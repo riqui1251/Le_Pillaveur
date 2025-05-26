@@ -1,0 +1,11 @@
+                } else { // shouldTriggerEffect est faux
+                    if (!isCumulativeMode) {
+                        console.log(`   -> [Effet Blocked] Pin ${sPin.id} (${sPin.type}) déjà utilisé ce tour (Mode Normal).`);
+                    } else {
+                        // En mode cumulatif, cette condition ne devrait pas être atteinte, mais on log au cas où
+                        console.log(`   -> [Effet Blocked - Inattendu] Pin ${sPin.id} (${sPin.type}) bloqué en mode cumulatif.`);
+                    }
+                }
+            } // Fin du if (specialCollisionPin)
+            // --- FIN REFACTORISATION ---
+        } // Fin du if (!collisionOccurred pour les pins normaux) 

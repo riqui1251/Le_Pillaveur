@@ -1,0 +1,675 @@
+"use client"
+
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from 'next-themes'
+import { Sun, Moon, Dice6 } from 'lucide-react'
+import { usePlayers } from '@/hooks/usePlayers'
+import { Card } from '@/components/ui/card'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Player as BasePlayer, PLAYER_ICONS } from '@/lib/players'
+
+interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
+  position: number
+  drinks: number
+  stats?: {
+    gamesPlayed: number;
+    wins: number;
+    totalDrinks: number;
+    favoriteGame?: string;
+    lastPlayed?: number;
+  }
+  createdAt?: number
+  color?: string
+  preferences: {
+    color: string
+    icon?: string
+    avatar?: string
+    nickname?: string
+    theme?: 'light' | 'dark'
+  }
+}
+
+interface Case {
+  type: 'normal' | 'defi' | 'gorgée' | 'recul' | 'avance' | 'tous'
+  description: string
+  effect: number
+}
+
+type Difficulty = 'facile' | 'normal' | 'difficile' | 'extreme'
+
+const difficultyMultipliers: Record<Difficulty, number> = {
+  facile: 1,
+  normal: 2,
+  difficile: 3,
+  extreme: 4
+}
+
+const difficultyNames: Record<Difficulty, string> = {
+  facile: '🌱 Facile',
+  normal: '🌟 Normal',
+  difficile: '🔥 Difficile',
+  extreme: '💀 Extrême'
+}
+
+const generateCase = (difficulty: Difficulty): Case => {
+  const types = ['normal', 'defi', 'gorgée', 'recul', 'avance', 'tous'] as const
+  const type = types[Math.floor(Math.random() * types.length)]
+  
+  const defis = [
+    { text: 'Fais 10 pompes', drinks: 2 },
+    { text: 'Raconte une blague', drinks: 3 },
+    { text: 'Chante une chanson', drinks: 2 },
+    { text: 'Imite un animal', drinks: 1 },
+    { text: 'Fais 20 squats', drinks: 3 }
+  ]
+
+  const multiplier = difficultyMultipliers[difficulty]
+
+  switch (type) {
+    case 'normal':
+      return { type, description: 'Case safe', effect: 0 }
+    case 'gorgée': {
+      const baseGorgees = Math.floor(Math.random() * 3) + 1
+      const drinks = baseGorgees * multiplier
+      let finalDrinks = drinks
+      let description = ''
+
+      if (difficulty === 'difficile' && drinks > 8) {
+        finalDrinks = 8
+      }
+
+      if (difficulty === 'extreme' && drinks >= 12) {
+        description = 'Cul sec ! 🍺'
+      } else {
+        description = `Bois ${finalDrinks} gorgée${finalDrinks > 1 ? 's' : ''} !`
+      }
+      
+      return { type, description, effect: finalDrinks }
+    }
+    case 'defi': {
+      const defi = defis[Math.floor(Math.random() * defis.length)]
+      const drinks = Math.min(defi.drinks * multiplier, 4)
+      return { 
+        type, 
+        description: `Défi : ${defi.text} ou bois ${drinks} gorgée${drinks > 1 ? 's' : ''} !`, 
+        effect: 0 
+      }
+    }
+    case 'recul':
+      const reculSpaces = Math.floor(Math.random() * 3) + 1
+      return { type, description: `Recule de ${reculSpaces} case${reculSpaces > 1 ? 's' : ''} !`, effect: -reculSpaces }
+    case 'avance':
+      const avanceSpaces = Math.floor(Math.random() * 3) + 1
+      return { type, description: `Avance de ${avanceSpaces} case${avanceSpaces > 1 ? 's' : ''} !`, effect: avanceSpaces }
+    case 'tous': {
+      const baseGorgees = Math.floor(Math.random() * 2) + 1
+      const drinks = Math.min(baseGorgees * multiplier, 3)
+      return { 
+        type, 
+        description: `Tout le monde boit ${drinks} gorgée${drinks > 1 ? 's' : ''} sauf la personne ciblée ! 🍻`, 
+        effect: drinks 
+      }
+    }
+  }
+}
+
+const playerColors = [
+  'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+  'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-orange-500',
+  'bg-teal-500', 'bg-cyan-500', 'bg-rose-500', 'bg-emerald-500',
+  'bg-violet-500', 'bg-amber-500', 'bg-lime-500'
+]
+
+const simCompliments = [
+  'Le tout puissant',
+  'Le magnifique',
+  'Le grand sage',
+  'Le maître',
+  'Sa majesté',
+  'Le créateur'
+]
+
+const debMessages = [
+  'Boit des vrais gorgées',
+  'Des gorgées pas des centilitres'
+]
+
+interface GameProps {
+  initialPlayers: BasePlayer[];
+  onGameEnd: () => void;
+}
+
+export default function Game({ initialPlayers, onGameEnd }: GameProps) {
+  const { updatePlayerStats } = usePlayers();
+  const { theme, setTheme } = useTheme()
+  const defaultColor = 'bg-primary';
+  
+  const [players, setPlayers] = useState<GamePlayer[]>(
+    initialPlayers.map(p => ({
+      ...p,
+      position: 0,
+      drinks: 0,
+      preferences: {
+        ...p.preferences,
+        color: p.preferences.color || defaultColor
+      }
+    }))
+  );
+  const [newPlayerName, setNewPlayerName] = useState('')
+  const [currentPlayer, setCurrentPlayer] = useState<number>(0);
+  const [gameStarted, setGameStarted] = useState(true);
+  const [diceResult, setDiceResult] = useState<number | null>(null);
+  const [currentCase, setCurrentCase] = useState<Case | null>(null);
+  const [winner, setWinner] = useState<GamePlayer | null>(null);
+  const [turnCount, setTurnCount] = useState<number>(1);
+  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const boardSize = 30;
+  const [animatingPlayer, setAnimatingPlayer] = useState<string | null>(null);
+  const [selectingPlayer, setSelectingPlayer] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
+  const [pendingCase, setPendingCase] = useState<Case | null>(null);
+  const [pendingPosition, setPendingPosition] = useState<number | null>(null);
+  const [targetPlayerId, setTargetPlayerId] = useState<string | null>(null);
+  const [isProcessingTurn, setIsProcessingTurn] = useState(false);
+  const [isDiceRolling, setIsDiceRolling] = useState(false);
+  const [animatedDiceValue, setAnimatedDiceValue] = useState<number | null>(null);
+  const [clickCount, setClickCount] = useState<Record<string, number>>({});
+  const [showConfirmation, setShowConfirmation] = useState<string | null>(null);
+
+  const addPlayer = () => {
+    if (newPlayerName.trim() && players.length < 15) {
+      setPlayers([
+        ...players,
+        {
+          id: Date.now().toString(),
+          name: newPlayerName.trim(),
+          position: 0,
+          drinks: 0,
+          preferences: {
+            color: playerColors[players.length % playerColors.length],
+            icon: PLAYER_ICONS[Math.floor(Math.random() * PLAYER_ICONS.length)]
+          }
+        } as GamePlayer
+      ])
+      setNewPlayerName('')
+    }
+  }
+
+  const removePlayer = (playerId: string) => {
+    // Approche avec double-clic et confirmation
+    const currentCount = clickCount[playerId] || 0;
+    const newClickCount = {...clickCount, [playerId]: currentCount + 1};
+    setClickCount(newClickCount);
+    
+    if (newClickCount[playerId] === 1) {
+      // Premier clic - montrer un message d'avertissement
+      setShowConfirmation(playerId);
+      
+      // Réinitialiser le compteur après 3 secondes
+      setTimeout(() => {
+        setClickCount(prev => ({...prev, [playerId]: 0}));
+        setShowConfirmation(null);
+      }, 3000);
+    } else if (newClickCount[playerId] === 2) {
+      // Deuxième clic - demander le code
+      const code = prompt("Entrez le code de sécurité pour supprimer ce joueur:");
+      if (code === "1251381") {
+        setPlayers(players.filter(player => player.id !== playerId));
+      } else {
+        alert("Code incorrect. Le joueur n'a pas été supprimé.");
+      }
+      setClickCount({...clickCount, [playerId]: 0});
+      setShowConfirmation(null);
+    }
+  }
+
+  const animateDiceRoll = (finalValue: number) => {
+    setIsDiceRolling(true)
+    let duration = 2000 // 2 secondes d'animation
+    let interval = 200 // Changement toutes les 100ms
+    let steps = duration / interval
+    let currentStep = 0
+
+    const rollInterval = setInterval(() => {
+      if (currentStep < steps - 1) {
+        // Ralentir progressivement l'animation
+        if (currentStep > steps * 0.7) {
+          // Dans les 30% derniers, on ralentit encore plus
+          interval = 200
+        }
+        setAnimatedDiceValue(Math.floor(Math.random() * 6) + 1)
+        currentStep++
+      } else {
+        clearInterval(rollInterval)
+        setAnimatedDiceValue(finalValue)
+        setIsDiceRolling(false)
+        // Continue avec le déplacement du joueur
+        const player = players[currentPlayer]
+        let newPosition = Math.min(player.position + finalValue, boardSize - 1)
+        const caseType = generateCase(difficulty)
+        setCurrentCase(null)
+        setPendingCase(caseType)
+        setPendingPosition(newPosition)
+        setTargetPlayerId(null)
+        setAnimatingPlayer(player.id)
+        
+        const positions = []
+        for (let i = player.position + 1; i <= newPosition; i++) {
+          positions.push(i)
+        }
+        
+        let delay = 0
+        positions.forEach((pos, index) => {
+          setTimeout(() => {
+            setPlayers(prevPlayers => prevPlayers.map(p => 
+              p.id === player.id ? { ...p, position: pos } : p
+            ))
+            
+            if (index === positions.length - 1) {
+              setSelectedPosition(pos)
+              setSelectingPlayer(true)
+              setAnimatingPlayer(null)
+            }
+          }, delay)
+          delay += 300
+        })
+      }
+    }, interval)
+  }
+
+  const rollDice = () => {
+    const result = Math.floor(Math.random() * 6) + 1
+    setDiceResult(result)
+    animateDiceRoll(result)
+  }
+
+  const applyEffectToPlayer = (targetPlayerId: string) => {
+    if (!pendingCase || pendingPosition === null) return
+
+    setIsProcessingTurn(true)
+
+    const targetPlayerForEasterEgg = players.find(p => p.id === targetPlayerId)
+    let description = pendingCase.description
+    let targetPlayerDisplay = targetPlayerForEasterEgg?.name || "Aucun joueur sélectionné"
+
+    // Easter egg pour Sim
+    if (targetPlayerForEasterEgg?.name.toLowerCase() === 'sim' && Math.random() < 0.7) {
+      const compliment = simCompliments[Math.floor(Math.random() * simCompliments.length)]
+      description = `${description}\n\nJoueur ciblé : <span class="${targetPlayerForEasterEgg.preferences.color} text-white px-2 py-1 rounded-md">"${compliment}" ${targetPlayerForEasterEgg.name}</span>`
+    } else if (targetPlayerForEasterEgg?.name.toLowerCase() === 'deb' && 
+        pendingCase.type === 'gorgée' && 
+        pendingCase.effect >= 6 && 
+        pendingCase.effect < 12 && 
+        Math.random() < 0.5) {
+      const message = debMessages[Math.floor(Math.random() * debMessages.length)]
+      description = `${description}\n\nJoueur ciblé : <span class="${targetPlayerForEasterEgg.preferences.color} text-white px-2 py-1 rounded-md">"${message}" ${targetPlayerForEasterEgg.name}</span>`
+    } else {
+      description = `${description}\n\nJoueur ciblé : <span class="${targetPlayerForEasterEgg?.preferences.color || ''} text-white px-2 py-1 rounded-md">${targetPlayerDisplay}</span>`
+    }
+
+    setCurrentCase({
+      ...pendingCase,
+      description
+    })
+
+    const updatedPlayers = players.map(p => {
+      if (pendingCase.type === 'tous') {
+        if (p.id !== targetPlayerId) {
+          const newDrinks = p.drinks + pendingCase.effect;
+          // Mettre à jour les statistiques pour les gorgées bues
+          updatePlayerStats(p.id, 'petit-buveur', {
+            totalDrinks: newDrinks
+          });
+          return {
+            ...p,
+            drinks: newDrinks
+          }
+        }
+        return p
+      } else if (p.id === targetPlayerId) {
+        let newPosition = p.position
+        let newDrinks = p.drinks
+        if (pendingCase.type === 'avance' || pendingCase.type === 'recul') {
+          newPosition = Math.max(0, Math.min(boardSize - 1, p.position + pendingCase.effect))
+        }
+        if (pendingCase.type === 'gorgée') {
+          newDrinks = p.drinks + pendingCase.effect;
+          // Mettre à jour les statistiques pour les gorgées bues
+          updatePlayerStats(p.id, 'petit-buveur', {
+            totalDrinks: newDrinks
+          });
+        }
+        return {
+          ...p,
+          position: newPosition,
+          drinks: newDrinks
+        }
+      }
+      return p
+    })
+
+    setPlayers(updatedPlayers)
+    setTargetPlayerId(targetPlayerId)
+    setSelectingPlayer(false)
+    setPendingCase(null)
+    setPendingPosition(null)
+    setSelectedPosition(null)
+
+    const targetPlayer = updatedPlayers.find(p => p.id === targetPlayerId)
+    if (targetPlayer && targetPlayer.position === boardSize - 1) {
+      setWinner(targetPlayer)
+      // Mettre à jour les statistiques du gagnant spécifiquement pour le jeu "petit-buveur"
+      updatePlayerStats(targetPlayer.id, 'petit-buveur', {
+        wins: 1
+      });
+      return
+    }
+
+    // Passage immédiat au joueur suivant
+    const nextPlayer = (currentPlayer + 1) % players.length
+    if (nextPlayer === 0) {
+      setTurnCount(turnCount + 1)
+    }
+    setCurrentPlayer(nextPlayer)
+    setIsProcessingTurn(false)
+  }
+
+  const selectRandomPlayer = () => {
+    const eligiblePlayers = players.filter(p => p.id !== players[currentPlayer].id)
+    if (eligiblePlayers.length > 0) {
+      const randomPlayer = eligiblePlayers[Math.floor(Math.random() * eligiblePlayers.length)]
+      setTargetPlayerId(randomPlayer.id)
+      applyEffectToPlayer(randomPlayer.id)
+    }
+  }
+
+  const startGame = () => {
+    if (players.length >= 2) {
+      setGameStarted(true)
+      setCurrentPlayer(0)
+      setWinner(null)
+    }
+  }
+
+  const resetGame = () => {
+    setPlayers(initialPlayers.map(p => ({ ...p, position: 0, drinks: 0 })));
+    setGameStarted(true);
+    setCurrentPlayer(0);
+    setWinner(null);
+    setDiceResult(null);
+    setCurrentCase(null);
+    setIsProcessingTurn(false);
+    setIsDiceRolling(false);
+    setAnimatedDiceValue(null);
+    setSelectingPlayer(false);
+    setSelectedPosition(null);
+    setPendingCase(null);
+    setPendingPosition(null);
+    setTargetPlayerId(null);
+    setAnimatingPlayer(null);
+    setTurnCount(1);
+  }
+
+  const getBgColor = () => {
+    return theme === 'dark' 
+      ? 'bg-gray-800 text-white' 
+      : 'bg-gradient-to-br from-amber-50 to-amber-200 text-amber-900'
+  }
+
+  const getTextColor = () => {
+    return theme === 'dark' 
+      ? 'text-white' 
+      : 'text-amber-900 font-medium'
+  }
+
+  const getPlayerRanking = () => {
+    return [...players].sort((a, b) => b.position - a.position)
+  }
+
+  const renderPlayerToken = (player: GamePlayer, index: number) => {
+    return (
+      <motion.div
+        key={player.id}
+        initial={{ scale: 0 }}
+        animate={{ 
+          scale: 1,
+          opacity: animatingPlayer === player.id ? 0.8 : 1
+        }}
+        className={`
+          w-full h-full rounded-full flex items-center justify-center text-white font-bold
+          ${player.preferences.color}
+          ${animatingPlayer === player.id ? 'ring-2 ring-yellow-400 shadow-lg' : 'ring-1 ring-white/30'}
+        `}
+      >
+        {player.preferences.icon || player.name.charAt(0)}
+      </motion.div>
+    )
+  }
+
+  if (winner) {
+    return (
+      <div className="text-center space-y-4">
+        <h2 className="text-2xl font-bold">🎉 {winner.name} a gagné ! 🎉</h2>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            {players.map(player => (
+              <Card key={player.id} className="p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className={player.preferences.color}>
+                    {player.preferences.avatar ? (
+                      <AvatarImage src={player.preferences.avatar} alt={player.name} />
+                    ) : (
+                      <AvatarFallback>{player.name[0].toUpperCase()}</AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div>
+                    <div className="font-medium">{player.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {player.drinks} gorgées bues
+                      {player.id === winner.id && " • 🏆 Victoire !"}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+          <div className="flex justify-center gap-4">
+            <Button onClick={resetGame}>Rejouer</Button>
+            <Button onClick={onGameEnd} variant="outline">Retour au menu</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!gameStarted) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center mb-4">
+          <Button onClick={onGameEnd} variant="outline" className="text-sm">
+            ← Retour
+          </Button>
+        </div>
+
+        <div className="text-center space-y-4">
+          <h2 className={`text-3xl font-bold ${getTextColor()}`}>Le Petit Buveur</h2>
+          <p className={`text-lg ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            Ajoutez des joueurs pour commencer la partie !
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Input
+            placeholder="Nom du joueur"
+            value={newPlayerName}
+            onChange={(e) => setNewPlayerName(e.target.value)}
+            className={`${theme === 'dark' ? 'bg-white/20 border-white/20' : 'bg-white border-gray-300'} ${getTextColor()}`}
+          />
+          <Button 
+            onClick={addPlayer}
+            className={theme === 'dark' ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-amber-100 hover:bg-amber-200 text-gray-900'}
+          >
+            Ajouter
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className={`text-xl font-semibold ${getTextColor()}`}>Difficulté :</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {(Object.keys(difficultyMultipliers) as Difficulty[]).map((diff) => (
+              <Button
+                key={diff}
+                onClick={() => setDifficulty(diff)}
+                className={`${
+                  difficulty === diff
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
+                    : theme === 'dark'
+                    ? 'bg-white/20 hover:bg-white/30 text-white'
+                    : 'bg-amber-100 hover:bg-amber-200 text-gray-900'
+                } font-bold`}
+              >
+                {difficultyNames[diff]}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {players.length > 0 && (
+          <div className="space-y-4">
+            <h3 className={`text-xl font-semibold ${getTextColor()}`}>
+              Joueurs ({players.length}/15) :
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {players.map(player => (
+                <div 
+                  key={player.id}
+                  className={`p-3 rounded-lg flex items-center justify-between ${player.preferences.color}`}
+                >
+                  <span className="text-white font-medium">{player.name}</span>
+                  <Button
+                    onClick={() => removePlayer(player.id)}
+                    variant="ghost"
+                    className="text-white hover:bg-white/20"
+                  >
+                    ×
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {showConfirmation && (
+              <div className="mt-2 p-2 bg-yellow-500/80 text-black rounded-md text-sm">
+                Cliquez à nouveau sur la croix pour confirmer la suppression du joueur.
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex justify-between items-center">
+          <Button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className={theme === 'dark' ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-amber-100 hover:bg-amber-200 text-gray-900'}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </Button>
+
+          <Button
+            onClick={startGame}
+            disabled={players.length < 2}
+            className="flex-1 ml-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-3"
+          >
+            Commencer la partie
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-4">
+        <Button 
+          onClick={() => {
+            if (confirm("Êtes-vous sûr de vouloir quitter la partie en cours ?")) {
+              onGameEnd();
+            }
+          }} 
+          variant="outline" 
+          className="text-sm"
+        >
+          Quitter
+        </Button>
+      </div>
+
+      <div className="text-center space-y-4">
+        <h2 className="text-3xl font-bold">Le Petit Buveur</h2>
+        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          Mode {difficultyNames[difficulty]} {difficulty === 'difficile' ? '(max 8 gorgées)' : ''}
+        </p>
+        <div className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+          <div className={`flex justify-between items-center ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            <p className="text-lg">
+              Tour <span className="font-bold">{turnCount}</span>
+            </p>
+            <p className="text-lg">
+              Au tour de <span className="font-bold">{players[currentPlayer].name}</span> !
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className={`grid grid-cols-6 gap-2 p-4 ${getBgColor()} rounded-lg`}>
+        {Array.from({ length: boardSize }).map((_, index) => {
+          const playersOnCase = players.filter(p => p.position === index)
+          
+          return (
+            <div
+              key={index}
+              className={`aspect-square rounded-lg flex items-center justify-center relative
+                ${theme === 'dark' ? 'bg-white/20' : 'bg-amber-200/70 shadow-sm'}
+                ${currentCase && playersOnCase.some(p => p.id === animatingPlayer) ? 'ring-2 ring-yellow-400 shadow-md' : ''}`}
+            >
+              <span className={`text-sm font-medium ${getTextColor()}`}>{index + 1}</span>
+              <div className="absolute inset-2 grid grid-cols-2 gap-1">
+                {playersOnCase.map((player, idx) => renderPlayerToken(player, idx))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className={`p-4 ${getBgColor()} rounded-lg shadow-sm`}>
+          <h3 className="font-bold mb-2">Classement :</h3>
+          <div className="space-y-2">
+            {getPlayerRanking().map((player, index) => (
+              <div key={player.id} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{index + 1}.</span>
+                  <div className={`w-4 h-4 rounded-full ${player.preferences.color} ring-1 ring-white/30`}></div>
+                  <span>{player.name}</span>
+                </div>
+                <span className="bg-card text-card-foreground px-2 py-1 rounded-md text-sm">Case {player.position + 1}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {currentCase && (
+          <div className={`p-4 ${getBgColor()} rounded-lg shadow-sm`}>
+            <h3 className="font-bold mb-2">Case actuelle :</h3>
+            <p className="whitespace-pre-line bg-card/80 p-3 rounded-md" dangerouslySetInnerHTML={{ __html: currentCase.description }}></p>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {players.map((player, index) => (
+          <Card
+            key={player.id}
+            className={`p-4 ${currentPlayer === index ? 'ring-2 ring-primary' : ''} bg-card text-card-foreground`}
+          >
+            <div className="flex items-center gap-3">
+              <Avatar className={`

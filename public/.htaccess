@@ -1,0 +1,20 @@
+# Activer la réécriture d'URL
+RewriteEngine On
+
+# S'assurer qu'il s'agit d'un appareil mobile (via le User Agent)
+RewriteCond %{HTTP_USER_AGENT} Mobile|Android|iP(hone|od|ad) [NC]
+
+# Ne pas rediriger si déjà dans le dossier /m/
+RewriteCond %{REQUEST_URI} !^/m/
+
+# Ne pas rediriger pour les fichiers statiques
+RewriteCond %{REQUEST_URI} !\.(css|js|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|json|xml)$ [NC]
+
+# Rediriger vers la page de redirection mobile
+RewriteRule ^(.*)$ /mobile-redirect.html [L]
+
+# Si l'utilisateur accède directement au fichier mobile-redirect.html depuis un ordinateur de bureau
+# alors rediriger vers la page d'accueil normale
+RewriteCond %{HTTP_USER_AGENT} !(Mobile|Android|iP(hone|od|ad)) [NC]
+RewriteCond %{REQUEST_URI} ^/mobile-redirect.html$
+RewriteRule ^(.*)$ / [R=302,L] 

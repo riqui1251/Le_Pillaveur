@@ -1,0 +1,105 @@
+/* Styles spécifiques au mode plein écran pour différentes résolutions */
+
+/* Styles de base pour tous les écrans en plein écran */
+:fullscreen .fullscreen-container,
+:-webkit-full-screen .fullscreen-container,
+:-moz-full-screen .fullscreen-container,
+:-ms-fullscreen .fullscreen-container {
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Très petits écrans (smartphones) */
+@media screen and (max-width: 480px) {
+  :fullscreen .content-container,
+  :-webkit-full-screen .content-container,
+  :-moz-full-screen .content-container,
+  :-ms-fullscreen .content-container {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.95rem;
+  }
+  
+  :fullscreen .navbar-container,
+  :-webkit-full-screen .navbar-container,
+  :-moz-full-screen .navbar-container,
+  :-ms-fullscreen .navbar-container {
+    padding: 0.5rem;
+  }
+}
+
+/* Petits écrans (smartphones en paysage, petites tablettes) */
+@media screen and (min-width: 481px) and (max-width: 768px) {
+  :fullscreen .content-container,
+  :-webkit-full-screen .content-container,
+  :-moz-full-screen .content-container,
+  :-ms-fullscreen .content-container {
+    width: 90%;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0.75rem;
+  }
+}
+
+/* Écrans moyens (tablettes, petits laptops) */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  :fullscreen .content-container,
+  :-webkit-full-screen .content-container,
+  :-moz-full-screen .content-container,
+  :-ms-fullscreen .content-container {
+    width: 85%;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+}
+
+/* Grands écrans (desktops, grands laptops) */
+@media screen and (min-width: 1025px) and (max-width: 1440px) {
+  :fullscreen .content-container,
+  :-webkit-full-screen .content-container,
+  :-moz-full-screen .content-container,
+  :-ms-fullscreen .content-container {
+    width: 80%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+}
+
+/* Très grands écrans */
+@media screen and (min-width: 1441px) {
+  :fullscreen .content-container,
+  :-webkit-full-screen .content-container,
+  :-moz-full-screen .content-container,
+  :-ms-fullscreen .content-container {
+    width: 70%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+}
+
+/* Support pour l'orientation */
+@media screen and (orientation: portrait) {
+  :fullscreen .content-container,
+  :-webkit-full-screen .content-container,
+  :-moz-full-screen .content-container,
+  :-ms-fullscreen .content-container {
+    padding-top: 4rem; /* Plus d'espace en haut en mode portrait */
+  }
+}
+
+@media screen and (orientation: landscape) {
+  :fullscreen .content-container,
+  :-webkit-full-screen .content-container,
+  :-moz-full-screen .content-container,
+  :-ms-fullscreen .content-container {
+    padding-top: 3.5rem; /* Moins d'espace en haut en mode paysage */
+  }
+} 
