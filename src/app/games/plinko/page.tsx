@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { PlayerManager } from '@/components/PlayerManager'
 import { usePlayers } from '@/hooks/usePlayers'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -12,25 +11,17 @@ import { Label } from "@/components/ui/label"
 import { User, Home } from 'lucide-react'
 import Link from 'next/link'
 import Game, { DifficultyLevel } from './components/game'
+import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
+import { SelectedPlayersDisplay } from '@/components/SelectedPlayersDisplay'
 
 export default function PlinkoPage() {
   const { players } = usePlayers()
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [gameStarted, setGameStarted] = useState(false)
   const [activeTab, setActiveTab] = useState('players')
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel>('medium')
   const [isCumulativeModeEnabled, setIsCumulativeModeEnabled] = useState(false)
   const [gameKey, setGameKey] = useState(0)
-
-  const handlePlayersSelected = (playerIds: string[]) => {
-    if (!selectedDifficulty) {
-        console.warn("Veuillez sélectionner une difficulté avant de commencer.");
-        return;
-    }
-    setSelectedPlayerIds(playerIds)
-    setGameStarted(true)
-    setActiveTab('game')
-  }
+  const { selectedIds } = useSelectedPlayers()
 
   const handleReturnToSelection = () => {
     setGameStarted(false)
@@ -50,6 +41,8 @@ export default function PlinkoPage() {
     setSelectedDifficulty(value)
   }
 
+  const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
@@ -65,7 +58,7 @@ export default function PlinkoPage() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="players">
             <User className="mr-2 h-4 w-4" />
-            Joueurs
+            Paramètres
           </TabsTrigger>
           <TabsTrigger value="game" disabled={!gameStarted}>
             Jeu
@@ -73,17 +66,11 @@ export default function PlinkoPage() {
         </TabsList>
 
         <TabsContent value="players" className="space-y-4">
+          <SelectedPlayersDisplay players={selectedPlayers} />
+          
           <Card className="p-4">
-            <h2 className="text-xl font-semibold mb-4">Sélectionnez les joueurs</h2>
-            <PlayerManager 
-              onPlayersSelected={handlePlayersSelected}
-              minPlayers={2}
-              maxPlayers={Infinity}
-              hideRemoveButtons={true}
-            />
-            
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-2">Difficulté</h3>
+            <h3 className="text-lg font-semibold mb-2">Difficulté</h3>
+            <div>
               <Select value={selectedDifficulty} onValueChange={handleDifficultyChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner une difficulté" />
@@ -118,6 +105,8 @@ export default function PlinkoPage() {
                 Plus la balle atterrit au centre, plus le multiplicateur est élevé !
               </p>
             </div>
+
+            <Button className="mt-4 w-full" disabled={selectedPlayers.length < 2} onClick={() => { setGameStarted(true); setActiveTab('game') }}>Commencer la partie</Button>
           </Card>
         </TabsContent>
 
@@ -125,7 +114,7 @@ export default function PlinkoPage() {
           {gameStarted && (
             <Game 
               key={gameKey}
-              players={players.filter(p => selectedPlayerIds.includes(p.id))}
+              players={selectedPlayers}
               onGameEnd={handleReturnToSelection}
               onRestartGame={handleRestartGame}
               difficulty={selectedDifficulty}

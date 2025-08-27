@@ -6,6 +6,21 @@ const config: Config = {
   content: [
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    'from-red-600','to-amber-500',
+    'from-sky-500','to-indigo-600',
+    'from-fuchsia-600','to-violet-700',
+    'from-emerald-600','to-teal-400',
+    'from-amber-600','to-yellow-400',
+    'from-emerald-500','to-lime-400',
+    'from-pink-600','to-rose-400',
+    'from-sky-500','to-cyan-400',
+    'from-violet-600','to-purple-700',
+    'from-indigo-600','to-blue-600',
+    'from-rose-500','to-fuchsia-500',
+    // also allow the gradient direction utilities used dynamically
+    'bg-gradient-to-br','bg-gradient-to-r'
+  ],
   theme: {
     container: {
       center: true,

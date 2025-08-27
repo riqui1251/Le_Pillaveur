@@ -1,24 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/toast';
 
+// Types pour les API de plein écran spécifiques aux navigateurs
+interface FullscreenDocument extends Document {
+  webkitFullscreenElement?: Element | null;
+  mozFullScreenElement?: Element | null;
+  msFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void>;
+  mozCancelFullScreen?: () => Promise<void>;
+  msExitFullscreen?: () => Promise<void>;
+}
+
+interface FullscreenElement extends HTMLElement {
+  webkitRequestFullscreen?: () => Promise<void>;
+  mozRequestFullScreen?: () => Promise<void>;
+  msRequestFullscreen?: () => Promise<void>;
+}
+
 export const useFullscreen = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { showToast } = useToast();
 
   const handleFullscreenChange = useCallback(() => {
+    const doc = document as FullscreenDocument;
     const newFullscreenState = !!(
       document.fullscreenElement ||
-      // @ts-ignore - Propriétés spécifiques aux navigateurs
-      document.webkitFullscreenElement ||
-      // @ts-ignore
-      document.mozFullScreenElement ||
-      // @ts-ignore
-      document.msFullscreenElement
+      doc.webkitFullscreenElement ||
+      doc.mozFullScreenElement ||
+      doc.msFullscreenElement
     );
     
     setIsFullscreen(newFullscreenState);
     
-    // Afficher une notification lors du changement d'état
     if (newFullscreenState) {
       showToast({
         message: 'Mode plein écran activé',
@@ -51,28 +64,23 @@ export const useFullscreen = () => {
   const toggleFullscreen = async () => {
     try {
       if (!isFullscreen) {
-        const docEl = document.documentElement;
+        const docEl = document.documentElement as FullscreenElement;
         const requestFullscreen = 
           docEl.requestFullscreen || 
-          // @ts-ignore - Méthodes spécifiques aux navigateurs
           docEl.webkitRequestFullscreen || 
-          // @ts-ignore
           docEl.mozRequestFullScreen || 
-          // @ts-ignore
           docEl.msRequestFullscreen;
         
         if (requestFullscreen) {
           await requestFullscreen.call(docEl);
         }
       } else {
+        const doc = document as FullscreenDocument;
         const exitFullscreen = 
           document.exitFullscreen || 
-          // @ts-ignore
-          document.webkitExitFullscreen || 
-          // @ts-ignore
-          document.mozCancelFullScreen || 
-          // @ts-ignore
-          document.msExitFullscreen;
+          doc.webkitExitFullscreen || 
+          doc.mozCancelFullScreen || 
+          doc.msExitFullscreen;
         
         if (exitFullscreen) {
           await exitFullscreen.call(document);

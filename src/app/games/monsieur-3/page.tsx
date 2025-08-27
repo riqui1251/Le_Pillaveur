@@ -1,30 +1,35 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Game from '@/app/games/monsieur-3/components/game'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { PlayerManager } from '@/components/PlayerManager'
 import { usePlayers } from '@/hooks/usePlayers'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { User, Home } from 'lucide-react'
 import Link from 'next/link'
+import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
+import { SelectedPlayersDisplay } from '@/components/SelectedPlayersDisplay'
+import { useRouter } from 'next/navigation'
 
 export default function Monsieur3Page() {
   const { players } = usePlayers()
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
+  const { selectedIds } = useSelectedPlayers()
   const [gameStarted, setGameStarted] = useState(false)
   const [activeTab, setActiveTab] = useState('players')
+  const router = useRouter()
 
-  const handlePlayersSelected = (playerIds: string[]) => {
-    setSelectedPlayerIds(playerIds)
-    setGameStarted(true)
-    setActiveTab('game')
-  }
+  const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
+
+  useEffect(() => {
+    if (selectedPlayers.length >= 2 && !gameStarted) {
+      setGameStarted(true)
+      setActiveTab('game')
+    }
+  }, [selectedPlayers, gameStarted])
 
   const handleGameEnd = () => {
-    setGameStarted(false)
-    setActiveTab('players')
+    router.push('/jeux')
   }
 
   const handleTabChange = (value: string) => {
@@ -55,14 +60,7 @@ export default function Monsieur3Page() {
 
         <TabsContent value="players" className="space-y-4">
           <Card className="p-4">
-            <h2 className="text-xl font-semibold mb-4">Sélectionnez les joueurs</h2>
-            <PlayerManager 
-              onPlayersSelected={handlePlayersSelected}
-              minPlayers={2}
-              maxPlayers={8}
-              hideRemoveButtons={true}
-            />
-            
+            <SelectedPlayersDisplay players={selectedPlayers} />
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
               <p className="text-sm">
                 <strong>Règles du jeu :</strong> &quot;Monsieur 3&quot; est un jeu où le premier joueur qui fait un 3 devient Monsieur 3. 
@@ -76,7 +74,7 @@ export default function Monsieur3Page() {
         <TabsContent value="game">
           {gameStarted && (
             <Game 
-              players={players.filter(p => selectedPlayerIds.includes(p.id))}
+              players={selectedPlayers}
               onGameEnd={handleGameEnd}
             />
           )}

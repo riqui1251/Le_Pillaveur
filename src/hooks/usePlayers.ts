@@ -89,12 +89,12 @@ export function usePlayers() {
   }, [players]);
 
   // Obtenir le classement des joueurs par jeu
-  const getTopPlayersByGame = useCallback((gameId: string, limit: number = 5): Player[] => {
+  const getTopPlayersByGameCallback = useCallback((gameId: string, limit: number = 5): Player[] => {
     return getTopPlayersByGame(gameId, limit);
   }, []);
 
   // Obtenir les joueurs les plus actifs par jeu
-  const getMostActivePlayersByGame = useCallback((gameId: string, limit: number = 5): Player[] => {
+  const getMostActivePlayersByGameCallback = useCallback((gameId: string, limit: number = 5): Player[] => {
     return getMostActivePlayersByGame(gameId, limit);
   }, []);
 
@@ -123,8 +123,8 @@ export function usePlayers() {
     selectPlayersForGame,
     getPlayerStats,
     getPlayerPreferences,
-    getTopPlayersByGame,
-    getMostActivePlayersByGame,
+    getTopPlayersByGame: getTopPlayersByGameCallback,
+    getMostActivePlayersByGame: getMostActivePlayersByGameCallback,
     getPlayerStatsByGame
   };
 } 

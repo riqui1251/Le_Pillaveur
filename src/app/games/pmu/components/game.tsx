@@ -296,7 +296,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
           // Mettre à jour les statistiques des joueurs gagnants
           if (winner.players.length > 0) {
             winner.players.forEach(player => {
-              updatePlayerStats(player.id, 'pmu', { wins: 1 });
+              updatePlayerStats(player.id, 'pmu', { gamesPlayed: 1, wins: 1 });
             });
           }
           
@@ -304,7 +304,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
           initialPlayersRef.current.forEach(player => {
             // Si le joueur n'est pas dans l'équipe gagnante, on met à jour ses stats sans victoire
             if (!winner.players.some(p => p.id === player.id)) {
-              updatePlayerStats(player.id, 'pmu', { wins: 0 });
+              updatePlayerStats(player.id, 'pmu', { gamesPlayed: 1, wins: 0 });
             }
           });
         }
@@ -331,7 +331,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
     return (
       <div className="min-h-fit bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-6">
         {/* Ajouter le style CSS pour l'animation */}
-        <style jsx>{specialPlayerNameStyle}</style>
+
         
         <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-sm rounded-xl shadow-2xl p-8 space-y-6">
           <div className="text-center space-y-4 relative">
@@ -469,7 +469,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
     return (
       <div className="min-h-fit bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-6">
         {/* Ajouter le style CSS pour l'animation */}
-        <style jsx>{specialPlayerNameStyle}</style>
+
         
         <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-sm rounded-xl shadow-2xl p-8 text-center space-y-6">
           <h2 className="text-3xl font-bold text-white">Course terminée !</h2>

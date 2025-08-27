@@ -7,7 +7,7 @@ interface BalloonRaceProps {
   onRaceFinish: (winnerColor: string, sips: number) => void;
 }
 
-const RACE_HEIGHT = 400; // Hauteur de la zone de course en pixels
+const RACE_HEIGHT = 400; // Hauteur par défaut (fallback desktop)
 const MIN_SPEED = 0.5; // Vitesse minimale px/frame
 const MAX_SPEED = 1.5; // Vitesse maximale px/frame
 
@@ -18,6 +18,8 @@ export default function BalloonRace({ playerChoices, onRaceFinish }: BalloonRace
   const [finalSips, setFinalSips] = useState<number | null>(null);
   const requestRef = useRef<number | undefined>(undefined);
   const startTimeRef = useRef<number | undefined>(undefined);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [raceHeightPx, setRaceHeightPx] = useState<number>(RACE_HEIGHT);
 
   // Utiliser les entrées pour avoir playerId et color
   const playerEntries = Object.entries(playerChoices); 
@@ -51,8 +53,8 @@ export default function BalloonRace({ playerChoices, onRaceFinish }: BalloonRace
         if (speeds[color] === undefined) continue; 
         if (detectedWinner) break; 
         newPositions[color] += speeds[color];
-        if (newPositions[color] >= RACE_HEIGHT) {
-          newPositions[color] = RACE_HEIGHT;
+        if (newPositions[color] >= raceHeightPx) {
+          newPositions[color] = raceHeightPx;
           if (!winner) {
              detectedWinner = color;
           }
@@ -70,7 +72,7 @@ export default function BalloonRace({ playerChoices, onRaceFinish }: BalloonRace
     if (!winner) {
       requestRef.current = requestAnimationFrame(animate);
     }
-  }, [winner, speeds]);
+  }, [winner, speeds, raceHeightPx]);
 
   // Effet pour démarrer et arrêter l'animation
   useEffect(() => {
@@ -97,8 +99,25 @@ export default function BalloonRace({ playerChoices, onRaceFinish }: BalloonRace
     }
   }, [winner, finalSips, onRaceFinish]);
 
+  // Adapter la hauteur de course au viewport pour le mobile
+  useEffect(() => {
+    const computeHeight = () => {
+      // 60vh sur mobile/tablette, clampé entre 300 et 520 px
+      const ideal = Math.round(window.innerHeight * 0.6);
+      const clamped = Math.max(300, Math.min(ideal, 520));
+      setRaceHeightPx(clamped);
+    };
+    computeHeight();
+    window.addEventListener('resize', computeHeight);
+    return () => window.removeEventListener('resize', computeHeight);
+  }, []);
+
   return (
-    <div className="relative w-full border-2 border-dashed border-gray-400 rounded-lg overflow-hidden" style={{ height: `${RACE_HEIGHT + 50}px` }}>
+    <div
+      ref={containerRef}
+      className="relative w-full border-2 border-dashed border-gray-400 rounded-lg overflow-hidden"
+      style={{ height: `${raceHeightPx + 50}px` }}
+    >
       {/* Ligne d'arrivée */}
       <div 
         className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 to-blue-500 z-10"
@@ -112,7 +131,7 @@ export default function BalloonRace({ playerChoices, onRaceFinish }: BalloonRace
       {playerEntries.map(([playerId, color], index) => (
         <div
           key={playerId} // Utiliser playerId comme clé unique
-          className={`absolute bottom-0 w-10 h-12 rounded-full bg-${color}-500 shadow-lg transition-transform duration-100 ease-linear`}
+          className={`absolute bottom-0 w-8 h-10 sm:w-10 sm:h-12 rounded-full bg-${color}-500 shadow-lg transition-transform duration-100 ease-linear`}
           style={{
             // Calculer la position gauche basée sur l'index du joueur dans la liste des entrées
             left: `${(index * (100 / playerEntries.length)) + (50 / playerEntries.length)}%`, 

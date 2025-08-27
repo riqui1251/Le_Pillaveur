@@ -3,10 +3,10 @@
 /* eslint-disable react/no-unescaped-entities */
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
 import { useTheme } from 'next-themes'
 import { Sun, Moon, Dice6, User, Users, Trophy, ArrowRight, RefreshCw, Home } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
@@ -35,6 +35,10 @@ const checkBrowserSupport = () => {
 interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
   position: number
   drinks: number
+  protected: boolean
+  cursed: number // Nombre de tours restants pour la malédiction
+  linkedTo?: string // ID du joueur avec qui il est lié (défi en chaîne)
+  linkedTurns: number // Nombre de tours restants pour le lien
   stats?: {
     gamesPlayed: number;
     wins: number;
@@ -49,12 +53,18 @@ interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
 }
 
 interface Case {
-  type: 'normal' | 'defi' | 'gorgée' | 'recul' | 'avance' | 'tous'
+  type: 'normal' | 'defi' | 'gorgée' | 'recul' | 'avance' | 'tous' | 'roue' | 'echange' | 'bombe' | 'protection' | 'malediction' | 'chance' | 'repetition' | 'miroir' | 'defi-chaine' | 'piege' | 'melange'
   description: string
   effect: number
 }
 
 type Difficulty = 'facile' | 'normal' | 'difficile' | 'extreme'
+
+type WheelSegment = {
+  id: string
+  label: string
+  value: number // 0 = SAFE, 1..12 = gorgées
+}
 
 const difficultyMultipliers: Record<Difficulty, number> = {
   facile: 1,
@@ -70,16 +80,65 @@ const difficultyNames: Record<Difficulty, string> = {
   extreme: '💀 Extrême'
 }
 
+// Génération des segments de la roue (fonction utilitaire)
+const generateWheelSegments = (): WheelSegment[] => {
+  const n = 15 // 15 segments
+  const arr: WheelSegment[] = []
+  for (let i = 0; i < n; i++) {
+    const isSafe = (i + 1) % 3 === 0
+    const value = isSafe ? 0 : 1 + Math.floor(Math.random() * 12)
+    arr.push({ 
+      id: `seg-${i}-${value}-${Math.random().toString(36).slice(2,6)}`, 
+      label: value === 0 ? 'SAFE' : `${value} gorgées`, 
+      value 
+    })
+  }
+  return arr
+}
+
 const generateCase = (difficulty: Difficulty): Case => {
-  // Réduire la probabilité d'obtenir une case de type 'tous' à maximum 10%
+  // Répartir les probabilités pour toutes les cases
   const random = Math.random();
-  let type: 'normal' | 'defi' | 'gorgée' | 'recul' | 'avance' | 'tous';
+  let type: 'normal' | 'defi' | 'gorgée' | 'recul' | 'avance' | 'tous' | 'roue' | 'echange' | 'bombe' | 'protection' | 'malediction' | 'chance' | 'repetition' | 'miroir' | 'defi-chaine' | 'piege' | 'melange';
   
-  if (random < 0.1) {
-    // 10% de chance d'obtenir une case 'tous'
+  if (random < 0.08) {
+    // 8% de chance d'obtenir une case 'roue'
+    type = 'roue';
+  } else if (random < 0.15) {
+    // 7% de chance d'obtenir une case 'tous'
     type = 'tous';
+  } else if (random < 0.20) {
+    // 5% de chance d'obtenir une case 'echange'
+    type = 'echange';
+  } else if (random < 0.25) {
+    // 5% de chance d'obtenir une case 'bombe'
+    type = 'bombe';
+  } else if (random < 0.30) {
+    // 5% de chance d'obtenir une case 'protection'
+    type = 'protection';
+  } else if (random < 0.35) {
+    // 5% de chance d'obtenir une case 'malediction'
+    type = 'malediction';
+  } else   if (random < 0.40) {
+    // 5% de chance d'obtenir une case 'chance'
+    type = 'chance';
+  } else if (random < 0.45) {
+    // 5% de chance d'obtenir une case 'repetition'
+    type = 'repetition';
+  } else if (random < 0.50) {
+    // 5% de chance d'obtenir une case 'miroir'
+    type = 'miroir';
+  } else if (random < 0.55) {
+    // 5% de chance d'obtenir une case 'defi-chaine'
+    type = 'defi-chaine';
+  } else if (random < 0.60) {
+    // 5% de chance d'obtenir une case 'piege'
+    type = 'piege';
+  } else if (random < 0.65) {
+    // 5% de chance d'obtenir une case 'melange'
+    type = 'melange';
   } else {
-    // Répartir les autres types sur les 90% restants
+    // Répartir les autres types sur les 35% restants
     const types = ['normal', 'defi', 'gorgée', 'recul', 'avance'] as const;
     type = types[Math.floor(Math.random() * types.length)];
   }
@@ -150,6 +209,83 @@ const generateCase = (difficulty: Difficulty): Case => {
         type, 
         description: `Tout le monde boit ${drinks} gorgée${drinks > 1 ? 's' : ''} sauf la personne ciblée ! 🍻`, 
         effect: drinks 
+      }
+    }
+    case 'roue': {
+      return { 
+        type, 
+        description: `🎯 Case spéciale : Roue des gorgées ! 🎯`, 
+        effect: 0 
+      }
+    }
+    case 'echange': {
+      return { 
+        type, 
+        description: `🔄 Échange ta position avec un autre joueur !`, 
+        effect: 0 
+      }
+    }
+    case 'bombe': {
+      return { 
+        type, 
+        description: `💣 Bombe ! Tout le monde boit, mais toi tu bois double !`, 
+        effect: 2 
+      }
+    }
+    case 'protection': {
+      return { 
+        type, 
+        description: `🛡️ Tu es protégé pendant 1 tour !`, 
+        effect: 0 
+      }
+    }
+    case 'malediction': {
+      return { 
+        type, 
+        description: `👻 Malédiction ! Tu bois à chaque tour pendant 3 tours !`, 
+        effect: 3 
+      }
+    }
+    case 'chance': {
+      return { 
+        type, 
+        description: `🍀 Chance ! Relance le dé ou avance de 2 cases !`, 
+        effect: 0 
+      }
+    }
+    case 'repetition': {
+      return { 
+        type, 
+        description: `🔄 Répète l'action de la case précédente !`, 
+        effect: 0 
+      }
+    }
+    case 'miroir': {
+      return { 
+        type, 
+        description: `🪞 Miroir ! Les positions sont inversées !`, 
+        effect: 0 
+      }
+    }
+    case 'defi-chaine': {
+      return { 
+        type, 
+        description: `🔗 Défi en chaîne ! Choisis avec qui tu seras lié pendant 5 tours !`, 
+        effect: 5 
+      }
+    }
+    case 'piege': {
+      return { 
+        type, 
+        description: `🕳️ Piège ! Bois autant de gorgées que ta position !`, 
+        effect: 0 
+      }
+    }
+    case 'melange': {
+      return { 
+        type, 
+        description: `🔀 Mélange ! Les positions sont mélangées !`, 
+        effect: 0 
       }
     }
   }
@@ -248,6 +384,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       ...p,
       position: 0,
       drinks: 0,
+      protected: false,
+      cursed: 0,
+      linkedTo: undefined,
+      linkedTurns: 0,
       preferences: p.preferences || {
         color: defaultColor,
         icon: PLAYER_ICONS[Math.floor(Math.random() * PLAYER_ICONS.length)],
@@ -283,6 +423,23 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [showNotification, setShowNotification] = useState(false);
   const [showVictoryScreen, setShowVictoryScreen] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  
+  // États pour la roue des gorgées
+  const [showWheel, setShowWheel] = useState(false);
+  const [wheelSegments, setWheelSegments] = useState<WheelSegment[]>([]);
+  const [wheelSpinning, setWheelSpinning] = useState(false);
+  const [wheelResult, setWheelResult] = useState<WheelSegment | null>(null);
+  const wheelRef = useRef<HTMLDivElement | null>(null);
+  const wheelRotation = useMotionValue(0);
+  const lastWheelTickRef = useRef<number>(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  
+  // États pour les nouvelles cases
+  const [lastCase, setLastCase] = useState<Case | null>(null);
+  const [showChanceDialog, setShowChanceDialog] = useState(false);
+  const [showExchangeDialog, setShowExchangeDialog] = useState(false);
+  const [showChainDialog, setShowChainDialog] = useState(false);
+  const [showNextButton, setShowNextButton] = useState(false);
 
   // Détection des fonctionnalités du navigateur au chargement
   useEffect(() => {
@@ -318,6 +475,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
   }, [winner]);
 
+
+
   const addPlayer = () => {
     if (newPlayerName.trim() && players.length < 15) {
       setPlayers([
@@ -346,6 +505,86 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     
     // Masquer toute notification précédente
     setShowNotification(false);
+    
+    // Gérer les protections et malédictions au début du tour
+    const currentPlayerObj = players[currentPlayer];
+    if (currentPlayerObj) {
+      const updatedPlayers = [...players];
+      
+      // Appliquer la malédiction si le joueur est maudit
+      if (currentPlayerObj.cursed > 0) {
+        currentPlayerObj.drinks += 1;
+        currentPlayerObj.cursed -= 1;
+        console.log(`Le joueur ${currentPlayerObj.name} boit 1 gorgée à cause de la malédiction (${currentPlayerObj.cursed} tours restants)`);
+        
+        // Mettre à jour les statistiques
+        try {
+          updatePlayerStats(currentPlayerObj.id, 'petit-buveur', {
+            totalDrinks: currentPlayerObj.drinks
+          });
+        } catch (error) {
+          console.error("Erreur lors de la mise à jour des statistiques:", error);
+        }
+        
+        setPlayers(updatedPlayers);
+        
+        // Afficher la notification de malédiction
+        setCurrentCase({
+          type: 'malediction',
+          description: `👻 Malédiction ! ${currentPlayerObj.name} boit 1 gorgée (${currentPlayerObj.cursed} tours restants)`,
+          effect: 1
+        });
+        
+        setShowNotification(true);
+        setTimeout(() => {
+          setShowNotification(false);
+        }, 2000);
+      }
+      
+      // Retirer la protection après 1 tour
+      if (currentPlayerObj.protected) {
+        currentPlayerObj.protected = false;
+        console.log(`La protection de ${currentPlayerObj.name} a expiré`);
+      }
+      
+      // Gérer les liens de chaîne
+      if (currentPlayerObj.linkedTo && currentPlayerObj.linkedTurns > 0) {
+        const linkedPlayer = updatedPlayers.find(p => p.id === currentPlayerObj.linkedTo);
+        if (linkedPlayer) {
+          // Le joueur boit comme le joueur lié
+          currentPlayerObj.drinks += 1;
+          currentPlayerObj.linkedTurns -= 1;
+          console.log(`Le joueur ${currentPlayerObj.name} boit 1 gorgée car lié à ${linkedPlayer.name} (${currentPlayerObj.linkedTurns} tours restants)`);
+          
+          // Mettre à jour les statistiques
+          try {
+            updatePlayerStats(currentPlayerObj.id, 'petit-buveur', {
+              totalDrinks: currentPlayerObj.drinks
+            });
+          } catch (error) {
+            console.error("Erreur lors de la mise à jour des statistiques:", error);
+          }
+          
+          // Afficher la notification de lien
+          setCurrentCase({
+            type: 'defi-chaine',
+            description: `🔗 ${currentPlayerObj.name} boit 1 gorgée car lié à ${linkedPlayer.name} (${currentPlayerObj.linkedTurns} tours restants)`,
+            effect: 1
+          });
+          
+          setShowNotification(true);
+          setTimeout(() => {
+            setShowNotification(false);
+          }, 2000);
+          
+          // Retirer le lien si expiré
+          if (currentPlayerObj.linkedTurns <= 0) {
+            currentPlayerObj.linkedTo = undefined;
+            console.log(`Le lien de ${currentPlayerObj.name} a expiré`);
+          }
+        }
+      }
+    }
     
     // Marquer le début du traitement
     setIsProcessingTurn(true);
@@ -438,10 +677,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     
     console.log(`applyEffectToCurrentPlayer: Joueur ${player.name}, position actuelle: ${currentPosition + 1}, type de case: ${caseType.type}`);
 
-    // Pour toutes les cases, y compris les cases normales, utiliser la logique de ciblage
+    // Pour toutes les cases, y compris la roue, utiliser la logique de ciblage
     console.log("Affichage de la fenêtre de ciblage pour la case de type: " + caseType.type);
     setPendingCase(caseType);
     setPendingPosition(currentPosition);
+    
+    // Sauvegarder la case pour la répétition (sauf pour les cases spéciales)
+    if (caseType.type !== 'repetition' && caseType.type !== 'chance' && caseType.type !== 'echange') {
+      setLastCase(caseType);
+    }
     
     setPlayers(updatedPlayers);
     
@@ -463,6 +707,70 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     );
   };
 
+  // Fonction pour gérer le clic sur le bouton "Suivant"
+  const handleNextButtonClick = () => {
+    setShowNotification(false);
+    setShowNextButton(false);
+    
+    // Passer au joueur suivant
+    const nextPlayer = (currentPlayer + 1) % players.length;
+    if (nextPlayer === 0) {
+      setTurnCount(turnCount + 1);
+    }
+    setCurrentPlayer(nextPlayer);
+    setIsProcessingTurn(false);
+  };
+
+  // Fonction utilitaire pour remplacer les passages automatiques
+  const replaceAutomaticNextPlayer = () => {
+    // Ne rien faire - le passage se fait maintenant via le bouton "Suivant"
+  };
+
+  // Fonction pour générer le résumé des effets en cours
+  const generateEffectsSummary = (targetPlayer: GamePlayer) => {
+    // Ajouter les effets actifs du joueur ciblé
+    const activeEffects = [];
+    
+    if (targetPlayer.protected) {
+      activeEffects.push(`🛡️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est <strong>protégé</strong> (immunisé à tout effet négatif)`);
+    }
+    
+    if (targetPlayer.cursed > 0) {
+      activeEffects.push(`👻 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est <strong>maudit</strong> (boit 1 gorgée par tour pendant ${targetPlayer.cursed} tours)`);
+    }
+    
+    if (targetPlayer.linkedTo) {
+      const linkedPlayer = players.find(p => p.id === targetPlayer.linkedTo);
+      if (linkedPlayer) {
+        activeEffects.push(`🔗 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est <strong>lié</strong> à <span class="${linkedPlayer.preferences.color} text-white px-2 py-1 rounded-md">${linkedPlayer.name}</span> (boit comme lui pendant ${targetPlayer.linkedTurns} tours)`);
+      }
+    }
+    
+    // Ajouter les effets des autres joueurs qui peuvent affecter le joueur ciblé
+    players.forEach(player => {
+      if (player.id !== targetPlayer.id) {
+        if (player.protected) {
+          activeEffects.push(`🛡️ <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> est <strong>protégé</strong>`);
+        }
+        if (player.cursed > 0) {
+          activeEffects.push(`👻 <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> est <strong>maudit</strong> (${player.cursed} tours restants)`);
+        }
+        if (player.linkedTo) {
+          const linkedPlayer = players.find(p => p.id === player.linkedTo);
+          if (linkedPlayer) {
+            activeEffects.push(`🔗 <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> est <strong>lié</strong> à <span class="${linkedPlayer.preferences.color} text-white px-2 py-1 rounded-md">${linkedPlayer.name}</span> (${player.linkedTurns} tours restants)`);
+          }
+        }
+      }
+    });
+    
+    if (activeEffects.length > 0) {
+      return `<strong>Effets en cours :</strong>\n${activeEffects.join('\n')}`;
+    } else {
+      return `<em>Aucun effet spécial en cours</em>`;
+    }
+  };
+
   const handleTargetSelection = (targetId: string) => {
     // Fermer la fenêtre de ciblage
     setShowTargetDialog(false);
@@ -480,23 +788,71 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setIsProcessingTurn(false);
       return;
     }
+
+    // Cas spéciaux pour les nouvelles cases
+    if (pendingCase.type === 'roue') {
+      setWheelSegments(generateWheelSegments());
+      setWheelResult(null);
+      setShowWheel(true);
+      setCurrentCase(pendingCase);
+      return;
+    }
     
-    // Révéler l'effet maintenant que le joueur est ciblé
-    let descriptionEffet = pendingCase.description;
+    if (pendingCase.type === 'chance') {
+      setShowChanceDialog(true);
+      setCurrentCase(pendingCase);
+      return;
+    }
+    
+    if (pendingCase.type === 'echange') {
+      setShowExchangeDialog(true);
+      setCurrentCase(pendingCase);
+      return;
+    }
+    
+    if (pendingCase.type === 'defi-chaine') {
+      setShowChainDialog(true);
+      setCurrentCase(pendingCase);
+      return;
+    }
+    
+    if (pendingCase.type === 'repetition') {
+      if (lastCase) {
+        // Appliquer la case précédente
+        applyEffectToPlayer(targetId, lastCase);
+        return;
+      } else {
+        // Si pas de case précédente, case safe
+        setCurrentCase({
+          type: 'normal',
+          description: 'Pas de case précédente, tu es safe !\n\n<em>Aucun effet spécial en cours</em>',
+          effect: 0
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
+      }
+    }
+    
+    // Générer le résumé complet des effets
+    const effectsSummary = generateEffectsSummary(targetPlayer);
+    
+    // Personnaliser la description en fonction du type de case
+    let descriptionEffet = effectsSummary;
     
     // Pour les cases "safe"
     if (pendingCase.type === 'normal') {
-      descriptionEffet = `Case safe ! Le joueur <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est en sécurité pour ce tour.`;
+      descriptionEffet = `Case safe ! Le joueur <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est en sécurité pour ce tour.\n\n${effectsSummary}`;
     }
     // Pour les cases "avance" ou "recul"
     else if (pendingCase.type === 'avance' || pendingCase.type === 'recul') {
       // Garder les compliments pour Sim ou Riqui
       if (targetPlayer.name.toLowerCase() === 'sim' || targetPlayer.name.toLowerCase() === 'riqui') {
         const compliment = simCompliments[Math.floor(Math.random() * simCompliments.length)];
-        descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">"${compliment}" ${targetPlayer.name}</span>`;
+        descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">"${compliment}" ${targetPlayer.name}</span>\n\n${effectsSummary}`;
       } else {
         // Format standard pour les autres joueurs
-        descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>`;
+        descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>\n\n${effectsSummary}`;
       }
     } else {
       // Sélectionner un message aléatoire pour les joueurs qui doivent boire (40% de chance)
@@ -512,6 +868,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           if (showRandomMessage) {
             descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
           }
+          descriptionEffet += `\n\n${effectsSummary}`;
         } 
         // Cas spécial pour Deb - sans phrase spéciale quand elle est épargnée
         else if (targetPlayer.name.toLowerCase() === 'deb') {
@@ -519,12 +876,14 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           if (showRandomMessage) {
             descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
           }
+          descriptionEffet += `\n\n${effectsSummary}`;
         }
         else {
           descriptionEffet = `${pendingCase.description}\n\nJoueur épargné : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>`;
           if (showRandomMessage) {
             descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
           }
+          descriptionEffet += `\n\n${effectsSummary}`;
         }
       } else {
         // Easter egg pour Sim ou Riqui
@@ -534,6 +893,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           if (showRandomMessage) {
             descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
           }
+          descriptionEffet += `\n\n${effectsSummary}`;
         } 
         // Cas spécial pour Deb - avec message spécial quand elle boit directement, mais sans couleur
         else if (targetPlayer.name.toLowerCase() === 'deb') {
@@ -542,12 +902,14 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           if (showRandomMessage) {
             descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
           }
+          descriptionEffet += `\n\n${effectsSummary}`;
         }
         else {
           descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>`;
           if (showRandomMessage) {
             descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
           }
+          descriptionEffet += `\n\n${effectsSummary}`;
         }
       }
     }
@@ -557,25 +919,22 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       description: descriptionEffet
     });
     
-    // Afficher la notification avec l'effet révélé
+    // Afficher la notification avec l'effet révélé et le bouton "Suivant"
     setShowNotification(true);
-    
-    // Masquer la notification après un délai
-    setTimeout(() => {
-      setShowNotification(false);
-    }, 3000);
+    setShowNextButton(true);
     
     // Appliquer l'effet au joueur ciblé
     applyEffectToPlayer(targetId);
   };
 
-  const applyEffectToPlayer = (targetPlayerId: string) => {
-    if (!pendingCase || pendingPosition === null) {
+  const applyEffectToPlayer = (targetPlayerId: string, customCase?: Case) => {
+    const caseToApply = customCase || pendingCase;
+    if (!caseToApply || pendingPosition === null) {
       setIsProcessingTurn(false);
       return;
     }
     
-    console.log(`applyEffectToPlayer: Joueur ciblé: ${targetPlayerId}, type de case: ${pendingCase.type}`);
+    console.log(`applyEffectToPlayer: Joueur ciblé: ${targetPlayerId}, type de case: ${caseToApply.type}`);
     
     // Créer une copie des joueurs pour la mise à jour
     const updatedPlayers = [...players];
@@ -587,35 +946,30 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
     
     // Appliquer l'effet en fonction du type de case
-    switch (pendingCase.type) {
+    switch (caseToApply.type) {
       case 'normal':
         // Pour les cases safe, on ne fait rien de spécial
         console.log(`Le joueur ${targetPlayer.name} est sur une case safe`);
         break;
         
-      case 'tous':
-        // Faire boire tous les autres joueurs sauf le joueur ciblé
-        updatedPlayers.forEach((p) => {
-          if (p.id !== targetPlayerId) {
-            p.drinks += pendingCase.effect;
-            console.log(`Le joueur ${p.name} boit ${pendingCase.effect} gorgées`);
-            
-            // Mettre à jour les statistiques
-            try {
-              updatePlayerStats(p.id, 'petit-buveur', {
-                totalDrinks: p.drinks
-              });
-            } catch (error) {
-              console.error("Erreur lors de la mise à jour des statistiques:", error);
-            }
-          }
-        });
-        break;
-        
       case 'gorgée':
-        // Ajouter des gorgées au joueur ciblé
-        targetPlayer.drinks += pendingCase.effect;
-        console.log(`Le joueur ${targetPlayer.name} boit ${pendingCase.effect} gorgées`);
+      case 'defi':
+        // Vérifier si le joueur est protégé
+        if (targetPlayer.protected) {
+          console.log(`Le joueur ${targetPlayer.name} a été protégé`);
+          // Afficher un message spécial pour le joueur protégé
+          setCurrentCase({
+            ...caseToApply,
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+          });
+          setShowNotification(true);
+          setShowNextButton(true);
+          return;
+        }
+        
+        // Si pas protégé, continuer normalement
+        targetPlayer.drinks += caseToApply.effect;
+        console.log(`Le joueur ${targetPlayer.name} boit ${caseToApply.effect} gorgées`);
         
         // Mettre à jour les statistiques
         try {
@@ -627,18 +981,50 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         }
         break;
         
+      case 'tous':
+        // Faire boire tous les autres joueurs sauf le joueur ciblé
+        updatedPlayers.forEach((p) => {
+          if (p.id !== targetPlayerId) {
+            p.drinks += caseToApply.effect;
+            console.log(`Le joueur ${p.name} boit ${caseToApply.effect} gorgées`);
+            
+            // Mettre à jour les statistiques
+            try {
+              updatePlayerStats(p.id, 'petit-buveur', {
+                totalDrinks: p.drinks
+              });
+            } catch (error) {
+              console.error("Erreur lors de la mise à jour des statistiques:", error);
+            }
+          }
+        });
+
+        
       case 'avance':
       case 'recul':
-        // Vérifier si le joueur est sur la case 1 et que l'effet est un recul
-        if (pendingCase.type === 'recul' && pendingPosition === 0) {
+        // Vérifier si le joueur est protégé
+        if (targetPlayer.protected) {
+          console.log(`Le joueur ${targetPlayer.name} a été protégé du déplacement`);
+          // Afficher un message spécial pour le joueur protégé
+          setCurrentCase({
+            ...caseToApply,
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+          });
+          setShowNotification(true);
+          setShowNextButton(true);
+          return;
+        }
+        
+        // Vérifier si le joueur ciblé est sur la case 1 et que l'effet est un recul
+        if (caseToApply.type === 'recul' && targetPlayer.position === 0) {
           console.log(`Le joueur ${targetPlayer.name} est sur la case 1 et ne peut pas reculer`);
           // Ne pas appliquer l'effet de recul
           break;
         }
 
         // Calculer la nouvelle position après l'effet
-        const effectPosition = Math.max(0, Math.min(boardSize - 1, pendingPosition + pendingCase.effect));
-        console.log(`applyEffectToPlayer: Effet ${pendingCase.type}, déplacement de ${pendingPosition + 1} vers ${effectPosition + 1}`);
+        const effectPosition = Math.max(0, Math.min(boardSize - 1, targetPlayer.position + caseToApply.effect));
+        console.log(`applyEffectToPlayer: Effet ${caseToApply.type}, déplacement de ${targetPlayer.position + 1} vers ${effectPosition + 1}`);
         
         // Mettre à jour la position du joueur avec animation
         setAnimatingPlayer(targetPlayer.id);
@@ -662,9 +1048,162 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         }
         break;
         
+      case 'bombe':
+        // Faire boire tous les joueurs, mais le ciblé boit double (sauf s'il est protégé)
+        updatedPlayers.forEach((p) => {
+          if (p.id === targetPlayerId) {
+            if (p.protected) {
+              console.log(`Le joueur ${p.name} a été protégé de la bombe`);
+              // Afficher un message spécial pour le joueur protégé
+              setCurrentCase({
+                ...caseToApply,
+                description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${p.preferences.color} text-white px-2 py-1 rounded-md">${p.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+              });
+              setShowNotification(true);
+              setShowNextButton(true);
+              return;
+            } else {
+              p.drinks += caseToApply.effect * 2; // Double pour le ciblé
+              console.log(`Le joueur ${p.name} boit ${caseToApply.effect * 2} gorgées (double)`);
+            }
+          } else {
+            p.drinks += caseToApply.effect;
+            console.log(`Le joueur ${p.name} boit ${caseToApply.effect} gorgées`);
+          }
+          
+          // Mettre à jour les statistiques
+          try {
+            updatePlayerStats(p.id, 'petit-buveur', {
+              totalDrinks: p.drinks
+            });
+          } catch (error) {
+            console.error("Erreur lors de la mise à jour des statistiques:", error);
+          }
+        });
+        break;
+        
+      case 'protection':
+        // Protéger le joueur pendant 1 tour
+        targetPlayer.protected = true;
+        console.log(`Le joueur ${targetPlayer.name} est protégé pendant 1 tour`);
+        break;
+        
+      case 'malediction':
+        // Vérifier si le joueur est protégé
+        if (targetPlayer.protected) {
+          console.log(`Le joueur ${targetPlayer.name} a été protégé de la malédiction`);
+          // Afficher un message spécial pour le joueur protégé
+          setCurrentCase({
+            ...caseToApply,
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+          });
+          setShowNotification(true);
+          setTimeout(() => {
+            setShowNotification(false);
+          }, 3000);
+          
+          // Passer au joueur suivant
+          setTimeout(() => {
+            const nextPlayer = (currentPlayer + 1) % players.length;
+            if (nextPlayer === 0) {
+              setTurnCount(turnCount + 1);
+            }
+            setCurrentPlayer(nextPlayer);
+            setIsProcessingTurn(false);
+          }, 2000);
+          return;
+        }
+        
+        // Maudire le joueur pendant 3 tours
+        targetPlayer.cursed = 3;
+        console.log(`Le joueur ${targetPlayer.name} est maudit pendant 3 tours`);
+        break;
+        
+      case 'miroir':
+        // Vérifier si le joueur ciblé est protégé
+        if (targetPlayer.protected) {
+          console.log(`Le joueur ${targetPlayer.name} a été protégé du miroir`);
+          // Afficher un message spécial pour le joueur protégé
+          setCurrentCase({
+            ...caseToApply,
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+          });
+          setShowNotification(true);
+          setShowNextButton(true);
+          return;
+        }
+        
+        // Inverser les positions de tous les joueurs (premier devient dernier, etc.)
+        const sortedPlayers = [...updatedPlayers].sort((a, b) => b.position - a.position);
+        const mirrorPositions = sortedPlayers.map(p => p.position);
+        
+        // Créer un mapping d'inversion : premier joueur prend la position du dernier, etc.
+        updatedPlayers.forEach((p) => {
+          const sortedIndex = sortedPlayers.findIndex(sp => sp.id === p.id);
+          const invertedIndex = mirrorPositions.length - 1 - sortedIndex;
+          p.position = mirrorPositions[invertedIndex];
+        });
+        
+        console.log('Positions inversées par effet miroir (premier ↔ dernier)');
+        break;
+        
+      case 'piege':
+        // Vérifier si le joueur est protégé
+        if (targetPlayer.protected) {
+          console.log(`Le joueur ${targetPlayer.name} a été protégé du piège`);
+          // Afficher un message spécial pour le joueur protégé
+          setCurrentCase({
+            ...caseToApply,
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+          });
+          setShowNotification(true);
+          setShowNextButton(true);
+          return;
+        }
+        
+        // Si pas protégé, continuer normalement
+        const trapDrinks = targetPlayer.position + 1;
+        targetPlayer.drinks += trapDrinks;
+        console.log(`Le joueur ${targetPlayer.name} boit ${trapDrinks} gorgées (position ${targetPlayer.position + 1})`);
+        
+        // Mettre à jour les statistiques
+        try {
+          updatePlayerStats(targetPlayer.id, 'petit-buveur', {
+            totalDrinks: targetPlayer.drinks
+          });
+        } catch (error) {
+          console.error("Erreur lors de la mise à jour des statistiques:", error);
+        }
+        break;
+        
+      case 'melange':
+        // Vérifier si le joueur ciblé est protégé
+        if (targetPlayer.protected) {
+          console.log(`Le joueur ${targetPlayer.name} a été protégé du mélange`);
+          // Afficher un message spécial pour le joueur protégé
+          setCurrentCase({
+            ...caseToApply,
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+          });
+          setShowNotification(true);
+          setShowNextButton(true);
+          return;
+        }
+        
+        // Mélanger aléatoirement les positions de tous les joueurs
+        const shufflePositions = updatedPlayers.map(p => p.position);
+        const shuffledPositions = [...shufflePositions].sort(() => Math.random() - 0.5);
+        
+        updatedPlayers.forEach((p, index) => {
+          p.position = shuffledPositions[index];
+        });
+        
+        console.log('Positions mélangées aléatoirement');
+        break;
+        
       // Pour les autres types de cases (normal, defi)
       default:
-        console.log(`Aucun effet spécial à appliquer pour la case de type ${pendingCase.type}`);
+        console.log(`Aucun effet spécial à appliquer pour la case de type ${caseToApply.type}`);
         break;
     }
     
@@ -681,14 +1220,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setPendingCase(null);
       setPendingPosition(null);
       
-      // Passer au joueur suivant après un délai
-      const nextPlayer = (currentPlayer + 1) % updatedPlayers.length;
-      if (nextPlayer === 0) {
-        setTurnCount(turnCount + 1);
-      }
-      setCurrentPlayer(nextPlayer);
-      setIsProcessingTurn(false);
-    }, 2000);
+      // Ne pas passer automatiquement au joueur suivant - c'est le bouton "Suivant" qui s'en charge
+      // setIsProcessingTurn(false);
+    }, 500);
   };
 
   const selectRandomPlayer = () => {
@@ -714,7 +1248,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       const resetPlayers = players.map(p => ({
         ...p,
         position: 0,
-        drinks: 0
+        drinks: 0,
+        protected: false,
+        cursed: 0,
+        linkedTo: undefined,
+        linkedTurns: 0
       }));
       
       // Mettre à jour l'état des joueurs
@@ -747,6 +1285,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         ...p,
         position: 0,
         drinks: 0,
+        protected: false,
+        cursed: 0,
+        linkedTo: undefined,
+        linkedTurns: 0,
         color: defaultColor
       }))
     );
@@ -901,6 +1443,280 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       });
     }
   }
+
+  // Fonctions utilitaires pour la roue des gorgées
+  const toRad = (deg: number) => (Math.PI / 180) * deg
+  const polar = (cx: number, cy: number, r: number, angleDeg: number) => {
+    const a = toRad(angleDeg)
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }
+  }
+  const arcPath = (cx: number, cy: number, r: number, startDeg: number, endDeg: number) => {
+    const start = polar(cx, cy, r, startDeg)
+    const end = polar(cx, cy, r, endDeg)
+    const largeArc = endDeg - startDeg <= 180 ? 0 : 1
+    return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z`
+  }
+
+  const ensureAudioCtx = async () => {
+    if (!audioCtxRef.current) {
+      const win = window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }
+      const Ctx = win.AudioContext || win.webkitAudioContext
+      if (Ctx) {
+        audioCtxRef.current = new Ctx()
+      }
+    }
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      try { await audioCtxRef.current.resume() } catch {}
+    }
+  }
+
+  const playTick = () => {
+    const ctx = audioCtxRef.current
+    if (!ctx) return
+    const now = ctx.currentTime
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'square'
+    osc.frequency.value = 900 + Math.random() * 300
+    gain.gain.setValueAtTime(0.0, now)
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.005)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06)
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.08)
+  }
+
+  // Couleur basée sur la valeur (0 = SAFE → vert; 1..12 → jaune→orange→rouge)
+  const colorForValue = (v: number): string => {
+    if (v === 0) return '#10b981' // SAFE vert
+    const ratio = Math.max(0, Math.min(1, v / 12))
+    const hue = 60 - 60 * ratio // 60 (jaune) → 0 (rouge)
+    const saturation = 85
+    const lightness = 55 - 10 * ratio // plus élevé = plus sombre
+    return `hsl(${hue}deg ${saturation}% ${lightness}%)`
+  }
+
+
+
+  // Fonction pour faire tourner la roue
+  const spinWheel = async () => {
+    if (wheelSpinning || wheelSegments.length === 0) return
+    setWheelSpinning(true)
+
+    const anglePerSegment = 360 / Math.max(wheelSegments.length, 1)
+    const randomIndex = Math.floor(Math.random() * wheelSegments.length)
+    const segStart = randomIndex * anglePerSegment
+    const segAngle = anglePerSegment
+    const extraSpins = 4 + Math.floor(Math.random() * 7) // 4-10 tours
+    const duration = 4 + Math.random() * 2
+    const offsetWithinSegment = Math.random() * segAngle
+    const targetAngle = 360 * extraSpins - (segStart + offsetWithinSegment)
+    const overshootAngle = segAngle * (0.12 + Math.random() * 0.18)
+    const accelAngle = targetAngle * 0.25
+
+    await ensureAudioCtx()
+    wheelRotation.set(0)
+    lastWheelTickRef.current = 0
+
+    animate(wheelRotation, [0, accelAngle, targetAngle + overshootAngle, targetAngle], {
+      duration,
+      times: [0, 0.25, 0.9, 1],
+      ease: ['easeIn', [0.16, 1, 0.3, 1], 'easeOut'],
+      onUpdate: (v) => {
+        const mod = ((v % 360) + 360) % 360
+        const tickIndex = Math.floor(mod / anglePerSegment)
+        if (tickIndex !== lastWheelTickRef.current) { 
+          lastWheelTickRef.current = tickIndex; 
+          playTick() 
+        }
+      }
+    })
+
+    await new Promise(resolve => setTimeout(resolve, Math.ceil(duration * 1000) + 80))
+
+    const result = wheelSegments[randomIndex]
+    setWheelResult(result)
+    setWheelSpinning(false)
+  }
+
+  // Fonction pour relancer le dé (utilisée par la case Chance)
+  const rerollDice = () => {
+    // Réinitialiser les états de traitement
+    setIsProcessingTurn(false);
+    setIsDiceRolling(false);
+    setAnimatedDiceValue(null);
+    setDiceResult(null);
+    setDiceValue(null);
+    
+    // Masquer toute notification précédente
+    setShowNotification(false);
+    
+    // Marquer le début du traitement
+    setIsProcessingTurn(true);
+    setIsDiceRolling(true);
+    
+    // Générer un résultat de dé entre 1 et 6
+    const result = Math.floor(Math.random() * 6) + 1;
+    setDiceResult(result);
+    setDiceValue(result);
+    
+    // Animation simple du dé
+    const duration = 800;
+    const interval = 100;
+    const steps = duration / interval;
+    let currentStep = 0;
+    
+    const rollInterval = setInterval(() => {
+      if (currentStep < steps - 1) {
+        setAnimatedDiceValue(Math.floor(Math.random() * 6) + 1);
+        currentStep++;
+      } else {
+        clearInterval(rollInterval);
+        setAnimatedDiceValue(result);
+        setIsDiceRolling(false);
+        
+        // Obtenir le joueur actuel
+        const player = players[currentPlayer];
+        if (!player) {
+          setIsProcessingTurn(false);
+          return;
+        }
+        
+        // Calculer la nouvelle position
+        const newPosition = Math.min(player.position + result, boardSize - 1);
+        console.log(`Joueur ${player.name} avance de la case ${player.position + 1} à la case ${newPosition + 1} (relance)`);
+        
+        // Activer l'animation de déplacement
+        setAnimatingPlayer(player.id);
+        
+        // Mettre à jour directement la position du joueur
+        const updatedPlayers = players.map((p, idx) => {
+          if (idx === currentPlayer) {
+            return { ...p, position: newPosition };
+          }
+          return p;
+        });
+        
+        // Mettre à jour l'état des joueurs immédiatement
+        setPlayers(updatedPlayers);
+        
+        // Vérifier si le joueur a gagné
+        if (newPosition === boardSize - 1) {
+          setWinner(updatedPlayers[currentPlayer]);
+          try {
+            updatePlayerStats(player.id, 'petit-buveur', {
+              wins: 1
+            });
+          } catch (error) {
+            console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
+          }
+          setIsProcessingTurn(false);
+          return;
+        }
+        
+        // Générer un effet aléatoire
+        const caseType = generateCase(gameDifficulty);
+        console.log(`Case générée (relance): type=${caseType.type}, description=${caseType.description}, effet=${caseType.effect}`);
+        
+        // Réinitialiser l'animation après un délai
+        setTimeout(() => {
+          setAnimatingPlayer(null);
+        }, 500);
+        
+        // Appliquer l'effet après un court délai
+        setTimeout(() => {
+          applyEffectToCurrentPlayer(caseType, newPosition, currentPlayer, updatedPlayers);
+        }, 800);
+      }
+    }, interval);
+  };
+
+  // Fonction pour gérer la fin de la roue
+  const handleWheelComplete = useCallback(() => {
+    if (!wheelResult) return;
+    
+    const currentPlayerObj = players[currentPlayer];
+    if (!currentPlayerObj) return;
+    
+    // Appliquer le résultat de la roue
+    if (wheelResult.value > 0) {
+      // Le joueur doit boire
+      const updatedPlayers = players.map((p, idx) => {
+        if (idx === currentPlayer) {
+          return { ...p, drinks: p.drinks + wheelResult.value };
+        }
+        return p;
+      });
+      
+      setPlayers(updatedPlayers);
+      
+      // Mettre à jour les statistiques
+      try {
+        updatePlayerStats(currentPlayerObj.id, 'petit-buveur', {
+          totalDrinks: currentPlayerObj.drinks + wheelResult.value
+        });
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour des statistiques:", error);
+      }
+      
+      // Afficher le résultat
+      setCurrentCase({
+        type: 'gorgée',
+        description: `🎯 Résultat de la roue : ${wheelResult.label} !\n\nJoueur ciblé : <span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span>`,
+        effect: wheelResult.value
+      });
+      
+      setShowNotification(true);
+      
+      // Masquer la notification après un délai
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 3000);
+    } else {
+      // Case SAFE
+      setCurrentCase({
+        type: 'normal',
+        description: `🎯 Résultat de la roue : SAFE !\n\nJoueur ciblé : <span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> est en sécurité !`,
+        effect: 0
+      });
+      
+      setShowNotification(true);
+      
+      // Masquer la notification après un délai
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 3000);
+    }
+    
+    // Fermer la roue
+    setShowWheel(false);
+    setWheelResult(null);
+    
+    // Passer au joueur suivant après un délai
+    setTimeout(() => {
+      setCurrentPlayer(prev => {
+        const nextPlayer = (prev + 1) % players.length;
+        if (nextPlayer === 0) {
+          setTurnCount(prevTurn => prevTurn + 1);
+        }
+        return nextPlayer;
+      });
+      setIsProcessingTurn(false);
+    }, 2000);
+  }, [wheelResult, players, currentPlayer, updatePlayerStats]);
+
+  // Gérer la fin de la roue
+  useEffect(() => {
+    if (wheelResult && !wheelSpinning) {
+      // Attendre un peu avant d'appliquer le résultat
+      const timer = setTimeout(() => {
+        handleWheelComplete();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [wheelResult, wheelSpinning, handleWheelComplete]);
 
   // Mise à jour du rendu des classements des joueurs
   const renderPlayerRanking = (player: GamePlayer, index: number) => {
@@ -1152,7 +1968,17 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           >
             <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-6 rounded-lg shadow-lg text-center">
               <h3 className="text-xl font-bold mb-2">Effet de la case :</h3>
-              <p className="text-lg whitespace-pre-line" dangerouslySetInnerHTML={{ __html: currentCase.description }}></p>
+              <p className="text-lg whitespace-pre-line mb-4" dangerouslySetInnerHTML={{ __html: currentCase.description }}></p>
+              
+              {/* Bouton "Suivant" */}
+              {showNextButton && (
+                <Button
+                  onClick={handleNextButtonClick}
+                  className="bg-white text-emerald-600 hover:bg-gray-100 font-bold py-2 px-6 rounded-lg shadow-md transition-colors"
+                >
+                  Suivant
+                </Button>
+              )}
             </div>
           </motion.div>
         )}
@@ -1203,6 +2029,17 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                 <PlayerName player={player} className="font-medium" />
                 <div className="text-sm text-muted-foreground">
                   {player.drinks} gorgées
+                </div>
+                <div className="flex gap-1 mt-1">
+                  {player.protected && (
+                    <span className="text-xs bg-blue-500 text-white px-1 rounded">🛡️</span>
+                  )}
+                  {player.cursed > 0 && (
+                    <span className="text-xs bg-red-500 text-white px-1 rounded">👻 {player.cursed}</span>
+                  )}
+                  {player.linkedTo && player.linkedTurns > 0 && (
+                    <span className="text-xs bg-purple-500 text-white px-1 rounded">🔗 {player.linkedTurns}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1259,6 +2096,333 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog pour la case Chance */}
+      <Dialog open={showChanceDialog} onOpenChange={setShowChanceDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>🍀 Case Chance</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-center text-muted-foreground">
+              Choisis ton action :
+            </p>
+            <div className="grid grid-cols-1 gap-3">
+              <Button 
+                onClick={() => {
+                  setShowChanceDialog(false);
+                  // Relancer le dé avec la fonction spéciale
+                  rerollDice();
+                }}
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold"
+              >
+                🎲 Relancer le dé
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowChanceDialog(false);
+                  // Avancer de 2 cases
+                  const currentPlayerObj = players[currentPlayer];
+                  if (currentPlayerObj) {
+                    const newPosition = Math.min(currentPlayerObj.position + 2, boardSize - 1);
+                    const updatedPlayers = players.map((p, idx) => {
+                      if (idx === currentPlayer) {
+                        return { ...p, position: newPosition };
+                      }
+                      return p;
+                    });
+                    setPlayers(updatedPlayers);
+                    
+                    // Vérifier si le joueur a gagné
+                    if (newPosition === boardSize - 1) {
+                      setWinner(updatedPlayers[currentPlayer]);
+                      try {
+                        updatePlayerStats(currentPlayerObj.id, 'petit-buveur', {
+                          wins: 1
+                        });
+                      } catch (error) {
+                        console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
+                      }
+                      setIsProcessingTurn(false);
+                      return;
+                    }
+                    
+                    // Passer au joueur suivant
+                    const nextPlayer = (currentPlayer + 1) % players.length;
+                    if (nextPlayer === 0) {
+                      setTurnCount(turnCount + 1);
+                    }
+                    setCurrentPlayer(nextPlayer);
+                    setIsProcessingTurn(false);
+                  }
+                }}
+                className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold"
+              >
+                ➡️ Avancer de 2 cases
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog pour la case Défi en chaîne */}
+      <Dialog open={showChainDialog} onOpenChange={setShowChainDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>🔗 Défi en chaîne</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-center text-muted-foreground">
+              Choisis avec qui tu seras lié pendant 5 tours :
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {players.filter(p => p.id !== players[currentPlayer].id).map(player => (
+                <Button
+                  key={player.id}
+                  onClick={() => {
+                    setShowChainDialog(false);
+                    // Lier le joueur actuel au joueur ciblé
+                    const currentPlayerObj = players[currentPlayer];
+                    const targetPlayerObj = player;
+                    
+                    const updatedPlayers = players.map(p => {
+                      if (p.id === currentPlayerObj.id) {
+                        return { 
+                          ...p, 
+                          linkedTo: targetPlayerObj.id,
+                          linkedTurns: 5
+                        };
+                      }
+                      return p;
+                    });
+                    
+                    setPlayers(updatedPlayers);
+                    
+                    // Afficher le résultat
+                    setCurrentCase({
+                      type: 'defi-chaine',
+                      description: `🔗 ${currentPlayerObj.name} est maintenant lié à ${targetPlayerObj.name} pendant 5 tours !`,
+                      effect: 5
+                    });
+                    
+                    setShowNotification(true);
+                    setTimeout(() => {
+                      setShowNotification(false);
+                    }, 3000);
+                    
+                    // Passer au joueur suivant
+                    const nextPlayer = (currentPlayer + 1) % players.length;
+                    if (nextPlayer === 0) {
+                      setTurnCount(turnCount + 1);
+                    }
+                    setCurrentPlayer(nextPlayer);
+                    setIsProcessingTurn(false);
+                  }}
+                  className={`p-3 ${player.preferences.color} text-white font-bold`}
+                >
+                  <PlayerName player={player} />
+                </Button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog pour la case Échange */}
+      <Dialog open={showExchangeDialog} onOpenChange={setShowExchangeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>🔄 Case Échange</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-center text-muted-foreground">
+              Choisis un joueur avec qui échanger ta position :
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {players.filter(p => p.id !== players[currentPlayer].id).map(player => (
+                <Button
+                  key={player.id}
+                  onClick={() => {
+                    setShowExchangeDialog(false);
+                    // Échanger les positions
+                    const currentPlayerObj = players[currentPlayer];
+                    const targetPlayerObj = player;
+                    const currentPos = currentPlayerObj.position;
+                    const targetPos = targetPlayerObj.position;
+                    
+                    const updatedPlayers = players.map(p => {
+                      if (p.id === currentPlayerObj.id) {
+                        return { ...p, position: targetPos };
+                      }
+                      if (p.id === targetPlayerObj.id) {
+                        return { ...p, position: currentPos };
+                      }
+                      return p;
+                    });
+                    
+                    setPlayers(updatedPlayers);
+                    
+                    // Vérifier si un des joueurs a gagné
+                    if (targetPos === boardSize - 1) {
+                      setWinner(updatedPlayers[currentPlayer]);
+                      try {
+                        updatePlayerStats(currentPlayerObj.id, 'petit-buveur', {
+                          wins: 1
+                        });
+                      } catch (error) {
+                        console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
+                      }
+                      setIsProcessingTurn(false);
+                      return;
+                    }
+                    
+                    // Afficher le résultat
+                    setCurrentCase({
+                      type: 'echange',
+                      description: `🔄 ${currentPlayerObj.name} et ${targetPlayerObj.name} ont échangé leurs positions !`,
+                      effect: 0
+                    });
+                    
+                    setShowNotification(true);
+                    setTimeout(() => {
+                      setShowNotification(false);
+                    }, 3000);
+                    
+                    // Passer au joueur suivant
+                    const nextPlayer = (currentPlayer + 1) % players.length;
+                    if (nextPlayer === 0) {
+                      setTurnCount(turnCount + 1);
+                    }
+                    setCurrentPlayer(nextPlayer);
+                    setIsProcessingTurn(false);
+                  }}
+                  className={`p-3 ${player.preferences.color} text-white font-bold`}
+                >
+                  <PlayerName player={player} />
+                </Button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Roue des gorgées */}
+      <AnimatePresence>
+        {showWheel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 300, 
+                damping: 20
+              }}
+              className="bg-card/90 backdrop-blur-md rounded-lg shadow-xl max-w-2xl w-full mx-auto overflow-hidden"
+            >
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold mb-2">🎯 Roue des Gorgées</h2>
+                  <p className="text-muted-foreground">
+                    Au tour de <PlayerName player={players[currentPlayer]} className="font-bold" />
+                  </p>
+                </div>
+
+                <div className="flex flex-col items-center gap-6">
+                  <div className="relative w-64 h-64 md:w-80 md:h-80">
+                    {/* Flèche fixe (pointeur résultat) */}
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 drop-shadow">
+                      <svg width="28" height="28" viewBox="0 0 28 28">
+                        <polygon points="14,0 24,16 4,16" fill="#f43f5e" />
+                        <rect x="12.5" y="16" width="3" height="8" rx="1.5" fill="#f43f5e" />
+                      </svg>
+                    </div>
+
+                    {/* Roue animée */}
+                    <motion.div
+                      className="absolute inset-0 rounded-full ring-2 ring-white/20 shadow-[0_8px_30px_rgba(0,0,0,0.35)] overflow-visible"
+                      style={{ originX: 0.5, originY: 0.5, rotate: wheelRotation }}
+                      ref={wheelRef}
+                    >
+                      <svg viewBox="0 0 200 200" width="100%" height="100%">
+                        {/* Fond */}
+                        <circle cx="100" cy="100" r="98" fill="#0f172a" />
+                        {/* Segments */}
+                        {wheelSegments.map((seg, i) => {
+                          const anglePerSegment = 360 / Math.max(wheelSegments.length, 1)
+                          const start = -90 + i * anglePerSegment
+                          const end = start + anglePerSegment
+                          const path = arcPath(100, 100, 95, start, end)
+                          return (
+                            <g key={seg.id}>
+                              <path d={path} fill={colorForValue(seg.value)} opacity={0.95} />
+                              {/* séparateur */}
+                              <path d={`M 100 100 L ${polar(100,100,95,start).x} ${polar(100,100,95,start).y}`} stroke="#0f172a" strokeWidth={1.2} />
+                            </g>
+                          )
+                        })}
+                        {/* Moyeu */}
+                        <circle cx="100" cy="100" r="10" fill="#ffffff" />
+                        <circle cx="100" cy="100" r="4" fill="#0f172a" />
+                      </svg>
+                    </motion.div>
+                  </div>
+
+                  {!wheelResult && (
+                    <Button 
+                      disabled={wheelSpinning} 
+                      onClick={spinWheel} 
+                      className="px-8 py-4 text-lg font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                    >
+                      {wheelSpinning ? 'La roue tourne…' : 'Lancer la roue'}
+                    </Button>
+                  )}
+
+                  {wheelResult && (
+                    <div className="text-center">
+                      <div className="text-xl font-bold mb-2">
+                        Résultat : {wheelResult.label}
+                      </div>
+                      <Button 
+                        onClick={() => setShowWheel(false)}
+                        className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg shadow-lg"
+                      >
+                        Continuer
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Légende des couleurs */}
+                {wheelSegments.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold mb-3">Légende</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                      {Object.entries(wheelSegments.reduce<Record<string, { color: string; count: number }>>((acc, s) => {
+                        const key = s.label
+                        const color = colorForValue(s.value)
+                        if (!acc[key]) acc[key] = { color, count: 0 }
+                        acc[key].count += 1
+                        return acc
+                      }, {})).map(([label, info]) => (
+                        <div key={label} className="flex items-center gap-2">
+                          <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: info.color }} />
+                          <span className="text-muted-foreground">{label}{info.count > 1 ? ` ×${info.count}` : ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Écran de victoire */}
       <AnimatePresence>

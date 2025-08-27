@@ -10,6 +10,8 @@ import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { X, Trophy, Activity, Settings, User } from 'lucide-react';
 import { PlayerPreferences, PLAYER_ICONS } from '@/lib/players';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { GAMES } from '@/lib/games'
+import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils';
 
 // Ajouter un style CSS pour les différentes animations de dégradé
 const specialPlayerNameStyle = `
@@ -19,52 +21,20 @@ const specialPlayerNameStyle = `
     100% { background-position: 0% 50%; }
   }
   
-  /* Effet rouge */
-  .special-player-name-red {
-    background: linear-gradient(90deg, #ff0000, #ff6b6b, #ff0000);
-    background-size: 200% auto;
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: gradientFlow 3s linear infinite;
-    font-weight: bold;
-    text-shadow: 0 0 5px rgba(255, 0, 0, 0.3);
+  @keyframes sparkle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
   
-  /* Effet bleu */
-  .special-player-name-blue {
-    background: linear-gradient(90deg, #0066ff, #00ccff, #0066ff);
-    background-size: 200% auto;
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: gradientFlow 3s linear infinite;
-    font-weight: bold;
-    text-shadow: 0 0 5px rgba(0, 102, 255, 0.3);
+  @keyframes lightning {
+    0%, 90%, 100% { opacity: 1; }
+    5%, 85% { opacity: 0.3; }
   }
   
-  /* Effet arc-en-ciel */
-  .special-player-name-rainbow {
-    background: linear-gradient(90deg, #ff0000, #ffa500, #ffff00, #00ff00, #0000ff, #4b0082, #ee82ee, #ff0000);
-    background-size: 400% auto;
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: gradientFlow 6s linear infinite;
-    font-weight: bold;
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
-  }
-  
-  /* Effet or */
-  .special-player-name-gold {
-    background: linear-gradient(90deg, #ffd700, #ffcc00, #ffdb58, #ffd700);
-    background-size: 200% auto;
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: gradientFlow 3s linear infinite;
-    font-weight: bold;
-    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+  @keyframes matrix {
+    0% { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00; }
+    50% { text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00; }
+    100% { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00; }
   }
   
   /* Effet feu */
@@ -79,16 +49,96 @@ const specialPlayerNameStyle = `
     text-shadow: 0 0 8px rgba(255, 69, 0, 0.7);
   }
   
+  /* Effet glace */
+  .special-player-name-ice {
+    background: linear-gradient(90deg, #00ffff, #87ceeb, #00ffff);
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: gradientFlow 4s linear infinite;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+  }
+  
+  /* Effet éclair */
+  .special-player-name-lightning {
+    background: linear-gradient(90deg, #ffff00, #ffd700, #ffff00);
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: lightning 1s linear infinite;
+    font-weight: bold;
+    text-shadow: 0 0 15px rgba(255, 255, 0, 0.9);
+  }
+  
+  /* Effet arc-en-ciel */
+  .special-player-name-rainbow {
+    background: linear-gradient(90deg, #ff0000, #ffa500, #ffff00, #00ff00, #0000ff, #4b0082, #ee82ee, #ff0000);
+    background-size: 400% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: gradientFlow 6s linear infinite;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+  }
+  
   /* Effet néon */
   .special-player-name-neon {
-    background: linear-gradient(90deg, #00ff00, #66ff66, #00ff00);
+    background: linear-gradient(90deg, #ff00ff, #ff69b4, #ff00ff);
     background-size: 200% auto;
     color: transparent;
     -webkit-background-clip: text;
     background-clip: text;
     animation: gradientFlow 3s linear infinite;
     font-weight: bold;
-    text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+    text-shadow: 0 0 10px rgba(255, 0, 255, 0.8);
+  }
+  
+  /* Effet galaxie */
+  .special-player-name-galaxy {
+    background: linear-gradient(90deg, #4b0082, #8a2be2, #9370db, #4b0082);
+    background-size: 300% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: gradientFlow 5s linear infinite;
+    font-weight: bold;
+    text-shadow: 0 0 12px rgba(75, 0, 130, 0.8);
+  }
+  
+  /* Effet matrix */
+  .special-player-name-matrix {
+    color: #00ff00;
+    animation: matrix 2s linear infinite;
+    font-weight: bold;
+    text-shadow: 0 0 5px #00ff00;
+  }
+  
+  /* Effet coucher de soleil */
+  .special-player-name-sunset {
+    background: linear-gradient(90deg, #ff6b35, #f7931e, #ffd23f, #ff6b35);
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: gradientFlow 4s linear infinite;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(255, 107, 53, 0.6);
+  }
+  
+  /* Effet océan */
+  .special-player-name-ocean {
+    background: linear-gradient(90deg, #006994, #0099cc, #00bfff, #006994);
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: gradientFlow 3s linear infinite;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0, 105, 148, 0.7);
   }
   
   /* Pour la rétrocompatibilité */
@@ -107,51 +157,12 @@ const specialPlayerNameStyle = `
 interface PlayerManagerProps {
   onPlayersSelected: (selectedPlayers: string[]) => void;
   minPlayers?: number;
-  maxPlayers?: number;
   hideRemoveButtons?: boolean;
 }
 
-// Fonction pour convertir les classes Tailwind en couleurs CSS
-const getColorFromClass = (colorClass: string): string => {
-  if (!colorClass.startsWith('bg-')) return colorClass;
-  const colorName = colorClass.substring(3);
-  return `var(--${colorName})`;
-};
 
-// Fonction pour vérifier si un joueur est spécial (Sim ou Riqui ou a l'effet spécial activé)
-const isSpecialPlayer = (player: any): boolean => {
-  // Si le joueur a explicitement activé l'effet spécial dans ses préférences
-  if (player.preferences?.specialEffect) {
-    return true;
-  }
-  
-  // Sinon, vérifier si c'est un des noms spéciaux par défaut
-  const name = typeof player === 'string' 
-    ? player.toLowerCase() 
-    : player.name?.toLowerCase();
-  return name === 'sim' || name === 'riqui';
-};
 
-// Fonction pour obtenir la classe CSS de l'effet spécial
-const getSpecialEffectClass = (player: any): string => {
-  // Si le joueur a un effet spécial spécifique
-  if (player.preferences?.specialEffect) {
-    const effect = player.preferences.specialEffect as 'red' | 'blue' | 'rainbow' | 'gold' | 'fire' | 'neon';
-    return `special-player-name-${effect}`;
-  }
-  
-  // Pour les joueurs spéciaux par défaut (Sim ou Riqui)
-  const name = typeof player === 'string' 
-    ? player.toLowerCase() 
-    : player.name?.toLowerCase();
-  if (name === 'sim' || name === 'riqui') {
-    return 'special-player-name-red'; // Effet par défaut pour Sim et Riqui
-  }
-  
-  return '';
-};
-
-export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 8, hideRemoveButtons = false }: PlayerManagerProps) {
+export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveButtons = false }: PlayerManagerProps) {
   const { 
     players, 
     loading, 
@@ -165,6 +176,7 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
   } = usePlayers();
   
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [bulkNames, setBulkNames] = useState('');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('players');
@@ -174,8 +186,7 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
   // Liste des jeux disponibles
   const availableGames = [
     { id: 'global', name: 'Tous les jeux' },
-    { id: 'petit-buveur', name: 'Le Petit Buveur' },
-    { id: 'pmu', name: 'PMU' },
+    ...GAMES.map(g => ({ id: g.id, name: g.title }))
   ];
 
   // Obtenir le classement en fonction du jeu sélectionné
@@ -201,10 +212,9 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
       const isSelected = prev.includes(playerId);
       if (isSelected) {
         return prev.filter(id => id !== playerId);
-      } else if (prev.length < maxPlayers) {
+      } else {
         return [...prev, playerId];
       }
-      return prev;
     });
     setError(null);
   };
@@ -227,10 +237,11 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
 
   return (
     <div className="space-y-6">
+      <style jsx>{specialPlayerNameStyle}</style>
       <div className="flex flex-col space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="p-4 shadow-md">
-            <h2 className="text-lg md:text-xl font-semibold mb-4">Ajouter un joueur</h2>
+            <h2 className="text-lg md:text-xl font-semibold mb-4">Ajouter des joueurs</h2>
             <form onSubmit={handleAddPlayer} className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <Input
@@ -242,15 +253,36 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
                 />
                 <Button 
                   type="submit" 
-                  disabled={!newPlayerName.trim() || players.length >= maxPlayers}
+                  disabled={!newPlayerName.trim()}
                   className="w-full sm:w-auto"
                 >
                   Ajouter
                 </Button>
               </div>
-              {players.length >= maxPlayers && (
-                <p className="text-sm text-orange-500 mt-1">Nombre maximum de joueurs atteint ({maxPlayers})</p>
-              )}
+              <div className="grid grid-cols-1 gap-2">
+                <Input
+                  type="text"
+                  placeholder="Ajout multiple: séparez par des virgules ou retours à la ligne"
+                  value={bulkNames}
+                  onChange={(e) => setBulkNames(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!bulkNames.trim()}
+                  onClick={() => {
+                    const parts = bulkNames
+                      .split(/[,\n]/)
+                      .map(s => s.trim())
+                      .filter(Boolean)
+                      .slice(0, 30); // sécurité
+                    parts.forEach(name => addPlayer(name));
+                    setBulkNames('');
+                  }}
+                >
+                  Ajouter en lot
+                </Button>
+              </div>
             </form>
           </Card>
 
@@ -272,22 +304,18 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
         </div>
 
         <Tabs defaultValue="players" className="w-full">
-          <TabsList className="grid grid-cols-4 max-w-md mx-auto mb-4">
+          <TabsList className="grid grid-cols-3 max-w-md mx-auto mb-4">
             <TabsTrigger value="players" className="flex items-center gap-1 px-2 md:px-3">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Joueurs</span>
-            </TabsTrigger>
-            <TabsTrigger value="leaderboard" className="flex items-center gap-1 px-2 md:px-3">
-              <Trophy className="h-4 w-4" />
-              <span className="hidden sm:inline">Classement</span>
             </TabsTrigger>
             <TabsTrigger value="activity" className="flex items-center gap-1 px-2 md:px-3">
               <Activity className="h-4 w-4" />
               <span className="hidden sm:inline">Activité</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-1 px-2 md:px-3">
+            <TabsTrigger value="personalization" className="flex items-center gap-1 px-2 md:px-3">
               <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Préférences</span>
+              <span className="hidden sm:inline">Personalisation</span>
             </TabsTrigger>
           </TabsList>
 
@@ -304,8 +332,11 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar className={`h-10 w-10 border-2 bg-${player.preferences.color}-100 border-${player.preferences.color}-500`}>
-                      <AvatarFallback className={`bg-${player.preferences.color}-100 text-${player.preferences.color}-700`}>
+                    <Avatar 
+                      className="h-10 w-10 border-2"
+                      style={{ backgroundColor: getColorFromClass(player.preferences.color) }}
+                    >
+                      <AvatarFallback style={{ backgroundColor: getColorFromClass(player.preferences.color) }}>
                         {player.name.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                       {player.preferences.avatar && (
@@ -340,62 +371,7 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
             </div>
           </TabsContent>
 
-          <TabsContent value="leaderboard" className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Meilleurs joueurs</h3>
-              <Select
-                value={selectedGame}
-                onValueChange={setSelectedGame}
-              >
-                <SelectTrigger className="w-[180px] shadow-sm">
-                  <SelectValue placeholder="Sélectionner un jeu" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableGames.map(game => (
-                    <SelectItem key={game.id} value={game.id}>
-                      {game.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              {gameTopPlayers.length > 0 ? (
-                gameTopPlayers.map((player, index) => (
-                  <Card key={player.id} className="p-3 card-with-relief">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="text-2xl font-bold">#{index + 1}</div>
-                        <Avatar className={`shadow-sm ${isSpecialPlayer(player) ? 'border-2 border-red-500 shadow-lg shadow-red-500/50' : ''}`} style={{ backgroundColor: getColorFromClass(player.preferences.color) }}>
-                          {player.preferences.avatar ? (
-                            <AvatarImage src={player.preferences.avatar} alt={player.name} />
-                          ) : (
-                            <AvatarFallback style={{ backgroundColor: getColorFromClass(player.preferences.color) }}>
-                              {player.preferences.icon || player.name[0].toUpperCase()}
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                        <div>
-                          <div className={getSpecialEffectClass(player) || 'font-medium'}>{player.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {selectedGame === 'global' 
-                              ? `${player.stats.wins} victoires` 
-                              : `${player.stats.gameStats?.[selectedGame]?.wins || 0} victoires en ${player.stats.gameStats?.[selectedGame]?.gamesPlayed || 0} parties`}
-                          </div>
-                        </div>
-                      </div>
-                      <Trophy className={`w-6 h-6 ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-400' : 'text-amber-600'}`} />
-                    </div>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  Aucune partie jouée pour ce jeu
-                </div>
-              )}
-            </div>
-          </TabsContent>
+
 
           <TabsContent value="activity" className="space-y-4">
             <div className="flex justify-between items-center mb-4">
@@ -433,7 +409,7 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
                           )}
                         </Avatar>
                         <div>
-                          <div className={getSpecialEffectClass(player) || 'font-medium'}>{player.name}</div>
+                          <div className={getSpecialEffectClass(player) || 'player-name-default font-medium'}>{player.name}</div>
                           <div className="text-sm text-muted-foreground">
                             {selectedGame === 'global'
                               ? `${player.stats.gamesPlayed} parties jouées${player.stats.favoriteGame ? ` • Favori : ${player.stats.favoriteGame}` : ''}`
@@ -453,8 +429,8 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
             </div>
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">Préférences des joueurs</h3>
+          <TabsContent value="personalization" className="space-y-4">
+            <h3 className="text-lg font-semibold mb-4">Personalisation des joueurs</h3>
             
             <Select
               value={selectedPlayerId}
@@ -490,23 +466,21 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium">{player.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {player.preferences.nickname || 'Pas de surnom'}
-                          </div>
+                          <div className={getSpecialEffectClass(player) || 'player-name-default font-medium'}>{player.name}</div>
                         </div>
                       </div>
 
                       <div>
                         <label className="text-sm font-medium mb-2 block">Couleur</label>
-                        <div className="grid grid-cols-6 gap-2">
-                          {['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
-                            'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-orange-500',
-                            'bg-teal-500', 'bg-cyan-500', 'bg-rose-500', 'bg-emerald-500'].map(color => (
+                        <div className="grid grid-cols-9 gap-2">
+                          {[
+                            'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 'bg-blue-500',
+                            'bg-purple-500', 'bg-pink-500', 'bg-gray-500', 'bg-black'
+                          ].map(color => (
                             <div
                               key={color}
-                              className={`h-8 rounded-md cursor-pointer shadow-sm ${
-                                player.preferences.color === color ? 'ring-2 ring-primary' : 'ring-1 ring-border'
+                              className={`h-8 rounded-md cursor-pointer shadow-sm transition-all hover:scale-110 ${
+                                player.preferences.color === color ? 'ring-2 ring-primary ring-offset-2' : 'ring-1 ring-border'
                               }`}
                               style={{ backgroundColor: getColorFromClass(color) }}
                               onClick={() => handleUpdatePreferences(player.id, { color })}
@@ -517,12 +491,12 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
 
                       <div>
                         <label className="text-sm font-medium mb-2 block">Icône</label>
-                        <div className="grid grid-cols-8 gap-2">
+                        <div className="grid grid-cols-10 gap-2 max-h-64 overflow-y-auto p-2 border rounded-md">
                           {PLAYER_ICONS.map(icon => (
                             <Button
                               key={icon}
                               variant="outline"
-                              className={`h-10 w-10 p-0 text-lg shadow-sm ${
+                              className={`h-10 w-10 p-0 text-lg shadow-sm hover:scale-110 transition-all ${
                                 player.preferences.icon === icon ? 'ring-2 ring-primary bg-primary/20' : ''
                               }`}
                               onClick={() => handleUpdatePreferences(player.id, { icon })}
@@ -531,26 +505,99 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
                             </Button>
                           ))}
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {PLAYER_ICONS.length} icônes disponibles
+                        </p>
                       </div>
 
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Surnom</label>
-                        <Input
-                          placeholder="Surnom"
-                          value={player.preferences.nickname || ''}
-                          onChange={(e) => handleUpdatePreferences(player.id, { 
-                            nickname: e.target.value 
-                          })}
-                          className="w-full shadow-sm"
-                        />
-                      </div>
+
                       
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Présets</label>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => handleUpdatePreferences(player.id, { 
+                              color: 'bg-red-500',
+                              icon: '🔥',
+                              specialEffect: 'fire'
+                            })}
+                          >
+                            🔥 Feu
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => handleUpdatePreferences(player.id, { 
+                              color: 'bg-blue-500',
+                              icon: '❄️',
+                              specialEffect: 'ice'
+                            })}
+                          >
+                            ❄️ Glace
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => handleUpdatePreferences(player.id, { 
+                              color: 'bg-green-500',
+                              icon: '🌿',
+                              specialEffect: null
+                            })}
+                          >
+                            🌿 Nature
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => handleUpdatePreferences(player.id, { 
+                              color: 'bg-purple-500',
+                              icon: '⭐',
+                              specialEffect: 'galaxy'
+                            })}
+                          >
+                            🌌 Galaxie
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => handleUpdatePreferences(player.id, { 
+                              color: 'bg-yellow-500',
+                              icon: '⚡',
+                              specialEffect: 'lightning'
+                            })}
+                          >
+                            ⚡ Éclair
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => handleUpdatePreferences(player.id, { 
+                              color: 'bg-pink-500',
+                              icon: '💖',
+                              specialEffect: 'neon'
+                            })}
+                          >
+                            💖 Néon
+                          </Button>
+                        </div>
+                      </div>
+
+
+
                       <div>
                         <label className="text-sm font-medium mb-2 flex items-center justify-between">
                           <span>Effet spécial</span>
                         </label>
                         
-                        <div className="grid grid-cols-4 gap-2 mt-2">
+                        <div className="grid grid-cols-3 gap-2 mt-2">
                           <Button
                             type="button"
                             variant={!player.preferences.specialEffect ? "default" : "outline"}
@@ -561,19 +608,27 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
                           </Button>
                           <Button
                             type="button"
-                            variant={player.preferences.specialEffect === 'red' ? "default" : "outline"}
-                            className="w-full special-player-name-red"
-                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'red' })}
+                            variant={player.preferences.specialEffect === 'fire' ? "default" : "outline"}
+                            className="w-full special-player-name-fire"
+                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'fire' })}
                           >
-                            Rouge
+                            🔥 Feu
                           </Button>
                           <Button
                             type="button"
-                            variant={player.preferences.specialEffect === 'blue' ? "default" : "outline"}
-                            className="w-full special-player-name-blue"
-                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'blue' })}
+                            variant={player.preferences.specialEffect === 'ice' ? "default" : "outline"}
+                            className="w-full special-player-name-ice"
+                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'ice' })}
                           >
-                            Bleu
+                            ❄️ Glace
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={player.preferences.specialEffect === 'lightning' ? "default" : "outline"}
+                            className="w-full special-player-name-lightning"
+                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'lightning' })}
+                          >
+                            ⚡ Éclair
                           </Button>
                           <Button
                             type="button"
@@ -581,23 +636,7 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
                             className="w-full special-player-name-rainbow"
                             onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'rainbow' })}
                           >
-                            Arc-en-ciel
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={player.preferences.specialEffect === 'gold' ? "default" : "outline"}
-                            className="w-full special-player-name-gold"
-                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'gold' })}
-                          >
-                            Or
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={player.preferences.specialEffect === 'fire' ? "default" : "outline"}
-                            className="w-full special-player-name-fire"
-                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'fire' })}
-                          >
-                            Feu
+                            🌈 Arc-en-ciel
                           </Button>
                           <Button
                             type="button"
@@ -605,7 +644,39 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
                             className="w-full special-player-name-neon"
                             onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'neon' })}
                           >
-                            Néon
+                            💖 Néon
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={player.preferences.specialEffect === 'galaxy' ? "default" : "outline"}
+                            className="w-full special-player-name-galaxy"
+                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'galaxy' })}
+                          >
+                            🌌 Galaxie
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={player.preferences.specialEffect === 'matrix' ? "default" : "outline"}
+                            className="w-full special-player-name-matrix"
+                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'matrix' })}
+                          >
+                            💻 Matrix
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={player.preferences.specialEffect === 'sunset' ? "default" : "outline"}
+                            className="w-full special-player-name-sunset"
+                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'sunset' })}
+                          >
+                            🌅 Coucher
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={player.preferences.specialEffect === 'ocean' ? "default" : "outline"}
+                            className="w-full special-player-name-ocean"
+                            onClick={() => handleUpdatePreferences(player.id, { specialEffect: 'ocean' })}
+                          >
+                            🌊 Océan
                           </Button>
                         </div>
                         
@@ -613,6 +684,8 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, maxPlayers = 
                           Applique un effet de dégradé au nom du joueur.
                         </p>
                       </div>
+
+
                     </div>
                   </Card>
                 ))}

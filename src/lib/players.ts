@@ -20,7 +20,7 @@ export interface PlayerPreferences {
   nickname?: string;
   theme?: 'light' | 'dark';
   icon?: string;
-  specialEffect?: 'red' | 'blue' | 'rainbow' | 'gold' | 'fire' | 'neon' | null;
+  specialEffect?: 'fire' | 'ice' | 'lightning' | 'rainbow' | 'neon' | 'galaxy' | 'matrix' | 'sunset' | 'ocean' | null;
 }
 
 export interface Player {
@@ -39,9 +39,26 @@ const DEFAULT_COLORS = [
 ];
 
 export const PLAYER_ICONS = [
-  '👑', '🌟', '🦁', '🐯', '🐉', '🦊', '🦄', '🦋',
-  '🌈', '⭐', '🍀', '🎮', '🎲', '🎯', '🎪', '🎭',
-  '🌙', '☀️', '⚡', '🔥', '❄️', '🌺', '🍄', '🎸'
+  // Animaux
+  '🦁', '🐯', '🐉', '🦊', '🦄', '🦋', '🐺', '🐻', '🐸', '🐙', '🦈', '🦅', '🦉', '🦇', '🦕', '🦖',
+  // Émotions et visages
+  '😎', '🤠', '👻', '🤖', '👾', '👽', '🤡', '👹', '👺', '💀', '☠️', '🎃', '🧙‍♀️', '🧙‍♂️',
+  // Nature et éléments
+  '🌙', '☀️', '⭐', '🌟', '⚡', '🔥', '💧', '❄️', '🌈', '🍀', '🌺', '🌹', '🌸', '🌻', '🌼', '🌷',
+  // Objets et symboles
+  '👑', '💎', '🔮', '⚔️', '🛡️', '🏹', '🗡️', '🔱', '⚜️', '💠', '🔯', '☯️', '☮️', '✝️', '☪️', '🕉️',
+  // Jeux et divertissement
+  '🎮', '🎲', '🎯', '🎪', '🎭', '🎨', '🎤', '🎧', '🎸', '🎹', '🎺', '🎻', '🥁', '🎼',
+  // Sports et activités
+  '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏊‍♂️', '🏄‍♂️', '🚴‍♂️', '🏃‍♂️', '🏋️‍♂️', '🤸‍♂️',
+  // Nourriture et boissons
+  '🍕', '🍔', '🌭', '🍟', '🌮', '🍣', '🍜', '🍱', '🍙', '🍘', '🍪', '🍩', '🍰', '🍦', '🍺', '🍷',
+  // Technologie et gadgets
+  '📱', '💻', '🖥️', '⌨️', '🖱️', '📷', '📹', '🎥', '📺', '📻', '🔋', '💡', '🔌', '🔍', '🔬',
+  // Transport
+  '🚗', '🏎️', '🚓', '🚑', '🚒', '🚐', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲', '🚁', '✈️', '🚀', '🛸',
+  // Divers
+  '🎬', '🎵', '🎶'
 ];
 
 export function getStoredPlayers(): Player[] {
@@ -51,7 +68,23 @@ export function getStoredPlayers(): Player[] {
   if (!stored) return [];
   
   try {
-    return JSON.parse(stored);
+    const parsed: Player[] = JSON.parse(stored);
+    // Assainir: s'assurer que chaque joueur a un id unique
+    const seen = new Set<string>();
+    let changed = false;
+    const sanitized = parsed.map((p) => {
+      let id = p.id;
+      if (!id || seen.has(id)) {
+        id = generatePlayerId();
+        changed = true;
+      }
+      seen.add(id);
+      return { ...p, id };
+    });
+    if (changed) {
+      try { savePlayers(sanitized); } catch {}
+    }
+    return sanitized;
   } catch {
     return [];
   }
@@ -62,10 +95,21 @@ export function savePlayers(players: Player[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
 }
 
+export function generatePlayerId(): string {
+  try {
+    // Utiliser un UUID si disponible pour éviter les collisions (notamment en ajout multiple)
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      return `player-${(crypto as unknown as { randomUUID: () => string }).randomUUID()}`;
+    }
+  } catch {}
+  // Fallback robuste: timestamp + aléatoire
+  return `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 export function addPlayer(name: string): Player[] {
   const players = getStoredPlayers();
   const newPlayer: Player = {
-    id: `player-${Date.now()}`,
+    id: generatePlayerId(),
     name,
     createdAt: Date.now(),
     stats: {

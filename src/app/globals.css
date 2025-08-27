@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import des styles pour les effets spéciaux des joueurs */
+@import '../styles/player-effects.css';
+
 /* Styles de centrage pour le mode plein écran */
 :fullscreen .fullscreen-container,
 :-webkit-full-screen .fullscreen-container,

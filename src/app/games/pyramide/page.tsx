@@ -9,9 +9,10 @@ import { usePlayers } from "@/hooks/usePlayers"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { PlayerManager } from '@/components/PlayerManager'
 import { User, Home } from 'lucide-react'
 import Link from 'next/link'
+import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
+import { SelectedPlayersDisplay } from '@/components/SelectedPlayersDisplay'
 
 export default function PyramidePage() {
   const { players } = usePlayers()
@@ -20,14 +21,10 @@ export default function PyramidePage() {
   const [gameMode, setGameMode] = useState<'fun' | 'classic'>('fun')
   const [deckCount, setDeckCount] = useState<1 | 2>(1)
   const [cardsToSelect, setCardsToSelect] = useState<4 | 5>(4)
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
+  const { selectedIds } = useSelectedPlayers()
   const [activeTab, setActiveTab] = useState('players')
 
-  const handlePlayersSelected = (playerIds: string[]) => {
-    setSelectedPlayerIds(playerIds)
-    setGameStarted(true)
-    setActiveTab('game')
-  }
+  const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
 
   const handleGameEnd = () => {
     setGameStarted(false)
@@ -53,7 +50,7 @@ export default function PyramidePage() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="players">
             <User className="mr-2 h-4 w-4" />
-            Joueurs
+            Paramètres
           </TabsTrigger>
           <TabsTrigger value="game" disabled={!gameStarted}>
             Jeu
@@ -138,21 +135,21 @@ export default function PyramidePage() {
             </div>
           </Card>
 
-          <Card className="p-4">
-            <h2 className="text-xl font-semibold mb-4">Sélectionnez les joueurs</h2>
-            <PlayerManager 
-              onPlayersSelected={handlePlayersSelected}
-              minPlayers={2}
-              maxPlayers={8}
-              hideRemoveButtons={true}
-            />
-          </Card>
+          <SelectedPlayersDisplay players={selectedPlayers} />
+          
+          <Button 
+            className="mt-4 w-full" 
+            disabled={selectedPlayers.length < 2} 
+            onClick={() => { setGameStarted(true); setActiveTab('game') }}
+          >
+            Commencer la partie
+          </Button>
         </TabsContent>
 
         <TabsContent value="game">
           {gameStarted && (
             <Game 
-              players={players.filter(p => selectedPlayerIds.includes(p.id))}
+              players={selectedPlayers}
               pyramidHeight={pyramidHeight}
               onGameEnd={handleGameEnd}
               gameMode={gameMode}

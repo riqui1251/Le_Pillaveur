@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from 'react'
-import { PlayerManager } from '@/components/PlayerManager'
 import { usePlayers } from '@/hooks/usePlayers'
 import Game from './components/game'
 import { Card } from '@/components/ui/card'
@@ -11,6 +10,8 @@ import { User, Shield, Lock, AlertCircle, Home } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
+import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
+import { SelectedPlayersDisplay } from '@/components/SelectedPlayersDisplay'
 
 // Types de difficulté disponibles
 type Difficulty = 'facile' | 'normal' | 'difficile' | 'extreme'
@@ -25,19 +26,15 @@ const difficultyNames: Record<Difficulty, string> = {
 
 export default function PetitBuveurPage() {
   const [gameStarted, setGameStarted] = useState(false)
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [difficulty, setDifficulty] = useState<Difficulty>('normal')
   const [activeTab, setActiveTab] = useState('players')
   const { players } = usePlayers()
-
-  const handlePlayersSelected = (playerIds: string[]) => {
-    setSelectedPlayerIds(playerIds)
-    setGameStarted(true)
-  }
+  const { selectedIds } = useSelectedPlayers()
+  const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
 
   const handleGameEnd = () => {
     setGameStarted(false)
-    setSelectedPlayerIds([])
+    setActiveTab('players')
   }
 
   return (
@@ -53,7 +50,7 @@ export default function PetitBuveurPage() {
             Retour
           </Button>
           <Game 
-            players={players.filter(p => selectedPlayerIds.includes(p.id))} 
+            players={selectedPlayers} 
             onGameEnd={handleGameEnd}
             difficulty={difficulty}
           />
@@ -92,12 +89,8 @@ export default function PetitBuveurPage() {
             
             <TabsContent value="players" className="w-full">
               <div className="card p-4 mb-4">
-                <PlayerManager 
-                  onPlayersSelected={handlePlayersSelected}
-                  minPlayers={2}
-                  maxPlayers={8}
-                  hideRemoveButtons={true}
-                />
+                <SelectedPlayersDisplay players={selectedPlayers} />
+                <Button className="mt-4 w-full" disabled={selectedPlayers.length < 2} onClick={() => setGameStarted(true)}>Commencer</Button>
               </div>
             </TabsContent>
             

@@ -27,7 +27,7 @@ export function PinCodeInput({ onSubmit, error }: PinCodeInputProps) {
 
   // Ajouter un chiffre au code PIN
   const addDigit = (digit: string) => {
-    if (pin.length < 7) {
+    if (pin.length < 6) {
       setPin(prev => prev + digit);
     }
   };
@@ -53,7 +53,7 @@ export function PinCodeInput({ onSubmit, error }: PinCodeInputProps) {
       
       {/* Affichage du code PIN */}
       <div className="flex justify-center space-x-2 w-full mb-4">
-        {Array.from({ length: 7 }).map((_, index) => (
+        {Array.from({ length: 6 }).map((_, index) => (
           <div 
             key={index} 
             className={`w-10 h-12 border-2 rounded-md flex items-center justify-center text-xl font-bold
@@ -111,7 +111,7 @@ export function PinCodeInput({ onSubmit, error }: PinCodeInputProps) {
       <Button 
         className="w-full h-12 mt-4 bg-amber-500 hover:bg-amber-600 text-white"
         onClick={handleSubmit}
-        disabled={pin.length !== 7}
+        disabled={pin.length !== 6}
       >
         Valider
       </Button>

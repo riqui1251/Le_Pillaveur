@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from 'react'
-import { PlayerManager } from '@/components/PlayerManager'
 import { usePlayers } from '@/hooks/usePlayers'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -10,22 +9,20 @@ import { User, Home } from 'lucide-react'
 import Link from 'next/link'
 import Game from './components/game'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
+import { SelectedPlayersDisplay } from '@/components/SelectedPlayersDisplay'
 
 // Types de mode de jeu
 export type GameMode = 'standard' | 'traversee'
 
 export default function HiLoPage() {
   const { players, updatePlayerStats } = usePlayers()
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
+  const { selectedIds } = useSelectedPlayers()
   const [gameStarted, setGameStarted] = useState(false)
   const [activeTab, setActiveTab] = useState('players')
   const [gameMode, setGameMode] = useState<GameMode>('standard')
 
-  const handlePlayersSelected = (playerIds: string[]) => {
-    setSelectedPlayerIds(playerIds)
-    setGameStarted(true)
-    setActiveTab('game')
-  }
+  const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
 
   const handleGameEnd = () => {
     setGameStarted(false)
@@ -56,7 +53,7 @@ export default function HiLoPage() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="players">
             <User className="mr-2 h-4 w-4" />
-            Joueurs
+            Paramètres
           </TabsTrigger>
           <TabsTrigger value="game" disabled={!gameStarted}>
             Jeu
@@ -64,45 +61,29 @@ export default function HiLoPage() {
         </TabsList>
 
         <TabsContent value="players" className="space-y-4">
+          <SelectedPlayersDisplay players={selectedPlayers} />
+          
           <Card className="p-4">
-            <h2 className="text-xl font-semibold mb-4">Sélectionnez les joueurs</h2>
-            <PlayerManager 
-              onPlayersSelected={handlePlayersSelected}
-              minPlayers={2}
-              maxPlayers={8}
-              hideRemoveButtons={true}
-            />
-            
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2">Mode de jeu</h3>
-              <Select value={gameMode} onValueChange={handleGameModeChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner un mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="traversee">Traversée</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              {gameMode === 'traversee' && (
-                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
-                  <p className="text-sm">
-                    <strong>Mode Traversée :</strong> Le but est d&apos;obtenir une série de bonnes réponses. 
-                    L&apos;objectif est de 5 cartes de suite pour 2 joueurs et augmente de 2 par joueur supplémentaire.
-                    Si un joueur devine &quot;égalité&quot; correctement, il sort de la partie. Si un joueur se trompe, 
-                    tous boivent et la série repart à 1. La partie ne s&apos;arrête que quand l&apos;objectif est atteint !
-                  </p>
-                </div>
-              )}
-            </div>
+            <h3 className="text-lg font-semibold mb-2">Mode de jeu</h3>
+            <Select value={gameMode} onValueChange={handleGameModeChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Sélectionner un mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">Standard</SelectItem>
+                <SelectItem value="traversee">Traversée</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button className="mt-4 w-full" disabled={selectedPlayers.length < 2} onClick={() => { setGameStarted(true); setActiveTab('game') }}>
+              Commencer la partie
+            </Button>
           </Card>
         </TabsContent>
 
         <TabsContent value="game">
           {gameStarted && (
             <Game 
-              players={players.filter(p => selectedPlayerIds.includes(p.id))}
+              players={selectedPlayers}
               onGameEnd={handleGameEnd}
               updatePlayerStats={updatePlayerStats}
               gameMode={gameMode}

@@ -1,18 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 // Importer les composants nécessaires ici (sélection joueurs, sélection ballons, course, etc.)
-import { PlayerManager } from '@/components/PlayerManager';
 import BalloonSelection from './components/BalloonSelection';
 import BalloonRace from './components/BalloonRace';
 import { Button } from '@/components/ui/button';
 import { usePlayers } from '@/hooks/usePlayers'; // Importer le hook usePlayers
 import { Player } from '@/lib/players'; // Importer le type Player
+import { useSelectedPlayers } from '@/hooks/useSelectedPlayers';
 
 export default function BallonSurprisePage() {
   const { players: allPlayers } = usePlayers(); // Récupérer tous les joueurs
+  const { selectedIds } = useSelectedPlayers();
   // Gérer l'état du jeu (quelle étape afficher)
-  const [gameStep, setGameStep] = React.useState('playerSelection'); // playerSelection, balloonSelection, race, results
+  const [gameStep, setGameStep] = React.useState<'balloonSelection' | 'race' | 'results'>('balloonSelection'); // playerSelection, balloonSelection, race, results
 
   // Gérer les joueurs sélectionnés
   const [selectedPlayers, setSelectedPlayers] = React.useState<Player[]>([]); // Stocker les objets Player
@@ -23,15 +24,10 @@ export default function BallonSurprisePage() {
   // Gérer les résultats de la course
   const [raceResult, setRaceResult] = React.useState<{ winnerColor: string; sips: number } | null>(null);
 
-  const handlePlayersSelected = (playerIds: string[]) => {
-    // Trouver les objets Player correspondants aux IDs
-    const selected = playerIds.map(id => allPlayers.find(p => p.id === id)).filter(p => p !== undefined) as Player[];
+  useEffect(() => {
+    const selected = selectedIds.map(id => allPlayers.find(p => p.id === id)).filter(Boolean) as Player[];
     setSelectedPlayers(selected);
-    setGameStep('balloonSelection');
-    // Réinitialiser les choix précédents si on re-sélectionne les joueurs
-    setPlayerChoices({}); 
-    setRaceResult(null);
-  };
+  }, [allPlayers, selectedIds]);
 
   const handleBalloonsSelected = (choices: { [playerId: string]: string }) => {
     setPlayerChoices(choices);
@@ -51,8 +47,7 @@ export default function BallonSurprisePage() {
   }, [raceResult, playerChoices, selectedPlayers]);
 
   const handleReplay = () => {
-    setGameStep('playerSelection');
-    setSelectedPlayers([]); // Réinitialiser les joueurs sélectionnés
+    setGameStep('balloonSelection');
     setPlayerChoices({});
     setRaceResult(null);
   };
@@ -60,14 +55,6 @@ export default function BallonSurprisePage() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-4">Ballon Surprise</h1>
-
-      {gameStep === 'playerSelection' && (
-        <PlayerManager 
-          onPlayersSelected={handlePlayersSelected} 
-          maxPlayers={99}
-          hideRemoveButtons={true}
-        />
-      )}
 
       {gameStep === 'balloonSelection' && (
         <BalloonSelection players={selectedPlayers} onBalloonsSelected={handleBalloonsSelected} />
@@ -101,7 +88,7 @@ export default function BallonSurprisePage() {
       )}
 
       {/* Message temporaire - ajusté */}
-      {gameStep !== 'playerSelection' && gameStep !== 'results' && gameStep !== 'balloonSelection' && (
+      {gameStep !== 'balloonSelection' && gameStep !== 'results' && (
         <p>Étape : {gameStep}</p>
       )}
 

@@ -5,8 +5,6 @@ const nextConfig = {
     // Activer la vérification ESLint pendant le build
     ignoreDuringBuilds: false,
   },
-  // Définir le dossier de sortie du build
-  distDir: 'html',
   // Activer la vérification des types pour le build
   typescript: {
     ignoreBuildErrors: false,

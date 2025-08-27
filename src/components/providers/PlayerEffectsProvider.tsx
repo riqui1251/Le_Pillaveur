@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { specialPlayerNameStyle } from '../ui/PlayerName';
 
 // Type du contexte
 type PlayerEffectsContextType = {
@@ -28,8 +27,6 @@ export function PlayerEffectsProvider({ children }: PlayerEffectsProviderProps) 
 
   return (
     <PlayerEffectsContext.Provider value={{ isEffectsEnabled }}>
-      {/* Style global pour les effets spéciaux des joueurs */}
-      <style jsx global>{specialPlayerNameStyle}</style>
       {children}
     </PlayerEffectsContext.Provider>
   );

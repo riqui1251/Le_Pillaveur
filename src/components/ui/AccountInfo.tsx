@@ -9,34 +9,10 @@ import { usePlayers } from '@/hooks/usePlayers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils';
+import { Player } from '@/lib/players';
 
-interface Player {
-  id: string;
-  name: string;
-  createdAt: number;
-  stats: {
-    gamesPlayed: number;
-    wins: number;
-    totalDrinks: number;
-    favoriteGame?: string;
-    lastPlayed?: number;
-    gameStats?: {
-      [gameId: string]: {
-        gamesPlayed: number;
-        wins: number;
-        totalDrinks?: number;
-      }
-    };
-  };
-  preferences: {
-    color: string;
-    avatar?: string;
-    nickname?: string;
-    theme?: 'light' | 'dark';
-    icon?: string;
-    specialEffect?: 'red' | 'blue' | 'rainbow' | 'gold' | 'fire' | 'neon' | null;
-  };
-}
+
 
 interface AccountInfoProps {
   onLogout: () => void;
@@ -100,33 +76,7 @@ export function AccountInfo({ onLogout }: AccountInfoProps) {
     return gameNames[gameId] || gameId;
   };
 
-  // Fonction pour vérifier si un joueur est spécial
-  const isSpecialPlayer = (player: Player): boolean => {
-    // Si le joueur a explicitement activé l'effet spécial dans ses préférences
-    if (player.preferences?.specialEffect) {
-      return true;
-    }
-    
-    // Sinon, vérifier si c'est un des noms spéciaux par défaut
-    const name = player.name.toLowerCase();
-    return name === 'sim' || name === 'riqui';
-  };
 
-  // Fonction pour obtenir la classe CSS de l'effet spécial
-  const getSpecialEffectClass = (player: Player): string => {
-    // Si le joueur a un effet spécial spécifique
-    if (player.preferences?.specialEffect) {
-      return `special-player-name-${player.preferences.specialEffect}`;
-    }
-    
-    // Pour les joueurs spéciaux par défaut (Sim ou Riqui)
-    const name = player.name.toLowerCase();
-    if (name === 'sim' || name === 'riqui') {
-      return 'special-player-name-red'; // Effet par défaut pour Sim et Riqui
-    }
-    
-    return '';
-  };
 
   if (loading) {
     return <div className="flex justify-center items-center p-6">Chargement...</div>;
@@ -202,7 +152,7 @@ export function AccountInfo({ onLogout }: AccountInfoProps) {
                       {player.preferences.icon || player.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex flex-col">
-                      <span className={getSpecialEffectClass(player) || 'font-bold text-white'}>
+                      <span className={getSpecialEffectClass(player) || 'player-name-default'}>
                         {player.name}
                       </span>
                       <div className="flex items-center gap-2 text-xs opacity-80">
@@ -277,86 +227,7 @@ export function AccountInfo({ onLogout }: AccountInfoProps) {
         </CardContent>
       </Card>
 
-      {/* Styles pour les effets spéciaux */}
-      <style jsx global>{`
-        @keyframes gradientFlow {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        
-        /* Effet rouge */
-        .special-player-name-red {
-          background: linear-gradient(90deg, #ff0000, #ff6b6b, #ff0000);
-          background-size: 200% auto;
-          color: transparent;
-          -webkit-background-clip: text;
-          background-clip: text;
-          animation: gradientFlow 3s linear infinite;
-          font-weight: bold;
-          text-shadow: 0 0 5px rgba(255, 0, 0, 0.3);
-        }
-        
-        /* Effet bleu */
-        .special-player-name-blue {
-          background: linear-gradient(90deg, #0066ff, #00ccff, #0066ff);
-          background-size: 200% auto;
-          color: transparent;
-          -webkit-background-clip: text;
-          background-clip: text;
-          animation: gradientFlow 3s linear infinite;
-          font-weight: bold;
-          text-shadow: 0 0 5px rgba(0, 102, 255, 0.3);
-        }
-        
-        /* Effet arc-en-ciel */
-        .special-player-name-rainbow {
-          background: linear-gradient(90deg, #ff0000, #ffa500, #ffff00, #00ff00, #0000ff, #4b0082, #ee82ee, #ff0000);
-          background-size: 400% auto;
-          color: transparent;
-          -webkit-background-clip: text;
-          background-clip: text;
-          animation: gradientFlow 6s linear infinite;
-          font-weight: bold;
-          text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Effet or */
-        .special-player-name-gold {
-          background: linear-gradient(90deg, #ffd700, #ffcc00, #ffdb58, #ffd700);
-          background-size: 200% auto;
-          color: transparent;
-          -webkit-background-clip: text;
-          background-clip: text;
-          animation: gradientFlow 3s linear infinite;
-          font-weight: bold;
-          text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-        }
-        
-        /* Effet feu */
-        .special-player-name-fire {
-          background: linear-gradient(90deg, #ff4500, #ff8c00, #ff4500);
-          background-size: 200% auto;
-          color: transparent;
-          -webkit-background-clip: text;
-          background-clip: text;
-          animation: gradientFlow 2s linear infinite;
-          font-weight: bold;
-          text-shadow: 0 0 8px rgba(255, 69, 0, 0.7);
-        }
-        
-        /* Effet néon */
-        .special-player-name-neon {
-          background: linear-gradient(90deg, #00ff00, #66ff66, #00ff00);
-          background-size: 200% auto;
-          color: transparent;
-          -webkit-background-clip: text;
-          background-clip: text;
-          animation: gradientFlow 3s linear infinite;
-          font-weight: bold;
-          text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
-        }
-      `}</style>
+
     </div>
   );
 } 

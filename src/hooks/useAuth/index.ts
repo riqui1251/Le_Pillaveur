@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 // Code PIN fixe pour l'accès à la page de compte
-const PIN_CODE = "1251381";
+const PIN_CODE = "125138";
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -11,19 +11,20 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
 
   // Vérifier si l'utilisateur est déjà authentifié au chargement
-  useEffect(() => {
-    const authStatus = localStorage.getItem('auth_status');
-    if (authStatus === 'authenticated') {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  // Commenté pour forcer la saisie du code PIN à chaque fois
+  // useEffect(() => {
+  //   const authStatus = localStorage.getItem('auth_status');
+  //   if (authStatus === 'authenticated') {
+  //     setIsAuthenticated(true);
+  //   }
+  // }, []);
 
   // Fonction pour vérifier le code PIN
   const verifyPin = () => {
     if (pinAttempt === PIN_CODE) {
       setIsAuthenticated(true);
       setError(null);
-      localStorage.setItem('auth_status', 'authenticated');
+      // localStorage.setItem('auth_status', 'authenticated'); // Commenté pour ne pas persister l'authentification
       return true;
     } else {
       setError("Code PIN incorrect");
@@ -35,7 +36,7 @@ export function useAuth() {
   const logout = () => {
     setIsAuthenticated(false);
     setPinAttempt("");
-    localStorage.removeItem('auth_status');
+    // localStorage.removeItem('auth_status'); // Commenté car on n'utilise plus le localStorage
   };
 
   return {
