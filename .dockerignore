@@ -1,0 +1,10 @@
+.git
+.cursor
+.next
+node_modules
+npm-debug.log*
+.env*
+Le_Pillaveur
+deploy
+*.md
+!README.md
