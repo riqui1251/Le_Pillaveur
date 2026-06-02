@@ -1,10 +1,10 @@
 {
   "name": "mon-projet",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--no-webstorage next dev",
-    "build": "cross-env NODE_OPTIONS=--no-webstorage next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
