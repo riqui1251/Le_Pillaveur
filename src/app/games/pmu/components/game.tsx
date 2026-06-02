@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Player as BasePlayer } from '@/lib/players'
+import { Player as BasePlayer, getPlayerGameBoost } from '@/lib/players'
 import { usePlayers } from '@/hooks/usePlayers'
 
 // Ajouter un style CSS pour les différentes animations de dégradé
@@ -281,10 +281,16 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
     
     const raceInterval = setInterval(() => {
       setHorses(prevHorses => {
-        const updatedHorses = prevHorses.map(horse => ({
-          ...horse,
-          position: horse.position + Math.random() * 2
-        }))
+        const updatedHorses = prevHorses.map(horse => {
+          const maxBoost = horse.players.length > 0
+            ? Math.max(...horse.players.map(p => getPlayerGameBoost(p, 'pmu')))
+            : 0
+          const speedMult = 1 + maxBoost / 800
+          return {
+            ...horse,
+            position: horse.position + Math.random() * 2 * speedMult
+          }
+        })
 
         const winner = updatedHorses.find(horse => horse.position >= finishLine)
         if (winner) {

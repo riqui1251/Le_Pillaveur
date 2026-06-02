@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { Player } from '@/lib/players';
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils';

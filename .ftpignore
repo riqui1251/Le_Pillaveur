@@ -1,0 +1,78 @@
+# Fichiers et dossiers à ignorer lors du transfert FTP
+
+# Dossier Git
+.git/
+.gitignore
+
+# Dépendances
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Fichiers de build
+.next/
+out/
+build/
+dist/
+
+# Fichiers de développement
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Fichiers de cache
+.cache/
+.parcel-cache/
+
+# Fichiers de logs
+*.log
+
+# Fichiers temporaires
+*.tmp
+*.temp
+
+# Fichiers de configuration IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers TypeScript
+*.tsbuildinfo
+
+# Fichiers de base de données
+*.db
+*.db-journal
+
+# Fichiers de migration Prisma (optionnel - à garder si nécessaire)
+# prisma/migrations/
+
+# Fichiers de test
+coverage/
+.nyc_output/
+
+# Fichiers de documentation
+README.md
+CHANGELOG.md
+LICENSE
+
+
+
+
+
+
+
+
+
+
+
+
+
+

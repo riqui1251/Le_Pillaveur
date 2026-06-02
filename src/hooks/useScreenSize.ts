@@ -14,17 +14,21 @@ interface ScreenSize {
   isMobile: boolean;
   isTablet: boolean;
   isDesktop: boolean;
+  isLandscape: boolean;
 }
 
+// Valeurs initiales identiques serveur/client pour éviter les erreurs d'hydratation
+const INITIAL_SCREEN_SIZE: ScreenSize = {
+  width: 1200,
+  height: 800,
+  isMobile: false,
+  isTablet: false,
+  isDesktop: true,
+  isLandscape: true,
+};
+
 export function useScreenSize(): ScreenSize {
-  // Initialiser avec une taille par défaut pour éviter les erreurs SSR
-  const [screenSize, setScreenSize] = useState<ScreenSize>({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
-    height: typeof window !== 'undefined' ? window.innerHeight : 800,
-    isMobile: false,
-    isTablet: false,
-    isDesktop: true,
-  });
+  const [screenSize, setScreenSize] = useState<ScreenSize>(INITIAL_SCREEN_SIZE);
 
   useEffect(() => {
     // Fonction pour mettre à jour les dimensions de l'écran
@@ -38,6 +42,7 @@ export function useScreenSize(): ScreenSize {
         isMobile: width < SCREEN_SIZES.md,
         isTablet: width >= SCREEN_SIZES.md && width < SCREEN_SIZES.lg,
         isDesktop: width >= SCREEN_SIZES.lg,
+        isLandscape: width > height,
       });
     };
 

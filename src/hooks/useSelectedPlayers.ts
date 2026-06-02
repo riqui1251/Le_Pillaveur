@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import { useCallback, useEffect, useState } from 'react';
 import { getSelectedPlayerIds, setSelectedPlayerIds, clearSelectedPlayerIds } from '@/lib/selectedPlayers';

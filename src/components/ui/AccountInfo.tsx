@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react/no-unescaped-entities */
 "use client";
 
@@ -11,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils';
 import { Player } from '@/lib/players';
+import { getSafeStorage } from '@/lib/storage';
 
 
 
@@ -31,7 +31,8 @@ export function AccountInfo({ onLogout }: AccountInfoProps) {
   // Calculer le nombre total de parties jouées et de gorgées bues
   useEffect(() => {
     // Charger les statistiques
-    const storedGames = localStorage.getItem('games');
+    const storage = getSafeStorage();
+    const storedGames = storage?.getItem('games') ?? null;
     const games = storedGames ? JSON.parse(storedGames) : [];
     
     // Si games n'existe pas, calculer à partir des statistiques des joueurs

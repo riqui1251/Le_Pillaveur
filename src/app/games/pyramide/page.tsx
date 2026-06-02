@@ -36,7 +36,7 @@ export default function PyramidePage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-2 sm:p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Pyramide</h1>
         <Link href="/">

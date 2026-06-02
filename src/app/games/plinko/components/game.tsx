@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Player } from '@/types/game'
+import { getPlayerGameBoost } from '@/lib/players'
 
 // --- MODIFICATION: Exporter le type DifficultyLevel ---
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
@@ -449,8 +450,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
   // Annuler proprement toute animation en cours (démontage/changement d'écran)
   useEffect(() => {
+    const refs = animationRefs.current;
     return () => {
-      const refs = animationRefs.current;
       if (refs.red) { cancelAnimationFrame(refs.red); }
       if (refs.green) { cancelAnimationFrame(refs.green); }
       refs.red = null;
@@ -1343,6 +1344,13 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         }
     });
 
+    const currentPlayer = players[currentPlayerIndex];
+    const boost = currentPlayer ? getPlayerGameBoost(currentPlayer, 'plinko') : 0;
+    if (boost > 0) {
+      totalGreenSips += Math.floor(totalGreenSips * boost / 100);
+      totalRedSips = Math.max(0, totalRedSips - Math.floor(totalRedSips * boost / 100));
+    }
+
     console.log("Totaux calculés:", { totalRedSips, totalGreenSips });
 
     const extraSipsForDisplay = finishedExtraBalls.reduce((sum, ballData) => sum + (ballData.finalSipResult ?? 0), 0);
@@ -1356,7 +1364,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     // const currentPlayer = players[currentPlayerIndex];
     // if (...) { setGameHistory(...) }
 
-    const currentPlayer = players[currentPlayerIndex]; // Gardé pour les résultats
+    // currentPlayer déjà défini plus haut
     const currentResults = playerResults[currentPlayer.id] || [];
     
     // Collecter tous les powerups de ce tour (nouvelle méthode fiable)

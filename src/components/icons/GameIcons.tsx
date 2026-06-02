@@ -98,6 +98,17 @@ export function HiLoIcon({ className = 'w-6 h-6' }: IconProps) {
   )
 }
 
+export function PurpleIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="5" y="4" width="8" height="12" rx="2" className="text-purple-300/30" fill="currentColor" />
+      <rect x="11" y="8" width="8" height="12" rx="2" className="text-purple-400/40" fill="currentColor" />
+      <path d="M9 9l2-2 2 2" className="stroke-purple-400" />
+      <path d="M15 15l-2 2-2-2" className="stroke-violet-400" />
+    </svg>
+  )
+}
+
 export function PyramidIcon({ className = 'w-6 h-6' }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -187,6 +198,105 @@ export function WheelIcon({ className = 'w-6 h-6' }: IconProps) {
       <circle cx="12" cy="12" r="1.6" className="fill-current" />
       {/* Pointeur */}
       <path d="M12 1.8l1.6 2.8H10.4L12 1.8Z" className="fill-current" />
+    </svg>
+  )
+}
+
+export function MapIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z" className="fill-current text-emerald-500/20" />
+      <path d="M9 4v13" className="stroke-current text-emerald-400" />
+      <path d="M15 7v13" className="stroke-current text-emerald-400" />
+      <circle cx="9" cy="10" r="1" className="fill-current text-emerald-600" />
+      <circle cx="15" cy="13" r="1" className="fill-current text-emerald-600" />
+      <circle cx="12" cy="16" r="1" className="fill-current text-emerald-600" />
+    </svg>
+  )
+}
+
+export function GooseIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">
+      {/* Corps de l'oie */}
+      <ellipse cx="12" cy="14" rx="6" ry="4" className="fill-current text-blue-500/20" />
+      {/* Cou */}
+      <path d="M12 10c0-2 2-3 4-3s4 1 4 3" className="stroke-current text-blue-400" />
+      {/* Tête */}
+      <circle cx="16" cy="8" r="2" className="fill-current text-blue-300" />
+      {/* Bec */}
+      <path d="M18 8l2 1" className="stroke-current text-orange-400" strokeWidth="2" />
+      {/* Aile */}
+      <path d="M8 12c-1 1-2 2-1 3s2 1 3 0" className="stroke-current text-blue-400" />
+      {/* Patte */}
+      <path d="M10 18l1 2M14 18l-1 2" className="stroke-current text-orange-400" />
+    </svg>
+  )
+}
+
+export function HangmanIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">
+      {/* Potence - poteau vertical */}
+      <path d="M6 3v16" className="stroke-current" strokeWidth="2" />
+      {/* Potence - barre horizontale */}
+      <path d="M6 3h8" className="stroke-current" strokeWidth="2" />
+      {/* Potence - corde */}
+      <path d="M14 3v3" className="stroke-current" strokeWidth="1.5" />
+      {/* Tête */}
+      <circle cx="14" cy="8" r="1.5" className="stroke-current" fill="none" />
+      {/* Corps */}
+      <path d="M14 9.5v5" className="stroke-current" strokeWidth="1.5" />
+      {/* Bras gauche */}
+      <path d="M14 11l-2 2" className="stroke-current" strokeWidth="1.5" />
+      {/* Bras droit */}
+      <path d="M14 11l2 2" className="stroke-current" strokeWidth="1.5" />
+      {/* Jambe gauche */}
+      <path d="M14 14.5l-2 2.5" className="stroke-current" strokeWidth="1.5" />
+      {/* Jambe droite */}
+      <path d="M14 14.5l2 2.5" className="stroke-current" strokeWidth="1.5" />
+      {/* Base de la potence */}
+      <path d="M4 19h4" className="stroke-current" strokeWidth="2" />
+    </svg>
+  )
+}
+
+/** Deux dés : faces 12 et 20 pour le jeu 1220 */
+export function Dice1220Icon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.4">
+      <rect x="3" y="5" width="9" height="9" rx="1.5" className="fill-amber-500/35" />
+      <text x="7.5" y="11.8" textAnchor="middle" fill="currentColor" fontSize="5" fontWeight="700">
+        12
+      </text>
+      <rect x="12" y="10" width="9" height="9" rx="1.5" className="fill-violet-500/35" />
+      <text x="16.5" y="16.8" textAnchor="middle" fill="currentColor" fontSize="5" fontWeight="700">
+        20
+      </text>
+    </svg>
+  )
+}
+
+export function TrialMotoIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">
+      {/* Moto simplifiée vue de côté */}
+      {/* Corps principale */}
+      <ellipse cx="12" cy="14" rx="8" ry="3" className="text-red-400/30" fill="currentColor" />
+      {/* Roue avant */}
+      <circle cx="6" cy="17" r="2.5" className="stroke-current" fill="none" />
+      {/* Roue arrière */}
+      <circle cx="18" cy="17" r="2.5" className="stroke-current" fill="none" />
+      {/* Guidon */}
+      <path d="M5 10l-2 1M19 10l2 1" className="stroke-current" strokeWidth="2" />
+      {/* Pot d'échappement - flammes */}
+      <path d="M22 17c.5 1 1.5 0 2-1" className="stroke-current text-orange-500" strokeWidth="1.5" />
+      {/* Casque (cercle autour de la tête) */}
+      <circle cx="12" cy="9" r="3" className="stroke-current text-blue-300" fill="none" />
+      {/* Pare-brise */}
+      <path d="M10 9c.5-1 1.5 0 2 1.5 0-.5 1-.5 1.5 0" className="stroke-current text-gray-300" strokeWidth="1.5" />
+      {/* Vitesse - lignes de mouvement */}
+      <path d="M4 14l1-2M3 15l1-1.5" className="stroke-current text-orange-400" strokeWidth="1" strokeOpacity="0.6" />
     </svg>
   )
 }

@@ -6,6 +6,7 @@ import "../styles/player-effects.css";
 import { Providers } from "./providers";
 import Navbar from "@/components/layout/Navbar";
 import { FullscreenLayoutProvider } from "@/components/providers/FullscreenLayoutProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -42,16 +43,18 @@ export default function RootLayout({
     <html lang="fr" suppressHydrationWarning>
       <head />
       <body className={`${inter.className} antialiased`}>
-        <Providers>
-          <FullscreenLayoutProvider>
-            <div className="relative min-h-screen fullscreen-container">
-              <Navbar />
-              <div className="content-container mt-5">
-                {children}
+        <ErrorBoundary>
+          <Providers>
+            <FullscreenLayoutProvider>
+              <div className="relative min-h-screen fullscreen-container">
+                <Navbar />
+                <div className="content-container mt-5">
+                  {children}
+                </div>
               </div>
-            </div>
-          </FullscreenLayoutProvider>
-        </Providers>
+            </FullscreenLayoutProvider>
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   );

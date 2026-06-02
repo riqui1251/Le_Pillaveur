@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react/no-unescaped-entities */
 "use client"
 
@@ -63,7 +62,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   const [currentCard, setCurrentCard] = useState<Card | null>(null)
   const [gameStarted, setGameStarted] = useState(false)
   const [isCardFlipping, setIsCardFlipping] = useState(false)
-  const { isMobile, width } = useScreenSize();
+  const { isMobile, width, isLandscape } = useScreenSize();
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   
   // États pour le mode classique
@@ -254,12 +253,12 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     "bg-red-500",
   ];
 
-  // Ajustement de la hauteur de la pyramide pour les appareils mobiles
-  const effectivePyramidHeight = isMobile && pyramidHeight > 5 ? 5 : pyramidHeight;
   // Réduire la taille pour les ordinateurs
   const containerMaxWidth = isMobile ? "100%" : "900px";
-  // Ajuster la taille des cartes en fonction du type d'appareil (h-18 n'existe pas en Tailwind)
-  const cardWidth = isMobile ? (width < 400 ? 'w-10 h-16' : 'w-12 h-20') : 'w-16 h-24';
+  // Ajuster la taille des cartes : en paysage mobile = plus d'espace, cartes plus grandes
+  const cardWidth = isMobile 
+    ? (isLandscape ? 'w-14 h-20' : (width < 400 ? 'w-10 h-16' : 'w-12 h-20'))
+    : 'w-16 h-24';
   const cardFontSize = isMobile ? (width < 400 ? 'text-sm' : 'text-base') : 'text-xl';
   const suitFontSize = isMobile ? (width < 400 ? 'text-base' : 'text-lg') : 'text-2xl';
 
@@ -372,11 +371,10 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
 
   // Créer la pyramide de cartes
   const createPyramid = (deck: Card[], rows: number): { pyramidCards: Card[][]; remainingDeck: Card[] } => {
-    const actualRows = isMobile ? Math.min(rows, 5) : rows;
     const pyramidCards: Card[][] = [];
     let deckIndex = 0;
     
-    for (let row = 0; row < actualRows; row++) {
+    for (let row = 0; row < rows; row++) {
       const rowCards: Card[] = [];
       for (let col = 0; col <= row; col++) {
         if (deckIndex < deck.length) {
@@ -640,7 +638,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     const pyramidCards: Card[][] = [];
     let cardIndex = 0;
     
-    // Pour chaque niveau de la pyramide
+    // Pour chaque niveau de la pyramide - toujours utiliser la hauteur sélectionnée par l'utilisateur
     for (let row = 0; row < pyramidHeight; row++) {
       const rowCards: Card[] = [];
       
@@ -712,12 +710,12 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
         <div className="absolute inset-0 opacity-[0.08] [background:radial-gradient(circle_at_20%_10%,rgba(255,255,255,.2),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,.16),transparent_40%)]" />
       </div>
 
-      <div className="container mx-auto max-w-6xl p-4" style={{ maxWidth: containerMaxWidth }}>
-        {/* En-tête */}
-        <div className="mb-5 md:mb-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 md:px-6 md:py-5 shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300">
-              Pyramide {gameMode === 'classic' ? '· Mode Classique' : ''}
+      <div className={`container mx-auto max-w-6xl ${isMobile ? 'p-2 pb-24' : 'p-4'}`} style={{ maxWidth: containerMaxWidth }}>
+        {/* En-tête - compact sur mobile */}
+        <div className={`rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.45)] ${isMobile ? 'mb-2 px-3 py-2' : 'mb-5 md:mb-6 px-4 py-3 md:px-6 md:py-5'}`}>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className={`font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 ${isMobile ? 'text-lg' : 'text-2xl sm:text-3xl'}`}>
+              Pyramide {gameMode === 'classic' ? '· Classique' : ''}
             </h1>
           </div>
         </div>
@@ -881,12 +879,21 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
           </div>
         )}
 
-        {/* Instructions sur mobile - placées avant la pyramide pour un meilleur flux */}
-        {isMobile && !gameOver && gameMode === 'fun' && (
-          <div className="flex items-center justify-center mb-4">
-            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur px-3 py-2 text-center text-sm flex items-center gap-2 shadow-sm">
-              <ArrowDown className="h-4 w-4 text-amber-300" />
-              <span className="text-amber-200/90">Retournez les cartes une par une, de bas en haut</span>
+        {/* Message : tourner en paysage sur mobile portrait */}
+        {isMobile && !isLandscape && !gameOver && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
+          <div className="flex items-center justify-center mb-3 p-3 rounded-xl border border-amber-500/50 bg-amber-500/20 backdrop-blur">
+            <div className="flex items-center gap-2 text-amber-200 text-sm">
+              <span className="text-lg">📱</span>
+              <span className="font-medium">Tournez votre téléphone en <strong>paysage</strong> pour une meilleure vue de la pyramide</span>
+            </div>
+          </div>
+        )}
+        {/* Instructions sur mobile paysage */}
+        {isMobile && isLandscape && !gameOver && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
+          <div className="flex items-center justify-center mb-2">
+            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur px-3 py-1.5 text-center text-xs flex items-center gap-2 shadow-sm">
+              <ArrowDown className="h-3 w-3 text-amber-300" />
+              <span className="text-amber-200/90">Retournez les cartes une par une • Faites défiler si besoin</span>
             </div>
           </div>
         )}
@@ -918,7 +925,8 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
         <Button 
           onClick={() => setShowRules(!showRules)} 
           variant="outline"
-          className="mb-4 rounded-xl border-white/10 bg-white/5 text-amber-200 hover:bg-white/10"
+          size={isMobile ? "sm" : "default"}
+          className={`rounded-xl border-white/10 bg-white/5 text-amber-200 hover:bg-white/10 ${isMobile ? 'mb-2 text-xs py-1' : 'mb-4'}`}
         >
           {showRules ? "Cacher les règles" : "Voir les règles"}
         </Button>
@@ -946,7 +954,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                 </div>
 
                 {/* Cartes en grand format, centrées */}
-                <div className="grid grid-cols-5 gap-3 md:gap-4 place-items-center py-2">
+                <div className={`grid gap-3 md:gap-4 place-items-center py-2 ${cardsToSelect === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
                   {(selectedCardsByPlayer[players[currentSelectionPlayer]?.id] || []).map((card, idx) => (
                     <button
                       key={`mem-${idx}`}
@@ -1018,33 +1026,35 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
           </div>
         )}
 
-        {/* Boutons de contrôle du jeu - déplacés en haut pour mobile */}
+        {/* Boutons de contrôle du jeu - compacts sur mobile */}
         {isMobile && (
-          <div className="flex justify-between mb-4">
+          <div className="flex justify-between gap-2 mb-2">
             <Button 
               onClick={onGameEnd}
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10 w-[48%]"
+              size="sm"
+              className="border-white/20 text-white hover:bg-white/10 flex-1 text-xs py-2"
             >
-              Retour au menu
+              Retour
             </Button>
             <Button 
               onClick={resetGame}
-              className="bg-amber-600 hover:bg-amber-700 text-white w-[48%]"
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white flex-1 text-xs py-2"
             >
-              <RotateCcw className="mr-2 h-4 w-4" /> Nouvelle partie
+              <RotateCcw className="mr-1 h-3 w-3" /> Nouvelle partie
             </Button>
           </div>
         )}
 
-        {/* Conteneur principal pour la pyramide et les cartes sélectionnées */}
+        {/* Conteneur principal : en paysage mobile = côte à côte, sinon colonne */}
         {(gameMode === 'fun' || (gameMode === 'classic' && (classicGamePhase === 'play' || classicGamePhase === 'selection'))) && (
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Affichage des cartes sélectionnées en mode classique pendant la phase de jeu - À GAUCHE sur desktop */}
+          <div className={`flex ${isMobile && isLandscape ? 'flex-row gap-2' : `flex-col ${isMobile ? 'gap-2' : 'md:flex-row gap-4'}`}`}>
+            {/* Affichage des cartes sélectionnées en mode classique - plus compact sur mobile */}
             {gameMode === 'classic' && (
-              <div className="md:w-1/3 lg:w-1/4 order-2 md:order-1">
-                <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur p-4 h-full shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
-                  <h3 className="text-lg font-semibold mb-3 text-amber-200">
+              <div className={`order-2 md:order-1 shrink-0 ${isMobile && isLandscape ? 'w-28 max-h-[70vh] overflow-y-auto' : isMobile ? 'max-h-[25vh] overflow-y-auto' : 'md:w-1/3 lg:w-1/4'}`}>
+                <div className={`rounded-xl border border-white/10 bg-white/5 backdrop-blur h-full shadow-[inset_0_1px_0_rgba(255,255,255,.06)] ${isMobile ? 'p-2' : 'p-4'}`}>
+                  <h3 className={`font-semibold text-amber-200 ${isMobile ? 'text-sm mb-1' : 'text-lg mb-3'}`}>
                     {classicGamePhase === 'selection' ? (
                       <span>
                         Mémorisation — <span className="font-bold text-amber-100">{players[currentSelectionPlayer]?.name}</span>
@@ -1068,7 +1078,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                           </div>
                            <div className={`${classicGamePhase === 'play' ? 'grid grid-cols-4' : 'flex flex-wrap'} gap-1 p-2 rounded ${classicGamePhase === 'selection' && players[currentSelectionPlayer]?.id === player.id ? 'bg-white/5 ring-1 ring-white/10' : ''}`}>
                             {(selectedCardsByPlayer[player.id] || []).map((card, cardIndex) => {
-                              const isLastFlippedValue = lastFlippedCard && pyramid[lastFlippedCard.row][lastFlippedCard.col].value === card.value;
+                              const isLastFlippedValue = lastFlippedCard && pyramid[lastFlippedCard.row]?.[lastFlippedCard.col]?.value === card.value;
                               const shouldHighlight = false;
                               const isCurrent = classicGamePhase === 'selection' && players[currentSelectionPlayer]?.id === player.id
                               return (
@@ -1143,18 +1153,25 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
               </div>
             )}
 
-            {/* Conteneur de la pyramide - À DROITE sur desktop */}
-            <div className={`${gameMode === 'classic' && classicGamePhase === 'play' ? 'md:w-2/3 lg:w-3/4' : 'w-full'} order-1 md:order-2`}>
-              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-2 md:p-4 mb-4 md:mb-6 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+            {/* Conteneur de la pyramide - en paysage mobile prend le reste de l'espace */}
+            <div className={`order-1 md:order-2 min-w-0 ${gameMode === 'classic' && classicGamePhase === 'play' ? 'md:w-2/3 lg:w-3/4' : 'w-full'} ${isMobile && isLandscape ? 'flex-1 overflow-hidden' : ''}`}>
+              <div className={`rounded-2xl border border-white/10 bg-white/5 backdrop-blur shadow-[inset_0_1px_0_rgba(255,255,255,.06)] ${isMobile ? 'p-2 mb-2' : 'p-2 md:p-4 mb-4 md:mb-6'}`}>
                 {/* Affichage de la pyramide */}
                 {(gameMode === 'fun' || classicGamePhase === 'play') && (
-                <div className={`space-y-1 md:space-y-2 py-2 md:py-4 relative ${isMobile ? 'overflow-x-auto' : ''}`}>
+                <div 
+                  className={`space-y-1 md:space-y-2 py-2 md:py-4 relative ${isMobile ? 'overflow-x-auto overflow-y-auto scroll-smooth' : ''}`} 
+                  style={isMobile ? { 
+                    minWidth: 'min-content', 
+                    WebkitOverflowScrolling: 'touch',
+                    maxHeight: isLandscape ? '55vh' : undefined 
+                  } : undefined}
+                >
                   {pyramid.map((row, rowIndex) => (
                     <div 
                       key={rowIndex} 
-                      className="flex justify-center items-center"
+                      className="flex justify-center items-center shrink-0"
                       style={{ 
-                        paddingLeft: `${(effectivePyramidHeight - rowIndex - 1) * (isMobile ? 0.2 : 0.5)}rem`,
+                        paddingLeft: `${Math.max(0, (pyramid.length - rowIndex - 1) * (isMobile ? 0.2 : 0.5))}rem`,
                         marginBottom: isMobile ? '0.5rem' : '0.75rem'
                       }}
                     >
@@ -1162,7 +1179,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                       <div className={`mr-2 md:mr-4 flex items-center justify-center rounded-full font-bold shadow-md border ${rowIndex === 0 
                         ? 'px-2 md:px-3 py-1 bg-red-700/90 border-red-400/40 text-white text-xs md:text-sm' 
                         : 'w-6 h-6 md:w-8 md:h-8 bg-white/5 border-white/10 text-amber-200'}`}>
-                        {rowIndex === 0 ? "CUL SEC" : effectivePyramidHeight - rowIndex}
+                        {rowIndex === 0 ? "CUL SEC" : pyramid.length - rowIndex}
                       </div>
                       {row.map((card, colIndex) => (
                         <motion.div 
@@ -1225,6 +1242,25 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                     ? `${totalCardsFlipped} / ${totalCards} cartes retournées` 
                     : 'En attente du démarrage de la partie'}
                 </div>
+                {/* Bouton Suivant sur mobile : bien visible, zone tactile large, dans le flux */}
+                {isMobile && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
+                  <div className="mt-3 pt-3 pb-4 flex flex-col items-center gap-2">
+                    <Button 
+                      onClick={flipNextCard}
+                      className="w-full max-w-[280px] bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-6 py-4 rounded-xl shadow-[0_10px_30px_rgba(245,158,11,0.3)] min-h-[56px] text-lg font-bold [touch-action:manipulation] active:scale-[0.98]"
+                      disabled={gameOver || !nextCardToFlip || isCardFlipping}
+                    >
+                      {gameOver ? "Terminé" : "Suivant"}
+                    </Button>
+                    <div className="text-xs text-amber-200/80">
+                      {currentCard ? (
+                        <span>Dernière carte : <span className={getCardColor(currentCard.suit)}>{currentCard.value}{getSuitSymbol(currentCard.suit)}</span></span>
+                      ) : (
+                        <span>Cliquez pour retourner la première carte</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1245,10 +1281,10 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
           </div>
         )}
 
-        {/* Barre basse: compteur + bouton Suivant (centrés et non bloquants pour l'UI au-dessus) */}
-        {(gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
-          <div className="fixed bottom-0 inset-x-0 z-10">
-            <div className="mx-auto max-w-6xl p-3 pb-[calc(env(safe-area-inset-bottom,0)+0.5rem)]">
+        {/* Barre basse fixe: compteur + bouton Suivant - DESKTOP uniquement (sur mobile le bouton est dans le flux ci-dessus) */}
+        {!isMobile && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
+          <div className="fixed bottom-0 inset-x-0 z-10 bg-gradient-to-t from-slate-950/95 via-slate-950/90 to-transparent backdrop-blur-sm">
+            <div className="mx-auto max-w-6xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <div className="flex justify-center items-center gap-3">
                 <div className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs md:text-sm text-amber-200/90 font-semibold flex items-center gap-1">
                   {currentCard ? (
@@ -1263,7 +1299,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                 <Button 
                   onClick={flipNextCard}
                   className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-6 py-3 rounded-full shadow-[0_10px_30px_rgba(245,158,11,0.3)]"
-                  disabled={gameOver || !nextCardToFlip}
+                  disabled={gameOver || !nextCardToFlip || isCardFlipping}
                 >
                   {gameOver ? "Terminé" : "Suivant"}
                 </Button>

@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card'
 import useScreenSize from '@/hooks/useScreenSize'
 import confetti from 'canvas-confetti'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Player as BasePlayer, PlayerPreferences } from '@/lib/players'
+import { Player as BasePlayer, PlayerPreferences, getPlayerGameBoost } from '@/lib/players'
 import { PlayerName } from '@/components/ui/PlayerName'
 
 // Types
@@ -166,16 +166,21 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
   
   // Gérer le lancer pendant la phase de setup
   const handleSetupRoll = (roll: number) => {
-    const currentPlayerName = players[currentPlayerIndex].name
+    const currentPlayerObj = players[currentPlayerIndex]
+    const currentPlayerName = currentPlayerObj.name
+    const basePlayer = initialBasePlayers.find(p => p.id === currentPlayerObj.id)
+    const boost = basePlayer ? getPlayerGameBoost(basePlayer, 'monsieur-3') : 0
+    let effectiveRoll = roll
+    if (roll === 3 && boost > 0 && Math.random() * 100 < boost) {
+      effectiveRoll = 4
+    }
     
-    // Ajouter ce lancé à la liste des lancés de setup
-    const newSetupRolls = [...setupRolls, { playerName: currentPlayerName, roll }]
+    const newSetupRolls = [...setupRolls, { playerName: currentPlayerName, roll: effectiveRoll }]
     setSetupRolls(newSetupRolls)
     
     let newMessage = ''
     
-    // Vérifier si le joueur a fait un 3
-    if (roll === 3) {
+    if (effectiveRoll === 3) {
       // Désigner ce joueur comme Monsieur 3
       const updatedPlayers = [...players]
       updatedPlayers[currentPlayerIndex].isMonsieur3 = true
@@ -206,7 +211,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
         }, 2000)
       }, 2000)
     } else {
-      newMessage = `${currentPlayerName} a fait un ${roll}.`
+      newMessage = `${currentPlayerName} a fait un ${effectiveRoll}.`
       setMessage(newMessage)
       
       // Passer au joueur suivant
@@ -215,10 +220,9 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
       setCanRoll(true)
     }
     
-    // Ajouter au rollHistory
     setRollHistory(prev => [...prev, {
       player: currentPlayerName,
-      dice: { dice1: roll, dice2: 1 },
+      dice: { dice1: effectiveRoll, dice2: 1 },
       message: newMessage
     }])
   }
@@ -228,14 +232,16 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
     const { dice1, dice2 } = diceRoll
     const sum = dice1 + dice2
     const isDouble = dice1 === dice2
-    const currentPlayerName = players[currentPlayerIndex].name
-    const isCurrentPlayerMonsieur3 = players[currentPlayerIndex].isMonsieur3
+    const currentPlayerObj = players[currentPlayerIndex]
+    const currentPlayerName = currentPlayerObj.name
+    const isCurrentPlayerMonsieur3 = currentPlayerObj.isMonsieur3
+    const basePlayer = initialBasePlayers.find(p => p.id === currentPlayerObj.id)
+    const boost = basePlayer ? getPlayerGameBoost(basePlayer, 'monsieur-3') : 0
     
     let messageText = ''
     let monsieur3ShouldDrink = false
     let ruleTriggered = false
     
-    // Vérifier si le joueur actuel est Monsieur 3
     if (isCurrentPlayerMonsieur3) {
       // Si aucune règle n'est déclenchée pour Monsieur 3, on termine la partie
       if (dice1 !== 3 && dice2 !== 3 && sum !== 3 && sum !== 5 && dice1 !== 5 && dice2 !== 5 && sum !== 8 && !isDouble) {
@@ -252,8 +258,12 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
       }
     }
     
-    // Vérifier les différentes règles
     if (dice1 === 3 || dice2 === 3 || sum === 3 || sum === 5 || dice1 === 5 || dice2 === 5 || sum === 8) {
+      monsieur3ShouldDrink = true
+      messageText = "Monsieur 3 tu bois !"
+      ruleTriggered = true
+    }
+    if (!isCurrentPlayerMonsieur3 && !monsieur3ShouldDrink && monsieur3Index >= 0 && boost > 0 && Math.random() * 100 < boost) {
       monsieur3ShouldDrink = true
       messageText = "Monsieur 3 tu bois !"
       ruleTriggered = true

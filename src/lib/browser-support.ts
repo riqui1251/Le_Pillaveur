@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Collection d'utilitaires pour détecter le support de fonctionnalités dans le navigateur
  * et fournir des alternatives si nécessaire

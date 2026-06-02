@@ -1,10 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { getSafeStorage } from './storage';
+
 const STORAGE_KEY = 'selected_player_ids';
 
 export function getSelectedPlayerIds(): string[] {
-	if (typeof window === 'undefined') return [];
+	const storage = getSafeStorage();
+	if (!storage) return [];
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
+		const raw = storage.getItem(STORAGE_KEY);
 		if (!raw) return [];
 		const parsed = JSON.parse(raw);
 		return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
@@ -14,18 +16,21 @@ export function getSelectedPlayerIds(): string[] {
 }
 
 export function setSelectedPlayerIds(ids: string[]): void {
-	if (typeof window === 'undefined') return;
+	const storage = getSafeStorage();
+	if (!storage) return;
 	try {
 		const unique = Array.from(new Set(ids.filter(Boolean)));
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(unique));
+		storage.setItem(STORAGE_KEY, JSON.stringify(unique));
 	} catch {}
 }
 
 export function clearSelectedPlayerIds(): void {
-	if (typeof window === 'undefined') return;
+	const storage = getSafeStorage();
+	if (!storage) return;
 	try {
-		localStorage.removeItem(STORAGE_KEY);
+		storage.removeItem(STORAGE_KEY);
 	} catch {}
 }
+
 
 

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react/no-unescaped-entities */
 "use client"
 
@@ -12,9 +10,10 @@ import { Sun, Moon, Dice6, User, Users, Trophy, ArrowRight, RefreshCw, Home } fr
 import { usePlayers } from '@/hooks/usePlayers'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS } from '@/lib/players'
+import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS, getPlayerGameBoost } from '@/lib/players'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { detectBrowserCapabilities } from '@/lib/browser-support'
+import { getSafeStorage } from '@/lib/storage'
 import { PlayerName, isSpecialPlayer } from '@/components/ui/PlayerName'
 import ReactConfetti from 'react-confetti'
 
@@ -96,7 +95,12 @@ const generateWheelSegments = (): WheelSegment[] => {
   return arr
 }
 
-const generateCase = (difficulty: Difficulty): Case => {
+const generateCase = (difficulty: Difficulty, currentPlayer?: GamePlayer): Case => {
+  const boost = currentPlayer ? getPlayerGameBoost(currentPlayer, 'petit-buveur') : 0
+  if (boost > 0 && Math.random() * 100 < boost) {
+    const avanceSpaces = Math.floor(Math.random() * 3) + 1
+    return { type: 'avance', description: `Avance de ${avanceSpaces} case${avanceSpaces > 1 ? 's' : ''} !`, effect: avanceSpaces }
+  }
   // Répartir les probabilités pour toutes les cases
   const random = Math.random();
   let type: 'normal' | 'defi' | 'gorgée' | 'recul' | 'avance' | 'tous' | 'roue' | 'echange' | 'bombe' | 'protection' | 'malediction' | 'chance' | 'repetition' | 'miroir' | 'defi-chaine' | 'piege' | 'melange';
@@ -277,7 +281,7 @@ const generateCase = (difficulty: Difficulty): Case => {
     case 'piege': {
       return { 
         type, 
-        description: `🕳️ Piège ! Bois autant de gorgées que ta position !`, 
+        description: `🕳️ Piège ! Le joueur ciblé boira autant de gorgées que sa position actuelle !`, 
         effect: 0 
       }
     }
@@ -360,6 +364,18 @@ const drinkingMessages = [
   'La vie est trop courte pour boire de mauvais alcool !'
 ]
 
+interface GameSave {
+  id: string;
+  timestamp: number;
+  players: GamePlayer[];
+  currentPlayer: number;
+  turnCount: number;
+  gameDifficulty: Difficulty;
+  lastCase: Case | null;
+  gameStarted: boolean;
+  winner: GamePlayer | null;
+}
+
 interface GameProps {
   players: BasePlayer[];
   onGameEnd: () => void;
@@ -380,7 +396,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   });
   
   const [players, setPlayers] = useState<GamePlayer[]>(
-    initialPlayers.map(p => ({
+    initialPlayers.length > 0 ? initialPlayers.map(p => ({
       ...p,
       position: 0,
       drinks: 0,
@@ -394,7 +410,38 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         specialEffect: null
       },
       id: p.id || `player-${Math.random().toString(36).substring(2, 9)}`
-    }))
+    })) : [
+      {
+        id: 'player-1',
+        name: 'Joueur 1',
+        position: 0,
+        drinks: 0,
+        protected: false,
+        cursed: 0,
+        linkedTo: undefined,
+        linkedTurns: 0,
+        preferences: {
+          color: 'bg-blue-500',
+          icon: '🎮',
+          specialEffect: null
+        }
+      },
+      {
+        id: 'player-2',
+        name: 'Joueur 2',
+        position: 0,
+        drinks: 0,
+        protected: false,
+        cursed: 0,
+        linkedTo: undefined,
+        linkedTurns: 0,
+        preferences: {
+          color: 'bg-red-500',
+          icon: '🎲',
+          specialEffect: null
+        }
+      }
+    ]
   );
   const [newPlayerName, setNewPlayerName] = useState('')
   const [currentPlayer, setCurrentPlayer] = useState<number>(0);
@@ -423,6 +470,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [showNotification, setShowNotification] = useState(false);
   const [showVictoryScreen, setShowVictoryScreen] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  
+  // États pour la sauvegarde
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [hasActiveSave, setHasActiveSave] = useState(false);
   
   // États pour la roue des gorgées
   const [showWheel, setShowWheel] = useState(false);
@@ -475,6 +526,137 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
   }, [winner]);
 
+  // Debug: Surveiller l'état de la fenêtre de sélection
+  useEffect(() => {
+    console.log(`État de showTargetDialog changé: ${showTargetDialog}`);
+    if (showTargetDialog) {
+      console.log("Fenêtre de sélection ouverte - vérification des joueurs:", players.length);
+    }
+  }, [showTargetDialog, players.length]);
+
+  // Debug: Surveiller l'état du traitement du tour
+  useEffect(() => {
+    console.log(`État du traitement du tour: isProcessingTurn=${isProcessingTurn}, isDiceRolling=${isDiceRolling}`);
+    if (isProcessingTurn && !isDiceRolling) {
+      console.log("Tour en cours de traitement - vérification des états:");
+      console.log("- pendingCase:", pendingCase?.type);
+      console.log("- showTargetDialog:", showTargetDialog);
+      console.log("- showWheel:", showWheel);
+      console.log("- showChanceDialog:", showChanceDialog);
+      console.log("- showExchangeDialog:", showExchangeDialog);
+      console.log("- showChainDialog:", showChainDialog);
+    }
+  }, [isProcessingTurn, isDiceRolling, pendingCase, showTargetDialog, showWheel, showChanceDialog, showExchangeDialog, showChainDialog]);
+
+  // Fonctions de sauvegarde et chargement
+  const saveGame = useCallback(() => {
+    const saveData: GameSave = {
+      id: `save_${Date.now()}`,
+      timestamp: Date.now(),
+      players,
+      currentPlayer,
+      turnCount,
+      gameDifficulty,
+      lastCase,
+      gameStarted,
+      winner
+    };
+    
+    try {
+      const storage = getSafeStorage();
+      if (storage) {
+        console.log('saveGame: Tentative de sauvegarde dans localStorage');
+        storage.setItem('petit-buveur-save', JSON.stringify(saveData));
+        setHasActiveSave(true);
+        console.log('saveGame: Partie sauvegardée avec succès');
+      }
+    } catch (error) {
+      console.error('saveGame: Erreur lors de la sauvegarde:', error);
+    }
+  }, [players, currentPlayer, turnCount, gameDifficulty, lastCase, gameStarted, winner]);
+
+  const loadGame = (): GameSave | null => {
+    try {
+      const storage = getSafeStorage();
+      if (!storage) return null;
+      console.log('loadGame: Tentative de chargement depuis localStorage');
+      const saveData = storage.getItem('petit-buveur-save');
+      console.log('loadGame: Données brutes récupérées:', saveData);
+      
+      if (saveData) {
+        const parsed = JSON.parse(saveData) as GameSave;
+        console.log('loadGame: Données parsées avec succès:', parsed);
+        return parsed;
+      } else {
+        console.log('loadGame: Aucune donnée trouvée dans localStorage');
+      }
+    } catch (error) {
+      console.error('loadGame: Erreur lors du chargement:', error);
+    }
+    return null;
+  };
+
+  const deleteSave = () => {
+    try {
+      const storage = getSafeStorage();
+      if (storage) {
+        console.log('deleteSave: Tentative de suppression de la sauvegarde');
+        storage.removeItem('petit-buveur-save');
+      }
+      setHasActiveSave(false);
+      console.log('deleteSave: Sauvegarde supprimée avec succès');
+    } catch (error) {
+      console.error('deleteSave: Erreur lors de la suppression:', error);
+    }
+  };
+
+  const resumeGame = () => {
+    console.log('resumeGame: Début de la fonction');
+    const saveData = loadGame();
+    console.log('resumeGame: Données de sauvegarde récupérées:', saveData);
+    
+    if (saveData) {
+      console.log('resumeGame: Application des données de sauvegarde');
+      setPlayers(saveData.players);
+      setCurrentPlayer(saveData.currentPlayer);
+      setTurnCount(saveData.turnCount);
+      setGameDifficulty(saveData.gameDifficulty);
+      setLastCase(saveData.lastCase);
+      setGameStarted(saveData.gameStarted);
+      setWinner(saveData.winner);
+      setShowSaveDialog(false);
+      console.log('Partie reprise avec succès');
+    } else {
+      console.log('resumeGame: Aucune donnée de sauvegarde trouvée');
+    }
+  };
+
+  // Vérifier s'il y a une sauvegarde au chargement (sans reprendre automatiquement)
+  useEffect(() => {
+    const saveData = loadGame();
+    setHasActiveSave(!!saveData);
+    console.log('useEffect: Sauvegarde détectée:', !!saveData);
+  }, []);
+
+  // Sauvegarde automatique quand la partie change
+  useEffect(() => {
+    if (gameStarted && !winner) {
+      // Sauvegarde automatique toutes les 30 secondes (sauvegarde de sécurité)
+      const autoSaveInterval = setInterval(() => {
+        saveGame();
+      }, 30000);
+      
+      return () => clearInterval(autoSaveInterval);
+    }
+  }, [gameStarted, players, currentPlayer, turnCount, winner, saveGame]);
+
+  // Surveiller les changements d'état du jeu
+  useEffect(() => {
+    console.log('useEffect: gameStarted a changé:', gameStarted);
+    console.log('useEffect: nombre de joueurs:', players.length);
+    console.log('useEffect: currentPlayer:', currentPlayer);
+  }, [gameStarted, players.length, currentPlayer]);
+
 
 
   const addPlayer = () => {
@@ -501,7 +683,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }
 
   const rollDice = () => {
-    if (isProcessingTurn || isDiceRolling) return;
+    if (isProcessingTurn || isDiceRolling) {
+      console.log("Tentative de lancement de dé bloquée - tour en cours");
+      return;
+    }
     
     // Masquer toute notification précédente
     setShowNotification(false);
@@ -528,17 +713,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         setPlayers(updatedPlayers);
         
-        // Afficher la notification de malédiction
-        setCurrentCase({
-          type: 'malediction',
-          description: `👻 Malédiction ! ${currentPlayerObj.name} boit 1 gorgée (${currentPlayerObj.cursed} tours restants)`,
-          effect: 1
-        });
-        
-        setShowNotification(true);
-        setTimeout(() => {
-          setShowNotification(false);
-        }, 2000);
+        // Appliquer la malédiction en arrière-plan sans notification
+        console.log(`Malédiction appliquée en arrière-plan pour ${currentPlayerObj.name}`);
       }
       
       // Retirer la protection après 1 tour
@@ -565,17 +741,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             console.error("Erreur lors de la mise à jour des statistiques:", error);
           }
           
-          // Afficher la notification de lien
-          setCurrentCase({
-            type: 'defi-chaine',
-            description: `🔗 ${currentPlayerObj.name} boit 1 gorgée car lié à ${linkedPlayer.name} (${currentPlayerObj.linkedTurns} tours restants)`,
-            effect: 1
-          });
-          
-          setShowNotification(true);
-          setTimeout(() => {
-            setShowNotification(false);
-          }, 2000);
+          // Appliquer le lien en arrière-plan sans notification
+          console.log(`Lien de chaîne appliqué en arrière-plan pour ${currentPlayerObj.name}`);
           
           // Retirer le lien si expiré
           if (currentPlayerObj.linkedTurns <= 0) {
@@ -584,6 +751,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           }
         }
       }
+      
+      // Mettre à jour l'état des joueurs après avoir appliqué tous les effets actifs
+      setPlayers(updatedPlayers);
     }
     
     // Marquer le début du traitement
@@ -649,8 +819,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           return;
         }
         
-        // Générer un effet aléatoire
-        const caseType = generateCase(gameDifficulty);
+        // Générer un effet aléatoire (boost possible pour le joueur actuel)
+        const caseType = generateCase(gameDifficulty, updatedPlayers[currentPlayer]);
         console.log(`Case générée: type=${caseType.type}, description=${caseType.description}, effet=${caseType.effect}`);
         
         // Réinitialiser l'animation après un délai
@@ -695,7 +865,20 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       description: `Vous devez choisir un joueur à cibler !`
     });
     
-    setShowTargetDialog(true);
+    // Forcer la mise à jour de l'état et ajouter un délai pour s'assurer que le DOM est mis à jour
+    setTimeout(() => {
+      console.log("Ouverture de la fenêtre de ciblage...");
+      setShowTargetDialog(true);
+      
+      // Vérification de secours après 500ms
+      setTimeout(() => {
+        if (!showTargetDialog) {
+          console.log("Problème détecté - forçage de l'ouverture de la fenêtre");
+          setShowTargetDialog(true);
+        }
+      }, 500);
+    }, 100);
+    
     // La logique de `handleTargetSelection` et `applyEffectToPlayer` prendra le relais
   };
 
@@ -709,6 +892,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   // Fonction pour gérer le clic sur le bouton "Suivant"
   const handleNextButtonClick = () => {
+    console.log("Passage au joueur suivant via bouton Suivant");
     setShowNotification(false);
     setShowNextButton(false);
     
@@ -719,6 +903,39 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
     setCurrentPlayer(nextPlayer);
     setIsProcessingTurn(false);
+    
+    // Sauvegarde automatique après passage au joueur suivant
+    setTimeout(() => {
+      saveGame();
+    }, 100);
+  };
+
+  // Fonction de secours pour débloquer le jeu
+  const forceNextPlayer = () => {
+    console.log("FORÇAGE du passage au joueur suivant - déblocage du jeu");
+    setShowNotification(false);
+    setShowNextButton(false);
+    setShowTargetDialog(false);
+    setShowWheel(false);
+    setShowChanceDialog(false);
+    setShowExchangeDialog(false);
+    setShowChainDialog(false);
+    setPendingCase(null);
+    setPendingPosition(null);
+    
+    // Passer au joueur suivant
+    const nextPlayer = (currentPlayer + 1) % players.length;
+    if (nextPlayer === 0) {
+      setTurnCount(turnCount + 1);
+    }
+    setCurrentPlayer(nextPlayer);
+    setIsProcessingTurn(false);
+    setIsDiceRolling(false);
+    
+    // Sauvegarde automatique après passage au joueur suivant
+    setTimeout(() => {
+      saveGame();
+    }, 100);
   };
 
   // Fonction utilitaire pour remplacer les passages automatiques
@@ -772,10 +989,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   };
 
   const handleTargetSelection = (targetId: string) => {
+    console.log(`handleTargetSelection: Début - Joueur ciblé: ${targetId}, pendingCase: ${pendingCase?.type}`);
+    
     // Fermer la fenêtre de ciblage
     setShowTargetDialog(false);
     
-    console.log(`handleTargetSelection: Joueur ciblé: ${targetId}, pendingCase: ${pendingCase?.type}`);
+    console.log(`handleTargetSelection: Fenêtre fermée, pendingCase: ${pendingCase?.type}`);
     
     if (!pendingCase) {
       setIsProcessingTurn(false);
@@ -791,6 +1010,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
     // Cas spéciaux pour les nouvelles cases
     if (pendingCase.type === 'roue') {
+      console.log("Ouverture de la roue des gorgées");
       setWheelSegments(generateWheelSegments());
       setWheelResult(null);
       setShowWheel(true);
@@ -799,18 +1019,21 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
     
     if (pendingCase.type === 'chance') {
+      console.log("Ouverture du dialogue de chance");
       setShowChanceDialog(true);
       setCurrentCase(pendingCase);
       return;
     }
     
     if (pendingCase.type === 'echange') {
+      console.log("Ouverture du dialogue d'échange");
       setShowExchangeDialog(true);
       setCurrentCase(pendingCase);
       return;
     }
     
     if (pendingCase.type === 'defi-chaine') {
+      console.log("Ouverture du dialogue de défi en chaîne");
       setShowChainDialog(true);
       setCurrentCase(pendingCase);
       return;
@@ -843,6 +1066,19 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     // Pour les cases "safe"
     if (pendingCase.type === 'normal') {
       descriptionEffet = `Case safe ! Le joueur <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est en sécurité pour ce tour.\n\n${effectsSummary}`;
+    }
+    // Pour les cases "piège" - afficher la position et le nombre de gorgées
+    else if (pendingCase.type === 'piege') {
+      const trapDrinks = targetPlayer.position + 1;
+      if (targetPlayer.name.toLowerCase() === 'sim' || targetPlayer.name.toLowerCase() === 'riqui') {
+        const compliment = simCompliments[Math.floor(Math.random() * simCompliments.length)];
+        descriptionEffet = `🕳️ Piège ! <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">"${compliment}" ${targetPlayer.name}</span> boit ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) !\n\n${effectsSummary}`;
+      } else if (targetPlayer.name.toLowerCase() === 'deb') {
+        const message = debMessages[Math.floor(Math.random() * debMessages.length)];
+        descriptionEffet = `🕳️ Piège ! <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) ${message}\n\n${effectsSummary}`;
+      } else {
+        descriptionEffet = `🕳️ Piège ! <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) !\n\n${effectsSummary}`;
+      }
     }
     // Pour les cases "avance" ou "recul"
     else if (pendingCase.type === 'avance' || pendingCase.type === 'recul') {
@@ -945,12 +1181,23 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       return;
     }
     
+    // Générer le résumé des effets en cours
+    const effectsSummary = generateEffectsSummary(targetPlayer);
+    
     // Appliquer l'effet en fonction du type de case
     switch (caseToApply.type) {
       case 'normal':
         // Pour les cases safe, on ne fait rien de spécial
         console.log(`Le joueur ${targetPlayer.name} est sur une case safe`);
-        break;
+        
+        // Afficher la notification de case safe
+        setCurrentCase({
+          ...caseToApply,
+          description: `✅ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est sur une case safe !\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       case 'gorgée':
       case 'defi':
@@ -960,7 +1207,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
-            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>\n\n${effectsSummary}`
           });
           setShowNotification(true);
           setShowNextButton(true);
@@ -979,7 +1226,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         } catch (error) {
           console.error("Erreur lors de la mise à jour des statistiques:", error);
         }
-        break;
+        
+        // Afficher la notification de gorgée/défi
+        setCurrentCase({
+          ...caseToApply,
+          description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${caseToApply.effect} gorgée${caseToApply.effect > 1 ? 's' : ''} !\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       case 'tous':
         // Faire boire tous les autres joueurs sauf le joueur ciblé
@@ -998,7 +1253,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             }
           }
         });
-
+        
+        // Afficher la notification de "tous"
+        setCurrentCase({
+          ...caseToApply,
+          description: `${caseToApply.description}\n\nJoueur épargné : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       case 'avance':
       case 'recul':
@@ -1008,7 +1271,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
-            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>\n\n${effectsSummary}`
           });
           setShowNotification(true);
           setShowNextButton(true);
@@ -1018,8 +1281,14 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         // Vérifier si le joueur ciblé est sur la case 1 et que l'effet est un recul
         if (caseToApply.type === 'recul' && targetPlayer.position === 0) {
           console.log(`Le joueur ${targetPlayer.name} est sur la case 1 et ne peut pas reculer`);
-          // Ne pas appliquer l'effet de recul
-          break;
+          // Afficher un message pour le recul impossible
+          setCurrentCase({
+            ...caseToApply,
+            description: `❌ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est sur la case 1 et ne peut pas reculer !\n\n${effectsSummary}`
+          });
+          setShowNotification(true);
+          setShowNextButton(true);
+          return;
         }
 
         // Calculer la nouvelle position après l'effet
@@ -1046,7 +1315,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           setIsProcessingTurn(false);
           return;
         }
-        break;
+        
+        // Afficher la notification de déplacement
+        setCurrentCase({
+          ...caseToApply,
+          description: `${caseToApply.type === 'avance' ? '➡️' : '⬅️'} <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> se déplace de la case ${targetPlayer.position - caseToApply.effect + 1} vers la case ${targetPlayer.position + 1} !\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       case 'bombe':
         // Faire boire tous les joueurs, mais le ciblé boit double (sauf s'il est protégé)
@@ -1080,13 +1357,29 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             console.error("Erreur lors de la mise à jour des statistiques:", error);
           }
         });
-        break;
+        
+        // Afficher la notification de bombe
+        setCurrentCase({
+          ...caseToApply,
+          description: `💣 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> a déclenché une bombe ! Tout le monde boit ${caseToApply.effect} gorgée${caseToApply.effect > 1 ? 's' : ''}, mais ${targetPlayer.name} boit double !\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       case 'protection':
         // Protéger le joueur pendant 1 tour
         targetPlayer.protected = true;
         console.log(`Le joueur ${targetPlayer.name} est protégé pendant 1 tour`);
-        break;
+        
+        // Afficher la notification de protection
+        setCurrentCase({
+          ...caseToApply,
+          description: `🛡️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est maintenant protégé pendant 1 tour !\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       case 'malediction':
         // Vérifier si le joueur est protégé
@@ -1095,7 +1388,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
-            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>\n\n${effectsSummary}`
           });
           setShowNotification(true);
           setTimeout(() => {
@@ -1110,6 +1403,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             }
             setCurrentPlayer(nextPlayer);
             setIsProcessingTurn(false);
+            
+            // Sauvegarde automatique après passage au joueur suivant
+            setTimeout(() => {
+              saveGame();
+            }, 100);
           }, 2000);
           return;
         }
@@ -1117,7 +1415,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         // Maudire le joueur pendant 3 tours
         targetPlayer.cursed = 3;
         console.log(`Le joueur ${targetPlayer.name} est maudit pendant 3 tours`);
-        break;
+        
+        // Afficher la notification de malédiction
+        setCurrentCase({
+          ...caseToApply,
+          description: `👻 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est maintenant maudit pendant 3 tours !\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       case 'miroir':
         // Vérifier si le joueur ciblé est protégé
@@ -1126,7 +1432,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
-            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>\n\n${effectsSummary}`
           });
           setShowNotification(true);
           setShowNextButton(true);
@@ -1145,16 +1451,25 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         });
         
         console.log('Positions inversées par effet miroir (premier ↔ dernier)');
-        break;
+        
+        // Afficher la notification de miroir
+        setCurrentCase({
+          ...caseToApply,
+          description: `🪞 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> a inversé toutes les positions ! (premier ↔ dernier)\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       case 'piege':
         // Vérifier si le joueur est protégé
         if (targetPlayer.protected) {
           console.log(`Le joueur ${targetPlayer.name} a été protégé du piège`);
           // Afficher un message spécial pour le joueur protégé
+          const trapDrinks = targetPlayer.position + 1;
           setCurrentCase({
             ...caseToApply,
-            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+            description: `🕳️ Piège ! <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> aurait dû boire ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) mais <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
           });
           setShowNotification(true);
           setShowNextButton(true);
@@ -1174,7 +1489,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         } catch (error) {
           console.error("Erreur lors de la mise à jour des statistiques:", error);
         }
-        break;
+        
+        // Afficher la notification de piège
+        setCurrentCase({
+          ...caseToApply,
+          description: `🕳️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) !\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       case 'melange':
         // Vérifier si le joueur ciblé est protégé
@@ -1183,7 +1506,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
-            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>`
+            description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>\n\n${effectsSummary}`
           });
           setShowNotification(true);
           setShowNextButton(true);
@@ -1199,12 +1522,28 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         });
         
         console.log('Positions mélangées aléatoirement');
-        break;
+        
+        // Afficher la notification de mélange
+        setCurrentCase({
+          ...caseToApply,
+          description: `🔀 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> a mélangé toutes les positions !\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
         
       // Pour les autres types de cases (normal, defi)
       default:
         console.log(`Aucun effet spécial à appliquer pour la case de type ${caseToApply.type}`);
-        break;
+        
+        // Afficher une notification pour les cases sans effet spécial
+        setCurrentCase({
+          ...caseToApply,
+          description: `Case ${caseToApply.type} appliquée à <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>\n\n${effectsSummary}`
+        });
+        setShowNotification(true);
+        setShowNextButton(true);
+        return;
     }
     
     // Mettre à jour l'état des joueurs
@@ -1227,23 +1566,35 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   const selectRandomPlayer = () => {
     console.log("Sélection d'un joueur aléatoire");
-    
-    // Sélectionner un joueur aléatoire parmi tous les joueurs
     const eligiblePlayers = [...players];
     if (eligiblePlayers.length > 0) {
-      const randomIndex = Math.floor(Math.random() * eligiblePlayers.length);
-      const randomPlayer = eligiblePlayers[randomIndex];
-      console.log(`Joueur aléatoire sélectionné: ${randomPlayer.name}`);
-      handleTargetSelection(randomPlayer.id);
+      const weights = eligiblePlayers.map((p) => 1 / (1 + getPlayerGameBoost(p, 'petit-buveur') / 100));
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      let r = Math.random() * totalWeight;
+      let chosen = eligiblePlayers[0];
+      for (let i = 0; i < eligiblePlayers.length; i++) {
+        r -= weights[i];
+        if (r <= 0) {
+          chosen = eligiblePlayers[i];
+          break;
+        }
+      }
+      console.log(`Joueur aléatoire sélectionné: ${chosen.name}`);
+      handleTargetSelection(chosen.id);
     } else {
-      // S'il n'y a pas d'autres joueurs, sélectionner le joueur actuel
       console.log(`Aucun autre joueur disponible, sélection du joueur actuel: ${players[currentPlayer].name}`);
       handleTargetSelection(players[currentPlayer].id);
     }
   };
 
   const startGame = () => {
+    console.log('startGame: Début de la fonction');
+    console.log('startGame: Nombre de joueurs:', players.length);
+    console.log('startGame: Difficulté:', gameDifficulty);
+    
     if (players.length >= 2) {
+      console.log('startGame: Démarrage du jeu...');
+      
       // Réinitialiser les positions et les boissons des joueurs
       const resetPlayers = players.map(p => ({
         ...p,
@@ -1258,7 +1609,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       // Mettre à jour l'état des joueurs
       setPlayers(resetPlayers);
       
-      // Initialiser les autres états du jeu
+      // Initialiser tous les états du jeu
       setGameStarted(true);
       setCurrentPlayer(0);
       setWinner(null);
@@ -1274,8 +1625,19 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setPendingPosition(null);
       setTargetPlayerId(null);
       setAnimatingPlayer(null);
+      setShowNotification(false);
+      setShowNextButton(false);
+      setShowTargetDialog(false);
+      setShowWheel(false);
+      setShowChanceDialog(false);
+      setShowExchangeDialog(false);
+      setShowChainDialog(false);
       
-      console.log("Jeu démarré avec les joueurs:", resetPlayers);
+      console.log("startGame: Jeu démarré avec succès !");
+      console.log("startGame: Joueurs réinitialisés:", resetPlayers);
+    } else {
+      console.log('startGame: ERREUR - Pas assez de joueurs pour démarrer (minimum 2 requis)');
+      alert('Il faut au moins 2 joueurs pour commencer une partie !');
     }
   }
 
@@ -1615,8 +1977,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           return;
         }
         
-        // Générer un effet aléatoire
-        const caseType = generateCase(gameDifficulty);
+        // Générer un effet aléatoire (boost possible pour le joueur actuel)
+        const caseType = generateCase(gameDifficulty, updatedPlayers[currentPlayer]);
         console.log(`Case générée (relance): type=${caseType.type}, description=${caseType.description}, effet=${caseType.effect}`);
         
         // Réinitialiser l'animation après un délai
@@ -1668,11 +2030,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       });
       
       setShowNotification(true);
-      
-      // Masquer la notification après un délai
-      setTimeout(() => {
-        setShowNotification(false);
-      }, 3000);
+      setShowNextButton(true);
     } else {
       // Case SAFE
       setCurrentCase({
@@ -1682,28 +2040,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       });
       
       setShowNotification(true);
-      
-      // Masquer la notification après un délai
-      setTimeout(() => {
-        setShowNotification(false);
-      }, 3000);
+      setShowNextButton(true);
     }
     
-    // Fermer la roue
-    setShowWheel(false);
-    setWheelResult(null);
-    
-    // Passer au joueur suivant après un délai
-    setTimeout(() => {
-      setCurrentPlayer(prev => {
-        const nextPlayer = (prev + 1) % players.length;
-        if (nextPlayer === 0) {
-          setTurnCount(prevTurn => prevTurn + 1);
-        }
-        return nextPlayer;
-      });
-      setIsProcessingTurn(false);
-    }, 2000);
+    // Ne pas fermer la roue automatiquement - elle se fermera quand on clique sur "Continuer"
+    // Ne pas passer automatiquement au joueur suivant - c'est le bouton "Suivant" qui s'en charge
   }, [wheelResult, players, currentPlayer, updatePlayerStats]);
 
   // Gérer la fin de la roue
@@ -1793,23 +2134,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             <div className="text-center space-y-4">
               <h2 className={`text-3xl font-bold ${getTextColor()}`}>Le Petit Buveur</h2>
               <p className="text-lg text-gray-300">
-                Ajoutez des joueurs pour commencer la partie !
+                Choisissez la difficulté et commencez la partie !
               </p>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Input
-                placeholder="Nom du joueur"
-                value={newPlayerName}
-                onChange={(e) => setNewPlayerName(e.target.value)}
-                className="bg-white/20 border-white/20 text-white"
-              />
-              <Button 
-                onClick={addPlayer}
-                className="bg-white/20 hover:bg-white/30 text-white"
-              >
-                Ajouter
-              </Button>
             </div>
 
             <div className="space-y-4">
@@ -1831,40 +2157,39 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               </div>
             </div>
 
-            {players.length > 0 && (
-              <div className="space-y-4">
-                <h3 className={`text-xl font-semibold ${getTextColor()}`}>Joueurs :</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {players.map(player => (
-                    <div 
-                      key={player.id}
-                      className={`p-3 rounded-lg ${player.preferences.color} flex items-center justify-between`}
-                    >
-                      <PlayerName player={player} className="text-white font-medium" />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setPlayerToDelete(player.id);
-                          setShowConfirmation('delete-player');
-                        }}
-                        className="text-white/80 hover:text-white"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex mt-8">
+            <div className="flex gap-4 mt-8">
               <Button
-                onClick={startGame}
+                onClick={() => {
+                  console.log('Bouton "Commencer la partie" cliqué');
+                  console.log('Nombre de joueurs:', players.length);
+                  console.log('Difficulté sélectionnée:', gameDifficulty);
+                  
+                  // Lancer directement la partie
+                  startGame();
+                }}
                 disabled={players.length < 2}
                 className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-3"
               >
                 Commencer la partie
+              </Button>
+              
+              <Button
+                onClick={() => {
+                  console.log('Bouton "Charger la partie en cours" cliqué');
+                  if (hasActiveSave) {
+                    console.log('Chargement de la partie sauvegardée');
+                    resumeGame();
+                  } else {
+                    console.log('Aucune partie sauvegardée trouvée');
+                    alert('Aucune partie en cours trouvée !');
+                  }
+                }}
+                disabled={!hasActiveSave}
+                variant="outline"
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white border-white/20 font-bold py-3"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Charger la partie en cours
               </Button>
             </div>
           </>
@@ -1875,18 +2200,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <Button 
-          onClick={() => {
-            if (confirm("Êtes-vous sûr de vouloir quitter la partie en cours ?")) {
-              onGameEnd();
-            }
-          }} 
-          variant="outline" 
-          className="text-sm"
-        >
-          Quitter
-        </Button>
+      <div className="flex justify-end items-center mb-4">
         <div className="flex items-center space-x-2">
           <p className="text-sm font-medium text-gray-400">
             Mode {difficultyNames[gameDifficulty]} {gameDifficulty === 'difficile' ? '(max 8 gorgées)' : ''}
@@ -1929,6 +2243,47 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             </div>
           )
         })}
+      </div>
+
+      {/* Bouton de lancement de dé et nom du joueur juste après le plateau */}
+      <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg p-4 shadow-lg mb-6">
+        <div className="container mx-auto">
+          <div className="mb-2 text-center">
+            <p className="font-medium text-primary">
+              Au tour de <PlayerName player={players[currentPlayer]} className="font-bold text-lg" />
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={rollDice}
+              disabled={isProcessingTurn}
+              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-6 px-8 text-xl shadow-lg"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span>Lancer le dé</span>
+                {isDiceRolling ? (
+                  <div className="animate-spin">
+                    <Dice6 className="h-6 w-6" />
+                  </div>
+                ) : (
+                  <Dice6 className="h-6 w-6" />
+                )}
+              </div>
+            </Button>
+            
+            {/* Bouton de secours pour débloquer le jeu */}
+            {isProcessingTurn && !isDiceRolling && (
+              <Button
+                onClick={forceNextPlayer}
+                variant="outline"
+                className="px-4 text-sm text-red-600 border-red-600 hover:bg-red-50"
+                title="Débloquer le jeu si il se bloque"
+              >
+                🔧
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -1984,34 +2339,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         )}
       </AnimatePresence>
 
-      {/* Bouton de lancement de dé et nom du joueur fixés en bas */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border p-4 z-40 shadow-lg">
-        <div className="container mx-auto">
-          <div className="mb-2 text-center">
-            <p className="font-medium text-primary">
-              Au tour de <PlayerName player={players[currentPlayer]} className="font-bold text-lg" />
-            </p>
-          </div>
-          <Button
-            onClick={rollDice}
-            disabled={isProcessingTurn}
-            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-6 px-8 text-xl shadow-lg"
-          >
-            <div className="flex items-center justify-center gap-2">
-              <span>Lancer le dé</span>
-              {isDiceRolling ? (
-                <div className="animate-spin">
-                  <Dice6 className="h-6 w-6" />
-                </div>
-              ) : (
-                <Dice6 className="h-6 w-6" />
-              )}
-            </div>
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-32">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {players.map((player, index) => (
           <Card
             key={player.id}
@@ -2047,55 +2375,59 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         ))}
       </div>
 
-      {/* Dialog pour sélectionner un joueur cible */}
-      <Dialog open={showTargetDialog} onOpenChange={(open) => {
-        // Si l'utilisateur ferme la fenêtre manuellement, on considère qu'il annule
-        if (!open && showTargetDialog) {
-          console.log("Fermeture manuelle de la fenêtre de ciblage");
-          // Sélectionner le joueur actuel par défaut
-          handleTargetSelection(players[currentPlayer].id);
-        }
-        setShowTargetDialog(open);
-      }}>
-        <DialogContent className="sm:max-w-md pb-6">
-          <DialogHeader>
-            <DialogTitle>Choisissez un joueur à cibler</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 gap-4 py-4">
-            <p className="text-center text-muted-foreground">
-              Sélectionnez un joueur pour révéler et appliquer l'effet de la case !
-            </p>
-            
-            {/* Afficher d'abord les autres joueurs */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {players.filter(p => p.id !== players[currentPlayer].id).map(player => (
-                <Button
-                  key={player.id}
-                  onClick={() => handleTargetSelection(player.id)}
-                  className={`p-3 ${player.preferences.color} text-white font-bold`}
-                >
-                  <PlayerName player={player} />
-                </Button>
-              ))}
+            {/* Dialog pour sélectionner un joueur cible */}
+      {showTargetDialog && (
+        <>
+          {/* Overlay de secours en cas de problème avec le Dialog */}
+          <div className="fixed inset-0 bg-black/80 z-[99] flex items-center justify-center p-4">
+            <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6 z-[100]">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-semibold">Choisissez un joueur à cibler</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Sélectionnez un joueur pour révéler et appliquer l'effet de la case !
+                </p>
+              </div>
+              
+              {/* Afficher d'abord les autres joueurs */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {players.filter(p => p.id !== players[currentPlayer].id).map(player => (
+                  <Button
+                    key={player.id}
+                    onClick={() => {
+                      console.log(`Clic sur le joueur: ${player.name}`);
+                      handleTargetSelection(player.id);
+                    }}
+                    className={`p-3 ${player.preferences.color} text-white font-bold`}
+                  >
+                    <PlayerName player={player} />
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Puis les options "Joueur aléatoire" et "Vous-même" */}
+              <Button 
+                onClick={() => {
+                  console.log("Clic sur joueur aléatoire");
+                  selectRandomPlayer();
+                }}
+                className="p-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold w-full mb-2"
+              >
+                Joueur aléatoire
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  console.log(`Clic sur vous-même: ${players[currentPlayer].name}`);
+                  handleTargetSelection(players[currentPlayer].id);
+                }}
+                className={`p-4 ${players[currentPlayer].preferences.color} text-white font-bold w-full`}
+              >
+                Vous-même (<PlayerName player={players[currentPlayer]} />)
+              </Button>
             </div>
-            
-            {/* Puis les options "Joueur aléatoire" et "Vous-même" */}
-            <Button 
-              onClick={selectRandomPlayer}
-              className="p-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold"
-            >
-              Joueur aléatoire
-            </Button>
-            
-            <Button 
-              onClick={() => handleTargetSelection(players[currentPlayer].id)}
-              className={`p-4 ${players[currentPlayer].preferences.color} text-white font-bold`}
-            >
-              Vous-même (<PlayerName player={players[currentPlayer]} />)
-            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
 
       {/* Dialog pour la case Chance */}
       <Dialog open={showChanceDialog} onOpenChange={setShowChanceDialog}>
@@ -2154,6 +2486,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     }
                     setCurrentPlayer(nextPlayer);
                     setIsProcessingTurn(false);
+                    
+                    // Sauvegarde automatique après passage au joueur suivant
+                    setTimeout(() => {
+                      saveGame();
+                    }, 100);
                   }
                 }}
                 className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold"
@@ -2217,6 +2554,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     }
                     setCurrentPlayer(nextPlayer);
                     setIsProcessingTurn(false);
+                    
+                    // Sauvegarde automatique après passage au joueur suivant
+                    setTimeout(() => {
+                      saveGame();
+                    }, 100);
                   }}
                   className={`p-3 ${player.preferences.color} text-white font-bold`}
                 >
@@ -2295,6 +2637,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     }
                     setCurrentPlayer(nextPlayer);
                     setIsProcessingTurn(false);
+                    
+                    // Sauvegarde automatique après passage au joueur suivant
+                    setTimeout(() => {
+                      saveGame();
+                    }, 100);
                   }}
                   className={`p-3 ${player.preferences.color} text-white font-bold`}
                 >
@@ -2389,7 +2736,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                         Résultat : {wheelResult.label}
                       </div>
                       <Button 
-                        onClick={() => setShowWheel(false)}
+                        onClick={() => {
+                          setShowWheel(false);
+                          setWheelResult(null);
+                          // Le bouton "Suivant" sera affiché par handleWheelComplete
+                        }}
                         className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg shadow-lg"
                       >
                         Continuer
@@ -2565,6 +2916,62 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Dialog de sauvegarde */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>💾 Partie en cours</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {hasActiveSave ? (
+              <>
+                <p className="text-center text-muted-foreground">
+                  Une partie est en cours. Voulez-vous la reprendre ou commencer une nouvelle partie ?
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    onClick={() => {
+                      console.log('Bouton "Reprendre la partie" dans le dialogue cliqué');
+                      resumeGame();
+                    }}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold"
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Reprendre la partie
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      console.log('Bouton "Nouvelle partie" dans le dialogue cliqué');
+                      deleteSave();
+                      setShowSaveDialog(false);
+                      // Continuer vers la sélection de difficulté
+                      console.log('Continuation vers la sélection de difficulté');
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Home className="mr-2 h-4 w-4" />
+                    Nouvelle partie
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-center text-muted-foreground">
+                  Aucune partie sauvegardée trouvée.
+                </p>
+                <Button
+                  onClick={() => setShowSaveDialog(false)}
+                  className="w-full"
+                >
+                  Fermer
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

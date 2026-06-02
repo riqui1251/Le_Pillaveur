@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { getSafeStorage } from './storage';
+
 export interface PlayerStats {
   gamesPlayed: number;
   wins: number;
@@ -14,6 +15,15 @@ export interface PlayerStats {
   };
 }
 
+/** Boost secret par jeu : % de chance supplémentaire (0-100). Influence les probabilités en jeu. */
+export interface AdminBoost {
+  pmu?: number;           // + chance victoire
+  purple?: number;         // + chance paris gagnant
+  'petit-buveur'?: number; // - cases négatives quand ciblé, + avancer loin
+  plinko?: number;        // + chance de donner des gorgées
+  'monsieur-3'?: number;   // - chance d'être M3, + chance tirage faire boire M3
+}
+
 export interface PlayerPreferences {
   color: string;
   avatar?: string;
@@ -21,6 +31,8 @@ export interface PlayerPreferences {
   theme?: 'light' | 'dark';
   icon?: string;
   specialEffect?: 'fire' | 'ice' | 'lightning' | 'rainbow' | 'neon' | 'galaxy' | 'matrix' | 'sunset' | 'ocean' | null;
+  /** Boost secret (admin) - modifie les probabilités en jeu, pas les stats affichées */
+  adminBoost?: AdminBoost;
 }
 
 export interface Player {
@@ -62,9 +74,10 @@ export const PLAYER_ICONS = [
 ];
 
 export function getStoredPlayers(): Player[] {
-  if (typeof window === 'undefined') return [];
+  const storage = getSafeStorage();
+  if (!storage) return [];
   
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = storage.getItem(STORAGE_KEY);
   if (!stored) return [];
   
   try {
@@ -91,8 +104,9 @@ export function getStoredPlayers(): Player[] {
 }
 
 export function savePlayers(players: Player[]): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
+  const storage = getSafeStorage();
+  if (!storage) return;
+  storage.setItem(STORAGE_KEY, JSON.stringify(players));
 }
 
 export function generatePlayerId(): string {
@@ -262,52 +276,14 @@ export function getPlayerStats(playerId: string): PlayerStats | null {
 export function getTopPlayers(limit: number = 5): Player[] {
   const players = getStoredPlayers();
   return [...players]
-    .sort((a, b) => {
-      // Calculer le total des victoires sur tous les jeux
-      let aWins = a.stats.wins || 0;
-      let bWins = b.stats.wins || 0;
-      
-      // Ajouter les victoires spécifiques à chaque jeu
-      if (a.stats.gameStats) {
-        Object.entries(a.stats.gameStats).forEach(([gameId, stats]) => {
-          aWins += stats.wins || 0;
-        });
-      }
-      
-      if (b.stats.gameStats) {
-        Object.entries(b.stats.gameStats).forEach(([gameId, stats]) => {
-          bWins += stats.wins || 0;
-        });
-      }
-      
-      return bWins - aWins;
-    })
+    .sort((a, b) => (b.stats?.wins || 0) - (a.stats?.wins || 0))
     .slice(0, limit);
 }
 
 export function getMostActivePlayers(limit: number = 5): Player[] {
   const players = getStoredPlayers();
   return [...players]
-    .sort((a, b) => {
-      // Calculer le total des parties jouées sur tous les jeux
-      let aGames = a.stats.gamesPlayed || 0;
-      let bGames = b.stats.gamesPlayed || 0;
-      
-      // Ajouter les parties spécifiques à chaque jeu
-      if (a.stats.gameStats) {
-        Object.entries(a.stats.gameStats).forEach(([gameId, stats]) => {
-          aGames += stats.gamesPlayed || 0;
-        });
-      }
-      
-      if (b.stats.gameStats) {
-        Object.entries(b.stats.gameStats).forEach(([gameId, stats]) => {
-          bGames += stats.gamesPlayed || 0;
-        });
-      }
-      
-      return bGames - aGames;
-    })
+    .sort((a, b) => (b.stats?.gamesPlayed || 0) - (a.stats?.gamesPlayed || 0))
     .slice(0, limit);
 }
 
@@ -343,4 +319,23 @@ export function getPlayerStatsByGame(playerId: string, gameId: string): { gamesP
     return null;
   }
   return player.stats.gameStats[gameId];
+}
+
+const BOOSTED_GAME_IDS = ['pmu', 'purple', 'petit-buveur', 'plinko', 'monsieur-3'] as const
+
+/** Retourne le % de boost (0-100) pour un joueur sur un jeu donné. Sim a 20% par défaut. */
+export function getPlayerGameBoost(player: unknown, gameId: string): number {
+  const p = player as { name?: string; preferences?: { adminBoost?: Record<string, number> } } | null | undefined;
+  if (!p) return 0
+  const isSim = p.name?.toLowerCase() === 'sim'
+  const b = p?.preferences?.adminBoost
+  const adminVal = b && typeof b[gameId] === 'number' ? Math.max(0, Math.min(100, b[gameId])) : 0
+  if (isSim && BOOSTED_GAME_IDS.includes(gameId as (typeof BOOSTED_GAME_IDS)[number])) {
+    return Math.max(adminVal, 20)
+  }
+  return adminVal
+}
+
+export function updatePlayerAdminBoost(playerId: string, boost: AdminBoost): Player[] {
+  return updatePlayerPreferences(playerId, { adminBoost: boost });
 } 
