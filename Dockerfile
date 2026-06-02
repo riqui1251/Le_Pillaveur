@@ -2,7 +2,8 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
+# postinstall lance prisma generate : le schema n'est pas encore copié ici
+RUN npm ci --legacy-peer-deps --ignore-scripts
 
 FROM node:20-alpine AS builder
 WORKDIR /app
