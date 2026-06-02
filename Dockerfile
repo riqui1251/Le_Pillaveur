@@ -9,6 +9,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Pas de sous-chemin /jeux dans l'image sauf choix explicite plus tard
+ENV NEXT_PUBLIC_BASE_PATH=
+ENV DATABASE_URL="file:./prisma/dev.db"
 RUN npx prisma generate
 RUN npm run build
 

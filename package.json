@@ -1,6 +1,6 @@
 {
   "name": "mon-projet",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--no-webstorage next dev",
