@@ -6,9 +6,8 @@ import Game from './components/game'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { User, Shield, Lock, AlertCircle, Home } from 'lucide-react'
+import { User, Shield, Home } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
 import { SelectedPlayersDisplay } from '@/components/SelectedPlayersDisplay'
@@ -37,61 +36,53 @@ export default function PetitBuveurPage() {
     setActiveTab('players')
   }
 
+  // En jeu : le GameShell (dans Game) fournit l'en-tête, le retour et la barre d'action.
+  if (gameStarted) {
+    return (
+      <Game 
+        players={selectedPlayers} 
+        onGameEnd={handleGameEnd}
+        difficulty={difficulty}
+      />
+    )
+  }
+
   return (
-    <div className="container mx-auto p-4">
-      {gameStarted ? (
-        <div className="space-y-4">
-          <Button 
-            variant="outline" 
-            onClick={handleGameEnd}
-            className="flex items-center gap-2 mb-4"
-          >
-            <Home className="h-4 w-4" />
-            Retour
-          </Button>
-          <Game 
-            players={selectedPlayers} 
-            onGameEnd={handleGameEnd}
-            difficulty={difficulty}
-          />
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="flex flex-col space-y-2">
-            <h1 className="text-2xl md:text-3xl font-bold text-center mb-2">🍻 Le Petit Buveur</h1>
-            <p className="text-muted-foreground text-center mb-6">
-              Un jeu de plateau où l&apos;objectif est d&apos;arriver au bout sans être trop saoul !
-            </p>
-            
-            <Link href="/" className="mx-auto mb-4">
-              <Button variant="outline" className="flex items-center gap-2">
+    <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="pl-12 text-2xl font-bold sm:pl-0 sm:text-3xl">🍻 Le Petit Buveur</h1>
+            <Link href="/jeux">
+              <Button variant="outline" size="icon" aria-label="Retour aux jeux">
                 <Home className="h-4 w-4" />
-                Retour à l&apos;accueil
               </Button>
             </Link>
           </div>
+          <p className="text-muted-foreground">
+            Un jeu de plateau où l&apos;objectif est d&apos;arriver au bout sans être trop saoul !
+          </p>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 md:grid-cols-3 mb-4">
+            <TabsList className="grid grid-cols-2 mb-4">
               <TabsTrigger value="players" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                <span className="hidden md:inline">Joueurs</span>
+                <span>Joueurs</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                <span className="hidden md:inline">Paramètres</span>
-              </TabsTrigger>
-              <TabsTrigger value="account" className="flex items-center gap-2">
-                <Lock className="h-4 w-4" />
-                <span className="hidden md:inline">Compte</span>
+                <span>Paramètres</span>
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="players" className="w-full">
-              <div className="card p-4 mb-4">
+              <Card className="p-4 mb-4">
                 <SelectedPlayersDisplay players={selectedPlayers} />
                 <Button className="mt-4 w-full" disabled={selectedPlayers.length < 2} onClick={() => setGameStarted(true)}>Commencer</Button>
-              </div>
+                {selectedPlayers.length < 2 && (
+                  <p className="mt-3 text-center text-sm text-muted-foreground">
+                    Sélectionnez au moins 2 joueurs sur la page Joueurs.
+                  </p>
+                )}
+              </Card>
             </TabsContent>
             
             <TabsContent value="settings" className="space-y-4">
@@ -135,32 +126,7 @@ export default function PetitBuveurPage() {
                 </div>
               </Card>
             </TabsContent>
-            
-            <TabsContent value="account" className="space-y-4">
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <h2 className="text-lg font-semibold mb-4">Zone réservée</h2>
-                  <div className="flex items-center space-x-4">
-                    <AlertCircle className="h-6 w-6 text-yellow-500" />
-                    <p className="text-sm text-muted-foreground">Cette section est réservée à l&apos;administrateur.</p>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <Input
-                      type="password"
-                      placeholder="Mot de passe"
-                      className="mb-2"
-                    />
-                    <Button variant="default" className="w-full">
-                      Accéder
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            </TabsContent>
           </Tabs>
-        </div>
-      )}
     </div>
   )
 } 

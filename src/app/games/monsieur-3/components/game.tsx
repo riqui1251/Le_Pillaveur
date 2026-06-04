@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Home, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import useScreenSize from '@/hooks/useScreenSize'
+import { GameShell } from '@/components/game/GameShell'
 import confetti from 'canvas-confetti'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Player as BasePlayer, PlayerPreferences, getPlayerGameBoost } from '@/lib/players'
@@ -45,7 +45,6 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
   const [gameEnded, setGameEnded] = useState<boolean>(false)
   const [monsieur3Index, setMonsieur3Index] = useState<number>(-1)
   const [victoryScreen, setVictoryScreen] = useState<boolean>(false)
-  const { isMobile } = useScreenSize()
   
   const confettiRef = useRef<HTMLDivElement>(null)
   const diceContainerRef = useRef<HTMLDivElement>(null)
@@ -362,7 +361,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
     return (
       <motion.div 
         key={`die-${index}`}
-        className={`w-16 h-16 ${isMobile ? 'w-12 h-12' : 'w-16 h-16'} rounded-lg shadow-lg bg-white flex items-center justify-center`}
+        className="w-[clamp(3rem,13vw,4rem)] h-[clamp(3rem,13vw,4rem)] rounded-lg shadow-lg bg-white flex items-center justify-center"
         initial={{ rotateX: 0 }}
         animate={rolling ? { 
           rotateX: [0, 360, 720, 1080], 
@@ -469,7 +468,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
     
     return (
       <motion.div 
-        className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gradient-to-br from-blue-900/90 to-purple-900/90"
+        className="fixed inset-0 flex flex-col items-center justify-center z-50 bg-gradient-to-br from-blue-900/90 to-purple-900/90"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -570,29 +569,28 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* En-tête */}
-      <div className="flex justify-between items-center mb-6">
-        <Button 
-          onClick={onGameEnd}
-          variant="outline" 
-          size="icon"
-        >
-          <Home className="w-5 h-5" />
+    <GameShell
+      title="Monsieur 3"
+      onBack={onGameEnd}
+      maxWidth={760}
+      headerRight={
+        <Button onClick={restartGame} variant="ghost" size="icon" aria-label="Recommencer">
+          <RefreshCw className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold">Monsieur 3</h1>
-        <Button 
-          onClick={restartGame}
-          variant="outline" 
-          size="icon"
+      }
+      actionBar={
+        <Button
+          disabled={!canRoll || rolling || victoryScreen || players.length === 0}
+          onClick={rollDice}
+          className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600"
         >
-          <RefreshCw className="w-5 h-5" />
+          {rolling ? "Lancement..." : "Lancer les dés"}
         </Button>
-      </div>
-      
+      }
+    >
       {/* Affichage du nombre de joueurs */}
       <div className="mb-4 text-center">
-        <p className="text-blue-200">
+        <p className="text-muted-foreground">
           {players.length} joueur{players.length > 1 ? 's' : ''} dans la partie
         </p>
       </div>
@@ -649,19 +647,8 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
           </div>
           
           {/* Message du lancer actuel */}
-          <div className="text-center text-blue-100 mb-4 min-h-[3rem] text-xl font-bold">
+          <div className="text-center text-blue-100 mb-2 min-h-[3rem] text-xl font-bold">
             {message}
-          </div>
-          
-          {/* Boutons d'action */}
-          <div className="flex justify-center space-x-3">
-            <Button
-              disabled={!canRoll || rolling || victoryScreen || players.length === 0}
-              onClick={rollDice}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600"
-            >
-              {rolling ? "Lancement..." : "Lancer les dés"}
-            </Button>
           </div>
         </Card>
       </div>
@@ -707,6 +694,6 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
       
       {/* Écran de victoire */}
       {victoryScreen && renderVictoryScreen()}
-    </div>
+    </GameShell>
   )
 } 

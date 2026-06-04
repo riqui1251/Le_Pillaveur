@@ -9,7 +9,7 @@ import { usePlayers } from "@/hooks/usePlayers"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { User, Home } from 'lucide-react'
+import { Home } from 'lucide-react'
 import Link from 'next/link'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
 import { SelectedPlayersDisplay } from '@/components/SelectedPlayersDisplay'
@@ -22,42 +22,40 @@ export default function PyramidePage() {
   const [deckCount, setDeckCount] = useState<1 | 2>(1)
   const [cardsToSelect, setCardsToSelect] = useState<4 | 5>(4)
   const { selectedIds } = useSelectedPlayers()
-  const [activeTab, setActiveTab] = useState('players')
 
   const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
 
   const handleGameEnd = () => {
     setGameStarted(false)
-    setActiveTab('players')
   }
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value)
+  // En jeu : le composant Game gère son propre plein écran (en-tête, retour, pyramide).
+  if (gameStarted && selectedPlayers.length >= 2) {
+    return (
+      <Game 
+        players={selectedPlayers}
+        pyramidHeight={pyramidHeight}
+        onGameEnd={handleGameEnd}
+        gameMode={gameMode}
+        deckCount={deckCount}
+        cardsToSelect={cardsToSelect}
+      />
+    )
   }
 
+  // Écran de configuration
   return (
-    <div className="container mx-auto p-2 sm:p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Pyramide</h1>
-        <Link href="/">
-          <Button variant="outline" size="icon">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="pl-12 text-2xl font-bold sm:pl-0 sm:text-3xl">Pyramide</h1>
+        <Link href="/jeux">
+          <Button variant="outline" size="icon" aria-label="Retour aux jeux">
             <Home className="h-4 w-4" />
           </Button>
         </Link>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="players">
-            <User className="mr-2 h-4 w-4" />
-            Paramètres
-          </TabsTrigger>
-          <TabsTrigger value="game" disabled={!gameStarted}>
-            Jeu
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="players" className="space-y-4">
+      <div className="space-y-4">
           <Card className="p-4 bg-gradient-to-br from-amber-900/80 to-yellow-800/80 border-amber-700">
             <h2 className="text-xl font-semibold mb-4 text-amber-100">Configuration de la partie</h2>
             
@@ -136,29 +134,20 @@ export default function PyramidePage() {
           </Card>
 
           <SelectedPlayersDisplay players={selectedPlayers} />
-          
+
           <Button 
             className="mt-4 w-full" 
             disabled={selectedPlayers.length < 2} 
-            onClick={() => { setGameStarted(true); setActiveTab('game') }}
+            onClick={() => setGameStarted(true)}
           >
             Commencer la partie
           </Button>
-        </TabsContent>
-
-        <TabsContent value="game">
-          {gameStarted && (
-            <Game 
-              players={selectedPlayers}
-              pyramidHeight={pyramidHeight}
-              onGameEnd={handleGameEnd}
-              gameMode={gameMode}
-              deckCount={deckCount}
-              cardsToSelect={cardsToSelect}
-            />
+          {selectedPlayers.length < 2 && (
+            <p className="text-center text-sm text-muted-foreground">
+              Sélectionnez au moins 2 joueurs sur la page Joueurs.
+            </p>
           )}
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   )
 } 

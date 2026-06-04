@@ -18,6 +18,15 @@ module.exports = {
     'from-rose-500','to-fuchsia-500',
     // direction utilities utilisées dynamiquement
     'bg-gradient-to-br','bg-gradient-to-r',
+    // Couleurs dynamiques des ballons (Ballon Surprise) — générées via bg-${color}-500
+    'bg-red-500','bg-red-600','text-red-400',
+    'bg-blue-500','bg-blue-600','text-blue-400',
+    'bg-green-500','bg-green-600','text-green-400',
+    'bg-yellow-500','bg-yellow-600','text-yellow-400',
+    'bg-purple-500','bg-purple-600','text-purple-400',
+    'bg-orange-500','bg-orange-600','text-orange-400',
+    'bg-pink-500','bg-pink-600','text-pink-400',
+    'bg-cyan-500','bg-cyan-600','text-cyan-400',
   ],
   theme: {
     container: {

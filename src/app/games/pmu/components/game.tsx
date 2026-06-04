@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Player as BasePlayer, getPlayerGameBoost } from '@/lib/players'
 import { usePlayers } from '@/hooks/usePlayers'
+import { GameShell } from '@/components/game/GameShell'
 
 // Ajouter un style CSS pour les différentes animations de dégradé
 const specialPlayerNameStyle = `
@@ -331,24 +332,23 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
     const unassignedPlayers = initialPlayersRef.current.filter(player => !isPlayerAssigned(player))
 
     return (
-      <div className="min-h-fit bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-6">
-        {/* Ajouter le style CSS pour l'animation */}
-
-        
-        <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-sm rounded-xl shadow-2xl p-8 space-y-6">
-          <div className="text-center space-y-4 relative">
-            <div className="absolute left-0 top-0">
-              <Button 
-                onClick={onGameEnd}
-                variant="ghost" 
-                className="text-white/70 hover:text-white hover:bg-white/10"
-              >
-                ← Retour
-              </Button>
-            </div>
-            <h2 className="text-3xl font-bold text-white">Course PMU</h2>
-            <p className="text-lg text-gray-300">Choisissez votre cheval et que le meilleur gagne ! Les gagnants donnent le double des gorgées qu&apos;ils ont au préalable bu.</p>
-          </div>
+      <GameShell
+        title="Course PMU"
+        onBack={onGameEnd}
+        maxWidth={900}
+        actionBar={
+          <Button
+            onClick={startRace}
+            disabled={totalPlayers === 0}
+            className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-medium"
+          >
+            {totalPlayers === 0 ? "Assignez des joueurs aux chevaux" : "Démarrer la course"}
+          </Button>
+        }
+      >
+        <style jsx>{specialPlayerNameStyle}</style>
+        <div className="space-y-5">
+          <p className="text-center text-sm text-gray-300 sm:text-base">Choisissez votre cheval et que le meilleur gagne ! Les gagnants donnent le double des gorgées qu&apos;ils ont au préalable bu.</p>
 
           {/* Instructions d'utilisation - uniformisées */}
           <div className="p-4 border border-white/20 rounded-lg bg-white/5 mb-4">
@@ -446,14 +446,6 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
             ))}
           </div>
 
-          <Button 
-            onClick={startRace} 
-            className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-medium py-2"
-            disabled={totalPlayers === 0}
-          >
-            {totalPlayers === 0 ? "Assignez des joueurs aux chevaux pour commencer" : "Démarrer la course"}
-          </Button>
-          
           {/* Si personne n'est encore assigné mais qu'il y a des joueurs */}
           {unassignedPlayers.length === 0 && totalPlayers > 0 && (
             <div className="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-center">
@@ -463,17 +455,15 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
             </div>
           )}
         </div>
-      </div>
+      </GameShell>
     )
   }
 
   if (gameOver && winner) {
     return (
-      <div className="min-h-fit bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-6">
-        {/* Ajouter le style CSS pour l'animation */}
-
-        
-        <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-sm rounded-xl shadow-2xl p-8 text-center space-y-6">
+      <GameShell title="Course PMU" onBack={onGameEnd} maxWidth={760} center>
+        <style jsx>{specialPlayerNameStyle}</style>
+        <div className="text-center space-y-6">
           <h2 className="text-3xl font-bold text-white">Course terminée !</h2>
           <div className="text-xl">
             <p className="text-white">🏆 {winner.name} a gagné !</p>
@@ -498,17 +488,15 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
             <Button onClick={onGameEnd} variant="outline">Retour au menu</Button>
           </div>
         </div>
-      </div>
+      </GameShell>
     )
   }
 
   return (
-    <div className="min-h-fit bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-6">
-      {/* Ajouter le style CSS pour l'animation */}
+    <GameShell title="Course PMU" onBack={onGameEnd} maxWidth={900}>
       <style jsx>{specialPlayerNameStyle}</style>
-      
-      <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-sm rounded-xl shadow-2xl p-8">
-        <div className="relative h-80 border-r-4 border-dashed border-white/50">
+      <div className="bg-white/10 backdrop-blur-sm rounded-xl shadow-2xl p-4 sm:p-6">
+        <div className="relative h-[clamp(16rem,55vh,22rem)] border-r-4 border-dashed border-white/50">
           {/* Lignes de séparation avec clôtures */}
           {[0, 1, 2, 3, 4].map((line) => (
             <div
@@ -541,9 +529,9 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
             >
               <div className="flex items-center space-x-2 pl-2">
                 <div className={`w-4 h-4 rounded-full ${horse.color} shadow-lg`}></div>
-                <span className="text-2xl text-white drop-shadow-lg">{horse.name}</span>
+                <span className="text-[clamp(0.95rem,4vw,1.5rem)] text-white drop-shadow-lg whitespace-nowrap">{horse.name}</span>
                 {horse.players.length > 0 && (
-                  <span className="text-sm text-gray-400">
+                  <span className="text-xs text-gray-400 sm:text-sm">
                     (
                     {horse.players.map((p, idx) => (
                       <span key={p.id} className={getSpecialEffectClass(p) || ''}>
@@ -558,6 +546,6 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
           ))}
         </div>
       </div>
-    </div>
+    </GameShell>
   )
 } 

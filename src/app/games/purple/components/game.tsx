@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { RotateCcw } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import useScreenSize from '@/hooks/useScreenSize'
+import { GameShell } from '@/components/game/GameShell'
 import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
 
@@ -105,8 +105,6 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   const [isRevealing, setIsRevealing] = useState(false)
   const [canContinue, setCanContinue] = useState(false) // Après un bon pari : continuer ou passer
   const [cardHistory, setCardHistory] = useState<PlayingCard[]>([]) // Dernières cartes sorties
-  
-  const { isMobile } = useScreenSize()
 
   useEffect(() => {
     setIsMounted(true)
@@ -264,20 +262,18 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   const betButtons: BetType[] = ['rouge', 'double-rouge', 'noir', 'double-noir', 'purple', 'double-purple']
 
   return (
-    <div className="space-y-6 flex flex-col min-h-[60vh]">
-      <Card className="p-6 flex-1">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Purple</h2>
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={restartGame} title="Nouvelle partie">
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={quitGame}>
-              Retour
-            </Button>
-          </div>
-        </div>
-
+    <GameShell
+      title="Purple"
+      onBack={quitGame}
+      maxWidth={760}
+      headerRight={
+        <Button variant="ghost" size="icon" onClick={restartGame} aria-label="Nouvelle partie">
+          <RotateCcw className="h-5 w-5" />
+        </Button>
+      }
+    >
+      <div className="space-y-6">
+      <Card className="p-4 sm:p-6">
         <div className="flex flex-col items-center space-y-6">
           {currentPlayer && (
             <div className="flex items-center space-x-2 mb-4">
@@ -376,7 +372,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
 
       {/* Dialogue mauvaise réponse */}
       <Dialog open={showResultDialog} onOpenChange={(open) => { if (!open) closeResultDialog() }}>
-        <DialogContent className={isMobile ? 'w-[95%] max-w-lg p-4' : ''}>
+        <DialogContent className="w-[95%] max-w-lg p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-red-600">Mauvaise combinaison !</DialogTitle>
           </DialogHeader>
@@ -386,12 +382,13 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
             </p>
           </div>
           <DialogFooter>
-            <Button onClick={closeResultDialog} className={isMobile ? 'w-full' : ''}>
+            <Button onClick={closeResultDialog} className="w-full sm:w-auto">
               Compris !
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </GameShell>
   )
 }

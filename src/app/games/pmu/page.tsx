@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from 'react'
 import { usePlayers } from '@/hooks/usePlayers'
 import Game from './components/game'
 import { Card } from '@/components/ui/card'
@@ -9,64 +8,50 @@ import { Player } from '@/lib/players'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
 import { SelectedPlayersDisplay } from '@/components/SelectedPlayersDisplay'
 import { Button } from '@/components/ui/button'
+import { Home } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export default function PMUPage() {
   const { players } = usePlayers();
   const { selectedIds } = useSelectedPlayers();
-  const [gameStarted, setGameStarted] = useState(false);
   const router = useRouter()
   const selectedPlayers: Player[] = players.filter(p => selectedIds.includes(p.id));
 
-  useEffect(() => {
-    if (selectedPlayers.length >= 2 && !gameStarted) {
-      setGameStarted(true)
-    }
-  }, [selectedPlayers, gameStarted])
-
   const handleGameEnd = () => {
-    // Retour au menu des jeux
     router.push('/jeux')
   };
 
-  if (selectedPlayers.length >= 2 && gameStarted) {
+  // En jeu : le GameShell (dans Game) fournit l'en-tête, le retour et la barre d'action.
+  if (selectedPlayers.length >= 2) {
     return (
-      <div className="container mx-auto px-4 py-24 min-h-screen">
-        <Game 
-          players={selectedPlayers} 
-          onGameEnd={handleGameEnd}
-        />
-      </div>
+      <Game 
+        players={selectedPlayers} 
+        onGameEnd={handleGameEnd}
+      />
     )
   }
 
+  // Écran de configuration
   return (
-    <div className="container mx-auto px-4 py-24 min-h-screen">
-      <div className="max-w-2xl mx-auto">
-        <Card className="bg-white/10 backdrop-blur-sm border-white/20">
-          <div className="p-6">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
-                Course PMU
-              </h1>
-              <p className="text-gray-300 text-lg">
-                Un jeu de paris hippiques entre amis ! 🏇
-              </p>
-            </div>
-
-            <SelectedPlayersDisplay players={selectedPlayers} />
-
-            <div className="mt-6 text-center">
-              <Link 
-                href="/"
-                className="text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                ← Retour à l&apos;accueil
-              </Link>
-            </div>
-          </div>
-        </Card>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="pl-12 text-2xl font-bold sm:pl-0 sm:text-3xl">Course PMU</h1>
+        <Link href="/jeux">
+          <Button variant="outline" size="icon" aria-label="Retour aux jeux">
+            <Home className="h-4 w-4" />
+          </Button>
+        </Link>
       </div>
+
+      <Card className="p-6">
+        <p className="mb-4 text-center text-muted-foreground">
+          Un jeu de paris hippiques entre amis ! 🏇
+        </p>
+        <SelectedPlayersDisplay players={selectedPlayers} />
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Sélectionnez au moins 2 joueurs sur la page Joueurs pour commencer.
+        </p>
+      </Card>
     </div>
   )
 } 

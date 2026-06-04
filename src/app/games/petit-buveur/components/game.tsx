@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { detectBrowserCapabilities } from '@/lib/browser-support'
 import { getSafeStorage } from '@/lib/storage'
 import { PlayerName, isSpecialPlayer } from '@/components/ui/PlayerName'
+import { GameShell } from '@/components/game/GameShell'
 import ReactConfetti from 'react-confetti'
 
 // Vérifier si le navigateur supporte certaines fonctionnalités avancées
@@ -2011,13 +2012,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   if (!gameStarted) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center mb-4">
-          <Button onClick={onGameEnd} variant="outline" className="text-sm">
-            ← Retour
-          </Button>
-        </div>
-
+      <GameShell title="Le Petit Buveur" onBack={onGameEnd} maxWidth={620}>
+        <div className="space-y-6">
         {showSettings ? (
           <div className="space-y-6">
             <h3 className={`text-xl font-semibold ${getTextColor()}`}>
@@ -2105,35 +2101,58 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             </div>
           </>
         )}
-      </div>
+        </div>
+      </GameShell>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end items-center mb-4">
-        <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium text-gray-400">
-            Mode {difficultyNames[gameDifficulty]} {gameDifficulty === 'difficile' ? '(max 8 gorgées)' : ''}
+    <GameShell
+      title="Le Petit Buveur"
+      onBack={onGameEnd}
+      maxWidth={760}
+      headerRight={
+        <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">
+          {difficultyNames[gameDifficulty]}
+        </span>
+      }
+      actionBar={
+        <div className="flex gap-2">
+          <Button
+            onClick={rollDice}
+            disabled={isProcessingTurn}
+            className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-4 text-lg shadow-lg"
+          >
+            <span className="flex items-center justify-center gap-2">
+              <span>Lancer le dé</span>
+              <Dice6 className={`h-5 w-5 ${isDiceRolling ? 'animate-spin' : ''}`} />
+            </span>
+          </Button>
+          {isProcessingTurn && !isDiceRolling && (
+            <Button
+              onClick={forceNextPlayer}
+              variant="outline"
+              className="px-4 text-sm text-red-600 border-red-600 hover:bg-red-50"
+              title="Débloquer le jeu si il se bloque"
+            >
+              🔧
+            </Button>
+          )}
+        </div>
+      }
+    >
+      <div className="text-center space-y-2">
+        <div className="flex justify-between items-center text-gray-300">
+          <p className="text-base">
+            Tour <span className="font-bold">{turnCount}</span>
+          </p>
+          <p className="text-base">
+            Au tour de <PlayerName player={players[currentPlayer]} className="font-bold" />
           </p>
         </div>
       </div>
 
-      <div className="text-center space-y-4">
-        <h2 className="text-3xl font-bold">Le Petit Buveur</h2>
-        <div className="text-gray-300">
-          <div className="flex justify-between items-center text-gray-300">
-            <p className="text-lg">
-              Tour <span className="font-bold">{turnCount}</span>
-            </p>
-            <p className="text-lg">
-              Au tour de <PlayerName player={players[currentPlayer]} className="font-bold" />
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className={`grid grid-cols-6 gap-2 p-4 ${getBgColor()} rounded-lg mb-20`}>
+      <div className={`mt-4 grid grid-cols-6 gap-2 p-4 ${getBgColor()} rounded-lg mb-4`}>
         {Array.from({ length: boardSize }).map((_, index) => {
           const playersOnCase = players.filter(p => p.position === index)
           const gridCols = playersOnCase.length > 4 
@@ -2154,47 +2173,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             </div>
           )
         })}
-      </div>
-
-      {/* Bouton de lancement de dé et nom du joueur juste après le plateau */}
-      <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg p-4 shadow-lg mb-6">
-        <div className="container mx-auto">
-          <div className="mb-2 text-center">
-            <p className="font-medium text-primary">
-              Au tour de <PlayerName player={players[currentPlayer]} className="font-bold text-lg" />
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={rollDice}
-              disabled={isProcessingTurn}
-              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-6 px-8 text-xl shadow-lg"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <span>Lancer le dé</span>
-                {isDiceRolling ? (
-                  <div className="animate-spin">
-                    <Dice6 className="h-6 w-6" />
-                  </div>
-                ) : (
-                  <Dice6 className="h-6 w-6" />
-                )}
-              </div>
-            </Button>
-            
-            {/* Bouton de secours pour débloquer le jeu */}
-            {isProcessingTurn && !isDiceRolling && (
-              <Button
-                onClick={forceNextPlayer}
-                variant="outline"
-                className="px-4 text-sm text-red-600 border-red-600 hover:bg-red-50"
-                title="Débloquer le jeu si il se bloque"
-              >
-                🔧
-              </Button>
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -2877,6 +2855,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </GameShell>
   );
 }

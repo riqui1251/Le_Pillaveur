@@ -5,6 +5,8 @@ import React, { useEffect } from 'react';
 import BalloonSelection from './components/BalloonSelection';
 import BalloonRace from './components/BalloonRace';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { GameShell } from '@/components/game/GameShell';
 import { usePlayers } from '@/hooks/usePlayers'; // Importer le hook usePlayers
 import { Player } from '@/lib/players'; // Importer le type Player
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers';
@@ -69,45 +71,46 @@ export default function BallonSurprisePage() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-4">Ballon Surprise</h1>
-
-      {gameStep === 'balloonSelection' && (
-        <BalloonSelection players={selectedPlayers} onBalloonsSelected={handleBalloonsSelected} />
-      )}
-
-      {gameStep === 'race' && (
-        <BalloonRace playerChoices={playerChoices} onRaceFinish={handleRaceFinish} />
-      )}
-
-      {gameStep === 'results' && raceResult && (
-        <div className="text-center p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold mb-4 text-yellow-400">Course Terminée !</h2>
-          <p className="text-xl mb-2">
-            Le ballon <span className={`font-semibold text-${raceResult.winnerColor}-400`}>{raceResult.winnerColor.toUpperCase()}</span> a gagné !
+    <GameShell title="Ballon Surprise" backHref="/jeux" maxWidth={900}>
+      {selectedPlayers.length < 2 ? (
+        <Card className="p-6 text-center">
+          <p className="text-muted-foreground">
+            Sélectionnez au moins 2 joueurs sur la page Joueurs pour lancer une course.
           </p>
-          {winnerPlayer ? (
-            <p className="text-lg mb-4">
-              Félicitations à <span className="font-bold">{winnerPlayer.name}</span> ! Tu dois distribuer <span className="font-bold text-xl text-amber-500">{raceResult.sips}</span> gorgées.
-            </p>
-          ) : (
-            <p className="text-lg mb-4">
-              Personne n&apos;avait choisi le ballon {raceResult.winnerColor}. Pas de chance ! La maison distribue <span className="font-bold text-xl text-amber-500">{raceResult.sips}</span> gorgées (ou pas, selon vos règles).
-            </p>
+        </Card>
+      ) : (
+        <>
+          {gameStep === 'balloonSelection' && (
+            <BalloonSelection players={selectedPlayers} onBalloonsSelected={handleBalloonsSelected} />
           )}
-          
-          {/* La distribution des gorgées est manuelle entre joueurs ; la partie est enregistrée dans les stats. */}
-          <Button onClick={handleReplay} className="mt-4">
-            Rejouer
-          </Button>
-        </div>
-      )}
 
-      {/* Message temporaire - ajusté */}
-      {gameStep !== 'balloonSelection' && gameStep !== 'results' && (
-        <p>Étape : {gameStep}</p>
-      )}
+          {gameStep === 'race' && (
+            <BalloonRace playerChoices={playerChoices} onRaceFinish={handleRaceFinish} />
+          )}
 
-    </div>
+          {gameStep === 'results' && raceResult && (
+            <div className="text-center p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg">
+              <h2 className="text-2xl font-bold mb-4 text-yellow-400">Course Terminée !</h2>
+              <p className="text-xl mb-2">
+                Le ballon <span className={`font-semibold text-${raceResult.winnerColor}-400`}>{raceResult.winnerColor.toUpperCase()}</span> a gagné !
+              </p>
+              {winnerPlayer ? (
+                <p className="text-lg mb-4">
+                  Félicitations à <span className="font-bold">{winnerPlayer.name}</span> ! Tu dois distribuer <span className="font-bold text-xl text-amber-500">{raceResult.sips}</span> gorgées.
+                </p>
+              ) : (
+                <p className="text-lg mb-4">
+                  Personne n&apos;avait choisi le ballon {raceResult.winnerColor}. Pas de chance ! La maison distribue <span className="font-bold text-xl text-amber-500">{raceResult.sips}</span> gorgées (ou pas, selon vos règles).
+                </p>
+              )}
+
+              <Button onClick={handleReplay} className="mt-4">
+                Rejouer
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </GameShell>
   );
 } 

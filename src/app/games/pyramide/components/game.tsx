@@ -714,9 +714,18 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
         {/* En-tête - compact sur mobile */}
         <div className={`rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.45)] ${isMobile ? 'mb-2 px-3 py-2' : 'mb-5 md:mb-6 px-4 py-3 md:px-6 md:py-5'}`}>
           <div className="flex items-center justify-between gap-2">
-            <h1 className={`font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 ${isMobile ? 'text-lg' : 'text-2xl sm:text-3xl'}`}>
+            <h1 className={`font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 ${isMobile ? 'text-lg pl-10' : 'text-2xl sm:text-3xl'}`}>
               Pyramide {gameMode === 'classic' ? '· Classique' : ''}
             </h1>
+            <Button
+              onClick={onGameEnd}
+              variant="ghost"
+              size="icon"
+              className="shrink-0 text-amber-200 hover:bg-white/10 hover:text-amber-100"
+              aria-label="Retour aux jeux"
+            >
+              <Home className="h-5 w-5" />
+            </Button>
           </div>
         </div>
 
