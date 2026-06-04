@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Menu, X, Home, Trophy, User } from 'lucide-react'
+import { Menu, X, Home, Trophy, User, Gamepad2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useBrowserCapabilities } from '@/components/providers/BrowserCapabilitiesProvider'
 import { FullscreenButton } from '@/components/ui/fullscreen-button'
@@ -28,7 +28,7 @@ export default function Navbar() {
   const navLinks = [
     { href: '/', label: 'Accueil', icon: <Home className="h-4 w-4" /> },
     { href: '/joueurs', label: 'Joueurs', icon: <User className="h-4 w-4" /> },
-    { href: '/jeux', label: 'Jeux', icon: <Home className="h-4 w-4" /> },
+    { href: '/jeux', label: 'Jeux', icon: <Gamepad2 className="h-4 w-4" /> },
     { href: '/classement', label: 'Classement', icon: <Trophy className="h-4 w-4" /> },
     { href: '/compte', label: 'Compte', icon: <User className="h-4 w-4" /> },
   ]

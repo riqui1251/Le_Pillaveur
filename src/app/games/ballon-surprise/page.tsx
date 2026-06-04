@@ -10,8 +10,9 @@ import { Player } from '@/lib/players'; // Importer le type Player
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers';
 
 export default function BallonSurprisePage() {
-  const { players: allPlayers } = usePlayers(); // Récupérer tous les joueurs
+  const { players: allPlayers, updatePlayerStats } = usePlayers(); // Récupérer tous les joueurs
   const { selectedIds } = useSelectedPlayers();
+  const statsFlushedRef = React.useRef(false);
   // Gérer l'état du jeu (quelle étape afficher)
   const [gameStep, setGameStep] = React.useState<'balloonSelection' | 'race' | 'results'>('balloonSelection'); // playerSelection, balloonSelection, race, results
 
@@ -46,7 +47,22 @@ export default function BallonSurprisePage() {
     return selectedPlayers.find(p => p.id === winnerId) || null;
   }, [raceResult, playerChoices, selectedPlayers]);
 
+  // Enregistre la partie une fois les résultats affichés : 1 partie par joueur,
+  // + une victoire pour le joueur dont le ballon a gagné.
+  useEffect(() => {
+    if (gameStep !== 'results' || !raceResult || statsFlushedRef.current) return;
+    if (selectedPlayers.length === 0) return;
+    statsFlushedRef.current = true;
+    selectedPlayers.forEach(p => {
+      updatePlayerStats(p.id, 'ballon-surprise', {
+        gamesPlayed: 1,
+        wins: winnerPlayer && winnerPlayer.id === p.id ? 1 : 0,
+      });
+    });
+  }, [gameStep, raceResult, selectedPlayers, winnerPlayer, updatePlayerStats]);
+
   const handleReplay = () => {
+    statsFlushedRef.current = false;
     setGameStep('balloonSelection');
     setPlayerChoices({});
     setRaceResult(null);
@@ -80,7 +96,7 @@ export default function BallonSurprisePage() {
             </p>
           )}
           
-          {/* TODO: Ajouter la logique/composant de distribution des gorgées ici */}
+          {/* La distribution des gorgées est manuelle entre joueurs ; la partie est enregistrée dans les stats. */}
           <Button onClick={handleReplay} className="mt-4">
             Rejouer
           </Button>

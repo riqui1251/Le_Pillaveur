@@ -28,7 +28,7 @@ export default function PetitsPointsPage() {
   const [gameStarted, setGameStarted] = useState(false)
   const [difficulty, setDifficulty] = useState<Difficulty>('normal')
   const [activeTab, setActiveTab] = useState('players')
-  const { players } = usePlayers()
+  const { players, updatePlayerStats } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
   const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
 
@@ -53,6 +53,7 @@ export default function PetitsPointsPage() {
             players={selectedPlayers} 
             onGameEnd={handleGameEnd}
             difficulty={difficulty}
+            updatePlayerStats={updatePlayerStats}
           />
         </div>
       ) : (

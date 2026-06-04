@@ -3,41 +3,38 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    // Récupérer le nombre total de parties
+    // Nombre total de parties (une ligne Stats = une partie jouée)
     const totalGames = await prisma.stats.count()
 
-    // Récupérer le nombre total de joueurs uniques
+    // Nombre total de joueurs
     const totalPlayers = await prisma.user.count()
 
-    // Récupérer le meilleur joueur (celui avec le plus de victoires)
-    const bestPlayer = await prisma.user.findFirst({
-      where: {
-        stats: {
-          some: {
-            score: {
-              gt: 0
-            }
-          }
-        }
-      },
-      select: {
-        name: true,
-        stats: {
-          where: {
-            score: {
-              gt: 0
-            }
-          }
-        }
-      },
-      orderBy: {
-        stats: {
-          _count: 'desc'
-        }
-      }
+    // Meilleur joueur = score cumulé le plus élevé.
+    // On regroupe les parties par joueur et on trie par somme de score.
+    const ranking = await prisma.stats.groupBy({
+      by: ['userId'],
+      _sum: { score: true },
+      orderBy: { _sum: { score: 'desc' } },
+      take: 1,
     })
 
-    // Récupérer les 5 dernières parties
+    let bestPlayer: { name: string; wins: number } | null = null
+    if (ranking.length > 0) {
+      const topUserId = ranking[0].userId
+      const [user, wins] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: topUserId },
+          select: { name: true },
+        }),
+        // "Victoires" = parties au score positif pour ce joueur
+        prisma.stats.count({
+          where: { userId: topUserId, score: { gt: 0 } },
+        }),
+      ])
+      bestPlayer = { name: user?.name || 'Anonyme', wins }
+    }
+
+    // Les 5 dernières parties
     const recentGames = await prisma.stats.findMany({
       take: 5,
       orderBy: {
@@ -51,10 +48,7 @@ export async function GET() {
     return NextResponse.json({
       totalGames,
       totalPlayers,
-      bestPlayer: bestPlayer ? {
-        name: bestPlayer.name,
-        wins: bestPlayer.stats.length
-      } : null,
+      bestPlayer,
       recentGames: recentGames.map(game => ({
         gameType: game.gameType,
         winner: game.user.name || 'Anonyme',

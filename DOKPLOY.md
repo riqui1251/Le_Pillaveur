@@ -66,9 +66,14 @@ Onglet **Environment** de l’application :
 
 ```env
 NODE_ENV=production
-NODE_OPTIONS=--no-webstorage
 DATABASE_URL=file:/app/prisma/prod.db
 ```
+
+> Ne pas ajouter `NODE_OPTIONS=--no-webstorage` : ce flag n'existe pas
+> (il faisait planter le démarrage). Le Web Storage de Node est désactivé
+> par défaut, donc aucune option n'est nécessaire en production.
+> Si un jour le Web Storage est activé volontairement, le bon flag sur
+> Node ≥ 22 est `--no-experimental-webstorage`.
 
 ### Sous-chemin `/jeux` (optionnel)
 

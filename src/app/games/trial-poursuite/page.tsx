@@ -130,6 +130,7 @@ export default function TrialPoursuitePage() {
                 players={selectedPlayers}
                 onGameEnd={handleGameEnd}
                 difficulty={difficulty}
+                updatePlayerStats={updatePlayerStats}
                 key={gameKey}
               />
             )}

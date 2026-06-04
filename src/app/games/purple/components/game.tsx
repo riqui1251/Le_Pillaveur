@@ -240,6 +240,13 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   }
 
   const quitGame = () => {
+    // Enregistre la session : 1 partie par joueur + gorgées accumulées
+    players.forEach(p => {
+      updatePlayerStats(p.id, 'purple', {
+        gamesPlayed: 1,
+        totalDrinks: gameResults[p.id] || 0,
+      })
+    })
     onGameEnd()
   }
 

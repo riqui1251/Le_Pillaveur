@@ -180,14 +180,12 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
       return;
     }
 
-    console.log('Ajout du joueur au cheval:', player.name, 'Index du cheval:', horseIndex);
     
     setHorses(prevHorses => {
       try {
         // Vérifier si le joueur est déjà assigné à un cheval
         const playerCurrentHorse = prevHorses.find(h => h.players.some(p => p.id === player.id));
         if (playerCurrentHorse) {
-          console.log('Le joueur est déjà assigné à un cheval, on le déplace');
           // Si oui, le retirer de ce cheval
           const updatedHorses = prevHorses.map(h => ({
             ...h,
@@ -197,7 +195,6 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
           updatedHorses[horseIndex].players.push(player);
           return updatedHorses;
         } else {
-          console.log('Le joueur n&apos;était pas assigné, on l&apos;ajoute au cheval');
           // Si non, l&apos;ajouter simplement au cheval sélectionné
           return prevHorses.map((horse, index) => 
             index === horseIndex
@@ -218,7 +215,6 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
       return;
     }
 
-    console.log('Retrait du joueur du cheval:', playerToRemove.name, 'Index du cheval:', horseIndex);
     
     setHorses(prevHorses => prevHorses.map((horse, index) => {
       if (index === horseIndex) {

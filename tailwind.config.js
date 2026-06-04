@@ -2,11 +2,31 @@
 module.exports = {
     darkMode: ['class'],
     content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  safelist: [
+    'from-red-600','to-amber-500',
+    'from-sky-500','to-indigo-600',
+    'from-fuchsia-600','to-violet-700',
+    'from-emerald-600','to-teal-400',
+    'from-amber-600','to-yellow-400',
+    'from-emerald-500','to-lime-400',
+    'from-pink-600','to-rose-400',
+    'from-sky-500','to-cyan-400',
+    'from-violet-600','to-purple-700',
+    'from-indigo-600','to-blue-600',
+    'from-rose-500','to-fuchsia-500',
+    // direction utilities utilisées dynamiquement
+    'bg-gradient-to-br','bg-gradient-to-r',
   ],
   theme: {
+    container: {
+      center: true,
+      padding: '2rem',
+      screens: {
+        '2xl': '1400px',
+      },
+    },
   	extend: {
   		screens: {
   			xs: '480px',

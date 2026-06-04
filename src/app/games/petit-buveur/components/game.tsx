@@ -528,23 +528,13 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   // Debug: Surveiller l'état de la fenêtre de sélection
   useEffect(() => {
-    console.log(`État de showTargetDialog changé: ${showTargetDialog}`);
     if (showTargetDialog) {
-      console.log("Fenêtre de sélection ouverte - vérification des joueurs:", players.length);
     }
   }, [showTargetDialog, players.length]);
 
   // Debug: Surveiller l'état du traitement du tour
   useEffect(() => {
-    console.log(`État du traitement du tour: isProcessingTurn=${isProcessingTurn}, isDiceRolling=${isDiceRolling}`);
     if (isProcessingTurn && !isDiceRolling) {
-      console.log("Tour en cours de traitement - vérification des états:");
-      console.log("- pendingCase:", pendingCase?.type);
-      console.log("- showTargetDialog:", showTargetDialog);
-      console.log("- showWheel:", showWheel);
-      console.log("- showChanceDialog:", showChanceDialog);
-      console.log("- showExchangeDialog:", showExchangeDialog);
-      console.log("- showChainDialog:", showChainDialog);
     }
   }, [isProcessingTurn, isDiceRolling, pendingCase, showTargetDialog, showWheel, showChanceDialog, showExchangeDialog, showChainDialog]);
 
@@ -565,10 +555,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     try {
       const storage = getSafeStorage();
       if (storage) {
-        console.log('saveGame: Tentative de sauvegarde dans localStorage');
         storage.setItem('petit-buveur-save', JSON.stringify(saveData));
         setHasActiveSave(true);
-        console.log('saveGame: Partie sauvegardée avec succès');
       }
     } catch (error) {
       console.error('saveGame: Erreur lors de la sauvegarde:', error);
@@ -579,16 +567,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     try {
       const storage = getSafeStorage();
       if (!storage) return null;
-      console.log('loadGame: Tentative de chargement depuis localStorage');
       const saveData = storage.getItem('petit-buveur-save');
-      console.log('loadGame: Données brutes récupérées:', saveData);
       
       if (saveData) {
         const parsed = JSON.parse(saveData) as GameSave;
-        console.log('loadGame: Données parsées avec succès:', parsed);
         return parsed;
       } else {
-        console.log('loadGame: Aucune donnée trouvée dans localStorage');
       }
     } catch (error) {
       console.error('loadGame: Erreur lors du chargement:', error);
@@ -600,23 +584,18 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     try {
       const storage = getSafeStorage();
       if (storage) {
-        console.log('deleteSave: Tentative de suppression de la sauvegarde');
         storage.removeItem('petit-buveur-save');
       }
       setHasActiveSave(false);
-      console.log('deleteSave: Sauvegarde supprimée avec succès');
     } catch (error) {
       console.error('deleteSave: Erreur lors de la suppression:', error);
     }
   };
 
   const resumeGame = () => {
-    console.log('resumeGame: Début de la fonction');
     const saveData = loadGame();
-    console.log('resumeGame: Données de sauvegarde récupérées:', saveData);
     
     if (saveData) {
-      console.log('resumeGame: Application des données de sauvegarde');
       setPlayers(saveData.players);
       setCurrentPlayer(saveData.currentPlayer);
       setTurnCount(saveData.turnCount);
@@ -625,9 +604,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setGameStarted(saveData.gameStarted);
       setWinner(saveData.winner);
       setShowSaveDialog(false);
-      console.log('Partie reprise avec succès');
     } else {
-      console.log('resumeGame: Aucune donnée de sauvegarde trouvée');
     }
   };
 
@@ -635,7 +612,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   useEffect(() => {
     const saveData = loadGame();
     setHasActiveSave(!!saveData);
-    console.log('useEffect: Sauvegarde détectée:', !!saveData);
   }, []);
 
   // Sauvegarde automatique quand la partie change
@@ -652,9 +628,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   // Surveiller les changements d'état du jeu
   useEffect(() => {
-    console.log('useEffect: gameStarted a changé:', gameStarted);
-    console.log('useEffect: nombre de joueurs:', players.length);
-    console.log('useEffect: currentPlayer:', currentPlayer);
   }, [gameStarted, players.length, currentPlayer]);
 
 
@@ -684,7 +657,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   const rollDice = () => {
     if (isProcessingTurn || isDiceRolling) {
-      console.log("Tentative de lancement de dé bloquée - tour en cours");
       return;
     }
     
@@ -700,7 +672,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       if (currentPlayerObj.cursed > 0) {
         currentPlayerObj.drinks += 1;
         currentPlayerObj.cursed -= 1;
-        console.log(`Le joueur ${currentPlayerObj.name} boit 1 gorgée à cause de la malédiction (${currentPlayerObj.cursed} tours restants)`);
         
         // Mettre à jour les statistiques
         try {
@@ -714,13 +685,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         setPlayers(updatedPlayers);
         
         // Appliquer la malédiction en arrière-plan sans notification
-        console.log(`Malédiction appliquée en arrière-plan pour ${currentPlayerObj.name}`);
       }
       
       // Retirer la protection après 1 tour
       if (currentPlayerObj.protected) {
         currentPlayerObj.protected = false;
-        console.log(`La protection de ${currentPlayerObj.name} a expiré`);
       }
       
       // Gérer les liens de chaîne
@@ -730,7 +699,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           // Le joueur boit comme le joueur lié
           currentPlayerObj.drinks += 1;
           currentPlayerObj.linkedTurns -= 1;
-          console.log(`Le joueur ${currentPlayerObj.name} boit 1 gorgée car lié à ${linkedPlayer.name} (${currentPlayerObj.linkedTurns} tours restants)`);
           
           // Mettre à jour les statistiques
           try {
@@ -742,12 +710,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           }
           
           // Appliquer le lien en arrière-plan sans notification
-          console.log(`Lien de chaîne appliqué en arrière-plan pour ${currentPlayerObj.name}`);
           
           // Retirer le lien si expiré
           if (currentPlayerObj.linkedTurns <= 0) {
             currentPlayerObj.linkedTo = undefined;
-            console.log(`Le lien de ${currentPlayerObj.name} a expiré`);
           }
         }
       }
@@ -789,7 +755,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         // Calculer la nouvelle position
         const newPosition = Math.min(player.position + result, boardSize - 1);
-        console.log(`Joueur ${player.name} avance de la case ${player.position + 1} à la case ${newPosition + 1}`);
         
         // Activer l'animation de déplacement
         setAnimatingPlayer(player.id);
@@ -821,7 +786,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         // Générer un effet aléatoire (boost possible pour le joueur actuel)
         const caseType = generateCase(gameDifficulty, updatedPlayers[currentPlayer]);
-        console.log(`Case générée: type=${caseType.type}, description=${caseType.description}, effet=${caseType.effect}`);
         
         // Réinitialiser l'animation après un délai
         setTimeout(() => {
@@ -845,10 +809,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       return;
     }
     
-    console.log(`applyEffectToCurrentPlayer: Joueur ${player.name}, position actuelle: ${currentPosition + 1}, type de case: ${caseType.type}`);
 
     // Pour toutes les cases, y compris la roue, utiliser la logique de ciblage
-    console.log("Affichage de la fenêtre de ciblage pour la case de type: " + caseType.type);
     setPendingCase(caseType);
     setPendingPosition(currentPosition);
     
@@ -867,13 +829,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     
     // Forcer la mise à jour de l'état et ajouter un délai pour s'assurer que le DOM est mis à jour
     setTimeout(() => {
-      console.log("Ouverture de la fenêtre de ciblage...");
       setShowTargetDialog(true);
       
       // Vérification de secours après 500ms
       setTimeout(() => {
         if (!showTargetDialog) {
-          console.log("Problème détecté - forçage de l'ouverture de la fenêtre");
           setShowTargetDialog(true);
         }
       }, 500);
@@ -884,7 +844,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   const movePlayer = (playerId: string, newPosition: number) => {
     // Fonction simplifiée pour déplacer un joueur directement
-    console.log(`movePlayer: Déplacement du joueur ${playerId} vers la position ${newPosition + 1}`);
     setPlayers(prevPlayers => 
       prevPlayers.map(p => p.id === playerId ? { ...p, position: newPosition } : p)
     );
@@ -892,7 +851,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   // Fonction pour gérer le clic sur le bouton "Suivant"
   const handleNextButtonClick = () => {
-    console.log("Passage au joueur suivant via bouton Suivant");
     setShowNotification(false);
     setShowNextButton(false);
     
@@ -912,7 +870,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   // Fonction de secours pour débloquer le jeu
   const forceNextPlayer = () => {
-    console.log("FORÇAGE du passage au joueur suivant - déblocage du jeu");
     setShowNotification(false);
     setShowNextButton(false);
     setShowTargetDialog(false);
@@ -989,12 +946,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   };
 
   const handleTargetSelection = (targetId: string) => {
-    console.log(`handleTargetSelection: Début - Joueur ciblé: ${targetId}, pendingCase: ${pendingCase?.type}`);
     
     // Fermer la fenêtre de ciblage
     setShowTargetDialog(false);
     
-    console.log(`handleTargetSelection: Fenêtre fermée, pendingCase: ${pendingCase?.type}`);
     
     if (!pendingCase) {
       setIsProcessingTurn(false);
@@ -1010,7 +965,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
     // Cas spéciaux pour les nouvelles cases
     if (pendingCase.type === 'roue') {
-      console.log("Ouverture de la roue des gorgées");
       setWheelSegments(generateWheelSegments());
       setWheelResult(null);
       setShowWheel(true);
@@ -1019,21 +973,18 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
     
     if (pendingCase.type === 'chance') {
-      console.log("Ouverture du dialogue de chance");
       setShowChanceDialog(true);
       setCurrentCase(pendingCase);
       return;
     }
     
     if (pendingCase.type === 'echange') {
-      console.log("Ouverture du dialogue d'échange");
       setShowExchangeDialog(true);
       setCurrentCase(pendingCase);
       return;
     }
     
     if (pendingCase.type === 'defi-chaine') {
-      console.log("Ouverture du dialogue de défi en chaîne");
       setShowChainDialog(true);
       setCurrentCase(pendingCase);
       return;
@@ -1170,7 +1121,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       return;
     }
     
-    console.log(`applyEffectToPlayer: Joueur ciblé: ${targetPlayerId}, type de case: ${caseToApply.type}`);
     
     // Créer une copie des joueurs pour la mise à jour
     const updatedPlayers = [...players];
@@ -1188,7 +1138,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     switch (caseToApply.type) {
       case 'normal':
         // Pour les cases safe, on ne fait rien de spécial
-        console.log(`Le joueur ${targetPlayer.name} est sur une case safe`);
         
         // Afficher la notification de case safe
         setCurrentCase({
@@ -1203,7 +1152,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       case 'defi':
         // Vérifier si le joueur est protégé
         if (targetPlayer.protected) {
-          console.log(`Le joueur ${targetPlayer.name} a été protégé`);
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1216,7 +1164,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         // Si pas protégé, continuer normalement
         targetPlayer.drinks += caseToApply.effect;
-        console.log(`Le joueur ${targetPlayer.name} boit ${caseToApply.effect} gorgées`);
         
         // Mettre à jour les statistiques
         try {
@@ -1241,7 +1188,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         updatedPlayers.forEach((p) => {
           if (p.id !== targetPlayerId) {
             p.drinks += caseToApply.effect;
-            console.log(`Le joueur ${p.name} boit ${caseToApply.effect} gorgées`);
             
             // Mettre à jour les statistiques
             try {
@@ -1267,7 +1213,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       case 'recul':
         // Vérifier si le joueur est protégé
         if (targetPlayer.protected) {
-          console.log(`Le joueur ${targetPlayer.name} a été protégé du déplacement`);
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1280,7 +1225,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         // Vérifier si le joueur ciblé est sur la case 1 et que l'effet est un recul
         if (caseToApply.type === 'recul' && targetPlayer.position === 0) {
-          console.log(`Le joueur ${targetPlayer.name} est sur la case 1 et ne peut pas reculer`);
           // Afficher un message pour le recul impossible
           setCurrentCase({
             ...caseToApply,
@@ -1293,7 +1237,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
         // Calculer la nouvelle position après l'effet
         const effectPosition = Math.max(0, Math.min(boardSize - 1, targetPlayer.position + caseToApply.effect));
-        console.log(`applyEffectToPlayer: Effet ${caseToApply.type}, déplacement de ${targetPlayer.position + 1} vers ${effectPosition + 1}`);
         
         // Mettre à jour la position du joueur avec animation
         setAnimatingPlayer(targetPlayer.id);
@@ -1330,7 +1273,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         updatedPlayers.forEach((p) => {
           if (p.id === targetPlayerId) {
             if (p.protected) {
-              console.log(`Le joueur ${p.name} a été protégé de la bombe`);
               // Afficher un message spécial pour le joueur protégé
               setCurrentCase({
                 ...caseToApply,
@@ -1341,11 +1283,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               return;
             } else {
               p.drinks += caseToApply.effect * 2; // Double pour le ciblé
-              console.log(`Le joueur ${p.name} boit ${caseToApply.effect * 2} gorgées (double)`);
             }
           } else {
             p.drinks += caseToApply.effect;
-            console.log(`Le joueur ${p.name} boit ${caseToApply.effect} gorgées`);
           }
           
           // Mettre à jour les statistiques
@@ -1370,7 +1310,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       case 'protection':
         // Protéger le joueur pendant 1 tour
         targetPlayer.protected = true;
-        console.log(`Le joueur ${targetPlayer.name} est protégé pendant 1 tour`);
         
         // Afficher la notification de protection
         setCurrentCase({
@@ -1384,7 +1323,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       case 'malediction':
         // Vérifier si le joueur est protégé
         if (targetPlayer.protected) {
-          console.log(`Le joueur ${targetPlayer.name} a été protégé de la malédiction`);
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1414,7 +1352,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         // Maudire le joueur pendant 3 tours
         targetPlayer.cursed = 3;
-        console.log(`Le joueur ${targetPlayer.name} est maudit pendant 3 tours`);
         
         // Afficher la notification de malédiction
         setCurrentCase({
@@ -1428,7 +1365,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       case 'miroir':
         // Vérifier si le joueur ciblé est protégé
         if (targetPlayer.protected) {
-          console.log(`Le joueur ${targetPlayer.name} a été protégé du miroir`);
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1450,7 +1386,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           p.position = mirrorPositions[invertedIndex];
         });
         
-        console.log('Positions inversées par effet miroir (premier ↔ dernier)');
         
         // Afficher la notification de miroir
         setCurrentCase({
@@ -1464,7 +1399,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       case 'piege':
         // Vérifier si le joueur est protégé
         if (targetPlayer.protected) {
-          console.log(`Le joueur ${targetPlayer.name} a été protégé du piège`);
           // Afficher un message spécial pour le joueur protégé
           const trapDrinks = targetPlayer.position + 1;
           setCurrentCase({
@@ -1479,7 +1413,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         // Si pas protégé, continuer normalement
         const trapDrinks = targetPlayer.position + 1;
         targetPlayer.drinks += trapDrinks;
-        console.log(`Le joueur ${targetPlayer.name} boit ${trapDrinks} gorgées (position ${targetPlayer.position + 1})`);
         
         // Mettre à jour les statistiques
         try {
@@ -1502,7 +1435,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       case 'melange':
         // Vérifier si le joueur ciblé est protégé
         if (targetPlayer.protected) {
-          console.log(`Le joueur ${targetPlayer.name} a été protégé du mélange`);
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1521,7 +1453,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           p.position = shuffledPositions[index];
         });
         
-        console.log('Positions mélangées aléatoirement');
         
         // Afficher la notification de mélange
         setCurrentCase({
@@ -1534,7 +1465,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
       // Pour les autres types de cases (normal, defi)
       default:
-        console.log(`Aucun effet spécial à appliquer pour la case de type ${caseToApply.type}`);
         
         // Afficher une notification pour les cases sans effet spécial
         setCurrentCase({
@@ -1565,7 +1495,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   };
 
   const selectRandomPlayer = () => {
-    console.log("Sélection d'un joueur aléatoire");
     const eligiblePlayers = [...players];
     if (eligiblePlayers.length > 0) {
       const weights = eligiblePlayers.map((p) => 1 / (1 + getPlayerGameBoost(p, 'petit-buveur') / 100));
@@ -1579,21 +1508,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           break;
         }
       }
-      console.log(`Joueur aléatoire sélectionné: ${chosen.name}`);
       handleTargetSelection(chosen.id);
     } else {
-      console.log(`Aucun autre joueur disponible, sélection du joueur actuel: ${players[currentPlayer].name}`);
       handleTargetSelection(players[currentPlayer].id);
     }
   };
 
   const startGame = () => {
-    console.log('startGame: Début de la fonction');
-    console.log('startGame: Nombre de joueurs:', players.length);
-    console.log('startGame: Difficulté:', gameDifficulty);
     
     if (players.length >= 2) {
-      console.log('startGame: Démarrage du jeu...');
       
       // Réinitialiser les positions et les boissons des joueurs
       const resetPlayers = players.map(p => ({
@@ -1633,10 +1556,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setShowExchangeDialog(false);
       setShowChainDialog(false);
       
-      console.log("startGame: Jeu démarré avec succès !");
-      console.log("startGame: Joueurs réinitialisés:", resetPlayers);
     } else {
-      console.log('startGame: ERREUR - Pas assez de joueurs pour démarrer (minimum 2 requis)');
       alert('Il faut au moins 2 joueurs pour commencer une partie !');
     }
   }
@@ -1669,7 +1589,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setTurnCount(1);
     setGameDifficulty(difficulty);
     setGameStarted(false);
-    console.log("Jeu réinitialisé avec la difficulté:", difficulty);
   }, [initialPlayers, setPlayers, difficulty]);
 
   const getBgColor = () => {
@@ -1947,7 +1866,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         // Calculer la nouvelle position
         const newPosition = Math.min(player.position + result, boardSize - 1);
-        console.log(`Joueur ${player.name} avance de la case ${player.position + 1} à la case ${newPosition + 1} (relance)`);
         
         // Activer l'animation de déplacement
         setAnimatingPlayer(player.id);
@@ -1979,7 +1897,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         // Générer un effet aléatoire (boost possible pour le joueur actuel)
         const caseType = generateCase(gameDifficulty, updatedPlayers[currentPlayer]);
-        console.log(`Case générée (relance): type=${caseType.type}, description=${caseType.description}, effet=${caseType.effect}`);
         
         // Réinitialiser l'animation après un délai
         setTimeout(() => {
@@ -2160,9 +2077,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             <div className="flex gap-4 mt-8">
               <Button
                 onClick={() => {
-                  console.log('Bouton "Commencer la partie" cliqué');
-                  console.log('Nombre de joueurs:', players.length);
-                  console.log('Difficulté sélectionnée:', gameDifficulty);
                   
                   // Lancer directement la partie
                   startGame();
@@ -2175,12 +2089,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               
               <Button
                 onClick={() => {
-                  console.log('Bouton "Charger la partie en cours" cliqué');
                   if (hasActiveSave) {
-                    console.log('Chargement de la partie sauvegardée');
                     resumeGame();
                   } else {
-                    console.log('Aucune partie sauvegardée trouvée');
                     alert('Aucune partie en cours trouvée !');
                   }
                 }}
@@ -2394,7 +2305,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                   <Button
                     key={player.id}
                     onClick={() => {
-                      console.log(`Clic sur le joueur: ${player.name}`);
                       handleTargetSelection(player.id);
                     }}
                     className={`p-3 ${player.preferences.color} text-white font-bold`}
@@ -2407,7 +2317,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               {/* Puis les options "Joueur aléatoire" et "Vous-même" */}
               <Button 
                 onClick={() => {
-                  console.log("Clic sur joueur aléatoire");
                   selectRandomPlayer();
                 }}
                 className="p-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold w-full mb-2"
@@ -2417,7 +2326,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               
               <Button 
                 onClick={() => {
-                  console.log(`Clic sur vous-même: ${players[currentPlayer].name}`);
                   handleTargetSelection(players[currentPlayer].id);
                 }}
                 className={`p-4 ${players[currentPlayer].preferences.color} text-white font-bold w-full`}
@@ -2932,7 +2840,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                 <div className="flex flex-col gap-2">
                   <Button
                     onClick={() => {
-                      console.log('Bouton "Reprendre la partie" dans le dialogue cliqué');
                       resumeGame();
                     }}
                     className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold"
@@ -2942,11 +2849,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                   </Button>
                   <Button
                     onClick={() => {
-                      console.log('Bouton "Nouvelle partie" dans le dialogue cliqué');
                       deleteSave();
                       setShowSaveDialog(false);
                       // Continuer vers la sélection de difficulté
-                      console.log('Continuation vers la sélection de difficulté');
                     }}
                     variant="outline"
                     className="w-full"

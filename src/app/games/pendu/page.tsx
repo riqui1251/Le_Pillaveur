@@ -195,6 +195,7 @@ export default function PenduPage() {
                 players={selectedPlayers}
                 onGameEnd={handleGameEnd}
                 difficulty={difficulty}
+                updatePlayerStats={updatePlayerStats}
               />
             )}
           </TabsContent>

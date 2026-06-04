@@ -44,7 +44,7 @@ export default function GamesHubPage() {
     <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
       <div className="relative container mx-auto px-4 py-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <h1 className="text-3xl sm:text-4xl font-extrabold flex-1 bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300">Tous les jeux</h1>
+          <h1 className="text-3xl sm:text-4xl font-extrabold flex-1 pl-12 sm:pl-0 bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300">Tous les jeux</h1>
           <div className="flex gap-2">
             <Button 
               variant={layout === 'grid' ? 'default' : 'outline'} 

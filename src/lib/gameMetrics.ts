@@ -72,11 +72,6 @@ const gameSpecific: Record<string, MetricDescriptor[]> = {
     { id: 'wins@ballon-surprise', title: 'Victoires Ballon Surprise', icon: '🏆', getValue: (p) => p.stats.gameStats?.['ballon-surprise']?.wins || 0, format: defaultFormat },
     { id: 'games@ballon-surprise', title: 'Parties Ballon Surprise', icon: '🎮', getValue: (p) => p.stats.gameStats?.['ballon-surprise']?.gamesPlayed || 0, format: defaultFormat },
   ],
-  // The Choice
-  'the-choice': [
-    { id: 'wins@the-choice', title: 'Victoires The Choice', icon: '🏆', getValue: (p) => p.stats.gameStats?.['the-choice']?.wins || 0, format: defaultFormat },
-    { id: 'games@the-choice', title: 'Parties The Choice', icon: '🎮', getValue: (p) => p.stats.gameStats?.['the-choice']?.gamesPlayed || 0, format: defaultFormat },
-  ],
   // Petits Points
   'petits-points': [
     { id: 'wins@petits-points', title: 'Victoires Petits Points', icon: '🏆', getValue: (p) => p.stats.gameStats?.['petits-points']?.wins || 0, format: defaultFormat },

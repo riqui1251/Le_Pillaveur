@@ -4,14 +4,16 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Player } from '@/types/game'
-import { Home, Play, RotateCcw, Settings, ArrowLeft } from 'lucide-react'
+import { Play, RotateCcw, Settings, ArrowLeft, Home } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
+import { GameShell } from '@/components/game/GameShell'
 
 interface GameProps {
   players: Player[]
   onGameEnd: () => void
   difficulty: 'facile' | 'normal' | 'difficile' | 'extreme'
+  updatePlayerStats?: (playerId: string, gameId: string, stats: { gamesPlayed: number; totalDrinks?: number; wins?: number }) => void
 }
 
 interface Pawn {
@@ -72,8 +74,9 @@ const playerColors = [
   '#84cc16'  // lime
 ]
 
-export default function Game({ players, onGameEnd, difficulty }: GameProps) {
+export default function Game({ players, onGameEnd, difficulty, updatePlayerStats }: GameProps) {
   const [gameState, setGameState] = useState<'placing' | 'config' | 'playing' | 'finished'>('placing')
+  const statsFlushedRef = useRef(false)
   const [pawns, setPawns] = useState<Pawn[]>([])
   const [currentZone, setCurrentZone] = useState<Zone | null>(null)
   const [currentRound, setCurrentRound] = useState(0)
@@ -106,7 +109,6 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
       color: playerColors[index % playerColors.length]
     }))
     setPawns(initialPawns)
-    console.log('Pions initialisés:', initialPawns)
     
          // Initialiser les gorgées totales
      const initialTotalSips: Record<string, number> = {}
@@ -116,7 +118,24 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
      setTotalSips(initialTotalSips)
   }, [players])
 
-  // Surveiller la fin de partie (supprimé car maintenant géré dans spawnZone)
+  // Enregistre les stats une fois la partie terminée (1 partie/joueur, gorgées, victoire au plus haut score)
+  useEffect(() => {
+    if (gameState !== 'finished' || statsFlushedRef.current || players.length === 0) return
+    statsFlushedRef.current = true
+    let winnerId: string | null = null
+    let maxSips = -Infinity
+    players.forEach(p => {
+      const s = totalSips[p.id] || 0
+      if (s > maxSips) { maxSips = s; winnerId = p.id }
+    })
+    players.forEach(p => {
+      updatePlayerStats?.(p.id, 'petits-points', {
+        gamesPlayed: 1,
+        wins: p.id === winnerId ? 1 : 0,
+        totalDrinks: totalSips[p.id] || 0,
+      })
+    })
+  }, [gameState, players, totalSips, updatePlayerStats])
 
          // Fonction pour placer un pion
     const handleBoardClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -140,22 +159,12 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
         Math.pow(relativeX - 50, 2) + Math.pow(relativeY - 50, 2)
       )
       
-      console.log('Clic détecté:', { 
-        clickX, 
-        clickY, 
-        relativeX, 
-        relativeY, 
-        distanceFromCenter, 
-        gameState 
-      })
       
       if (distanceFromCenter <= 45) { // 45% du rayon pour laisser de la marge
         const placedPawns = pawns.filter(p => p.x !== 50 || p.y !== 50).length
         const currentPlayerIndex = placedPawns
-        console.log('Placement du pion:', { placedPawns, currentPlayerIndex, players: players.length })
         
         if (currentPlayerIndex < players.length) {
-          console.log('Placing pawn for player:', currentPlayerIndex, 'at position:', { relativeX, relativeY })
           setPawns(prev => {
             const newPawns = [...prev]
             newPawns[currentPlayerIndex] = { 
@@ -163,15 +172,11 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
               x: relativeX, 
               y: relativeY 
             }
-            console.log('New pawns state:', newPawns)
             return newPawns
           })
-          console.log('Pion placé pour le joueur:', currentPlayerIndex)
         } else {
-          console.log('Tous les joueurs ont déjà placé leur pion')
         }
       } else {
-        console.log('Clic en dehors de la zone valide (distance:', distanceFromCenter, ')')
       }
     }
 
@@ -194,7 +199,6 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
   const spawnZone = () => {
     // Vérifier si le jeu est toujours en cours
     if (gameState !== 'playing') {
-      console.log('Jeu arrêté, arrêt de la génération de zones')
       return
     }
 
@@ -219,18 +223,10 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
         )
         // Le rayon de la zone en pourcentage (diamètre de la zone divisé par 2)
         const zoneRadiusPercent = (config.zoneRadius / 320) * 100 / 2
-        console.log('Vérification zone:', {
-          pawn: { x: pawn.x, y: pawn.y },
-          zone: { x: zone.x, y: zone.y },
-          distance,
-          zoneRadiusPercent,
-          isInZone: distance <= zoneRadiusPercent
-        })
         return distance <= zoneRadiusPercent
       })
       .map(pawn => pawn.playerId)
 
-    console.log('Joueurs dans la zone:', playersInZoneIds)
     setPlayersInZone(playersInZoneIds)
 
     // Ajouter les gorgées aux joueurs dans la zone
@@ -247,7 +243,6 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
   const nextZone = () => {
     // Vérifier si on a atteint le nombre de zones configuré
     if (currentRound >= config.zoneCount) {
-      console.log('Fin de partie - nombre de zones atteint:', { currentRound, zoneCount: config.zoneCount })
       setGameState('finished')
       return
     }
@@ -264,6 +259,7 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
 
   // Recommencer
   const restartGame = () => {
+    statsFlushedRef.current = false
     setGameState('placing')
     setCurrentRound(0)
          setCurrentZone(null)
@@ -283,10 +279,6 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
       sipsPerZone: difficultyConfig[difficulty].sipsPerZone,
       zoneDuration: difficultyConfig[difficulty].zoneDuration,
       spawnDelay: difficultyConfig[difficulty].spawnDelay
-    })
-    console.log('Partie redémarrée avec configuration:', {
-      zoneCount: difficultyConfig[difficulty].zoneCount,
-      currentRound: 0
     })
   }
 
@@ -339,7 +331,7 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
                  <div className="flex justify-center">
            <div 
              ref={boardRef}
-             className="relative w-80 h-80 bg-gradient-to-br from-gray-800 to-gray-900 rounded-full border-4 border-gray-600 cursor-pointer"
+             className="relative game-square max-w-[440px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-full border-4 border-gray-600 cursor-pointer"
              onClick={handleBoardClick}
            >
              {/* Cercle de placement */}
@@ -412,7 +404,7 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
            <Card className="p-6">
              <h3 className="text-lg font-semibold mb-4 text-center">👁️ Aperçu en temps réel</h3>
              <div className="flex justify-center">
-               <div className="relative w-80 h-80 bg-gradient-to-br from-gray-800 to-gray-900 rounded-full border-4 border-gray-600">
+               <div className="relative game-square max-w-[440px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-full border-4 border-gray-600">
                                    {/* Zone d'aperçu statique */}
                   <div
                     className="absolute rounded-full border-2 border-yellow-400/50 bg-yellow-400/10"
@@ -794,23 +786,23 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
    }
 
   return (
-    <div className="space-y-6">
-             <div className="flex justify-between items-center">
-         <div>
-           <h2 className="text-2xl font-bold">🎯 Petits Points</h2>
-           <p className="text-muted-foreground">Zone {currentRound}/{config.zoneCount}</p>
-         </div>
-         <div className="flex gap-2">
-           <Button onClick={onGameEnd} variant="outline">
-             <Home className="h-4 w-4" />
-           </Button>
-         </div>
-       </div>
-
+    <GameShell
+      title="Petits Points"
+      onBack={onGameEnd}
+      headerRight={<span className="text-sm font-semibold">Zone {currentRound}/{config.zoneCount}</span>}
+      actionBar={
+        <Button
+          onClick={currentRound >= config.zoneCount ? () => setGameState('finished') : nextZone}
+          className="mx-auto w-full max-w-xs py-3 text-lg"
+        >
+          {currentRound >= config.zoneCount ? 'Fin de partie' : 'Zone suivante'}
+        </Button>
+      }
+    >
              <div className="flex justify-center">
          <div 
            ref={boardRef}
-           className="relative w-80 h-80 bg-gradient-to-br from-gray-800 to-gray-900 rounded-full border-4 border-gray-600"
+           className="relative game-square max-w-[440px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-full border-4 border-gray-600"
          >
                       {/* Zone active */}
             {currentZone && (
@@ -849,17 +841,7 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
          </div>
        </div>
 
-        {/* Bouton zone suivante - toujours à la même place */}
-        <div className="text-center">
-          <Button 
-            onClick={currentRound >= config.zoneCount ? () => setGameState('finished') : nextZone} 
-            className="px-8 py-3 text-lg"
-          >
-            {currentRound >= config.zoneCount ? 'Fin de partie' : 'Zone suivante'}
-          </Button>
-        </div>
-
-        {/* Joueurs dans la zone - apparaît en dessous du bouton */}
+        {/* Joueurs dans la zone */}
         {playersInZone.length > 0 && (
           <Card className="p-4 bg-yellow-500/10 border-yellow-500/20">
             <h3 className="text-lg font-semibold mb-2 text-yellow-400">🎯 Joueurs dans la zone :</h3>
@@ -898,6 +880,6 @@ export default function Game({ players, onGameEnd, difficulty }: GameProps) {
             })}
           </div>
         </Card>
-    </div>
+    </GameShell>
   )
 } 

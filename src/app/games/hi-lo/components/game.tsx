@@ -3,10 +3,10 @@
 
 import { useState, useEffect } from 'react'
 import { Player } from '@/lib/players'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { GameShell } from '@/components/game/GameShell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ArrowUp, ArrowDown, RotateCcw, Trophy, LogOut } from 'lucide-react'
+import { ArrowUp, ArrowDown, RotateCcw, Trophy } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { motion } from 'framer-motion'
 import useScreenSize from '@/hooks/useScreenSize'
@@ -245,7 +245,6 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   // Régénérer le deck si nécessaire
   const regenerateDeckIfNeeded = (): PlayingCard[] => {
     if (deck.length < 2) {
-      console.log("Remélangeage du paquet complet")
       const newDeck = createDeck();
       return shuffleDeck(newDeck);
     }
@@ -592,31 +591,52 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   const currentPlayer = getCurrentPlayer();
   const specialEffectClass = currentPlayer ? getSpecialEffectClass(currentPlayer?.preferences?.specialEffect) : '';
 
+  const cardsPlayed = 52 - deck.length - (currentCard ? 1 : 0) - (nextCard ? 1 : 0)
+
+  const headerRight = (
+    <div className="flex items-center gap-2">
+      <div className="flex flex-col items-end leading-tight">
+        <span className="text-sm font-semibold">Gorgées : {drinkCounter}</span>
+        <span className="text-[10px] text-gray-400">{cardsPlayed}/52</span>
+      </div>
+      <Button variant="outline" size="icon" onClick={restartGame} aria-label="Recommencer">
+        <RotateCcw className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+
+  const actionBar = !gameOver ? (
+    !showResult ? (
+      <div className="flex w-full justify-center gap-2">
+        <Button onClick={() => handleGuess('higher')} variant="outline" className="flex-1 max-w-[10rem]" disabled={isFlipping || isProcessing}>
+          <ArrowUp className="mr-1 h-4 w-4" />
+          Plus haut
+        </Button>
+        <Button onClick={() => handleGuess('equal')} variant="outline" className="flex-1 max-w-[8rem]" disabled={isFlipping || isProcessing}>
+          <span className="mr-1">=</span>
+          Égalité
+        </Button>
+        <Button onClick={() => handleGuess('lower')} variant="outline" className="flex-1 max-w-[10rem]" disabled={isFlipping || isProcessing}>
+          <ArrowDown className="mr-1 h-4 w-4" />
+          Plus bas
+        </Button>
+      </div>
+    ) : !isCorrect ? (
+      <Button onClick={nextTurn} className="mx-auto w-full max-w-xs">Suivant</Button>
+    ) : (
+      <div className="w-full text-center font-semibold text-green-500">Correct ! Prochain joueur…</div>
+    )
+  ) : null
+
   return (
-    <div className="space-y-6">
-      <Card className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex flex-col">
-            <h2 className="text-2xl font-bold">Hi/Lo</h2>
-            {gameMode === 'traversee' && (
-              <div className="text-sm mt-1">
-                <span className="font-medium">Mode Traversée</span>
-                <span className="ml-2">
-                  Objectif: {correctGuessesInRow}/{targetGuesses} bonnes réponses
-                </span>
-              </div>
-            )}
+    <>
+    <GameShell title="Hi/Lo" onBack={quitGame} headerRight={headerRight} actionBar={actionBar} maxWidth={760}>
+        {gameMode === 'traversee' && (
+          <div className="mb-2 text-center text-sm">
+            <span className="font-medium">Mode Traversée</span>
+            <span className="ml-2">Objectif : {correctGuessesInRow}/{targetGuesses} bonnes réponses</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex flex-col items-end mr-4">
-              <span className="font-semibold">Gorgées: {drinkCounter}</span>
-              <span className="text-sm text-gray-500">Cartes: {52 - deck.length - (currentCard ? 1 : 0) - (nextCard ? 1 : 0)}/52</span>
-            </div>
-            <Button variant="outline" size="icon" onClick={restartGame}>
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        )}
 
         {gameMode === 'traversee' && (
           <div className="mb-4 flex gap-2 flex-wrap justify-center">
@@ -652,11 +672,11 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
           )}
 
           {/* Cartes */}
-          <div className="flex justify-center items-center space-x-8">
+          <div className="flex justify-center items-center gap-3 sm:gap-8">
             {/* Carte actuelle */}
             {currentCard && (
               <div 
-                className="w-32 h-48 rounded-lg flex flex-col items-center justify-center text-4xl font-bold relative"
+                className="w-[clamp(5rem,26vw,8rem)] h-[clamp(7.5rem,39vw,12rem)] rounded-lg flex flex-col items-center justify-center text-[clamp(1.5rem,8vw,2.25rem)] font-bold relative"
                 style={getCardStyle(currentCard.color)}
               >
                 <div>{currentCard.value}</div>
@@ -665,7 +685,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
             )}
 
             {/* Carte suivante avec animation */}
-            <div className="relative w-32 h-48">
+            <div className="relative w-[clamp(5rem,26vw,8rem)] h-[clamp(7.5rem,39vw,12rem)]">
               {isFlipping ? (
                 <motion.div
                   className="absolute w-full h-full"
@@ -677,7 +697,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
                     ?
                   </div>
                   <div 
-                    className="absolute w-full h-full backface-hidden rounded-lg flex flex-col items-center justify-center text-4xl font-bold"
+                    className="absolute w-full h-full backface-hidden rounded-lg flex flex-col items-center justify-center text-[clamp(1.5rem,8vw,2.25rem)] font-bold"
                     style={{
                       transform: 'rotateY(180deg)',
                       backgroundColor: 'white',
@@ -696,7 +716,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
                 </motion.div>
               ) : showResult ? (
                 <div 
-                  className="w-full h-full rounded-lg flex flex-col items-center justify-center text-4xl font-bold"
+                  className="w-full h-full rounded-lg flex flex-col items-center justify-center text-[clamp(1.5rem,8vw,2.25rem)] font-bold"
                   style={nextCard ? getCardStyle(nextCard.color) : {}}
                 >
                   {nextCard && (
@@ -731,54 +751,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
             </div>
           </div>
 
-          {/* Boutons de prédiction */}
-          {!showResult && !gameOver && (
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
-              <Button 
-                onClick={() => handleGuess('higher')}
-                variant="outline"
-                className="flex items-center"
-                disabled={isFlipping || isProcessing}
-              >
-                <ArrowUp className="mr-2 h-4 w-4" />
-                Plus haut
-              </Button>
-              <Button 
-                onClick={() => handleGuess('equal')}
-                variant="outline"
-                className="flex items-center"
-                disabled={isFlipping || isProcessing}
-              >
-                <span className="mr-2">=</span>
-                Égalité
-              </Button>
-              <Button 
-                onClick={() => handleGuess('lower')}
-                variant="outline"
-                className="flex items-center"
-                disabled={isFlipping || isProcessing}
-              >
-                <ArrowDown className="mr-2 h-4 w-4" />
-                Plus bas
-              </Button>
-            </div>
-          )}
-
-          {/* Bouton suivant (uniquement pour les mauvaises réponses) */}
-          {showResult && !isCorrect && (
-            <Button onClick={nextTurn} className="mt-4">
-              Suivant
-            </Button>
-          )}
-
-          {/* Indicateur de progression pour les bonnes réponses */}
-          {showResult && isCorrect && (
-            <div className="mt-4 text-green-600 font-semibold">
-              Correct ! Prochain joueur dans un instant...
-            </div>
-          )}
         </div>
-      </Card>
+    </GameShell>
 
       {/* Dialogue de fin de jeu */}
       <Dialog open={showGameOver} onOpenChange={setShowGameOver}>
@@ -971,6 +945,6 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
           text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
         }
       `}</style>
-    </div>
+    </>
   )
 } 
