@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
 import { useTheme } from 'next-themes'
-import { Sun, Moon, Dice6, User, Users, Trophy, ArrowRight, RefreshCw, Home } from 'lucide-react'
+import { Sun, Moon, Dice6, User, Users, Trophy, ArrowRight, RefreshCw, Home, MapPin, Target, Shuffle, Link2, CircleDot, Sparkles, Swords, History } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -17,6 +17,18 @@ import { getSafeStorage } from '@/lib/storage'
 import { PlayerName, isSpecialPlayer } from '@/components/ui/PlayerName'
 import { GameShell } from '@/components/game/GameShell'
 import ReactConfetti from 'react-confetti'
+import {
+  type Case,
+  type CaseType,
+  type Difficulty,
+  generateCase,
+  getCaseTypeLabel,
+  CASES_NO_TARGET,
+  DEFI_WHEEL_CHALLENGES,
+} from '../case-config'
+import type { GamePlayer } from '../case-types'
+import { resolveNoTargetCase, getLeader, getLastPlayer } from '../resolve-case'
+import { ShameDice, getDeHonteOutcomeLabel } from './shame-dice'
 
 // Vérifier si le navigateur supporte certaines fonctionnalités avancées
 const checkBrowserSupport = () => {
@@ -32,45 +44,31 @@ const checkBrowserSupport = () => {
   }
 };
 
-interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
-  position: number
-  drinks: number
-  protected: boolean
-  cursed: number // Nombre de tours restants pour la malédiction
-  linkedTo?: string // ID du joueur avec qui il est lié (défi en chaîne)
-  linkedTurns: number // Nombre de tours restants pour le lien
-  stats?: {
-    gamesPlayed: number;
-    wins: number;
-    totalDrinks: number;
-    favoriteGame?: string;
-    lastPlayed?: number;
-  }
-  createdAt?: number
-  color?: string
-  preferences: PlayerPreferences
+interface ActiveEffectItem {
   id: string
+  icon: string
+  title: string
+  remainingTurns: number
+  player: GamePlayer
+  accentClass: string
 }
 
-interface Case {
-  type: 'normal' | 'defi' | 'gorgée' | 'recul' | 'avance' | 'tous' | 'roue' | 'echange' | 'bombe' | 'protection' | 'malediction' | 'chance' | 'repetition' | 'miroir' | 'defi-chaine' | 'piege' | 'melange'
-  description: string
-  effect: number
+interface LastActionRecord {
+  turnNumber: number
+  actor: GamePlayer
+  caseType: CaseType
+  caseLabel: string
+  effectHtml: string
+  target: GamePlayer | null
 }
 
-type Difficulty = 'facile' | 'normal' | 'difficile' | 'extreme'
+const formatEffectRemainingTurns = (turns: number) =>
+  `${turns} tour${turns > 1 ? 's' : ''}`
 
 type WheelSegment = {
   id: string
   label: string
   value: number // 0 = SAFE, 1..12 = gorgées
-}
-
-const difficultyMultipliers: Record<Difficulty, number> = {
-  facile: 1,
-  normal: 2,
-  difficile: 3,
-  extreme: 4
 }
 
 const difficultyNames: Record<Difficulty, string> = {
@@ -96,205 +94,26 @@ const generateWheelSegments = (): WheelSegment[] => {
   return arr
 }
 
-const generateCase = (difficulty: Difficulty, currentPlayer?: GamePlayer): Case => {
-  const boost = currentPlayer ? getPlayerGameBoost(currentPlayer, 'petit-buveur') : 0
-  if (boost > 0 && Math.random() * 100 < boost) {
-    const avanceSpaces = Math.floor(Math.random() * 3) + 1
-    return { type: 'avance', description: `Avance de ${avanceSpaces} case${avanceSpaces > 1 ? 's' : ''} !`, effect: avanceSpaces }
+/** Roue de duel : 12 segments alternant gagnant / perdant (value 1 = gagnant, 0 = perdant). */
+const generateDuelWheelSegments = (): WheelSegment[] => {
+  const arr: WheelSegment[] = []
+  for (let i = 0; i < 12; i++) {
+    const isWinner = i % 2 === 0
+    arr.push({
+      id: `duel-seg-${i}`,
+      label: isWinner ? 'Gagnant' : 'Perdant',
+      value: isWinner ? 1 : 0,
+    })
   }
-  // Répartir les probabilités pour toutes les cases
-  const random = Math.random();
-  let type: 'normal' | 'defi' | 'gorgée' | 'recul' | 'avance' | 'tous' | 'roue' | 'echange' | 'bombe' | 'protection' | 'malediction' | 'chance' | 'repetition' | 'miroir' | 'defi-chaine' | 'piege' | 'melange';
-  
-  if (random < 0.08) {
-    // 8% de chance d'obtenir une case 'roue'
-    type = 'roue';
-  } else if (random < 0.15) {
-    // 7% de chance d'obtenir une case 'tous'
-    type = 'tous';
-  } else if (random < 0.20) {
-    // 5% de chance d'obtenir une case 'echange'
-    type = 'echange';
-  } else if (random < 0.25) {
-    // 5% de chance d'obtenir une case 'bombe'
-    type = 'bombe';
-  } else if (random < 0.30) {
-    // 5% de chance d'obtenir une case 'protection'
-    type = 'protection';
-  } else if (random < 0.35) {
-    // 5% de chance d'obtenir une case 'malediction'
-    type = 'malediction';
-  } else   if (random < 0.40) {
-    // 5% de chance d'obtenir une case 'chance'
-    type = 'chance';
-  } else if (random < 0.45) {
-    // 5% de chance d'obtenir une case 'repetition'
-    type = 'repetition';
-  } else if (random < 0.50) {
-    // 5% de chance d'obtenir une case 'miroir'
-    type = 'miroir';
-  } else if (random < 0.55) {
-    // 5% de chance d'obtenir une case 'defi-chaine'
-    type = 'defi-chaine';
-  } else if (random < 0.60) {
-    // 5% de chance d'obtenir une case 'piege'
-    type = 'piege';
-  } else if (random < 0.65) {
-    // 5% de chance d'obtenir une case 'melange'
-    type = 'melange';
-  } else {
-    // Répartir les autres types sur les 35% restants
-    const types = ['normal', 'defi', 'gorgée', 'recul', 'avance'] as const;
-    type = types[Math.floor(Math.random() * types.length)];
-  }
-  
-  // Générer un effet unique pour cette case, même si deux joueurs sont sur la même case
-  // Chaque appel à generateCase donne un résultat différent
-  const defis = [
-    { text: 'Fais 10 pompes', drinks: 3 },
-    { text: 'Raconte une blague', drinks: 3 },
-    { text: 'Chante une chanson', drinks: 3 },
-    { text: 'Imite un animal', drinks: 3 },
-    { text: 'Fais 10 squats', drinks: 3 },
-    { text: 'Fais 30 secondes de gainage', drinks: 3 },
-    { text: 'Mime un film sans parler', drinks: 2 },
-    { text: 'Imite un autre joueur', drinks: 2 },
-    { text: 'Fais 10 tours sur toi-même', drinks: 2 },
-    { text: 'Danse pendant 20 secondes', drinks: 2 },
-    { text: 'Raconte ton souvenir de soirée le plus gênant', drinks: 3 },
-    { text: 'Parle avec un accent pendant 2 tours', drinks: 2 },
-    { text: 'Fais le poirier contre un mur', drinks: 3 },
-    { text: 'Fais deviner un mot sans parler', drinks: 2 },
-    { text: 'Récite l\'alphabet à l\'envers', drinks: 3 },
-    { text: 'Fais 5 sauts de grenouille', drinks: 2 },
-    { text: 'Ne touche pas ton téléphone pendant 3 tours', drinks: 8 },
-    { text: 'Bois sans utiliser tes mains', drinks: 2 }
-  ]
-
-  const multiplier = difficultyMultipliers[difficulty]
-
-  switch (type) {
-    case 'normal':
-      return { type, description: 'Case safe', effect: 0 }
-    case 'gorgée': {
-      const baseGorgees = Math.floor(Math.random() * 3) + 1
-      const drinks = baseGorgees * multiplier
-      let finalDrinks = drinks
-      let description = ''
-
-      if (difficulty === 'difficile' && drinks > 8) {
-        finalDrinks = 8
-      }
-
-      if (difficulty === 'extreme' && drinks >= 12) {
-        description = 'Cul sec ! 🍺'
-      } else {
-        description = `Bois ${finalDrinks} gorgée${finalDrinks > 1 ? 's' : ''} !`
-      }
-      
-      return { type, description, effect: finalDrinks }
-    }
-    case 'defi': {
-      const defi = defis[Math.floor(Math.random() * defis.length)]
-      const drinks = Math.min(defi.drinks * multiplier, 4)
-      return { 
-        type, 
-        description: `Défi : ${defi.text} ou bois ${drinks} gorgée${drinks > 1 ? 's' : ''} !`, 
-        effect: 0 
-      }
-    }
-    case 'recul':
-      return { type, description: `Recule de 1 case !`, effect: -1 }
-    case 'avance':
-      return { type, description: `Avance de 1 case !`, effect: 1 }
-    case 'tous': {
-      const baseGorgees = Math.floor(Math.random() * 2) + 1
-      const drinks = Math.min(baseGorgees * multiplier, 3)
-      return { 
-        type, 
-        description: `Tout le monde boit ${drinks} gorgée${drinks > 1 ? 's' : ''} sauf la personne ciblée ! 🍻`, 
-        effect: drinks 
-      }
-    }
-    case 'roue': {
-      return { 
-        type, 
-        description: `🎯 Case spéciale : Roue des gorgées ! 🎯`, 
-        effect: 0 
-      }
-    }
-    case 'echange': {
-      return { 
-        type, 
-        description: `🔄 Échange ta position avec un autre joueur !`, 
-        effect: 0 
-      }
-    }
-    case 'bombe': {
-      return { 
-        type, 
-        description: `💣 Bombe ! Tout le monde boit, mais toi tu bois double !`, 
-        effect: 2 
-      }
-    }
-    case 'protection': {
-      return { 
-        type, 
-        description: `🛡️ Tu es protégé pendant 1 tour !`, 
-        effect: 0 
-      }
-    }
-    case 'malediction': {
-      return { 
-        type, 
-        description: `👻 Malédiction ! Tu bois à chaque tour pendant 3 tours !`, 
-        effect: 3 
-      }
-    }
-    case 'chance': {
-      return { 
-        type, 
-        description: `🍀 Chance ! Relance le dé ou avance de 2 cases !`, 
-        effect: 0 
-      }
-    }
-    case 'repetition': {
-      return { 
-        type, 
-        description: `🔄 Répète l'action de la case précédente !`, 
-        effect: 0 
-      }
-    }
-    case 'miroir': {
-      return { 
-        type, 
-        description: `🪞 Miroir ! Les positions sont inversées !`, 
-        effect: 0 
-      }
-    }
-    case 'defi-chaine': {
-      return { 
-        type, 
-        description: `🔗 Défi en chaîne ! Choisis avec qui tu seras lié pendant 5 tours !`, 
-        effect: 5 
-      }
-    }
-    case 'piege': {
-      return { 
-        type, 
-        description: `🕳️ Piège ! Le joueur ciblé boira autant de gorgées que sa position actuelle !`, 
-        effect: 0 
-      }
-    }
-    case 'melange': {
-      return { 
-        type, 
-        description: `🔀 Mélange ! Les positions sont mélangées !`, 
-        effect: 0 
-      }
-    }
-  }
+  return arr
 }
+
+const generateDefiWheelSegments = (): WheelSegment[] =>
+  DEFI_WHEEL_CHALLENGES.map((label, i) => ({
+    id: `defi-seg-${i}`,
+    label,
+    value: label === 'SAFE' ? 0 : label.includes('boit') ? 2 : 0,
+  }))
 
 const playerColors = [
   'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
@@ -402,9 +221,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       position: 0,
       drinks: 0,
       protected: false,
+      protectedUntilTurn: undefined,
       cursed: 0,
       linkedTo: undefined,
       linkedTurns: 0,
+      skipNextTurn: false,
+      anchored: false,
+      mirrorDrinkTargetId: undefined,
+      mirrorDrinkTurns: 0,
+      jokerCase: null,
       preferences: p.preferences || {
         color: defaultColor,
         icon: PLAYER_ICONS[Math.floor(Math.random() * PLAYER_ICONS.length)],
@@ -421,6 +246,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         cursed: 0,
         linkedTo: undefined,
         linkedTurns: 0,
+        skipNextTurn: false,
+        anchored: false,
+        mirrorDrinkTargetId: undefined,
+        mirrorDrinkTurns: 0,
+        jokerCase: null,
         preferences: {
           color: 'bg-blue-500',
           icon: '🎮',
@@ -436,6 +266,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         cursed: 0,
         linkedTo: undefined,
         linkedTurns: 0,
+        skipNextTurn: false,
+        anchored: false,
+        mirrorDrinkTargetId: undefined,
+        mirrorDrinkTurns: 0,
+        jokerCase: null,
         preferences: {
           color: 'bg-red-500',
           icon: '🎲',
@@ -458,6 +293,21 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [pendingCase, setPendingCase] = useState<Case | null>(null);
   const [pendingPosition, setPendingPosition] = useState<number | null>(null);
+  const [pendingDuelNote, setPendingDuelNote] = useState<string | undefined>(undefined);
+  const [lastActionHistory, setLastActionHistory] = useState<LastActionRecord | null>(null);
+  const lastTargetIdRef = useRef<string | null>(null);
+  const lastMoveDeltaRef = useRef(0);
+  const extraCaseQueueRef = useRef<Case[]>([]);
+  const [wheelMode, setWheelMode] = useState<'drinks' | 'defis'>('drinks');
+  const [showTeleportDialog, setShowTeleportDialog] = useState(false);
+  const [showVoteDialog, setShowVoteDialog] = useState(false);
+  const [showDeHonteDialog, setShowDeHonteDialog] = useState(false);
+  const [deHonteResult, setDeHonteResult] = useState<number | null>(null);
+  const [deHonteRolling, setDeHonteRolling] = useState(false);
+  const [deHonteDisplayValue, setDeHonteDisplayValue] = useState(1);
+  const deHonteRollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [pileFaceTargetId, setPileFaceTargetId] = useState<string | null>(null);
+  const [showPileFaceDialog, setShowPileFaceDialog] = useState(false);
   const [targetPlayerId, setTargetPlayerId] = useState<string | null>(null);
   const [isProcessingTurn, setIsProcessingTurn] = useState(false);
   const [isDiceRolling, setIsDiceRolling] = useState(false);
@@ -484,7 +334,19 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const wheelRef = useRef<HTMLDivElement | null>(null);
   const wheelRotation = useMotionValue(0);
   const lastWheelTickRef = useRef<number>(0);
+  const wheelOutcomeAppliedRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Duel sur case partagée (avant le ciblage)
+  const [showDuelDialog, setShowDuelDialog] = useState(false);
+  const [duelPhase, setDuelPhase] = useState<'pick' | 'wheel'>('pick');
+  const [duelBoardPosition, setDuelBoardPosition] = useState<number | null>(null);
+  const [duelOpponentId, setDuelOpponentId] = useState<string | null>(null);
+  const [duelWheelSegments, setDuelWheelSegments] = useState<WheelSegment[]>([]);
+  const [duelWheelSpinning, setDuelWheelSpinning] = useState(false);
+  const [duelWheelResult, setDuelWheelResult] = useState<WheelSegment | null>(null);
+  const duelWheelRotation = useMotionValue(0);
+  const lastDuelWheelTickRef = useRef<number>(0);
   
   // États pour les nouvelles cases
   const [lastCase, setLastCase] = useState<Case | null>(null);
@@ -537,7 +399,51 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   useEffect(() => {
     if (isProcessingTurn && !isDiceRolling) {
     }
-  }, [isProcessingTurn, isDiceRolling, pendingCase, showTargetDialog, showWheel, showChanceDialog, showExchangeDialog, showChainDialog]);
+  }, [isProcessingTurn, isDiceRolling, pendingCase, showTargetDialog, showWheel, showDuelDialog, showChanceDialog, showExchangeDialog, showChainDialog]);
+
+  // Débloque le dé si le tour est marqué en cours sans UI active (filet de sécurité)
+  useEffect(() => {
+    const hasBlockingUi =
+      showTargetDialog ||
+      showWheel ||
+      showDuelDialog ||
+      showChanceDialog ||
+      showExchangeDialog ||
+      showChainDialog ||
+      showTeleportDialog ||
+      showVoteDialog ||
+      showDeHonteDialog ||
+      showPileFaceDialog ||
+      (showNotification && showNextButton) ||
+      wheelSpinning ||
+      duelWheelSpinning ||
+      isDiceRolling
+
+    if (!isProcessingTurn || hasBlockingUi) return
+
+    const timer = setTimeout(() => {
+      setIsProcessingTurn(false)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [
+    isProcessingTurn,
+    showTargetDialog,
+    showWheel,
+    showDuelDialog,
+    showChanceDialog,
+    showExchangeDialog,
+    showChainDialog,
+    showTeleportDialog,
+    showVoteDialog,
+    showDeHonteDialog,
+    showPileFaceDialog,
+    showNotification,
+    showNextButton,
+    wheelSpinning,
+    duelWheelSpinning,
+    isDiceRolling,
+  ]);
 
   // Fonctions de sauvegarde et chargement
   const saveGame = useCallback(() => {
@@ -645,7 +551,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           preferences: {
             color: playerColors[players.length % playerColors.length],
             icon: PLAYER_ICONS[Math.floor(Math.random() * PLAYER_ICONS.length)]
-          }
+          },
+          skipNextTurn: false,
+          anchored: false,
+          mirrorDrinkTargetId: undefined,
+          mirrorDrinkTurns: 0,
+          jokerCase: null,
         } as GamePlayer
       ])
       setNewPlayerName('')
@@ -656,22 +567,75 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setPlayers(players.filter(player => player.id !== playerId));
   }
 
+  /** Protection active jusqu'à la fin du tour de table en cours (tous les joueurs). */
+  const isPlayerProtected = (player: GamePlayer, round: number = turnCount) =>
+    player.protected &&
+    (player.protectedUntilTurn == null || round < player.protectedUntilTurn)
+
+  const expireExpiredProtections = (list: GamePlayer[], round: number = turnCount) => {
+    list.forEach(p => {
+      if (p.protected && p.protectedUntilTurn != null && round >= p.protectedUntilTurn) {
+        p.protected = false
+        p.protectedUntilTurn = undefined
+      }
+    })
+  }
+
+  const getProtectionRemainingRounds = (player: GamePlayer) =>
+    Math.max(1, (player.protectedUntilTurn ?? turnCount + 1) - turnCount)
+
+  const isDiceActionBlocked = () =>
+    isDiceRolling ||
+    showTargetDialog ||
+    showWheel ||
+    showDuelDialog ||
+    showChanceDialog ||
+    showExchangeDialog ||
+    showChainDialog ||
+    showTeleportDialog ||
+    showVoteDialog ||
+    showDeHonteDialog ||
+    showPileFaceDialog ||
+    (showNotification && showNextButton) ||
+    wheelSpinning ||
+    duelWheelSpinning
+
   const rollDice = () => {
-    if (isProcessingTurn || isDiceRolling) {
-      return;
+    if (isDiceActionBlocked()) {
+      return
     }
     
     // Masquer toute notification précédente
     setShowNotification(false);
+    setCurrentCase(null);
     
     // Gérer les protections et malédictions au début du tour
     const currentPlayerObj = players[currentPlayer];
+
+    if (currentPlayerObj?.skipNextTurn) {
+      const skipped = players.map((p, idx) =>
+        idx === currentPlayer ? { ...p, skipNextTurn: false } : p
+      )
+      setPlayers(skipped)
+      setCurrentCase({
+        type: 'passe-tour',
+        description: `⏭️ <span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> passe automatiquement ce tour.`,
+        effect: 0,
+      })
+      recordLastAction(currentPlayerObj, 'passe-tour', `⏭️ ${currentPlayerObj.name} passe son tour.`, null)
+      setIsProcessingTurn(true)
+      setShowNotification(true)
+      setShowNextButton(true)
+      return
+    }
     if (currentPlayerObj) {
       const updatedPlayers = [...players];
-      
+      expireExpiredProtections(updatedPlayers);
+
       // Appliquer la malédiction si le joueur est maudit
       if (currentPlayerObj.cursed > 0) {
         currentPlayerObj.drinks += 1;
+        applyMirrorDrinkIfActive(currentPlayer, 1, updatedPlayers);
         currentPlayerObj.cursed -= 1;
         
         // Mettre à jour les statistiques
@@ -686,11 +650,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         setPlayers(updatedPlayers);
         
         // Appliquer la malédiction en arrière-plan sans notification
-      }
-      
-      // Retirer la protection après 1 tour
-      if (currentPlayerObj.protected) {
-        currentPlayerObj.protected = false;
       }
       
       // Gérer les liens de chaîne
@@ -754,16 +713,24 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           return;
         }
         
-        // Calculer la nouvelle position
-        const newPosition = Math.min(player.position + result, boardSize - 1);
+        let moveDelta = result
+        if (player.anchored) {
+          moveDelta = 0
+        }
+        lastMoveDeltaRef.current = moveDelta
+
+        const newPosition = Math.min(player.position + moveDelta, boardSize - 1);
         
         // Activer l'animation de déplacement
         setAnimatingPlayer(player.id);
         
-        // Mettre à jour directement la position du joueur
         const updatedPlayers = players.map((p, idx) => {
           if (idx === currentPlayer) {
-            return { ...p, position: newPosition };
+            return {
+              ...p,
+              position: newPosition,
+              anchored: p.anchored ? false : p.anchored,
+            };
           }
           return p;
         });
@@ -800,7 +767,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       }
     }, interval);
   };
-  
+
   const applyEffectToCurrentPlayer = (caseType: Case, currentPosition: number, playerIndex: number, currentPlayers: GamePlayer[]) => {
     const updatedPlayers = [...currentPlayers];
     const player = updatedPlayers[playerIndex];
@@ -811,7 +778,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
     
 
-    // Pour toutes les cases, y compris la roue, utiliser la logique de ciblage
     setPendingCase(caseType);
     setPendingPosition(currentPosition);
     
@@ -821,27 +787,403 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
     
     setPlayers(updatedPlayers);
-    
-    // Afficher la description générique avant le ciblage
+
+    const opponentsOnCase = updatedPlayers.filter(
+      p => p.position === currentPosition && p.id !== player.id
+    );
+    const canOfferDuel = currentPosition > 0 && opponentsOnCase.length >= 1;
+
+    if (canOfferDuel) {
+      setDuelBoardPosition(currentPosition);
+      setDuelPhase('pick');
+      setDuelOpponentId(null);
+      setDuelWheelSegments([]);
+      setDuelWheelResult(null);
+      setDuelWheelSpinning(false);
+      duelWheelRotation.set(0);
+      setCurrentCase(null);
+      setTimeout(() => setShowDuelDialog(true), 100);
+      return;
+    }
+
+    continueCaseFlow(caseType);
+  };
+
+  const proceedToTargetSelection = (_caseType: Case) => {
+    setCurrentCase(null)
+    setTimeout(() => {
+      setShowTargetDialog(true)
+    }, 120)
+  }
+
+  /** Roue des gorgées / défis : toujours pour le joueur au tour, sans ciblage. */
+  const openWheelForCurrentPlayer = (mode: 'drinks' | 'defis' = wheelMode) => {
+    wheelOutcomeAppliedRef.current = false
+    setWheelMode(mode)
+    setWheelSegments(mode === 'defis' ? generateDefiWheelSegments() : generateWheelSegments())
+    setWheelResult(null)
+    setWheelSpinning(false)
+    setShowTargetDialog(false)
+    setCurrentCase(null)
+    setShowWheel(true)
+  }
+
+  const showCaseResultNotification = (
+    caseType: Case,
+    description: string,
+    target: GamePlayer | null = null
+  ) => {
+    const actor = players[currentPlayer]
+    const duelPrefix = pendingDuelNote ? `${pendingDuelNote}\n\n` : ''
+    if (pendingDuelNote) setPendingDuelNote(undefined)
+    const summaryPlayer = target ?? actor
+    const effectsSummary = summaryPlayer
+      ? generateEffectsSummary(summaryPlayer)
+      : `<em>Aucun effet spécial en cours</em>`
     setCurrentCase({
       ...caseType,
-      description: `Vous devez choisir un joueur à cibler !`
-    });
-    
-    // Forcer la mise à jour de l'état et ajouter un délai pour s'assurer que le DOM est mis à jour
-    setTimeout(() => {
-      setShowTargetDialog(true);
-      
-      // Vérification de secours après 500ms
-      setTimeout(() => {
-        if (!showTargetDialog) {
-          setShowTargetDialog(true);
-        }
-      }, 500);
-    }, 100);
-    
-    // La logique de `handleTargetSelection` et `applyEffectToPlayer` prendra le relais
+      description: `${duelPrefix}${description}\n\n${effectsSummary}`,
+    })
+    if (target) lastTargetIdRef.current = target.id
+    else if (actor) lastTargetIdRef.current = actor.id
+    setShowNotification(true)
+    setShowNextButton(true)
+  }
+
+  const applyNoTargetCaseFlow = (caseType: Case) => {
+    const { players: updated, description } = resolveNoTargetCase(caseType, players, {
+      boardSize,
+      actorIndex: currentPlayer,
+      lastMoveDelta: lastMoveDeltaRef.current,
+      lastCase,
+    })
+    if (caseType.type === 'solo') {
+      applyMirrorDrinkIfActive(currentPlayer, caseType.effect, updated)
+    }
+    setPlayers(updated)
+    const actor = updated[currentPlayer]
+    if (actor) {
+      recordLastAction(actor, caseType.type, description, null)
+    }
+    showCaseResultNotification(caseType, description, null)
+  }
+
+  const applyMirrorDrinkIfActive = (
+    drinkerIndex: number,
+    drinks: number,
+    updatedPlayers: GamePlayer[]
+  ) => {
+    const drinker = updatedPlayers[drinkerIndex]
+    if (!drinker?.mirrorDrinkTargetId || (drinker.mirrorDrinkTurns ?? 0) <= 0) return
+    const mirror = updatedPlayers.find(p => p.id === drinker.mirrorDrinkTargetId)
+    if (mirror) {
+      mirror.drinks += drinks
+      try {
+        updatePlayerStats(mirror.id, 'petit-buveur', { totalDrinks: mirror.drinks })
+      } catch (error) {
+        console.error('Erreur stats miroir:', error)
+      }
+      drinker.mirrorDrinkTurns = (drinker.mirrorDrinkTurns ?? 1) - 1
+      if ((drinker.mirrorDrinkTurns ?? 0) <= 0) {
+        drinker.mirrorDrinkTargetId = undefined
+      }
+    }
+  }
+
+  const applyTeleportChoice = (which: 'leader' | 'last') => {
+    setShowTeleportDialog(false)
+    const actor = players[currentPlayer]
+    if (!actor || !pendingCase) return
+    const partner = which === 'leader' ? getLeader(players) : getLastPlayer(players)
+    const updated = players.map(p => {
+      if (p.id === actor.id) return { ...p, position: partner.position }
+      if (p.id === partner.id) return { ...p, position: actor.position }
+      return p
+    })
+    setPlayers(updated)
+    const desc = `🌀 <span class="${actor.preferences.color} text-white px-2 py-1 rounded-md">${actor.name}</span> échange sa place avec <span class="${partner.preferences.color} text-white px-2 py-1 rounded-md">${partner.name}</span> (${which === 'leader' ? '1er' : 'dernier'} du classement) !`
+    recordLastAction(actor, 'teleport', desc, partner)
+    showCaseResultNotification(pendingCase, desc, partner)
+    setPendingCase(null)
+    setPendingPosition(null)
+  }
+
+  const applyVoteTarget = (votedId: string) => {
+    setShowVoteDialog(false)
+    const actor = players[currentPlayer]
+    const voted = players.find(p => p.id === votedId)
+    if (!actor || !voted || !pendingCase) return
+    const drinks = pendingCase.effect || 3
+    const updated = players.map(p =>
+      p.id === votedId ? { ...p, drinks: p.drinks + drinks } : p
+    )
+    setPlayers(updated)
+    try {
+      updatePlayerStats(votedId, 'petit-buveur', {
+        totalDrinks: updated.find(p => p.id === votedId)!.drinks,
+      })
+    } catch (error) {
+      console.error('Erreur stats vote:', error)
+    }
+    const desc = `🗳️ Vote : <span class="${voted.preferences.color} text-white px-2 py-1 rounded-md">${voted.name}</span> boit ${drinks} gorgée${drinks > 1 ? 's' : ''} !`
+    recordLastAction(actor, 'vote', desc, voted)
+    showCaseResultNotification(pendingCase, desc, voted)
+    setPendingCase(null)
+    setPendingPosition(null)
+  }
+
+  const clearDeHonteRollInterval = () => {
+    if (deHonteRollIntervalRef.current) {
+      clearInterval(deHonteRollIntervalRef.current)
+      deHonteRollIntervalRef.current = null
+    }
+  }
+
+  useEffect(() => () => clearDeHonteRollInterval(), [])
+
+  const buildDeHonteDescription = (r: number, player: GamePlayer) => {
+    if (r <= 2) {
+      return `🎲 Dé de la honte (${r}) : <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> est safe !`
+    }
+    if (r <= 4) {
+      return `🎲 Dé de la honte (${r}) : <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> boit 2 gorgées !`
+    }
+    if (r === 5) {
+      return `🎲 Dé de la honte (5) : <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> avance d'une case !`
+    }
+    return `🎲 Dé de la honte (6) : <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> recule d'une case !`
+  }
+
+  const rollDeHonte = () => {
+    if (deHonteRolling) return
+    clearDeHonteRollInterval()
+    setDeHonteResult(null)
+    setDeHonteRolling(true)
+
+    const result = Math.floor(Math.random() * 6) + 1
+    const duration = 900
+    const interval = 90
+    const steps = Math.floor(duration / interval)
+    let step = 0
+
+    deHonteRollIntervalRef.current = setInterval(() => {
+      if (step < steps - 1) {
+        setDeHonteDisplayValue(Math.floor(Math.random() * 6) + 1)
+        step++
+      } else {
+        clearDeHonteRollInterval()
+        setDeHonteDisplayValue(result)
+        setDeHonteResult(result)
+        setDeHonteRolling(false)
+      }
+    }, interval)
+  }
+
+  const applyDeHonteOutcome = () => {
+    const r = deHonteResult
+    const actor = players[currentPlayer]
+    if (r == null || !actor || !pendingCase) return
+
+    const updated = [...players]
+    const p = updated[currentPlayer]
+    if (!p) return
+
+    if (r > 2 && r <= 4) {
+      const drinks = 2
+      p.drinks += drinks
+      applyMirrorDrinkIfActive(currentPlayer, drinks, updated)
+      try {
+        updatePlayerStats(p.id, 'petit-buveur', { totalDrinks: p.drinks })
+      } catch (error) {
+        console.error('Erreur stats dé honte:', error)
+      }
+    } else if (r === 5) {
+      p.position = Math.min(p.position + 1, boardSize - 1)
+    } else if (r === 6) {
+      p.position = Math.max(0, p.position - 1)
+    }
+
+    const desc = buildDeHonteDescription(r, p)
+    setPlayers(updated)
+    clearDeHonteRollInterval()
+    setDeHonteRolling(false)
+    setDeHonteResult(null)
+    setShowDeHonteDialog(false)
+    recordLastAction(actor, 'de-honte', desc, null)
+    showCaseResultNotification(pendingCase, desc, null)
+    setPendingCase(null)
+    setPendingPosition(null)
+  }
+
+  const resolvePileFace = (choice: 'pile' | 'face') => {
+    setShowPileFaceDialog(false)
+    const targetId = pileFaceTargetId
+    setPileFaceTargetId(null)
+    const actor = players[currentPlayer]
+    const target = targetId ? players.find(p => p.id === targetId) : null
+    if (!actor || !target || !pendingCase) return
+    const flip = Math.random() < 0.5 ? 'pile' : 'face'
+    const wins = choice === flip
+    const drinks = pendingCase.effect || 2
+    let desc = ''
+    const updated = [...players]
+    const tp = updated.find(p => p.id === target.id)
+    if (!tp) return
+    if (wins) {
+      desc = `🪙 Pile ou face : <span class="${tp.preferences.color} text-white px-2 py-1 rounded-md">${tp.name}</span> a choisi ${choice}, tirage ${flip} — safe !`
+    } else {
+      tp.drinks += drinks
+      try {
+        updatePlayerStats(tp.id, 'petit-buveur', { totalDrinks: tp.drinks })
+      } catch (error) {
+        console.error('Erreur stats pile-face:', error)
+      }
+      desc = `🪙 Pile ou face : tirage ${flip}, <span class="${tp.preferences.color} text-white px-2 py-1 rounded-md">${tp.name}</span> boit ${drinks} gorgée${drinks > 1 ? 's' : ''} !`
+    }
+    setPlayers(updated)
+    recordLastAction(actor, 'pile-face', desc, target)
+    showCaseResultNotification(pendingCase, desc, target)
+    setPendingCase(null)
+    setPendingPosition(null)
+  }
+
+  const playJokerCase = () => {
+    const actor = players[currentPlayer]
+    if (!actor?.jokerCase) return
+    const saved = actor.jokerCase
+    setPlayers(prev =>
+      prev.map(p => (p.id === actor.id ? { ...p, jokerCase: null } : p))
+    )
+    setPendingCase(saved)
+    setPendingPosition(actor.position)
+    setIsProcessingTurn(true)
+    continueCaseFlow(saved)
+  }
+
+  const continueCaseFlow = (caseType: Case) => {
+    if (caseType.type === 'roue') {
+      openWheelForCurrentPlayer('drinks')
+      return
+    }
+    if (caseType.type === 'roue-defis') {
+      openWheelForCurrentPlayer('defis')
+      return
+    }
+    if (CASES_NO_TARGET.has(caseType.type)) {
+      applyNoTargetCaseFlow(caseType)
+      return
+    }
+    if (caseType.type === 'de-honte') {
+      clearDeHonteRollInterval()
+      setDeHonteResult(null)
+      setDeHonteRolling(false)
+      setDeHonteDisplayValue(Math.floor(Math.random() * 6) + 1)
+      setShowDeHonteDialog(true)
+      return
+    }
+    if (caseType.type === 'vote') {
+      setShowVoteDialog(true)
+      return
+    }
+    if (caseType.type === 'teleport') {
+      setShowTeleportDialog(true)
+      return
+    }
+    if (caseType.type === 'double-case') {
+      const first = generateCase(gameDifficulty, players[currentPlayer])
+      const second = generateCase(gameDifficulty, players[currentPlayer])
+      extraCaseQueueRef.current = [second]
+      setPendingCase(first)
+      setTimeout(() => continueCaseFlow(first), 0)
+      return
+    }
+    proceedToTargetSelection(caseType)
+  }
+
+  const resetDuelState = () => {
+    setShowDuelDialog(false);
+    setDuelPhase('pick');
+    setDuelBoardPosition(null);
+    setDuelOpponentId(null);
+    setDuelWheelSegments([]);
+    setDuelWheelResult(null);
+    setDuelWheelSpinning(false);
+    duelWheelRotation.set(0);
   };
+
+  const skipDuelAndTarget = () => {
+    resetDuelState();
+    if (pendingCase) {
+      continueCaseFlow(pendingCase);
+    } else {
+      setIsProcessingTurn(false);
+    }
+  };
+
+  const startDuelWithOpponent = (opponentId: string) => {
+    setDuelOpponentId(opponentId);
+    setDuelWheelSegments(generateDuelWheelSegments());
+    setDuelWheelResult(null);
+    setDuelWheelSpinning(false);
+    duelWheelRotation.set(0);
+    setDuelPhase('wheel');
+  };
+
+  const applyDuelOutcome = (
+    challengerId: string,
+    opponentId: string,
+    challengerWins: boolean
+  ) => {
+    setPlayers(prev =>
+      prev.map(p => {
+        if (challengerWins && p.id === opponentId) {
+          return { ...p, position: Math.max(0, p.position - 1) }
+        }
+        if (!challengerWins && p.id === challengerId) {
+          return { ...p, position: Math.max(0, p.position - 1) }
+        }
+        return p
+      })
+    )
+  }
+
+  const buildDuelOutcomeNote = (
+    challengerWins: boolean,
+    challenger: GamePlayer,
+    opponent: GamePlayer
+  ) => {
+    if (challengerWins) {
+      return `⚔️ Duel terminé : <span class="font-semibold">${challenger.name}</span> gagne (reste sur place), <span class="font-semibold">${opponent.name}</span> recule d&apos;une case.`
+    }
+    return `⚔️ Duel terminé : <span class="font-semibold">${opponent.name}</span> gagne, <span class="font-semibold">${challenger.name}</span> recule d&apos;une case.`
+  }
+
+  const finishDuelAndTarget = () => {
+    const caseToResolve = pendingCase
+    const opponentId = duelOpponentId
+    const challenger = players[currentPlayer]
+    const opponent = opponentId ? players.find(p => p.id === opponentId) : null
+    const challengerWins = duelWheelResult?.value === 1
+
+    let duelNote: string | undefined
+    if (duelWheelResult && challenger && opponent) {
+      applyDuelOutcome(challenger.id, opponent.id, challengerWins)
+      duelNote = buildDuelOutcomeNote(challengerWins, challenger, opponent)
+    }
+
+    resetDuelState()
+
+    if (duelNote) {
+      setPendingDuelNote(duelNote)
+    }
+    if (caseToResolve) {
+      setTimeout(() => {
+        continueCaseFlow(caseToResolve)
+      }, 80)
+    } else {
+      setIsProcessingTurn(false)
+    }
+  }
 
   const movePlayer = (playerId: string, newPosition: number) => {
     // Fonction simplifiée pour déplacer un joueur directement
@@ -850,50 +1192,105 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     );
   };
 
+  const clearTurnBlockingUi = () => {
+    setShowNotification(false)
+    setShowNextButton(false)
+    setShowTargetDialog(false)
+    setShowWheel(false)
+    setWheelResult(null)
+    setWheelSpinning(false)
+    wheelOutcomeAppliedRef.current = false
+    resetDuelState()
+    setShowChanceDialog(false)
+    setShowExchangeDialog(false)
+    setShowChainDialog(false)
+    setShowTeleportDialog(false)
+    setShowVoteDialog(false)
+    setShowDeHonteDialog(false)
+    setShowPileFaceDialog(false)
+    setDeHonteResult(null)
+    setDeHonteRolling(false)
+    clearDeHonteRollInterval()
+    setPileFaceTargetId(null)
+    extraCaseQueueRef.current = []
+    setPendingCase(null)
+    setPendingPosition(null)
+    setPendingDuelNote(undefined)
+    setCurrentCase(null)
+  }
+
+  const commitLastActionFromCurrentTurn = () => {
+    const actor = players[currentPlayer]
+    if (!actor || !currentCase) return
+
+    const targetId = lastTargetIdRef.current
+    const targetPlayer = targetId ? players.find(p => p.id === targetId) ?? null : null
+    const displayTarget =
+      targetPlayer && targetPlayer.id !== actor.id ? targetPlayer : null
+
+    setLastActionHistory({
+      turnNumber: turnCount,
+      actor,
+      caseType: currentCase.type,
+      caseLabel: getCaseTypeLabel(currentCase.type),
+      effectHtml: currentCase.description,
+      target: displayTarget,
+    })
+  }
+
+  const recordLastAction = (
+    actor: GamePlayer,
+    caseType: Case['type'],
+    effectHtml: string,
+    target: GamePlayer | null
+  ) => {
+    const displayTarget = target && target.id !== actor.id ? target : null
+    setLastActionHistory({
+      turnNumber: turnCount,
+      actor,
+      caseType,
+      caseLabel: getCaseTypeLabel(caseType),
+      effectHtml,
+      target: displayTarget,
+    })
+  }
+
+  const advanceToNextPlayer = () => {
+    clearTurnBlockingUi()
+    const nextPlayer = (currentPlayer + 1) % players.length
+    const nextTurnCount = nextPlayer === 0 ? turnCount + 1 : turnCount
+    if (nextPlayer === 0) {
+      setTurnCount(nextTurnCount)
+    }
+    setPlayers(prev => {
+      const updated = [...prev]
+      expireExpiredProtections(updated, nextTurnCount)
+      return updated
+    })
+    setCurrentPlayer(nextPlayer)
+    setIsProcessingTurn(false)
+    setIsDiceRolling(false)
+    setTimeout(() => saveGame(), 100)
+  }
+
   // Fonction pour gérer le clic sur le bouton "Suivant"
   const handleNextButtonClick = () => {
-    setShowNotification(false);
-    setShowNextButton(false);
-    
-    // Passer au joueur suivant
-    const nextPlayer = (currentPlayer + 1) % players.length;
-    if (nextPlayer === 0) {
-      setTurnCount(turnCount + 1);
+    commitLastActionFromCurrentTurn()
+    if (extraCaseQueueRef.current.length > 0) {
+      const nextCase = extraCaseQueueRef.current.shift()!
+      setShowNotification(false)
+      setShowNextButton(false)
+      setCurrentCase(null)
+      setPendingCase(nextCase)
+      setTimeout(() => continueCaseFlow(nextCase), 80)
+      return
     }
-    setCurrentPlayer(nextPlayer);
-    setIsProcessingTurn(false);
-    
-    // Sauvegarde automatique après passage au joueur suivant
-    setTimeout(() => {
-      saveGame();
-    }, 100);
+    advanceToNextPlayer()
   };
 
   // Fonction de secours pour débloquer le jeu
   const forceNextPlayer = () => {
-    setShowNotification(false);
-    setShowNextButton(false);
-    setShowTargetDialog(false);
-    setShowWheel(false);
-    setShowChanceDialog(false);
-    setShowExchangeDialog(false);
-    setShowChainDialog(false);
-    setPendingCase(null);
-    setPendingPosition(null);
-    
-    // Passer au joueur suivant
-    const nextPlayer = (currentPlayer + 1) % players.length;
-    if (nextPlayer === 0) {
-      setTurnCount(turnCount + 1);
-    }
-    setCurrentPlayer(nextPlayer);
-    setIsProcessingTurn(false);
-    setIsDiceRolling(false);
-    
-    // Sauvegarde automatique après passage au joueur suivant
-    setTimeout(() => {
-      saveGame();
-    }, 100);
+    advanceToNextPlayer()
   };
 
   // Fonction utilitaire pour remplacer les passages automatiques
@@ -901,53 +1298,116 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     // Ne rien faire - le passage se fait maintenant via le bouton "Suivant"
   };
 
-  // Fonction pour générer le résumé des effets en cours
-  const generateEffectsSummary = (targetPlayer: GamePlayer) => {
-    // Ajouter les effets actifs du joueur ciblé
-    const activeEffects = [];
-    
-    if (targetPlayer.protected) {
-      activeEffects.push(`🛡️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est <strong>protégé</strong> (immunisé à tout effet négatif)`);
-    }
-    
-    if (targetPlayer.cursed > 0) {
-      activeEffects.push(`👻 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est <strong>maudit</strong> (boit 1 gorgée par tour pendant ${targetPlayer.cursed} tours)`);
-    }
-    
-    if (targetPlayer.linkedTo) {
-      const linkedPlayer = players.find(p => p.id === targetPlayer.linkedTo);
-      if (linkedPlayer) {
-        activeEffects.push(`🔗 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est <strong>lié</strong> à <span class="${linkedPlayer.preferences.color} text-white px-2 py-1 rounded-md">${linkedPlayer.name}</span> (boit comme lui pendant ${targetPlayer.linkedTurns} tours)`);
-      }
-    }
-    
-    // Ajouter les effets des autres joueurs qui peuvent affecter le joueur ciblé
+  /** Liste structurée des effets actifs (tous joueurs). */
+  const collectActiveEffects = (): ActiveEffectItem[] => {
+    const items: ActiveEffectItem[] = []
     players.forEach(player => {
-      if (player.id !== targetPlayer.id) {
-        if (player.protected) {
-          activeEffects.push(`🛡️ <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> est <strong>protégé</strong>`);
-        }
-        if (player.cursed > 0) {
-          activeEffects.push(`👻 <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> est <strong>maudit</strong> (${player.cursed} tours restants)`);
-        }
-        if (player.linkedTo) {
-          const linkedPlayer = players.find(p => p.id === player.linkedTo);
-          if (linkedPlayer) {
-            activeEffects.push(`🔗 <span class="${player.preferences.color} text-white px-2 py-1 rounded-md">${player.name}</span> est <strong>lié</strong> à <span class="${linkedPlayer.preferences.color} text-white px-2 py-1 rounded-md">${linkedPlayer.name}</span> (${player.linkedTurns} tours restants)`);
-          }
+      if (isPlayerProtected(player)) {
+        items.push({
+          id: `prot-${player.id}`,
+          icon: '🛡️',
+          title: 'Protégé',
+          remainingTurns: getProtectionRemainingRounds(player),
+          player,
+          accentClass: 'border-blue-400/40 bg-blue-500/10',
+        })
+      }
+      if (player.cursed > 0) {
+        items.push({
+          id: `curse-${player.id}`,
+          icon: '👻',
+          title: 'Maudit',
+          remainingTurns: player.cursed,
+          player,
+          accentClass: 'border-red-400/40 bg-red-500/10',
+        })
+      }
+      if (player.linkedTo && player.linkedTurns > 0) {
+        items.push({
+          id: `link-${player.id}`,
+          icon: '🔗',
+          title: 'Lié',
+          remainingTurns: player.linkedTurns,
+          player,
+          accentClass: 'border-indigo-400/40 bg-indigo-500/10',
+        })
+      }
+      if (player.skipNextTurn) {
+        items.push({
+          id: `skip-${player.id}`,
+          icon: '⏭️',
+          title: 'Passe tour',
+          remainingTurns: 1,
+          player,
+          accentClass: 'border-slate-400/40 bg-slate-500/10',
+        })
+      }
+      if (player.anchored) {
+        items.push({
+          id: `anchor-${player.id}`,
+          icon: '⚓',
+          title: 'Ancré',
+          remainingTurns: 1,
+          player,
+          accentClass: 'border-cyan-400/40 bg-cyan-500/10',
+        })
+      }
+      if (player.mirrorDrinkTargetId && (player.mirrorDrinkTurns ?? 0) > 0) {
+        items.push({
+          id: `mirror-${player.id}`,
+          icon: '🪞',
+          title: 'Miroir',
+          remainingTurns: player.mirrorDrinkTurns ?? 1,
+          player,
+          accentClass: 'border-pink-400/40 bg-pink-500/10',
+        })
+      }
+      if (player.jokerCase) {
+        items.push({
+          id: `joker-${player.id}`,
+          icon: '🃏',
+          title: 'Joker',
+          remainingTurns: 1,
+          player,
+          accentClass: 'border-amber-400/40 bg-amber-500/10',
+        })
+      }
+    })
+    return items
+  }
+
+  const getCaseEffectMainHtml = (description: string) => {
+    const markers = ['<strong>Effets en cours', '<em>Aucun effet spécial']
+    let cut = description.length
+    for (const m of markers) {
+      const i = description.indexOf(m)
+      if (i !== -1 && i < cut) cut = i
+    }
+    return description.slice(0, cut).replace(/\n\n+$/, '').trim()
+  }
+
+  // Résumé HTML (compatibilité descriptions existantes)
+  const generateEffectsSummary = (_targetPlayer: GamePlayer) => {
+    const items = collectActiveEffects()
+    if (items.length === 0) return `<em>Aucun effet spécial en cours</em>`
+    const lines = items.map(e => {
+      if (e.id.startsWith('link-')) {
+        const linked = players.find(p => p.id === e.player.linkedTo)
+        if (linked) {
+          return `🔗 <span class="${e.player.preferences.color} text-white px-2 py-1 rounded-md">${e.player.name}</span> est <strong>lié</strong> à <span class="${linked.preferences.color} text-white px-2 py-1 rounded-md">${linked.name}</span> (${e.player.linkedTurns} tours)`
         }
       }
-    });
-    
-    if (activeEffects.length > 0) {
-      return `<strong>Effets en cours :</strong>\n${activeEffects.join('\n')}`;
-    } else {
-      return `<em>Aucun effet spécial en cours</em>`;
-    }
-  };
+      if (e.id.startsWith('prot-')) {
+        return `🛡️ <span class="${e.player.preferences.color} text-white px-2 py-1 rounded-md">${e.player.name}</span> est <strong>protégé</strong>`
+      }
+      return `👻 <span class="${e.player.preferences.color} text-white px-2 py-1 rounded-md">${e.player.name}</span> est <strong>maudit</strong> (${e.player.cursed} tours)`
+    })
+    return `<strong>Effets en cours :</strong>\n${lines.join('\n')}`
+  }
 
   const handleTargetSelection = (targetId: string) => {
-    
+    lastTargetIdRef.current = targetId
+
     // Fermer la fenêtre de ciblage
     setShowTargetDialog(false);
     
@@ -966,29 +1426,29 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
     // Cas spéciaux pour les nouvelles cases
     if (pendingCase.type === 'roue') {
-      setWheelSegments(generateWheelSegments());
-      setWheelResult(null);
-      setShowWheel(true);
-      setCurrentCase(pendingCase);
-      return;
+      openWheelForCurrentPlayer()
+      return
     }
     
     if (pendingCase.type === 'chance') {
       setShowChanceDialog(true);
-      setCurrentCase(pendingCase);
       return;
     }
     
     if (pendingCase.type === 'echange') {
       setShowExchangeDialog(true);
-      setCurrentCase(pendingCase);
       return;
     }
     
     if (pendingCase.type === 'defi-chaine') {
       setShowChainDialog(true);
-      setCurrentCase(pendingCase);
       return;
+    }
+
+    if (pendingCase.type === 'pile-face') {
+      setPileFaceTargetId(targetId)
+      setShowPileFaceDialog(true)
+      return
     }
     
     if (pendingCase.type === 'repetition') {
@@ -1102,9 +1562,14 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       }
     }
     
+    const duelPrefix = pendingDuelNote ? `${pendingDuelNote}\n\n` : ''
+    if (pendingDuelNote) {
+      setPendingDuelNote(undefined)
+    }
+
     setCurrentCase({
       ...pendingCase,
-      description: descriptionEffet
+      description: `${duelPrefix}${descriptionEffet}`,
     });
     
     // Afficher la notification avec l'effet révélé et le bouton "Suivant"
@@ -1116,6 +1581,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   };
 
   const applyEffectToPlayer = (targetPlayerId: string, customCase?: Case) => {
+    lastTargetIdRef.current = targetPlayerId
+
     const caseToApply = customCase || pendingCase;
     if (!caseToApply || pendingPosition === null) {
       setIsProcessingTurn(false);
@@ -1152,7 +1619,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       case 'gorgée':
       case 'defi':
         // Vérifier si le joueur est protégé
-        if (targetPlayer.protected) {
+        if (isPlayerProtected(targetPlayer)) {
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1213,7 +1680,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       case 'avance':
       case 'recul':
         // Vérifier si le joueur est protégé
-        if (targetPlayer.protected) {
+        if (isPlayerProtected(targetPlayer)) {
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1273,7 +1740,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         // Faire boire tous les joueurs, mais le ciblé boit double (sauf s'il est protégé)
         updatedPlayers.forEach((p) => {
           if (p.id === targetPlayerId) {
-            if (p.protected) {
+            if (isPlayerProtected(p)) {
               // Afficher un message spécial pour le joueur protégé
               setCurrentCase({
                 ...caseToApply,
@@ -1309,13 +1776,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         return;
         
       case 'protection':
-        // Protéger le joueur pendant 1 tour
         targetPlayer.protected = true;
-        
-        // Afficher la notification de protection
+        targetPlayer.protectedUntilTurn = turnCount + 1;
+        setPlayers(updatedPlayers);
         setCurrentCase({
           ...caseToApply,
-          description: `🛡️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est maintenant protégé pendant 1 tour !\n\n${effectsSummary}`
+          description: `🛡️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est protégé jusqu'à la fin du tour de table (tous les joueurs) !\n\n${effectsSummary}`,
         });
         setShowNotification(true);
         setShowNextButton(true);
@@ -1323,7 +1789,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
       case 'malediction':
         // Vérifier si le joueur est protégé
-        if (targetPlayer.protected) {
+        if (isPlayerProtected(targetPlayer)) {
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1336,6 +1802,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           
           // Passer au joueur suivant
           setTimeout(() => {
+            commitLastActionFromCurrentTurn()
             const nextPlayer = (currentPlayer + 1) % players.length;
             if (nextPlayer === 0) {
               setTurnCount(turnCount + 1);
@@ -1365,7 +1832,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
       case 'miroir':
         // Vérifier si le joueur ciblé est protégé
-        if (targetPlayer.protected) {
+        if (isPlayerProtected(targetPlayer)) {
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1399,7 +1866,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
       case 'piege':
         // Vérifier si le joueur est protégé
-        if (targetPlayer.protected) {
+        if (isPlayerProtected(targetPlayer)) {
           // Afficher un message spécial pour le joueur protégé
           const trapDrinks = targetPlayer.position + 1;
           setCurrentCase({
@@ -1433,9 +1900,207 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         setShowNextButton(true);
         return;
         
+      case 'passe-tour':
+        targetPlayer.skipNextTurn = true
+        setPlayers(updatedPlayers)
+        setCurrentCase({
+          ...caseToApply,
+          description: `⏭️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> ne lancera pas au prochain tour !\n\n${effectsSummary}`,
+        })
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+
+      case 'double-peine': {
+        if (isPlayerProtected(targetPlayer)) {
+          setCurrentCase({
+            ...caseToApply,
+            description: `${caseToApply.description}\n\n<span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>\n\n${effectsSummary}`,
+          })
+          setShowNotification(true)
+          setShowNextButton(true)
+          return
+        }
+        const doubled = caseToApply.effect * 2
+        targetPlayer.drinks += doubled
+        try {
+          updatePlayerStats(targetPlayer.id, 'petit-buveur', { totalDrinks: targetPlayer.drinks })
+        } catch (error) {
+          console.error('Erreur stats double-peine:', error)
+        }
+        setPlayers(updatedPlayers)
+        setCurrentCase({
+          ...caseToApply,
+          description: `💥 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${doubled} gorgées (double peine) !\n\n${effectsSummary}`,
+        })
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+      }
+
+      case 'copie': {
+        const delta = lastMoveDeltaRef.current
+        const before = targetPlayer.position
+        targetPlayer.position = Math.max(
+          0,
+          Math.min(boardSize - 1, targetPlayer.position + delta)
+        )
+        setPlayers(updatedPlayers)
+        setCurrentCase({
+          ...caseToApply,
+          description: `👯 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> copie le dé (${delta >= 0 ? '+' : ''}${delta}) : case ${before + 1} → ${targetPlayer.position + 1} !\n\n${effectsSummary}`,
+        })
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+      }
+
+      case 'roulette-russe': {
+        if (isPlayerProtected(targetPlayer)) {
+          setCurrentCase({
+            ...caseToApply,
+            description: `🔫 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>\n\n${effectsSummary}`,
+          })
+          setShowNotification(true)
+          setShowNextButton(true)
+          return
+        }
+        const hit = Math.random() < 1 / 3
+        if (hit) {
+          targetPlayer.drinks += caseToApply.effect
+          try {
+            updatePlayerStats(targetPlayer.id, 'petit-buveur', { totalDrinks: targetPlayer.drinks })
+          } catch (error) {
+            console.error('Erreur stats roulette:', error)
+          }
+          setPlayers(updatedPlayers)
+          setCurrentCase({
+            ...caseToApply,
+            description: `🔫 Raté ! <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${caseToApply.effect} gorgées !\n\n${effectsSummary}`,
+          })
+        } else {
+          setCurrentCase({
+            ...caseToApply,
+            description: `🔫 Click… <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est safe !\n\n${effectsSummary}`,
+          })
+        }
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+      }
+
+      case 'ancre':
+        targetPlayer.anchored = true
+        setPlayers(updatedPlayers)
+        setCurrentCase({
+          ...caseToApply,
+          description: `⚓ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> ne pourra pas avancer au prochain tour !\n\n${effectsSummary}`,
+        })
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+
+      case 'question':
+        if (isPlayerProtected(targetPlayer)) {
+          setCurrentCase({
+            ...caseToApply,
+            description: `❓ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>\n\n${effectsSummary}`,
+          })
+          setShowNotification(true)
+          setShowNextButton(true)
+          return
+        }
+        targetPlayer.drinks += caseToApply.effect
+        try {
+          updatePlayerStats(targetPlayer.id, 'petit-buveur', { totalDrinks: targetPlayer.drinks })
+        } catch (error) {
+          console.error('Erreur stats question:', error)
+        }
+        setPlayers(updatedPlayers)
+        setCurrentCase({
+          ...caseToApply,
+          description: `❓ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> répond à voix haute ou boit ${caseToApply.effect} gorgée${caseToApply.effect > 1 ? 's' : ''} !\n\n${effectsSummary}`,
+        })
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+
+      case 'inversion': {
+        if (isPlayerProtected(targetPlayer)) {
+          setCurrentCase({
+            ...caseToApply,
+            description: `🔃 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> <span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">A ÉTÉ PROTÉGÉ !</span>\n\n${effectsSummary}`,
+          })
+          setShowNotification(true)
+          setShowNextButton(true)
+          return
+        }
+        const lastPlace = updatedPlayers.reduce((min, p) =>
+          p.position < min.position ? p : min
+        )
+        lastPlace.drinks += caseToApply.effect
+        try {
+          updatePlayerStats(lastPlace.id, 'petit-buveur', { totalDrinks: lastPlace.drinks })
+        } catch (error) {
+          console.error('Erreur stats inversion:', error)
+        }
+        setPlayers(updatedPlayers)
+        setCurrentCase({
+          ...caseToApply,
+          description: `🔃 Inversion ! <span class="${lastPlace.preferences.color} text-white px-2 py-1 rounded-md">${lastPlace.name}</span> (dernier) boit ${caseToApply.effect} gorgée${caseToApply.effect > 1 ? 's' : ''} à la place de <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> !\n\n${effectsSummary}`,
+        })
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+      }
+
+      case 'miroir-inverse': {
+        const actor = updatedPlayers[currentPlayer]
+        if (actor) {
+          actor.mirrorDrinkTargetId = targetPlayerId
+          actor.mirrorDrinkTurns = caseToApply.effect || 1
+        }
+        setPlayers(updatedPlayers)
+        setCurrentCase({
+          ...caseToApply,
+          description: `🪞 <span class="${actor?.preferences.color} text-white px-2 py-1 rounded-md">${actor?.name}</span> est lié à <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> : quand l'un boit, l'autre aussi (${actor?.mirrorDrinkTurns ?? 1} tour) !\n\n${effectsSummary}`,
+        })
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+      }
+
+      case 'rewind':
+        if (lastCase) {
+          applyEffectToPlayer(targetPlayerId, lastCase)
+          return
+        }
+        setCurrentCase({
+          ...caseToApply,
+          description: `⏪ Pas de case précédente — <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est safe !\n\n${effectsSummary}`,
+        })
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+
+      case 'joker': {
+        const actor = updatedPlayers[currentPlayer]
+        if (actor) {
+          actor.jokerCase = { ...caseToApply, type: caseToApply.type, description: caseToApply.description }
+        }
+        setPlayers(updatedPlayers)
+        setCurrentCase({
+          ...caseToApply,
+          description: `🃏 <span class="${actor?.preferences.color} text-white px-2 py-1 rounded-md">${actor?.name}</span> garde cette case en main !\n\n${effectsSummary}`,
+        })
+        setShowNotification(true)
+        setShowNextButton(true)
+        return
+      }
+
       case 'melange':
         // Vérifier si le joueur ciblé est protégé
-        if (targetPlayer.protected) {
+        if (isPlayerProtected(targetPlayer)) {
           // Afficher un message spécial pour le joueur protégé
           setCurrentCase({
             ...caseToApply,
@@ -1525,13 +2190,20 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         position: 0,
         drinks: 0,
         protected: false,
+        protectedUntilTurn: undefined,
         cursed: 0,
         linkedTo: undefined,
-        linkedTurns: 0
+        linkedTurns: 0,
+        skipNextTurn: false,
+        anchored: false,
+        mirrorDrinkTargetId: undefined,
+        mirrorDrinkTurns: 0,
+        jokerCase: null,
       }));
       
       // Mettre à jour l'état des joueurs
       setPlayers(resetPlayers);
+      extraCaseQueueRef.current = [];
       
       // Initialiser tous les états du jeu
       setGameStarted(true);
@@ -1540,6 +2212,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setTurnCount(1);
       setDiceResult(null);
       setCurrentCase(null);
+      setLastActionHistory(null);
+      lastTargetIdRef.current = null;
       setIsProcessingTurn(false);
       setIsDiceRolling(false);
       setAnimatedDiceValue(null);
@@ -1569,12 +2243,19 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         position: 0,
         drinks: 0,
         protected: false,
+        protectedUntilTurn: undefined,
         cursed: 0,
         linkedTo: undefined,
         linkedTurns: 0,
+        skipNextTurn: false,
+        anchored: false,
+        mirrorDrinkTargetId: undefined,
+        mirrorDrinkTurns: 0,
+        jokerCase: null,
         color: defaultColor
       }))
     );
+    extraCaseQueueRef.current = [];
     setCurrentPlayer(0);
     setWinner(null);
     setShowVictoryScreen(false);
@@ -1602,6 +2283,176 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   const getPlayerRanking = () => {
     return [...players].sort((a, b) => b.position - a.position)
+  }
+
+  /** Bandeau classement compact (réutilisé dans les modales). */
+  const renderCompactRanking = () => (
+    <div className="rounded-xl border border-border/40 bg-background/50 px-2 py-2">
+      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Classement
+      </p>
+      <div className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {getPlayerRanking().map((player, index) => {
+          const isActive = players[currentPlayer]?.id === player.id
+          return (
+            <div
+              key={player.id}
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 ${
+                isActive ? 'border-emerald-400/50 bg-emerald-500/10' : 'border-border/40 bg-card/60'
+              }`}
+            >
+              <span className="w-4 text-center text-[10px] leading-none">
+                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+              </span>
+              <Avatar className={`${player.preferences.color} h-6 w-6 shrink-0`}>
+                {player.preferences.avatar ? (
+                  <AvatarImage src={player.preferences.avatar} alt={player.name} />
+                ) : (
+                  <AvatarFallback className="text-[9px]">
+                    {player.preferences.icon || player.name[0].toUpperCase()}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <div className="min-w-0 pr-0.5">
+                <PlayerName player={player} className="block max-w-[4.5rem] truncate text-[10px] font-medium leading-tight" />
+                <span className="text-[9px] text-muted-foreground">Case {player.position + 1}</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  const renderActiveEffectLabel = (effect: ActiveEffectItem) => {
+    const linked =
+      effect.id.startsWith('link-') ? players.find(p => p.id === effect.player.linkedTo) : null
+    const tooltip = linked
+      ? `${effect.title} — ${effect.player.name} avec ${linked.name}`
+      : `${effect.title} — ${effect.player.name}`
+
+    return (
+      <div
+        key={effect.id}
+        title={tooltip}
+        className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 ${effect.accentClass}`}
+      >
+        <span className="text-xs leading-none">{effect.icon}</span>
+        <PlayerName player={effect.player} className="max-w-[5.5rem] truncate text-[10px] font-semibold leading-tight" />
+        <span className="whitespace-nowrap text-[9px] font-medium text-muted-foreground">
+          {formatEffectRemainingTurns(effect.remainingTurns)}
+        </span>
+      </div>
+    )
+  }
+
+  const renderActiveEffectsPanel = () => {
+    const items = collectActiveEffects()
+    if (items.length === 0) return null
+    return (
+      <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3">
+        <div className="mb-2 flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-violet-300" />
+          <span className="text-xs font-semibold text-violet-200">Effets en cours</span>
+          <span className="rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[10px] font-bold leading-none text-violet-100">
+            {items.length}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {items.map(effect => renderActiveEffectLabel(effect))}
+        </div>
+      </div>
+    )
+  }
+
+  const renderLastActionHistory = () => {
+    if (!lastActionHistory) return null
+    const { actor, target, caseLabel, effectHtml, turnNumber } = lastActionHistory
+
+    return (
+      <div className="mt-2 rounded-xl border border-slate-500/35 bg-slate-800/50 px-3 py-2.5">
+        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <History className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            Action précédente
+          </span>
+          <span className="text-[9px] text-muted-foreground">Tour {turnNumber}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+          <PlayerName player={actor} className="font-semibold text-slate-200" />
+          <span className="text-muted-foreground">·</span>
+          <span className="font-medium text-violet-300">{caseLabel}</span>
+          {target ? (
+            <>
+              <span className="text-muted-foreground">→</span>
+              <PlayerName player={target} className="font-semibold text-amber-200" />
+            </>
+          ) : (
+            <span className="text-[10px] text-muted-foreground">(soi / aucune cible)</span>
+          )}
+        </div>
+        <div
+          className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-muted-foreground [&_span]:inline [&_strong]:text-slate-300"
+          dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(effectHtml) }}
+        />
+      </div>
+    )
+  }
+
+  const renderActiveEffectsChips = () => {
+    const items = collectActiveEffects()
+    if (items.length === 0) return null
+    return (
+      <div className="mt-3 rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-600/15 to-indigo-600/10 p-3 shadow-sm">
+        <div className="mb-2 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 shrink-0 text-violet-300" />
+          <span className="text-sm font-semibold text-violet-100">Effets en cours</span>
+          <span className="rounded-full bg-violet-500/30 px-1.5 text-[10px] font-bold text-violet-50">
+            {items.length}
+          </span>
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {items.map(effect => renderActiveEffectLabel(effect))}
+        </div>
+      </div>
+    )
+  }
+
+  const handleChainPlayerSelect = (targetPlayerId: string) => {
+    setShowChainDialog(false)
+    const currentPlayerObj = players[currentPlayer]
+    const targetPlayerObj = players.find(p => p.id === targetPlayerId)
+    if (!currentPlayerObj || !targetPlayerObj) return
+
+    const updatedPlayers = players.map(p => {
+      if (p.id === currentPlayerObj.id) {
+        return {
+          ...p,
+          linkedTo: targetPlayerObj.id,
+          linkedTurns: 5,
+        }
+      }
+      return p
+    })
+
+    setPlayers(updatedPlayers)
+    const chainDescription = `🔗 ${currentPlayerObj.name} est maintenant lié à ${targetPlayerObj.name} pendant 5 tours !`
+    setCurrentCase({
+      type: 'defi-chaine',
+      description: chainDescription,
+      effect: 5,
+    })
+    recordLastAction(currentPlayerObj, 'defi-chaine', chainDescription, targetPlayerObj)
+    setShowNotification(true)
+    setTimeout(() => setShowNotification(false), 3000)
+
+    const nextPlayer = (currentPlayer + 1) % players.length
+    if (nextPlayer === 0) {
+      setTurnCount(turnCount + 1)
+    }
+    setCurrentPlayer(nextPlayer)
+    setIsProcessingTurn(false)
+    setTimeout(() => saveGame(), 100)
   }
 
   const renderPlayerToken = (player: GamePlayer, index?: number) => {
@@ -1769,6 +2620,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     osc.stop(now + 0.08)
   }
 
+  const colorForDuelSegment = (v: number): string => (v === 1 ? '#10b981' : '#ef4444')
+
   // Couleur basée sur la valeur (0 = SAFE → vert; 1..12 → jaune→orange→rouge)
   const colorForValue = (v: number): string => {
     if (v === 0) return '#10b981' // SAFE vert
@@ -1822,6 +2675,45 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setWheelSpinning(false)
   }
 
+  const spinDuelWheel = async () => {
+    if (duelWheelSpinning || duelWheelSegments.length === 0) return
+    setDuelWheelSpinning(true)
+
+    const anglePerSegment = 360 / duelWheelSegments.length
+    const randomIndex = Math.floor(Math.random() * duelWheelSegments.length)
+    const segStart = randomIndex * anglePerSegment
+    const segAngle = anglePerSegment
+    const extraSpins = 4 + Math.floor(Math.random() * 7)
+    const duration = 4 + Math.random() * 2
+    const offsetWithinSegment = Math.random() * segAngle
+    const targetAngle = 360 * extraSpins - (segStart + offsetWithinSegment)
+    const overshootAngle = segAngle * (0.12 + Math.random() * 0.18)
+    const accelAngle = targetAngle * 0.25
+
+    await ensureAudioCtx()
+    duelWheelRotation.set(0)
+    lastDuelWheelTickRef.current = 0
+
+    animate(duelWheelRotation, [0, accelAngle, targetAngle + overshootAngle, targetAngle], {
+      duration,
+      times: [0, 0.25, 0.9, 1],
+      ease: ['easeIn', [0.16, 1, 0.3, 1], 'easeOut'],
+      onUpdate: v => {
+        const mod = ((v % 360) + 360) % 360
+        const tickIndex = Math.floor(mod / anglePerSegment)
+        if (tickIndex !== lastDuelWheelTickRef.current) {
+          lastDuelWheelTickRef.current = tickIndex
+          playTick()
+        }
+      },
+    })
+
+    await new Promise(resolve => setTimeout(resolve, Math.ceil(duration * 1000) + 80))
+
+    setDuelWheelResult(duelWheelSegments[randomIndex])
+    setDuelWheelSpinning(false)
+  }
+
   // Fonction pour relancer le dé (utilisée par la case Chance)
   const rerollDice = () => {
     // Réinitialiser les états de traitement
@@ -1865,16 +2757,24 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           return;
         }
         
-        // Calculer la nouvelle position
-        const newPosition = Math.min(player.position + result, boardSize - 1);
+        let moveDelta = result
+        if (player.anchored) {
+          moveDelta = 0
+        }
+        lastMoveDeltaRef.current = moveDelta
+
+        const newPosition = Math.min(player.position + moveDelta, boardSize - 1);
         
         // Activer l'animation de déplacement
         setAnimatingPlayer(player.id);
         
-        // Mettre à jour directement la position du joueur
         const updatedPlayers = players.map((p, idx) => {
           if (idx === currentPlayer) {
-            return { ...p, position: newPosition };
+            return {
+              ...p,
+              position: newPosition,
+              anchored: p.anchored ? false : p.anchored,
+            };
           }
           return p;
         });
@@ -1912,70 +2812,76 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }, interval);
   };
 
-  // Fonction pour gérer la fin de la roue
-  const handleWheelComplete = useCallback(() => {
-    if (!wheelResult) return;
-    
-    const currentPlayerObj = players[currentPlayer];
-    if (!currentPlayerObj) return;
-    
-    // Appliquer le résultat de la roue
-    if (wheelResult.value > 0) {
-      // Le joueur doit boire
-      const updatedPlayers = players.map((p, idx) => {
-        if (idx === currentPlayer) {
-          return { ...p, drinks: p.drinks + wheelResult.value };
-        }
-        return p;
-      });
-      
-      setPlayers(updatedPlayers);
-      
-      // Mettre à jour les statistiques
-      try {
-        updatePlayerStats(currentPlayerObj.id, 'petit-buveur', {
-          totalDrinks: currentPlayerObj.drinks + wheelResult.value
-        });
-      } catch (error) {
-        console.error("Erreur lors de la mise à jour des statistiques:", error);
-      }
-      
-      // Afficher le résultat
-      setCurrentCase({
-        type: 'gorgée',
-        description: `🎯 Résultat de la roue : ${wheelResult.label} !\n\nJoueur ciblé : <span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span>`,
-        effect: wheelResult.value
-      });
-      
-      setShowNotification(true);
-      setShowNextButton(true);
-    } else {
-      // Case SAFE
-      setCurrentCase({
-        type: 'normal',
-        description: `🎯 Résultat de la roue : SAFE !\n\nJoueur ciblé : <span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> est en sécurité !`,
-        effect: 0
-      });
-      
-      setShowNotification(true);
-      setShowNextButton(true);
-    }
-    
-    // Ne pas fermer la roue automatiquement - elle se fermera quand on clique sur "Continuer"
-    // Ne pas passer automatiquement au joueur suivant - c'est le bouton "Suivant" qui s'en charge
-  }, [wheelResult, players, currentPlayer, updatePlayerStats]);
+  const applyWheelOutcome = useCallback(
+    (result: WheelSegment) => {
+      if (wheelOutcomeAppliedRef.current) return
+      wheelOutcomeAppliedRef.current = true
 
-  // Gérer la fin de la roue
-  useEffect(() => {
-    if (wheelResult && !wheelSpinning) {
-      // Attendre un peu avant d'appliquer le résultat
-      const timer = setTimeout(() => {
-        handleWheelComplete();
-      }, 1000);
-      
-      return () => clearTimeout(timer);
+      const currentPlayerObj = players[currentPlayer]
+      if (!currentPlayerObj) return
+
+      lastTargetIdRef.current = currentPlayerObj.id
+
+      const duelPrefix = pendingDuelNote ? `${pendingDuelNote}\n\n` : ''
+      if (pendingDuelNote) {
+        setPendingDuelNote(undefined)
+      }
+
+      const isDefiWheel = wheelMode === 'defis'
+      const defiDrinks =
+        isDefiWheel &&
+        (result.value > 0 || result.label.toLowerCase().includes('boit'))
+
+      if (result.value > 0 || defiDrinks) {
+        const drinks = defiDrinks && result.value === 0 ? 2 : result.value
+        setPlayers(prev => {
+          const updated = prev.map((p, idx) =>
+            idx === currentPlayer ? { ...p, drinks: p.drinks + drinks } : p
+          )
+          applyMirrorDrinkIfActive(currentPlayer, drinks, updated)
+          const after = updated[currentPlayer]
+          if (after) {
+            try {
+              updatePlayerStats(after.id, 'petit-buveur', {
+                totalDrinks: after.drinks,
+              })
+            } catch (error) {
+              console.error('Erreur lors de la mise à jour des statistiques:', error)
+            }
+          }
+          return updated
+        })
+        setCurrentCase({
+          type: isDefiWheel ? 'roue-defis' : 'gorgée',
+          description: isDefiWheel
+            ? `${duelPrefix}🎭 Défi : ${result.label} !\n\n<span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span>${defiDrinks ? ` boit ${drinks} gorgées.` : ' — à toi de jouer !'}`
+            : `${duelPrefix}🎯 Résultat de la roue : ${result.label} !\n\n<span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> boit (joueur au tour).`,
+          effect: drinks,
+        })
+      } else {
+        setCurrentCase({
+          type: isDefiWheel ? 'roue-defis' : 'normal',
+          description: isDefiWheel
+            ? `${duelPrefix}🎭 Défi : ${result.label} !\n\n<span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> — exécute le défi (ou bois si tu refuses).`
+            : `${duelPrefix}🎯 Résultat de la roue : SAFE !\n\n<span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> est en sécurité (joueur au tour).`,
+          effect: 0,
+        })
+      }
+
+      setPendingCase(null)
+      setPendingPosition(null)
+      setShowNotification(true)
+      setShowNextButton(true)
+    },
+    [players, currentPlayer, updatePlayerStats, pendingDuelNote, wheelMode]
+  )
+
+  const finishWheelModal = () => {
+    if (wheelResult) {
+      applyWheelOutcome(wheelResult)
     }
-  }, [wheelResult, wheelSpinning, handleWheelComplete]);
+    setShowWheel(false)
+  }
 
   // Mise à jour du rendu des classements des joueurs
   const renderPlayerRanking = (player: GamePlayer, index: number) => {
@@ -2054,7 +2960,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             <div className="space-y-4">
               <h3 className={`text-xl font-semibold ${getTextColor()}`}>Difficulté :</h3>
               <div className="grid grid-cols-2 gap-4">
-                {(Object.keys(difficultyMultipliers) as Difficulty[]).map((diff) => (
+                {(Object.keys(difficultyNames) as Difficulty[]).map((diff) => (
                   <Button
                     key={diff}
                     onClick={() => setGameDifficulty(diff)}
@@ -2106,6 +3012,25 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     )
   }
 
+  const leaderBoardPosition =
+    players.length > 0 ? Math.max(...players.map(p => p.position)) : -1
+  const activeTurnBoardPosition = players[currentPlayer]?.position ?? -1
+
+  const getBoardCaseHighlightClass = (index: number) => {
+    const isLeaderCase = index === leaderBoardPosition
+    const isActiveTurnCase = index === activeTurnBoardPosition
+    if (isActiveTurnCase && isLeaderCase) {
+      return 'ring-2 ring-emerald-400/95 bg-gradient-to-br from-emerald-500/35 to-amber-400/40 shadow-[0_0_10px_rgba(52,211,153,0.35),0_0_14px_rgba(251,191,36,0.35)]'
+    }
+    if (isActiveTurnCase) {
+      return 'ring-2 ring-emerald-400/95 bg-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.4)]'
+    }
+    if (isLeaderCase) {
+      return 'ring-2 ring-amber-400/95 bg-amber-400/35 shadow-[0_0_12px_rgba(251,191,36,0.45)]'
+    }
+    return 'bg-white/20'
+  }
+
   return (
     <GameShell
       title="Le Petit Buveur"
@@ -2117,42 +3042,81 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </span>
       }
       actionBar={
-        <div className="flex gap-2">
+        <div className="relative flex w-full flex-col items-center justify-center gap-2">
+          {players[currentPlayer]?.jokerCase && !isDiceActionBlocked() && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={playJokerCase}
+              className="w-full max-w-xs border-amber-500/50 text-amber-400 hover:bg-amber-500/10"
+            >
+              🃏 Jouer le joker ({getCaseTypeLabel(players[currentPlayer].jokerCase!.type)})
+            </Button>
+          )}
+          {isProcessingTurn && !isDiceRolling && (
+            <Button
+              onClick={forceNextPlayer}
+              variant="outline"
+              size="icon"
+              className="absolute right-0 shrink-0 border-red-500/40 text-red-500 hover:bg-red-500/10"
+              title="Débloquer le jeu si il se bloque"
+              aria-label="Débloquer"
+            >
+              🔧
+            </Button>
+          )}
           <Button
             onClick={rollDice}
-            disabled={isProcessingTurn}
-            className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-4 text-lg shadow-lg"
+            disabled={isDiceActionBlocked()}
+            className="w-full max-w-xs bg-gradient-to-r from-emerald-500 to-teal-500 px-8 text-lg font-bold text-white shadow-lg hover:from-emerald-600 hover:to-teal-600 py-4"
           >
             <span className="flex items-center justify-center gap-2">
               <span>Lancer le dé</span>
               <Dice6 className={`h-5 w-5 ${isDiceRolling ? 'animate-spin' : ''}`} />
             </span>
           </Button>
-          {isProcessingTurn && !isDiceRolling && (
-            <Button
-              onClick={forceNextPlayer}
-              variant="outline"
-              className="px-4 text-sm text-red-600 border-red-600 hover:bg-red-50"
-              title="Débloquer le jeu si il se bloque"
-            >
-              🔧
-            </Button>
-          )}
         </div>
       }
     >
-      <div className="text-center space-y-2">
-        <div className="flex justify-between items-center text-gray-300">
-          <p className="text-base">
-            Tour <span className="font-bold">{turnCount}</span>
-          </p>
-          <p className="text-base">
-            Au tour de <PlayerName player={players[currentPlayer]} className="font-bold" />
-          </p>
-        </div>
+      {/* HUD tour + joueur actif */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/50 bg-card/50 px-3 py-2">
+        <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold">
+          Tour {turnCount}
+        </span>
+        <p className="min-w-0 flex-1 text-center text-sm sm:text-base">
+          Au tour de{' '}
+          <PlayerName player={players[currentPlayer]} className="font-bold text-emerald-400" />
+        </p>
+        <span className="hidden text-xs text-muted-foreground sm:inline">
+          Case {players[currentPlayer]?.position != null ? players[currentPlayer].position + 1 : '—'}/{boardSize}
+        </span>
       </div>
 
-      <div className={`mt-4 grid grid-cols-6 gap-2 p-4 ${getBgColor()} rounded-lg mb-4`}>
+      {renderLastActionHistory()}
+
+      {/* Case actuelle — visible uniquement après révélation (cible choisie) */}
+      {currentCase && !showNotification && !showTargetDialog && !showDuelDialog && !showWheel && !showChanceDialog && !showExchangeDialog && !showChainDialog && !showTeleportDialog && !showVoteDialog && !showDeHonteDialog && !showPileFaceDialog && (
+        <div className="mt-3 rounded-xl border border-amber-500/35 bg-gradient-to-br from-amber-500/15 to-orange-500/10 p-3 shadow-sm">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <MapPin className="h-4 w-4 shrink-0 text-amber-400" />
+            <span className="text-sm font-semibold text-amber-200">
+              Case {players[currentPlayer]?.position != null ? players[currentPlayer].position + 1 : '—'}
+            </span>
+            <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-100">
+              {getCaseTypeLabel(currentCase.type)}
+            </span>
+          </div>
+          <div
+            className="max-h-28 overflow-y-auto text-sm leading-relaxed text-foreground/90 [&_strong]:text-amber-100"
+            dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(currentCase.description) }}
+          />
+        </div>
+      )}
+
+      {collectActiveEffects().length > 0 && !showNotification && renderActiveEffectsChips()}
+
+      {/* Plateau */}
+      <div className={`mt-3 grid grid-cols-6 gap-1.5 p-3 sm:gap-2 sm:p-4 ${getBgColor()} rounded-xl`}>
         {Array.from({ length: boardSize }).map((_, index) => {
           const playersOnCase = players.filter(p => p.position === index)
           const gridCols = playersOnCase.length > 4 
@@ -2164,10 +3128,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           return (
             <div
               key={index}
-              className="aspect-square rounded-lg flex items-center justify-center relative bg-white/20"
+              className={`aspect-square rounded-md sm:rounded-lg flex items-center justify-center relative ${getBoardCaseHighlightClass(index)}`}
             >
-              <span className={`text-sm font-medium ${getTextColor()}`}>{index + 1}</span>
-              <div className={`absolute inset-3 grid ${gridCols} gap-[2px] place-items-center overflow-hidden`}>
+              <span className={`text-[10px] sm:text-sm font-medium ${getTextColor()}`}>{index + 1}</span>
+              <div className={`absolute inset-2 sm:inset-3 grid ${gridCols} gap-[2px] place-items-center overflow-hidden`}>
                 {playersOnCase.map((player) => renderPlayerToken(player))}
               </div>
             </div>
@@ -2175,145 +3139,506 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         })}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className={`p-4 ${getBgColor()} rounded-lg shadow-sm`}>
-          <h3 className="font-bold mb-2">Classement :</h3>
-          <div className="space-y-2">
-            {getPlayerRanking().map((player, index) => (
-              <div key={player.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">{index + 1}.</span>
-                  <div className={`w-4 h-4 rounded-full ${player.preferences.color} ring-1 ring-white/30`}></div>
-                  <PlayerName player={player} />
-                </div>
-                <span className="bg-card text-card-foreground px-2 py-1 rounded-md text-sm">Case {player.position + 1}</span>
-              </div>
-            ))}
-          </div>
+      {/* Classement — défilement horizontal (cartes compactes) */}
+      <div className="mt-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-amber-400" />
+          <h3 className="text-sm font-semibold">Classement</h3>
+          <span className="text-xs text-muted-foreground">(par avancement)</span>
         </div>
-
-        {currentCase && (
-          <div className={`p-4 ${getBgColor()} rounded-lg shadow-sm`}>
-            <h3 className="font-bold mb-2">Case actuelle :</h3>
-            <p className="whitespace-pre-line bg-card/80 p-3 rounded-md" dangerouslySetInnerHTML={{ __html: currentCase.description }}></p>
-          </div>
-        )}
+        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {getPlayerRanking().map((player, index) => {
+            const isActive = players[currentPlayer]?.id === player.id
+            const rankStyles =
+              index === 0
+                ? 'border-amber-400/50 bg-amber-500/10'
+                : index === 1
+                  ? 'border-slate-400/40 bg-slate-500/10'
+                  : index === 2
+                    ? 'border-orange-700/40 bg-orange-900/10'
+                    : 'border-border/50 bg-card/60'
+            return (
+              <div
+                key={player.id}
+                className={`flex w-[6.75rem] shrink-0 flex-col items-center gap-1.5 rounded-xl border p-2.5 ${rankStyles} ${
+                  isActive ? 'ring-2 ring-emerald-400/50' : ''
+                }`}
+              >
+                <span className={`text-xs font-bold ${index < 3 ? 'text-amber-300' : 'text-muted-foreground'}`}>
+                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                </span>
+                <Avatar className={`${player.preferences.color} h-9 w-9`}>
+                  {player.preferences.avatar ? (
+                    <AvatarImage src={player.preferences.avatar} alt={player.name} />
+                  ) : (
+                    <AvatarFallback className="text-xs">
+                      {player.preferences.icon || player.name[0].toUpperCase()}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <PlayerName player={player} className="max-w-full truncate text-center text-xs font-medium" />
+                <span className="text-[10px] font-semibold text-muted-foreground">
+                  Case {player.position + 1}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Notification d'effet de case - plus visible */}
+      {/* Effet de la case — modale alignée sur les autres overlays */}
       <AnimatePresence>
         {showNotification && currentCase && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-x-0 top-1/2 transform -translate-y-1/2 mx-auto w-5/6 max-w-md z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={`fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4 ${
+              showNextButton ? '' : 'pointer-events-none'
+            }`}
           >
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-6 rounded-lg shadow-lg text-center">
-              <h3 className="text-xl font-bold mb-2">Effet de la case :</h3>
-              <p className="text-lg whitespace-pre-line mb-4" dangerouslySetInnerHTML={{ __html: currentCase.description }}></p>
-              
-              {/* Bouton "Suivant" */}
-              {showNextButton && (
-                <Button
-                  onClick={handleNextButtonClick}
-                  className="bg-white text-emerald-600 hover:bg-gray-100 font-bold py-2 px-6 rounded-lg shadow-md transition-colors"
-                >
-                  Suivant
-                </Button>
-              )}
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              className="z-[100] max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl"
+            >
+              <div className="bg-gradient-to-br from-emerald-600/20 via-card to-teal-600/10 p-5">
+                <div className="mb-4 flex flex-col items-center text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 ring-1 ring-emerald-400/30">
+                    <Sparkles className="h-6 w-6 text-emerald-400" />
+                  </div>
+                  <h2 className="text-lg font-bold">Effet de la case</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {getCaseTypeLabel(currentCase.type)}
+                    {players[currentPlayer] && (
+                      <>
+                        {' '}
+                        · <PlayerName player={players[currentPlayer]} className="font-semibold text-emerald-400" />
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-emerald-500/25 bg-background/50 p-4 text-left">
+                  <div
+                    className="text-sm leading-relaxed text-foreground/95 [&_strong]:text-emerald-200 [&_span]:inline-flex"
+                    dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(currentCase.description) }}
+                  />
+                </div>
+
+                {renderActiveEffectsPanel()}
+
+                {showNextButton && (
+                  <Button
+                    onClick={handleNextButtonClick}
+                    className="mt-5 w-full bg-emerald-600 font-bold text-white hover:bg-emerald-500"
+                    size="lg"
+                  >
+                    Suivant
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        {players.map((player, index) => (
-          <Card
-            key={player.id}
-            className={`p-4 ${currentPlayer === index ? 'ring-2 ring-primary' : ''} bg-card text-card-foreground`}
+      {/* Duel sur case partagée (avant le ciblage) */}
+      <AnimatePresence>
+        {showDuelDialog && duelBoardPosition != null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           >
-            <div className="flex items-center gap-3">
-              <Avatar className={`${player.preferences.color} h-10 w-10`}>
-                {player.preferences.avatar ? (
-                  <AvatarImage src={player.preferences.avatar} alt={player.name} />
-                ) : (
-                  <AvatarFallback>{player.name[0].toUpperCase()}</AvatarFallback>
-                )}
-              </Avatar>
-              <div>
-                <PlayerName player={player} className="font-medium" />
-                <div className="text-sm text-muted-foreground">
-                  {player.drinks} gorgées
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              className="z-[100] max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl"
+            >
+              <div className="bg-gradient-to-br from-rose-600/20 via-card to-orange-600/10 p-5">
+                <div className="mb-4 flex flex-col items-center text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 ring-1 ring-rose-400/30">
+                    <Swords className="h-6 w-6 text-rose-400" />
+                  </div>
+                  <h2 className="text-lg font-bold">Duel sur la case</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Case {duelBoardPosition + 1} ·{' '}
+                    <PlayerName player={players[currentPlayer]} className="font-semibold text-rose-400" />
+                  </p>
+                  <p className="mt-2 max-w-[18rem] text-xs text-muted-foreground">
+                    Gagnant : ne bouge pas · Perdant : recule d&apos;une case
+                  </p>
                 </div>
-                <div className="flex gap-1 mt-1">
-                  {player.protected && (
-                    <span className="text-xs bg-blue-500 text-white px-1 rounded">🛡️</span>
-                  )}
-                  {player.cursed > 0 && (
-                    <span className="text-xs bg-red-500 text-white px-1 rounded">👻 {player.cursed}</span>
-                  )}
-                  {player.linkedTo && player.linkedTurns > 0 && (
-                    <span className="text-xs bg-purple-500 text-white px-1 rounded">🔗 {player.linkedTurns}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
 
-            {/* Dialog pour sélectionner un joueur cible */}
+                {duelPhase === 'pick' && (
+                  <>
+                    <p className="mt-4 text-center text-sm text-muted-foreground">
+                      Choisis un adversaire sur cette case
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {players
+                        .filter(
+                          p =>
+                            p.position === duelBoardPosition &&
+                            p.id !== players[currentPlayer]?.id
+                        )
+                        .map(player => (
+                          <button
+                            key={player.id}
+                            type="button"
+                            onClick={() => startDuelWithOpponent(player.id)}
+                            className="flex flex-col items-center gap-2 rounded-xl border border-border/50 bg-background/60 p-3 transition-all hover:border-rose-400/60 hover:bg-rose-500/10 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                          >
+                            <Avatar className={`${player.preferences.color} h-12 w-12 ring-2 ring-white/10`}>
+                              {player.preferences.avatar ? (
+                                <AvatarImage src={player.preferences.avatar} alt={player.name} />
+                              ) : (
+                                <AvatarFallback className="text-base">
+                                  {player.preferences.icon || player.name[0].toUpperCase()}
+                                </AvatarFallback>
+                              )}
+                            </Avatar>
+                            <PlayerName player={player} className="max-w-full truncate text-center text-sm font-semibold" />
+                          </button>
+                        ))}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={skipDuelAndTarget}
+                      className="mt-5 h-11 w-full border-border/60"
+                    >
+                      Passer le duel
+                    </Button>
+                  </>
+                )}
+
+                {duelPhase === 'wheel' && duelOpponentId && (
+                  <div className="mt-4 flex flex-col items-center gap-5">
+                    <p className="text-center text-sm">
+                      <PlayerName player={players[currentPlayer]} className="font-semibold text-rose-300" />
+                      {' vs '}
+                      <PlayerName
+                        player={players.find(p => p.id === duelOpponentId)!}
+                        className="font-semibold text-amber-300"
+                      />
+                    </p>
+
+                    <div className="relative h-56 w-56 sm:h-64 sm:w-64">
+                      <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 drop-shadow">
+                        <svg width="28" height="28" viewBox="0 0 28 28">
+                          <polygon points="14,0 24,16 4,16" fill="#f43f5e" />
+                          <rect x="12.5" y="16" width="3" height="8" rx="1.5" fill="#f43f5e" />
+                        </svg>
+                      </div>
+                      <motion.div
+                        className="absolute inset-0 overflow-visible rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.35)] ring-2 ring-white/20"
+                        style={{ originX: 0.5, originY: 0.5, rotate: duelWheelRotation }}
+                      >
+                        <svg viewBox="0 0 200 200" width="100%" height="100%">
+                          <circle cx="100" cy="100" r="98" fill="#0f172a" />
+                          {duelWheelSegments.map((seg, i) => {
+                            const anglePerSegment = 360 / Math.max(duelWheelSegments.length, 1)
+                            const start = -90 + i * anglePerSegment
+                            const end = start + anglePerSegment
+                            const path = arcPath(100, 100, 95, start, end)
+                            return (
+                              <g key={seg.id}>
+                                <path d={path} fill={colorForDuelSegment(seg.value)} opacity={0.95} />
+                                <path
+                                  d={`M 100 100 L ${polar(100, 100, 95, start).x} ${polar(100, 100, 95, start).y}`}
+                                  stroke="#0f172a"
+                                  strokeWidth={1.2}
+                                />
+                              </g>
+                            )
+                          })}
+                          <circle cx="100" cy="100" r="10" fill="#ffffff" />
+                          <circle cx="100" cy="100" r="4" fill="#0f172a" />
+                        </svg>
+                      </motion.div>
+                    </div>
+
+                    {!duelWheelResult && (
+                      <Button
+                        disabled={duelWheelSpinning}
+                        onClick={spinDuelWheel}
+                        className="mx-auto w-full max-w-xs bg-gradient-to-r from-rose-500 to-orange-500 py-4 text-base font-bold text-white shadow-lg hover:from-rose-600 hover:to-orange-600"
+                      >
+                        {duelWheelSpinning ? 'La roue tourne…' : 'Lancer le duel'}
+                      </Button>
+                    )}
+
+                    {duelWheelResult && (
+                      <div className="w-full rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-4 text-center">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-rose-400/90">Résultat</p>
+                        <p className="mt-1 text-2xl font-bold text-foreground">{duelWheelResult.label}</p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {duelWheelResult.value === 1 ? (
+                            <>
+                              <PlayerName player={players[currentPlayer]} className="font-semibold" /> gagne et
+                              reste ·{' '}
+                              <PlayerName
+                                player={players.find(p => p.id === duelOpponentId)!}
+                                className="font-semibold"
+                              />{' '}
+                              recule d&apos;une case
+                            </>
+                          ) : (
+                            <>
+                              <PlayerName
+                                player={players.find(p => p.id === duelOpponentId)!}
+                                className="font-semibold"
+                              />{' '}
+                              gagne · <PlayerName player={players[currentPlayer]} className="font-semibold" /> recule
+                              d&apos;une case
+                            </>
+                          )}
+                        </p>
+                        <Button
+                          onClick={finishDuelAndTarget}
+                          className="mt-4 w-full max-w-xs bg-gradient-to-r from-emerald-500 to-teal-500 font-bold text-white shadow-lg"
+                        >
+                          Appliquer l&apos;effet de la case
+                        </Button>
+                      </div>
+                    )}
+
+                    {!duelWheelResult && !duelWheelSpinning && (
+                      <Button type="button" variant="ghost" onClick={() => setDuelPhase('pick')} className="text-xs">
+                        Changer d&apos;adversaire
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sélection du joueur à cibler */}
+      <AnimatePresence>
       {showTargetDialog && (
-        <>
-          {/* Overlay de secours en cas de problème avec le Dialog */}
-          <div className="fixed inset-0 bg-black/80 z-[99] flex items-center justify-center p-4">
-            <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6 z-[100]">
-              <div className="text-center mb-4">
-                <h3 className="text-lg font-semibold">Choisissez un joueur à cibler</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Sélectionnez un joueur pour révéler et appliquer l'effet de la case !
-                </p>
-              </div>
-              
-              {/* Afficher d'abord les autres joueurs */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {players.filter(p => p.id !== players[currentPlayer].id).map(player => (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              className="z-[100] w-full max-w-md overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl"
+            >
+              <div className="bg-gradient-to-br from-violet-600/20 via-card to-emerald-600/10 px-5 pb-5 pt-5">
+                <div className="mb-5 flex flex-col items-center text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/20 ring-1 ring-violet-400/30">
+                    <Target className="h-6 w-6 text-violet-400" />
+                  </div>
+                  <h3 className="text-lg font-bold">Qui cibler ?</h3>
+                  <p className="mt-1 max-w-[18rem] text-sm text-muted-foreground">
+                    L&apos;effet de la case sera révélé après ton choix
+                  </p>
+                  <div className="mt-3 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-violet-400/40 bg-violet-500/10 text-2xl">
+                    ?
+                  </div>
+                </div>
+
+                {renderCompactRanking()}
+
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {players
+                    .filter(p => p.id !== players[currentPlayer].id)
+                    .map(player => (
+                      <button
+                        key={player.id}
+                        type="button"
+                        onClick={() => handleTargetSelection(player.id)}
+                        className="flex flex-col items-center gap-2 rounded-xl border border-border/50 bg-background/60 p-3 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/10 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                      >
+                        <Avatar className={`${player.preferences.color} h-12 w-12 ring-2 ring-white/10`}>
+                          {player.preferences.avatar ? (
+                            <AvatarImage src={player.preferences.avatar} alt={player.name} />
+                          ) : (
+                            <AvatarFallback className="text-base">
+                              {player.preferences.icon || player.name[0].toUpperCase()}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <PlayerName player={player} className="max-w-full truncate text-center text-sm font-semibold" />
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          Case {player.position + 1}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+
+                <div className="mt-5 space-y-2 border-t border-border/50 pt-4">
                   <Button
-                    key={player.id}
-                    onClick={() => {
-                      handleTargetSelection(player.id);
-                    }}
-                    className={`p-3 ${player.preferences.color} text-white font-bold`}
+                    type="button"
+                    variant="outline"
+                    onClick={selectRandomPlayer}
+                    className="h-11 w-full gap-2 border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/15"
                   >
-                    <PlayerName player={player} />
+                    <Shuffle className="h-4 w-4 text-violet-400" />
+                    Joueur aléatoire
                   </Button>
-                ))}
+                  <Button
+                    type="button"
+                    onClick={() => handleTargetSelection(players[currentPlayer].id)}
+                    className={`h-11 w-full gap-2 ${players[currentPlayer].preferences.color} text-white hover:opacity-90`}
+                  >
+                    <User className="h-4 w-4 opacity-90" />
+                    <span className="flex min-w-0 items-center gap-1 truncate">
+                      Moi —
+                      <PlayerName player={players[currentPlayer]} className="font-semibold" />
+                    </span>
+                  </Button>
+                </div>
               </div>
-              
-              {/* Puis les options "Joueur aléatoire" et "Vous-même" */}
-              <Button 
-                onClick={() => {
-                  selectRandomPlayer();
-                }}
-                className="p-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold w-full mb-2"
-              >
-                Joueur aléatoire
-              </Button>
-              
-              <Button 
-                onClick={() => {
-                  handleTargetSelection(players[currentPlayer].id);
-                }}
-                className={`p-4 ${players[currentPlayer].preferences.color} text-white font-bold w-full`}
-              >
-                Vous-même (<PlayerName player={players[currentPlayer]} />)
-              </Button>
-            </div>
-          </div>
-        </>
+            </motion.div>
+          </motion.div>
       )}
+      </AnimatePresence>
+
+      <Dialog open={showTeleportDialog} onOpenChange={setShowTeleportDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>🌀 Téléport</DialogTitle>
+          </DialogHeader>
+          <p className="text-center text-sm text-muted-foreground">
+            Échange ta position avec :
+          </p>
+          <div className="grid grid-cols-1 gap-3 py-2">
+            <Button onClick={() => applyTeleportChoice('leader')} className="font-bold">
+              🏆 Le 1er du classement ({getLeader(players).name})
+            </Button>
+            <Button onClick={() => applyTeleportChoice('last')} variant="secondary" className="font-bold">
+              🐢 Le dernier ({getLastPlayer(players).name})
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showVoteDialog} onOpenChange={setShowVoteDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>🗳️ Vote</DialogTitle>
+          </DialogHeader>
+          <p className="text-center text-sm text-muted-foreground">
+            Main levée — qui boit {pendingCase?.effect ?? 3} gorgées ?
+          </p>
+          <div className="grid grid-cols-2 gap-2 py-2">
+            {players.map(player => (
+              <Button
+                key={player.id}
+                onClick={() => applyVoteTarget(player.id)}
+                className={`${player.preferences.color} text-white`}
+              >
+                <PlayerName player={player} />
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showDeHonteDialog}
+        onOpenChange={open => {
+          if (!open && !deHonteRolling) {
+            clearDeHonteRollInterval()
+            setDeHonteResult(null)
+            setShowDeHonteDialog(false)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>🎲 Dé de la honte</DialogTitle>
+          </DialogHeader>
+          <p className="text-center text-sm text-muted-foreground">
+            1–2 safe · 3–4 gorgées · 5 avance · 6 recul
+          </p>
+
+          <div className="flex flex-col items-center gap-4 py-4">
+            <ShameDice
+              displayValue={deHonteDisplayValue}
+              isRolling={deHonteRolling}
+            />
+
+            {deHonteResult != null && !deHonteRolling && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full rounded-xl border border-violet-500/35 bg-violet-500/10 px-4 py-3 text-center"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-violet-300/90">
+                  Résultat
+                </p>
+                <p className="mt-1 text-3xl font-bold tabular-nums">{deHonteResult}</p>
+                <p className="mt-1 text-sm font-medium text-violet-100">
+                  {getDeHonteOutcomeLabel(deHonteResult)}
+                </p>
+              </motion.div>
+            )}
+          </div>
+
+          {deHonteResult != null && !deHonteRolling ? (
+            <Button
+              onClick={applyDeHonteOutcome}
+              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 font-bold text-white"
+            >
+              Continuer
+            </Button>
+          ) : (
+            <Button
+              onClick={rollDeHonte}
+              disabled={deHonteRolling}
+              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 font-bold text-white"
+            >
+              {deHonteRolling ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Dice6 className="h-5 w-5 animate-spin" />
+                  Le dé roule…
+                </span>
+              ) : (
+                'Lancer le D6'
+              )}
+            </Button>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPileFaceDialog} onOpenChange={setShowPileFaceDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>🪙 Pile ou face</DialogTitle>
+          </DialogHeader>
+          <p className="text-center text-sm text-muted-foreground">
+            {pileFaceTargetId
+              ? `${players.find(p => p.id === pileFaceTargetId)?.name ?? 'La cible'} choisit :`
+              : 'Choix pile ou face'}
+          </p>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            <Button onClick={() => resolvePileFace('pile')} className="font-bold">
+              Pile
+            </Button>
+            <Button onClick={() => resolvePileFace('face')} variant="secondary" className="font-bold">
+              Face
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog pour la case Chance */}
       <Dialog open={showChanceDialog} onOpenChange={setShowChanceDialog}>
@@ -2364,6 +3689,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                       setIsProcessingTurn(false);
                       return;
                     }
+
+                    const chanceAdvanceDescription = `🍀 Chance : <span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> avance de 2 cases (case ${newPosition + 1}) !`
+                    recordLastAction(currentPlayerObj, 'chance', chanceAdvanceDescription, null)
                     
                     // Passer au joueur suivant
                     const nextPlayer = (currentPlayer + 1) % players.length;
@@ -2388,73 +3716,69 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </DialogContent>
       </Dialog>
 
-      {/* Dialog pour la case Défi en chaîne */}
-      <Dialog open={showChainDialog} onOpenChange={setShowChainDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>🔗 Défi en chaîne</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-center text-muted-foreground">
-              Choisis avec qui tu seras lié pendant 5 tours :
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {players.filter(p => p.id !== players[currentPlayer].id).map(player => (
-                <Button
-                  key={player.id}
-                  onClick={() => {
-                    setShowChainDialog(false);
-                    // Lier le joueur actuel au joueur ciblé
-                    const currentPlayerObj = players[currentPlayer];
-                    const targetPlayerObj = player;
-                    
-                    const updatedPlayers = players.map(p => {
-                      if (p.id === currentPlayerObj.id) {
-                        return { 
-                          ...p, 
-                          linkedTo: targetPlayerObj.id,
-                          linkedTurns: 5
-                        };
-                      }
-                      return p;
-                    });
-                    
-                    setPlayers(updatedPlayers);
-                    
-                    // Afficher le résultat
-                    setCurrentCase({
-                      type: 'defi-chaine',
-                      description: `🔗 ${currentPlayerObj.name} est maintenant lié à ${targetPlayerObj.name} pendant 5 tours !`,
-                      effect: 5
-                    });
-                    
-                    setShowNotification(true);
-                    setTimeout(() => {
-                      setShowNotification(false);
-                    }, 3000);
-                    
-                    // Passer au joueur suivant
-                    const nextPlayer = (currentPlayer + 1) % players.length;
-                    if (nextPlayer === 0) {
-                      setTurnCount(turnCount + 1);
-                    }
-                    setCurrentPlayer(nextPlayer);
-                    setIsProcessingTurn(false);
-                    
-                    // Sauvegarde automatique après passage au joueur suivant
-                    setTimeout(() => {
-                      saveGame();
-                    }, 100);
-                  }}
-                  className={`p-3 ${player.preferences.color} text-white font-bold`}
-                >
-                  <PlayerName player={player} />
-                </Button>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Défi en chaîne — sélection du partenaire */}
+      <AnimatePresence>
+        {showChainDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              className="z-[100] w-full max-w-md overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl"
+            >
+              <div className="bg-gradient-to-br from-indigo-600/20 via-card to-violet-600/10 px-5 pb-5 pt-5">
+                <div className="mb-4 flex flex-col items-center text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/20 ring-1 ring-indigo-400/30">
+                    <Link2 className="h-6 w-6 text-indigo-400" />
+                  </div>
+                  <h3 className="text-lg font-bold">Défi en chaîne</h3>
+                  <p className="mt-1 max-w-[18rem] text-sm text-muted-foreground">
+                    Choisis ton partenaire pour <span className="font-semibold text-foreground">5 tours</span> liés
+                  </p>
+                  <p className="mt-2 text-xs text-indigo-300/90">
+                    <PlayerName player={players[currentPlayer]} className="font-semibold" /> choisit
+                  </p>
+                </div>
+
+                {renderCompactRanking()}
+
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {players
+                    .filter(p => p.id !== players[currentPlayer].id)
+                    .map(player => (
+                      <button
+                        key={player.id}
+                        type="button"
+                        onClick={() => handleChainPlayerSelect(player.id)}
+                        className="flex flex-col items-center gap-2 rounded-xl border border-border/50 bg-background/60 p-3 transition-all hover:border-indigo-400/60 hover:bg-indigo-500/10 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                      >
+                        <Avatar className={`${player.preferences.color} h-12 w-12 ring-2 ring-white/10`}>
+                          {player.preferences.avatar ? (
+                            <AvatarImage src={player.preferences.avatar} alt={player.name} />
+                          ) : (
+                            <AvatarFallback className="text-base">
+                              {player.preferences.icon || player.name[0].toUpperCase()}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <PlayerName player={player} className="max-w-full truncate text-center text-sm font-semibold" />
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          Case {player.position + 1}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Dialog pour la case Échange */}
       <Dialog open={showExchangeDialog} onOpenChange={setShowExchangeDialog}>
@@ -2504,12 +3828,13 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                       return;
                     }
                     
-                    // Afficher le résultat
+                    const exchangeDescription = `🔄 ${currentPlayerObj.name} et ${targetPlayerObj.name} ont échangé leurs positions !`
                     setCurrentCase({
                       type: 'echange',
-                      description: `🔄 ${currentPlayerObj.name} et ${targetPlayerObj.name} ont échangé leurs positions !`,
+                      description: exchangeDescription,
                       effect: 0
                     });
+                    recordLastAction(currentPlayerObj, 'echange', exchangeDescription, targetPlayerObj)
                     
                     setShowNotification(true);
                     setTimeout(() => {
@@ -2546,28 +3871,30 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           >
             <motion.div
-              initial={{ scale: 0.8, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 20
-              }}
-              className="bg-card/90 backdrop-blur-md rounded-lg shadow-xl max-w-2xl w-full mx-auto overflow-hidden"
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              className="z-[100] max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl"
             >
-              <div className="p-6">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold mb-2">🎯 Roue des Gorgées</h2>
-                  <p className="text-muted-foreground">
-                    Au tour de <PlayerName player={players[currentPlayer]} className="font-bold" />
+              <div className="bg-gradient-to-br from-amber-600/20 via-card to-rose-600/10 p-5">
+                <div className="mb-4 flex flex-col items-center text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20 ring-1 ring-amber-400/30">
+                    <CircleDot className="h-6 w-6 text-amber-400" />
+                  </div>
+                  <h2 className="text-lg font-bold">
+                    {wheelMode === 'defis' ? 'Roue des défis' : 'Roue des gorgées'}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Au tour de <PlayerName player={players[currentPlayer]} className="font-semibold text-amber-400" />
                   </p>
                 </div>
 
-                <div className="flex flex-col items-center gap-6">
-                  <div className="relative w-64 h-64 md:w-80 md:h-80">
+                <div className="mt-4 flex flex-col items-center gap-5">
+                  <div className="relative h-56 w-56 sm:h-64 sm:w-64">
                     {/* Flèche fixe (pointeur résultat) */}
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 drop-shadow">
                       <svg width="28" height="28" viewBox="0 0 28 28">
@@ -2607,27 +3934,22 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                   </div>
 
                   {!wheelResult && (
-                    <Button 
-                      disabled={wheelSpinning} 
-                      onClick={spinWheel} 
-                      className="px-8 py-4 text-lg font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                    <Button
+                      disabled={wheelSpinning}
+                      onClick={spinWheel}
+                      className="mx-auto w-full max-w-xs bg-gradient-to-r from-amber-500 to-orange-500 py-4 text-base font-bold text-white shadow-lg hover:from-amber-600 hover:to-orange-600"
                     >
                       {wheelSpinning ? 'La roue tourne…' : 'Lancer la roue'}
                     </Button>
                   )}
 
                   {wheelResult && (
-                    <div className="text-center">
-                      <div className="text-xl font-bold mb-2">
-                        Résultat : {wheelResult.label}
-                      </div>
-                      <Button 
-                        onClick={() => {
-                          setShowWheel(false);
-                          setWheelResult(null);
-                          // Le bouton "Suivant" sera affiché par handleWheelComplete
-                        }}
-                        className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg shadow-lg"
+                    <div className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-center">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-400/90">Résultat</p>
+                      <p className="mt-1 text-2xl font-bold text-foreground">{wheelResult.label}</p>
+                      <Button
+                        onClick={finishWheelModal}
+                        className="mt-4 w-full max-w-xs bg-gradient-to-r from-emerald-500 to-teal-500 font-bold text-white shadow-lg"
                       >
                         Continuer
                       </Button>
@@ -2636,10 +3958,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                 </div>
 
                 {/* Légende des couleurs */}
-                {wheelSegments.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-lg font-semibold mb-3">Légende</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                {wheelSegments.length > 0 && !wheelSpinning && (
+                  <div className="mt-4 rounded-xl border border-border/40 bg-background/40 px-3 py-2">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Légende</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
                       {Object.entries(wheelSegments.reduce<Record<string, { color: string; count: number }>>((acc, s) => {
                         const key = s.label
                         const color = colorForValue(s.value)
@@ -2647,8 +3969,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                         acc[key].count += 1
                         return acc
                       }, {})).map(([label, info]) => (
-                        <div key={label} className="flex items-center gap-2">
-                          <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: info.color }} />
+                        <div key={label} className="flex items-center gap-1.5">
+                          <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: info.color }} />
                           <span className="text-muted-foreground">{label}{info.count > 1 ? ` ×${info.count}` : ''}</span>
                         </div>
                       ))}
