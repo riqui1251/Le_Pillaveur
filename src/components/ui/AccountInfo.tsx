@@ -1,234 +1,187 @@
 /* eslint-disable react/no-unescaped-entities */
-"use client";
+"use client"
 
-import { useState, useEffect } from 'react';
-import { Trash2, User, Settings, Shield, Calendar, Gamepad2, BarChart3, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { usePlayers } from '@/hooks/usePlayers';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils';
-import { Player } from '@/lib/players';
-import { getSafeStorage } from '@/lib/storage';
-
-
+import { useState, useEffect } from 'react'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users } from 'lucide-react'
+import { usePlayers } from '@/hooks/usePlayers'
+import { isSpecialPlayer, getSpecialEffectClass, getColorFromClass } from '@/lib/playerUtils'
+import { getSafeStorage } from '@/lib/storage'
+import { GAMES } from '@/lib/games'
+import { cn } from '@/lib/utils'
 
 interface AccountInfoProps {
-  onLogout: () => void;
+  onLogout: () => void
+}
+
+const GAME_NAMES: Record<string, string> = Object.fromEntries(
+  GAMES.map((g) => [g.id, g.title])
+)
+
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center">
+      <span className={cn('text-3xl font-bold tabular-nums', color)}>{value}</span>
+      <span className="mt-1 text-xs text-white/50">{label}</span>
+    </div>
+  )
 }
 
 export function AccountInfo({ onLogout }: AccountInfoProps) {
-  const { 
-    players, 
-    loading, 
-    removePlayer 
-  } = usePlayers();
-  
-  const [totalGames, setTotalGames] = useState(0);
-  const [totalDrinks, setTotalDrinks] = useState(0);
+  const { players, loading, removePlayer } = usePlayers()
+  const [totalGames, setTotalGames] = useState(0)
+  const [totalDrinks, setTotalDrinks] = useState(0)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
-  // Calculer le nombre total de parties jouées et de gorgées bues
   useEffect(() => {
-    // Charger les statistiques
-    const storage = getSafeStorage();
-    const storedGames = storage?.getItem('games') ?? null;
-    const games = storedGames ? JSON.parse(storedGames) : [];
-    
-    // Si games n'existe pas, calculer à partir des statistiques des joueurs
+    const storage = getSafeStorage()
+    const storedGames = storage?.getItem('games') ?? null
+    const games = storedGames ? JSON.parse(storedGames) : []
+
     if (games.length === 0 && players.length > 0) {
-      const totalGamesPlayed = players.reduce((total, player) => {
-        return total + (player.stats.gamesPlayed || 0);
-      }, 0);
-      setTotalGames(totalGamesPlayed);
+      setTotalGames(players.reduce((t, p) => t + (p.stats.gamesPlayed || 0), 0))
     } else {
-      setTotalGames(games.length);
+      setTotalGames(games.length)
     }
-
-    // Calculer le total des gorgées bues
-    const totalDrinksCount = players.reduce((total, player) => {
-      return total + (player.stats.totalDrinks || 0);
-    }, 0);
-    setTotalDrinks(totalDrinksCount);
-  }, [players]);
-
-  // Formatage de date pour l'affichage
-  const formatDate = (timestamp: number) => {
-    if (!timestamp) return "Jamais";
-    const date = new Date(timestamp);
-    return date.toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  // Obtenir le nom du jeu favori
-  const getFavoriteGameName = (gameId?: string) => {
-    if (!gameId) return 'Aucun';
-    
-    const gameNames: {[key: string]: string} = {
-      'hi-lo': 'Hi/Lo',
-      'petit-buveur': 'Le Petit Buveur',
-      'pmu': 'PMU',
-      'roulette': 'Roulette'
-    };
-    
-    return gameNames[gameId] || gameId;
-  };
-
-
+    setTotalDrinks(players.reduce((t, p) => t + (p.stats.totalDrinks || 0), 0))
+  }, [players])
 
   if (loading) {
-    return <div className="flex justify-center items-center p-6">Chargement...</div>;
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
+      </div>
+    )
   }
 
   return (
-    <div className="flex flex-col space-y-6 p-6">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">Gestion du compte</h1>
-        <Button 
-          variant="outline"
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/70">
+            Le Pillaveur
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">Gestion du compte</h1>
+        </div>
+        <button
           onClick={onLogout}
-          className="border-red-500 text-red-500 hover:bg-red-500/10"
+          className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
         >
-          Se déconnecter
-        </Button>
+          <LogOut className="h-4 w-4" />
+          <span className="hidden sm:inline">Déconnexion</span>
+        </button>
       </div>
-      
-      <Separator />
-      
-      {/* Section des statistiques globales */}
-      <Card className="border-none shadow-lg bg-gradient-to-br from-gray-900 to-gray-800">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-purple-400" />
-            Statistiques globales
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-gray-800/50 p-4 rounded-lg text-center">
-              <h3 className="text-3xl font-bold text-purple-400">{players.length}</h3>
-              <p className="text-gray-400">Joueurs</p>
-            </div>
-            <div className="bg-gray-800/50 p-4 rounded-lg text-center">
-              <h3 className="text-3xl font-bold text-blue-400">{totalGames}</h3>
-              <p className="text-gray-400">Parties jouées</p>
-            </div>
-            <div className="bg-gray-800/50 p-4 rounded-lg text-center">
-              <h3 className="text-3xl font-bold text-amber-400">{totalDrinks}</h3>
-              <p className="text-gray-400">Gorgées bues</p>
-            </div>
+
+      {/* Stats globales */}
+      <section>
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
+          <BarChart3 className="h-4 w-4 text-amber-300" />
+          Statistiques globales
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard label="Joueurs" value={players.length} color="text-amber-300" />
+          <StatCard label="Parties" value={totalGames} color="text-violet-300" />
+          <StatCard label="Gorgées" value={totalDrinks} color="text-rose-300" />
+        </div>
+      </section>
+
+      {/* Liste joueurs */}
+      <section>
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
+          <Users className="h-4 w-4 text-amber-300" />
+          Joueurs enregistrés
+        </div>
+
+        {players.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-10 text-center">
+            <User className="mb-2 h-7 w-7 text-white/20" />
+            <p className="text-sm text-white/40">Aucun joueur enregistré</p>
           </div>
-        </CardContent>
-      </Card>
-      
-      {/* Section de gestion des joueurs */}
-      <Card className="border-none shadow-lg bg-gradient-to-br from-gray-900 to-gray-800">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-blue-400" />
-            Gestion des joueurs
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {players.length === 0 ? (
-              <div className="bg-gray-800/50 p-6 rounded-lg text-center">
-                <p className="text-gray-400">Aucun joueur enregistré</p>
-              </div>
-            ) : (
-              players.map(player => (
-                <div 
+        ) : (
+          <ul className="space-y-2">
+            {players.map((player) => {
+              const bg = getColorFromClass(player.preferences.color)
+              const isConfirming = confirmDelete === player.id
+              return (
+                <li
                   key={player.id}
-                  className="flex items-center justify-between p-4 rounded-lg transition-all duration-300 hover:scale-[1.01]"
-                  style={{ 
-                    backgroundColor: player.preferences.color,
-                    boxShadow: isSpecialPlayer(player) ? `0 0 15px ${player.preferences.color}` : 'none'
-                  }}
+                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 transition-all"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg">
-                      {player.preferences.icon || player.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className={getSpecialEffectClass(player) || 'player-name-default'}>
-                        {player.name}
-                      </span>
-                      <div className="flex items-center gap-2 text-xs opacity-80">
-                        <span>{player.stats.gamesPlayed} parties</span>
-                        <span>•</span>
-                        <span>{player.stats.wins} victoires</span>
-                        {player.stats.favoriteGame && (
-                          <>
-                            <span>•</span>
-                            <span className="flex items-center">
-                              <Gamepad2 className="h-3 w-3 mr-1" />
-                              {getFavoriteGameName(player.stats.favoriteGame)}
-                            </span>
-                          </>
-                        )}
-                      </div>
+                  {/* Avatar */}
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white shadow"
+                    style={{ backgroundColor: bg }}
+                  >
+                    {player.preferences.icon || player.name.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Infos */}
+                  <div className="min-w-0 flex-1">
+                    <p className={cn('truncate text-sm font-semibold', isSpecialPlayer(player) ? getSpecialEffectClass(player) : 'text-white')}>
+                      {player.name}
+                    </p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-white/45">
+                      <span>{player.stats.gamesPlayed} parties</span>
+                      <span>·</span>
+                      <span>{player.stats.wins} victoires</span>
+                      {player.stats.favoriteGame && (
+                        <>
+                          <span>·</span>
+                          <span className="flex items-center gap-1">
+                            <Gamepad2 className="h-2.5 w-2.5" />
+                            {GAME_NAMES[player.stats.favoriteGame] ?? player.stats.favoriteGame}
+                          </span>
+                        </>
+                      )}
+                      {player.stats.lastPlayed ? (
+                        <>
+                          <span>·</span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-2.5 w-2.5" />
+                            {new Date(player.stats.lastPlayed).toLocaleDateString('fr-FR')}
+                          </span>
+                        </>
+                      ) : null}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {player.stats.lastPlayed && (
-                      <Badge variant="outline" className="bg-black/20 text-white border-none">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {new Date(player.stats.lastPlayed).toLocaleDateString('fr-FR')}
-                      </Badge>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => removePlayer(player.id)}
-                      className="hover:bg-white/10 text-white"
+
+                  {/* Supprimer */}
+                  {isConfirming ? (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        onClick={() => { removePlayer(player.id); setConfirmDelete(null) }}
+                        className="rounded-lg bg-red-500/20 px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/30"
+                      >
+                        Confirmer
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(null)}
+                        className="rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-xs font-medium text-white/60 hover:bg-white/10"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDelete(player.id)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/15 hover:text-red-400"
                     >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Section des paramètres du compte */}
-      <Card className="border-none shadow-lg bg-gradient-to-br from-gray-900 to-gray-800">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-green-400" />
-            Paramètres du compte
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-gray-800/50 p-4 rounded-lg">
-            <p className="text-gray-400">Les données sont stockées localement sur votre appareil.</p>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Section de synchronisation */}
-      <Card className="border-none shadow-lg bg-gradient-to-br from-gray-900 to-gray-800">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-amber-400" />
-            Synchronisation
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-gray-800/50 p-4 rounded-lg flex items-center">
-            <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center mr-2">
-              <span className="text-black font-bold">!</span>
-            </div>
-            <p className="text-gray-400">La synchronisation entre appareils n'est pas encore disponible.</p>
-          </div>
-        </CardContent>
-      </Card>
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
 
-
+      {/* Infos stockage */}
+      <section>
+        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3 text-sm text-white/40">
+          Les données sont stockées localement sur cet appareil. La synchronisation multi-appareils n'est pas encore disponible.
+        </div>
+      </section>
     </div>
-  );
-} 
+  )
+}
