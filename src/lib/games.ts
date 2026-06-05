@@ -6,8 +6,9 @@ export type GameMeta = {
   emoji: string;
   gradient: string;
   fallbackColor: string;
-  colorFrom?: string; // Hex/RGB for inline gradients (avoids Tailwind purge)
+  colorFrom?: string;
   colorTo?: string;
+  hidden?: boolean;
 };
 
 // Source unique de vérité pour les jeux
@@ -102,6 +103,7 @@ export const GAMES: GameMeta[] = [
   },
   {
     id: 'roue-des-gorgees',
+    hidden: true,
     title: 'Roue des Gorgées',
     description: 'Ajoute des gorgées/actions et fais tourner la roue !',
     path: '/games/roue-des-gorgees',
@@ -113,6 +115,7 @@ export const GAMES: GameMeta[] = [
   },
   {
     id: 'ballon-surprise',
+    hidden: true,
     title: 'Ballon Surprise',
     description: "Choisissez un ballon et priez pour qu'il gagne la course !",
     path: '/games/ballon-surprise',
@@ -124,6 +127,7 @@ export const GAMES: GameMeta[] = [
   },
   {
     id: 'petits-points',
+    hidden: true,
     title: 'Petits Points',
     description: 'Un jeu de précision et de rapidité où chaque point compte !',
     path: '/games/petits-points',
@@ -135,6 +139,7 @@ export const GAMES: GameMeta[] = [
   },
   {
     id: 'pendu',
+    hidden: true,
     title: 'Le Pendu des Gorgées',
     description: 'Devinez le mot mystère avant d\'être pendu ! Lettres, gorgées et suspense garantis.',
     path: '/games/pendu',
@@ -146,6 +151,7 @@ export const GAMES: GameMeta[] = [
   },
   {
     id: 'trial-poursuite',
+    hidden: true,
     title: 'Trial Poursuite',
     description: 'Redez des défis fous sous pression ! Coordination, créativité et rapidité au programme.',
     path: '/games/trial-poursuite',

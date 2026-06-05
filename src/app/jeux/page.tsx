@@ -47,8 +47,9 @@ export default function GamesHubPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return GAMES
-    return GAMES.filter(
+    const visible = GAMES.filter(g => !g.hidden)
+    if (!q) return visible
+    return visible.filter(
       (g) =>
         g.title.toLowerCase().includes(q) ||
         g.description.toLowerCase().includes(q) ||

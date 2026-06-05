@@ -3,261 +3,210 @@
 
 import { useState, useEffect } from 'react'
 import { Player, getPlayerGameBoost } from '@/lib/players'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { RotateCcw } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { RotateCcw, X } from 'lucide-react'
 import { GameShell } from '@/components/game/GameShell'
 import { GameMode } from '../page'
-import { PlayerName } from '@/components/ui/PlayerName'
+import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
+import { cn } from '@/lib/utils'
 
-// Types de cartes
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type CardValue = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'V' | 'D' | 'R' | 'A'
 type CardSuit = '♠' | '♥' | '♦' | '♣'
-
-// Types de paris
 type BetType = 'rouge' | 'double-rouge' | 'noir' | 'double-noir' | 'purple' | 'double-purple'
 
-const cardSuits: CardSuit[] = ['♠', '♥', '♦', '♣']
-
-// Configuration des paris : nb cartes, gorgées si erreur, fonction de vérification
-const BET_CONFIG: Record<BetType, { cards: number; gulps: number; label: string }> = {
-  'rouge': { cards: 1, gulps: 1, label: 'Rouge' },
-  'double-rouge': { cards: 2, gulps: 2, label: 'Double rouge' },
-  'noir': { cards: 1, gulps: 1, label: 'Noir' },
-  'double-noir': { cards: 2, gulps: 2, label: 'Double noir' },
-  'purple': { cards: 2, gulps: 2, label: 'Purple' },
-  'double-purple': { cards: 4, gulps: 4, label: 'Double Purple' },
-}
-
-// Interface pour une carte
-interface PlayingCard {
-  value: CardValue
-  suit: CardSuit
-  color: 'red' | 'black'
-}
+interface PlayingCard { value: CardValue; suit: CardSuit; color: 'red' | 'black' }
 
 interface GameProps {
   players: Player[]
   onGameEnd: () => void
-  updatePlayerStats: (playerId: string, gameId: string, stats: { gamesPlayed: number, totalDrinks?: number, wins?: number }) => void
+  updatePlayerStats: (id: string, game: string, stats: { gamesPlayed: number; totalDrinks?: number; wins?: number }) => void
   gameMode: GameMode
 }
 
-const getSpecialEffectClass = (effect: string | null | undefined): string => {
-  if (!effect) return '';
-  switch (effect) {
-    case 'red': return 'special-player-name-red';
-    case 'blue': return 'special-player-name-blue';
-    case 'rainbow': return 'special-player-name-rainbow';
-    case 'gold': return 'special-player-name-gold';
-    case 'fire': return 'special-player-name-fire';
-    case 'neon': return 'special-player-name-neon';
-    default: return '';
-  }
+// ─── Config ───────────────────────────────────────────────────────────────────
+
+const cardSuits: CardSuit[] = ['♠', '♥', '♦', '♣']
+
+const BET_CONFIG: Record<BetType, { cards: number; gulps: number; label: string; emoji: string }> = {
+  'rouge':         { cards: 1, gulps: 1, label: 'Rouge',         emoji: '🔴' },
+  'double-rouge':  { cards: 2, gulps: 2, label: 'Double rouge',  emoji: '🔴🔴' },
+  'noir':          { cards: 1, gulps: 1, label: 'Noir',          emoji: '⚫' },
+  'double-noir':   { cards: 2, gulps: 2, label: 'Double noir',   emoji: '⚫⚫' },
+  'purple':        { cards: 2, gulps: 2, label: 'Purple',        emoji: '🟣' },
+  'double-purple': { cards: 4, gulps: 4, label: 'Double Purple', emoji: '🟣🟣' },
 }
 
-const isSpecialPlayer = (player: any): boolean => {
-  if (!player) return false;
-  if (player?.preferences?.specialEffect) return true;
-  const name = typeof player === 'string' ? player.toLowerCase() : player?.name?.toLowerCase();
-  return name === 'sim' || name === 'riqui';
+const BET_STYLE: Record<BetType, { from: string; to: string; border: string }> = {
+  'rouge':         { from: 'from-red-600',    to: 'to-red-800',     border: 'border-red-500/40' },
+  'double-rouge':  { from: 'from-red-500',    to: 'to-rose-700',    border: 'border-red-400/40' },
+  'noir':          { from: 'from-zinc-700',   to: 'to-zinc-900',    border: 'border-zinc-500/40' },
+  'double-noir':   { from: 'from-zinc-600',   to: 'to-neutral-900', border: 'border-zinc-400/40' },
+  'purple':        { from: 'from-violet-600', to: 'to-purple-800',  border: 'border-violet-500/40' },
+  'double-purple': { from: 'from-violet-500', to: 'to-fuchsia-800', border: 'border-violet-400/40' },
 }
 
-// Vérifier si les cartes tirées correspondent au pari
-function checkBetResult(bet: BetType, drawnCards: PlayingCard[]): boolean {
-  const colors = drawnCards.map(c => c.color)
-  
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function checkBetResult(bet: BetType, cards: PlayingCard[]): boolean {
+  const colors = cards.map(c => c.color)
   switch (bet) {
-    case 'rouge':
-      return colors.length === 1 && colors[0] === 'red'
-    case 'double-rouge':
-      return colors.length === 2 && colors.every(c => c === 'red')
-    case 'noir':
-      return colors.length === 1 && colors[0] === 'black'
-    case 'double-noir':
-      return colors.length === 2 && colors.every(c => c === 'black')
-    case 'purple':
-      if (colors.length !== 2) return false
-      return (colors[0] === 'red' && colors[1] === 'black') || (colors[0] === 'black' && colors[1] === 'red')
-    case 'double-purple':
+    case 'rouge':         return colors.length === 1 && colors[0] === 'red'
+    case 'double-rouge':  return colors.length === 2 && colors.every(c => c === 'red')
+    case 'noir':          return colors.length === 1 && colors[0] === 'black'
+    case 'double-noir':   return colors.length === 2 && colors.every(c => c === 'black')
+    case 'purple':        return colors.length === 2 && colors[0] !== colors[1]
+    case 'double-purple': {
       if (colors.length !== 4) return false
-      const rb = colors[0] === 'red' && colors[1] === 'black' && colors[2] === 'red' && colors[3] === 'black'
-      const br = colors[0] === 'black' && colors[1] === 'red' && colors[2] === 'black' && colors[3] === 'red'
-      return rb || br
-    default:
-      return false
+      // Deux paires Purple indépendantes : chaque paire doit alterner (R≠B)
+      return colors[0] !== colors[1] && colors[2] !== colors[3]
+    }
+    default: return false
   }
 }
+
+// ─── Composant carte ──────────────────────────────────────────────────────────
+
+function PlayingCardUI({ card, size = 'lg' }: { card: PlayingCard; size?: 'sm' | 'lg' }) {
+  const isRed = card.color === 'red'
+  if (size === 'sm') {
+    return (
+      <div className="flex h-14 w-10 shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/20 bg-white shadow-md">
+        <span className={cn('text-xs font-extrabold leading-none', isRed ? 'text-red-600' : 'text-gray-900')}>{card.value}</span>
+        <span className={cn('text-sm leading-none', isRed ? 'text-red-600' : 'text-gray-900')}>{card.suit}</span>
+      </div>
+    )
+  }
+  return (
+    <div className={cn(
+      'flex h-32 w-20 sm:h-36 sm:w-24 flex-col items-center justify-center rounded-2xl border-2 bg-white shadow-xl',
+      isRed ? 'border-red-400' : 'border-gray-800',
+    )}>
+      <span className={cn('text-3xl sm:text-4xl font-extrabold', isRed ? 'text-red-600' : 'text-gray-900')}>{card.value}</span>
+      <span className={cn('text-2xl sm:text-3xl leading-tight', isRed ? 'text-red-600' : 'text-gray-900')}>{card.suit}</span>
+    </div>
+  )
+}
+
+// ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function Game({ players, onGameEnd, updatePlayerStats }: GameProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [deck, setDeck] = useState<PlayingCard[]>([])
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
-  const [drinkCounter, setDrinkCounter] = useState(0) // Compteur accumulé pour le prochain qui perd
+  const [drinkCounter, setDrinkCounter] = useState(0)
   const [gameResults, setGameResults] = useState<Record<string, number>>({})
-  const [showResultDialog, setShowResultDialog] = useState(false)
+  const [showResult, setShowResult] = useState(false)
   const [amountToDrink, setAmountToDrink] = useState(0)
   const [drawnCards, setDrawnCards] = useState<PlayingCard[]>([])
   const [lastBet, setLastBet] = useState<BetType | null>(null)
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null)
   const [isRevealing, setIsRevealing] = useState(false)
-  const [canContinue, setCanContinue] = useState(false) // Après un bon pari : continuer ou passer
-  const [cardHistory, setCardHistory] = useState<PlayingCard[]>([]) // Dernières cartes sorties
+  const [canContinue, setCanContinue] = useState(false)
+  const [cardHistory, setCardHistory] = useState<PlayingCard[]>([])
+  const [totalCardsDrawn, setTotalCardsDrawn] = useState(0)
 
+  useEffect(() => { setIsMounted(true) }, [])
   useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (isMounted && players.length >= 2) {
-      initializeGame()
-    }
+    if (isMounted && players.length >= 2) initializeGame()
   }, [isMounted, players.length])
 
   const createDeck = (): PlayingCard[] => {
-    const values: CardValue[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R', 'A']
-    const deck: PlayingCard[] = []
-    for (const suit of cardSuits) {
-      for (const value of values) {
-        deck.push({
-          value,
-          suit,
-          color: (suit === '♥' || suit === '♦') ? 'red' : 'black'
-        })
-      }
-    }
-    return deck
+    const values: CardValue[] = ['2','3','4','5','6','7','8','9','10','V','D','R','A']
+    return cardSuits.flatMap(suit =>
+      values.map(value => ({ value, suit, color: (suit === '♥' || suit === '♦') ? 'red' : 'black' }))
+    )
   }
 
-  const shuffleDeck = (deck: PlayingCard[]): PlayingCard[] => {
-    const shuffled = [...deck]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  const shuffleDeck = (d: PlayingCard[]): PlayingCard[] => {
+    const s = [...d]
+    for (let i = s.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [s[i], s[j]] = [s[j], s[i]]
     }
-    return shuffled
+    return s
   }
 
   const initializeGame = () => {
-    if (players.length === 0) return
-    const newDeck = shuffleDeck(createDeck())
-    setDeck(newDeck)
+    if (!players.length) return
+    setDeck(shuffleDeck(createDeck()))
     setCurrentPlayerIndex(Math.floor(Math.random() * players.length))
     setDrinkCounter(0)
     setGameResults({})
-    setShowResultDialog(false)
+    setShowResult(false)
     setDrawnCards([])
     setLastBet(null)
     setIsCorrect(null)
     setIsRevealing(false)
     setCanContinue(false)
     setCardHistory([])
+    setTotalCardsDrawn(0)
   }
 
   const handleBet = (bet: BetType) => {
     if (isRevealing) return
-    
     const config = BET_CONFIG[bet]
+    // Si pas assez de cartes, on mélange un nouveau paquet et on l'ajoute aux restantes
     let currentDeck = [...deck]
-    
     if (currentDeck.length < config.cards) {
-      currentDeck = shuffleDeck(createDeck())
+      currentDeck = [...currentDeck, ...shuffleDeck(createDeck())]
     }
-    
     const drawn = currentDeck.slice(0, config.cards)
-    const currentCounter = drinkCounter
+    const counter = drinkCounter
     setDeck(currentDeck.slice(config.cards))
+    setTotalCardsDrawn(prev => prev + config.cards)
     setDrawnCards(drawn)
     setLastBet(bet)
     setIsRevealing(true)
-    
+
     setTimeout(() => {
-      let isBetCorrect = checkBetResult(bet, drawn)
-      const currentPlayer = players[currentPlayerIndex]
-      const boost = currentPlayer ? getPlayerGameBoost(currentPlayer, 'purple') : 0
-      if (!isBetCorrect && boost > 0 && Math.random() * 100 < boost) {
-        isBetCorrect = true
-      }
-      setIsCorrect(isBetCorrect)
-      
-      // Ajouter les cartes à l'historique (garder les 6 dernières)
+      const player = players[currentPlayerIndex]
+      const boost = player ? getPlayerGameBoost(player, 'purple') : 0
+      let correct = checkBetResult(bet, drawn)
+      if (!correct && boost > 0 && Math.random() * 100 < boost) correct = true
+      setIsCorrect(correct)
       setCardHistory(prev => [...prev, ...drawn].slice(-6))
-      
-      if (isBetCorrect) {
+
+      if (correct) {
         setDrinkCounter(prev => prev + config.gulps)
         setCanContinue(true)
       } else {
-        const totalToDrink = currentCounter + config.gulps
-        setAmountToDrink(totalToDrink)
-        setGameResults(prev => ({
-          ...prev,
-          [currentPlayer.id]: (prev[currentPlayer.id] || 0) + totalToDrink
-        }))
+        const total = counter + config.gulps
+        setAmountToDrink(total)
+        setGameResults(prev => ({ ...prev, [player.id]: (prev[player.id] || 0) + total }))
         setDrinkCounter(0)
-        setShowResultDialog(true)
+        setShowResult(true)
       }
-      
       setIsRevealing(false)
-    }, 800)
+    }, 700)
   }
 
   const handleContinue = () => {
-    setDrawnCards([])
-    setLastBet(null)
-    setIsCorrect(null)
-    setCanContinue(false)
+    setDrawnCards([]); setLastBet(null); setIsCorrect(null); setCanContinue(false)
   }
 
   const handlePass = () => {
-    setCurrentPlayerIndex((prev) => (prev + 1) % Math.max(1, players.length))
-    setDrawnCards([])
-    setLastBet(null)
-    setIsCorrect(null)
-    setCanContinue(false)
+    setCurrentPlayerIndex(prev => (prev + 1) % Math.max(1, players.length))
+    setDrawnCards([]); setLastBet(null); setIsCorrect(null); setCanContinue(false)
   }
 
-  const closeResultDialog = () => {
-    setShowResultDialog(false)
-    setCurrentPlayerIndex((prev) => (prev + 1) % Math.max(1, players.length))
-    setDrawnCards([])
-    setLastBet(null)
-  }
-
-  const getCardStyle = (color: string) => ({
-    backgroundColor: 'white',
-    color: color === 'red' ? '#e53e3e' : '#1a202c',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    border: '2px solid',
-    borderColor: color === 'red' ? '#e53e3e' : '#1a202c'
-  })
-
-  const restartGame = () => {
-    initializeGame()
+  const closeResult = () => {
+    setShowResult(false)
+    setCurrentPlayerIndex(prev => (prev + 1) % Math.max(1, players.length))
+    setDrawnCards([]); setLastBet(null)
   }
 
   const quitGame = () => {
-    // Enregistre la session : 1 partie par joueur + gorgées accumulées
-    players.forEach(p => {
-      updatePlayerStats(p.id, 'purple', {
-        gamesPlayed: 1,
-        totalDrinks: gameResults[p.id] || 0,
-      })
-    })
+    players.forEach(p => updatePlayerStats(p.id, 'purple', { gamesPlayed: 1, totalDrinks: gameResults[p.id] || 0 }))
     onGameEnd()
   }
 
   const currentPlayer = players[currentPlayerIndex]
-  const specialEffectClass = currentPlayer ? getSpecialEffectClass(currentPlayer?.preferences?.specialEffect) : ''
+  const playerBg = currentPlayer ? getColorFromClass(currentPlayer.preferences?.color ?? '') : '#7c3aed'
 
-  if (!players || players.length < 2) {
-    return <div className="p-6 text-center text-red-500">Au moins 2 joueurs requis.</div>
-  }
-
-  if (!isMounted) {
-    return <div className="p-6 text-center">Chargement du jeu...</div>
-  }
+  if (!isMounted) return null
+  if (!players || players.length < 2) return <div className="p-6 text-center text-red-400">Au moins 2 joueurs requis.</div>
 
   const betButtons: BetType[] = ['rouge', 'double-rouge', 'noir', 'double-noir', 'purple', 'double-purple']
 
@@ -265,129 +214,139 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     <GameShell
       title="Purple"
       onBack={quitGame}
-      maxWidth={760}
+      maxWidth={700}
       headerRight={
-        <Button variant="ghost" size="icon" onClick={restartGame} aria-label="Nouvelle partie">
-          <RotateCcw className="h-5 w-5" />
-        </Button>
+        <button onClick={initializeGame} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:bg-white/10 hover:text-white" aria-label="Nouvelle partie">
+          <RotateCcw className="h-4 w-4" />
+        </button>
       }
     >
-      <div className="space-y-6">
-      <Card className="p-4 sm:p-6">
-        <div className="flex flex-col items-center space-y-6">
-          {currentPlayer && (
-            <div className="flex items-center space-x-2 mb-4">
-              <Avatar className={`h-10 w-10 ${isSpecialPlayer(currentPlayer) ? 'border-2 border-purple-500 shadow-lg shadow-purple-500/50' : ''}`}>
-                <AvatarImage src={currentPlayer?.preferences?.avatar} />
-                <AvatarFallback className={currentPlayer?.preferences?.color || 'bg-primary'}>
-                  {currentPlayer?.preferences?.icon || (currentPlayer?.name ? currentPlayer.name.charAt(0).toUpperCase() : '?')}
-                </AvatarFallback>
-              </Avatar>
-              <PlayerName player={currentPlayer} className={`font-semibold ${specialEffectClass}`} />
-            </div>
-          )}
+      <div className="space-y-4">
 
-          {/* Cartes tirées */}
-          {drawnCards.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2">
-              {drawnCards.map((card, i) => (
-                <div
-                  key={i}
-                  className="w-20 h-28 sm:w-24 sm:h-36 rounded-lg flex flex-col items-center justify-center text-2xl sm:text-3xl font-bold"
-                  style={getCardStyle(card.color)}
-                >
-                  <div>{card.value}</div>
-                  <div>{card.suit}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Résultat après révélation */}
-          {isCorrect === true && canContinue && (
-            <div className="text-center space-y-3">
-              <p className="text-green-600 font-semibold text-lg">Correct ! +{lastBet ? BET_CONFIG[lastBet].gulps : 0} au compteur</p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                <Button onClick={handleContinue} className="bg-purple-600 hover:bg-purple-700">
-                  Continuer
-                </Button>
-                <Button onClick={handlePass} variant="outline">
-                  Passer au suivant
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Boutons de paris - affichés quand pas de résultat en attente ou après avoir choisi continuer */}
-          {!canContinue && !showResultDialog && (
-            <div className="flex flex-col gap-2 w-full max-w-md">
-              <p className="text-center text-sm text-gray-500 mb-2">Choisis ton pari</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {betButtons.map((bet) => (
-                  <Button
-                    key={bet}
-                    onClick={() => handleBet(bet)}
-                    disabled={isRevealing || deck.length < BET_CONFIG[bet].cards}
-                    variant="outline"
-                    className={`h-auto py-3 border-0 text-white font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
-                      bet.includes('rouge') ? 'bg-gradient-to-br from-red-500 to-red-700' :
-                      bet.includes('noir') ? 'bg-gradient-to-br from-gray-700 to-gray-900' :
-                      'bg-gradient-to-br from-purple-500 to-purple-700'
-                    }`}
-                  >
-                    <span className="text-xs sm:text-sm">{BET_CONFIG[bet].label}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {isRevealing && (
-            <p className="text-amber-600 animate-pulse">Révélation...</p>
-          )}
-        </div>
-      </Card>
-
-      {/* Compteur de gorgées et historique des cartes */}
-      <div className="space-y-2">
-        <div className="py-3 px-4 rounded-lg bg-gradient-to-r from-amber-900/50 to-amber-800/30 border border-amber-600/30 text-center flex flex-col sm:flex-row sm:justify-center sm:gap-6 gap-1">
-          <span className="font-semibold text-amber-300">Compteur : {drinkCounter} gorgée{drinkCounter !== 1 ? 's' : ''}</span>
-          <span className="text-sm text-gray-400">Cartes : {52 - deck.length}/52</span>
-        </div>
-        {cardHistory.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {cardHistory.map((card, i) => (
-              <div
-                key={i}
-                className="w-10 h-14 sm:w-12 sm:h-16 rounded flex flex-col items-center justify-center text-xs sm:text-sm font-bold shrink-0"
-                style={getCardStyle(card.color)}
-              >
-                <span>{card.value}</span>
-                <span>{card.suit}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Dialogue mauvaise réponse */}
-      <Dialog open={showResultDialog} onOpenChange={(open) => { if (!open) closeResultDialog() }}>
-        <DialogContent className="w-[95%] max-w-lg p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">Mauvaise combinaison !</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-center text-lg font-semibold">
-              {currentPlayer?.name} doit boire {amountToDrink} gorgée{amountToDrink !== 1 ? 's' : ''} !
+        {/* ── Joueur actif ─────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3 rounded-2xl border border-violet-800/20 bg-violet-950/30 p-3">
+          <Avatar className="h-10 w-10 border-2 border-violet-500/50 shadow-lg shadow-violet-500/20" style={{ backgroundColor: playerBg }}>
+            <AvatarFallback className="text-sm font-bold text-white" style={{ backgroundColor: playerBg }}>
+              {currentPlayer?.preferences?.icon || currentPlayer?.name?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-white/40">Au tour de</p>
+            <p className={cn('font-bold text-white truncate', isSpecialPlayer(currentPlayer) && getSpecialEffectClass(currentPlayer))}>
+              {currentPlayer?.name}
             </p>
           </div>
-          <DialogFooter>
-            <Button onClick={closeResultDialog} className="w-full sm:w-auto">
-              Compris !
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="flex items-center gap-2">
+            <div className="rounded-xl border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-center">
+              <p className="text-[10px] text-violet-400/70 uppercase tracking-wide">Compteur</p>
+              <p className="text-lg font-extrabold text-violet-300">{drinkCounter}<span className="text-xs ml-0.5">🍺</span></p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-center">
+              <p className="text-[10px] text-white/35 uppercase tracking-wide">Cartes</p>
+              <p className="text-sm font-bold text-white/60">{deck.length} restantes</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Cartes tirées ────────────────────────────────────────────── */}
+        {drawnCards.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex flex-wrap justify-center gap-3">
+              {drawnCards.map((card, i) => <PlayingCardUI key={i} card={card} />)}
+            </div>
+            {isCorrect === true && canContinue && (
+              <div className="mt-4 text-center space-y-3">
+                <p className="text-emerald-400 font-semibold">
+                  ✓ Correct ! +{lastBet ? BET_CONFIG[lastBet].gulps : 0} gorgée{BET_CONFIG[lastBet!]?.gulps > 1 ? 's' : ''} au compteur
+                </p>
+                <div className="flex gap-2 justify-center">
+                  <button onClick={handleContinue} className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600">
+                    Continuer
+                  </button>
+                  <button onClick={handlePass} className="rounded-xl border border-white/15 bg-white/[0.05] px-5 py-2 text-sm text-white/70 hover:bg-white/10">
+                    Passer
+                  </button>
+                </div>
+              </div>
+            )}
+            {isRevealing && (
+              <p className="mt-3 text-center text-sm text-violet-400 animate-pulse">Révélation…</p>
+            )}
+          </div>
+        )}
+
+        {/* ── Boutons de paris ─────────────────────────────────────────── */}
+        {!canContinue && !showResult && (
+          <div className="space-y-2">
+            <p className="text-center text-xs font-semibold uppercase tracking-widest text-violet-400/60">Choisis ton pari</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {betButtons.map(bet => {
+                const s = BET_STYLE[bet]
+                const cfg = BET_CONFIG[bet]
+                return (
+                  <button
+                    key={bet}
+                    onClick={() => handleBet(bet)}
+                    disabled={isRevealing || deck.length < cfg.cards}
+                    className={cn(
+                      'relative overflow-hidden rounded-2xl border py-4 text-center font-semibold text-white transition-all active:scale-95 disabled:opacity-40',
+                      s.border,
+                    )}
+                  >
+                    <div className={cn('absolute inset-0 bg-gradient-to-br opacity-80', s.from, s.to)} />
+                    <div className="relative">
+                      <p className="text-lg leading-none mb-1">{cfg.emoji}</p>
+                      <p className="text-xs font-bold">{cfg.label}</p>
+                      <p className="text-[10px] text-white/60">{cfg.gulps} gorgée{cfg.gulps > 1 ? 's' : ''}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Historique des cartes ────────────────────────────────────── */}
+        {cardHistory.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/30">Dernières cartes</p>
+            <div className="flex flex-wrap gap-2">
+              {cardHistory.map((card, i) => <PlayingCardUI key={i} card={card} size="sm" />)}
+            </div>
+          </div>
+        )}
+
+        {/* ── Dialog mauvaise réponse ──────────────────────────────────── */}
+        {showResult && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-red-500/20 bg-[#0d0814] p-6 shadow-2xl">
+              <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #ef4444, transparent 70%)' }} />
+              <div className="relative text-center space-y-4">
+                <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-red-500/15 border border-red-500/20 text-3xl">
+                  😬
+                </div>
+                <div>
+                  <p className="text-lg font-extrabold text-white">Mauvaise combinaison !</p>
+                  <p className="mt-1 text-white/60 text-sm">
+                    <span className="font-semibold text-white">{currentPlayer?.name}</span> doit boire{' '}
+                    <span className="text-red-400 font-extrabold text-xl">{amountToDrink}</span>{' '}
+                    gorgée{amountToDrink !== 1 ? 's' : ''} 🍺
+                  </p>
+                </div>
+                <button
+                  onClick={closeResult}
+                  className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3 text-sm font-bold text-white hover:from-violet-500 hover:to-purple-600"
+                >
+                  Compris, joueur suivant →
+                </button>
+              </div>
+              <button onClick={closeResult} className="absolute right-4 top-4 text-white/30 hover:text-white/60">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     </GameShell>
   )
