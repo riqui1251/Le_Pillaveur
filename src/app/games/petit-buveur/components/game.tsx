@@ -5,8 +5,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
-import { useTheme } from 'next-themes'
-import { Sun, Moon, Dice6, User, Users, Trophy, ArrowRight, RefreshCw, Home, MapPin, Target, Shuffle, Link2, CircleDot, Sparkles, Swords, History } from 'lucide-react'
+import { Dice6, Trophy, ArrowRight, RefreshCw, Home, MapPin, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -15,7 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { detectBrowserCapabilities } from '@/lib/browser-support'
 import { getSafeStorage } from '@/lib/storage'
 import { PlayerName, isSpecialPlayer } from '@/components/ui/PlayerName'
-import { GameShell } from '@/components/game/GameShell'
 import ReactConfetti from 'react-confetti'
 import {
   type Case,
@@ -204,7 +202,6 @@ interface GameProps {
 
 export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal' }: GameProps) {
   const { updatePlayerStats } = usePlayers();
-  const { theme } = useTheme()
   const defaultColor = 'bg-primary';
   
   // État pour stocker les capacités du navigateur
@@ -2918,97 +2915,79 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   if (!gameStarted) {
     return (
-      <GameShell title="Le Petit Buveur" onBack={onGameEnd} maxWidth={620}>
-        <div className="space-y-6">
-        {showSettings ? (
-          <div className="space-y-6">
-            <h3 className={`text-xl font-semibold ${getTextColor()}`}>
-              Gestion des joueurs
-            </h3>
-            {players.length > 0 ? (
-              <div className="space-y-2">
-                {players.map(player => (
-                  <div 
-                    key={player.id}
-                    className={`p-3 rounded-lg flex items-center justify-center ${player.preferences.color}`}
-                  >
-                    <PlayerName player={player} className="text-white font-medium" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-lg text-gray-300">
-                Aucun joueur ajouté pour le moment.
-              </p>
-            )}
-            <Button
-              onClick={() => setShowSettings(false)}
-              className="bg-white/20 hover:bg-white/30 text-white"
+      <div className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/20 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
+          <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-orange-600/15 blur-[100px] animate-[pulse_10s_ease-in-out_infinite_2s]" />
+          <div className="absolute bottom-0 right-1/3 h-72 w-72 rounded-full bg-emerald-600/15 blur-[90px] animate-[pulse_12s_ease-in-out_infinite_4s]" />
+        </div>
+        <div className="relative z-10 mx-auto max-w-lg px-4 py-8 pb-12">
+          <div className="mb-8 flex items-center justify-between">
+            <button
+              onClick={onGameEnd}
+              className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-white"
             >
+              <Home className="h-4 w-4" />
               Retour
-            </Button>
+            </button>
+            <span className="text-xs font-medium text-white/30">🍺 Jeu de plateau</span>
           </div>
-        ) : (
-          <>
-            <div className="text-center space-y-4">
-              <h2 className={`text-3xl font-bold ${getTextColor()}`}>Le Petit Buveur</h2>
-              <p className="text-lg text-gray-300">
-                Choisissez la difficulté et commencez la partie !
-              </p>
-            </div>
 
-            <div className="space-y-4">
-              <h3 className={`text-xl font-semibold ${getTextColor()}`}>Difficulté :</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {(Object.keys(difficultyNames) as Difficulty[]).map((diff) => (
-                  <Button
+          <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-center shadow-2xl backdrop-blur-md">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-4xl shadow-lg shadow-amber-500/30">
+              🍺
+            </div>
+            <h1 className="mb-1 text-2xl font-bold">Le Petit Buveur</h1>
+            <p className="text-sm text-white/50">Choisis la difficulté et lance la partie !</p>
+          </div>
+
+          <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">Difficulté</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(difficultyNames) as Difficulty[]).map((diff) => {
+                const gradients: Record<Difficulty, string> = {
+                  facile: 'from-emerald-500 to-green-600 shadow-emerald-500/30',
+                  normal: 'from-amber-500 to-yellow-600 shadow-amber-500/30',
+                  difficile: 'from-orange-500 to-red-600 shadow-orange-500/30',
+                  extreme: 'from-red-600 to-rose-700 shadow-red-500/30',
+                }
+                return (
+                  <button
                     key={diff}
                     onClick={() => setGameDifficulty(diff)}
-                    className={`${
+                    className={`rounded-xl border px-3 py-2.5 text-left text-sm font-bold transition-all ${
                       gameDifficulty === diff
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
-                        : 'bg-white/20 hover:bg-white/30 text-white'
-                    } font-bold`}
+                        ? `border-transparent bg-gradient-to-r ${gradients[diff]} text-white shadow-lg`
+                        : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                    }`}
                   >
                     {difficultyNames[diff]}
-                  </Button>
-                ))}
-              </div>
+                  </button>
+                )
+              })}
             </div>
+          </div>
 
-            <div className="flex gap-4 mt-8">
-              <Button
-                onClick={() => {
-                  
-                  // Lancer directement la partie
-                  startGame();
-                }}
-                disabled={players.length < 2}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-3"
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={startGame}
+              disabled={players.length < 2}
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Commencer la partie
+            </button>
+            {hasActiveSave && (
+              <button
+                onClick={resumeGame}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3.5 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
               >
-                Commencer la partie
-              </Button>
-              
-              <Button
-                onClick={() => {
-                  if (hasActiveSave) {
-                    resumeGame();
-                  } else {
-                    alert('Aucune partie en cours trouvée !');
-                  }
-                }}
-                disabled={!hasActiveSave}
-                variant="outline"
-                className="flex-1 bg-white/10 hover:bg-white/20 text-white border-white/20 font-bold py-3"
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Charger la partie en cours
-              </Button>
-            </div>
-          </>
-        )}
+                <RefreshCw className="h-4 w-4" />
+                Reprendre la partie en cours
+              </button>
+            )}
+          </div>
         </div>
-      </GameShell>
+      </div>
     )
   }
 
@@ -3032,63 +3011,47 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }
 
   return (
-    <GameShell
-      title="Le Petit Buveur"
-      onBack={onGameEnd}
-      maxWidth={760}
-      headerRight={
-        <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">
-          {difficultyNames[gameDifficulty]}
-        </span>
-      }
-      actionBar={
-        <div className="relative flex w-full flex-col items-center justify-center gap-2">
-          {players[currentPlayer]?.jokerCase && !isDiceActionBlocked() && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={playJokerCase}
-              className="w-full max-w-xs border-amber-500/50 text-amber-400 hover:bg-amber-500/10"
-            >
-              🃏 Jouer le joker ({getCaseTypeLabel(players[currentPlayer].jokerCase!.type)})
-            </Button>
-          )}
-          {isProcessingTurn && !isDiceRolling && (
-            <Button
-              onClick={forceNextPlayer}
-              variant="outline"
-              size="icon"
-              className="absolute right-0 shrink-0 border-red-500/40 text-red-500 hover:bg-red-500/10"
-              title="Débloquer le jeu si il se bloque"
-              aria-label="Débloquer"
-            >
-              🔧
-            </Button>
-          )}
-          <Button
-            onClick={rollDice}
-            disabled={isDiceActionBlocked()}
-            className="w-full max-w-xs bg-gradient-to-r from-emerald-500 to-teal-500 px-8 text-lg font-bold text-white shadow-lg hover:from-emerald-600 hover:to-teal-600 py-4"
+    <div className="relative min-h-screen bg-gray-950 text-white flex flex-col">
+      {/* Blobs animés */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
+        <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-orange-600/10 blur-[100px] animate-[pulse_10s_ease-in-out_infinite_2s]" />
+        <div className="absolute bottom-0 right-1/3 h-72 w-72 rounded-full bg-emerald-600/10 blur-[90px] animate-[pulse_12s_ease-in-out_infinite_4s]" />
+      </div>
+
+      {/* En-tête fixe */}
+      <header className="fixed inset-x-0 top-0 z-30 border-b border-white/10 bg-gray-950/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
+          <button
+            onClick={onGameEnd}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
+            aria-label="Retour"
           >
-            <span className="flex items-center justify-center gap-2">
-              <span>Lancer le dé</span>
-              <Dice6 className={`h-5 w-5 ${isDiceRolling ? 'animate-spin' : ''}`} />
-            </span>
-          </Button>
+            ←
+          </button>
+          <h1 className="min-w-0 flex-1 truncate text-center text-base font-bold sm:text-lg">
+            🍺 Le Petit Buveur
+          </h1>
+          <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/60">
+            {difficultyNames[gameDifficulty]}
+          </span>
         </div>
-      }
-    >
+      </header>
+
+      {/* Contenu scrollable */}
+      <main className="relative z-10 flex-1 overflow-y-auto px-3 pb-32 pt-16 sm:px-4">
+        <div className="mx-auto max-w-3xl space-y-3 py-3">
       {/* HUD tour + joueur actif */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/50 bg-card/50 px-3 py-2">
-        <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold">
+      <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
+        <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-xs font-bold text-amber-300">
           Tour {turnCount}
         </span>
-        <p className="min-w-0 flex-1 text-center text-sm sm:text-base">
-          Au tour de{' '}
-          <PlayerName player={players[currentPlayer]} className="font-bold text-emerald-400" />
-        </p>
-        <span className="hidden text-xs text-muted-foreground sm:inline">
-          Case {players[currentPlayer]?.position != null ? players[currentPlayer].position + 1 : '—'}/{boardSize}
+        <div className="min-w-0 flex-1 text-center">
+          <p className="mb-0.5 text-[10px] uppercase tracking-widest text-white/40">Au tour de</p>
+          <PlayerName player={players[currentPlayer]} className="block truncate font-bold text-white" />
+        </div>
+        <span className="shrink-0 text-xs font-medium text-white/40">
+          {players[currentPlayer]?.position != null ? players[currentPlayer].position + 1 : '—'}/{boardSize}
         </span>
       </div>
 
@@ -3116,22 +3079,35 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       {collectActiveEffects().length > 0 && !showNotification && renderActiveEffectsChips()}
 
       {/* Plateau */}
-      <div className={`mt-3 grid grid-cols-6 gap-1.5 p-3 sm:gap-2 sm:p-4 ${getBgColor()} rounded-xl`}>
+      <div className="mt-3 grid grid-cols-6 gap-1.5 rounded-2xl border border-white/10 bg-gray-900/70 p-3 backdrop-blur-md sm:gap-2 sm:p-4">
         {Array.from({ length: boardSize }).map((_, index) => {
           const playersOnCase = players.filter(p => p.position === index)
-          const gridCols = playersOnCase.length > 4 
-            ? 'grid-cols-3' 
-            : playersOnCase.length > 2 
-              ? 'grid-cols-2' 
-              : 'grid-cols-1';
-          
+          const isStart = index === 0
+          const isFinish = index === boardSize - 1
+          const isMilestone = (index + 1) % 5 === 0 && !isFinish
+          const gridCols = playersOnCase.length > 4
+            ? 'grid-cols-3'
+            : playersOnCase.length > 2
+              ? 'grid-cols-2'
+              : 'grid-cols-1'
+
+          const squareBase = isStart
+            ? 'bg-emerald-500/20 border border-emerald-500/40'
+            : isFinish
+              ? 'bg-amber-500/25 border border-amber-500/50'
+              : isMilestone
+                ? 'bg-white/8 border border-white/20'
+                : 'bg-white/5 border border-white/8'
+
           return (
             <div
               key={index}
-              className={`aspect-square rounded-md sm:rounded-lg flex items-center justify-center relative ${getBoardCaseHighlightClass(index)}`}
+              className={`relative flex aspect-square items-center justify-center rounded-lg sm:rounded-xl ${squareBase} ${getBoardCaseHighlightClass(index)}`}
             >
-              <span className={`text-[10px] sm:text-sm font-medium ${getTextColor()}`}>{index + 1}</span>
-              <div className={`absolute inset-2 sm:inset-3 grid ${gridCols} gap-[2px] place-items-center overflow-hidden`}>
+              <span className={`text-[9px] font-semibold sm:text-[11px] ${isStart ? 'text-emerald-400' : isFinish ? 'text-amber-400' : isMilestone ? 'text-white/50' : 'text-white/30'}`}>
+                {isStart ? '🏁' : isFinish ? '🏆' : index + 1}
+              </span>
+              <div className={`absolute inset-1 grid ${gridCols} gap-[2px] place-items-center overflow-hidden sm:inset-1.5`}>
                 {playersOnCase.map((player) => renderPlayerToken(player))}
               </div>
             </div>
@@ -3139,35 +3115,34 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         })}
       </div>
 
-      {/* Classement — défilement horizontal (cartes compactes) */}
-      <div className="mt-4">
-        <div className="mb-2 flex items-center gap-2">
-          <Trophy className="h-4 w-4 text-amber-400" />
-          <h3 className="text-sm font-semibold">Classement</h3>
-          <span className="text-xs text-muted-foreground">(par avancement)</span>
+      {/* Classement — défilement horizontal */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
+        <div className="mb-2.5 flex items-center gap-2">
+          <Trophy className="h-3.5 w-3.5 text-amber-400" />
+          <h3 className="text-xs font-semibold text-white/80">Classement</h3>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {getPlayerRanking().map((player, index) => {
             const isActive = players[currentPlayer]?.id === player.id
-            const rankStyles =
+            const rankBorder =
               index === 0
-                ? 'border-amber-400/50 bg-amber-500/10'
+                ? 'border-amber-400/40 bg-amber-500/10'
                 : index === 1
-                  ? 'border-slate-400/40 bg-slate-500/10'
+                  ? 'border-slate-400/30 bg-white/5'
                   : index === 2
-                    ? 'border-orange-700/40 bg-orange-900/10'
-                    : 'border-border/50 bg-card/60'
+                    ? 'border-orange-600/30 bg-white/5'
+                    : 'border-white/8 bg-white/3'
             return (
               <div
                 key={player.id}
-                className={`flex w-[6.75rem] shrink-0 flex-col items-center gap-1.5 rounded-xl border p-2.5 ${rankStyles} ${
-                  isActive ? 'ring-2 ring-emerald-400/50' : ''
+                className={`flex w-[6.5rem] shrink-0 flex-col items-center gap-1.5 rounded-xl border p-2.5 transition-all ${rankBorder} ${
+                  isActive ? 'ring-2 ring-amber-400/50 border-transparent' : ''
                 }`}
               >
-                <span className={`text-xs font-bold ${index < 3 ? 'text-amber-300' : 'text-muted-foreground'}`}>
+                <span className="text-base leading-none">
                   {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
                 </span>
-                <Avatar className={`${player.preferences.color} h-9 w-9`}>
+                <Avatar className={`${player.preferences.color} h-9 w-9 ring-1 ring-white/20`}>
                   {player.preferences.avatar ? (
                     <AvatarImage src={player.preferences.avatar} alt={player.name} />
                   ) : (
@@ -3176,8 +3151,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <PlayerName player={player} className="max-w-full truncate text-center text-xs font-medium" />
-                <span className="text-[10px] font-semibold text-muted-foreground">
+                <PlayerName player={player} className="max-w-full truncate text-center text-xs font-medium text-white/90" />
+                <span className="text-[10px] font-medium text-white/40">
                   Case {player.position + 1}
                 </span>
               </div>
@@ -3990,7 +3965,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
           >
             {windowSize.width > 0 && windowSize.height > 0 && (
               <ReactConfetti
@@ -4001,123 +3976,94 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                 gravity={0.15}
               />
             )}
-            
             <motion.div
-              initial={{ scale: 0.8, y: 20 }}
+              initial={{ scale: 0.85, y: 30 }}
               animate={{ scale: 1, y: 0 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 20,
-                delay: 0.2
-              }}
-              className="bg-card/90 backdrop-blur-md rounded-lg shadow-xl max-w-md w-full mx-auto overflow-hidden"
+              transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
+              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-gray-900/95 shadow-2xl backdrop-blur-md"
             >
-              <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary-foreground opacity-30 z-0"></div>
-                <div className="p-6 relative z-10">
-                  <div className="flex justify-center mb-4">
-                    <motion.div
-                      initial={{ rotateY: 0 }}
-                      animate={{ rotateY: 360 }}
-                      transition={{ 
-                        duration: 2,
-                        repeat: Infinity,
-                        repeatType: "loop",
-                        ease: "linear"
-                      }}
-                    >
-                      <Trophy className="w-16 h-16 text-yellow-400" />
-                    </motion.div>
-                  </div>
-                  
-                  <motion.h2
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="text-3xl font-bold text-center mb-6"
-                  >
-                    🎉 <PlayerName player={winner} /> a gagné ! 🎉
-                  </motion.h2>
-                  
+              <div className="bg-gradient-to-br from-amber-600/20 via-transparent to-orange-600/10 p-6">
+                {/* Trophée animé */}
+                <div className="mb-4 flex flex-col items-center gap-3">
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="space-y-6"
+                    animate={{ scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                    className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-4xl shadow-xl shadow-amber-500/40"
                   >
-                    <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4">
-                      <h3 className="text-lg font-semibold mb-3">Statistiques de partie</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>Tours joués:</span>
-                          <span className="font-medium">{turnCount}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Mode de jeu:</span>
-                          <span className="font-medium">{difficultyNames[gameDifficulty]}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Joueurs:</span>
-                          <span className="font-medium">{players.length}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4">
-                      <h3 className="text-lg font-semibold mb-3">Classement final</h3>
-                      <div className="space-y-3">
-                        {getPlayerRanking().map((player, index) => (
-                          <div 
-                            key={player.id} 
-                            className={`flex items-center justify-between p-2 rounded-md ${
-                              player.id === winner.id 
-                                ? 'bg-gradient-to-r from-yellow-400/30 to-amber-500/30 border border-yellow-400/50' 
-                                : 'bg-card/50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className={`font-bold ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-400' : index === 2 ? 'text-amber-700' : ''}`}>
-                                {index + 1}.
-                              </span>
-                              <Avatar className={`${player.preferences.color} h-6 w-6`}>
-                                {player.preferences.avatar ? (
-                                  <AvatarImage src={player.preferences.avatar} alt={player.name} />
-                                ) : (
-                                  <AvatarFallback>{player.name[0].toUpperCase()}</AvatarFallback>
-                                )}
-                              </Avatar>
-                              <PlayerName player={player} className="font-medium" />
-                              {player.id === winner.id && (
-                                <Trophy className="h-4 w-4 text-yellow-400 ml-1" />
-                              )}
-                            </div>
-                            <div className="flex items-center">
-                              <span className="text-sm">{player.drinks} gorgées</span>
-                              <span className="mx-2">•</span>
-                              <span className="text-sm">Case {player.position + 1}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-3 pt-2">
-                      <Button
-                        onClick={resetGame}
-                        className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-4"
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4" /> Rejouer
-                      </Button>
-                      <Button
-                        onClick={onGameEnd}
-                        variant="outline"
-                        className="py-4"
-                      >
-                        <Home className="mr-2 h-4 w-4" /> Retour au menu
-                      </Button>
-                    </div>
+                    🏆
                   </motion.div>
+                  <div className="text-center">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/70">Vainqueur !</p>
+                    <h2 className="mt-1 text-2xl font-bold">
+                      <PlayerName player={winner} className="text-white" />
+                    </h2>
+                    <p className="mt-0.5 text-sm text-white/50">a remporté la partie 🎉</p>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-amber-300">{turnCount}</p>
+                    <p className="text-[10px] text-white/40">Tours</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-amber-300">{players.length}</p>
+                    <p className="text-[10px] text-white/40">Joueurs</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="truncate text-sm font-bold text-amber-300">{difficultyNames[gameDifficulty].split(' ')[0]}</p>
+                    <p className="text-[10px] text-white/40">Difficulté</p>
+                  </div>
+                </div>
+
+                {/* Classement final */}
+                <div className="mb-5 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-white/40">Classement final</p>
+                  {getPlayerRanking().map((player, index) => (
+                    <div
+                      key={player.id}
+                      className={`flex items-center justify-between rounded-xl px-3 py-2 ${
+                        player.id === winner.id
+                          ? 'border border-amber-400/30 bg-amber-500/15'
+                          : 'bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 text-center text-sm">
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                        </span>
+                        <Avatar className={`${player.preferences.color} h-7 w-7 ring-1 ring-white/20`}>
+                          {player.preferences.avatar ? (
+                            <AvatarImage src={player.preferences.avatar} alt={player.name} />
+                          ) : (
+                            <AvatarFallback className="text-xs">{player.name[0].toUpperCase()}</AvatarFallback>
+                          )}
+                        </Avatar>
+                        <PlayerName player={player} className="text-sm font-semibold" />
+                      </div>
+                      <div className="flex gap-3 text-xs text-white/50">
+                        <span>{player.drinks}🍺</span>
+                        <span>C.{player.position + 1}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2.5">
+                  <button
+                    onClick={resetGame}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500"
+                  >
+                    <RefreshCw className="h-4 w-4" /> Rejouer
+                  </button>
+                  <button
+                    onClick={onGameEnd}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
+                  >
+                    <Home className="h-4 w-4" /> Retour au menu
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -4142,7 +4088,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     onClick={() => {
                       resumeGame();
                     }}
-                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold"
+                    className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold"
                   >
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Reprendre la partie
@@ -4151,7 +4097,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     onClick={() => {
                       deleteSave();
                       setShowSaveDialog(false);
-                      // Continuer vers la sélection de difficulté
                     }}
                     variant="outline"
                     className="w-full"
@@ -4177,6 +4122,45 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           </div>
         </DialogContent>
       </Dialog>
-    </GameShell>
+        </div>
+      </main>
+
+      {/* Barre d'action fixe en bas */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-gray-950/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 px-3 py-3 sm:px-4">
+          {players[currentPlayer]?.jokerCase && !isDiceActionBlocked() && (
+            <button
+              type="button"
+              onClick={playJokerCase}
+              className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-400 transition-all hover:bg-amber-500/20"
+            >
+              🃏 Jouer le joker ({getCaseTypeLabel(players[currentPlayer].jokerCase!.type)})
+            </button>
+          )}
+          <div className="relative flex w-full items-center justify-center">
+            {isProcessingTurn && !isDiceRolling && (
+              <button
+                onClick={forceNextPlayer}
+                className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 transition-all hover:bg-red-500/20"
+                title="Débloquer le jeu"
+                aria-label="Débloquer"
+              >
+                🔧
+              </button>
+            )}
+            <button
+              onClick={rollDice}
+              disabled={isDiceActionBlocked()}
+              className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <span>Lancer le dé</span>
+                <Dice6 className={`h-5 w-5 ${isDiceRolling ? 'animate-spin' : ''}`} />
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
