@@ -80,7 +80,7 @@ export default function Monsieur3Page() {
           <p className="text-[11px] font-semibold uppercase tracking-widest text-red-400/70 mb-3">Règles</p>
           <p>🎲 Le premier joueur qui fait un <strong className="text-white/80">3</strong> devient <strong className="text-red-400">Monsieur 3</strong>.</p>
           <p>🍺 Monsieur 3 boit si un dé ou la somme vaut <strong className="text-white/80">3</strong>.</p>
-          <p>🤸 Somme = <strong className="text-white/80">5</strong> : bras en croix + "Whoo !" — le dernier boit.</p>
+          <p>🤸 Somme = <strong className="text-white/80">5</strong> : bras en croix + &ldquo;Whoo !&rdquo; — le dernier boit.</p>
           <p>👆 Somme = <strong className="text-white/80">8</strong> : pouce sur le front — le dernier boit.</p>
           <p>⚔️ <strong className="text-white/80">Double</strong> : le joueur choisit un adversaire pour un duel.</p>
           <p>🔄 Un joueur qui déclenche une règle <strong className="text-white/80">rejoue</strong>.</p>
