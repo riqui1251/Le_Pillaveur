@@ -3168,53 +3168,47 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4 ${
-              showNextButton ? '' : 'pointer-events-none'
-            }`}
+            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.97 }}
               transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-              className="z-[100] max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl"
+              className="z-[100] max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/15 bg-gray-900/95 shadow-2xl backdrop-blur-md"
             >
-              <div className="bg-gradient-to-br from-emerald-600/20 via-card to-teal-600/10 p-5">
+              <div className="bg-gradient-to-br from-amber-600/15 via-transparent to-orange-600/10 p-5">
                 <div className="mb-4 flex flex-col items-center text-center">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 ring-1 ring-emerald-400/30">
-                    <Sparkles className="h-6 w-6 text-emerald-400" />
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 ring-1 ring-amber-400/30">
+                    <Sparkles className="h-6 w-6 text-amber-400" />
                   </div>
-                  <h2 className="text-lg font-bold">Effet de la case</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <h2 className="text-lg font-bold text-white">Effet de la case</h2>
+                  <p className="mt-1 text-sm text-white/50">
                     {getCaseTypeLabel(currentCase.type)}
                     {players[currentPlayer] && (
                       <>
-                        {' '}
-                        · <PlayerName player={players[currentPlayer]} className="font-semibold text-emerald-400" />
+                        {' '}· <PlayerName player={players[currentPlayer]} className="font-semibold text-amber-300" />
                       </>
                     )}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-emerald-500/25 bg-background/50 p-4 text-left">
+                <div className="rounded-xl border border-amber-500/20 bg-white/5 p-4 text-left">
                   <div
-                    className="text-sm leading-relaxed text-foreground/95 [&_strong]:text-emerald-200 [&_span]:inline-flex"
+                    className="text-sm leading-relaxed text-white/90 [&_strong]:text-amber-200 [&_span]:inline-flex"
                     dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(currentCase.description) }}
                   />
                 </div>
 
                 {renderActiveEffectsPanel()}
 
-                {showNextButton && (
-                  <Button
-                    onClick={handleNextButtonClick}
-                    className="mt-5 w-full bg-emerald-600 font-bold text-white hover:bg-emerald-500"
-                    size="lg"
-                  >
-                    Suivant
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                )}
+                <button
+                  onClick={handleNextButtonClick}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500"
+                >
+                  Suivant
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
             </motion.div>
           </motion.div>
