@@ -1,0 +1,47 @@
+"use client"
+
+import Link from "next/link"
+import { GameMeta } from "@/lib/games"
+import { cn } from "@/lib/utils"
+import { ReactNode } from "react"
+
+interface GameCardProps {
+  game: GameMeta
+  icon: ReactNode
+}
+
+export function GameCard({ game, icon }: GameCardProps) {
+  const from = game.colorFrom || game.fallbackColor
+  const to = game.colorTo || game.fallbackColor
+
+  return (
+    <Link href={game.path} className="group block">
+      <article
+        className={cn(
+          "relative overflow-hidden rounded-xl border border-white/10 transition-all duration-200",
+          "hover:border-white/20 hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] active:scale-[0.98]"
+        )}
+      >
+        <div
+          className="absolute inset-0 opacity-90 transition-opacity group-hover:opacity-100"
+          style={{ background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/45 via-black/25 to-black/10" />
+
+        <div className="relative flex items-center gap-2.5 p-2.5 sm:gap-3 sm:p-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-black/30 backdrop-blur-sm sm:h-10 sm:w-10">
+            {icon}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-semibold leading-tight text-white sm:text-[0.9rem]">
+              {game.title}
+            </h3>
+            <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-white/70 sm:text-xs">
+              {game.description}
+            </p>
+          </div>
+        </div>
+      </article>
+    </Link>
+  )
+}
