@@ -37,7 +37,6 @@ export type CaseType =
   | 'loterie'
   | 'inversion'
   | 'double-case'
-  | 'joker'
   | 'roue-defis'
   | 'de-honte'
   | 'pile-face'
@@ -115,7 +114,6 @@ const CASE_TYPE_POOL: { type: CaseType; weight: number }[] = [
   { type: 'loterie', weight: 2 },
   { type: 'inversion', weight: 2 },
   { type: 'double-case', weight: 1 },
-  { type: 'joker', weight: 1 },
   { type: 'roue-defis', weight: 2 },
   { type: 'de-honte', weight: 2 },
   { type: 'pile-face', weight: 2 },
@@ -157,7 +155,6 @@ export const CASE_TYPE_LABELS: Record<CaseType, string> = {
   loterie: 'Loterie',
   inversion: 'Inversion',
   'double-case': 'Double case',
-  joker: 'Joker',
   'roue-defis': 'Roue des défis',
   'de-honte': 'Dé de la honte',
   'pile-face': 'Pile ou face',
@@ -264,7 +261,7 @@ export function generateCase(difficulty: Difficulty, currentPlayer?: GamePlayer)
     case 'protection':
       return {
         type,
-        description: '🛡️ Protection : immunisé jusqu\'à la fin du tour de table !',
+        description: '🛡️ Protection : immunisé pendant un tour de table complet !',
         effect: 0,
       }
     case 'malediction':
@@ -395,12 +392,6 @@ export function generateCase(difficulty: Difficulty, currentPlayer?: GamePlayer)
       return {
         type,
         description: '🎲 Double case ! Deux effets d\'affilée après le ciblage.',
-        effect: 0,
-      }
-    case 'joker':
-      return {
-        type,
-        description: '🃏 Joker ! Garde cette case et joue-la plus tard (1 fois).',
         effect: 0,
       }
     default:

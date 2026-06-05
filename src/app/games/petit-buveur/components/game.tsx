@@ -28,6 +28,11 @@ import type { GamePlayer } from '../case-types'
 import { resolveNoTargetCase, getLeader, getLastPlayer } from '../resolve-case'
 import { ShameDice, getDeHonteOutcomeLabel } from './shame-dice'
 
+const CASE_TYPES_NO_LAST_CASE: CaseType[] = ['repetition', 'chance', 'echange', 'rewind', 'double-case']
+
+const isReplayableCase = (caseType: Case | null | undefined): caseType is Case =>
+  caseType != null && !CASE_TYPES_NO_LAST_CASE.includes(caseType.type)
+
 // Vérifier si le navigateur supporte certaines fonctionnalités avancées
 const checkBrowserSupport = () => {
   if (typeof window === 'undefined') return false; // SSR
@@ -46,8 +51,10 @@ interface ActiveEffectItem {
   id: string
   icon: string
   title: string
+  description: string
   remainingTurns: number
   player: GamePlayer
+  linkedPlayer?: GamePlayer
   accentClass: string
 }
 
@@ -198,9 +205,10 @@ interface GameProps {
   players: BasePlayer[];
   onGameEnd: () => void;
   difficulty?: Difficulty;
+  initialMode?: 'new' | 'resume';
 }
 
-export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal' }: GameProps) {
+export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal', initialMode = 'new' }: GameProps) {
   const { updatePlayerStats } = usePlayers();
   const defaultColor = 'bg-primary';
   
@@ -218,7 +226,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       position: 0,
       drinks: 0,
       protected: false,
-      protectedUntilTurn: undefined,
+      protectionTurnsLeft: undefined,
       cursed: 0,
       linkedTo: undefined,
       linkedTurns: 0,
@@ -226,7 +234,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       anchored: false,
       mirrorDrinkTargetId: undefined,
       mirrorDrinkTurns: 0,
-      jokerCase: null,
       preferences: p.preferences || {
         color: defaultColor,
         icon: PLAYER_ICONS[Math.floor(Math.random() * PLAYER_ICONS.length)],
@@ -247,7 +254,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         anchored: false,
         mirrorDrinkTargetId: undefined,
         mirrorDrinkTurns: 0,
-        jokerCase: null,
         preferences: {
           color: 'bg-blue-500',
           icon: '🎮',
@@ -267,7 +273,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         anchored: false,
         mirrorDrinkTargetId: undefined,
         mirrorDrinkTurns: 0,
-        jokerCase: null,
         preferences: {
           color: 'bg-red-500',
           icon: '🎲',
@@ -411,7 +416,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       showVoteDialog ||
       showDeHonteDialog ||
       showPileFaceDialog ||
-      (showNotification && showNextButton) ||
+      showNotification ||
       wheelSpinning ||
       duelWheelSpinning ||
       isDiceRolling
@@ -500,7 +505,18 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     const saveData = loadGame();
     
     if (saveData) {
-      setPlayers(saveData.players);
+      setPlayers(
+        saveData.players.map(p => {
+          const loaded = p as GamePlayer & { protectedUntilTurn?: number }
+          if (loaded.protected && (loaded.protectionTurnsLeft == null || loaded.protectionTurnsLeft <= 0)) {
+            return {
+              ...loaded,
+              protectionTurnsLeft: Math.max(saveData.players.length, 1),
+            }
+          }
+          return loaded
+        })
+      );
       setCurrentPlayer(saveData.currentPlayer);
       setTurnCount(saveData.turnCount);
       setGameDifficulty(saveData.gameDifficulty);
@@ -517,6 +533,27 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     const saveData = loadGame();
     setHasActiveSave(!!saveData);
   }, []);
+
+  const hasInitializedRef = useRef(false);
+
+  // Démarrage automatique : le menu est géré par page.tsx
+  useEffect(() => {
+    if (hasInitializedRef.current || gameStarted) return;
+    hasInitializedRef.current = true;
+
+    if (initialMode === 'resume') {
+      const saveData = loadGame();
+      if (saveData?.gameStarted) {
+        resumeGame();
+        return;
+      }
+    }
+
+    if (players.length >= 2) {
+      startGame();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMode]);
 
   // Sauvegarde automatique quand la partie change
   useEffect(() => {
@@ -553,7 +590,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           anchored: false,
           mirrorDrinkTargetId: undefined,
           mirrorDrinkTurns: 0,
-          jokerCase: null,
         } as GamePlayer
       ])
       setNewPlayerName('')
@@ -564,22 +600,23 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setPlayers(players.filter(player => player.id !== playerId));
   }
 
-  /** Protection active jusqu'à la fin du tour de table en cours (tous les joueurs). */
-  const isPlayerProtected = (player: GamePlayer, round: number = turnCount) =>
-    player.protected &&
-    (player.protectedUntilTurn == null || round < player.protectedUntilTurn)
+  /** Protection active pendant un tour de table complet (tous les autres joueurs jouent une fois). */
+  const isPlayerProtected = (player: GamePlayer) =>
+    player.protected && (player.protectionTurnsLeft ?? 0) > 0
 
-  const expireExpiredProtections = (list: GamePlayer[], round: number = turnCount) => {
+  const tickProtectionTurns = (list: GamePlayer[]) => {
     list.forEach(p => {
-      if (p.protected && p.protectedUntilTurn != null && round >= p.protectedUntilTurn) {
+      if (!p.protected || p.protectionTurnsLeft == null) return
+      p.protectionTurnsLeft -= 1
+      if (p.protectionTurnsLeft <= 0) {
         p.protected = false
-        p.protectedUntilTurn = undefined
+        p.protectionTurnsLeft = undefined
       }
     })
   }
 
   const getProtectionRemainingRounds = (player: GamePlayer) =>
-    Math.max(1, (player.protectedUntilTurn ?? turnCount + 1) - turnCount)
+    Math.max(1, Math.ceil((player.protectionTurnsLeft ?? 1) / Math.max(players.length, 1)))
 
   const isDiceActionBlocked = () =>
     isDiceRolling ||
@@ -593,7 +630,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     showVoteDialog ||
     showDeHonteDialog ||
     showPileFaceDialog ||
-    (showNotification && showNextButton) ||
+    showNotification ||
     wheelSpinning ||
     duelWheelSpinning
 
@@ -627,7 +664,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
     if (currentPlayerObj) {
       const updatedPlayers = [...players];
-      expireExpiredProtections(updatedPlayers);
 
       // Appliquer la malédiction si le joueur est maudit
       if (currentPlayerObj.cursed > 0) {
@@ -778,8 +814,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setPendingCase(caseType);
     setPendingPosition(currentPosition);
     
-    // Sauvegarder la case pour la répétition (sauf pour les cases spéciales)
-    if (caseType.type !== 'repetition' && caseType.type !== 'chance' && caseType.type !== 'echange') {
+    // Sauvegarder la case pour répétition / rewind (sauf méta-cases)
+    if (!CASE_TYPES_NO_LAST_CASE.includes(caseType.type)) {
       setLastCase(caseType);
     }
     
@@ -1044,19 +1080,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setPendingPosition(null)
   }
 
-  const playJokerCase = () => {
-    const actor = players[currentPlayer]
-    if (!actor?.jokerCase) return
-    const saved = actor.jokerCase
-    setPlayers(prev =>
-      prev.map(p => (p.id === actor.id ? { ...p, jokerCase: null } : p))
-    )
-    setPendingCase(saved)
-    setPendingPosition(actor.position)
-    setIsProcessingTurn(true)
-    continueCaseFlow(saved)
-  }
-
   const continueCaseFlow = (caseType: Case) => {
     if (caseType.type === 'roue') {
       openWheelForCurrentPlayer('drinks')
@@ -1252,19 +1275,23 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     })
   }
 
-  const advanceToNextPlayer = () => {
-    clearTurnBlockingUi()
+  const incrementPlayerTurn = () => {
     const nextPlayer = (currentPlayer + 1) % players.length
-    const nextTurnCount = nextPlayer === 0 ? turnCount + 1 : turnCount
     if (nextPlayer === 0) {
-      setTurnCount(nextTurnCount)
+      setTurnCount(c => c + 1)
     }
     setPlayers(prev => {
       const updated = [...prev]
-      expireExpiredProtections(updated, nextTurnCount)
+      tickProtectionTurns(updated)
       return updated
     })
     setCurrentPlayer(nextPlayer)
+    return nextPlayer
+  }
+
+  const advanceToNextPlayer = () => {
+    clearTurnBlockingUi()
+    incrementPlayerTurn()
     setIsProcessingTurn(false)
     setIsDiceRolling(false)
     setTimeout(() => saveGame(), 100)
@@ -1303,70 +1330,71 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         items.push({
           id: `prot-${player.id}`,
           icon: '🛡️',
-          title: 'Protégé',
+          title: 'Protection',
+          description: 'Immunisé pendant un tour de table complet (tous les autres joueurs)',
           remainingTurns: getProtectionRemainingRounds(player),
           player,
-          accentClass: 'border-blue-400/40 bg-blue-500/10',
+          accentClass: 'border-blue-400/50 bg-blue-500/15',
         })
       }
       if (player.cursed > 0) {
         items.push({
           id: `curse-${player.id}`,
           icon: '👻',
-          title: 'Maudit',
+          title: 'Malédiction',
+          description: 'Boit 1 gorgée supplémentaire à chaque tour',
           remainingTurns: player.cursed,
           player,
-          accentClass: 'border-red-400/40 bg-red-500/10',
+          accentClass: 'border-red-400/50 bg-red-500/15',
         })
       }
       if (player.linkedTo && player.linkedTurns > 0) {
+        const linked = players.find(p => p.id === player.linkedTo)
         items.push({
           id: `link-${player.id}`,
           icon: '🔗',
-          title: 'Lié',
+          title: 'Défi en chaîne',
+          description: 'Subissent les mêmes effets',
           remainingTurns: player.linkedTurns,
           player,
-          accentClass: 'border-indigo-400/40 bg-indigo-500/10',
+          linkedPlayer: linked,
+          accentClass: 'border-indigo-400/50 bg-indigo-500/15',
         })
       }
       if (player.skipNextTurn) {
         items.push({
           id: `skip-${player.id}`,
           icon: '⏭️',
-          title: 'Passe tour',
+          title: 'Passe ton tour',
+          description: 'Passera automatiquement son prochain tour',
           remainingTurns: 1,
           player,
-          accentClass: 'border-slate-400/40 bg-slate-500/10',
+          accentClass: 'border-slate-400/50 bg-slate-500/15',
         })
       }
       if (player.anchored) {
         items.push({
           id: `anchor-${player.id}`,
           icon: '⚓',
-          title: 'Ancré',
+          title: 'Ancre',
+          description: 'Ne pourra pas avancer au prochain tour',
           remainingTurns: 1,
           player,
-          accentClass: 'border-cyan-400/40 bg-cyan-500/10',
+          accentClass: 'border-cyan-400/50 bg-cyan-500/15',
         })
       }
       if (player.mirrorDrinkTargetId && (player.mirrorDrinkTurns ?? 0) > 0) {
+        const mirrorTarget = players.find(p => p.id === player.mirrorDrinkTargetId)
         items.push({
           id: `mirror-${player.id}`,
           icon: '🪞',
-          title: 'Miroir',
+          title: 'Miroir inversé',
+          description: mirrorTarget
+            ? `Quand ${player.name} boit, ${mirrorTarget.name} boit aussi`
+            : 'Effet miroir actif sur un autre joueur',
           remainingTurns: player.mirrorDrinkTurns ?? 1,
           player,
-          accentClass: 'border-pink-400/40 bg-pink-500/10',
-        })
-      }
-      if (player.jokerCase) {
-        items.push({
-          id: `joker-${player.id}`,
-          icon: '🃏',
-          title: 'Joker',
-          remainingTurns: 1,
-          player,
-          accentClass: 'border-amber-400/40 bg-amber-500/10',
+          accentClass: 'border-pink-400/50 bg-pink-500/15',
         })
       }
     })
@@ -1391,7 +1419,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       if (e.id.startsWith('link-')) {
         const linked = players.find(p => p.id === e.player.linkedTo)
         if (linked) {
-          return `🔗 <span class="${e.player.preferences.color} text-white px-2 py-1 rounded-md">${e.player.name}</span> est <strong>lié</strong> à <span class="${linked.preferences.color} text-white px-2 py-1 rounded-md">${linked.name}</span> (${e.player.linkedTurns} tours)`
+          return `🔗 <span class="${e.player.preferences.color} text-white px-2 py-1 rounded-md">${e.player.name}</span> → <span class="${linked.preferences.color} text-white px-2 py-1 rounded-md">${linked.name}</span> (${e.player.linkedTurns} tours)`
         }
       }
       if (e.id.startsWith('prot-')) {
@@ -1449,8 +1477,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
     
     if (pendingCase.type === 'repetition') {
-      if (lastCase) {
-        // Appliquer la case précédente
+      if (isReplayableCase(lastCase)) {
         applyEffectToPlayer(targetId, lastCase);
         return;
       } else {
@@ -1464,6 +1491,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         setShowNextButton(true);
         return;
       }
+    }
+
+    if (pendingCase.type === 'rewind') {
+      applyEffectToPlayer(targetId);
+      return;
     }
     
     // Générer le résumé complet des effets
@@ -1772,17 +1804,20 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         setShowNextButton(true);
         return;
         
-      case 'protection':
-        targetPlayer.protected = true;
-        targetPlayer.protectedUntilTurn = turnCount + 1;
-        setPlayers(updatedPlayers);
+      case 'protection': {
+        // +1 pour ne pas consommer le tour du joueur qui vient de recevoir la protection
+        const protectionTurns = Math.max(players.length, 1)
+        targetPlayer.protected = true
+        targetPlayer.protectionTurnsLeft = protectionTurns
+        setPlayers(updatedPlayers)
         setCurrentCase({
           ...caseToApply,
-          description: `🛡️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est protégé jusqu'à la fin du tour de table (tous les joueurs) !\n\n${effectsSummary}`,
-        });
+          description: `🛡️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est protégé pendant un tour de table complet (tous les autres joueurs jouent une fois) !\n\n${effectsSummary}`,
+        })
         setShowNotification(true);
         setShowNextButton(true);
         return;
+      }
         
       case 'malediction':
         // Vérifier si le joueur est protégé
@@ -1800,17 +1835,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           // Passer au joueur suivant
           setTimeout(() => {
             commitLastActionFromCurrentTurn()
-            const nextPlayer = (currentPlayer + 1) % players.length;
-            if (nextPlayer === 0) {
-              setTurnCount(turnCount + 1);
-            }
-            setCurrentPlayer(nextPlayer);
-            setIsProcessingTurn(false);
-            
-            // Sauvegarde automatique après passage au joueur suivant
-            setTimeout(() => {
-              saveGame();
-            }, 100);
+            incrementPlayerTurn()
+            setIsProcessingTurn(false)
+            setTimeout(() => saveGame(), 100)
           }, 2000);
           return;
         }
@@ -2068,7 +2095,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       }
 
       case 'rewind':
-        if (lastCase) {
+        if (isReplayableCase(lastCase)) {
           applyEffectToPlayer(targetPlayerId, lastCase)
           return
         }
@@ -2079,21 +2106,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         setShowNotification(true)
         setShowNextButton(true)
         return
-
-      case 'joker': {
-        const actor = updatedPlayers[currentPlayer]
-        if (actor) {
-          actor.jokerCase = { ...caseToApply, type: caseToApply.type, description: caseToApply.description }
-        }
-        setPlayers(updatedPlayers)
-        setCurrentCase({
-          ...caseToApply,
-          description: `🃏 <span class="${actor?.preferences.color} text-white px-2 py-1 rounded-md">${actor?.name}</span> garde cette case en main !\n\n${effectsSummary}`,
-        })
-        setShowNotification(true)
-        setShowNextButton(true)
-        return
-      }
 
       case 'melange':
         // Vérifier si le joueur ciblé est protégé
@@ -2187,7 +2199,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         position: 0,
         drinks: 0,
         protected: false,
-        protectedUntilTurn: undefined,
+        protectionTurnsLeft: undefined,
         cursed: 0,
         linkedTo: undefined,
         linkedTurns: 0,
@@ -2195,7 +2207,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         anchored: false,
         mirrorDrinkTargetId: undefined,
         mirrorDrinkTurns: 0,
-        jokerCase: null,
       }));
       
       // Mettre à jour l'état des joueurs
@@ -2240,7 +2251,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         position: 0,
         drinks: 0,
         protected: false,
-        protectedUntilTurn: undefined,
+        protectionTurnsLeft: undefined,
         cursed: 0,
         linkedTo: undefined,
         linkedTurns: 0,
@@ -2248,7 +2259,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         anchored: false,
         mirrorDrinkTargetId: undefined,
         mirrorDrinkTurns: 0,
-        jokerCase: null,
         color: defaultColor
       }))
     );
@@ -2267,7 +2277,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setShowTargetDialog(false);
     setTurnCount(1);
     setGameDifficulty(difficulty);
-    setGameStarted(false);
+    setGameStarted(true);
   }, [initialPlayers, setPlayers, difficulty]);
 
   const getBgColor = () => {
@@ -2321,46 +2331,74 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     </div>
   )
 
-  const renderActiveEffectLabel = (effect: ActiveEffectItem) => {
-    const linked =
-      effect.id.startsWith('link-') ? players.find(p => p.id === effect.player.linkedTo) : null
-    const tooltip = linked
-      ? `${effect.title} — ${effect.player.name} avec ${linked.name}`
-      : `${effect.title} — ${effect.player.name}`
-
+  const renderPlayerChip = (player: GamePlayer, size: 'sm' | 'md' = 'sm') => {
+    const avatarSize = size === 'md' ? 'h-8 w-8' : 'h-6 w-6'
+    const textSize = size === 'md' ? 'text-sm' : 'text-xs'
     return (
-      <div
-        key={effect.id}
-        title={tooltip}
-        className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 ${effect.accentClass}`}
-      >
-        <span className="text-xs leading-none">{effect.icon}</span>
-        <PlayerName player={effect.player} className="max-w-[5.5rem] truncate text-[10px] font-semibold leading-tight" />
-        <span className="whitespace-nowrap text-[9px] font-medium text-muted-foreground">
-          {formatEffectRemainingTurns(effect.remainingTurns)}
-        </span>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <Avatar className={`${player.preferences.color} ${avatarSize} shrink-0 ring-1 ring-white/20`}>
+          {player.preferences.avatar ? (
+            <AvatarImage src={player.preferences.avatar} alt={player.name} />
+          ) : (
+            <AvatarFallback className="text-[10px]">
+              {player.preferences.icon || player.name[0].toUpperCase()}
+            </AvatarFallback>
+          )}
+        </Avatar>
+        <PlayerName player={player} className={`${textSize} max-w-[6rem] truncate font-semibold text-amber-200 sm:max-w-[8rem]`} />
       </div>
     )
   }
 
-  const renderActiveEffectsPanel = () => {
+  const renderActiveEffectCard = (effect: ActiveEffectItem) => (
+    <div
+      key={effect.id}
+      className={`rounded-xl border p-3 ${effect.accentClass}`}
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-2xl leading-none" aria-hidden="true">{effect.icon}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <span className="text-sm font-bold text-white">{effect.title}</span>
+            <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[11px] font-semibold text-white/80">
+              {formatEffectRemainingTurns(effect.remainingTurns)} restant{effect.remainingTurns > 1 ? 's' : ''}
+            </span>
+          </div>
+          {effect.linkedPlayer ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {renderPlayerChip(effect.player, 'md')}
+              <span className="shrink-0 text-base font-bold text-indigo-300" aria-hidden="true">→</span>
+              {renderPlayerChip(effect.linkedPlayer, 'md')}
+            </div>
+          ) : (
+            <div className="mt-1">{renderPlayerChip(effect.player)}</div>
+          )}
+          <p className="mt-1.5 text-xs leading-relaxed text-white/60">{effect.description}</p>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderActiveEffectsSection = (className = '') => {
     const items = collectActiveEffects()
     if (items.length === 0) return null
     return (
-      <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3">
-        <div className="mb-2 flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-violet-300" />
-          <span className="text-xs font-semibold text-violet-200">Effets en cours</span>
-          <span className="rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[10px] font-bold leading-none text-violet-100">
+      <div className={`rounded-2xl border border-violet-500/35 bg-gradient-to-br from-violet-600/15 to-indigo-600/10 p-4 backdrop-blur-md ${className}`}>
+        <div className="mb-3 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 shrink-0 text-violet-300" />
+          <span className="text-sm font-semibold text-violet-100">Effets en cours</span>
+          <span className="rounded-full bg-violet-500/30 px-2 py-0.5 text-[11px] font-bold text-violet-50">
             {items.length}
           </span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {items.map(effect => renderActiveEffectLabel(effect))}
+        <div className="space-y-2">
+          {items.map(effect => renderActiveEffectCard(effect))}
         </div>
       </div>
     )
   }
+
+  const renderActiveEffectsPanel = () => renderActiveEffectsSection('mt-4')
 
   const renderLastActionHistory = () => {
     if (!lastActionHistory) return null
@@ -2396,24 +2434,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     )
   }
 
-  const renderActiveEffectsChips = () => {
-    const items = collectActiveEffects()
-    if (items.length === 0) return null
-    return (
-      <div className="mt-3 rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-600/15 to-indigo-600/10 p-3 shadow-sm">
-        <div className="mb-2 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 shrink-0 text-violet-300" />
-          <span className="text-sm font-semibold text-violet-100">Effets en cours</span>
-          <span className="rounded-full bg-violet-500/30 px-1.5 text-[10px] font-bold text-violet-50">
-            {items.length}
-          </span>
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {items.map(effect => renderActiveEffectLabel(effect))}
-        </div>
-      </div>
-    )
-  }
+  const renderActiveEffectsChips = () => renderActiveEffectsSection('mt-3')
 
   const handleChainPlayerSelect = (targetPlayerId: string) => {
     setShowChainDialog(false)
@@ -2433,7 +2454,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     })
 
     setPlayers(updatedPlayers)
-    const chainDescription = `🔗 ${currentPlayerObj.name} est maintenant lié à ${targetPlayerObj.name} pendant 5 tours !`
+    const chainDescription = `🔗 <span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> → <span class="${targetPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayerObj.name}</span> — liés pendant 5 tours !`
     setCurrentCase({
       type: 'defi-chaine',
       description: chainDescription,
@@ -2443,11 +2464,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setShowNotification(true)
     setTimeout(() => setShowNotification(false), 3000)
 
-    const nextPlayer = (currentPlayer + 1) % players.length
-    if (nextPlayer === 0) {
-      setTurnCount(turnCount + 1)
-    }
-    setCurrentPlayer(nextPlayer)
+    incrementPlayerTurn()
     setIsProcessingTurn(false)
     setTimeout(() => saveGame(), 100)
   }
@@ -2915,78 +2932,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   if (!gameStarted) {
     return (
-      <div className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
-        <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/20 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
-          <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-orange-600/15 blur-[100px] animate-[pulse_10s_ease-in-out_infinite_2s]" />
-          <div className="absolute bottom-0 right-1/3 h-72 w-72 rounded-full bg-emerald-600/15 blur-[90px] animate-[pulse_12s_ease-in-out_infinite_4s]" />
-        </div>
-        <div className="relative z-10 mx-auto max-w-lg px-4 py-8 pb-12">
-          <div className="mb-8 flex items-center justify-between">
-            <button
-              onClick={onGameEnd}
-              className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-white"
-            >
-              <Home className="h-4 w-4" />
-              Retour
-            </button>
-            <span className="text-xs font-medium text-white/30">🍺 Jeu de plateau</span>
-          </div>
-
-          <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-center shadow-2xl backdrop-blur-md">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-4xl shadow-lg shadow-amber-500/30">
-              🍺
-            </div>
-            <h1 className="mb-1 text-2xl font-bold">Le Petit Buveur</h1>
-            <p className="text-sm text-white/50">Choisis la difficulté et lance la partie !</p>
-          </div>
-
-          <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">Difficulté</p>
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(difficultyNames) as Difficulty[]).map((diff) => {
-                const gradients: Record<Difficulty, string> = {
-                  facile: 'from-emerald-500 to-green-600 shadow-emerald-500/30',
-                  normal: 'from-amber-500 to-yellow-600 shadow-amber-500/30',
-                  difficile: 'from-orange-500 to-red-600 shadow-orange-500/30',
-                  extreme: 'from-red-600 to-rose-700 shadow-red-500/30',
-                }
-                return (
-                  <button
-                    key={diff}
-                    onClick={() => setGameDifficulty(diff)}
-                    className={`rounded-xl border px-3 py-2.5 text-left text-sm font-bold transition-all ${
-                      gameDifficulty === diff
-                        ? `border-transparent bg-gradient-to-r ${gradients[diff]} text-white shadow-lg`
-                        : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    {difficultyNames[diff]}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={startGame}
-              disabled={players.length < 2}
-              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Commencer la partie
-            </button>
-            {hasActiveSave && (
-              <button
-                onClick={resumeGame}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3.5 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Reprendre la partie en cours
-              </button>
-            )}
-          </div>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white">
+        <p className="text-sm text-white/50">Chargement de la partie…</p>
       </div>
     )
   }
@@ -3160,60 +3107,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           })}
         </div>
       </div>
-
-      {/* Effet de la case — modale alignée sur les autres overlays */}
-      <AnimatePresence>
-        {showNotification && currentCase && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.97 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-              className="z-[100] max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/15 bg-gray-900/95 shadow-2xl backdrop-blur-md"
-            >
-              <div className="bg-gradient-to-br from-amber-600/15 via-transparent to-orange-600/10 p-5">
-                <div className="mb-4 flex flex-col items-center text-center">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 ring-1 ring-amber-400/30">
-                    <Sparkles className="h-6 w-6 text-amber-400" />
-                  </div>
-                  <h2 className="text-lg font-bold text-white">Effet de la case</h2>
-                  <p className="mt-1 text-sm text-white/50">
-                    {getCaseTypeLabel(currentCase.type)}
-                    {players[currentPlayer] && (
-                      <>
-                        {' '}· <PlayerName player={players[currentPlayer]} className="font-semibold text-amber-300" />
-                      </>
-                    )}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-amber-500/20 bg-white/5 p-4 text-left">
-                  <div
-                    className="text-sm leading-relaxed text-white/90 [&_strong]:text-amber-200 [&_span]:inline-flex"
-                    dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(currentCase.description) }}
-                  />
-                </div>
-
-                {renderActiveEffectsPanel()}
-
-                <button
-                  onClick={handleNextButtonClick}
-                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500"
-                >
-                  Suivant
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Duel sur case partagée (avant le ciblage) */}
       <AnimatePresence>
@@ -3662,18 +3555,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     const chanceAdvanceDescription = `🍀 Chance : <span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> avance de 2 cases (case ${newPosition + 1}) !`
                     recordLastAction(currentPlayerObj, 'chance', chanceAdvanceDescription, null)
                     
-                    // Passer au joueur suivant
-                    const nextPlayer = (currentPlayer + 1) % players.length;
-                    if (nextPlayer === 0) {
-                      setTurnCount(turnCount + 1);
-                    }
-                    setCurrentPlayer(nextPlayer);
-                    setIsProcessingTurn(false);
-                    
-                    // Sauvegarde automatique après passage au joueur suivant
-                    setTimeout(() => {
-                      saveGame();
-                    }, 100);
+                    incrementPlayerTurn()
+                    setIsProcessingTurn(false)
+                    setTimeout(() => saveGame(), 100)
                   }
                 }}
                 className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold"
@@ -3810,18 +3694,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                       setShowNotification(false);
                     }, 3000);
                     
-                    // Passer au joueur suivant
-                    const nextPlayer = (currentPlayer + 1) % players.length;
-                    if (nextPlayer === 0) {
-                      setTurnCount(turnCount + 1);
-                    }
-                    setCurrentPlayer(nextPlayer);
-                    setIsProcessingTurn(false);
-                    
-                    // Sauvegarde automatique après passage au joueur suivant
-                    setTimeout(() => {
-                      saveGame();
-                    }, 100);
+                    incrementPlayerTurn()
+                    setIsProcessingTurn(false)
+                    setTimeout(() => saveGame(), 100)
                   }}
                   className={`p-3 ${player.preferences.color} text-white font-bold`}
                 >
@@ -4119,18 +3994,64 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </div>
       </main>
 
-      {/* Barre d'action fixe en bas */}
+      {/* Effet de la case — centré, au-dessus de la barre d'action */}
+      <AnimatePresence>
+        {showNotification && currentCase && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              className="max-h-[80dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/15 bg-gray-900/95 shadow-2xl backdrop-blur-md"
+            >
+              <div className="bg-gradient-to-br from-amber-600/15 via-transparent to-orange-600/10 p-5">
+                <div className="mb-4 flex flex-col items-center text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 ring-1 ring-amber-400/30">
+                    <Sparkles className="h-6 w-6 text-amber-400" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white">Effet de la case</h2>
+                  <p className="mt-1 text-sm text-white/50">
+                    {getCaseTypeLabel(currentCase.type)}
+                    {players[currentPlayer] && (
+                      <>
+                        {' '}· <PlayerName player={players[currentPlayer]} className="font-semibold text-amber-300" />
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-amber-500/20 bg-white/5 p-4 text-left">
+                  <div
+                    className="text-sm leading-relaxed text-white/90 [&_strong]:text-amber-200 [&_span]:inline-flex"
+                    dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(currentCase.description) }}
+                  />
+                </div>
+
+                {renderActiveEffectsPanel()}
+
+                <button
+                  onClick={handleNextButtonClick}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500"
+                >
+                  Suivant
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Barre d'action fixe en bas — masquée pendant lancer de dé, choix de joueur ou effet */}
+      {!showNotification && !isDiceActionBlocked() && (
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-gray-950/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 px-3 py-3 sm:px-4">
-          {players[currentPlayer]?.jokerCase && !isDiceActionBlocked() && (
-            <button
-              type="button"
-              onClick={playJokerCase}
-              className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-400 transition-all hover:bg-amber-500/20"
-            >
-              🃏 Jouer le joker ({getCaseTypeLabel(players[currentPlayer].jokerCase!.type)})
-            </button>
-          )}
           <div className="relative flex w-full items-center justify-center">
             {isProcessingTurn && !isDiceRolling && (
               <button
@@ -4155,6 +4076,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

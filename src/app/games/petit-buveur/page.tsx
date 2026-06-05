@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePlayers } from '@/hooks/usePlayers'
 import Game from './components/game'
-import { Home, ChevronDown, ChevronUp } from 'lucide-react'
+import { Home, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
 import { motion, AnimatePresence } from 'framer-motion'
+import { getSafeStorage } from '@/lib/storage'
 
 type Difficulty = 'facile' | 'normal' | 'difficile' | 'extreme'
 
@@ -19,13 +20,28 @@ const difficultyOptions: { value: Difficulty; label: string; desc: string; activ
 
 export default function PetitBuveurPage() {
   const [gameStarted, setGameStarted] = useState(false)
+  const [initialMode, setInitialMode] = useState<'new' | 'resume'>('new')
   const [difficulty, setDifficulty] = useState<Difficulty>('normal')
   const [showRules, setShowRules] = useState(false)
+  const [hasActiveSave, setHasActiveSave] = useState(false)
   const { players } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
   const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
 
-  const handleGameEnd = () => setGameStarted(false)
+  useEffect(() => {
+    const storage = getSafeStorage()
+    setHasActiveSave(!!storage?.getItem('petit-buveur-save'))
+  }, [gameStarted])
+
+  const handleGameEnd = () => {
+    setGameStarted(false)
+    setInitialMode('new')
+  }
+
+  const launchGame = (mode: 'new' | 'resume') => {
+    setInitialMode(mode)
+    setGameStarted(true)
+  }
 
   if (gameStarted) {
     return (
@@ -33,6 +49,7 @@ export default function PetitBuveurPage() {
         players={selectedPlayers}
         onGameEnd={handleGameEnd}
         difficulty={difficulty}
+        initialMode={initialMode}
       />
     )
   }
@@ -155,14 +172,25 @@ export default function PetitBuveurPage() {
           </p>
         )}
 
-        {/* Bouton démarrer */}
-        <button
-          onClick={() => setGameStarted(true)}
-          disabled={selectedPlayers.length < 2}
-          className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Commencer la partie
-        </button>
+        {/* Boutons démarrer */}
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => launchGame('new')}
+            disabled={selectedPlayers.length < 2}
+            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Commencer la partie
+          </button>
+          {hasActiveSave && (
+            <button
+              onClick={() => launchGame('resume')}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3.5 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Reprendre la partie en cours
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

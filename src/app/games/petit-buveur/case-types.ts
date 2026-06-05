@@ -5,8 +5,8 @@ export interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
   position: number
   drinks: number
   protected: boolean
-  /** Tour de table (turnCount) à partir duquel la protection expire */
-  protectedUntilTurn?: number
+  /** Nombre de tours de joueur restants avant expiration (tour de table complet) */
+  protectionTurnsLeft?: number
   cursed: number
   linkedTo?: string
   linkedTurns: number
@@ -14,7 +14,6 @@ export interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
   anchored?: boolean
   mirrorDrinkTargetId?: string
   mirrorDrinkTurns?: number
-  jokerCase?: Case | null
   stats?: {
     gamesPlayed: number
     wins: number
