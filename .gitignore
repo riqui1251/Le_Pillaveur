@@ -23,6 +23,14 @@
 # misc
 .DS_Store
 .cursor/
+
+# AI agent skills (npx skills — local only, do not push to GitHub)
+.agents/
+skills-lock.json
+/skills/
+
+# Absolute-Human board (état de travail local)
+.absolute-human/
 Le_Pillaveur/
 *.pem
 
@@ -37,6 +45,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# Artefact de déploiement FTP généré par deploy-ftp.js
+/deploy/
 
 # typescript
 *.tsbuildinfo

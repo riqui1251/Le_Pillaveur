@@ -2,11 +2,40 @@
 module.exports = {
     darkMode: ['class'],
     content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  safelist: [
+    'from-red-600','to-amber-500',
+    'from-sky-500','to-indigo-600',
+    'from-fuchsia-600','to-violet-700',
+    'from-emerald-600','to-teal-400',
+    'from-amber-600','to-yellow-400',
+    'from-emerald-500','to-lime-400',
+    'from-pink-600','to-rose-400',
+    'from-sky-500','to-cyan-400',
+    'from-violet-600','to-purple-700',
+    'from-indigo-600','to-blue-600',
+    'from-rose-500','to-fuchsia-500',
+    // direction utilities utilisées dynamiquement
+    'bg-gradient-to-br','bg-gradient-to-r',
+    // Couleurs dynamiques des ballons (Ballon Surprise) — générées via bg-${color}-500
+    'bg-red-500','bg-red-600','text-red-400',
+    'bg-blue-500','bg-blue-600','text-blue-400',
+    'bg-green-500','bg-green-600','text-green-400',
+    'bg-yellow-500','bg-yellow-600','text-yellow-400',
+    'bg-purple-500','bg-purple-600','text-purple-400',
+    'bg-orange-500','bg-orange-600','text-orange-400',
+    'bg-pink-500','bg-pink-600','text-pink-400',
+    'bg-cyan-500','bg-cyan-600','text-cyan-400',
   ],
   theme: {
+    container: {
+      center: true,
+      padding: '2rem',
+      screens: {
+        '2xl': '1400px',
+      },
+    },
   	extend: {
   		screens: {
   			xs: '480px',

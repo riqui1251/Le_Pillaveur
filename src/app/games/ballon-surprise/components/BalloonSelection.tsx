@@ -59,7 +59,7 @@ export default function BalloonSelection({ players, onBalloonsSelected }: Balloo
                 >
                   <Avatar className="h-9 w-9 mr-3">
                     {player.preferences.avatar && <AvatarImage src={player.preferences.avatar} alt={player.name} />}
-                    <AvatarFallback className={`bg-${player.preferences.color}-500 text-white`}>
+                    <AvatarFallback className={`${player.preferences.color} text-white`}>
                       {player.name.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -96,7 +96,7 @@ export default function BalloonSelection({ players, onBalloonsSelected }: Balloo
                         <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
                           {playersWithThisColor.slice(0, 3).map(p => (
                             <Avatar key={p.id} className="h-4 w-4 border border-black/50">
-                              <AvatarFallback className={`bg-${p.preferences.color}-500 text-white text-[8px] leading-none`}>
+                              <AvatarFallback className={`${p.preferences.color} text-white text-[8px] leading-none`}>
                                 {p.name.substring(0, 1)}
                               </AvatarFallback>
                             </Avatar>

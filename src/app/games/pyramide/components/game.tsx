@@ -3,14 +3,35 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Button } from '@/components/ui/button'
-import { RotateCcw, Home, ArrowDown } from 'lucide-react'
+import { RotateCcw, ArrowDown } from 'lucide-react'
 import useScreenSize from '@/hooks/useScreenSize'
-import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Player as BasePlayer } from '@/lib/players'
-import { usePlayers } from '@/hooks/usePlayers'
 import { PlayerName } from '@/components/ui/PlayerName'
+import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
+import { cn } from '@/lib/utils'
+
+// ── Helpers partagés ─────────────────────────────────────────────────────────
+
+/** Convertit A/J/Q/K en 10 pts, sinon valeur numérique */
+const valueToPoints = (v: string): number => {
+  if (v === 'A' || v === 'J' || v === 'Q' || v === 'K') return 10
+  return parseInt(v, 10)
+}
+
+/** Composant Avatar réutilisable */
+function PlayerAvatar({ player, size = 'md' }: { player: BasePlayer; size?: 'sm' | 'md' | 'lg' }) {
+  const bg = getColorFromClass(player.preferences?.color ?? '')
+  const sizeClass = size === 'sm' ? 'h-6 w-6 text-[10px]' : size === 'lg' ? 'h-11 w-11 text-sm' : 'h-8 w-8 text-xs'
+  return (
+    <Avatar className={cn(sizeClass, 'shrink-0 border border-white/20')} style={{ backgroundColor: bg }}>
+      <AvatarFallback className="font-bold text-white" style={{ backgroundColor: bg }}>
+        {player.preferences?.icon || player.name.charAt(0).toUpperCase()}
+      </AvatarFallback>
+      {player.preferences?.avatar && <AvatarImage src={player.preferences.avatar} alt={player.name} />}
+    </Avatar>
+  )
+}
 
 // Types de cartes
 type Suit = 'hearts' | 'diamonds' | 'clubs' | 'spades'
@@ -49,30 +70,26 @@ interface GameProps {
 }
 
 export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deckCount, cardsToSelect }: GameProps) {
-  const [deck, setDeck] = useState<Card[]>([])
   const [pyramid, setPyramid] = useState<Card[][]>([])
   const [gameOver, setGameOver] = useState(false)
-  const [message, setMessage] = useState('')
-  const [showRules, setShowRules] = useState(false)
+  const [preludeMessage, setPreludeMessage] = useState('')
   const [nextCardToFlip, setNextCardToFlip] = useState<{row: number, col: number} | null>(null)
   const [lastFlippedCard, setLastFlippedCard] = useState<{row: number, col: number} | null>(null)
   const [totalCardsFlipped, setTotalCardsFlipped] = useState(0)
   const [totalCards, setTotalCards] = useState(0)
-  const [remainingCards, setRemainingCards] = useState<Card[]>([])
   const [currentCard, setCurrentCard] = useState<Card | null>(null)
   const [gameStarted, setGameStarted] = useState(false)
   const [isCardFlipping, setIsCardFlipping] = useState(false)
-  const { isMobile, width, isLandscape } = useScreenSize();
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  
-  // États pour le mode classique
+  const { isMobile, width, isLandscape } = useScreenSize()
+
+  // États mode classique
   const [classicGamePhase, setClassicGamePhase] = useState<'prelude' | 'preludeSummary' | 'selection' | 'play'>('prelude')
   const [selectedCardsByPlayer, setSelectedCardsByPlayer] = useState<Record<string, Card[]>>({})
   const [currentSelectionPlayer, setCurrentSelectionPlayer] = useState<number>(0)
   const [availableCardsForSelection, setAvailableCardsForSelection] = useState<Card[]>([])
   const [readyToStart, setReadyToStart] = useState(false)
 
-  // Pré-jeu (mode classique) : prédictions en 4 étapes
+  // Pré-jeu : prédictions en 4 étapes
   type PredictionResult = {
     step: 'color' | 'higherLower' | 'insideOutside' | 'suit'
     choice: string
@@ -82,7 +99,6 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   const [preludeDeck, setPreludeDeck] = useState<Card[]>([])
   const [preludeCurrentPlayer, setPreludeCurrentPlayer] = useState<number>(0)
   const [preludeStep, setPreludeStep] = useState<'color' | 'higherLower' | 'insideOutside' | 'suit'>('color')
-  const [preludeChoice, setPreludeChoice] = useState<string | null>(null)
   const [preludeResultsByPlayer, setPreludeResultsByPlayer] = useState<Record<string, PredictionResult[]>>({})
   const [preludeDrinksByPlayer, setPreludeDrinksByPlayer] = useState<Record<string, number>>({})
   const [preludeRevealed, setPreludeRevealed] = useState<Card[]>([])
@@ -98,10 +114,6 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
 
   const computePreludeTotals = (): Record<string, number> => {
     const totals: Record<string, number> = {}
-    const valueToPoints = (v: Value): number => {
-      if (v === 'A' || v === 'J' || v === 'Q' || v === 'K') return 10
-      return parseInt(v, 10)
-    }
     players.forEach(p => {
       const res = preludeResultsByPlayer[p.id] || []
       totals[p.id] = res.reduce((acc, r) => acc + valueToPoints(r.card.value), 0)
@@ -136,41 +148,17 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
       setAvailableCardsForSelection(fullDeck)
       setClassicGamePhase('preludeSummary')
       setPreludeRevealed([])
-      setMessage('Mini-jeu terminé. Affichage du résumé…')
     } else {
-      // Joueur suivant
       const next = preludeCurrentPlayer + 1
       setPreludeCurrentPlayer(next)
       setPreludeStep('color')
-      setPreludeChoice(null)
       setPreludeRevealed([])
-      setMessage(`${players[next].name}, choisis une couleur (Rouge/Noire).`)
     }
-  }
-
-  // Calcul des points du pré-jeu (nb de réussites sur 4)
-  const computePreludePoints = () => {
-    const points: Record<string, number> = {}
-    players.forEach(p => {
-      const list = preludeResultsByPlayer[p.id] || []
-      points[p.id] = list.reduce((acc, r) => acc + (r.success ? 1 : 0), 0)
-    })
-    const entries = Object.entries(points)
-    if (entries.length === 0) return null
-    let min = entries[0], max = entries[0]
-    for (const e of entries) {
-      if (e[1] < min[1]) min = e
-      if (e[1] > max[1]) max = e
-    }
-    const minPlayer = players.find(p => p.id === min[0])
-    const maxPlayer = players.find(p => p.id === max[0])
-    return { points, min: { player: minPlayer, score: min[1] }, max: { player: maxPlayer, score: max[1] } }
   }
 
   const handlePreludeSelection = (choice: string) => {
     const player = players[preludeCurrentPlayer]
     if (!player) return
-    setPreludeChoice(choice)
     const revealed = drawPreludeCard()
     if (!revealed) return
     setPreludeRevealed(prev => [...prev, revealed])
@@ -219,40 +207,22 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
         [player.id]: (prev[player.id] || 0) + penalty
       }))
     }
-    setMessage(`${player.name}: ${revealed.value}${suitSym} — ${success ? 'Réussi' : `Raté • +${penalty} gorgée${penalty>1?'s':''}`}`)
+    setPreludeMessage(`${player.name}: ${revealed.value}${suitSym} — ${success ? 'Réussi ✓' : `Raté • +${penalty} gorgée${penalty>1?'s':''}`}`)
 
     if (preludeStep === 'color') {
       setPreludeStep('higherLower')
-      setPreludeChoice(null)
-      setTimeout(() => setMessage(`${player.name}, plus ou moins que ${preludeRevealed[0]?.value || revealed.value} ?`), 250)
     } else if (preludeStep === 'higherLower') {
       setPreludeStep('insideOutside')
-      setPreludeChoice(null)
-      setTimeout(() => setMessage(`${player.name}, intérieur ou extérieur des deux premières cartes ?`), 250)
     } else if (preludeStep === 'insideOutside') {
       setPreludeStep('suit')
-      setPreludeChoice(null)
-      setTimeout(() => setMessage(`${player.name}, quel signe exact ?`), 250)
     } else {
       proceedAfterPreludeIfNeeded()
     }
   }
   
-  // État pour les joueurs qui doivent boire suite à la dernière carte retournée
-  const [playersWithLastCard, setPlayersWithLastCard] = useState<string[]>([])
-  
-  // Définir les couleurs pour les avatars des joueurs
-  const playerColors = [
-    "bg-green-500",
-    "bg-blue-500",
-    "bg-purple-500",
-    "bg-orange-500",
-    "bg-pink-500",
-    "bg-yellow-500",
-    "bg-indigo-500",
-    "bg-red-500",
-  ];
+  const getPlayerBg = (player: BasePlayer) => getColorFromClass(player.preferences?.color ?? '')
 
+  // ── Taille des cartes ────────────────────────────────────────────────────
   // Réduire la taille pour les ordinateurs
   const containerMaxWidth = isMobile ? "100%" : "900px";
   // Ajuster la taille des cartes : en paysage mobile = plus d'espace, cartes plus grandes
@@ -275,12 +245,9 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
       // Créer la pyramide de cartes
       const { pyramidCards, remainingDeck } = createPyramid(shuffledDeck, pyramidHeight)
       
-      // Mettre à jour les états
       setPyramid(pyramidCards)
-      setRemainingCards(remainingDeck)
       setCurrentCard(null)
       setGameOver(false)
-      setMessage("")
       setGameStarted(true)
       setIsCardFlipping(false)
       
@@ -304,23 +271,19 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
       const newDeck = createDeck(deckCount)
       const shuffledDeck = shuffleDeck(newDeck)
       setPreludeDeck(shuffledDeck)
-      setAvailableCardsForSelection([]) // sera défini après le pré-jeu
+      setAvailableCardsForSelection([])
       setClassicGamePhase('prelude')
       setPreludeCurrentPlayer(0)
       setPreludeStep('color')
-      setPreludeChoice(null)
       setPreludeResultsByPlayer({})
       setPreludeDrinksByPlayer({})
+      setPreludeMessage('')
       setReadyToStart(false)
       setCurrentSelectionPlayer(0)
       setSelectedCardsByPlayer({})
-      
-      // Réinitialiser états visuels
       setPyramid([])
-      setRemainingCards([])
       setCurrentCard(null)
       setGameOver(false)
-      setMessage(`${players[0].name}, choisis une couleur (Rouge/Noire).`)
       setGameStarted(true)
       setIsCardFlipping(false)
       setTotalCardsFlipped(0)
@@ -395,11 +358,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   // Retourner la prochaine carte
   const flipNextCard = () => {
     if (!nextCardToFlip || isCardFlipping) return
-    
     setIsCardFlipping(true)
-    
-    // Réinitialiser les joueurs qui doivent boire de la carte précédente
-    setPlayersWithLastCard([])
     
     // Mettre à jour la pyramide pour retourner la carte
     const updatedPyramid = [...pyramid]
@@ -411,36 +370,14 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
       
       // Mettre à jour le compteur de cartes retournées
       setTotalCardsFlipped(prev => prev + 1)
-      
-      // Mettre à jour le message avec la valeur de la carte
       const card = updatedPyramid[row][col]
       setCurrentCard(card)
-      const cardValue = cardValues[card.value]
-      
-      // Message personnalisé en fonction du mode de jeu
-      if (gameMode === 'fun') {
-        // Mode Fun - ne plus afficher de phrase
-        setPlayersWithLastCard([]);
-      } else {
-        // Mode Classique - ne plus afficher de phrase
-        setPlayersWithLastCard([]);
-      }
-      
-      // Sauvegarder la dernière carte retournée
       setLastFlippedCard({ row, col })
       
       // Vérifier si toutes les cartes ont été retournées
       if (totalCardsFlipped + 1 >= totalCards) {
         setGameOver(true)
         setNextCardToFlip(null)
-        const res = computeScores()
-        if (res) {
-          const topName = res.max.player?.name || '—'
-          const lowName = res.min.player?.name || '—'
-          setMessage(`Partie terminée ! Scores calculés. Plus de points: ${topName} (${res.max.score}) • Moins de points: ${lowName} (${res.min.score})`)
-        } else {
-          setMessage("Partie terminée !")
-        }
       } else {
         // Trouver la prochaine carte à retourner
         findNextCardToFlip(updatedPyramid, row, col)
@@ -471,19 +408,11 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     setNextCardToFlip(null);
   }
 
-  // Calcul des points en fin de partie à partir des 4 cartes du mini-jeu
-  // Règle de valeur: A,J,Q,K = 10 points; autres = valeur numérique
   const computeScores = () => {
-    const valueToPoints = (v: Value): number => {
-      if (v === 'A' || v === 'J' || v === 'Q' || v === 'K') return 10
-      return parseInt(v, 10)
-    }
     const scores: Record<string, number> = {}
-    players.forEach(p => { scores[p.id] = 0 })
     players.forEach(p => {
       const results = preludeResultsByPlayer[p.id] || []
-      const sum = results.reduce((acc, r) => acc + valueToPoints(r.card.value), 0)
-      scores[p.id] = sum
+      scores[p.id] = results.reduce((acc, r) => acc + valueToPoints(r.card.value), 0)
     })
     const entries = Object.entries(scores)
     if (entries.length === 0) return null
@@ -517,96 +446,6 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     initializeGame()
   }
 
-  // Rendu d'un joueur avec son avatar
-  const renderPlayer = (player: BasePlayer, index: number) => {
-    return (
-      <div
-        key={player.id}
-        className={`
-          rounded-lg p-2 transition-all cursor-pointer hover:bg-primary/10
-          ${currentPlayerIndex === index ? 'bg-primary/20' : ''}
-        `}
-        onClick={() => setCurrentPlayerIndex(index)}
-      >
-        <div className="flex items-center space-x-2">
-          <Avatar className={playerColors[index % playerColors.length]}>
-            <AvatarFallback>{player.name.charAt(0).toUpperCase()}</AvatarFallback>
-            {player.preferences?.avatar && (
-              <AvatarImage src={player.preferences.avatar} alt={player.name} />
-            )}
-          </Avatar>
-          <div className="flex flex-col">
-            <PlayerName player={player} className="font-medium" />
-            <div className="text-xs text-muted-foreground">
-              {player.stats?.totalDrinks || 0} gorgée{(player.stats?.totalDrinks || 0) !== 1 ? 's' : ''}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Fonction pour gérer la sélection de cartes par un joueur (mode classique)
-  const handleCardSelection = (value: Value) => {
-    if (classicGamePhase !== 'selection') return;
-    
-    const currentPlayer = players[currentSelectionPlayer];
-    const playerSelectedCards = [...(selectedCardsByPlayer[currentPlayer.id] || [])];
-    
-    // Vérifier si le joueur a déjà sélectionné le maximum de cartes
-    if (playerSelectedCards.length >= cardsToSelect) {
-      return;
-    }
-    
-    // Vérifier si cette valeur a encore des cartes disponibles
-    const availableCardsOfValue = availableCardsForSelection.filter(
-      card => card.value === value
-    );
-    
-    // Vérifier si le joueur a déjà sélectionné le maximum de cartes de cette valeur
-    const selectedCardsOfValue = playerSelectedCards.filter(
-      card => card.value === value
-    ).length;
-    
-    // Le maximum de cartes de même valeur est de 4 pour un paquet, 8 pour deux paquets
-    const maxCardsOfSameValue = deckCount === 2 ? 8 : 4;
-    
-    if (availableCardsOfValue.length === 0 || selectedCardsOfValue >= maxCardsOfSameValue) {
-      return;
-    }
-    
-    // Sélectionner automatiquement une carte avec cette valeur (n'importe quel signe)
-    const selectedCard = availableCardsOfValue[0];
-    
-    // Ajouter la carte à la sélection du joueur
-    playerSelectedCards.push({ ...selectedCard, faceUp: false });
-    
-    // Mettre à jour les cartes sélectionnées
-    setSelectedCardsByPlayer(prev => ({
-      ...prev,
-      [currentPlayer.id]: playerSelectedCards
-    }));
-    
-    // Retirer la carte des cartes disponibles
-    setAvailableCardsForSelection(prev => prev.filter(c => 
-      !(c.suit === selectedCard.suit && c.value === selectedCard.value)
-    ));
-    
-    // Si le joueur a sélectionné toutes ses cartes, passer au joueur suivant
-    if (playerSelectedCards.length >= cardsToSelect) {
-      if (currentSelectionPlayer < players.length - 1) {
-        // Passer au joueur suivant
-        const nextPlayer = currentSelectionPlayer + 1;
-        setCurrentSelectionPlayer(nextPlayer);
-        setMessage(`${players[nextPlayer].name}, sélectionnez ${cardsToSelect} cartes`);
-      } else {
-        // Tous les joueurs ont sélectionné leurs cartes, commencer le jeu
-        startClassicGame();
-      }
-    }
-  };
-  
-  // Fonction pour démarrer le jeu en mode classique après la sélection des cartes
   const startClassicGame = () => {
     // On passe à la phase de jeu
     setClassicGamePhase('play');
@@ -696,184 +535,199 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     // Définir la première carte à retourner (en bas à gauche)
     setNextCardToFlip({ row: pyramidHeight - 1, col: 0 });
     
-    // Afficher un message pour commencer le jeu
-    setMessage("La partie commence ! Les cartes des joueurs sont cachées. Cliquez sur une carte d'un joueur pour la dévoiler quand nécessaire.");
   };
 
   return (
     <div className="w-full min-h-screen relative text-white">
-      {/* Arrière-plan artistique */}
+      {/* Arrière-plan */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-zinc-950 to-slate-950" />
-        <div className="absolute -top-40 -left-32 h-[28rem] w-[28rem] bg-gradient-to-br from-amber-500/15 to-pink-500/10 blur-3xl" />
-        <div className="absolute -bottom-48 right-0 h-[32rem] w-[32rem] bg-gradient-to-tr from-yellow-400/10 to-emerald-400/10 blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.08] [background:radial-gradient(circle_at_20%_10%,rgba(255,255,255,.2),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,.16),transparent_40%)]" />
+        <div className="absolute inset-0 bg-[#07060b]" />
+        <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-amber-600/12 blur-[120px]" />
+        <div className="absolute -bottom-40 right-0 h-[30rem] w-[30rem] rounded-full bg-orange-600/10 blur-[110px]" />
       </div>
 
-      <div className={`container mx-auto max-w-6xl ${isMobile ? 'p-2 pb-24' : 'p-4'}`} style={{ maxWidth: containerMaxWidth }}>
-        {/* En-tête - compact sur mobile */}
-        <div className={`rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.45)] ${isMobile ? 'mb-2 px-3 py-2' : 'mb-5 md:mb-6 px-4 py-3 md:px-6 md:py-5'}`}>
+      <div className={`container mx-auto max-w-6xl pb-24 ${isMobile ? 'p-2' : 'p-4'}`} style={{ maxWidth: containerMaxWidth }}>
+        {/* En-tête */}
+        <div className={`rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.45)] ${isMobile ? 'mb-2 px-3 py-2' : 'mb-5 md:mb-6 px-4 py-3 md:px-6 md:py-4'}`}>
           <div className="flex items-center justify-between gap-2">
-            <h1 className={`font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 ${isMobile ? 'text-lg' : 'text-2xl sm:text-3xl'}`}>
-              Pyramide {gameMode === 'classic' ? '· Classique' : ''}
+            <h1 className={`font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 ${isMobile ? 'text-lg pl-10' : 'text-2xl sm:text-3xl'}`}>
+              🔺 Pyramide {gameMode === 'classic' ? '· Classique' : ''}
             </h1>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={resetGame}
+                className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-amber-300/60 transition hover:bg-white/10 hover:text-amber-300"
+                aria-label="Nouvelle partie"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+              <button
+                onClick={onGameEnd}
+                className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70"
+                aria-label="Retour aux jeux"
+              >
+                <ArrowDown className="h-4 w-4 rotate-90" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Phase de pré-jeu classique: prédictions en 4 étapes */}
         {gameMode === 'classic' && classicGamePhase === 'prelude' && (
-          <div className="mb-6">
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-              <h3 className="text-xl font-bold text-amber-200 mb-2">Prédictions</h3>
-              <p className="text-amber-300/90 mb-4">{players[preludeCurrentPlayer]?.name} :
-                {preludeStep === 'color' && ' choisis une couleur'}
-                {preludeStep === 'higherLower' && ' plus ou moins que la 1re carte'}
-                {preludeStep === 'insideOutside' && ' intérieur ou extérieur des deux premières'}
-                {preludeStep === 'suit' && ' choisis le signe exact'}
+          <div className="mb-6 space-y-3">
+            <div className="rounded-2xl border border-amber-800/20 bg-amber-950/20 backdrop-blur p-4 md:p-5">
+              {/* Joueur courant */}
+              <div className="flex items-center gap-3 mb-4">
+                {(() => {
+                  const p = players[preludeCurrentPlayer]
+                  return p ? (
+                    <>
+                      <PlayerAvatar player={p} size="md" />
+                      <div>
+                        <p className="text-xs text-amber-400/70 uppercase tracking-wide">Prédictions</p>
+                        <p className={cn('font-bold text-white', isSpecialPlayer(p) && getSpecialEffectClass(p))}>{p.name}</p>
+                      </div>
+                    </>
+                  ) : null
+                })()}
+                <div className="ml-auto flex gap-1">
+                  {(['color','higherLower','insideOutside','suit'] as const).map((s, i) => (
+                    <div key={s} className={cn('h-2 w-2 rounded-full transition-all', 
+                      preludeStep === s ? 'bg-amber-400' :
+                      (['color','higherLower','insideOutside','suit'].indexOf(preludeStep) > i) ? 'bg-amber-600' : 'bg-white/10'
+                    )} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Question */}
+              <p className="mb-3 text-sm text-amber-200/80">
+                {preludeStep === 'color' && 'Quelle couleur ?'}
+                {preludeStep === 'higherLower' && `Plus ou moins que ${preludeRevealed[0]?.value ?? '?'} ?`}
+                {preludeStep === 'insideOutside' && 'Intérieur ou extérieur des deux premières ?'}
+                {preludeStep === 'suit' && 'Quel signe exactement ?'}
               </p>
+
+              {/* Choix */}
               <div className="flex flex-wrap gap-2">
                 {preludeStep === 'color' && (
                   <>
-                    <Button onClick={() => handlePreludeSelection('red')} className="bg-rose-600 hover:bg-rose-700">Rouge</Button>
-                    <Button onClick={() => handlePreludeSelection('black')} className="bg-slate-700 hover:bg-slate-800">Noire</Button>
+                    <button onClick={() => handlePreludeSelection('red')} className="flex-1 rounded-xl bg-gradient-to-br from-rose-600 to-red-700 border border-rose-500/40 py-3 font-semibold text-white hover:from-rose-500 active:scale-95">Rouge ♥♦</button>
+                    <button onClick={() => handlePreludeSelection('black')} className="flex-1 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-zinc-500/40 py-3 font-semibold text-white hover:from-zinc-600 active:scale-95">Noire ♠♣</button>
                   </>
                 )}
                 {preludeStep === 'higherLower' && (
                   <>
-                    <Button onClick={() => handlePreludeSelection('higher')} className="bg-emerald-600 hover:bg-emerald-700">Plus</Button>
-                    <Button onClick={() => handlePreludeSelection('lower')} className="bg-amber-600 hover:bg-amber-700">Moins</Button>
+                    <button onClick={() => handlePreludeSelection('higher')} className="flex-1 rounded-xl bg-gradient-to-br from-emerald-600 to-green-700 border border-emerald-500/40 py-3 font-semibold text-white hover:from-emerald-500 active:scale-95">↑ Plus</button>
+                    <button onClick={() => handlePreludeSelection('lower')} className="flex-1 rounded-xl bg-gradient-to-br from-amber-600 to-orange-700 border border-amber-500/40 py-3 font-semibold text-white hover:from-amber-500 active:scale-95">↓ Moins</button>
                   </>
                 )}
                 {preludeStep === 'insideOutside' && (
                   <>
-                    <Button onClick={() => handlePreludeSelection('inside')} className="bg-indigo-600 hover:bg-indigo-700">Intérieur</Button>
-                    <Button onClick={() => handlePreludeSelection('outside')} className="bg-fuchsia-600 hover:bg-fuchsia-700">Extérieur</Button>
+                    <button onClick={() => handlePreludeSelection('inside')} className="flex-1 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 border border-indigo-500/40 py-3 font-semibold text-white hover:from-indigo-500 active:scale-95">↔ Intérieur</button>
+                    <button onClick={() => handlePreludeSelection('outside')} className="flex-1 rounded-xl bg-gradient-to-br from-fuchsia-600 to-purple-700 border border-fuchsia-500/40 py-3 font-semibold text-white hover:from-fuchsia-500 active:scale-95">⟷ Extérieur</button>
                   </>
                 )}
                 {preludeStep === 'suit' && (
-                  <>
-                    <Button onClick={() => handlePreludeSelection('hearts')} className="bg-rose-600 hover:bg-rose-700">Coeur ♥</Button>
-                    <Button onClick={() => handlePreludeSelection('diamonds')} className="bg-pink-600 hover:bg-pink-700">Carreau ♦</Button>
-                    <Button onClick={() => handlePreludeSelection('clubs')} className="bg-slate-700 hover:bg-slate-800">Trèfle ♣</Button>
-                    <Button onClick={() => handlePreludeSelection('spades')} className="bg-slate-800 hover:bg-slate-900">Pique ♠</Button>
-                  </>
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    {([['hearts','♥','Cœur','from-rose-600 to-red-700','border-rose-500/40'],['diamonds','♦','Carreau','from-pink-600 to-rose-700','border-pink-500/40'],['clubs','♣','Trèfle','from-zinc-600 to-zinc-800','border-zinc-500/40'],['spades','♠','Pique','from-slate-700 to-slate-900','border-slate-500/40']] as const).map(([suit, sym, label, grad, border]) => (
+                      <button key={suit} onClick={() => handlePreludeSelection(suit)} className={`rounded-xl bg-gradient-to-br ${grad} border ${border} py-3 font-semibold text-white hover:brightness-110 active:scale-95`}>
+                        {sym} {label}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* Cartes révélées du joueur courant pendant le pré-jeu */}
-              <div className="mt-4 flex items-center gap-2">
-                {preludeRevealed.map((c, idx) => (
-                  <div key={idx} className="w-12 h-18 md:w-14 md:h-20 rounded-lg bg-white text-black border border-white/40 relative flex items-center justify-center">
-                    <div className={`absolute top-1 left-1 text-[10px] md:text-xs font-black ${getCardColor(c.suit)}`}>
-                      <div>{c.value}</div>
-                      <div className="leading-none">{getSuitSymbol(c.suit)}</div>
-                    </div>
-                    <div className={`text-xl md:text-2xl font-black ${getCardColor(c.suit)}`}>{getSuitSymbol(c.suit)}</div>
-                    <div className={`absolute bottom-1 right-1 rotate-180 text-[10px] md:text-xs font-black ${getCardColor(c.suit)}`}>
-                      <div>{c.value}</div>
-                      <div className="leading-none">{getSuitSymbol(c.suit)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-              {/* Récapitulatif gorgées du pré-jeu */}
-              <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="text-sm text-amber-200/80 font-semibold mb-2">Gorgées (pré-jeu)</div>
-                <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
-                  {players.map(p => (
-                    <li key={p.id} className="flex items-center justify-between bg-white/5 rounded px-2 py-1">
-                      <span>{p.name}</span>
-                      <span className="font-mono">{preludeDrinksByPlayer[p.id] || 0}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-        )}
-
-        {/* Phase de sélection des cartes en mode classique */}
-        {gameMode === 'classic' && classicGamePhase === 'selection' && (
-          <div className="mb-6">
-            <div className="grid grid-cols-1 gap-4 mb-4">
-              {/* Liste des joueurs avec progression anonyme (ne pas afficher les valeurs choisies) */}
-              <div className="bg-amber-900/50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-3 text-amber-200">Joueurs</h3>
-                <div className="space-y-2">
-                  {players.map((player, index) => (
-                    <div 
-                      key={player.id} 
-                      className={`p-2 rounded-lg ${index === currentSelectionPlayer ? 'bg-amber-700/50 border border-amber-500' : 'bg-amber-800/30'}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Avatar className={playerColors[index % playerColors.length]}>
-                            <AvatarFallback>{player.name.charAt(0).toUpperCase()}</AvatarFallback>
-                            {player.preferences?.avatar && (
-                              <AvatarImage src={player.preferences.avatar} alt={player.name} />
-                            )}
-                          </Avatar>
-                          <span className="ml-2 font-medium">{player.name}</span>
-                        </div>
-                        {/* Afficher uniquement la progression de la sélection, pas les cartes spécifiques */}
-                        <div className="text-amber-200">
-                          {selectedCardsByPlayer[player.id]?.length || 0}/{cardsToSelect} cartes
-                        </div>
+              {/* Cartes révélées */}
+              {preludeRevealed.length > 0 && (
+                <div className="mt-4 flex items-center gap-2">
+                  {preludeRevealed.map((c, idx) => (
+                    <div key={idx} className="relative flex h-20 w-14 flex-col items-center justify-center rounded-xl border-2 border-white/20 bg-white shadow-lg">
+                      <div className={`absolute top-1 left-1 text-[9px] font-black leading-none ${getCardColor(c.suit)}`}>
+                        <div>{c.value}</div><div>{getSuitSymbol(c.suit)}</div>
+                      </div>
+                      <div className={`text-2xl font-black ${getCardColor(c.suit)}`}>{getSuitSymbol(c.suit)}</div>
+                      <div className={`absolute bottom-1 right-1 rotate-180 text-[9px] font-black leading-none ${getCardColor(c.suit)}`}>
+                        <div>{c.value}</div><div>{getSuitSymbol(c.suit)}</div>
                       </div>
                     </div>
                   ))}
+                  {preludeMessage && (
+                    <p
+                      role="status"
+                      aria-live="polite"
+                      className={cn('ml-2 text-sm font-semibold', preludeMessage.includes('Réussi') ? 'text-emerald-400' : 'text-red-400')}
+                    >
+                      {preludeMessage}
+                    </p>
+                  )}
                 </div>
-              </div>
-              
-              {/* Plus de sélection manuelle des valeurs — mémorisation uniquement */}
+              )}
             </div>
-            
-            <div className="text-center text-amber-200 text-sm">
-              <p>Chaque joueur mémorise ses cartes attribuées aléatoirement avec Voir/Cacher.</p>
-              <p className="mt-2 italic">Vos cartes restent secrètes pendant toute la partie.</p>
+
+            {/* Récapitulatif gorgées du pré-jeu */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/60 mb-2">Gorgées pré-jeu</p>
+              <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                {players.map(p => {
+                  const drinks = preludeDrinksByPlayer[p.id] || 0
+                  return (
+                    <li key={p.id} className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.04] px-2.5 py-1.5">
+                      <span className="text-white/70 truncate">{p.name}</span>
+                      <span className={cn('font-bold ml-2', drinks > 0 ? 'text-red-400' : 'text-white/30')}>{drinks}🍺</span>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
           </div>
         )}
 
+
         {/* Résumé du mini-jeu + pause avant mémorisation */}
         {gameMode === 'classic' && classicGamePhase === 'preludeSummary' && (
           <div className="mb-6">
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-              <h3 className="text-xl font-bold text-amber-200 mb-3">Résumé du mini-jeu</h3>
-              <div className="space-y-3">
-                {(() => { const totals = computePreludeTotals(); return (
-                  <ul className="space-y-2 text-sm text-white/90">
+            <div className="rounded-2xl border border-amber-800/20 bg-amber-950/20 backdrop-blur p-4 md:p-5">
+              <h3 className="text-lg font-extrabold text-amber-200 mb-4">Résumé du pré-jeu</h3>
+              {(() => {
+                const totals = computePreludeTotals()
+                return (
+                  <ul className="space-y-2">
                     {players.map(p => {
                       const drinks = preludeDrinksByPlayer[p.id] || 0
-                      const mistakes = (preludeResultsByPlayer[p.id] || [])
-                        .filter(r => !r.success)
-                        .map(r => `(${stepLabels[r.step]})`)
+                      const mistakes = (preludeResultsByPlayer[p.id] || []).filter(r => !r.success).map(r => stepLabels[r.step])
                       const totalPts = totals[p.id] || 0
                       return (
-                        <li key={p.id} className="bg-white/5 rounded px-3 py-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">{p.name}</span>
-                            <span className="font-mono">{drinks} gorgée{drinks>1?'s':''}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-amber-200 mt-1">
-                            <span>{mistakes.length > 0 ? `Erreurs: ${mistakes.join(', ')}` : 'Aucune erreur'}</span>
-                            <span className="font-semibold text-amber-100">Total: {totalPts} pts</span>
+                        <li key={p.id} className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.04] px-3 py-2.5">
+                          <PlayerAvatar player={p} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-white text-sm">{p.name}</span>
+                              <span className={cn('text-sm font-bold', drinks > 0 ? 'text-red-400' : 'text-emerald-400')}>{drinks > 0 ? `${drinks}🍺` : '✓'}</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-0.5">
+                              <span className="text-xs text-white/40">{mistakes.length > 0 ? `Erreurs: ${mistakes.join(', ')}` : 'Sans faute'}</span>
+                              <span className="text-xs font-semibold text-amber-300">{totalPts} pts</span>
+                            </div>
                           </div>
                         </li>
                       )
                     })}
                   </ul>
-                ) })()}
-              </div>
-              <div className="mt-5 flex justify-end">
-                <Button onClick={() => {
-                  setClassicGamePhase('selection')
-                  setCurrentSelectionPlayer(0)
-                  setReadyToStart(false)
-                  setMessage(`${players[0].name}, mémorise tes ${cardsToSelect} cartes. Utilise Voir/Cacher puis passe au joueur suivant.`)
-                }} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  Suivant
-                </Button>
+                )
+              })()}
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => {
+                    setClassicGamePhase('selection')
+                    setCurrentSelectionPlayer(0)
+                    setReadyToStart(false)
+                  }}
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
+                >
+                  Mémorisation →
+                </button>
               </div>
             </div>
           </div>
@@ -898,467 +752,394 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
           </div>
         )}
 
-        {/* Afficher les règles - cachées par défaut */}
-        <div className={`bg-amber-900/60 p-4 rounded-lg text-amber-200 mb-4 ${showRules ? 'block' : 'hidden'}`}>
-          <h3 className="text-lg font-semibold mb-2">Règles du jeu :</h3>
-          <ul className="list-disc list-inside space-y-1">
-            {gameMode === 'fun' ? (
-              <>
-                <li>Cliquez sur "Suivant" pour retourner les cartes une par une, en commençant par le bas.</li>
-                <li>Pour chaque carte retournée, le joueur doit boire un nombre de gorgées égal à la valeur de la carte.</li>
-                <li>As = 1 gorgée, J/V = 11, Q/D = 12, K/R = 13 gorgées.</li>
-                <li>On ne peut retourner une carte que si celles situées en dessous sont déjà retournées.</li>
-              </>
-            ) : (
-              <>
-                <li>Au début, chaque joueur sélectionne {cardsToSelect} cartes (de 2 à As).</li>
-                <li>Une pyramide est créée en excluant ces cartes sélectionnées.</li>
-                <li>Les cartes choisies par chaque joueur sont affichées.</li>
-                <li>Cliquez sur "Suivant" pour retourner les cartes une par une, en commençant par le bas.</li>
-                <li>Quand une carte est retournée, les joueurs qui ont cette valeur sont indiqués.</li>
-                <li>Pour une carte au niveau "CUL SEC", les joueurs concernés sont également signalés.</li>
-              </>
-            )}
-          </ul>
-        </div>
-
-        <Button 
-          onClick={() => setShowRules(!showRules)} 
-          variant="outline"
-          size={isMobile ? "sm" : "default"}
-          className={`rounded-xl border-white/10 bg-white/5 text-amber-200 hover:bg-white/10 ${isMobile ? 'mb-2 text-xs py-1' : 'mb-4'}`}
-        >
-          {showRules ? "Cacher les règles" : "Voir les règles"}
-        </Button>
-
-        {/* Overlay plein écran pour la phase de mémorisation (DA dédiée, immersive) */}
+        {/* Overlay mémorisation */}
         {gameMode === 'classic' && classicGamePhase === 'selection' && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-            <div className="w-full max-w-2xl mx-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-amber-800/20 bg-[#0d0b06] shadow-2xl">
               <div className="p-5 md:p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
-                    <Avatar className={`${playerColors[currentSelectionPlayer % playerColors.length]} h-10 w-10 ring-2 ring-white/20`}>
-                      <AvatarFallback className="text-sm">{players[currentSelectionPlayer]?.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                      {players[currentSelectionPlayer]?.preferences?.avatar && (
-                        <AvatarImage src={players[currentSelectionPlayer]?.preferences?.avatar} alt={players[currentSelectionPlayer]?.name} />
-                      )}
-                    </Avatar>
-                    <div>
-                      <div className="text-amber-100 font-semibold text-lg">Mémorisation</div>
-                      <div className="text-white text-xl font-extrabold leading-tight">{players[currentSelectionPlayer]?.name}</div>
-                      <div className="text-amber-300 text-xs">{currentSelectionPlayer + 1} / {players.length} joueur{players.length>1?'s':''}</div>
-                    </div>
+                    {(() => {
+                      const p = players[currentSelectionPlayer]
+                      return p ? (
+                        <>
+                          <PlayerAvatar player={p} size="lg" />
+                          <div>
+                            <p className="text-xs text-amber-400/70 uppercase tracking-wide">Mémorisation</p>
+                            <p className={cn('font-extrabold text-white text-lg leading-tight', isSpecialPlayer(p) && getSpecialEffectClass(p))}>{p.name}</p>
+                            <p className="text-xs text-amber-300/70">{currentSelectionPlayer + 1} / {players.length}</p>
+                          </div>
+                        </>
+                      ) : null
+                    })()}
                   </div>
-                  <div className="text-amber-200 text-sm font-medium">{cardsToSelect} cartes</div>
+                  <span className="text-sm text-amber-200/60 font-medium">{cardsToSelect} cartes</span>
                 </div>
 
-                {/* Cartes en grand format, centrées */}
-                <div className={`grid gap-3 md:gap-4 place-items-center py-2 ${cardsToSelect === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
+                <div className={cn('grid place-items-center py-2 gap-3', cardsToSelect === 5 ? 'grid-cols-5' : 'grid-cols-4')}>
                   {(selectedCardsByPlayer[players[currentSelectionPlayer]?.id] || []).map((card, idx) => (
                     <button
                       key={`mem-${idx}`}
+                      aria-label={card.faceUp ? `Cacher la carte ${card.value} ${getSuitSymbol(card.suit)}` : `Révéler la carte ${idx + 1}`}
+                      aria-pressed={card.faceUp}
                       onClick={() => {
                         const pid = players[currentSelectionPlayer]?.id
                         if (!pid) return
-                        setSelectedCardsByPlayer(prev => ({
-                          ...prev,
-                          [pid]: prev[pid].map((c, i) => i === idx ? { ...c, faceUp: !c.faceUp } : c)
-                        }))
+                        setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: prev[pid].map((c, i) => i === idx ? { ...c, faceUp: !c.faceUp } : c) }))
                       }}
-                      className={`w-16 h-24 md:w-20 md:h-28 rounded-xl border flex items-center justify-center transition-all duration-200 shadow-lg
-                        ${card.faceUp ? 'bg-white text-amber-900 border-white/40 shadow-yellow-500/10' : 'border-white/10 bg-white/5 backdrop-blur text-amber-100'}
-                      `}
+                      className={cn(
+                        'h-24 w-16 md:h-28 md:w-20 rounded-xl border flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95',
+                        card.faceUp ? 'bg-white border-white/40' : 'border-amber-800/30 bg-amber-950/40 text-amber-200'
+                      )}
                     >
-                      <div className="text-lg md:text-xl font-extrabold">
-                        {card.faceUp ? card.value : '❓'}
-                      </div>
+                      {card.faceUp ? (
+                        <div className="relative w-full h-full">
+                          <div className={`absolute top-1 left-1 text-[9px] font-black ${getCardColor(card.suit)}`}>
+                            <div>{card.value}</div><div>{getSuitSymbol(card.suit)}</div>
+                          </div>
+                          <div className={`absolute inset-0 flex items-center justify-center text-2xl font-black ${getCardColor(card.suit)}`}>{getSuitSymbol(card.suit)}</div>
+                          <div className={`absolute bottom-1 right-1 rotate-180 text-[9px] font-black ${getCardColor(card.suit)}`}>
+                            <div>{card.value}</div><div>{getSuitSymbol(card.suit)}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xl">❓</span>
+                      )}
                     </button>
                   ))}
                 </div>
 
-                {/* Actions */}
                 <div className="mt-5 flex items-center gap-2">
-                  <Button onClick={() => {
-                    const pid = players[currentSelectionPlayer]?.id
-                    if (!pid) return
-                    setSelectedCardsByPlayer(prev => ({
-                      ...prev,
-                      [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: true }))
-                    }))
-                  }} className="bg-amber-700 hover:bg-amber-800 text-white">Voir tout</Button>
-                  <Button onClick={() => {
-                    const pid = players[currentSelectionPlayer]?.id
-                    if (!pid) return
-                    setSelectedCardsByPlayer(prev => ({
-                      ...prev,
-                      [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: false }))
-                    }))
-                  }} variant="outline" className="border-amber-600 text-amber-200">Cacher tout</Button>
-                  <div className="ml-auto flex items-center gap-2">
-                    <Button onClick={() => {
-                      // À chaque "Suivant": recacher toutes les cartes du joueur courant
+                  <button
+                    onClick={() => {
                       const pid = players[currentSelectionPlayer]?.id
-                      if (pid) {
-                        setSelectedCardsByPlayer(prev => ({
-                          ...prev,
-                          [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: false }))
-                        }))
-                      }
+                      if (!pid) return
+                      setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: true })) }))
+                    }}
+                    className="rounded-xl bg-amber-700/60 border border-amber-600/40 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-700/80"
+                  >Voir tout</button>
+                  <button
+                    onClick={() => {
+                      const pid = players[currentSelectionPlayer]?.id
+                      if (!pid) return
+                      setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: false })) }))
+                    }}
+                    className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/60 hover:bg-white/[0.08]"
+                  >Cacher</button>
+                  <button
+                    onClick={() => {
+                      const pid = players[currentSelectionPlayer]?.id
+                      if (pid) setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: false })) }))
                       if (currentSelectionPlayer < players.length - 1) {
-                        const next = currentSelectionPlayer + 1
-                        setCurrentSelectionPlayer(next)
-                        setMessage(`${players[next].name}, mémorise tes ${cardsToSelect} cartes. Utilise Voir/Cacher puis passe au joueur suivant.`)
+                        setCurrentSelectionPlayer(prev => prev + 1)
                       } else {
-                        // Dernier joueur → lancer directement la partie
                         setReadyToStart(true)
-                        setClassicGamePhase('play')
-                        setMessage('La partie commence ! Retournez les cartes de la pyramide.')
                         startClassicGame()
                       }
-                    }} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                      {currentSelectionPlayer < players.length - 1 ? 'Suivant' : 'Terminer'}
-                    </Button>
-                  </div>
+                    }}
+                    className="ml-auto rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-2 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
+                  >
+                    {currentSelectionPlayer < players.length - 1 ? 'Joueur suivant →' : 'Commencer →'}
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Boutons de contrôle du jeu - compacts sur mobile */}
-        {isMobile && (
-          <div className="flex justify-between gap-2 mb-2">
-            <Button 
-              onClick={onGameEnd}
-              variant="outline"
-              size="sm"
-              className="border-white/20 text-white hover:bg-white/10 flex-1 text-xs py-2"
-            >
-              Retour
-            </Button>
-            <Button 
-              onClick={resetGame}
-              size="sm"
-              className="bg-amber-600 hover:bg-amber-700 text-white flex-1 text-xs py-2"
-            >
-              <RotateCcw className="mr-1 h-3 w-3" /> Nouvelle partie
-            </Button>
-          </div>
-        )}
 
-        {/* Conteneur principal : en paysage mobile = côte à côte, sinon colonne */}
+        {/* Conteneur principal */}
         {(gameMode === 'fun' || (gameMode === 'classic' && (classicGamePhase === 'play' || classicGamePhase === 'selection'))) && (
-          <div className={`flex ${isMobile && isLandscape ? 'flex-row gap-2' : `flex-col ${isMobile ? 'gap-2' : 'md:flex-row gap-4'}`}`}>
-            {/* Affichage des cartes sélectionnées en mode classique - plus compact sur mobile */}
-            {gameMode === 'classic' && (
-              <div className={`order-2 md:order-1 shrink-0 ${isMobile && isLandscape ? 'w-28 max-h-[70vh] overflow-y-auto' : isMobile ? 'max-h-[25vh] overflow-y-auto' : 'md:w-1/3 lg:w-1/4'}`}>
-                <div className={`rounded-xl border border-white/10 bg-white/5 backdrop-blur h-full shadow-[inset_0_1px_0_rgba(255,255,255,.06)] ${isMobile ? 'p-2' : 'p-4'}`}>
-                  <h3 className={`font-semibold text-amber-200 ${isMobile ? 'text-sm mb-1' : 'text-lg mb-3'}`}>
-                    {classicGamePhase === 'selection' ? (
-                      <span>
-                        Mémorisation — <span className="font-bold text-amber-100">{players[currentSelectionPlayer]?.name}</span>
-                      </span>
-                    ) : 'Cartes des joueurs (cliquez pour dévoiler)'}
-                  </h3>
-                  <div className="space-y-2">
-                    {players.map((player, index) => {
-                      const playerMustDrink = false;
-                      
+          <div className="flex flex-col gap-3">
+
+            {/* ── Plateau ──────────────────────────────────────────────── */}
+            <div className="w-full min-w-0">
+              <div
+                className={cn(
+                  'relative overflow-hidden rounded-2xl border border-amber-800/20 shadow-[0_20px_60px_rgba(0,0,0,0.6)]',
+                  isMobile ? 'mb-2 p-2' : 'mb-4 md:mb-6 p-3 md:p-5'
+                )}
+                style={{ background: 'radial-gradient(ellipse at 50% -10%, rgba(180,100,8,0.18) 0%, #07060b 60%)' }}
+              >
+                {/* Texture subtile */}
+                <div className="pointer-events-none absolute inset-0 opacity-[0.04] [background:repeating-linear-gradient(60deg,rgba(255,255,255,.15)_0px,rgba(255,255,255,.15)_1px,transparent_1px,transparent_28px)]" />
+
+                {/* Pyramide */}
+                {(gameMode === 'fun' || classicGamePhase === 'play') && (
+                  <div
+                    className={cn('relative py-2 md:py-4', isMobile ? 'overflow-x-auto overflow-y-auto scroll-smooth' : '')}
+                    style={isMobile ? { minWidth: 'min-content', WebkitOverflowScrolling: 'touch', maxHeight: isLandscape ? '55vh' : undefined } : undefined}
+                  >
+                    {pyramid.map((row, rowIndex) => {
+                      const isTopRow = rowIndex === 0
                       return (
-                        <div key={player.id} className={`rounded-lg p-2 transition-all duration-300 border border-white/5 bg-white/5` }>
-                          <div className="flex items-center mb-1">
-                            <Avatar className={`${playerColors[index % playerColors.length]} h-8 w-8 ring-2 ring-white/20`}>
-                              <AvatarFallback className="text-sm">{player.name.charAt(0).toUpperCase()}</AvatarFallback>
-                              {player.preferences?.avatar && (
-                                <AvatarImage src={player.preferences.avatar} alt={player.name} />
-                              )}
-                            </Avatar>
-                            <span className={`ml-2 font-medium text-sm`}>{player.name}</span>
+                        <div
+                          key={rowIndex}
+                          className="flex justify-center items-center shrink-0"
+                          style={{
+                            paddingLeft: `${Math.max(0, (pyramid.length - rowIndex - 1) * (isMobile ? 0.2 : 0.5))}rem`,
+                            marginBottom: isMobile ? '0.4rem' : '0.6rem'
+                          }}
+                        >
+                          {/* Badge de rangée */}
+                          <div className={cn(
+                            'mr-2 md:mr-3 flex shrink-0 items-center justify-center rounded-lg font-bold',
+                            isTopRow
+                              ? 'border border-red-500/40 bg-red-600/20 px-1.5 py-0.5 text-[9px] md:text-[11px] text-red-300'
+                              : 'h-5 w-5 md:h-7 md:w-7 border border-amber-700/30 bg-amber-900/20 text-[10px] md:text-xs text-amber-400'
+                          )}>
+                            {isTopRow ? '🔥' : pyramid.length - rowIndex}
                           </div>
-                           <div className={`${classicGamePhase === 'play' ? 'grid grid-cols-4' : 'flex flex-wrap'} gap-1 p-2 rounded ${classicGamePhase === 'selection' && players[currentSelectionPlayer]?.id === player.id ? 'bg-white/5 ring-1 ring-white/10' : ''}`}>
-                            {(selectedCardsByPlayer[player.id] || []).map((card, cardIndex) => {
-                              const isLastFlippedValue = lastFlippedCard && pyramid[lastFlippedCard.row]?.[lastFlippedCard.col]?.value === card.value;
-                              const shouldHighlight = false;
-                              const isCurrent = classicGamePhase === 'selection' && players[currentSelectionPlayer]?.id === player.id
-                              return (
-                                <button
-                                  key={`${player.id}-${card.suit}-${card.value}-${cardIndex}`}
-                                   className={`w-7 h-9 rounded border flex items-center justify-center transition-all duration-300
-                                     ${card.faceUp
-                                       ? (shouldHighlight 
-                                           ? 'border-2 border-yellow-400 bg-white shadow-md shadow-yellow-400/40 scale-110 text-amber-900'
-                                           : 'border-white/40 bg-white text-amber-900')
-                                       : 'border-white/10 bg-white/5 text-amber-100 backdrop-blur-sm'} ${(classicGamePhase === 'selection' && !isCurrent) ? 'opacity-30 grayscale pointer-events-none' : ''}
-                                  `}
-                                  onClick={() => {
-                                    if (classicGamePhase === 'selection' && isCurrent) {
-                                      setSelectedCardsByPlayer(prev => ({
-                                        ...prev,
-                                        [player.id]: prev[player.id].map((c, i) => i === cardIndex ? { ...c, faceUp: !c.faceUp } : c)
-                                      }))
-                                    } else if (classicGamePhase === 'play') {
-                                      setSelectedCardsByPlayer(prev => ({
-                                        ...prev,
-                                        [player.id]: prev[player.id].map((c, i) => i === cardIndex ? { ...c, faceUp: !c.faceUp } : c)
-                                      }))
-                                    }
-                                  }}
-                                >
-                                  <div className="text-xs font-bold">
-                                    {card.faceUp ? card.value : '❓'}
+
+                          {row.map((card, colIndex) => {
+                            const isNext = !!(nextCardToFlip && nextCardToFlip.row === rowIndex && nextCardToFlip.col === colIndex)
+                            const isLast = !!(lastFlippedCard && lastFlippedCard.row === rowIndex && lastFlippedCard.col === colIndex)
+                            const isRed = card.suit === 'hearts' || card.suit === 'diamonds'
+
+                            return (
+                              <motion.div
+                                key={`${rowIndex}-${colIndex}`}
+                                className={cn(
+                                  cardWidth, 'mx-0.5 md:mx-1 rounded-xl flex items-center justify-center shadow-xl border transition-all duration-200',
+                                  card.faceUp
+                                    ? cn('bg-white', isRed ? 'border-red-300/60' : 'border-gray-700/40')
+                                    : 'border-amber-800/30 bg-transparent',
+                                  isNext && !card.faceUp && 'shadow-[0_0_16px_rgba(245,158,11,0.5)] border-amber-400/60',
+                                  isLast && 'scale-105 shadow-[0_0_20px_rgba(52,211,153,0.35)] border-emerald-400/50'
+                                )}
+                                animate={card.faceUp ? { rotateY: 0 } : { rotateY: 180 }}
+                                transition={{ duration: 0.45, ease: 'easeOut' }}
+                                style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
+                              >
+                                {card.faceUp ? (
+                                  /* Face */
+                                  <div className="relative w-full h-full px-0.5">
+                                    <div className={cn('absolute top-0.5 left-1 text-[9px] md:text-[11px] font-black leading-tight', getCardColor(card.suit))}>
+                                      <div>{card.value}</div>
+                                      <div className="leading-none">{getSuitSymbol(card.suit)}</div>
+                                    </div>
+                                    <div className={cn('absolute inset-0 flex items-center justify-center', getCardColor(card.suit))}>
+                                      <span className={cn(isMobile ? 'text-xl' : 'text-2xl md:text-3xl', 'font-black opacity-80')}>{getSuitSymbol(card.suit)}</span>
+                                    </div>
+                                    <div className={cn('absolute bottom-0.5 right-1 rotate-180 text-[9px] md:text-[11px] font-black leading-tight', getCardColor(card.suit))}>
+                                      <div>{card.value}</div>
+                                      <div className="leading-none">{getSuitSymbol(card.suit)}</div>
+                                    </div>
                                   </div>
-                                </button>
-                              )
-                            })}
-                          </div>
-                          {classicGamePhase === 'selection' && players[currentSelectionPlayer]?.id === player.id && (
-                            <div className="mt-3 flex items-center gap-2">
-                              <Button onClick={() => {
-                                setSelectedCardsByPlayer(prev => ({
-                                  ...prev,
-                                  [player.id]: prev[player.id].map(c => ({ ...c, faceUp: true }))
-                                }))
-                              }} className="bg-amber-700 hover:bg-amber-800 text-white">Voir</Button>
-                              <Button onClick={() => {
-                                setSelectedCardsByPlayer(prev => ({
-                                  ...prev,
-                                  [player.id]: prev[player.id].map(c => ({ ...c, faceUp: false }))
-                                }))
-                              }} variant="outline" className="border-amber-600 text-amber-200">Cacher</Button>
-                              <span className="text-xs text-amber-300 ml-2">Clique sur chaque carte pour basculer individuellement</span>
-                              <Button onClick={() => {
-                                if (currentSelectionPlayer < players.length - 1) {
-                                  const nextPlayer = currentSelectionPlayer + 1
-                                  setCurrentSelectionPlayer(nextPlayer)
-                                  setMessage(`${players[nextPlayer].name}, mémorise tes ${cardsToSelect} cartes. Utilise Voir/Cacher puis passe au joueur suivant.`)
-                                } else {
-                                  setReadyToStart(true)
-                                  setMessage('Tous les joueurs ont mémorisé. Appuyez sur « Commencer » pour afficher la pyramide.')
-                                }
-                              }} className="bg-emerald-600 hover:bg-emerald-700 text-white ml-auto">Suivant</Button>
-                            </div>
-                          )}
+                                ) : (
+                                  /* Dos */
+                                  <div className="relative w-full h-full rounded-xl overflow-hidden" style={{ transform: 'rotateY(180deg)' }}>
+                                    {/* Fond dégradé or/amber */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900" />
+                                    {/* Motif losanges */}
+                                    <div className="absolute inset-0 opacity-15 [background:repeating-linear-gradient(45deg,rgba(0,0,0,.25)_0px,rgba(0,0,0,.25)_3px,transparent_3px,transparent_14px),repeating-linear-gradient(-45deg,rgba(0,0,0,.25)_0px,rgba(0,0,0,.25)_3px,transparent_3px,transparent_14px)]" />
+                                    {/* Bordure intérieure */}
+                                    <div className="absolute inset-[3px] rounded-lg border border-amber-400/20" />
+                                    {/* Ornement central */}
+                                    <div className="absolute inset-0 flex items-center justify-center text-amber-300/30 font-black" style={{ fontSize: isMobile ? '14px' : '18px' }}>🔺</div>
+                                    {/* Glow si prochaine carte */}
+                                    {isNext && <div className="absolute inset-0 bg-amber-400/10 animate-pulse" />}
+                                  </div>
+                                )}
+                              </motion.div>
+                            )
+                          })}
                         </div>
-                      );
+                      )
                     })}
                   </div>
-                  {classicGamePhase === 'selection' && readyToStart && (
-                    <div className="mt-4 flex justify-end">
-                      <Button onClick={startClassicGame} className="bg-emerald-600 hover:bg-emerald-700 text-white">Commencer</Button>
+                )}
+
+                {/* Barre de progression */}
+                {(gameMode === 'fun' || classicGamePhase === 'play') && totalCards > 0 && (
+                  <div className="mt-3 md:mt-5 space-y-1.5">
+                    <div
+                      role="progressbar"
+                      aria-valuenow={totalCardsFlipped}
+                      aria-valuemin={0}
+                      aria-valuemax={totalCards}
+                      aria-label={`Progression : ${totalCardsFlipped} cartes retournées sur ${totalCards}`}
+                      className="relative w-full overflow-hidden rounded-full bg-white/[0.05] border border-white/[0.08] h-2 md:h-2.5"
+                    >
+                      <div
+                        className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 shadow-[0_0_16px_rgba(245,158,11,0.5)] transition-all duration-500"
+                        style={{ width: `${(totalCardsFlipped / totalCards) * 100}%` }}
+                      />
                     </div>
-                  )}
-                  
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-amber-400/70">{totalCardsFlipped} / {totalCards}</span>
+                      {currentCard && (
+                        <span className="flex items-center gap-1 text-xs font-semibold text-white/70">
+                          Dernière :
+                          <span className={cn('text-sm font-black', getCardColor(currentCard.suit))}>{currentCard.value}{getSuitSymbol(currentCard.suit)}</span>
+                        </span>
+                      )}
+                      <span className="text-[11px] text-amber-400/70">{Math.round((totalCardsFlipped / totalCards) * 100)}%</span>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+
+            {/* ── Cartes des joueurs (mode classique) ───────────────────── */}
+            {gameMode === 'classic' && classicGamePhase === 'play' && (
+              <div className="rounded-2xl border border-amber-800/20 p-3 md:p-4" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(120,60,5,0.12) 0%, #07060b 70%)' }}>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">Cartes des joueurs</p>
+                <div className="flex flex-wrap gap-3">
+                  {players.map((player) => {
+                    const cards = selectedCardsByPlayer[player.id] || []
+                    if (cards.length === 0) return null
+                    return (
+                      <div key={player.id} className="flex items-center gap-2">
+                        <span className={cn('text-xs font-semibold text-white/80 shrink-0', isSpecialPlayer(player) && getSpecialEffectClass(player))}>
+                          {player.name}
+                        </span>
+                        <div className="flex gap-1">
+                          {cards.map((card, cardIndex) => {
+                            const isLastFlippedValue = !!(lastFlippedCard && pyramid[lastFlippedCard.row]?.[lastFlippedCard.col]?.value === card.value)
+                            const isRed = card.suit === 'hearts' || card.suit === 'diamonds'
+                            return (
+                              <button
+                                key={`${player.id}-${card.suit}-${card.value}-${cardIndex}`}
+                                aria-label={card.faceUp ? `Cacher ${card.value} ${getSuitSymbol(card.suit)} de ${player.name}` : `Révéler carte ${cardIndex + 1} de ${player.name}`}
+                                aria-pressed={card.faceUp}
+                                onClick={() => setSelectedCardsByPlayer(prev => ({ ...prev, [player.id]: prev[player.id].map((c, i) => i === cardIndex ? { ...c, faceUp: !c.faceUp } : c) }))}
+                                className={cn(
+                                  'flex h-10 w-7 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95',
+                                  card.faceUp
+                                    ? cn('bg-white shadow-md', isLastFlippedValue ? 'border-2 border-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)] scale-110' : isRed ? 'border-red-300/60' : 'border-gray-600/40')
+                                    : 'border-amber-800/25 bg-amber-950/30 text-amber-300/50'
+                                )}
+                              >
+                                {card.faceUp ? (
+                                  <div className={cn('text-[10px] font-black leading-none text-center', getCardColor(card.suit))}>
+                                    <div>{card.value}</div>
+                                    <div>{getSuitSymbol(card.suit)}</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px]">🔺</span>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
-
-            {/* Conteneur de la pyramide - en paysage mobile prend le reste de l'espace */}
-            <div className={`order-1 md:order-2 min-w-0 ${gameMode === 'classic' && classicGamePhase === 'play' ? 'md:w-2/3 lg:w-3/4' : 'w-full'} ${isMobile && isLandscape ? 'flex-1 overflow-hidden' : ''}`}>
-              <div className={`rounded-2xl border border-white/10 bg-white/5 backdrop-blur shadow-[inset_0_1px_0_rgba(255,255,255,.06)] ${isMobile ? 'p-2 mb-2' : 'p-2 md:p-4 mb-4 md:mb-6'}`}>
-                {/* Affichage de la pyramide */}
-                {(gameMode === 'fun' || classicGamePhase === 'play') && (
-                <div 
-                  className={`space-y-1 md:space-y-2 py-2 md:py-4 relative ${isMobile ? 'overflow-x-auto overflow-y-auto scroll-smooth' : ''}`} 
-                  style={isMobile ? { 
-                    minWidth: 'min-content', 
-                    WebkitOverflowScrolling: 'touch',
-                    maxHeight: isLandscape ? '55vh' : undefined 
-                  } : undefined}
-                >
-                  {pyramid.map((row, rowIndex) => (
-                    <div 
-                      key={rowIndex} 
-                      className="flex justify-center items-center shrink-0"
-                      style={{ 
-                        paddingLeft: `${Math.max(0, (pyramid.length - rowIndex - 1) * (isMobile ? 0.2 : 0.5))}rem`,
-                        marginBottom: isMobile ? '0.5rem' : '0.75rem'
-                      }}
-                    >
-                      {/* Numéro du niveau */}
-                      <div className={`mr-2 md:mr-4 flex items-center justify-center rounded-full font-bold shadow-md border ${rowIndex === 0 
-                        ? 'px-2 md:px-3 py-1 bg-red-700/90 border-red-400/40 text-white text-xs md:text-sm' 
-                        : 'w-6 h-6 md:w-8 md:h-8 bg-white/5 border-white/10 text-amber-200'}`}>
-                        {rowIndex === 0 ? "CUL SEC" : pyramid.length - rowIndex}
-                      </div>
-                      {row.map((card, colIndex) => (
-                        <motion.div 
-                          key={`${rowIndex}-${colIndex}`} 
-                            className={`${cardWidth} mx-0.5 md:mx-1 rounded-lg flex items-center justify-center shadow-xl border transition-all duration-200 
-                              ${card.faceUp ? 'bg-white border-white/40' : 'border-white/10 bg-white/5 backdrop-blur'}
-                              ${nextCardToFlip && nextCardToFlip.row === rowIndex && nextCardToFlip.col === colIndex ? 'ring-2 ring-yellow-400/70 animate-pulse' : ''}
-                              ${lastFlippedCard && lastFlippedCard.row === rowIndex && lastFlippedCard.col === colIndex ? 'scale-105 ring-2 ring-emerald-400/70' : ''}`}
-                          animate={card.faceUp ? { rotateY: 0 } : { rotateY: 180 }}
-                          transition={{ duration: 0.5 }}
-                          style={{ 
-                            transformStyle: 'preserve-3d',
-                            perspective: '1000px'
-                          }}
-                        >
-                          {card.faceUp ? (
-                            <div className="relative w-full h-full px-1" >
-                              {/* coin haut gauche */}
-                              <div className={`absolute top-1 left-1 text-[10px] md:text-xs font-black ${getCardColor(card.suit)}`}>
-                                <div>{card.value}</div>
-                                <div className="leading-none">{getSuitSymbol(card.suit)}</div>
-                              </div>
-                              {/* centre */}
-                              <div className={`absolute inset-0 flex items-center justify-center ${getCardColor(card.suit)}`}>
-                                <span className="text-2xl md:text-3xl font-black opacity-90">{getSuitSymbol(card.suit)}</span>
-                              </div>
-                              {/* coin bas droit */}
-                              <div className={`absolute bottom-1 right-1 rotate-180 text-[10px] md:text-xs font-black ${getCardColor(card.suit)}`}>
-                                <div>{card.value}</div>
-                                <div className="leading-none">{getSuitSymbol(card.suit)}</div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="relative w-full h-full rounded-lg overflow-hidden" style={{ transform: 'rotateY(180deg)' }}>
-                              <div className="absolute inset-0 bg-gradient-to-br from-amber-700/80 to-amber-800/80" />
-                              <div className="absolute inset-0 opacity-20 [background:repeating-linear-gradient(45deg,rgba(0,0,0,.18)_0px,rgba(0,0,0,.18)_8px,transparent_8px,transparent_16px)]" />
-                              <div className="absolute inset-0 rounded-lg ring-1 ring-black/20" />
-                            </div>
-                          )}
-                        </motion.div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-                )}
-                
-                {/* Barre de progression */}
-                {(gameMode === 'fun' || classicGamePhase === 'play') && (
-                <div className="w-full mt-2 md:mt-4">
-                  <div className="relative w-full bg-white/5 border border-white/10 rounded-full h-2.5 md:h-3 overflow-hidden">
-                    <div 
-                      className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.45)] transition-all duration-500" 
-                      style={{ width: `${(totalCardsFlipped / totalCards) * 100}%` }}
-                    />
-                  </div>
-                </div>
-                )}
-                <div className="text-center text-xs md:text-sm text-amber-200/80 mt-1 md:mt-2">
-                  {(gameMode === 'fun' || classicGamePhase === 'play') 
-                    ? `${totalCardsFlipped} / ${totalCards} cartes retournées` 
-                    : 'En attente du démarrage de la partie'}
-                </div>
-                {/* Bouton Suivant sur mobile : bien visible, zone tactile large, dans le flux */}
-                {isMobile && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
-                  <div className="mt-3 pt-3 pb-4 flex flex-col items-center gap-2">
-                    <Button 
-                      onClick={flipNextCard}
-                      className="w-full max-w-[280px] bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-6 py-4 rounded-xl shadow-[0_10px_30px_rgba(245,158,11,0.3)] min-h-[56px] text-lg font-bold [touch-action:manipulation] active:scale-[0.98]"
-                      disabled={gameOver || !nextCardToFlip || isCardFlipping}
-                    >
-                      {gameOver ? "Terminé" : "Suivant"}
-                    </Button>
-                    <div className="text-xs text-amber-200/80">
-                      {currentCard ? (
-                        <span>Dernière carte : <span className={getCardColor(currentCard.suit)}>{currentCard.value}{getSuitSymbol(currentCard.suit)}</span></span>
-                      ) : (
-                        <span>Cliquez pour retourner la première carte</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Bandeau de message/status supprimé à la demande (évite les phrases superflues) */}
-
-        {/* Carte actuelle affichée au-dessus du bouton Suivant (désactivée sur mobile pour ne pas gêner l'affichage) */}
-        {!isMobile && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && currentCard && (
-          <div className="fixed bottom-24 right-6 z-10">
-            <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur px-4 py-2 shadow-lg">
-              <div className="text-[11px] uppercase tracking-wide text-amber-200/80">Carte actuelle</div>
-              <div className={`${cardFontSize} font-extrabold leading-none`}>
-                <span className={`${getCardColor(currentCard.suit)}`}>{currentCard.value}</span>
-                <span className={`ml-1 ${suitFontSize}`}>{getSuitSymbol(currentCard.suit)}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Barre basse fixe: compteur + bouton Suivant - DESKTOP uniquement (sur mobile le bouton est dans le flux ci-dessus) */}
-        {!isMobile && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
-          <div className="fixed bottom-0 inset-x-0 z-10 bg-gradient-to-t from-slate-950/95 via-slate-950/90 to-transparent backdrop-blur-sm">
-            <div className="mx-auto max-w-6xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              <div className="flex justify-center items-center gap-3">
-                <div className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs md:text-sm text-amber-200/90 font-semibold flex items-center gap-1">
+        {/* Barre fixe bas — bouton Suivant (toutes tailles d'écran) */}
+        {(gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
+          <div className="fixed bottom-0 inset-x-0 z-20 bg-gradient-to-t from-[#07060b] via-[#07060b]/95 to-transparent backdrop-blur-sm">
+            <div className="mx-auto max-w-2xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <div className="flex items-center gap-3">
+                {/* Carte actuelle */}
+                <div className="shrink-0 w-14">
                   {currentCard ? (
-                    <>
-                      <span className={`${cardFontSize} leading-none`}>{currentCard.value}</span>
-                      <span className={`${suitFontSize} leading-none ${getCardColor(currentCard.suit)}`}>{getSuitSymbol(currentCard.suit)}</span>
-                    </>
+                    <div className="relative flex h-20 w-14 flex-col items-center justify-center rounded-xl border-2 bg-white shadow-lg"
+                      style={{ borderColor: (currentCard.suit === 'hearts' || currentCard.suit === 'diamonds') ? 'rgba(248,113,113,0.7)' : 'rgba(100,100,100,0.4)' }}
+                    >
+                      <div className={cn('absolute top-1 left-1 text-[9px] font-black leading-none', getCardColor(currentCard.suit))}>
+                        <div>{currentCard.value}</div>
+                        <div>{getSuitSymbol(currentCard.suit)}</div>
+                      </div>
+                      <div className={cn('text-2xl font-black', getCardColor(currentCard.suit))}>{getSuitSymbol(currentCard.suit)}</div>
+                      <div className={cn('absolute bottom-1 right-1 rotate-180 text-[9px] font-black leading-none', getCardColor(currentCard.suit))}>
+                        <div>{currentCard.value}</div>
+                        <div>{getSuitSymbol(currentCard.suit)}</div>
+                      </div>
+                    </div>
                   ) : (
-                    <span>—</span>
+                    <div className="flex h-20 w-14 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/20 text-xs text-center leading-tight">
+                      aucune carte
+                    </div>
                   )}
                 </div>
-                <Button 
+                <button
                   onClick={flipNextCard}
-                  className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-6 py-3 rounded-full shadow-[0_10px_30px_rgba(245,158,11,0.3)]"
                   disabled={gameOver || !nextCardToFlip || isCardFlipping}
+                  aria-label={gameOver ? 'Partie terminée' : isCardFlipping ? 'Retournement en cours' : 'Retourner la prochaine carte'}
+                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-3.5 rounded-2xl font-bold text-base shadow-[0_8px_24px_rgba(245,158,11,0.35)] [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 transition-transform"
                 >
-                  {gameOver ? "Terminé" : "Suivant"}
-                </Button>
+                  {gameOver ? 'Terminé ✓' : 'Suivant →'}
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Boutons de contrôle du jeu - pour desktop ou en bas pour mobile si pas déplacés en haut */}
-        {!isMobile && (
-          <div className="flex justify-center space-x-4 mt-6">
-            <Button 
-              onClick={resetGame}
-              className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-[0_10px_30px_rgba(245,158,11,0.25)]"
-            >
-              <RotateCcw className="mr-2 h-4 w-4" /> Nouvelle partie
-            </Button>
-            <Button 
-              onClick={onGameEnd}
-              variant="outline"
-              className="border-white/20 text-white hover:bg-white/10"
-            >
-              Retour au menu
-            </Button>
-          </div>
-        )}
         
-        {/* Affichage du récapitulatif en fin de partie (uniquement en mode sans cartes/classique) */}
+        {/* Région aria-live : annonces lecteur d'écran */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {gameOver ? 'Partie terminée.' : currentCard ? `Carte retournée : ${currentCard.value} ${getSuitSymbol(currentCard.suit)}` : ''}
+        </div>
+
+        {/* Écran de fin mode classique */}
         {gameOver && gameMode === 'classic' && (
-          <div className="mt-6 p-4 border border-yellow-500/30 rounded-lg bg-yellow-500/10">
-            <h3 className="text-xl font-bold text-yellow-400 mb-2">Résumé de la partie</h3>
-            {(() => {
-              const res = computeScores()
-              if (!res) return <p className="text-white">Aucun score disponible.</p>
-              const topName = res.max.player?.name || '—'
-              const lowName = res.min.player?.name || '—'
-              return (
-                <div className="space-y-3">
-                  <div className="text-amber-100">Plus de points: <span className="font-semibold">{topName}</span> ({res.max.score})</div>
-                  <div className="text-amber-100">Moins de points: <span className="font-semibold">{lowName}</span> ({res.min.score})</div>
-                  <div className="mt-4">
-                    <div className="text-amber-200 font-semibold mb-1">Pour la traversée</div>
-                    <div className="text-amber-100">Plus de points: <span className="font-semibold">{topName}</span> ({res.max.score})</div>
-                    <div className="text-amber-100">Moins de points: <span className="font-semibold">{lowName}</span> ({res.min.score})</div>
-                  </div>
-                  <div className="pt-2">
-                    <div className="text-amber-200 font-semibold mb-1">Détail des scores</div>
-                    <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm text-white/90">
-                      {players.map(p => (
-                        <li key={p.id} className="bg-amber-900/40 rounded px-2 py-1 flex items-center justify-between">
-                          <span>{p.name}</span>
-                          <span className="font-mono">{(computeScores()?.scores[p.id] ?? 0)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-amber-500/20 bg-[#0d0b06] p-6 shadow-2xl">
+              <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #f59e0b, transparent 70%)' }} />
+              <div className="relative space-y-4">
+                <div className="text-center">
+                  <div className="text-4xl mb-2">🏆</div>
+                  <h3 className="text-xl font-extrabold text-amber-300">Partie terminée !</h3>
                 </div>
-              )
-            })()}
+                {(() => {
+                  const res = computeScores()
+                  if (!res) return null
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-center">
+                          <p className="text-[10px] text-amber-400/60 uppercase tracking-wide mb-1">Plus de points</p>
+                          <p className="font-extrabold text-amber-300">{res.max.player?.name}</p>
+                          <p className="text-2xl font-black text-amber-200">{res.max.score}</p>
+                        </div>
+                        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-center">
+                          <p className="text-[10px] text-red-400/60 uppercase tracking-wide mb-1">Moins de points</p>
+                          <p className="font-extrabold text-red-300">{res.min.player?.name}</p>
+                          <p className="text-2xl font-black text-red-200">{res.min.score}</p>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-2">Scores complets</p>
+                        <ul className="grid grid-cols-2 gap-1.5">
+                          {players.map(p => {
+                            const score = res.scores[p.id] ?? 0
+                            return (
+                              <li key={p.id} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.04] px-2.5 py-1.5">
+                                <PlayerAvatar player={p} size="sm" />
+                                <span className="text-xs text-white/75 truncate flex-1">{p.name}</span>
+                                <span className="text-xs font-bold text-amber-300">{score}</span>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </div>
+                    </>
+                  )
+                })()}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={resetGame}
+                    className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
+                  >
+                    Rejouer
+                  </button>
+                  <button
+                    onClick={onGameEnd}
+                    className="flex-1 rounded-2xl border border-white/10 bg-white/[0.05] py-3 text-sm text-white/60 hover:bg-white/10 hover:text-white"
+                  >
+                    Menu
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

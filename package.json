@@ -2,8 +2,11 @@
   "name": "mon-projet",
   "version": "1.0.7",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--no-webstorage next dev",
+    "dev": "cross-env NODE_OPTIONS=--no-experimental-webstorage next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

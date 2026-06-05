@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/card'
@@ -31,6 +31,7 @@ interface GameProps {
   players: BasePlayer[]
   onGameEnd: () => void
   difficulty?: Difficulty
+  updatePlayerStats?: (playerId: string, gameId: string, stats: { gamesPlayed: number; totalDrinks?: number; wins?: number }) => void
 }
 
 type Difficulty = 'facile' | 'normal' | 'difficile' | 'extreme'
@@ -493,7 +494,8 @@ const getHangmanStage = (errorCount: number, maxErrors: number): number => {
   return Math.min(Math.max(stage, 1), 8)
 }
 
-export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal' }: GameProps) {
+export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal', updatePlayerStats }: GameProps) {
+  const statsFlushedRef = useRef(false)
   const [players, setPlayers] = useState<GamePlayer[]>(
     initialPlayers.map(p => ({ 
       ...p, 
@@ -503,6 +505,19 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       preferences: p.preferences || { color: 'bg-blue-500', icon: '👤' }
     }))
   )
+  // Fin de partie : enregistre les stats (une seule fois) puis remonte au parent
+  const handleFinish = () => {
+    if (!statsFlushedRef.current) {
+      statsFlushedRef.current = true
+      players.forEach(p => {
+        updatePlayerStats?.(p.id, 'pendu', {
+          gamesPlayed: 1,
+          totalDrinks: p.drinks,
+        })
+      })
+    }
+    onGameEnd()
+  }
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
   const [currentWord, setCurrentWord] = useState('')
   const [currentCategory, setCurrentCategory] = useState('')
@@ -584,7 +599,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             return prevWrong
           })
           
-          console.log('TIMEOUT DÉTECTÉ - 3 gorgées seront ajoutées au clic sur "Joueur suivant"')
           
           return 0
         }
@@ -743,7 +757,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       })
       setIsTimerActive(false)
       
-      console.log('PENDU NORMAL DÉTECTÉ - Gorgées seront attribuées au clic sur "Joueur suivant"')
     }
   }, [currentWord, guessedLetters, wrongLetters, config, currentPlayerIndex, gameState, drinksPenaltyApplied])
 
@@ -798,8 +811,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           ...updatedPlayers[currentPlayerIndex],
           drinks: oldDrinks + timeoutDrinksToAdd
         }
-        console.log(`ATTRIBUTION FINALE: +${timeoutDrinksToAdd} gorgées pour ${updatedPlayers[currentPlayerIndex].name}`)
-        console.log(`Avant: ${oldDrinks}, Après: ${updatedPlayers[currentPlayerIndex].drinks}`)
         return updatedPlayers
       })
       setTimeoutDrinksToAdd(0) // Réinitialiser
@@ -814,8 +825,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           ...updatedPlayers[currentPlayerIndex],
           drinks: oldDrinks + drinks
         }
-        console.log(`ATTRIBUTION PENDU: +${drinks} gorgées pour ${updatedPlayers[currentPlayerIndex].name}`)
-        console.log(`Avant: ${oldDrinks}, Après: ${updatedPlayers[currentPlayerIndex].drinks}`)
         return updatedPlayers
       })
     }
@@ -910,6 +919,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }, [players, gameState])
 
   const restartGame = () => {
+    statsFlushedRef.current = false
     // Arrêter le minuteur actuel
     setTimerRef(prevTimer => {
       if (prevTimer) {
@@ -1246,7 +1256,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         {/* Boutons d'action */}
         <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 px-4">
           <Button 
-            onClick={onGameEnd}
+            onClick={handleFinish}
             variant="outline"
             className="border-white/20 text-white hover:bg-white/10 w-full sm:w-auto"
           >
@@ -1346,7 +1356,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             <Button onClick={restartGame} className="w-full">
               Rejouer
             </Button>
-            <Button onClick={onGameEnd} variant="outline" className="w-full">
+            <Button onClick={handleFinish} variant="outline" className="w-full">
               Retour au menu
             </Button>
           </DialogFooter>

@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Button } from '@/components/ui/button'
-import { Home, RefreshCw } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import useScreenSize from '@/hooks/useScreenSize'
+import { RotateCcw, ArrowLeft } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Player as BasePlayer, PlayerPreferences, getPlayerGameBoost } from '@/lib/players'
 import { PlayerName } from '@/components/ui/PlayerName'
+import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
+import { cn } from '@/lib/utils'
 
-// Types
+// ── Types ────────────────────────────────────────────────────────────────────
+
 interface GameProps {
   players: BasePlayer[]
   onGameEnd: () => void
@@ -25,328 +25,245 @@ interface Player {
   id: string
 }
 
-interface DiceRoll {
-  dice1: number
-  dice2: number
+interface DiceRoll { dice1: number; dice2: number }
+
+// ── Composant Dé ─────────────────────────────────────────────────────────────
+
+const DOT_POSITIONS: Record<number, string[]> = {
+  1: ['center'],
+  2: ['top-left', 'bottom-right'],
+  3: ['top-left', 'center', 'bottom-right'],
+  4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+  5: ['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'],
+  6: ['top-left', 'top-right', 'mid-left', 'mid-right', 'bottom-left', 'bottom-right'],
 }
+
+const DOT_CLASS: Record<string, string> = {
+  'center':       'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
+  'top-left':     'absolute top-[18%] left-[18%]',
+  'top-right':    'absolute top-[18%] right-[18%]',
+  'mid-left':     'absolute top-1/2 left-[18%] -translate-y-1/2',
+  'mid-right':    'absolute top-1/2 right-[18%] -translate-y-1/2',
+  'bottom-left':  'absolute bottom-[18%] left-[18%]',
+  'bottom-right': 'absolute bottom-[18%] right-[18%]',
+}
+
+function Die({ value, rolling, highlight }: { value: number; rolling: boolean; highlight?: boolean }) {
+  return (
+    <motion.div
+      animate={rolling ? { rotate: [0, -12, 12, -8, 8, 0], scale: [1, 1.08, 0.95, 1.05, 1] } : {}}
+      transition={{ duration: 0.6, ease: 'easeInOut' }}
+      className={cn(
+        'relative h-20 w-20 rounded-2xl border-2 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-all duration-300',
+        highlight ? 'border-red-400 shadow-[0_0_24px_rgba(239,68,68,0.5)]' : 'border-white/80',
+        rolling && 'shadow-[0_0_32px_rgba(239,68,68,0.35)]'
+      )}
+    >
+      {(DOT_POSITIONS[value] || []).map((pos, i) => (
+        <div key={i} className={DOT_CLASS[pos]}>
+          <div className={cn(
+            'h-3.5 w-3.5 rounded-full',
+            value === 3 ? 'bg-red-600' : 'bg-gray-800'
+          )} />
+        </div>
+      ))}
+    </motion.div>
+  )
+}
+
+// ── Composant principal ───────────────────────────────────────────────────────
 
 export default function Game({ players: initialBasePlayers, onGameEnd }: GameProps) {
   const [players, setPlayers] = useState<Player[]>([])
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState<number>(0)
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
   const [dice, setDice] = useState<DiceRoll>({ dice1: 1, dice2: 1 })
-  const [rolling, setRolling] = useState<boolean>(false)
+  const [rolling, setRolling] = useState(false)
   const [gamePhase, setGamePhase] = useState<'setup' | 'play' | 'end'>('setup')
-  const [message, setMessage] = useState<string>('')
-  const [rollHistory, setRollHistory] = useState<{player: string, dice: DiceRoll, message: string}[]>([])
+  const [message, setMessage] = useState('')
+  const [rollHistory, setRollHistory] = useState<{ player: string; dice: DiceRoll; message: string }[]>([])
   const [specialMessage, setSpecialMessage] = useState<string | null>(null)
-  const [canRoll, setCanRoll] = useState<boolean>(false)
-  const [setupRolls, setSetupRolls] = useState<{playerName: string, roll: number}[]>([])
-  const [monsieur3Found, setMonsieur3Found] = useState<boolean>(false)
-  const [gameEnded, setGameEnded] = useState<boolean>(false)
-  const [monsieur3Index, setMonsieur3Index] = useState<number>(-1)
-  const [victoryScreen, setVictoryScreen] = useState<boolean>(false)
-  const { isMobile } = useScreenSize()
-  
+  const [canRoll, setCanRoll] = useState(false)
+  const [setupRolls, setSetupRolls] = useState<{ playerName: string; roll: number }[]>([])
+  const [monsieur3Found, setMonsieur3Found] = useState(false)
+  const [gameEnded, setGameEnded] = useState(false)
+  const [monsieur3Index, setMonsieur3Index] = useState(-1)
+  const [victoryScreen, setVictoryScreen] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+
   const confettiRef = useRef<HTMLDivElement>(null)
-  const diceContainerRef = useRef<HTMLDivElement>(null)
 
-  // Fonction pour lancer des confettis
   const launchConfetti = () => {
-    if (confettiRef.current) {
-      const rect = confettiRef.current.getBoundingClientRect()
-      const defaults = { 
-        particleCount: 100,
-        spread: 70,
-        origin: { 
-          x: rect.left / window.innerWidth + rect.width / window.innerWidth / 2,
-          y: rect.top / window.innerHeight
-        }
-      }
-
-      // Configuration de base
-      confetti({
-        ...defaults,
-        particleCount: 50,
-        spread: 80,
-      })
-
-      // Second jet de confettis
-      setTimeout(() => {
-        confetti({
-          ...defaults,
-          particleCount: 30,
-          angle: 60,
-          spread: 50,
-        })
-      }, 250)
-
-      // Troisième jet de confettis
-      setTimeout(() => {
-        confetti({
-          ...defaults,
-          particleCount: 30,
-          angle: 120,
-          spread: 50,
-        })
-      }, 400)
+    if (!confettiRef.current) return
+    const rect = confettiRef.current.getBoundingClientRect()
+    const origin = {
+      x: rect.left / window.innerWidth + rect.width / window.innerWidth / 2,
+      y: rect.top / window.innerHeight + 0.1,
     }
+    confetti({ particleCount: 60, spread: 80, origin, colors: ['#ef4444', '#f97316', '#facc15', '#a78bfa'] })
+    setTimeout(() => confetti({ particleCount: 40, angle: 60, spread: 55, origin, colors: ['#ef4444', '#f97316'] }), 300)
+    setTimeout(() => confetti({ particleCount: 40, angle: 120, spread: 55, origin, colors: ['#facc15', '#a78bfa'] }), 500)
   }
-  
-  // Initialisation du jeu
+
+  const rollDie = () => Math.floor(Math.random() * 6) + 1
+
   useEffect(() => {
-    // Vérifier que initialBasePlayers est bien défini et est un tableau
-    if (!initialBasePlayers || !Array.isArray(initialBasePlayers)) {
-      // Initialiser avec un tableau vide si initialBasePlayers n'est pas valide
-      setPlayers([]);
-      return;
-    }
-    
-    // Initialiser les joueurs en conservant leurs préférences
-    const initialPlayers: Player[] = initialBasePlayers.map(player => ({
-      name: player?.name || 'Joueur sans nom',
+    if (!initialBasePlayers?.length) { setPlayers([]); return }
+    setPlayers(initialBasePlayers.map(p => ({
+      name: p?.name || 'Joueur',
       isMonsieur3: false,
       score: 0,
-      preferences: player?.preferences || {},
-      id: player?.id || `player-${Math.random().toString(36).substring(2, 9)}`
-    }))
-    
-    setPlayers(initialPlayers)
+      preferences: p?.preferences || {},
+      id: p?.id || crypto.randomUUID(),
+    })))
     setGamePhase('setup')
-    setMessage('Lancez le dé pour commencer. Le premier joueur qui obtient un 3 devient "Monsieur 3".')
+    setMessage('Lancez le dé — le premier à faire un 3 devient Monsieur 3 !')
     setCurrentPlayerIndex(0)
     setCanRoll(true)
     setMonsieur3Index(-1)
     setVictoryScreen(false)
+    setSetupRolls([])
+    setRollHistory([])
+    setMonsieur3Found(false)
+    setGameEnded(false)
   }, [initialBasePlayers])
-  
-  // Fonction pour lancer un dé (1-6)
-  const rollDie = (): number => {
-    return Math.floor(Math.random() * 6) + 1
-  }
-  
-  // Lancer les dés
+
   const rollDice = () => {
     if (!canRoll) return
-    
     setRolling(true)
     setCanRoll(false)
-    
-    // Animation de roulement
-    const rollInterval = setInterval(() => {
-      setDice({
-        dice1: rollDie(),
-        dice2: gamePhase === 'setup' ? 1 : rollDie() // En phase de setup, un seul dé
-      })
+
+    const interval = setInterval(() => {
+      setDice({ dice1: rollDie(), dice2: gamePhase === 'setup' ? 1 : rollDie() })
     }, 50)
-    
-    // Arrêter l'animation après un délai
+
     setTimeout(() => {
-      clearInterval(rollInterval)
-      
-      // Résultat final
-      const finalDice1 = rollDie()
-      const finalDice2 = gamePhase === 'setup' ? 1 : rollDie()
-      
-      const finalDice = {
-        dice1: finalDice1,
-        dice2: finalDice2
-      }
-      
-      setDice(finalDice)
+      clearInterval(interval)
+      const d1 = rollDie()
+      const d2 = gamePhase === 'setup' ? 1 : rollDie()
+      setDice({ dice1: d1, dice2: d2 })
       setRolling(false)
-      
-      // Traiter le résultat
-      if (gamePhase === 'setup') {
-        handleSetupRoll(finalDice1)
-      } else if (gamePhase === 'play') {
-        handlePlayRoll(finalDice)
-      }
-    }, 1000)
+      if (gamePhase === 'setup') handleSetupRoll(d1)
+      else handlePlayRoll({ dice1: d1, dice2: d2 })
+    }, 800)
   }
-  
-  // Gérer le lancer pendant la phase de setup
+
   const handleSetupRoll = (roll: number) => {
-    const currentPlayerObj = players[currentPlayerIndex]
-    const currentPlayerName = currentPlayerObj.name
-    const basePlayer = initialBasePlayers.find(p => p.id === currentPlayerObj.id)
-    const boost = basePlayer ? getPlayerGameBoost(basePlayer, 'monsieur-3') : 0
-    let effectiveRoll = roll
-    if (roll === 3 && boost > 0 && Math.random() * 100 < boost) {
-      effectiveRoll = 4
-    }
-    
-    const newSetupRolls = [...setupRolls, { playerName: currentPlayerName, roll: effectiveRoll }]
-    setSetupRolls(newSetupRolls)
-    
-    let newMessage = ''
-    
-    if (effectiveRoll === 3) {
-      // Désigner ce joueur comme Monsieur 3
-      const updatedPlayers = [...players]
-      updatedPlayers[currentPlayerIndex].isMonsieur3 = true
-      setPlayers(updatedPlayers)
+    const p = players[currentPlayerIndex]
+    const base = initialBasePlayers.find(b => b.id === p.id)
+    const boost = base ? getPlayerGameBoost(base, 'monsieur-3') : 0
+    let effective = roll
+    if (roll === 3 && boost > 0 && Math.random() * 100 < boost) effective = 4
+
+    const newRolls = [...setupRolls, { playerName: p.name, roll: effective }]
+    setSetupRolls(newRolls)
+
+    if (effective === 3) {
+      const updated = [...players]
+      updated[currentPlayerIndex].isMonsieur3 = true
+      setPlayers(updated)
       setMonsieur3Index(currentPlayerIndex)
-      
-      newMessage = `${currentPlayerName} a fait un 3 et devient Monsieur 3!`
-      setMessage(newMessage)
-      setSpecialMessage('Monsieur 3 trouvé!')
-      
-      // Lancer des confettis
+      setMessage(`${p.name} a fait un 3 — Monsieur 3 trouvé !`)
+      setSpecialMessage('🎲 Monsieur 3 !')
       launchConfetti()
-      
-      // Passer à la phase de jeu après un délai
+      setRollHistory(prev => [...prev, { player: p.name, dice: { dice1: effective, dice2: 1 }, message: `${p.name} devient Monsieur 3` }])
+
       setTimeout(() => {
         setMonsieur3Found(true)
-        setMessage('Monsieur 3 trouvé! La partie va commencer.')
-        
-        // Le joueur suivant est le joueur à gauche de Monsieur 3 (index + 1, avec retour à 0 si nécessaire)
-        const nextPlayerIndex = (currentPlayerIndex + 1) % players.length
-        setCurrentPlayerIndex(nextPlayerIndex)
-        
+        const next = (currentPlayerIndex + 1) % players.length
+        setCurrentPlayerIndex(next)
         setTimeout(() => {
           setGamePhase('play')
-          setMessage(`C'est au tour de ${players[nextPlayerIndex].name} de lancer les dés.`)
+          setMessage(`C'est au tour de ${players[next].name} de lancer les dés.`)
           setSpecialMessage(null)
           setCanRoll(true)
-        }, 2000)
-      }, 2000)
+        }, 1800)
+      }, 1800)
     } else {
-      newMessage = `${currentPlayerName} a fait un ${effectiveRoll}.`
-      setMessage(newMessage)
-      
-      // Passer au joueur suivant
-      const nextPlayerIndex = (currentPlayerIndex + 1) % players.length
-      setCurrentPlayerIndex(nextPlayerIndex)
+      const msg = `${p.name} a fait un ${effective}.`
+      setMessage(msg)
+      setRollHistory(prev => [...prev, { player: p.name, dice: { dice1: effective, dice2: 1 }, message: msg }])
+      const next = (currentPlayerIndex + 1) % players.length
+      setCurrentPlayerIndex(next)
       setCanRoll(true)
     }
-    
-    setRollHistory(prev => [...prev, {
-      player: currentPlayerName,
-      dice: { dice1: effectiveRoll, dice2: 1 },
-      message: newMessage
-    }])
   }
-  
-  // Gérer le lancer pendant la phase de jeu
+
   const handlePlayRoll = (diceRoll: DiceRoll) => {
     const { dice1, dice2 } = diceRoll
     const sum = dice1 + dice2
     const isDouble = dice1 === dice2
-    const currentPlayerObj = players[currentPlayerIndex]
-    const currentPlayerName = currentPlayerObj.name
-    const isCurrentPlayerMonsieur3 = currentPlayerObj.isMonsieur3
-    const basePlayer = initialBasePlayers.find(p => p.id === currentPlayerObj.id)
-    const boost = basePlayer ? getPlayerGameBoost(basePlayer, 'monsieur-3') : 0
-    
-    let messageText = ''
-    let monsieur3ShouldDrink = false
+    const p = players[currentPlayerIndex]
+    const base = initialBasePlayers.find(b => b.id === p.id)
+    const boost = base ? getPlayerGameBoost(base, 'monsieur-3') : 0
+
+    let msg = ''
+    let m3Drinks = false
     let ruleTriggered = false
-    
-    if (isCurrentPlayerMonsieur3) {
-      // Si aucune règle n'est déclenchée pour Monsieur 3, on termine la partie
+
+    if (p.isMonsieur3) {
       if (dice1 !== 3 && dice2 !== 3 && sum !== 3 && sum !== 5 && dice1 !== 5 && dice2 !== 5 && sum !== 8 && !isDouble) {
-        messageText = `Fin de la partie ! Monsieur 3 a terminé son tour.`
+        msg = `Monsieur 3 a terminé son tour — fin de la partie !`
         setGameEnded(true)
-        showVictoryScreen()
-        setRollHistory(prev => [...prev, {
-          player: currentPlayerName,
-          dice: diceRoll,
-          message: messageText
-        }])
-        setMessage(messageText)
+        setRollHistory(prev => [...prev, { player: p.name, dice: diceRoll, message: msg }])
+        setMessage(msg)
+        setTimeout(() => { setVictoryScreen(true); launchConfetti(); setTimeout(launchConfetti, 1200) }, 800)
         return
       }
     }
-    
+
     if (dice1 === 3 || dice2 === 3 || sum === 3 || sum === 5 || dice1 === 5 || dice2 === 5 || sum === 8) {
-      monsieur3ShouldDrink = true
-      messageText = "Monsieur 3 tu bois !"
-      ruleTriggered = true
+      m3Drinks = true; ruleTriggered = true
+      if (sum === 5) msg = '🤸 Somme 5 — bras en croix + Whoo ! Le dernier boit.'
+      else if (sum === 8) msg = '👆 Somme 8 — pouce sur le front ! Le dernier boit.'
+      else msg = '🍺 Monsieur 3, tu bois !'
     }
-    if (!isCurrentPlayerMonsieur3 && !monsieur3ShouldDrink && monsieur3Index >= 0 && boost > 0 && Math.random() * 100 < boost) {
-      monsieur3ShouldDrink = true
-      messageText = "Monsieur 3 tu bois !"
-      ruleTriggered = true
+    if (!p.isMonsieur3 && !m3Drinks && monsieur3Index >= 0 && boost > 0 && Math.random() * 100 < boost) {
+      m3Drinks = true; ruleTriggered = true
+      msg = '🍺 Monsieur 3, tu bois !'
     }
-    
     if (isDouble) {
-      messageText += messageText ? " Et " : "";
-      messageText += `${currentPlayerName} peut choisir un joueur pour un duel.`
+      msg += msg ? ' — ' : ''
+      msg += `⚔️ Double ! ${p.name} choisit un duel.`
       ruleTriggered = true
     }
-    
-    // Mettre à jour le score de Monsieur 3 (une seule gorgée même si plusieurs règles s'appliquent)
-    if (monsieur3ShouldDrink && monsieur3Index !== -1) {
-      const updatedPlayers = [...players]
-      updatedPlayers[monsieur3Index].score += 1
-      setPlayers(updatedPlayers)
+
+    if (m3Drinks && monsieur3Index !== -1) {
+      const updated = [...players]
+      updated[monsieur3Index].score += 1
+      setPlayers(updated)
     }
-    
-    // Si aucune règle n'est déclenchée
-    if (!ruleTriggered && !gameEnded) {
-      messageText = `Aucune règle déclenchée pour ${dice1} et ${dice2}.`
-      
-      // Passer au joueur suivant automatiquement
-      const nextPlayerIndex = (currentPlayerIndex + 1) % players.length
-      setCurrentPlayerIndex(nextPlayerIndex)
+
+    if (!ruleTriggered) {
+      msg = `Aucune règle — [${dice1}, ${dice2}].`
+      const next = (currentPlayerIndex + 1) % players.length
+      setCurrentPlayerIndex(next)
     }
-    
-    // Ajouter au rollHistory
-    setRollHistory(prev => [...prev, {
-      player: currentPlayerName,
-      dice: diceRoll,
-      message: messageText
-    }])
-    
-    setMessage(messageText)
-    
-    // Si le joueur doit relancer ou la partie est terminée
+
+    setRollHistory(prev => [...prev, { player: p.name, dice: diceRoll, message: msg }])
+    setMessage(msg)
+
     setTimeout(() => {
       if (ruleTriggered && !gameEnded) {
         setCanRoll(true)
-      } else if (gameEnded) {
-        setGamePhase('end')
-      } else {
-        setMessage(`C'est au tour de ${players[(currentPlayerIndex + 1) % players.length].name} de lancer les dés.`)
+      } else if (!gameEnded) {
+        const next = (currentPlayerIndex + 1) % players.length
+        setMessage(`C'est au tour de ${players[next].name} de lancer les dés.`)
         setCanRoll(true)
       }
-    }, 1000)
+    }, 900)
   }
-  
-  // Afficher l'écran de victoire
-  const showVictoryScreen = () => {
-    setVictoryScreen(true)
-    
-    // Animations de confettis plus impressionnantes
-    launchConfetti()
-    
-    // Plus de confettis après un délai
-    setTimeout(() => {
-      launchConfetti()
-    }, 1500)
-  }
-  
-  // Redémarrer le jeu
+
   const restartGame = () => {
-    // Vérifier que initialBasePlayers est bien défini et est un tableau
-    if (!initialBasePlayers || !Array.isArray(initialBasePlayers)) {
-      setPlayers([]);
-      return;
-    }
-    
-    // Réinitialiser tous les états en conservant les préférences
-    setPlayers(initialBasePlayers.map(player => ({
-      name: player?.name || 'Joueur sans nom',
-      isMonsieur3: false,
-      score: 0,
-      preferences: player?.preferences || {},
-      id: player?.id || `player-${Math.random().toString(36).substring(2, 9)}`
+    if (!initialBasePlayers?.length) return
+    setPlayers(initialBasePlayers.map(p => ({
+      name: p?.name || 'Joueur', isMonsieur3: false, score: 0,
+      preferences: p?.preferences || {}, id: p?.id || crypto.randomUUID(),
     })))
     setCurrentPlayerIndex(0)
     setDice({ dice1: 1, dice2: 1 })
     setRolling(false)
     setGamePhase('setup')
-    setMessage('Lancez le dé pour commencer. Le premier joueur qui obtient un 3 devient "Monsieur 3".')
+    setMessage('Lancez le dé — le premier à faire un 3 devient Monsieur 3 !')
     setRollHistory([])
     setSpecialMessage(null)
     setCanRoll(true)
@@ -356,357 +273,260 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
     setMonsieur3Index(-1)
     setVictoryScreen(false)
   }
-  
-  // Rendu d'un dé
-  const renderDie = (value: number, index: number) => {
-    return (
-      <motion.div 
-        key={`die-${index}`}
-        className={`w-16 h-16 ${isMobile ? 'w-12 h-12' : 'w-16 h-16'} rounded-lg shadow-lg bg-white flex items-center justify-center`}
-        initial={{ rotateX: 0 }}
-        animate={rolling ? { 
-          rotateX: [0, 360, 720, 1080], 
-          rotateY: [0, 360, 720, 1080],
-          scale: [1, 1.1, 0.9, 1]
-        } : {}}
-        transition={{ duration: 1, ease: "easeInOut" }}
-      >
-        <div className="relative w-full h-full">
-          {/* Points du dé basés sur la valeur */}
-          {value === 1 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-3 h-3 bg-black rounded-full"></div>
-            </div>
-          )}
-          {value === 2 && (
-            <>
-              <div className="absolute top-2 left-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute bottom-2 right-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-            </>
-          )}
-          {value === 3 && (
-            <>
-              <div className="absolute top-2 left-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute bottom-2 right-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-            </>
-          )}
-          {value === 4 && (
-            <>
-              <div className="absolute top-2 left-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute top-2 right-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute bottom-2 left-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute bottom-2 right-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-            </>
-          )}
-          {value === 5 && (
-            <>
-              <div className="absolute top-2 left-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute top-2 right-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute bottom-2 left-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute bottom-2 right-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-            </>
-          )}
-          {value === 6 && (
-            <>
-              <div className="absolute top-2 left-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute top-2 right-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute left-2 top-1/2 -translate-y-1/2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute bottom-2 left-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-              <div className="absolute bottom-2 right-2">
-                <div className="w-2 h-2 bg-black rounded-full"></div>
-              </div>
-            </>
-          )}
-        </div>
-      </motion.div>
-    )
-  }
 
-  // Écran de victoire
-  const renderVictoryScreen = () => {
-    const monsieur3 = players.find(player => player.isMonsieur3);
-    
-    return (
-      <motion.div 
-        className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gradient-to-br from-blue-900/90 to-purple-900/90"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <motion.div 
-          className="text-center p-8"
-          initial={{ scale: 0.8, y: 30 }}
-          animate={{ scale: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.8, type: "spring" }}
-        >
-          <h2 className="text-4xl font-bold text-white mb-6">Partie Terminée !</h2>
-          
-          <div className="mb-6">
-            <div className="text-xl text-yellow-300 font-semibold mb-2">Monsieur 3</div>
-            <div className="text-3xl text-white font-bold mb-4">{monsieur3?.name}</div>
-            <div className="text-xl text-blue-200">
-              A bu {monsieur3?.score} gorgée{monsieur3?.score !== 1 ? 's' : ''}
-            </div>
-          </div>
-          
-          <div className="flex flex-col gap-4 mt-8">
-            <Button
-              onClick={restartGame}
-              size="lg"
-              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 font-bold py-6"
-            >
-              Nouvelle partie
-            </Button>
-            
-            <Button
-              onClick={onGameEnd}
-              variant="outline"
-              size="lg"
-              className="border-white text-white hover:bg-white/10"
-            >
-              Retour à la sélection des joueurs
-            </Button>
-          </div>
-        </motion.div>
-      </motion.div>
-    )
-  }
-
-  // Pour tout rendu de nom de joueur, utiliser le composant PlayerName
-  const renderPlayerCard = (player: Player, index: number) => {
-    return (
-      <div 
-        key={player.id}
-        className={`
-          flex items-center justify-between p-2 rounded-md
-          ${currentPlayerIndex === index ? 'bg-primary/20' : ''}
-          ${player.isMonsieur3 ? 'border-2 border-yellow-500' : ''}
-          mb-2 hover:bg-primary/10 transition-colors
-        `}
-        onClick={() => setCurrentPlayerIndex(index)}
-      >
-        <div className="flex items-center space-x-2">
-          <Avatar className={`${player.preferences?.color || ''} ${player.isMonsieur3 ? 'border-2 border-yellow-500' : ''}`}>
-            <AvatarFallback>
-              {player.preferences?.icon || player.name.charAt(0).toUpperCase()}
-            </AvatarFallback>
-            {player.preferences?.avatar && (
-              <AvatarImage src={player.preferences.avatar} alt={player.name} />
-            )}
-          </Avatar>
-          <div className="flex flex-col">
-            <PlayerName player={player} className="font-medium" />
-            <div className="text-xs text-muted-foreground">
-              {player.score > 0 && player.isMonsieur3 && `${player.score} gorgée${player.score > 1 ? 's' : ''}`}
-            </div>
-          </div>
-        </div>
-        {player.isMonsieur3 && (
-          <div className="px-2 py-1 bg-yellow-500 text-black text-xs rounded-full font-medium">
-            Monsieur 3
-          </div>
-        )}
-      </div>
-    )
-  }
-  
-  // Rendu du tableau des joueurs avec un titre plus visible
-  const renderPlayersList = () => {
-    if (!players || players.length === 0) {
-      return (
-        <div className="text-center p-4 text-blue-200 bg-blue-800/30 rounded-md">
-          <p>Aucun joueur sélectionné</p>
-          <p className="text-sm mt-2">Retournez à la sélection des joueurs</p>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="divide-y divide-blue-700">
-        {players.map((player, index) => renderPlayerCard(player, index))}
-      </div>
-    );
-  }
+  const currentPlayer = players[currentPlayerIndex]
+  const monsieur3Player = players.find(p => p.isMonsieur3)
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* En-tête */}
-      <div className="flex justify-between items-center mb-6">
-        <Button 
-          onClick={onGameEnd}
-          variant="outline" 
-          size="icon"
-        >
-          <Home className="w-5 h-5" />
-        </Button>
-        <h1 className="text-2xl font-bold">Monsieur 3</h1>
-        <Button 
-          onClick={restartGame}
-          variant="outline" 
-          size="icon"
-        >
-          <RefreshCw className="w-5 h-5" />
-        </Button>
+    <div className="w-full min-h-screen relative text-white">
+      {/* Fond */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[#07060b]" />
+        <div className="absolute -top-32 -left-20 h-[28rem] w-[28rem] rounded-full bg-red-600/10 blur-[120px]" />
+        <div className="absolute -bottom-32 right-0 h-[26rem] w-[26rem] rounded-full bg-indigo-700/10 blur-[110px]" />
       </div>
-      
-      {/* Affichage du nombre de joueurs */}
-      <div className="mb-4 text-center">
-        <p className="text-blue-200">
-          {players.length} joueur{players.length > 1 ? 's' : ''} dans la partie
-        </p>
-      </div>
-      
-      {/* Zone des dés */}
-      <div ref={confettiRef} className="relative">
-        <Card className="mb-6 p-6 bg-gradient-to-br from-blue-900/80 to-purple-800/80 border-blue-700">
-          <div className="text-blue-100 text-center mb-4">
-            {gamePhase === 'setup' && !monsieur3Found && (
-              <div className="mb-2">
-                <span className="text-lg font-semibold">Recherche de Monsieur 3</span>
-                <p className="text-sm">Le premier joueur qui fait un 3 devient Monsieur 3</p>
-              </div>
-            )}
-            
-            {/* Joueur actuel */}
-            <div className="flex justify-center items-center space-x-3 mb-4">
-              {players.length > 0 && currentPlayerIndex < players.length ? (
-                <>
-                  {players[currentPlayerIndex]?.isMonsieur3 && (
-                    <span className="bg-yellow-500 text-black text-xs px-2 py-1 rounded-full">Monsieur 3</span>
-                  )}
-                  <PlayerName player={players[currentPlayerIndex]} className="text-lg font-bold" />
-                </>
-              ) : (
-                <span className="text-red-300">Aucun joueur actif</span>
-              )}
-            </div>
+
+      {/* Header fixe */}
+      <div className="fixed top-0 inset-x-0 z-30 border-b border-white/[0.06] bg-[#07060b]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
+          <h1 className="font-black tracking-tight text-lg bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-rose-300 to-orange-400">
+            🎲 Monsieur 3
+          </h1>
+          <div className="flex items-center gap-1">
+            <button onClick={restartGame} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-red-300/60 transition hover:bg-white/10 hover:text-red-300" aria-label="Nouvelle partie">
+              <RotateCcw className="h-4 w-4" />
+            </button>
+            <button onClick={onGameEnd} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label="Retour aux jeux">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
           </div>
-          
-          {/* Animation spéciale */}
+        </div>
+      </div>
+
+      {/* Contenu principal */}
+      <div className="mx-auto max-w-xl px-4 pt-20 pb-28 space-y-4">
+
+        {/* Phase indicator */}
+        <div className="flex items-center gap-2">
+          <span className={cn(
+            'rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-widest',
+            gamePhase === 'setup' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'
+          )}>
+            {gamePhase === 'setup' ? 'Recherche de Monsieur 3' : 'En jeu'}
+          </span>
+          {monsieur3Player && (
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-[11px] font-semibold text-amber-300">
+              M3 : {monsieur3Player.name} · {monsieur3Player.score} 🍺
+            </span>
+          )}
+        </div>
+
+        {/* Joueur actif */}
+        {currentPlayer && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 flex items-center gap-3">
+            {(() => {
+              const bg = getColorFromClass(currentPlayer.preferences?.color ?? '')
+              return (
+                <Avatar className="h-10 w-10 shrink-0 border-2 border-white/20" style={{ backgroundColor: bg }}>
+                  <AvatarFallback className="text-sm font-bold text-white" style={{ backgroundColor: bg }}>
+                    {currentPlayer.preferences?.icon || currentPlayer.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                  {currentPlayer.preferences?.avatar && <AvatarImage src={currentPlayer.preferences.avatar} alt={currentPlayer.name} />}
+                </Avatar>
+              )
+            })()}
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">Joueur actif</p>
+              <PlayerName player={currentPlayer} className={cn('font-bold text-white text-base truncate', isSpecialPlayer(currentPlayer) && getSpecialEffectClass(currentPlayer))} />
+            </div>
+            {currentPlayer.isMonsieur3 && (
+              <span className="shrink-0 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2.5 py-1 text-[11px] font-bold text-black shadow-[0_0_12px_rgba(245,158,11,0.4)]">
+                Monsieur 3
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Zone des dés */}
+        <div ref={confettiRef} className="relative rounded-2xl border border-white/10 bg-white/[0.04] p-6 overflow-hidden">
+          {/* Texture */}
+          <div className="pointer-events-none absolute inset-0 opacity-[0.03] [background:repeating-linear-gradient(45deg,rgba(255,255,255,.2)_0px,rgba(255,255,255,.2)_1px,transparent_1px,transparent_20px)]" />
+
+          <div className="relative flex items-center justify-center gap-6 mb-5">
+            <Die value={dice.dice1} rolling={rolling} highlight={dice.dice1 === 3} />
+            {gamePhase !== 'setup' && (
+              <>
+                <span className="text-white/20 text-2xl font-thin">+</span>
+                <Die value={dice.dice2} rolling={rolling} highlight={dice.dice2 === 3} />
+                {!rolling && gamePhase === 'play' && (
+                  <div className="absolute -bottom-1 right-4 flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 text-xs text-white/50">
+                    Somme <span className="font-bold text-white/80 ml-1">{dice.dice1 + dice.dice2}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Message */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={message}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+              role="status"
+              aria-live="polite"
+              className="text-center text-sm font-semibold text-white/80 min-h-[2.5rem] flex items-center justify-center px-2"
+            >
+              {message}
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Message spécial (Monsieur 3 trouvé) */}
           <AnimatePresence>
             {specialMessage && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.5 }}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.6 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.5 }}
-                className="absolute inset-0 flex items-center justify-center z-10"
+                exit={{ opacity: 0, scale: 0.6 }}
+                className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-2xl z-10"
               >
-                <div className="bg-yellow-500 text-black text-2xl font-bold px-6 py-3 rounded-lg shadow-xl">
+                <div className="rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 px-6 py-4 text-2xl font-black text-black shadow-2xl">
                   {specialMessage}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-          
-          {/* Dés */}
-          <div 
-            ref={diceContainerRef}
-            className="flex justify-center items-center space-x-4 mb-6"
-          >
-            {renderDie(dice.dice1, 1)}
-            {gamePhase !== 'setup' && renderDie(dice.dice2, 2)}
+        </div>
+
+        {/* Liste des joueurs */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-white/40">Joueurs</p>
+          <div className="space-y-1">
+            {players.map((p, i) => {
+              const bg = getColorFromClass(p.preferences?.color ?? '')
+              const isCurrent = i === currentPlayerIndex
+              return (
+                <div
+                  key={p.id}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all',
+                    isCurrent ? 'bg-white/[0.07] border border-white/10' : 'border border-transparent'
+                  )}
+                >
+                  <Avatar className="h-7 w-7 shrink-0 border border-white/15" style={{ backgroundColor: bg }}>
+                    <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundColor: bg }}>
+                      {p.preferences?.icon || p.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                    {p.preferences?.avatar && <AvatarImage src={p.preferences.avatar} alt={p.name} />}
+                  </Avatar>
+                  <PlayerName player={p} className={cn('text-sm font-medium flex-1 truncate', isCurrent ? 'text-white' : 'text-white/60', isSpecialPlayer(p) && getSpecialEffectClass(p))} />
+                  {p.isMonsieur3 && (
+                    <span className="rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-400">M3</span>
+                  )}
+                  {p.isMonsieur3 && p.score > 0 && (
+                    <span className="text-xs text-red-400 font-semibold">{p.score}🍺</span>
+                  )}
+                  {isCurrent && !p.isMonsieur3 && (
+                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                  )}
+                </div>
+              )
+            })}
           </div>
-          
-          {/* Message du lancer actuel */}
-          <div className="text-center text-blue-100 mb-4 min-h-[3rem] text-xl font-bold">
-            {message}
-          </div>
-          
-          {/* Boutons d'action */}
-          <div className="flex justify-center space-x-3">
-            <Button
-              disabled={!canRoll || rolling || victoryScreen || players.length === 0}
-              onClick={rollDice}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600"
+        </div>
+
+        {/* Historique */}
+        {rollHistory.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden">
+            <button
+              onClick={() => setShowHistory(v => !v)}
+              aria-expanded={showHistory}
+              aria-controls="roll-history"
+              className="flex w-full items-center justify-between px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-white/40 hover:text-white/60 transition"
             >
-              {rolling ? "Lancement..." : "Lancer les dés"}
-            </Button>
-          </div>
-        </Card>
-      </div>
-      
-      {/* Tableau des joueurs */}
-      <Card className="p-4 bg-gradient-to-br from-blue-900/60 to-purple-800/60 border-blue-700 mb-6">
-        <h2 className="text-xl font-semibold mb-3 text-blue-100">Joueurs</h2>
-        {renderPlayersList()}
-      </Card>
-      
-      {/* Historique des lancers */}
-      <Card className="p-4 bg-gradient-to-br from-blue-900/60 to-purple-800/60 border-blue-700 mb-6">
-        <h2 className="text-xl font-semibold mb-3 text-blue-100">Historique</h2>
-        <div className="max-h-40 overflow-y-auto space-y-2">
-          {rollHistory.length === 0 ? (
-            <div className="text-blue-300 text-center py-4">Aucun lancer effectué</div>
-          ) : (
-            rollHistory.map((roll, index) => (
-              <div key={index} className="text-sm text-blue-100 border-b border-blue-800 pb-1">
-                <span className="font-semibold">{roll.player}: </span>
-                <span>[{roll.dice.dice1}{gamePhase !== 'setup' || index >= setupRolls.length ? `, ${roll.dice.dice2}` : ''}] </span>
-                <span>{roll.message}</span>
+              <span>Historique ({rollHistory.length})</span>
+              <span>{showHistory ? '▲' : '▼'}</span>
+            </button>
+            {showHistory && (
+              <div id="roll-history" className="border-t border-white/[0.06] px-4 pb-3 pt-2 max-h-48 overflow-y-auto space-y-1.5">
+                {[...rollHistory].reverse().map((r, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-white/50">
+                    <span className="shrink-0 font-semibold text-white/70">{r.player}</span>
+                    <span className="shrink-0 rounded border border-white/10 bg-white/[0.05] px-1.5 py-0.5 font-mono">
+                      {r.dice.dice1}{r.dice.dice2 !== 1 ? `+${r.dice.dice2}` : ''}
+                    </span>
+                    <span className="flex-1 text-white/45">{r.message}</span>
+                  </div>
+                ))}
               </div>
-            )).reverse()
-          )}
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Barre d'action fixe */}
+      <div className="fixed bottom-0 inset-x-0 z-20 bg-gradient-to-t from-[#07060b] via-[#07060b]/95 to-transparent backdrop-blur-sm">
+        <div className="mx-auto max-w-xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button
+            onClick={rollDice}
+            disabled={!canRoll || rolling || victoryScreen || players.length === 0}
+            aria-label={rolling ? 'Lancement en cours' : 'Lancer les dés'}
+            className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-rose-500 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(239,68,68,0.35)] transition-transform [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 hover:from-red-500 hover:to-rose-400"
+          >
+            {rolling ? '🎲 Lancement...' : gamePhase === 'setup' ? '🎲 Lancer le dé' : '🎲 Lancer les dés'}
+          </button>
         </div>
-      </Card>
-      
-      {/* Règles du jeu */}
-      <Card className="p-4 bg-gradient-to-br from-blue-900/60 to-purple-800/60 border-blue-700">
-        <h2 className="text-xl font-semibold mb-3 text-blue-100">Règles du jeu</h2>
-        <div className="text-sm text-blue-100 space-y-2">
-          <p>• Seul Monsieur 3 boit des gorgées pendant la partie.</p>
-          <p>• Monsieur 3 boit une gorgée chaque fois qu&apos;un dé affiche 3, que la somme des dés est égale à 3.</p>
-          <p>• La somme ou un dé égal à 5 : Il faut faire metre les bras en croix et dire whoo! le dernier a faire cela boit une gorgée.</p>
-          <p>• La somme égale à 8 : Pouce sur le front et le dernier a faire le geste boit une gorgée.</p>
-          <p>• Si un dé 5 et dé 3 est tiré, le cumul est de 8 et il faut faire les 2 gestes cités ci-dessus. </p>
-          <p>• Double (deux dés identiques) : le joueur peut choisir un autre joueur pour un duel.</p>
-          <p>• Un joueur qui déclenche une règle rejoue jusqu&apos;à faire un lancer qui ne correspond à aucune règle.</p>
-          <p>• La partie se termine après un tour complet quand tous les joueurs ont joué et que Monsieur 3 a fait son tour.</p>
-        </div>
-      </Card>
-      
+      </div>
+
       {/* Écran de victoire */}
-      {victoryScreen && renderVictoryScreen()}
+      <AnimatePresence>
+        {victoryScreen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.85, y: 24 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: 'spring', duration: 0.6 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-red-500/20 bg-[#0d0807] p-6 shadow-2xl"
+            >
+              <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #ef4444, transparent 70%)' }} />
+              <div className="relative space-y-5 text-center">
+                <div className="text-5xl">🎲</div>
+                <h2 className="text-2xl font-black text-white">Partie terminée !</h2>
+
+                {monsieur3Player && (
+                  <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/70 mb-2">Monsieur 3</p>
+                    <p className="text-xl font-extrabold text-amber-300">{monsieur3Player.name}</p>
+                    <p className="text-3xl font-black text-white mt-1">{monsieur3Player.score} 🍺</p>
+                    <p className="text-xs text-white/40 mt-1">gorgée{monsieur3Player.score !== 1 ? 's' : ''} bue{monsieur3Player.score !== 1 ? 's' : ''}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    onClick={restartGame}
+                    className="rounded-2xl bg-gradient-to-r from-red-600 to-rose-500 py-3 text-sm font-bold text-white hover:from-red-500 hover:to-rose-400"
+                  >
+                    Rejouer
+                  </button>
+                  <button
+                    onClick={onGameEnd}
+                    className="rounded-2xl border border-white/10 bg-white/[0.05] py-3 text-sm text-white/60 hover:bg-white/10 hover:text-white"
+                  >
+                    Menu
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
-} 
+}
