@@ -9,7 +9,7 @@ import { Dice6, Trophy, ArrowRight, RefreshCw, Home, MapPin, Target, Link2, Circ
 import { usePlayers } from '@/hooks/usePlayers'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS, getPlayerGameBoost } from '@/lib/players'
+import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS, getPlayerGameBoost, sanitizePlayerName } from '@/lib/players'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { detectBrowserCapabilities } from '@/lib/browser-support'
 import { getSafeStorage } from '@/lib/storage'
@@ -223,6 +223,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [players, setPlayers] = useState<GamePlayer[]>(
     initialPlayers.length > 0 ? initialPlayers.map(p => ({
       ...p,
+      name: sanitizePlayerName(p.name),
       position: 0,
       drinks: 0,
       protected: false,
@@ -579,7 +580,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         ...players,
         {
           id: Date.now().toString(),
-          name: newPlayerName.trim(),
+          name: sanitizePlayerName(newPlayerName),
           position: 0,
           drinks: 0,
           preferences: {

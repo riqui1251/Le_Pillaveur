@@ -73,6 +73,21 @@ export const PLAYER_ICONS = [
   '🎬', '🎵', '🎶'
 ];
 
+/**
+ * Nettoie un nom de joueur pour empêcher toute injection HTML/XSS.
+ * Les noms sont rendus dans plusieurs jeux via dangerouslySetInnerHTML
+ * (descriptions d'effets) : on supprime donc tout caractère permettant
+ * d'ouvrir une balise ou une entité, et on limite la longueur.
+ */
+export function sanitizePlayerName(name: string): string {
+  if (typeof name !== 'string') return '';
+  return name
+    .replace(/[<>]/g, '')        // empêche l'ouverture/fermeture de balises
+    .replace(/[\u0000-\u001F\u007F]/g, '') // supprime les caractères de contrôle
+    .trim()
+    .slice(0, 40);               // garde-fou de longueur
+}
+
 export function getStoredPlayers(): Player[] {
   const storage = getSafeStorage();
   if (!storage) return [];
@@ -92,7 +107,9 @@ export function getStoredPlayers(): Player[] {
         changed = true;
       }
       seen.add(id);
-      return { ...p, id };
+      const cleanName = sanitizePlayerName(p.name);
+      if (cleanName !== p.name) changed = true;
+      return { ...p, id, name: cleanName };
     });
     if (changed) {
       try { savePlayers(sanitized); } catch {}
@@ -124,7 +141,7 @@ export function addPlayer(name: string): Player[] {
   const players = getStoredPlayers();
   const newPlayer: Player = {
     id: generatePlayerId(),
-    name,
+    name: sanitizePlayerName(name),
     createdAt: Date.now(),
     stats: {
       gamesPlayed: 0,
@@ -151,8 +168,11 @@ export function removePlayer(playerId: string): Player[] {
 
 export function updatePlayer(playerId: string, updates: Partial<Player>): Player[] {
   const players = getStoredPlayers();
+  const safeUpdates: Partial<Player> = typeof updates.name === 'string'
+    ? { ...updates, name: sanitizePlayerName(updates.name) }
+    : updates;
   const updatedPlayers = players.map(p => 
-    p.id === playerId ? { ...p, ...updates } : p
+    p.id === playerId ? { ...p, ...safeUpdates } : p
   );
   savePlayers(updatedPlayers);
   return updatedPlayers;
