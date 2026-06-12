@@ -17,6 +17,7 @@ import {
   getPlayerStatsByGame as getPlayerStatsByGameFromStorage
 } from '../lib/players';
 import { useAuth } from '@/hooks/useAuth';
+import { clearSelectedPlayerIds } from '@/lib/selectedPlayers';
 
 export function usePlayers() {
   const { user } = useAuth();
@@ -25,12 +26,14 @@ export function usePlayers() {
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [mostActivePlayers, setMostActivePlayers] = useState<Player[]>([]);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cloudSyncedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       setLoading(true);
+      cloudSyncedRef.current = false;
       const local = getStoredPlayers();
 
       if (user) {
@@ -39,12 +42,19 @@ export function usePlayers() {
           if (res.ok) {
             const data = await res.json();
             const cloud: Player[] = Array.isArray(data.players) ? data.players : [];
-            const useCloud = cloud.length > 0 || local.length === 0;
-            if (!cancelled && useCloud) {
-              savePlayers(cloud);
-              setPlayers(cloud);
+            if (!cancelled) {
+              if (cloud.length > 0) {
+                savePlayers(cloud);
+                setPlayers(cloud);
+              } else {
+                // Compte cloud vide : ne pas reprendre les joueurs locaux de l'appareil
+                savePlayers([]);
+                setPlayers([]);
+                clearSelectedPlayerIds();
+              }
               setTopPlayers(getTopPlayers());
               setMostActivePlayers(getMostActivePlayers());
+              cloudSyncedRef.current = true;
               setLoading(false);
               return;
             }
@@ -56,6 +66,7 @@ export function usePlayers() {
         setPlayers(local);
         setTopPlayers(getTopPlayers());
         setMostActivePlayers(getMostActivePlayers());
+        cloudSyncedRef.current = !user;
         setLoading(false);
       }
     }
@@ -126,7 +137,7 @@ export function usePlayers() {
     if (loading) return;
     savePlayers(players);
 
-    if (!user) return;
+    if (!user || !cloudSyncedRef.current) return;
 
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(() => {
