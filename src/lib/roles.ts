@@ -107,6 +107,11 @@ export function canViewAccountActivity(role: string): boolean {
   return roleRank(role) >= ROLE_RANK.moderator
 }
 
+/** Retours joueurs (bugs, suggestions) : fondateur uniquement. */
+export function canViewUserFeedback(role: string): boolean {
+  return normalizeRole(role) === 'fondateur'
+}
+
 export function assignableRoles(actorRole: string): UserRole[] {
   if (!canAssignRoles(actorRole)) return []
   return USER_ROLES.filter((r) => {

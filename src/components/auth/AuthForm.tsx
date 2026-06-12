@@ -1,19 +1,45 @@
 "use client"
 
 import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { LogIn, UserPlus } from 'lucide-react'
+import { LogIn, UserPlus, Gamepad2 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+
+function safeRedirect(path: string | null): string {
+  if (!path || !path.startsWith('/') || path.startsWith('//')) return '/joueurs'
+  if (path.startsWith('/compte')) return '/joueurs'
+  return path
+}
 
 export function AuthForm() {
   const { login, register } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = safeRedirect(searchParams.get('redirect'))
+
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [localLoading, setLocalLoading] = useState(false)
+
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null)
+  const [forgotError, setForgotError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,9 +49,52 @@ export function AuthForm() {
       const err = mode === 'login'
         ? await login(email, password)
         : await register(email, password, displayName)
-      if (err) setError(err)
+      if (err) {
+        setError(err)
+      } else {
+        router.push(redirectTo)
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleLocalPlay = async () => {
+    setLocalLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/auth/local-play', { method: 'POST', credentials: 'include' })
+      if (!res.ok) throw new Error('Impossible d\'activer le mode local')
+      router.push(redirectTo)
+    } catch {
+      setError('Impossible d\'activer le mode local. Réessayez.')
+    } finally {
+      setLocalLoading(false)
+    }
+  }
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotError(null)
+    setForgotMessage(null)
+    setForgotLoading(true)
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? 'Erreur')
+      }
+      setForgotMessage(
+        'Si un compte existe avec cet email, vous recevrez un lien de réinitialisation dans quelques minutes.'
+      )
+    } catch (err) {
+      setForgotError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setForgotLoading(false)
     }
   }
 
@@ -94,7 +163,23 @@ export function AuthForm() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-white/60">Mot de passe</label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="text-xs font-medium text-white/60">Mot de passe</label>
+            {mode === 'login' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotEmail(email)
+                  setForgotOpen(true)
+                  setForgotMessage(null)
+                  setForgotError(null)
+                }}
+                className="text-xs text-amber-300/70 hover:text-amber-200"
+              >
+                Mot de passe oublié ?
+              </button>
+            )}
+          </div>
           <Input
             type="password"
             value={password}
@@ -119,9 +204,57 @@ export function AuthForm() {
         </Button>
       </form>
 
-      <p className="text-center text-xs text-white/35">
-        Sans compte, vos joueurs restent enregistrés uniquement sur cet appareil.
-      </p>
+      <div className="space-y-3 text-center">
+        <p className="text-xs text-white/35">
+          Sans compte, vos joueurs restent enregistrés uniquement sur cet appareil.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={localLoading}
+          onClick={handleLocalPlay}
+          className="w-full border-white/15 bg-transparent text-white/70 hover:bg-white/[0.06] hover:text-white"
+        >
+          <Gamepad2 className="mr-2 h-4 w-4" />
+          {localLoading ? 'Chargement…' : 'Jouer en local'}
+        </Button>
+      </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="border-white/10 bg-[#0c0b12] text-white">
+          <DialogHeader>
+            <DialogTitle>Mot de passe oublié</DialogTitle>
+            <DialogDescription className="text-white/50">
+              Entrez votre email pour recevoir un lien de réinitialisation.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotSubmit} className="space-y-4">
+            <Input
+              type="email"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              placeholder="vous@exemple.com"
+              required
+              className="border-white/10 bg-white/[0.05] text-white"
+            />
+            {forgotError && (
+              <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">{forgotError}</p>
+            )}
+            {forgotMessage && (
+              <p className="rounded-lg bg-emerald-500/15 px-3 py-2 text-sm text-emerald-300">{forgotMessage}</p>
+            )}
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={forgotLoading || Boolean(forgotMessage)}
+                className="bg-amber-500 text-black hover:bg-amber-400"
+              >
+                {forgotLoading ? 'Envoi…' : 'Envoyer le lien'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

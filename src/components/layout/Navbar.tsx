@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { canAccessSupervision } from '@/lib/roles'
 import { getPageMeta } from '@/lib/nav-meta'
 import { FullscreenButton } from '@/components/ui/fullscreen-button'
+import { FeedbackDialog, FeedbackMenuButton } from '@/components/feedback/FeedbackDialog'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -19,6 +20,7 @@ const navLinks = [
 export default function Navbar() {
   const [mounted, setMounted] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const { user } = useAuth()
   const pathname = usePathname()
   const pageMeta = getPageMeta(pathname)
@@ -197,10 +199,18 @@ export default function Navbar() {
           </ul>
         </nav>
 
-        <div className="relative border-t border-white/[0.07] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="relative border-t border-white/[0.07] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] space-y-2">
+          <FeedbackMenuButton
+            onClick={() => {
+              setDrawerOpen(false)
+              setFeedbackOpen(true)
+            }}
+          />
           <FullscreenButton className="w-full justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-sm text-white/60 hover:bg-white/[0.08] hover:text-white" />
         </div>
       </aside>
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   )
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   createSession,
+  clearLocalPlayCookieOptions,
   isValidEmail,
   sessionCookieOptions,
   verifyPassword,
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
       },
     })
     response.cookies.set(sessionCookieOptions(token))
+    response.cookies.set(clearLocalPlayCookieOptions())
     return response
   } catch (error) {
     console.error('login error:', error)

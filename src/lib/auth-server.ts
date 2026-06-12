@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
-import { randomBytes } from 'crypto'
+import { createHash, randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import {
   canAccessSupervision,
@@ -11,11 +11,12 @@ import {
 } from '@/lib/roles'
 import { ensureUserAccountCode } from '@/lib/account-code'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
+import { LOCAL_PLAY_COOKIE, SESSION_COOKIE, VISITOR_COOKIE } from '@/lib/auth-cookies'
 
-export const SESSION_COOKIE = 'lp_session'
-export const VISITOR_COOKIE = 'lp_vid'
+export { SESSION_COOKIE, VISITOR_COOKIE, LOCAL_PLAY_COOKIE } from '@/lib/auth-cookies'
 const SESSION_DAYS = 30
 const VISITOR_DAYS = 365
+const LOCAL_PLAY_DAYS = 365
 
 export type AuthUser = {
   id: string
@@ -161,6 +162,38 @@ export function clearSessionCookieOptions() {
     path: '/',
     maxAge: 0,
   }
+}
+
+export function localPlayCookieOptions() {
+  return {
+    name: LOCAL_PLAY_COOKIE,
+    value: '1',
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: LOCAL_PLAY_DAYS * 24 * 60 * 60,
+  }
+}
+
+export function clearLocalPlayCookieOptions() {
+  return {
+    name: LOCAL_PLAY_COOKIE,
+    value: '',
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 0,
+  }
+}
+
+export function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
+}
+
+export async function revokeAllUserSessions(userId: string): Promise<void> {
+  await prisma.session.deleteMany({ where: { userId } })
 }
 
 export function isValidEmail(email: string): boolean {

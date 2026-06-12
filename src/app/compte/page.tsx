@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { AuthForm } from '@/components/auth/AuthForm'
 import { AccountInfo } from '@/components/ui/AccountInfo'
@@ -28,7 +29,15 @@ export default function AccountPage() {
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
           </div>
         ) : !user ? (
-          <AuthForm />
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-20">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
+              </div>
+            }
+          >
+            <AuthForm />
+          </Suspense>
         ) : (
           <AccountInfo />
         )}

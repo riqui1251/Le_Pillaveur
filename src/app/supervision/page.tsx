@@ -21,6 +21,7 @@ import {
   Users,
   Gamepad2,
   Trash2,
+  MessageSquarePlus,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -35,6 +36,7 @@ import {
   canViewAccountActivity,
   canViewSupervisionAnalytics,
   canViewSupervisionBans,
+  canViewUserFeedback,
   ROLE_DESCRIPTIONS,
   roleLabel,
 } from '@/lib/roles'
@@ -134,6 +136,24 @@ type ActiveBan = {
   bannedByName: string | null
 }
 
+type FeedbackItem = {
+  id: string
+  type: string
+  typeLabel: string
+  message: string
+  messagePreview: string
+  screenshots: string[]
+  pageUrl: string | null
+  userAgent: string | null
+  userId: string | null
+  authorName: string
+  contactEmail: string | null
+  status: string
+  statusLabel: string
+  createdAt: string
+  updatedAt: string
+}
+
 type UserDetail = {
   user: {
     id: string
@@ -224,6 +244,107 @@ function matchesAccountSearch(
   if (user.email?.toLowerCase().includes(q)) return true
   if (user.accountCode?.toLowerCase().includes(codeQ)) return true
   return false
+}
+
+function matchesFeedbackSearch(item: FeedbackItem, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  if (item.message.toLowerCase().includes(q)) return true
+  if (item.messagePreview.toLowerCase().includes(q)) return true
+  if (item.authorName.toLowerCase().includes(q)) return true
+  if (item.typeLabel.toLowerCase().includes(q)) return true
+  if (item.type.toLowerCase().includes(q)) return true
+  if (item.statusLabel.toLowerCase().includes(q)) return true
+  if (item.contactEmail?.toLowerCase().includes(q)) return true
+  if (item.pageUrl?.toLowerCase().includes(q)) return true
+  return false
+}
+
+function FeedbackListSection({
+  items,
+  emptyMessage,
+  onSelect,
+}: {
+  items: FeedbackItem[]
+  emptyMessage: string
+  onSelect: (item: FeedbackItem) => void
+}) {
+  if (items.length === 0) {
+    return <p className="py-6 text-center text-sm text-white/50">{emptyMessage}</p>
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onSelect(item)}
+          className="w-full rounded-xl border border-white/10 bg-black/20 p-4 text-left transition-colors hover:bg-white/[0.04]"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                className={
+                  item.type === 'bug'
+                    ? 'border-red-500/30 bg-red-500/15 text-red-200'
+                    : item.type === 'improvement'
+                      ? 'border-amber-500/30 bg-amber-500/15 text-amber-200'
+                      : 'border-violet-500/30 bg-violet-500/15 text-violet-200'
+                }
+              >
+                {item.typeLabel}
+              </Badge>
+              <Badge variant="secondary">{item.statusLabel}</Badge>
+            </div>
+            <span className="text-xs text-white/40">
+              {new Date(item.createdAt).toLocaleString('fr-FR')}
+            </span>
+          </div>
+          <p className="mt-2 text-sm font-medium text-white">{item.authorName}</p>
+          <p className="mt-1 text-sm text-white/60">{item.messagePreview}</p>
+          {item.screenshots.length > 0 && (
+            <p className="mt-1 text-xs text-white/35">
+              {item.screenshots.length} capture{item.screenshots.length > 1 ? 's' : ''}
+            </p>
+          )}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function FeedbackSearchBar({
+  value,
+  onChange,
+  placeholder,
+  resultCount,
+  totalCount,
+}: {
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  resultCount: number
+  totalCount: number
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+        <Input
+          className="bg-black/30 pl-9"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
+      {value.trim() && (
+        <p className="text-xs text-white/45">
+          {resultCount} résultat{resultCount > 1 ? 's' : ''} sur {totalCount}
+        </p>
+      )}
+    </div>
+  )
 }
 
 function RoleBadge({ role }: { role: string }) {
@@ -375,16 +496,48 @@ export default function SupervisionPage() {
     displayName: string
   } | null>(null)
 
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([])
+  const [feedbackSearch, setFeedbackSearch] = useState('')
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null)
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+
   const canEditAccounts = user ? canManageUsers(user.role) : false
   const showAccountActivity = user ? canViewAccountActivity(user.role) : false
   const assignableRoleOptions = user ? assignableRoles(user.role) : []
   const showAnalytics = user ? canViewSupervisionAnalytics(user.role) : false
   const showBansTab = user ? canViewSupervisionBans(user.role) : false
+  const showFeedbackTab = user ? canViewUserFeedback(user.role) : false
   const defaultTab = showAnalytics ? 'overview' : 'accounts'
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => matchesAccountSearch(u, accountSearch))
   }, [users, accountSearch])
+
+  const activeFeedbackItems = useMemo(
+    () =>
+      feedbackItems.filter(
+        (f) => f.status !== 'resolved' && matchesFeedbackSearch(f, feedbackSearch)
+      ),
+    [feedbackItems, feedbackSearch]
+  )
+
+  const resolvedFeedbackItems = useMemo(
+    () =>
+      feedbackItems.filter(
+        (f) => f.status === 'resolved' && matchesFeedbackSearch(f, feedbackSearch)
+      ),
+    [feedbackItems, feedbackSearch]
+  )
+
+  const activeFeedbackTotal = useMemo(
+    () => feedbackItems.filter((f) => f.status !== 'resolved').length,
+    [feedbackItems]
+  )
+
+  const resolvedFeedbackTotal = useMemo(
+    () => feedbackItems.filter((f) => f.status === 'resolved').length,
+    [feedbackItems]
+  )
 
   const loadAll = useCallback(async () => {
     if (!user) return
@@ -393,6 +546,7 @@ export default function SupervisionPage() {
     try {
       const analytics = canViewSupervisionAnalytics(user.role)
       const bansAllowed = canViewSupervisionBans(user.role)
+      const feedbackAllowed = canViewUserFeedback(user.role)
 
       const usersRes = await fetch('/api/admin/users', { credentials: 'include' })
       if (usersRes.status === 403) {
@@ -430,6 +584,18 @@ export default function SupervisionPage() {
         }
       } else {
         setBans([])
+      }
+
+      if (feedbackAllowed) {
+        const feedbackRes = await fetch('/api/admin/feedback', { credentials: 'include' })
+        if (feedbackRes.ok) {
+          const feedbackData = await feedbackRes.json()
+          setFeedbackItems(feedbackData.feedback ?? [])
+        } else {
+          setFeedbackItems([])
+        }
+      } else {
+        setFeedbackItems([])
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur')
@@ -563,6 +729,44 @@ export default function SupervisionPage() {
     }
   }
 
+  const updateFeedbackStatus = async (id: string, status: 'read' | 'resolved') => {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/feedback/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Modification refusée')
+      setFeedbackItems((prev) =>
+        prev.map((f) =>
+          f.id === id
+            ? {
+                ...f,
+                status,
+                statusLabel: status === 'read' ? 'Lu' : 'Résolu',
+              }
+            : f
+        )
+      )
+      setSelectedFeedback((prev) =>
+        prev?.id === id
+          ? { ...prev, status, statusLabel: status === 'read' ? 'Lu' : 'Résolu' }
+          : prev
+      )
+      if (status === 'resolved') {
+        setSelectedFeedback(null)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erreur')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (loading || !user || !canAccessSupervision(user.role)) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-white/60">
@@ -638,6 +842,16 @@ export default function SupervisionPage() {
           </TabsTrigger>
           {showBansTab && (
             <TabsTrigger value="bans">Bannis ({bans.length})</TabsTrigger>
+          )}
+          {showFeedbackTab && (
+            <>
+              <TabsTrigger value="feedback">
+                Retours ({activeFeedbackTotal})
+              </TabsTrigger>
+              <TabsTrigger value="feedback-resolved">
+                Résolus ({resolvedFeedbackTotal})
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -1103,6 +1317,74 @@ export default function SupervisionPage() {
           </Card>
         </TabsContent>
         )}
+
+        {showFeedbackTab && (
+        <TabsContent value="feedback" className="space-y-4">
+          <Card className="border-white/10 bg-white/[0.03]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <MessageSquarePlus className="h-5 w-5 text-violet-400" />
+                Retours en cours
+              </CardTitle>
+              <CardDescription>
+                Bugs, suggestions et commentaires à traiter. Une fois résolu, le retour passe dans l&apos;onglet Résolus.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FeedbackSearchBar
+                value={feedbackSearch}
+                onChange={setFeedbackSearch}
+                placeholder="Rechercher un bug, auteur, message…"
+                resultCount={activeFeedbackItems.length}
+                totalCount={activeFeedbackTotal}
+              />
+              <FeedbackListSection
+                items={activeFeedbackItems}
+                emptyMessage={
+                  feedbackSearch.trim()
+                    ? 'Aucun retour en cours ne correspond à votre recherche.'
+                    : 'Aucun retour en cours.'
+                }
+                onSelect={setSelectedFeedback}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        )}
+
+        {showFeedbackTab && (
+        <TabsContent value="feedback-resolved" className="space-y-4">
+          <Card className="border-white/10 bg-white/[0.03]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <MessageSquarePlus className="h-5 w-5 text-emerald-400" />
+                Retours résolus
+              </CardTitle>
+              <CardDescription>
+                Historique des retours marqués comme résolus.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FeedbackSearchBar
+                value={feedbackSearch}
+                onChange={setFeedbackSearch}
+                placeholder="Rechercher dans les retours résolus…"
+                resultCount={resolvedFeedbackItems.length}
+                totalCount={resolvedFeedbackTotal}
+              />
+              <FeedbackListSection
+                items={resolvedFeedbackItems}
+                emptyMessage={
+                  feedbackSearch.trim()
+                    ? 'Aucun retour résolu ne correspond à votre recherche.'
+                    : 'Aucun retour résolu pour le moment.'
+                }
+                onSelect={setSelectedFeedback}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        )}
       </Tabs>
 
       <Dialog open={!!deleteDialog} onOpenChange={(open) => !open && setDeleteDialog(null)}>
@@ -1316,6 +1598,95 @@ export default function SupervisionPage() {
                 )}
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!selectedFeedback}
+        onOpenChange={(open) => !open && setSelectedFeedback(null)}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#0c0b12] text-white sm:max-w-lg">
+          {selectedFeedback && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex flex-wrap items-center gap-2">
+                  {selectedFeedback.typeLabel}
+                  <Badge variant="secondary">{selectedFeedback.statusLabel}</Badge>
+                </DialogTitle>
+                <DialogDescription className="text-white/50">
+                  {selectedFeedback.authorName} ·{' '}
+                  {new Date(selectedFeedback.createdAt).toLocaleString('fr-FR')}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="whitespace-pre-wrap text-sm text-white/80">{selectedFeedback.message}</p>
+                {selectedFeedback.contactEmail && (
+                  <p className="text-sm text-white/50">
+                    Contact :{' '}
+                    <a
+                      href={`mailto:${selectedFeedback.contactEmail}`}
+                      className="text-amber-300 hover:underline"
+                    >
+                      {selectedFeedback.contactEmail}
+                    </a>
+                  </p>
+                )}
+                {selectedFeedback.pageUrl && (
+                  <p className="text-xs text-white/40">Page : {selectedFeedback.pageUrl}</p>
+                )}
+                {selectedFeedback.screenshots.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-white/50">Captures d&apos;écran</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedFeedback.screenshots.map((src, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setLightboxImage(src)}
+                          className="h-24 w-24 overflow-hidden rounded-lg border border-white/10"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={src} alt={`Capture ${i + 1}`} className="h-full w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                {selectedFeedback.status === 'open' && (
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => updateFeedbackStatus(selectedFeedback.id, 'read')}
+                  >
+                    Marquer lu
+                  </Button>
+                )}
+                {selectedFeedback.status !== 'resolved' && (
+                  <Button
+                    disabled={busy}
+                    className="bg-emerald-600 text-white hover:bg-emerald-500"
+                    onClick={() => updateFeedbackStatus(selectedFeedback.id, 'resolved')}
+                  >
+                    Résolu
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!lightboxImage} onOpenChange={(open) => !open && setLightboxImage(null)}>
+        <DialogContent className="max-w-4xl border-white/10 bg-black/95 p-2">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Capture d&apos;écran agrandie</DialogTitle>
+          </DialogHeader>
+          {lightboxImage && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={lightboxImage} alt="Capture agrandie" className="max-h-[85vh] w-full object-contain" />
           )}
         </DialogContent>
       </Dialog>

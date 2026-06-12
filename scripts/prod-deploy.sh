@@ -37,6 +37,9 @@ else
     npx prisma migrate resolve --applied "$MIG"
 fi
 
+echo "=== Migration auth_feedback_reset ==="
+bash "$APP_DIR/scripts/prod-migrate-auth-feedback.sh"
+
 echo "=== DB permissions ==="
 docker run --rm -v le-pillaveur-db:/data alpine sh -c '
   apk add sqlite >/dev/null 2>&1
