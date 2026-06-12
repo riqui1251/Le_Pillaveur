@@ -3,9 +3,11 @@ import { usePlayers } from '../hooks/usePlayers';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
-import { X, Trophy } from 'lucide-react';
-import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils';
+import { X, Trophy, Pencil } from 'lucide-react';
+import { PlayerIcon } from '@/components/ui/PlayerIcon';
+import { PlayerName } from '@/components/ui/PlayerName';
+import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer';
+import { Player } from '@/lib/players';
 
 interface PlayerManagerProps {
   onPlayersSelected: (selectedPlayers: string[]) => void;
@@ -19,10 +21,11 @@ const HUB_CARD = 'bg-white/[0.04] border-white/10 backdrop-blur-md shadow-lg';
 export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveButtons = false, variant = 'default' }: PlayerManagerProps) {
   const isHub = variant === 'hub';
   const cardClass = isHub ? HUB_CARD : 'shadow-md';
-  const { players, loading, addPlayer, removePlayer } = usePlayers();
+  const { players, loading, addPlayer, removePlayer, updatePlayerPreferences } = usePlayers();
 
   const [newPlayerName, setNewPlayerName] = useState('');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null);
 
   const handleAddPlayer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,25 +100,27 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Avatar
-                    className="h-10 w-10 border-2"
-                    style={{ backgroundColor: getColorFromClass(player.preferences.color) }}
-                  >
-                    <AvatarFallback style={{ backgroundColor: getColorFromClass(player.preferences.color) }}>
-                      {player.name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                    {player.preferences.avatar && (
-                      <AvatarImage src={player.preferences.avatar} alt={player.name} />
-                    )}
-                  </Avatar>
+                  <PlayerIcon player={player} size="md" className="h-10 w-10 text-xl" />
                   <div className="flex-grow">
-                    <div className={`font-semibold ${isSpecialPlayer(player) ? getSpecialEffectClass(player) : ''}`}>
-                      {player.name}
+                    <div className="font-semibold">
+                      <PlayerName player={player} />
                     </div>
                     <div className="flex items-center gap-1 text-xs opacity-70">
                       <Trophy className="h-3 w-3" /> {player.stats.wins} victoires
                     </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCustomizingPlayer(player);
+                    }}
+                    title="Personnaliser"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                   {!hideRemoveButtons && (
                     <Button
                       variant="ghost"
@@ -136,6 +141,13 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
           </div>
         </div>
       </div>
+
+      <PlayerCustomizer
+        player={customizingPlayer}
+        open={customizingPlayer !== null}
+        onOpenChange={(open) => { if (!open) setCustomizingPlayer(null) }}
+        onSave={updatePlayerPreferences}
+      />
 
       <div
         className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 py-3 backdrop-blur-xl ${

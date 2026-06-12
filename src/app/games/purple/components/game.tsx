@@ -3,11 +3,11 @@
 
 import { useState, useEffect } from 'react'
 import { Player, getPlayerGameBoost } from '@/lib/players'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { RotateCcw, X } from 'lucide-react'
 import { GameShell } from '@/components/game/GameShell'
 import { GameMode } from '../page'
-import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
+import { PlayerName } from '@/components/ui/PlayerName'
+import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { cn } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -203,7 +203,6 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   }
 
   const currentPlayer = players[currentPlayerIndex]
-  const playerBg = currentPlayer ? getColorFromClass(currentPlayer.preferences?.color ?? '') : '#7c3aed'
 
   if (!isMounted) return null
   if (!players || players.length < 2) return <div className="p-6 text-center text-red-400">Au moins 2 joueurs requis.</div>
@@ -225,15 +224,11 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
 
         {/* ── Joueur actif ─────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 rounded-2xl border border-violet-800/20 bg-violet-950/30 p-3">
-          <Avatar className="h-10 w-10 border-2 border-violet-500/50 shadow-lg shadow-violet-500/20" style={{ backgroundColor: playerBg }}>
-            <AvatarFallback className="text-sm font-bold text-white" style={{ backgroundColor: playerBg }}>
-              {currentPlayer?.preferences?.icon || currentPlayer?.name?.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <PlayerIcon player={currentPlayer} size="md" className="h-10 w-10 text-xl" />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-white/40">Au tour de</p>
-            <p className={cn('font-bold text-white truncate', isSpecialPlayer(currentPlayer) && getSpecialEffectClass(currentPlayer))}>
-              {currentPlayer?.name}
+            <p className="font-bold truncate">
+              <PlayerName player={currentPlayer} />
             </p>
           </div>
           <div className="flex items-center gap-2">

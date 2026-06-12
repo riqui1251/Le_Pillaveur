@@ -1,0 +1,87 @@
+/* Cadres d'icône joueur (staff+) — anneau fin, centre 60 % transparent */
+
+@keyframes frameNeonPulse {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(0, 255, 255, 0.35)); }
+  50% { filter: drop-shadow(0 0 4px rgba(255, 0, 255, 0.45)); }
+}
+
+@keyframes frameEmberPulse {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 100, 0, 0.35)); }
+  50% { filter: drop-shadow(0 0 5px rgba(255, 60, 0, 0.5)); }
+}
+
+@keyframes frameCrownShine {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.3)); }
+  50% { filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5)); }
+}
+
+.player-icon-frame {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+}
+
+/* Anneau décoratif (pseudo-élément autour du cercle intérieur 60 %) */
+.player-icon-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.player-icon-frame-gold::before {
+  border: 2px solid #d4a017;
+  box-shadow: 0 0 4px rgba(255, 215, 0, 0.2);
+}
+
+.player-icon-frame-silver::before {
+  border: 2px solid #b0b0b0;
+  box-shadow: 0 0 3px rgba(200, 200, 200, 0.15);
+}
+
+.player-icon-frame-neon::before {
+  border: 2px solid #00e5ff;
+  animation: frameNeonPulse 2s ease-in-out infinite;
+}
+
+.player-icon-frame-ember::before {
+  border: 2px solid #ff5500;
+  animation: frameEmberPulse 1.5s ease-in-out infinite;
+}
+
+.player-icon-frame-royal::before {
+  border: 2px solid #8b5cf6;
+  box-shadow: 0 0 4px rgba(124, 58, 237, 0.25);
+}
+
+.player-icon-frame-diamond::before {
+  border: 2px solid #22d3ee;
+  box-shadow: 0 0 4px rgba(34, 211, 238, 0.2);
+}
+
+.player-icon-frame-staff::before {
+  border: 2px solid #10b981;
+  box-shadow: 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.player-icon-frame-crown::before {
+  border: 2px solid #f59e0b;
+  animation: frameCrownShine 2.5s ease-in-out infinite;
+}
+
+/* Centre transparent : 60 % du cadre */
+.player-icon-frame-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  background: transparent;
+}

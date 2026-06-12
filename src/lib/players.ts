@@ -15,14 +15,76 @@ export interface PlayerStats {
   };
 }
 
+export type PlayerSpecialEffect =
+  | 'fire'
+  | 'ice'
+  | 'lightning'
+  | 'rainbow'
+  | 'neon'
+  | 'galaxy'
+  | 'matrix'
+  | 'sunset'
+  | 'ocean'
+  | 'red'
+  | 'blue'
+  | 'gold'
+  | 'emerald'
+  | 'purple'
+  | 'cyber'
+  | 'cyber'
+  | null;
+
+export type PlayerIconFrame =
+  | 'gold'
+  | 'silver'
+  | 'neon'
+  | 'ember'
+  | 'royal'
+  | 'diamond'
+  | 'staff'
+  | 'crown'
+  | null;
+
 export interface PlayerPreferences {
   color: string;
   avatar?: string;
   nickname?: string;
   theme?: 'light' | 'dark';
   icon?: string;
-  specialEffect?: 'fire' | 'ice' | 'lightning' | 'rainbow' | 'neon' | 'galaxy' | 'matrix' | 'sunset' | 'ocean' | null;
+  specialEffect?: PlayerSpecialEffect;
+  iconFrame?: PlayerIconFrame;
 }
+
+export const PLAYER_EFFECTS: { id: PlayerSpecialEffect; label: string }[] = [
+  { id: null, label: 'Classique' },
+  { id: 'fire', label: 'Feu' },
+  { id: 'ice', label: 'Glace' },
+  { id: 'lightning', label: 'Éclair' },
+  { id: 'rainbow', label: 'Arc-en-ciel' },
+  { id: 'neon', label: 'Néon' },
+  { id: 'galaxy', label: 'Galaxie' },
+  { id: 'matrix', label: 'Matrix' },
+  { id: 'sunset', label: 'Coucher de soleil' },
+  { id: 'ocean', label: 'Océan' },
+  { id: 'red', label: 'Rouge' },
+  { id: 'blue', label: 'Bleu' },
+  { id: 'gold', label: 'Or' },
+  { id: 'emerald', label: 'Émeraude' },
+  { id: 'purple', label: 'Violet' },
+  { id: 'cyber', label: 'Cyber' },
+];
+
+export const PLAYER_FRAMES: { id: PlayerIconFrame; label: string }[] = [
+  { id: null, label: 'Aucun' },
+  { id: 'gold', label: 'Or' },
+  { id: 'silver', label: 'Argent' },
+  { id: 'neon', label: 'Néon' },
+  { id: 'ember', label: 'Braise' },
+  { id: 'royal', label: 'Royal' },
+  { id: 'diamond', label: 'Diamant' },
+  { id: 'staff', label: 'Staff' },
+  { id: 'crown', label: 'Couronne' },
+];
 
 export interface Player {
   id: string;

@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RotateCcw, ArrowLeft } from 'lucide-react'
 import confetti from 'canvas-confetti'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Player as BasePlayer, PlayerPreferences, getPlayerGameBoost } from '@/lib/players'
 import { PlayerName } from '@/components/ui/PlayerName'
-import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
+import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -324,17 +324,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
         {/* Joueur actif */}
         {currentPlayer && (
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 flex items-center gap-3">
-            {(() => {
-              const bg = getColorFromClass(currentPlayer.preferences?.color ?? '')
-              return (
-                <Avatar className="h-10 w-10 shrink-0 border-2 border-white/20" style={{ backgroundColor: bg }}>
-                  <AvatarFallback className="text-sm font-bold text-white" style={{ backgroundColor: bg }}>
-                    {currentPlayer.preferences?.icon || currentPlayer.name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                  {currentPlayer.preferences?.avatar && <AvatarImage src={currentPlayer.preferences.avatar} alt={currentPlayer.name} />}
-                </Avatar>
-              )
-            })()}
+            <PlayerIcon player={currentPlayer} size="md" className="h-10 w-10 text-xl" />
             <div className="flex-1 min-w-0">
               <p className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">Joueur actif</p>
               <PlayerName player={currentPlayer} className={cn('font-bold text-white text-base truncate', isSpecialPlayer(currentPlayer) && getSpecialEffectClass(currentPlayer))} />
@@ -405,7 +395,6 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-white/40">Joueurs</p>
           <div className="space-y-1">
             {players.map((p, i) => {
-              const bg = getColorFromClass(p.preferences?.color ?? '')
               const isCurrent = i === currentPlayerIndex
               return (
                 <div
@@ -415,12 +404,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
                     isCurrent ? 'bg-white/[0.07] border border-white/10' : 'border border-transparent'
                   )}
                 >
-                  <Avatar className="h-7 w-7 shrink-0 border border-white/15" style={{ backgroundColor: bg }}>
-                    <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundColor: bg }}>
-                      {p.preferences?.icon || p.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                    {p.preferences?.avatar && <AvatarImage src={p.preferences.avatar} alt={p.name} />}
-                  </Avatar>
+                  <PlayerIcon player={p} size="sm" className="h-7 w-7 text-sm" />
                   <PlayerName player={p} className={cn('text-sm font-medium flex-1 truncate', isCurrent ? 'text-white' : 'text-white/60', isSpecialPlayer(p) && getSpecialEffectClass(p))} />
                   {p.isMonsieur3 && (
                     <span className="rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-400">M3</span>

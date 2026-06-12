@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Player } from '@/types/game'
 import { getPlayerGameBoost } from '@/lib/players'
-import { getColorFromClass } from '@/lib/playerUtils'
+import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { PlayerName } from '@/components/ui/PlayerName'
 import { GameShell } from '@/components/game/GameShell'
 import { cn } from '@/lib/utils'
 
@@ -1408,20 +1408,15 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   // ── Action bar ─────────────────────────────────────────────────────────────
 
   const currentPlayer = players[currentPlayerIndex]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const playerBg = currentPlayer ? getColorFromClass((currentPlayer as any).preferences?.color ?? '') : '#6366f1'
 
   const actionBar = !gameOver ? (
     <div className="flex w-full items-center gap-3">
-      {/* Avatar + nom */}
-      <Avatar className="h-8 w-8 shrink-0 border border-white/20" style={{ backgroundColor: playerBg }}>
-        <AvatarFallback className="text-xs font-bold text-white" style={{ backgroundColor: playerBg }}>
-          {(currentPlayer as any)?.preferences?.icon || currentPlayer?.name?.charAt(0).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
+      <PlayerIcon player={currentPlayer} size="md" className="h-8 w-8 text-base" />
       <div className="min-w-0 flex-1">
         <p className="text-xs text-white/45">Au tour de</p>
-        <p className="truncate text-sm font-bold text-white leading-tight">{currentPlayer?.name}</p>
+        <p className="truncate text-sm font-bold leading-tight">
+          <PlayerName player={currentPlayer} />
+        </p>
       </div>
 
       {/* Résultat du tour */}
@@ -1467,18 +1462,15 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 const distance = ((i - currentPlayerIndex) + players.length) % players.length
                 if (distance > 2) return null
                 const isActive = distance === 0
-                const bg = getColorFromClass((p as any).preferences?.color ?? '')
                 return (
                   <div key={p.id} className={cn(
                     'flex shrink-0 items-center gap-1.5 rounded-xl border px-2 py-1 transition-all duration-200',
                     isActive ? 'border-violet-500/50 bg-violet-500/10' : 'border-white/[0.07] bg-white/[0.03] opacity-50',
                   )}>
-                    <Avatar className="h-5 w-5 border border-white/20" style={{ backgroundColor: bg }}>
-                      <AvatarFallback className="text-[9px] font-bold text-white" style={{ backgroundColor: bg }}>
-                        {(p as any).preferences?.icon || p.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className={cn('text-xs font-semibold', isActive ? 'text-white' : 'text-white/50')}>{p.name}</span>
+                    <PlayerIcon player={p} size="sm" className="h-5 w-5 text-xs" />
+                    <span className={cn('text-xs font-semibold', isActive ? 'text-white' : 'text-white/50')}>
+                      <PlayerName player={p} />
+                    </span>
                     {distance === 1 && <span className="text-[9px] text-white/30">suivant</span>}
                   </div>
                 )
@@ -1656,16 +1648,13 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
             {resultDisplayPhase === 'details' && (() => {
               const player = players[currentPlayerResultIndex]
               const results = playerResults[player?.id] || []
-              const bg = getColorFromClass((player as any)?.preferences?.color ?? '')
               return (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2.5 rounded-2xl border border-violet-800/20 bg-violet-950/30 p-3">
-                    <Avatar className="h-9 w-9 border border-white/20" style={{ backgroundColor: bg }}>
-                      <AvatarFallback className="text-xs font-bold text-white" style={{ backgroundColor: bg }}>
-                        {(player as any)?.preferences?.icon || player?.name?.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-bold text-white">{player?.name}</span>
+                    <PlayerIcon player={player} size="md" className="h-9 w-9 text-lg" />
+                    <span className="font-bold">
+                      <PlayerName player={player} />
+                    </span>
                     <span className="ml-auto text-xs text-white/35">{currentPlayerResultIndex + 1} / {players.length}</span>
                   </div>
                   {results.map((result, i) => (
@@ -1714,16 +1703,13 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                   const totalRed = results.reduce((s, r) => s + r.redSips, 0)
                   const totalGreen = results.reduce((s, r) => s + r.greenSips, 0)
                   const allPowerups = results.flatMap(r => r.powerups)
-                  const bg = getColorFromClass((player as any).preferences?.color ?? '')
                   return (
                     <div key={player.id} className="rounded-2xl border border-violet-800/20 bg-violet-950/30 p-4">
                       <div className="mb-3 flex items-center gap-2.5">
-                        <Avatar className="h-8 w-8 border border-white/20" style={{ backgroundColor: bg }}>
-                          <AvatarFallback className="text-xs font-bold text-white" style={{ backgroundColor: bg }}>
-                            {(player as any).preferences?.icon || player.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-bold text-white">{player.name}</span>
+                        <PlayerIcon player={player} size="md" />
+                        <span className="font-bold">
+                          <PlayerName player={player} />
+                        </span>
                       </div>
                       <div className="flex gap-2">
                         <div className="flex-1 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-center">

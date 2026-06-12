@@ -3,11 +3,14 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash } from 'lucide-react'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessSupervision } from '@/lib/roles'
-import { isSpecialPlayer, getSpecialEffectClass, getColorFromClass } from '@/lib/playerUtils'
+import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { PlayerName } from '@/components/ui/PlayerName'
+import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer'
+import { Player } from '@/lib/players'
 import { getSafeStorage } from '@/lib/storage'
 import { GAMES } from '@/lib/games'
 import { cn } from '@/lib/utils'
@@ -27,11 +30,12 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 
 export function AccountInfo() {
   const { user, logout } = useAuth()
-  const { players, loading, removePlayer } = usePlayers()
+  const { players, loading, removePlayer, updatePlayerPreferences } = usePlayers()
   const [totalGames, setTotalGames] = useState(0)
   const [totalDrinks, setTotalDrinks] = useState(0)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [codeCopied, setCodeCopied] = useState(false)
+  const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null)
 
   const copyAccountCode = async () => {
     if (!user?.accountCode) return
@@ -59,9 +63,17 @@ export function AccountInfo() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
-      </div>
+      <>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
+        </div>
+        <PlayerCustomizer
+          player={customizingPlayer}
+          open={customizingPlayer !== null}
+          onOpenChange={(open) => { if (!open) setCustomizingPlayer(null) }}
+          onSave={updatePlayerPreferences}
+        />
+      </>
     )
   }
 
@@ -147,25 +159,18 @@ export function AccountInfo() {
         ) : (
           <ul className="space-y-2">
             {players.map((player) => {
-              const bg = getColorFromClass(player.preferences.color)
               const isConfirming = confirmDelete === player.id
               return (
                 <li
                   key={player.id}
                   className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 transition-all"
                 >
-                  {/* Avatar */}
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white shadow"
-                    style={{ backgroundColor: bg }}
-                  >
-                    {player.preferences.icon || player.name.charAt(0).toUpperCase()}
-                  </div>
+                  <PlayerIcon player={player} size="md" className="h-10 w-10 text-xl" />
 
                   {/* Infos */}
                   <div className="min-w-0 flex-1">
-                    <p className={cn('truncate text-sm font-semibold', isSpecialPlayer(player) ? getSpecialEffectClass(player) : 'text-white')}>
-                      {player.name}
+                    <p className="truncate text-sm font-semibold">
+                      <PlayerName player={player} />
                     </p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-white/45">
                       <span>{player.stats.gamesPlayed} parties</span>
@@ -192,7 +197,7 @@ export function AccountInfo() {
                     </div>
                   </div>
 
-                  {/* Supprimer */}
+                  {/* Actions */}
                   {isConfirming ? (
                     <div className="flex shrink-0 items-center gap-1.5">
                       <button
@@ -209,12 +214,21 @@ export function AccountInfo() {
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setConfirmDelete(player.id)}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/15 hover:text-red-400"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        onClick={() => setCustomizingPlayer(player)}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
+                        title="Personnaliser"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(player.id)}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/15 hover:text-red-400"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   )}
                 </li>
               )
@@ -222,6 +236,13 @@ export function AccountInfo() {
           </ul>
         )}
       </section>
+
+      <PlayerCustomizer
+        player={customizingPlayer}
+        open={customizingPlayer !== null}
+        onOpenChange={(open) => { if (!open) setCustomizingPlayer(null) }}
+        onSave={updatePlayerPreferences}
+      />
 
       {/* Sync */}
       <section>

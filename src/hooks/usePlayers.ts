@@ -19,6 +19,27 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { clearSelectedPlayerIds } from '@/lib/selectedPlayers';
 
+type PlayersListener = () => void;
+const playersListeners = new Set<PlayersListener>();
+
+function notifyPlayersUpdated(except?: PlayersListener) {
+  queueMicrotask(() => {
+    playersListeners.forEach((listener) => {
+      if (listener !== except) listener();
+    });
+  });
+}
+
+function refreshPlayersState(
+  setPlayers: (players: Player[]) => void,
+  setTopPlayers: (players: Player[]) => void,
+  setMostActivePlayers: (players: Player[]) => void,
+) {
+  setPlayers(getStoredPlayers());
+  setTopPlayers(getTopPlayers());
+  setMostActivePlayers(getMostActivePlayers());
+}
+
 export function usePlayers() {
   const { user } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
@@ -27,6 +48,7 @@ export function usePlayers() {
   const [mostActivePlayers, setMostActivePlayers] = useState<Player[]>([]);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cloudSyncedRef = useRef(false);
+  const listenerRef = useRef<PlayersListener | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,37 +97,58 @@ export function usePlayers() {
     return () => { cancelled = true };
   }, [user?.id]);
 
+  useEffect(() => {
+    const listener: PlayersListener = () => {
+      refreshPlayersState(setPlayers, setTopPlayers, setMostActivePlayers);
+    };
+    listenerRef.current = listener;
+    playersListeners.add(listener);
+    return () => {
+      playersListeners.delete(listener);
+      if (listenerRef.current === listener) listenerRef.current = null;
+    };
+  }, []);
+
+  const notifyOthers = useCallback(() => {
+    notifyPlayersUpdated(listenerRef.current ?? undefined);
+  }, []);
+
   const addPlayer = useCallback((name: string) => {
     const updatedPlayers = addPlayerToStorage(name);
     setPlayers(updatedPlayers);
+    notifyOthers();
     return updatedPlayers;
-  }, []);
+  }, [notifyOthers]);
 
   const removePlayer = useCallback((playerId: string) => {
     const updatedPlayers = removePlayerFromStorage(playerId);
     setPlayers(updatedPlayers);
+    notifyOthers();
     return updatedPlayers;
-  }, []);
+  }, [notifyOthers]);
 
   const updatePlayer = useCallback((playerId: string, updates: Partial<Player>) => {
     const updatedPlayers = updatePlayerInStorage(playerId, updates);
     setPlayers(updatedPlayers);
+    notifyOthers();
     return updatedPlayers;
-  }, []);
+  }, [notifyOthers]);
 
   const updatePlayerStats = useCallback((playerId: string, gameId: string, stats: Partial<PlayerStats>) => {
     const updatedPlayers = updatePlayerStatsInStorage(playerId, gameId, stats);
     setPlayers(updatedPlayers);
     setTopPlayers(getTopPlayers());
     setMostActivePlayers(getMostActivePlayers());
+    notifyOthers();
     return updatedPlayers;
-  }, []);
+  }, [notifyOthers]);
 
   const updatePlayerPreferences = useCallback((playerId: string, preferences: Partial<PlayerPreferences>) => {
     const updatedPlayers = updatePlayerPreferencesInStorage(playerId, preferences);
     setPlayers(updatedPlayers);
+    notifyOthers();
     return updatedPlayers;
-  }, []);
+  }, [notifyOthers]);
 
   const selectPlayersForGame = useCallback((selectedIds: string[]): Player[] => {
     return players.filter(player => selectedIds.includes(player.id));

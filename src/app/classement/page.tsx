@@ -2,12 +2,12 @@
 
 import { useState, useMemo } from 'react'
 import { usePlayers } from '@/hooks/usePlayers'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Trophy, Star, ChevronDown } from 'lucide-react'
 import { Player } from '@/lib/players'
 import { GAMES } from '@/lib/games'
 import { getMetricsForGame } from '@/lib/gameMetrics'
-import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
+import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { PlayerName } from '@/components/ui/PlayerName'
 import { cn } from '@/lib/utils'
 
 const MEDALS = ['🥇', '🥈', '🥉']
@@ -18,23 +18,9 @@ function PlayerRow({ player, index, metric }: { player: Player; index: number; m
       <span className="w-6 shrink-0 text-center text-base">
         {index < 3 ? MEDALS[index] : <span className="text-sm text-white/40 font-medium">{index + 1}</span>}
       </span>
-      <Avatar
-        className="h-8 w-8 shrink-0"
-        style={{ backgroundColor: getColorFromClass(player.preferences.color) }}
-      >
-        {player.preferences.avatar ? (
-          <AvatarImage src={player.preferences.avatar} alt={player.name} />
-        ) : (
-          <AvatarFallback
-            className="text-xs font-bold text-white"
-            style={{ backgroundColor: getColorFromClass(player.preferences.color) }}
-          >
-            {player.preferences.icon || player.name[0].toUpperCase()}
-          </AvatarFallback>
-        )}
-      </Avatar>
-      <span className={cn('flex-1 truncate text-sm font-medium', isSpecialPlayer(player) ? getSpecialEffectClass(player) : 'text-white/90')}>
-        {player.name}
+      <PlayerIcon player={player} size="md" />
+      <span className="flex-1 truncate text-sm font-medium">
+        <PlayerName player={player} />
       </span>
       <span className="shrink-0 text-sm font-semibold text-amber-300">{metric}</span>
     </div>

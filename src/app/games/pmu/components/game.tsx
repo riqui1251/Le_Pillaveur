@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Player as BasePlayer, getPlayerGameBoost } from '@/lib/players'
 import { usePlayers } from '@/hooks/usePlayers'
 import { GameShell } from '@/components/game/GameShell'
-import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
+import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { PlayerName } from '@/components/ui/PlayerName'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { X, CheckCircle2, Minus, Plus } from 'lucide-react'
@@ -51,7 +51,6 @@ function PlayerChip({
   player: BasePlayer; selected?: boolean; onClick?: (e: React.MouseEvent) => void
   onRemove?: () => void; size?: 'sm' | 'md'
 }) {
-  const bg = getColorFromClass(player.preferences.color)
   return (
     <div
       onClick={onClick}
@@ -63,13 +62,9 @@ function PlayerChip({
           : 'border-white/10 bg-white/[0.06] hover:bg-white/10',
       )}
     >
-      <Avatar className="h-6 w-6 shrink-0 border border-white/20" style={{ backgroundColor: bg }}>
-        <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundColor: bg }}>
-          {player.preferences.icon || player.name.charAt(0).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
-      <span className={cn('text-sm font-medium', isSpecialPlayer(player) ? getSpecialEffectClass(player) : 'text-white/90')}>
-        {player.name}
+      <PlayerIcon player={player} size="sm" />
+      <span className="text-sm font-medium">
+        <PlayerName player={player} />
       </span>
       {onRemove && (
         <button onClick={e => { e.stopPropagation(); onRemove() }} className="ml-0.5 text-white/40 hover:text-white/90">
@@ -514,17 +509,12 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
           <div className="space-y-2">
             {assignedPlayers.map(player => {
               const horse = horses.find(h => h.players.some(x => x.id === player.id))!
-              const bg = getColorFromClass(player.preferences.color)
               return (
                 <div key={player.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                  <Avatar className="h-10 w-10 shrink-0 border border-white/20" style={{ backgroundColor: bg }}>
-                    <AvatarFallback className="text-sm font-bold text-white" style={{ backgroundColor: bg }}>
-                      {player.preferences.icon || player.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <PlayerIcon player={player} size="md" className="h-10 w-10 text-xl" />
                   <div className="min-w-0 flex-1">
-                    <p className={cn('font-semibold', isSpecialPlayer(player) ? getSpecialEffectClass(player) : 'text-white')}>
-                      {player.name}
+                    <p className="font-semibold">
+                      <PlayerName player={player} />
                     </p>
                     <div className="flex items-center gap-1.5">
                       <div className="h-2 w-2 rounded-full" style={{ backgroundColor: horse.colorFrom }} />
@@ -604,8 +594,8 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                 <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: horse.colorFrom }} />
                 <span className="text-xs font-medium text-white/70">{horse.name} :</span>
                 {horse.players.map(p => (
-                  <span key={p.id} className={cn('text-xs', isSpecialPlayer(p) ? getSpecialEffectClass(p) : 'text-white/90')}>
-                    {p.name}
+                  <span key={p.id} className="text-xs">
+                    <PlayerName player={p} />
                     {mode === 'paris' && bets[p.id] ? ` (${bets[p.id]}🍺)` : ''}
                   </span>
                 ))}
@@ -656,18 +646,13 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
           ) : winningPlayers.map(player => {
             const bet = bets[player.id] ?? 2
             const payout = bet * 2
-            const bg = getColorFromClass(player.preferences.color)
             return (
               <div key={player.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 space-y-3">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 shrink-0 border border-white/20" style={{ backgroundColor: bg }}>
-                    <AvatarFallback className="text-sm font-bold text-white" style={{ backgroundColor: bg }}>
-                      {player.preferences.icon || player.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <PlayerIcon player={player} size="md" className="h-10 w-10 text-xl" />
                   <div className="flex-1">
-                    <p className={cn('font-semibold', isSpecialPlayer(player) ? getSpecialEffectClass(player) : 'text-white')}>
-                      {player.name}
+                    <p className="font-semibold">
+                      <PlayerName player={player} />
                     </p>
                     <p className="text-sm text-amber-300">distribue {payout} gorgées 🍺</p>
                   </div>
@@ -679,7 +664,6 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {allTargets.map(target => {
-                        const tbg = getColorFromClass(target.preferences.color)
                         const isChosen = payoutTargets[player.id] === target.id
                         return (
                           <button
@@ -692,12 +676,8 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                                 : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/10 hover:text-white',
                             )}
                           >
-                            <Avatar className="h-5 w-5" style={{ backgroundColor: tbg }}>
-                              <AvatarFallback className="text-[9px] font-bold text-white" style={{ backgroundColor: tbg }}>
-                                {target.preferences.icon || target.name.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            {target.name}
+                            <PlayerIcon player={target} size="sm" className="h-5 w-5 text-xs" />
+                            <PlayerName player={target} />
                           </button>
                         )
                       })}

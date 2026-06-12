@@ -40,6 +40,12 @@ export function canAccessSupervision(role: string): boolean {
   return roleRank(role) >= ROLE_RANK.moderator
 }
 
+/** Cadre d'icône joueur : modérateur et grades supérieurs uniquement. */
+export function canCustomizePlayerFrame(role: string | undefined | null): boolean {
+  if (!role) return false
+  return roleRank(role) > ROLE_RANK.user
+}
+
 /** Vue d'ensemble, pays, stats visiteurs et jeux : super admin et fondateur. */
 export function canViewSupervisionAnalytics(role: string): boolean {
   return roleRank(role) >= ROLE_RANK.superadmin

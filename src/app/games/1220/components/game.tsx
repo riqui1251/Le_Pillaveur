@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Player } from "@/lib/players"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PlayerName } from "@/components/ui/PlayerName"
 import {
   type Band1220,
@@ -20,7 +19,8 @@ import {
   TOTAL_MAX,
   TOTAL_MIN,
 } from "@/lib/game-1220"
-import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from "@/lib/playerUtils"
+import { PlayerIcon } from "@/components/ui/PlayerIcon"
+import { isSpecialPlayer, getSpecialEffectClass } from "@/lib/playerUtils"
 import { cn } from "@/lib/utils"
 import { RotateCcw, ArrowLeft } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -280,18 +280,11 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
           {/* Config par joueur */}
           {players.map(p => {
             const c = draft[p.id] ?? defaultChoices()
-            const bg = getColorFromClass(p.preferences?.color ?? "")
             const clash = c.drinkNumber === c.giveNumber
             return (
               <div key={p.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 space-y-4">
-                {/* Joueur header */}
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 border-2 border-white/20" style={{ backgroundColor: bg }}>
-                    <AvatarFallback className="text-sm font-bold text-white" style={{ backgroundColor: bg }}>
-                      {p.preferences?.icon || p.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                    {p.preferences?.avatar && <AvatarImage src={p.preferences.avatar} alt={p.name} />}
-                  </Avatar>
+                  <PlayerIcon player={p} size="md" className="h-10 w-10 text-xl" />
                   <PlayerName player={p} className={cn("font-bold text-base text-white", isSpecialPlayer(p) && getSpecialEffectClass(p))} />
                 </div>
 
@@ -459,11 +452,10 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             {configs?.map(cfg => {
               const p = getPlayerObj(cfg.playerId)
-              const bg = p ? getColorFromClass(p.preferences?.color ?? "") : "#666"
               return (
                 <div key={cfg.playerId} className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-2.5 py-2 space-y-1">
                   <div className="flex items-center gap-1.5">
-                    <div className="h-4 w-4 rounded-full shrink-0 border border-white/20" style={{ backgroundColor: bg }} />
+                    {p ? <PlayerIcon player={p} size="sm" className="h-4 w-4 text-[10px]" /> : <div className="h-4 w-4 shrink-0" />}
                     <span className="text-xs font-semibold text-white/70 truncate">{cfg.name}</span>
                   </div>
                   <div className="flex flex-wrap gap-1 text-[10px]">
@@ -497,7 +489,6 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
               <div className="space-y-2">
                 {lastRoll.results.map(r => {
                   const p = getPlayerObj(r.playerId)
-                  const bg = p ? getColorFromClass(p.preferences?.color ?? "") : "#666"
                   const allGood = r.text.length === 1 && r.text[0].startsWith("Rien")
                   return (
                     <div
@@ -508,7 +499,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
                       )}
                     >
                       <div className="flex items-center gap-2 mb-1.5">
-                        <div className="h-5 w-5 rounded-full shrink-0 border border-white/20" style={{ backgroundColor: bg }} />
+                        {p ? <PlayerIcon player={p} size="sm" className="h-5 w-5 text-xs" /> : <div className="h-5 w-5 shrink-0" />}
                         {p ? (
                           <PlayerName player={p} className={cn("text-sm font-semibold text-white/90", isSpecialPlayer(p) && getSpecialEffectClass(p))} />
                         ) : (

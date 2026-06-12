@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
-import { getColorFromClass } from '@/lib/playerUtils'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { PlayerName } from '@/components/ui/PlayerName'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import Game from './components/game'
@@ -85,19 +85,14 @@ export default function PurplePage() {
             Joueurs — {selectedPlayers.length}
           </p>
           <div className="flex flex-wrap gap-2">
-            {selectedPlayers.map(p => {
-              const bg = getColorFromClass(p.preferences.color)
-              return (
-                <div key={p.id} className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5">
-                  <Avatar className="h-6 w-6 border border-white/20" style={{ backgroundColor: bg }}>
-                    <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundColor: bg }}>
-                      {p.preferences.icon || p.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs font-medium text-white/80">{p.name}</span>
-                </div>
-              )
-            })}
+            {selectedPlayers.map(p => (
+              <div key={p.id} className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5">
+                <PlayerIcon player={p} size="sm" />
+                <span className="text-xs font-medium">
+                  <PlayerName player={p} />
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -5,10 +5,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { RotateCcw, ArrowDown } from 'lucide-react'
 import useScreenSize from '@/hooks/useScreenSize'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Player as BasePlayer } from '@/lib/players'
 import { PlayerName } from '@/components/ui/PlayerName'
-import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
+import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
 
 // ── Helpers partagés ─────────────────────────────────────────────────────────
@@ -21,15 +21,9 @@ const valueToPoints = (v: string): number => {
 
 /** Composant Avatar réutilisable */
 function PlayerAvatar({ player, size = 'md' }: { player: BasePlayer; size?: 'sm' | 'md' | 'lg' }) {
-  const bg = getColorFromClass(player.preferences?.color ?? '')
-  const sizeClass = size === 'sm' ? 'h-6 w-6 text-[10px]' : size === 'lg' ? 'h-11 w-11 text-sm' : 'h-8 w-8 text-xs'
+  const sizeClass = size === 'sm' ? 'h-6 w-6 text-sm' : size === 'lg' ? 'h-11 w-11 text-xl' : 'h-8 w-8 text-base'
   return (
-    <Avatar className={cn(sizeClass, 'shrink-0 border border-white/20')} style={{ backgroundColor: bg }}>
-      <AvatarFallback className="font-bold text-white" style={{ backgroundColor: bg }}>
-        {player.preferences?.icon || player.name.charAt(0).toUpperCase()}
-      </AvatarFallback>
-      {player.preferences?.avatar && <AvatarImage src={player.preferences.avatar} alt={player.name} />}
-    </Avatar>
+    <PlayerIcon player={player} size={size} className={cn(sizeClass, 'shrink-0')} />
   )
 }
 
@@ -220,7 +214,6 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     }
   }
   
-  const getPlayerBg = (player: BasePlayer) => getColorFromClass(player.preferences?.color ?? '')
 
   // ── Taille des cartes ────────────────────────────────────────────────────
   // Réduire la taille pour les ordinateurs

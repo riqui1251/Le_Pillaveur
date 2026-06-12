@@ -5,8 +5,8 @@ import { useMemo } from "react"
 import { ArrowLeft, Users } from "lucide-react"
 import { usePlayers } from "@/hooks/usePlayers"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
-import { getColorFromClass } from "@/lib/playerUtils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { PlayerIcon } from "@/components/ui/PlayerIcon"
+import { PlayerName } from "@/components/ui/PlayerName"
 import { Button } from "@/components/ui/button"
 
 export function SelectedPlayersBar() {
@@ -51,21 +51,10 @@ export function SelectedPlayersBar() {
               key={player.id}
               className="flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5"
             >
-              <Avatar
-                className="h-7 w-7 border border-white/20"
-                style={{ backgroundColor: getColorFromClass(player.preferences.color) }}
-              >
-                {player.preferences.avatar && (
-                  <AvatarImage src={player.preferences.avatar} alt={player.name} />
-                )}
-                <AvatarFallback
-                  className="text-[10px] font-bold"
-                  style={{ backgroundColor: getColorFromClass(player.preferences.color) }}
-                >
-                  {player.name.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm font-medium text-white/90">{player.name}</span>
+              <PlayerIcon player={player} size="sm" className="h-7 w-7 text-base" />
+              <span className="text-sm font-medium">
+                <PlayerName player={player} />
+              </span>
             </div>
           ))}
         </div>

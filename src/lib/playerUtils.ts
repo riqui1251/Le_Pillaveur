@@ -1,3 +1,32 @@
+import type { Player } from './players';
+
+export function getPlayerFrameClass(frame: string | null | undefined): string {
+  if (!frame) return '';
+  return `player-icon-frame player-icon-frame-${frame}`;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Génère le HTML du nom de joueur pour dangerouslySetInnerHTML (Petit Buveur, etc.) */
+export function formatPlayerNameHtml(
+  player: Player | { name: string; preferences?: { specialEffect?: string | null } },
+  options?: { compliment?: string }
+): string {
+  const effectClass = getSpecialEffectClass(player);
+  const classAttr = effectClass || 'player-name-default';
+  const safeName = escapeHtml(player.name);
+  const prefix = options?.compliment
+    ? `"${escapeHtml(options.compliment)}" `
+    : '';
+  return `<span class="${classAttr} font-semibold">${prefix}${safeName}</span>`;
+}
+
 // Fonction pour convertir les classes Tailwind en couleurs CSS
 export const getColorFromClass = (colorClass: string): string => {
   if (!colorClass.startsWith('bg-')) return colorClass;
@@ -23,7 +52,7 @@ export const isSpecialPlayer = (player: any): boolean => {
 export const getSpecialEffectClass = (player: any): string => {
   // Si le joueur a un effet spécial spécifique
   if (player?.preferences?.specialEffect) {
-    const effect = player.preferences.specialEffect as 'fire' | 'ice' | 'lightning' | 'rainbow' | 'neon' | 'galaxy' | 'matrix' | 'sunset' | 'ocean' | 'red' | 'blue' | 'gold' | 'emerald' | 'purple' | 'cyber';
+    const effect = player.preferences.specialEffect;
     return `special-player-name-${effect}`;
   }
   
