@@ -270,7 +270,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
           </div>
         </div>
 
-        <div className="mx-auto max-w-xl px-4 pt-20 pb-28 space-y-4">
+        <div className="mx-auto max-w-xl px-4 pt-6 pb-28 space-y-4 sm:pt-8">
           {/* Info */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/55 leading-relaxed">
             Chaque joueur choisit sa <strong className="text-white/80">parité</strong>, sa <strong className="text-white/80">plage</strong>, son <strong className="text-teal-400">chiffre fait boire</strong> et son <strong className="text-amber-400">chiffre donne à boire</strong>.
@@ -427,7 +427,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-xl px-4 pt-20 pb-28 space-y-4">
+      <div className="mx-auto max-w-xl px-4 pt-6 pb-28 space-y-4 sm:pt-8">
 
         {/* Zone des dés */}
         <div

@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Player, 
   PlayerStats, 
   PlayerPreferences,
-  PLAYER_ICONS,
   getStoredPlayers, 
   savePlayers, 
   addPlayer as addPlayerToStorage, 
@@ -17,44 +16,72 @@ import {
   getMostActivePlayersByGame,
   getPlayerStatsByGame as getPlayerStatsByGameFromStorage
 } from '../lib/players';
+import { useAuth } from '@/hooks/useAuth';
 
 export function usePlayers() {
+  const { user } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [mostActivePlayers, setMostActivePlayers] = useState<Player[]>([]);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Charger les joueurs au montage du composant
   useEffect(() => {
-    const storedPlayers = getStoredPlayers();
-    setPlayers(storedPlayers);
-    setTopPlayers(getTopPlayers());
-    setMostActivePlayers(getMostActivePlayers());
-    setLoading(false);
-  }, []);
+    let cancelled = false;
 
-  // Ajouter un nouveau joueur
+    async function load() {
+      setLoading(true);
+      const local = getStoredPlayers();
+
+      if (user) {
+        try {
+          const res = await fetch('/api/players/local', { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            const cloud: Player[] = Array.isArray(data.players) ? data.players : [];
+            const useCloud = cloud.length > 0 || local.length === 0;
+            if (!cancelled && useCloud) {
+              savePlayers(cloud);
+              setPlayers(cloud);
+              setTopPlayers(getTopPlayers());
+              setMostActivePlayers(getMostActivePlayers());
+              setLoading(false);
+              return;
+            }
+          }
+        } catch {}
+      }
+
+      if (!cancelled) {
+        setPlayers(local);
+        setTopPlayers(getTopPlayers());
+        setMostActivePlayers(getMostActivePlayers());
+        setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true };
+  }, [user?.id]);
+
   const addPlayer = useCallback((name: string) => {
     const updatedPlayers = addPlayerToStorage(name);
     setPlayers(updatedPlayers);
     return updatedPlayers;
   }, []);
 
-  // Supprimer un joueur
   const removePlayer = useCallback((playerId: string) => {
     const updatedPlayers = removePlayerFromStorage(playerId);
     setPlayers(updatedPlayers);
     return updatedPlayers;
   }, []);
 
-  // Mettre à jour un joueur
   const updatePlayer = useCallback((playerId: string, updates: Partial<Player>) => {
     const updatedPlayers = updatePlayerInStorage(playerId, updates);
     setPlayers(updatedPlayers);
     return updatedPlayers;
   }, []);
 
-  // Mettre à jour les statistiques d'un joueur
   const updatePlayerStats = useCallback((playerId: string, gameId: string, stats: Partial<PlayerStats>) => {
     const updatedPlayers = updatePlayerStatsInStorage(playerId, gameId, stats);
     setPlayers(updatedPlayers);
@@ -63,51 +90,54 @@ export function usePlayers() {
     return updatedPlayers;
   }, []);
 
-  // Mettre à jour les préférences d'un joueur
   const updatePlayerPreferences = useCallback((playerId: string, preferences: Partial<PlayerPreferences>) => {
     const updatedPlayers = updatePlayerPreferencesInStorage(playerId, preferences);
     setPlayers(updatedPlayers);
     return updatedPlayers;
   }, []);
 
-  // Sélectionner des joueurs pour un jeu
   const selectPlayersForGame = useCallback((selectedIds: string[]): Player[] => {
     return players.filter(player => selectedIds.includes(player.id));
   }, [players]);
 
-  // Obtenir les statistiques d'un joueur
   const getPlayerStats = useCallback((playerId: string): PlayerStats | null => {
     const player = players.find(p => p.id === playerId);
     return player ? player.stats : null;
   }, [players]);
 
-  // Obtenir les préférences d'un joueur
   const getPlayerPreferences = useCallback((playerId: string): PlayerPreferences | null => {
     const player = players.find(p => p.id === playerId);
     return player ? player.preferences : null;
   }, [players]);
 
-  // Obtenir le classement des joueurs par jeu
   const getTopPlayersByGameCallback = useCallback((gameId: string, limit: number = 5): Player[] => {
     return getTopPlayersByGame(gameId, limit);
   }, []);
 
-  // Obtenir les joueurs les plus actifs par jeu
   const getMostActivePlayersByGameCallback = useCallback((gameId: string, limit: number = 5): Player[] => {
     return getMostActivePlayersByGame(gameId, limit);
   }, []);
 
-  // Obtenir les statistiques d'un joueur pour un jeu spécifique
   const getPlayerStatsByGame = useCallback((playerId: string, gameId: string) => {
     return getPlayerStatsByGameFromStorage(playerId, gameId);
   }, []);
 
-  // Sauvegarder les joueurs quand ils changent
   useEffect(() => {
-    if (!loading) {
-      savePlayers(players);
-    }
-  }, [players, loading]);
+    if (loading) return;
+    savePlayers(players);
+
+    if (!user) return;
+
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => {
+      fetch('/api/players/local', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ players }),
+      }).catch(() => {});
+    }, 800);
+  }, [players, loading, user?.id]);
 
   return {
     players,
@@ -126,4 +156,4 @@ export function usePlayers() {
     getMostActivePlayersByGame: getMostActivePlayersByGameCallback,
     getPlayerStatsByGame
   };
-} 
+}

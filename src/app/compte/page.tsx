@@ -1,20 +1,14 @@
 "use client"
 
 import { useAuth } from '@/hooks/useAuth'
-import { PinCodeInput } from '@/components/ui/PinCodeInput'
+import { AuthForm } from '@/components/auth/AuthForm'
 import { AccountInfo } from '@/components/ui/AccountInfo'
 
 export default function AccountPage() {
-  const { isAuthenticated, setPinAttempt, verifyPin, logout, error } = useAuth()
-
-  const handlePinSubmit = (pin: string) => {
-    setPinAttempt(pin)
-    verifyPin()
-  }
+  const { user, loading } = useAuth()
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#07060b] text-white">
-      {/* Halos */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-amber-500/20 blur-[100px]" />
         <div className="absolute right-0 top-32 h-80 w-80 rounded-full bg-violet-600/25 blur-[110px]" />
@@ -28,11 +22,15 @@ export default function AccountPage() {
         />
       </div>
 
-      <div className="relative container mx-auto max-w-2xl px-4 pb-16 pt-16 sm:px-6">
-        {!isAuthenticated ? (
-          <PinCodeInput onSubmit={handlePinSubmit} error={error} />
+      <div className="relative container mx-auto max-w-2xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
+          </div>
+        ) : !user ? (
+          <AuthForm />
         ) : (
-          <AccountInfo onLogout={logout} />
+          <AccountInfo />
         )}
       </div>
     </main>

@@ -90,7 +90,7 @@ export default function ClassementPage() {
         />
       </div>
 
-      <div className="relative container mx-auto max-w-3xl px-4 pb-16 pt-12 sm:px-6">
+      <div className="relative container mx-auto max-w-3xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
         {/* Header */}
         <header className="mb-8 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/70">Le Pillaveur</p>

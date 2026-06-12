@@ -2,16 +2,15 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users } from 'lucide-react'
+import Link from 'next/link'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
+import { useAuth } from '@/hooks/useAuth'
+import { canAccessSupervision } from '@/lib/roles'
 import { isSpecialPlayer, getSpecialEffectClass, getColorFromClass } from '@/lib/playerUtils'
 import { getSafeStorage } from '@/lib/storage'
 import { GAMES } from '@/lib/games'
 import { cn } from '@/lib/utils'
-
-interface AccountInfoProps {
-  onLogout: () => void
-}
 
 const GAME_NAMES: Record<string, string> = Object.fromEntries(
   GAMES.map((g) => [g.id, g.title])
@@ -26,11 +25,24 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   )
 }
 
-export function AccountInfo({ onLogout }: AccountInfoProps) {
+export function AccountInfo() {
+  const { user, logout } = useAuth()
   const { players, loading, removePlayer } = usePlayers()
   const [totalGames, setTotalGames] = useState(0)
   const [totalDrinks, setTotalDrinks] = useState(0)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [codeCopied, setCodeCopied] = useState(false)
+
+  const copyAccountCode = async () => {
+    if (!user?.accountCode) return
+    try {
+      await navigator.clipboard.writeText(user.accountCode)
+      setCodeCopied(true)
+      window.setTimeout(() => setCodeCopied(false), 2000)
+    } catch {
+      /* ignore */
+    }
+  }
 
   useEffect(() => {
     const storage = getSafeStorage()
@@ -61,15 +73,50 @@ export function AccountInfo({ onLogout }: AccountInfoProps) {
           <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/70">
             Le Pillaveur
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">Gestion du compte</h1>
+          <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">
+            {user?.displayName ?? 'Mon compte'}
+          </h1>
+          {user?.accountCode && (
+            <button
+              type="button"
+              onClick={copyAccountCode}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 font-mono text-xs text-amber-200 transition-colors hover:bg-amber-500/20"
+              title="Copier le code compte"
+            >
+              <Hash className="h-3 w-3" />
+              {user.accountCode}
+              {codeCopied ? (
+                <Check className="h-3 w-3 text-green-400" />
+              ) : (
+                <Copy className="h-3 w-3 opacity-60" />
+              )}
+            </button>
+          )}
+          {user?.email && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-white/45">
+              <Mail className="h-3 w-3" />
+              {user.email}
+            </p>
+          )}
         </div>
-        <button
-          onClick={onLogout}
-          className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">Déconnexion</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {user && canAccessSupervision(user.role) && (
+            <Link
+              href="/supervision"
+              className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300 transition-colors hover:bg-amber-500/20"
+            >
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Supervision</span>
+            </Link>
+          )}
+          <button
+            onClick={() => logout()}
+            className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Déconnexion</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats globales */}
@@ -176,10 +223,14 @@ export function AccountInfo({ onLogout }: AccountInfoProps) {
         )}
       </section>
 
-      {/* Infos stockage */}
+      {/* Sync */}
       <section>
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3 text-sm text-white/40">
-          Les données sont stockées localement sur cet appareil. La synchronisation multi-appareils n'est pas encore disponible.
+        <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100/80">
+          <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+          <p>
+            Vos joueurs sont sauvegardés sur votre compte et se synchronisent automatiquement
+            sur tous vos appareils connectés.
+          </p>
         </div>
       </section>
     </div>

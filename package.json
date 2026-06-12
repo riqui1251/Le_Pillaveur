@@ -15,6 +15,8 @@
     "postinstall": "prisma generate",
     "prebuild": "prisma generate",
     "prisma:check": "node scripts/check-prisma.js",
+    "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
+    "accounts:backfill-codes": "node scripts/backfill-account-codes.mjs",
     "deploy:prepare": "node deploy-ftp.js"
   },
   "prisma": {
@@ -36,6 +38,7 @@
     "@radix-ui/react-tabs": "^1.1.4",
     "@radix-ui/react-tooltip": "^1.2.3",
     "@types/node-cron": "^3.0.11",
+    "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -54,6 +57,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/bcryptjs": "^2.4.6",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^18",

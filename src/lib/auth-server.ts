@@ -1,0 +1,172 @@
+import { cookies } from 'next/headers'
+import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
+import { prisma } from '@/lib/prisma'
+import {
+  canAccessSupervision,
+  canAssignRoles,
+  canManageUsers,
+  normalizeRole,
+  type UserRole,
+} from '@/lib/roles'
+import { ensureUserAccountCode } from '@/lib/account-code'
+import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
+
+export const SESSION_COOKIE = 'lp_session'
+export const VISITOR_COOKIE = 'lp_vid'
+const SESSION_DAYS = 30
+const VISITOR_DAYS = 365
+
+export type AuthUser = {
+  id: string
+  email: string
+  displayName: string
+  accountCode: string
+  role: UserRole
+}
+
+function sessionExpiry(): Date {
+  const d = new Date()
+  d.setDate(d.getDate() + SESSION_DAYS)
+  return d
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12)
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  if (!hash) return false
+  return bcrypt.compare(password, hash)
+}
+
+export function createSessionToken(): string {
+  return randomBytes(32).toString('hex')
+}
+
+export async function createSession(userId: string): Promise<string> {
+  const token = createSessionToken()
+  await prisma.session.create({
+    data: {
+      token,
+      userId,
+      expiresAt: sessionExpiry(),
+    },
+  })
+  return token
+}
+
+export async function deleteSession(token: string): Promise<void> {
+  await prisma.session.deleteMany({ where: { token } })
+}
+
+export async function getUserFromSessionToken(token: string | undefined): Promise<AuthUser | null> {
+  if (!token) return null
+
+  const session = await prisma.session.findUnique({
+    where: { token },
+    include: { user: true },
+  })
+
+  if (!session || session.expiresAt < new Date()) {
+    if (session) await prisma.session.delete({ where: { id: session.id } }).catch(() => {})
+    return null
+  }
+
+  const user = session.user
+  if (!user.email || !user.passwordHash) return null
+
+  await clearExpiredBanIfNeeded(user.id)
+  const ban = getBanState(user)
+  if (ban.banned) {
+    await prisma.session.delete({ where: { id: session.id } }).catch(() => {})
+    return null
+  }
+
+  const role = normalizeRole(user.role)
+  const accountCode = user.accountCode ?? (await ensureUserAccountCode(user.id))
+
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    accountCode,
+    role,
+  }
+}
+
+export async function requireSupervisionUser(): Promise<AuthUser> {
+  const user = await getCurrentUser()
+  if (!user || !canAccessSupervision(user.role)) {
+    throw new Error('FORBIDDEN')
+  }
+  return user
+}
+
+export async function requireAdminUser(): Promise<AuthUser> {
+  const user = await getCurrentUser()
+  if (!user || !canManageUsers(user.role)) {
+    throw new Error('FORBIDDEN')
+  }
+  return user
+}
+
+export function assertCanAssignRoles(actor: AuthUser): void {
+  if (!canAssignRoles(actor.role)) {
+    throw new Error('FORBIDDEN')
+  }
+}
+
+export function createVisitorId(): string {
+  return randomBytes(16).toString('hex')
+}
+
+export function visitorCookieOptions(visitorId: string) {
+  return {
+    name: VISITOR_COOKIE,
+    value: visitorId,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: VISITOR_DAYS * 24 * 60 * 60,
+  }
+}
+
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(SESSION_COOKIE)?.value
+  return getUserFromSessionToken(token)
+}
+
+export function sessionCookieOptions(token: string) {
+  return {
+    name: SESSION_COOKIE,
+    value: token,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: SESSION_DAYS * 24 * 60 * 60,
+  }
+}
+
+export function clearSessionCookieOptions() {
+  return {
+    name: SESSION_COOKIE,
+    value: '',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 0,
+  }
+}
+
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+export function isValidPassword(password: string): boolean {
+  return password.length >= 8
+}

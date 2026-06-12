@@ -1,9 +1,11 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { GameMeta } from "@/lib/games"
 import { cn } from "@/lib/utils"
 import { ReactNode } from "react"
+import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 
 interface GameCardProps {
   game: GameMeta
@@ -11,11 +13,20 @@ interface GameCardProps {
 }
 
 export function GameCard({ game, icon }: GameCardProps) {
+  const router = useRouter()
+  const { selectedIds } = useSelectedPlayers()
   const from = game.colorFrom || game.fallbackColor
   const to = game.colorTo || game.fallbackColor
 
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (selectedIds.length === 0) {
+      e.preventDefault()
+      router.push("/joueurs")
+    }
+  }
+
   return (
-    <Link href={game.path} className="group block">
+    <Link href={game.path} onClick={handleClick} className="group block">
       <article
         className={cn(
           "relative overflow-hidden rounded-xl border border-white/10 transition-all duration-200",

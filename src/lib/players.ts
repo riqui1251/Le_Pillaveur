@@ -15,15 +15,6 @@ export interface PlayerStats {
   };
 }
 
-/** Boost secret par jeu : % de chance supplémentaire (0-100). Influence les probabilités en jeu. */
-export interface AdminBoost {
-  pmu?: number;           // + chance victoire
-  purple?: number;         // + chance paris gagnant
-  'petit-buveur'?: number; // - cases négatives quand ciblé, + avancer loin
-  plinko?: number;        // + chance de donner des gorgées
-  'monsieur-3'?: number;   // - chance d'être M3, + chance tirage faire boire M3
-}
-
 export interface PlayerPreferences {
   color: string;
   avatar?: string;
@@ -31,8 +22,6 @@ export interface PlayerPreferences {
   theme?: 'light' | 'dark';
   icon?: string;
   specialEffect?: 'fire' | 'ice' | 'lightning' | 'rainbow' | 'neon' | 'galaxy' | 'matrix' | 'sunset' | 'ocean' | null;
-  /** Boost secret (admin) - modifie les probabilités en jeu, pas les stats affichées */
-  adminBoost?: AdminBoost;
 }
 
 export interface Player {
@@ -343,19 +332,13 @@ export function getPlayerStatsByGame(playerId: string, gameId: string): { gamesP
 
 const BOOSTED_GAME_IDS = ['pmu', 'purple', 'petit-buveur', 'plinko', 'monsieur-3'] as const
 
-/** Retourne le % de boost (0-100) pour un joueur sur un jeu donné. Sim a 20% par défaut. */
+/** Easter egg Sim : léger avantage sur certains jeux. */
 export function getPlayerGameBoost(player: unknown, gameId: string): number {
-  const p = player as { name?: string; preferences?: { adminBoost?: Record<string, number> } } | null | undefined;
+  const p = player as { name?: string } | null | undefined;
   if (!p) return 0
   const isSim = p.name?.toLowerCase() === 'sim'
-  const b = p?.preferences?.adminBoost
-  const adminVal = b && typeof b[gameId] === 'number' ? Math.max(0, Math.min(100, b[gameId])) : 0
   if (isSim && BOOSTED_GAME_IDS.includes(gameId as (typeof BOOSTED_GAME_IDS)[number])) {
-    return Math.max(adminVal, 20)
+    return 20
   }
-  return adminVal
-}
-
-export function updatePlayerAdminBoost(playerId: string, boost: AdminBoost): Player[] {
-  return updatePlayerPreferences(playerId, { adminBoost: boost });
+  return 0
 } 

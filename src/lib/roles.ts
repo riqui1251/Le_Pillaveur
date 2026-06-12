@@ -1,0 +1,131 @@
+export const USER_ROLES = ['user', 'moderator', 'admin', 'superadmin', 'fondateur'] as const
+export type UserRole = (typeof USER_ROLES)[number]
+
+const ROLE_RANK: Record<UserRole, number> = {
+  user: 0,
+  moderator: 1,
+  admin: 2,
+  superadmin: 3,
+  fondateur: 4,
+}
+
+const NON_ASSIGNABLE_ROLES: UserRole[] = ['fondateur']
+
+export function isUserRole(value: string): value is UserRole {
+  return (USER_ROLES as readonly string[]).includes(value)
+}
+
+export function normalizeRole(role: string): UserRole {
+  if (
+    role === 'fondateur' ||
+    role === 'superadmin' ||
+    role === 'admin' ||
+    role === 'moderator'
+  ) {
+    return role
+  }
+  return 'user'
+}
+
+export function roleRank(role: string): number {
+  return ROLE_RANK[normalizeRole(role)]
+}
+
+/** Hiérarchie : joueur < modérateur < admin < super admin < fondateur */
+export function isStrictlyHigher(actorRole: string, targetRole: string): boolean {
+  return roleRank(actorRole) > roleRank(targetRole)
+}
+
+export function canAccessSupervision(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.moderator
+}
+
+/** Vue d'ensemble, pays, stats visiteurs et jeux : super admin et fondateur. */
+export function canViewSupervisionAnalytics(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.superadmin
+}
+
+/** Liste des bannissements : admin et au-dessus. */
+export function canViewSupervisionBans(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.admin
+}
+
+export function canManageUsers(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.admin
+}
+
+export function canAssignRoles(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.admin
+}
+
+export function canBanUsers(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.moderator
+}
+
+/** Ban temporaire : grade strictement supérieur à la cible. */
+export function canTemporaryBanTarget(actorRole: string, targetRole: string): boolean {
+  return canBanUsers(actorRole) && isStrictlyHigher(actorRole, targetRole)
+}
+
+/** Ban permanent : admin ou au-dessus, grade strictement supérieur. */
+export function canPermanentBan(actorRole: string): boolean {
+  return roleRank(actorRole) >= ROLE_RANK.admin
+}
+
+export function canPermanentBanTarget(actorRole: string, targetRole: string): boolean {
+  return canPermanentBan(actorRole) && isStrictlyHigher(actorRole, targetRole)
+}
+
+/** @deprecated Préférer canTemporaryBanTarget ou canPermanentBanTarget */
+export function canBanTarget(actorRole: string, targetRole: string): boolean {
+  return canTemporaryBanTarget(actorRole, targetRole)
+}
+
+export function canAssignRole(actorRole: string, newRole: string): boolean {
+  if (!canAssignRoles(actorRole) || !isUserRole(newRole)) return false
+  if (NON_ASSIGNABLE_ROLES.includes(newRole)) return false
+  if (newRole === 'superadmin' && roleRank(actorRole) < ROLE_RANK.fondateur) return false
+  return roleRank(newRole) < roleRank(actorRole)
+}
+
+/** Modifier un autre compte : uniquement si grade strictement supérieur (pas un pair). */
+export function canModifyTarget(actorRole: string, targetRole: string): boolean {
+  return isStrictlyHigher(actorRole, targetRole)
+}
+
+export function assignableRoles(actorRole: string): UserRole[] {
+  if (!canAssignRoles(actorRole)) return []
+  return USER_ROLES.filter((r) => {
+    if (NON_ASSIGNABLE_ROLES.includes(r)) return false
+    if (r === 'superadmin' && roleRank(actorRole) < ROLE_RANK.fondateur) return false
+    return roleRank(r) < roleRank(actorRole)
+  })
+}
+
+export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  fondateur:
+    'Grade suprême : contrôle total sur tous les comptes, y compris les super administrateurs. Non attribuable via l\'interface.',
+  superadmin:
+    'Gestion complète sauf les fondateurs : supervision, rôles (jusqu\'à admin), bannissements des grades inférieurs.',
+  admin:
+    'Gestion des joueurs et modérateurs : supervision, stats, rôles (jusqu\'à modérateur) et bannissements des grades inférieurs.',
+  moderator:
+    'Supervision en lecture, historiques, bannissement temporaire des joueurs uniquement (pas de ban permanent, pas de sanction d\'un pair ni d\'un grade supérieur).',
+  user:
+    'Joueur standard : jeux locaux, compte personnel et synchronisation cloud de ses joueurs.',
+}
+
+export function roleLabel(role: string): string {
+  switch (normalizeRole(role)) {
+    case 'fondateur':
+      return 'Fondateur'
+    case 'superadmin':
+      return 'Super administrateur'
+    case 'admin':
+      return 'Administrateur'
+    case 'moderator':
+      return 'Modérateur'
+    default:
+      return 'Joueur'
+  }
+}

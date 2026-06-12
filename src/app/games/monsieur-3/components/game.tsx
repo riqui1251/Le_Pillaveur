@@ -304,7 +304,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
       </div>
 
       {/* Contenu principal */}
-      <div className="mx-auto max-w-xl px-4 pt-20 pb-28 space-y-4">
+      <div className="mx-auto max-w-xl px-4 pt-6 pb-28 space-y-4 sm:pt-8">
 
         {/* Phase indicator */}
         <div className="flex items-center gap-2">

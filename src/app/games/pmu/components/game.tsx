@@ -9,7 +9,7 @@ import { GameShell } from '@/components/game/GameShell'
 import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { X, CheckCircle2, Minus, Plus, GripVertical } from 'lucide-react'
+import { X, CheckCircle2, Minus, Plus } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ function makeHorses(): Horse[] {
 function PlayerChip({
   player, selected, onClick, onRemove, size = 'md',
 }: {
-  player: BasePlayer; selected?: boolean; onClick?: () => void
+  player: BasePlayer; selected?: boolean; onClick?: (e: React.MouseEvent) => void
   onRemove?: () => void; size?: 'sm' | 'md'
 }) {
   const bg = getColorFromClass(player.preferences.color)
@@ -108,7 +108,7 @@ interface GameProps {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// COMPOSANT SETUP — Drag & Drop
+// COMPOSANT SETUP — Clic pour sélectionner, puis clic sur un cheval
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function SetupPhase({
@@ -125,45 +125,25 @@ function SetupPhase({
   onBack: () => void
   onNext: () => void
 }) {
-  const [dragging, setDragging] = useState<BasePlayer | null>(null)
-  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
-  const [hoveredZone, setHoveredZone] = useState<'pool' | number | null>(null)
-  const horseRefs = useRef<(HTMLDivElement | null)[]>([])
-  const poolRef = useRef<HTMLDivElement | null>(null)
+  const [selectedPlayer, setSelectedPlayer] = useState<BasePlayer | null>(null)
 
   const assignedIds = new Set(horses.flatMap(h => h.players.map(p => p.id)))
   const unassigned = allPlayers.filter(p => !assignedIds.has(p.id))
 
-  const getZoneAt = (x: number, y: number): 'pool' | number | null => {
-    for (let i = 0; i < horseRefs.current.length; i++) {
-      const r = horseRefs.current[i]?.getBoundingClientRect()
-      if (r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return i
-    }
-    const pr = poolRef.current?.getBoundingClientRect()
-    if (pr && x >= pr.left && x <= pr.right && y >= pr.top && y <= pr.bottom) return 'pool'
-    return null
+  const toggleSelect = (player: BasePlayer) => {
+    setSelectedPlayer(prev => (prev?.id === player.id ? null : player))
   }
 
-  const startDrag = (e: React.PointerEvent, player: BasePlayer) => {
-    e.preventDefault()
-    setDragging(player)
-    setDragPos({ x: e.clientX, y: e.clientY })
+  const assignSelected = (horseIdx: number) => {
+    if (!selectedPlayer) return
+    assignToHorse(selectedPlayer, horseIdx)
+    setSelectedPlayer(null)
   }
 
-  const onMove = (e: React.PointerEvent) => {
-    if (!dragging) return
-    setDragPos({ x: e.clientX, y: e.clientY })
-    setHoveredZone(getZoneAt(e.clientX, e.clientY))
-  }
-
-  const onDrop = (e: React.PointerEvent) => {
-    if (!dragging) return
-    const zone = getZoneAt(e.clientX, e.clientY)
-    if (typeof zone === 'number') assignToHorse(dragging, zone)
-    else if (zone === 'pool') unassignPlayer(dragging)
-    setDragging(null)
-    setDragPos(null)
-    setHoveredZone(null)
+  const unassignSelected = () => {
+    if (!selectedPlayer) return
+    unassignPlayer(selectedPlayer)
+    setSelectedPlayer(null)
   }
 
   return (
@@ -177,55 +157,55 @@ function SetupPhase({
           disabled={totalAssigned === 0}
           className="w-full h-11 bg-gradient-to-r from-fuchsia-600 to-violet-700 font-semibold text-white hover:from-fuchsia-500 hover:to-violet-600 disabled:opacity-50"
         >
-          {totalAssigned === 0 ? 'Glissez des joueurs sur les chevaux' : nextLabel}
+          {totalAssigned === 0 ? 'Assignez au moins un joueur' : nextLabel}
         </Button>
       }
     >
       <div className="space-y-4">
-        {/* Overlay de capture pendant le drag */}
-        {dragging && dragPos && (
-          <div
-            className="fixed inset-0 z-50 cursor-grabbing touch-none"
-            onPointerMove={onMove}
-            onPointerUp={onDrop}
-          >
-            {/* Chip fantôme qui suit le doigt */}
-            <div
-              style={{ position: 'absolute', left: dragPos.x, top: dragPos.y, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}
-              className="opacity-90 scale-110 drop-shadow-2xl"
-            >
-              <PlayerChip player={dragging} />
-            </div>
-          </div>
-        )}
+        <p className="text-center text-xs text-white/45">
+          {selectedPlayer
+            ? <>Joueur sélectionné : <span className="font-semibold text-amber-300">{selectedPlayer.name}</span> — touchez un cheval</>
+            : 'Touchez un joueur, puis un cheval pour l\'assigner'}
+        </p>
 
         {/* Zone non assignés */}
         <div
-          ref={poolRef}
+          role="button"
+          tabIndex={selectedPlayer && !unassigned.some(p => p.id === selectedPlayer.id) ? 0 : -1}
+          onClick={() => {
+            if (selectedPlayer && !unassigned.some(p => p.id === selectedPlayer.id)) {
+              unassignSelected()
+            }
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && selectedPlayer && !unassigned.some(p => p.id === selectedPlayer.id)) {
+              unassignSelected()
+            }
+          }}
           className={cn(
             'min-h-[56px] rounded-2xl border p-3 transition-all duration-150',
-            dragging
-              ? hoveredZone === 'pool'
-                ? 'border-white/35 bg-white/[0.07]'
-                : 'border-dashed border-white/15 bg-white/[0.02]'
+            selectedPlayer && !unassigned.some(p => p.id === selectedPlayer.id)
+              ? 'cursor-pointer border-dashed border-white/25 bg-white/[0.05] hover:border-white/40'
               : 'border-white/10 bg-white/[0.04]',
           )}
         >
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/35">Non assignés</p>
           {unassigned.length === 0 ? (
-            <p className="text-center text-xs text-white/25 py-1">
-              {dragging ? '← Glisser ici pour désassigner' : 'Tous les joueurs sont assignés ✓'}
+            <p className="py-1 text-center text-xs text-white/25">
+              {selectedPlayer ? 'Touchez ici pour retirer du cheval' : 'Tous les joueurs sont assignés ✓'}
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {unassigned.map(p => (
-                <div
+                <PlayerChip
                   key={p.id}
-                  onPointerDown={e => startDrag(e, p)}
-                  className={cn('cursor-grab active:cursor-grabbing touch-none select-none', dragging?.id === p.id && 'opacity-30')}
-                >
-                  <PlayerChip player={p} />
-                </div>
+                  player={p}
+                  selected={selectedPlayer?.id === p.id}
+                  onClick={e => {
+                    e.stopPropagation()
+                    toggleSelect(p)
+                  }}
+                />
               ))}
             </div>
           )}
@@ -234,49 +214,62 @@ function SetupPhase({
         {/* Grille des chevaux */}
         <div className="grid grid-cols-2 gap-3">
           {horses.map((horse, idx) => {
-            const isHovered = dragging !== null && hoveredZone === idx
+            const isTarget = selectedPlayer !== null
             return (
               <div
                 key={idx}
-                ref={el => { horseRefs.current[idx] = el }}
+                role="button"
+                tabIndex={isTarget ? 0 : -1}
+                onClick={() => assignSelected(idx)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') assignSelected(idx)
+                }}
                 className={cn(
-                  'relative min-h-[100px] overflow-hidden rounded-2xl border p-3 transition-colors duration-150',
-                  isHovered
-                    ? 'border-white/40'
-                    : dragging
-                      ? 'border-dashed border-white/15'
-                      : 'border-white/10',
+                  'relative min-h-[100px] overflow-hidden rounded-2xl border p-3 text-left transition-colors duration-150',
+                  isTarget
+                    ? 'cursor-pointer border-dashed border-amber-400/35 hover:border-amber-400/60 hover:bg-white/[0.03]'
+                    : 'border-white/10',
                 )}
               >
-                {/* Fond coloré */}
                 <div
-                  className={cn('absolute inset-0 transition-opacity duration-150', isHovered ? 'opacity-20' : 'opacity-[0.08]')}
+                  className={cn('absolute inset-0 transition-opacity duration-150', isTarget ? 'opacity-20' : 'opacity-[0.08]')}
                   style={{ background: `linear-gradient(135deg, ${horse.colorFrom}, ${horse.colorTo})` }}
                 />
-                <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl"
-                  style={{ background: `linear-gradient(to bottom, ${horse.colorFrom}, ${horse.colorTo})` }} />
+                <div
+                  className="absolute left-0 top-0 h-full w-1 rounded-l-2xl"
+                  style={{ background: `linear-gradient(to bottom, ${horse.colorFrom}, ${horse.colorTo})` }}
+                />
 
                 <div className="relative">
                   <div className="mb-2 flex items-center gap-1.5">
                     <span className="text-lg">{horse.emoji}</span>
                     <span className="text-sm font-bold text-white">{horse.name}</span>
-                    {isHovered && <span className="ml-auto text-xs text-white/60 animate-pulse">Lâcher ici</span>}
+                    {isTarget && (
+                      <span className="ml-auto text-[10px] text-amber-300/80">Assigner ici</span>
+                    )}
                   </div>
                   {horse.players.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {horse.players.map(p => (
-                        <div
+                        <PlayerChip
                           key={p.id}
-                          onPointerDown={e => startDrag(e, p)}
-                          className={cn('cursor-grab active:cursor-grabbing touch-none select-none', dragging?.id === p.id && 'opacity-30')}
-                        >
-                          <PlayerChip player={p} size="sm" onRemove={() => unassignPlayer(p)} />
-                        </div>
+                          player={p}
+                          size="sm"
+                          selected={selectedPlayer?.id === p.id}
+                          onClick={e => {
+                            e.stopPropagation()
+                            toggleSelect(p)
+                          }}
+                          onRemove={() => {
+                            unassignPlayer(p)
+                            if (selectedPlayer?.id === p.id) setSelectedPlayer(null)
+                          }}
+                        />
                       ))}
                     </div>
                   ) : (
                     <p className="text-xs text-white/25">
-                      {dragging ? 'Lâcher ici' : 'Aucun joueur'}
+                      {isTarget ? 'Touchez pour assigner' : 'Aucun joueur'}
                     </p>
                   )}
                 </div>

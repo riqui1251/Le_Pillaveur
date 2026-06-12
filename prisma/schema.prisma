@@ -8,15 +8,74 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  stats         Stats[]
-  achievements  Achievement[]
+  id               String    @id @default(cuid())
+  email            String?   @unique
+  passwordHash     String    @default("")
+  displayName      String    @default("Joueur")
+  accountCode      String?   @unique
+  role             String    @default("user")
+  playMode         String    @default("local")
+  localPlayersJson String?
+  name             String?
+  emailVerified    DateTime?
+  image            String?
+  banType          String?
+  bannedUntil      DateTime?
+  banComment       String?
+  bannedAt         DateTime?
+  bannedById       String?
+  lastCountry      String?
+  lastSeenAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  stats            Stats[]
+  achievements     Achievement[]
+  sessions         Session[]
+  banEvents        AccountBanEvent[] @relation("BanTarget")
+  bansIssued       AccountBanEvent[] @relation("BanActor")
+}
+
+model AccountBanEvent {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("BanTarget", fields: [userId], references: [id], onDelete: Cascade)
+  actorId     String?
+  actor       User?     @relation("BanActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action      String
+  comment     String?
+  bannedUntil DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model SitePresence {
+  visitorId String   @id
+  userId    String?
+  country   String?
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+
+  @@index([lastSeen])
+  @@index([userId])
+  @@index([country])
+}
+
+model DailyVisitor {
+  visitorId String
+  date      String
+
+  @@id([visitorId, date])
+  @@index([date])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model Stats {
@@ -26,13 +85,13 @@ model Stats {
   gameType  String
   score     Int
   playedAt  DateTime @default(now())
-  metadata  String?  // SQLite ne supporte pas JSON, nous utilisons une chaîne
+  metadata  String?
 }
 
 model Achievement {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  type        String
-  unlockedAt  DateTime @default(now())
-} 
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  type       String
+  unlockedAt DateTime @default(now())
+}

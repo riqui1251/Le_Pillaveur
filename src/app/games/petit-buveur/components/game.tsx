@@ -2293,42 +2293,38 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     return [...players].sort((a, b) => b.position - a.position)
   }
 
-  /** Bandeau classement compact (réutilisé dans les modales). */
+  /** Bandeau classement compact (réutilisé dans les modales de ciblage). */
   const renderCompactRanking = () => (
-    <div className="rounded-xl border border-border/40 bg-background/50 px-2 py-2">
-      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-xl border border-border/40 bg-background/50 px-3 py-2.5">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         Classement
       </p>
-      <div className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul className="space-y-1">
         {getPlayerRanking().map((player, index) => {
           const isActive = players[currentPlayer]?.id === player.id
           return (
-            <div
+            <li
               key={player.id}
-              className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 ${
-                isActive ? 'border-emerald-400/50 bg-emerald-500/10' : 'border-border/40 bg-card/60'
+              className={`flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm ${
+                isActive ? 'bg-emerald-500/10' : ''
               }`}
             >
-              <span className="w-4 text-center text-[10px] leading-none">
-                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="shrink-0 tabular-nums font-semibold text-muted-foreground">
+                  {index + 1}
+                </span>
+                <PlayerName
+                  player={player}
+                  className={`truncate font-medium ${isActive ? 'text-emerald-300' : ''}`}
+                />
               </span>
-              <Avatar className={`${player.preferences.color} h-6 w-6 shrink-0`}>
-                {player.preferences.avatar ? (
-                  <AvatarImage src={player.preferences.avatar} alt={player.name} />
-                ) : (
-                  <AvatarFallback className="text-[9px]">
-                    {player.preferences.icon || player.name[0].toUpperCase()}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div className="min-w-0 pr-0.5">
-                <PlayerName player={player} className="block max-w-[4.5rem] truncate text-[10px] font-medium leading-tight" />
-                <span className="text-[9px] text-muted-foreground">Case {player.position + 1}</span>
-              </div>
-            </div>
+              <span className="shrink-0 text-[10px] text-muted-foreground">
+                case {player.position + 1}
+              </span>
+            </li>
           )
         })}
-      </div>
+      </ul>
     </div>
   )
 
@@ -2959,16 +2955,16 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }
 
   return (
-    <div className="relative min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className="relative -mx-2 -my-1 flex min-h-[calc(100dvh-3.5rem)] flex-col overflow-hidden bg-gray-950 text-white sm:-mx-4 sm:min-h-[calc(100dvh-3.75rem)]">
       {/* Blobs animés */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
         <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-orange-600/10 blur-[100px] animate-[pulse_10s_ease-in-out_infinite_2s]" />
         <div className="absolute bottom-0 right-1/3 h-72 w-72 rounded-full bg-emerald-600/10 blur-[90px] animate-[pulse_12s_ease-in-out_infinite_4s]" />
       </div>
 
-      {/* En-tête fixe */}
-      <header className="fixed inset-x-0 top-0 z-30 border-b border-white/10 bg-gray-950/85 backdrop-blur-md">
+      {/* En-tête */}
+      <header className="relative z-30 shrink-0 border-b border-white/10 bg-gray-950/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
           <button
             onClick={onGameEnd}
@@ -2986,8 +2982,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </div>
       </header>
 
-      {/* Contenu scrollable */}
-      <main className="relative z-10 flex-1 overflow-y-auto px-3 pb-32 pt-16 sm:px-4">
+      {/* Contenu scrollable — min-h-0 évite que le scroll recouvre la barre d'action sur mobile */}
+      <main className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-2 pt-2 sm:px-4 sm:pt-3 [-webkit-overflow-scrolling:touch]">
         <div className="mx-auto max-w-3xl space-y-3 py-3">
       {/* HUD tour + joueur actif */}
       <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
@@ -4049,15 +4045,16 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         )}
       </AnimatePresence>
 
-      {/* Barre d'action fixe en bas — masquée pendant lancer de dé, choix de joueur ou effet */}
+      {/* Barre d'action en bas (dans le flux, pas en fixed — évite les taps fantômes sur mobile) */}
       {!showNotification && !isDiceActionBlocked() && (
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-gray-950/85 backdrop-blur-md">
+      <div className="relative z-50 shrink-0 isolate border-t border-white/10 bg-gray-950/95 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 px-3 py-3 sm:px-4">
           <div className="relative flex w-full items-center justify-center">
             {isProcessingTurn && !isDiceRolling && (
               <button
+                type="button"
                 onClick={forceNextPlayer}
-                className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 transition-all hover:bg-red-500/20"
+                className="absolute right-0 flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 transition-all hover:bg-red-500/20 active:scale-95"
                 title="Débloquer le jeu"
                 aria-label="Débloquer"
               >
@@ -4065,9 +4062,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               </button>
             )}
             <button
+              type="button"
               onClick={rollDice}
               disabled={isDiceActionBlocked()}
-              className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full max-w-xs touch-manipulation select-none rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span className="flex items-center justify-center gap-2">
                 <span>Lancer le dé</span>

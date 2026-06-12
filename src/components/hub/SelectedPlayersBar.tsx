@@ -39,7 +39,7 @@ export function SelectedPlayersBar() {
         >
           <Link href="/joueurs">
             <ArrowLeft className="h-3.5 w-3.5" />
-            Modifier
+            {selectedPlayers.length === 0 ? "Choisir les joueurs" : "Modifier"}
           </Link>
         </Button>
       </div>
@@ -70,9 +70,12 @@ export function SelectedPlayersBar() {
           ))}
         </div>
       ) : (
-        <p className="text-center text-sm text-amber-200/70">
-          Retournez sur la page Joueurs pour constituer votre équipe (minimum 2).
-        </p>
+        <Link
+          href="/joueurs"
+          className="block rounded-xl border border-dashed border-amber-400/25 bg-amber-500/5 px-4 py-3 text-center text-sm text-amber-200/80 transition-colors hover:border-amber-400/40 hover:bg-amber-500/10 hover:text-amber-100"
+        >
+          Touchez ici pour choisir vos joueurs (minimum 2).
+        </Link>
       )}
     </div>
   )

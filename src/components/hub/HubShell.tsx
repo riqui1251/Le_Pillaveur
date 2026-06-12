@@ -37,7 +37,7 @@ export function HubShell({ step, title, subtitle, children, headerExtra }: HubSh
         />
       </div>
 
-      <div className="relative container mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pt-12">
+      <div className="relative container mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
         <nav aria-label="Étapes de la soirée" className="mb-8 flex items-center justify-center gap-2 sm:gap-4">
           {steps.map((s, index) => {
             const isActive = s.id === step

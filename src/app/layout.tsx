@@ -46,9 +46,9 @@ export default function RootLayout({
         <ErrorBoundary>
           <Providers>
             <FullscreenLayoutProvider>
-              <div className="relative min-h-screen fullscreen-container">
+              <div className="relative flex min-h-screen flex-col bg-[#07060b] fullscreen-container">
                 <Navbar />
-                <div className="content-container mt-5">
+                <div className="content-container flex min-h-0 flex-1 flex-col">
                   {children}
                 </div>
               </div>
