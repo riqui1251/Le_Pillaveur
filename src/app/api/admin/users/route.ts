@@ -19,6 +19,7 @@ function serializeUser(user: {
   createdAt: Date
   updatedAt: Date
   lastCountry: string | null
+  lastIp: string | null
   lastSeenAt: Date | null
   lastLoginAt: Date | null
   totalPresenceSeconds: number
@@ -37,6 +38,7 @@ function serializeUser(user: {
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
     lastCountry: user.lastCountry,
+    lastIp: user.lastIp,
     lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
     totalPresenceSeconds: user.totalPresenceSeconds,
@@ -65,6 +67,7 @@ export async function GET() {
         createdAt: true,
         updatedAt: true,
         lastCountry: true,
+        lastIp: true,
         lastSeenAt: true,
         lastLoginAt: true,
         totalPresenceSeconds: true,
@@ -169,6 +172,7 @@ export async function PATCH(request: Request) {
         createdAt: true,
         updatedAt: true,
         lastCountry: true,
+        lastIp: true,
         lastSeenAt: true,
         lastLoginAt: true,
         totalPresenceSeconds: true,

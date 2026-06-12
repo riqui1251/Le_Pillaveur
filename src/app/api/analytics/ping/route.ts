@@ -7,13 +7,15 @@ import {
   visitorCookieOptions,
 } from '@/lib/auth-server'
 import { recordVisitorPing } from '@/lib/analytics-server'
-import { getCountryFromRequest } from '@/lib/geo-server'
+import { resolveGeoFromRequest } from '@/lib/geo-server'
+
+export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
     let visitorId = cookieStore.get(VISITOR_COOKIE)?.value
-    const country = getCountryFromRequest(request)
+    const { country, ip } = resolveGeoFromRequest(request)
     const currentUser = await getCurrentUser()
 
     const response = NextResponse.json({ ok: true })
@@ -25,6 +27,7 @@ export async function POST(request: Request) {
 
     await recordVisitorPing(visitorId, {
       country,
+      ip,
       userId: currentUser?.id ?? null,
     })
     return response

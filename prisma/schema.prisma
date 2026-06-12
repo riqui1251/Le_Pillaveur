@@ -25,6 +25,7 @@ model User {
   bannedAt         DateTime?
   bannedById       String?
   lastCountry      String?
+  lastIp           String?
   lastSeenAt       DateTime?
   lastLoginAt      DateTime?
   totalPresenceSeconds Int   @default(0)
@@ -57,12 +58,14 @@ model SitePresence {
   visitorId String   @id
   userId    String?
   country   String?
+  lastIp    String?
   firstSeen DateTime @default(now())
   lastSeen  DateTime @default(now())
 
   @@index([lastSeen])
   @@index([userId])
   @@index([country])
+  @@index([lastIp])
 }
 
 model DailyVisitor {

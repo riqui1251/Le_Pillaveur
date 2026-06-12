@@ -10,6 +10,7 @@ import {
 import { ensureUserAccountCode } from '@/lib/account-code'
 import { normalizeRole } from '@/lib/roles'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
+import { resolveGeoFromRequest } from '@/lib/geo-server'
 
 export async function POST(request: Request) {
   try {
@@ -48,9 +49,15 @@ export async function POST(request: Request) {
     }
 
     const now = new Date()
+    const { country, ip } = resolveGeoFromRequest(request)
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: now, lastSeenAt: now },
+      data: {
+        lastLoginAt: now,
+        lastSeenAt: now,
+        ...(country ? { lastCountry: country } : {}),
+        ...(ip ? { lastIp: ip } : {}),
+      },
     })
 
     const token = await createSession(user.id)

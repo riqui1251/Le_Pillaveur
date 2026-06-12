@@ -40,6 +40,9 @@ fi
 echo "=== Migration auth_feedback_reset ==="
 bash "$APP_DIR/scripts/prod-migrate-auth-feedback.sh"
 
+echo "=== Migration visitor_ip ==="
+bash "$APP_DIR/scripts/prod-migrate-visitor-ip.sh"
+
 echo "=== DB permissions ==="
 docker run --rm -v le-pillaveur-db:/data alpine sh -c '
   apk add sqlite >/dev/null 2>&1
@@ -53,11 +56,17 @@ docker run --rm -v le-pillaveur-db:/data alpine sh -c '
 
 echo "=== Restart container ==="
 docker rm -f le-pillaveur 2>/dev/null || true
+ENV_FILE="${ENV_FILE:-$APP_DIR/.env}"
+ENV_ARGS=()
+if [ -f "$ENV_FILE" ]; then
+  ENV_ARGS=(--env-file "$ENV_FILE")
+fi
 docker run -d \
   --name le-pillaveur \
   --restart always \
   -p 127.0.0.1:3000:3000 \
   -v le-pillaveur-db:/app/prisma \
+  "${ENV_ARGS[@]}" \
   -e NODE_ENV=production \
   -e DATABASE_URL=file:/app/prisma/prod.db \
   le-pillaveur:latest

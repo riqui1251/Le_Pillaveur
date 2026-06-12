@@ -13,6 +13,7 @@ import {
   Globe,
   History,
   Info,
+  Network,
   Search,
   RefreshCw,
   Shield,
@@ -72,8 +73,22 @@ type ConnectedAccount = {
   email: string | null
   accountCode: string | null
   country: string | null
+  ip: string | null
   lastSeenAt: string | null
   role: string
+  online: boolean
+}
+
+type VisitorIpRow = {
+  visitorId: string
+  userId: string | null
+  ip: string | null
+  country: string | null
+  displayName: string | null
+  email: string | null
+  accountCode: string | null
+  role: string | null
+  lastSeenAt: string
   online: boolean
 }
 
@@ -87,6 +102,7 @@ type StatsResponse = {
     visitorsTodayByCountry: CountryRow[]
   }
   connectedAccounts: ConnectedAccount[]
+  visitorIpList: VisitorIpRow[]
   accounts: {
     total: number
     byRole: {
@@ -112,6 +128,7 @@ type AdminUser = {
   role: string
   createdAt: string
   lastCountry: string | null
+  lastIp: string | null
   lastSeenAt: string | null
   lastLoginAt: string | null
   totalPresenceSeconds: number
@@ -163,6 +180,7 @@ type UserDetail = {
     role: string
     playMode: string
     lastCountry: string | null
+    lastIp: string | null
     lastSeenAt: string | null
     lastLoginAt: string | null
     totalPresenceSeconds: number
@@ -462,6 +480,109 @@ function CountryList({
               </li>
             ))}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function IpVisitorList({ rows }: { rows: VisitorIpRow[] }) {
+  const [query, setQuery] = useState('')
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter((row) => {
+      if (row.ip?.toLowerCase().includes(q)) return true
+      if (row.displayName?.toLowerCase().includes(q)) return true
+      if (row.email?.toLowerCase().includes(q)) return true
+      if (row.accountCode?.toLowerCase().includes(q)) return true
+      if (countryLabel(row.country).toLowerCase().includes(q)) return true
+      if (row.country?.toLowerCase().includes(q)) return true
+      return false
+    })
+  }, [rows, query])
+
+  return (
+    <Card className="border-white/10 bg-white/[0.03] md:col-span-2">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-white">
+          <Network className="h-5 w-5 text-amber-400" />
+          Adresses IP et pays
+        </CardTitle>
+        <CardDescription>
+          Dernières connexions détectées (200 visiteurs max). Le pays est déduit de l&apos;IP si l&apos;hébergeur ne le fournit pas.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <Input
+            className="bg-black/30 pl-9"
+            placeholder="Filtrer par IP, pseudo, email ou pays…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        {filtered.length === 0 ? (
+          <p className="py-6 text-center text-sm text-white/45">
+            {rows.length === 0
+              ? 'Aucune IP enregistrée pour le moment. Les données apparaîtront après la prochaine visite.'
+              : 'Aucun résultat pour cette recherche.'}
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-white/10 bg-black/30 text-xs uppercase tracking-wider text-white/45">
+                  <th className="px-3 py-2 font-medium">IP</th>
+                  <th className="px-3 py-2 font-medium">Pays</th>
+                  <th className="px-3 py-2 font-medium">Joueur</th>
+                  <th className="px-3 py-2 font-medium">Dernière activité</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((row) => (
+                  <tr
+                    key={row.visitorId}
+                    className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+                  >
+                    <td className="px-3 py-2 font-mono text-xs text-amber-200/90">
+                      {row.ip ?? '—'}
+                    </td>
+                    <td className="px-3 py-2 text-white/80">
+                      <span className="inline-flex items-center gap-1.5">
+                        {countryFlag(row.country)}
+                        {countryLabel(row.country)}
+                        {row.country && row.country !== '??' && (
+                          <span className="text-xs text-white/35">({row.country})</span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {row.displayName ? (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-medium text-white">{row.displayName}</span>
+                          <AccountCodeBadge code={row.accountCode} />
+                          {row.role && <RoleBadge role={row.role} />}
+                          {row.online && (
+                            <Badge className="border-green-500/30 bg-green-500/10 text-green-300">
+                              En ligne
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-white/40">Visiteur anonyme</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-white/45">
+                      {new Date(row.lastSeenAt).toLocaleString('fr-FR')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -834,7 +955,7 @@ export default function SupervisionPage() {
           {showAnalytics && (
             <>
               <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
-              <TabsTrigger value="geo">Pays</TabsTrigger>
+              <TabsTrigger value="geo">Pays / IP</TabsTrigger>
             </>
           )}
           <TabsTrigger value="accounts">
@@ -958,7 +1079,7 @@ export default function SupervisionPage() {
                 Comptes connectés récemment
               </CardTitle>
               <CardDescription>
-                Joueurs identifiés avec leur pays (si disponible via l&apos;hébergeur)
+                Joueurs identifiés avec leur IP et pays
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -983,6 +1104,10 @@ export default function SupervisionPage() {
                         )}
                       </div>
                       <div className="text-xs text-white/45">
+                        {acc.ip && (
+                          <span className="font-mono text-amber-200/70">{acc.ip}</span>
+                        )}
+                        {acc.ip && acc.country && <> · </>}
                         {countryLabel(acc.country)}
                         {acc.lastSeenAt && (
                           <> · {new Date(acc.lastSeenAt).toLocaleString('fr-FR')}</>
@@ -1044,6 +1169,7 @@ export default function SupervisionPage() {
             description="Visiteurs ayant été actifs dans les dernières 24 h"
             rows={stats?.visitors.visitorsTodayByCountry ?? []}
           />
+          <IpVisitorList rows={stats?.visitorIpList ?? []} />
         </TabsContent>
         </>
         )}
@@ -1125,6 +1251,9 @@ export default function SupervisionPage() {
                           <span>
                             · {countryFlag(u.lastCountry)} {countryLabel(u.lastCountry)}
                           </span>
+                        )}
+                        {u.lastIp && (
+                          <span className="font-mono text-amber-200/60">· {u.lastIp}</span>
                         )}
                         {u.lastSeenAt && (
                           <span>· Vu le {new Date(u.lastSeenAt).toLocaleString('fr-FR')}</span>
@@ -1518,6 +1647,9 @@ export default function SupervisionPage() {
               <div className="text-sm text-white/60">
                 <p>Mode : {historyDetail.user.playMode}</p>
                 <p>Pays : {countryLabel(historyDetail.user.lastCountry)}</p>
+                {historyDetail.user.lastIp && (
+                  <p>IP : <span className="font-mono text-amber-200/80">{historyDetail.user.lastIp}</span></p>
+                )}
                 {historyDetail.user.lastSeenAt && (
                   <p>Dernière activité : {new Date(historyDetail.user.lastSeenAt).toLocaleString('fr-FR')}</p>
                 )}
