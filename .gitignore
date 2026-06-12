@@ -43,6 +43,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# bases SQLite locales
+prisma/**/*.db
+prisma/**/*.db-journal
+
 # vercel
 .vercel
 
