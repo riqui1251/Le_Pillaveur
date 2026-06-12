@@ -20,6 +20,7 @@ import {
   UserX,
   Users,
   Gamepad2,
+  Trash2,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -30,12 +31,15 @@ import {
   canTemporaryBanTarget,
   canManageUsers,
   canModifyTarget,
+  canDeleteTarget,
+  canViewAccountActivity,
   canViewSupervisionAnalytics,
   canViewSupervisionBans,
   ROLE_DESCRIPTIONS,
   roleLabel,
 } from '@/lib/roles'
 import { countryFlag, countryLabel } from '@/lib/country-display'
+import { formatPresenceDuration } from '@/lib/format-presence'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -107,6 +111,8 @@ type AdminUser = {
   createdAt: string
   lastCountry: string | null
   lastSeenAt: string | null
+  lastLoginAt: string | null
+  totalPresenceSeconds: number
   ban: {
     banned: boolean
     banType: string | null
@@ -138,8 +144,16 @@ type UserDetail = {
     playMode: string
     lastCountry: string | null
     lastSeenAt: string | null
+    lastLoginAt: string | null
+    totalPresenceSeconds: number
     createdAt: string
     localPlayerCount: number
+    gamesPlayed?: Array<{
+      gameId: string
+      title: string
+      emoji: string
+      partiesPlayed: number
+    }>
     localPlayerNames: string[]
     statsCount: number
     achievementsCount: number
@@ -248,6 +262,33 @@ function RoleBadge({ role }: { role: string }) {
   return <Badge variant="secondary">Joueur</Badge>
 }
 
+function UserActivityLines({
+  lastLoginAt,
+  totalPresenceSeconds,
+  compact,
+}: {
+  lastLoginAt: string | null
+  totalPresenceSeconds: number
+  compact?: boolean
+}) {
+  return (
+    <div className={compact ? 'space-y-0.5 text-[11px] text-white/35' : 'space-y-1 text-sm text-white/60'}>
+      <p>
+        Dernière connexion :{' '}
+        {lastLoginAt
+          ? new Date(lastLoginAt).toLocaleString('fr-FR')
+          : 'Jamais enregistrée'}
+      </p>
+      <p>
+        Temps sur le site : {formatPresenceDuration(totalPresenceSeconds)}
+        {!compact && (
+          <span className="text-xs text-white/35"> (estimé via activité)</span>
+        )}
+      </p>
+    </div>
+  )
+}
+
 function actionLabel(action: string): string {
   switch (action) {
     case 'ban_permanent':
@@ -329,7 +370,13 @@ export default function SupervisionPage() {
   const [historyDetail, setHistoryDetail] = useState<UserDetail | null>(null)
   const [historyLoading, setHistoryLoading] = useState(false)
 
+  const [deleteDialog, setDeleteDialog] = useState<{
+    userId: string
+    displayName: string
+  } | null>(null)
+
   const canEditAccounts = user ? canManageUsers(user.role) : false
+  const showAccountActivity = user ? canViewAccountActivity(user.role) : false
   const assignableRoleOptions = user ? assignableRoles(user.role) : []
   const showAnalytics = user ? canViewSupervisionAnalytics(user.role) : false
   const showBansTab = user ? canViewSupervisionBans(user.role) : false
@@ -463,6 +510,30 @@ export default function SupervisionPage() {
       setBanDialog(null)
       setBanComment('')
       setBanDays('7')
+      await loadAll()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erreur')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const deleteAccount = async () => {
+    if (!deleteDialog) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/users/${deleteDialog.userId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Suppression refusée')
+      setDeleteDialog(null)
+      if (historyUserId === deleteDialog.userId) {
+        setHistoryUserId(null)
+        setHistoryDetail(null)
+      }
       await loadAll()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur')
@@ -845,6 +916,13 @@ export default function SupervisionPage() {
                           <span>· Vu le {new Date(u.lastSeenAt).toLocaleString('fr-FR')}</span>
                         )}
                       </p>
+                      {showAccountActivity && (
+                        <UserActivityLines
+                          compact
+                          lastLoginAt={u.lastLoginAt}
+                          totalPresenceSeconds={u.totalPresenceSeconds}
+                        />
+                      )}
                       {u.ban.banned && u.ban.banComment && (
                         <p className="text-xs text-red-300/80">Motif : {u.ban.banComment}</p>
                       )}
@@ -885,7 +963,8 @@ export default function SupervisionPage() {
 
                   {u.id !== user.id &&
                     (canTemporaryBanTarget(user.role, u.role) ||
-                      canPermanentBanTarget(user.role, u.role)) && (
+                      canPermanentBanTarget(user.role, u.role) ||
+                      canDeleteTarget(user.role, u.role)) && (
                     <div className="flex flex-wrap gap-2 border-t border-white/10 pt-3">
                       {u.ban.banned ? (
                         canTemporaryBanTarget(user.role, u.role) && (
@@ -936,6 +1015,22 @@ export default function SupervisionPage() {
                             </Button>
                           )}
                         </>
+                      )}
+                      {canDeleteTarget(user.role, u.role) && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={busy}
+                          onClick={() =>
+                            setDeleteDialog({
+                              userId: u.id,
+                              displayName: u.displayName,
+                            })
+                          }
+                        >
+                          <Trash2 className="mr-1 h-3.5 w-3.5" />
+                          Supprimer le compte
+                        </Button>
                       )}
                     </div>
                   )}
@@ -1009,6 +1104,27 @@ export default function SupervisionPage() {
         </TabsContent>
         )}
       </Tabs>
+
+      <Dialog open={!!deleteDialog} onOpenChange={(open) => !open && setDeleteDialog(null)}>
+        <DialogContent className="border-red-500/30 bg-[#0c0b12] text-white">
+          <DialogHeader>
+            <DialogTitle>Supprimer définitivement ce compte ?</DialogTitle>
+            <DialogDescription className="text-white/50">
+              Compte : <strong className="text-white">{deleteDialog?.displayName}</strong>
+              <br />
+              Cette action est irréversible : email, joueurs cloud, stats et sessions seront effacés.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" disabled={busy} onClick={deleteAccount}>
+              Supprimer définitivement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!banDialog} onOpenChange={(open) => !open && setBanDialog(null)}>
         <DialogContent className="border-white/10 bg-[#0c0b12] text-white">
@@ -1124,6 +1240,41 @@ export default function SupervisionPage() {
                   <p>Dernière activité : {new Date(historyDetail.user.lastSeenAt).toLocaleString('fr-FR')}</p>
                 )}
               </div>
+
+              {showAccountActivity && (
+                <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
+                    Activité du joueur
+                  </p>
+                  <UserActivityLines
+                    lastLoginAt={historyDetail.user.lastLoginAt}
+                    totalPresenceSeconds={historyDetail.user.totalPresenceSeconds}
+                  />
+                  <div className="mt-3">
+                    <p className="mb-1.5 text-xs font-medium text-white/50">Jeux joués</p>
+                    {historyDetail.user.gamesPlayed &&
+                    historyDetail.user.gamesPlayed.length > 0 ? (
+                      <ul className="space-y-1.5">
+                        {historyDetail.user.gamesPlayed.map((g) => (
+                          <li
+                            key={g.gameId}
+                            className="flex items-center justify-between rounded-md border border-white/10 bg-black/30 px-2.5 py-1.5 text-sm"
+                          >
+                            <span className="text-white/90">
+                              {g.emoji} {g.title}
+                            </span>
+                            <Badge variant="secondary">
+                              {g.partiesPlayed} partie{g.partiesPlayed > 1 ? 's' : ''}
+                            </Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-white/45">Aucune partie enregistrée.</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {historyDetail.user.ban.banned && (
                 <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">

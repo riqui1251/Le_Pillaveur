@@ -37,7 +37,15 @@ export async function POST(request: Request) {
     const user = existing
       ? await prisma.user.update({
           where: { id: existing.id },
-          data: { email, passwordHash, displayName, name: displayName, accountCode },
+          data: {
+            email,
+            passwordHash,
+            displayName,
+            name: displayName,
+            accountCode,
+            lastLoginAt: new Date(),
+            lastSeenAt: new Date(),
+          },
         })
       : await prisma.user.create({
           data: {
@@ -47,6 +55,8 @@ export async function POST(request: Request) {
             name: displayName,
             accountCode,
             playMode: 'local',
+            lastLoginAt: new Date(),
+            lastSeenAt: new Date(),
           },
         })
 

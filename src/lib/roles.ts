@@ -93,6 +93,20 @@ export function canModifyTarget(actorRole: string, targetRole: string): boolean 
   return isStrictlyHigher(actorRole, targetRole)
 }
 
+/** Suppression définitive d'un compte : super admin et fondateur. */
+export function canDeleteAccount(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.superadmin
+}
+
+export function canDeleteTarget(actorRole: string, targetRole: string): boolean {
+  return canDeleteAccount(actorRole) && isStrictlyHigher(actorRole, targetRole)
+}
+
+/** Activité détaillée (connexion, temps, jeux) : tout grade staff (modérateur+). */
+export function canViewAccountActivity(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.moderator
+}
+
 export function assignableRoles(actorRole: string): UserRole[] {
   if (!canAssignRoles(actorRole)) return []
   return USER_ROLES.filter((r) => {
@@ -104,13 +118,13 @@ export function assignableRoles(actorRole: string): UserRole[] {
 
 export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   fondateur:
-    'Grade suprême : contrôle total sur tous les comptes, y compris les super administrateurs. Non attribuable via l\'interface.',
+    'Grade suprême : contrôle total sur tous les comptes (y compris suppression des super administrateurs). Non attribuable via l\'interface.',
   superadmin:
-    'Gestion complète sauf les fondateurs : supervision, rôles (jusqu\'à admin), bannissements des grades inférieurs.',
+    'Gestion complète sauf les fondateurs : supervision, rôles (jusqu\'à admin), bannissements et suppression définitive des grades inférieurs.',
   admin:
     'Gestion des joueurs et modérateurs : supervision, stats, rôles (jusqu\'à modérateur) et bannissements des grades inférieurs.',
   moderator:
-    'Supervision en lecture, historiques, bannissement temporaire des joueurs uniquement (pas de ban permanent, pas de sanction d\'un pair ni d\'un grade supérieur).',
+    'Supervision en lecture, historiques et activité des joueurs (connexion, temps, jeux), bannissement temporaire des joueurs uniquement.',
   user:
     'Joueur standard : jeux locaux, compte personnel et synchronisation cloud de ses joueurs.',
 }

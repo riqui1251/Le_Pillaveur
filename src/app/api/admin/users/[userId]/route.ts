@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server'
-import { requireSupervisionUser } from '@/lib/auth-server'
+import { getCurrentUser, requireSupervisionUser } from '@/lib/auth-server'
 import { countLocalPlayers, getBanState } from '@/lib/ban-server'
 import { prisma } from '@/lib/prisma'
+import {
+  canDeleteTarget,
+  canViewAccountActivity,
+  normalizeRole,
+} from '@/lib/roles'
+import { deleteUserAccount, getUserGamePlayStats } from '@/lib/user-activity-server'
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    await requireSupervisionUser()
+    const actor = await requireSupervisionUser()
     const { userId } = await params
 
     const user = await prisma.user.findUnique({
@@ -23,6 +29,8 @@ export async function GET(
         localPlayersJson: true,
         lastCountry: true,
         lastSeenAt: true,
+        lastLoginAt: true,
+        totalPresenceSeconds: true,
         createdAt: true,
         updatedAt: true,
         banType: true,
@@ -69,6 +77,9 @@ export async function GET(
       }
     }
 
+    const showActivity = canViewAccountActivity(actor.role)
+    const gamesPlayed = showActivity ? await getUserGamePlayStats(userId) : undefined
+
     return NextResponse.json({
       user: {
         id: user.id,
@@ -79,6 +90,8 @@ export async function GET(
         playMode: user.playMode,
         lastCountry: user.lastCountry,
         lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
+        lastLoginAt: showActivity ? user.lastLoginAt?.toISOString() ?? null : null,
+        totalPresenceSeconds: showActivity ? user.totalPresenceSeconds : 0,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
         localPlayerCount,
@@ -86,6 +99,7 @@ export async function GET(
         statsCount: user._count.stats,
         achievementsCount: user._count.achievements,
         sessionsCount: user._count.sessions,
+        gamesPlayed,
         ban: {
           ...ban,
           bannedUntil: ban.bannedUntil?.toISOString() ?? null,
@@ -107,5 +121,51 @@ export async function GET(
     }
     console.error('admin user detail error:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  try {
+    const actor = await getCurrentUser()
+    if (!actor) {
+      return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    }
+
+    const { userId } = await params
+
+    if (userId === actor.id) {
+      return NextResponse.json(
+        { error: 'Tu ne peux pas supprimer ton propre compte depuis la supervision' },
+        { status: 400 }
+      )
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, email: true },
+    })
+
+    if (!target || !target.email) {
+      return NextResponse.json({ error: 'Compte introuvable' }, { status: 404 })
+    }
+
+    if (
+      !canDeleteTarget(normalizeRole(actor.role), normalizeRole(target.role))
+    ) {
+      return NextResponse.json(
+        { error: 'Tu ne peux pas supprimer ce compte' },
+        { status: 403 }
+      )
+    }
+
+    await deleteUserAccount(userId)
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('admin user delete error:', error)
+    return NextResponse.json({ error: 'Erreur lors de la suppression' }, { status: 500 })
   }
 }

@@ -46,6 +46,12 @@ export async function POST(request: Request) {
       )
     }
 
+    const now = new Date()
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: now, lastSeenAt: now },
+    })
+
     const token = await createSession(user.id)
     const role = normalizeRole(user.role)
     const accountCode = user.accountCode ?? (await ensureUserAccountCode(user.id))

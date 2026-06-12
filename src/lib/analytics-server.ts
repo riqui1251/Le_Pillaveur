@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { PRESENCE_PING_SECONDS } from '@/lib/user-activity-server'
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000
 
@@ -59,6 +60,7 @@ export async function recordVisitorPing(
       where: { id: userId },
       data: {
         lastSeenAt: now,
+        totalPresenceSeconds: { increment: PRESENCE_PING_SECONDS },
         ...(country ? { lastCountry: country } : {}),
       },
     })

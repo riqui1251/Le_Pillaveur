@@ -20,6 +20,8 @@ function serializeUser(user: {
   updatedAt: Date
   lastCountry: string | null
   lastSeenAt: Date | null
+  lastLoginAt: Date | null
+  totalPresenceSeconds: number
   banType: string | null
   bannedUntil: Date | null
   banComment: string | null
@@ -36,6 +38,8 @@ function serializeUser(user: {
     updatedAt: user.updatedAt.toISOString(),
     lastCountry: user.lastCountry,
     lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
+    lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+    totalPresenceSeconds: user.totalPresenceSeconds,
     ban: {
       banned: ban.banned,
       banType: ban.banType,
@@ -62,6 +66,8 @@ export async function GET() {
         updatedAt: true,
         lastCountry: true,
         lastSeenAt: true,
+        lastLoginAt: true,
+        totalPresenceSeconds: true,
         banType: true,
         bannedUntil: true,
         banComment: true,
@@ -164,6 +170,8 @@ export async function PATCH(request: Request) {
         updatedAt: true,
         lastCountry: true,
         lastSeenAt: true,
+        lastLoginAt: true,
+        totalPresenceSeconds: true,
         banType: true,
         bannedUntil: true,
         banComment: true,
