@@ -9,9 +9,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { OnlineGameGate, useIsOnlineMode } from '@/components/online/OnlineGameGate'
 
 export default function PyramidePage() {
   const { players } = usePlayers()
+  const isOnline = useIsOnlineMode()
   const [gameStarted, setGameStarted] = useState(false)
   const [pyramidHeight, setPyramidHeight] = useState(5)
   const [gameMode, setGameMode] = useState<'fun' | 'classic'>('fun')
@@ -22,6 +24,25 @@ export default function PyramidePage() {
 
   const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
   const canStart = selectedPlayers.length >= 2
+
+  if (isOnline) {
+    return (
+      <div className="min-h-screen px-4 py-8">
+        <OnlineGameGate gameId="pyramide">
+          {(onlinePlayers) => (
+            <Game
+              players={onlinePlayers}
+              pyramidHeight={pyramidHeight}
+              onGameEnd={() => setGameStarted(false)}
+              gameMode={gameMode}
+              deckCount={deckCount}
+              cardsToSelect={cardsToSelect}
+            />
+          )}
+        </OnlineGameGate>
+      </div>
+    )
+  }
 
   if (gameStarted && canStart) {
     return (

@@ -5,8 +5,11 @@ import { Search, Sparkles } from "lucide-react"
 import { GAMES } from "@/lib/games"
 import { HubShell } from "@/components/hub/HubShell"
 import { SelectedPlayersBar } from "@/components/hub/SelectedPlayersBar"
+import { OpenLobbiesList } from "@/components/online/OpenLobbiesList"
 import { GameCard } from "@/components/hub/GameCard"
 import { Input } from "@/components/ui/input"
+import { useAuth } from "@/hooks/useAuth"
+import { PlayModeSelector } from "@/components/auth/PlayModeSelector"
 import {
   PlinkoIcon,
   RaceFlagIcon,
@@ -44,6 +47,8 @@ function GameIconById({ id, className }: { id: string; className?: string }) {
 
 export default function GamesHubPage() {
   const [query, setQuery] = useState("")
+  const { user } = useAuth()
+  const isOnline = user?.playMode === "online"
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -60,10 +65,22 @@ export default function GamesHubPage() {
   return (
     <HubShell
       step="jeux"
-      title="Choisissez votre jeu"
-      subtitle="Des classiques aux nouveautés — trouvez l'ambiance parfaite pour votre soirée."
-      headerExtra={<SelectedPlayersBar />}
+      title={isOnline ? "Jeux en ligne" : "Choisissez votre jeu"}
+      subtitle={
+        isOnline
+          ? "Rejoignez un lobby ouvert ou choisissez un jeu pour en créer un nouveau."
+          : "Des classiques aux nouveautés — trouvez l'ambiance parfaite pour votre soirée."
+      }
+      headerExtra={!isOnline ? <SelectedPlayersBar /> : undefined}
     >
+      {user && (
+        <div className="mb-6">
+          <PlayModeSelector />
+        </div>
+      )}
+
+      {isOnline && <OpenLobbiesList />}
+
       <div className="mb-4 flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />

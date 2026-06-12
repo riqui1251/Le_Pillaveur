@@ -1,0 +1,649 @@
+"use client"
+
+
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import type { RoomDto } from '@/lib/online-room'
+
+import { parseApiJson } from '@/lib/api-response'
+
+import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
+
+import { useAuth } from '@/components/providers/AuthProvider'
+
+
+
+/** Lobby en attente */
+
+const POLL_LOBBY_MS = 2000
+
+/** Partie en cours — en attente du tour adverse */
+
+const POLL_PLAYING_WAIT_MS = 250
+
+/** Partie en cours — c'est notre tour (secours si push raté) */
+
+const POLL_PLAYING_ACTIVE_MS = 900
+
+
+
+export function useOnlineRoom() {
+
+  const { user } = useAuth()
+
+  const [room, setRoom] = useState<RoomDto | null>(null)
+
+  const [loading, setLoading] = useState(false)
+
+  const [error, setError] = useState<string | null>(null)
+
+  const roomRef = useRef<RoomDto | null>(null)
+
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const userIdRef = useRef<string | undefined>(undefined)
+
+
+
+  roomRef.current = room
+
+  userIdRef.current = user?.id
+
+
+
+  const fetchRoom = useCallback(async () => {
+
+    if (!user || user.playMode !== 'online') {
+
+      setRoom(null)
+
+      return null
+
+    }
+
+    const res = await fetch('/api/online/rooms/me', { credentials: 'include' })
+
+    if (!res.ok) return null
+
+    const data = await parseApiJson<{ room?: RoomDto }>(res)
+
+    setRoom(data.room ?? null)
+
+    return data.room as RoomDto | null
+
+  }, [user])
+
+
+
+  const refreshRoom = useCallback(async (roomId: string) => {
+
+    const res = await fetch(`/api/online/rooms/${roomId}`, { credentials: 'include' })
+
+    if (!res.ok) return null
+
+    const data = await parseApiJson<{ room?: RoomDto }>(res)
+
+    setRoom(data.room ?? null)
+
+    return data.room as RoomDto | null
+
+  }, [])
+
+
+
+  /** Polling léger — uniquement l'état de partie (plus rapide qu'un refresh complet) */
+
+  const refreshGameState = useCallback(async (roomId: string) => {
+
+    const res = await fetch(`/api/online/rooms/${roomId}/state`, { credentials: 'include' })
+
+    if (!res.ok) return null
+
+    const data = await parseApiJson<{
+
+      stateVersion: number
+
+      currentTurnUserId: string | null
+
+      gameStateJson: string | null
+
+    }>(res)
+
+    setRoom((prev) => {
+
+      if (!prev || prev.id !== roomId) return prev
+
+      if (
+
+        prev.stateVersion === data.stateVersion &&
+
+        prev.gameStateJson === data.gameStateJson &&
+
+        prev.currentTurnUserId === data.currentTurnUserId
+
+      ) {
+
+        return prev
+
+      }
+
+      return {
+
+        ...prev,
+
+        stateVersion: data.stateVersion,
+
+        gameStateJson: data.gameStateJson,
+
+        currentTurnUserId: data.currentTurnUserId,
+
+      }
+
+    })
+
+    return data
+
+  }, [])
+
+
+
+  const getPollDelay = useCallback((r: RoomDto | null) => {
+
+    if (!r || r.status !== 'playing') return POLL_LOBBY_MS
+
+    const uid = userIdRef.current
+
+    if (uid && r.currentTurnUserId && r.currentTurnUserId !== uid) {
+
+      return POLL_PLAYING_WAIT_MS
+
+    }
+
+    return POLL_PLAYING_ACTIVE_MS
+
+  }, [])
+
+
+
+  const pollTick = useCallback(async () => {
+
+    const r = roomRef.current
+
+    if (r?.status === 'playing' && r.id) {
+
+      const gameId = r.gameId ?? ''
+      const state = gameId ? parseOnlineGameState(gameId, r.gameStateJson) : null
+      const finished = state && gameId ? isOnlineGameFinished(gameId, state) : false
+
+      if (finished) {
+
+        await refreshRoom(r.id)
+
+      } else {
+
+        await refreshGameState(r.id)
+
+      }
+
+    } else if (r?.id) {
+
+      await refreshRoom(r.id)
+
+    } else {
+
+      await fetchRoom()
+
+    }
+
+  }, [fetchRoom, refreshRoom, refreshGameState])
+
+
+
+  const schedulePoll = useCallback(() => {
+
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
+
+    const delay = getPollDelay(roomRef.current)
+
+    pollTimerRef.current = setTimeout(async () => {
+
+      await pollTick()
+
+      schedulePoll()
+
+    }, delay)
+
+  }, [getPollDelay, pollTick])
+
+
+
+  const createRoom = useCallback(async (gameId: string) => {
+
+    setLoading(true)
+
+    setError(null)
+
+    try {
+
+      const res = await fetch('/api/online/rooms', {
+
+        method: 'POST',
+
+        headers: { 'Content-Type': 'application/json' },
+
+        credentials: 'include',
+
+        body: JSON.stringify({ gameId }),
+
+      })
+
+      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+
+      if (!res.ok) {
+
+        setError(data.error ?? 'Impossible de créer le lobby')
+
+        return null
+
+      }
+
+      setRoom(data.room ?? null)
+
+      return data.room as RoomDto
+
+    } catch (e) {
+
+      const msg = e instanceof Error ? e.message : 'Erreur réseau'
+
+      setError(msg)
+
+      return null
+
+    } finally {
+
+      setLoading(false)
+
+    }
+
+  }, [])
+
+
+
+  const joinRoom = useCallback(async (opts: { code?: string; roomId?: string }) => {
+
+    setLoading(true)
+
+    setError(null)
+
+    try {
+
+      const res = await fetch('/api/online/rooms/join', {
+
+        method: 'POST',
+
+        headers: { 'Content-Type': 'application/json' },
+
+        credentials: 'include',
+
+        body: JSON.stringify(opts),
+
+      })
+
+      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+
+      if (!res.ok) {
+
+        setError(data.error ?? 'Impossible de rejoindre le lobby')
+
+        return null
+
+      }
+
+      setRoom(data.room ?? null)
+
+      return data.room as RoomDto
+
+    } catch (e) {
+
+      const msg = e instanceof Error ? e.message : 'Erreur réseau'
+
+      setError(msg)
+
+      return null
+
+    } finally {
+
+      setLoading(false)
+
+    }
+
+  }, [])
+
+
+
+  const leaveRoom = useCallback(async () => {
+
+    if (!room) return
+
+    await fetch(`/api/online/rooms/${room.id}`, {
+
+      method: 'DELETE',
+
+      credentials: 'include',
+
+    })
+
+    setRoom(null)
+
+  }, [room])
+
+
+
+  const voteRematch = useCallback(async () => {
+
+    if (!room) return null
+
+    setLoading(true)
+
+    setError(null)
+
+    try {
+
+      const res = await fetch(`/api/online/rooms/${room.id}/rematch`, {
+
+        method: 'POST',
+
+        credentials: 'include',
+
+      })
+
+      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+
+      if (!res.ok) {
+
+        setError(data.error ?? 'Impossible de voter pour rejouer')
+
+        return null
+
+      }
+
+      setRoom(data.room ?? null)
+
+      return data.room as RoomDto
+
+    } catch (e) {
+
+      const msg = e instanceof Error ? e.message : 'Erreur réseau'
+
+      setError(msg)
+
+      return null
+
+    } finally {
+
+      setLoading(false)
+
+    }
+
+  }, [room])
+
+
+
+  const setReady = useCallback(async (isReady: boolean) => {
+
+    if (!room) return
+
+    const res = await fetch(`/api/online/rooms/${room.id}/ready`, {
+
+      method: 'PUT',
+
+      headers: { 'Content-Type': 'application/json' },
+
+      credentials: 'include',
+
+      body: JSON.stringify({ isReady }),
+
+    })
+
+    const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+
+    if (res.ok) setRoom(data.room ?? null)
+
+    else setError(data.error ?? 'Erreur')
+
+  }, [room])
+
+
+
+  const launchGame = useCallback(async () => {
+
+    if (!room) return null
+
+    setLoading(true)
+
+    setError(null)
+
+    try {
+
+      const res = await fetch(`/api/online/rooms/${room.id}/launch`, {
+
+        method: 'POST',
+
+        credentials: 'include',
+
+      })
+
+      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+
+      if (!res.ok) {
+
+        setError(data.error ?? 'Impossible de lancer la partie')
+
+        return null
+
+      }
+
+      setRoom(data.room ?? null)
+
+      return data.room as RoomDto
+
+    } catch (e) {
+
+      const msg = e instanceof Error ? e.message : 'Erreur réseau'
+
+      setError(msg)
+
+      return null
+
+    } finally {
+
+      setLoading(false)
+
+    }
+
+  }, [room])
+
+
+
+  const updateSettings = useCallback(
+
+    async (settings: { difficulty?: string; plinkoDifficulty?: string; hiLoMode?: 'standard' | 'traversee' }) => {
+
+      if (!room) return null
+
+      const res = await fetch(`/api/online/rooms/${room.id}/settings`, {
+
+        method: 'PUT',
+
+        headers: { 'Content-Type': 'application/json' },
+
+        credentials: 'include',
+
+        body: JSON.stringify(settings),
+
+      })
+
+      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+
+      if (res.ok) {
+
+        setRoom(data.room ?? null)
+
+        return data.room as RoomDto
+
+      }
+
+      setError(data.error ?? 'Erreur')
+
+      return null
+
+    },
+
+    [room]
+
+  )
+
+
+
+  const pushGameState = useCallback(
+
+    async (gameStateJson: string, expectedVersion: number) => {
+
+      if (!room) return false
+
+      const res = await fetch(`/api/online/rooms/${room.id}/state`, {
+
+        method: 'PUT',
+
+        headers: { 'Content-Type': 'application/json' },
+
+        credentials: 'include',
+
+        body: JSON.stringify({
+
+          gameStateJson,
+
+          expectedVersion,
+
+          pushedByUserId: room.members.find((m) => m.isSelf)?.userId,
+
+        }),
+
+      })
+
+      const data = await parseApiJson<{ room?: RoomDto }>(res)
+
+      if (res.ok) {
+
+        setRoom(data.room ?? null)
+
+        return true
+
+      }
+
+      if (res.status === 409) {
+
+        await refreshGameState(room.id)
+
+      }
+
+      return false
+
+    },
+
+    [room, refreshGameState]
+
+  )
+
+
+
+  useEffect(() => {
+
+    if (!user || user.playMode !== 'online') {
+
+      setRoom(null)
+
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
+
+      return
+
+    }
+
+
+
+    void fetchRoom().then(() => schedulePoll())
+
+
+
+    const onVisible = () => {
+
+      if (document.visibilityState === 'visible') void pollTick()
+
+    }
+
+    document.addEventListener('visibilitychange', onVisible)
+
+
+
+    return () => {
+
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
+
+      document.removeEventListener('visibilitychange', onVisible)
+
+    }
+
+  }, [user, user?.playMode, fetchRoom, schedulePoll, pollTick])
+
+
+
+  /** Ré-accélère le polling quand le tour ou le statut change */
+
+  useEffect(() => {
+
+    if (!user || user.playMode !== 'online') return
+
+    schedulePoll()
+
+  }, [room?.status, room?.currentTurnUserId, room?.stateVersion, user, user?.playMode, schedulePoll])
+
+
+
+  return {
+
+    room,
+
+    loading,
+
+    error,
+
+    setError,
+
+    createRoom,
+
+    joinRoom,
+
+    leaveRoom,
+
+    voteRematch,
+
+    setReady,
+
+    launchGame,
+
+    updateSettings,
+
+    pushGameState,
+
+    fetchRoom,
+
+    refreshRoom,
+
+    refreshGameState,
+
+  }
+
+}
+
+

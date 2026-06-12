@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, animate, type MotionValue } from 'framer-motion'
 import { Dice6, Trophy, ArrowRight, RefreshCw, Home, MapPin, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { Card } from '@/components/ui/card'
@@ -19,14 +19,17 @@ import {
   type Case,
   type CaseType,
   type Difficulty,
+  type GenerateCaseOptions,
   generateCase,
   getCaseTypeLabel,
+  isCaseTypeAllowedOnline,
   CASES_NO_TARGET,
   DEFI_WHEEL_CHALLENGES,
 } from '../case-config'
 import type { GamePlayer } from '../case-types'
 import { resolveNoTargetCase, getLeader, getLastPlayer } from '../resolve-case'
 import { ShameDice, getDeHonteOutcomeLabel } from './shame-dice'
+import { emptySyncedView, type SyncedWheelSpinPlan } from '@/lib/online-game-state'
 
 const CASE_TYPES_NO_LAST_CASE: CaseType[] = ['repetition', 'chance', 'echange', 'rewind', 'double-case']
 
@@ -111,6 +114,27 @@ const generateDuelWheelSegments = (): WheelSegment[] => {
     })
   }
   return arr
+}
+
+function createWheelSpinPlan(segmentCount: number): SyncedWheelSpinPlan {
+  const anglePerSegment = 360 / Math.max(segmentCount, 1)
+  const segmentIndex = Math.floor(Math.random() * segmentCount)
+  const segStart = segmentIndex * anglePerSegment
+  const segAngle = anglePerSegment
+  const extraSpins = 4 + Math.floor(Math.random() * 7)
+  const duration = 4 + Math.random() * 2
+  const offsetWithinSegment = Math.random() * segAngle
+  const targetAngle = 360 * extraSpins - (segStart + offsetWithinSegment)
+  const overshootAngle = segAngle * (0.12 + Math.random() * 0.18)
+  const accelAngle = targetAngle * 0.25
+  return {
+    nonce: Date.now() + Math.random(),
+    segmentIndex,
+    duration,
+    targetAngle,
+    overshootAngle,
+    accelAngle,
+  }
 }
 
 const generateDefiWheelSegments = (): WheelSegment[] =>
@@ -201,14 +225,29 @@ interface GameSave {
   winner: GamePlayer | null;
 }
 
+export type OnlineGameSync = {
+  roomId: string
+  myUserId: string
+  memberUserIds: string[]
+  canInteract: boolean
+  stateVersion: number
+  remoteState: import('@/lib/online-game-state').PetitBuveurSyncedState | null
+  pushState: (gameStateJson: string) => Promise<boolean>
+  voteRematch?: () => Promise<unknown>
+  leaveToMenu?: () => Promise<void>
+  rematchVotes?: string[]
+  activePlayerName?: string
+}
+
 interface GameProps {
   players: BasePlayer[];
   onGameEnd: () => void;
   difficulty?: Difficulty;
   initialMode?: 'new' | 'resume';
+  onlineSync?: OnlineGameSync;
 }
 
-export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal', initialMode = 'new' }: GameProps) {
+export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal', initialMode = 'new', onlineSync }: GameProps) {
   const { updatePlayerStats } = usePlayers();
   const defaultColor = 'bg-primary';
   
@@ -317,6 +356,40 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [animatedDiceValue, setAnimatedDiceValue] = useState<number | null>(null);
   const [clickCount, setClickCount] = useState<Record<string, number>>({});
   const [showConfirmation, setShowConfirmation] = useState<string | null>(null);
+  const lastAppliedRemoteVersionRef = useRef(0);
+  const diceLockRef = useRef(false);
+  const isPushingOnlineRef = useRef(false);
+  const advancingTurnRef = useRef(false);
+  const pushDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isOnlineGame = Boolean(onlineSync);
+
+  const cancelPendingOnlinePush = useCallback(() => {
+    if (pushDebounceRef.current) {
+      clearTimeout(pushDebounceRef.current)
+      pushDebounceRef.current = null
+    }
+  }, [])
+
+  const isMyTurnOnline = useMemo(() => {
+    if (!onlineSync) return true
+    const activeUserId = onlineSync.memberUserIds[currentPlayer]
+    return activeUserId === onlineSync.myUserId
+  }, [onlineSync, currentPlayer])
+
+  const generateCaseOptions = useMemo((): GenerateCaseOptions | undefined => {
+    if (!isOnlineGame) return undefined
+    return { online: true, playerCount: players.length }
+  }, [isOnlineGame, players.length])
+
+  const canReplayCase = useCallback(
+    (caseType: Case | null | undefined): caseType is Case => {
+      if (!isReplayableCase(caseType)) return false
+      if (isOnlineGame && !isCaseTypeAllowedOnline(caseType.type, players.length)) return false
+      return true
+    },
+    [isOnlineGame, players.length]
+  )
+
   const [playerToDelete, setPlayerToDelete] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showTargetDialog, setShowTargetDialog] = useState(false);
@@ -333,10 +406,13 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [showWheel, setShowWheel] = useState(false);
   const [wheelSegments, setWheelSegments] = useState<WheelSegment[]>([]);
   const [wheelSpinning, setWheelSpinning] = useState(false);
+  const [wheelSpinPlan, setWheelSpinPlan] = useState<SyncedWheelSpinPlan | null>(null);
   const [wheelResult, setWheelResult] = useState<WheelSegment | null>(null);
   const wheelRef = useRef<HTMLDivElement | null>(null);
   const wheelRotation = useMotionValue(0);
   const lastWheelTickRef = useRef<number>(0);
+  const lastWheelSpinNonceRef = useRef(0);
+  const isLocalWheelAnimatingRef = useRef(false);
   const wheelOutcomeAppliedRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -347,9 +423,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [duelOpponentId, setDuelOpponentId] = useState<string | null>(null);
   const [duelWheelSegments, setDuelWheelSegments] = useState<WheelSegment[]>([]);
   const [duelWheelSpinning, setDuelWheelSpinning] = useState(false);
+  const [duelWheelSpinPlan, setDuelWheelSpinPlan] = useState<SyncedWheelSpinPlan | null>(null);
   const [duelWheelResult, setDuelWheelResult] = useState<WheelSegment | null>(null);
   const duelWheelRotation = useMotionValue(0);
   const lastDuelWheelTickRef = useRef<number>(0);
+  const lastDuelWheelSpinNonceRef = useRef(0);
+  const isLocalDuelWheelAnimatingRef = useRef(false);
   
   // États pour les nouvelles cases
   const [lastCase, setLastCase] = useState<Case | null>(null);
@@ -448,8 +527,220 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     isDiceRolling,
   ]);
 
+  const toSyncedCase = (c: Case | null): import('@/lib/online-game-state').SyncedCase | null =>
+    c ? { type: c.type, description: c.description, effect: c.effect } : null
+
+  const captureViewState = useCallback((): import('@/lib/online-game-state').SyncedViewState => ({
+    diceResult,
+    diceValue,
+    animatedDiceValue,
+    animatingPlayerId: animatingPlayer,
+    currentCase: toSyncedCase(currentCase),
+    pendingCase: toSyncedCase(pendingCase),
+    pendingPosition,
+    pendingDuelNote: pendingDuelNote ?? null,
+    showNotification,
+    showNextButton,
+    showTargetDialog,
+    showWheel,
+    wheelMode,
+    wheelSegments,
+    wheelSpinning,
+    wheelSpinPlan,
+    wheelResult,
+    showDuelDialog,
+    duelPhase,
+    duelBoardPosition,
+    duelOpponentId,
+    duelWheelSegments,
+    duelWheelSpinning,
+    duelWheelSpinPlan,
+    duelWheelResult,
+    showChanceDialog,
+    showExchangeDialog,
+    showChainDialog,
+    showTeleportDialog,
+    showVoteDialog,
+    showDeHonteDialog,
+    deHonteResult,
+    deHonteRolling,
+    deHonteDisplayValue,
+    showPileFaceDialog,
+    pileFaceTargetId,
+    showVictoryScreen,
+    isProcessingTurn,
+    isDiceRolling,
+  }), [
+    diceResult, diceValue, animatedDiceValue, animatingPlayer, currentCase, pendingCase,
+    pendingPosition, pendingDuelNote, showNotification, showNextButton, showTargetDialog,
+    showWheel, wheelMode, wheelSegments, wheelSpinning, wheelSpinPlan, wheelResult, showDuelDialog,
+    duelPhase, duelBoardPosition, duelOpponentId, duelWheelSegments, duelWheelSpinning, duelWheelSpinPlan,
+    duelWheelResult, showChanceDialog, showExchangeDialog, showChainDialog, showTeleportDialog,
+    showVoteDialog, showDeHonteDialog, deHonteResult, deHonteRolling, deHonteDisplayValue,
+    showPileFaceDialog, pileFaceTargetId, showVictoryScreen, isProcessingTurn, isDiceRolling,
+  ])
+
+  const applyViewState = useCallback((view: import('@/lib/online-game-state').SyncedViewState) => {
+    setDiceResult(view.diceResult)
+    setDiceValue(view.diceValue)
+    setAnimatedDiceValue(view.animatedDiceValue)
+    setAnimatingPlayer(view.animatingPlayerId)
+    setCurrentCase(view.currentCase as Case | null)
+    setPendingCase(view.pendingCase as Case | null)
+    setPendingPosition(view.pendingPosition)
+    setPendingDuelNote(view.pendingDuelNote ?? undefined)
+    setShowNotification(view.showNotification)
+    setShowNextButton(view.showNextButton)
+    setShowTargetDialog(view.showTargetDialog)
+    setShowWheel(view.showWheel)
+    setWheelMode(view.wheelMode)
+    setWheelSegments(view.wheelSegments)
+    setWheelSpinning(view.wheelSpinning)
+    setWheelSpinPlan(view.wheelSpinPlan ?? null)
+    setWheelResult(view.wheelResult)
+    setShowDuelDialog(view.showDuelDialog)
+    setDuelPhase(view.duelPhase)
+    setDuelBoardPosition(view.duelBoardPosition)
+    setDuelOpponentId(view.duelOpponentId)
+    setDuelWheelSegments(view.duelWheelSegments)
+    setDuelWheelSpinning(view.duelWheelSpinning)
+    setDuelWheelSpinPlan(view.duelWheelSpinPlan ?? null)
+    setDuelWheelResult(view.duelWheelResult)
+    setShowChanceDialog(view.showChanceDialog)
+    setShowExchangeDialog(view.showExchangeDialog)
+    setShowChainDialog(view.showChainDialog)
+    setShowTeleportDialog(view.showTeleportDialog)
+    setShowVoteDialog(view.showVoteDialog)
+    setShowDeHonteDialog(view.showDeHonteDialog)
+    setDeHonteResult(view.deHonteResult)
+    setDeHonteRolling(view.deHonteRolling)
+    setDeHonteDisplayValue(view.deHonteDisplayValue)
+    setShowPileFaceDialog(view.showPileFaceDialog)
+    setPileFaceTargetId(view.pileFaceTargetId)
+    setShowVictoryScreen(view.showVictoryScreen)
+    setIsProcessingTurn(view.isProcessingTurn)
+    setIsDiceRolling(view.isDiceRolling)
+    diceLockRef.current = view.isDiceRolling || view.isProcessingTurn
+  }, [])
+
+  const buildSyncedStateJson = useCallback(
+    (snapshot?: {
+      players?: GamePlayer[]
+      currentPlayer?: number
+      turnCount?: number
+      lastCase?: Case | null
+      winner?: GamePlayer | null
+      view?: import('@/lib/online-game-state').SyncedViewState
+    }) => {
+      if (!onlineSync) return null
+      return JSON.stringify({
+        version: onlineSync.stateVersion + 1,
+        memberUserIds: onlineSync.memberUserIds,
+        players: snapshot?.players ?? players,
+        currentPlayer: snapshot?.currentPlayer ?? currentPlayer,
+        turnCount: snapshot?.turnCount ?? turnCount,
+        gameDifficulty,
+        lastCase: snapshot?.lastCase ?? lastCase,
+        gameStarted,
+        winner: snapshot?.winner ?? winner,
+        rematchVotes:
+          snapshot?.winner ?? winner
+            ? onlineSync.remoteState?.rematchVotes ?? []
+            : [],
+        view: snapshot?.view ?? captureViewState(),
+        pushedByUserId: onlineSync.myUserId,
+      })
+    },
+    [onlineSync, players, currentPlayer, turnCount, gameDifficulty, lastCase, gameStarted, winner, captureViewState]
+  )
+
+  const syncOnlineState = useCallback(
+    async (snapshot: {
+      players: GamePlayer[]
+      currentPlayer: number
+      turnCount: number
+      lastCase?: Case | null
+      winner?: GamePlayer | null
+      view?: import('@/lib/online-game-state').SyncedViewState
+    }) => {
+      if (!onlineSync) return false
+      cancelPendingOnlinePush()
+      const json = buildSyncedStateJson(snapshot)
+      if (!json) return false
+      isPushingOnlineRef.current = true
+      try {
+        const ok = await onlineSync.pushState(json)
+        if (ok) {
+          lastAppliedRemoteVersionRef.current = onlineSync.stateVersion + 1
+        }
+        return ok
+      } finally {
+        isPushingOnlineRef.current = false
+      }
+    },
+    [onlineSync, buildSyncedStateJson, cancelPendingOnlinePush]
+  )
+
+  const scheduleOnlinePush = useCallback(
+    (immediate = false, overrides?: Partial<{
+      players: GamePlayer[]
+      currentPlayer: number
+      turnCount: number
+      lastCase: Case | null
+      winner: GamePlayer | null
+      view: import('@/lib/online-game-state').SyncedViewState
+    }>) => {
+      if (!onlineSync || !isMyTurnOnline || advancingTurnRef.current) return
+      const run = () => {
+        if (advancingTurnRef.current) return
+        void syncOnlineState({
+          players: overrides?.players ?? players,
+          currentPlayer: overrides?.currentPlayer ?? currentPlayer,
+          turnCount: overrides?.turnCount ?? turnCount,
+          lastCase: overrides?.lastCase ?? lastCase,
+          winner: overrides?.winner ?? winner,
+          view: overrides?.view ?? captureViewState(),
+        })
+      }
+      if (immediate) {
+        cancelPendingOnlinePush()
+        run()
+        return
+      }
+      cancelPendingOnlinePush()
+      pushDebounceRef.current = setTimeout(run, 120)
+    },
+    [onlineSync, isMyTurnOnline, syncOnlineState, players, currentPlayer, turnCount, lastCase, winner, captureViewState, cancelPendingOnlinePush]
+  )
+
+  const applyRemoteState = useCallback((raw: import('@/lib/online-game-state').PetitBuveurSyncedState) => {
+    setPlayers(
+      (raw.players as GamePlayer[]).map(p => ({
+        ...p,
+        name: sanitizePlayerName(p.name),
+      }))
+    )
+    setCurrentPlayer(raw.currentPlayer)
+    setTurnCount(raw.turnCount)
+    setGameDifficulty(raw.gameDifficulty as Difficulty)
+    setLastCase(raw.lastCase as Case | null)
+    setGameStarted(raw.gameStarted)
+    setWinner(raw.winner as GamePlayer | null)
+    if (raw.view) {
+      applyViewState(raw.view)
+    } else if (raw.gameStarted) {
+      clearTurnBlockingUi()
+      setIsProcessingTurn(false)
+      setIsDiceRolling(false)
+      diceLockRef.current = false
+    }
+  }, [applyViewState])
+
   // Fonctions de sauvegarde et chargement
   const saveGame = useCallback(() => {
+    // En ligne : la synchro se fait via syncOnlineState à la fin de chaque tour
+    if (onlineSync) return
+
     const saveData: GameSave = {
       id: `save_${Date.now()}`,
       timestamp: Date.now(),
@@ -471,7 +762,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     } catch (error) {
       console.error('saveGame: Erreur lors de la sauvegarde:', error);
     }
-  }, [players, currentPlayer, turnCount, gameDifficulty, lastCase, gameStarted, winner]);
+  }, [players, currentPlayer, turnCount, gameDifficulty, lastCase, gameStarted, winner, onlineSync, buildSyncedStateJson]);
 
   const loadGame = (): GameSave | null => {
     try {
@@ -531,42 +822,110 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   // Vérifier s'il y a une sauvegarde au chargement (sans reprendre automatiquement)
   useEffect(() => {
+    if (isOnlineGame) return
     const saveData = loadGame();
     setHasActiveSave(!!saveData);
-  }, []);
+  }, [isOnlineGame]);
 
   const hasInitializedRef = useRef(false);
 
-  // Démarrage automatique : le menu est géré par page.tsx
+  // Mode local : démarrage automatique géré par page.tsx
   useEffect(() => {
-    if (hasInitializedRef.current || gameStarted) return;
-    hasInitializedRef.current = true;
+    if (isOnlineGame || hasInitializedRef.current || gameStarted) return
+    hasInitializedRef.current = true
 
     if (initialMode === 'resume') {
-      const saveData = loadGame();
+      const saveData = loadGame()
       if (saveData?.gameStarted) {
-        resumeGame();
-        return;
+        resumeGame()
+        return
       }
     }
 
     if (players.length >= 2) {
-      startGame();
+      startGame()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialMode]);
+  }, [initialMode, isOnlineGame, gameStarted])
 
-  // Sauvegarde automatique quand la partie change
+  // Mode en ligne : appliquer l'état serveur (bootstrap + mises à jour)
   useEffect(() => {
-    if (gameStarted && !winner) {
-      // Sauvegarde automatique toutes les 30 secondes (sauvegarde de sécurité)
-      const autoSaveInterval = setInterval(() => {
-        saveGame();
-      }, 30000);
-      
-      return () => clearInterval(autoSaveInterval);
+    if (!isOnlineGame || !onlineSync?.remoteState?.gameStarted) return
+    if (isPushingOnlineRef.current) return
+    if (onlineSync.stateVersion <= lastAppliedRemoteVersionRef.current) return
+    // Le joueur actif ignore les échos pendant qu'il pilote son tour ou une animation locale
+    if (
+      isMyTurnOnline &&
+      (isDiceRolling ||
+        diceLockRef.current ||
+        isLocalWheelAnimatingRef.current ||
+        isLocalDuelWheelAnimatingRef.current)
+    ) {
+      return
     }
-  }, [gameStarted, players, currentPlayer, turnCount, winner, saveGame]);
+
+    applyRemoteState(onlineSync.remoteState)
+    lastAppliedRemoteVersionRef.current = onlineSync.stateVersion
+    diceLockRef.current = false
+    advancingTurnRef.current = false
+  }, [
+    isOnlineGame,
+    gameStarted,
+    onlineSync?.stateVersion,
+    onlineSync?.remoteState,
+    isMyTurnOnline,
+    isDiceRolling,
+    applyRemoteState,
+  ])
+
+  // Secours : le spectateur ferme l'UI si le serveur a déjà avancé (ex. loterie → Suivant)
+  useEffect(() => {
+    if (!isOnlineGame || isMyTurnOnline || !onlineSync?.remoteState?.view) return
+    const remoteView = onlineSync.remoteState.view
+    const remoteTurn = onlineSync.remoteState.currentPlayer
+    const desyncedUi =
+      (!remoteView.showNotification && showNotification) ||
+      remoteTurn !== currentPlayer
+    if (desyncedUi && !isPushingOnlineRef.current) {
+      applyRemoteState(onlineSync.remoteState)
+      lastAppliedRemoteVersionRef.current = onlineSync.stateVersion
+      diceLockRef.current = false
+    }
+  }, [
+    isOnlineGame,
+    isMyTurnOnline,
+    onlineSync?.stateVersion,
+    onlineSync?.remoteState,
+    showNotification,
+    currentPlayer,
+    applyRemoteState,
+  ])
+
+  const syncedViewKey = useMemo(() => JSON.stringify(captureViewState()), [captureViewState])
+
+  // Pousser l'UI partagée pendant notre tour (debounce)
+  useEffect(() => {
+    if (!isOnlineGame || !isMyTurnOnline || !gameStarted || advancingTurnRef.current) return
+    scheduleOnlinePush()
+    return () => cancelPendingOnlinePush()
+  }, [
+    isOnlineGame,
+    isMyTurnOnline,
+    gameStarted,
+    scheduleOnlinePush,
+    syncedViewKey,
+    players,
+    cancelPendingOnlinePush,
+  ])
+
+  // Sauvegarde automatique quand la partie change (local uniquement)
+  useEffect(() => {
+    if (isOnlineGame || !gameStarted || winner) return
+    const autoSaveInterval = setInterval(() => {
+      saveGame();
+    }, 30000);
+    return () => clearInterval(autoSaveInterval);
+  }, [gameStarted, players, currentPlayer, turnCount, winner, saveGame, isOnlineGame]);
 
   // Surveiller les changements d'état du jeu
   useEffect(() => {
@@ -636,10 +995,23 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     duelWheelSpinning
 
   const rollDice = () => {
-    if (isDiceActionBlocked()) {
-      return
-    }
-    
+    if (diceLockRef.current) return
+    if (onlineSync && !isMyTurnOnline) return
+    if (isDiceActionBlocked() || isProcessingTurn) return
+
+    diceLockRef.current = true
+    setIsProcessingTurn(true)
+    setIsDiceRolling(true)
+    scheduleOnlinePush(true, {
+      view: {
+        ...captureViewState(),
+        isProcessingTurn: true,
+        isDiceRolling: true,
+        showNotification: false,
+        currentCase: null,
+      },
+    })
+
     // Masquer toute notification précédente
     setShowNotification(false);
     setCurrentCase(null);
@@ -658,7 +1030,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         effect: 0,
       })
       recordLastAction(currentPlayerObj, 'passe-tour', `⏭️ ${currentPlayerObj.name} passe son tour.`, null)
-      setIsProcessingTurn(true)
       setShowNotification(true)
       setShowNextButton(true)
       return
@@ -715,11 +1086,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       // Mettre à jour l'état des joueurs après avoir appliqué tous les effets actifs
       setPlayers(updatedPlayers);
     }
-    
-    // Marquer le début du traitement
-    setIsProcessingTurn(true);
-    setIsDiceRolling(true);
-    
+
     // Générer un résultat de dé entre 1 et 6
     const result = Math.floor(Math.random() * 6) + 1;
     setDiceResult(result);
@@ -744,6 +1111,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         const player = players[currentPlayer];
         if (!player) {
           setIsProcessingTurn(false);
+          diceLockRef.current = false;
           return;
         }
         
@@ -771,10 +1139,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         // Mettre à jour l'état des joueurs immédiatement
         setPlayers(updatedPlayers);
-        
+        scheduleOnlinePush(true, { players: updatedPlayers });
+
         // Vérifier si le joueur a gagné
         if (newPosition === boardSize - 1) {
-          setWinner(updatedPlayers[currentPlayer]);
+          const winnerPlayer = updatedPlayers[currentPlayer];
+          setWinner(winnerPlayer);
           try {
             updatePlayerStats(player.id, 'petit-buveur', {
               wins: 1
@@ -783,11 +1153,17 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
           }
           setIsProcessingTurn(false);
+          void syncOnlineState({
+            players: updatedPlayers,
+            currentPlayer,
+            turnCount,
+            winner: winnerPlayer,
+          });
           return;
         }
         
         // Générer un effet aléatoire (boost possible pour le joueur actuel)
-        const caseType = generateCase(gameDifficulty, updatedPlayers[currentPlayer]);
+        const caseType = generateCase(gameDifficulty, updatedPlayers[currentPlayer], generateCaseOptions);
         
         // Réinitialiser l'animation après un délai
         setTimeout(() => {
@@ -852,14 +1228,31 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   /** Roue des gorgées / défis : toujours pour le joueur au tour, sans ciblage. */
   const openWheelForCurrentPlayer = (mode: 'drinks' | 'defis' = wheelMode) => {
+    const effectiveMode = isOnlineGame && mode === 'defis' ? 'drinks' : mode
     wheelOutcomeAppliedRef.current = false
-    setWheelMode(mode)
-    setWheelSegments(mode === 'defis' ? generateDefiWheelSegments() : generateWheelSegments())
+    setWheelMode(effectiveMode)
+    const segments = effectiveMode === 'defis' ? generateDefiWheelSegments() : generateWheelSegments()
+    setWheelSegments(segments)
     setWheelResult(null)
+    setWheelSpinPlan(null)
     setWheelSpinning(false)
+    wheelRotation.set(0)
     setShowTargetDialog(false)
     setCurrentCase(null)
     setShowWheel(true)
+    if (isOnlineGame && isMyTurnOnline) {
+      scheduleOnlinePush(true, {
+        view: {
+          ...captureViewState(),
+          showWheel: true,
+          wheelMode: effectiveMode,
+          wheelSegments: segments,
+          wheelResult: null,
+          wheelSpinPlan: null,
+          wheelSpinning: false,
+        },
+      })
+    }
   }
 
   const showCaseResultNotification = (
@@ -882,6 +1275,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     else if (actor) lastTargetIdRef.current = actor.id
     setShowNotification(true)
     setShowNextButton(true)
+    setPendingCase(null)
+    setPendingPosition(null)
+    if (onlineSync && isMyTurnOnline) {
+      scheduleOnlinePush(true)
+    }
   }
 
   const applyNoTargetCaseFlow = (caseType: Case) => {
@@ -925,6 +1323,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }
 
   const applyTeleportChoice = (which: 'leader' | 'last') => {
+    if (onlineSync && !isMyTurnOnline) return
     setShowTeleportDialog(false)
     const actor = players[currentPlayer]
     if (!actor || !pendingCase) return
@@ -943,6 +1342,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }
 
   const applyVoteTarget = (votedId: string) => {
+    if (onlineSync && !isMyTurnOnline) return
     setShowVoteDialog(false)
     const actor = players[currentPlayer]
     const voted = players.find(p => p.id === votedId)
@@ -1111,8 +1511,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       return
     }
     if (caseType.type === 'double-case') {
-      const first = generateCase(gameDifficulty, players[currentPlayer])
-      const second = generateCase(gameDifficulty, players[currentPlayer])
+      const first = generateCase(gameDifficulty, players[currentPlayer], generateCaseOptions)
+      const second = generateCase(gameDifficulty, players[currentPlayer], generateCaseOptions)
       extraCaseQueueRef.current = [second]
       setPendingCase(first)
       setTimeout(() => continueCaseFlow(first), 0)
@@ -1128,6 +1528,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setDuelOpponentId(null);
     setDuelWheelSegments([]);
     setDuelWheelResult(null);
+    setDuelWheelSpinPlan(null);
     setDuelWheelSpinning(false);
     duelWheelRotation.set(0);
   };
@@ -1142,12 +1543,28 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   };
 
   const startDuelWithOpponent = (opponentId: string) => {
+    const segments = generateDuelWheelSegments()
     setDuelOpponentId(opponentId);
-    setDuelWheelSegments(generateDuelWheelSegments());
+    setDuelWheelSegments(segments);
     setDuelWheelResult(null);
+    setDuelWheelSpinPlan(null);
     setDuelWheelSpinning(false);
     duelWheelRotation.set(0);
     setDuelPhase('wheel');
+    if (isOnlineGame && isMyTurnOnline) {
+      scheduleOnlinePush(true, {
+        view: {
+          ...captureViewState(),
+          showDuelDialog: true,
+          duelPhase: 'wheel',
+          duelOpponentId: opponentId,
+          duelWheelSegments: segments,
+          duelWheelResult: null,
+          duelWheelSpinPlan: null,
+          duelWheelSpinning: false,
+        },
+      })
+    }
   };
 
   const applyDuelOutcome = (
@@ -1219,6 +1636,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setShowTargetDialog(false)
     setShowWheel(false)
     setWheelResult(null)
+    setWheelSpinPlan(null)
     setWheelSpinning(false)
     wheelOutcomeAppliedRef.current = false
     resetDuelState()
@@ -1291,25 +1709,43 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }
 
   const advanceToNextPlayer = () => {
+    cancelPendingOnlinePush()
+    advancingTurnRef.current = true
     clearTurnBlockingUi()
-    incrementPlayerTurn()
+
+    const nextPlayer = (currentPlayer + 1) % players.length
+    const newTurnCount = nextPlayer === 0 ? turnCount + 1 : turnCount
+    const updatedPlayers = [...players]
+    tickProtectionTurns(updatedPlayers)
+
+    setPlayers(updatedPlayers)
+    setCurrentPlayer(nextPlayer)
+    if (nextPlayer === 0) setTurnCount(newTurnCount)
     setIsProcessingTurn(false)
     setIsDiceRolling(false)
-    setTimeout(() => saveGame(), 100)
+    diceLockRef.current = false
+
+    if (onlineSync) {
+      const idleView = emptySyncedView()
+      void syncOnlineState({
+        players: updatedPlayers,
+        currentPlayer: nextPlayer,
+        turnCount: newTurnCount,
+        view: idleView,
+      }).finally(() => {
+        advancingTurnRef.current = false
+      })
+    } else {
+      advancingTurnRef.current = false
+      setTimeout(() => saveGame(), 100)
+    }
   }
 
   // Fonction pour gérer le clic sur le bouton "Suivant"
   const handleNextButtonClick = () => {
+    if (onlineSync && !isMyTurnOnline) return
+    cancelPendingOnlinePush()
     commitLastActionFromCurrentTurn()
-    if (extraCaseQueueRef.current.length > 0) {
-      const nextCase = extraCaseQueueRef.current.shift()!
-      setShowNotification(false)
-      setShowNextButton(false)
-      setCurrentCase(null)
-      setPendingCase(nextCase)
-      setTimeout(() => continueCaseFlow(nextCase), 80)
-      return
-    }
     advanceToNextPlayer()
   };
 
@@ -1431,44 +1867,65 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     return `<strong>Effets en cours :</strong>\n${lines.join('\n')}`
   }
 
+  /** Affiche le résultat d'une case ciblée et nettoie l'état en attente (un seul « Suivant »). */
+  const revealTargetedCaseResult = (casePayload: Case, updatedPlayers?: GamePlayer[]) => {
+    if (updatedPlayers) setPlayers(updatedPlayers)
+    setCurrentCase(casePayload)
+    setShowNotification(true)
+    setShowNextButton(true)
+    setPendingCase(null)
+    setPendingPosition(null)
+    if (onlineSync && isMyTurnOnline) {
+      scheduleOnlinePush(true)
+    }
+  }
+
+  /** Enchaîne les cases en file (ex. double-case) sur la même cible sans re-sélection. */
+  const applyTargetedCaseChain = (targetId: string, firstCase?: Case) => {
+    const chain: Case[] = []
+    if (firstCase) chain.push(firstCase)
+    else if (pendingCase) chain.push(pendingCase)
+    while (extraCaseQueueRef.current.length > 0) {
+      chain.push(extraCaseQueueRef.current.shift()!)
+    }
+    chain.forEach(caseItem => applyEffectToPlayer(targetId, caseItem))
+  }
+
   const handleTargetSelection = (targetId: string) => {
+    if (onlineSync && !isMyTurnOnline) return
     lastTargetIdRef.current = targetId
 
-    // Fermer la fenêtre de ciblage
-    setShowTargetDialog(false);
-    
-    
+    setShowTargetDialog(false)
+
     if (!pendingCase) {
-      setIsProcessingTurn(false);
-      return;
-    }
-    
-    // Trouver le joueur ciblé
-    const targetPlayer = players.find(p => p.id === targetId);
-    if (!targetPlayer) {
-      setIsProcessingTurn(false);
-      return;
+      setIsProcessingTurn(false)
+      return
     }
 
-    // Cas spéciaux pour les nouvelles cases
+    const targetPlayer = players.find(p => p.id === targetId)
+    if (!targetPlayer) {
+      setIsProcessingTurn(false)
+      return
+    }
+
     if (pendingCase.type === 'roue') {
       openWheelForCurrentPlayer()
       return
     }
-    
+
     if (pendingCase.type === 'chance') {
-      setShowChanceDialog(true);
-      return;
+      setShowChanceDialog(true)
+      return
     }
-    
+
     if (pendingCase.type === 'echange') {
-      setShowExchangeDialog(true);
-      return;
+      setShowExchangeDialog(true)
+      return
     }
-    
+
     if (pendingCase.type === 'defi-chaine') {
-      setShowChainDialog(true);
-      return;
+      setShowChainDialog(true)
+      return
     }
 
     if (pendingCase.type === 'pile-face') {
@@ -1476,138 +1933,26 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setShowPileFaceDialog(true)
       return
     }
-    
+
     if (pendingCase.type === 'repetition') {
-      if (isReplayableCase(lastCase)) {
-        applyEffectToPlayer(targetId, lastCase);
-        return;
+      if (canReplayCase(lastCase)) {
+        applyTargetedCaseChain(targetId, lastCase)
       } else {
-        // Si pas de case précédente, case safe
-        setCurrentCase({
+        revealTargetedCaseResult({
           type: 'normal',
           description: 'Pas de case précédente, tu es safe !\n\n<em>Aucun effet spécial en cours</em>',
-          effect: 0
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
-        return;
+          effect: 0,
+        })
       }
+      return
     }
 
     if (pendingCase.type === 'rewind') {
-      applyEffectToPlayer(targetId);
-      return;
-    }
-    
-    // Générer le résumé complet des effets
-    const effectsSummary = generateEffectsSummary(targetPlayer);
-    
-    // Personnaliser la description en fonction du type de case
-    let descriptionEffet = effectsSummary;
-    
-    // Pour les cases "safe"
-    if (pendingCase.type === 'normal') {
-      descriptionEffet = `Case safe ! Le joueur <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est en sécurité pour ce tour.\n\n${effectsSummary}`;
-    }
-    // Pour les cases "piège" - afficher la position et le nombre de gorgées
-    else if (pendingCase.type === 'piege') {
-      const trapDrinks = targetPlayer.position + 1;
-      if (targetPlayer.name.toLowerCase() === 'sim' || targetPlayer.name.toLowerCase() === 'riqui') {
-        const compliment = simCompliments[Math.floor(Math.random() * simCompliments.length)];
-        descriptionEffet = `🕳️ Piège ! <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">"${compliment}" ${targetPlayer.name}</span> boit ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) !\n\n${effectsSummary}`;
-      } else if (targetPlayer.name.toLowerCase() === 'deb') {
-        const message = debMessages[Math.floor(Math.random() * debMessages.length)];
-        descriptionEffet = `🕳️ Piège ! <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) ${message}\n\n${effectsSummary}`;
-      } else {
-        descriptionEffet = `🕳️ Piège ! <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) !\n\n${effectsSummary}`;
-      }
-    }
-    // Pour les cases "avance" ou "recul"
-    else if (pendingCase.type === 'avance' || pendingCase.type === 'recul') {
-      // Garder les compliments pour Sim ou Riqui
-      if (targetPlayer.name.toLowerCase() === 'sim' || targetPlayer.name.toLowerCase() === 'riqui') {
-        const compliment = simCompliments[Math.floor(Math.random() * simCompliments.length)];
-        descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">"${compliment}" ${targetPlayer.name}</span>\n\n${effectsSummary}`;
-      } else {
-        // Format standard pour les autres joueurs
-        descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>\n\n${effectsSummary}`;
-      }
-    } else {
-      // Sélectionner un message aléatoire pour les joueurs qui doivent boire (40% de chance)
-      const showRandomMessage = Math.random() < 0.4;
-      const randomMessage = showRandomMessage ? drinkingMessages[Math.floor(Math.random() * drinkingMessages.length)] : '';
-      
-      // Personnaliser la description en fonction du type de case
-      if (pendingCase.type === 'tous') {
-        // Easter egg pour Sim ou Riqui
-        if (targetPlayer.name.toLowerCase() === 'sim' || targetPlayer.name.toLowerCase() === 'riqui') {
-          const compliment = simCompliments[Math.floor(Math.random() * simCompliments.length)];
-          descriptionEffet = `${pendingCase.description}\n\nJoueur épargné : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">"${compliment}" ${targetPlayer.name}</span>`;
-          if (showRandomMessage) {
-            descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
-          }
-          descriptionEffet += `\n\n${effectsSummary}`;
-        } 
-        // Cas spécial pour Deb - sans phrase spéciale quand elle est épargnée
-        else if (targetPlayer.name.toLowerCase() === 'deb') {
-          descriptionEffet = `${pendingCase.description}\n\nJoueur épargné : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>`;
-          if (showRandomMessage) {
-            descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
-          }
-          descriptionEffet += `\n\n${effectsSummary}`;
-        }
-        else {
-          descriptionEffet = `${pendingCase.description}\n\nJoueur épargné : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>`;
-          if (showRandomMessage) {
-            descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
-          }
-          descriptionEffet += `\n\n${effectsSummary}`;
-        }
-      } else {
-        // Easter egg pour Sim ou Riqui
-        if (targetPlayer.name.toLowerCase() === 'sim' || targetPlayer.name.toLowerCase() === 'riqui') {
-          const compliment = simCompliments[Math.floor(Math.random() * simCompliments.length)];
-          descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">"${compliment}" ${targetPlayer.name}</span>`;
-          if (showRandomMessage) {
-            descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
-          }
-          descriptionEffet += `\n\n${effectsSummary}`;
-        } 
-        // Cas spécial pour Deb - avec message spécial quand elle boit directement, mais sans couleur
-        else if (targetPlayer.name.toLowerCase() === 'deb') {
-          const message = debMessages[Math.floor(Math.random() * debMessages.length)];
-          descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> ${message}`;
-          if (showRandomMessage) {
-            descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
-          }
-          descriptionEffet += `\n\n${effectsSummary}`;
-        }
-        else {
-          descriptionEffet = `${pendingCase.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>`;
-          if (showRandomMessage) {
-            descriptionEffet += `\n\n<span class="italic text-sm">${randomMessage}</span>`;
-          }
-          descriptionEffet += `\n\n${effectsSummary}`;
-        }
-      }
-    }
-    
-    const duelPrefix = pendingDuelNote ? `${pendingDuelNote}\n\n` : ''
-    if (pendingDuelNote) {
-      setPendingDuelNote(undefined)
+      applyTargetedCaseChain(targetId)
+      return
     }
 
-    setCurrentCase({
-      ...pendingCase,
-      description: `${duelPrefix}${descriptionEffet}`,
-    });
-    
-    // Afficher la notification avec l'effet révélé et le bouton "Suivant"
-    setShowNotification(true);
-    setShowNextButton(true);
-    
-    // Appliquer l'effet au joueur ciblé
-    applyEffectToPlayer(targetId);
+    applyTargetedCaseChain(targetId)
   };
 
   const applyEffectToPlayer = (targetPlayerId: string, customCase?: Case) => {
@@ -1631,19 +1976,23 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     
     // Générer le résumé des effets en cours
     const effectsSummary = generateEffectsSummary(targetPlayer);
+
+    const duelPrefix = pendingDuelNote ? `${pendingDuelNote}\n\n` : ''
+    if (pendingDuelNote) setPendingDuelNote(undefined)
+
+    const finishCase = (payload: Case, playersAfter?: GamePlayer[]) => {
+      revealTargetedCaseResult(payload, playersAfter)
+    }
     
     // Appliquer l'effet en fonction du type de case
     switch (caseToApply.type) {
       case 'normal':
         // Pour les cases safe, on ne fait rien de spécial
         
-        // Afficher la notification de case safe
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `✅ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est sur une case safe !\n\n${effectsSummary}`
+          description: `${duelPrefix}✅ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est sur une case safe !\n\n${effectsSummary}`,
         });
-        setShowNotification(true);
-        setShowNextButton(true);
         return;
         
       case 'gorgée':
@@ -1660,10 +2009,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           return;
         }
         
-        // Si pas protégé, continuer normalement
         targetPlayer.drinks += caseToApply.effect;
-        
-        // Mettre à jour les statistiques
+        applyMirrorDrinkIfActive(
+          updatedPlayers.findIndex(p => p.id === targetPlayerId),
+          caseToApply.effect,
+          updatedPlayers
+        );
         try {
           updatePlayerStats(targetPlayer.id, 'petit-buveur', {
             totalDrinks: targetPlayer.drinks
@@ -1672,13 +2023,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           console.error("Erreur lors de la mise à jour des statistiques:", error);
         }
         
-        // Afficher la notification de gorgée/défi
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${caseToApply.effect} gorgée${caseToApply.effect > 1 ? 's' : ''} !\n\n${effectsSummary}`
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}${caseToApply.description}\n\nJoueur ciblé : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${caseToApply.effect} gorgée${caseToApply.effect > 1 ? 's' : ''} !\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
         
       case 'tous':
@@ -1698,13 +2046,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           }
         });
         
-        // Afficher la notification de "tous"
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `${caseToApply.description}\n\nJoueur épargné : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>\n\n${effectsSummary}`
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}${caseToApply.description}\n\nJoueur épargné : <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
         
       case 'avance':
@@ -1757,13 +2102,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           return;
         }
         
-        // Afficher la notification de déplacement
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `${caseToApply.type === 'avance' ? '➡️' : '⬅️'} <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> se déplace de la case ${targetPlayer.position - caseToApply.effect + 1} vers la case ${targetPlayer.position + 1} !\n\n${effectsSummary}`
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}${caseToApply.type === 'avance' ? '➡️' : '⬅️'} <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> se déplace de la case ${targetPlayer.position - caseToApply.effect + 1} vers la case ${targetPlayer.position + 1} !\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
         
       case 'bombe':
@@ -1796,13 +2138,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           }
         });
         
-        // Afficher la notification de bombe
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `💣 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> a déclenché une bombe ! Tout le monde boit ${caseToApply.effect} gorgée${caseToApply.effect > 1 ? 's' : ''}, mais ${targetPlayer.name} boit double !\n\n${effectsSummary}`
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}💣 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> a déclenché une bombe ! Tout le monde boit ${caseToApply.effect} gorgée${caseToApply.effect > 1 ? 's' : ''}, mais ${targetPlayer.name} boit double !\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
         
       case 'protection': {
@@ -1810,13 +2149,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         const protectionTurns = Math.max(players.length, 1)
         targetPlayer.protected = true
         targetPlayer.protectionTurnsLeft = protectionTurns
-        setPlayers(updatedPlayers)
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `🛡️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est protégé pendant un tour de table complet (tous les autres joueurs jouent une fois) !\n\n${effectsSummary}`,
-        })
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}🛡️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est protégé pendant un tour de table complet (tous les autres joueurs jouent une fois) !\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
       }
         
@@ -1836,9 +2172,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           // Passer au joueur suivant
           setTimeout(() => {
             commitLastActionFromCurrentTurn()
-            incrementPlayerTurn()
-            setIsProcessingTurn(false)
-            setTimeout(() => saveGame(), 100)
+            advanceToNextPlayer()
           }, 2000);
           return;
         }
@@ -1846,13 +2180,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         // Maudire le joueur pendant 3 tours
         targetPlayer.cursed = 3;
         
-        // Afficher la notification de malédiction
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `👻 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est maintenant maudit pendant 3 tours !\n\n${effectsSummary}`
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}👻 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> est maintenant maudit pendant 3 tours !\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
         
       case 'miroir':
@@ -1880,13 +2211,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         });
         
         
-        // Afficher la notification de miroir
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `🪞 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> a inversé toutes les positions ! (premier ↔ dernier)\n\n${effectsSummary}`
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}🪞 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> a inversé toutes les positions ! (premier ↔ dernier)\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
         
       case 'piege':
@@ -1916,13 +2244,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           console.error("Erreur lors de la mise à jour des statistiques:", error);
         }
         
-        // Afficher la notification de piège
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `🕳️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) !\n\n${effectsSummary}`
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}🕳️ <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> boit ${trapDrinks} gorgée${trapDrinks > 1 ? 's' : ''} (position ${targetPlayer.position + 1}) !\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
         
       case 'passe-tour':
@@ -2096,7 +2421,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       }
 
       case 'rewind':
-        if (isReplayableCase(lastCase)) {
+        if (canReplayCase(lastCase)) {
           applyEffectToPlayer(targetPlayerId, lastCase)
           return
         }
@@ -2130,25 +2455,19 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         });
         
         
-        // Afficher la notification de mélange
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `🔀 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> a mélangé toutes les positions !\n\n${effectsSummary}`
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}🔀 <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span> a mélangé toutes les positions !\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
         
       // Pour les autres types de cases (normal, defi)
       default:
         
-        // Afficher une notification pour les cases sans effet spécial
-        setCurrentCase({
+        finishCase({
           ...caseToApply,
-          description: `Case ${caseToApply.type} appliquée à <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>\n\n${effectsSummary}`
-        });
-        setShowNotification(true);
-        setShowNextButton(true);
+          description: `${duelPrefix}Case ${caseToApply.type} appliquée à <span class="${targetPlayer.preferences.color} text-white px-2 py-1 rounded-md">${targetPlayer.name}</span>\n\n${effectsSummary}`,
+        }, updatedPlayers);
         return;
     }
     
@@ -2160,14 +2479,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setAnimatingPlayer(null);
     }, 500);
     
-    // Réinitialiser les états
-    setTimeout(() => {
-      setPendingCase(null);
-      setPendingPosition(null);
-      
-      // Ne pas passer automatiquement au joueur suivant - c'est le bouton "Suivant" qui s'en charge
-      // setIsProcessingTurn(false);
-    }, 500);
   };
 
   const selectRandomPlayer = () => {
@@ -2465,9 +2776,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setShowNotification(true)
     setTimeout(() => setShowNotification(false), 3000)
 
-    incrementPlayerTurn()
-    setIsProcessingTurn(false)
-    setTimeout(() => saveGame(), 100)
+    advanceToNextPlayer()
   }
 
   const renderPlayerToken = (player: GamePlayer, index?: number) => {
@@ -2649,88 +2958,197 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
 
 
-  // Fonction pour faire tourner la roue
-  const spinWheel = async () => {
-    if (wheelSpinning || wheelSegments.length === 0) return
-    setWheelSpinning(true)
-
-    const anglePerSegment = 360 / Math.max(wheelSegments.length, 1)
-    const randomIndex = Math.floor(Math.random() * wheelSegments.length)
-    const segStart = randomIndex * anglePerSegment
-    const segAngle = anglePerSegment
-    const extraSpins = 4 + Math.floor(Math.random() * 7) // 4-10 tours
-    const duration = 4 + Math.random() * 2
-    const offsetWithinSegment = Math.random() * segAngle
-    const targetAngle = 360 * extraSpins - (segStart + offsetWithinSegment)
-    const overshootAngle = segAngle * (0.12 + Math.random() * 0.18)
-    const accelAngle = targetAngle * 0.25
+  const runSyncedWheelAnimation = async (
+    rotation: MotionValue<number>,
+    segments: WheelSegment[],
+    plan: SyncedWheelSpinPlan,
+    tickRef: React.MutableRefObject<number>
+  ) => {
+    const anglePerSegment = 360 / Math.max(segments.length, 1)
+    const { duration, targetAngle, overshootAngle, accelAngle } = plan
 
     await ensureAudioCtx()
-    wheelRotation.set(0)
-    lastWheelTickRef.current = 0
+    rotation.set(0)
+    tickRef.current = 0
 
-    animate(wheelRotation, [0, accelAngle, targetAngle + overshootAngle, targetAngle], {
+    await animate(rotation, [0, accelAngle, targetAngle + overshootAngle, targetAngle], {
       duration,
       times: [0, 0.25, 0.9, 1],
       ease: ['easeIn', [0.16, 1, 0.3, 1], 'easeOut'],
       onUpdate: (v) => {
         const mod = ((v % 360) + 360) % 360
         const tickIndex = Math.floor(mod / anglePerSegment)
-        if (tickIndex !== lastWheelTickRef.current) { 
-          lastWheelTickRef.current = tickIndex; 
-          playTick() 
-        }
-      }
-    })
-
-    await new Promise(resolve => setTimeout(resolve, Math.ceil(duration * 1000) + 80))
-
-    const result = wheelSegments[randomIndex]
-    setWheelResult(result)
-    setWheelSpinning(false)
-  }
-
-  const spinDuelWheel = async () => {
-    if (duelWheelSpinning || duelWheelSegments.length === 0) return
-    setDuelWheelSpinning(true)
-
-    const anglePerSegment = 360 / duelWheelSegments.length
-    const randomIndex = Math.floor(Math.random() * duelWheelSegments.length)
-    const segStart = randomIndex * anglePerSegment
-    const segAngle = anglePerSegment
-    const extraSpins = 4 + Math.floor(Math.random() * 7)
-    const duration = 4 + Math.random() * 2
-    const offsetWithinSegment = Math.random() * segAngle
-    const targetAngle = 360 * extraSpins - (segStart + offsetWithinSegment)
-    const overshootAngle = segAngle * (0.12 + Math.random() * 0.18)
-    const accelAngle = targetAngle * 0.25
-
-    await ensureAudioCtx()
-    duelWheelRotation.set(0)
-    lastDuelWheelTickRef.current = 0
-
-    animate(duelWheelRotation, [0, accelAngle, targetAngle + overshootAngle, targetAngle], {
-      duration,
-      times: [0, 0.25, 0.9, 1],
-      ease: ['easeIn', [0.16, 1, 0.3, 1], 'easeOut'],
-      onUpdate: v => {
-        const mod = ((v % 360) + 360) % 360
-        const tickIndex = Math.floor(mod / anglePerSegment)
-        if (tickIndex !== lastDuelWheelTickRef.current) {
-          lastDuelWheelTickRef.current = tickIndex
+        if (tickIndex !== tickRef.current) {
+          tickRef.current = tickIndex
           playTick()
         }
       },
     })
 
     await new Promise(resolve => setTimeout(resolve, Math.ceil(duration * 1000) + 80))
-
-    setDuelWheelResult(duelWheelSegments[randomIndex])
-    setDuelWheelSpinning(false)
   }
+
+  // Fonction pour faire tourner la roue
+  const spinWheel = async () => {
+    if (wheelSpinning || wheelSegments.length === 0) return
+
+    const plan = createWheelSpinPlan(wheelSegments.length)
+    lastWheelSpinNonceRef.current = plan.nonce
+    isLocalWheelAnimatingRef.current = true
+    setWheelSpinPlan(plan)
+    setWheelSpinning(true)
+
+    if (isOnlineGame && isMyTurnOnline) {
+      cancelPendingOnlinePush()
+      void syncOnlineState({
+        players,
+        currentPlayer,
+        turnCount,
+        view: {
+          ...captureViewState(),
+          showWheel: true,
+          wheelSegments,
+          wheelSpinPlan: plan,
+          wheelSpinning: true,
+          wheelResult: null,
+        },
+      })
+    }
+
+    await runSyncedWheelAnimation(wheelRotation, wheelSegments, plan, lastWheelTickRef)
+
+    const result = wheelSegments[plan.segmentIndex]
+    setWheelResult(result)
+    setWheelSpinning(false)
+    setWheelSpinPlan(null)
+    isLocalWheelAnimatingRef.current = false
+
+    if (isOnlineGame && isMyTurnOnline) {
+      void syncOnlineState({
+        players,
+        currentPlayer,
+        turnCount,
+        view: {
+          ...captureViewState(),
+          showWheel: true,
+          wheelSegments,
+          wheelSpinPlan: null,
+          wheelSpinning: false,
+          wheelResult: result,
+        },
+      })
+    }
+  }
+
+  const spinDuelWheel = async () => {
+    if (duelWheelSpinning || duelWheelSegments.length === 0) return
+
+    const plan = createWheelSpinPlan(duelWheelSegments.length)
+    lastDuelWheelSpinNonceRef.current = plan.nonce
+    isLocalDuelWheelAnimatingRef.current = true
+    setDuelWheelSpinPlan(plan)
+    setDuelWheelSpinning(true)
+
+    if (isOnlineGame && isMyTurnOnline) {
+      cancelPendingOnlinePush()
+      void syncOnlineState({
+        players,
+        currentPlayer,
+        turnCount,
+        view: {
+          ...captureViewState(),
+          showDuelDialog: true,
+          duelPhase: 'wheel',
+          duelOpponentId,
+          duelWheelSegments,
+          duelWheelSpinPlan: plan,
+          duelWheelSpinning: true,
+          duelWheelResult: null,
+        },
+      })
+    }
+
+    await runSyncedWheelAnimation(duelWheelRotation, duelWheelSegments, plan, lastDuelWheelTickRef)
+
+    const result = duelWheelSegments[plan.segmentIndex]
+    setDuelWheelResult(result)
+    setDuelWheelSpinning(false)
+    setDuelWheelSpinPlan(null)
+    isLocalDuelWheelAnimatingRef.current = false
+
+    if (isOnlineGame && isMyTurnOnline) {
+      void syncOnlineState({
+        players,
+        currentPlayer,
+        turnCount,
+        view: {
+          ...captureViewState(),
+          showDuelDialog: true,
+          duelPhase: 'wheel',
+          duelOpponentId,
+          duelWheelSegments,
+          duelWheelSpinPlan: null,
+          duelWheelSpinning: false,
+          duelWheelResult: result,
+        },
+      })
+    }
+  }
+
+  // Rejouer l'animation de roue côté spectateur
+  useEffect(() => {
+    if (!isOnlineGame || isMyTurnOnline || !wheelSpinPlan) return
+    if (wheelSpinPlan.nonce === lastWheelSpinNonceRef.current) return
+    if (wheelSegments.length === 0) return
+
+    lastWheelSpinNonceRef.current = wheelSpinPlan.nonce
+    let cancelled = false
+
+    void (async () => {
+      setWheelSpinning(true)
+      await runSyncedWheelAnimation(wheelRotation, wheelSegments, wheelSpinPlan, lastWheelTickRef)
+      if (cancelled) return
+      setWheelResult(wheelSegments[wheelSpinPlan.segmentIndex])
+      setWheelSpinning(false)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wheelSpinPlan, isOnlineGame, isMyTurnOnline, wheelSegments])
+
+  useEffect(() => {
+    if (!isOnlineGame || isMyTurnOnline || !duelWheelSpinPlan) return
+    if (duelWheelSpinPlan.nonce === lastDuelWheelSpinNonceRef.current) return
+    if (duelWheelSegments.length === 0) return
+
+    lastDuelWheelSpinNonceRef.current = duelWheelSpinPlan.nonce
+    let cancelled = false
+
+    void (async () => {
+      setDuelWheelSpinning(true)
+      await runSyncedWheelAnimation(
+        duelWheelRotation,
+        duelWheelSegments,
+        duelWheelSpinPlan,
+        lastDuelWheelTickRef
+      )
+      if (cancelled) return
+      setDuelWheelResult(duelWheelSegments[duelWheelSpinPlan.segmentIndex])
+      setDuelWheelSpinning(false)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duelWheelSpinPlan, isOnlineGame, isMyTurnOnline, duelWheelSegments])
 
   // Fonction pour relancer le dé (utilisée par la case Chance)
   const rerollDice = () => {
+    if (diceLockRef.current && isDiceRolling) return
+    diceLockRef.current = true
     // Réinitialiser les états de traitement
     setIsProcessingTurn(false);
     setIsDiceRolling(false);
@@ -2769,6 +3187,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         const player = players[currentPlayer];
         if (!player) {
           setIsProcessingTurn(false);
+          diceLockRef.current = false;
           return;
         }
         
@@ -2796,10 +3215,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         
         // Mettre à jour l'état des joueurs immédiatement
         setPlayers(updatedPlayers);
-        
+        scheduleOnlinePush(true, { players: updatedPlayers });
+
         // Vérifier si le joueur a gagné
         if (newPosition === boardSize - 1) {
-          setWinner(updatedPlayers[currentPlayer]);
+          const winnerPlayer = updatedPlayers[currentPlayer];
+          setWinner(winnerPlayer);
           try {
             updatePlayerStats(player.id, 'petit-buveur', {
               wins: 1
@@ -2808,11 +3229,17 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
           }
           setIsProcessingTurn(false);
+          void syncOnlineState({
+            players: updatedPlayers,
+            currentPlayer,
+            turnCount,
+            winner: winnerPlayer,
+          });
           return;
         }
         
         // Générer un effet aléatoire (boost possible pour le joueur actuel)
-        const caseType = generateCase(gameDifficulty, updatedPlayers[currentPlayer]);
+        const caseType = generateCase(gameDifficulty, updatedPlayers[currentPlayer], generateCaseOptions);
         
         // Réinitialiser l'animation après un délai
         setTimeout(() => {
@@ -2896,6 +3323,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       applyWheelOutcome(wheelResult)
     }
     setShowWheel(false)
+    setWheelSpinPlan(null)
+    if (isOnlineGame && isMyTurnOnline) {
+      setTimeout(() => scheduleOnlinePush(true), 0)
+    }
   }
 
   // Mise à jour du rendu des classements des joueurs
@@ -2932,6 +3363,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }
 
   if (!gameStarted) {
+    if (isOnlineGame) {
+      return null
+    }
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white">
         <p className="text-sm text-white/50">Chargement de la partie…</p>
@@ -3310,7 +3744,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                   </div>
                   <h3 className="text-lg font-bold">Qui cibler ?</h3>
                   <p className="mt-1 max-w-[18rem] text-sm text-muted-foreground">
-                    L&apos;effet de la case sera révélé après ton choix
+                    L&apos;effet s&apos;applique tout de suite — un seul « Suivant » pour passer la main
                   </p>
                   <div className="mt-3 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-violet-400/40 bg-violet-500/10 text-2xl">
                     ?
@@ -3556,9 +3990,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     const chanceAdvanceDescription = `🍀 Chance : <span class="${currentPlayerObj.preferences.color} text-white px-2 py-1 rounded-md">${currentPlayerObj.name}</span> avance de 2 cases (case ${newPosition + 1}) !`
                     recordLastAction(currentPlayerObj, 'chance', chanceAdvanceDescription, null)
                     
-                    incrementPlayerTurn()
-                    setIsProcessingTurn(false)
-                    setTimeout(() => saveGame(), 100)
+                    advanceToNextPlayer()
                   }
                 }}
                 className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold"
@@ -3693,11 +4125,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     setShowNotification(true);
                     setTimeout(() => {
                       setShowNotification(false);
+                      advanceToNextPlayer()
                     }, 3000);
-                    
-                    incrementPlayerTurn()
-                    setIsProcessingTurn(false)
-                    setTimeout(() => saveGame(), 100)
                   }}
                   className={`p-3 ${player.preferences.color} text-white font-bold`}
                 >
@@ -3922,18 +4351,44 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
                 {/* Actions */}
                 <div className="flex flex-col gap-2.5">
-                  <button
-                    onClick={resetGame}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500"
-                  >
-                    <RefreshCw className="h-4 w-4" /> Rejouer
-                  </button>
-                  <button
-                    onClick={onGameEnd}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
-                  >
-                    <Home className="h-4 w-4" /> Retour au menu
-                  </button>
+                  {onlineSync ? (
+                    <>
+                      <p className="text-center text-xs text-white/50">
+                        {onlineSync.rematchVotes?.length ?? 0} / {onlineSync.memberUserIds.length} ont voté pour rejouer
+                      </p>
+                      <button
+                        onClick={() => void onlineSync.voteRematch?.()}
+                        disabled={onlineSync.rematchVotes?.includes(onlineSync.myUserId)}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-default disabled:opacity-60"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        {onlineSync.rematchVotes?.includes(onlineSync.myUserId)
+                          ? 'En attente des autres…'
+                          : 'Rejouer'}
+                      </button>
+                      <button
+                        onClick={() => void onlineSync.leaveToMenu?.()}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
+                      >
+                        <Home className="h-4 w-4" /> Retour au menu
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={resetGame}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500"
+                      >
+                        <RefreshCw className="h-4 w-4" /> Rejouer
+                      </button>
+                      <button
+                        onClick={onGameEnd}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
+                      >
+                        <Home className="h-4 w-4" /> Retour au menu
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -4053,8 +4508,13 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       {!showNotification && !isDiceActionBlocked() && (
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-gray-950/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 px-3 py-3 sm:px-4">
+          {onlineSync && !isMyTurnOnline && (
+            <p className="text-center text-sm text-white/55">
+              Tour de <span className="font-semibold text-amber-300">{players[currentPlayer]?.name ?? '…'}</span> — en attente
+            </p>
+          )}
           <div className="relative flex w-full items-center justify-center">
-            {isProcessingTurn && !isDiceRolling && (
+            {isProcessingTurn && !isDiceRolling && isMyTurnOnline && (
               <button
                 onClick={forceNextPlayer}
                 className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 transition-all hover:bg-red-500/20"
@@ -4066,17 +4526,22 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             )}
             <button
               onClick={rollDice}
-              disabled={isDiceActionBlocked()}
+              disabled={isDiceActionBlocked() || isProcessingTurn || (onlineSync != null && !isMyTurnOnline)}
               className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span className="flex items-center justify-center gap-2">
-                <span>Lancer le dé</span>
+                <span>{onlineSync && !isMyTurnOnline ? 'Ce n\'est pas votre tour' : 'Lancer le dé'}</span>
                 <Dice6 className={`h-5 w-5 ${isDiceRolling ? 'animate-spin' : ''}`} />
               </span>
             </button>
           </div>
         </div>
       </div>
+      )}
+
+      {/* Bloque les clics des spectateurs sauf si l'UI locale est déjà fermée (secours anti-désync) */}
+      {onlineSync && !isMyTurnOnline && (showNotification || showTargetDialog || showWheel || showDuelDialog || showChanceDialog || showExchangeDialog || showChainDialog || showTeleportDialog || showVoteDialog || showDeHonteDialog || showPileFaceDialog) && (
+        <div className="fixed inset-0 z-[125] cursor-default" aria-hidden />
       )}
     </div>
   );

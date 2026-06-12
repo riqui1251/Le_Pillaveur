@@ -1,0 +1,29 @@
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth-server'
+import { buildRoomDto } from '@/lib/online-room'
+
+type Params = { params: Promise<{ roomId: string }> }
+
+export async function PUT(request: Request, { params }: Params) {
+  const user = await getCurrentUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+  }
+
+  const { roomId } = await params
+  const body = await request.json()
+  const isReady = Boolean(body.isReady)
+
+  const updated = await prisma.onlineRoomMember.updateMany({
+    where: { roomId, userId: user.id },
+    data: { isReady, lastSeenAt: new Date() },
+  })
+
+  if (updated.count === 0) {
+    return NextResponse.json({ error: 'Pas membre de cette salle' }, { status: 403 })
+  }
+
+  const dto = await buildRoomDto(roomId, user.id)
+  return NextResponse.json({ room: dto })
+}

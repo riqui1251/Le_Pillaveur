@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState, useRef, useEffect } from "react"
 import {
   Select,
   SelectContent,
@@ -24,6 +24,11 @@ import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from "@/lib
 import { cn } from "@/lib/utils"
 import { RotateCcw, ArrowLeft } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import type { Game1220SyncedState } from "@/lib/online-game-state"
+import type { OnlineGameSync } from "@/lib/online-sync-types"
+import { useSyncedOnlineGame } from "@/hooks/useSyncedOnlineGame"
+import { onlineUserIdFromPlayerId } from "@/lib/online-players"
+import { createSeededRng, randomIntWithRng, randomSeed } from "@/lib/online-rng"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,6 +38,7 @@ export type Player1220Config = Choices1220 & { playerId: string; name: string }
 interface GameProps {
   players: Player[]
   onGameEnd: () => void
+  onlineSync?: OnlineGameSync<Game1220SyncedState>
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -170,13 +176,15 @@ function DieD20({ value, rolling }: { value: number; rolling: boolean }) {
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export default function Game1220({ players, onGameEnd }: GameProps) {
+export default function Game1220({ players, onGameEnd, onlineSync }: GameProps) {
   const [phase, setPhase] = useState<Phase>("setup")
   const [draft, setDraft] = useState<Record<string, Choices1220>>(() => {
     const init: Record<string, Choices1220> = {}
     for (const p of players) init[p.id] = defaultChoices()
     return init
   })
+  const [setupReady, setSetupReady] = useState<string[]>([])
+  const [currentPlayer, setCurrentPlayer] = useState(0)
   const [configs, setConfigs]   = useState<Player1220Config[] | null>(null)
   const [d12,     setD12]       = useState(6)
   const [d20,     setD20]       = useState(10)
@@ -185,9 +193,71 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
     { d12: number; d20: number; results: { playerId: string; name: string; text: string[] }[] }[]
   >([])
 
-  const updateDraft = useCallback((id: string, patch: Partial<Choices1220>) => {
-    setDraft(d => ({ ...d, [id]: { ...d[id], ...patch } }))
+  const stateRef = useRef({ phase, draft, setupReady, currentPlayer, configs, d12, d20, rolling, history })
+  useEffect(() => {
+    stateRef.current = { phase, draft, setupReady, currentPlayer, configs, d12, d20, rolling, history }
+  }, [phase, draft, setupReady, currentPlayer, configs, d12, d20, rolling, history])
+
+  const applyFromServer = useCallback((s: Game1220SyncedState) => {
+    setPhase(s.phase)
+    setDraft(s.draft)
+    setSetupReady(s.setupReady)
+    setCurrentPlayer(s.currentPlayer)
+    setConfigs(s.configs as Player1220Config[] | null)
+    setD12(s.d12)
+    setD20(s.d20)
+    setRolling(s.rolling)
+    setHistory(s.history)
   }, [])
+
+  const buildSyncedState = useCallback((extra?: Partial<Game1220SyncedState>): Game1220SyncedState | null => {
+    if (!onlineSync) return null
+    const c = stateRef.current
+    return {
+      version: onlineSync.stateVersion + 1,
+      memberUserIds: onlineSync.memberUserIds,
+      gameStarted: true,
+      currentPlayer: extra?.currentPlayer ?? c.currentPlayer,
+      phase: extra?.phase ?? c.phase,
+      draft: extra?.draft ?? c.draft,
+      setupReady: extra?.setupReady ?? c.setupReady,
+      configs: extra?.configs !== undefined ? extra.configs : c.configs,
+      d12: extra?.d12 ?? c.d12,
+      d20: extra?.d20 ?? c.d20,
+      rolling: extra?.rolling ?? c.rolling,
+      history: extra?.history ?? c.history,
+      rematchVotes: onlineSync.remoteState?.rematchVotes ?? [],
+    }
+  }, [onlineSync])
+
+  const { isOnline, isMyTurn, pushState } = useSyncedOnlineGame({
+    onlineSync,
+    applyRemoteState: applyFromServer,
+    buildState: buildSyncedState,
+    isBlockingRemote: () => rolling && Boolean(onlineSync?.canInteract),
+  })
+
+  const isMyConfig = useCallback((playerId: string) => {
+    if (!isOnline || !onlineSync) return true
+    return onlineUserIdFromPlayerId(playerId) === onlineSync.myUserId
+  }, [isOnline, onlineSync])
+
+  const tryStartPlayFromReady = useCallback((ready: string[], draftState: Record<string, Choices1220>) => {
+    if (ready.length < players.length) return false
+    const built = players.map(p => ({ playerId: p.id, name: p.name, ...draftState[p.id] }))
+    setConfigs(built)
+    setPhase("play")
+    return true
+  }, [players])
+
+  const updateDraft = useCallback((id: string, patch: Partial<Choices1220>) => {
+    if (isOnline && !isMyConfig(id)) return
+    setDraft(d => {
+      const next = { ...d, [id]: { ...d[id], ...patch } }
+      if (isOnline) void pushState({ draft: next })
+      return next
+    })
+  }, [isOnline, isMyConfig, pushState])
 
   const setupValid = useMemo(() => players.every(p => {
     const c = draft[p.id]
@@ -201,16 +271,31 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
 
   const startPlay = () => {
     if (!setupValid) return
+    if (isOnline) {
+      if (!onlineSync) return
+      const ready = [...new Set([...setupReady, onlineSync.myUserId])]
+      setSetupReady(ready)
+      if (tryStartPlayFromReady(ready, draft)) {
+        const built = players.map(p => ({ playerId: p.id, name: p.name, ...draft[p.id] }))
+        void pushState({ setupReady: ready, phase: "play", configs: built })
+      } else {
+        void pushState({ setupReady: ready })
+      }
+      return
+    }
     setConfigs(players.map(p => ({ playerId: p.id, name: p.name, ...draft[p.id] })))
     setPhase("play")
   }
 
   const roll = () => {
-    if (rolling || !configs) return
+    if (rolling || !configs || (isOnline && !isMyTurn)) return
     setRolling(true)
+    if (isOnline) void pushState({ rolling: true })
+
     setTimeout(() => {
-      const a = Math.floor(Math.random() * 12) + 1
-      const b = Math.floor(Math.random() * 20) + 1
+      const rng = createSeededRng(randomSeed())
+      const a = randomIntWithRng(rng, 1, 12)
+      const b = randomIntWithRng(rng, 1, 20)
       setD12(a)
       setD20(b)
 
@@ -232,17 +317,37 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
         return { playerId: cfg.playerId, name: cfg.name, text: lines }
       })
 
-      setHistory(h => [{ d12: a, d20: b, results }, ...h].slice(0, 15))
+      const nextHistory = [{ d12: a, d20: b, results }, ...stateRef.current.history].slice(0, 15)
+      const nextPlayer = (stateRef.current.currentPlayer + 1) % Math.max(1, players.length)
+      setHistory(nextHistory)
+      setCurrentPlayer(nextPlayer)
       setRolling(false)
+      if (isOnline) {
+        void pushState({ d12: a, d20: b, rolling: false, history: nextHistory, currentPlayer: nextPlayer })
+      }
     }, 650)
   }
 
   const resetSetup = () => {
+    if (isOnline) return
     setPhase("setup")
     setHistory([])
     setConfigs(null)
+    setSetupReady([])
     setD12(6)
     setD20(10)
+  }
+
+  const handleEnd = () => {
+    if (isOnline) {
+      void onlineSync?.leaveToMenu?.()
+      return
+    }
+    onGameEnd()
+  }
+
+  if (isOnline && !onlineSync?.remoteState?.gameStarted) {
+    return <div className="p-6 text-center text-teal-300">Chargement de la partie…</div>
   }
 
   const getPlayerObj = (id: string) => players.find(p => p.id === id)
@@ -264,13 +369,18 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
             <h1 className="font-black tracking-tight text-lg bg-clip-text text-transparent bg-gradient-to-r from-teal-400 via-cyan-300 to-indigo-400">
               🎲 1220 — Paris
             </h1>
-            <button onClick={onGameEnd} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label="Retour aux jeux">
+            <button onClick={handleEnd} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label="Retour aux jeux">
               <ArrowLeft className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         <div className="mx-auto max-w-xl px-4 pt-20 pb-28 space-y-4">
+          {isOnline && (
+            <p className="text-center text-sm text-teal-300/80">
+              Prêts : {setupReady.length}/{players.length}
+            </p>
+          )}
           {/* Info */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/55 leading-relaxed">
             Chaque joueur choisit sa <strong className="text-white/80">parité</strong>, sa <strong className="text-white/80">plage</strong>, son <strong className="text-teal-400">chiffre fait boire</strong> et son <strong className="text-amber-400">chiffre donne à boire</strong>.
@@ -282,8 +392,10 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
             const c = draft[p.id] ?? defaultChoices()
             const bg = getColorFromClass(p.preferences?.color ?? "")
             const clash = c.drinkNumber === c.giveNumber
+            const editable = isMyConfig(p.id)
+            const isReady = setupReady.includes(onlineUserIdFromPlayerId(p.id) ?? '')
             return (
-              <div key={p.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 space-y-4">
+              <div key={p.id} className={cn("rounded-2xl border bg-white/[0.04] p-4 space-y-4", isReady ? "border-teal-500/30" : "border-white/10")}>
                 {/* Joueur header */}
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10 border-2 border-white/20" style={{ backgroundColor: bg }}>
@@ -293,6 +405,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
                     {p.preferences?.avatar && <AvatarImage src={p.preferences.avatar} alt={p.name} />}
                   </Avatar>
                   <PlayerName player={p} className={cn("font-bold text-base text-white", isSpecialPlayer(p) && getSpecialEffectClass(p))} />
+                  {isOnline && isReady && <span className="ml-auto text-xs text-teal-400">✓ Prêt</span>}
                 </div>
 
                 {/* Parité */}
@@ -302,6 +415,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
                     {(["pair", "impair"] as Parity1220[]).map(v => (
                       <button
                         key={v}
+                        disabled={!editable}
                         onClick={() => updateDraft(p.id, { parity: v })}
                         className={cn(
                           "flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-all",
@@ -323,6 +437,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
                     {BANDS.map(b => (
                       <button
                         key={b.value}
+                        disabled={!editable}
                         onClick={() => updateDraft(p.id, { band: b.value })}
                         className={cn(
                           "rounded-xl border py-2.5 text-sm font-semibold transition-all",
@@ -386,10 +501,10 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
           <div className="mx-auto max-w-xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <button
               onClick={startPlay}
-              disabled={!setupValid}
+              disabled={isOnline ? !setupValid || setupReady.includes(onlineSync?.myUserId ?? '') : !setupValid}
               className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(20,184,166,0.3)] transition [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 hover:from-teal-500 hover:to-indigo-500"
             >
-              Valider les paris — Lancer la partie →
+              {isOnline ? 'Valider mes paris ✓' : 'Valider les paris — Lancer la partie →'}
             </button>
           </div>
         </div>
@@ -420,7 +535,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
             <button onClick={resetSetup} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-teal-300/60 transition hover:bg-white/10 hover:text-teal-300" aria-label="Reconfigurer les paris">
               <RotateCcw className="h-4 w-4" />
             </button>
-            <button onClick={onGameEnd} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label="Retour aux jeux">
+            <button onClick={handleEnd} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label="Retour aux jeux">
               <ArrowLeft className="h-4 w-4" />
             </button>
           </div>
@@ -428,6 +543,11 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
       </div>
 
       <div className="mx-auto max-w-xl px-4 pt-20 pb-28 space-y-4">
+        {isOnline && !isMyTurn && (
+          <p className="text-center text-sm text-teal-300/80">
+            Au tour de <span className="font-semibold">{onlineSync?.activePlayerName ?? '…'}</span>
+          </p>
+        )}
 
         {/* Zone des dés */}
         <div
@@ -557,7 +677,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
         <div className="mx-auto max-w-xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             onClick={roll}
-            disabled={rolling}
+            disabled={rolling || (isOnline && !isMyTurn)}
             aria-label={rolling ? "Lancer en cours" : "Lancer les dés"}
             className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(20,184,166,0.3)] [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 transition-transform hover:from-teal-500 hover:to-indigo-500"
           >

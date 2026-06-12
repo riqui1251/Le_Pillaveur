@@ -3,14 +3,14 @@
 import Link from "next/link"
 import { useMemo } from "react"
 import { ArrowLeft, Users } from "lucide-react"
-import { usePlayers } from "@/hooks/usePlayers"
+import { useActivePlayers } from "@/hooks/useActivePlayers"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 import { getColorFromClass } from "@/lib/playerUtils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 
 export function SelectedPlayersBar() {
-  const { players, loading } = usePlayers()
+  const { players, loading, isOnline } = useActivePlayers()
   const { selectedIds } = useSelectedPlayers()
 
   const selectedPlayers = useMemo(
@@ -71,7 +71,9 @@ export function SelectedPlayersBar() {
         </div>
       ) : (
         <p className="text-center text-sm text-amber-200/70">
-          Retournez sur la page Joueurs pour constituer votre équipe (minimum 2).
+          {isOnline
+            ? "Rejoignez une salle en ligne ou attendez que l'hôte lance la partie."
+            : "Retournez sur la page Joueurs pour constituer votre équipe (minimum 2)."}
         </p>
       )}
     </div>

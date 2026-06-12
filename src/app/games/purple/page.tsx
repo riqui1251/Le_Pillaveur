@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
 import { getColorFromClass } from '@/lib/playerUtils'
@@ -8,29 +8,52 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import Game from './components/game'
+import { useIsOnlineMode } from '@/components/online/OnlineGameGate'
+import { OnlineLobbyPanel } from '@/components/online/OnlineLobbyPanel'
+import { useOnlineGameSync } from '@/hooks/useOnlineGameSync'
+import type { PurpleSyncedState } from '@/lib/online-game-state'
 
 export type GameMode = 'standard' | 'traversee'
 
 export default function PurplePage() {
   const { players, updatePlayerStats } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
+  const isOnline = useIsOnlineMode()
   const [gameStarted, setGameStarted] = useState(false)
 
-  const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
-  const canStart = selectedPlayers.length >= 2
+  const {
+    isPlayingOnline,
+    onlinePlayers,
+    onlineSync,
+    handleLeaveToMenu,
+  } = useOnlineGameSync<PurpleSyncedState>({ gameId: 'purple' })
 
-  if (gameStarted && canStart) {
+  const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
+  const activePlayers = isOnline ? onlinePlayers : selectedPlayers
+  const canStart = activePlayers.length >= 2
+
+  useEffect(() => {
+    if (isPlayingOnline && !gameStarted) setGameStarted(true)
+    if (!isPlayingOnline && gameStarted && isOnline) setGameStarted(false)
+  }, [isPlayingOnline, gameStarted, isOnline])
+
+  if (gameStarted && (canStart || isPlayingOnline)) {
     return (
       <Game
-        players={selectedPlayers}
-        onGameEnd={() => setGameStarted(false)}
+        key={onlineSync ? `${onlineSync.roomId}-${onlineSync.stateVersion}` : 'local'}
+        players={activePlayers}
+        onGameEnd={() => {
+          if (isOnline) void handleLeaveToMenu()
+          else setGameStarted(false)
+        }}
         updatePlayerStats={updatePlayerStats}
         gameMode="standard"
+        onlineSync={onlineSync}
       />
     )
   }
 
-  if (!canStart) {
+  if (!canStart && !isOnline) {
     return (
       <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#07060b] px-4 text-white">
         <div className="pointer-events-none absolute inset-0">
@@ -48,10 +71,7 @@ export default function PurplePage() {
           <div className="w-full rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-200/80">
             Aucun joueur sélectionné. Retournez sur la page Joueurs pour constituer votre équipe (minimum 2).
           </div>
-          <Link
-            href="/joueurs"
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-5 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-          >
+          <Link href="/joueurs" className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-5 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white">
             <ArrowLeft className="h-4 w-4" />
             Sélectionner des joueurs
           </Link>
@@ -68,7 +88,6 @@ export default function PurplePage() {
       </div>
 
       <div className="relative w-full max-w-sm space-y-6">
-        {/* En-tête */}
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-violet-600 to-purple-700 text-3xl shadow-xl">
             🃏
@@ -79,48 +98,53 @@ export default function PurplePage() {
           </div>
         </div>
 
-        {/* Joueurs */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/35">
-            Joueurs — {selectedPlayers.length}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {selectedPlayers.map(p => {
-              const bg = getColorFromClass(p.preferences.color)
-              return (
-                <div key={p.id} className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5">
-                  <Avatar className="h-6 w-6 border border-white/20" style={{ backgroundColor: bg }}>
-                    <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundColor: bg }}>
-                      {p.preferences.icon || p.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs font-medium text-white/80">{p.name}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        {isOnline && <OnlineLobbyPanel gameId="purple" />}
 
-        {/* Règles */}
+        {!isOnline && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/35">
+              Joueurs — {selectedPlayers.length}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {selectedPlayers.map(p => {
+                const bg = getColorFromClass(p.preferences.color)
+                return (
+                  <div key={p.id} className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5">
+                    <Avatar className="h-6 w-6 border border-white/20" style={{ backgroundColor: bg }}>
+                      <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundColor: bg }}>
+                        {p.preferences.icon || p.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs font-medium text-white/80">{p.name}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="rounded-2xl border border-violet-800/20 bg-violet-950/30 p-4 text-sm text-white/55 space-y-1.5">
           <p className="font-semibold text-violet-300 text-xs uppercase tracking-widest mb-2">Comment jouer</p>
-          <p>Parie sur la couleur de la prochaine carte : <span className="text-red-400">Rouge</span>, <span className="text-white/70">Noir</span> ou <span className="text-violet-400">Purple</span> (rouge + noir).</p>
+          <p>Parie sur la couleur de la prochaine carte : <span className="text-red-400">Rouge</span>, <span className="text-white/70">Noir</span> ou <span className="text-violet-400">Purple</span>.</p>
           <p>Si tu as raison, le compteur monte. Si tu as tort, tu bois le compteur + les gorgées du pari raté.</p>
-          <p>Le <span className="text-violet-300">Double Purple</span> est le pari le plus risqué — 4 cartes alternées.</p>
         </div>
 
-        {/* Bouton lancer */}
-        <button
-          onClick={() => setGameStarted(true)}
-          className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:from-violet-500 hover:to-purple-600 active:scale-[0.98]"
-        >
-          Commencer la partie
-        </button>
+        {!isOnline && (
+          <button
+            onClick={() => setGameStarted(true)}
+            className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:from-violet-500 hover:to-purple-600 active:scale-[0.98]"
+          >
+            Commencer la partie
+          </button>
+        )}
 
-        <Link
-          href="/jeux"
-          className="flex items-center justify-center gap-2 text-sm text-white/35 transition-colors hover:text-white/60"
-        >
+        {isOnline && (
+          <p className="text-center text-sm text-white/40">
+            Rejoignez le lobby, déclarez-vous prêt, puis l&apos;hôte lance la partie.
+          </p>
+        )}
+
+        <Link href="/jeux" className="flex items-center justify-center gap-2 text-sm text-white/35 transition-colors hover:text-white/60">
           <ArrowLeft className="h-3.5 w-3.5" />
           Retour aux jeux
         </Link>

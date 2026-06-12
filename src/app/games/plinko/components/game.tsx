@@ -8,6 +8,10 @@ import { getPlayerGameBoost } from '@/lib/players'
 import { getColorFromClass } from '@/lib/playerUtils'
 import { GameShell } from '@/components/game/GameShell'
 import { cn } from '@/lib/utils'
+import type { PlinkoPinState, PlinkoSyncedState } from '@/lib/online-game-state'
+import type { OnlineGameSync } from '@/lib/online-sync-types'
+import { useSyncedOnlineGame } from '@/hooks/useSyncedOnlineGame'
+import { createSeededRng, randomIntWithRng, randomSeed } from '@/lib/online-rng'
 
 // --- MODIFICATION: Exporter le type DifficultyLevel ---
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
@@ -19,7 +23,12 @@ interface GameProps {
   onRestartGame: () => void
   difficulty: DifficultyLevel
   isCumulativeMode: boolean
+  onlineSync?: OnlineGameSync<PlinkoSyncedState>
 }
+
+type Rng = () => number
+
+const defaultRng: Rng = () => Math.random()
 
 // --- AJOUT: Définition des settings de difficulté ici pour l'utiliser dans le setup ---
 const DIFFICULTY_SETTINGS: Record<DifficultyLevel, { range: { min: number; max: number } }> = {
@@ -302,6 +311,61 @@ interface TurnResult {
 
 type ResultDisplayPhase = 'tournees' | 'details' | 'final';
 
+function localToSyncedPlayerResults(
+  local: Record<string, TurnResult[]>
+): Record<string, { drinks: number; given: number }> {
+  const out: Record<string, { drinks: number; given: number }> = {}
+  for (const [id, turns] of Object.entries(local)) {
+    out[id] = {
+      drinks: turns.reduce((s, t) => s + t.redSips, 0),
+      given: turns.reduce((s, t) => s + t.greenSips, 0),
+    }
+  }
+  return out
+}
+
+function syncedToLocalPlayerResults(
+  synced: Record<string, { drinks: number; given: number }>
+): Record<string, TurnResult[]> {
+  const out: Record<string, TurnResult[]> = {}
+  for (const [id, agg] of Object.entries(synced)) {
+    if (agg.drinks > 0 || agg.given > 0) {
+      out[id] = [{ redSips: agg.drinks, greenSips: agg.given, powerups: [] }]
+    }
+  }
+  return out
+}
+
+function pinsToSync(pins: PinPosition[]): PlinkoPinState[] {
+  return pins.map((p) => ({ x: p.x, y: p.y, row: 0 }))
+}
+
+function specialPinsToSync(pins: SpecialPin[]): PlinkoPinState[] {
+  return pins.map((p) => ({ x: p.x, y: p.y, row: 0, type: p.type }))
+}
+
+function turnResultToSync(
+  result: { redSips: number | null; greenSips: number | null; extraSips?: number | null } | null
+): PlinkoSyncedState['turnResult'] {
+  if (!result) return null
+  return {
+    redSips: result.redSips ?? 0,
+    greenSips: result.greenSips ?? 0,
+    extraSips: result.extraSips ?? null,
+  }
+}
+
+function syncToSpecialPins(pins: PlinkoPinState[]): SpecialPin[] {
+  return pins.map((p, i) => ({
+    id: `sync-${i}-${p.type ?? 'pin'}`,
+    x: p.x,
+    y: p.y,
+    type: (p.type ?? 'multiplier') as SpecialPinType,
+    hitByBallIds: new Set<string>(),
+    usedThisTurn: false,
+  }))
+}
+
 // Mapping pour affichage simplifié des powerups
 const SPECIAL_PIN_LABELS: Record<SpecialPinType, string> = {
   multiplier: 'x2',
@@ -350,10 +414,15 @@ const SPECIAL_PIN_LABELS: Record<SpecialPinType, string> = {
 // };
 
 // Génération statique des pins
-const generateStaticPinsConfig = (rows: number, minPinsPerRow: number, maxPinsPerRow: number) => {
+const generateStaticPinsConfig = (
+  rows: number,
+  minPinsPerRow: number,
+  maxPinsPerRow: number,
+  rng: Rng = defaultRng
+) => {
   const config = new Map<number, number>();
   for (let row = 0; row < rows; row++) {
-    let pinsInRow = Math.floor(Math.random() * (maxPinsPerRow - minPinsPerRow + 1)) + minPinsPerRow;
+    let pinsInRow = randomIntWithRng(rng, minPinsPerRow, maxPinsPerRow);
     // Limiter la première rangée à 8 pins maximum
     if (row === 0) pinsInRow = Math.min(pinsInRow, 8);
     config.set(row, pinsInRow);
@@ -362,9 +431,14 @@ const generateStaticPinsConfig = (rows: number, minPinsPerRow: number, maxPinsPe
 };
 
 // Génération statique des positions des pins normaux
-const generateStaticNormalPins = (rows: number, minPinsPerRow: number, maxPinsPerRow: number) => {
+const generateStaticNormalPins = (
+  rows: number,
+  minPinsPerRow: number,
+  maxPinsPerRow: number,
+  rng: Rng = defaultRng
+) => {
   const pins: PinPosition[] = [];
-  const config = generateStaticPinsConfig(rows, minPinsPerRow, maxPinsPerRow);
+  const config = generateStaticPinsConfig(rows, minPinsPerRow, maxPinsPerRow, rng);
   for (let row = 0; row < rows; row++) {
     const pinsInRow = config.get(row) || DEFAULT_PINS_PER_ROW_FALLBACK(row);
     const rowY = (row + 1) * (100 / (rows + 1));
@@ -401,7 +475,11 @@ const generateStaticNormalPins = (rows: number, minPinsPerRow: number, maxPinsPe
 };
 
 // Génération statique des pins spéciaux
-const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercentage: number): SpecialPin[] => {
+const generateStaticSpecialPins = (
+  normalPins: PinPosition[],
+  specialPinsPercentage: number,
+  rng: Rng = defaultRng
+): SpecialPin[] => {
   const newSpecialPins: SpecialPin[] = [];
   const numNormalPins = normalPins.length;
   if (numNormalPins === 0) return [];
@@ -410,7 +488,7 @@ const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercent
 
   const normalPinIndices = Array.from({ length: numNormalPins }, (_, i) => i);
   for (let i = normalPinIndices.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [normalPinIndices[i], normalPinIndices[j]] = [normalPinIndices[j], normalPinIndices[i]];
   }
   
@@ -422,7 +500,7 @@ const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercent
     let type: SpecialPinType;
     let attempts = 0;
     do {
-      type = WEIGHTED_PIN_TYPES[Math.floor(Math.random() * WEIGHTED_PIN_TYPES.length)];
+      type = WEIGHTED_PIN_TYPES[Math.floor(rng() * WEIGHTED_PIN_TYPES.length)];
       attempts++;
     } while (
       attempts < 20 && (
@@ -447,7 +525,87 @@ const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercent
   return newSpecialPins;
 };
 
-export default function Game({ players, onGameEnd, onRestartGame, difficulty, isCumulativeMode }: GameProps) {
+function getResponsiveBoardParams(viewportWidth: number) {
+  const isMobile = viewportWidth < 640
+  return {
+    isMobile,
+    rows: isMobile ? 6 : ROWS,
+    minPins: isMobile ? 4 : 5,
+    maxPins: isMobile ? 8 : 12,
+    specialPct: isMobile ? 0.25 : SPECIAL_PINS_PERCENTAGE,
+  }
+}
+
+function generateBoardWithSeed(
+  difficulty: DifficultyLevel,
+  seed: number,
+  viewportWidth: number
+) {
+  const { rows, minPins, maxPins, specialPct } = getResponsiveBoardParams(viewportWidth)
+  const rng = createSeededRng(seed)
+  const pinPositions = generateStaticNormalPins(rows, minPins, maxPins, rng)
+  const specialPins = generateStaticSpecialPins(pinPositions, specialPct, rng)
+  const { min, max } = DIFFICULTY_SETTINGS[difficulty].range
+  const slotSipValues = Array.from({ length: TARGET_NUM_SLOTS }, () =>
+    randomIntWithRng(rng, min, max)
+  )
+  return { pinPositions, specialPins, slotSipValues, boardSeed: seed }
+}
+
+function generateTurnSpecialPins(
+  normalPins: PinPosition[],
+  specialPinsPercentage: number,
+  seed: number
+): SpecialPin[] {
+  const rng = createSeededRng(seed)
+  const numNormalPins = normalPins.length
+  if (numNormalPins === 0) return []
+
+  const totalPinsToPlace = Math.round(numNormalPins * specialPinsPercentage)
+  const normalPinIndices = Array.from({ length: numNormalPins }, (_, i) => i)
+  for (let i = normalPinIndices.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[normalPinIndices[i], normalPinIndices[j]] = [normalPinIndices[j], normalPinIndices[i]]
+  }
+
+  const indicesToReplace = normalPinIndices.slice(0, totalPinsToPlace)
+  const addedCounts = { addBall: 0, jackpot: 0, roundDrinks: 0 }
+  const newSpecialPins: SpecialPin[] = []
+
+  indicesToReplace.forEach((pinIndex, iterationIndex) => {
+    const position = normalPins[pinIndex]
+    if (!position) return
+
+    let randomType: SpecialPinType
+    let selectionAttempts = 0
+    do {
+      randomType = WEIGHTED_PIN_TYPES[Math.floor(rng() * WEIGHTED_PIN_TYPES.length)]
+      selectionAttempts++
+      if (selectionAttempts > 20) break
+    } while (
+      (randomType === 'addBall' && addedCounts.addBall >= 1) ||
+      (randomType === 'jackpot' && addedCounts.jackpot >= 1) ||
+      (randomType === 'roundDrinks' && addedCounts.roundDrinks >= 1)
+    )
+    if (selectionAttempts > 20) return
+
+    newSpecialPins.push({
+      id: `s-${randomType}-${iterationIndex}-${seed}`,
+      x: position.x,
+      y: position.y,
+      type: randomType,
+      hitByBallIds: new Set<string>(),
+      usedThisTurn: false,
+    })
+    if (randomType === 'addBall') addedCounts.addBall++
+    if (randomType === 'jackpot') addedCounts.jackpot++
+    if (randomType === 'roundDrinks') addedCounts.roundDrinks++
+  })
+
+  return newSpecialPins
+}
+
+export default function Game({ players, onGameEnd, onRestartGame, difficulty, isCumulativeMode, onlineSync }: GameProps) {
   // États du jeu
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -494,6 +652,104 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const animationRefs = useRef<{ red: number | null, green: number | null }>({ red: null, green: null })
+  const boardPushedForTurnRef = useRef(-1)
+  const stateRef = useRef({
+    currentPlayerIndex,
+    gameOver,
+    isAnimating,
+    pinPositions,
+    slotSipValues,
+    specialPins,
+    turnResult,
+    playerResults,
+    roundDrinksCount,
+    resultDisplayPhase,
+    boardSeed: null as number | null,
+  })
+
+  useEffect(() => {
+    stateRef.current = {
+      currentPlayerIndex,
+      gameOver,
+      isAnimating,
+      pinPositions,
+      slotSipValues,
+      specialPins,
+      turnResult,
+      playerResults,
+      roundDrinksCount,
+      resultDisplayPhase,
+      boardSeed: onlineSync?.remoteState?.boardSeed ?? null,
+    }
+  }, [
+    currentPlayerIndex,
+    gameOver,
+    isAnimating,
+    pinPositions,
+    slotSipValues,
+    specialPins,
+    turnResult,
+    playerResults,
+    roundDrinksCount,
+    resultDisplayPhase,
+    onlineSync?.remoteState?.boardSeed,
+  ])
+
+  const applyFromServer = useCallback((s: PlinkoSyncedState) => {
+    setCurrentPlayerIndex(s.currentPlayerIndex)
+    setGameOver(s.gameOver)
+    setIsAnimating(s.isAnimating)
+    setPinPositions(s.pinPositions)
+    setSlotSipValues(s.slotSipValues)
+    setSpecialPins(syncToSpecialPins(s.specialPins))
+    setTurnResult(s.turnResult)
+    setPlayerResults(syncedToLocalPlayerResults(s.playerResults))
+    setRoundDrinksCount(s.roundDrinksCount)
+    setResultDisplayPhase(s.resultDisplayPhase ?? 'tournees')
+    setBallPositions(
+      s.isAnimating
+        ? { red: { x: 50, y: 0, color: 'red' }, green: { x: 50, y: 0, color: 'green' } }
+        : { red: { x: 50, y: -10, color: 'red' }, green: { x: 50, y: -10, color: 'green' } }
+    )
+    if (!s.isAnimating) {
+      setExtraBalls([])
+      setFinalSlotIndices({ red: null, green: null, extra: null })
+    }
+  }, [])
+
+  const buildSyncedState = useCallback((extra?: Partial<PlinkoSyncedState>): PlinkoSyncedState | null => {
+    if (!onlineSync) return null
+    const cur = stateRef.current
+    return {
+      version: onlineSync.stateVersion + 1,
+      memberUserIds: onlineSync.memberUserIds,
+      gameStarted: true,
+      currentPlayer: extra?.currentPlayerIndex ?? extra?.currentPlayer ?? cur.currentPlayerIndex,
+      difficulty,
+      isCumulativeMode,
+      pinPositions: extra?.pinPositions ?? pinsToSync(cur.pinPositions),
+      slotSipValues: extra?.slotSipValues ?? cur.slotSipValues,
+      specialPins: extra?.specialPins ?? specialPinsToSync(cur.specialPins),
+      currentPlayerIndex: extra?.currentPlayerIndex ?? cur.currentPlayerIndex,
+      isAnimating: extra?.isAnimating ?? cur.isAnimating,
+      turnResult: extra?.turnResult !== undefined
+        ? extra.turnResult
+        : turnResultToSync(cur.turnResult),
+      playerResults: extra?.playerResults ?? localToSyncedPlayerResults(cur.playerResults),
+      roundDrinksCount: extra?.roundDrinksCount ?? cur.roundDrinksCount,
+      gameOver: extra?.gameOver ?? cur.gameOver,
+      resultDisplayPhase: extra?.resultDisplayPhase !== undefined ? extra.resultDisplayPhase : cur.resultDisplayPhase,
+      boardSeed: extra?.boardSeed !== undefined ? extra.boardSeed : cur.boardSeed,
+      rematchVotes: onlineSync.remoteState?.rematchVotes ?? [],
+    }
+  }, [onlineSync, difficulty, isCumulativeMode])
+
+  const { isOnline, isMyTurn, pushState } = useSyncedOnlineGame({
+    onlineSync,
+    applyRemoteState: applyFromServer,
+    buildState: buildSyncedState,
+    isBlockingRemote: () => isAnimating && Boolean(onlineSync?.canInteract),
+  })
 
   // Flash bref sur un pin touché
   const triggerPinFlash = (id: string) => {
@@ -519,6 +775,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
   // --- Effet pour nettoyer l'état visuel après un changement de joueur --- 
   useEffect(() => {
+    if (isOnline) return
     // Ne rien faire si le jeu est terminé ou si une animation est en cours
     if (gameOver || isAnimating) {
         return;
@@ -553,11 +810,43 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     return () => clearTimeout(cleanupTimeout);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPlayerIndex, gameOver, isAnimating, difficulty]);
+  }, [currentPlayerIndex, gameOver, isAnimating, difficulty, isOnline]);
   // --- Fin Effet Nettoyage ---
+
+  useEffect(() => {
+    if (!isOnline || !isMyTurn || isAnimating || gameOver) return
+    if (boardPushedForTurnRef.current === currentPlayerIndex) return
+
+    const viewportWidth = canvasRef.current?.offsetWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 1024)
+    const delay = turnResult ? 1500 : 0
+
+    const timeout = setTimeout(() => {
+      const seed = randomSeed()
+      const board = generateBoardWithSeed(difficulty, seed, viewportWidth)
+      boardPushedForTurnRef.current = currentPlayerIndex
+      setPinPositions(board.pinPositions)
+      setSpecialPins(board.specialPins)
+      setSlotSipValues(board.slotSipValues)
+      setTurnResult(null)
+      setBallPositions({ red: { x: 50, y: -10, color: 'red' }, green: { x: 50, y: -10, color: 'green' } })
+      setExtraBalls([])
+      setFinalSlotIndices({ red: null, green: null, extra: null })
+      void pushState({
+        turnResult: null,
+        pinPositions: pinsToSync(board.pinPositions),
+        slotSipValues: board.slotSipValues,
+        specialPins: specialPinsToSync(board.specialPins),
+        boardSeed: seed,
+        isAnimating: false,
+      })
+    }, delay)
+
+    return () => clearTimeout(timeout)
+  }, [isOnline, isMyTurn, currentPlayerIndex, isAnimating, gameOver, turnResult, difficulty, pushState])
 
   // --- MODIFICATION: useEffect pour initialiser/réinitialiser le jeu basé sur les props --- 
   useEffect(() => {
+    if (isOnline) return
 
     // Déterminer les paramètres responsive (mobile vs desktop)
     const containerElement = canvasRef.current;
@@ -581,13 +870,30 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
       Math.floor(Math.random() * (max - min + 1)) + min
     );
     setSlotSipValues(newSlotValues);
-  }, [difficulty, gameVersion]); // Ajouter gameVersion comme dépendance
+  }, [difficulty, gameVersion, isOnline]); // Ajouter gameVersion comme dépendance
 
   // --- MODIFICATION: Mise à jour de onRestartGame pour incrémenter gameVersion ---
   const handleRestartGame = () => {
+    if (isOnline) {
+      void onlineSync?.voteRematch?.()
+      return
+    }
     setGameVersion(prev => prev + 1); // Incrémenter gameVersion
     onRestartGame(); // Appeler la fonction originale
   };
+
+  const handleLeaveGame = () => {
+    if (isOnline) {
+      void onlineSync?.leaveToMenu?.()
+      return
+    }
+    onGameEnd()
+  }
+
+  const handleResultPhaseChange = (phase: ResultDisplayPhase) => {
+    setResultDisplayPhase(phase)
+    if (isOnline) void pushState({ resultDisplayPhase: phase })
+  }
 
   // --- Fonction séparée pour générer TOUS les pins spéciaux --- 
   // --- RE-RE-RE-MODIFICATION: Les pins spéciaux remplacent aléatoirement des pins normaux --- 
@@ -693,6 +999,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   // ----------------------------------------------------------------------------------------
 
   const dropBalls = () => {
+    if (isOnline && !isMyTurn) return
     if (isAnimating) return;
     if (!canvasRef.current) {
       console.warn("Canvas non prêt, lancement annulé.")
@@ -701,16 +1008,29 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     
     const containerElement = canvasRef.current;
     const viewportWidth = containerElement?.offsetWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 1024);
-    const isMobile = viewportWidth < 640;
-    const specialPct = isMobile ? 0.25 : SPECIAL_PINS_PERCENTAGE;
-    const newPinsForTurn = generateSpecialPins(pinPositions, specialPct);
+    const { specialPct } = getResponsiveBoardParams(viewportWidth);
+    const dropSeed = randomSeed()
+    const newPinsForTurn = isOnline
+      ? generateTurnSpecialPins(pinPositions, specialPct, dropSeed)
+      : generateSpecialPins(pinPositions, specialPct);
     setSpecialPins(newPinsForTurn);
     const currentSpecialPins = newPinsForTurn;
 
     setExtraBalls([]); 
     setFinalSlotIndices({ red: null, green: null, extra: null }); 
     setIsAnimating(true);
-    setTurnResult(null); 
+    setTurnResult(null);
+
+    if (isOnline) {
+      void pushState({
+        isAnimating: true,
+        turnResult: null,
+        specialPins: specialPinsToSync(newPinsForTurn),
+        boardSeed: dropSeed,
+      })
+    }
+
+    if (isOnline && !isMyTurn) return
     // setTurnEffectLogs(null); // SUPPRIMÉ: Assurer la réinitialisation avant le lancer
     // Positionner les balles pile au-dessus d'un pin de la 1ère rangée (ou 2nde si indisponible)
     const rowsForStart = pinPositions
@@ -1359,7 +1679,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     });
 
     const currentPlayer = players[currentPlayerIndex];
-    const boost = currentPlayer ? getPlayerGameBoost(currentPlayer, 'plinko') : 0;
+    const boost = !isOnline && currentPlayer ? getPlayerGameBoost(currentPlayer, 'plinko') : 0;
     if (boost > 0) {
       totalGreenSips += Math.floor(totalGreenSips * boost / 100);
       totalRedSips = Math.max(0, totalRedSips - Math.floor(totalRedSips * boost / 100));
@@ -1388,19 +1708,45 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         if (ball.powerupEvents) turnPowerups.push(...ball.powerupEvents);
     });
 
-    setPlayerResults(prev => ({
-        ...prev,
-        [currentPlayer.id]: [...currentResults, { 
-            redSips: totalRedSips, 
-            greenSips: totalGreenSips,
-            powerups: turnPowerups
-        }]
-    }));
+    const nextPlayerResults = {
+      ...playerResults,
+      [currentPlayer.id]: [...currentResults, {
+        redSips: totalRedSips,
+        greenSips: totalGreenSips,
+        powerups: turnPowerups,
+      }],
+    }
 
-    if (currentPlayerIndex === players.length - 1) {
-      setGameOver(true);
+    setPlayerResults(nextPlayerResults);
+
+    const isLastPlayer = currentPlayerIndex === players.length - 1
+    const nextIndex = isLastPlayer ? currentPlayerIndex : currentPlayerIndex + 1
+    const nextTurnResult = {
+      redSips: totalRedSips,
+      greenSips: totalGreenSips,
+      extraSips: extraSipsForDisplay > 0 ? extraSipsForDisplay : null,
+    }
+
+    if (isLastPlayer) {
+      setGameOver(true)
+      setResultDisplayPhase('tournees')
     } else {
-      setCurrentPlayerIndex(prev => prev + 1);
+      setCurrentPlayerIndex(nextIndex)
+      boardPushedForTurnRef.current = -1
+    }
+
+    if (isOnline && isMyTurn) {
+      void pushState({
+        isAnimating: false,
+        turnResult: nextTurnResult,
+        playerResults: localToSyncedPlayerResults(nextPlayerResults),
+        roundDrinksCount: stateRef.current.roundDrinksCount,
+        slotSipValues: stateRef.current.slotSipValues,
+        currentPlayerIndex: nextIndex,
+        currentPlayer: nextIndex,
+        gameOver: isLastPlayer,
+        resultDisplayPhase: isLastPlayer ? 'tournees' : null,
+      })
     }
   };
   // --- Fin de handleTurnEnd ---
@@ -1444,19 +1790,36 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
       {/* Bouton action */}
       <Button
         onClick={dropBalls}
-        disabled={isAnimating || !!turnResult}
+        disabled={(isOnline && !isMyTurn) || isAnimating || !!turnResult}
         className="shrink-0 bg-gradient-to-r from-violet-600 to-purple-700 text-white font-semibold hover:from-violet-500 hover:to-purple-600 disabled:opacity-50"
       >
-        {isAnimating ? 'En jeu…' : turnResult ? 'Tour suivant' : 'Lancer 🎯'}
+        {isOnline && !isMyTurn
+          ? 'En attente…'
+          : isAnimating
+            ? 'En jeu…'
+            : turnResult
+              ? 'Tour suivant'
+              : 'Lancer 🎯'}
       </Button>
     </div>
   ) : undefined
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  if (isOnline && !onlineSync?.remoteState?.gameStarted) {
+    return <div className="p-6 text-center text-violet-300">Chargement de la partie…</div>
+  }
+
   return (
-    <GameShell title="Plinko" onBack={onGameEnd} maxWidth={920} actionBar={actionBar}>
+    <GameShell title="Plinko" onBack={handleLeaveGame} maxWidth={920} actionBar={actionBar}>
       <div className="space-y-4">
+
+        {isOnline && !isMyTurn && !gameOver && (
+          <p className="text-center text-sm text-violet-300/80">
+            Au tour de <span className="font-semibold">{onlineSync?.activePlayerName ?? '…'}</span>
+            {isAnimating && ' — lancer en cours…'}
+          </p>
+        )}
 
         {/* ── Plateau de jeu ───────────────────────────────────────────── */}
         {!gameOver && (
@@ -1757,7 +2120,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
             <div className="flex justify-center gap-3 pt-2">
               {resultDisplayPhase === 'tournees' && (
                 <button
-                  onClick={() => setResultDisplayPhase('details')}
+                  onClick={() => handleResultPhaseChange('details')}
                   className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600"
                 >
                   {roundDrinksCount > 0 ? 'Voir les détails →' : 'Voir les résultats →'}
@@ -1781,7 +2144,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     Suivant →
                   </button>
                   <button
-                    onClick={() => setResultDisplayPhase('final')}
+                    onClick={() => handleResultPhaseChange('final')}
                     className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600"
                   >
                     Totaux →
@@ -1791,18 +2154,41 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
               {resultDisplayPhase === 'final' && (
                 <>
-                  <button
-                    onClick={handleRestartGame}
-                    className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600"
-                  >
-                    Nouvelle partie
-                  </button>
-                  <button
-                    onClick={onGameEnd}
-                    className="rounded-xl border border-violet-800/30 bg-violet-950/30 px-5 py-2.5 text-sm text-white/70 hover:bg-violet-900/40"
-                  >
-                    Retour
-                  </button>
+                  {isOnline ? (
+                    <>
+                      <p className="w-full text-center text-xs text-white/45">
+                        {(onlineSync?.rematchVotes?.length ?? 0)} / {onlineSync?.memberUserIds.length ?? players.length} ont voté pour rejouer
+                      </p>
+                      <button
+                        onClick={handleRestartGame}
+                        disabled={onlineSync?.rematchVotes?.includes(onlineSync.myUserId)}
+                        className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600 disabled:opacity-50"
+                      >
+                        {onlineSync?.rematchVotes?.includes(onlineSync.myUserId) ? 'Vote enregistré' : 'Rejouer'}
+                      </button>
+                      <button
+                        onClick={handleLeaveGame}
+                        className="rounded-xl border border-violet-800/30 bg-violet-950/30 px-5 py-2.5 text-sm text-white/70 hover:bg-violet-900/40"
+                      >
+                        Quitter
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleRestartGame}
+                        className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600"
+                      >
+                        Nouvelle partie
+                      </button>
+                      <button
+                        onClick={onGameEnd}
+                        className="rounded-xl border border-violet-800/30 bg-violet-950/30 px-5 py-2.5 text-sm text-white/70 hover:bg-violet-900/40"
+                      >
+                        Retour
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             </div>

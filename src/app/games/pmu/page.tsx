@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from 'react'
 import { usePlayers } from '@/hooks/usePlayers'
 import Game from './components/game'
 import { Player } from '@/lib/players'
@@ -7,14 +8,46 @@ import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { useIsOnlineMode } from '@/components/online/OnlineGameGate'
+import { OnlineLobbyPanel } from '@/components/online/OnlineLobbyPanel'
+import { useOnlineGameSync } from '@/hooks/useOnlineGameSync'
+import type { PmuSyncedState } from '@/lib/online-game-state'
 
 export default function PMUPage() {
   const { players } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
   const router = useRouter()
-  const selectedPlayers: Player[] = players.filter(p => selectedIds.includes(p.id))
+  const isOnline = useIsOnlineMode()
+  const [gameStarted, setGameStarted] = useState(false)
 
-  if (selectedPlayers.length >= 2) {
+  const { isPlayingOnline, onlinePlayers, onlineSync, handleLeaveToMenu, isHost } =
+    useOnlineGameSync<PmuSyncedState>({ gameId: 'pmu' })
+
+  const selectedPlayers: Player[] = players.filter(p => selectedIds.includes(p.id))
+  const activePlayers = isOnline ? onlinePlayers : selectedPlayers
+  const canStart = activePlayers.length >= 2
+
+  useEffect(() => {
+    if (isPlayingOnline && !gameStarted) setGameStarted(true)
+    if (!isPlayingOnline && gameStarted && isOnline) setGameStarted(false)
+  }, [isPlayingOnline, gameStarted, isOnline])
+
+  if (gameStarted || (isOnline && isPlayingOnline)) {
+    return (
+      <Game
+        key={onlineSync ? `${onlineSync.roomId}-${onlineSync.stateVersion}` : 'local'}
+        players={activePlayers}
+        onGameEnd={() => {
+          if (isOnline) void handleLeaveToMenu()
+          else router.push('/jeux')
+        }}
+        onlineSync={onlineSync}
+        isHost={isHost}
+      />
+    )
+  }
+
+  if (selectedPlayers.length >= 2 && !isOnline) {
     return (
       <Game
         players={selectedPlayers}
@@ -40,15 +73,37 @@ export default function PMUPage() {
             Assignez vos chevaux et que le meilleur gagne !
           </p>
         </div>
-        <div className="w-full rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-200/80">
-          Aucun joueur sélectionné. Retournez sur la page Joueurs pour constituer votre équipe (minimum 2).
-        </div>
+
+        {isOnline && <OnlineLobbyPanel gameId="pmu" />}
+
+        {!isOnline && (
+          <div className="w-full rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-200/80">
+            Aucun joueur sélectionné. Retournez sur la page Joueurs pour constituer votre équipe (minimum 2).
+          </div>
+        )}
+
+        {isOnline && (
+          <p className="text-center text-sm text-white/40">
+            Rejoignez le lobby, déclarez-vous prêt, puis l&apos;hôte lance la partie.
+          </p>
+        )}
+
+        {!isOnline && (
+          <Link
+            href="/joueurs"
+            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-5 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Sélectionner des joueurs
+          </Link>
+        )}
+
         <Link
-          href="/joueurs"
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-5 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+          href="/jeux"
+          className="flex items-center justify-center gap-2 text-sm text-white/35 transition-colors hover:text-white/60"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Sélectionner des joueurs
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Retour aux jeux
         </Link>
       </div>
     </main>

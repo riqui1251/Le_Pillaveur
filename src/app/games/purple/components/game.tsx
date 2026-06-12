@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Player, getPlayerGameBoost } from '@/lib/players'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { RotateCcw, X } from 'lucide-react'
@@ -9,6 +9,11 @@ import { GameShell } from '@/components/game/GameShell'
 import { GameMode } from '../page'
 import { getColorFromClass, isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
+import type { PurpleSyncedState } from '@/lib/online-game-state'
+import type { OnlineGameSync } from '@/lib/online-sync-types'
+import { useSyncedOnlineGame } from '@/hooks/useSyncedOnlineGame'
+import { createPurpleDeck } from '@/lib/online-purple'
+import { createSeededRng, randomSeed } from '@/lib/online-rng'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +28,7 @@ interface GameProps {
   onGameEnd: () => void
   updatePlayerStats: (id: string, game: string, stats: { gamesPlayed: number; totalDrinks?: number; wins?: number }) => void
   gameMode: GameMode
+  onlineSync?: OnlineGameSync<PurpleSyncedState>
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -59,14 +65,11 @@ function checkBetResult(bet: BetType, cards: PlayingCard[]): boolean {
     case 'purple':        return colors.length === 2 && colors[0] !== colors[1]
     case 'double-purple': {
       if (colors.length !== 4) return false
-      // Deux paires Purple indépendantes : chaque paire doit alterner (R≠B)
       return colors[0] !== colors[1] && colors[2] !== colors[3]
     }
     default: return false
   }
 }
-
-// ─── Composant carte ──────────────────────────────────────────────────────────
 
 function PlayingCardUI({ card, size = 'lg' }: { card: PlayingCard; size?: 'sm' | 'lg' }) {
   const isRed = card.color === 'red'
@@ -89,9 +92,13 @@ function PlayingCardUI({ card, size = 'lg' }: { card: PlayingCard; size?: 'sm' |
   )
 }
 
+function toPlayingCards(cards: PurpleSyncedState['deck']): PlayingCard[] {
+  return cards as PlayingCard[]
+}
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 
-export default function Game({ players, onGameEnd, updatePlayerStats }: GameProps) {
+export default function Game({ players, onGameEnd, updatePlayerStats, onlineSync }: GameProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [deck, setDeck] = useState<PlayingCard[]>([])
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
@@ -107,10 +114,67 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   const [cardHistory, setCardHistory] = useState<PlayingCard[]>([])
   const [totalCardsDrawn, setTotalCardsDrawn] = useState(0)
 
-  useEffect(() => { setIsMounted(true) }, [])
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const stateRef = useRef({
+    deck, currentPlayerIndex, drinkCounter, gameResults, drawnCards, lastBet,
+    isCorrect, isRevealing, canContinue, showResult, amountToDrink, cardHistory, totalCardsDrawn,
+  })
+
   useEffect(() => {
-    if (isMounted && players.length >= 2) initializeGame()
-  }, [isMounted, players.length])
+    stateRef.current = {
+      deck, currentPlayerIndex, drinkCounter, gameResults, drawnCards, lastBet,
+      isCorrect, isRevealing, canContinue, showResult, amountToDrink, cardHistory, totalCardsDrawn,
+    }
+  }, [deck, currentPlayerIndex, drinkCounter, gameResults, drawnCards, lastBet, isCorrect, isRevealing, canContinue, showResult, amountToDrink, cardHistory, totalCardsDrawn])
+
+  const applyFromServer = useCallback((s: PurpleSyncedState) => {
+    setDeck(toPlayingCards(s.deck))
+    setCurrentPlayerIndex(s.currentPlayer)
+    setDrinkCounter(s.drinkCounter)
+    setGameResults(s.gameResults)
+    setDrawnCards(toPlayingCards(s.drawnCards))
+    setLastBet(s.lastBet as BetType | null)
+    setIsCorrect(s.isCorrect)
+    setIsRevealing(s.isRevealing)
+    setCanContinue(s.canContinue)
+    setShowResult(s.showResult)
+    setAmountToDrink(s.amountToDrink)
+    setCardHistory(toPlayingCards(s.cardHistory))
+    setTotalCardsDrawn(s.totalCardsDrawn)
+  }, [])
+
+  const buildSyncedState = useCallback((extra?: Partial<PurpleSyncedState>): PurpleSyncedState | null => {
+    if (!onlineSync) return null
+    const cur = stateRef.current
+    return {
+      version: onlineSync.stateVersion + 1,
+      memberUserIds: onlineSync.memberUserIds,
+      gameStarted: true,
+      currentPlayer: extra?.currentPlayer ?? cur.currentPlayerIndex,
+      drinkCounter: extra?.drinkCounter ?? cur.drinkCounter,
+      deck: (extra?.deck ?? cur.deck) as PurpleSyncedState['deck'],
+      gameResults: extra?.gameResults ?? cur.gameResults,
+      drawnCards: (extra?.drawnCards ?? cur.drawnCards) as PurpleSyncedState['deck'],
+      lastBet: extra?.lastBet !== undefined ? extra.lastBet : cur.lastBet,
+      isCorrect: extra?.isCorrect !== undefined ? extra.isCorrect : cur.isCorrect,
+      isRevealing: extra?.isRevealing ?? cur.isRevealing,
+      canContinue: extra?.canContinue ?? cur.canContinue,
+      showResult: extra?.showResult ?? cur.showResult,
+      amountToDrink: extra?.amountToDrink ?? cur.amountToDrink,
+      cardHistory: (extra?.cardHistory ?? cur.cardHistory) as PurpleSyncedState['deck'],
+      totalCardsDrawn: extra?.totalCardsDrawn ?? cur.totalCardsDrawn,
+      rematchVotes: onlineSync.remoteState?.rematchVotes ?? [],
+    }
+  }, [onlineSync])
+
+  const { isOnline, isMyTurn, pushState } = useSyncedOnlineGame({
+    onlineSync,
+    applyRemoteState: applyFromServer,
+    buildState: buildSyncedState,
+    isBlockingRemote: () => isRevealing && Boolean(onlineSync?.canInteract),
+  })
+
+  useEffect(() => { setIsMounted(true) }, [])
 
   const createDeck = (): PlayingCard[] => {
     const values: CardValue[] = ['2','3','4','5','6','7','8','9','10','V','D','R','A']
@@ -120,10 +184,11 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   }
 
   const shuffleDeck = (d: PlayingCard[]): PlayingCard[] => {
+    const rng = createSeededRng(randomSeed())
     const s = [...d]
     for (let i = s.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [s[i], s[j]] = [s[j], s[i]]
+      const j = Math.floor(rng() * (i + 1))
+      ;[s[i], s[j]] = [s[j], s[i]]
     }
     return s
   }
@@ -144,68 +209,138 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     setTotalCardsDrawn(0)
   }
 
+  useEffect(() => {
+    if (!isMounted || players.length < 2 || isOnline) return
+    initializeGame()
+  }, [isMounted, players.length, isOnline])
+
   const handleBet = (bet: BetType) => {
-    if (isRevealing) return
+    if (isRevealing || (isOnline && !isMyTurn)) return
     const config = BET_CONFIG[bet]
-    // Si pas assez de cartes, on mélange un nouveau paquet et on l'ajoute aux restantes
-    let currentDeck = [...deck]
+    let currentDeck = [...stateRef.current.deck]
     if (currentDeck.length < config.cards) {
       currentDeck = [...currentDeck, ...shuffleDeck(createDeck())]
     }
     const drawn = currentDeck.slice(0, config.cards)
-    const counter = drinkCounter
-    setDeck(currentDeck.slice(config.cards))
+    const newDeck = currentDeck.slice(config.cards)
+    const counter = stateRef.current.drinkCounter
+    const playerIdx = stateRef.current.currentPlayerIndex
+
+    setDeck(newDeck)
     setTotalCardsDrawn(prev => prev + config.cards)
     setDrawnCards(drawn)
     setLastBet(bet)
     setIsRevealing(true)
 
-    setTimeout(() => {
-      const player = players[currentPlayerIndex]
-      const boost = player ? getPlayerGameBoost(player, 'purple') : 0
+    if (isOnline) {
+      void pushState({
+        deck: newDeck,
+        drawnCards: drawn,
+        lastBet: bet,
+        isRevealing: true,
+        canContinue: false,
+        showResult: false,
+        totalCardsDrawn: stateRef.current.totalCardsDrawn + config.cards,
+      })
+    }
+
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current)
+    revealTimerRef.current = setTimeout(() => {
+      const player = players[playerIdx]
+      const boost = !isOnline && player ? getPlayerGameBoost(player, 'purple') : 0
       let correct = checkBetResult(bet, drawn)
       if (!correct && boost > 0 && Math.random() * 100 < boost) correct = true
-      setIsCorrect(correct)
-      setCardHistory(prev => [...prev, ...drawn].slice(-6))
+
+      const newHistory = [...stateRef.current.cardHistory, ...drawn].slice(-6)
 
       if (correct) {
-        setDrinkCounter(prev => prev + config.gulps)
+        const newCounter = counter + config.gulps
+        setIsCorrect(true)
+        setCardHistory(newHistory)
+        setDrinkCounter(newCounter)
         setCanContinue(true)
+        setIsRevealing(false)
+        if (isOnline) {
+          void pushState({
+            deck: newDeck,
+            drawnCards: drawn,
+            lastBet: bet,
+            isCorrect: true,
+            isRevealing: false,
+            canContinue: true,
+            drinkCounter: newCounter,
+            cardHistory: newHistory,
+          })
+        }
       } else {
         const total = counter + config.gulps
+        const newResults = { ...stateRef.current.gameResults, [player.id]: (stateRef.current.gameResults[player.id] || 0) + total }
+        setIsCorrect(false)
+        setCardHistory(newHistory)
         setAmountToDrink(total)
-        setGameResults(prev => ({ ...prev, [player.id]: (prev[player.id] || 0) + total }))
+        setGameResults(newResults)
         setDrinkCounter(0)
         setShowResult(true)
+        setIsRevealing(false)
+        if (isOnline) {
+          void pushState({
+            deck: newDeck,
+            drawnCards: drawn,
+            lastBet: bet,
+            isCorrect: false,
+            isRevealing: false,
+            canContinue: false,
+            showResult: true,
+            amountToDrink: total,
+            drinkCounter: 0,
+            gameResults: newResults,
+            cardHistory: newHistory,
+          })
+        }
       }
-      setIsRevealing(false)
     }, 700)
   }
 
   const handleContinue = () => {
+    if (isOnline && !isMyTurn) return
     setDrawnCards([]); setLastBet(null); setIsCorrect(null); setCanContinue(false)
+    if (isOnline) void pushState({ drawnCards: [], lastBet: null, isCorrect: null, canContinue: false, showResult: false })
   }
 
   const handlePass = () => {
-    setCurrentPlayerIndex(prev => (prev + 1) % Math.max(1, players.length))
+    if (isOnline && !isMyTurn) return
+    const next = (stateRef.current.currentPlayerIndex + 1) % Math.max(1, players.length)
+    setCurrentPlayerIndex(next)
     setDrawnCards([]); setLastBet(null); setIsCorrect(null); setCanContinue(false)
+    if (isOnline) void pushState({ currentPlayer: next, drawnCards: [], lastBet: null, isCorrect: null, canContinue: false, showResult: false })
   }
 
   const closeResult = () => {
+    if (isOnline && !isMyTurn) return
+    const next = (stateRef.current.currentPlayerIndex + 1) % Math.max(1, players.length)
     setShowResult(false)
-    setCurrentPlayerIndex(prev => (prev + 1) % Math.max(1, players.length))
+    setCurrentPlayerIndex(next)
     setDrawnCards([]); setLastBet(null)
+    if (isOnline) void pushState({ currentPlayer: next, showResult: false, drawnCards: [], lastBet: null, isCorrect: null, canContinue: false })
   }
 
   const quitGame = () => {
+    if (isOnline) {
+      void onlineSync?.leaveToMenu?.()
+      return
+    }
     players.forEach(p => updatePlayerStats(p.id, 'purple', { gamesPlayed: 1, totalDrinks: gameResults[p.id] || 0 }))
     onGameEnd()
   }
 
   const currentPlayer = players[currentPlayerIndex]
   const playerBg = currentPlayer ? getColorFromClass(currentPlayer.preferences?.color ?? '') : '#7c3aed'
+  const canAct = !isOnline || isMyTurn
 
   if (!isMounted) return null
+  if (isOnline && !onlineSync?.remoteState?.gameStarted) {
+    return <div className="p-6 text-center text-violet-300">Chargement de la partie…</div>
+  }
   if (!players || players.length < 2) return <div className="p-6 text-center text-red-400">Au moins 2 joueurs requis.</div>
 
   const betButtons: BetType[] = ['rouge', 'double-rouge', 'noir', 'double-noir', 'purple', 'double-purple']
@@ -216,14 +351,20 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
       onBack={quitGame}
       maxWidth={700}
       headerRight={
-        <button onClick={initializeGame} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:bg-white/10 hover:text-white" aria-label="Nouvelle partie">
-          <RotateCcw className="h-4 w-4" />
-        </button>
+        !isOnline ? (
+          <button onClick={initializeGame} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:bg-white/10 hover:text-white" aria-label="Nouvelle partie">
+            <RotateCcw className="h-4 w-4" />
+          </button>
+        ) : null
       }
     >
       <div className="space-y-4">
+        {isOnline && !isMyTurn && (
+          <p className="text-center text-sm text-violet-300/80">
+            Au tour de <span className="font-semibold">{onlineSync?.activePlayerName ?? '…'}</span>
+          </p>
+        )}
 
-        {/* ── Joueur actif ─────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 rounded-2xl border border-violet-800/20 bg-violet-950/30 p-3">
           <Avatar className="h-10 w-10 border-2 border-violet-500/50 shadow-lg shadow-violet-500/20" style={{ backgroundColor: playerBg }}>
             <AvatarFallback className="text-sm font-bold text-white" style={{ backgroundColor: playerBg }}>
@@ -248,13 +389,12 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
           </div>
         </div>
 
-        {/* ── Cartes tirées ────────────────────────────────────────────── */}
         {drawnCards.length > 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
             <div className="flex flex-wrap justify-center gap-3">
               {drawnCards.map((card, i) => <PlayingCardUI key={i} card={card} />)}
             </div>
-            {isCorrect === true && canContinue && (
+            {isCorrect === true && canContinue && canAct && (
               <div className="mt-4 text-center space-y-3">
                 <p className="text-emerald-400 font-semibold">
                   ✓ Correct ! +{lastBet ? BET_CONFIG[lastBet].gulps : 0} gorgée{BET_CONFIG[lastBet!]?.gulps > 1 ? 's' : ''} au compteur
@@ -275,8 +415,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
           </div>
         )}
 
-        {/* ── Boutons de paris ─────────────────────────────────────────── */}
-        {!canContinue && !showResult && (
+        {!canContinue && !showResult && canAct && (
           <div className="space-y-2">
             <p className="text-center text-xs font-semibold uppercase tracking-widest text-violet-400/60">Choisis ton pari</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -306,7 +445,6 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
           </div>
         )}
 
-        {/* ── Historique des cartes ────────────────────────────────────── */}
         {cardHistory.length > 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/30">Dernières cartes</p>
@@ -316,7 +454,6 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
           </div>
         )}
 
-        {/* ── Dialog mauvaise réponse ──────────────────────────────────── */}
         {showResult && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
             <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-red-500/20 bg-[#0d0814] p-6 shadow-2xl">
@@ -333,20 +470,23 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
                     gorgée{amountToDrink !== 1 ? 's' : ''} 🍺
                   </p>
                 </div>
-                <button
-                  onClick={closeResult}
-                  className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3 text-sm font-bold text-white hover:from-violet-500 hover:to-purple-600"
-                >
-                  Compris, joueur suivant →
-                </button>
+                {canAct && (
+                  <button
+                    onClick={closeResult}
+                    className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3 text-sm font-bold text-white hover:from-violet-500 hover:to-purple-600"
+                  >
+                    Compris, joueur suivant →
+                  </button>
+                )}
               </div>
-              <button onClick={closeResult} className="absolute right-4 top-4 text-white/30 hover:text-white/60">
-                <X className="h-4 w-4" />
-              </button>
+              {canAct && (
+                <button onClick={closeResult} className="absolute right-4 top-4 text-white/30 hover:text-white/60">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         )}
-
       </div>
     </GameShell>
   )

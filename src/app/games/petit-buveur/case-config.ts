@@ -174,6 +174,42 @@ export function pickCaseType(): CaseType {
   return 'gorgée'
 }
 
+/** Options pour adapter la génération de cases en partie en ligne */
+export type GenerateCaseOptions = {
+  online?: boolean
+  playerCount?: number
+}
+
+/** Défis physiques ou actions non vérifiables à distance */
+const ONLINE_IRL_CASE_TYPES: ReadonlySet<CaseType> = new Set([
+  'defi',
+  'roue-defis',
+  'question',
+])
+
+/** Cases nécessitant un nombre minimum de joueurs en ligne */
+const ONLINE_MIN_PLAYERS_BY_CASE: Partial<Record<CaseType, number>> = {
+  loterie: 3,
+}
+
+export function isCaseTypeAllowedOnline(type: CaseType, playerCount: number): boolean {
+  if (ONLINE_IRL_CASE_TYPES.has(type)) return false
+  const minPlayers = ONLINE_MIN_PLAYERS_BY_CASE[type] ?? 1
+  return playerCount >= minPlayers
+}
+
+function pickCaseTypeOnline(playerCount: number): CaseType {
+  const pool = CASE_TYPE_POOL.filter(({ type }) => isCaseTypeAllowedOnline(type, playerCount))
+  if (pool.length === 0) return 'gorgée'
+  const total = pool.reduce((s, e) => s + e.weight, 0)
+  let r = Math.random() * total
+  for (const entry of pool) {
+    r -= entry.weight
+    if (r <= 0) return entry.type
+  }
+  return 'gorgée'
+}
+
 /** Cases sans choix de cible (résolues au lancer / après le dé) */
 export const CASES_NO_TARGET = new Set<CaseType>([
   'solo',
@@ -198,7 +234,11 @@ export const CASES_SPECIAL_MODAL = new Set<CaseType>([
   'double-case',
 ])
 
-export function generateCase(difficulty: Difficulty, currentPlayer?: GamePlayer): Case {
+export function generateCase(
+  difficulty: Difficulty,
+  currentPlayer?: GamePlayer,
+  options?: GenerateCaseOptions
+): Case {
   const boost = currentPlayer ? getPlayerGameBoost(currentPlayer, 'petit-buveur') : 0
   if (boost > 0 && Math.random() * 100 < boost) {
     const avanceSpaces = Math.floor(Math.random() * 3) + 1
@@ -209,7 +249,9 @@ export function generateCase(difficulty: Difficulty, currentPlayer?: GamePlayer)
     }
   }
 
-  const type = pickCaseType()
+  const type = options?.online
+    ? pickCaseTypeOnline(options.playerCount ?? 2)
+    : pickCaseType()
   const multiplier = difficultyMultipliers[difficulty]
 
   switch (type) {

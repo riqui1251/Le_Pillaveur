@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Player } from '@/lib/players'
 import { Button } from '@/components/ui/button'
 import { GameShell } from '@/components/game/GameShell'
@@ -12,6 +12,9 @@ import { motion } from 'framer-motion'
 import useScreenSize from '@/hooks/useScreenSize'
 import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
+import type { HiLoSyncedState } from '@/lib/online-game-state'
+import type { OnlineGameSync } from '@/lib/online-sync-types'
+import { useSyncedOnlineGame } from '@/hooks/useSyncedOnlineGame'
 
 // Types de cartes
 type CardValue = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'V' | 'D' | 'R' | 'A'
@@ -65,6 +68,7 @@ interface GameProps {
   onGameEnd: () => void
   updatePlayerStats: (playerId: string, gameId: string, stats: { gamesPlayed: number, totalDrinks?: number, wins?: number }) => void
   gameMode: GameMode
+  onlineSync?: OnlineGameSync<HiLoSyncedState>
 }
 
 // Fonction pour obtenir la classe CSS de l'effet spécial du joueur
@@ -98,7 +102,7 @@ const isSpecialPlayer = (player: any): boolean => {
   return name === 'sim' || name === 'riqui';
 }
 
-export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }: GameProps) {
+export default function Game({ players, onGameEnd, updatePlayerStats, gameMode, onlineSync }: GameProps) {
   // État pour vérifier si le composant est monté (côté client)
   const [isMounted, setIsMounted] = useState(false);
   
@@ -132,6 +136,91 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   
   const { isMobile } = useScreenSize();
 
+  const stateRef = useRef({
+    deck, currentCard, nextCard, currentPlayerIndex, drinkCounter, gameOver,
+    showResult, lastGuess, isCorrect, gameResults, showGameOver, showIncorrectDialog,
+    isFlipping, isProcessing, isUnguessedEqual, activePlayers, correctGuessesInRow,
+    targetGuesses, sameCardCount,
+  })
+
+  useEffect(() => {
+    stateRef.current = {
+      deck, currentCard, nextCard, currentPlayerIndex, drinkCounter, gameOver,
+      showResult, lastGuess, isCorrect, gameResults, showGameOver, showIncorrectDialog,
+      isFlipping, isProcessing, isUnguessedEqual, activePlayers, correctGuessesInRow,
+      targetGuesses, sameCardCount,
+    }
+  }, [
+    deck, currentCard, nextCard, currentPlayerIndex, drinkCounter, gameOver,
+    showResult, lastGuess, isCorrect, gameResults, showGameOver, showIncorrectDialog,
+    isFlipping, isProcessing, isUnguessedEqual, activePlayers, correctGuessesInRow,
+    targetGuesses, sameCardCount,
+  ])
+
+  const applyFromServer = useCallback((s: HiLoSyncedState) => {
+    setDeck(s.deck as PlayingCard[])
+    setCurrentCard(s.currentCard as PlayingCard | null)
+    setNextCard(s.nextCard as PlayingCard | null)
+    setCurrentPlayerIndex(s.currentPlayer)
+    setDrinkCounter(s.drinkCounter)
+    setGameOver(s.gameOver)
+    setShowResult(s.showResult)
+    setLastGuess(s.lastGuess)
+    setIsCorrect(s.isCorrect)
+    setGameResults(s.gameResults)
+    setShowGameOver(s.showGameOver)
+    setShowIncorrectDialog(s.showIncorrectDialog)
+    setIsFlipping(s.isFlipping)
+    setIsProcessing(s.isProcessing)
+    setIsUnguessedEqual(s.isUnguessedEqual)
+    setActivePlayers(players.filter(p => s.activePlayerIds.includes(p.id)))
+    setCorrectGuessesInRow(s.correctGuessesInRow)
+    setTargetGuesses(s.targetGuesses)
+  }, [players])
+
+  const buildSyncedState = useCallback((extra?: Partial<HiLoSyncedState>): HiLoSyncedState | null => {
+    if (!onlineSync) return null
+    const cur = stateRef.current
+    const mode = onlineSync.remoteState?.gameMode ?? gameMode
+    return {
+      version: onlineSync.stateVersion + 1,
+      memberUserIds: onlineSync.memberUserIds,
+      gameStarted: true,
+      currentPlayer: extra?.currentPlayer ?? cur.currentPlayerIndex,
+      gameMode: mode,
+      deck: (extra?.deck ?? cur.deck) as HiLoSyncedState['deck'],
+      currentCard: (extra?.currentCard !== undefined ? extra.currentCard : cur.currentCard) as HiLoSyncedState['currentCard'],
+      nextCard: (extra?.nextCard !== undefined ? extra.nextCard : cur.nextCard) as HiLoSyncedState['nextCard'],
+      drinkCounter: extra?.drinkCounter ?? cur.drinkCounter,
+      gameOver: extra?.gameOver ?? cur.gameOver,
+      showResult: extra?.showResult ?? cur.showResult,
+      lastGuess: extra?.lastGuess !== undefined ? extra.lastGuess : cur.lastGuess,
+      isCorrect: extra?.isCorrect !== undefined ? extra.isCorrect : cur.isCorrect,
+      gameResults: extra?.gameResults ?? cur.gameResults,
+      showGameOver: extra?.showGameOver ?? cur.showGameOver,
+      showIncorrectDialog: extra?.showIncorrectDialog ?? cur.showIncorrectDialog,
+      isFlipping: extra?.isFlipping ?? cur.isFlipping,
+      isProcessing: extra?.isProcessing ?? cur.isProcessing,
+      isUnguessedEqual: extra?.isUnguessedEqual ?? cur.isUnguessedEqual,
+      activePlayerIds: extra?.activePlayerIds ?? cur.activePlayers.map(p => p.id),
+      correctGuessesInRow: extra?.correctGuessesInRow ?? cur.correctGuessesInRow,
+      targetGuesses: extra?.targetGuesses ?? cur.targetGuesses,
+      rematchVotes: onlineSync.remoteState?.rematchVotes ?? [],
+    }
+  }, [onlineSync, gameMode])
+
+  const { isOnline, isMyTurn, pushState } = useSyncedOnlineGame({
+    onlineSync,
+    applyRemoteState: applyFromServer,
+    buildState: buildSyncedState,
+    isBlockingRemote: () =>
+      (stateRef.current.isFlipping || stateRef.current.isProcessing) && Boolean(onlineSync?.canInteract),
+  })
+
+  const effectiveGameMode = isOnline && onlineSync?.remoteState?.gameMode
+    ? onlineSync.remoteState.gameMode
+    : gameMode
+
   // Vérifier si le composant est monté (côté client)
   useEffect(() => {
     setIsMounted(true);
@@ -141,17 +230,18 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     setDebMessageIndex(Math.floor(Math.random() * debMessages.length));
   }, []);
 
-  // Initialisation du jeu
+  // Initialisation du jeu (local uniquement)
   useEffect(() => {
-    if (isMounted) {
+    if (isMounted && !isOnline) {
       initializeGame();
     }
-  }, [isMounted]);
+  }, [isMounted, isOnline]);
 
   // Effet pour passer automatiquement au tour suivant après un délai en cas de bonne réponse
   useEffect(() => {
     if (!isMounted) return;
-    
+    if (isOnline && !isMyTurn) return;
+
     if (showResult && isCorrect && !isProcessing) {
       setIsProcessing(true)
       const timer = setTimeout(() => {
@@ -161,7 +251,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
       
       return () => clearTimeout(timer)
     }
-  }, [showResult, isCorrect, isMounted]);
+  }, [showResult, isCorrect, isMounted, isProcessing, isOnline, isMyTurn]);
 
   // Initialiser le jeu
   const initializeGame = () => {
@@ -178,7 +268,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     setNextCard(null)
     
     // Sélection aléatoire du premier joueur en mode standard
-    if (gameMode === 'standard') {
+    if (effectiveGameMode === 'standard') {
       const randomPlayerIndex = Math.floor(Math.random() * players.length);
       setCurrentPlayerIndex(randomPlayerIndex);
     } else {
@@ -197,7 +287,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     setIsProcessing(false)
     
     // Initialisation pour le mode Traversée
-    if (gameMode === 'traversee') {
+    if (effectiveGameMode === 'traversee') {
       // Calcul de l'objectif basé sur le nombre de joueurs
       // 5 pour 2 joueurs, +2 par joueur supplémentaire
       const target = 5 + (Math.max(0, players.length - 2) * 2)
@@ -254,221 +344,226 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   // Gérer la prédiction du joueur
   const handleGuess = (guess: 'higher' | 'lower' | 'equal') => {
     if (!currentCard || gameOver || isFlipping || isProcessing) return
+    if (isOnline && !isMyTurn) return
 
-    // Régénérer le deck si nécessaire
-    const currentDeck = regenerateDeckIfNeeded();
-    
-    // Tirer la prochaine carte
+    const cur = stateRef.current
+    let currentDeck = cur.deck.length < 2 ? shuffleDeck(createDeck()) : [...cur.deck]
     const nextCardFromDeck = currentDeck[0]
     const remainingDeck = currentDeck.slice(1)
+
     setNextCard(nextCardFromDeck)
     setDeck(remainingDeck)
     setLastGuess(guess)
-    
-    // Démarrer l'animation de retournement
     setIsFlipping(true)
-    
-    // Vérifier si la prédiction est correcte
-    const currentValue = cardValues[currentCard.value]
-    const nextValue = cardValues[nextCardFromDeck.value]
-    
-    let correct = false
-    if (guess === 'higher' && nextValue > currentValue) {
-      correct = true
-    } else if (guess === 'lower' && nextValue < currentValue) {
-      correct = true
-    } else if (guess === 'equal' && nextValue === currentValue) {
-      correct = true
+
+    if (isOnline) {
+      void pushState({
+        isFlipping: true,
+        lastGuess: guess,
+        nextCard: nextCardFromDeck as HiLoSyncedState['nextCard'],
+        deck: remainingDeck as HiLoSyncedState['deck'],
+      })
     }
 
-    // Vérifier si c'est une égalité que personne n'a choisie (pour le mode traversée)
-    const unguessedEqual = nextValue === currentValue && guess !== 'equal';
-    setIsUnguessedEqual(unguessedEqual);
+    const currentValue = cardValues[currentCard.value]
+    const nextValue = cardValues[nextCardFromDeck.value]
 
-    // Vérifier si on a plus de 4 cartes identiques
-    const cardKey = `${nextCardFromDeck.value}-${nextCardFromDeck.suit}`
-    const updatedSameCardCount = { ...sameCardCount }
-    updatedSameCardCount[cardKey] = (updatedSameCardCount[cardKey] || 0) + 1
-    setSameCardCount(updatedSameCardCount)
+    let correct = false
+    if (guess === 'higher' && nextValue > currentValue) correct = true
+    else if (guess === 'lower' && nextValue < currentValue) correct = true
+    else if (guess === 'equal' && nextValue === currentValue) correct = true
 
-    // Attendre que l'animation soit terminée avant de montrer le résultat
+    const unguessedEqual = nextValue === currentValue && guess !== 'equal'
+
     setTimeout(() => {
+      const mode = effectiveGameMode
+      const playerIdx = cur.currentPlayerIndex
+      const counter = cur.drinkCounter
+      const traverseePlayers = [...cur.activePlayers]
+      const guessesInRow = cur.correctGuessesInRow
+      const target = cur.targetGuesses
+      let newResults = { ...cur.gameResults }
+      let newCounter = counter
+      let newGuessesInRow = guessesInRow
+      let newActivePlayers = traverseePlayers
+      let newActiveIds = traverseePlayers.map(p => p.id)
+      let ended = false
+
+      if (!isOnline) {
+        const cardKey = `${nextCardFromDeck.value}-${nextCardFromDeck.suit}`
+        const updatedSameCardCount = { ...cur.sameCardCount }
+        updatedSameCardCount[cardKey] = (updatedSameCardCount[cardKey] || 0) + 1
+        setSameCardCount(updatedSameCardCount)
+
+        if (updatedSameCardCount[cardKey] > 4) {
+          const currentPlayer = mode === 'traversee' ? traverseePlayers[playerIdx] : players[playerIdx]
+          if (currentPlayer) {
+            newResults = {
+              ...newResults,
+              [currentPlayer.id]: (newResults[currentPlayer.id] || 0) + counter,
+            }
+            setGameResults(newResults)
+          }
+          setIsCorrect(correct)
+          setShowResult(true)
+          setIsFlipping(false)
+          endGame(true)
+          setShowIncorrectDialog(true)
+          return
+        }
+      }
+
+      setIsUnguessedEqual(unguessedEqual)
       setIsCorrect(correct)
       setShowResult(true)
       setIsFlipping(false)
 
-      // Vérifier si on a plus de 4 cartes identiques pour terminer le jeu
-      if (updatedSameCardCount[cardKey] > 4) {
-        // Le joueur actuel a perdu
-        const currentPlayer = getCurrentPlayer()
-        if (currentPlayer) {
-          setGameResults(prev => ({
-            ...prev,
-            [currentPlayer.id]: (prev[currentPlayer.id] || 0) + drinkCounter
-          }))
+      if (mode === 'standard') {
+        if (correct) {
+          newCounter = guess === 'equal' ? counter + 3 : counter + 1
+          setDrinkCounter(newCounter)
+        } else {
+          const currentPlayer = players[playerIdx]
+          newResults = {
+            ...newResults,
+            [currentPlayer.id]: (newResults[currentPlayer.id] || 0) + counter,
+          }
+          setGameResults(newResults)
+          setShowIncorrectDialog(true)
         }
-        
-        // Terminer la partie car on a atteint 5 cartes identiques
-        endGame(true)
-        setShowIncorrectDialog(true)
-        return
+      } else if (mode === 'traversee') {
+        if (correct) {
+          newGuessesInRow = guessesInRow + 1
+          newCounter = guess === 'equal' ? counter + 3 : counter + 1
+          setCorrectGuessesInRow(newGuessesInRow)
+          setDrinkCounter(newCounter)
+
+          if (guess === 'equal') {
+            newActivePlayers = traverseePlayers.filter((_, index) => index !== playerIdx)
+            newActiveIds = newActivePlayers.map(p => p.id)
+            setActivePlayers(newActivePlayers)
+            if (newActivePlayers.length === 0) ended = true
+          }
+          if (newGuessesInRow >= target) ended = true
+        } else if (unguessedEqual) {
+          traverseePlayers.forEach(player => {
+            newResults = {
+              ...newResults,
+              [player.id]: (newResults[player.id] || 0) + 1,
+            }
+          })
+          setGameResults(newResults)
+          setShowIncorrectDialog(true)
+        } else {
+          traverseePlayers.forEach(player => {
+            newResults = {
+              ...newResults,
+              [player.id]: (newResults[player.id] || 0) + counter,
+            }
+          })
+          setGameResults(newResults)
+          newGuessesInRow = 0
+          setCorrectGuessesInRow(0)
+          setShowIncorrectDialog(true)
+        }
       }
 
-      if (gameMode === 'standard') {
-        // Mode standard - Comportement original
-        if (correct) {
-          // Augmenter le compteur de gorgées (bonus pour égalité correcte)
-          if (guess === 'equal') {
-            // Bonus pour avoir deviné l'égalité (plus difficile)
-            setDrinkCounter(prev => prev + 3)
-          } else {
-            setDrinkCounter(prev => prev + 1)
-          }
-        } else {
-          // Le joueur doit boire le cumul des gorgées
-          const currentPlayer = players[currentPlayerIndex]
-          setGameResults(prev => ({
-            ...prev,
-            [currentPlayer.id]: (prev[currentPlayer.id] || 0) + drinkCounter
-          }))
-          // Afficher la fenêtre de mauvais choix sans réinitialiser le compteur
-          setShowIncorrectDialog(true)
-          
-          // On ne réinitialise plus le compteur ici, mais dans closeIncorrectDialog
-        }
-      } else if (gameMode === 'traversee') {
-        // Mode traversée
-        if (correct) {
-          // Augmenter le compteur de bonnes réponses consécutives
-          setCorrectGuessesInRow(prev => prev + 1)
-          
-          // Augmenter le compteur de gorgées comme dans le mode standard
-          if (guess === 'equal') {
-            // Bonus pour avoir deviné l'égalité (plus difficile)
-            setDrinkCounter(prev => prev + 3)
-          } else {
-            setDrinkCounter(prev => prev + 1)
-          }
-          
-          // Si le joueur a deviné "égalité" correctement, il sort de la partie
-          if (guess === 'equal') {
-            const updatedPlayers = activePlayers.filter((_, index) => index !== currentPlayerIndex);
-            setActivePlayers(updatedPlayers);
-            
-            // Si plus aucun joueur, fin de la partie
-            if (updatedPlayers.length === 0) {
-              endGame();
-              return;
-            }
-          }
-          
-          // Si on a atteint l'objectif, fin de la partie
-          if (correctGuessesInRow + 1 >= targetGuesses) {
-            endGame();
-          }
-        } else if (isUnguessedEqual) {
-          // Cas spécial: égalité que personne n'a choisie
-          // Tous les joueurs boivent 1 gorgée, mais le cumul reste inchangé
-          activePlayers.forEach(player => {
-            setGameResults(prev => ({
-              ...prev,
-              [player.id]: (prev[player.id] || 0) + 1
-            }));
-          });
-          
-          // Afficher la fenêtre de mauvais choix spéciale pour égalité
-          setShowIncorrectDialog(true);
-          
-          // On ne modifie pas le compteur de gorgées ici
-        } else {
-          // Mauvaise réponse: tous les joueurs boivent
-          activePlayers.forEach(player => {
-            setGameResults(prev => ({
-              ...prev,
-              [player.id]: (prev[player.id] || 0) + drinkCounter
-            }));
-          });
-          
-          // Réinitialiser le compteur de bonnes réponses
-          setCorrectGuessesInRow(0);
-          
-          // Afficher la fenêtre de mauvais choix
-          setShowIncorrectDialog(true);
-          
-          // On ne réinitialise plus le compteur ici, mais dans closeIncorrectDialog
-        }
+      if (isOnline) {
+        void pushState({
+          deck: remainingDeck as HiLoSyncedState['deck'],
+          nextCard: nextCardFromDeck as HiLoSyncedState['nextCard'],
+          lastGuess: guess,
+          isCorrect: correct,
+          isFlipping: false,
+          showResult: true,
+          isUnguessedEqual: unguessedEqual,
+          drinkCounter: newCounter,
+          gameResults: newResults,
+          showIncorrectDialog: !correct,
+          correctGuessesInRow: newGuessesInRow,
+          activePlayerIds: newActiveIds,
+        })
       }
-    }, 600) // Durée de l'animation
+
+      if (ended) endGame()
+    }, 600)
   }
 
   // Fermer la fenêtre de mauvais choix
   const closeIncorrectDialog = () => {
+    if (isOnline && !isMyTurn) return
     setShowIncorrectDialog(false)
-    
-    // Réinitialiser le compteur à 1 seulement après avoir fermé la boîte de dialogue
-    // Si c'est une égalité non devinée en mode traversée, on ne réinitialise pas le compteur
-    if (!isCorrect && !(isUnguessedEqual && gameMode === 'traversee')) {
-      if (gameMode === 'standard') {
-        setDrinkCounter(1)
-      } else if (gameMode === 'traversee') {
-        setDrinkCounter(1)
-      }
+
+    const shouldResetCounter =
+      !isCorrect && !(isUnguessedEqual && effectiveGameMode === 'traversee')
+
+    if (shouldResetCounter) {
+      setDrinkCounter(1)
+    }
+
+    if (isOnline) {
+      void pushState({
+        showIncorrectDialog: false,
+        drinkCounter: shouldResetCounter ? 1 : stateRef.current.drinkCounter,
+      })
     }
   }
 
   // Passer au tour suivant
   const nextTurn = () => {
     if (gameOver) return
+    if (isOnline && !isMyTurn) return
 
-    if (gameMode === 'standard') {
-      // Mode standard - comportement original
-      // Passer au joueur suivant, que la prédiction soit correcte ou non
-      const nextPlayerIndex = (currentPlayerIndex + 1) % players.length
+    const cur = stateRef.current
+    let nextPlayerIndex = cur.currentPlayerIndex
+    let newCounter = cur.drinkCounter
+
+    if (effectiveGameMode === 'standard') {
+      nextPlayerIndex = (cur.currentPlayerIndex + 1) % players.length
       setCurrentPlayerIndex(nextPlayerIndex)
-      
-      // Si la prédiction était incorrecte et que la boîte de dialogue a été fermée,
-      // réinitialiser le compteur à 1
-      if (!isCorrect && !showIncorrectDialog) {
+      if (!cur.isCorrect && !cur.showIncorrectDialog) {
+        newCounter = 1
         setDrinkCounter(1)
       }
-    } else if (gameMode === 'traversee') {
-      if (activePlayers.length === 0) {
-        endGame();
-        return;
+    } else if (effectiveGameMode === 'traversee') {
+      if (cur.activePlayers.length === 0) {
+        endGame()
+        return
       }
-      
-      if (isCorrect) {
-        // Passer au joueur suivant en sautant les joueurs inactifs
-        const nextIndex = (currentPlayerIndex + 1) % activePlayers.length;
-        setCurrentPlayerIndex(nextIndex);
-        
-        // On garde le nombre de gorgées (il augmente progressivement)
-      } else {
-        // En cas d'erreur, on repart à 1 avec le joueur suivant
-        // Le joueur suivant celui qui s'est trompé
-        const nextIndex = (currentPlayerIndex + 1) % activePlayers.length;
-        setCurrentPlayerIndex(nextIndex);
-        
-        // On ne réinitialise plus le compteur ici, mais dans closeIncorrectDialog
-        // Si c'est une égalité non devinée, on ne réinitialise pas le compteur
-        if (!showIncorrectDialog && !isUnguessedEqual) {
-          setDrinkCounter(1);
-        }
+      nextPlayerIndex = (cur.currentPlayerIndex + 1) % cur.activePlayers.length
+      setCurrentPlayerIndex(nextPlayerIndex)
+      if (!cur.isCorrect && !cur.showIncorrectDialog && !cur.isUnguessedEqual) {
+        newCounter = 1
+        setDrinkCounter(1)
       }
     }
 
-    // Préparer pour le prochain tour
-    setCurrentCard(nextCard)
+    const newCurrentCard = cur.nextCard
+    setCurrentCard(newCurrentCard)
     setNextCard(null)
     setShowResult(false)
     setLastGuess(null)
     setIsCorrect(null)
     setIsUnguessedEqual(false)
-    
-    // Générer de nouveaux indices aléatoires pour les messages
+    setIsProcessing(false)
+
     if (isMounted) {
-      setComplimentIndex(Math.floor(Math.random() * simCompliments.length));
-      setDebMessageIndex(Math.floor(Math.random() * debMessages.length));
+      setComplimentIndex(Math.floor(Math.random() * simCompliments.length))
+      setDebMessageIndex(Math.floor(Math.random() * debMessages.length))
+    }
+
+    if (isOnline) {
+      void pushState({
+        currentPlayer: nextPlayerIndex,
+        currentCard: newCurrentCard as HiLoSyncedState['currentCard'],
+        nextCard: null,
+        showResult: false,
+        lastGuess: null,
+        isCorrect: null,
+        isUnguessedEqual: false,
+        isProcessing: false,
+        drinkCounter: newCounter,
+      })
     }
   }
 
@@ -477,81 +572,88 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     setGameOver(true)
     setShowGameOver(true)
 
-    // Déterminer le gagnant selon le mode de jeu
+    const cur = stateRef.current
     let winnerId = null;
-    
-    if (gameMode === 'standard') {
+
+    if (effectiveGameMode === 'standard') {
       // Mode standard: le gagnant est celui qui a bu le moins de gorgées
       let minDrinks = Infinity;
       
       // Trouver le joueur avec le moins de gorgées bues
-      for (const playerId in gameResults) {
-        if (gameResults[playerId] < minDrinks) {
-          minDrinks = gameResults[playerId];
+      for (const playerId in cur.gameResults) {
+        if (cur.gameResults[playerId] < minDrinks) {
+          minDrinks = cur.gameResults[playerId];
           winnerId = playerId;
         }
       }
-      
-      // Si tous les joueurs ont bu 0 gorgées (cas rare), le dernier joueur est le gagnant
+
       if (winnerId === null && players.length > 0) {
         winnerId = players[players.length - 1].id;
       }
-    } else if (gameMode === 'traversee') {
-      // Mode Traversée: Si on arrive ici, c'est soit que l'objectif est atteint
-      // soit que tous les joueurs sont sortis (par égalité correcte)
-      
-      // Si on a atteint l'objectif, le dernier joueur à avoir joué est le gagnant
-      if (correctGuessesInRow >= targetGuesses) {
-        // Le joueur actuel est le gagnant car c'est lui qui a complété l'objectif
-        winnerId = activePlayers[currentPlayerIndex]?.id || null;
+    } else if (effectiveGameMode === 'traversee') {
+      if (cur.correctGuessesInRow >= cur.targetGuesses) {
+        winnerId = cur.activePlayers[cur.currentPlayerIndex]?.id || null;
       } else {
-        // Sinon, le gagnant est celui qui a bu le moins (comme dans le mode standard)
         let minDrinks = Infinity;
-        
-        for (const playerId in gameResults) {
-          if (gameResults[playerId] < minDrinks) {
-            minDrinks = gameResults[playerId];
+
+        for (const playerId in cur.gameResults) {
+          if (cur.gameResults[playerId] < minDrinks) {
+            minDrinks = cur.gameResults[playerId];
             winnerId = playerId;
           }
         }
       }
     }
 
-    // Mettre à jour les statistiques des joueurs
-    players.forEach(player => {
-      const drinks = gameResults[player.id] || 0
-      const isWinner = player.id === winnerId;
-      
-      updatePlayerStats(player.id, 'hi-lo', {
-        gamesPlayed: 1,
-        wins: isWinner ? 1 : 0,
-        totalDrinks: drinks
+    if (isOnline) {
+      void pushState({
+        gameOver: true,
+        showGameOver: true,
+        gameResults: cur.gameResults,
       })
-    })
+    } else {
+      players.forEach(player => {
+        const drinks = cur.gameResults[player.id] || 0
+        const isWinner = player.id === winnerId
+
+        updatePlayerStats(player.id, 'hi-lo', {
+          gamesPlayed: 1,
+          wins: isWinner ? 1 : 0,
+          totalDrinks: drinks,
+        })
+      })
+    }
+
+    void due5Cards // conservé pour compatibilité locale (5 cartes identiques)
   }
 
   // Redémarrer le jeu
   const restartGame = () => {
-    // Fermer la fenêtre de fin de partie
+    if (isOnline) return
     setShowGameOver(false)
-    // Réinitialiser l'état du jeu
     setSameCardCount({})
     initializeGame()
   }
 
   // Quitter le jeu
   const quitGame = () => {
+    if (isOnline) {
+      void onlineSync?.leaveToMenu?.()
+      return
+    }
     onGameEnd()
   }
 
   // Obtenir le joueur actuel en mode Traversée
   const getCurrentPlayer = (): Player | undefined => {
-    if (gameMode === 'traversee') {
+    if (effectiveGameMode === 'traversee') {
       return activePlayers[currentPlayerIndex];
     } else {
       return players[currentPlayerIndex];
     }
   }
+
+  const canAct = !isOnline || isMyTurn
 
   // Fonction pour obtenir un message personnalisé pour le joueur actuel
   const getPersonalizedMessage = (player: Player): string => {
@@ -582,9 +684,12 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     }
   }
 
-  // Si le composant n'est pas encore monté (côté client), afficher un état de chargement ou rien
   if (!isMounted) {
     return <div className="p-6 text-center">Chargement du jeu...</div>;
+  }
+
+  if (isOnline && !onlineSync?.remoteState?.gameStarted) {
+    return <div className="p-6 text-center">Chargement de la partie…</div>
   }
 
   // Obtenir le joueur actuel
@@ -599,30 +704,36 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
         <span className="text-sm font-semibold">Gorgées : {drinkCounter}</span>
         <span className="text-[10px] text-gray-400">{cardsPlayed}/52</span>
       </div>
-      <Button variant="outline" size="icon" onClick={restartGame} aria-label="Recommencer">
-        <RotateCcw className="h-4 w-4" />
-      </Button>
+      {!isOnline && (
+        <Button variant="outline" size="icon" onClick={restartGame} aria-label="Recommencer">
+          <RotateCcw className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   )
 
   const actionBar = !gameOver ? (
-    !showResult ? (
+    isOnline && !isMyTurn ? (
+      <p className="w-full text-center text-sm text-muted-foreground">
+        Au tour de <span className="font-semibold">{onlineSync?.activePlayerName ?? '…'}</span>
+      </p>
+    ) : !showResult ? (
       <div className="flex w-full justify-center gap-2">
-        <Button onClick={() => handleGuess('higher')} variant="outline" className="flex-1 max-w-[10rem]" disabled={isFlipping || isProcessing}>
+        <Button onClick={() => handleGuess('higher')} variant="outline" className="flex-1 max-w-[10rem]" disabled={!canAct || isFlipping || isProcessing}>
           <ArrowUp className="mr-1 h-4 w-4" />
           Plus haut
         </Button>
-        <Button onClick={() => handleGuess('equal')} variant="outline" className="flex-1 max-w-[8rem]" disabled={isFlipping || isProcessing}>
+        <Button onClick={() => handleGuess('equal')} variant="outline" className="flex-1 max-w-[8rem]" disabled={!canAct || isFlipping || isProcessing}>
           <span className="mr-1">=</span>
           Égalité
         </Button>
-        <Button onClick={() => handleGuess('lower')} variant="outline" className="flex-1 max-w-[10rem]" disabled={isFlipping || isProcessing}>
+        <Button onClick={() => handleGuess('lower')} variant="outline" className="flex-1 max-w-[10rem]" disabled={!canAct || isFlipping || isProcessing}>
           <ArrowDown className="mr-1 h-4 w-4" />
           Plus bas
         </Button>
       </div>
     ) : !isCorrect ? (
-      <Button onClick={nextTurn} className="mx-auto w-full max-w-xs">Suivant</Button>
+      <Button onClick={nextTurn} className="mx-auto w-full max-w-xs" disabled={!canAct}>Suivant</Button>
     ) : (
       <div className="w-full text-center font-semibold text-green-500">Correct ! Prochain joueur…</div>
     )
@@ -631,14 +742,14 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   return (
     <>
     <GameShell title="Hi/Lo" onBack={quitGame} headerRight={headerRight} actionBar={actionBar} maxWidth={760}>
-        {gameMode === 'traversee' && (
+        {effectiveGameMode === 'traversee' && (
           <div className="mb-2 text-center text-sm">
             <span className="font-medium">Mode Traversée</span>
             <span className="ml-2">Objectif : {correctGuessesInRow}/{targetGuesses} bonnes réponses</span>
           </div>
         )}
 
-        {gameMode === 'traversee' && (
+        {effectiveGameMode === 'traversee' && (
           <div className="mb-4 flex gap-2 flex-wrap justify-center">
             {players.map(player => {
               const isActive = activePlayers.some(p => p.id === player.id);
@@ -760,7 +871,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
-              {gameMode === 'traversee' && correctGuessesInRow >= targetGuesses 
+              {effectiveGameMode === 'traversee' && correctGuessesInRow >= targetGuesses 
                 ? "Félicitations !" 
                 : sameCardCount[`${nextCard?.value}-${nextCard?.suit}`] > 4
                   ? "5 cartes identiques ! Fin de la partie"
@@ -769,7 +880,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
           </DialogHeader>
           
           <div className="space-y-4">
-            {gameMode === 'traversee' && correctGuessesInRow >= targetGuesses && (
+            {effectiveGameMode === 'traversee' && correctGuessesInRow >= targetGuesses && (
               <p className="font-medium text-green-600">
                 Vous avez atteint l&apos;objectif de {targetGuesses} bonnes réponses consécutives !
               </p>
@@ -824,12 +935,12 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
         <DialogContent className={`bg-red-50 border-red-200 ${isMobile ? 'w-[95%] max-w-lg p-4' : ''}`}>
           <DialogHeader>
             <DialogTitle className="text-red-600">
-              {isUnguessedEqual && gameMode === 'traversee' ? "Égalité non devinée !" : "Mauvaise réponse !"}
+              {isUnguessedEqual && effectiveGameMode === 'traversee' ? "Égalité non devinée !" : "Mauvaise réponse !"}
             </DialogTitle>
           </DialogHeader>
           
           <div className="py-4">
-            {gameMode === 'standard' ? (
+            {effectiveGameMode === 'standard' ? (
               <p className="text-center text-lg font-semibold text-black">
                 {currentPlayer ? getPersonalizedMessage(currentPlayer) : "Joueur doit boire des gorgées !"}
               </p>
@@ -854,7 +965,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
           </div>
           
           <DialogFooter>
-            <Button onClick={closeIncorrectDialog} className={isMobile ? 'w-full' : ''}>
+            <Button onClick={closeIncorrectDialog} className={isMobile ? 'w-full' : ''} disabled={!canAct}>
               Compris !
             </Button>
           </DialogFooter>

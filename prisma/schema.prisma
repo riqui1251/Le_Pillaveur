@@ -8,15 +8,61 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  stats         Stats[]
-  achievements  Achievement[]
+  id               String    @id @default(cuid())
+  email            String?   @unique
+  passwordHash     String    @default("")
+  displayName      String    @default("Joueur")
+  playMode         String    @default("local") // "local" | "online"
+  localPlayersJson String?   // roster JSON synchronisé (mode local)
+  name             String?
+  emailVerified    DateTime?
+  image            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  stats            Stats[]
+  achievements     Achievement[]
+  sessions         Session[]
+  hostedRooms      OnlineRoom[]       @relation("HostedRooms")
+  roomMemberships  OnlineRoomMember[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model OnlineRoom {
+  id                    String   @id @default(cuid())
+  code                  String   @unique
+  hostUserId            String
+  host                  User     @relation("HostedRooms", fields: [hostUserId], references: [id], onDelete: Cascade)
+  status                String   @default("waiting") // waiting | playing
+  gameId                String?
+  selectedMemberIdsJson String?
+  settingsJson          String?  // ex: { difficulty: "normal" } — modifiable par l'hôte
+  gameStateJson         String?  // état synchronisé de la partie en cours
+  stateVersion          Int      @default(0)
+  currentTurnUserId     String?  // userId dont c'est le tour
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  members               OnlineRoomMember[]
+}
+
+model OnlineRoomMember {
+  id        String     @id @default(cuid())
+  roomId    String
+  room      OnlineRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isReady   Boolean    @default(false)
+  joinedAt  DateTime   @default(now())
+  lastSeenAt DateTime  @default(now())
+
+  @@unique([roomId, userId])
 }
 
 model Stats {
@@ -26,7 +72,7 @@ model Stats {
   gameType  String
   score     Int
   playedAt  DateTime @default(now())
-  metadata  String?  // SQLite ne supporte pas JSON, nous utilisons une chaîne
+  metadata  String?
 }
 
 model Achievement {
@@ -35,4 +81,4 @@ model Achievement {
   user        User     @relation(fields: [userId], references: [id])
   type        String
   unlockedAt  DateTime @default(now())
-} 
+}

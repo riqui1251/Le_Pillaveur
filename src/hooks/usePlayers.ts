@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Player, 
   PlayerStats, 
   PlayerPreferences,
-  PLAYER_ICONS,
   getStoredPlayers, 
   savePlayers, 
   addPlayer as addPlayerToStorage, 
@@ -17,21 +16,68 @@ import {
   getMostActivePlayersByGame,
   getPlayerStatsByGame as getPlayerStatsByGameFromStorage
 } from '../lib/players';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { useOnlineRoom } from '@/hooks/useOnlineRoom';
+import { membersToPlayers } from '@/lib/online-players';
 
 export function usePlayers() {
+  const { user } = useAuth();
+  const { room } = useOnlineRoom();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [mostActivePlayers, setMostActivePlayers] = useState<Player[]>([]);
+  const cloudSyncedRef = useRef(false);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Charger les joueurs au montage du composant
+  // Charger les joueurs (local + sync cloud si connecté en mode local)
   useEffect(() => {
-    const storedPlayers = getStoredPlayers();
-    setPlayers(storedPlayers);
-    setTopPlayers(getTopPlayers());
-    setMostActivePlayers(getMostActivePlayers());
-    setLoading(false);
-  }, []);
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      const local = getStoredPlayers();
+
+      if (user && user.playMode === 'local') {
+        try {
+          const res = await fetch('/api/players/local', { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            const cloud: Player[] = Array.isArray(data.players) ? data.players : [];
+            const useCloud = cloud.length > 0 || local.length === 0;
+            if (!cancelled && useCloud) {
+              savePlayers(cloud);
+              setPlayers(cloud);
+              cloudSyncedRef.current = true;
+              setTopPlayers(getTopPlayers());
+              setMostActivePlayers(getMostActivePlayers());
+              setLoading(false);
+              return;
+            }
+          }
+        } catch {}
+      }
+
+      if (!cancelled) {
+        setPlayers(local);
+        setTopPlayers(getTopPlayers());
+        setMostActivePlayers(getMostActivePlayers());
+        setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true };
+  }, [user?.id, user?.playMode]);
+
+  // Mode en ligne : les joueurs actifs sont les membres de la salle
+  useEffect(() => {
+    if (user?.playMode !== 'online' || !room) return;
+    const onlinePlayers = membersToPlayers(room.members);
+    setPlayers(onlinePlayers);
+    setTopPlayers(onlinePlayers.slice(0, 5));
+    setMostActivePlayers(onlinePlayers);
+  }, [user?.playMode, room]);
 
   // Ajouter un nouveau joueur
   const addPlayer = useCallback((name: string) => {
@@ -102,12 +148,23 @@ export function usePlayers() {
     return getPlayerStatsByGameFromStorage(playerId, gameId);
   }, []);
 
-  // Sauvegarder les joueurs quand ils changent
+  // Sauvegarder localement + synchroniser le cloud (mode local + compte)
   useEffect(() => {
-    if (!loading) {
-      savePlayers(players);
-    }
-  }, [players, loading]);
+    if (loading) return;
+    savePlayers(players);
+
+    if (!user || user.playMode !== 'local') return;
+
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => {
+      fetch('/api/players/local', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ players }),
+      }).catch(() => {});
+    }, 800);
+  }, [players, loading, user?.id, user?.playMode]);
 
   return {
     players,

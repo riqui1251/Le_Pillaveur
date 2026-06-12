@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
 import { getColorFromClass } from '@/lib/playerUtils'
@@ -9,6 +9,14 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import Game, { DifficultyLevel } from './components/game'
+import { useIsOnlineMode } from '@/components/online/OnlineGameGate'
+import { OnlineLobbyPanel } from '@/components/online/OnlineLobbyPanel'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { useOnlineRoom } from '@/hooks/useOnlineRoom'
+import { useOnlineGameSync } from '@/hooks/useOnlineGameSync'
+import { membersToPlayers } from '@/lib/online-players'
+import type { PlinkoSyncedState } from '@/lib/online-game-state'
+import type { Player } from '@/lib/players'
 
 const DIFFICULTIES: {
   id: DifficultyLevel
@@ -51,28 +59,72 @@ const DIFFICULTIES: {
 export default function PlinkoPage() {
   const { players } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
+  const isOnline = useIsOnlineMode()
+  const { user } = useAuth()
+  const { room, updateSettings } = useOnlineRoom()
   const [gameStarted, setGameStarted] = useState(false)
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('medium')
   const [cumulative, setCumulative] = useState(false)
   const [gameKey, setGameKey] = useState(0)
 
+  const {
+    isPlayingOnline,
+    onlinePlayers,
+    onlineSync,
+    handleLeaveToMenu,
+    inRoom: inPlinkoRoom,
+    isHost,
+  } = useOnlineGameSync<PlinkoSyncedState>({ gameId: 'plinko' })
+
   const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
-  const canStart = selectedPlayers.length >= 2
+  const activePlayers: Player[] = isOnline ? onlinePlayers : selectedPlayers
+  const canStart = activePlayers.length >= 2
+  const canEditDifficulty = !isOnline || isHost
+
+  useEffect(() => {
+    if (!isOnline || !inPlinkoRoom || isHost) return
+    const d = room?.settings?.plinkoDifficulty as DifficultyLevel | undefined
+    if (d && d !== difficulty) setDifficulty(d)
+  }, [isOnline, inPlinkoRoom, isHost, room?.settings?.plinkoDifficulty, difficulty])
+
+  useEffect(() => {
+    const d = onlineSync?.remoteState?.difficulty
+    if (isPlayingOnline && d && d !== difficulty) setDifficulty(d)
+  }, [isPlayingOnline, onlineSync?.remoteState?.difficulty, difficulty])
+
+  useEffect(() => {
+    if (isPlayingOnline && !gameStarted) setGameStarted(true)
+    if (!isPlayingOnline && gameStarted && isOnline) setGameStarted(false)
+  }, [isPlayingOnline, gameStarted, isOnline])
+
+  const handleDifficultyChange = useCallback(
+    (d: DifficultyLevel) => {
+      setDifficulty(d)
+      if (isOnline && isHost && room?.status === 'waiting') {
+        updateSettings({ plinkoDifficulty: d })
+      }
+    },
+    [isOnline, isHost, room?.status, updateSettings]
+  )
 
   if (gameStarted) {
     return (
       <Game
-        key={gameKey}
-        players={selectedPlayers}
-        onGameEnd={() => { setGameStarted(false); setGameKey(k => k + 1) }}
+        key={onlineSync ? onlineSync.roomId : gameKey}
+        players={activePlayers}
+        onGameEnd={() => {
+          if (isOnline) void handleLeaveToMenu()
+          else { setGameStarted(false); setGameKey(k => k + 1) }
+        }}
         onRestartGame={() => setGameKey(k => k + 1)}
         difficulty={difficulty}
-        isCumulativeMode={cumulative}
+        isCumulativeMode={isOnline ? (onlineSync?.remoteState?.isCumulativeMode ?? false) : cumulative}
+        onlineSync={onlineSync}
       />
     )
   }
 
-  if (!canStart) {
+  if (!isOnline && !canStart) {
     return (
       <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#07060b] px-4 text-white">
         <div className="pointer-events-none absolute inset-0">
@@ -104,15 +156,12 @@ export default function PlinkoPage() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#07060b] px-4 py-10 text-white">
-      {/* Blobs décoratifs */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-violet-600/20 blur-[120px]" />
         <div className="absolute bottom-10 right-1/4 h-80 w-80 rounded-full bg-purple-700/25 blur-[100px]" />
       </div>
 
       <div className="relative w-full max-w-sm space-y-6">
-
-        {/* En-tête */}
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-violet-600 to-purple-700 text-3xl shadow-xl">
             🎯
@@ -123,41 +172,48 @@ export default function PlinkoPage() {
           </div>
         </div>
 
-        {/* Joueurs */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/35">
-            Joueurs — {selectedPlayers.length}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {selectedPlayers.map(p => {
-              const bg = getColorFromClass(p.preferences.color)
-              return (
-                <div key={p.id} className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5">
-                  <Avatar className="h-6 w-6 border border-white/20" style={{ backgroundColor: bg }}>
-                    <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundColor: bg }}>
-                      {p.preferences.icon || p.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs font-medium text-white/80">{p.name}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        {isOnline && <OnlineLobbyPanel gameId="plinko" />}
 
-        {/* Difficulté */}
+        {!isOnline && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/35">
+              Joueurs — {selectedPlayers.length}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {selectedPlayers.map(p => {
+                const bg = getColorFromClass(p.preferences.color)
+                return (
+                  <div key={p.id} className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 py-1.5">
+                    <Avatar className="h-6 w-6 border border-white/20" style={{ backgroundColor: bg }}>
+                      <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundColor: bg }}>
+                        {p.preferences.icon || p.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs font-medium text-white/80">{p.name}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-white/35">Difficulté</p>
+          {isOnline && !canEditDifficulty && (
+            <p className="text-[11px] text-white/40">Choix du créateur du lobby</p>
+          )}
           <div className="grid grid-cols-3 gap-2">
             {DIFFICULTIES.map(d => {
               const active = difficulty === d.id
               return (
                 <button
                   key={d.id}
-                  onClick={() => setDifficulty(d.id)}
+                  onClick={() => canEditDifficulty && handleDifficultyChange(d.id)}
+                  disabled={!canEditDifficulty}
                   className={cn(
                     'relative overflow-hidden rounded-2xl border p-3 text-left transition-all duration-150 active:scale-95',
                     active ? 'border-white/25' : 'border-white/10 hover:border-white/20',
+                    !canEditDifficulty && 'cursor-default opacity-80',
                   )}
                 >
                   <div
@@ -178,37 +234,46 @@ export default function PlinkoPage() {
           </div>
         </div>
 
-        {/* Mode cumulatif */}
-        <button
-          onClick={() => setCumulative(v => !v)}
-          className={cn(
-            'relative w-full overflow-hidden rounded-2xl border p-4 text-left transition-all duration-150 active:scale-[0.99]',
-            cumulative ? 'border-violet-500/40' : 'border-white/10 hover:border-white/20',
-          )}
-        >
-          <div className={cn('absolute inset-0 transition-opacity', cumulative ? 'opacity-20' : 'opacity-0')}
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }} />
-          <div className="relative flex items-start gap-3">
-            <div className={cn(
-              'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all',
-              cumulative ? 'border-violet-400 bg-violet-500' : 'border-white/20 bg-white/[0.05]',
-            )}>
-              {cumulative && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
-            </div>
-            <div>
-              <p className={cn('text-sm font-semibold', cumulative ? 'text-white' : 'text-white/70')}>Mode Cumulatif</p>
-              <p className="mt-0.5 text-xs text-white/40">Les effets multiplicateurs et +/- s&apos;accumulent sur le tour</p>
-            </div>
-          </div>
-        </button>
+        {!isOnline && (
+          <>
+            <button
+              onClick={() => setCumulative(v => !v)}
+              className={cn(
+                'relative w-full overflow-hidden rounded-2xl border p-4 text-left transition-all duration-150 active:scale-[0.99]',
+                cumulative ? 'border-violet-500/40' : 'border-white/10 hover:border-white/20',
+              )}
+            >
+              <div className={cn('absolute inset-0 transition-opacity', cumulative ? 'opacity-20' : 'opacity-0')}
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }} />
+              <div className="relative flex items-start gap-3">
+                <div className={cn(
+                  'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all',
+                  cumulative ? 'border-violet-400 bg-violet-500' : 'border-white/20 bg-white/[0.05]',
+                )}>
+                  {cumulative && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
+                </div>
+                <div>
+                  <p className={cn('text-sm font-semibold', cumulative ? 'text-white' : 'text-white/70')}>Mode Cumulatif</p>
+                  <p className="mt-0.5 text-xs text-white/40">Les effets multiplicateurs et +/- s&apos;accumulent sur le tour</p>
+                </div>
+              </div>
+            </button>
 
-        {/* Bouton lancer */}
-        <button
-          onClick={() => setGameStarted(true)}
-          className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:from-violet-500 hover:to-purple-600 active:scale-[0.98]"
-        >
-          Commencer la partie
-        </button>
+            <button
+              onClick={() => setGameStarted(true)}
+              disabled={!canStart}
+              className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:from-violet-500 hover:to-purple-600 active:scale-[0.98] disabled:opacity-40"
+            >
+              Commencer la partie
+            </button>
+          </>
+        )}
+
+        {isOnline && (
+          <p className="text-center text-sm text-white/40">
+            Rejoignez le lobby, déclarez-vous prêt, puis l&apos;hôte lance la partie.
+          </p>
+        )}
 
         <Link
           href="/jeux"

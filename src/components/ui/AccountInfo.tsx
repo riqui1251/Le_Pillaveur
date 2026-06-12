@@ -2,16 +2,13 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users } from 'lucide-react'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
+import { useAuth } from '@/hooks/useAuth'
 import { isSpecialPlayer, getSpecialEffectClass, getColorFromClass } from '@/lib/playerUtils'
 import { getSafeStorage } from '@/lib/storage'
 import { GAMES } from '@/lib/games'
 import { cn } from '@/lib/utils'
-
-interface AccountInfoProps {
-  onLogout: () => void
-}
 
 const GAME_NAMES: Record<string, string> = Object.fromEntries(
   GAMES.map((g) => [g.id, g.title])
@@ -26,7 +23,8 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   )
 }
 
-export function AccountInfo({ onLogout }: AccountInfoProps) {
+export function AccountInfo() {
+  const { user, logout } = useAuth()
   const { players, loading, removePlayer } = usePlayers()
   const [totalGames, setTotalGames] = useState(0)
   const [totalDrinks, setTotalDrinks] = useState(0)
@@ -61,10 +59,18 @@ export function AccountInfo({ onLogout }: AccountInfoProps) {
           <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/70">
             Le Pillaveur
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">Gestion du compte</h1>
+          <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">
+            {user?.displayName ?? 'Mon compte'}
+          </h1>
+          {user?.email && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-white/45">
+              <Mail className="h-3 w-3" />
+              {user.email}
+            </p>
+          )}
         </div>
         <button
-          onClick={onLogout}
+          onClick={() => logout()}
           className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
         >
           <LogOut className="h-4 w-4" />
@@ -179,7 +185,9 @@ export function AccountInfo({ onLogout }: AccountInfoProps) {
       {/* Infos stockage */}
       <section>
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3 text-sm text-white/40">
-          Les données sont stockées localement sur cet appareil. La synchronisation multi-appareils n'est pas encore disponible.
+          {user?.playMode === 'online'
+            ? 'Mode en ligne : vos parties se font via des salles partagées avec d\'autres comptes connectés.'
+            : 'Mode local : vos joueurs sont synchronisés sur votre compte et disponibles sur tous vos appareils connectés.'}
         </div>
       </section>
     </div>
