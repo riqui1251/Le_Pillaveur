@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
+import { sendVisitPing } from '@/lib/visit-ping-client'
 
 const PING_INTERVAL_MS = 60_000
 
@@ -10,7 +11,7 @@ export function VisitTracker() {
 
     const ping = () => {
       if (!active) return
-      fetch('/api/analytics/ping', { method: 'POST', credentials: 'include' }).catch(() => {})
+      sendVisitPing()
     }
 
     ping()

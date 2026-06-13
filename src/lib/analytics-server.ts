@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { PRESENCE_PING_SECONDS } from '@/lib/user-activity-server'
+import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
 import {
   buildGroupedVisitors,
   findSubjectKeysByIp,
@@ -32,13 +33,26 @@ function daysAgoParis(days: number): string {
 
 export async function recordVisitorPing(
   visitorId: string,
-  options?: { country?: string | null; userId?: string | null; ip?: string | null }
+  options?: {
+    country?: string | null
+    userId?: string | null
+    ip?: string | null
+    localPlayerNames?: string[]
+  }
 ): Promise<void> {
   const now = new Date()
   const date = todayParis()
   const country = options?.country ?? null
   const userId = options?.userId ?? null
   const ip = options?.ip ?? null
+  const localPlayerNames = options?.localPlayerNames
+  const localPlayersPatch =
+    localPlayerNames && localPlayerNames.length > 0
+      ? {
+          localPlayerCount: localPlayerNames.length,
+          localPlayerNames: JSON.stringify(localPlayerNames),
+        }
+      : {}
 
   await prisma.$transaction([
     prisma.sitePresence.upsert({
@@ -50,12 +64,14 @@ export async function recordVisitorPing(
         country,
         lastIp: ip,
         userId,
+        ...localPlayersPatch,
       },
       update: {
         lastSeen: now,
         ...(country ? { country } : {}),
         ...(ip ? { lastIp: ip } : {}),
         ...(userId ? { userId } : {}),
+        ...localPlayersPatch,
       },
     }),
     prisma.dailyVisitor.upsert({
@@ -188,6 +204,8 @@ export async function getVisitorStats() {
       country: true,
       lastIp: true,
       lastSeen: true,
+      localPlayerCount: true,
+      localPlayerNames: true,
     },
   })
 
@@ -205,11 +223,10 @@ export async function getVisitorStats() {
             email: true,
             accountCode: true,
             role: true,
+            localPlayersJson: true,
           },
         })
       : []
-
-  const userById = new Map(presenceUsers.map((u) => [u.id, u]))
 
   const visitorIpList = await buildGroupedVisitors(
     recentPresences.map((p) => ({
@@ -218,6 +235,8 @@ export async function getVisitorStats() {
       country: p.country,
       lastIp: p.lastIp,
       lastSeen: p.lastSeen,
+      localPlayerCount: p.localPlayerCount,
+      localPlayerNames: p.localPlayerNames,
     })),
     presenceUsers,
     onlineSince

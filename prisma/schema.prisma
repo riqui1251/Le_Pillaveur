@@ -55,12 +55,14 @@ model AccountBanEvent {
 }
 
 model SitePresence {
-  visitorId String   @id
-  userId    String?
-  country   String?
-  lastIp    String?
-  firstSeen DateTime @default(now())
-  lastSeen  DateTime @default(now())
+  visitorId        String   @id
+  userId           String?
+  country          String?
+  lastIp           String?
+  localPlayerCount Int      @default(0)
+  localPlayerNames String?
+  firstSeen        DateTime @default(now())
+  lastSeen         DateTime @default(now())
 
   @@index([lastSeen])
   @@index([userId])

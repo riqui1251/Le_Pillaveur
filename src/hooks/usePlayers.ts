@@ -18,6 +18,7 @@ import {
 } from '../lib/players';
 import { useAuth } from '@/hooks/useAuth';
 import { clearSelectedPlayerIds } from '@/lib/selectedPlayers';
+import { sendVisitPing } from '@/lib/visit-ping-client';
 
 type PlayersListener = () => void;
 const playersListeners = new Set<PlayersListener>();
@@ -47,6 +48,7 @@ export function usePlayers() {
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [mostActivePlayers, setMostActivePlayers] = useState<Player[]>([]);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cloudSyncedRef = useRef(false);
   const listenerRef = useRef<PlayersListener | null>(null);
 
@@ -179,6 +181,9 @@ export function usePlayers() {
   useEffect(() => {
     if (loading) return;
     savePlayers(players);
+
+    if (pingTimeoutRef.current) clearTimeout(pingTimeoutRef.current);
+    pingTimeoutRef.current = setTimeout(() => sendVisitPing(), 500);
 
     if (!user || !cloudSyncedRef.current) return;
 

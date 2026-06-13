@@ -91,6 +91,11 @@ type ConnectedAccount = {
   online: boolean
 }
 
+type BotSignals = {
+  suspicious: boolean
+  reasons: string[]
+}
+
 type VisitorIpRow = {
   subjectKey: string
   visitorId: string
@@ -102,6 +107,9 @@ type VisitorIpRow = {
   email: string | null
   accountCode: string | null
   role: string | null
+  localPlayerNames: string[]
+  localPlayerCount: number
+  botSignals: BotSignals
   lastSeenAt: string
   online: boolean
 }
@@ -571,6 +579,48 @@ function CountryList({
   )
 }
 
+function LocalPlayersSection({ row }: { row: VisitorIpRow }) {
+  if (row.localPlayerCount === 0) {
+    return (
+      <div>
+        <p className="text-xs font-medium text-white/45">Joueurs locaux</p>
+        <p className="mt-1 text-sm text-white/40">
+          Aucun joueur remonté (visiteur sans liste ou pas encore synchronisé).
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-xs font-medium text-white/45">
+          Joueurs locaux ({row.localPlayerCount})
+        </p>
+        {row.botSignals.suspicious && (
+          <Badge className="border-orange-500/35 bg-orange-500/15 text-orange-200">
+            Suspect
+          </Badge>
+        )}
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {row.localPlayerNames.map((name) => (
+          <Badge key={name} variant="secondary" className="text-xs">
+            {name}
+          </Badge>
+        ))}
+      </div>
+      {row.botSignals.suspicious && (
+        <ul className="mt-2 space-y-0.5 text-xs text-orange-200/80">
+          {row.botSignals.reasons.map((reason) => (
+            <li key={reason}>· {reason}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function VisitorDetailPanel({
   row,
   onIpClick,
@@ -623,6 +673,7 @@ function VisitorDetailPanel({
       ) : (
         <p className="text-white/45">Aucun compte associé (visiteur anonyme)</p>
       )}
+      <LocalPlayersSection row={row} />
       <p className="font-mono text-[10px] text-white/30">Visitor ID : {row.visitorId}</p>
     </div>
   )
@@ -648,6 +699,7 @@ function IpVisitorList({
       if (row.displayName?.toLowerCase().includes(q)) return true
       if (row.email?.toLowerCase().includes(q)) return true
       if (row.accountCode?.toLowerCase().includes(q)) return true
+      if (row.localPlayerNames.some((name) => name.toLowerCase().includes(q))) return true
       if (countryLabel(row.country).toLowerCase().includes(q)) return true
       if (row.country?.toLowerCase().includes(q)) return true
       return false
@@ -731,6 +783,16 @@ function IpVisitorList({
                             {countryFlag(row.country)}
                             {countryLabel(row.country)}
                           </span>
+                          {row.localPlayerCount > 0 && (
+                            <Badge variant="outline" className="text-[10px] text-white/55">
+                              {row.localPlayerCount} joueur{row.localPlayerCount > 1 ? 's locaux' : ' local'}
+                            </Badge>
+                          )}
+                          {row.botSignals.suspicious && (
+                            <Badge className="border-orange-500/35 bg-orange-500/10 text-[10px] text-orange-200">
+                              Suspect
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
@@ -2276,6 +2338,9 @@ export default function SupervisionPage() {
                     </div>
                     <div className="mt-2">
                       <IpAddressDisplay ips={ips} onIpClick={handleIpClick} compact />
+                    </div>
+                    <div className="mt-2">
+                      <LocalPlayersSection row={row} />
                     </div>
                     {row.email && <p className="mt-1 text-xs text-white/45">{row.email}</p>}
                     <p className="mt-1 text-[10px] text-white/30">

@@ -1,6 +1,12 @@
 import { Prisma } from '@prisma/client'
 import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
+import {
+  analyzePlayerNamesForBot,
+  extractNamesFromUserLocalPlayersJson,
+  parseStoredLocalPlayerNamesJson,
+  type BotSignals,
+} from '@/lib/visitor-local-players'
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000
 
@@ -22,6 +28,9 @@ export type GroupedVisitor = {
   country: string | null
   primaryIp: string | null
   ips: IpEntry[]
+  localPlayerNames: string[]
+  localPlayerCount: number
+  botSignals: BotSignals
   lastSeenAt: string
   online: boolean
 }
@@ -113,6 +122,8 @@ type PresenceRow = {
   country: string | null
   lastIp: string | null
   lastSeen: Date
+  localPlayerCount?: number | null
+  localPlayerNames?: string | null
 }
 
 type LinkedUser = {
@@ -121,6 +132,22 @@ type LinkedUser = {
   email: string | null
   accountCode: string | null
   role: string
+  localPlayersJson?: string | null
+}
+
+function resolveLocalPlayerNames(
+  presence: PresenceRow,
+  linked?: LinkedUser
+): string[] {
+  const fromVisitor = parseStoredLocalPlayerNamesJson(presence.localPlayerNames)
+  if (fromVisitor.length > 0) return fromVisitor
+
+  if (linked?.localPlayersJson) {
+    const fromAccount = extractNamesFromUserLocalPlayersJson(linked.localPlayersJson)
+    if (fromAccount.length > 0) return fromAccount
+  }
+
+  return []
 }
 
 export async function buildGroupedVisitors(
@@ -147,6 +174,8 @@ export async function buildGroupedVisitors(
       const linked = p.userId ? userById.get(p.userId) : undefined
       const ips = ipsMap.get(subjectKey) ?? []
       const primaryIp = ips[0]?.ip ?? p.lastIp
+      const localPlayerNames = resolveLocalPlayerNames(p, linked)
+      const botSignals = analyzePlayerNamesForBot(localPlayerNames)
 
       return {
         subjectKey,
@@ -159,6 +188,9 @@ export async function buildGroupedVisitors(
         country: ips[0]?.country ?? p.country,
         primaryIp,
         ips,
+        localPlayerNames,
+        localPlayerCount: localPlayerNames.length,
+        botSignals,
         lastSeenAt: p.lastSeen.toISOString(),
         online: p.lastSeen >= onlineSince,
       }
@@ -193,6 +225,8 @@ export async function getVisitorsByCountry(
       country: true,
       lastIp: true,
       lastSeen: true,
+      localPlayerCount: true,
+      localPlayerNames: true,
     },
   })
 
@@ -207,6 +241,7 @@ export async function getVisitorsByCountry(
             email: true,
             accountCode: true,
             role: true,
+            localPlayersJson: true,
           },
         })
       : []
