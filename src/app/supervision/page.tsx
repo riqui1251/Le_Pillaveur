@@ -23,6 +23,10 @@ import {
   Gamepad2,
   Trash2,
   MessageSquarePlus,
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  X,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -252,7 +256,12 @@ function AccountCodeBadge({ code }: { code: string | null | undefined }) {
 }
 
 function matchesAccountSearch(
-  user: { displayName: string; email: string | null; accountCode: string | null },
+  user: {
+    displayName: string
+    email: string | null
+    accountCode: string | null
+    lastIp?: string | null
+  },
   query: string
 ): boolean {
   const q = query.trim().toLowerCase()
@@ -261,6 +270,7 @@ function matchesAccountSearch(
   if (user.displayName.toLowerCase().includes(q)) return true
   if (user.email?.toLowerCase().includes(q)) return true
   if (user.accountCode?.toLowerCase().includes(codeQ)) return true
+  if (user.lastIp?.toLowerCase().includes(q)) return true
   return false
 }
 
@@ -486,7 +496,13 @@ function CountryList({
   )
 }
 
-function IpVisitorList({ rows }: { rows: VisitorIpRow[] }) {
+function IpVisitorList({
+  rows,
+  onIpClick,
+}: {
+  rows: VisitorIpRow[]
+  onIpClick?: (ip: string) => void
+}) {
   const [query, setQuery] = useState('')
 
   const filtered = useMemo(() => {
@@ -494,6 +510,7 @@ function IpVisitorList({ rows }: { rows: VisitorIpRow[] }) {
     if (!q) return rows
     return rows.filter((row) => {
       if (row.ip?.toLowerCase().includes(q)) return true
+      if (row.visitorId.toLowerCase().includes(q)) return true
       if (row.displayName?.toLowerCase().includes(q)) return true
       if (row.email?.toLowerCase().includes(q)) return true
       if (row.accountCode?.toLowerCase().includes(q)) return true
@@ -503,6 +520,20 @@ function IpVisitorList({ rows }: { rows: VisitorIpRow[] }) {
     })
   }, [rows, query])
 
+  const renderPlayer = (row: VisitorIpRow) =>
+    row.displayName ? (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="font-medium text-white">{row.displayName}</span>
+        <AccountCodeBadge code={row.accountCode} />
+        {row.role && <RoleBadge role={row.role} />}
+        {row.online && (
+          <Badge className="border-green-500/30 bg-green-500/10 text-green-300">En ligne</Badge>
+        )}
+      </div>
+    ) : (
+      <span className="text-white/40">Visiteur anonyme</span>
+    )
+
   return (
     <Card className="border-white/10 bg-white/[0.03] md:col-span-2">
       <CardHeader>
@@ -511,7 +542,7 @@ function IpVisitorList({ rows }: { rows: VisitorIpRow[] }) {
           Adresses IP et pays
         </CardTitle>
         <CardDescription>
-          Dernières connexions détectées (200 visiteurs max). Le pays est déduit de l&apos;IP si l&apos;hébergeur ne le fournit pas.
+          Dernières connexions détectées (200 visiteurs max). Touchez une IP pour filtrer les comptes.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -519,7 +550,7 @@ function IpVisitorList({ rows }: { rows: VisitorIpRow[] }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
           <Input
             className="bg-black/30 pl-9"
-            placeholder="Filtrer par IP, pseudo, email ou pays…"
+            placeholder="Filtrer par IP, visitorId, pseudo, email ou pays…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -531,58 +562,86 @@ function IpVisitorList({ rows }: { rows: VisitorIpRow[] }) {
               : 'Aucun résultat pour cette recherche.'}
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-white/10 bg-black/30 text-xs uppercase tracking-wider text-white/45">
-                  <th className="px-3 py-2 font-medium">IP</th>
-                  <th className="px-3 py-2 font-medium">Pays</th>
-                  <th className="px-3 py-2 font-medium">Joueur</th>
-                  <th className="px-3 py-2 font-medium">Dernière activité</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((row) => (
-                  <tr
-                    key={row.visitorId}
-                    className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
-                  >
-                    <td className="px-3 py-2 font-mono text-xs text-amber-200/90">
-                      {row.ip ?? '—'}
-                    </td>
-                    <td className="px-3 py-2 text-white/80">
-                      <span className="inline-flex items-center gap-1.5">
-                        {countryFlag(row.country)}
-                        {countryLabel(row.country)}
-                        {row.country && row.country !== '??' && (
-                          <span className="text-xs text-white/35">({row.country})</span>
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      {row.displayName ? (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-medium text-white">{row.displayName}</span>
-                          <AccountCodeBadge code={row.accountCode} />
-                          {row.role && <RoleBadge role={row.role} />}
-                          {row.online && (
-                            <Badge className="border-green-500/30 bg-green-500/10 text-green-300">
-                              En ligne
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-white/40">Visiteur anonyme</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-white/45">
+          <>
+            <div className="space-y-2 md:hidden">
+              {filtered.map((row) => (
+                <div
+                  key={row.visitorId}
+                  className="rounded-xl border border-white/10 bg-black/20 p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    {row.ip ? (
+                      <button
+                        type="button"
+                        onClick={() => onIpClick?.(row.ip!)}
+                        className="font-mono text-sm text-amber-200/90 hover:underline"
+                      >
+                        {row.ip}
+                      </button>
+                    ) : (
+                      <span className="text-white/40">—</span>
+                    )}
+                    <span className="text-xs text-white/40">
                       {new Date(row.lastSeenAt).toLocaleString('fr-FR')}
-                    </td>
+                    </span>
+                  </div>
+                  <p className="mt-1 flex items-center gap-1.5 text-sm text-white/80">
+                    {countryFlag(row.country)}
+                    {countryLabel(row.country)}
+                  </p>
+                  <div className="mt-2">{renderPlayer(row)}</div>
+                  <p className="mt-1 font-mono text-[10px] text-white/30">ID {row.visitorId}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto rounded-xl border border-white/10 md:block">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 bg-black/30 text-xs uppercase tracking-wider text-white/45">
+                    <th className="px-3 py-2 font-medium">IP</th>
+                    <th className="px-3 py-2 font-medium">Pays</th>
+                    <th className="px-3 py-2 font-medium">Joueur</th>
+                    <th className="px-3 py-2 font-medium">Visitor ID</th>
+                    <th className="px-3 py-2 font-medium">Dernière activité</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filtered.map((row) => (
+                    <tr
+                      key={row.visitorId}
+                      className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+                    >
+                      <td className="px-3 py-2">
+                        {row.ip ? (
+                          <button
+                            type="button"
+                            onClick={() => onIpClick?.(row.ip!)}
+                            className="font-mono text-xs text-amber-200/90 hover:underline"
+                          >
+                            {row.ip}
+                          </button>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-white/80">
+                        <span className="inline-flex items-center gap-1.5">
+                          {countryFlag(row.country)}
+                          {countryLabel(row.country)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">{renderPlayer(row)}</td>
+                      <td className="px-3 py-2 font-mono text-[10px] text-white/35">{row.visitorId}</td>
+                      <td className="px-3 py-2 text-xs text-white/45">
+                        {new Date(row.lastSeenAt).toLocaleString('fr-FR')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
@@ -599,6 +658,30 @@ export default function SupervisionPage() {
   const [error, setError] = useState<string | null>(null)
   const [editingNames, setEditingNames] = useState<Record<string, string>>({})
   const [accountSearch, setAccountSearch] = useState('')
+  const [activeTab, setActiveTab] = useState('overview')
+  const [accountFilterRole, setAccountFilterRole] = useState('all')
+  const [accountFilterStatus, setAccountFilterStatus] = useState('all')
+  const [rolesHelpOpen, setRolesHelpOpen] = useState(false)
+  const [ipLookup, setIpLookup] = useState<{
+    ip: string
+    accounts: Array<{
+      id: string
+      displayName: string
+      email: string | null
+      accountCode: string | null
+      role: string
+      online: boolean
+      banned: boolean
+    }>
+    visitors: Array<{ visitorId: string; displayName: string | null; online: boolean }>
+  } | null>(null)
+  const [ipLookupLoading, setIpLookupLoading] = useState(false)
+
+  const [unbanDialog, setUnbanDialog] = useState<{
+    userId: string
+    displayName: string
+  } | null>(null)
+  const [unbanComment, setUnbanComment] = useState('')
 
   const [banDialog, setBanDialog] = useState<{
     userId: string
@@ -629,10 +712,20 @@ export default function SupervisionPage() {
   const showBansTab = user ? canViewSupervisionBans(user.role) : false
   const showFeedbackTab = user ? canViewUserFeedback(user.role) : false
   const defaultTab = showAnalytics ? 'overview' : 'accounts'
+  const onlineSinceMs = Date.now() - 5 * 60 * 1000
 
   const filteredUsers = useMemo(() => {
-    return users.filter((u) => matchesAccountSearch(u, accountSearch))
-  }, [users, accountSearch])
+    return users.filter((u) => {
+      if (!matchesAccountSearch(u, accountSearch)) return false
+      if (accountFilterRole !== 'all' && u.role !== accountFilterRole) return false
+      if (accountFilterStatus === 'banned' && !u.ban.banned) return false
+      if (accountFilterStatus === 'online') {
+        const seen = u.lastSeenAt ? new Date(u.lastSeenAt).getTime() : 0
+        if (seen < onlineSinceMs) return false
+      }
+      return true
+    })
+  }, [users, accountSearch, accountFilterRole, accountFilterStatus, onlineSinceMs])
 
   const activeFeedbackItems = useMemo(
     () =>
@@ -746,8 +839,40 @@ export default function SupervisionPage() {
       router.replace('/compte')
       return
     }
+    setActiveTab(defaultTab)
     loadAll()
-  }, [user, loading, router, loadAll])
+  }, [user, loading, router, loadAll, defaultTab])
+
+  useEffect(() => {
+    if (!user || !showAnalytics) return
+    const refreshStats = async () => {
+      try {
+        const statsRes = await fetch('/api/admin/stats', { credentials: 'include' })
+        if (statsRes.ok) setStats(await statsRes.json())
+      } catch {
+        /* ignore background refresh errors */
+      }
+    }
+    const id = window.setInterval(refreshStats, 60_000)
+    return () => window.clearInterval(id)
+  }, [user, showAnalytics])
+
+  const handleIpClick = useCallback(async (ip: string) => {
+    setAccountSearch(ip)
+    setActiveTab('accounts')
+    setIpLookupLoading(true)
+    setIpLookup(null)
+    try {
+      const res = await fetch(`/api/admin/ip-lookup?ip=${encodeURIComponent(ip)}`, {
+        credentials: 'include',
+      })
+      if (res.ok) setIpLookup(await res.json())
+    } catch {
+      /* ignore */
+    } finally {
+      setIpLookupLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (historyUserId) loadUserHistory(historyUserId)
@@ -829,8 +954,8 @@ export default function SupervisionPage() {
     }
   }
 
-  const submitUnban = async (userId: string) => {
-    const comment = window.prompt('Commentaire de débannissement (optionnel) :') ?? ''
+  const submitUnban = async () => {
+    if (!unbanDialog) return
     setBusy(true)
     setError(null)
     try {
@@ -838,10 +963,12 @@ export default function SupervisionPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId, comment }),
+        body: JSON.stringify({ userId: unbanDialog.userId, comment: unbanComment }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Débannissement refusé')
+      setUnbanDialog(null)
+      setUnbanComment('')
       await loadAll()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur')
@@ -920,28 +1047,43 @@ export default function SupervisionPage() {
       </div>
 
       <Alert className="border-amber-500/25 bg-amber-500/5">
-        <Info className="h-4 w-4 text-amber-400" />
-        <AlertTitle className="text-amber-100">Rôles et permissions</AlertTitle>
-        <AlertDescription className="mt-2 space-y-2 text-sm text-white/70">
-          <p>
-            <strong className="text-yellow-200">Fondateur</strong> — {ROLE_DESCRIPTIONS.fondateur}
-          </p>
-          <p>
-            <strong className="text-rose-200">Super administrateur</strong> — {ROLE_DESCRIPTIONS.superadmin}
-          </p>
-          <p>
-            <strong className="text-amber-200">Administrateur</strong> — {ROLE_DESCRIPTIONS.admin}
-          </p>
-          <p>
-            <strong className="text-violet-200">Modérateur</strong> — {ROLE_DESCRIPTIONS.moderator}
-          </p>
-          <p>
-            <strong className="text-white/80">Joueur</strong> — {ROLE_DESCRIPTIONS.user}
-          </p>
-          <p className="text-xs text-white/40">
-            Hiérarchie : joueur &lt; modérateur &lt; admin &lt; super admin &lt; fondateur — seul un grade supérieur peut sanctionner ou modifier un compte (jamais un pair). Les modérateurs : ban temporaire uniquement.
-          </p>
-        </AlertDescription>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 text-left"
+          onClick={() => setRolesHelpOpen((open) => !open)}
+        >
+          <div className="flex items-center gap-2">
+            <Info className="h-4 w-4 text-amber-400" />
+            <AlertTitle className="text-amber-100">Rôles et permissions</AlertTitle>
+          </div>
+          {rolesHelpOpen ? (
+            <ChevronDown className="h-4 w-4 text-amber-300" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-amber-300" />
+          )}
+        </button>
+        {rolesHelpOpen && (
+          <AlertDescription className="mt-2 space-y-2 text-sm text-white/70">
+            <p>
+              <strong className="text-yellow-200">Fondateur</strong> — {ROLE_DESCRIPTIONS.fondateur}
+            </p>
+            <p>
+              <strong className="text-rose-200">Super administrateur</strong> — {ROLE_DESCRIPTIONS.superadmin}
+            </p>
+            <p>
+              <strong className="text-amber-200">Administrateur</strong> — {ROLE_DESCRIPTIONS.admin}
+            </p>
+            <p>
+              <strong className="text-violet-200">Modérateur</strong> — {ROLE_DESCRIPTIONS.moderator}
+            </p>
+            <p>
+              <strong className="text-white/80">Joueur</strong> — {ROLE_DESCRIPTIONS.user}
+            </p>
+            <p className="text-xs text-white/40">
+              Hiérarchie : joueur &lt; modérateur &lt; admin &lt; super admin &lt; fondateur — seul un grade supérieur peut sanctionner ou modifier un compte (jamais un pair). Les modérateurs : ban temporaire uniquement.
+            </p>
+          </AlertDescription>
+        )}
       </Alert>
 
       {error && (
@@ -950,8 +1092,8 @@ export default function SupervisionPage() {
         </div>
       )}
 
-      <Tabs defaultValue={defaultTab} className="space-y-4">
-        <TabsList className="flex h-auto flex-wrap bg-white/5">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 overflow-x-auto bg-white/5 p-1">
           {showAnalytics && (
             <>
               <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
@@ -1105,7 +1247,13 @@ export default function SupervisionPage() {
                       </div>
                       <div className="text-xs text-white/45">
                         {acc.ip && (
-                          <span className="font-mono text-amber-200/70">{acc.ip}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleIpClick(acc.ip!)}
+                            className="font-mono text-amber-200/70 hover:underline"
+                          >
+                            {acc.ip}
+                          </button>
                         )}
                         {acc.ip && acc.country && <> · </>}
                         {countryLabel(acc.country)}
@@ -1169,7 +1317,7 @@ export default function SupervisionPage() {
             description="Visiteurs ayant été actifs dans les dernières 24 h"
             rows={stats?.visitors.visitorsTodayByCountry ?? []}
           />
-          <IpVisitorList rows={stats?.visitorIpList ?? []} />
+          <IpVisitorList rows={stats?.visitorIpList ?? []} onIpClick={handleIpClick} />
         </TabsContent>
         </>
         )}
@@ -1179,7 +1327,7 @@ export default function SupervisionPage() {
             <CardHeader>
               <CardTitle className="text-white">Administration des comptes</CardTitle>
               <CardDescription>
-                Recherche par pseudo, email ou code unique (ex. LP-ABC123).
+                Recherche par pseudo, email, code unique (ex. LP-ABC123) ou adresse IP.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -1187,15 +1335,87 @@ export default function SupervisionPage() {
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                 <Input
                   className="bg-black/30 pl-9"
-                  placeholder="Rechercher un compte…"
+                  placeholder="Rechercher un compte ou une IP…"
                   value={accountSearch}
                   onChange={(e) => setAccountSearch(e.target.value)}
                 />
               </div>
-              {accountSearch.trim() && (
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Filter className="h-4 w-4 text-white/35" />
+                <Select value={accountFilterRole} onValueChange={setAccountFilterRole}>
+                  <SelectTrigger className="w-[150px] bg-black/30">
+                    <SelectValue placeholder="Rôle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les rôles</SelectItem>
+                    <SelectItem value="user">Joueurs</SelectItem>
+                    <SelectItem value="moderator">Modérateurs</SelectItem>
+                    <SelectItem value="admin">Admins</SelectItem>
+                    <SelectItem value="superadmin">Super admins</SelectItem>
+                    <SelectItem value="fondateur">Fondateurs</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={accountFilterStatus} onValueChange={setAccountFilterStatus}>
+                  <SelectTrigger className="w-[150px] bg-black/30">
+                    <SelectValue placeholder="Statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="online">En ligne</SelectItem>
+                    <SelectItem value="banned">Bannis</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(accountSearch || accountFilterRole !== 'all' || accountFilterStatus !== 'all') && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-white/50"
+                    onClick={() => {
+                      setAccountSearch('')
+                      setAccountFilterRole('all')
+                      setAccountFilterStatus('all')
+                      setIpLookup(null)
+                    }}
+                  >
+                    <X className="mr-1 h-3.5 w-3.5" />
+                    Réinitialiser
+                  </Button>
+                )}
+              </div>
+
+              {(accountSearch.trim() || accountFilterRole !== 'all' || accountFilterStatus !== 'all') && (
                 <p className="text-xs text-white/45">
                   {filteredUsers.length} résultat{filteredUsers.length > 1 ? 's' : ''} sur {users.length}
                 </p>
+              )}
+
+              {ipLookupLoading && (
+                <p className="text-sm text-white/45">Analyse de l&apos;IP en cours…</p>
+              )}
+
+              {ipLookup && (
+                <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-sm">
+                  <p className="font-medium text-amber-100">
+                    IP {ipLookup.ip} — {ipLookup.accounts.length} compte
+                    {ipLookup.accounts.length > 1 ? 's' : ''}, {ipLookup.visitors.length} visiteur
+                    {ipLookup.visitors.length > 1 ? 's' : ''}
+                  </p>
+                  {ipLookup.accounts.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-white/70">
+                      {ipLookup.accounts.map((acc) => (
+                        <li key={acc.id}>
+                          {acc.displayName}
+                          {acc.accountCode && (
+                            <span className="font-mono text-amber-200/70"> {acc.accountCode}</span>
+                          )}
+                          {acc.online && <span className="text-green-300"> · en ligne</span>}
+                          {acc.banned && <span className="text-red-300"> · banni</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
               {filteredUsers.length === 0 ? (
                 <p className="py-8 text-center text-sm text-white/45">
@@ -1253,7 +1473,13 @@ export default function SupervisionPage() {
                           </span>
                         )}
                         {u.lastIp && (
-                          <span className="font-mono text-amber-200/60">· {u.lastIp}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleIpClick(u.lastIp!)}
+                            className="font-mono text-amber-200/60 hover:underline"
+                          >
+                            · {u.lastIp}
+                          </button>
                         )}
                         {u.lastSeenAt && (
                           <span>· Vu le {new Date(u.lastSeenAt).toLocaleString('fr-FR')}</span>
@@ -1315,7 +1541,9 @@ export default function SupervisionPage() {
                             size="sm"
                             variant="secondary"
                             disabled={busy}
-                            onClick={() => submitUnban(u.id)}
+                            onClick={() =>
+                              setUnbanDialog({ userId: u.id, displayName: u.displayName })
+                            }
                           >
                             Lever le ban
                           </Button>
@@ -1434,7 +1662,9 @@ export default function SupervisionPage() {
                         variant="secondary"
                         className="mt-3"
                         disabled={busy}
-                        onClick={() => submitUnban(b.id)}
+                        onClick={() =>
+                          setUnbanDialog({ userId: b.id, displayName: b.displayName })
+                        }
                       >
                         Débannir
                       </Button>
@@ -1532,6 +1762,36 @@ export default function SupervisionPage() {
             </Button>
             <Button variant="destructive" disabled={busy} onClick={deleteAccount}>
               Supprimer définitivement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!unbanDialog} onOpenChange={(open) => !open && setUnbanDialog(null)}>
+        <DialogContent className="border-white/10 bg-[#0c0b12] text-white">
+          <DialogHeader>
+            <DialogTitle>Lever le bannissement</DialogTitle>
+            <DialogDescription className="text-white/50">
+              Compte : <strong className="text-white">{unbanDialog?.displayName}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <label className="mb-1 block text-xs text-white/50">
+              Commentaire (optionnel)
+            </label>
+            <textarea
+              className="min-h-[80px] w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/30"
+              placeholder="Motif du débannissement…"
+              value={unbanComment}
+              onChange={(e) => setUnbanComment(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUnbanDialog(null)}>
+              Annuler
+            </Button>
+            <Button variant="secondary" disabled={busy} onClick={submitUnban}>
+              Débannir
             </Button>
           </DialogFooter>
         </DialogContent>

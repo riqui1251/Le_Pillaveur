@@ -6,13 +6,19 @@ import {
   isValidEmail,
 } from '@/lib/auth-server'
 import { sendPasswordResetEmail } from '@/lib/email'
+import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 
 const RESET_HOURS = 1
+const FORGOT_LIMIT = 5
+const FORGOT_WINDOW_MS = 60 * 60 * 1000
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+
+    const rate = checkRateLimit(rateLimitKey(request, 'forgot-password', email), FORGOT_LIMIT, FORGOT_WINDOW_MS)
+    if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: 'Email invalide' }, { status: 400 })

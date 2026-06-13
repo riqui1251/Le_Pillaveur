@@ -11,12 +11,19 @@ import { ensureUserAccountCode } from '@/lib/account-code'
 import { normalizeRole } from '@/lib/roles'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
+import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+
+const LOGIN_LIMIT = 10
+const LOGIN_WINDOW_MS = 15 * 60 * 1000
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const password = typeof body.password === 'string' ? body.password : ''
+
+    const rate = checkRateLimit(rateLimitKey(request, 'login', email), LOGIN_LIMIT, LOGIN_WINDOW_MS)
+    if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
     if (!isValidEmail(email) || !password) {
       return NextResponse.json({ error: 'Email ou mot de passe incorrect' }, { status: 401 })

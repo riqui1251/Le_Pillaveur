@@ -46,9 +46,9 @@ export function canCustomizePlayerFrame(role: string | undefined | null): boolea
   return roleRank(role) > ROLE_RANK.user
 }
 
-/** Vue d'ensemble, pays, stats visiteurs et jeux : super admin et fondateur. */
+/** Vue d'ensemble, pays, stats visiteurs et jeux : admin et grades supérieurs. */
 export function canViewSupervisionAnalytics(role: string): boolean {
-  return roleRank(role) >= ROLE_RANK.superadmin
+  return roleRank(role) >= ROLE_RANK.admin
 }
 
 /** Liste des bannissements : admin et au-dessus. */

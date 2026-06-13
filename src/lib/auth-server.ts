@@ -201,5 +201,12 @@ export function isValidEmail(email: string): boolean {
 }
 
 export function isValidPassword(password: string): boolean {
-  return password.length >= 8
+  if (password.length < 8 || password.length > 128) return false
+  if (!/[a-zA-Z]/.test(password)) return false
+  if (!/[0-9]/.test(password)) return false
+  return true
+}
+
+export function passwordRequirementsHint(): string {
+  return '8 caractères minimum, avec au moins une lettre et un chiffre'
 }

@@ -184,7 +184,7 @@ export function AuthForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={mode === 'register' ? '8 caractères minimum' : '••••••••'}
+            placeholder={mode === 'register' ? 'Lettre + chiffre, 8 car. min.' : '••••••••'}
             required
             minLength={mode === 'register' ? 8 : 1}
             className="border-white/10 bg-white/[0.05] text-white"

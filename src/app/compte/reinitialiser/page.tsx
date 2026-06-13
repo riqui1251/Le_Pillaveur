@@ -25,8 +25,8 @@ function ResetPasswordForm() {
       setError('Lien invalide ou expiré.')
       return
     }
-    if (password.length < 8) {
-      setError('Mot de passe : 8 caractères minimum.')
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('8 caractères minimum, avec au moins une lettre et un chiffre.')
       return
     }
     if (password !== confirm) {
@@ -79,7 +79,7 @@ function ResetPasswordForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="8 caractères minimum"
+          placeholder="Lettre + chiffre, 8 car. min."
           required
           minLength={8}
           className="border-white/10 bg-white/[0.05] text-white"

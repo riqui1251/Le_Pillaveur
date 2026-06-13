@@ -4,6 +4,7 @@ import {
   hashPassword,
   hashToken,
   isValidPassword,
+  passwordRequirementsHint,
   revokeAllUserSessions,
 } from '@/lib/auth-server'
 
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Lien invalide ou expiré' }, { status: 400 })
     }
     if (!isValidPassword(password)) {
-      return NextResponse.json({ error: 'Mot de passe : 8 caractères minimum' }, { status: 400 })
+      return NextResponse.json({ error: passwordRequirementsHint() }, { status: 400 })
     }
 
     const tokenHash = hashToken(token)

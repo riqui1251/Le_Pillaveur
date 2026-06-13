@@ -226,3 +226,94 @@ export async function getVisitorStats() {
     generatedAt: now.toISOString(),
   }
 }
+
+export async function lookupByIp(ip: string) {
+  const normalized = ip.trim()
+  const onlineSince = new Date(Date.now() - ONLINE_WINDOW_MS)
+
+  const [users, presences] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        passwordHash: { not: '' },
+        email: { not: null },
+        lastIp: normalized,
+      },
+      select: {
+        id: true,
+        displayName: true,
+        email: true,
+        accountCode: true,
+        role: true,
+        lastIp: true,
+        lastCountry: true,
+        lastSeenAt: true,
+        banType: true,
+        bannedUntil: true,
+      },
+      orderBy: { lastSeenAt: 'desc' },
+      take: 50,
+    }),
+    prisma.sitePresence.findMany({
+      where: { lastIp: normalized },
+      orderBy: { lastSeen: 'desc' },
+      take: 50,
+      select: {
+        visitorId: true,
+        userId: true,
+        country: true,
+        lastIp: true,
+        lastSeen: true,
+        firstSeen: true,
+      },
+    }),
+  ])
+
+  const presenceUserIds = [
+    ...new Set(presences.map((p) => p.userId).filter(Boolean)),
+  ] as string[]
+
+  const linkedUsers =
+    presenceUserIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: presenceUserIds } },
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            accountCode: true,
+            role: true,
+          },
+        })
+      : []
+
+  const linkedById = new Map(linkedUsers.map((u) => [u.id, u]))
+
+  return {
+    ip: normalized,
+    accounts: users.map((u) => ({
+      id: u.id,
+      displayName: u.displayName,
+      email: u.email,
+      accountCode: u.accountCode,
+      role: u.role,
+      lastCountry: u.lastCountry,
+      lastSeenAt: u.lastSeenAt?.toISOString() ?? null,
+      online: u.lastSeenAt ? u.lastSeenAt >= onlineSince : false,
+      banned: Boolean(u.banType && (u.banType === 'permanent' || (u.bannedUntil && u.bannedUntil > new Date()))),
+    })),
+    visitors: presences.map((p) => {
+      const linked = p.userId ? linkedById.get(p.userId) : undefined
+      return {
+        visitorId: p.visitorId,
+        userId: p.userId,
+        country: p.country,
+        lastSeenAt: p.lastSeen.toISOString(),
+        firstSeenAt: p.firstSeen.toISOString(),
+        online: p.lastSeen >= onlineSince,
+        displayName: linked?.displayName ?? null,
+        accountCode: linked?.accountCode ?? null,
+        role: linked?.role ?? null,
+      }
+    }),
+  }
+}
