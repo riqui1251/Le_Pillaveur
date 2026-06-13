@@ -68,6 +68,19 @@ model SitePresence {
   @@index([lastIp])
 }
 
+model IpSeenLog {
+  id         String   @id @default(cuid())
+  subjectKey String
+  ip         String
+  country    String?
+  firstSeen  DateTime @default(now())
+  lastSeen   DateTime @default(now())
+
+  @@unique([subjectKey, ip])
+  @@index([subjectKey])
+  @@index([ip])
+}
+
 model DailyVisitor {
   visitorId String
   date      String

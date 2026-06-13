@@ -44,6 +44,9 @@ bash "$APP_DIR/scripts/prod-migrate-auth-feedback.sh"
 echo "=== Migration visitor_ip ==="
 bash "$APP_DIR/scripts/prod-migrate-visitor-ip.sh"
 
+echo "=== Migration ip_history ==="
+bash "$APP_DIR/scripts/prod-migrate-ip-history.sh"
+
 echo "=== DB permissions ==="
 docker run --rm -v le-pillaveur-db:/data alpine sh -c '
   apk add sqlite >/dev/null 2>&1

@@ -9,6 +9,7 @@ import {
   normalizeRole,
 } from '@/lib/roles'
 import { prisma } from '@/lib/prisma'
+import { getIpsBySubjectKeys, subjectKeyFor } from '@/lib/ip-history-server'
 
 function serializeUser(user: {
   id: string
@@ -78,7 +79,14 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({ users: users.map(serializeUser) })
+    const ipsMap = await getIpsBySubjectKeys(users.map((u) => subjectKeyFor(u.id, '')))
+
+    return NextResponse.json({
+      users: users.map((u) => ({
+        ...serializeUser(u),
+        ips: ipsMap.get(subjectKeyFor(u.id, '')) ?? [],
+      })),
+    })
   } catch (error) {
     if (error instanceof Error && error.message === 'FORBIDDEN') {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })

@@ -71,6 +71,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 type CountryRow = { country: string | null; count: number }
 
+type IpEntry = {
+  ip: string
+  country: string | null
+  lastSeenAt: string
+  firstSeenAt?: string
+}
+
 type ConnectedAccount = {
   id: string
   displayName: string
@@ -78,16 +85,19 @@ type ConnectedAccount = {
   accountCode: string | null
   country: string | null
   ip: string | null
+  ips?: IpEntry[]
   lastSeenAt: string | null
   role: string
   online: boolean
 }
 
 type VisitorIpRow = {
+  subjectKey: string
   visitorId: string
   userId: string | null
-  ip: string | null
   country: string | null
+  primaryIp: string | null
+  ips: IpEntry[]
   displayName: string | null
   email: string | null
   accountCode: string | null
@@ -133,6 +143,7 @@ type AdminUser = {
   createdAt: string
   lastCountry: string | null
   lastIp: string | null
+  ips?: IpEntry[]
   lastSeenAt: string | null
   lastLoginAt: string | null
   totalPresenceSeconds: number
@@ -261,6 +272,7 @@ function matchesAccountSearch(
     email: string | null
     accountCode: string | null
     lastIp?: string | null
+    ips?: IpEntry[]
   },
   query: string
 ): boolean {
@@ -271,7 +283,60 @@ function matchesAccountSearch(
   if (user.email?.toLowerCase().includes(q)) return true
   if (user.accountCode?.toLowerCase().includes(codeQ)) return true
   if (user.lastIp?.toLowerCase().includes(q)) return true
+  if (user.ips?.some((entry) => entry.ip.toLowerCase().includes(q))) return true
   return false
+}
+
+function IpAddressDisplay({
+  ips,
+  onIpClick,
+  compact,
+}: {
+  ips: IpEntry[]
+  onIpClick?: (ip: string) => void
+  compact?: boolean
+}) {
+  if (ips.length === 0) {
+    return <span className="text-white/40">—</span>
+  }
+
+  const primary = ips[0]
+  const others = ips.slice(1)
+
+  return (
+    <div className={`inline-flex flex-wrap items-center gap-1 ${compact ? 'text-xs' : 'text-sm'}`}>
+      <button
+        type="button"
+        onClick={() => onIpClick?.(primary.ip)}
+        className="font-mono text-amber-200/90 hover:underline"
+      >
+        {primary.ip}
+      </button>
+      {others.length > 0 && (
+        <details className="inline-block">
+          <summary className="cursor-pointer list-none rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-amber-200/70 hover:bg-white/10 [&::-webkit-details-marker]:hidden">
+            +{others.length} IP
+          </summary>
+          <ul className="mt-1 space-y-0.5 rounded-md border border-white/10 bg-black/40 p-2">
+            {others.map((entry) => (
+              <li key={entry.ip}>
+                <button
+                  type="button"
+                  onClick={() => onIpClick?.(entry.ip)}
+                  className="font-mono text-[11px] text-amber-200/80 hover:underline"
+                >
+                  {entry.ip}
+                </button>
+                <span className="ml-1 text-[10px] text-white/35">
+                  {countryLabel(entry.country)} · {new Date(entry.lastSeenAt).toLocaleDateString('fr-FR')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  )
 }
 
 function matchesFeedbackSearch(item: FeedbackItem, query: string): boolean {
@@ -455,11 +520,15 @@ function CountryList({
   title,
   description,
   rows,
+  onCountryClick,
 }: {
   title: string
   description: string
   rows: CountryRow[]
+  onCountryClick?: (country: string | null, scope: 'online' | 'today') => void
 }) {
+  const scope = title.toLowerCase().includes('aujourd') ? 'today' : 'online'
+
   return (
     <Card className="border-white/10 bg-white/[0.03]">
       <CardHeader>
@@ -467,7 +536,10 @@ function CountryList({
           <Globe className="h-5 w-5 text-amber-400" />
           {title}
         </CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardDescription>
+          {description}
+          {onCountryClick && ' Touchez un pays pour voir les visiteurs.'}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
@@ -475,24 +547,84 @@ function CountryList({
         ) : (
           <ul className="space-y-2">
             {rows.map((row) => (
-              <li
-                key={row.country ?? 'unknown'}
-                className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-              >
-                <span className="flex items-center gap-2 text-sm text-white">
-                  <span>{countryFlag(row.country)}</span>
-                  {countryLabel(row.country)}
-                  {row.country && row.country !== '??' && (
-                    <span className="text-xs text-white/35">({row.country})</span>
-                  )}
-                </span>
-                <Badge variant="secondary">{row.count}</Badge>
+              <li key={row.country ?? 'unknown'}>
+                <button
+                  type="button"
+                  onClick={() => onCountryClick?.(row.country, scope)}
+                  className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-left transition-colors hover:bg-white/[0.05]"
+                >
+                  <span className="flex items-center gap-2 text-sm text-white">
+                    <span>{countryFlag(row.country)}</span>
+                    {countryLabel(row.country)}
+                    {row.country && row.country !== '??' && (
+                      <span className="text-xs text-white/35">({row.country})</span>
+                    )}
+                  </span>
+                  <Badge variant="secondary">{row.count}</Badge>
+                </button>
               </li>
             ))}
           </ul>
         )}
       </CardContent>
     </Card>
+  )
+}
+
+function VisitorDetailPanel({
+  row,
+  onIpClick,
+}: {
+  row: VisitorIpRow
+  onIpClick?: (ip: string) => void
+}) {
+  return (
+    <div className="mt-3 space-y-2 border-t border-white/10 pt-3 text-sm">
+      <div>
+        <p className="text-xs font-medium text-white/45">Adresses IP</p>
+        {row.ips.length > 0 ? (
+          <ul className="mt-1 space-y-1">
+            {row.ips.map((entry) => (
+              <li
+                key={entry.ip}
+                className="flex flex-wrap items-center gap-2 rounded-md border border-white/10 bg-black/30 px-2 py-1.5"
+              >
+                <button
+                  type="button"
+                  onClick={() => onIpClick?.(entry.ip)}
+                  className="font-mono text-xs text-amber-200/90 hover:underline"
+                >
+                  {entry.ip}
+                </button>
+                <span className="text-white/50">
+                  {countryFlag(entry.country)} {countryLabel(entry.country)}
+                </span>
+                <span className="text-[11px] text-white/35">
+                  {new Date(entry.lastSeenAt).toLocaleString('fr-FR')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-white/40">Aucune IP enregistrée</p>
+        )}
+      </div>
+      {row.displayName ? (
+        <div>
+          <p className="text-xs font-medium text-white/45">Compte lié</p>
+          <p className="mt-1 text-white">
+            {row.displayName}
+            {row.accountCode && (
+              <span className="ml-2 font-mono text-amber-200/70">{row.accountCode}</span>
+            )}
+          </p>
+          {row.email && <p className="text-xs text-white/45">{row.email}</p>}
+        </div>
+      ) : (
+        <p className="text-white/45">Aucun compte associé (visiteur anonyme)</p>
+      )}
+      <p className="font-mono text-[10px] text-white/30">Visitor ID : {row.visitorId}</p>
+    </div>
   )
 }
 
@@ -504,12 +636,14 @@ function IpVisitorList({
   onIpClick?: (ip: string) => void
 }) {
   const [query, setQuery] = useState('')
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return rows
     return rows.filter((row) => {
-      if (row.ip?.toLowerCase().includes(q)) return true
+      if (row.primaryIp?.toLowerCase().includes(q)) return true
+      if (row.ips.some((entry) => entry.ip.toLowerCase().includes(q))) return true
       if (row.visitorId.toLowerCase().includes(q)) return true
       if (row.displayName?.toLowerCase().includes(q)) return true
       if (row.email?.toLowerCase().includes(q)) return true
@@ -534,15 +668,19 @@ function IpVisitorList({
       <span className="text-white/40">Visiteur anonyme</span>
     )
 
+  const toggleExpand = (key: string) => {
+    setExpandedKey((current) => (current === key ? null : key))
+  }
+
   return (
     <Card className="border-white/10 bg-white/[0.03] md:col-span-2">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-white">
           <Network className="h-5 w-5 text-amber-400" />
-          Adresses IP et pays
+          Visiteurs et joueurs
         </CardTitle>
         <CardDescription>
-          Dernières connexions détectées (200 visiteurs max). Touchez une IP pour filtrer les comptes.
+          Un joueur = une ligne (IP principale + menu pour les autres). Touchez une carte pour le détail.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -550,7 +688,7 @@ function IpVisitorList({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
           <Input
             className="bg-black/30 pl-9"
-            placeholder="Filtrer par IP, visitorId, pseudo, email ou pays…"
+            placeholder="Filtrer par IP, pseudo, email ou pays…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -558,90 +696,58 @@ function IpVisitorList({
         {filtered.length === 0 ? (
           <p className="py-6 text-center text-sm text-white/45">
             {rows.length === 0
-              ? 'Aucune IP enregistrée pour le moment. Les données apparaîtront après la prochaine visite.'
+              ? 'Aucun visiteur enregistré pour le moment.'
               : 'Aucun résultat pour cette recherche.'}
           </p>
         ) : (
-          <>
-            <div className="space-y-2 md:hidden">
-              {filtered.map((row) => (
-                <div
-                  key={row.visitorId}
-                  className="rounded-xl border border-white/10 bg-black/20 p-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    {row.ip ? (
-                      <button
-                        type="button"
-                        onClick={() => onIpClick?.(row.ip!)}
-                        className="font-mono text-sm text-amber-200/90 hover:underline"
-                      >
-                        {row.ip}
-                      </button>
-                    ) : (
-                      <span className="text-white/40">—</span>
-                    )}
-                    <span className="text-xs text-white/40">
-                      {new Date(row.lastSeenAt).toLocaleString('fr-FR')}
-                    </span>
-                  </div>
-                  <p className="mt-1 flex items-center gap-1.5 text-sm text-white/80">
-                    {countryFlag(row.country)}
-                    {countryLabel(row.country)}
-                  </p>
-                  <div className="mt-2">{renderPlayer(row)}</div>
-                  <p className="mt-1 font-mono text-[10px] text-white/30">ID {row.visitorId}</p>
-                </div>
-              ))}
-            </div>
+          <div className="space-y-2">
+            {filtered.map((row) => {
+              const expanded = expandedKey === row.subjectKey
+              const ips =
+                row.ips.length > 0
+                  ? row.ips
+                  : row.primaryIp
+                    ? [{ ip: row.primaryIp, country: row.country, lastSeenAt: row.lastSeenAt }]
+                    : []
 
-            <div className="hidden overflow-x-auto rounded-xl border border-white/10 md:block">
-              <table className="w-full min-w-[720px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-white/10 bg-black/30 text-xs uppercase tracking-wider text-white/45">
-                    <th className="px-3 py-2 font-medium">IP</th>
-                    <th className="px-3 py-2 font-medium">Pays</th>
-                    <th className="px-3 py-2 font-medium">Joueur</th>
-                    <th className="px-3 py-2 font-medium">Visitor ID</th>
-                    <th className="px-3 py-2 font-medium">Dernière activité</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((row) => (
-                    <tr
-                      key={row.visitorId}
-                      className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
-                    >
-                      <td className="px-3 py-2">
-                        {row.ip ? (
-                          <button
-                            type="button"
-                            onClick={() => onIpClick?.(row.ip!)}
-                            className="font-mono text-xs text-amber-200/90 hover:underline"
-                          >
-                            {row.ip}
-                          </button>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-white/80">
-                        <span className="inline-flex items-center gap-1.5">
-                          {countryFlag(row.country)}
-                          {countryLabel(row.country)}
+              return (
+                <div
+                  key={row.subjectKey}
+                  className={`rounded-xl border bg-black/20 transition-colors ${
+                    expanded ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(row.subjectKey)}
+                    className="w-full p-3 text-left"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        {renderPlayer(row)}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <IpAddressDisplay ips={ips} onIpClick={onIpClick} compact />
+                          <span className="flex items-center gap-1 text-xs text-white/50">
+                            {countryFlag(row.country)}
+                            {countryLabel(row.country)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="text-xs text-white/40">
+                          {new Date(row.lastSeenAt).toLocaleString('fr-FR')}
                         </span>
-                      </td>
-                      <td className="px-3 py-2">{renderPlayer(row)}</td>
-                      <td className="px-3 py-2 font-mono text-[10px] text-white/35">{row.visitorId}</td>
-                      <td className="px-3 py-2 text-xs text-white/45">
-                        {new Date(row.lastSeenAt).toLocaleString('fr-FR')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                        <p className="mt-1 text-[10px] text-amber-300/60">
+                          {expanded ? 'Masquer' : 'Détails'}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                  {expanded && <div className="px-3 pb-3"><VisitorDetailPanel row={{ ...row, ips }} onIpClick={onIpClick} /></div>}
+                </div>
+              )
+            })}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -676,6 +782,14 @@ export default function SupervisionPage() {
     visitors: Array<{ visitorId: string; displayName: string | null; online: boolean }>
   } | null>(null)
   const [ipLookupLoading, setIpLookupLoading] = useState(false)
+
+  const [countryDialog, setCountryDialog] = useState<{
+    country: string | null
+    scope: 'online' | 'today'
+    title: string
+  } | null>(null)
+  const [countryVisitors, setCountryVisitors] = useState<VisitorIpRow[]>([])
+  const [countryVisitorsLoading, setCountryVisitorsLoading] = useState(false)
 
   const [unbanDialog, setUnbanDialog] = useState<{
     userId: string
@@ -873,6 +987,31 @@ export default function SupervisionPage() {
       setIpLookupLoading(false)
     }
   }, [])
+
+  const handleCountryClick = useCallback(
+    async (country: string | null, scope: 'online' | 'today') => {
+      const title = `${countryLabel(country)} — ${scope === 'online' ? 'en ligne' : 'aujourd\'hui'}`
+      setCountryDialog({ country, scope, title })
+      setCountryVisitorsLoading(true)
+      setCountryVisitors([])
+      try {
+        const param = country ?? 'unknown'
+        const res = await fetch(
+          `/api/admin/visitors-by-country?country=${encodeURIComponent(param)}&scope=${scope}`,
+          { credentials: 'include' }
+        )
+        if (res.ok) {
+          const data = await res.json()
+          setCountryVisitors(data.visitors ?? [])
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        setCountryVisitorsLoading(false)
+      }
+    },
+    []
+  )
 
   useEffect(() => {
     if (historyUserId) loadUserHistory(historyUserId)
@@ -1246,16 +1385,18 @@ export default function SupervisionPage() {
                         )}
                       </div>
                       <div className="text-xs text-white/45">
-                        {acc.ip && (
-                          <button
-                            type="button"
-                            onClick={() => handleIpClick(acc.ip!)}
-                            className="font-mono text-amber-200/70 hover:underline"
-                          >
-                            {acc.ip}
-                          </button>
-                        )}
-                        {acc.ip && acc.country && <> · </>}
+                        <IpAddressDisplay
+                          ips={
+                            acc.ips && acc.ips.length > 0
+                              ? acc.ips
+                              : acc.ip
+                                ? [{ ip: acc.ip, country: acc.country, lastSeenAt: acc.lastSeenAt ?? '' }]
+                                : []
+                          }
+                          onIpClick={handleIpClick}
+                          compact
+                        />
+                        {(acc.ips?.length || acc.ip) && acc.country && <> · </>}
                         {countryLabel(acc.country)}
                         {acc.lastSeenAt && (
                           <> · {new Date(acc.lastSeenAt).toLocaleString('fr-FR')}</>
@@ -1311,11 +1452,13 @@ export default function SupervisionPage() {
             title="En ligne par pays"
             description="Visiteurs actifs ces 5 dernières minutes"
             rows={stats?.visitors.onlineByCountry ?? []}
+            onCountryClick={handleCountryClick}
           />
           <CountryList
             title="Connectés aujourd'hui par pays"
             description="Visiteurs ayant été actifs dans les dernières 24 h"
             rows={stats?.visitors.visitorsTodayByCountry ?? []}
+            onCountryClick={handleCountryClick}
           />
           <IpVisitorList rows={stats?.visitorIpList ?? []} onIpClick={handleIpClick} />
         </TabsContent>
@@ -1472,15 +1615,22 @@ export default function SupervisionPage() {
                             · {countryFlag(u.lastCountry)} {countryLabel(u.lastCountry)}
                           </span>
                         )}
-                        {u.lastIp && (
-                          <button
-                            type="button"
-                            onClick={() => handleIpClick(u.lastIp!)}
-                            className="font-mono text-amber-200/60 hover:underline"
-                          >
-                            · {u.lastIp}
-                          </button>
-                        )}
+                        {u.lastIp || (u.ips && u.ips.length > 0) ? (
+                          <span className="inline-flex items-center gap-1">
+                            ·{' '}
+                            <IpAddressDisplay
+                              ips={
+                                u.ips && u.ips.length > 0
+                                  ? u.ips
+                                  : u.lastIp
+                                    ? [{ ip: u.lastIp, country: u.lastCountry, lastSeenAt: u.lastSeenAt ?? '' }]
+                                    : []
+                              }
+                              onIpClick={handleIpClick}
+                              compact
+                            />
+                          </span>
+                        ) : null}
                         {u.lastSeenAt && (
                           <span>· Vu le {new Date(u.lastSeenAt).toLocaleString('fr-FR')}</span>
                         )}
@@ -2067,6 +2217,74 @@ export default function SupervisionPage() {
                 )}
               </DialogFooter>
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!countryDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCountryDialog(null)
+            setCountryVisitors([])
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto border-white/10 bg-[#0c0b12] text-white sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-amber-400" />
+              Visiteurs — {countryDialog?.title}
+            </DialogTitle>
+            <DialogDescription className="text-white/50">
+              Liste des visiteurs et comptes pour ce pays. Touchez une carte pour voir toutes les IP.
+            </DialogDescription>
+          </DialogHeader>
+          {countryVisitorsLoading ? (
+            <p className="py-8 text-center text-white/50">Chargement…</p>
+          ) : countryVisitors.length === 0 ? (
+            <p className="py-8 text-center text-white/50">Aucun visiteur pour ce pays.</p>
+          ) : (
+            <div className="space-y-2">
+              {countryVisitors.map((row) => {
+                const ips =
+                  row.ips.length > 0
+                    ? row.ips
+                    : row.primaryIp
+                      ? [{ ip: row.primaryIp, country: row.country, lastSeenAt: row.lastSeenAt }]
+                      : []
+                return (
+                  <div
+                    key={row.subjectKey}
+                    className="rounded-xl border border-white/10 bg-black/20 p-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      {row.displayName ? (
+                        <>
+                          <span className="font-medium text-white">{row.displayName}</span>
+                          <AccountCodeBadge code={row.accountCode} />
+                          {row.role && <RoleBadge role={row.role} />}
+                        </>
+                      ) : (
+                        <span className="text-white/50">Visiteur anonyme</span>
+                      )}
+                      {row.online && (
+                        <Badge className="border-green-500/30 bg-green-500/10 text-green-300">
+                          En ligne
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-2">
+                      <IpAddressDisplay ips={ips} onIpClick={handleIpClick} compact />
+                    </div>
+                    {row.email && <p className="mt-1 text-xs text-white/45">{row.email}</p>}
+                    <p className="mt-1 text-[10px] text-white/30">
+                      {new Date(row.lastSeenAt).toLocaleString('fr-FR')}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </DialogContent>
       </Dialog>

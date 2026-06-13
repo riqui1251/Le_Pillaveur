@@ -1,5 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { PRESENCE_PING_SECONDS } from '@/lib/user-activity-server'
+import {
+  buildGroupedVisitors,
+  getIpsBySubjectKeys,
+  recordIpSeen,
+  subjectKeyFor,
+} from '@/lib/ip-history-server'
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000
 
@@ -69,6 +75,8 @@ export async function recordVisitorPing(
       },
     })
   }
+
+  await recordIpSeen(userId, visitorId, ip, country)
 }
 
 export async function getVisitorStats() {
@@ -130,18 +138,27 @@ export async function getVisitorStats() {
         })
       : []
 
+  const connectedUserIps = await getIpsBySubjectKeys(
+    recentUsers.map((u) => subjectKeyFor(u.id, ''))
+  )
+
   const connectedAccounts = recentUsers
-    .map((u) => ({
-      id: u.id,
-      displayName: u.displayName,
-      email: u.email,
-      accountCode: u.accountCode,
-      country: u.lastCountry,
-      ip: u.lastIp,
-      lastSeenAt: u.lastSeenAt?.toISOString() ?? null,
-      role: u.role,
-      online: u.lastSeenAt ? u.lastSeenAt >= onlineSince : false,
-    }))
+    .map((u) => {
+      const ips = connectedUserIps.get(subjectKeyFor(u.id, '')) ?? []
+      const primaryIp = ips[0]?.ip ?? u.lastIp
+      return {
+        id: u.id,
+        displayName: u.displayName,
+        email: u.email,
+        accountCode: u.accountCode,
+        country: ips[0]?.country ?? u.lastCountry,
+        ip: primaryIp,
+        ips,
+        lastSeenAt: u.lastSeenAt?.toISOString() ?? null,
+        role: u.role,
+        online: u.lastSeenAt ? u.lastSeenAt >= onlineSince : false,
+      }
+    })
     .sort((a, b) => {
       const ta = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0
       const tb = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0
@@ -193,21 +210,17 @@ export async function getVisitorStats() {
 
   const userById = new Map(presenceUsers.map((u) => [u.id, u]))
 
-  const visitorIpList = recentPresences.map((p) => {
-    const linked = p.userId ? userById.get(p.userId) : undefined
-    return {
+  const visitorIpList = await buildGroupedVisitors(
+    recentPresences.map((p) => ({
       visitorId: p.visitorId,
       userId: p.userId,
-      ip: p.lastIp,
       country: p.country,
-      displayName: linked?.displayName ?? null,
-      email: linked?.email ?? null,
-      accountCode: linked?.accountCode ?? null,
-      role: linked?.role ?? null,
-      lastSeenAt: p.lastSeen.toISOString(),
-      online: p.lastSeen >= onlineSince,
-    }
-  })
+      lastIp: p.lastIp,
+      lastSeen: p.lastSeen,
+    })),
+    presenceUsers,
+    onlineSince
+  )
 
   return {
     visitors: {
@@ -231,12 +244,26 @@ export async function lookupByIp(ip: string) {
   const normalized = ip.trim()
   const onlineSince = new Date(Date.now() - ONLINE_WINDOW_MS)
 
+  const ipLogs = await prisma.ipSeenLog.findMany({
+    where: { ip: normalized },
+    orderBy: { lastSeen: 'desc' },
+    take: 100,
+  })
+
+  const subjectUserIds = [
+    ...new Set(
+      ipLogs
+        .map((log) => (log.subjectKey.startsWith('user:') ? log.subjectKey.slice(5) : null))
+        .filter(Boolean)
+    ),
+  ] as string[]
+
   const [users, presences] = await Promise.all([
     prisma.user.findMany({
       where: {
         passwordHash: { not: '' },
         email: { not: null },
-        lastIp: normalized,
+        OR: [{ lastIp: normalized }, { id: { in: subjectUserIds } }],
       },
       select: {
         id: true,
@@ -267,6 +294,8 @@ export async function lookupByIp(ip: string) {
       },
     }),
   ])
+
+  const userIpsMap = await getIpsBySubjectKeys(users.map((u) => subjectKeyFor(u.id, '')))
 
   const presenceUserIds = [
     ...new Set(presences.map((p) => p.userId).filter(Boolean)),
@@ -300,6 +329,7 @@ export async function lookupByIp(ip: string) {
       lastSeenAt: u.lastSeenAt?.toISOString() ?? null,
       online: u.lastSeenAt ? u.lastSeenAt >= onlineSince : false,
       banned: Boolean(u.banType && (u.banType === 'permanent' || (u.bannedUntil && u.bannedUntil > new Date()))),
+      ips: userIpsMap.get(subjectKeyFor(u.id, '')) ?? [],
     })),
     visitors: presences.map((p) => {
       const linked = p.userId ? linkedById.get(p.userId) : undefined
