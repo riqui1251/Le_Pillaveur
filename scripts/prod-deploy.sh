@@ -6,6 +6,7 @@ ARCHIVE="${1:-/tmp/le-pillaveur-deploy.tar}"
 echo "=== Extract ==="
 cd "$APP_DIR"
 tar xf "$ARCHIVE"
+find scripts -name '*.sh' -exec sed -i 's/\r$//' {} + 2>/dev/null || true
 
 echo "=== Build image ==="
 docker build -t le-pillaveur:latest . 2>&1 | tail -20
