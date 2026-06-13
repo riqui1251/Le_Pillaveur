@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--no-experimental-webstorage next dev",
+    "dev": "node scripts/sync-prisma-client.mjs && cross-env NODE_OPTIONS=--no-experimental-webstorage next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -15,6 +15,8 @@
     "postinstall": "prisma generate",
     "prebuild": "prisma generate",
     "prisma:check": "node scripts/check-prisma.js",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:local": "prisma db execute --file prisma/migrations/20250613120000_ip_history/migration.sql && prisma migrate resolve --applied 20250613120000_ip_history",
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "accounts:backfill-codes": "node scripts/backfill-account-codes.mjs",
     "deploy:prepare": "node deploy-ftp.js"

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { PRESENCE_PING_SECONDS } from '@/lib/user-activity-server'
 import {
   buildGroupedVisitors,
+  findSubjectKeysByIp,
   getIpsBySubjectKeys,
   recordIpSeen,
   subjectKeyFor,
@@ -244,16 +245,10 @@ export async function lookupByIp(ip: string) {
   const normalized = ip.trim()
   const onlineSince = new Date(Date.now() - ONLINE_WINDOW_MS)
 
-  const ipLogs = await prisma.ipSeenLog.findMany({
-    where: { ip: normalized },
-    orderBy: { lastSeen: 'desc' },
-    take: 100,
-  })
-
   const subjectUserIds = [
     ...new Set(
-      ipLogs
-        .map((log) => (log.subjectKey.startsWith('user:') ? log.subjectKey.slice(5) : null))
+      (await findSubjectKeysByIp(normalized))
+        .map((key) => (key.startsWith('user:') ? key.slice(5) : null))
         .filter(Boolean)
     ),
   ] as string[]

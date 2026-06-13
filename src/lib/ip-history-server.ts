@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client'
+import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000
@@ -24,6 +26,28 @@ export type GroupedVisitor = {
   online: boolean
 }
 
+type IpSeenRow = {
+  id: string
+  subjectKey: string
+  ip: string
+  country: string | null
+  firstSeen: string
+  lastSeen: string
+}
+
+function newRowId(): string {
+  return randomBytes(16).toString('hex')
+}
+
+function rowToEntry(row: IpSeenRow): IpEntry {
+  return {
+    ip: row.ip,
+    country: row.country,
+    lastSeenAt: row.lastSeen,
+    firstSeenAt: row.firstSeen,
+  }
+}
+
 export function subjectKeyFor(userId: string | null | undefined, visitorId: string): string {
   return userId ? `user:${userId}` : `visitor:${visitorId}`
 }
@@ -36,34 +60,17 @@ export async function recordIpSeen(
 ): Promise<void> {
   if (!ip) return
 
-  const now = new Date()
+  const now = new Date().toISOString()
   const subjectKey = subjectKeyFor(userId, visitorId)
+  const id = newRowId()
 
-  const existing = await prisma.ipSeenLog.findUnique({
-    where: { subjectKey_ip: { subjectKey, ip } },
-    select: { id: true },
-  })
-
-  if (existing) {
-    await prisma.ipSeenLog.update({
-      where: { id: existing.id },
-      data: {
-        lastSeen: now,
-        ...(country ? { country } : {}),
-      },
-    })
-    return
-  }
-
-  await prisma.ipSeenLog.create({
-    data: {
-      subjectKey,
-      ip,
-      country: country ?? null,
-      firstSeen: now,
-      lastSeen: now,
-    },
-  })
+  await prisma.$executeRaw`
+    INSERT INTO "IpSeenLog" ("id", "subjectKey", "ip", "country", "firstSeen", "lastSeen")
+    VALUES (${id}, ${subjectKey}, ${ip}, ${country ?? null}, ${now}, ${now})
+    ON CONFLICT("subjectKey", "ip") DO UPDATE SET
+      "lastSeen" = excluded."lastSeen",
+      "country" = COALESCE(excluded."country", "IpSeenLog"."country")
+  `
 }
 
 export async function getIpsBySubjectKeys(
@@ -72,23 +79,32 @@ export async function getIpsBySubjectKeys(
   const map = new Map<string, IpEntry[]>()
   if (subjectKeys.length === 0) return map
 
-  const rows = await prisma.ipSeenLog.findMany({
-    where: { subjectKey: { in: subjectKeys } },
-    orderBy: { lastSeen: 'desc' },
-  })
+  const rows = await prisma.$queryRaw<IpSeenRow[]>`
+    SELECT "id", "subjectKey", "ip", "country", "firstSeen", "lastSeen"
+    FROM "IpSeenLog"
+    WHERE "subjectKey" IN (${Prisma.join(subjectKeys)})
+    ORDER BY "lastSeen" DESC
+  `
 
   for (const row of rows) {
     const list = map.get(row.subjectKey) ?? []
-    list.push({
-      ip: row.ip,
-      country: row.country,
-      lastSeenAt: row.lastSeen.toISOString(),
-      firstSeenAt: row.firstSeen.toISOString(),
-    })
+    list.push(rowToEntry(row))
     map.set(row.subjectKey, list)
   }
 
   return map
+}
+
+export async function findSubjectKeysByIp(ip: string): Promise<string[]> {
+  const rows = await prisma.$queryRaw<Array<{ subjectKey: string }>>`
+    SELECT "subjectKey"
+    FROM "IpSeenLog"
+    WHERE "ip" = ${ip}
+    GROUP BY "subjectKey"
+    ORDER BY MAX("lastSeen") DESC
+    LIMIT 100
+  `
+  return rows.map((row) => row.subjectKey)
 }
 
 type PresenceRow = {
