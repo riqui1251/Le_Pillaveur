@@ -4,6 +4,7 @@ import { LOCAL_PLAY_COOKIE, SESSION_COOKIE } from '@/lib/auth-cookies'
 
 const PUBLIC_PREFIXES = [
   '/compte',
+  '/legal',
   '/api/',
   '/_next',
   '/favicon.ico',

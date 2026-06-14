@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { LogIn, UserPlus, Gamepad2 } from 'lucide-react'
+import Link from 'next/link'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -40,10 +42,15 @@ export function AuthForm() {
   const [forgotLoading, setForgotLoading] = useState(false)
   const [forgotMessage, setForgotMessage] = useState<string | null>(null)
   const [forgotError, setForgotError] = useState<string | null>(null)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    if (mode === 'register' && !acceptedTerms) {
+      setError('Vous devez accepter les CGU et la politique de confidentialité.')
+      return
+    }
     setLoading(true)
     try {
       const err = mode === 'login'
@@ -195,9 +202,30 @@ export function AuthForm() {
           <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">{error}</p>
         )}
 
+        {mode === 'register' && (
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+            <Checkbox
+              checked={acceptedTerms}
+              onCheckedChange={(v) => setAcceptedTerms(v === true)}
+              className="mt-0.5 border-white/30 data-[state=checked]:bg-amber-500 data-[state=checked]:text-black"
+            />
+            <span className="text-xs leading-relaxed text-white/60">
+              J&apos;accepte les{' '}
+              <Link href="/legal/cgu" className="text-amber-400 underline underline-offset-2 hover:text-amber-300">
+                CGU
+              </Link>{' '}
+              et la{' '}
+              <Link href="/legal/confidentialite" className="text-amber-400 underline underline-offset-2 hover:text-amber-300">
+                politique de confidentialité
+              </Link>
+              .
+            </span>
+          </label>
+        )}
+
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || (mode === 'register' && !acceptedTerms)}
           className="w-full bg-amber-500 text-black hover:bg-amber-400"
         >
           {loading ? 'Chargement…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
@@ -207,6 +235,17 @@ export function AuthForm() {
       <div className="space-y-3 text-center">
         <p className="text-xs text-white/35">
           Sans compte, vos joueurs restent enregistrés uniquement sur cet appareil.
+        </p>
+        <p className="text-xs text-white/30">
+          En jouant en local, vous acceptez les{' '}
+          <Link href="/legal/cgu" className="text-amber-400/80 underline underline-offset-2 hover:text-amber-300">
+            CGU
+          </Link>{' '}
+          et la{' '}
+          <Link href="/legal/confidentialite" className="text-amber-400/80 underline underline-offset-2 hover:text-amber-300">
+            politique de confidentialité
+          </Link>
+          .
         </p>
         <Button
           type="button"

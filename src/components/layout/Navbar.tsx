@@ -207,6 +207,19 @@ export default function Navbar() {
             }}
           />
           <FullscreenButton className="w-full justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-sm text-white/60 hover:bg-white/[0.08] hover:text-white" />
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-1 pt-1 text-[11px] text-white/30">
+            <Link href="/legal/cgu" onClick={() => setDrawerOpen(false)} className="hover:text-amber-400/80">
+              CGU
+            </Link>
+            <span aria-hidden>·</span>
+            <Link href="/legal/confidentialite" onClick={() => setDrawerOpen(false)} className="hover:text-amber-400/80">
+              Confidentialité
+            </Link>
+            <span aria-hidden>·</span>
+            <Link href="/legal/mentions-legales" onClick={() => setDrawerOpen(false)} className="hover:text-amber-400/80">
+              Mentions légales
+            </Link>
+          </div>
         </div>
       </aside>
 

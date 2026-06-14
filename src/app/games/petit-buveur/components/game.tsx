@@ -188,24 +188,24 @@ const randomMessages = [
 // Nouveaux messages aléatoires pour les joueurs qui doivent boire
 const drinkingMessages = [
   'Santé et à la vôtre !',
-  'Une petite gorgée pour toi, un grand pas vers l\'ivresse !',
-  'La bière, c\'est de la vitamine B, c\'est bon pour la santé !',
-  'Les grands alcooliques ont commencé comme toi !',
-  'Un verre, ça va... deux verres, bonjour les dégâts !',
+  'Une petite gorgée pour toi, un grand pas vers la victoire !',
+  'Hydrate-toi bien, champion !',
+  'Les grands joueurs ont tous commencé comme toi !',
+  'Un verre d\'eau, ça va… deux verres, c\'est encore mieux !',
   'Tu te souviendras de cette gorgée demain matin !',
-  'L\'abus d\'alcool est dangereux pour la santé... mais tellement bon pour le moral !',
-  'À consommer avec modération... ou pas !',
+  'L\'abus d\'alcool est dangereux pour la santé — à consommer avec modération.',
+  'À consommer avec modération, quelle que soit la boisson !',
   'Ce n\'est pas une gorgée, c\'est un investissement pour ta soirée !',
-  'Si tu ne bois pas, quelqu\'un d\'autre le fera pour toi !',
-  'Une gorgée de plus ne fait jamais de mal... enfin presque !',
-  'Lève ton verre plus haut que ton moral !',
-  'Plus tu bois, plus tu deviens intéressant !',
+  'Si tu ne bois pas, quelqu\'un d\'autre prendra ta place au classement !',
+  'Une gorgée de plus pour le fun… en toute modération !',
+  'Lève ton verre plus haut que ton score !',
+  'Plus tu joues, plus tu deviens légendaire !',
   'C\'est pour hydrater tes neurones !',
-  'L\'alcool tue lentement, mais on n\'est pas pressés !',
-  'Une soirée sans alcool, c\'est comme une pizza sans fromage !',
+  'Prends ton temps, savoure chaque gorgée !',
+  'Une soirée entre amis, c\'est toujours une bonne idée !',
   'Tu es sur la bonne voie pour devenir une légende !',
   'À ce rythme, tu vas finir champion olympique de descente !',
-  'La vie est trop courte pour boire de mauvais alcool !'
+  'La vie est trop courte pour de mauvaises soirées !'
 ]
 
 interface GameSave {

@@ -6,6 +6,7 @@ import { PlayerEffectsProvider } from '@/components/providers/PlayerEffectsProvi
 import { AuthProvider } from '@/components/providers/AuthProvider'
 import { VisitTracker } from '@/components/analytics/VisitTracker'
 import { ToastProvider } from '@/components/ui/toast'
+import { AgeGate } from '@/components/legal/AgeGate'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -21,6 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <PlayerEffectsProvider>
             <ToastProvider>
               <VisitTracker />
+              <AgeGate />
               {children}
             </ToastProvider>
           </PlayerEffectsProvider>
