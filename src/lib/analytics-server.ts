@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { PRESENCE_PING_SECONDS } from '@/lib/user-activity-server'
 import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
+import type { DeviceKind } from '@/lib/device-from-user-agent'
 import {
   buildGroupedVisitors,
   findSubjectKeysByIp,
@@ -38,6 +39,8 @@ export async function recordVisitorPing(
     userId?: string | null
     ip?: string | null
     localPlayerNames?: string[]
+    forceLocalPlayerSync?: boolean
+    device?: DeviceKind | null
   }
 ): Promise<void> {
   const now = new Date()
@@ -45,14 +48,21 @@ export async function recordVisitorPing(
   const country = options?.country ?? null
   const userId = options?.userId ?? null
   const ip = options?.ip ?? null
+  const device = options?.device && options.device !== 'unknown' ? options.device : null
   const localPlayerNames = options?.localPlayerNames
+  const forceLocalPlayerSync = options?.forceLocalPlayerSync === true
   const localPlayersPatch =
-    localPlayerNames && localPlayerNames.length > 0
+    forceLocalPlayerSync && localPlayerNames !== undefined
       ? {
           localPlayerCount: localPlayerNames.length,
           localPlayerNames: JSON.stringify(localPlayerNames),
         }
-      : {}
+      : localPlayerNames && localPlayerNames.length > 0
+        ? {
+            localPlayerCount: localPlayerNames.length,
+            localPlayerNames: JSON.stringify(localPlayerNames),
+          }
+        : {}
 
   await prisma.$transaction([
     prisma.sitePresence.upsert({
@@ -63,6 +73,7 @@ export async function recordVisitorPing(
         lastSeen: now,
         country,
         lastIp: ip,
+        lastDevice: device,
         userId,
         ...localPlayersPatch,
       },
@@ -70,6 +81,7 @@ export async function recordVisitorPing(
         lastSeen: now,
         ...(country ? { country } : {}),
         ...(ip ? { lastIp: ip } : {}),
+        ...(device ? { lastDevice: device } : {}),
         ...(userId ? { userId } : {}),
         ...localPlayersPatch,
       },
@@ -89,6 +101,7 @@ export async function recordVisitorPing(
         totalPresenceSeconds: { increment: PRESENCE_PING_SECONDS },
         ...(country ? { lastCountry: country } : {}),
         ...(ip ? { lastIp: ip } : {}),
+        ...(device ? { lastDevice: device } : {}),
       },
     })
   }
@@ -121,7 +134,7 @@ export async function getVisitorStats() {
 
   const onlinePresences = await prisma.sitePresence.findMany({
     where: { lastSeen: { gte: onlineSince } },
-    select: { country: true, lastIp: true, userId: true, visitorId: true, lastSeen: true },
+    select: { country: true, lastIp: true, lastDevice: true, userId: true, visitorId: true, lastSeen: true },
   })
 
   const onlineByCountryMap = new Map<string, number>()
@@ -149,6 +162,7 @@ export async function getVisitorStats() {
             accountCode: true,
             lastCountry: true,
             lastIp: true,
+            lastDevice: true,
             lastSeenAt: true,
             role: true,
           },
@@ -171,6 +185,7 @@ export async function getVisitorStats() {
         country: ips[0]?.country ?? u.lastCountry,
         ip: primaryIp,
         ips,
+        lastDevice: u.lastDevice,
         lastSeenAt: u.lastSeenAt?.toISOString() ?? null,
         role: u.role,
         online: u.lastSeenAt ? u.lastSeenAt >= onlineSince : false,
@@ -203,6 +218,7 @@ export async function getVisitorStats() {
       userId: true,
       country: true,
       lastIp: true,
+      lastDevice: true,
       lastSeen: true,
       localPlayerCount: true,
       localPlayerNames: true,
@@ -234,6 +250,7 @@ export async function getVisitorStats() {
       userId: p.userId,
       country: p.country,
       lastIp: p.lastIp,
+      lastDevice: p.lastDevice,
       lastSeen: p.lastSeen,
       localPlayerCount: p.localPlayerCount,
       localPlayerNames: p.localPlayerNames,

@@ -8,6 +8,7 @@ import {
 } from '@/lib/auth-server'
 import { recordVisitorPing } from '@/lib/analytics-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
+import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
 
 export const runtime = 'nodejs'
@@ -17,14 +18,17 @@ export async function POST(request: Request) {
     const cookieStore = await cookies()
     let visitorId = cookieStore.get(VISITOR_COOKIE)?.value
     const { country, ip } = resolveGeoFromRequest(request)
+    const device = deviceKindFromHeader(request)
     const currentUser = await getCurrentUser()
 
     let localPlayerNames: string[] | undefined
+    let forceLocalPlayerSync = false
     const contentType = request.headers.get('content-type') ?? ''
     if (contentType.includes('application/json')) {
       try {
         const body = await request.json()
         localPlayerNames = parseLocalPlayerNamesInput(body?.localPlayerNames)
+        forceLocalPlayerSync = body?.syncLocalPlayers === true
       } catch {
         /* corps vide ou invalide */
       }
@@ -42,6 +46,8 @@ export async function POST(request: Request) {
       ip,
       userId: currentUser?.id ?? null,
       localPlayerNames,
+      forceLocalPlayerSync,
+      device,
     })
     return response
   } catch (error) {

@@ -27,6 +27,7 @@ export type GroupedVisitor = {
   role: string | null
   country: string | null
   primaryIp: string | null
+  lastDevice: string | null
   ips: IpEntry[]
   localPlayerNames: string[]
   localPlayerCount: number
@@ -121,6 +122,7 @@ type PresenceRow = {
   userId: string | null
   country: string | null
   lastIp: string | null
+  lastDevice?: string | null
   lastSeen: Date
   localPlayerCount?: number | null
   localPlayerNames?: string | null
@@ -187,6 +189,7 @@ export async function buildGroupedVisitors(
         role: linked?.role ?? null,
         country: ips[0]?.country ?? p.country,
         primaryIp,
+        lastDevice: p.lastDevice ?? null,
         ips,
         localPlayerNames,
         localPlayerCount: localPlayerNames.length,
@@ -224,6 +227,7 @@ export async function getVisitorsByCountry(
       userId: true,
       country: true,
       lastIp: true,
+      lastDevice: true,
       lastSeen: true,
       localPlayerCount: true,
       localPlayerNames: true,

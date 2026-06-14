@@ -18,7 +18,7 @@ import {
 } from '../lib/players';
 import { useAuth } from '@/hooks/useAuth';
 import { clearSelectedPlayerIds } from '@/lib/selectedPlayers';
-import { sendVisitPing } from '@/lib/visit-ping-client';
+import { syncLocalPlayersNow } from '@/lib/visit-ping-client';
 
 type PlayersListener = () => void;
 const playersListeners = new Set<PlayersListener>();
@@ -92,6 +92,9 @@ export function usePlayers() {
         setMostActivePlayers(getMostActivePlayers());
         cloudSyncedRef.current = !user;
         setLoading(false);
+        if (local.length > 0) {
+          syncLocalPlayersNow();
+        }
       }
     }
 
@@ -119,6 +122,7 @@ export function usePlayers() {
     const updatedPlayers = addPlayerToStorage(name);
     setPlayers(updatedPlayers);
     notifyOthers();
+    syncLocalPlayersNow();
     return updatedPlayers;
   }, [notifyOthers]);
 
@@ -126,6 +130,7 @@ export function usePlayers() {
     const updatedPlayers = removePlayerFromStorage(playerId);
     setPlayers(updatedPlayers);
     notifyOthers();
+    syncLocalPlayersNow();
     return updatedPlayers;
   }, [notifyOthers]);
 
@@ -133,6 +138,7 @@ export function usePlayers() {
     const updatedPlayers = updatePlayerInStorage(playerId, updates);
     setPlayers(updatedPlayers);
     notifyOthers();
+    syncLocalPlayersNow();
     return updatedPlayers;
   }, [notifyOthers]);
 
@@ -183,7 +189,7 @@ export function usePlayers() {
     savePlayers(players);
 
     if (pingTimeoutRef.current) clearTimeout(pingTimeoutRef.current);
-    pingTimeoutRef.current = setTimeout(() => sendVisitPing(), 500);
+    pingTimeoutRef.current = setTimeout(() => syncLocalPlayersNow(), 300);
 
     if (!user || !cloudSyncedRef.current) return;
 

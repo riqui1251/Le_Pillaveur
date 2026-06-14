@@ -11,6 +11,9 @@ export function getCountryFromRequest(request: Request): string | null {
 }
 
 export function getClientIpFromRequest(request: Request): string | null {
+  const cfIp = request.headers.get('cf-connecting-ip')
+  if (cfIp) return normalizeIp(cfIp.trim())
+
   const forwarded = request.headers.get('x-forwarded-for')
   if (forwarded) {
     const first = forwarded.split(',')[0]?.trim()
@@ -19,9 +22,6 @@ export function getClientIpFromRequest(request: Request): string | null {
 
   const realIp = request.headers.get('x-real-ip')
   if (realIp) return normalizeIp(realIp.trim())
-
-  const cfIp = request.headers.get('cf-connecting-ip')
-  if (cfIp) return normalizeIp(cfIp.trim())
 
   return null
 }

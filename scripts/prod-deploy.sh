@@ -50,6 +50,9 @@ bash "$APP_DIR/scripts/prod-migrate-ip-history.sh"
 echo "=== Migration visitor_local_players ==="
 bash "$APP_DIR/scripts/prod-migrate-visitor-local-players.sh"
 
+echo "=== Migration visitor_device ==="
+bash "$APP_DIR/scripts/prod-migrate-visitor-device.sh"
+
 echo "=== DB permissions ==="
 docker run --rm -v le-pillaveur-db:/data alpine sh -c '
   apk add sqlite >/dev/null 2>&1

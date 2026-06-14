@@ -26,6 +26,7 @@ model User {
   bannedById       String?
   lastCountry      String?
   lastIp           String?
+  lastDevice       String?
   lastSeenAt       DateTime?
   lastLoginAt      DateTime?
   totalPresenceSeconds Int   @default(0)
@@ -59,6 +60,7 @@ model SitePresence {
   userId           String?
   country          String?
   lastIp           String?
+  lastDevice       String?
   localPlayerCount Int      @default(0)
   localPlayerNames String?
   firstSeen        DateTime @default(now())

@@ -11,6 +11,7 @@ import { ensureUserAccountCode } from '@/lib/account-code'
 import { normalizeRole } from '@/lib/roles'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
+import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 
 const LOGIN_LIMIT = 10
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
 
     const now = new Date()
     const { country, ip } = resolveGeoFromRequest(request)
+    const device = deviceKindFromHeader(request)
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -64,6 +66,7 @@ export async function POST(request: Request) {
         lastSeenAt: now,
         ...(country ? { lastCountry: country } : {}),
         ...(ip ? { lastIp: ip } : {}),
+        ...(device !== 'unknown' ? { lastDevice: device } : {}),
       },
     })
 

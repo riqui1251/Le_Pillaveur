@@ -27,7 +27,12 @@ import {
   ChevronRight,
   Filter,
   X,
+  Monitor,
+  Smartphone,
+  Laptop,
+  Tablet,
 } from 'lucide-react'
+import { deviceLabel } from '@/lib/device-from-user-agent'
 import { useAuth } from '@/hooks/useAuth'
 import {
   assignableRoles,
@@ -86,6 +91,7 @@ type ConnectedAccount = {
   country: string | null
   ip: string | null
   ips?: IpEntry[]
+  lastDevice?: string | null
   lastSeenAt: string | null
   role: string
   online: boolean
@@ -102,6 +108,7 @@ type VisitorIpRow = {
   userId: string | null
   country: string | null
   primaryIp: string | null
+  lastDevice: string | null
   ips: IpEntry[]
   displayName: string | null
   email: string | null
@@ -151,6 +158,7 @@ type AdminUser = {
   createdAt: string
   lastCountry: string | null
   lastIp: string | null
+  lastDevice: string | null
   ips?: IpEntry[]
   lastSeenAt: string | null
   lastLoginAt: string | null
@@ -204,6 +212,7 @@ type UserDetail = {
     playMode: string
     lastCountry: string | null
     lastIp: string | null
+    lastDevice: string | null
     lastSeenAt: string | null
     lastLoginAt: string | null
     totalPresenceSeconds: number
@@ -295,12 +304,40 @@ function matchesAccountSearch(
   return false
 }
 
+function DeviceBadge({ device, compact }: { device?: string | null; compact?: boolean }) {
+  const label = deviceLabel(device)
+  if (!label) return null
+
+  const Icon =
+    device === 'mobile'
+      ? Smartphone
+      : device === 'tablet'
+        ? Tablet
+        : device === 'mac'
+          ? Laptop
+          : Monitor
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 text-white/60 ${
+        compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
+      }`}
+      title={`Appareil : ${label}`}
+    >
+      <Icon className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
+      {label}
+    </span>
+  )
+}
+
 function IpAddressDisplay({
   ips,
+  device,
   onIpClick,
   compact,
 }: {
   ips: IpEntry[]
+  device?: string | null
   onIpClick?: (ip: string) => void
   compact?: boolean
 }) {
@@ -320,6 +357,7 @@ function IpAddressDisplay({
       >
         {primary.ip}
       </button>
+      <DeviceBadge device={device} compact={compact} />
       {others.length > 0 && (
         <details className="inline-block">
           <summary className="cursor-pointer list-none rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-amber-200/70 hover:bg-white/10 [&::-webkit-details-marker]:hidden">
@@ -632,6 +670,9 @@ function VisitorDetailPanel({
     <div className="mt-3 space-y-2 border-t border-white/10 pt-3 text-sm">
       <div>
         <p className="text-xs font-medium text-white/45">Adresses IP</p>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <DeviceBadge device={row.lastDevice} />
+        </div>
         {row.ips.length > 0 ? (
           <ul className="mt-1 space-y-1">
             {row.ips.map((entry) => (
@@ -778,7 +819,7 @@ function IpVisitorList({
                       <div className="min-w-0 flex-1 space-y-1.5">
                         {renderPlayer(row)}
                         <div className="flex flex-wrap items-center gap-2">
-                          <IpAddressDisplay ips={ips} onIpClick={onIpClick} compact />
+                          <IpAddressDisplay ips={ips} device={row.lastDevice} onIpClick={onIpClick} compact />
                           <span className="flex items-center gap-1 text-xs text-white/50">
                             {countryFlag(row.country)}
                             {countryLabel(row.country)}
@@ -1457,6 +1498,7 @@ export default function SupervisionPage() {
                           }
                           onIpClick={handleIpClick}
                           compact
+                          device={acc.lastDevice}
                         />
                         {(acc.ips?.length || acc.ip) && acc.country && <> · </>}
                         {countryLabel(acc.country)}
@@ -1690,6 +1732,7 @@ export default function SupervisionPage() {
                               }
                               onIpClick={handleIpClick}
                               compact
+                              device={u.lastDevice}
                             />
                           </span>
                         ) : null}
@@ -2120,7 +2163,11 @@ export default function SupervisionPage() {
                 <p>Mode : {historyDetail.user.playMode}</p>
                 <p>Pays : {countryLabel(historyDetail.user.lastCountry)}</p>
                 {historyDetail.user.lastIp && (
-                  <p>IP : <span className="font-mono text-amber-200/80">{historyDetail.user.lastIp}</span></p>
+                  <p className="flex flex-wrap items-center gap-2">
+                    IP :{' '}
+                    <span className="font-mono text-amber-200/80">{historyDetail.user.lastIp}</span>
+                    <DeviceBadge device={historyDetail.user.lastDevice} compact />
+                  </p>
                 )}
                 {historyDetail.user.lastSeenAt && (
                   <p>Dernière activité : {new Date(historyDetail.user.lastSeenAt).toLocaleString('fr-FR')}</p>
@@ -2337,7 +2384,7 @@ export default function SupervisionPage() {
                       )}
                     </div>
                     <div className="mt-2">
-                      <IpAddressDisplay ips={ips} onIpClick={handleIpClick} compact />
+                      <IpAddressDisplay ips={ips} device={row.lastDevice} onIpClick={handleIpClick} compact />
                     </div>
                     <div className="mt-2">
                       <LocalPlayersSection row={row} />

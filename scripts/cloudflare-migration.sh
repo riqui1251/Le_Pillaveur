@@ -1,0 +1,46 @@
+#!/bin/bash
+# Checklist migration Cloudflare pour lepillaveur.fr
+set -euo pipefail
+
+VPS_IP="${VPS_IP:-146.59.199.22}"
+DOMAIN="lepillaveur.fr"
+
+echo "=============================================="
+echo " Migration Cloudflare — ${DOMAIN}"
+echo "=============================================="
+echo ""
+echo "DNS actuel:"
+dig +short NS "$DOMAIN" | sed 's/^/  NS /'
+dig +short A "$DOMAIN" | sed 's/^/  A  /'
+dig +short A "www.${DOMAIN}" | sed 's/^/  www A /'
+echo ""
+echo "Etapes (dashboard Cloudflare):"
+echo ""
+echo "  1. Creer un compte sur https://dash.cloudflare.com"
+echo "  2. Add site > ${DOMAIN} (plan Free)"
+echo "  3. Cloudflare affiche 2 nameservers — les tiens :"
+echo "       felipe.ns.cloudflare.com"
+echo "       keyla.ns.cloudflare.com"
+echo "  4. Chez ton registrar (actuellement anycast.me / OVH) :"
+echo "     Domaines > lepillaveur.fr > Serveurs DNS"
+echo "     Remplacer dns200.anycast.me et ns200.anycast.me par les 2 NS Cloudflare"
+echo "  5. DNS > Records:"
+echo "     A    @    ${VPS_IP}   Proxied (nuage ORANGE)"
+echo "     A    www  ${VPS_IP}   Proxied (nuage ORANGE)"
+echo "  6. SSL/TLS > Overview > Full (strict)"
+echo "     (Caddy a deja un certificat Let's Encrypt valide)"
+echo "  7. SSL/TLS > Edge Certificates > Always Use HTTPS: ON"
+echo "  8. Security > Settings > Security Level: Medium"
+echo "  9. Speed > Optimization > Auto Minify (optionnel)"
+echo ""
+echo "Apres propagation DNS (souvent 15 min - 24 h):"
+echo "  curl -sI https://${DOMAIN}/api/health | grep -i cf-ray"
+echo "  (presence de cf-ray = trafic via Cloudflare)"
+echo ""
+echo "Puis sur le VPS (bloque l'acces direct IP):"
+echo "  sudo bash /opt/le-pillaveur/scripts/vps-ufw-cloudflare.sh"
+echo ""
+echo "Backup off-site R2 (meme compte Cloudflare):"
+echo "  sudo bash /opt/le-pillaveur/scripts/vps-setup-offsite-r2.sh"
+echo ""
+echo "=============================================="
