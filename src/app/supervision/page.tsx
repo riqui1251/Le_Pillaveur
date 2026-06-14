@@ -1712,7 +1712,7 @@ export default function SupervisionPage() {
                         )}
                       </div>
                       <p className="truncate text-xs text-white/45">{u.email}</p>
-                      <p className="flex flex-wrap items-center gap-2 text-[11px] text-white/30">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/30">
                         <span>Inscrit le {new Date(u.createdAt).toLocaleDateString('fr-FR')}</span>
                         {u.lastCountry && (
                           <span>
@@ -1739,7 +1739,7 @@ export default function SupervisionPage() {
                         {u.lastSeenAt && (
                           <span>· Vu le {new Date(u.lastSeenAt).toLocaleString('fr-FR')}</span>
                         )}
-                      </p>
+                      </div>
                       {showAccountActivity && (
                         <UserActivityLines
                           compact

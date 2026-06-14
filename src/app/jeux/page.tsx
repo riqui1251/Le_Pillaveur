@@ -7,6 +7,7 @@ import { HubShell } from "@/components/hub/HubShell"
 import { SelectedPlayersBar } from "@/components/hub/SelectedPlayersBar"
 import { GameCard } from "@/components/hub/GameCard"
 import { Input } from "@/components/ui/input"
+import { useRequireSelectedPlayers } from "@/hooks/useRequireSelectedPlayers"
 import {
   PlinkoIcon,
   RaceFlagIcon,
@@ -43,6 +44,7 @@ function GameIconById({ id, className }: { id: string; className?: string }) {
 }
 
 export default function GamesHubPage() {
+  const { ready } = useRequireSelectedPlayers()
   const [query, setQuery] = useState("")
 
   const filtered = useMemo(() => {
@@ -56,6 +58,8 @@ export default function GamesHubPage() {
         g.id.toLowerCase().includes(q)
     )
   }, [query])
+
+  if (!ready) return null
 
   return (
     <HubShell

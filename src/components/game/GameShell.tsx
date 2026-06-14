@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FullscreenButton } from "@/components/ui/fullscreen-button"
 import { cn } from "@/lib/utils"
+import { gameActionBarPadding } from "@/components/game/GameFixedActionBar"
 
 export interface GameShellProps {
   /** Titre affiché dans l'en-tête du jeu. */
@@ -107,7 +108,7 @@ export function GameShell({
         className={cn(
           "game-surface flex w-full flex-1 flex-col px-3 py-4 sm:px-4",
           center && "justify-center",
-          actionBar && "pb-28",
+          actionBar && gameActionBarPadding("default"),
           contentClassName
         )}
         style={surfaceStyle}

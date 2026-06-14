@@ -430,7 +430,18 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
   }, [isProcessingTurn, isDiceRolling, pendingCase, showTargetDialog, showWheel, showDuelDialog, showChanceDialog, showExchangeDialog, showChainDialog]);
 
-  // Débloque le dé si le tour est marqué en cours sans UI active (filet de sécurité)
+  // Notification orpheline (showNotification sans currentCase) → barre bloquée sans modal
+  useEffect(() => {
+    if (!showNotification || currentCase) return
+    const timer = setTimeout(() => {
+      setShowNotification(false)
+      setShowNextButton(false)
+      setIsProcessingTurn(false)
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [showNotification, currentCase])
+
+  // Déblocage après blocage prolongé sans UI visible (évite une partie figée)
   useEffect(() => {
     const hasBlockingUi =
       showTargetDialog ||
@@ -443,7 +454,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       showVoteDialog ||
       showDeHonteDialog ||
       showPileFaceDialog ||
-      showNotification ||
+      (showNotification && currentCase) ||
       wheelSpinning ||
       duelWheelSpinning ||
       isDiceRolling
@@ -452,7 +463,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
     const timer = setTimeout(() => {
       setIsProcessingTurn(false)
-    }, 500)
+    }, 12_000)
 
     return () => clearTimeout(timer)
   }, [
@@ -468,11 +479,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     showDeHonteDialog,
     showPileFaceDialog,
     showNotification,
-    showNextButton,
+    currentCase,
     wheelSpinning,
     duelWheelSpinning,
     isDiceRolling,
-  ]);
+  ])
 
   // Fonctions de sauvegarde et chargement
   const saveGame = useCallback(() => {
@@ -724,8 +735,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     player.cursed -= 1
   }
 
-  const isDiceActionBlocked = () =>
-    isDiceRolling ||
+  const hasBlockingDialog = () =>
     showTargetDialog ||
     showWheel ||
     showDuelDialog ||
@@ -736,12 +746,17 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     showVoteDialog ||
     showDeHonteDialog ||
     showPileFaceDialog ||
-    showNotification ||
     wheelSpinning ||
     duelWheelSpinning
 
+  const canRollDice = () =>
+    !isDiceRolling &&
+    !isProcessingTurn &&
+    !hasBlockingDialog() &&
+    !(showNotification && currentCase)
+
   const rollDice = () => {
-    if (isDiceActionBlocked()) {
+    if (!canRollDice()) {
       return
     }
     
@@ -1426,11 +1441,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setTimeout(() => continueCaseFlow(nextCase), 80)
       return
     }
-    advanceToNextPlayer()
-  };
-
-  // Fonction de secours pour débloquer le jeu
-  const forceNextPlayer = () => {
     advanceToNextPlayer()
   };
 
@@ -3004,8 +3014,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     return ''
   }
 
+  const showDiceActionBar = !hasBlockingDialog() && !(showNotification && currentCase)
+
   return (
-    <div className="relative -mx-2 -my-1 flex min-h-[calc(100dvh-3.5rem)] flex-col overflow-hidden bg-gray-950 text-white sm:-mx-4 sm:min-h-[calc(100dvh-3.75rem)]">
+    <div className="relative grid h-full min-h-0 w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-gray-950 text-white">
       {/* Blobs animés */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
@@ -3032,9 +3044,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </div>
       </header>
 
-      {/* Contenu scrollable — min-h-0 évite que le scroll recouvre la barre d'action sur mobile */}
-      <main className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-2 pt-2 sm:px-4 sm:pt-3 [-webkit-overflow-scrolling:touch]">
-        <div className="mx-auto max-w-3xl space-y-3 py-3">
+      {/* Zone scrollable : plateau + classement uniquement (barre d'action en footer fixe) */}
+      <main className="relative min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+        <div className="mx-auto flex w-full max-w-3xl flex-col space-y-3 px-3 py-3 pb-4 sm:px-4">
       {/* HUD tour + joueur actif */}
       <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
         <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-xs font-bold text-amber-300">
@@ -3165,6 +3177,59 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </div>
       </div>
 
+        </div>
+      </main>
+
+      {showDiceActionBar && (
+        <footer
+          className="relative z-40 border-t border-white/10 bg-gray-950/95 px-3 py-3 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4"
+          aria-label="Actions de tour"
+        >
+          <div className="mx-auto flex w-full max-w-lg items-stretch gap-2 sm:max-w-3xl sm:gap-3">
+            {players[currentPlayer] && (
+              <div
+                className="flex shrink-0 flex-col justify-center gap-1.5 rounded-2xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2.5 sm:px-4 sm:py-3"
+                aria-label={`Au tour de ${players[currentPlayer].name}`}
+              >
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/80 sm:text-xs">
+                  Au tour
+                </span>
+                <div className="flex items-center gap-2">
+                  <PlayerIcon
+                    player={players[currentPlayer]}
+                    size="md"
+                    className="h-8 w-8 shrink-0 text-base sm:h-9 sm:w-9 sm:text-lg"
+                  />
+                  <PlayerName
+                    player={players[currentPlayer]}
+                    className="max-w-[5.5rem] truncate text-sm font-bold text-emerald-100 sm:max-w-[7.5rem] sm:text-base"
+                  />
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={rollDice}
+              disabled={!canRollDice()}
+              className="min-w-0 flex-1 touch-manipulation select-none rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-lg"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <span>
+                  {isDiceRolling
+                    ? 'Lancement…'
+                    : showNotification && currentCase
+                      ? 'Validez l\'effet…'
+                      : hasBlockingDialog()
+                        ? 'Action en cours…'
+                        : 'Lancer le dé'}
+                </span>
+                <Dice6 className={`h-5 w-5 ${isDiceRolling ? 'animate-spin' : ''}`} />
+              </span>
+            </button>
+          </div>
+        </footer>
+      )}
+
       {/* Duel sur case partagée (avant le ciblage) */}
       <AnimatePresence>
         {showDuelDialog && duelBoardPosition != null && (
@@ -3172,7 +3237,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
+            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.97 }}
@@ -3342,7 +3407,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
           >
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.97 }}
@@ -3414,8 +3479,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       )}
       </AnimatePresence>
 
-      <Dialog open={showTeleportDialog} onOpenChange={setShowTeleportDialog}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={showTeleportDialog} onOpenChange={() => {}}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>🌀 Téléport</DialogTitle>
           </DialogHeader>
@@ -3433,8 +3498,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showVoteDialog} onOpenChange={setShowVoteDialog}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={showVoteDialog} onOpenChange={() => {}}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>🗳️ Vote</DialogTitle>
           </DialogHeader>
@@ -3457,15 +3522,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
       <Dialog
         open={showDeHonteDialog}
-        onOpenChange={open => {
-          if (!open && !deHonteRolling) {
-            clearDeHonteRollInterval()
-            setDeHonteResult(null)
-            setShowDeHonteDialog(false)
-          }
-        }}
+        onOpenChange={() => {}}
       >
-        <DialogContent className="sm:max-w-md overflow-hidden">
+        <DialogContent showCloseButton={false} className="sm:max-w-md overflow-hidden">
           <DialogHeader>
             <DialogTitle>🎲 Dé de la honte</DialogTitle>
           </DialogHeader>
@@ -3524,14 +3583,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
       <Dialog
         open={showPileFaceDialog}
-        onOpenChange={open => {
-          if (!open && !pileFaceFlipping) {
-            setShowPileFaceDialog(false)
-            resetPileFaceState()
-          }
-        }}
+        onOpenChange={() => {}}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>🪙 Pile ou face</DialogTitle>
           </DialogHeader>
@@ -3615,8 +3669,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       </Dialog>
 
       {/* Dialog pour la case Chance */}
-      <Dialog open={showChanceDialog} onOpenChange={setShowChanceDialog}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={showChanceDialog} onOpenChange={() => {}}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>🍀 Case Chance</DialogTitle>
           </DialogHeader>
@@ -3688,7 +3742,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
           >
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.97 }}
@@ -3738,8 +3792,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       </AnimatePresence>
 
       {/* Dialog pour la case Échange */}
-      <Dialog open={showExchangeDialog} onOpenChange={setShowExchangeDialog}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={showExchangeDialog} onOpenChange={() => {}}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>🔄 Case Échange</DialogTitle>
           </DialogHeader>
@@ -3819,7 +3873,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
+            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.97 }}
@@ -4095,8 +4149,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           </div>
         </DialogContent>
       </Dialog>
-        </div>
-      </main>
 
       {/* Effet de la case — centré, au-dessus de la barre d'action */}
       <AnimatePresence>
@@ -4177,59 +4229,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Barre d'action en bas (dans le flux, pas en fixed — évite les taps fantômes sur mobile) */}
-      {!showNotification && !isDiceActionBlocked() && (
-      <div className="relative z-50 shrink-0 isolate border-t border-white/10 bg-gray-950/95 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 px-3 py-3 sm:px-4">
-          <div className="relative flex w-full max-w-lg items-stretch gap-2 sm:gap-3">
-            {isProcessingTurn && !isDiceRolling && (
-              <button
-                type="button"
-                onClick={forceNextPlayer}
-                className="absolute -top-1 right-0 z-10 flex h-9 w-9 touch-manipulation items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 transition-all hover:bg-red-500/20 active:scale-95 sm:-right-1"
-                title="Débloquer le jeu"
-                aria-label="Débloquer"
-              >
-                🔧
-              </button>
-            )}
-            {players[currentPlayer] && (
-              <div
-                className="flex shrink-0 flex-col justify-center gap-1.5 rounded-2xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2.5 sm:px-4 sm:py-3"
-                aria-label={`Au tour de ${players[currentPlayer].name}`}
-              >
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/80 sm:text-xs">
-                  Au tour
-                </span>
-                <div className="flex items-center gap-2">
-                  <PlayerIcon
-                    player={players[currentPlayer]}
-                    size="md"
-                    className="h-8 w-8 shrink-0 text-base sm:h-9 sm:w-9 sm:text-lg"
-                  />
-                  <PlayerName
-                    player={players[currentPlayer]}
-                    className="max-w-[5.5rem] truncate text-sm font-bold text-emerald-100 sm:max-w-[7.5rem] sm:text-base"
-                  />
-                </div>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={rollDice}
-              disabled={isDiceActionBlocked()}
-              className="min-w-0 flex-1 touch-manipulation select-none rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-lg"
-            >
-              <span className="flex items-center justify-center gap-2">
-                <span>Lancer le dé</span>
-                <Dice6 className={`h-5 w-5 ${isDiceRolling ? 'animate-spin' : ''}`} />
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-      )}
     </div>
   );
 }

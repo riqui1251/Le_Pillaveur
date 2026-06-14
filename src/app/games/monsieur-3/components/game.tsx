@@ -9,6 +9,7 @@ import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
+import { GameFixedActionBar, gameActionBarPadding } from '@/components/game/GameFixedActionBar'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -304,7 +305,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
       </div>
 
       {/* Contenu principal */}
-      <div className="mx-auto max-w-xl px-4 pt-6 pb-28 space-y-4 sm:pt-8">
+      <div className={cn("mx-auto max-w-xl px-4 pt-6 space-y-4 sm:pt-8", gameActionBarPadding())}>
 
         {/* Phase indicator */}
         <div className="flex items-center gap-2">
@@ -450,19 +451,16 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
         )}
       </div>
 
-      {/* Barre d'action fixe */}
-      <div className="fixed bottom-0 inset-x-0 z-20 bg-gradient-to-t from-[#07060b] via-[#07060b]/95 to-transparent backdrop-blur-sm">
-        <div className="mx-auto max-w-xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <button
-            onClick={rollDice}
-            disabled={!canRoll || rolling || victoryScreen || players.length === 0}
-            aria-label={rolling ? 'Lancement en cours' : 'Lancer les dés'}
-            className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-rose-500 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(239,68,68,0.35)] transition-transform [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 hover:from-red-500 hover:to-rose-400"
-          >
-            {rolling ? '🎲 Lancement...' : gamePhase === 'setup' ? '🎲 Lancer le dé' : '🎲 Lancer les dés'}
-          </button>
-        </div>
-      </div>
+      <GameFixedActionBar>
+        <button
+          onClick={rollDice}
+          disabled={!canRoll || rolling || victoryScreen || players.length === 0}
+          aria-label={rolling ? 'Lancement en cours' : 'Lancer les dés'}
+          className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-rose-500 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(239,68,68,0.35)] transition-transform [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 hover:from-red-500 hover:to-rose-400"
+        >
+          {rolling ? '🎲 Lancement...' : gamePhase === 'setup' ? '🎲 Lancer le dé' : '🎲 Lancer les dés'}
+        </button>
+      </GameFixedActionBar>
 
       {/* Écran de victoire */}
       <AnimatePresence>

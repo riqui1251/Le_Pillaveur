@@ -24,6 +24,7 @@ import { isSpecialPlayer, getSpecialEffectClass } from "@/lib/playerUtils"
 import { cn } from "@/lib/utils"
 import { RotateCcw, ArrowLeft } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { GameFixedActionBar, gameActionBarPadding } from "@/components/game/GameFixedActionBar"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -270,7 +271,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
           </div>
         </div>
 
-        <div className="mx-auto max-w-xl px-4 pt-6 pb-28 space-y-4 sm:pt-8">
+        <div className={cn("mx-auto max-w-xl px-4 pt-6 space-y-4 sm:pt-8", gameActionBarPadding())}>
           {/* Info */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/55 leading-relaxed">
             Chaque joueur choisit sa <strong className="text-white/80">parité</strong>, sa <strong className="text-white/80">plage</strong>, son <strong className="text-teal-400">chiffre fait boire</strong> et son <strong className="text-amber-400">chiffre donne à boire</strong>.
@@ -374,18 +375,15 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
           })}
         </div>
 
-        {/* Barre fixe bas */}
-        <div className="fixed bottom-0 inset-x-0 z-20 bg-gradient-to-t from-[#07060b] via-[#07060b]/95 to-transparent backdrop-blur-sm">
-          <div className="mx-auto max-w-xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <button
-              onClick={startPlay}
-              disabled={!setupValid}
-              className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(20,184,166,0.3)] transition [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 hover:from-teal-500 hover:to-indigo-500"
-            >
-              Valider les paris — Lancer la partie →
-            </button>
-          </div>
-        </div>
+        <GameFixedActionBar>
+          <button
+            onClick={startPlay}
+            disabled={!setupValid}
+            className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(20,184,166,0.3)] transition [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 hover:from-teal-500 hover:to-indigo-500"
+          >
+            Valider les paris — Lancer la partie →
+          </button>
+        </GameFixedActionBar>
       </div>
     )
   }
@@ -420,7 +418,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-xl px-4 pt-6 pb-28 space-y-4 sm:pt-8">
+      <div className={cn("mx-auto max-w-xl px-4 pt-6 space-y-4 sm:pt-8", gameActionBarPadding())}>
 
         {/* Zone des dés */}
         <div
@@ -543,19 +541,16 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
         )}
       </div>
 
-      {/* Barre d'action fixe */}
-      <div className="fixed bottom-0 inset-x-0 z-20 bg-gradient-to-t from-[#07060b] via-[#07060b]/95 to-transparent backdrop-blur-sm">
-        <div className="mx-auto max-w-xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <button
-            onClick={roll}
-            disabled={rolling}
-            aria-label={rolling ? "Lancer en cours" : "Lancer les dés"}
-            className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(20,184,166,0.3)] [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 transition-transform hover:from-teal-500 hover:to-indigo-500"
-          >
-            {rolling ? "🎲 Lancement…" : "🎲 Lancer les dés"}
-          </button>
-        </div>
-      </div>
+      <GameFixedActionBar>
+        <button
+          onClick={roll}
+          disabled={rolling}
+          aria-label={rolling ? "Lancer en cours" : "Lancer les dés"}
+          className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(20,184,166,0.3)] [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 transition-transform hover:from-teal-500 hover:to-indigo-500"
+        >
+          {rolling ? "🎲 Lancement…" : "🎲 Lancer les dés"}
+        </button>
+      </GameFixedActionBar>
     </div>
   )
 }

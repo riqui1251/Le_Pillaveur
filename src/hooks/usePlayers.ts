@@ -19,6 +19,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { clearSelectedPlayerIds } from '@/lib/selectedPlayers';
 import { syncLocalPlayersNow } from '@/lib/visit-ping-client';
+import { pushPlayersToCloud, syncLocalWithCloud } from '@/lib/player-sync';
 
 type PlayersListener = () => void;
 const playersListeners = new Set<PlayersListener>();
@@ -62,26 +63,17 @@ export function usePlayers() {
 
       if (user) {
         try {
-          const res = await fetch('/api/players/local', { credentials: 'include' });
-          if (res.ok) {
-            const data = await res.json();
-            const cloud: Player[] = Array.isArray(data.players) ? data.players : [];
-            if (!cancelled) {
-              if (cloud.length > 0) {
-                savePlayers(cloud);
-                setPlayers(cloud);
-              } else {
-                // Compte cloud vide : ne pas reprendre les joueurs locaux de l'appareil
-                savePlayers([]);
-                setPlayers([]);
-                clearSelectedPlayerIds();
-              }
-              setTopPlayers(getTopPlayers());
-              setMostActivePlayers(getMostActivePlayers());
-              cloudSyncedRef.current = true;
-              setLoading(false);
-              return;
+          const merged = await syncLocalWithCloud();
+          if (!cancelled) {
+            setPlayers(merged);
+            if (merged.length === 0) {
+              clearSelectedPlayerIds();
             }
+            setTopPlayers(getTopPlayers());
+            setMostActivePlayers(getMostActivePlayers());
+            cloudSyncedRef.current = true;
+            setLoading(false);
+            return;
           }
         } catch {}
       }
@@ -118,29 +110,62 @@ export function usePlayers() {
     notifyPlayersUpdated(listenerRef.current ?? undefined);
   }, []);
 
+  const pushCloudIfReady = useCallback((playerList: Player[]) => {
+    if (user && cloudSyncedRef.current) {
+      pushPlayersToCloud(playerList).catch(() => {});
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || loading) return;
+
+    const resyncFromCloud = () => {
+      if (document.visibilityState === 'hidden') return;
+      syncLocalWithCloud()
+        .then((merged) => {
+          setPlayers(merged);
+          setTopPlayers(getTopPlayers());
+          setMostActivePlayers(getMostActivePlayers());
+        })
+        .catch(() => {});
+    };
+
+    document.addEventListener('visibilitychange', resyncFromCloud);
+    window.addEventListener('focus', resyncFromCloud);
+    window.addEventListener('pageshow', resyncFromCloud);
+    return () => {
+      document.removeEventListener('visibilitychange', resyncFromCloud);
+      window.removeEventListener('focus', resyncFromCloud);
+      window.removeEventListener('pageshow', resyncFromCloud);
+    };
+  }, [user?.id, loading]);
+
   const addPlayer = useCallback((name: string) => {
     const updatedPlayers = addPlayerToStorage(name);
     setPlayers(updatedPlayers);
     notifyOthers();
     syncLocalPlayersNow();
+    pushCloudIfReady(updatedPlayers);
     return updatedPlayers;
-  }, [notifyOthers]);
+  }, [notifyOthers, pushCloudIfReady]);
 
   const removePlayer = useCallback((playerId: string) => {
     const updatedPlayers = removePlayerFromStorage(playerId);
     setPlayers(updatedPlayers);
     notifyOthers();
     syncLocalPlayersNow();
+    pushCloudIfReady(updatedPlayers);
     return updatedPlayers;
-  }, [notifyOthers]);
+  }, [notifyOthers, pushCloudIfReady]);
 
   const updatePlayer = useCallback((playerId: string, updates: Partial<Player>) => {
     const updatedPlayers = updatePlayerInStorage(playerId, updates);
     setPlayers(updatedPlayers);
     notifyOthers();
     syncLocalPlayersNow();
+    pushCloudIfReady(updatedPlayers);
     return updatedPlayers;
-  }, [notifyOthers]);
+  }, [notifyOthers, pushCloudIfReady]);
 
   const updatePlayerStats = useCallback((playerId: string, gameId: string, stats: Partial<PlayerStats>) => {
     const updatedPlayers = updatePlayerStatsInStorage(playerId, gameId, stats);
@@ -148,8 +173,9 @@ export function usePlayers() {
     setTopPlayers(getTopPlayers());
     setMostActivePlayers(getMostActivePlayers());
     notifyOthers();
+    pushCloudIfReady(updatedPlayers);
     return updatedPlayers;
-  }, [notifyOthers]);
+  }, [notifyOthers, pushCloudIfReady]);
 
   const updatePlayerPreferences = useCallback((playerId: string, preferences: Partial<PlayerPreferences>) => {
     const updatedPlayers = updatePlayerPreferencesInStorage(playerId, preferences);

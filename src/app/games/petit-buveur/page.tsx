@@ -33,6 +33,15 @@ export default function PetitBuveurPage() {
     setHasActiveSave(!!storage?.getItem('petit-buveur-save'))
   }, [gameStarted])
 
+  useEffect(() => {
+    if (!gameStarted) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [gameStarted])
+
   const handleGameEnd = () => {
     setGameStarted(false)
     setInitialMode('new')
@@ -45,12 +54,14 @@ export default function PetitBuveurPage() {
 
   if (gameStarted) {
     return (
-      <Game
-        players={selectedPlayers}
-        onGameEnd={handleGameEnd}
-        difficulty={difficulty}
-        initialMode={initialMode}
-      />
+      <div className="fixed inset-x-0 bottom-0 top-14 z-20 flex flex-col overflow-hidden bg-gray-950 sm:top-[3.75rem]">
+        <Game
+          players={selectedPlayers}
+          onGameEnd={handleGameEnd}
+          difficulty={difficulty}
+          initialMode={initialMode}
+        />
+      </div>
     )
   }
 

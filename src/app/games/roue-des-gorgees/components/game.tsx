@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-// import { WheelIcon } from '@/components/icons/GameIcons'
+import { GameShell } from '@/components/game/GameShell'
 import { motion, useMotionValue, animate } from 'framer-motion'
 
 type BasePlayer = { id: string; name: string }
@@ -172,7 +172,35 @@ export default function Game({ players, onGameEnd, updatePlayerStats, riskLevel,
     }
   }, [allPlayersPlayed])
 
+  const restartRound = () => {
+    setRounds([])
+    setCurrentIndex(0)
+    setSpinning(false)
+    rotation.set(0)
+    lastTickRef.current = 0
+  }
+
+  const actionBar = allPlayersPlayed ? (
+    <div className="flex w-full gap-2">
+      <Button onClick={onGameEnd} variant="outline" className="flex-1">
+        Terminer
+      </Button>
+      <Button onClick={restartRound} className="flex-1">
+        Recommencer un tour
+      </Button>
+    </div>
+  ) : (
+    <Button
+      disabled={spinning || segments.length === 0}
+      onClick={spinWheel}
+      className="w-full py-4 text-base font-bold"
+    >
+      {spinning ? 'La roue tourne…' : 'Lancer la roue'}
+    </Button>
+  )
+
   return (
+    <GameShell title="Roue des Gorgées" onBack={onGameEnd} actionBar={actionBar} fill maxWidth={800}>
     <div className="space-y-4">
       {/* Info paramètres utilisés */}
       <Card className="p-4">
@@ -225,12 +253,6 @@ export default function Game({ players, onGameEnd, updatePlayerStats, riskLevel,
               </svg>
             </motion.div>
           </div>
-
-          {!allPlayersPlayed && (
-            <Button disabled={spinning || segments.length === 0} onClick={spinWheel} className="px-6">
-              {spinning ? 'La roue tourne…' : 'Lancer la roue'}
-            </Button>
-          )}
         </div>
       </Card>
 
@@ -268,13 +290,10 @@ export default function Game({ players, onGameEnd, updatePlayerStats, riskLevel,
               </li>
             ))}
           </ul>
-          <div className="mt-3 flex gap-2">
-            <Button onClick={onGameEnd} variant="outline">Terminer</Button>
-            <Button onClick={() => { setRounds([]); setCurrentIndex(0); setSpinning(false); rotation.set(0); lastTickRef.current = 0; }}>Recommencer un tour</Button>
-          </div>
         </Card>
       )}
     </div>
+    </GameShell>
   )
 }
 
