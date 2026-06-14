@@ -1,23 +1,23 @@
 /* eslint-disable react/no-unescaped-entities */
 "use client"
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessSupervision } from '@/lib/roles'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer'
-import { Player } from '@/lib/players'
+import { Player, getPlayerNameValidationError } from '@/lib/players'
+import { nameValidationI18nKey } from '@/lib/name-moderation'
+import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { getSafeStorage } from '@/lib/storage'
-import { GAMES } from '@/lib/games'
+import { useLocalizedGames } from '@/lib/games-i18n'
 import { cn } from '@/lib/utils'
-
-const GAME_NAMES: Record<string, string> = Object.fromEntries(
-  GAMES.map((g) => [g.id, g.title])
-)
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
@@ -29,13 +29,79 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 }
 
 export function AccountInfo() {
+  const t = useTranslations('account')
+  const tCommon = useTranslations('common')
+  const tNameValidation = useTranslations('common.nameValidation')
+  const locale = useLocale()
+  const games = useLocalizedGames()
+  const gameNames = useMemo(
+    () => Object.fromEntries(games.map((g) => [g.id, g.title])),
+    [games]
+  )
   const { user, logout } = useAuth()
-  const { players, loading, removePlayer, updatePlayerPreferences } = usePlayers()
+  const { players, loading, removePlayer, updatePlayer, updatePlayerPreferences } = usePlayers()
   const [totalGames, setTotalGames] = useState(0)
   const [totalDrinks, setTotalDrinks] = useState(0)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [renamingPlayerId, setRenamingPlayerId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [renameError, setRenameError] = useState<string | null>(null)
   const [codeCopied, setCodeCopied] = useState(false)
   const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null)
+  const [nameModerationWarning, setNameModerationWarning] = useState(false)
+
+  useEffect(() => {
+    if (!user) {
+      setNameModerationWarning(false)
+      return
+    }
+    let cancelled = false
+    fetch('/api/name-moderation/status', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.showWarning) {
+          setNameModerationWarning(true)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
+  const startRename = (player: Player) => {
+    setConfirmDelete(null)
+    setRenamingPlayerId(player.id)
+    setRenameValue(player.name)
+  }
+
+  const cancelRename = () => {
+    setRenamingPlayerId(null)
+    setRenameValue('')
+    setRenameError(null)
+  }
+
+  const saveRename = (playerId: string) => {
+    const trimmed = renameValue.trim()
+    if (!trimmed) return
+
+    const validationError = getPlayerNameValidationError(trimmed)
+    if (validationError) {
+      void reportProfanityIfNeeded(trimmed, validationError, 'local_player_rename').then(
+        (result) => {
+          if (result?.showWarning) setNameModerationWarning(true)
+        }
+      )
+      const key = nameValidationI18nKey(validationError)
+      const messageKey =
+        validationError === 'invalid_characters' ? 'invalidCharactersPlayer' : key
+      setRenameError(tNameValidation(messageKey))
+      return
+    }
+
+    updatePlayer(playerId, { name: trimmed })
+    cancelRename()
+  }
 
   const copyAccountCode = async () => {
     if (!user?.accountCode) return
@@ -51,14 +117,14 @@ export function AccountInfo() {
   useEffect(() => {
     const storage = getSafeStorage()
     const storedGames = storage?.getItem('games') ?? null
-    const games = storedGames ? JSON.parse(storedGames) : []
+    const gamesData = storedGames ? JSON.parse(storedGames) : []
 
-    if (games.length === 0 && players.length > 0) {
-      setTotalGames(players.reduce((t, p) => t + (p.stats.gamesPlayed || 0), 0))
+    if (gamesData.length === 0 && players.length > 0) {
+      setTotalGames(players.reduce((total, p) => total + (p.stats.gamesPlayed || 0), 0))
     } else {
-      setTotalGames(games.length)
+      setTotalGames(gamesData.length)
     }
-    setTotalDrinks(players.reduce((t, p) => t + (p.stats.totalDrinks || 0), 0))
+    setTotalDrinks(players.reduce((total, p) => total + (p.stats.totalDrinks || 0), 0))
   }, [players])
 
   if (loading) {
@@ -79,21 +145,20 @@ export function AccountInfo() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/70">
-            Le Pillaveur
+            {t('brand')}
           </p>
           <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">
-            {user?.displayName ?? 'Mon compte'}
+            {user?.displayName ?? t('title')}
           </h1>
           {user?.accountCode && (
             <button
               type="button"
               onClick={copyAccountCode}
               className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 font-mono text-xs text-amber-200 transition-colors hover:bg-amber-500/20"
-              title="Copier le code compte"
+              title={t('copyAccountCode')}
             >
               <Hash className="h-3 w-3" />
               {user.accountCode}
@@ -118,7 +183,7 @@ export function AccountInfo() {
               className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300 transition-colors hover:bg-amber-500/20"
             >
               <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Supervision</span>
+              <span className="hidden sm:inline">{t('supervision')}</span>
             </Link>
           )}
           <button
@@ -126,40 +191,49 @@ export function AccountInfo() {
             className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
           >
             <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Déconnexion</span>
+            <span className="hidden sm:inline">{t('logout')}</span>
           </button>
         </div>
       </div>
 
-      {/* Stats globales */}
+      {nameModerationWarning && (
+        <div
+          role="alert"
+          className="flex gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <p>{t('nameModerationWarning')}</p>
+        </div>
+      )}
+
       <section>
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
           <BarChart3 className="h-4 w-4 text-amber-300" />
-          Statistiques globales
+          {t('stats.title')}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Joueurs" value={players.length} color="text-amber-300" />
-          <StatCard label="Parties" value={totalGames} color="text-violet-300" />
-          <StatCard label="Gorgées" value={totalDrinks} color="text-rose-300" />
+          <StatCard label={t('stats.players')} value={players.length} color="text-amber-300" />
+          <StatCard label={t('stats.games')} value={totalGames} color="text-violet-300" />
+          <StatCard label={t('stats.sips')} value={totalDrinks} color="text-rose-300" />
         </div>
       </section>
 
-      {/* Liste joueurs */}
       <section>
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
           <Users className="h-4 w-4 text-amber-300" />
-          Joueurs enregistrés
+          {t('playersList.title')}
         </div>
 
         {players.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-10 text-center">
             <User className="mb-2 h-7 w-7 text-white/20" />
-            <p className="text-sm text-white/40">Aucun joueur enregistré</p>
+            <p className="text-sm text-white/40">{t('playersList.empty')}</p>
           </div>
         ) : (
           <ul className="space-y-2">
             {players.map((player) => {
               const isConfirming = confirmDelete === player.id
+              const isRenaming = renamingPlayerId === player.id
               return (
                 <li
                   key={player.id}
@@ -167,58 +241,109 @@ export function AccountInfo() {
                 >
                   <PlayerIcon player={player} size="md" className="h-10 w-10 text-xl" />
 
-                  {/* Infos */}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">
-                      <PlayerName player={player} />
-                    </p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-white/45">
-                      <span>{player.stats.gamesPlayed} parties</span>
-                      <span>·</span>
-                      <span>{player.stats.wins} victoires</span>
-                      {player.stats.favoriteGame && (
-                        <>
+                    {isRenaming ? (
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Input
+                          type="text"
+                          value={renameValue}
+                          onChange={(e) => {
+                            setRenameValue(e.target.value)
+                            if (renameError) setRenameError(null)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveRename(player.id)
+                            if (e.key === 'Escape') cancelRename()
+                          }}
+                          placeholder={t('playersList.renamePlaceholder')}
+                          className="h-9 border-white/15 bg-white/[0.06] text-sm text-white placeholder:text-white/35"
+                          autoFocus
+                          maxLength={40}
+                          aria-invalid={renameError ? true : undefined}
+                        />
+                        {renameError && (
+                          <p className="text-xs text-orange-400 sm:col-span-2" role="alert">
+                            {renameError}
+                          </p>
+                        )}
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => saveRename(player.id)}
+                            disabled={!renameValue.trim()}
+                            className="rounded-lg bg-amber-500/20 px-2.5 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/30 disabled:opacity-40"
+                          >
+                            {tCommon('save')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelRename}
+                            className="rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-xs font-medium text-white/60 hover:bg-white/10"
+                          >
+                            {tCommon('cancel')}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="truncate text-sm font-semibold">
+                          <PlayerName player={player} />
+                        </p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-white/45">
+                          <span>{t('playersList.gamesPlayed', { count: player.stats.gamesPlayed })}</span>
                           <span>·</span>
-                          <span className="flex items-center gap-1">
-                            <Gamepad2 className="h-2.5 w-2.5" />
-                            {GAME_NAMES[player.stats.favoriteGame] ?? player.stats.favoriteGame}
-                          </span>
-                        </>
-                      )}
-                      {player.stats.lastPlayed ? (
-                        <>
-                          <span>·</span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-2.5 w-2.5" />
-                            {new Date(player.stats.lastPlayed).toLocaleDateString('fr-FR')}
-                          </span>
-                        </>
-                      ) : null}
-                    </div>
+                          <span>{t('playersList.wins', { count: player.stats.wins })}</span>
+                          {player.stats.favoriteGame && (
+                            <>
+                              <span>·</span>
+                              <span className="flex items-center gap-1">
+                                <Gamepad2 className="h-2.5 w-2.5" />
+                                {gameNames[player.stats.favoriteGame] ?? player.stats.favoriteGame}
+                              </span>
+                            </>
+                          )}
+                          {player.stats.lastPlayed ? (
+                            <>
+                              <span>·</span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-2.5 w-2.5" />
+                                {new Date(player.stats.lastPlayed).toLocaleDateString(locale)}
+                              </span>
+                            </>
+                          ) : null}
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  {/* Actions */}
-                  {isConfirming ? (
+                  {isRenaming ? null : isConfirming ? (
                     <div className="flex shrink-0 items-center gap-1.5">
                       <button
                         onClick={() => { removePlayer(player.id); setConfirmDelete(null) }}
                         className="rounded-lg bg-red-500/20 px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/30"
                       >
-                        Confirmer
+                        {t('playersList.confirmDelete')}
                       </button>
                       <button
                         onClick={() => setConfirmDelete(null)}
                         className="rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-xs font-medium text-white/60 hover:bg-white/10"
                       >
-                        Annuler
+                        {tCommon('cancel')}
                       </button>
                     </div>
                   ) : (
                     <div className="flex shrink-0 items-center gap-1">
                       <button
+                        onClick={() => startRename(player)}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-violet-500/15 hover:text-violet-300"
+                        title={t('playersList.rename')}
+                      >
+                        <TextCursorInput className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => setCustomizingPlayer(player)}
                         className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
-                        title="Personnaliser"
+                        title={t('playersList.customize')}
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -244,14 +369,10 @@ export function AccountInfo() {
         onSave={updatePlayerPreferences}
       />
 
-      {/* Sync */}
       <section>
         <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100/80">
           <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-          <p>
-            Vos joueurs sont sauvegardés sur votre compte et se synchronisent automatiquement
-            sur tous vos appareils connectés.
-          </p>
+          <p>{t('sync')}</p>
         </div>
       </section>
     </div>

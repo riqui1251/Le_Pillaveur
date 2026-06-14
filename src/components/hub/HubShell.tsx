@@ -1,6 +1,7 @@
 "use client"
 
 import { ReactNode } from "react"
+import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 
 type HubStep = "joueurs" | "jeux"
@@ -13,12 +14,12 @@ interface HubShellProps {
   headerExtra?: ReactNode
 }
 
-const steps = [
-  { id: "joueurs" as const, label: "Joueurs", number: 1 },
-  { id: "jeux" as const, label: "Jeux", number: 2 },
-]
-
 export function HubShell({ step, title, subtitle, children, headerExtra }: HubShellProps) {
+  const t = useTranslations('hub')
+  const steps = [
+    { id: "joueurs" as const, label: t('steps.joueurs'), number: 1 },
+    { id: "jeux" as const, label: t('steps.jeux'), number: 2 },
+  ]
   const activeIndex = steps.findIndex((s) => s.id === step)
 
   return (
@@ -38,7 +39,7 @@ export function HubShell({ step, title, subtitle, children, headerExtra }: HubSh
       </div>
 
       <div className="relative container mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
-        <nav aria-label="Étapes de la soirée" className="mb-8 flex items-center justify-center gap-2 sm:gap-4">
+        <nav aria-label={t('stepsAria')} className="mb-8 flex items-center justify-center gap-2 sm:gap-4">
           {steps.map((s, index) => {
             const isActive = s.id === step
             const isDone = index < activeIndex
@@ -80,7 +81,7 @@ export function HubShell({ step, title, subtitle, children, headerExtra }: HubSh
 
         <header className="mb-8 space-y-3 text-center sm:mb-10">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300/80">
-            Le Pillaveur
+            {t('brand')}
           </p>
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
             <span className="bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text text-transparent">

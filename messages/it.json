@@ -1,0 +1,2098 @@
+{
+  "metadata": {
+    "title": "Le Pillaveur",
+    "description": "Giochi di bevute con gli amici"
+  },
+  "nav": {
+    "brand": "Le Pillaveur",
+    "loading": "Caricamento…",
+    "navigation": "Navigazione",
+    "menuLabel": "Menù di navigazione",
+    "openMenu": "Apri il menu",
+    "closeMenu": "Chiudi menù",
+    "languageSwitcher": "Cambia lingua",
+    "links": {
+      "joueurs": {
+        "label": "Giocatori",
+        "description": "Gestisci i giocatori"
+      },
+      "jeux": {
+        "label": "Giochi",
+        "description": "Scegli un gioco"
+      },
+      "compte": {
+        "label": "Account",
+        "description": "Impostazioni"
+      },
+      "supervision": {
+        "label": "Supervisione",
+        "description": "Dashboard admin"
+      }
+    },
+    "legal": {
+      "cgu": "CGU",
+      "confidentialite": "Riservatezza",
+      "mentionsLegales": "Avvisi legali"
+    },
+    "pages": {
+      "joueurs": {
+        "title": "Giocatori",
+        "subtitle": "Gestisci la squadra"
+      },
+      "jeux": {
+        "title": "Giochi",
+        "subtitle": "Scegli un gioco"
+      },
+      "classement": {
+        "title": "Classifica",
+        "subtitle": "Punteggi e statistiche"
+      },
+      "compte": {
+        "title": "Account",
+        "subtitle": "Accesso e profilo"
+      },
+      "supervision": {
+        "title": "Supervisione",
+        "subtitle": "Amministrazione"
+      },
+      "achievements": {
+        "title": "Obiettivi",
+        "subtitle": "Trofei sbloccati"
+      },
+      "stats": {
+        "title": "Statistiche",
+        "subtitle": "Storico"
+      },
+      "gameInProgress": {
+        "subtitle": "Gioco in corso"
+      },
+      "default": {
+        "subtitle": "Giochi di bevute con gli amici"
+      }
+    }
+  },
+  "common": {
+    "back": "Indietro",
+    "loading": "Caricamento…",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "confirm": "Conferma",
+    "close": "Chiudi",
+    "next": "Avanti",
+    "replay": "Rigiocare",
+    "home": "Benvenuto",
+    "menu": "Menu",
+    "modify": "Per modificare",
+    "add": "Aggiungere",
+    "finish": "Per finire",
+    "understood": "Inteso !",
+    "understoodNext": "Capito, prossimo giocatore →",
+    "quit": "Andarsene",
+    "continue": "Continuare",
+    "pass": "Passaggio",
+    "validate": "Conferma…",
+    "send": "Inviare",
+    "sending": "Invio…",
+    "error": "Errore",
+    "fullscreen": "A schermo intero",
+    "players": "Giocatori",
+    "games": "Parti",
+    "sips": "Sorsi",
+    "victories": "Vittorie",
+    "victory": "Vittoria!",
+    "noData": "Nessun dato",
+    "playerCount": "{count, plural, one {# giocatore} other {# giocatori}}",
+    "gameCount": "{count, plural, one {# gioco} other {# giochi}}",
+    "sipsCount": "{count, plural, one {# sorso} other {# sorsi}}",
+    "turnCount": "{count, plural, one {# turno} other {# turni}}",
+    "safe": "SAFE",
+    "moderation": "Consumare con moderazione.",
+    "nameValidation": {
+      "empty": "Nome obbligatorio",
+      "tooLong": "Nome troppo lungo",
+      "invalidCharacters": "Caratteri non consentiti (solo lettere, numeri e spazi)",
+      "invalidCharactersPlayer": "Caratteri non consentiti",
+      "profanity": "Questo nome contiene un linguaggio inappropriato"
+    }
+  },
+  "hub": {
+    "brand": "Le Pillaveur",
+    "stepsAria": "Tappe della serata",
+    "steps": {
+      "joueurs": "Giocatori",
+      "jeux": "Giochi"
+    },
+    "joueurs": {
+      "title": "Chi suona stasera?",
+      "subtitle": "Aggiungi i tuoi amici, seleziona la squadra e vai al passaggio successivo per scegliere il gioco.",
+      "guestPrompt": "Crea un account per trovare i tuoi giocatori su tutti i tuoi dispositivi (telefono, tablet, computer).",
+      "guestCta": "Accedi / Crea un account"
+    },
+    "jeux": {
+      "title": "Scegli il tuo gioco",
+      "subtitle": "Dai classici alle novità — trova l'atmosfera perfetta per la tua serata.",
+      "searchPlaceholder": "Cerca un gioco...",
+      "emptyTitle": "Nessun gioco trovato",
+      "emptyHint": "Prova un'altra parola chiave."
+    },
+    "selectedPlayers": {
+      "ready": "{count, plural, one {# giocatore pronto} other {# giocatori pronti}}",
+      "none": "Nessun giocatore selezionato",
+      "choose": "Scegli i giocatori",
+      "modify": "Per modificare",
+      "tapToChoose": "Tocca qui per scegliere i tuoi giocatori (minimo 2)."
+    }
+  },
+  "auth": {
+    "brand": "Le Pillaveur",
+    "login": {
+      "title": "Connessione",
+      "subtitle": "Trova i tuoi giocatori su tutti i tuoi dispositivi.",
+      "tab": "Connessione",
+      "submit": "Login",
+      "forgotPassword": "Password dimenticata?"
+    },
+    "register": {
+      "title": "Creare un account",
+      "subtitle": "Sincronizza l'elenco dei tuoi giocatori tra telefono, tablet e computer.",
+      "tab": "Registrazione",
+      "submit": "Crea il mio account",
+      "displayNameLabel": "Pseudo",
+      "displayNamePlaceholder": "Il tuo soprannome",
+      "passwordPlaceholder": "Lettera + numero, 8 car. min.",
+      "termsRequired": "Devi accettare il CGU e l'Informativa sulla privacy.",
+      "termsPrefix": "Accetto il",
+      "termsAnd": "e il",
+      "termsSuffix": null,
+      "displayNameTaken": "Questo nickname è già in uso"
+    },
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "tu@esempio.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholderLogin": null,
+    "localPlay": {
+      "hint": "Senza un account, i tuoi giocatori rimarranno registrati solo su questo dispositivo.",
+      "termsPrefix": "Giocando in locale, accetti le",
+      "termsAnd": "e l'",
+      "termsSuffix": ".",
+      "termsHint": "Giocando in locale accetti le CGU e l'Informativa sulla privacy.",
+      "button": "Gioca localmente",
+      "errorActivate": "Impossibile abilitare la modalità locale",
+      "errorRetry": "Impossibile attivare la modalità locale. Riprova."
+    },
+    "forgot": {
+      "title": "Password dimenticata",
+      "description": "Inserisci la tua email per ricevere un collegamento per il ripristino.",
+      "submit": "Invia collegamento",
+      "success": "Se esiste un account con questa email, riceverai un collegamento per reimpostare entro pochi minuti."
+    }
+  },
+  "account": {
+    "brand": "Le Pillaveur",
+    "title": "Il mio conto",
+    "copyAccountCode": "Copia il codice dell'account",
+    "supervision": "Supervisione",
+    "logout": "Disconnetti",
+    "stats": {
+      "title": "Statistiche generali",
+      "players": "Giocatori",
+      "games": "Parti",
+      "sips": "Sorsi"
+    },
+    "playersList": {
+      "title": "Giocatori registrati",
+      "empty": "Nessun giocatore registrato",
+      "gamesPlayed": "{count} parti",
+      "wins": "{count} vittorie",
+      "customize": "Personalizzare",
+      "rename": "Rinominare",
+      "renamePlaceholder": "Nuovo nome",
+      "confirmDelete": "Confermare"
+    },
+    "sync": "I tuoi giocatori vengono salvati sul tuo account e si sincronizzano automaticamente su tutti i tuoi dispositivi connessi.",
+    "nameModerationWarning": "Sono stati registrati diversi tentativi di nome inappropriato su questo account. Usa un soprannome rispettoso — il team di moderazione può consultare la cronologia.",
+    "reset": {
+      "title": "Nuova password",
+      "subtitle": "Scegli una password sicura per il tuo account.",
+      "invalidLink": "Link non valido o scaduto.",
+      "backToLogin": "Torna al login",
+      "success": "Password aggiornata! Reindirizzamento…",
+      "newPassword": "Nuova password",
+      "confirmPassword": "Conferma password",
+      "passwordPlaceholder": "Lettera + numero, min. 8 car.",
+      "updating": "Aggiornamento…",
+      "submit": "Reimposta password",
+      "passwordRules": "Almeno 8 caratteri con una lettera e un numero.",
+      "passwordMismatch": "Le password non corrispondono."
+    }
+  },
+  "legal": {
+    "ageGate": {
+      "title": "Accesso riservato agli adulti",
+      "body1": "Le Pillaveur è uno strumento di intrattenimento festivo. I “sorsi” sono unità di gioco astratte e non costituiscono un obbligo al consumo di alcol. Questo servizio non vende né distribuisce bevande.",
+      "healthWarning": "L’abuso di alcol è pericoloso per la salute.",
+      "moderation": "Consumare con moderazione.",
+      "checkboxPrefix": "Dichiaro di avere più di 18 anni e accetto le",
+      "checkboxAnd": "e l'",
+      "checkboxSuffix": ".",
+      "checkbox": "Dichiaro di avere più di 18 anni e accetto il CGU e la politica di riservatezza.",
+      "enter": "Entra nel sito",
+      "validating": "Convalida…",
+      "minorWarning": "Se hai meno di 18 anni devi abbandonare questo sito."
+    },
+    "pages": {
+      "back": "Indietro",
+      "cgu": "Condizioni Generali d'Uso",
+      "confidentialite": "politica sulla riservatezza",
+      "mentionsLegales": "Avvisi legali"
+    }
+  },
+  "players": {
+    "loading": "Caricamento giocatori...",
+    "addTitle": "Aggiungi un giocatore",
+    "namePlaceholder": "Nome del giocatore",
+    "addButton": "Aggiungere",
+    "selectTitle": "Seleziona i giocatori",
+    "wins": "{count} vittorie",
+    "customize": "Personalizzare",
+    "selectionStatus": {
+      "ready": "{count, plural, one {# giocatore selezionato} other {# giocatori selezionati}}",
+      "needMore": "Seleziona almeno {min} giocatori ({current}/{min})"
+    },
+    "startGame": "Inizia il gioco",
+    "effects": {
+      "classic": "Classico",
+      "fire": "Fuoco",
+      "ice": "Ghiaccio",
+      "lightning": "Flash",
+      "rainbow": "Arcobaleno",
+      "neon": "Neon",
+      "galaxy": "Galassia",
+      "matrix": "Matrix",
+      "sunset": "Tramonto",
+      "ocean": "Oceano",
+      "red": "Rosso",
+      "blue": "Blu",
+      "gold": "Oro",
+      "emerald": "Smeraldo",
+      "purple": "Viola",
+      "cyber": "Cibernetico"
+    },
+    "frames": {
+      "none": "Nessuno",
+      "gold": "Oro",
+      "silver": "Soldi",
+      "neon": "Neon",
+      "ember": "Brasato",
+      "royal": "Reale",
+      "diamond": "Diamante",
+      "staff": "Personale",
+      "crown": "Corona"
+    },
+    "customizer": {
+      "title": "Personalizza {name}",
+      "preview": "Anteprima",
+      "icon": "Icona",
+      "effect": "Effetto del soprannome",
+      "frame": "Cornice dell'icona",
+      "frameStaffOnly": "Riservato ai membri dello staff (moderatore+)"
+    }
+  },
+  "games": {
+    "catalog": {
+      "roulette-russe": {
+        "title": "Roulette russa",
+        "description": "Un gioco d'azzardo in cui ogni giocatore, a turno, spara. Sopravvivi o bevi!"
+      },
+      "monsieur-3": {
+        "title": "Monsieur 3",
+        "description": "Un amichevole gioco di dadi in cui devi evitare i 3 e altre combinazioni"
+      },
+      "pmu": {
+        "title": "Corsa PMU",
+        "description": "Un gioco di scommesse sulle corse di cavalli con gli amici"
+      },
+      "petit-buveur": {
+        "title": "Il Piccolo Bevitore",
+        "description": "Un gioco da tavolo festoso con sfide e sorsi"
+      },
+      "hi-lo": {
+        "title": "Hi/Lo",
+        "description": "Indovina se la carta successiva sarà più alta o più bassa"
+      },
+      "purple": {
+        "title": "Purple",
+        "description": "Scommetti sul colore delle carte: Rosso, Nero o Purple (alternativo)"
+      },
+      "pyramide": {
+        "title": "Piramide",
+        "description": "Gira le carte e avanza attraverso la piramide"
+      },
+      "plinko": {
+        "title": "Plinko",
+        "description": "Lancia una pallina attraverso gli ostacoli per guadagnare sorsi"
+      },
+      "roue-des-gorgees": {
+        "title": "Ruota dei Sorsi",
+        "description": "Aggiungi sorsi/azioni e gira la ruota!"
+      },
+      "ballon-surprise": {
+        "title": "Palloncino a sorpresa",
+        "description": "Scegli una palla e prega che vinca la gara!"
+      },
+      "petits-points": {
+        "title": "Piccoli punti",
+        "description": "Un gioco di precisione e velocità in cui ogni punto conta!"
+      },
+      "pendu": {
+        "title": "L'Impiccato",
+        "description": "Indovina la parola misteriosa prima di essere impiccato! Lettere, sorsi e suspense assicurati."
+      },
+      "trial-poursuite": {
+        "title": "Trial Poursuite",
+        "description": "Affronta di nuovo sfide folli sotto pressione! Coordinazione, creatività e velocità nel programma."
+      },
+      "1220": {
+        "title": "1220",
+        "description": "Un dado da 12 e un dado da 20: scommessa sulla parità, un intervallo di somma e due numeri chiave per bere o far bere."
+      }
+    },
+    "roulette-russe": {
+      "title": "Roulette russa",
+      "alive": "Invidia",
+      "eliminated": "Eliminato",
+      "pull": "{name} tira",
+      "lastSurvivor": "{name} è l'ultimo sopravvissuto!",
+      "recapTitle": "Riepilogo del sorso:",
+      "sipsCount": "{count} sorseggia",
+      "replay": "Rigiocare",
+      "home": "Benvenuto",
+      "config": {
+        "rules": [
+          "Ogni giocatore, a turno, spara",
+          "Se il giocatore sopravvive, beve un bicchierino",
+          "Se il giocatore perde, viene eliminato",
+          "L'ultimo giocatore vivo vince la partita"
+        ]
+      }
+    },
+    "ballon-surprise": {
+      "title": "Palloncino a sorpresa",
+      "needPlayers": "Seleziona almeno 2 giocatori nella pagina Giocatori per iniziare una gara.",
+      "finishLine": "LINEA DEL TRAGUARDO",
+      "selection": {
+        "players": "Giocatori",
+        "pickTurn": "Nel turno di {name}, scegli la tua pallina:",
+        "selectPlayer": "Seleziona un giocatore",
+        "balloonAria": "Palloncino {color}",
+        "startRace": "Inizia la gara!"
+      },
+      "results": {
+        "title": "Gara completata!",
+        "winnerBalloon": "La palla {color} ha vinto!",
+        "winnerPlayer": "Congratulazioni a {name}! Devi distribuire {count} sorsi.",
+        "noWinner": "Nessuno aveva scelto la palla {color}. Nessuna fortuna! La casa distribuisce {count} sorsi (o meno, a seconda delle regole).",
+        "replay": "Rigiocare"
+      }
+    },
+    "purple": {
+      "title": "Purple",
+      "minPlayers": "Sono richiesti almeno 2 giocatori.",
+      "newGame": "Nuova parte",
+      "yourTurn": "È il turno di",
+      "counter": "Contatore",
+      "cardsLeft": "{count} rimanente",
+      "chooseBet": "Scegli la tua scommessa",
+      "correct": "✓ Esatto! +{count} sorso/i sul bancone",
+      "revealing": "Rivelazione…",
+      "lastCards": "Ultime carte",
+      "wrongCombo": "Pessima combinazione!",
+      "mustDrink": "{name} deve bere {count} sorso/i 🍺",
+      "bets": {
+        "rouge": "Rosso",
+        "doubleRouge": "Doppio rosso",
+        "noir": "Nero",
+        "doubleNoir": "Doppio nero",
+        "purple": "Purple",
+        "doublePurple": "Doppio Purple"
+      }
+    },
+    "1220": {
+      "title": "1220",
+      "titleBets": "1220 — Parigi",
+      "backToGames": "Torniamo ai giochi",
+      "reconfigure": "Riconfigurare le scommesse",
+      "setupInfo": "Ogni giocatore sceglie la sua parità, il suo range, il suo numero da bere e il suo numero da bere. I due numeri devono essere diversi.",
+      "parityLabel": "Parità della somma",
+      "pair": "Pari",
+      "impair": "Strano",
+      "bandLabel": "Intervallo di somma",
+      "bands": {
+        "2-10": "2 – 10",
+        "11-20": "11 – 20",
+        "21-30": "21 – 30"
+      },
+      "drinkNumber": "Ti fa bere",
+      "giveNumber": "Date da bere",
+      "clashWarning": "⚠️ I due numeri devono essere diversi.",
+      "validateBets": "Convalida le scommesse — Avvia il gioco →",
+      "sum": "Somma",
+      "results": "Risultati",
+      "history": "Cronologia ({count} lanci precedenti)",
+      "rolling": "🎲 Lancio...",
+      "rollDice": "🎲Lancia i dadi",
+      "rollAriaRolling": "Lancio in corso",
+      "rollAria": "Lancia i dadi",
+      "outcomes": {
+        "drink": "🍺 Bevande — somma = {number}.",
+        "give": "🎁 Regala da bere: {label}.",
+        "partialGive": "⚡ Numero su un dado ({numbers}) senza somma → {count} sip(s) (÷2).",
+        "totalGive": "Totale: {count} sorso/i da erogare.",
+        "partialNothing": "⚡ Numero/i su un dado ({numbers}) ma non in totale: niente da distribuire.",
+        "nothing": "Niente per te questo lancio."
+      }
+    },
+    "roue-des-gorgees": {
+      "title": "Ruota dei Sorsi",
+      "spinning": "La ruota gira…",
+      "spin": "Gira la ruota",
+      "finish": "Per finire",
+      "restartRound": "Inizia di nuovo un round",
+      "turnOf": "Torre di",
+      "legend": "Leggenda",
+      "summary": "Riepilogo",
+      "wheelInfo": "Ruota generata automaticamente: rischio: {risk}, segmenti: {count}",
+      "wheelHint": "Contenuto: SAFE e sorsi da 1 a 12, con ripetizioni. Maggiore è il valore, più piccolo è il segmento.",
+      "segmentSips": "{count} sorseggia"
+    },
+    "monsieur-3": {
+      "title": "Monsieur 3",
+      "newGame": "Nuova parte",
+      "backToGames": "Torniamo ai giochi",
+      "phaseSetup": "Alla ricerca di Monsieur 3",
+      "phasePlay": "Palo",
+      "m3Badge": "M3: {name} · {count} 🍺",
+      "activePlayer": "Giocatore attivo",
+      "m3Label": "Monsieur 3",
+      "sum": "Somma",
+      "players": "Giocatori",
+      "history": "Cronologia ({count})",
+      "rollSetup": "🎲 Lancia il dado",
+      "rollPlay": "🎲Lancia i dadi",
+      "rolling": "🎲 Lancio...",
+      "gameOver": "Game Over!",
+      "m3Title": "Monsieur 3",
+      "sipsDrunk": "{count, plural, one {sorso bevuto} other {sorsi bevuti}}",
+      "replay": "Rigiocare",
+      "menu": "Menu",
+      "messages": {
+        "setupStart": "Lancia il dado: il primo che lancia un 3 diventa Monsieur 3!",
+        "foundM3": "{name} ha fatto un 3 — Monsieur 3 trovato!",
+        "foundSpecial": "🎲 Monsieur 3!",
+        "rollResult": "{name} ha fatto un {roll}.",
+        "turnNext": "È il turno di {name} di lanciare i dadi.",
+        "gameEnd": "Monsieur 3 ha terminato il suo turno: fine del gioco!",
+        "sum5": "🤸 Somma 5 — braccia incrociate + Whoo! L'ultimo beve.",
+        "sum8": "👆 Somma 8 — pollice sulla fronte! L'ultimo beve.",
+        "m3Drinks": "🍺 Monsieur 3, bevi tu!",
+        "double": "⚔️ Raddoppia! {name} sceglie un duello.",
+        "noRule": "Nessuna regola: [{d1}, {d2}]."
+      }
+    },
+    "pmu": {
+      "title": "Gara PMU",
+      "titleBetting": "Parigi 🃏",
+      "titleRacing": "Gara PMU 🏁",
+      "titlePayout": "Distribuzione dei sorsi 🍺",
+      "chooseMode": "Scegli la tua modalità di gioco",
+      "modes": {
+        "libre": {
+          "title": "Gratuito",
+          "desc": "Il cavallo vincente distribuisce un numero di sorsi generato casualmente."
+        },
+        "paris": {
+          "title": "Parigi",
+          "desc": "Ogni giocatore scommette a sorsi. Li beve prima della gara e se vince li raddoppia."
+        }
+      },
+      "setup": {
+        "selectedHint": "Giocatore selezionato: {name} — tocca un cavallo",
+        "defaultHint": "Tocca un giocatore, quindi un cavallo per assegnargli",
+        "unassigned": "Non assegnato",
+        "allAssigned": "A tutti i giocatori viene assegnato ✓",
+        "tapToRemove": "Tocca qui per rimuovere dal cavallo",
+        "assignHere": "Assegna qui",
+        "tapToAssign": "Tocca per assegnare",
+        "noPlayer": "Nessun giocatore",
+        "needOne": "Assegna almeno un giocatore",
+        "nextBets": "Vai alle scommesse →",
+        "nextRace": "Inizia la corsa 🏁"
+      },
+      "horses": {
+        "tonnerre": "Tuono",
+        "eclair": "Flash",
+        "tempete": "Tempesta",
+        "ouragan": "Uragano"
+      },
+      "betting": {
+        "info": "🍺 Ogni giocatore scommette quale sorso beve adesso. Se vince, distribuisce il doppio alla persona di sua scelta.",
+        "drinkWin": "Bevande {bet} → vince {payout}",
+        "confirm": "Conferma le scommesse e inizia 🏁"
+      },
+      "race": {
+        "track": "Traccia",
+        "finish": "Arrivo 🏁"
+      },
+      "results": {
+        "winner": "{name} ha vinto!",
+        "pickTarget": "Ogni vincitore sceglie a chi distribuire i propri sorsi.",
+        "noRider": "Nessun giocatore su questo cavallo.",
+        "seeResults": "Guarda i risultati",
+        "distribute": "{name} distribuisce {count} sorsi a {target}",
+        "libreWin": "{name} vince! Distribuire {count} sorsi.",
+        "replay": "Rigiocare",
+        "menu": "Menu"
+      }
+    },
+    "hi-lo": {
+      "title": "Hi/Lo",
+      "page": {
+        "gameMode": "Modalità di gioco",
+        "selectMode": "Seleziona una modalità",
+        "modes": {
+          "standard": "Standard",
+          "traversee": "Attraversamento"
+        },
+        "start": "Inizia la partita",
+        "backToGames": "Torna ai giochi"
+      },
+      "loading": "Caricamento del gioco...",
+      "sipsHeader": "Sorsi: {count}",
+      "cardsPlayed": "{played}/52",
+      "restart": "Ricominciare",
+      "higher": "Più alto",
+      "equal": "Uguaglianza",
+      "lower": "Inferiore",
+      "correctNext": "Corretto ! Giocatore successivo...",
+      "traverseeMode": "Modalità di incrocio",
+      "traverseeGoal": "Obiettivo: {current}/{target} risposte corrette",
+      "cardsPlayedLabel": "{count} ha giocato",
+      "cardsLeftLabel": "{count} rimanente",
+      "gameOver": {
+        "congrats": "Congratulazioni!",
+        "fiveCards": "5 carte identiche! Fine del gioco",
+        "end": "Fine del gioco",
+        "goalReached": "Hai raggiunto l'obiettivo di {count} risposte corrette consecutive!",
+        "fiveSame": "Sono apparse 5 carte identiche ({value} {suit})! Fine del gioco.",
+        "results": "Risultati:",
+        "sipsResult": "{count} sorseggia"
+      },
+      "wrong": {
+        "title": "Risposta sbagliata!",
+        "unguessedEqual": "Cravatta mai indovinata!",
+        "mustDrink": "{message}",
+        "traverseeEqual": "È un pareggio! Tutti i giocatori bevono 1 sorso.",
+        "traverseeAllDrink": "Tutti i giocatori devono bere {count} sorsi!",
+        "streakReset": "La serie delle risposte corrette ricomincia da zero.",
+        "nextTurn": "Adesso è il turno di {name}"
+      },
+      "compliments": [
+        "L'Onnipotente",
+        "Il magnifico",
+        "Il grande saggio",
+        "Il maestro",
+        "Sua Maestà",
+        "Il creatore",
+        "L'invincibile",
+        "Il leggendario",
+        "Il supremo",
+        "L'indiscutibile"
+      ],
+      "debMessages": [
+        "Bevi veri sorsi",
+        "Sorsi, non centilitri",
+        "Non solo 2 cl!",
+        "Bevi davvero questa volta",
+        "Nessun imbroglio",
+        "Smettila di fingere",
+        "Ti abbiamo visto tradire",
+        "Bevi davvero",
+        "Niente acqua questa volta"
+      ],
+      "drinkMessageDefault": "{name} deve bere {count} sorsi!",
+      "drinkMessageSpecial": "\"{compliment}\" {name} deve bere {count} sorsi!",
+      "drinkMessageDeb": "{name} deve bere {count} sorsi e {message}!"
+    },
+    "pyramide": {
+      "title": "Piramide",
+      "tagline": "Gira le carte, distribuisci i sorsi",
+      "stepLabels": {
+        "color": "colore",
+        "higherLower": "più/meno",
+        "insideOutside": "interno/esterno",
+        "suit": "seme"
+      },
+      "preludeResult": "{name}: {card} — {result}",
+      "preludeSuccess": "Superato ✓",
+      "preludeFail": "Errore • +{count} sorso/i",
+      "page": {
+        "gameMode": "Modalità di gioco",
+        "modes": {
+          "fun": {
+            "label": "Carte",
+            "desc": "Piramide casuale"
+          },
+          "classic": {
+            "label": "Classico",
+            "desc": "Memorizzazione + preludio"
+          }
+        },
+        "decks": "Mazzi",
+        "deck52": "52 carte",
+        "deck104": "104 carte",
+        "cardsPerPlayer": "Carte per giocatore",
+        "cardsCount": "{n} carte",
+        "height": "Altezza",
+        "rowsCards": "{rows} righe · {cards} carte",
+        "noPlayersSelected": "Nessun giocatore selezionato",
+        "rulesTitle": "Regole del gioco",
+        "rulesFun": [
+          "Gira le carte una alla volta partendo dal basso.",
+          "Quando una carta viene girata, il giocatore attivo deve bere tanti sorsi quanto il suo valore.",
+          "La fila in cima è SHOT SECCO."
+        ],
+        "rulesClassic": [
+          "Mini preludio: previsioni in 4 fasi (colore → più/meno → interno/esterno → seme).",
+          "Ogni giocatore memorizza le carte assegnate segretamente.",
+          "La piramide è costruita senza le carte dei giocatori. Distribuisci i sorsi a chi ha il valore girato."
+        ],
+        "needPlayers": "Seleziona almeno 2 giocatori nella pagina Giocatori.",
+        "backToGames": "Torna ai giochi"
+      },
+      "game": {
+        "titleClassic": "· Classico",
+        "newGameAria": "Nuova partita",
+        "backAria": "Torna ai giochi",
+        "predictions": "Previsioni",
+        "questions": {
+          "color": "Che colore?",
+          "higherLower": "Più o meno di {value}?",
+          "insideOutside": "Interno o esterno delle prime due?",
+          "suit": "Quale seme esattamente?"
+        },
+        "choices": {
+          "red": "Rossa ♥♦",
+          "black": "Nera ♠♣",
+          "higher": "↑ Più",
+          "lower": "↓ Meno",
+          "inside": "↔ Interno",
+          "outside": "⟷ Esterno",
+          "hearts": "♥ Cuori",
+          "diamonds": "♦ Quadri",
+          "clubs": "♣ Fiori",
+          "spades": "♠ Picche"
+        },
+        "preludeDrinks": "Sorsi del preludio",
+        "preludeSummaryTitle": "Riepilogo del preludio",
+        "mistakes": "Errori: {list}",
+        "noMistakes": "Senza errori",
+        "points": "{pts} pts",
+        "memorizationContinue": "Memorizzazione →",
+        "memorization": "Memorizzazione",
+        "seeAll": "Mostra tutto",
+        "hideAll": "Nascondi",
+        "nextPlayer": "Giocatore successivo →",
+        "start": "Inizia →",
+        "landscapeHint": "Ruota il telefono in <strong>orizzontale</strong> per una migliore vista della piramide",
+        "scrollHint": "Gira le carte una alla volta • Scorri se necessario",
+        "progressAria": "Progresso: {flipped} carte girate su {total}",
+        "lastCard": "Ultima:",
+        "playerCards": "Carte dei giocatori",
+        "noCard": "nessuna carta",
+        "next": "Avanti →",
+        "finished": "Finito ✓",
+        "gameOverAria": "Partita terminata",
+        "flippingAria": "Giro in corso",
+        "flipNextAria": "Gira la prossima carta",
+        "gameOverLive": "Partita terminata.",
+        "cardRevealedLive": "Carta girata: {value} {suit}",
+        "gameFinished": "Partita terminata!",
+        "mostPoints": "Più punti",
+        "leastPoints": "Meno punti",
+        "fullScores": "Punteggi completi",
+        "replay": "Rigioca",
+        "menu": "Menu",
+        "revealCardAria": "Rivela carta {n}",
+        "hideCardAria": "Nascondi carta {value} {suit}",
+        "revealPlayerCardAria": "Rivela carta {n} di {player}",
+        "hidePlayerCardAria": "Nascondi {value} {suit} di {player}"
+      }
+    },
+    "petits-points": {
+      "title": "Piccoli punti",
+      "tagline": "Un gioco di precisione e velocità in cui ogni punto conta!",
+      "page": {
+        "back": "Indietro",
+        "backHome": "Torna alla home",
+        "tabs": {
+          "players": "Giocatori",
+          "settings": "Impostazioni",
+          "account": "Account"
+        },
+        "start": "Inizia",
+        "difficulty": "Difficoltà",
+        "selectDifficulty": "Seleziona difficoltà",
+        "difficultyDescriptionsTitle": "Descrizione delle difficoltà:",
+        "difficulties": {
+          "facile": {
+            "label": "🌱 Facile",
+            "name": "Facile",
+            "description": "Zone più grandi, meno frequenti e meno sorsi. Ideale per i principianti."
+          },
+          "normal": {
+            "label": "🌟 Normale",
+            "name": "Normale",
+            "description": "Equilibrato, per una partita piacevole e accessibile."
+          },
+          "difficile": {
+            "label": "🔥 Difficile",
+            "name": "Difficile",
+            "description": "Zone più piccole, più frequenti e più sorsi. Per giocatori esperti."
+          },
+          "extreme": {
+            "label": "💀 Estremo",
+            "name": "Estremo",
+            "description": "Zone molto piccole, molto frequenti e molti sorsi. Solo per esperti!"
+          }
+        },
+        "rulesTitle": "Regole del gioco",
+        "rules": [
+          "Ogni giocatore posiziona il proprio pedina sul tabellone circolare.",
+          "Una zona rotonda appare casualmente sul tabellone.",
+          "Tutte le pedine in quella zona devono bere il numero di sorsi configurato.",
+          "La zona scompare e ne appare una nuova dopo un ritardo.",
+          "Il giocatore con più sorsi alla fine vince (o perde a seconda del punto di vista!)."
+        ],
+        "rulesNote": "Nota: la strategia di posizionamento è cruciale per evitare le zone!",
+        "accountTitle": "Area riservata",
+        "accountReserved": "Questa sezione è riservata all'amministratore.",
+        "passwordPlaceholder": "Password",
+        "accountAccess": "Accedi"
+      },
+      "game": {
+        "title": "Piccoli punti",
+        "zoneProgress": "Zona {current}/{total}",
+        "nextZone": "Zona successiva",
+        "endGame": "Fine partita",
+        "placingTitle": "Posizionamento pedine",
+        "placingTurn": "È il turno di {name} di posizionare la pedina",
+        "allPlaced": "Tutte le pedine sono posizionate",
+        "zoneSize": "Dimensione zone: {size}px",
+        "configureGame": "Configura partita",
+        "configTitle": "⚙️ Configurazione partita",
+        "configSubtitle": "Regola i parametri secondo le tue preferenze",
+        "previewTitle": "👁️ Anteprima in tempo reale",
+        "zoneVisible": "Zona visibile: {seconds}s",
+        "testZone": "Testa una zona",
+        "testInProgress": "Test in corso...",
+        "previewHint": "La zona gialla mostra la dimensione. Clicca \"Testa una zona\" per vedere una zona apparire casualmente.",
+        "zoneCount": "Numero di zone",
+        "zoneCountLabel": "Zone: {count}",
+        "zoneCountHint": "Più zone = partita più lunga",
+        "zoneRadius": "Dimensione zone",
+        "zoneRadiusLabel": "Raggio: {radius}px",
+        "zoneRadiusHint": "Più grande = più facile da evitare",
+        "sipsPerZone": "Sorsi per zona",
+        "sipsPerZoneLabel": "Sorsi: {count}",
+        "sipsPerZoneHint": "Più sorsi = più sfida!",
+        "zoneDuration": "Durata zone",
+        "zoneDurationLabel": "Durata: {seconds}s",
+        "zoneDurationHint": "Più lungo = più tempo per vedere",
+        "spawnDelay": "Ritardo tra zone",
+        "spawnDelayLabel": "Ritardo: {seconds}s",
+        "spawnDelayHint": "Più corto = zone più rapide",
+        "configSummary": "📊 Riepilogo configurazione",
+        "summaryZones": "Zone",
+        "summarySize": "Dimensione",
+        "summarySipsPerZone": "Sorsi/zona",
+        "summaryTotalDuration": "Durata totale",
+        "backToPlacing": "Torna al posizionamento",
+        "launchGame": "Avvia partita",
+        "finishedTitle": "🎉 Partita terminata!",
+        "winner": "🏆 Vincitore: {name}",
+        "winnerSips": "con {count} sorsi",
+        "summaryTitle": "📊 Riepilogo partita",
+        "zonesPlayed": "Zone giocate",
+        "totalSips": "Sorsi totali",
+        "averagePerPlayer": "Media/giocatore",
+        "zoneSizeLabel": "Dimensione zone",
+        "finalRanking": "🏆 Classifica finale",
+        "sipsCount": "{count} sorsi",
+        "percentOfTotal": "{percent}% del totale",
+        "statsTitle": "📈 Statistiche dettagliate",
+        "configUsed": "Configurazione usata:",
+        "configUsedZones": "• {count} zone in totale",
+        "configUsedSips": "• {count} sorso per zona",
+        "configUsedSipsPlural": "• {count} sorsi per zona",
+        "configUsedRadius": "• Zone di {radius}px di raggio",
+        "configUsedDuration": "• Durata: {seconds}s per zona",
+        "configUsedDelay": "• Ritardo: {seconds}s tra zone",
+        "performance": "Prestazioni:",
+        "perfTotalDuration": "• Durata totale: ~{seconds}s",
+        "perfSipsPerZone": "• Sorsi per zona: {count}",
+        "perfMaxSips": "• Sorsi max possibili: {count}",
+        "perfEfficiency": "• Efficienza: {percent}%",
+        "replay": "Rigioca",
+        "backToMenu": "Torna al menu",
+        "playersInZone": "🎯 Giocatori nella zona:",
+        "playerSips": "{name}: {count} sorso",
+        "playerSipsPlural": "{name}: {count} sorsi",
+        "totalSipsTitle": "Sorsi totali"
+      }
+    },
+    "plinko": {
+      "title": "Plinko",
+      "tagline": "Lancia palline, distribuisci sorsi",
+      "page": {
+        "noPlayers": "Nessun giocatore selezionato. Torna alla pagina Giocatori per formare la squadra (minimo 2).",
+        "difficulty": "Difficoltà",
+        "difficulties": {
+          "easy": {
+            "label": "Facile",
+            "range": "1–2 sorsi",
+            "desc": "Ideale per iniziare"
+          },
+          "medium": {
+            "label": "Medio",
+            "range": "1–3 sorsi",
+            "desc": "Il giusto equilibrio"
+          },
+          "hard": {
+            "label": "Difficile",
+            "range": "1–4 sorsi",
+            "desc": "Per i coraggiosi"
+          }
+        },
+        "cumulativeMode": "Modalità cumulativa",
+        "cumulativeDesc": "Gli effetti moltiplicatori e +/- si accumulano nel turno",
+        "backToGames": "Torna ai giochi"
+      },
+      "pinLabels": {
+        "multiplier": "x2",
+        "addBall": "+palla",
+        "addSip": "+1",
+        "subtractSip": "-1",
+        "cancellation": "annulla tutti gli effetti",
+        "colorSwap": "cambio colore",
+        "mystery": "Casuale",
+        "shake": "Mescola valori caselle",
+        "roundDrinks": "Giro generale",
+        "jackpot": "Jackpot",
+        "teleportation": "Teletrasporto",
+        "gravityFlip": "Gravità ↕",
+        "slowMotion": "Rallentato",
+        "split": "Divisione",
+        "scoreSwap": "Scambio punteggio",
+        "doubleEffect": "x2 effetto",
+        "magnetLeft": "Magnete ←",
+        "magnetRight": "Magnete →"
+      },
+      "pinEffects": {
+        "multiplier": "Moltiplicare i sorsi x2",
+        "addBall": "Lancia una palla in più (dello stesso colore)",
+        "addSip": "Aggiunge +1 sorso al risultato",
+        "subtractSip": "Togliere -1 sorso dal risultato (min 0)",
+        "cancellation": "Annulla tutti gli effetti del proiettile",
+        "colorSwap": "Inverti il ​​colore della pallina (Rosso <-> Verde)",
+        "mystery": "Attiva un effetto speciale casuale (?).",
+        "shake": "Mescola i valori dalle caselle in basso!",
+        "roundDrinks": "Giro generale! (+1 sorso per tutti)",
+        "jackpot": "JACKPOT! Vale 7 sorsi fissi",
+        "teleportation": "Teletrasporta la palla in modo casuale in cima al tabellone",
+        "gravityFlip": "Inverte la gravità per un breve periodo",
+        "slowMotion": "Rallenta brevemente la caduta",
+        "split": "Dividere la palla in due",
+        "scoreSwap": "Inverte il conteggio finale (Bevi/Dai)",
+        "doubleEffect": "Il prossimo effetto speciale si attiva due volte",
+        "magnetLeft": "Magnete a sinistra temporaneo",
+        "magnetRight": "Magnete a destra temporaneo"
+      },
+      "roundDrinksBanner": "{label} — ogni giocatore beve {count} sorso/i!",
+      "roundDrinksSingular": "Giro generale",
+      "roundDrinksPlural": "Giri generali",
+      "noRoundDrinks": "Nessun giro generale in questa partita.",
+      "game": {
+        "yourTurn": "Turno di",
+        "drinks": "Beve",
+        "gives": "Distribuisce",
+        "roundDrinksShort": "Giro",
+        "launch": "Lancia 🎯",
+        "inGame": "In gioco…",
+        "nextTurn": "Turno successivo",
+        "next": "successivo",
+        "specialPins": "Pin speciali",
+        "results": {
+          "roundDrinksPhase": "Giri generali",
+          "detailsPhase": "Dettagli dei turni",
+          "finalPhase": "Risultati finali",
+          "seeDetails": "Vedi dettagli →",
+          "seeResults": "Vedi risultati →",
+          "turn": "Turno {n}",
+          "previous": "← Precedente",
+          "nextPlayer": "Successivo →",
+          "totals": "Totali →",
+          "newGame": "Nuova partita",
+          "back": "Indietro",
+          "roundDrinksAll": "🥂 {count} giro/i generale/i — tutti bevono!"
+        }
+      }
+    },
+    "trial-poursuite": {
+      "title": "Trial Poursuite",
+      "page": {
+        "title": "Trial Poursuite 🏍️",
+        "configTab": "Configurazione",
+        "gameTab": "Gioco",
+        "configTitle": "Configurazione del gioco",
+        "difficulty": "Difficoltà",
+        "startRace": "🏍️ Inizia la corsa",
+        "difficulties": {
+          "facile": {
+            "name": "Facile",
+            "description": "Prove brevi, penalità leggere",
+            "emoji": "😌"
+          },
+          "normal": {
+            "name": "Normale",
+            "description": "Prove equilibrate",
+            "emoji": "😏"
+          },
+          "difficile": {
+            "name": "Difficile",
+            "description": "Prove complesse, buone penalità",
+            "emoji": "😰"
+          },
+          "extreme": {
+            "name": "Estremo",
+            "description": "Prove molto lunghe, grandi penalità",
+            "emoji": "😱"
+          }
+        }
+      },
+      "yourTurn": "Tocca a te affrontare la sfida!",
+      "challengeLabel": "Sfida {category}",
+      "challengeSuccess": "Sfida completata!",
+      "challengeFailed": "Sfida non completata",
+      "willDrink": "Bisognerà bere!",
+      "playerTokens": "Gettoni dei giocatori",
+      "progression": "Progresso:",
+      "categoriesCount": "{current}/{total} categorie",
+      "tokens": "Gettoni:",
+      "noTokens": "Nessun gettone",
+      "sips": "🍺 {count} sorsi",
+      "playerProgressTitle": "Progresso di {name}:",
+      "headerStatus": "{name} — Categoria {current}/{total} — {icon} {category} — Difficoltà: {difficulty}",
+      "dialogSuccessTitle": "🎉 Bravo!",
+      "dialogFailTitle": "💀 Fallito!",
+      "nextPlayer": "Giocatore successivo",
+      "gameCompletedTitle": "🏆 Trial completato!",
+      "championLabel": "🥇 Campione del Trial:",
+      "tokensCount": "{count} gettoni",
+      "finalResults": "Risultati finali:",
+      "backToMenu": "Torna al menu",
+      "restart": "Ricomincia",
+      "successMessage": "🎉 Bravo {name}! Categoria {category} completata! Il tuo turno è finito, tocca al giocatore successivo!",
+      "failMessage": "💀 {name} ha fallito la sfida! Beve {count} sorsi! Il tuo turno è finito, tocca al giocatore successivo!",
+      "victoryMessage": "🏆 {name} ha completato tutte le categorie! VITTORIA TOTALE!",
+      "difficulties": {
+        "facile": "Facile",
+        "normal": "Normale",
+        "difficile": "Difficile",
+        "extreme": "Estremo"
+      },
+      "categories": {
+        "geographie": "geografia",
+        "divertissement": "divertimento",
+        "histoire": "storia",
+        "artsEtLitterature": "arti e letteratura",
+        "sciencesEtNature": "scienza e natura",
+        "sportsEtLoisirs": "sport e tempo libero"
+      },
+      "challenges": {
+        "geographie": [
+          "Nomina 5 paesi europei in 30 secondi",
+          "Nomina 3 lettere maiuscole che iniziano con \"P\"",
+          "Inventare un nuovo nome per il continente",
+          "Descrivi con le tue mani la forma dell'Italia",
+          "Mima un turista che si perde in una città sconosciuta",
+          "Canta l'inno nazionale di un paese inventato",
+          "Spiega dove si trova il Kilimangiaro senza nominarlo",
+          "Disegna la mappa della Francia in 30 secondi"
+        ],
+        "divertissement": [
+          "Inventa un nuovo genere di film in 1 minuto",
+          "Mima una scena d'azione con effetti sonori",
+          "Racconta una barzelletta che nessuno conosce",
+          "Metti in scena una pubblicità per un prodotto strano",
+          "Inventa una danza speciale per il tuo doppiaggio",
+          "Creato uno schizzo di 30 secondi sui social media",
+          "Mette in scena un reality show completo",
+          "Esegui un monologo tragico in 45 secondi"
+        ],
+        "histoire": [
+          "Spiega la storia francese in 45 secondi netti",
+          "Gioca nei panni di Napoleone che prepara la sua strategia militare",
+          "Mima Charles de Gaulle in un discorso televisivo",
+          "Inventa cosa è realmente accaduto nel 1066",
+          "Racconta la versione della Rivoluzione francese TikTok",
+          "Interpreta un abitante di Pompei che scopre l'eruzione",
+          "Ricrea una scena di guerra con effetti sonori"
+        ],
+        "artsEtLitterature": [
+          "Leggi una poesia che improvvisi sul momento",
+          "Imita un'antica statua che prende vita",
+          "Esegui un'opera drammatica",
+          "Inventare una nuova opera artistica",
+          "Ha creato un personaggio letterario epico",
+          "Dipingi una tela invisibile davanti ai nostri occhi",
+          "Spiegare il significato nascosto di un'opera letteraria"
+        ],
+        "sciencesEtNature": [
+          "Spiega la fotosintesi con i movimenti delle braccia",
+          "Definisci un organismo che inventi",
+          "Simula un'eruzione vulcanica con audio completo",
+          "Inventare una nuova specie animale e descriverla",
+          "Spiegare l'Universo a un alieno",
+          "Inventare una medicina per una malattia fittizia"
+        ],
+        "sportsEtLoisirs": [
+          "Inventa un nuovo sport e mostra le regole",
+          "Riproduce commenti sportivi isterici",
+          "Mima una squadra di rugby in una canzone",
+          "Ha creato una disciplina olimpica pazzesca",
+          "Gioca con un arbitro pazzesco con fischi e cartellini",
+          "Inventa uno sport acquatico impossibile"
+        ]
+      },
+      "timeout": "⏰ Tempo scaduto! {name} beve {count} sorsi! Il tuo turno è finito, tocca al giocatore successivo!"
+    },
+    "pendu": {
+      "title": "L'Impiccato dei Sorsi",
+      "tagline": "Indovina la parola prima di essere impiccato!",
+      "themes": {
+        "default": "🎯 Classico",
+        "ocean": "🌊 Oceano",
+        "sunset": "🌅 Tramonto",
+        "forest": "🌲 Foresta",
+        "galaxy": "🌌 Galassia",
+        "fire": "🔥 Fuoco",
+        "ice": "❄️ Ghiaccio"
+      },
+      "categories": {
+        "animaux": "Animali",
+        "objets": "Oggetti",
+        "nourriture": "Cibo",
+        "lieux": "Luoghi",
+        "metiers": "Professioni",
+        "sports": "Sport",
+        "pays": "Paesi",
+        "couleurs": "Colori",
+        "emotions": "Emozioni"
+      },
+      "difficulty": {
+        "facile": "Facile",
+        "normal": "Normale",
+        "difficile": "Difficile",
+        "extreme": "Estremo"
+      },
+      "page": {
+        "tabConfig": "Configurazione",
+        "tabGame": "🎯 Gioco",
+        "selectedPlayers": "Giocatori selezionati",
+        "needPlayers": "⚠️ Seleziona almeno 2 giocatori per iniziare la partita",
+        "difficulty": "Difficoltà",
+        "selectDifficulty": "Seleziona difficoltà",
+        "difficultyDescriptions": {
+          "facile": "8 errori max, parole corte, pochi sorsi",
+          "normal": "6 errori max, parole medie, sorsi moderati",
+          "difficile": "5 errori max, parole lunghe, più sorsi",
+          "extreme": "4 errori max, parole molto difficili, molti sorsi"
+        },
+        "difficultyEmojis": {
+          "facile": "🌱",
+          "normal": "⭐",
+          "difficile": "🔥",
+          "extreme": "💀"
+        },
+        "rulesTitle": "📋 Regole del gioco",
+        "rules": [
+          "Ogni giocatore a turno deve indovinare una parola misteriosa",
+          "Proponi lettere una alla volta per scoprire la parola",
+          "💡 Usa gli indizi (costo: -10 secondi) per rivelare lettere",
+          "🎨 Cambia lo stile dell'impiccato durante la partita",
+          "⏰ Attenzione al timer! Tempo scaduto = sconfitta",
+          "Il giocatore con più punti alla fine vince!"
+        ],
+        "start": "🎯 Inizia partita"
+      },
+      "game": {
+        "title": "L'Impiccato dei Sorsi 🎯",
+        "roundInfo": "Round {round}/{max} - Difficoltà: {difficulty}",
+        "themesButton": "🎨 Temi e stili",
+        "themesMenuTitle": "🎨 Temi e stili",
+        "hangmanStyleLabel": "Stile impiccato:",
+        "colorThemeLabel": "Tema colore:",
+        "closeMenu": "✕ Chiudi",
+        "yourTurn": "Tocca a te",
+        "categoryLabel": "Categoria: {category}",
+        "errors": "Errori: {count}/{max}",
+        "hint": "💡 Indizio ({used}/{max})",
+        "hintCost": "Costo: -10s",
+        "wrongLetters": "Lettere sbagliate: {letters}",
+        "timeExpired": "Tempo scaduto ⏰",
+        "keyboard": "Tastiera",
+        "scoreboard": "Classifica punteggi",
+        "points": "{count} pt",
+        "wins": "{count} vittorie",
+        "drinks": "🍺 {count} sorsi",
+        "quit": "Esci",
+        "newGame": "Nuova partita",
+        "styles": {
+          "classic": "🏛️ Classico",
+          "modern": "🏢 Moderno",
+          "space": "🚀 Spaziale"
+        },
+        "roundDialog": {
+          "wonTitle": "🎉 Bravo!",
+          "lostTitle": "💀 Impiccato!",
+          "bonusPoints": "+{count} punti!",
+          "drinks": "🍺 {count} sorsi da bere!",
+          "seeResults": "Vedi risultati",
+          "nextPlayer": "Giocatore successivo"
+        },
+        "roundResult": {
+          "simWon": "🎉 {compliment} ha trovato la parola!",
+          "won": "🎉 {name} ha trovato la parola \"{word}\"!",
+          "debTimeout": "⏰ {message} - Tempo scaduto! La parola era \"{word}\"",
+          "timeout": "⏰ {name} non ha trovato in tempo! La parola era \"{word}\"",
+          "debLost": "💀 {message} - La parola era \"{word}\"",
+          "lost": "💀 {name} è stato impiccato! La parola era \"{word}\""
+        },
+        "endDialog": {
+          "title": "🏆 Fine partita!",
+          "winner": "🥇 Vincitore:",
+          "points": "{count} punti",
+          "finalRanking": "Classifica finale:",
+          "replay": "Rigioca",
+          "backToMenu": "Torna al menu"
+        }
+      },
+      "compliments": [
+        "Il onnipotente",
+        "Il magnifico",
+        "Il grande saggio",
+        "Il maestro",
+        "Sua maestà",
+        "Il creatore",
+        "L'invincibile",
+        "Il leggendario",
+        "Il supremo",
+        "L'incontestabile"
+      ],
+      "debMessages": [
+        "Bevi sorsi veri",
+        "Sorsi non centilitri",
+        "Non solo 2 cl!",
+        "Bevi davvero questa volta",
+        "Niente imbrogli",
+        "Smetti di fingere",
+        "Ti abbiamo visto imbrogliare",
+        "Bevi sul serio",
+        "Niente acqua questa volta"
+      ],
+      "wordsNote": "Banche di parole in WORD_CATEGORIES — estrai tramite script per la traduzione EN"
+    },
+    "petit-buveur": {
+      "page": {
+        "back": "Indietro",
+        "badge": "🍺Gioco da tavolo",
+        "title": "Il piccolo bevitore",
+        "tagline": "Muoviti sul set senza ubriacarti troppo!",
+        "selectedPlayers": "Giocatori selezionati",
+        "noPlayers": "Nessun giocatore: vai alla pagina Giocatori.",
+        "difficulty": "Difficoltà",
+        "difficulties": {
+          "facile": {
+            "label": "🌱 Facile",
+            "desc": "Meno sorsi, ideale per iniziare"
+          },
+          "normal": {
+            "label": "🌟 Normale",
+            "desc": "Equilibrato per una piacevole serata"
+          },
+          "difficile": {
+            "label": "🔥 Difficile",
+            "desc": "Niente più sfide e sorsi"
+          },
+          "extreme": {
+            "label": "💀 Estremo",
+            "desc": "Possibile culo secco: riservato agli esperti"
+          }
+        },
+        "rulesTitle": "Regole del gioco",
+        "rules": [
+          "🎲 Lancia il dado durante il tuo turno e avanza di un numero di caselle.",
+          "🍺 A seconda della scatola atterrata, bevi un sorso o accetta una sfida.",
+          "⚡ Scatole speciali attivano effetti: scambi, maledizioni, protezioni...",
+          "🏆 Il primo che raggiunge la casella 30 vince la partita!",
+          "⚠️ Consumare con moderazione."
+        ],
+        "needPlayers": "Seleziona almeno 2 giocatori per iniziare.",
+        "start": "Inizia il gioco",
+        "resume": "Riprendi la partita in corso"
+      },
+      "difficultyLabels": {
+        "facile": "Facile",
+        "normal": "Normale",
+        "difficile": "Difficile",
+        "extreme": "Estremo"
+      },
+      "wheel": {
+        "safe": "SAFE",
+        "sips": "{count} sorseggia",
+        "winner": "Vincitore",
+        "loser": "Perdere"
+      },
+      "caseTypes": {
+        "normal": "Normale",
+        "defi": "Sfida",
+        "gorgée": "Sorsi",
+        "recul": "Ritirarsi",
+        "avance": "Anticipo",
+        "tous": "Tutti",
+        "roue": "Ruota dei sorsi",
+        "echange": "Scambio",
+        "bombe": "Bomba",
+        "protection": "Protezione",
+        "malediction": "Maledizione",
+        "chance": "Opportunità",
+        "repetition": "Ripetizione",
+        "miroir": "Specchio",
+        "defi-chaine": "Sfida a catena",
+        "piege": "Trappola",
+        "melange": "Miscela",
+        "passe-tour": "Fai il tuo turno",
+        "double-peine": "Doppia punizione",
+        "solo": "Solo",
+        "copie": "Copia",
+        "roulette-russe": "Roulette russa",
+        "teleport": "Teletrasporto",
+        "grappin": "Pinza",
+        "ancre": "Ancorare",
+        "case-bonus": "Scatola bonus",
+        "recul-groupe": "Ritiro di gruppo",
+        "pont": "Ponte",
+        "question": "Domanda",
+        "vote": "Votare",
+        "miroir-inverse": "Specchio inverso",
+        "rewind": "Rewind",
+        "loterie": "Lotteria",
+        "inversion": "Inversione",
+        "double-case": "Doppia scatola",
+        "roue-defis": "Ruota della sfida",
+        "de-honte": "Dadi della vergogna",
+        "pile-face": "Testa o croce"
+      },
+      "defis": [
+        {
+          "text": "Fai 10 flessioni",
+          "drinks": 3
+        },
+        {
+          "text": "Racconta una barzelletta",
+          "drinks": 3
+        },
+        {
+          "text": "Canta una canzone",
+          "drinks": 3
+        },
+        {
+          "text": "Imita un animale",
+          "drinks": 3
+        },
+        {
+          "text": "Fai 10 squat",
+          "drinks": 3
+        },
+        {
+          "text": "Esegui 30 secondi di allenamento di base",
+          "drinks": 3
+        },
+        {
+          "text": "Mima un film senza parlare",
+          "drinks": 2
+        },
+        {
+          "text": "Imita un altro giocatore",
+          "drinks": 2
+        },
+        {
+          "text": "Fai 10 giri su te stesso",
+          "drinks": 2
+        },
+        {
+          "text": "Balla per 20 secondi",
+          "drinks": 2
+        },
+        {
+          "text": "Condividi il tuo ricordo serale più imbarazzante",
+          "drinks": 3
+        },
+        {
+          "text": "Parla con un accento per 2 turni",
+          "drinks": 2
+        },
+        {
+          "text": "Esegui una verticale contro un muro",
+          "drinks": 3
+        },
+        {
+          "text": "Indovina una parola senza parlare",
+          "drinks": 2
+        },
+        {
+          "text": "Recita l'alfabeto al contrario",
+          "drinks": 3
+        },
+        {
+          "text": "Esegui 5 salti della rana",
+          "drinks": 2
+        },
+        {
+          "text": "Non toccare il telefono per 3 round",
+          "drinks": 8
+        },
+        {
+          "text": "Bevi senza usare le mani",
+          "drinks": 2
+        }
+      ],
+      "defiWheelChallenges": [
+        "Imita un animale",
+        "Balla 15 secondi",
+        "Racconta una barzelletta",
+        "Canta il ritornello di una canzone",
+        "Flessioni × 5",
+        "Squat × 5",
+        "Parla in rima per 30 secondi",
+        "Senza nomi 1 giro",
+        "Selfie di gruppo",
+        "Complimento sincero a sinistra",
+        "Bevi 2 sorsi",
+        "SAFE"
+      ],
+      "caseDescriptions": {
+        "normal": "Custodia sicura",
+        "gorgée": "Bevi {count} sorso/i!",
+        "gorgéeCulSec": "Culo asciutto! 🍺",
+        "defi": "Sfida: {challenge} o bevi {count} sorso/i!",
+        "recul": "Torna indietro di 1 spazio!",
+        "avance": "Avanza di {count} quadrati!",
+        "tous": "Tutti bevono {count} sorso(i) tranne la persona presa di mira! 🍻",
+        "roue": "🎯 Caso speciale: Sip Wheel!",
+        "roue-defis": "🎭 Ruota delle sfide!",
+        "de-honte": "🎲 Dado della vergogna! Lancia i dadi del destino.",
+        "pile-face": "🪙 Testa o croce! Il bersaglio sceglie e tenta la fortuna.",
+        "echange": "🔄 Scambia la tua posizione con un altro giocatore!",
+        "bombe": "💣 Bomba! Tutti bevono, il bersaglio beve il doppio!",
+        "protection": "🛡️ Protezione: Immuni per un giro di tavola completo!",
+        "malediction": "👻Maledizione! 1 sorso per giro per 3 giri!",
+        "chance": "🍀 Fortuna! Lancia di nuovo il dado o avanza di 2 spazi!",
+        "repetition": "🔄 Ripeti l'azione della casella precedente!",
+        "miroir": "🪞 Specchio! Le posizioni sono invertite!",
+        "defi-chaine": "🔗Sfida a catena! Collegato 5 turni a un partner!",
+        "piege": "🕳️ Trappola! Bevi tanti sorsi quanto la tua posizione!",
+        "melange": "🔀 Mescola! Le posizioni sono miste!",
+        "passe-tour": "⏭️ Fai il tuo turno! Il bersaglio non lancerà il tiro nel turno successivo.",
+        "double-peine": "💥 Doppia penalità! Il bersaglio beve {count} sorsi × 2!",
+        "solo": "🎯 Solo! Tutti sono al sicuro, tu bevi 1 sorso.",
+        "copie": "👯 Copia! Il bersaglio subisce il tuo stesso movimento in questo turno.",
+        "roulette-russe": "🔫 Roulette russa! 1 possibilità su 3: 6 sorsi o cassaforte.",
+        "teleport": "🌀 Teletrasporto! Scambio con il 1° o l'ultimo della classifica.",
+        "grappin": "🪝 Rampino! Raggiungi la casella del giocatore proprio di fronte a te.",
+        "ancre": "⚓ Ancora! Il bersaglio non può avanzare al turno successivo.",
+        "case-bonus": "✨ Scatola bonus! +1 casella immediatamente.",
+        "recul-groupe": "⬅️ Ritiro di gruppo! Tutti quelli dietro di te arretrano di 1 spazio.",
+        "pont": "🌉Ponte! Sulla tua casella: tutti +1 o −1 (testa o croce).",
+        "question": "❓ Domanda! Rispondi ad alta voce o bevi {count} sorsi.",
+        "vote": "🗳️ Vota! Designare chi beve {count} sorsi.",
+        "miroir-inverse": "🪞 Specchio invertito! Quando bevi, anche il bersaglio beve (1 turno).",
+        "rewind": "⏪ Rewind! Riproduce l'ultimo quadrato registrato.",
+        "loterie": "🎰 Lotteria! 2 giocatori sorteggiati: uno beve, l'altro avanza.",
+        "inversion": "🔃 Inversione! L'ultimo della classifica beve invece {count} sorsi.",
+        "double-case": "🎲 Scatola doppia! Due effetti di fila dopo il targeting."
+      },
+      "resolveCase": {
+        "solo": "🎯 {actor} beve 1 sorso, gli altri sono salvi!",
+        "bonus": "✨ {actor} avanza dal box {from} a {to}!",
+        "reculGroupe": "⬅️ Ritiro di gruppo! Tutti i giocatori dietro {actor} arretrano di uno spazio.",
+        "grappinLeader": "🪝 {actor} è già in testa, nessuna lotta possibile.",
+        "grappinJoin": "🪝 Rampino! {actor} si unisce a {target} (casella {case}).",
+        "pont": "🌉Ponte ({side})! {count} giocatore/i sulla casella {case} {direction} di una casella.",
+        "pontPile": "pila",
+        "pontFace": "viso",
+        "pontAdvance": "anticipo",
+        "pontBack": "fa un passo indietro",
+        "loterieCancelled": "🎰 Lotteria annullata (non abbastanza giocatori).",
+        "loterieResult": "🎰 Lotteria! {drinker} beve 2 sorsi, {mover} avanza di uno spazio."
+      },
+      "shameDice": {
+        "safe": "Sicuro",
+        "twoSips": "2 sorsi",
+        "advance": "Avanza +1",
+        "back": "Indietro −1",
+        "outcomeSafe": "🎲 Dado della vergogna ({roll}): {player} è salvo!",
+        "outcomeDrink": "🎲 Morire di vergogna ({roll}): {player} beve 2 sorsi!",
+        "outcomeAdvance": "🎲 Dado della vergogna (5): {player} avanza di uno spazio!",
+        "outcomeBack": "🎲 Dado della vergogna (6): {player} torna indietro di uno spazio!",
+        "diceLabel": "Dado: {value}"
+      },
+      "coinFlip": {
+        "pile": "Pila",
+        "face": "Viso",
+        "won": "Pareggio: {result} — il bersaglio vince!",
+        "lost": "Pareggio: {result} — il bersaglio perde e beve."
+      },
+      "game": {
+        "rollDice": "Lancia il dado",
+        "rolling": "Lancio…",
+        "validateEffect": "Convalida l'effetto...",
+        "actionInProgress": "Azione in corso...",
+        "effectTitle": "Effetto scatola",
+        "challengeQuestion": "Il giocatore ha completato la sfida?",
+        "challengeSuccess": "Sfida riuscita",
+        "challengeDrink": "Ho bevuto {count} sorso/i",
+        "finalRanking": "Classifica finale",
+        "backToMenu": "Torna al menù",
+        "duel": {
+          "title": "Duello sulla scatola",
+          "caseInfo": "Casella {number} · {player}",
+          "rules": "Vincitore: non si muove · Perdente: torna indietro di uno spazio",
+          "pickOpponent": "Scegli un avversario in questo spazio",
+          "skip": "Salta il duello",
+          "vs": "{a} contro {b}",
+          "spin": "Inizia il duello",
+          "spinning": "La ruota gira…",
+          "result": "Risultato",
+          "applyCase": "Applica l'effetto scatola",
+          "changeOpponent": "Cambia avversario",
+          "winnerStays": "{winner} wins and stays · {loser} moves back one square",
+          "opponentWins": "{winner} wins · {loser} moves back one square"
+        },
+        "dialogs": {
+          "teleport": "🌀 Teletrasporto",
+          "vote": "🗳️ Vota",
+          "shameDice": "🎲 Dadi della vergogna",
+          "coinFlip": "🪙 Testa o croce",
+          "chance": "🍀 Caso Fortuna",
+          "exchange": "🔄 Scatola di scambio",
+          "saveGame": "💾 Partita in corso",
+          "teleportPrompt": "Swap your position with:",
+          "teleportLeader": "🏆 1st in ranking ({name})",
+          "teleportLast": "🐢 Last place ({name})",
+          "votePrompt": "Hands up — who drinks {count} sips?",
+          "shameDiceRules": "1–2 safe · 3–4 sips · 5 advance · 6 back",
+          "rollD6": "Roll the D6",
+          "diceRolling": "The die is rolling…",
+          "coinChooses": "sceglie testa o croce",
+          "coinChoice": "Scelta: {choice}",
+          "drinksToTake": "{count} sip(s) to drink",
+          "coinSpinning": "The coin is spinning…",
+          "chancePrompt": "Choose your action:",
+          "chanceReroll": "🎲 Roll the die again",
+          "chanceAdvance": "➡️ Move forward 2 squares",
+          "chainTitle": "Chain challenge",
+          "chainPrompt": "Choose your partner for {count} linked turns",
+          "chainChooser": "{player} chooses",
+          "exchangePrompt": "Choose a player to swap positions with:"
+        },
+        "save": {
+          "prompt": "È in corso una partita. Vuoi riprenderlo o iniziare un nuovo gioco?",
+          "resume": "Riprendere il gioco",
+          "newGame": "Nuova parte",
+          "none": "Nessun gioco salvato trovato."
+        },
+        "effects": {
+          "none": "Nessun effetto speciale in corso",
+          "active": "Effetti attuali:",
+          "protection": "Protezione",
+          "protectionDesc": "Immune per un turno intero (tutti gli altri giocatori)",
+          "curse": "Maledizione",
+          "curseDesc": "Bevi 1 sorso in più ogni giro",
+          "chain": "Sfida a catena",
+          "chainDesc": "Legato ad un partner: subisce gli stessi effetti (sorseggia)",
+          "mirror": "Specchio inverso",
+          "protected": "ERA PROTETTO!",
+          "skipTurn": "Skip your turn",
+          "skipTurnDesc": "Will automatically skip next turn",
+          "anchor": "Anchor",
+          "anchorDesc": "Cannot advance next turn",
+          "mirrorDesc": "When one drinks, the other too ({a} ↔ {b})",
+          "mirrorDescShort": "When one drinks, the other too",
+          "protectedStatus": "{player} is protected",
+          "cursedStatus": "{player} is cursed ({count} turns)",
+          "chainStatus": "{from} → {to} ({count} turns)"
+        },
+        "messages": {
+          "cheers": [
+            "Coraggio!",
+            "Salute !",
+            "Saluti!",
+            "Tchin-chin!",
+            "Culo asciutto!",
+            "Bottoms up!",
+            "Trangugiare!",
+            "Skål!",
+            "Prost!",
+            "Kanpai!"
+          ],
+          "drinking": [
+            "Salute e saluti!",
+            "Un piccolo sorso per te, un grande passo verso la vittoria!",
+            "Idratati bene, campione!",
+            "I grandi giocatori hanno iniziato tutti come te!",
+            "Un bicchiere d’acqua va bene… due bicchieri sono ancora meglio!",
+            "Ricorderai questo sorso domani mattina!",
+            "L'abuso di alcol è pericoloso per la salute: consumalo con moderazione.",
+            "Consumare con moderazione, qualunque sia la bevanda!",
+            "Non è un sorso, è un investimento nella tua serata!",
+            "Se non bevi, qualcun altro prenderà il tuo posto in classifica!",
+            "Un altro sorso per divertirsi... con tutta moderazione!",
+            "Alza il bicchiere più in alto del tuo punteggio!",
+            "Più giochi, più diventerai leggendario!",
+            "Prenditi il ​​tuo tempo, assapora ogni sorso!",
+            "Una serata tra amici è sempre una buona idea!",
+            "Sei sulla buona strada per diventare una leggenda!",
+            "Di questo passo diventerai campione olimpico di discesa libera!",
+            "La vita è troppo breve per le brutte notti!"
+          ],
+          "deb": [
+            "Bevi veri sorsi",
+            "Sorsi, non centilitri",
+            "Non solo 2 cl!",
+            "Bevi davvero questa volta",
+            "Nessun imbroglio",
+            "Smettila di fingere",
+            "Ti abbiamo visto tradire",
+            "Bevi davvero",
+            "Niente acqua questa volta"
+          ],
+          "compliments": [
+            "L'Onnipotente",
+            "Il magnifico",
+            "Il grande saggio",
+            "Il maestro",
+            "Sua Maestà",
+            "Il creatore",
+            "L'invincibile",
+            "Il leggendario",
+            "Il supremo",
+            "L'indiscutibile"
+          ]
+        },
+        "targetLabel": "Giocatore preso di mira: {player}",
+        "sparedLabel": "Giocatore risparmiato: {player}",
+        "resultLabel": "Risultato: {outcome}",
+        "resultHeading": "Risultato",
+        "title": "Il Piccolo Bevitore",
+        "back": "Indietro",
+        "turn": "Turno {count}",
+        "turnOf": "Turno di",
+        "turnShort": "Turno",
+        "ranking": "Classifica",
+        "caseLabel": "Casella {number}",
+        "loading": "Caricamento partita…",
+        "drinksShort": "{count} sip(s)",
+        "turnsRemaining": "{count} turn(s)",
+        "next": "Avanti",
+        "continue": "Continua",
+        "close": "Chiudi",
+        "replay": "Rigioca",
+        "victory": {
+          "winner": "Vincitore!",
+          "wonGame": "ha vinto la partita 🎉",
+          "turns": "Turni",
+          "players": "Giocatori",
+          "difficulty": "Difficoltà"
+        },
+        "target": {
+          "title": "Who to target?",
+          "hint": "The square effect will be revealed after your choice",
+          "random": "Random player",
+          "me": "Me —"
+        },
+        "history": {
+          "title": "Azione precedente",
+          "selfTarget": "(se stesso / nessun bersaglio)"
+        },
+        "wheel": {
+          "defis": "Challenge wheel",
+          "drinks": "Sip wheel",
+          "turnOf": "Turn of {player}",
+          "spin": "Spin the wheel",
+          "spinning": "The wheel is spinning…",
+          "legend": "Legend"
+        },
+        "outcomes": {
+          "skipTurn": "⏭️ {player} automatically skips this turn.",
+          "teleport": "🌀 {actor} swaps place with {partner} ({rank} in ranking)!",
+          "teleportLeader": "1st",
+          "teleportLast": "last",
+          "voteProtected": "🗳️ Vote: {player} {protected}",
+          "voteDrink": "🗳️ Vote: {player} drinks {count} sip(s)!",
+          "pileFaceWin": "🪙 Heads or tails: {player} chose {choice}, draw {result} — safe!",
+          "pileFaceLose": "🪙 Heads or tails: draw {result}, {player} drinks {count} sip(s)!",
+          "duelChallengerWins": "⚔️ Duel over: {challenger} wins (stays), {opponent} moves back one square.",
+          "duelOpponentWins": "⚔️ Duel over: {opponent} wins, {challenger} moves back one square.",
+          "challengeSuccess": "✅ {player} completed the challenge!",
+          "challengeDrink": "🍺 {player} drank {count} sip(s)!",
+          "noPreviousCase": "No previous square, you are safe!",
+          "safeCase": "Safe square! Player {player} is safe this turn.",
+          "trap": "🕳️ Trap! {player} drinks {count} sip(s) (position {position})!",
+          "trapWithMessage": "🕳️ Trap! {player} drinks {count} sip(s) (position {position}) {message}",
+          "move": "{arrow} {player} moves from square {from} to square {to}!",
+          "drinks": "{player} drinks {count} sip(s)!",
+          "bombe": "💣 {player} triggered a bomb! Everyone drinks {count} sip(s), but {name} drinks double!",
+          "protectionApplied": "🛡️ {player} is protected for a full round (everyone else plays once)!",
+          "miroirSwap": "🪞 {player} swapped all positions! (first ↔ last)",
+          "trapProtected": "🕳️ Trap! {player} should have drunk {count} sip(s) (position {position}) but {protected}",
+          "doublePeine": "💥 {player} drinks {count} sips (double penalty)!",
+          "copie": "👯 {player} copies the die ({delta}): square {from} → {to}!",
+          "rouletteProtected": "🔫 {player} {protected}",
+          "rouletteMiss": "🔫 Miss! {player} drinks {count} sips!",
+          "inversion": "🔃 Inversion! {last} (last) drinks {count} sip(s) instead of {player}!",
+          "mirrorLink": "🪞 {actor} is linked to {target}: when one drinks, the other too ({count} turn(s) from {actor})!",
+          "rewindSafe": "⏪ No previous square — {player} is safe!",
+          "melange": "🔀 {player} shuffled all positions!",
+          "genericApplied": "Square {type} applied to {player}",
+          "chainLinked": "🔗 {actor} → {target} — linked for {count} turns!",
+          "chanceAdvance": "🍀 Luck: {player} moves forward 2 squares (square {case})!",
+          "exchange": "🔄 {a} and {b} swapped positions!",
+          "everyoneDrinksHonor": "Everyone drinks {count} sip(s) to honor \"{compliment}\"",
+          "everyoneDrinksExcept": "Everyone drinks {count} sip(s) except",
+          "wheelDefi": "🎭 Challenge: {label}!",
+          "wheelDefiDrink": "{player} drinks {count} sips.",
+          "wheelDefiPlay": "{player} — your turn to play!",
+          "wheelDefiOrDrink": "{player} — complete the challenge or drink 2 sips!",
+          "wheelResult": "🎯 Risultato ruota: {label}!",
+          "wheelDrink": "{player} beve (giocatore al turno).",
+          "cannotRecul": "❌ {player} è sulla casella 1 e non può tornare indietro!",
+          "wheelSafePlayer": "{player} è al sicuro (giocatore al turno).",
+          "targetProtected": "Giocatore bersaglio: {player} {protected}",
+          "safeCaseBoard": "✅ {player} è su una casella sicura!",
+          "curseApplied": "👻 {player} è maledetto per {count} turni!",
+          "skipTurnNext": "⏭️ {player} non lancerà al prossimo turno!",
+          "anchorApplied": "⚓ {player} non potrà avanzare al prossimo turno!",
+          "rouletteSafe": "🔫 Click… {player} è al sicuro!"
+        }
+      }
+    }
+  },
+  "stats": {
+    "title": "Statistiche",
+    "noStats": "Nessuna statistica disponibile",
+    "gamesPlayed": "Partite giocate",
+    "uniquePlayers": "Giocatori unici",
+    "bestPlayer": "Miglior giocatore",
+    "winsCount": "{count} vittorie",
+    "noPlayer": "Nessun giocatore",
+    "recentGames": "Giochi recenti",
+    "recentGamesDesc": "Ultime partite giocate",
+    "winner": "Vincitore: {name}",
+    "metrics": {
+      "wins": "Vittorie",
+      "gamesPlayed": "Partite giocate",
+      "totalDrinks": "Sorseggia ubriaco",
+      "winsForGame": "Vittorie ({gameId})",
+      "gamesForGame": "Parti ({gameId})",
+      "winsPetitBuveur": "Piccole vittorie da bevitore",
+      "gamesPetitBuveur": "Piccole feste di bevitori",
+      "winsHiLo": "Vittorie Hi/Lo",
+      "gamesHiLo": "Parti Hi/Lo",
+      "winsPmu": "Vittorie PMU",
+      "gamesPmu": "Parti PMU",
+      "winsPyramide": "Vittorie della Piramide",
+      "gamesPyramide": "Parti della piramide",
+      "winsPlinko": "Vittorie Plinko",
+      "gamesPlinko": "Parti Plinko",
+      "winsMonsieur3": "Vittorie Monsieur 3",
+      "gamesMonsieur3": "Parti Monsieur 3",
+      "winsRouletteRusse": "Vince la roulette russa",
+      "gamesRouletteRusse": "Giochi di roulette russa",
+      "winsBallonSurprise": "Vittorie di palloncini a sorpresa",
+      "gamesBallonSurprise": "Feste in mongolfiera a sorpresa",
+      "winsPetitsPoints": "Vittorie a punti piccoli",
+      "gamesPetitsPoints": "Parti di piccoli punti"
+    }
+  },
+  "achievements": {
+    "title": "Obiettivi",
+    "unlockedOn": "Sbloccato il {date}",
+    "locked": "Non sbloccato",
+    "items": {
+      "first_win": {
+        "title": "Prima vittoria",
+        "description": "Vinci la tua prima partita"
+      },
+      "perfect_game": {
+        "title": "Senza fallo",
+        "description": "Vinci una partita senza commettere errori"
+      },
+      "speed_demon": {
+        "title": "Luminoso come un fulmine",
+        "description": "Reagisci in meno di 500 ms"
+      },
+      "social_butterfly": {
+        "title": "Farfalla sociale",
+        "description": "Gioca con 8 giocatori diversi"
+      },
+      "night_owl": {
+        "title": "Uccello notturno",
+        "description": "Gioca dopo mezzanotte"
+      }
+    }
+  },
+  "ranking": {
+    "title": "Classifica",
+    "summary": "{players} giocatori · {games} giochi · {gameCount} giochi",
+    "tabs": {
+      "global": "Complessivamente",
+      "byGame": "Per gioco"
+    },
+    "sections": {
+      "topWins": "Le migliori vittorie",
+      "mostActive": "Più attivo",
+      "ranking": "Classifica"
+    },
+    "metrics": {
+      "winsShort": "{count} vic.",
+      "gamesShort": "{count} parti"
+    },
+    "noDataForGame": "Nessun dato per questo gioco"
+  },
+  "feedback": {
+    "menuTitle": "Segnala/Suggerisci",
+    "menuSubtitle": "Bug, idea o commento",
+    "dialogTitle": "La tua opinione conta!",
+    "dialogDescription": "Segnala un bug, suggerisci un miglioramento o lascia un commento. Aiutaci a migliorare Le Pillaveur.",
+    "success": "Grazie per il tuo feedback! La squadra ne prende atto.",
+    "types": {
+      "bug": {
+        "label": "Insetto",
+        "description": "Qualcosa non funziona"
+      },
+      "improvement": {
+        "label": "Miglioramento",
+        "description": "Un'idea per migliorare il gioco"
+      },
+      "comment": {
+        "label": "Commento",
+        "description": "Un avviso o un messaggio"
+      }
+    },
+    "messageLabel": "Messaggio",
+    "placeholders": {
+      "bug": "Descrivi il problema e come riprodurlo...",
+      "improvement": "Che miglioramento vorresti?",
+      "comment": "Il tuo messaggio..."
+    },
+    "screenshots": "Screenshot (facoltativi, massimo {max})",
+    "addScreenshot": "Aggiungere",
+    "removeScreenshot": "Elimina acquisizione",
+    "contactEmail": "Email di contatto (facoltativo)",
+    "emptyMessage": "Descrivi il tuo reso.",
+    "imageError": "Impossibile elaborare una o più immagini.",
+    "send": "Inviare",
+    "sending": "Invio…"
+  },
+  "errors": {
+    "generic": "Errore",
+    "loadAchievements": "Errore durante il caricamento degli obiettivi:",
+    "loadStats": "Errore durante il caricamento delle statistiche:",
+    "updateStats": "Errore durante l'aggiornamento delle statistiche:",
+    "page": {
+      "title": "Ops! Qualcosa è andato storto",
+      "description": "Abbiamo riscontrato un problema tecnico durante il caricamento di questa pagina. Ci scusiamo per l'inconveniente.",
+      "retry": "Riprova",
+      "home": "Torna alla home",
+      "tipsTitle": "Puoi anche provare:",
+      "tipRefresh": "Aggiorna la pagina",
+      "tipCache": "Svuota la cache del browser",
+      "tipConnection": "Controlla la connessione Internet",
+      "logPrefix": "Errore applicazione:"
+    },
+    "boundary": {
+      "title": "Si è verificato un errore",
+      "retry": "Riprova",
+      "backToGames": "Torna ai giochi"
+    }
+  },
+  "supervision": {
+    "title": "Supervisione",
+    "loading": "Caricamento…",
+    "refresh": "Aggiorna",
+    "unknownCountry": "Sconosciuto",
+    "rolesHelpTitle": "Ruoli e permessi",
+    "rolesHierarchy": "Gerarchia: giocatore < moderatore < admin < super admin < fondatore — solo un grado superiore può sanzionare o modificare un account (mai un pari). Moderatori: solo ban temporaneo.",
+    "roles": {
+      "fondateur": "Fondatore",
+      "superadmin": "Super admin",
+      "admin": "Admin",
+      "moderator": "Moderatore",
+      "user": "Giocatore"
+    },
+    "subtitles": {
+      "full": "Dashboard completa — statistiche, giochi, visitatori e account.",
+      "bans": "Gestione account e ban.",
+      "accounts": "Consultazione e moderazione account giocatori."
+    },
+    "tabs": {
+      "section": "Sezione",
+      "overview": "Panoramica",
+      "geo": "Paese / IP",
+      "accounts": "Account ({count})",
+      "bans": "Bannati ({count})",
+      "feedback": "Feedback ({count})",
+      "feedbackResolved": "Risolti ({count})",
+      "moderation": "Moderazione nomi"
+    },
+    "moderation": {
+      "title": "Filtro anti-insulti",
+      "description": "Liste FR/EN/ES/IT integrate, file data/moderation-extra-terms.json e termini aggiunti qui (effetto immediato lato server).",
+      "loading": "Caricamento…",
+      "loadError": "Impossibile caricare la moderazione",
+      "saveError": "Impossibile aggiungere il termine",
+      "deleteError": "Impossibile eliminare il termine",
+      "baseLists": "Liste base",
+      "fileExtra": "Termini file",
+      "dbExtra": "Termini supervisione",
+      "fileHintTitle": "File repo",
+      "fileHint": "Modifica data/moderation-extra-terms.json per aggiunte versionate.",
+      "termLabel": "Nuovo termine",
+      "termPlaceholder": "Espressione da bloccare",
+      "localeLabel": "Lingua",
+      "localeAll": "Tutte le lingue",
+      "noteLabel": "Nota (interna)",
+      "notePlaceholder": "Contesto, segnalazione…",
+      "addTerm": "Aggiungi",
+      "saving": "Aggiunta…",
+      "recentTerms": "Termini aggiunti via supervisione",
+      "deleteTerm": "Elimina",
+      "attemptsTitle": "Tentativi di nomi vietati",
+      "attemptsDescription": "Cronologia dei nickname rifiutati (testo inserito). Avviso account dopo 3 tentativi di insulto.",
+      "attemptsLoadError": "Impossibile caricare i tentativi",
+      "attemptsEmpty": "Nessun tentativo registrato",
+      "flaggedUsersTitle": "Account segnalati (≥ 3 tentativi)",
+      "attemptCount": "{count, plural, one {# tentativo} other {# tentativi}}",
+      "attemptsColDate": "Data",
+      "attemptsColName": "Nome tentato",
+      "attemptsColUser": "Account",
+      "attemptsColContext": "Contesto",
+      "attemptsAnonymous": "Visitatore anonimo"
+    },
+    "stats": {
+      "onlineNow": "Online ora",
+      "onlineNowHint": "Visitatori attivi (ultimi 5 min.)",
+      "today": "Oggi",
+      "todayHint": "Visitatori unici (giorno)",
+      "week": "7 giorni",
+      "weekHint": "Visitatori unici (settimana)",
+      "month": "30 giorni",
+      "monthHint": "Visitatori unici (mese)"
+    },
+    "accounts": {
+      "registered": "Account registrati",
+      "total": "Totale",
+      "moderators": "Moderatori",
+      "admins": "Admin",
+      "superAdmins": "Super admin",
+      "founders": "Fondatori",
+      "adminTitle": "Amministrazione account",
+      "adminDesc": "Cerca per username, email, codice unico (es. LP-ABC123) o IP.",
+      "searchPlaceholder": "Cerca account o IP…",
+      "rolePlaceholder": "Ruolo",
+      "statusPlaceholder": "Stato",
+      "allRoles": "Tutti i ruoli",
+      "players": "Giocatori",
+      "allStatus": "Tutti",
+      "online": "Online",
+      "banned": "Bannati",
+      "resetFilters": "Reimposta",
+      "results": "{count} risultat{plural} su {total}",
+      "ipAnalyzing": "Analisi IP in corso…",
+      "ipSummary": "IP {ip} — {accounts} account{accountsPlural}, {visitors} visitatore{visitorsPlural}",
+      "noMatch": "Nessun account corrisponde a questa ricerca.",
+      "registeredOn": "Iscritto il {date}",
+      "seenOn": "Visto il {date}",
+      "you": "Tu",
+      "banReason": "Motivo: {reason}",
+      "history": "Cronologia",
+      "liftBan": "Rimuovi ban",
+      "permanentBan": "Ban permanente",
+      "temporaryBan": "Ban temporaneo",
+      "deleteAccount": "Elimina account"
+    },
+    "bans": {
+      "activeTitle": "Ban attivi",
+      "activeOverview": "{count} account sospeso/i",
+      "suspendedCount": "{count} account sospeso/i",
+      "noneActive": "Nessun ban attivo.",
+      "noneOverview": "Nessun ban in corso.",
+      "currentTitle": "Ban in corso",
+      "currentDesc": "Account sospesi (permanente o temporaneo non scaduto)",
+      "noneCurrent": "Nessun ban attivo.",
+      "permanent": "Permanente",
+      "temporary": "Temporaneo",
+      "bannedOn": "Bannato il {date}",
+      "expiresOn": "Scade il {date}",
+      "by": "Da: {name}",
+      "comment": "Commento: {comment}",
+      "until": "fino al {date}",
+      "unban": "Sbanna"
+    },
+    "connected": {
+      "recentTitle": "Account connessi di recente",
+      "recentDesc": "Giocatori identificati con IP e paese",
+      "noneRecent": "Nessun account connesso di recente."
+    },
+    "games": {
+      "playedTitle": "Partite per gioco",
+      "playedDesc": "Aggregato cloud degli account sincronizzati",
+      "totalParties": " — {count} partita{plural} in totale",
+      "party": "partita",
+      "parties": "partite",
+      "noneRecorded": "Nessuna partita registrata."
+    },
+    "geo": {
+      "onlineByCountry": "Online per paese",
+      "onlineByCountryDesc": "Visitatori attivi negli ultimi 5 minuti",
+      "todayByCountry": "Connessi oggi per paese",
+      "todayByCountryDesc": "Visitatori attivi nelle ultime 24 h",
+      "tapCountry": " Tocca un paese per vedere i visitatori.",
+      "noData": "Nessun dato al momento.",
+      "visitorsTitle": "Visitatori e giocatori",
+      "visitorsDesc": "Un giocatore = una riga. Tocca una scheda per i dettagli.",
+      "filterPlaceholder": "Filtra per IP, username, email o paese…",
+      "noVisitors": "Nessun visitatore registrato.",
+      "noSearchResults": "Nessun risultato per questa ricerca.",
+      "hide": "Nascondi",
+      "details": "Dettagli",
+      "localPlayer": " giocatore locale",
+      "localPlayers": " giocatori locali",
+      "suspicious": "Sospetto",
+      "anonymousVisitor": "Visitatore anonimo",
+      "localPlayersLabel": "Giocatori locali",
+      "noLocalPlayers": "Nessun giocatore segnalato.",
+      "ipAddresses": "Indirizzi IP",
+      "noIp": "Nessuna IP registrata",
+      "linkedAccount": "Account collegato",
+      "noLinkedAccount": "Nessun account associato (visitatore anonimo)",
+      "visitorId": "Visitor ID: {id}",
+      "countryDialogTitle": "Visitatori — {title}",
+      "countryDialogDesc": "Elenco visitatori e account per questo paese.",
+      "noVisitorsForCountry": "Nessun visitatore per questo paese.",
+      "scopeOnline": "online",
+      "scopeToday": "oggi"
+    },
+    "activity": {
+      "lastLogin": "Ultimo accesso:",
+      "neverLoggedIn": "Mai registrato",
+      "timeOnSite": "Tempo sul sito: {duration}",
+      "estimated": " (stimato dall'attività)"
+    },
+    "feedback": {
+      "activeTitle": "Feedback aperti",
+      "activeDesc": "Bug, suggerimenti e commenti da trattare.",
+      "resolvedTitle": "Feedback risolti",
+      "resolvedDesc": "Cronologia feedback segnati come risolti.",
+      "searchActive": "Cerca bug, autore, messaggio…",
+      "searchResolved": "Cerca nei feedback risolti…",
+      "noActiveSearch": "Nessun feedback aperto corrisponde.",
+      "noActive": "Nessun feedback aperto.",
+      "noResolvedSearch": "Nessun feedback risolto corrisponde.",
+      "noResolved": "Nessun feedback risolto al momento.",
+      "screenshot": " screenshot",
+      "screenshots": " screenshot",
+      "contact": "Contatto:",
+      "page": "Pagina:",
+      "screenshotsTitle": "Screenshot",
+      "markRead": "Segna letto",
+      "resolved": "Risolto",
+      "lightboxTitle": "Screenshot ingrandito",
+      "lightboxAlt": "Capture ingrandita",
+      "captureAlt": "Capture {index}",
+      "statusRead": "Letto",
+      "statusResolved": "Risolto"
+    },
+    "history": {
+      "title": "Cronologia account",
+      "localPlayers": "Giocatori locali",
+      "partiesStats": "Partite (stats)",
+      "achievements": "Successi",
+      "sessions": "Sessioni",
+      "localPlayerNames": "Nomi giocatori locali",
+      "mode": "Modalità: {mode}",
+      "country": "Paese: {country}",
+      "ip": "IP:",
+      "lastActivity": "Ultima attività: {date}",
+      "playerActivity": "Attività giocatore",
+      "gamesPlayed": "Giochi giocati",
+      "noParties": "Nessuna partita registrata.",
+      "currentlyBanned": "Account attualmente bannato",
+      "moderationHistory": "Cronologia moderazione",
+      "noEvents": "Nessun evento.",
+      "until": "Fino al {date}",
+      "by": "{date} · da {name}"
+    },
+    "actions": {
+      "banPermanent": "Ban permanente",
+      "banTemporary": "Ban temporaneo",
+      "unban": "Sbannamento"
+    },
+    "dialogs": {
+      "deleteTitle": "Eliminare definitivamente questo account?",
+      "deleteDesc": "Account:",
+      "deleteAccountLabel": "Account:",
+      "deleteWarning": "Azione irreversibile: email, giocatori cloud, stats e sessioni saranno cancellati.",
+      "cancel": "Annulla",
+      "deleteConfirm": "Elimina definitivamente",
+      "unbanTitle": "Rimuovi ban",
+      "unbanAccountLabel": "Account:",
+      "commentOptional": "Commento (opzionale)",
+      "unbanPlaceholder": "Motivo dello sbannamento…",
+      "unbanConfirm": "Sbanna",
+      "banPermanentTitle": "Ban permanente",
+      "banTemporaryTitle": "Ban temporaneo",
+      "banAccountLabel": "Account:",
+      "durationDays": "Durata (giorni)",
+      "day": "{count} giorno",
+      "days": "{count} giorni",
+      "banCommentLabel": "Commento / motivo (interno)",
+      "banCommentPlaceholder": "Es.: spam, comportamento tossico…",
+      "banConfirm": "Conferma ban"
+    },
+    "device": {
+      "accountCodeTitle": "Codice account unico",
+      "deviceTitle": "Dispositivo: {label}",
+      "moreIps": "+{count} IP"
+    },
+    "apiErrors": {
+      "modifyDenied": "Modifica rifiutata",
+      "banDenied": "Ban rifiutato",
+      "deleteDenied": "Eliminazione rifiutata",
+      "unbanDenied": "Sbannamento rifiutato",
+      "loadAccounts": "Impossibile caricare gli account",
+      "historyUnavailable": "Cronologia non disponibile"
+    }
+  }
+}

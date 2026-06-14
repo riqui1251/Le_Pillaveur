@@ -1,4 +1,7 @@
+"use client"
+
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { usePlayers } from '../hooks/usePlayers';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -7,7 +10,9 @@ import { X, Trophy, Pencil } from 'lucide-react';
 import { PlayerIcon } from '@/components/ui/PlayerIcon';
 import { PlayerName } from '@/components/ui/PlayerName';
 import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer';
-import { Player } from '@/lib/players';
+import { Player, getPlayerNameValidationError } from '@/lib/players';
+import { nameValidationI18nKey } from '@/lib/name-moderation';
+import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client';
 
 interface PlayerManagerProps {
   onPlayersSelected: (selectedPlayers: string[]) => void;
@@ -19,19 +24,34 @@ interface PlayerManagerProps {
 const HUB_CARD = 'bg-white/[0.04] border-white/10 backdrop-blur-md shadow-lg';
 
 export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveButtons = false, variant = 'default' }: PlayerManagerProps) {
+  const t = useTranslations('players');
+  const tCommon = useTranslations('common.nameValidation');
   const isHub = variant === 'hub';
   const cardClass = isHub ? HUB_CARD : 'shadow-md';
   const { players, loading, addPlayer, removePlayer, updatePlayerPreferences } = usePlayers();
 
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null);
 
   const handleAddPlayer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPlayerName.trim()) return;
+    const trimmed = newPlayerName.trim();
+    if (!trimmed) return;
 
-    addPlayer(newPlayerName.trim());
+    const validationError = getPlayerNameValidationError(trimmed);
+    if (validationError) {
+      void reportProfanityIfNeeded(trimmed, validationError, 'local_player_add');
+      const key = nameValidationI18nKey(validationError);
+      const messageKey =
+        validationError === 'invalid_characters' ? 'invalidCharactersPlayer' : key;
+      setNameError(tCommon(messageKey));
+      return;
+    }
+
+    setNameError(null);
+    addPlayer(trimmed);
     setNewPlayerName('');
   };
 
@@ -55,7 +75,7 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
       <div className={`flex items-center justify-center rounded-2xl border p-12 ${isHub ? HUB_CARD : ''}`}>
         <div className="flex flex-col items-center gap-3 text-white/70">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
-          <p>Chargement des joueurs…</p>
+          <p>{t('loading')}</p>
         </div>
       </div>
     );
@@ -67,25 +87,34 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
     <>
       <div className="space-y-6 pb-28">
         <Card className={`p-4 ${cardClass}`}>
-          <h2 className="mb-4 text-lg font-semibold md:text-xl">Ajouter un joueur</h2>
+          <h2 className="mb-4 text-lg font-semibold md:text-xl">{t('addTitle')}</h2>
           <form onSubmit={handleAddPlayer} className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Input
                 type="text"
-                placeholder="Nom du joueur"
+                placeholder={t('namePlaceholder')}
                 value={newPlayerName}
-                onChange={(e) => setNewPlayerName(e.target.value)}
+                onChange={(e) => {
+                  setNewPlayerName(e.target.value);
+                  if (nameError) setNameError(null);
+                }}
                 className="flex-grow"
+                aria-invalid={nameError ? true : undefined}
               />
               <Button type="submit" disabled={!newPlayerName.trim()} className="w-full sm:w-auto">
-                Ajouter
+                {t('addButton')}
               </Button>
             </div>
+            {nameError && (
+              <p className="text-sm text-orange-400" role="alert">
+                {nameError}
+              </p>
+            )}
           </form>
         </Card>
 
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold md:text-xl">Sélectionner les joueurs</h2>
+          <h2 className="text-lg font-semibold md:text-xl">{t('selectTitle')}</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {players.map((player) => (
               <Card
@@ -106,7 +135,7 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
                       <PlayerName player={player} />
                     </div>
                     <div className="flex items-center gap-1 text-xs opacity-70">
-                      <Trophy className="h-3 w-3" /> {player.stats.wins} victoires
+                      <Trophy className="h-3 w-3" /> {t('wins', { count: player.stats.wins })}
                     </div>
                   </div>
                   <Button
@@ -117,7 +146,7 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
                       e.stopPropagation();
                       setCustomizingPlayer(player);
                     }}
-                    title="Personnaliser"
+                    title={t('customize')}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -160,15 +189,15 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
         <div className="mx-auto flex max-w-6xl items-center gap-3 sm:gap-4">
           <p className={`min-w-0 flex-1 text-sm ${canStart ? 'text-white/70' : 'text-orange-400'}`}>
             {canStart
-              ? `${selectedPlayerIds.length} joueur${selectedPlayerIds.length > 1 ? 's' : ''} sélectionné${selectedPlayerIds.length > 1 ? 's' : ''}`
-              : `Sélectionnez au moins ${minPlayers} joueurs (${selectedPlayerIds.length}/${minPlayers})`}
+              ? t('selectionStatus.ready', { count: selectedPlayerIds.length })
+              : t('selectionStatus.needMore', { min: minPlayers, current: selectedPlayerIds.length })}
           </p>
           <Button
             onClick={handleStartGame}
             disabled={!canStart}
             className="h-11 shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 px-5 font-medium text-white hover:from-amber-600 hover:to-orange-600 disabled:opacity-50"
           >
-            Commencer la partie
+            {t('startGame')}
           </Button>
         </div>
       </div>

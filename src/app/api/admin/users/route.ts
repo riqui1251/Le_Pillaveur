@@ -10,10 +10,14 @@ import {
 } from '@/lib/roles'
 import { prisma } from '@/lib/prisma'
 import {
-  DISPLAY_NAME_TAKEN_ERROR,
+  displayNameTakenMessage,
+  displayNameValidationMessage,
+  getDisplayNameValidationError,
   isDisplayNameTaken,
-  isValidDisplayName,
 } from '@/lib/display-name'
+import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
+import { resolveRequestLocale } from '@/lib/name-moderation/request-locale'
+import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { getIpsBySubjectKeys, subjectKeyFor } from '@/lib/ip-history-server'
 
 function serializeUser(user: {
@@ -148,8 +152,25 @@ export async function PATCH(request: Request) {
     }
 
     if (displayName !== undefined) {
-      if (!isValidDisplayName(displayName)) {
-        return NextResponse.json({ error: 'Pseudo invalide' }, { status: 400 })
+      await ensureServerModerationTermsLoaded()
+      const requestLocale = await resolveRequestLocale({ userLocale: actor.locale })
+      const displayNameError = getDisplayNameValidationError(displayName)
+      if (displayNameError) {
+        if (displayNameError === 'profanity') {
+          await logRejectedNameOnServer(request, {
+            attemptedName: displayName,
+            reason: displayNameError,
+            context: 'display_name',
+            userId: actor.id,
+          })
+        }
+        return NextResponse.json(
+          {
+            error: displayNameValidationMessage(displayName, requestLocale),
+            code: displayNameError,
+          },
+          { status: 400 }
+        )
       }
       if (userId !== actor.id && !canManageUsers(actor.role)) {
         return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
@@ -164,7 +185,13 @@ export async function PATCH(request: Request) {
         )
       }
       if (await isDisplayNameTaken(displayName, userId)) {
-        return NextResponse.json({ error: DISPLAY_NAME_TAKEN_ERROR }, { status: 409 })
+        return NextResponse.json(
+          {
+            error: displayNameTakenMessage(requestLocale),
+            code: 'display_name_taken',
+          },
+          { status: 409 }
+        )
       }
     }
 

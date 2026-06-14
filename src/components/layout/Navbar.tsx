@@ -1,42 +1,61 @@
 "use client"
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, usePathname } from '@/i18n/navigation'
 import { Menu, X, Home, User, Gamepad2, ChevronRight, Shield } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessSupervision } from '@/lib/roles'
-import { getPageMeta } from '@/lib/nav-meta'
+import { usePageMeta } from '@/lib/nav-meta'
 import { FullscreenButton } from '@/components/ui/fullscreen-button'
 import { FeedbackDialog, FeedbackMenuButton } from '@/components/feedback/FeedbackDialog'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { cn } from '@/lib/utils'
 
-const navLinks = [
-  { href: '/joueurs', label: 'Joueurs', icon: User, description: 'Gérer les joueurs' },
-  { href: '/jeux', label: 'Jeux', icon: Gamepad2, description: 'Choisir un jeu' },
-  { href: '/compte', label: 'Compte', icon: Home, description: 'Paramètres' },
-]
+const NAV_LINK_KEYS = [
+  { href: '/joueurs', key: 'joueurs', icon: User },
+  { href: '/jeux', key: 'jeux', icon: Gamepad2 },
+  { href: '/compte', key: 'compte', icon: Home },
+] as const
+
+type NavLinkKey = (typeof NAV_LINK_KEYS)[number]['key'] | 'supervision'
+
+type NavLinkItem = {
+  href: string
+  key: NavLinkKey
+  icon: typeof User
+  label: string
+  description: string
+}
 
 export default function Navbar() {
+  const t = useTranslations('nav')
   const [mounted, setMounted] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const { user } = useAuth()
   const pathname = usePathname()
-  const pageMeta = getPageMeta(pathname)
+  const pageMeta = usePageMeta(pathname)
 
-  const links = useMemo(() => {
-    const base = [...navLinks]
+  const links = useMemo((): NavLinkItem[] => {
+    const base: NavLinkItem[] = NAV_LINK_KEYS.map(({ href, key, icon }) => ({
+      href,
+      key,
+      icon,
+      label: t(`links.${key}.label`),
+      description: t(`links.${key}.description`),
+    }))
     if (user && canAccessSupervision(user.role)) {
       base.push({
         href: '/supervision',
-        label: 'Supervision',
+        key: 'supervision',
         icon: Shield,
-        description: 'Dashboard admin',
+        label: t('links.supervision.label'),
+        description: t('links.supervision.description'),
       })
     }
     return base
-  }, [user])
+  }, [user, t])
 
   const activeHref =
     links.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`))?.href ?? null
@@ -70,7 +89,7 @@ export default function Navbar() {
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-3 sm:h-[3.75rem] sm:gap-4 sm:px-4">
           <button
             type="button"
-            aria-label={drawerOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-label={drawerOpen ? t('closeMenu') : t('openMenu')}
             aria-expanded={drawerOpen}
             onClick={toggleDrawer}
             className={cn(
@@ -89,13 +108,15 @@ export default function Navbar() {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold leading-tight text-white sm:text-base">
-                {mounted ? pageMeta.title : 'Le Pillaveur'}
+                {mounted ? pageMeta.title : t('brand')}
               </p>
               <p className="truncate text-[10px] text-white/45 sm:text-xs">
-                {mounted ? pageMeta.subtitle : 'Chargement…'}
+                {mounted ? pageMeta.subtitle : t('loading')}
               </p>
             </div>
           </div>
+
+          <LanguageSwitcher className="hidden h-9 w-[7.5rem] shrink-0 border-white/10 bg-white/[0.04] text-white sm:flex" />
 
           {activeHref && (
             <span className="hidden rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-medium text-amber-200/90 sm:inline-block">
@@ -105,7 +126,6 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* Overlay */}
       <div
         className={cn(
           'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300',
@@ -115,11 +135,10 @@ export default function Navbar() {
         aria-hidden={!drawerOpen}
       />
 
-      {/* Drawer */}
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label="Menu de navigation"
+        aria-label={t('menuLabel')}
         className={cn(
           'fixed left-0 top-0 z-[55] flex h-full w-72 max-w-[85vw] flex-col',
           'border-r border-white/[0.07] bg-[#0c0b12]/98 backdrop-blur-xl',
@@ -139,13 +158,13 @@ export default function Navbar() {
               🍺
             </div>
             <div>
-              <p className="text-sm font-bold leading-none text-white">Le Pillaveur</p>
-              <p className="mt-0.5 text-[10px] text-white/40">Menu de navigation</p>
+              <p className="text-sm font-bold leading-none text-white">{t('brand')}</p>
+              <p className="mt-0.5 text-[10px] text-white/40">{t('menuLabel')}</p>
             </div>
           </div>
           <button
             type="button"
-            aria-label="Fermer le menu"
+            aria-label={t('closeMenu')}
             onClick={() => setDrawerOpen(false)}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
           >
@@ -155,7 +174,7 @@ export default function Navbar() {
 
         <nav className="relative flex-1 overflow-y-auto p-3">
           <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">
-            Navigation
+            {t('navigation')}
           </p>
           <ul className="space-y-1">
             {links.map(({ href, label, icon: Icon, description }) => {
@@ -199,7 +218,7 @@ export default function Navbar() {
           </ul>
         </nav>
 
-        <div className="relative border-t border-white/[0.07] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] space-y-2">
+        <div className="relative space-y-2 border-t border-white/[0.07] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <FeedbackMenuButton
             onClick={() => {
               setDrawerOpen(false)
@@ -207,17 +226,18 @@ export default function Navbar() {
             }}
           />
           <FullscreenButton className="w-full justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-sm text-white/60 hover:bg-white/[0.08] hover:text-white" />
+          <LanguageSwitcher className="h-10 w-full border-white/10 bg-white/[0.04] text-white" />
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-1 pt-1 text-[11px] text-white/30">
             <Link href="/legal/cgu" onClick={() => setDrawerOpen(false)} className="hover:text-amber-400/80">
-              CGU
+              {t('legal.cgu')}
             </Link>
             <span aria-hidden>·</span>
             <Link href="/legal/confidentialite" onClick={() => setDrawerOpen(false)} className="hover:text-amber-400/80">
-              Confidentialité
+              {t('legal.confidentialite')}
             </Link>
             <span aria-hidden>·</span>
             <Link href="/legal/mentions-legales" onClick={() => setDrawerOpen(false)} className="hover:text-amber-400/80">
-              Mentions légales
+              {t('legal.mentionsLegales')}
             </Link>
           </div>
         </div>

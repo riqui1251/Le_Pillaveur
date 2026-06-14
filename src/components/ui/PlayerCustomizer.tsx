@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect, useMemo } from 'react'
-import { Player, PLAYER_ICONS, PLAYER_EFFECTS, PLAYER_FRAMES, PlayerSpecialEffect, PlayerIconFrame, PlayerPreferences } from '@/lib/players'
+import { useTranslations } from 'next-intl'
+import { Player, PLAYER_ICONS, PlayerSpecialEffect, PlayerIconFrame, PlayerPreferences } from '@/lib/players'
+import { usePlayerEffectLabels, usePlayerFrameLabels } from '@/lib/players-i18n'
 import { useAuth } from '@/hooks/useAuth'
 import { canCustomizePlayerFrame } from '@/lib/roles'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
@@ -24,6 +26,10 @@ interface PlayerCustomizerProps {
 }
 
 export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerCustomizerProps) {
+  const t = useTranslations('players.customizer')
+  const tCommon = useTranslations('common')
+  const effectLabels = usePlayerEffectLabels()
+  const frameLabels = usePlayerFrameLabels()
   const { user } = useAuth()
   const canSetFrame = canCustomizePlayerFrame(user?.role)
   const [selectedIcon, setSelectedIcon] = useState<string>('')
@@ -69,13 +75,13 @@ export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerC
       {player && previewPlayer && (
         <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#0f0e14] text-white sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-white">Personnaliser {player.name}</DialogTitle>
+            <DialogTitle className="text-white">{t('title', { name: player.name })}</DialogTitle>
           </DialogHeader>
 
           <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <PlayerIcon player={previewPlayer} size="lg" />
             <div>
-              <p className="text-xs text-white/50">Aperçu</p>
+              <p className="text-xs text-white/50">{t('preview')}</p>
               <p className="text-lg">
                 <PlayerName player={previewPlayer} />
               </p>
@@ -83,7 +89,7 @@ export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerC
           </div>
 
           <div>
-            <p className="mb-2 text-sm font-medium text-white/70">Icône</p>
+            <p className="mb-2 text-sm font-medium text-white/70">{t('icon')}</p>
             <div className="grid max-h-40 grid-cols-8 gap-1 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.02] p-2 sm:grid-cols-10">
               {PLAYER_ICONS.map((icon) => (
                 <button
@@ -102,9 +108,9 @@ export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerC
           </div>
 
           <div>
-            <p className="mb-2 text-sm font-medium text-white/70">Effet du pseudo</p>
+            <p className="mb-2 text-sm font-medium text-white/70">{t('effect')}</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {PLAYER_EFFECTS.map((effect) => {
+              {effectLabels.map((effect) => {
                 const effectPreview: Player = {
                   ...player,
                   name: effect.label,
@@ -134,10 +140,10 @@ export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerC
 
           {canSetFrame && (
             <div>
-              <p className="mb-1 text-sm font-medium text-white/70">Cadre d&apos;icône</p>
-              <p className="mb-2 text-xs text-emerald-300/70">Réservé aux membres staff (modérateur+)</p>
+              <p className="mb-1 text-sm font-medium text-white/70">{t('frame')}</p>
+              <p className="mb-2 text-xs text-emerald-300/70">{t('frameStaffOnly')}</p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {PLAYER_FRAMES.map((frame) => {
+                {frameLabels.map((frame) => {
                   const framePreview: Player = {
                     ...player,
                     preferences: {
@@ -171,13 +177,13 @@ export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerC
               onClick={() => onOpenChange(false)}
               className="text-white/70 hover:bg-white/10 hover:text-white"
             >
-              Annuler
+              {tCommon('cancel')}
             </Button>
             <Button
               onClick={handleSave}
               className="bg-amber-500 text-black hover:bg-amber-400"
             >
-              Enregistrer
+              {tCommon('save')}
             </Button>
           </DialogFooter>
         </DialogContent>

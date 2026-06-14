@@ -13,6 +13,10 @@ import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
+import { cookies } from 'next/headers'
+import { linkVisitorNameModerationAttempts } from '@/lib/name-moderation-attempts-server'
+import { VISITOR_COOKIE } from '@/lib/auth-cookies'
 
 const LOGIN_LIMIT = 10
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
@@ -74,6 +78,14 @@ export async function POST(request: Request) {
     const role = normalizeRole(user.role)
     const accountCode = user.accountCode ?? (await ensureUserAccountCode(user.id))
 
+    const cookieStore = await cookies()
+    const visitorId = cookieStore.get(VISITOR_COOKIE)?.value
+    if (visitorId) {
+      await linkVisitorNameModerationAttempts(visitorId, user.id)
+    }
+
+    const userLocale = normalizeAppLocale(freshUser?.locale ?? user.locale)
+
     const response = NextResponse.json({
       user: {
         id: user.id,
@@ -81,10 +93,12 @@ export async function POST(request: Request) {
         displayName: user.displayName,
         accountCode,
         role,
+        locale: userLocale,
       },
     })
     response.cookies.set(sessionCookieOptions(token))
     response.cookies.set(clearLocalPlayCookieOptions())
+    response.cookies.set(localeCookieOptions(userLocale))
     return response
   } catch (error) {
     console.error('login error:', error)

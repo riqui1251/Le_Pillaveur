@@ -1,9 +1,23 @@
-const COUNTRY_NAMES = new Intl.DisplayNames(['fr'], { type: 'region' })
+const displayNamesCache = new Map<string, Intl.DisplayNames>()
 
-export function countryLabel(code: string | null | undefined): string {
-  if (!code || code === '??') return 'Inconnu'
+function getDisplayNames(locale: string): Intl.DisplayNames {
+  const key = locale.split('-')[0] || 'fr'
+  let cached = displayNamesCache.get(key)
+  if (!cached) {
+    cached = new Intl.DisplayNames([key], { type: 'region' })
+    displayNamesCache.set(key, cached)
+  }
+  return cached
+}
+
+export function countryLabel(
+  code: string | null | undefined,
+  locale = 'fr',
+  unknownLabel = 'Inconnu'
+): string {
+  if (!code || code === '??') return unknownLabel
   try {
-    return COUNTRY_NAMES.of(code) ?? code
+    return getDisplayNames(locale).of(code) ?? code
   } catch {
     return code
   }

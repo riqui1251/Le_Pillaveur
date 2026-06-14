@@ -12,6 +12,7 @@ import {
 import { ensureUserAccountCode } from '@/lib/account-code'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { LOCAL_PLAY_COOKIE, SESSION_COOKIE, VISITOR_COOKIE } from '@/lib/auth-cookies'
+import { normalizeAppLocale } from '@/lib/locale-server'
 
 export { SESSION_COOKIE, VISITOR_COOKIE, LOCAL_PLAY_COOKIE } from '@/lib/auth-cookies'
 const SESSION_DAYS = 30
@@ -24,6 +25,7 @@ export type AuthUser = {
   displayName: string
   accountCode: string
   role: UserRole
+  locale: string
 }
 
 function sessionExpiry(): Date {
@@ -93,6 +95,7 @@ export async function getUserFromSessionToken(token: string | undefined): Promis
     displayName: user.displayName,
     accountCode,
     role,
+    locale: normalizeAppLocale(user.locale),
   }
 }
 

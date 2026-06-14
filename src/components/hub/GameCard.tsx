@@ -1,14 +1,13 @@
 "use client"
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { GameMeta } from "@/lib/games"
+import { Link, useRouter } from "@/i18n/navigation"
+import { LocalizedGameMeta } from "@/lib/games-i18n"
 import { cn } from "@/lib/utils"
 import { ReactNode } from "react"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 
 interface GameCardProps {
-  game: GameMeta
+  game: LocalizedGameMeta
   icon: ReactNode
 }
 

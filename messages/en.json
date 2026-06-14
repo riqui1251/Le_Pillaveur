@@ -1,0 +1,2098 @@
+{
+  "metadata": {
+    "title": "Le Pillaveur",
+    "description": "Drinking games with friends"
+  },
+  "nav": {
+    "brand": "Le Pillaveur",
+    "loading": "Loading…",
+    "navigation": "Navigation",
+    "menuLabel": "Navigation menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "languageSwitcher": "Change language",
+    "links": {
+      "joueurs": {
+        "label": "Players",
+        "description": "Manage players"
+      },
+      "jeux": {
+        "label": "Games",
+        "description": "Choose a game"
+      },
+      "compte": {
+        "label": "Account",
+        "description": "Settings"
+      },
+      "supervision": {
+        "label": "Supervision",
+        "description": "Dashboard admin"
+      }
+    },
+    "legal": {
+      "cgu": "CGU",
+      "confidentialite": "Privacy",
+      "mentionsLegales": "Legal notices"
+    },
+    "pages": {
+      "joueurs": {
+        "title": "Players",
+        "subtitle": "Manage the team"
+      },
+      "jeux": {
+        "title": "Games",
+        "subtitle": "Choose a game"
+      },
+      "classement": {
+        "title": "Ranking",
+        "subtitle": "Scores and stats"
+      },
+      "compte": {
+        "title": "Account",
+        "subtitle": "Login and profile"
+      },
+      "supervision": {
+        "title": "Supervision",
+        "subtitle": "Administration"
+      },
+      "achievements": {
+        "title": "Achievements",
+        "subtitle": "Unlocked trophies"
+      },
+      "stats": {
+        "title": "Statistics",
+        "subtitle": "History"
+      },
+      "gameInProgress": {
+        "subtitle": "Game in progress"
+      },
+      "default": {
+        "subtitle": "Drinking games with friends"
+      }
+    }
+  },
+  "common": {
+    "back": "Back",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "next": "Next",
+    "replay": "Replay",
+    "home": "Welcome",
+    "menu": "Menu",
+    "modify": "To modify",
+    "add": "Add",
+    "finish": "To end",
+    "understood": "Understood !",
+    "understoodNext": "Got it, next player →",
+    "quit": "To leave",
+    "continue": "Continue",
+    "pass": "Pass",
+    "validate": "Confirm…",
+    "send": "Send",
+    "sending": "Sending…",
+    "error": "Error",
+    "fullscreen": "Full screen",
+    "players": "Players",
+    "games": "Parts",
+    "sips": "Sips",
+    "victories": "Victories",
+    "victory": "Victory !",
+    "noData": "No data",
+    "playerCount": "{count, plural, one {# player} other {# players}}",
+    "gameCount": "{count, plural, one {# game} other {# games}}",
+    "sipsCount": "{count, plural, one {# sip} other {# sips}}",
+    "turnCount": "{count, plural, one {# turn} other {# turns}}",
+    "safe": "SAFE",
+    "moderation": "Consume in moderation.",
+    "nameValidation": {
+      "empty": "Name required",
+      "tooLong": "Name too long",
+      "invalidCharacters": "Invalid characters (letters, numbers and spaces only)",
+      "invalidCharactersPlayer": "Invalid characters",
+      "profanity": "This name contains inappropriate language"
+    }
+  },
+  "hub": {
+    "brand": "Le Pillaveur",
+    "stepsAria": "Stages of the evening",
+    "steps": {
+      "joueurs": "Players",
+      "jeux": "Games"
+    },
+    "joueurs": {
+      "title": "Who's playing tonight?",
+      "subtitle": "Add your friends, select the team and go to the next step to choose the game.",
+      "guestPrompt": "Create an account to find your players on all your devices (phone, tablet, computer).",
+      "guestCta": "Log in / Create an account"
+    },
+    "jeux": {
+      "title": "Choose your game",
+      "subtitle": "From classics to new releases — find the perfect ambiance for your evening.",
+      "searchPlaceholder": "Search for a game…",
+      "emptyTitle": "No games found",
+      "emptyHint": "Try another keyword."
+    },
+    "selectedPlayers": {
+      "ready": "{count, plural, one {# player ready} other {# players ready}}",
+      "none": "No players selected",
+      "choose": "Choose the players",
+      "modify": "To modify",
+      "tapToChoose": "Tap here to choose your players (minimum 2)."
+    }
+  },
+  "auth": {
+    "brand": "Le Pillaveur",
+    "login": {
+      "title": "Connection",
+      "subtitle": "Find your players on all your devices.",
+      "tab": "Connection",
+      "submit": "Log in",
+      "forgotPassword": "Forgotten password?"
+    },
+    "register": {
+      "title": "Create an account",
+      "subtitle": "Synchronize your player list between phone, tablet and computer.",
+      "tab": "Registration",
+      "submit": "Create my account",
+      "displayNameLabel": "Pseudo",
+      "displayNamePlaceholder": "Your nickname",
+      "passwordPlaceholder": "Letter + number, 8 char. min.",
+      "termsRequired": "You must agree to the CGU and Privacy Policy.",
+      "termsPrefix": "I accept the",
+      "termsAnd": "and the",
+      "termsSuffix": null,
+      "displayNameTaken": "This username is already taken"
+    },
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholderLogin": null,
+    "localPlay": {
+      "hint": "Without an account, your players remain registered only on this device.",
+      "termsPrefix": "By playing locally, you accept the",
+      "termsAnd": "and the",
+      "termsSuffix": ".",
+      "termsHint": "By playing locally you agree to the CGU and Privacy Policy.",
+      "button": "Play locally",
+      "errorActivate": "Unable to enable local mode",
+      "errorRetry": "Unable to activate local mode. Try again."
+    },
+    "forgot": {
+      "title": "Forgotten password",
+      "description": "Enter your email to receive a reset link.",
+      "submit": "Send link",
+      "success": "If an account exists with this email, you will receive a reset link in a few minutes."
+    }
+  },
+  "account": {
+    "brand": "Le Pillaveur",
+    "title": "My account",
+    "copyAccountCode": "Copy account code",
+    "supervision": "Supervision",
+    "logout": "Disconnect",
+    "stats": {
+      "title": "Overall statistics",
+      "players": "Players",
+      "games": "Parts",
+      "sips": "Sips"
+    },
+    "playersList": {
+      "title": "Registered players",
+      "empty": "No registered players",
+      "gamesPlayed": "{count} parts",
+      "wins": "{count} victories",
+      "customize": "Personalize",
+      "rename": "Rename",
+      "renamePlaceholder": "New name",
+      "confirmDelete": "Confirm"
+    },
+    "sync": "Your players are saved to your account and automatically sync across all your connected devices.",
+    "nameModerationWarning": "Several inappropriate name attempts have been recorded on this account. Please use a respectful nickname — the moderation team can review the history.",
+    "reset": {
+      "title": "New password",
+      "subtitle": "Choose a secure password for your account.",
+      "invalidLink": "Invalid or expired link.",
+      "backToLogin": "Back to sign in",
+      "success": "Password updated! Redirecting…",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "passwordPlaceholder": "Letter + number, 8 chars min.",
+      "updating": "Updating…",
+      "submit": "Reset password",
+      "passwordRules": "At least 8 characters with one letter and one number.",
+      "passwordMismatch": "Passwords do not match."
+    }
+  },
+  "legal": {
+    "ageGate": {
+      "title": "Access reserved for adults",
+      "body1": "Le Pillaveur is a festive entertainment tool. “Sips” are abstract play units — they do not constitute an obligation to consume alcohol. This service does not sell or distribute drinks.",
+      "healthWarning": "Alcohol abuse is dangerous for your health.",
+      "moderation": "Consume in moderation.",
+      "checkboxPrefix": "I certify that I am over 18 years old and I accept the",
+      "checkboxAnd": "and the",
+      "checkboxSuffix": ".",
+      "checkbox": "I certify that I am over 18 years old and I accept the CGU and the confidentiality policy.",
+      "enter": "Enter the site",
+      "validating": "Validation…",
+      "minorWarning": "If you are under 18 years old, you must leave this site."
+    },
+    "pages": {
+      "back": "Back",
+      "cgu": "General Conditions of Use",
+      "confidentialite": "Privacy Policy",
+      "mentionsLegales": "Legal notices"
+    }
+  },
+  "players": {
+    "loading": "Loading players…",
+    "addTitle": "Add a player",
+    "namePlaceholder": "Player Name",
+    "addButton": "Add",
+    "selectTitle": "Select players",
+    "wins": "{count} victories",
+    "customize": "Personalize",
+    "selectionStatus": {
+      "ready": "{count, plural, one {# player selected} other {# players selected}}",
+      "needMore": "Select at least {min} players ({current}/{min})"
+    },
+    "startGame": "Start the game",
+    "effects": {
+      "classic": "Classic",
+      "fire": "Fire",
+      "ice": "Ice",
+      "lightning": "Flash",
+      "rainbow": "Rainbow",
+      "neon": "Neon",
+      "galaxy": "Galaxy",
+      "matrix": "Matrix",
+      "sunset": "Sunset",
+      "ocean": "Ocean",
+      "red": "Red",
+      "blue": "Blue",
+      "gold": "Gold",
+      "emerald": "Emerald",
+      "purple": "Purple",
+      "cyber": "Cyber"
+    },
+    "frames": {
+      "none": "None",
+      "gold": "Gold",
+      "silver": "Money",
+      "neon": "Neon",
+      "ember": "Braised",
+      "royal": "Royal",
+      "diamond": "Diamond",
+      "staff": "Staff",
+      "crown": "Crown"
+    },
+    "customizer": {
+      "title": "Customize {name}",
+      "preview": "Preview",
+      "icon": "Icon",
+      "effect": "Effect of nickname",
+      "frame": "Icon frame",
+      "frameStaffOnly": "Reserved for staff members (moderator+)"
+    }
+  },
+  "games": {
+    "catalog": {
+      "roulette-russe": {
+        "title": "Russian Roulette",
+        "description": "A game of chance where each player takes a turn. Survive or drink!"
+      },
+      "monsieur-3": {
+        "title": "Monsieur 3",
+        "description": "A friendly dice game where you have to avoid 3s and other combinations"
+      },
+      "pmu": {
+        "title": "PMU Race",
+        "description": "A friendly horse-racing betting game"
+      },
+      "petit-buveur": {
+        "title": "The Little Drinker",
+        "description": "A festive board game with challenges and sips"
+      },
+      "hi-lo": {
+        "title": "Hi/Lo",
+        "description": "Guess if the next card will be higher or lower"
+      },
+      "purple": {
+        "title": "Purple",
+        "description": "Bet on the color of the cards: Red, Black or Purple (alternate)"
+      },
+      "pyramide": {
+        "title": "Pyramid",
+        "description": "Flip the cards and progress through the pyramid"
+      },
+      "plinko": {
+        "title": "Plinko",
+        "description": "Drop a ball through obstacles to earn sips"
+      },
+      "roue-des-gorgees": {
+        "title": "Wheel of Sips",
+        "description": "Add sips/actions and spin the wheel!"
+      },
+      "ballon-surprise": {
+        "title": "Surprise Balloon",
+        "description": "Pick a ball and pray it wins the race!"
+      },
+      "petits-points": {
+        "title": "Little Dots",
+        "description": "A game of precision and speed where every point counts!"
+      },
+      "pendu": {
+        "title": "The Hanged Man",
+        "description": "Guess the mystery word before you get hanged! Letters, sips and suspense guaranteed."
+      },
+      "trial-poursuite": {
+        "title": "Trial Poursuite",
+        "description": "Take on crazy challenges under pressure again! Coordination, creativity and speed on the program."
+      },
+      "1220": {
+        "title": "1220",
+        "description": "A 12 die and a 20 die: bet on parity, a sum range, and two key numbers to drink or make people drink."
+      }
+    },
+    "roulette-russe": {
+      "title": "Russian Roulette",
+      "alive": "Envy",
+      "eliminated": "Eliminated",
+      "pull": "{name} pulls",
+      "lastSurvivor": "{name} is the last survivor!",
+      "recapTitle": "Sip Summary:",
+      "sipsCount": "{count} sips",
+      "replay": "Replay",
+      "home": "Welcome",
+      "config": {
+        "rules": [
+          "Each player takes turns shooting",
+          "If the player survives, he drinks a shot",
+          "If the player loses, he is eliminated",
+          "The last player alive wins the game"
+        ]
+      }
+    },
+    "ballon-surprise": {
+      "title": "Surprise Balloon",
+      "needPlayers": "Select at least 2 players on the Players page to start a race.",
+      "finishLine": "FINISH LINE",
+      "selection": {
+        "players": "Players",
+        "pickTurn": "On {name}'s turn, choose your ball:",
+        "selectPlayer": "Select a player",
+        "balloonAria": "Balloon {color}",
+        "startRace": "Start the Race!"
+      },
+      "results": {
+        "title": "Race Completed!",
+        "winnerBalloon": "The {color} ball won!",
+        "winnerPlayer": "Congratulations to {name}! You must distribute {count} sips.",
+        "noWinner": "No one had chosen the {color} ball. No luck! The house distributes {count} sips (or not, depending on your rules).",
+        "replay": "Replay"
+      }
+    },
+    "purple": {
+      "title": "Purple",
+      "minPlayers": "At least 2 players required.",
+      "newGame": "New part",
+      "yourTurn": "It's the turn of",
+      "counter": "Counter",
+      "cardsLeft": "{count} remaining",
+      "chooseBet": "Choose your bet",
+      "correct": "✓ Correct! +{count} sip(s) on the counter",
+      "revealing": "Revelation…",
+      "lastCards": "Latest cards",
+      "wrongCombo": "Bad combination!",
+      "mustDrink": "{name} must drink {count} sip(s) 🍺",
+      "bets": {
+        "rouge": "Red",
+        "doubleRouge": "Double red",
+        "noir": "Black",
+        "doubleNoir": "Double black",
+        "purple": "Purple",
+        "doublePurple": "Double Purple"
+      }
+    },
+    "1220": {
+      "title": "1220",
+      "titleBets": "1220 — Paris",
+      "backToGames": "Back to games",
+      "reconfigure": "Reconfigure bets",
+      "setupInfo": "Each player chooses his parity, his range, his number to drink and his number to drink. The two numbers must be different.",
+      "parityLabel": "Parity of the sum",
+      "pair": "Peer",
+      "impair": "Odd",
+      "bandLabel": "Sum range",
+      "bands": {
+        "2-10": "2 – 10",
+        "11-20": "11 – 20",
+        "21-30": "21 – 30"
+      },
+      "drinkNumber": "Makes you drink",
+      "giveNumber": "Give a drink",
+      "clashWarning": "⚠️ The two numbers must be different.",
+      "validateBets": "Validate bets — Start the game →",
+      "sum": "Sum",
+      "results": "Results",
+      "history": "History ({count} previous throws)",
+      "rolling": "🎲 Launch…",
+      "rollDice": "🎲Roll the dice",
+      "rollAriaRolling": "Launch in progress",
+      "rollAria": "Roll the dice",
+      "outcomes": {
+        "drink": "🍺 Drinks — sum = {number}.",
+        "give": "🎁 Give a drink: {label}.",
+        "partialGive": "⚡ Number on a die ({numbers}) without sum → {count} sip(s) (÷2).",
+        "totalGive": "Total: {count} sip(s) to dispense.",
+        "partialNothing": "⚡ Number(s) on a die ({numbers}) but not in total — nothing to distribute.",
+        "nothing": "Nothing for you this throw."
+      }
+    },
+    "roue-des-gorgees": {
+      "title": "Wheel of Sips",
+      "spinning": "The wheel turns…",
+      "spin": "Spin the wheel",
+      "finish": "To end",
+      "restartRound": "Start a round again",
+      "turnOf": "Tower of",
+      "legend": "Legend",
+      "summary": "Summary",
+      "wheelInfo": "Auto-generated wheel — Risk: {risk}, Segments: {count}",
+      "wheelHint": "Content: SAFE and sips 1 to 12, with repetitions. The higher the value, the smaller the segment.",
+      "segmentSips": "{count} sips"
+    },
+    "monsieur-3": {
+      "title": "Monsieur 3",
+      "newGame": "New part",
+      "backToGames": "Back to games",
+      "phaseSetup": "Searching for Monsieur 3",
+      "phasePlay": "Stake",
+      "m3Badge": "M3: {name} · {count} 🍺",
+      "activePlayer": "Active player",
+      "m3Label": "Monsieur 3",
+      "sum": "Sum",
+      "players": "Players",
+      "history": "History ({count})",
+      "rollSetup": "🎲 Roll the die",
+      "rollPlay": "🎲Roll the dice",
+      "rolling": "🎲 Launch...",
+      "gameOver": "Game over!",
+      "m3Title": "Monsieur 3",
+      "sipsDrunk": "{count, plural, one {sip taken} other {sips taken}}",
+      "replay": "Replay",
+      "menu": "Menu",
+      "messages": {
+        "setupStart": "Roll the die — the first to roll a 3 becomes Monsieur 3!",
+        "foundM3": "{name} made a 3 — Monsieur 3 found!",
+        "foundSpecial": "🎲 Monsieur 3!",
+        "rollResult": "{name} made a {roll}.",
+        "turnNext": "It's {name}'s turn to roll the dice.",
+        "gameEnd": "Monsieur 3 has finished his turn — end of the game!",
+        "sum5": "🤸 Sum 5 — arms crossed + Whoo! The last one drinks.",
+        "sum8": "👆 Sum 8 — thumb on the forehead! The last one drinks.",
+        "m3Drinks": "🍺 Monsieur 3, you drink!",
+        "double": "⚔️ Double! {name} chooses a duel.",
+        "noRule": "No rule — [{d1}, {d2}]."
+      }
+    },
+    "pmu": {
+      "title": "Race PMU",
+      "titleBetting": "Paris 🃏",
+      "titleRacing": "Race PMU 🏁",
+      "titlePayout": "Distribution of sips 🍺",
+      "chooseMode": "Choose your game mode",
+      "modes": {
+        "libre": {
+          "title": "Free",
+          "desc": "The winning horse distributes a randomly generated number of sips."
+        },
+        "paris": {
+          "title": "Paris",
+          "desc": "Each player bets sips. He drinks them before the race and doubles them if he wins."
+        }
+      },
+      "setup": {
+        "selectedHint": "Selected player: {name} — touch a horse",
+        "defaultHint": "Tap a player, then a horse to assign them",
+        "unassigned": "Unassigned",
+        "allAssigned": "All players are assigned ✓",
+        "tapToRemove": "Tap here to remove from horse",
+        "assignHere": "Assign here",
+        "tapToAssign": "Touch to assign",
+        "noPlayer": "No players",
+        "needOne": "Assign at least one player",
+        "nextBets": "Skip to betting →",
+        "nextRace": "Start the race 🏁"
+      },
+      "horses": {
+        "tonnerre": "Thunder",
+        "eclair": "Flash",
+        "tempete": "Storm",
+        "ouragan": "Hurricane"
+      },
+      "betting": {
+        "info": "🍺 Each player bets which sips he drinks now. If he wins, he distributes double to the person of his choice.",
+        "drinkWin": "Drinks {bet} → wins {payout}",
+        "confirm": "Confirm bets and get started 🏁"
+      },
+      "race": {
+        "track": "Track",
+        "finish": "Arrival 🏁"
+      },
+      "results": {
+        "winner": "{name} won!",
+        "pickTarget": "Each winner chooses who to distribute their sips to.",
+        "noRider": "No players on this horse.",
+        "seeResults": "See the results",
+        "distribute": "{name} distributes {count} sips to {target}",
+        "libreWin": "{name} wins! Distribute {count} sips.",
+        "replay": "Replay",
+        "menu": "Menu"
+      }
+    },
+    "hi-lo": {
+      "title": "Hi/Lo",
+      "page": {
+        "gameMode": "Game mode",
+        "selectMode": "Select a mode",
+        "modes": {
+          "standard": "Standard",
+          "traversee": "Crossing"
+        },
+        "start": "Start the game",
+        "backToGames": "Back to games"
+      },
+      "loading": "Loading the game...",
+      "sipsHeader": "Sips: {count}",
+      "cardsPlayed": "{played}/52",
+      "restart": "Start again",
+      "higher": "Higher",
+      "equal": "Equality",
+      "lower": "Lower",
+      "correctNext": "Correct ! Next player…",
+      "traverseeMode": "Crossing Mode",
+      "traverseeGoal": "Objective: {current}/{target} correct answers",
+      "cardsPlayedLabel": "{count} played",
+      "cardsLeftLabel": "{count} remaining",
+      "gameOver": {
+        "congrats": "Congratulations !",
+        "fiveCards": "5 identical cards! End of the game",
+        "end": "End of the game",
+        "goalReached": "You have reached the objective of {count} consecutive correct answers!",
+        "fiveSame": "5 identical cards ({value} {suit}) have appeared! End of the game.",
+        "results": "Results:",
+        "sipsResult": "{count} sips"
+      },
+      "wrong": {
+        "title": "Wrong answer!",
+        "unguessedEqual": "Unguessed tie!",
+        "mustDrink": "{message}",
+        "traverseeEqual": "It's a tie! All players drink 1 sip.",
+        "traverseeAllDrink": "All players must drink {count} sips!",
+        "streakReset": "The series of correct answers starts again from zero.",
+        "nextTurn": "Now it's {name}'s turn"
+      },
+      "compliments": [
+        "The Almighty",
+        "The magnificent",
+        "The great sage",
+        "The master",
+        "His Majesty",
+        "The creator",
+        "The invincible",
+        "The legendary",
+        "The supreme",
+        "The indisputable"
+      ],
+      "debMessages": [
+        "Take real sips",
+        "Sips not centiliters",
+        "Not just 2 cl!",
+        "Really drink this time",
+        "No cheating",
+        "Stop pretending",
+        "We saw you cheat",
+        "Drink for real",
+        "No water this time"
+      ],
+      "drinkMessageDefault": "{name} must drink {count} sips!",
+      "drinkMessageSpecial": "\"{compliment}\" {name} must drink {count} sips!",
+      "drinkMessageDeb": "{name} must drink {count} sips and {message}!"
+    },
+    "pyramide": {
+      "title": "Pyramid",
+      "tagline": "Flip the cards, distribute the sips",
+      "stepLabels": {
+        "color": "color",
+        "higherLower": "more/less",
+        "insideOutside": "inside/outside",
+        "suit": "suit"
+      },
+      "preludeResult": "{name}: {card} — {result}",
+      "preludeSuccess": "Passed ✓",
+      "preludeFail": "Failure • +{count} sip(s)",
+      "page": {
+        "gameMode": "Game mode",
+        "modes": {
+          "fun": {
+            "label": "Cards",
+            "desc": "Random pyramid"
+          },
+          "classic": {
+            "label": "Classic",
+            "desc": "Memorization + prelude"
+          }
+        },
+        "decks": "Decks",
+        "deck52": "52 cards",
+        "deck104": "104 cards",
+        "cardsPerPlayer": "Cards per player",
+        "cardsCount": "{n} cards",
+        "height": "Height",
+        "rowsCards": "{rows} rows · {cards} cards",
+        "noPlayersSelected": "No players selected",
+        "rulesTitle": "Game rules",
+        "rulesFun": [
+          "Flip the cards one by one starting from the bottom.",
+          "When a card is flipped, the active player must drink as many sips as its value.",
+          "The top row is SHOT GLASS."
+        ],
+        "rulesClassic": [
+          "Mini prelude: 4-step predictions (color → higher/lower → inside/outside → suit).",
+          "Each player memorizes their secretly assigned cards.",
+          "The pyramid is built without players' cards. Distribute sips to those who have the flipped value."
+        ],
+        "needPlayers": "Select at least 2 players on the Players page.",
+        "backToGames": "Back to games"
+      },
+      "game": {
+        "titleClassic": "· Classic",
+        "newGameAria": "New game",
+        "backAria": "Back to games",
+        "predictions": "Predictions",
+        "questions": {
+          "color": "What color?",
+          "higherLower": "Higher or lower than {value}?",
+          "insideOutside": "Inside or outside the first two?",
+          "suit": "Which suit exactly?"
+        },
+        "choices": {
+          "red": "Red ♥♦",
+          "black": "Black ♠♣",
+          "higher": "↑ Higher",
+          "lower": "↓ Lower",
+          "inside": "↔ Inside",
+          "outside": "⟷ Outside",
+          "hearts": "♥ Hearts",
+          "diamonds": "♦ Diamonds",
+          "clubs": "♣ Clubs",
+          "spades": "♠ Spades"
+        },
+        "preludeDrinks": "Prelude sips",
+        "preludeSummaryTitle": "Prelude summary",
+        "mistakes": "Mistakes: {list}",
+        "noMistakes": "Flawless",
+        "points": "{pts} pts",
+        "memorizationContinue": "Memorization →",
+        "memorization": "Memorization",
+        "seeAll": "Show all",
+        "hideAll": "Hide",
+        "nextPlayer": "Next player →",
+        "start": "Start →",
+        "landscapeHint": "Turn your phone to <strong>landscape</strong> for a better view of the pyramid",
+        "scrollHint": "Flip cards one by one • Scroll if needed",
+        "progressAria": "Progress: {flipped} cards flipped out of {total}",
+        "lastCard": "Last:",
+        "playerCards": "Player cards",
+        "noCard": "no card",
+        "next": "Next →",
+        "finished": "Done ✓",
+        "gameOverAria": "Game over",
+        "flippingAria": "Flipping in progress",
+        "flipNextAria": "Flip the next card",
+        "gameOverLive": "Game over.",
+        "cardRevealedLive": "Card flipped: {value} {suit}",
+        "gameFinished": "Game over!",
+        "mostPoints": "Most points",
+        "leastPoints": "Fewest points",
+        "fullScores": "Full scores",
+        "replay": "Play again",
+        "menu": "Menu",
+        "revealCardAria": "Reveal card {n}",
+        "hideCardAria": "Hide card {value} {suit}",
+        "revealPlayerCardAria": "Reveal card {n} of {player}",
+        "hidePlayerCardAria": "Hide {value} {suit} of {player}"
+      }
+    },
+    "petits-points": {
+      "title": "Little Dots",
+      "tagline": "A precision and speed game where every point counts!",
+      "page": {
+        "back": "Back",
+        "backHome": "Back to home",
+        "tabs": {
+          "players": "Players",
+          "settings": "Settings",
+          "account": "Account"
+        },
+        "start": "Start",
+        "difficulty": "Difficulty",
+        "selectDifficulty": "Select difficulty",
+        "difficultyDescriptionsTitle": "Difficulty descriptions:",
+        "difficulties": {
+          "facile": {
+            "label": "🌱 Easy",
+            "name": "Easy",
+            "description": "Larger zones, less frequent and fewer sips. Ideal for beginners."
+          },
+          "normal": {
+            "label": "🌟 Normal",
+            "name": "Normal",
+            "description": "Balanced, for a pleasant and accessible game."
+          },
+          "difficile": {
+            "label": "🔥 Hard",
+            "name": "Hard",
+            "description": "Smaller zones, more frequent and more sips. For experienced players."
+          },
+          "extreme": {
+            "label": "💀 Extreme",
+            "name": "Extreme",
+            "description": "Very small zones, very frequent and lots of sips. For experts only!"
+          }
+        },
+        "rulesTitle": "Rules of the game",
+        "rules": [
+          "Each player places their pawn on the circular board.",
+          "A round zone appears randomly on the board.",
+          "All pawns in that zone must drink the configured number of sips.",
+          "The zone disappears and a new one appears after a delay.",
+          "The player with the most sips at the end wins (or loses depending on your perspective!)."
+        ],
+        "rulesNote": "Note: Placement strategy is crucial to avoid the zones!",
+        "accountTitle": "Restricted area",
+        "accountReserved": "This section is reserved for the administrator.",
+        "passwordPlaceholder": "Password",
+        "accountAccess": "Access"
+      },
+      "game": {
+        "title": "Little Dots",
+        "zoneProgress": "Zone {current}/{total}",
+        "nextZone": "Next zone",
+        "endGame": "End game",
+        "placingTitle": "Pawn placement",
+        "placingTurn": "It's {name}'s turn to place their pawn",
+        "allPlaced": "All pawns are placed",
+        "zoneSize": "Zone size: {size}px",
+        "configureGame": "Configure game",
+        "configTitle": "⚙️ Game configuration",
+        "configSubtitle": "Adjust settings to your preferences",
+        "previewTitle": "👁️ Live preview",
+        "zoneVisible": "Zone visible: {seconds}s",
+        "testZone": "Test a zone",
+        "testInProgress": "Test in progress...",
+        "previewHint": "The yellow zone shows the size. Click \"Test a zone\" to see a zone appear randomly.",
+        "zoneCount": "Number of zones",
+        "zoneCountLabel": "Zones: {count}",
+        "zoneCountHint": "More zones = longer game",
+        "zoneRadius": "Zone size",
+        "zoneRadiusLabel": "Radius: {radius}px",
+        "zoneRadiusHint": "Larger = easier to avoid",
+        "sipsPerZone": "Sips per zone",
+        "sipsPerZoneLabel": "Sips: {count}",
+        "sipsPerZoneHint": "More sips = more challenge!",
+        "zoneDuration": "Zone duration",
+        "zoneDurationLabel": "Duration: {seconds}s",
+        "zoneDurationHint": "Longer = more time to see",
+        "spawnDelay": "Delay between zones",
+        "spawnDelayLabel": "Delay: {seconds}s",
+        "spawnDelayHint": "Shorter = faster zones",
+        "configSummary": "📊 Configuration summary",
+        "summaryZones": "Zones",
+        "summarySize": "Size",
+        "summarySipsPerZone": "Sips/zone",
+        "summaryTotalDuration": "Total duration",
+        "backToPlacing": "Back to placement",
+        "launchGame": "Start game",
+        "finishedTitle": "🎉 Game over!",
+        "winner": "🏆 Winner: {name}",
+        "winnerSips": "with {count} sips",
+        "summaryTitle": "📊 Game summary",
+        "zonesPlayed": "Zones played",
+        "totalSips": "Total sips",
+        "averagePerPlayer": "Average/player",
+        "zoneSizeLabel": "Zone size",
+        "finalRanking": "🏆 Final ranking",
+        "sipsCount": "{count} sips",
+        "percentOfTotal": "{percent}% of total",
+        "statsTitle": "📈 Detailed statistics",
+        "configUsed": "Configuration used:",
+        "configUsedZones": "• {count} zones total",
+        "configUsedSips": "• {count} sip per zone",
+        "configUsedSipsPlural": "• {count} sips per zone",
+        "configUsedRadius": "• Zones with {radius}px radius",
+        "configUsedDuration": "• Duration: {seconds}s per zone",
+        "configUsedDelay": "• Delay: {seconds}s between zones",
+        "performance": "Performance:",
+        "perfTotalDuration": "• Total duration: ~{seconds}s",
+        "perfSipsPerZone": "• Sips per zone: {count}",
+        "perfMaxSips": "• Max possible sips: {count}",
+        "perfEfficiency": "• Efficiency: {percent}%",
+        "replay": "Play again",
+        "backToMenu": "Back to menu",
+        "playersInZone": "🎯 Players in the zone:",
+        "playerSips": "{name}: {count} sip",
+        "playerSipsPlural": "{name}: {count} sips",
+        "totalSipsTitle": "Total sips"
+      }
+    },
+    "plinko": {
+      "title": "Plinko",
+      "tagline": "Drop balls, distribute sips",
+      "page": {
+        "noPlayers": "No players selected. Go back to the Players page to build your team (minimum 2).",
+        "difficulty": "Difficulty",
+        "difficulties": {
+          "easy": {
+            "label": "Easy",
+            "range": "1–2 sips",
+            "desc": "Great for beginners"
+          },
+          "medium": {
+            "label": "Medium",
+            "range": "1–3 sips",
+            "desc": "The sweet spot"
+          },
+          "hard": {
+            "label": "Hard",
+            "range": "1–4 sips",
+            "desc": "For the brave"
+          }
+        },
+        "cumulativeMode": "Cumulative Mode",
+        "cumulativeDesc": "Multiplier and +/- effects stack during the turn",
+        "backToGames": "Back to games"
+      },
+      "pinLabels": {
+        "multiplier": "x2",
+        "addBall": "+ball",
+        "addSip": "+1",
+        "subtractSip": "-1",
+        "cancellation": "clears all effects",
+        "colorSwap": "color swap",
+        "mystery": "Random",
+        "shake": "Shuffle slot values",
+        "roundDrinks": "Round for all",
+        "jackpot": "Jackpot",
+        "teleportation": "Teleport",
+        "gravityFlip": "Gravity ↕",
+        "slowMotion": "Slow-mo",
+        "split": "Split",
+        "scoreSwap": "Score swap",
+        "doubleEffect": "x2 effect",
+        "magnetLeft": "Magnet ←",
+        "magnetRight": "Magnet →"
+      },
+      "pinEffects": {
+        "multiplier": "Multiply sips x2",
+        "addBall": "Throw an extra ball (same color)",
+        "addSip": "Adds +1 sip to the result",
+        "subtractSip": "Remove -1 sip from the result (min 0)",
+        "cancellation": "Cancels all effects of the bullet",
+        "colorSwap": "Invert the color of the ball (Red <-> Green)",
+        "mystery": "Triggers a random (?) special effect",
+        "shake": "Shuffle the values ​​from the bottom boxes!",
+        "roundDrinks": "General Tour! (+1 sip for everyone)",
+        "jackpot": "JACKPOT! Worth 7 fixed sips",
+        "teleportation": "Teleport the ball randomly to the top of the board",
+        "gravityFlip": "Reverses gravity for a short time",
+        "slowMotion": "Slows the fall briefly",
+        "split": "Divide the ball in two",
+        "scoreSwap": "Reverses the final count (Drink/Give)",
+        "doubleEffect": "The next special effect triggers twice",
+        "magnetLeft": "Magnet to the left temporary",
+        "magnetRight": "Magnet to the right temporary"
+      },
+      "roundDrinksBanner": "{label} — each player drinks {count} sip(s)!",
+      "roundDrinksSingular": "Round for all",
+      "roundDrinksPlural": "Rounds for all",
+      "noRoundDrinks": "No round for all this game.",
+      "game": {
+        "yourTurn": "Turn of",
+        "drinks": "Drinks",
+        "gives": "Gives",
+        "roundDrinksShort": "Round",
+        "launch": "Drop 🎯",
+        "inGame": "Playing…",
+        "nextTurn": "Next turn",
+        "next": "next",
+        "specialPins": "Special pins",
+        "results": {
+          "roundDrinksPhase": "Rounds for all",
+          "detailsPhase": "Turn details",
+          "finalPhase": "Final results",
+          "seeDetails": "See details →",
+          "seeResults": "See results →",
+          "turn": "Turn {n}",
+          "previous": "← Previous",
+          "nextPlayer": "Next →",
+          "totals": "Totals →",
+          "newGame": "New game",
+          "back": "Back",
+          "roundDrinksAll": "🥂 {count} round(s) for all — everyone drinks!"
+        }
+      }
+    },
+    "trial-poursuite": {
+      "title": "Trial Poursuite",
+      "page": {
+        "title": "Trial Poursuite 🏍️",
+        "configTab": "Configuration",
+        "gameTab": "Game",
+        "configTitle": "Game setup",
+        "difficulty": "Difficulty",
+        "startRace": "🏍️ Start the race",
+        "difficulties": {
+          "facile": {
+            "name": "Easy",
+            "description": "Short challenges, light penalties",
+            "emoji": "😌"
+          },
+          "normal": {
+            "name": "Normal",
+            "description": "Balanced challenges",
+            "emoji": "😏"
+          },
+          "difficile": {
+            "name": "Hard",
+            "description": "Complex challenges, solid penalties",
+            "emoji": "😰"
+          },
+          "extreme": {
+            "name": "Extreme",
+            "description": "Very long challenges, big penalties",
+            "emoji": "😱"
+          }
+        }
+      },
+      "yourTurn": "Your turn to take on the challenge!",
+      "challengeLabel": "Challenge {category}",
+      "challengeSuccess": "Challenge completed!",
+      "challengeFailed": "Challenge failed",
+      "willDrink": "Time to drink!",
+      "playerTokens": "Player tokens",
+      "progression": "Progress:",
+      "categoriesCount": "{current}/{total} categories",
+      "tokens": "Tokens:",
+      "noTokens": "No tokens",
+      "sips": "🍺 {count} sips",
+      "playerProgressTitle": "Progress for {name}:",
+      "headerStatus": "{name} — Category {current}/{total} — {icon} {category} — Difficulty: {difficulty}",
+      "dialogSuccessTitle": "🎉 Well done!",
+      "dialogFailTitle": "💀 Failed!",
+      "nextPlayer": "Next player",
+      "gameCompletedTitle": "🏆 Trial Completed!",
+      "championLabel": "🥇 Trial Champion:",
+      "tokensCount": "{count} tokens",
+      "finalResults": "Final results:",
+      "backToMenu": "Back to menu",
+      "restart": "Restart",
+      "successMessage": "🎉 Well done {name}! Category {category} completed! Your turn is over, next player's turn!",
+      "failMessage": "💀 {name} failed the challenge! Drink {count} sips! Your turn is over, next player's turn!",
+      "victoryMessage": "🏆 {name} completed all categories! TOTAL VICTORY!",
+      "difficulties": {
+        "facile": "Easy",
+        "normal": "Normal",
+        "difficile": "Hard",
+        "extreme": "Extreme"
+      },
+      "categories": {
+        "geographie": "geography",
+        "divertissement": "entertainment",
+        "histoire": "history",
+        "artsEtLitterature": "arts and literature",
+        "sciencesEtNature": "science and nature",
+        "sportsEtLoisirs": "sports and leisure"
+      },
+      "challenges": {
+        "geographie": [
+          "Name 5 European countries in 30 seconds",
+          "Name 3 capitals that start with 'P'",
+          "Invent a new continent name",
+          "Describe the shape of Italy with your hands",
+          "Mime a tourist who gets lost in an unknown city",
+          "Sing the national anthem of an invented country",
+          "Explain where Kilimanjaro is without naming it",
+          "Draw the map of France in 30 seconds"
+        ],
+        "divertissement": [
+          "Invent a new genre of film in 1 minute",
+          "Mime an action scene with sound effects",
+          "Tell a joke that no one knows",
+          "Play a commercial for a weird product",
+          "Invent a special dance for your own dubbing",
+          "Created a 30-second sketch on social media",
+          "Stages a full-length reality show",
+          "Perform a tragic monologue in 45 seconds"
+        ],
+        "histoire": [
+          "Explains French History in 45 seconds flat",
+          "Play as Napoleon who prepares his military strategy",
+          "Mime Charles de Gaulle in a televised speech",
+          "Make up what really happened in 1066",
+          "Recounts the French Revolution version TikTok",
+          "Interprets a resident of Pompei who discovers the eruption",
+          "Recreates a war scene with sound effects"
+        ],
+        "artsEtLitterature": [
+          "Read a poem that you improvise on the spot",
+          "Mimic an ancient statue that comes to life",
+          "Perform a dramatic play",
+          "Invent a new artistic work",
+          "Created an epic literary character",
+          "Paint an invisible canvas before our eyes",
+          "Explain the hidden meaning of a literary work"
+        ],
+        "sciencesEtNature": [
+          "Explains photosynthesis with arm movements",
+          "Define an organism that you invent",
+          "Simulates a volcanic eruption with full audio",
+          "Invent a new animal species and describe it",
+          "Explain the Universe to an alien",
+          "Invent a medicine for a fictitious disease"
+        ],
+        "sportsEtLoisirs": [
+          "Invent a new sport and show the rules",
+          "Plays hysterical sports commentary",
+          "Mime a rugby team in song",
+          "Created a crazy Olympic discipline",
+          "Play a crazy referee with whistles and cards",
+          "Invent an impossible water sport"
+        ]
+      },
+      "timeout": "⏰ Time up! {name} drinks {count} sips! Your turn is over, it's the next player's turn!"
+    },
+    "pendu": {
+      "title": "Hangman Sips",
+      "tagline": "Guess the word before you're hanged!",
+      "themes": {
+        "default": "🎯 Classic",
+        "ocean": "🌊 Ocean",
+        "sunset": "🌅 Sunset",
+        "forest": "🌲 Forest",
+        "galaxy": "🌌 Galaxy",
+        "fire": "🔥 Fire",
+        "ice": "❄️ Ice"
+      },
+      "categories": {
+        "animaux": "Animals",
+        "objets": "Objects",
+        "nourriture": "Food",
+        "lieux": "Places",
+        "metiers": "Professions",
+        "sports": "Sports",
+        "pays": "Countries",
+        "couleurs": "Colors",
+        "emotions": "Emotions"
+      },
+      "difficulty": {
+        "facile": "Easy",
+        "normal": "Normal",
+        "difficile": "Hard",
+        "extreme": "Extreme"
+      },
+      "page": {
+        "tabConfig": "Setup",
+        "tabGame": "🎯 Game",
+        "selectedPlayers": "Selected players",
+        "needPlayers": "⚠️ Select at least 2 players to start the game",
+        "difficulty": "Difficulty",
+        "selectDifficulty": "Select difficulty",
+        "difficultyDescriptions": {
+          "facile": "8 max errors, short words, few sips",
+          "normal": "6 max errors, medium words, moderate sips",
+          "difficile": "5 max errors, long words, more sips",
+          "extreme": "4 max errors, very hard words, lots of sips"
+        },
+        "difficultyEmojis": {
+          "facile": "🌱",
+          "normal": "⭐",
+          "difficile": "🔥",
+          "extreme": "💀"
+        },
+        "rulesTitle": "📋 Rules of the game",
+        "rules": [
+          "Each player takes turns guessing a mystery word",
+          "Suggest letters one by one to discover the word",
+          "💡 Use hints (cost: -10 seconds) to reveal letters",
+          "🎨 Change the hangman style during the game",
+          "⏰ Watch the timer! Time's up = defeat",
+          "The player with the most points at the end wins!"
+        ],
+        "start": "🎯 Start game"
+      },
+      "game": {
+        "title": "Hangman Sips 🎯",
+        "roundInfo": "Round {round}/{max} - Difficulty: {difficulty}",
+        "themesButton": "🎨 Themes & Styles",
+        "themesMenuTitle": "🎨 Themes & Styles",
+        "hangmanStyleLabel": "Hangman style:",
+        "colorThemeLabel": "Color theme:",
+        "closeMenu": "✕ Close",
+        "yourTurn": "Your turn",
+        "categoryLabel": "Category: {category}",
+        "errors": "Errors: {count}/{max}",
+        "hint": "💡 Hint ({used}/{max})",
+        "hintCost": "Cost: -10s",
+        "wrongLetters": "Wrong letters: {letters}",
+        "timeExpired": "Time's up ⏰",
+        "keyboard": "Keyboard",
+        "scoreboard": "Scoreboard",
+        "points": "{count} pts",
+        "wins": "{count} wins",
+        "drinks": "🍺 {count} sips",
+        "quit": "Quit",
+        "newGame": "New game",
+        "styles": {
+          "classic": "🏛️ Classic",
+          "modern": "🏢 Modern",
+          "space": "🚀 Space"
+        },
+        "roundDialog": {
+          "wonTitle": "🎉 Well done!",
+          "lostTitle": "💀 Hanged!",
+          "bonusPoints": "+{count} points!",
+          "drinks": "🍺 {count} sips to drink!",
+          "seeResults": "See results",
+          "nextPlayer": "Next player"
+        },
+        "roundResult": {
+          "simWon": "🎉 {compliment} found the word!",
+          "won": "🎉 {name} found the word \"{word}\"!",
+          "debTimeout": "⏰ {message} - Time's up! The word was \"{word}\"",
+          "timeout": "⏰ {name} didn't find it in time! The word was \"{word}\"",
+          "debLost": "💀 {message} - The word was \"{word}\"",
+          "lost": "💀 {name} was hanged! The word was \"{word}\""
+        },
+        "endDialog": {
+          "title": "🏆 Game over!",
+          "winner": "🥇 Winner:",
+          "points": "{count} points",
+          "finalRanking": "Final ranking:",
+          "replay": "Play again",
+          "backToMenu": "Back to menu"
+        }
+      },
+      "compliments": [
+        "The almighty",
+        "The magnificent",
+        "The great sage",
+        "The master",
+        "His majesty",
+        "The creator",
+        "The invincible",
+        "The legendary",
+        "The supreme",
+        "The undisputed"
+      ],
+      "debMessages": [
+        "Drink real sips",
+        "Sips not centiliters",
+        "Not just 2 cl!",
+        "Really drink this time",
+        "No cheating",
+        "Stop pretending",
+        "We saw you cheat",
+        "Drink for real",
+        "No water this time"
+      ],
+      "wordsNote": "Word banks in WORD_CATEGORIES — extract via script for EN translation"
+    },
+    "petit-buveur": {
+      "page": {
+        "back": "Back",
+        "badge": "🍺 Board game",
+        "title": "The Little Drinker",
+        "tagline": "Move onto the set without getting too drunk!",
+        "selectedPlayers": "Selected players",
+        "noPlayers": "No players — go to the Players page.",
+        "difficulty": "Difficulty",
+        "difficulties": {
+          "facile": {
+            "label": "🌱 Easy",
+            "desc": "Fewer sips, ideal for getting started"
+          },
+          "normal": {
+            "label": "🌟 Normal",
+            "desc": "Balanced for a pleasant evening"
+          },
+          "difficile": {
+            "label": "🔥 Difficult",
+            "desc": "No more challenges and sips"
+          },
+          "extreme": {
+            "label": "💀 Extreme",
+            "desc": "Dry ass possible — reserved for experts"
+          }
+        },
+        "rulesTitle": "Rules of the game",
+        "rules": [
+          "🎲 Roll the dice on your turn and move forward the number of squares.",
+          "🍺 Depending on the box landed, take sips or take on a challenge.",
+          "⚡ Special boxes trigger effects: exchanges, curses, protections...",
+          "🏆 The first to reach square 30 wins the game!",
+          "⚠️ Consume in moderation."
+        ],
+        "needPlayers": "Select at least 2 players to start.",
+        "start": "Start the game",
+        "resume": "Resume the current game"
+      },
+      "difficultyLabels": {
+        "facile": "Easy",
+        "normal": "Normal",
+        "difficile": "Difficult",
+        "extreme": "Extreme"
+      },
+      "wheel": {
+        "safe": "SAFE",
+        "sips": "{count} sips",
+        "winner": "Winner",
+        "loser": "Losing"
+      },
+      "caseTypes": {
+        "normal": "Normal",
+        "defi": "Challenge",
+        "gorgée": "Sips",
+        "recul": "Retreat",
+        "avance": "Advance",
+        "tous": "Everyone",
+        "roue": "Sip Wheel",
+        "echange": "Exchange",
+        "bombe": "Bomb",
+        "protection": "Protection",
+        "malediction": "Curse",
+        "chance": "Chance",
+        "repetition": "Repetition",
+        "miroir": "Mirror",
+        "defi-chaine": "Chain Challenge",
+        "piege": "Trap",
+        "melange": "Blend",
+        "passe-tour": "Take your turn",
+        "double-peine": "Double punishment",
+        "solo": "Solo",
+        "copie": "Copy",
+        "roulette-russe": "Russian Roulette",
+        "teleport": "Teleport",
+        "grappin": "Grapple",
+        "ancre": "Anchor",
+        "case-bonus": "Bonus box",
+        "recul-groupe": "Group retreat",
+        "pont": "Bridge",
+        "question": "Question",
+        "vote": "Vote",
+        "miroir-inverse": "Reverse mirror",
+        "rewind": "Rewind",
+        "loterie": "Lottery",
+        "inversion": "Inversion",
+        "double-case": "Double box",
+        "roue-defis": "Challenge Wheel",
+        "de-honte": "Dice of shame",
+        "pile-face": "Heads or tails"
+      },
+      "defis": [
+        {
+          "text": "Do 10 push-ups",
+          "drinks": 3
+        },
+        {
+          "text": "Tell a joke",
+          "drinks": 3
+        },
+        {
+          "text": "Sing a song",
+          "drinks": 3
+        },
+        {
+          "text": "Imitate an animal",
+          "drinks": 3
+        },
+        {
+          "text": "Do 10 squats",
+          "drinks": 3
+        },
+        {
+          "text": "Do 30 seconds of core training",
+          "drinks": 3
+        },
+        {
+          "text": "Mime a movie without speaking",
+          "drinks": 2
+        },
+        {
+          "text": "Imitate another player",
+          "drinks": 2
+        },
+        {
+          "text": "Do 10 turns on yourself",
+          "drinks": 2
+        },
+        {
+          "text": "Dance for 20 seconds",
+          "drinks": 2
+        },
+        {
+          "text": "Share your most embarrassing evening memory",
+          "drinks": 3
+        },
+        {
+          "text": "Speak with an accent for 2 turns",
+          "drinks": 2
+        },
+        {
+          "text": "Do a handstand against a wall",
+          "drinks": 3
+        },
+        {
+          "text": "Guess a word without speaking",
+          "drinks": 2
+        },
+        {
+          "text": "Recite the alphabet backwards",
+          "drinks": 3
+        },
+        {
+          "text": "Do 5 frog jumps",
+          "drinks": 2
+        },
+        {
+          "text": "Don't touch your phone for 3 rounds",
+          "drinks": 8
+        },
+        {
+          "text": "Drink without using your hands",
+          "drinks": 2
+        }
+      ],
+      "defiWheelChallenges": [
+        "Imitate an animal",
+        "Dance 15 seconds",
+        "Tell a joke",
+        "Sing the chorus of a song",
+        "Push-ups × 5",
+        "Squats × 5",
+        "Speak in rhyme 30 seconds",
+        "Without first names 1 round",
+        "Group selfie",
+        "Sincere compliment to the left",
+        "You drink 2 sips",
+        "SAFE"
+      ],
+      "caseDescriptions": {
+        "normal": "Case safe",
+        "gorgée": "Drink {count} sip(s)!",
+        "gorgéeCulSec": "Dry ass! 🍺",
+        "defi": "Challenge: {challenge} or drink {count} sip(s)!",
+        "recul": "Move back 1 space!",
+        "avance": "Advance by {count} square(s)!",
+        "tous": "Everyone drinks {count} sip(s) except the targeted person! 🍻",
+        "roue": "🎯 Special case: Sip Wheel!",
+        "roue-defis": "🎭 Wheel of Challenges!",
+        "de-honte": "🎲 Dice of shame! Roll the dice of destiny.",
+        "pile-face": "🪙 Heads or tails! The target chooses and tries his luck.",
+        "echange": "🔄 Swap your position with another player!",
+        "bombe": "💣 Bomb! Everyone drinks, the target drinks double!",
+        "protection": "🛡️ Protection: Immune for a full round of the table!",
+        "malediction": "👻 Curse! 1 sip per round for 3 rounds!",
+        "chance": "🍀 Luck! Roll the dice again or move forward 2 spaces!",
+        "repetition": "🔄 Repeat the action from the previous box!",
+        "miroir": "🪞 Mirror! The positions are reversed!",
+        "defi-chaine": "🔗 Chain challenge! Linked 5 turns to a partner!",
+        "piege": "🕳️ Trap! Drink as many sips as your position!",
+        "melange": "🔀 Mix! Positions are mixed!",
+        "passe-tour": "⏭️ Take your turn! The target will not roll next turn.",
+        "double-peine": "💥 Double penalty! The target drinks {count} sips × 2!",
+        "solo": "🎯 Solo! Everyone is safe, you drink 1 sip.",
+        "copie": "👯 Copy! The target undergoes the same movement as you this turn.",
+        "roulette-russe": "🔫 Russian Roulette! 1 chance in 3: 6 sips or safe.",
+        "teleport": "🌀 Teleport! Exchange with the 1st or last in the ranking.",
+        "grappin": "🪝 Grapple! You reach the player's square right in front of you.",
+        "ancre": "⚓ Anchor! The target cannot advance to the next turn.",
+        "case-bonus": "✨ Bonus box! +1 box immediately.",
+        "recul-groupe": "⬅️ Group retreat! Everyone behind you moves back 1 space.",
+        "pont": "🌉 Bridge! On your square: everyone +1 or −1 (heads or tails).",
+        "question": "❓ Question! Answer out loud or drink {count} sips.",
+        "vote": "🗳️ Vote! Designate who drinks {count} sips.",
+        "miroir-inverse": "🪞 Reverse mirror! When you drink, the target drinks too (1 turn).",
+        "rewind": "⏪ Rewind! Replays the last recorded square.",
+        "loterie": "🎰 Lottery! 2 players drawn: one drinks, the other advances.",
+        "inversion": "🔃 Inversion! The bottom of the ranking drinks {count} sips instead.",
+        "double-case": "🎲 Double box! Two effects in a row after targeting."
+      },
+      "resolveCase": {
+        "solo": "🎯 {actor} drinks 1 sip, the others are safe!",
+        "bonus": "✨ {actor} advances from box {from} to {to}!",
+        "reculGroupe": "⬅️ Group retreat! All players behind {actor} move back one space.",
+        "grappinLeader": "🪝 {actor} is already in the lead, no grappling possible.",
+        "grappinJoin": "🪝 Grapple! {actor} joins {target} (box {case}).",
+        "pont": "🌉 Bridge ({side})! {count} player(s) on square {case} {direction} of a square.",
+        "pontPile": "stack",
+        "pontFace": "face",
+        "pontAdvance": "advance",
+        "pontBack": "steps back",
+        "loterieCancelled": "🎰 Lottery canceled (not enough players).",
+        "loterieResult": "🎰 Lottery! {drinker} drinks 2 sips, {mover} moves forward one space."
+      },
+      "shameDice": {
+        "safe": "Safe",
+        "twoSips": "2 sips",
+        "advance": "Advance +1",
+        "back": "Backward −1",
+        "outcomeSafe": "🎲 Dice of shame ({roll}): {player} is safe!",
+        "outcomeDrink": "🎲 Dice of shame ({roll}): {player} drinks 2 sips!",
+        "outcomeAdvance": "🎲 Dice of shame (5): {player} moves forward one space!",
+        "outcomeBack": "🎲 Dice of shame (6): {player} moves back one space!",
+        "diceLabel": "Dice: {value}"
+      },
+      "coinFlip": {
+        "pile": "Stack",
+        "face": "Face",
+        "won": "Draw: {result} — the target wins!",
+        "lost": "Draw: {result} — the target loses and drinks."
+      },
+      "game": {
+        "rollDice": "Roll the dice",
+        "rolling": "Launch…",
+        "validateEffect": "Validate the effect…",
+        "actionInProgress": "Action in progress…",
+        "effectTitle": "Box effect",
+        "challengeQuestion": "Did the player complete the challenge?",
+        "challengeSuccess": "Successful challenge",
+        "challengeDrink": "Drank {count} sip(s)",
+        "finalRanking": "Final ranking",
+        "backToMenu": "Back to menu",
+        "duel": {
+          "title": "Duel on the box",
+          "caseInfo": "Box {number} · {player}",
+          "rules": "Winner: does not move · Loser: moves back one space",
+          "pickOpponent": "Choose an opponent on this space",
+          "skip": "Skip the duel",
+          "vs": "{a} vs {b}",
+          "spin": "Start the duel",
+          "spinning": "The wheel turns…",
+          "result": "Result",
+          "applyCase": "Apply box effect",
+          "changeOpponent": "Change opponent",
+          "winnerStays": "{winner} wins and stays · {loser} moves back one square",
+          "opponentWins": "{winner} wins · {loser} moves back one square"
+        },
+        "dialogs": {
+          "teleport": "🌀 Teleport",
+          "vote": "🗳️ Vote",
+          "shameDice": "🎲 Dice of shame",
+          "coinFlip": "🪙 Heads or tails",
+          "chance": "🍀 Case Luck",
+          "exchange": "🔄 Exchange box",
+          "saveGame": "💾 Game in progress",
+          "teleportPrompt": "Swap your position with:",
+          "teleportLeader": "🏆 1st in ranking ({name})",
+          "teleportLast": "🐢 Last place ({name})",
+          "votePrompt": "Hands up — who drinks {count} sips?",
+          "shameDiceRules": "1–2 safe · 3–4 sips · 5 advance · 6 back",
+          "rollD6": "Roll the D6",
+          "diceRolling": "The dice are rolling…",
+          "coinChooses": "chooses heads or tails",
+          "coinChoice": "Choice: {choice}",
+          "drinksToTake": "{count} sip(s) to drink",
+          "coinSpinning": "The coin is spinning…",
+          "chancePrompt": "Choose your action:",
+          "chanceReroll": "🎲 Roll the dice again",
+          "chanceAdvance": "➡️ Move forward 2 squares",
+          "chainTitle": "Chain challenge",
+          "chainPrompt": "Choose your partner for {count} linked turns",
+          "chainChooser": "{player} chooses",
+          "exchangePrompt": "Choose a player to swap positions with:"
+        },
+        "save": {
+          "prompt": "A game is in progress. Do you want to resume it or start a new game?",
+          "resume": "Resume the game",
+          "newGame": "New part",
+          "none": "No saved games found."
+        },
+        "effects": {
+          "none": "No special effects in progress",
+          "active": "Current effects:",
+          "protection": "Protection",
+          "protectionDesc": "Immune for a full turn (all other players)",
+          "curse": "Curse",
+          "curseDesc": "Drink 1 extra sip each round",
+          "chain": "Chain Challenge",
+          "chainDesc": "Linked to a partner: suffer the same effects (sips)",
+          "mirror": "Reverse mirror",
+          "protected": "WAS PROTECTED!",
+          "skipTurn": "Skip your turn",
+          "skipTurnDesc": "Will automatically skip next turn",
+          "anchor": "Anchor",
+          "anchorDesc": "Cannot advance next turn",
+          "mirrorDesc": "When one drinks, the other too ({a} ↔ {b})",
+          "mirrorDescShort": "When one drinks, the other too",
+          "protectedStatus": "{player} is protected",
+          "cursedStatus": "{player} is cursed ({count} turns)",
+          "chainStatus": "{from} → {to} ({count} turns)"
+        },
+        "messages": {
+          "cheers": [
+            "Courage !",
+            "Health !",
+            "Cheers!",
+            "Tchin-tchin!",
+            "Dry ass!",
+            "Bottoms up!",
+            "Gobble!",
+            "Skål!",
+            "Prost!",
+            "Kanpai!"
+          ],
+          "drinking": [
+            "Health and cheers!",
+            "One small sip for you, one big step towards victory!",
+            "Hydrate well, champ!",
+            "The great players all started like you!",
+            "A glass of water is fine… two glasses is even better!",
+            "You will remember this sip tomorrow morning!",
+            "Alcohol abuse is dangerous for your health - consume in moderation.",
+            "Consume in moderation, whatever the drink!",
+            "It's not a sip, it's an investment in your evening!",
+            "If you don't drink, someone else will take your place on the leaderboard!",
+            "One more sip for fun… in all moderation!",
+            "Raise your glass higher than your score!",
+            "The more you play, the more legendary you become!",
+            "Take your time, savor every sip!",
+            "An evening with friends is always a good idea!",
+            "You're on your way to becoming a legend!",
+            "At this rate, you will end up Olympic downhill champion!",
+            "Life is too short for bad nights!"
+          ],
+          "deb": [
+            "Take real sips",
+            "Sips not centiliters",
+            "Not just 2 cl!",
+            "Really drink this time",
+            "No cheating",
+            "Stop pretending",
+            "We saw you cheat",
+            "Drink for real",
+            "No water this time"
+          ],
+          "compliments": [
+            "The Almighty",
+            "The magnificent",
+            "The great sage",
+            "The master",
+            "His Majesty",
+            "The creator",
+            "The invincible",
+            "The legendary",
+            "The supreme",
+            "The indisputable"
+          ]
+        },
+        "targetLabel": "Targeted player: {player}",
+        "sparedLabel": "Player spared: {player}",
+        "resultLabel": "Result: {outcome}",
+        "resultHeading": "Result",
+        "title": "The Little Drinker",
+        "back": "Back",
+        "turn": "Turn {count}",
+        "turnOf": "Turn of",
+        "turnShort": "Turn",
+        "ranking": "Ranking",
+        "caseLabel": "Square {number}",
+        "loading": "Loading game…",
+        "drinksShort": "{count} sip(s)",
+        "turnsRemaining": "{count} turn(s)",
+        "next": "Next",
+        "continue": "Continue",
+        "close": "Close",
+        "replay": "Play again",
+        "victory": {
+          "winner": "Winner!",
+          "wonGame": "won the game 🎉",
+          "turns": "Turns",
+          "players": "Players",
+          "difficulty": "Difficulty"
+        },
+        "target": {
+          "title": "Who to target?",
+          "hint": "The square effect will be revealed after your choice",
+          "random": "Random player",
+          "me": "Me —"
+        },
+        "history": {
+          "title": "Previous action",
+          "selfTarget": "(self / no target)"
+        },
+        "wheel": {
+          "defis": "Challenge wheel",
+          "drinks": "Sip wheel",
+          "turnOf": "Turn of {player}",
+          "spin": "Spin the wheel",
+          "spinning": "The wheel is spinning…",
+          "legend": "Legend"
+        },
+        "outcomes": {
+          "skipTurn": "⏭️ {player} automatically skips this turn.",
+          "teleport": "🌀 {actor} swaps place with {partner} ({rank} in ranking)!",
+          "teleportLeader": "1st",
+          "teleportLast": "last",
+          "voteProtected": "🗳️ Vote: {player} {protected}",
+          "voteDrink": "🗳️ Vote: {player} drinks {count} sip(s)!",
+          "pileFaceWin": "🪙 Heads or tails: {player} chose {choice}, draw {result} — safe!",
+          "pileFaceLose": "🪙 Heads or tails: draw {result}, {player} drinks {count} sip(s)!",
+          "duelChallengerWins": "⚔️ Duel over: {challenger} wins (stays), {opponent} moves back one square.",
+          "duelOpponentWins": "⚔️ Duel over: {opponent} wins, {challenger} moves back one square.",
+          "challengeSuccess": "✅ {player} completed the challenge!",
+          "challengeDrink": "🍺 {player} drank {count} sip(s)!",
+          "noPreviousCase": "No previous square, you are safe!",
+          "safeCase": "Safe square! Player {player} is safe this turn.",
+          "trap": "🕳️ Trap! {player} drinks {count} sip(s) (position {position})!",
+          "trapWithMessage": "🕳️ Trap! {player} drinks {count} sip(s) (position {position}) {message}",
+          "move": "{arrow} {player} moves from square {from} to square {to}!",
+          "drinks": "{player} drinks {count} sip(s)!",
+          "bombe": "💣 {player} triggered a bomb! Everyone drinks {count} sip(s), but {name} drinks double!",
+          "protectionApplied": "🛡️ {player} is protected for a full round (everyone else plays once)!",
+          "miroirSwap": "🪞 {player} swapped all positions! (first ↔ last)",
+          "trapProtected": "🕳️ Trap! {player} should have drunk {count} sip(s) (position {position}) but {protected}",
+          "doublePeine": "💥 {player} drinks {count} sips (double penalty)!",
+          "copie": "👯 {player} copies the die ({delta}): square {from} → {to}!",
+          "rouletteProtected": "🔫 {player} {protected}",
+          "rouletteMiss": "🔫 Miss! {player} drinks {count} sips!",
+          "inversion": "🔃 Inversion! {last} (last) drinks {count} sip(s) instead of {player}!",
+          "mirrorLink": "🪞 {actor} is linked to {target}: when one drinks, the other too ({count} turn(s) from {actor})!",
+          "rewindSafe": "⏪ No previous square — {player} is safe!",
+          "melange": "🔀 {player} shuffled all positions!",
+          "genericApplied": "Square {type} applied to {player}",
+          "chainLinked": "🔗 {actor} → {target} — linked for {count} turns!",
+          "chanceAdvance": "🍀 Luck: {player} moves forward 2 squares (square {case})!",
+          "exchange": "🔄 {a} and {b} swapped positions!",
+          "everyoneDrinksHonor": "Everyone drinks {count} sip(s) to honor \"{compliment}\"",
+          "everyoneDrinksExcept": "Everyone drinks {count} sip(s) except",
+          "wheelDefi": "🎭 Challenge: {label}!",
+          "wheelDefiDrink": "{player} drinks {count} sips.",
+          "wheelDefiPlay": "{player} — your turn to play!",
+          "wheelDefiOrDrink": "{player} — complete the challenge or drink 2 sips!",
+          "wheelResult": "🎯 Wheel result: {label}!",
+          "wheelDrink": "{player} drinks (player on turn).",
+          "cannotRecul": "❌ {player} is on square 1 and cannot move back!",
+          "wheelSafePlayer": "{player} is safe (player on turn).",
+          "targetProtected": "Target: {player} {protected}",
+          "safeCaseBoard": "✅ {player} is on a safe square!",
+          "curseApplied": "👻 {player} is now cursed for {count} turns!",
+          "skipTurnNext": "⏭️ {player} will not roll on the next turn!",
+          "anchorApplied": "⚓ {player} cannot move forward on the next turn!",
+          "rouletteSafe": "🔫 Click… {player} is safe!"
+        }
+      }
+    }
+  },
+  "stats": {
+    "title": "Statistics",
+    "noStats": "No statistics available",
+    "gamesPlayed": "Games played",
+    "uniquePlayers": "Unique players",
+    "bestPlayer": "Best player",
+    "winsCount": "{count} victories",
+    "noPlayer": "No players",
+    "recentGames": "Recent games",
+    "recentGamesDesc": "Last games played",
+    "winner": "Winner: {name}",
+    "metrics": {
+      "wins": "Victories",
+      "gamesPlayed": "Games played",
+      "totalDrinks": "Sips drunk",
+      "winsForGame": "Victories ({gameId})",
+      "gamesForGame": "Parts ({gameId})",
+      "winsPetitBuveur": "Little Drinker Victories",
+      "gamesPetitBuveur": "Little Drinker Parties",
+      "winsHiLo": "Victories Hi/Lo",
+      "gamesHiLo": "Parts Hi/Lo",
+      "winsPmu": "Victories PMU",
+      "gamesPmu": "Parts PMU",
+      "winsPyramide": "Pyramid Victories",
+      "gamesPyramide": "Pyramid Parts",
+      "winsPlinko": "Victories Plinko",
+      "gamesPlinko": "Parts Plinko",
+      "winsMonsieur3": "Victories Monsieur 3",
+      "gamesMonsieur3": "Parts Monsieur 3",
+      "winsRouletteRusse": "Russian Roulette Wins",
+      "gamesRouletteRusse": "Russian Roulette Games",
+      "winsBallonSurprise": "Surprise Balloon Victories",
+      "gamesBallonSurprise": "Surprise Balloon Parties",
+      "winsPetitsPoints": "Small Points Victories",
+      "gamesPetitsPoints": "Small Dots Parts"
+    }
+  },
+  "achievements": {
+    "title": "Achievements",
+    "unlockedOn": "Unlocked on {date}",
+    "locked": "Not unlocked",
+    "items": {
+      "first_win": {
+        "title": "First Victory",
+        "description": "Win your first game"
+      },
+      "perfect_game": {
+        "title": "Without fail",
+        "description": "Win a game without making a mistake"
+      },
+      "speed_demon": {
+        "title": "Bright as lightning",
+        "description": "React in less than 500ms"
+      },
+      "social_butterfly": {
+        "title": "Social Butterfly",
+        "description": "Play with 8 different players"
+      },
+      "night_owl": {
+        "title": "Night Bird",
+        "description": "Play a game after midnight"
+      }
+    }
+  },
+  "ranking": {
+    "title": "Ranking",
+    "summary": "{players} players · {games} games · {gameCount} games",
+    "tabs": {
+      "global": "Overall",
+      "byGame": "By game"
+    },
+    "sections": {
+      "topWins": "Top wins",
+      "mostActive": "More active",
+      "ranking": "Ranking"
+    },
+    "metrics": {
+      "winsShort": "{count} vic.",
+      "gamesShort": "{count} parts"
+    },
+    "noDataForGame": "No data for this game"
+  },
+  "feedback": {
+    "menuTitle": "Report / Suggest",
+    "menuSubtitle": "Bug, idea or comment",
+    "dialogTitle": "Your opinion counts!",
+    "dialogDescription": "Report a bug, suggest an improvement, or leave a comment. Thanks for helping us improve Le Pillaveur.",
+    "success": "Thank you for your feedback! The team takes note of it.",
+    "types": {
+      "bug": {
+        "label": "Bug",
+        "description": "Something is not working"
+      },
+      "improvement": {
+        "label": "Improvement",
+        "description": "An idea to improve the game"
+      },
+      "comment": {
+        "label": "Comment",
+        "description": "A notice or message"
+      }
+    },
+    "messageLabel": "Message",
+    "placeholders": {
+      "bug": "Describe the problem and how to reproduce it…",
+      "improvement": "What improvement would you like?",
+      "comment": "Your message…"
+    },
+    "screenshots": "Screenshots (optional, max {max})",
+    "addScreenshot": "Add",
+    "removeScreenshot": "Delete capture",
+    "contactEmail": "Contact email (optional)",
+    "emptyMessage": "Please describe your return.",
+    "imageError": "Unable to process one or more images.",
+    "send": "Send",
+    "sending": "Sending…"
+  },
+  "errors": {
+    "generic": "Error",
+    "loadAchievements": "Error loading achievements:",
+    "loadStats": "Error loading statistics:",
+    "updateStats": "Error updating statistics:",
+    "page": {
+      "title": "Oops! Something went wrong",
+      "description": "We encountered a technical issue while loading this page. Sorry for the inconvenience.",
+      "retry": "Try again",
+      "home": "Back to home",
+      "tipsTitle": "You can also try:",
+      "tipRefresh": "Refresh the page",
+      "tipCache": "Clear your browser cache",
+      "tipConnection": "Check your internet connection",
+      "logPrefix": "Application error:"
+    },
+    "boundary": {
+      "title": "An error occurred",
+      "retry": "Try again",
+      "backToGames": "Back to games"
+    }
+  },
+  "supervision": {
+    "title": "Supervision",
+    "loading": "Loading…",
+    "refresh": "Refresh",
+    "unknownCountry": "Unknown",
+    "rolesHelpTitle": "Roles and permissions",
+    "rolesHierarchy": "Hierarchy: player < moderator < admin < super admin < founder — only a higher rank can sanction or modify an account (never a peer). Moderators: temporary ban only.",
+    "roles": {
+      "fondateur": "Founder",
+      "superadmin": "Super admin",
+      "admin": "Admin",
+      "moderator": "Moderator",
+      "user": "Player"
+    },
+    "subtitles": {
+      "full": "Full dashboard — stats, games, visitors and accounts.",
+      "bans": "Account and ban management.",
+      "accounts": "Player account review and moderation."
+    },
+    "tabs": {
+      "section": "Section",
+      "overview": "Overview",
+      "geo": "Country / IP",
+      "accounts": "Accounts ({count})",
+      "bans": "Banned ({count})",
+      "feedback": "Feedback ({count})",
+      "feedbackResolved": "Resolved ({count})",
+      "moderation": "Name moderation"
+    },
+    "moderation": {
+      "title": "Profanity filter",
+      "description": "Built-in FR/EN/ES/IT lists, data/moderation-extra-terms.json file, and terms added here (server-side, immediate effect).",
+      "loading": "Loading…",
+      "loadError": "Could not load moderation settings",
+      "saveError": "Could not add term",
+      "deleteError": "Could not delete term",
+      "baseLists": "Base lists",
+      "fileExtra": "File terms",
+      "dbExtra": "Supervision terms",
+      "fileHintTitle": "Repo file",
+      "fileHint": "Edit data/moderation-extra-terms.json for versioned additions.",
+      "termLabel": "New term",
+      "termPlaceholder": "Expression to block",
+      "localeLabel": "Language",
+      "localeAll": "All languages",
+      "noteLabel": "Note (internal)",
+      "notePlaceholder": "Context, report…",
+      "addTerm": "Add",
+      "saving": "Adding…",
+      "recentTerms": "Terms added via supervision",
+      "deleteTerm": "Delete",
+      "attemptsTitle": "Forbidden name attempts",
+      "attemptsDescription": "History of rejected nicknames (stored as entered). Account warning after 3 profanity attempts.",
+      "attemptsLoadError": "Could not load attempts",
+      "attemptsEmpty": "No attempts recorded",
+      "flaggedUsersTitle": "Flagged accounts (≥ 3 attempts)",
+      "attemptCount": "{count, plural, one {# attempt} other {# attempts}}",
+      "attemptsColDate": "Date",
+      "attemptsColName": "Attempted name",
+      "attemptsColUser": "Account",
+      "attemptsColContext": "Context",
+      "attemptsAnonymous": "Anonymous visitor"
+    },
+    "stats": {
+      "onlineNow": "Online now",
+      "onlineNowHint": "Active visitors (last 5 min.)",
+      "today": "Today",
+      "todayHint": "Unique visitors (day)",
+      "week": "7 days",
+      "weekHint": "Unique visitors (week)",
+      "month": "30 days",
+      "monthHint": "Unique visitors (month)"
+    },
+    "accounts": {
+      "registered": "Registered accounts",
+      "total": "Total",
+      "moderators": "Moderators",
+      "admins": "Admins",
+      "superAdmins": "Super admins",
+      "founders": "Founders",
+      "adminTitle": "Account administration",
+      "adminDesc": "Search by username, email, unique code (e.g. LP-ABC123) or IP address.",
+      "searchPlaceholder": "Search an account or IP…",
+      "rolePlaceholder": "Role",
+      "statusPlaceholder": "Status",
+      "allRoles": "All roles",
+      "players": "Players",
+      "allStatus": "All",
+      "online": "Online",
+      "banned": "Banned",
+      "resetFilters": "Reset",
+      "results": "{count} result{plural} of {total}",
+      "ipAnalyzing": "Analyzing IP…",
+      "ipSummary": "IP {ip} — {accounts} account{accountsPlural}, {visitors} visitor{visitorsPlural}",
+      "noMatch": "No account matches this search.",
+      "registeredOn": "Registered on {date}",
+      "seenOn": "Seen on {date}",
+      "you": "You",
+      "banReason": "Reason: {reason}",
+      "history": "History",
+      "liftBan": "Lift ban",
+      "permanentBan": "Permanent ban",
+      "temporaryBan": "Temporary ban",
+      "deleteAccount": "Delete account"
+    },
+    "bans": {
+      "activeTitle": "Active bans",
+      "activeOverview": "{count} suspended account(s)",
+      "suspendedCount": "{count} suspended account(s)",
+      "noneActive": "No active ban.",
+      "noneOverview": "No ban in progress.",
+      "currentTitle": "Current bans",
+      "currentDesc": "Suspended accounts (permanent or unexpired temporary)",
+      "noneCurrent": "No active ban.",
+      "permanent": "Permanent",
+      "temporary": "Temporary",
+      "bannedOn": "Banned on {date}",
+      "expiresOn": "Expires on {date}",
+      "by": "By: {name}",
+      "comment": "Comment: {comment}",
+      "until": "until {date}",
+      "unban": "Unban"
+    },
+    "connected": {
+      "recentTitle": "Recently connected accounts",
+      "recentDesc": "Identified players with IP and country",
+      "noneRecent": "No recently connected account."
+    },
+    "games": {
+      "playedTitle": "Games played",
+      "playedDesc": "Cloud aggregate of synced accounts",
+      "totalParties": " — {count} game{plural} total",
+      "party": "game",
+      "parties": "games",
+      "noneRecorded": "No game recorded yet."
+    },
+    "geo": {
+      "onlineByCountry": "Online by country",
+      "onlineByCountryDesc": "Active visitors in the last 5 minutes",
+      "todayByCountry": "Connected today by country",
+      "todayByCountryDesc": "Visitors active in the last 24 h",
+      "tapCountry": " Tap a country to see visitors.",
+      "noData": "No data yet.",
+      "visitorsTitle": "Visitors and players",
+      "visitorsDesc": "One player = one row (primary IP + menu for others). Tap a card for details.",
+      "filterPlaceholder": "Filter by IP, username, email or country…",
+      "noVisitors": "No visitor recorded yet.",
+      "noSearchResults": "No results for this search.",
+      "hide": "Hide",
+      "details": "Details",
+      "localPlayer": " local player",
+      "localPlayers": " local players",
+      "suspicious": "Suspicious",
+      "anonymousVisitor": "Anonymous visitor",
+      "localPlayersLabel": "Local players",
+      "noLocalPlayers": "No player reported (visitor without list or not synced yet).",
+      "ipAddresses": "IP addresses",
+      "noIp": "No IP recorded",
+      "linkedAccount": "Linked account",
+      "noLinkedAccount": "No linked account (anonymous visitor)",
+      "visitorId": "Visitor ID: {id}",
+      "countryDialogTitle": "Visitors — {title}",
+      "countryDialogDesc": "List of visitors and accounts for this country. Tap a card to see all IPs.",
+      "noVisitorsForCountry": "No visitor for this country.",
+      "scopeOnline": "online",
+      "scopeToday": "today"
+    },
+    "activity": {
+      "lastLogin": "Last login:",
+      "neverLoggedIn": "Never recorded",
+      "timeOnSite": "Time on site: {duration}",
+      "estimated": " (estimated from activity)"
+    },
+    "feedback": {
+      "activeTitle": "Open feedback",
+      "activeDesc": "Bugs, suggestions and comments to handle. Once resolved, feedback moves to the Resolved tab.",
+      "resolvedTitle": "Resolved feedback",
+      "resolvedDesc": "History of feedback marked as resolved.",
+      "searchActive": "Search bug, author, message…",
+      "searchResolved": "Search resolved feedback…",
+      "noActiveSearch": "No open feedback matches your search.",
+      "noActive": "No open feedback.",
+      "noResolvedSearch": "No resolved feedback matches your search.",
+      "noResolved": "No resolved feedback yet.",
+      "screenshot": " screenshot",
+      "screenshots": " screenshots",
+      "contact": "Contact:",
+      "page": "Page:",
+      "screenshotsTitle": "Screenshots",
+      "markRead": "Mark read",
+      "resolved": "Resolved",
+      "lightboxTitle": "Enlarged screenshot",
+      "lightboxAlt": "Enlarged capture",
+      "captureAlt": "Capture {index}",
+      "statusRead": "Read",
+      "statusResolved": "Resolved"
+    },
+    "history": {
+      "title": "Account history",
+      "localPlayers": "Local players",
+      "partiesStats": "Games (stats)",
+      "achievements": "Achievements",
+      "sessions": "Sessions",
+      "localPlayerNames": "Local player names",
+      "mode": "Mode: {mode}",
+      "country": "Country: {country}",
+      "ip": "IP:",
+      "lastActivity": "Last activity: {date}",
+      "playerActivity": "Player activity",
+      "gamesPlayed": "Games played",
+      "noParties": "No game recorded.",
+      "currentlyBanned": "Account currently banned",
+      "moderationHistory": "Moderation history",
+      "noEvents": "No events.",
+      "until": "Until {date}",
+      "by": "{date} · by {name}"
+    },
+    "actions": {
+      "banPermanent": "Permanent ban",
+      "banTemporary": "Temporary ban",
+      "unban": "Unban"
+    },
+    "dialogs": {
+      "deleteTitle": "Permanently delete this account?",
+      "deleteDesc": "Account:",
+      "deleteAccountLabel": "Account:",
+      "deleteWarning": "This action is irreversible: email, cloud players, stats and sessions will be deleted.",
+      "cancel": "Cancel",
+      "deleteConfirm": "Delete permanently",
+      "unbanTitle": "Lift ban",
+      "unbanAccountLabel": "Account:",
+      "commentOptional": "Comment (optional)",
+      "unbanPlaceholder": "Reason for unban…",
+      "unbanConfirm": "Unban",
+      "banPermanentTitle": "Permanent ban",
+      "banTemporaryTitle": "Temporary ban",
+      "banAccountLabel": "Account:",
+      "durationDays": "Duration (days)",
+      "day": "{count} day",
+      "days": "{count} days",
+      "banCommentLabel": "Comment / reason (internal)",
+      "banCommentPlaceholder": "E.g. spam, toxic behavior…",
+      "banConfirm": "Confirm ban"
+    },
+    "device": {
+      "accountCodeTitle": "Unique account code",
+      "deviceTitle": "Device: {label}",
+      "moreIps": "+{count} IP"
+    },
+    "apiErrors": {
+      "modifyDenied": "Modification denied",
+      "banDenied": "Ban denied",
+      "deleteDenied": "Deletion denied",
+      "unbanDenied": "Unban denied",
+      "loadAccounts": "Unable to load accounts",
+      "historyUnavailable": "History unavailable"
+    }
+  }
+}

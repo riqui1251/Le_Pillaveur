@@ -16,13 +16,14 @@ export type AuthUser = {
   displayName: string
   accountCode: string
   role: 'user' | 'moderator' | 'admin' | 'superadmin' | 'fondateur'
+  locale: string
 }
 
 type AuthContextValue = {
   user: AuthUser | null
   loading: boolean
   login: (email: string, password: string) => Promise<string | null>
-  register: (email: string, password: string, displayName: string) => Promise<string | null>
+  register: (email: string, password: string, displayName: string, locale?: string) => Promise<string | null>
   logout: () => Promise<void>
   refresh: () => Promise<void>
 }
@@ -62,12 +63,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null
   }, [])
 
-  const register = useCallback(async (email: string, password: string, displayName: string) => {
+  const register = useCallback(async (email: string, password: string, displayName: string, locale?: string) => {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ email, password, displayName }),
+      body: JSON.stringify({ email, password, displayName, locale }),
     })
     const data = await res.json()
     if (!res.ok) return data.error ?? 'Erreur d\'inscription'

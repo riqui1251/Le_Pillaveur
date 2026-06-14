@@ -1,4 +1,15 @@
 import { prisma } from '@/lib/prisma'
+import type { AppLocale } from '@/i18n/routing'
+import { normalizeAppLocale } from '@/lib/locale-utils'
+import {
+  getModerationErrorMessage,
+  validateAccountDisplayName,
+  type NameModerationReason,
+} from '@/lib/name-moderation'
+import frMessages from '../../messages/fr.json'
+import enMessages from '../../messages/en.json'
+import esMessages from '../../messages/es.json'
+import itMessages from '../../messages/it.json'
 
 export const DISPLAY_NAME_MAX_LENGTH = 30
 
@@ -10,9 +21,21 @@ export function displayNameKey(name: string): string {
   return normalizeDisplayName(name).toLowerCase()
 }
 
+export function getDisplayNameValidationError(name: string): NameModerationReason | null {
+  const result = validateAccountDisplayName(name, DISPLAY_NAME_MAX_LENGTH)
+  return result.ok ? null : result.reason
+}
+
 export function isValidDisplayName(name: string): boolean {
-  const normalized = normalizeDisplayName(name)
-  return normalized.length > 0 && normalized.length <= DISPLAY_NAME_MAX_LENGTH
+  return getDisplayNameValidationError(name) === null
+}
+
+export function displayNameValidationMessage(
+  name: string,
+  locale: AppLocale | string | null = 'fr'
+): string | null {
+  const reason = getDisplayNameValidationError(name)
+  return reason ? getModerationErrorMessage(reason, locale, 'account') : null
 }
 
 /** Comptes avec email + mot de passe (pseudo public unique, casse ignorée). */
@@ -41,4 +64,18 @@ export async function isDisplayNameTaken(
   return rows.length > 0
 }
 
-export const DISPLAY_NAME_TAKEN_ERROR = 'Ce pseudo est déjà utilisé'
+const DISPLAY_NAME_TAKEN: Record<AppLocale, string> = {
+  fr: frMessages.auth.register.displayNameTaken,
+  en: enMessages.auth.register.displayNameTaken,
+  es: esMessages.auth.register.displayNameTaken,
+  it: itMessages.auth.register.displayNameTaken,
+}
+
+/** @deprecated Préférer displayNameTakenMessage(locale) */
+export const DISPLAY_NAME_TAKEN_ERROR = DISPLAY_NAME_TAKEN.fr
+
+export function displayNameTakenMessage(
+  locale: AppLocale | string | null = 'fr'
+): string {
+  return DISPLAY_NAME_TAKEN[normalizeAppLocale(locale)]
+}

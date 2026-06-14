@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -13,6 +14,8 @@ function hasAgeCookie(): boolean {
 }
 
 export function AgeGate() {
+  const t = useTranslations('legal.ageGate')
+  const tNav = useTranslations('nav.legal')
   const [visible, setVisible] = useState(false)
   const [checked, setChecked] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -49,19 +52,15 @@ export function AgeGate() {
             <AlertTriangle className="h-5 w-5 text-amber-400" />
           </div>
           <h2 id="age-gate-title" className="text-lg font-semibold text-white">
-            Accès réservé aux majeurs
+            {t('title')}
           </h2>
         </div>
 
-        <p className="text-sm leading-relaxed text-white/60">
-          Le Pillaveur est un outil de divertissement festif. Les « gorgées » sont des unités
-          ludiques abstraites — elles ne constituent pas une obligation de consommer de l&apos;alcool.
-          Ce service ne vend ni ne distribue de boissons.
-        </p>
+        <p className="text-sm leading-relaxed text-white/60">{t('body1')}</p>
 
         <p className="mt-3 text-sm text-white/50">
-          <strong className="text-white/70">L&apos;abus d&apos;alcool est dangereux pour la santé.</strong>{' '}
-          À consommer avec modération.
+          <strong className="text-white/70">{t('healthWarning')}</strong>{' '}
+          {t('moderation')}
         </p>
 
         <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -71,15 +70,15 @@ export function AgeGate() {
             className="mt-0.5 border-white/30 data-[state=checked]:bg-amber-500 data-[state=checked]:text-black"
           />
           <span className="text-sm text-white/70">
-            Je certifie avoir <strong className="text-white">18 ans révolus</strong> et j&apos;accepte les{' '}
+            {t('checkboxPrefix')}{' '}
             <Link href="/legal/cgu" className="text-amber-400 underline underline-offset-2 hover:text-amber-300">
-              CGU
+              {tNav('cgu')}
             </Link>{' '}
-            et la{' '}
+            {t('checkboxAnd')}{' '}
             <Link href="/legal/confidentialite" className="text-amber-400 underline underline-offset-2 hover:text-amber-300">
-              politique de confidentialité
+              {tNav('confidentialite')}
             </Link>
-            .
+            {t('checkboxSuffix')}
           </span>
         </label>
 
@@ -89,11 +88,9 @@ export function AgeGate() {
             disabled={!checked || loading}
             className="w-full bg-amber-500 text-black hover:bg-amber-400 disabled:opacity-40"
           >
-            {loading ? 'Validation…' : 'Entrer sur le site'}
+            {loading ? t('validating') : t('enter')}
           </Button>
-          <p className="text-center text-xs text-white/35">
-            Si vous avez moins de 18 ans, vous devez quitter ce site.
-          </p>
+          <p className="text-center text-xs text-white/35">{t('minorWarning')}</p>
         </div>
       </div>
     </div>

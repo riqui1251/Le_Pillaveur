@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/i18n/navigation"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 
 /** Redirige vers /joueurs si aucun joueur n'est sélectionné. */

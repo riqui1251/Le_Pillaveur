@@ -15,6 +15,7 @@ model User {
   accountCode      String?   @unique
   role             String    @default("user")
   playMode         String    @default("local")
+  locale           String    @default("fr")
   localPlayersJson String?
   name             String?
   emailVerified    DateTime?
@@ -39,6 +40,8 @@ model User {
   bansIssued           AccountBanEvent[]    @relation("BanActor")
   passwordResetTokens  PasswordResetToken[]
   feedback             UserFeedback[]
+  nameModerationAttempts NameModerationAttempt[]
+  nameModerationWarnedAt DateTime?
 }
 
 model AccountBanEvent {
@@ -147,4 +150,33 @@ model UserFeedback {
   updatedAt    DateTime @updatedAt
 
   @@index([status, createdAt])
+}
+
+model ModerationTerm {
+  id        String   @id @default(cuid())
+  term      String
+  locale    String?
+  note      String?
+  addedById String?
+  createdAt DateTime @default(now())
+
+  @@unique([term, locale])
+  @@index([locale])
+}
+
+model NameModerationAttempt {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  visitorId     String?
+  attemptedName String
+  reason        String
+  context       String
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([visitorId, createdAt])
+  @@index([reason, createdAt])
+  @@index([createdAt])
 }

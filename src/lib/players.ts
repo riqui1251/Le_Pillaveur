@@ -1,4 +1,8 @@
 import { getSafeStorage } from './storage';
+import {
+  validateLocalPlayerName,
+  type NameModerationReason,
+} from '@/lib/name-moderation';
 
 export interface PlayerStats {
   gamesPlayed: number;
@@ -130,13 +134,30 @@ export const PLAYER_ICONS = [
  * (descriptions d'effets) : on supprime donc tout caractère permettant
  * d'ouvrir une balise ou une entité, et on limite la longueur.
  */
+export const PLAYER_NAME_MAX_LENGTH = 40;
+
 export function sanitizePlayerName(name: string): string {
   if (typeof name !== 'string') return '';
   return name
     .replace(/[<>]/g, '')        // empêche l'ouverture/fermeture de balises
     .replace(/[\u0000-\u001F\u007F]/g, '') // supprime les caractères de contrôle
     .trim()
-    .slice(0, 40);               // garde-fou de longueur
+    .slice(0, PLAYER_NAME_MAX_LENGTH);
+}
+
+export function getPlayerNameValidationError(name: string): NameModerationReason | null {
+  const result = validateLocalPlayerName(name, PLAYER_NAME_MAX_LENGTH);
+  return result.ok ? null : result.reason;
+}
+
+export function isValidPlayerName(name: string): boolean {
+  return getPlayerNameValidationError(name) === null;
+}
+
+export function resolveValidatedPlayerName(name: string): string | null {
+  const validation = validateLocalPlayerName(name, PLAYER_NAME_MAX_LENGTH);
+  if (!validation.ok) return null;
+  return sanitizePlayerName(validation.value);
 }
 
 export function getStoredPlayers(): Player[] {
@@ -189,10 +210,13 @@ export function generatePlayerId(): string {
 }
 
 export function addPlayer(name: string): Player[] {
+  const validation = validateLocalPlayerName(name, PLAYER_NAME_MAX_LENGTH);
+  if (!validation.ok) return getStoredPlayers();
+
   const players = getStoredPlayers();
   const newPlayer: Player = {
     id: generatePlayerId(),
-    name: sanitizePlayerName(name),
+    name: sanitizePlayerName(validation.value),
     createdAt: Date.now(),
     stats: {
       gamesPlayed: 0,
@@ -219,9 +243,12 @@ export function removePlayer(playerId: string): Player[] {
 
 export function updatePlayer(playerId: string, updates: Partial<Player>): Player[] {
   const players = getStoredPlayers();
-  const safeUpdates: Partial<Player> = typeof updates.name === 'string'
-    ? { ...updates, name: sanitizePlayerName(updates.name) }
-    : updates;
+  let safeUpdates = updates;
+  if (typeof updates.name === 'string') {
+    const validation = validateLocalPlayerName(updates.name, PLAYER_NAME_MAX_LENGTH);
+    if (!validation.ok) return players;
+    safeUpdates = { ...updates, name: sanitizePlayerName(validation.value) };
+  }
   const updatedPlayers = players.map(p => 
     p.id === playerId ? { ...p, ...safeUpdates } : p
   );

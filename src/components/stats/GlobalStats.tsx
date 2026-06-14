@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface StatsData {
@@ -18,6 +19,10 @@ interface StatsData {
 }
 
 export default function GlobalStats() {
+  const t = useTranslations('stats')
+  const tCommon = useTranslations('common')
+  const tErrors = useTranslations('errors')
+  const format = useFormatter()
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -28,18 +33,18 @@ export default function GlobalStats() {
         const data = await response.json()
         setStats(data)
       } catch (error) {
-        console.error('Erreur lors du chargement des statistiques:', error)
+        console.error(tErrors('loadStats'), error)
       } finally {
         setLoading(false)
       }
     }
 
     fetchStats()
-  }, [])
+  }, [t])
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[200px]">
+      <div className="flex justify-center items-center min-h-[200px]" aria-label={tCommon('loading')}>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
@@ -49,9 +54,7 @@ export default function GlobalStats() {
     return (
       <Card>
         <CardContent className="py-6">
-          <p className="text-center text-muted-foreground">
-            Aucune statistique disponible
-          </p>
+          <p className="text-center text-muted-foreground">{t('noStats')}</p>
         </CardContent>
       </Card>
     )
@@ -61,9 +64,7 @@ export default function GlobalStats() {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Parties jouées
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">{t('gamesPlayed')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.totalGames}</div>
@@ -72,9 +73,7 @@ export default function GlobalStats() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Joueurs uniques
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">{t('uniquePlayers')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.totalPlayers}</div>
@@ -83,26 +82,22 @@ export default function GlobalStats() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Meilleur joueur
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">{t('bestPlayer')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
-            {stats.bestPlayer?.name || '-'}
-          </div>
+          <div className="text-2xl font-bold">{stats.bestPlayer?.name || '-'}</div>
           <p className="text-xs text-muted-foreground">
-            {stats.bestPlayer ? `${stats.bestPlayer.wins} victoires` : 'Aucun joueur'}
+            {stats.bestPlayer
+              ? t('winsCount', { count: stats.bestPlayer.wins })
+              : t('noPlayer')}
           </p>
         </CardContent>
       </Card>
 
       <Card className="col-span-full">
         <CardHeader>
-          <CardTitle>Parties récentes</CardTitle>
-          <CardDescription>
-            Les dernières parties jouées
-          </CardDescription>
+          <CardTitle>{t('recentGames')}</CardTitle>
+          <CardDescription>{t('recentGamesDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -114,11 +109,11 @@ export default function GlobalStats() {
                 <div>
                   <p className="font-medium">{game.gameType}</p>
                   <p className="text-sm text-muted-foreground">
-                    Gagnant : {game.winner}
+                    {t('winner', { name: game.winner })}
                   </p>
                 </div>
                 <time className="text-sm text-muted-foreground">
-                  {new Date(game.playedAt).toLocaleDateString()}
+                  {format.dateTime(new Date(game.playedAt), { dateStyle: 'medium' })}
                 </time>
               </div>
             ))}
@@ -127,4 +122,4 @@ export default function GlobalStats() {
       </Card>
     </div>
   )
-} 
+}

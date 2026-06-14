@@ -1,31 +1,62 @@
-import { GAMES } from '@/lib/games'
+'use client'
+
+import { useTranslations } from 'next-intl'
+import { useMemo } from 'react'
+import { stripLocalePrefix } from '@/i18n/routing'
+import { useLocalizedGames } from '@/lib/games-i18n'
 
 export type PageMeta = {
   title: string
   subtitle: string
 }
 
-const STATIC_PAGES: Record<string, PageMeta> = {
-  '/joueurs': { title: 'Joueurs', subtitle: 'Gérer l\'équipe' },
-  '/jeux': { title: 'Jeux', subtitle: 'Choisir un jeu' },
-  '/classement': { title: 'Classement', subtitle: 'Scores et stats' },
-  '/compte': { title: 'Compte', subtitle: 'Connexion et profil' },
-  '/supervision': { title: 'Supervision', subtitle: 'Administration' },
-  '/achievements': { title: 'Succès', subtitle: 'Trophées débloqués' },
-  '/stats': { title: 'Statistiques', subtitle: 'Historique' },
+type StaticPageKey =
+  | 'joueurs'
+  | 'jeux'
+  | 'classement'
+  | 'compte'
+  | 'supervision'
+  | 'achievements'
+  | 'stats'
+
+const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
+  '/joueurs': 'joueurs',
+  '/jeux': 'jeux',
+  '/classement': 'classement',
+  '/compte': 'compte',
+  '/supervision': 'supervision',
+  '/achievements': 'achievements',
+  '/stats': 'stats',
 }
 
-export function getPageMeta(pathname: string): PageMeta {
-  if (STATIC_PAGES[pathname]) return STATIC_PAGES[pathname]
+/** Resolve page title/subtitle for the navbar from a pathname (with or without locale prefix). */
+export function usePageMeta(pathname: string): PageMeta {
+  const t = useTranslations('nav')
+  const tPages = useTranslations('nav.pages')
+  const games = useLocalizedGames()
 
-  const game = GAMES.find((g) => pathname === g.path || pathname.startsWith(`${g.path}/`))
-  if (game) {
-    return { title: game.title, subtitle: 'Partie en cours' }
-  }
+  return useMemo(() => {
+    const path = stripLocalePrefix(pathname)
+    const pageKey = STATIC_PAGE_KEYS[path]
 
-  return { title: 'Le Pillaveur', subtitle: 'Jeux à boire entre amis' }
-}
+    if (pageKey) {
+      return {
+        title: tPages(`${pageKey}.title`),
+        subtitle: tPages(`${pageKey}.subtitle`),
+      }
+    }
 
-export function getNavHrefMeta(href: string): PageMeta | null {
-  return STATIC_PAGES[href] ?? null
+    const game = games.find((g) => path === g.path || path.startsWith(`${g.path}/`))
+    if (game) {
+      return {
+        title: game.title,
+        subtitle: tPages('gameInProgress.subtitle'),
+      }
+    }
+
+    return {
+      title: t('brand'),
+      subtitle: tPages('default.subtitle'),
+    }
+  }, [pathname, games, t, tPages])
 }

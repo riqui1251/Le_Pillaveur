@@ -1,13 +1,16 @@
 "use client"
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
+import { Link, useRouter } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { LogIn, UserPlus, Gamepad2 } from 'lucide-react'
-import Link from 'next/link'
 import { Checkbox } from '@/components/ui/checkbox'
+import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
+import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import {
   Dialog,
   DialogContent,
@@ -24,6 +27,10 @@ function safeRedirect(path: string | null): string {
 }
 
 export function AuthForm() {
+  const t = useTranslations('auth')
+  const tCommon = useTranslations('common')
+  const locale = useLocale()
+  const tNav = useTranslations('nav.legal')
   const { login, register } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -48,14 +55,22 @@ export function AuthForm() {
     e.preventDefault()
     setError(null)
     if (mode === 'register' && !acceptedTerms) {
-      setError('Vous devez accepter les CGU et la politique de confidentialité.')
+      setError(t('register.termsRequired'))
       return
+    }
+    if (mode === 'register') {
+      const validation = validateAccountDisplayName(displayName)
+      if (!validation.ok) {
+        void reportProfanityIfNeeded(displayName, validation.reason, 'register')
+        setError(tCommon(`nameValidation.${nameValidationI18nKey(validation.reason)}`))
+        return
+      }
     }
     setLoading(true)
     try {
       const err = mode === 'login'
         ? await login(email, password)
-        : await register(email, password, displayName)
+        : await register(email, password, displayName, locale)
       if (err) {
         setError(err)
       } else {
@@ -71,10 +86,10 @@ export function AuthForm() {
     setError(null)
     try {
       const res = await fetch('/api/auth/local-play', { method: 'POST', credentials: 'include' })
-      if (!res.ok) throw new Error('Impossible d\'activer le mode local')
+      if (!res.ok) throw new Error(t('localPlay.errorActivate'))
       router.push(redirectTo)
     } catch {
-      setError('Impossible d\'activer le mode local. Réessayez.')
+      setError(t('localPlay.errorRetry'))
     } finally {
       setLocalLoading(false)
     }
@@ -93,13 +108,11 @@ export function AuthForm() {
       })
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error ?? 'Erreur')
+        throw new Error(data.error ?? tCommon('error'))
       }
-      setForgotMessage(
-        'Si un compte existe avec cet email, vous recevrez un lien de réinitialisation dans quelques minutes.'
-      )
+      setForgotMessage(t('forgot.success'))
     } catch (err) {
-      setForgotError(err instanceof Error ? err.message : 'Erreur')
+      setForgotError(err instanceof Error ? err.message : tCommon('error'))
     } finally {
       setForgotLoading(false)
     }
@@ -109,15 +122,13 @@ export function AuthForm() {
     <div className="mx-auto w-full max-w-md space-y-6">
       <div className="text-center">
         <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/70">
-          Le Pillaveur
+          {t('brand')}
         </p>
         <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
-          {mode === 'login' ? 'Connexion' : 'Créer un compte'}
+          {mode === 'login' ? t('login.title') : t('register.title')}
         </h1>
         <p className="mt-2 text-sm text-white/50">
-          {mode === 'login'
-            ? 'Retrouvez vos joueurs sur tous vos appareils.'
-            : 'Synchronisez votre liste de joueurs entre téléphone, tablette et ordinateur.'}
+          {mode === 'login' ? t('login.subtitle') : t('register.subtitle')}
         </p>
       </div>
 
@@ -130,7 +141,7 @@ export function AuthForm() {
           }`}
         >
           <LogIn className="h-4 w-4" />
-          Connexion
+          {t('login.tab')}
         </button>
         <button
           type="button"
@@ -140,18 +151,18 @@ export function AuthForm() {
           }`}
         >
           <UserPlus className="h-4 w-4" />
-          Inscription
+          {t('register.tab')}
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-md">
         {mode === 'register' && (
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-white/60">Pseudo</label>
+            <label className="mb-1.5 block text-xs font-medium text-white/60">{t('register.displayNameLabel')}</label>
             <Input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Votre pseudo"
+              placeholder={t('register.displayNamePlaceholder')}
               maxLength={30}
               required
               className="border-white/10 bg-white/[0.05] text-white"
@@ -159,19 +170,19 @@ export function AuthForm() {
           </div>
         )}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-white/60">Email</label>
+          <label className="mb-1.5 block text-xs font-medium text-white/60">{t('emailLabel')}</label>
           <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="vous@exemple.com"
+            placeholder={t('emailPlaceholder')}
             required
             className="border-white/10 bg-white/[0.05] text-white"
           />
         </div>
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-xs font-medium text-white/60">Mot de passe</label>
+            <label className="text-xs font-medium text-white/60">{t('passwordLabel')}</label>
             {mode === 'login' && (
               <button
                 type="button"
@@ -183,7 +194,7 @@ export function AuthForm() {
                 }}
                 className="text-xs text-amber-300/70 hover:text-amber-200"
               >
-                Mot de passe oublié ?
+                {t('login.forgotPassword')}
               </button>
             )}
           </div>
@@ -191,7 +202,7 @@ export function AuthForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={mode === 'register' ? 'Lettre + chiffre, 8 car. min.' : '••••••••'}
+            placeholder={mode === 'register' ? t('register.passwordPlaceholder') : t('passwordPlaceholderLogin')}
             required
             minLength={mode === 'register' ? 8 : 1}
             className="border-white/10 bg-white/[0.05] text-white"
@@ -210,15 +221,15 @@ export function AuthForm() {
               className="mt-0.5 border-white/30 data-[state=checked]:bg-amber-500 data-[state=checked]:text-black"
             />
             <span className="text-xs leading-relaxed text-white/60">
-              J&apos;accepte les{' '}
+              {t('register.termsPrefix')}{' '}
               <Link href="/legal/cgu" className="text-amber-400 underline underline-offset-2 hover:text-amber-300">
-                CGU
+                {tNav('cgu')}
               </Link>{' '}
-              et la{' '}
+              {t('register.termsAnd')}{' '}
               <Link href="/legal/confidentialite" className="text-amber-400 underline underline-offset-2 hover:text-amber-300">
-                politique de confidentialité
+                {tNav('confidentialite')}
               </Link>
-              .
+              {t('register.termsSuffix')}
             </span>
           </label>
         )}
@@ -228,24 +239,26 @@ export function AuthForm() {
           disabled={loading || (mode === 'register' && !acceptedTerms)}
           className="w-full bg-amber-500 text-black hover:bg-amber-400"
         >
-          {loading ? 'Chargement…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
+          {loading
+            ? tCommon('loading')
+            : mode === 'login'
+              ? t('login.submit')
+              : t('register.submit')}
         </Button>
       </form>
 
       <div className="space-y-3 text-center">
-        <p className="text-xs text-white/35">
-          Sans compte, vos joueurs restent enregistrés uniquement sur cet appareil.
-        </p>
+        <p className="text-xs text-white/35">{t('localPlay.hint')}</p>
         <p className="text-xs text-white/30">
-          En jouant en local, vous acceptez les{' '}
+          {t('localPlay.termsPrefix')}{' '}
           <Link href="/legal/cgu" className="text-amber-400/80 underline underline-offset-2 hover:text-amber-300">
-            CGU
+            {tNav('cgu')}
           </Link>{' '}
-          et la{' '}
+          {t('localPlay.termsAnd')}{' '}
           <Link href="/legal/confidentialite" className="text-amber-400/80 underline underline-offset-2 hover:text-amber-300">
-            politique de confidentialité
+            {tNav('confidentialite')}
           </Link>
-          .
+          {t('localPlay.termsSuffix')}
         </p>
         <Button
           type="button"
@@ -255,16 +268,16 @@ export function AuthForm() {
           className="w-full border-white/15 bg-transparent text-white/70 hover:bg-white/[0.06] hover:text-white"
         >
           <Gamepad2 className="mr-2 h-4 w-4" />
-          {localLoading ? 'Chargement…' : 'Jouer en local'}
+          {localLoading ? tCommon('loading') : t('localPlay.button')}
         </Button>
       </div>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent className="border-white/10 bg-[#0c0b12] text-white">
           <DialogHeader>
-            <DialogTitle>Mot de passe oublié</DialogTitle>
+            <DialogTitle>{t('forgot.title')}</DialogTitle>
             <DialogDescription className="text-white/50">
-              Entrez votre email pour recevoir un lien de réinitialisation.
+              {t('forgot.description')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleForgotSubmit} className="space-y-4">
@@ -272,7 +285,7 @@ export function AuthForm() {
               type="email"
               value={forgotEmail}
               onChange={(e) => setForgotEmail(e.target.value)}
-              placeholder="vous@exemple.com"
+              placeholder={t('emailPlaceholder')}
               required
               className="border-white/10 bg-white/[0.05] text-white"
             />
@@ -288,7 +301,7 @@ export function AuthForm() {
                 disabled={forgotLoading || Boolean(forgotMessage)}
                 className="bg-amber-500 text-black hover:bg-amber-400"
               >
-                {forgotLoading ? 'Envoi…' : 'Envoyer le lien'}
+                {forgotLoading ? tCommon('sending') : t('forgot.submit')}
               </Button>
             </DialogFooter>
           </form>

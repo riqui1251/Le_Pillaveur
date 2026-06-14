@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { usePathname } from '@/i18n/navigation'
 import { Bug, Lightbulb, MessageCircle, ImagePlus, X, Send } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -22,16 +23,13 @@ import {
 } from '@/lib/feedback'
 import { cn } from '@/lib/utils'
 
-const TYPE_OPTIONS: Array<{
-  value: FeedbackType
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-  description: string
-}> = [
-  { value: 'bug', label: 'Bug', icon: Bug, description: 'Quelque chose ne fonctionne pas' },
-  { value: 'improvement', label: 'Amélioration', icon: Lightbulb, description: 'Une idée pour améliorer le jeu' },
-  { value: 'comment', label: 'Commentaire', icon: MessageCircle, description: 'Un avis ou un message' },
-]
+const FEEDBACK_TYPES: FeedbackType[] = ['bug', 'improvement', 'comment']
+
+const TYPE_ICONS: Record<FeedbackType, React.ComponentType<{ className?: string }>> = {
+  bug: Bug,
+  improvement: Lightbulb,
+  comment: MessageCircle,
+}
 
 type FeedbackDialogProps = {
   open: boolean
@@ -39,6 +37,9 @@ type FeedbackDialogProps = {
 }
 
 export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
+  const t = useTranslations('feedback')
+  const tAuth = useTranslations('auth')
+  const tCommon = useTranslations('common')
   const { user } = useAuth()
   const pathname = usePathname()
 
@@ -81,7 +82,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
       const compressed = await Promise.all(toProcess.map((f) => compressImageFile(f)))
       setScreenshots((prev) => [...prev, ...compressed].slice(0, MAX_SCREENSHOTS))
     } catch {
-      setError('Impossible de traiter une ou plusieurs images.')
+      setError(t('imageError'))
     }
   }
 
@@ -90,7 +91,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
     setError(null)
 
     if (!message.trim()) {
-      setError('Merci de décrire votre retour.')
+      setError(t('emptyMessage'))
       return
     }
 
@@ -109,11 +110,11 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Erreur')
+      if (!res.ok) throw new Error(data.error ?? tCommon('error'))
       setSuccess(true)
       setTimeout(() => handleOpenChange(false), 1800)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur')
+      setError(err instanceof Error ? err.message : tCommon('error'))
     } finally {
       setLoading(false)
     }
@@ -123,50 +124,49 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#0c0b12] text-white sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Votre avis compte !</DialogTitle>
+          <DialogTitle>{t('dialogTitle')}</DialogTitle>
           <DialogDescription className="text-white/50">
-            Signalez un bug, proposez une amélioration ou laissez un commentaire. Merci de nous aider à améliorer Le Pillaveur.
+            {t('dialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         {success ? (
           <p className="rounded-lg bg-emerald-500/15 px-4 py-3 text-sm text-emerald-300">
-            Merci pour votre retour ! L&apos;équipe en prend connaissance.
+            {t('success')}
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-2">
-              {TYPE_OPTIONS.map(({ value, label, icon: Icon, description }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setType(value)}
-                  className={cn(
-                    'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-colors',
-                    type === value
-                      ? 'border-amber-400/40 bg-amber-500/15 text-amber-100'
-                      : 'border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06]'
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="text-xs font-medium">{label}</span>
-                  <span className="hidden text-[10px] opacity-60 sm:block">{description}</span>
-                </button>
-              ))}
+              {FEEDBACK_TYPES.map((value) => {
+                const Icon = TYPE_ICONS[value]
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setType(value)}
+                    className={cn(
+                      'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-colors',
+                      type === value
+                        ? 'border-amber-400/40 bg-amber-500/15 text-amber-100'
+                        : 'border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06]'
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="text-xs font-medium">{t(`types.${value}.label`)}</span>
+                    <span className="hidden text-[10px] opacity-60 sm:block">
+                      {t(`types.${value}.description`)}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-white/60">Message</label>
+              <label className="mb-1.5 block text-xs font-medium text-white/60">{t('messageLabel')}</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={
-                  type === 'bug'
-                    ? 'Décrivez le problème et comment le reproduire…'
-                    : type === 'improvement'
-                      ? 'Quelle amélioration souhaiteriez-vous ?'
-                      : 'Votre message…'
-                }
+                placeholder={t(`placeholders.${type}`)}
                 required
                 maxLength={MAX_FEEDBACK_MESSAGE}
                 rows={4}
@@ -180,7 +180,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
             {type === 'bug' && (
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-white/60">
-                  Captures d&apos;écran (optionnel, max {MAX_SCREENSHOTS})
+                  {t('screenshots', { max: MAX_SCREENSHOTS })}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {screenshots.map((src, i) => (
@@ -191,7 +191,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                         type="button"
                         onClick={() => setScreenshots((prev) => prev.filter((_, idx) => idx !== i))}
                         className="absolute right-0.5 top-0.5 rounded bg-black/60 p-0.5 text-white"
-                        aria-label="Supprimer la capture"
+                        aria-label={t('removeScreenshot')}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -200,7 +200,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                   {screenshots.length < MAX_SCREENSHOTS && (
                     <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/20 bg-white/[0.03] text-white/40 hover:bg-white/[0.06]">
                       <ImagePlus className="h-5 w-5" />
-                      <span className="mt-1 text-[9px]">Ajouter</span>
+                      <span className="mt-1 text-[9px]">{t('addScreenshot')}</span>
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/webp"
@@ -216,13 +216,13 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
 
             <div>
               <label className="mb-1.5 block text-xs font-medium text-white/60">
-                Email de contact (optionnel)
+                {t('contactEmail')}
               </label>
               <Input
                 type="email"
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
-                placeholder="vous@exemple.com"
+                placeholder={tAuth('emailPlaceholder')}
                 className="border-white/10 bg-white/[0.05] text-white"
               />
             </div>
@@ -238,7 +238,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                 className="bg-amber-500 text-black hover:bg-amber-400"
               >
                 <Send className="mr-2 h-4 w-4" />
-                {loading ? 'Envoi…' : 'Envoyer'}
+                {loading ? t('sending') : t('send')}
               </Button>
             </DialogFooter>
           </form>
@@ -249,6 +249,8 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
 }
 
 export function FeedbackMenuButton({ onClick }: { onClick: () => void }) {
+  const t = useTranslations('feedback')
+
   return (
     <button
       type="button"
@@ -259,8 +261,8 @@ export function FeedbackMenuButton({ onClick }: { onClick: () => void }) {
         <MessageCircle className="h-4 w-4" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium leading-none">Signaler / Suggérer</p>
-        <p className="mt-0.5 truncate text-[11px] opacity-50">Bug, idée ou commentaire</p>
+        <p className="text-sm font-medium leading-none">{t('menuTitle')}</p>
+        <p className="mt-0.5 truncate text-[11px] opacity-50">{t('menuSubtitle')}</p>
       </div>
     </button>
   )

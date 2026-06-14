@@ -19,7 +19,9 @@
     "db:migrate:local": "prisma db execute --file prisma/migrations/20250613120000_ip_history/migration.sql && prisma migrate resolve --applied 20250613120000_ip_history",
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "accounts:backfill-codes": "node scripts/backfill-account-codes.mjs",
-    "deploy:prepare": "node deploy-ftp.js"
+    "deploy:prepare": "node deploy-ftp.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -49,6 +51,7 @@
     "konva": "^9.3.20",
     "lucide-react": "^0.476.0",
     "next": "^15.5.19",
+    "next-intl": "^4.13.0",
     "next-themes": "^0.4.4",
     "node-cron": "^4.2.0",
     "react": "18.3.1",
@@ -77,6 +80,7 @@
     "prisma": "^6.4.1",
     "tailwindcss": "^3.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.6"
   }
 }

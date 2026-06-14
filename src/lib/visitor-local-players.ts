@@ -1,4 +1,4 @@
-import { sanitizePlayerName } from '@/lib/players'
+import { sanitizePlayerName, isValidPlayerName } from '@/lib/players'
 
 export const MAX_VISITOR_LOCAL_PLAYER_NAMES = 30
 
@@ -17,7 +17,7 @@ export function parseLocalPlayerNamesInput(raw: unknown): string[] | undefined {
   for (const item of raw) {
     if (typeof item !== 'string') continue
     const name = sanitizePlayerName(item)
-    if (!name) continue
+    if (!name || !isValidPlayerName(name)) continue
     const key = name.toLowerCase()
     if (seen.has(key)) continue
     seen.add(key)

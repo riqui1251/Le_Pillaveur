@@ -1,20 +1,25 @@
-import Link from 'next/link'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { Link } from '@/i18n/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { loadLegalDoc, type LegalDocId } from '@/lib/legal/load-legal-doc'
 import { renderMarkdown } from '@/lib/legal/render-markdown'
 
-const TITLES: Record<LegalDocId, string> = {
-  cgu: 'Conditions Générales d\'Utilisation',
-  confidentialite: 'Politique de confidentialité',
-  'mentions-legales': 'Mentions légales',
+const DOC_TITLE_KEYS: Record<LegalDocId, 'cgu' | 'confidentialite' | 'mentionsLegales'> = {
+  cgu: 'cgu',
+  confidentialite: 'confidentialite',
+  'mentions-legales': 'mentionsLegales',
 }
 
 interface LegalPageProps {
   docId: LegalDocId
 }
 
-export function LegalPage({ docId }: LegalPageProps) {
-  const content = loadLegalDoc(docId)
+export async function LegalPage({ docId }: LegalPageProps) {
+  const locale = await getLocale()
+  const t = await getTranslations('legal.pages')
+  const tNav = await getTranslations('nav.legal')
+  const content = loadLegalDoc(docId, locale)
+  const titleKey = DOC_TITLE_KEYS[docId]
 
   return (
     <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 pb-24 sm:px-6">
@@ -23,7 +28,7 @@ export function LegalPage({ docId }: LegalPageProps) {
         className="mb-6 inline-flex items-center gap-2 text-sm text-white/50 transition-colors hover:text-white/80"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour
+        {t('back')}
       </Link>
 
       <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-10">
@@ -32,17 +37,23 @@ export function LegalPage({ docId }: LegalPageProps) {
 
       <nav className="mt-6 flex flex-wrap gap-4 text-sm text-white/40">
         {docId !== 'cgu' && (
-          <Link href="/legal/cgu" className="hover:text-amber-400">CGU</Link>
+          <Link href="/legal/cgu" className="hover:text-amber-400">
+            {tNav('cgu')}
+          </Link>
         )}
         {docId !== 'confidentialite' && (
-          <Link href="/legal/confidentialite" className="hover:text-amber-400">Confidentialité</Link>
+          <Link href="/legal/confidentialite" className="hover:text-amber-400">
+            {tNav('confidentialite')}
+          </Link>
         )}
         {docId !== 'mentions-legales' && (
-          <Link href="/legal/mentions-legales" className="hover:text-amber-400">Mentions légales</Link>
+          <Link href="/legal/mentions-legales" className="hover:text-amber-400">
+            {tNav('mentionsLegales')}
+          </Link>
         )}
       </nav>
 
-      <p className="sr-only">{TITLES[docId]}</p>
+      <p className="sr-only">{t(titleKey)}</p>
     </div>
   )
 }
