@@ -10,6 +10,16 @@ find scripts -name '*.sh' -exec sed -i 's/\r$//' {} + 2>/dev/null || true
 
 echo "=== Build image ==="
 docker build -t le-pillaveur:latest . 2>&1 | tail -20
+docker build --target builder -t le-pillaveur:builder . >/dev/null
+
+echo "=== Prisma migrate deploy ==="
+docker run --rm \
+  -v le-pillaveur-db:/app/prisma \
+  -v "$APP_DIR/prisma/migrations:/app/prisma/migrations:ro" \
+  -v "$APP_DIR/prisma/schema.prisma:/app/prisma/schema.prisma:ro" \
+  -e DATABASE_URL=file:/app/prisma/prod.db \
+  le-pillaveur:builder \
+  npx prisma migrate deploy
 
 echo "=== Migration user_activity ==="
 MIG=20250712154207_user_activity
