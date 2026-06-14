@@ -89,8 +89,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+const SSR_AUTH_FALLBACK: AuthContextValue = {
+  user: null,
+  loading: true,
+  login: async () => 'Non disponible',
+  register: async () => 'Non disponible',
+  logout: async () => {},
+  refresh: async () => {},
+}
+
 export function useAuth() {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth doit être utilisé dans AuthProvider')
+  if (!ctx) {
+    if (typeof window === 'undefined') {
+      return SSR_AUTH_FALLBACK
+    }
+    throw new Error('useAuth doit être utilisé dans AuthProvider')
+  }
   return ctx
 }
