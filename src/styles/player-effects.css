@@ -1,13 +1,11 @@
 /* Styles CSS pour les noms de joueurs */
 
-/* Style par défaut pour les noms de joueurs normaux */
 .player-name-default {
   color: #ffffff;
   font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* En mode clair */
 @media (prefers-color-scheme: light) {
   .player-name-default {
     color: #1f2937;
@@ -15,7 +13,30 @@
   }
 }
 
-/* Styles pour les effets spéciaux */
+/* Mise en page inline — évite les taches quand le pseudo est dans du texte ou du flex */
+.player-name {
+  vertical-align: baseline;
+  line-height: inherit;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.player-name-special {
+  display: inline;
+  max-width: 100%;
+}
+
+.player-name-special.truncate,
+.player-name-special.min-w-0 {
+  display: inline-block;
+  vertical-align: bottom;
+}
+
 @keyframes gradientFlow {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -33,117 +54,118 @@
   100% { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00; }
 }
 
-/* Effet feu */
 .special-player-name-fire {
   background: linear-gradient(90deg, #ff4500, #ff8c00, #ff4500);
   background-size: 200% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 2s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 8px rgba(255, 69, 0, 0.7);
 }
 
-/* Effet glace */
 .special-player-name-ice {
   background: linear-gradient(90deg, #00ffff, #87ceeb, #00ffff);
   background-size: 200% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 4s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
 }
 
-/* Effet éclair */
 .special-player-name-lightning {
   background: linear-gradient(90deg, #ffff00, #ffd700, #ffff00);
   background-size: 200% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: lightning 1s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 15px rgba(255, 255, 0, 0.9);
 }
 
-/* Effet arc-en-ciel */
 .special-player-name-rainbow {
   background: linear-gradient(90deg, #ff0000, #ffa500, #ffff00, #00ff00, #0000ff, #4b0082, #ee82ee, #ff0000);
   background-size: 400% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 6s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
 }
 
-/* Effet néon */
 .special-player-name-neon {
   background: linear-gradient(90deg, #ff00ff, #ff69b4, #ff00ff);
   background-size: 200% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 3s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 10px rgba(255, 0, 255, 0.8);
 }
 
-/* Effet galaxie */
 .special-player-name-galaxy {
   background: linear-gradient(90deg, #4b0082, #8a2be2, #9370db, #4b0082);
   background-size: 300% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 5s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 12px rgba(75, 0, 130, 0.8);
 }
 
-/* Effet matrix */
 .special-player-name-matrix {
+  display: inline;
   color: #00ff00;
+  -webkit-text-fill-color: #00ff00;
   animation: matrix 2s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 5px #00ff00;
 }
 
-/* Effet coucher de soleil */
 .special-player-name-sunset {
   background: linear-gradient(90deg, #ff6b35, #f7931e, #ffd23f, #ff6b35);
   background-size: 200% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 4s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 8px rgba(255, 107, 53, 0.6);
 }
 
-/* Effet océan */
 .special-player-name-ocean {
   background: linear-gradient(90deg, #006994, #0099cc, #00bfff, #006994);
   background-size: 200% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 3s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 10px rgba(0, 105, 148, 0.7);
 }
 
-/* Pour la rétrocompatibilité - anciens effets */
 .special-player-name-red {
   background: linear-gradient(90deg, #ff0000, #ff6b6b, #ff0000);
   background-size: 200% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 3s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 5px rgba(255, 0, 0, 0.3);
@@ -155,6 +177,7 @@
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 3s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 5px rgba(0, 102, 255, 0.3);
@@ -166,6 +189,7 @@
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 3s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
@@ -177,6 +201,7 @@
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 3s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 5px rgba(80, 200, 120, 0.3);
@@ -188,6 +213,7 @@
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 3s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 5px rgba(128, 0, 128, 0.3);
@@ -199,47 +225,47 @@
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   animation: gradientFlow 3s linear infinite;
   font-weight: bold;
   text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
 }
 
-/* Fallback styles pour les appareils qui ne supportent pas background-clip */
 @supports not (background-clip: text) {
-  .special-player-name-red { 
-    color: #ff6666; 
+  .special-player-name-red {
+    color: #ff6666;
     text-shadow: 0 0 10px rgba(255, 102, 102, 0.8);
   }
-  .special-player-name-blue { 
-    color: #66aaff; 
+  .special-player-name-blue {
+    color: #66aaff;
     text-shadow: 0 0 10px rgba(102, 170, 255, 0.8);
   }
-  .special-player-name-rainbow { 
-    color: #ff66ff; 
+  .special-player-name-rainbow {
+    color: #ff66ff;
     text-shadow: 0 0 10px rgba(255, 102, 255, 0.8);
   }
-  .special-player-name-gold { 
-    color: #ffdd44; 
+  .special-player-name-gold {
+    color: #ffdd44;
     text-shadow: 0 0 10px rgba(255, 221, 68, 0.8);
   }
-  .special-player-name-fire { 
-    color: #ff7744; 
+  .special-player-name-fire {
+    color: #ff7744;
     text-shadow: 0 0 10px rgba(255, 119, 68, 0.8);
   }
-  .special-player-name-neon { 
-    color: #44ff44; 
+  .special-player-name-neon {
+    color: #44ff44;
     text-shadow: 0 0 10px rgba(68, 255, 68, 0.8);
   }
-  .special-player-name-emerald { 
-    color: #66dd88; 
+  .special-player-name-emerald {
+    color: #66dd88;
     text-shadow: 0 0 10px rgba(102, 221, 136, 0.8);
   }
-  .special-player-name-purple { 
-    color: #bb66bb; 
+  .special-player-name-purple {
+    color: #bb66bb;
     text-shadow: 0 0 10px rgba(187, 102, 187, 0.8);
   }
-  .special-player-name-cyber { 
-    color: #44ffff; 
+  .special-player-name-cyber {
+    color: #44ffff;
     text-shadow: 0 0 10px rgba(68, 255, 255, 0.8);
   }
 }

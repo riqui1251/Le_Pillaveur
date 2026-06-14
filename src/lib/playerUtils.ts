@@ -24,7 +24,8 @@ export function formatPlayerNameHtml(
   const prefix = options?.compliment
     ? `"${escapeHtml(options.compliment)}" `
     : '';
-  return `<span class="${classAttr} font-semibold">${prefix}${safeName}</span>`;
+  const specialClass = effectClass ? ' player-name-special' : '';
+  return `<span class="player-name${specialClass} ${classAttr} font-semibold">${prefix}${safeName}</span>`;
 }
 
 // Fonction pour convertir les classes Tailwind en couleurs CSS

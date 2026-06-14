@@ -1,28 +1,42 @@
 import React from 'react';
 import { Player } from '@/lib/players';
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils';
+import { cn } from '@/lib/utils';
 
-// Ré-exporter les fonctions pour la compatibilité
 export { isSpecialPlayer, getSpecialEffectClass };
 
 interface PlayerNameProps {
-  player: Player | string | any;
+  player: Player | string | { name: string; preferences?: { specialEffect?: string | null } };
   className?: string;
 }
 
+function cleanClassNameForEffect(className: string): string {
+  return className
+    .split(/\s+/)
+    .filter((token) => token && !token.startsWith('text-') && token !== 'block')
+    .join(' ');
+}
+
 export function PlayerName({ player, className = '' }: PlayerNameProps) {
-  // Obtenir la classe d'effet spécial si applicable
   const effectClass = getSpecialEffectClass(player);
-  
-  // Obtenir le nom du joueur
   const playerName = typeof player === 'string' ? player : player?.name;
-  
-  // Utiliser la classe par défaut si aucun effet spécial
+  const hasEffect = Boolean(effectClass);
   const finalClass = effectClass || 'player-name-default';
-  
+
+  const resolvedClassName = hasEffect
+    ? cleanClassNameForEffect(className)
+    : className.replace(/\bblock\b/g, 'inline-block');
+
   return (
-    <span className={`${finalClass} ${className}`}>
+    <span
+      className={cn(
+        'player-name',
+        hasEffect && 'player-name-special',
+        finalClass,
+        resolvedClassName
+      )}
+    >
       {playerName}
     </span>
   );
-} 
+}

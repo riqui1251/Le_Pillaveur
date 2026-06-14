@@ -2493,7 +2493,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           )}
         </div>
         <div
-          className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-muted-foreground [&_span]:inline [&_strong]:text-slate-300"
+          className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-muted-foreground [&_.player-name-special]:align-baseline [&_strong]:text-slate-300"
           dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(effectHtml) }}
         />
       </div>
@@ -3054,7 +3054,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </span>
         <div className="min-w-0 flex-1 text-center">
           <p className="mb-0.5 text-[10px] uppercase tracking-widest text-white/40">Au tour de</p>
-          <PlayerName player={players[currentPlayer]} className="block truncate font-bold text-white" />
+          <div className="truncate font-bold">
+            <PlayerName player={players[currentPlayer]} />
+          </div>
         </div>
         <span className="shrink-0 text-xs font-medium text-white/40">
           {players[currentPlayer]?.position != null ? players[currentPlayer].position + 1 : '—'}/{boardSize}
