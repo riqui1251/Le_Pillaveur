@@ -10,6 +10,11 @@ import {
   sessionCookieOptions,
 } from '@/lib/auth-server'
 import { createUniqueAccountCode } from '@/lib/account-code'
+import {
+  DISPLAY_NAME_TAKEN_ERROR,
+  isDisplayNameTaken,
+  isValidDisplayName,
+} from '@/lib/display-name'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 
 const REGISTER_LIMIT = 5
@@ -34,13 +39,17 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
-    if (!displayName || displayName.length > 30) {
+    if (!isValidDisplayName(displayName)) {
       return NextResponse.json({ error: 'Pseudo requis (30 caractères max)' }, { status: 400 })
     }
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing?.passwordHash) {
       return NextResponse.json({ error: 'Cet email est déjà utilisé' }, { status: 409 })
+    }
+
+    if (await isDisplayNameTaken(displayName, existing?.id)) {
+      return NextResponse.json({ error: DISPLAY_NAME_TAKEN_ERROR }, { status: 409 })
     }
 
     const passwordHash = await hashPassword(password)

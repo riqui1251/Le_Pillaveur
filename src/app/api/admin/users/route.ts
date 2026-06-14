@@ -9,6 +9,11 @@ import {
   normalizeRole,
 } from '@/lib/roles'
 import { prisma } from '@/lib/prisma'
+import {
+  DISPLAY_NAME_TAKEN_ERROR,
+  isDisplayNameTaken,
+  isValidDisplayName,
+} from '@/lib/display-name'
 import { getIpsBySubjectKeys, subjectKeyFor } from '@/lib/ip-history-server'
 
 function serializeUser(user: {
@@ -143,7 +148,7 @@ export async function PATCH(request: Request) {
     }
 
     if (displayName !== undefined) {
-      if (!displayName || displayName.length > 30) {
+      if (!isValidDisplayName(displayName)) {
         return NextResponse.json({ error: 'Pseudo invalide' }, { status: 400 })
       }
       if (userId !== actor.id && !canManageUsers(actor.role)) {
@@ -157,6 +162,9 @@ export async function PATCH(request: Request) {
           { error: 'Seul un grade supérieur peut modifier un pair ou un supérieur' },
           { status: 403 }
         )
+      }
+      if (await isDisplayNameTaken(displayName, userId)) {
+        return NextResponse.json({ error: DISPLAY_NAME_TAKEN_ERROR }, { status: 409 })
       }
     }
 
