@@ -135,6 +135,16 @@
       "emptyTitle": "Aucun jeu trouvé",
       "emptyHint": "Essayez un autre mot-clé."
     },
+    "jeuxOnline": {
+      "title": "Jeux en ligne",
+      "subtitle": "Rejoins un lobby ouvert ou choisis un jeu pour en créer un nouveau.",
+      "connectedAs": "Joueur connecté :"
+    },
+    "playMode": {
+      "label": "Mode de jeu",
+      "local": "Local",
+      "online": "En ligne"
+    },
     "selectedPlayers": {
       "ready": "{count, plural, one {# joueur prêt} other {# joueurs prêts}}",
       "none": "Aucun joueur sélectionné",
@@ -1306,7 +1316,8 @@
       "defis": [
         {
           "text": "Fais 10 pompes",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Raconte une blague",
@@ -1322,11 +1333,13 @@
         },
         {
           "text": "Fais 10 squats",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Fais 30 secondes de gainage",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Mime un film sans parler",
@@ -1354,7 +1367,8 @@
         },
         {
           "text": "Fais le poirier contre un mur",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Fais deviner un mot sans parler",
@@ -1366,7 +1380,8 @@
         },
         {
           "text": "Fais 5 sauts de grenouille",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "Ne touche pas ton téléphone pendant 3 tours",

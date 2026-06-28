@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
 import {
@@ -16,7 +16,6 @@ import {
   Info,
   Network,
   Search,
-  RefreshCw,
   Shield,
   ShieldCheck,
   UserX,
@@ -1053,21 +1052,31 @@ export default function SupervisionPage() {
     t,
   ])
 
-  const loadAll = useCallback(async () => {
-    if (!user) return
-    setBusy(true)
-    setError(null)
+  const tRef = useRef(t)
+  const tErrorsRef = useRef(tErrors)
+  tRef.current = t
+  tErrorsRef.current = tErrors
+
+  const userId = user?.id
+  const userRole = user?.role
+
+  const loadAll = useCallback(async (silent = false) => {
+    if (!userId || !userRole) return
+    if (!silent) {
+      setBusy(true)
+      setError(null)
+    }
     try {
-      const analytics = canViewSupervisionAnalytics(user.role)
-      const bansAllowed = canViewSupervisionBans(user.role)
-      const feedbackAllowed = canViewUserFeedback(user.role)
+      const analytics = canViewSupervisionAnalytics(userRole)
+      const bansAllowed = canViewSupervisionBans(userRole)
+      const feedbackAllowed = canViewUserFeedback(userRole)
 
       const usersRes = await fetch('/api/admin/users', { credentials: 'include' })
       if (usersRes.status === 403) {
         router.replace('/compte')
         return
       }
-      if (!usersRes.ok) throw new Error(t('apiErrors.loadAccounts'))
+      if (!usersRes.ok) throw new Error(tRef.current('apiErrors.loadAccounts'))
 
       const usersData = await usersRes.json()
       setUsers(usersData.users ?? [])
@@ -1112,50 +1121,52 @@ export default function SupervisionPage() {
         setFeedbackItems([])
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : tErrors('generic'))
+      if (!silent) {
+        setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
+      }
     } finally {
-      setBusy(false)
+      if (!silent) setBusy(false)
     }
-  }, [router, user, t, tErrors])
+  }, [router, userId, userRole])
 
-  const loadUserHistory = useCallback(async (userId: string) => {
+  const loadUserHistory = useCallback(async (userIdToLoad: string) => {
     setHistoryLoading(true)
     setHistoryDetail(null)
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, { credentials: 'include' })
-      if (!res.ok) throw new Error(t('apiErrors.historyUnavailable'))
+      const res = await fetch(`/api/admin/users/${userIdToLoad}`, { credentials: 'include' })
+      if (!res.ok) throw new Error(tRef.current('apiErrors.historyUnavailable'))
       const data = await res.json()
       setHistoryDetail(data)
     } catch (e) {
-      setError(e instanceof Error ? e.message : tErrors('generic'))
+      setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
     } finally {
       setHistoryLoading(false)
     }
-  }, [t, tErrors])
+  }, [])
+
+  const initialTabSet = useRef(false)
 
   useEffect(() => {
     if (loading) return
     if (!user || !canAccessSupervision(user.role)) {
       router.replace('/compte')
-      return
     }
-    setActiveTab(defaultTab)
-    loadAll()
-  }, [user, loading, router, loadAll, defaultTab])
+  }, [user, loading, router])
 
   useEffect(() => {
-    if (!user || !showAnalytics) return
-    const refreshStats = async () => {
-      try {
-        const statsRes = await fetch('/api/admin/stats', { credentials: 'include' })
-        if (statsRes.ok) setStats(await statsRes.json())
-      } catch {
-        /* ignore background refresh errors */
-      }
+    if (loading || !user || !canAccessSupervision(user.role)) return
+    if (!initialTabSet.current) {
+      setActiveTab(defaultTab)
+      initialTabSet.current = true
     }
-    const id = window.setInterval(refreshStats, 60_000)
+  }, [user, loading, defaultTab])
+
+  useEffect(() => {
+    if (loading || !userId || !userRole || !canAccessSupervision(userRole)) return
+    void loadAll()
+    const id = window.setInterval(() => void loadAll(true), 15_000)
     return () => window.clearInterval(id)
-  }, [user, showAnalytics])
+  }, [loading, userId, userRole, loadAll])
 
   const handleIpClick = useCallback(async (ip: string) => {
     setAccountSearch(ip)
@@ -1352,28 +1363,18 @@ export default function SupervisionPage() {
     <div className="w-full min-w-0 overflow-x-hidden">
       <div className="mx-auto max-w-6xl space-y-4 px-3 pb-24 pt-3 sm:space-y-6 sm:px-6 sm:pb-16 sm:pt-6">
       {/* En-tête mobile : pas de titre dupliqué (déjà dans la navbar) */}
-      <div className="space-y-3 md:hidden">
+      <div className="md:hidden">
         <p className="break-words text-sm leading-relaxed text-white/50">{subtitle}</p>
-        <Button variant="outline" onClick={loadAll} disabled={busy} className="h-11 w-full">
-          <RefreshCw className={`mr-2 h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
-          {t('refresh')}
-        </Button>
       </div>
 
       {/* En-tête desktop */}
-      <div className="hidden flex-col gap-3 md:flex md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <Shield className="h-6 w-6 shrink-0 text-amber-400" />
-            <h1 className="text-2xl font-bold text-white">{t('title')}</h1>
-            <RoleBadge role={user.role} compact />
-          </div>
-          <p className="max-w-2xl break-words text-sm leading-relaxed text-white/50">{subtitle}</p>
+      <div className="hidden md:block">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <Shield className="h-6 w-6 shrink-0 text-amber-400" />
+          <h1 className="text-2xl font-bold text-white">{t('title')}</h1>
+          <RoleBadge role={user.role} compact />
         </div>
-        <Button variant="outline" onClick={loadAll} disabled={busy} className="shrink-0">
-          <RefreshCw className={`mr-2 h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
-          {t('refresh')}
-        </Button>
+        <p className="max-w-2xl break-words text-sm leading-relaxed text-white/50">{subtitle}</p>
       </div>
 
       <Alert className="border-amber-500/25 bg-amber-500/5 p-3 sm:p-4">

@@ -106,8 +106,14 @@ const CASE_TYPE_POOL: { type: CaseType; weight: number }[] = [
   { type: 'pile-face', weight: 2 },
 ]
 
-function getDefis(t: PetitBuveurT): { text: string; drinks: number }[] {
-  return t.raw('defis') as { text: string; drinks: number }[]
+type DefiItem = { text: string; drinks: number; verifiableOnline?: boolean }
+
+function getDefis(t: PetitBuveurT): DefiItem[] {
+  return t.raw('defis') as DefiItem[]
+}
+
+export function getOnlineVerifiableDefis(t: PetitBuveurT): DefiItem[] {
+  return getDefis(t).filter((defi) => defi.verifiableOnline !== false)
 }
 
 export function getDefiWheelChallenges(t: PetitBuveurT): string[] {

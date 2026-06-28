@@ -1170,10 +1170,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       lastMoveDelta: lastMoveDeltaRef.current,
       lastCase,
     }, t, formatPlayer)
-    if (caseType.type === 'solo') {
-      const soloActor = updated[currentPlayer]
-      if (soloActor) addPlayerDrinks(soloActor.id, caseType.effect, updated)
-    }
     setPlayers(updated)
     const actor = updated[currentPlayer]
     if (actor) {

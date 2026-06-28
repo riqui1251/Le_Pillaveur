@@ -4,6 +4,7 @@ import {
   type PlayerPreferences,
   getStoredPlayers,
   savePlayers,
+  dedupePlayersById,
 } from '@/lib/players'
 
 function playerKey(player: Player): string {
@@ -76,7 +77,7 @@ export function mergePlayerLists(local: Player[], cloud: Player[]): Player[] {
     byKey.set(key, existing ? mergePlayerPair(existing, player) : player)
   }
 
-  return [...byKey.values()].sort((a, b) => a.createdAt - b.createdAt)
+  return dedupePlayersById([...byKey.values()].sort((a, b) => a.createdAt - b.createdAt))
 }
 
 export async function fetchCloudPlayers(): Promise<Player[]> {

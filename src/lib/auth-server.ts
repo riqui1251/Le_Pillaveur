@@ -23,9 +23,11 @@ export type AuthUser = {
   id: string
   email: string
   displayName: string
+  onlineDisplayName: string | null
   accountCode: string
   role: UserRole
   locale: string
+  playMode: 'local' | 'online'
 }
 
 function sessionExpiry(): Date {
@@ -88,14 +90,20 @@ export async function getUserFromSessionToken(token: string | undefined): Promis
 
   const role = normalizeRole(user.role)
   const accountCode = user.accountCode ?? (await ensureUserAccountCode(user.id))
+  const normalizedOnlineName =
+    typeof user.name === 'string' && user.name.trim().length > 0 && user.name.trim() !== user.displayName
+      ? user.name.trim()
+      : null
 
   return {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
+    onlineDisplayName: normalizedOnlineName,
     accountCode,
     role,
     locale: normalizeAppLocale(user.locale),
+    playMode: user.playMode === 'online' ? 'online' : 'local',
   }
 }
 

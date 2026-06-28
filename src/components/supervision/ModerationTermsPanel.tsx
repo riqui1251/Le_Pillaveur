@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,23 +40,26 @@ export function ModerationTermsPanel() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
+  const tRef = useRef(t)
+  tRef.current = t
+
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const res = await fetch('/api/admin/moderation-terms', { credentials: 'include' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? t('loadError'))
+      if (!res.ok) throw new Error(data.error ?? tRef.current('loadError'))
       setStats(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('loadError'))
+      setError(err instanceof Error ? err.message : tRef.current('loadError'))
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const addTerm = async () => {

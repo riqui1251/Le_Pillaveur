@@ -93,6 +93,7 @@ export const PLAYER_FRAMES: { id: PlayerIconFrame; label: string }[] = [
 export interface Player {
   id: string;
   name: string;
+  onlineEnabled?: boolean;
   createdAt: number;
   stats: PlayerStats;
   preferences: PlayerPreferences;
@@ -169,24 +170,17 @@ export function getStoredPlayers(): Player[] {
   
   try {
     const parsed: Player[] = JSON.parse(stored);
-    // Assainir: s'assurer que chaque joueur a un id unique
-    const seen = new Set<string>();
     let changed = false;
     const sanitized = parsed.map((p) => {
-      let id = p.id;
-      if (!id || seen.has(id)) {
-        id = generatePlayerId();
-        changed = true;
-      }
-      seen.add(id);
       const cleanName = sanitizePlayerName(p.name);
       if (cleanName !== p.name) changed = true;
-      return { ...p, id, name: cleanName };
+      return { ...p, name: cleanName };
     });
-    if (changed) {
-      try { savePlayers(sanitized); } catch {}
+    const deduped = dedupePlayersById(sanitized);
+    if (changed || deduped.length !== sanitized.length) {
+      try { savePlayers(deduped); } catch {}
     }
-    return sanitized;
+    return deduped;
   } catch {
     return [];
   }
@@ -195,7 +189,7 @@ export function getStoredPlayers(): Player[] {
 export function savePlayers(players: Player[]): void {
   const storage = getSafeStorage();
   if (!storage) return;
-  storage.setItem(STORAGE_KEY, JSON.stringify(players));
+  storage.setItem(STORAGE_KEY, JSON.stringify(dedupePlayersById(players)));
 }
 
 export function generatePlayerId(): string {
@@ -209,6 +203,40 @@ export function generatePlayerId(): string {
   return `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Fusionne les entrées partageant le même id (données cloud/local corrompues). */
+export function dedupePlayersById(players: Player[]): Player[] {
+  const byId = new Map<string, Player>()
+
+  for (const raw of players) {
+    const id = raw.id?.trim() || generatePlayerId()
+    const player = { ...raw, id }
+    const existing = byId.get(id)
+    if (!existing) {
+      byId.set(id, player)
+      continue
+    }
+    const existingLast = existing.stats.lastPlayed ?? existing.createdAt
+    const currentLast = player.stats.lastPlayed ?? player.createdAt
+    const newer = currentLast >= existingLast ? player : existing
+    const older = currentLast >= existingLast ? existing : player
+    byId.set(id, {
+      ...newer,
+      createdAt: Math.min(existing.createdAt, player.createdAt),
+      stats: {
+        gamesPlayed: Math.max(existing.stats.gamesPlayed, player.stats.gamesPlayed),
+        wins: Math.max(existing.stats.wins, player.stats.wins),
+        totalDrinks: Math.max(existing.stats.totalDrinks, player.stats.totalDrinks),
+        favoriteGame: newer.stats.favoriteGame ?? older.stats.favoriteGame,
+        lastPlayed: Math.max(existingLast, currentLast) || undefined,
+        gameStats: { ...older.stats.gameStats, ...newer.stats.gameStats },
+      },
+      preferences: { ...older.preferences, ...newer.preferences },
+    })
+  }
+
+  return [...byId.values()].sort((a, b) => a.createdAt - b.createdAt)
+}
+
 export function addPlayer(name: string): Player[] {
   const validation = validateLocalPlayerName(name, PLAYER_NAME_MAX_LENGTH);
   if (!validation.ok) return getStoredPlayers();
@@ -217,6 +245,7 @@ export function addPlayer(name: string): Player[] {
   const newPlayer: Player = {
     id: generatePlayerId(),
     name: sanitizePlayerName(validation.value),
+    onlineEnabled: false,
     createdAt: Date.now(),
     stats: {
       gamesPlayed: 0,

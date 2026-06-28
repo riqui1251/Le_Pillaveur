@@ -5,6 +5,7 @@ import { LocalizedGameMeta } from "@/lib/games-i18n"
 import { cn } from "@/lib/utils"
 import { ReactNode } from "react"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
+import { useAuth } from "@/hooks/useAuth"
 
 interface GameCardProps {
   game: LocalizedGameMeta
@@ -13,11 +14,14 @@ interface GameCardProps {
 
 export function GameCard({ game, icon }: GameCardProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const { selectedIds } = useSelectedPlayers()
+  const isOnline = user?.playMode === "online"
   const from = game.colorFrom || game.fallbackColor
   const to = game.colorTo || game.fallbackColor
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isOnline) return
     if (selectedIds.length === 0) {
       e.preventDefault()
       router.push("/joueurs")

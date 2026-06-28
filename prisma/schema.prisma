@@ -12,6 +12,7 @@ model User {
   email            String?   @unique
   passwordHash     String    @default("")
   displayName      String    @default("Joueur")
+  onlineDisplayName String?
   accountCode      String?   @unique
   role             String    @default("user")
   playMode         String    @default("local")
@@ -36,12 +37,44 @@ model User {
   stats            Stats[]
   achievements     Achievement[]
   sessions         Session[]
+  hostedRooms      OnlineRoom[]       @relation("HostedRooms")
+  roomMemberships  OnlineRoomMember[]
   banEvents            AccountBanEvent[]    @relation("BanTarget")
   bansIssued           AccountBanEvent[]    @relation("BanActor")
   passwordResetTokens  PasswordResetToken[]
   feedback             UserFeedback[]
   nameModerationAttempts NameModerationAttempt[]
   nameModerationWarnedAt DateTime?
+}
+
+model OnlineRoom {
+  id                    String   @id @default(cuid())
+  code                  String   @unique
+  hostUserId            String
+  host                  User     @relation("HostedRooms", fields: [hostUserId], references: [id], onDelete: Cascade)
+  status                String   @default("waiting")
+  gameId                String?
+  selectedMemberIdsJson String?
+  settingsJson          String?
+  gameStateJson         String?
+  stateVersion          Int      @default(0)
+  currentTurnUserId     String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  members               OnlineRoomMember[]
+}
+
+model OnlineRoomMember {
+  id         String     @id @default(cuid())
+  roomId     String
+  room       OnlineRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isReady    Boolean    @default(false)
+  joinedAt   DateTime   @default(now())
+  lastSeenAt DateTime   @default(now())
+
+  @@unique([roomId, userId])
 }
 
 model AccountBanEvent {
@@ -179,4 +212,40 @@ model NameModerationAttempt {
   @@index([visitorId, createdAt])
   @@index([reason, createdAt])
   @@index([createdAt])
+}
+
+model OnlineLobby {
+  id         String              @id @default(cuid())
+  game       String
+  visibility String
+  difficulty String
+  hostUserId String
+  status     String              @default("waiting")
+  stateJson  String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  players    OnlineLobbyPlayer[]
+
+  @@index([status, createdAt])
+  @@index([visibility, createdAt])
+}
+
+model OnlineLobbyPlayer {
+  id                 String   @id @default(cuid())
+  lobbyId            String
+  lobby              OnlineLobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  userId             String?
+  displayName        String
+  seatIndex          Int
+  isBot              Boolean  @default(false)
+  reconnectTokenHash String
+  status             String   @default("connected")
+  lastSeenAt         DateTime @default(now())
+  disconnectedAt     DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([lobbyId, seatIndex])
+  @@index([lobbyId, status])
+  @@index([userId])
 }

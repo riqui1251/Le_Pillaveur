@@ -14,9 +14,11 @@ export type AuthUser = {
   id: string
   email: string
   displayName: string
+  onlineDisplayName: string | null
   accountCode: string
   role: 'user' | 'moderator' | 'admin' | 'superadmin' | 'fondateur'
   locale: string
+  playMode: 'local' | 'online'
 }
 
 type AuthContextValue = {
@@ -26,6 +28,7 @@ type AuthContextValue = {
   register: (email: string, password: string, displayName: string, locale?: string) => Promise<string | null>
   logout: () => Promise<void>
   refresh: () => Promise<void>
+  setPlayMode: (mode: 'local' | 'online') => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -81,9 +84,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
+  const setPlayMode = useCallback(async (mode: 'local' | 'online') => {
+    const res = await fetch('/api/auth/mode', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ mode }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) return data.error ?? 'Erreur'
+    setUser((prev) => (prev ? { ...prev, playMode: mode } : prev))
+    return null
+  }, [])
+
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, refresh }),
-    [user, loading, login, register, logout, refresh]
+    () => ({ user, loading, login, register, logout, refresh, setPlayMode }),
+    [user, loading, login, register, logout, refresh, setPlayMode]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -96,6 +112,7 @@ const SSR_AUTH_FALLBACK: AuthContextValue = {
   register: async () => 'Non disponible',
   logout: async () => {},
   refresh: async () => {},
+  setPlayMode: async () => 'Non disponible',
 }
 
 export function useAuth() {

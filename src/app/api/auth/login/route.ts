@@ -91,9 +91,14 @@ export async function POST(request: Request) {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
+        onlineDisplayName:
+          typeof user.name === 'string' && user.name.trim().length > 0 && user.name.trim() !== user.displayName
+            ? user.name.trim()
+            : null,
         accountCode,
         role,
         locale: userLocale,
+        playMode: user.playMode === 'online' ? 'online' : 'local',
       },
     })
     response.cookies.set(sessionCookieOptions(token))

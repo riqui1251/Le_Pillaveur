@@ -38,7 +38,7 @@ export function AccountInfo() {
     () => Object.fromEntries(games.map((g) => [g.id, g.title])),
     [games]
   )
-  const { user, logout } = useAuth()
+  const { user, logout, refresh } = useAuth()
   const { players, loading, removePlayer, updatePlayer, updatePlayerPreferences } = usePlayers()
   const [totalGames, setTotalGames] = useState(0)
   const [totalDrinks, setTotalDrinks] = useState(0)
@@ -49,6 +49,9 @@ export function AccountInfo() {
   const [codeCopied, setCodeCopied] = useState(false)
   const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null)
   const [nameModerationWarning, setNameModerationWarning] = useState(false)
+  const [onlineName, setOnlineName] = useState('')
+  const [onlineNameError, setOnlineNameError] = useState<string | null>(null)
+  const [onlineNameSaved, setOnlineNameSaved] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -68,6 +71,10 @@ export function AccountInfo() {
       cancelled = true
     }
   }, [user?.id])
+
+  useEffect(() => {
+    setOnlineName(user?.onlineDisplayName ?? user?.displayName ?? '')
+  }, [user?.id, user?.onlineDisplayName, user?.displayName])
 
   const startRename = (player: Player) => {
     setConfirmDelete(null)
@@ -112,6 +119,28 @@ export function AccountInfo() {
     } catch {
       /* ignore */
     }
+  }
+
+  const saveOnlineName = async () => {
+    const value = onlineName.trim()
+    if (!value) return
+    setOnlineNameError(null)
+    setOnlineNameSaved(false)
+    const response = await fetch('/api/auth/online-display-name', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ onlineDisplayName: value }),
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      setOnlineNameError(data.error ?? 'Impossible d’enregistrer le pseudo online')
+      return
+    }
+    setOnlineName(value)
+    await refresh()
+    setOnlineNameSaved(true)
+    window.setTimeout(() => setOnlineNameSaved(false), 1500)
   }
 
   useEffect(() => {
@@ -368,6 +397,39 @@ export function AccountInfo() {
         onOpenChange={(open) => { if (!open) setCustomizingPlayer(null) }}
         onSave={updatePlayerPreferences}
       />
+
+      <section>
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
+          <Cloud className="h-4 w-4 text-cyan-300" />
+          Pseudo online (compte)
+        </div>
+        <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
+          <p className="mb-2 text-xs text-cyan-100/80">
+            Ce pseudo est utilisé automatiquement pour les parties online (1 joueur compte). Les mêmes restrictions de pseudo s’appliquent.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              value={onlineName}
+              onChange={(e) => {
+                setOnlineName(e.target.value)
+                if (onlineNameError) setOnlineNameError(null)
+              }}
+              maxLength={30}
+              placeholder="Ton pseudo online"
+              className="h-9 border-cyan-300/25 bg-black/20 text-sm text-white placeholder:text-white/35"
+            />
+            <button
+              type="button"
+              onClick={() => { void saveOnlineName() }}
+              className="rounded-lg bg-cyan-500/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/35"
+            >
+              Enregistrer
+            </button>
+          </div>
+          {onlineNameError && <p className="mt-2 text-xs text-orange-300">{onlineNameError}</p>}
+          {onlineNameSaved && <p className="mt-2 text-xs text-emerald-300">Pseudo online enregistré.</p>}
+        </div>
+      </section>
 
       <section>
         <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100/80">

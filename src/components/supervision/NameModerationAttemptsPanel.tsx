@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle } from 'lucide-react'
@@ -40,6 +40,9 @@ export function NameModerationAttemptsPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const tRef = useRef(t)
+  tRef.current = t
+
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -48,18 +51,18 @@ export function NameModerationAttemptsPanel() {
         credentials: 'include',
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? t('attemptsLoadError'))
+      if (!res.ok) throw new Error(data.error ?? tRef.current('attemptsLoadError'))
       setAttempts(data.attempts ?? [])
       setFlaggedUsers(data.flaggedUsers ?? [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('attemptsLoadError'))
+      setError(err instanceof Error ? err.message : tRef.current('attemptsLoadError'))
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const formatDate = (iso: string) =>

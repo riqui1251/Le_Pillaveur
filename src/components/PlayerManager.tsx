@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePlayers } from '../hooks/usePlayers';
 import { Button } from './ui/button';
@@ -13,9 +13,11 @@ import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer';
 import { Player, getPlayerNameValidationError } from '@/lib/players';
 import { nameValidationI18nKey } from '@/lib/name-moderation';
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PlayerManagerProps {
   onPlayersSelected: (selectedPlayers: string[]) => void;
+  onStartOnline?: () => void;
   minPlayers?: number;
   hideRemoveButtons?: boolean;
   variant?: 'default' | 'hub';
@@ -23,17 +25,26 @@ interface PlayerManagerProps {
 
 const HUB_CARD = 'bg-white/[0.04] border-white/10 backdrop-blur-md shadow-lg';
 
-export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveButtons = false, variant = 'default' }: PlayerManagerProps) {
+export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2, hideRemoveButtons = false, variant = 'default' }: PlayerManagerProps) {
   const t = useTranslations('players');
   const tCommon = useTranslations('common.nameValidation');
   const isHub = variant === 'hub';
   const cardClass = isHub ? HUB_CARD : 'shadow-md';
+  const { user, refresh, setPlayMode } = useAuth();
   const { players, loading, addPlayer, removePlayer, updatePlayerPreferences } = usePlayers();
 
   const [newPlayerName, setNewPlayerName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null);
+  const [onlineName, setOnlineName] = useState('');
+  const [onlineNameError, setOnlineNameError] = useState<string | null>(null);
+  const [onlineLoading, setOnlineLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setOnlineName((prev) => prev || user.onlineDisplayName || user.displayName || '');
+  }, [user?.id, user?.onlineDisplayName, user?.displayName]);
 
   const handleAddPlayer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +81,40 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
     onPlayersSelected(selectedPlayerIds);
   };
 
+  const handleSaveOnlineName = async () => {
+    const value = onlineName.trim();
+    if (!value || !user) return false;
+    setOnlineNameError(null);
+    setOnlineLoading(true);
+    try {
+      const response = await fetch('/api/auth/online-display-name', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ onlineDisplayName: value }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setOnlineNameError(data.error ?? 'Pseudo online invalide');
+        return false;
+      }
+      await refresh();
+      return true;
+    } finally {
+      setOnlineLoading(false);
+    }
+  };
+
+  const handleStartOnline = async () => {
+    if (!user || !onStartOnline) return;
+    if (!user.onlineDisplayName) {
+      const ok = await handleSaveOnlineName();
+      if (!ok) return;
+    }
+    await setPlayMode('online');
+    onStartOnline();
+  };
+
   if (loading) {
     return (
       <div className={`flex items-center justify-center rounded-2xl border p-12 ${isHub ? HUB_CARD : ''}`}>
@@ -87,7 +132,9 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
     <>
       <div className="space-y-6 pb-28">
         <Card className={`p-4 ${cardClass}`}>
-          <h2 className="mb-4 text-lg font-semibold md:text-xl">{t('addTitle')}</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold md:text-xl">{t('addTitle')}</h2>
+          </div>
           <form onSubmit={handleAddPlayer} className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Input
@@ -111,6 +158,54 @@ export function PlayerManager({ onPlayersSelected, minPlayers = 2, hideRemoveBut
               </p>
             )}
           </form>
+          {onStartOnline && (
+            <div className="mt-4 rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3">
+              {!user ? (
+                <p className="text-sm text-cyan-100/90">Connexion requise pour jouer en ligne.</p>
+              ) : (
+                <>
+                  {!user.onlineDisplayName && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-cyan-100/85">
+                        Crée ton pseudo online (lié au compte, modifiable plus tard dans Compte).
+                      </p>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Input
+                          value={onlineName}
+                          onChange={(e) => {
+                            setOnlineName(e.target.value);
+                            if (onlineNameError) setOnlineNameError(null);
+                          }}
+                          maxLength={30}
+                          placeholder="Pseudo online"
+                          className="h-9 border-cyan-300/30 bg-black/20"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => { void handleSaveOnlineName(); }}
+                          disabled={!onlineName.trim() || onlineLoading}
+                          className="bg-cyan-500 text-black hover:bg-cyan-400"
+                        >
+                          Enregistrer
+                        </Button>
+                      </div>
+                      {onlineNameError && <p className="text-xs text-orange-300">{onlineNameError}</p>}
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <Button
+                      type="button"
+                      onClick={() => { void handleStartOnline(); }}
+                      className="bg-cyan-500 text-black hover:bg-cyan-400"
+                      disabled={onlineLoading}
+                    >
+                      Aller aux jeux en ligne
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </Card>
 
         <div className="space-y-4">

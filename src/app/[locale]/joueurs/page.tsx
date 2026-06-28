@@ -36,6 +36,10 @@ export default function JoueursPage() {
             select(ids)
             router.push("/jeux")
           }}
+          onStartOnline={() => {
+            select([])
+            router.push('/jeux')
+          }}
           minPlayers={2}
           hideRemoveButtons
         />

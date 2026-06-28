@@ -7,7 +7,7 @@ export default function GamesLayout({
 }: {
   children: React.ReactNode
 }) {
-  useRequireSelectedPlayers()
+  useRequireSelectedPlayers("/joueurs", { skipWhenOnline: true })
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-1 px-2 py-1 sm:px-4">

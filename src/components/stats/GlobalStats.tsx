@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import { useFormatter, useTranslations } from 'next-intl'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface StatsData {
@@ -22,7 +22,11 @@ export default function GlobalStats() {
   const t = useTranslations('stats')
   const tCommon = useTranslations('common')
   const tErrors = useTranslations('errors')
-  const format = useFormatter()
+  const locale = useLocale()
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }),
+    [locale]
+  )
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -113,7 +117,7 @@ export default function GlobalStats() {
                   </p>
                 </div>
                 <time className="text-sm text-muted-foreground">
-                  {format.dateTime(new Date(game.playedAt), { dateStyle: 'medium' })}
+                  {dateFormatter.format(new Date(game.playedAt))}
                 </time>
               </div>
             ))}

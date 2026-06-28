@@ -135,6 +135,16 @@
       "emptyTitle": "No games found",
       "emptyHint": "Try another keyword."
     },
+    "jeuxOnline": {
+      "title": "Online games",
+      "subtitle": "Join an open lobby or pick a game to create a new one.",
+      "connectedAs": "Signed in as:"
+    },
+    "playMode": {
+      "label": "Play mode",
+      "local": "Local",
+      "online": "Online"
+    },
     "selectedPlayers": {
       "ready": "{count, plural, one {# player ready} other {# players ready}}",
       "none": "No players selected",
