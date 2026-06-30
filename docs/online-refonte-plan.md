@@ -62,3 +62,27 @@ Deux systèmes online parallèles, aucun pleinement fonctionnel :
 - Migration Prisma appliquée au démarrage du conteneur (déjà en place).
 
 ## Estimation : ~1,5 à 2 semaines de dev focalisé.
+
+---
+
+## Avancement (2026-06-30)
+
+**Fait + commité + poussé sur GitHub (branche `claude/sweet-germain-9e26ce`) :**
+- ✅ **LOT 0** — nettoyage Système B + migration de suppression des tables.
+- ✅ **LOT 1** — temps réel SSE (bus mémoire, endpoint `/stream`, émission sur mutations, client abonné SSE + polling de secours allégé).
+- ✅ **LOT 2.1/2.2** — moteur pur déterministe, testé (66 tests au total) :
+  - `lib/petit-buveur/rng.ts` — RNG seedé (état persistable).
+  - `lib/petit-buveur/types.ts` — types découplés de l'UI.
+  - `lib/petit-buveur/case-generator.ts` — génération de cases déterministe (sans i18n, `defiIndex`).
+  - `lib/petit-buveur/engine.ts` — réducteur `ROLL` / `RESOLVE_INTERACTION` ; boucle complète déterministe (déplacement, victoire, tours, skip/ancre), effets directs fidèles ; cases interactives en `pending`.
+  - `lib/petit-buveur/game-data.ts` — données canoniques (gorgées par défi) pour alimenter le moteur côté serveur.
+
+**Reste à faire (prochaines sessions) — étapes précises de câblage :**
+1. **Enrichir le moteur** : logique fine des cases interactives (roue, vote, échange, téléport, pile/face, dé de la honte, défi-chaîne, chance, double-case) + cases à ciblage (bombe, miroir, échange, repetition, copie, rewind, melange, piege…) avec actions dédiées. Tests par case.
+2. **Adaptateur serveur** `lib/online/petit-buveur-engine-adapter.ts` : `buildEngineStateForRoom(members, settings, seed)` (engine player.id = userId), (dé)sérialisation, projection « vue client ».
+3. **Endpoint action** `POST /api/online/rooms/[roomId]/action` (serveur-autoritaire) : valide le tour via `currentPlayerId`, applique `reduce`, persiste `gameStateJson` + `stateVersion` + `currentTurnUserId`, publie en SSE (`publishRoomChanged`).
+4. **Rewire du lancement** : pour `gameId === 'petit-buveur'`, construire un `EngineState` (au lieu de l'ancien `buildPetitBuveurInitialState` client-autoritaire). Stocker une `seed` de partie.
+5. **Rewire `game.tsx`** (4057 l., le plus gros) : en ligne, afficher l'état serveur + envoyer des actions (`ROLL`, `RESOLVE_INTERACTION`) ; en local, utiliser le même moteur en mémoire. Même UI, même ressenti.
+6. **Déconnexion/reconnexion** + rematch côté moteur.
+
+**Dette préexistante notée** : historique de migrations Prisma cassé (`visitor_ip`/`SitePresence`) → `migrate dev` inutilisable, contourner via `migrate diff` jusqu'à réparation.
