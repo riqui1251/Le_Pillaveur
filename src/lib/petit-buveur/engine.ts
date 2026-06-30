@@ -1,0 +1,360 @@
+import { BOARD_SIZE, CASES_INTERACTIVE, type CaseType, type Difficulty, type EngineCase } from './types'
+import { rngFromState, hashSeed, type RngState, type SeededRng } from './rng'
+import { generateCase } from './case-generator'
+
+/**
+ * Moteur Petit Buveur — pur, déterministe, serveur-autoritaire.
+ *
+ * `reduce(state, action)` ne dépend que de l'état (RNG inclus via `rngState`)
+ * et de l'action : rejouer la même graine + la même suite d'actions reproduit
+ * exactement la partie. Aucune dépendance UI ni i18n.
+ *
+ * PÉRIMÈTRE DE CETTE ITÉRATION (cœur) :
+ *  - lancer de dé, déplacement, condition de victoire, enchaînement des tours
+ *    (gestion de `skipNextTurn` et `anchored`) ;
+ *  - effets DIRECTS appliqués fidèlement (gorgées solo/groupe, avance/recul,
+ *    case-bonus, recul-groupe, grappin, pont, loterie, malédiction, protection,
+ *    ancre, passe-tour) ;
+ *  - cases INTERACTIVES (roue, vote, échange, téléport, pile/face, dé de la honte,
+ *    défi-chaîne, chance, double-case, roue-defis) : passage en `pending`, résolues
+ *    par une action `RESOLVE_INTERACTION`. La logique fine par case (ciblage,
+ *    modales) sera complétée dans la slice suivante — ici une résolution par
+ *    défaut déterministe garantit que la partie progresse toujours.
+ */
+
+export interface EnginePlayer {
+  id: string
+  name: string
+  position: number
+  drinks: number
+  protected: boolean
+  cursed: number
+  skipNextTurn: boolean
+  anchored: boolean
+}
+
+export interface EngineSettings {
+  difficulty: Difficulty
+  /** Gorgées par défi (donnée i18n canonique). */
+  defiDrinks: number[]
+}
+
+export type EnginePhase = 'playing' | 'awaiting-interaction' | 'finished'
+
+export interface LogEntry {
+  turn: number
+  playerId: string
+  message: string
+}
+
+export interface EngineState {
+  /** Version logique (incrémentée à chaque action appliquée). */
+  version: number
+  /** Position persistée du RNG. */
+  rngState: RngState
+  settings: EngineSettings
+  players: EnginePlayer[]
+  /** Index du joueur courant. */
+  currentPlayer: number
+  turnCount: number
+  lastDice: number | null
+  lastCase: EngineCase | null
+  /** Case interactive en attente de résolution. */
+  pending: { caseType: CaseType; playerId: string } | null
+  phase: EnginePhase
+  /** Id du joueur gagnant, ou null. */
+  winner: string | null
+  log: LogEntry[]
+}
+
+export type EngineAction =
+  | { type: 'ROLL'; playerId: string }
+  | { type: 'RESOLVE_INTERACTION'; playerId: string }
+
+export type EnginePlayerInit = { id: string; name: string }
+
+export class EngineError extends Error {}
+
+const LOG_LIMIT = 40
+
+function clampPos(pos: number): number {
+  return Math.max(0, Math.min(BOARD_SIZE - 1, pos))
+}
+
+export function createInitialState(
+  players: EnginePlayerInit[],
+  settings: EngineSettings,
+  seed: string | number
+): EngineState {
+  return {
+    version: 0,
+    rngState: hashSeed(seed),
+    settings,
+    players: players.map((p) => ({
+      id: p.id,
+      name: p.name,
+      position: 0,
+      drinks: 0,
+      protected: false,
+      cursed: 0,
+      skipNextTurn: false,
+      anchored: false,
+    })),
+    currentPlayer: 0,
+    turnCount: 1,
+    lastDice: null,
+    lastCase: null,
+    pending: null,
+    phase: 'playing',
+    winner: null,
+    log: [],
+  }
+}
+
+function pushLog(log: LogEntry[], entry: LogEntry): LogEntry[] {
+  return [...log.slice(-(LOG_LIMIT - 1)), entry]
+}
+
+/** Applique l'effet direct d'une case (mute la copie `players`). */
+function applyCaseEffect(
+  players: EnginePlayer[],
+  actorIndex: number,
+  c: EngineCase,
+  rng: SeededRng
+): void {
+  const actor = players[actorIndex]
+
+  const addDrinks = (p: EnginePlayer, n: number) => {
+    if (p.protected && n > 0) {
+      p.protected = false
+      return
+    }
+    p.drinks = Math.max(0, p.drinks + n)
+  }
+
+  switch (c.type) {
+    // Gorgées sur l'acteur
+    case 'gorgée':
+    case 'defi':
+    case 'solo':
+    case 'question':
+    case 'vote':
+    case 'inversion':
+    case 'double-peine':
+    case 'roulette-russe':
+    case 'de-honte':
+    case 'bombe':
+      addDrinks(actor, c.effect)
+      break
+    // Tout le monde boit
+    case 'tous':
+      players.forEach((p) => addDrinks(p, c.effect))
+      break
+    // Déplacement de l'acteur
+    case 'avance':
+    case 'case-bonus':
+    case 'miroir-inverse':
+      actor.position = clampPos(actor.position + c.effect)
+      break
+    case 'recul':
+      actor.position = clampPos(actor.position + c.effect) // effect = -1
+      break
+    // Les joueurs derrière reculent d'une case
+    case 'recul-groupe':
+      players.forEach((p) => {
+        if (p.position < actor.position) p.position = clampPos(p.position - 1)
+      })
+      break
+    // L'acteur rejoint le joueur juste devant lui
+    case 'grappin': {
+      const ahead = players
+        .filter((p) => p.position > actor.position)
+        .sort((a, b) => a.position - b.position)[0]
+      if (ahead) actor.position = ahead.position
+      break
+    }
+    // Pile/face déterministe : tous ceux sur la case avancent ou reculent
+    case 'pont': {
+      const delta = rng.chance(0.5) ? 1 : -1
+      players.forEach((p) => {
+        if (p.position === actor.position) p.position = clampPos(p.position + delta)
+      })
+      break
+    }
+    // Deux joueurs au hasard : l'un boit 2, l'autre avance d'une case
+    case 'loterie': {
+      const pool = players.filter((p) => p.id !== actor.id)
+      if (pool.length >= 2) {
+        const shuffled = rng.shuffle(pool)
+        addDrinks(shuffled[0], 2)
+        shuffled[1].position = clampPos(shuffled[1].position + 1)
+      }
+      break
+    }
+    // Statuts
+    case 'protection':
+      actor.protected = true
+      break
+    case 'malediction':
+      actor.cursed += 1
+      addDrinks(actor, c.effect)
+      break
+    case 'ancre':
+      actor.anchored = true
+      break
+    case 'passe-tour':
+      actor.skipNextTurn = true
+      break
+    // Sans effet direct ou résolu ailleurs
+    case 'normal':
+    default:
+      break
+  }
+}
+
+export function reduce(state: EngineState, action: EngineAction): EngineState {
+  if (state.phase === 'finished') {
+    throw new EngineError('GAME_FINISHED')
+  }
+
+  const actorIndex = state.currentPlayer
+  const actor = state.players[actorIndex]
+
+  if (action.type === 'ROLL') {
+    if (state.phase !== 'playing') throw new EngineError('NOT_PLAYING')
+    if (state.pending) throw new EngineError('INTERACTION_PENDING')
+    if (!actor || actor.id !== action.playerId) throw new EngineError('NOT_YOUR_TURN')
+
+    const rng = rngFromState(state.rngState)
+    const players = state.players.map((p) => ({ ...p }))
+    const me = players[actorIndex]
+
+    // Ancré : on saute le déplacement et on consomme le statut.
+    if (me.anchored) {
+      me.anchored = false
+      const turn = advanceTurnOnPlayers(players, actorIndex, state.turnCount)
+      return {
+        ...state,
+        version: state.version + 1,
+        rngState: rng.getState(),
+        players,
+        currentPlayer: turn.currentPlayer,
+        turnCount: turn.turnCount,
+        lastDice: null,
+        log: pushLog(state.log, { turn: state.turnCount, playerId: me.id, message: 'anchored-skip' }),
+      }
+    }
+
+    const dice = rng.int(1, 6)
+    me.position = clampPos(me.position + dice)
+
+    // Victoire : atteindre la dernière case.
+    if (me.position === BOARD_SIZE - 1) {
+      return {
+        ...state,
+        version: state.version + 1,
+        rngState: rng.getState(),
+        players,
+        lastDice: dice,
+        lastCase: null,
+        phase: 'finished',
+        winner: me.id,
+        log: pushLog(state.log, { turn: state.turnCount, playerId: me.id, message: 'win' }),
+      }
+    }
+
+    const generated = generateCase(rng, {
+      difficulty: state.settings.difficulty,
+      defiDrinks: state.settings.defiDrinks,
+    })
+
+    // Case interactive : on attend une résolution joueur.
+    if (CASES_INTERACTIVE.has(generated.type)) {
+      return {
+        ...state,
+        version: state.version + 1,
+        rngState: rng.getState(),
+        players,
+        lastDice: dice,
+        lastCase: generated,
+        pending: { caseType: generated.type, playerId: me.id },
+        phase: 'awaiting-interaction',
+        log: pushLog(state.log, { turn: state.turnCount, playerId: me.id, message: `case:${generated.type}` }),
+      }
+    }
+
+    // Effet direct + passage au joueur suivant.
+    applyCaseEffect(players, actorIndex, generated, rng)
+    const turn = advanceTurnOnPlayers(players, actorIndex, state.turnCount)
+    return {
+      ...state,
+      version: state.version + 1,
+      rngState: rng.getState(),
+      players,
+      currentPlayer: turn.currentPlayer,
+      turnCount: turn.turnCount,
+      lastDice: dice,
+      lastCase: generated,
+      log: pushLog(state.log, { turn: state.turnCount, playerId: me.id, message: `case:${generated.type}` }),
+    }
+  }
+
+  if (action.type === 'RESOLVE_INTERACTION') {
+    if (state.phase !== 'awaiting-interaction' || !state.pending) {
+      throw new EngineError('NO_PENDING_INTERACTION')
+    }
+    if (state.pending.playerId !== action.playerId) throw new EngineError('NOT_YOUR_INTERACTION')
+
+    const rng = rngFromState(state.rngState)
+    const players = state.players.map((p) => ({ ...p }))
+
+    // Résolution par défaut déterministe (à enrichir par case dans la slice suivante).
+    if (state.lastCase) {
+      applyCaseEffect(players, actorIndex, state.lastCase, rng)
+    }
+    const turn = advanceTurnOnPlayers(players, actorIndex, state.turnCount)
+    return {
+      ...state,
+      version: state.version + 1,
+      rngState: rng.getState(),
+      players,
+      currentPlayer: turn.currentPlayer,
+      turnCount: turn.turnCount,
+      pending: null,
+      phase: 'playing',
+      log: pushLog(state.log, {
+        turn: state.turnCount,
+        playerId: action.playerId,
+        message: `resolved:${state.pending.caseType}`,
+      }),
+    }
+  }
+
+  throw new EngineError('UNKNOWN_ACTION')
+}
+
+/** Variante d'advanceTurn opérant sur une copie de joueurs déjà clonée. */
+function advanceTurnOnPlayers(
+  players: EnginePlayer[],
+  from: number,
+  turnCount: number
+): { currentPlayer: number; turnCount: number } {
+  const n = players.length
+  let idx = from
+  let tc = turnCount
+  for (let step = 0; step < n; step += 1) {
+    idx = (idx + 1) % n
+    if (idx === 0) tc += 1
+    if (players[idx].skipNextTurn) {
+      players[idx].skipNextTurn = false
+      continue
+    }
+    return { currentPlayer: idx, turnCount: tc }
+  }
+  return { currentPlayer: from, turnCount: tc }
+}
+
+/** Aide de test/serveur : id du joueur courant. */
+export function currentPlayerId(state: EngineState): string | null {
+  return state.players[state.currentPlayer]?.id ?? null
+}
