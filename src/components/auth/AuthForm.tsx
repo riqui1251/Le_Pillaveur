@@ -34,7 +34,7 @@ export function AuthForm() {
   const { login, register } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = safeRedirect(searchParams.get('redirect'))
+  const redirectTo = safeRedirect(searchParams?.get('redirect') ?? null)
 
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
@@ -106,13 +106,18 @@ export function AuthForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
       })
+      if (res.status >= 500) {
+        setForgotError(t('errors.serviceUnavailable'))
+        return
+      }
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error ?? tCommon('error'))
+        const data = await res.json().catch(() => null)
+        setForgotError(data?.error ?? t('errors.generic'))
+        return
       }
       setForgotMessage(t('forgot.success'))
-    } catch (err) {
-      setForgotError(err instanceof Error ? err.message : tCommon('error'))
+    } catch {
+      setForgotError(t('errors.network'))
     } finally {
       setForgotLoading(false)
     }

@@ -195,6 +195,11 @@
       "description": "Entrez votre email pour recevoir un lien de réinitialisation.",
       "submit": "Envoyer le lien",
       "success": "Si un compte existe avec cet email, vous recevrez un lien de réinitialisation dans quelques minutes."
+    },
+    "errors": {
+      "serviceUnavailable": "Service momentanément indisponible. Réessaie dans quelques instants.",
+      "network": "Connexion impossible. Vérifie ta connexion internet et réessaie.",
+      "generic": "Une erreur est survenue. Réessaie."
     }
   },
   "account": {

@@ -185,6 +185,11 @@
       "description": "Ingrese su correo electrónico para recibir un enlace de reinicio.",
       "submit": "Enviar enlace",
       "success": "Si existe una cuenta con este correo electrónico, recibirá un enlace de restablecimiento en unos minutos."
+    },
+    "errors": {
+      "serviceUnavailable": "El servicio no está disponible por el momento. Inténtalo de nuevo en un instante.",
+      "network": "No se pudo conectar. Comprueba tu conexión a internet e inténtalo de nuevo.",
+      "generic": "Se produjo un error. Inténtalo de nuevo."
     }
   },
   "account": {

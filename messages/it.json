@@ -185,6 +185,11 @@
       "description": "Inserisci la tua email per ricevere un collegamento per il ripristino.",
       "submit": "Invia collegamento",
       "success": "Se esiste un account con questa email, riceverai un collegamento per reimpostare entro pochi minuti."
+    },
+    "errors": {
+      "serviceUnavailable": "Servizio momentaneamente non disponibile. Riprova tra qualche istante.",
+      "network": "Impossibile connettersi. Controlla la tua connessione internet e riprova.",
+      "generic": "Si è verificato un errore. Riprova."
     }
   },
   "account": {

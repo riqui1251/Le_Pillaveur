@@ -107,6 +107,9 @@ export async function POST(request: Request) {
     return response
   } catch (error) {
     console.error('login error:', error)
-    return NextResponse.json({ error: 'Erreur de connexion' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Service momentanément indisponible. Réessaie dans quelques instants.', code: 'service_unavailable' },
+      { status: 503 }
+    )
   }
 }

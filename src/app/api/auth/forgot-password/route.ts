@@ -51,6 +51,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('forgot-password error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Service momentanément indisponible. Réessaie dans quelques instants.', code: 'service_unavailable' },
+      { status: 503 }
+    )
   }
 }

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 function ResetPasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const token = searchParams.get('token') ?? ''
+  const token = searchParams?.get('token') ?? ''
   const t = useTranslations('account.reset')
   const tCommon = useTranslations('common')
   const tErrors = useTranslations('errors')

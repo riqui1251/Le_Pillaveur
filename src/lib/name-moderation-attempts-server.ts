@@ -9,6 +9,7 @@ export type NameModerationAttemptContext =
   | 'display_name'
   | 'local_player_add'
   | 'local_player_rename'
+  | 'online_display_name_update'
 
 export type RecordNameModerationAttemptInput = {
   attemptedName: string

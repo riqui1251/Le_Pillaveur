@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useTranslations } from 'next-intl'
 
 export type AuthUser = {
   id: string
@@ -43,6 +44,7 @@ async function fetchMe(): Promise<AuthUser | null> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const tErrors = useTranslations('auth.errors')
 
   const refresh = useCallback(async () => {
     const me = await fetchMe()
@@ -54,30 +56,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email, password }),
-    })
-    const data = await res.json()
-    if (!res.ok) return data.error ?? 'Erreur de connexion'
+    let res: Response
+    try {
+      res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      })
+    } catch {
+      return tErrors('network')
+    }
+    if (res.status >= 500) return tErrors('serviceUnavailable')
+    const data = await res.json().catch(() => null)
+    if (!res.ok) return data?.error ?? tErrors('generic')
+    if (!data?.user) return tErrors('generic')
     setUser(data.user)
     return null
-  }, [])
+  }, [tErrors])
 
   const register = useCallback(async (email: string, password: string, displayName: string, locale?: string) => {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email, password, displayName, locale }),
-    })
-    const data = await res.json()
-    if (!res.ok) return data.error ?? 'Erreur d\'inscription'
+    let res: Response
+    try {
+      res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password, displayName, locale }),
+      })
+    } catch {
+      return tErrors('network')
+    }
+    if (res.status >= 500) return tErrors('serviceUnavailable')
+    const data = await res.json().catch(() => null)
+    if (!res.ok) return data?.error ?? tErrors('generic')
+    if (!data?.user) return tErrors('generic')
     setUser(data.user)
     return null
-  }, [])
+  }, [tErrors])
 
   const logout = useCallback(async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })

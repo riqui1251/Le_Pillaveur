@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useParams, useRouter as useNextRouter } from 'next/navigation'
 import { routing, type AppLocale } from './routing'
 
@@ -30,12 +30,20 @@ export function useRouter() {
     [nextRouter, locale]
   )
 
-  return {
-    push,
-    replace,
-    back: nextRouter.back,
-    forward: nextRouter.forward,
-    refresh: nextRouter.refresh,
-    prefetch: (href: string) => nextRouter.prefetch(withLocale(locale, href)),
-  }
+  const prefetch = useCallback(
+    (href: string) => nextRouter.prefetch(withLocale(locale, href)),
+    [nextRouter, locale]
+  )
+
+  return useMemo(
+    () => ({
+      push,
+      replace,
+      back: nextRouter.back,
+      forward: nextRouter.forward,
+      refresh: nextRouter.refresh,
+      prefetch,
+    }),
+    [push, replace, prefetch, nextRouter]
+  )
 }
