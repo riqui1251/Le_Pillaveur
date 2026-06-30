@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
+import { publishRoomChanged } from '@/lib/online/room-bus'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
@@ -36,6 +37,8 @@ export async function POST(request: Request) {
     create: { roomId: room.id, userId: user.id, isReady: false },
     update: { lastSeenAt: new Date(), isReady: false },
   })
+
+  publishRoomChanged(room.id, { type: 'lobby' })
 
   const dto = await buildRoomDto(room.id, user.id)
   return NextResponse.json({ room: dto })

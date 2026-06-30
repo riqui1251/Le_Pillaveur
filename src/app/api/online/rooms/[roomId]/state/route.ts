@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
+import { publishRoomChanged } from '@/lib/online/room-bus'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -106,6 +107,8 @@ export async function PUT(request: Request, { params }: Params) {
       currentTurnUserId: nextTurnUserId,
     },
   })
+
+  publishRoomChanged(roomId, { type: 'changed', stateVersion: nextVersion })
 
   const dto = await buildRoomDto(roomId, user.id)
   return NextResponse.json({ ok: true, stateVersion: nextVersion, room: dto })

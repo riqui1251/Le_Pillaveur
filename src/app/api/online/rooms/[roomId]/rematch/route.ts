@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 import { processRematchVote } from '@/lib/online-room-launch'
+import { publishRoomChanged } from '@/lib/online/room-bus'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -39,6 +40,8 @@ export async function POST(_request: Request, { params }: Params) {
     const msg = e instanceof Error ? e.message : 'Rejouer impossible'
     return NextResponse.json({ error: msg }, { status: 400 })
   }
+
+  publishRoomChanged(roomId, { type: 'changed' })
 
   const dto = await buildRoomDto(roomId, user.id)
   return NextResponse.json({ room: dto })

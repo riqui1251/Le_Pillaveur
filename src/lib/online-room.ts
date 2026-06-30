@@ -1,6 +1,18 @@
+import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { generateRoomCode } from '@/lib/auth-server'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
+
+const ROOM_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
+const ROOM_CODE_LENGTH = 6
+
+function generateRoomCode(): string {
+  const bytes = randomBytes(ROOM_CODE_LENGTH)
+  let out = ''
+  for (let i = 0; i < ROOM_CODE_LENGTH; i++) {
+    out += ROOM_CODE_CHARS[bytes[i] % ROOM_CODE_CHARS.length]
+  }
+  return out
+}
 
 export type RoomMemberDto = {
   userId: string

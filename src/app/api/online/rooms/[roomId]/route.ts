@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto, touchMemberPresence } from '@/lib/online-room'
 import { resetRoomToWaitingLobby } from '@/lib/online-petit-buveur'
 import { parsePetitBuveurState } from '@/lib/online-game-state'
+import { publishRoomChanged } from '@/lib/online/room-bus'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -73,6 +74,8 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (gameFinished && room.gameId === 'petit-buveur') {
     await resetRoomToWaitingLobby(roomId)
   }
+
+  publishRoomChanged(roomId, { type: 'lobby' })
 
   return NextResponse.json({ ok: true })
 }

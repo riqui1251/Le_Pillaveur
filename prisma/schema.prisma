@@ -213,39 +213,3 @@ model NameModerationAttempt {
   @@index([reason, createdAt])
   @@index([createdAt])
 }
-
-model OnlineLobby {
-  id         String              @id @default(cuid())
-  game       String
-  visibility String
-  difficulty String
-  hostUserId String
-  status     String              @default("waiting")
-  stateJson  String?
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
-  players    OnlineLobbyPlayer[]
-
-  @@index([status, createdAt])
-  @@index([visibility, createdAt])
-}
-
-model OnlineLobbyPlayer {
-  id                 String   @id @default(cuid())
-  lobbyId            String
-  lobby              OnlineLobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
-  userId             String?
-  displayName        String
-  seatIndex          Int
-  isBot              Boolean  @default(false)
-  reconnectTokenHash String
-  status             String   @default("connected")
-  lastSeenAt         DateTime @default(now())
-  disconnectedAt     DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  @@unique([lobbyId, seatIndex])
-  @@index([lobbyId, status])
-  @@index([userId])
-}

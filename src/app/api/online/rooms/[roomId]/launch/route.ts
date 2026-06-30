@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 
 import { launchOnlineRoom } from '@/lib/online-room-launch'
+import { publishRoomChanged } from '@/lib/online/room-bus'
 
 
 
@@ -83,6 +84,8 @@ export async function POST(_request: Request, { params }: Params) {
 
 
   await launchOnlineRoom(roomId, room)
+
+  publishRoomChanged(roomId, { type: 'changed' })
 
 
 

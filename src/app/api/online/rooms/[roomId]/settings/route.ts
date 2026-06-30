@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
+import { publishRoomChanged } from '@/lib/online/room-bus'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -45,6 +46,8 @@ export async function PUT(request: Request, { params }: Params) {
     where: { id: roomId },
     data: { settingsJson: JSON.stringify(next) },
   })
+
+  publishRoomChanged(roomId, { type: 'lobby' })
 
   const dto = await buildRoomDto(roomId, user.id)
   return NextResponse.json({ room: dto })

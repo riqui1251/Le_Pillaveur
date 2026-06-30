@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
+import { publishRoomChanged } from '@/lib/online/room-bus'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -23,6 +24,8 @@ export async function PUT(request: Request, { params }: Params) {
   if (updated.count === 0) {
     return NextResponse.json({ error: 'Pas membre de cette salle' }, { status: 403 })
   }
+
+  publishRoomChanged(roomId, { type: 'lobby' })
 
   const dto = await buildRoomDto(roomId, user.id)
   return NextResponse.json({ room: dto })
