@@ -1,30 +1,19 @@
 "use client"
 
-import { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Users, X } from 'lucide-react'
-import { Link } from '@/i18n/navigation'
-import type { Friend } from '@/hooks/useFriends'
-import { cn } from '@/lib/utils'
+import { FriendsManager } from '@/components/friends/FriendsManager'
 
 interface FriendsPanelProps {
   open: boolean
   onClose: () => void
-  friends: Friend[]
-  onRefresh: () => void
 }
 
-/** Panneau compact (amis + statut en ligne) ouvert depuis le bouton du header, à côté du menu. */
-export function FriendsPanel({ open, onClose, friends, onRefresh }: FriendsPanelProps) {
+/** Panneau amis (ajout, demandes, liste + statut en ligne) ouvert depuis le bouton du header, à côté du menu. */
+export function FriendsPanel({ open, onClose }: FriendsPanelProps) {
   const tFriends = useTranslations('account.friends')
   const tNav = useTranslations('nav')
-
-  useEffect(() => {
-    if (open) onRefresh()
-  }, [open, onRefresh])
-
-  const sorted = [...friends].sort((a, b) => Number(b.isOnline) - Number(a.isOnline))
 
   return (
     <AnimatePresence>
@@ -63,40 +52,9 @@ export function FriendsPanel({ open, onClose, friends, onRefresh }: FriendsPanel
               </button>
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto p-2">
-              {sorted.length === 0 ? (
-                <p className="px-3 py-6 text-center text-sm text-white/40">{tFriends('empty')}</p>
-              ) : (
-                <ul className="space-y-1">
-                  {sorted.map((f) => (
-                    <li
-                      key={f.friendshipId}
-                      className="flex items-center gap-2.5 rounded-xl px-3 py-2 transition-colors hover:bg-white/[0.04]"
-                    >
-                      <span
-                        className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-white/20')}
-                      />
-                      <span className={cn('truncate text-sm font-medium', f.isOnline ? 'text-white' : 'text-white/50')}>
-                        {f.displayName}
-                      </span>
-                      {f.isOnline && (
-                        <span className="ml-auto shrink-0 text-[10px] font-semibold uppercase tracking-wide text-emerald-400/80">
-                          {tFriends('online')}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <div className="max-h-[70vh] overflow-y-auto p-3">
+              <FriendsManager compact />
             </div>
-
-            <Link
-              href="/compte"
-              onClick={onClose}
-              className="flex items-center justify-center gap-1.5 border-t border-white/10 bg-white/[0.03] py-2.5 text-xs font-semibold text-violet-300 transition-colors hover:bg-white/[0.06] hover:text-violet-200"
-            >
-              {tNav('manageFriends')}
-            </Link>
           </motion.div>
         </>
       )}

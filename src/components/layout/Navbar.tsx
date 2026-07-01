@@ -37,7 +37,7 @@ export default function Navbar() {
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
   const { user } = useAuth()
-  const { friends, refresh: refreshFriends } = useFriends()
+  const { friends, refresh: refreshFriendsBadge } = useFriends()
   const onlineFriendsCount = friends.filter((f) => f.isOnline).length
   const pathname = usePathname()
   const pageMeta = usePageMeta(pathname)
@@ -112,7 +112,12 @@ export default function Navbar() {
             <button
               type="button"
               aria-label={t('manageFriends')}
-              onClick={() => setFriendsOpen((v) => !v)}
+              onClick={() => {
+                setFriendsOpen((v) => {
+                  if (v) void refreshFriendsBadge()
+                  return !v
+                })
+              }}
               className={cn(
                 'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
                 friendsOpen
@@ -275,9 +280,10 @@ export default function Navbar() {
       {user && (
         <FriendsPanel
           open={friendsOpen}
-          onClose={() => setFriendsOpen(false)}
-          friends={friends}
-          onRefresh={refreshFriends}
+          onClose={() => {
+            setFriendsOpen(false)
+            void refreshFriendsBadge()
+          }}
         />
       )}
     </>
