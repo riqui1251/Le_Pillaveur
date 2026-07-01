@@ -219,15 +219,15 @@ export function PetitBuveurOnline() {
 
       {/* Zone scrollable */}
       <main className="relative min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-        <div className="mx-auto flex w-full max-w-3xl flex-col space-y-3 px-3 py-3 pb-4 sm:px-4">
+        <div className="mx-auto flex w-full max-w-3xl flex-col space-y-2 px-3 py-2.5 pb-4 sm:space-y-3 sm:px-4 sm:py-3">
           {/* HUD tour + joueur actif */}
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
-            <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-xs font-bold text-amber-300">
+          <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-md sm:px-4 sm:py-3">
+            <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300 sm:px-2.5 sm:py-1 sm:text-xs">
               {t('turn', { count: view.turnCount })}
             </span>
             <div className="min-w-0 flex-1 text-center">
-              <p className="mb-0.5 text-[10px] uppercase tracking-widest text-white/40">{tGame('turnOf')}</p>
-              <div className="flex items-center justify-center gap-1.5 truncate font-bold">
+              <p className="hidden text-[10px] uppercase tracking-widest text-white/40 sm:mb-0.5 sm:block">{tGame('turnOf')}</p>
+              <div className="flex items-center justify-center gap-1.5 truncate text-sm font-bold sm:text-base">
                 {active && <span aria-hidden>{iconOf(active.id)}</span>}
                 <span className="truncate">{active?.name}</span>
               </div>
@@ -237,33 +237,27 @@ export function PetitBuveurOnline() {
             </span>
           </div>
 
-          {/* Effets actifs */}
+          {/* Effets actifs — pastilles compactes (icône + joueur + compteur, détail en title) */}
           {effectChips.length > 0 && (
-            <div className="rounded-2xl border border-violet-500/35 bg-gradient-to-br from-violet-600/15 to-indigo-600/10 p-4 backdrop-blur-md">
-              <div className="mb-3 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 shrink-0 text-violet-300" />
-                <span className="text-sm font-semibold text-violet-100">{tGame('effects.active').replace(' :', '')}</span>
-                <span className="rounded-full bg-violet-500/30 px-2 py-0.5 text-[11px] font-bold text-violet-50">
-                  {effectChips.length}
+            <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5">
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-300" aria-hidden />
+              {effectChips.map((e) => (
+                <span
+                  key={e.id}
+                  title={`${e.playerName}${e.linkedName ? ` ↔ ${e.linkedName}` : ''} · ${e.title} — ${e.desc}`}
+                  className={cn(
+                    'flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium text-white/90',
+                    e.accent
+                  )}
+                >
+                  <span aria-hidden>{e.icon}</span>
+                  <span className="max-w-[4.5rem] truncate sm:max-w-[7rem]">
+                    {e.playerName}
+                    {e.linkedName ? ` ↔ ${e.linkedName}` : ''}
+                  </span>
+                  <span className="rounded-full bg-black/25 px-1 text-[9px] font-bold leading-4">{e.remaining}</span>
                 </span>
-              </div>
-              <div className="space-y-2">
-                {effectChips.map((e) => (
-                  <div key={e.id} className={cn('flex items-center gap-2.5 rounded-xl border px-3 py-2', e.accent)}>
-                    <span className="text-lg" aria-hidden>{e.icon}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold text-white">
-                        {e.playerName}
-                        {e.linkedName ? ` ↔ ${e.linkedName}` : ''} · {e.title}
-                      </p>
-                      <p className="truncate text-[11px] text-white/50">{e.desc}</p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
-                      {e.remaining}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           )}
 
@@ -276,22 +270,20 @@ export function PetitBuveurOnline() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="rounded-xl border border-amber-500/35 bg-gradient-to-br from-amber-500/15 to-orange-500/10 p-3 shadow-sm"
+                className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/35 bg-gradient-to-br from-amber-500/15 to-orange-500/10 px-3 py-1.5 shadow-sm"
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <MapPin className="h-4 w-4 shrink-0 text-amber-400" />
-                  <span className="text-sm font-semibold text-amber-200">
-                    {t('caseLabel')} {(active?.position ?? 0) + 1}
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                <span className="text-xs font-semibold text-amber-200 sm:text-sm">
+                  {t('caseLabel')} {(active?.position ?? 0) + 1}
+                </span>
+                <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-100">
+                  {caseLabel(view.lastCase.type)}
+                </span>
+                {view.lastDice != null && (
+                  <span className="ml-auto flex items-center gap-1 text-xs text-white/50">
+                    <Dice6 className="h-3.5 w-3.5" /> {view.lastDice}
                   </span>
-                  <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-100">
-                    {caseLabel(view.lastCase.type)}
-                  </span>
-                  {view.lastDice != null && (
-                    <span className="ml-auto flex items-center gap-1 text-xs text-white/50">
-                      <Dice6 className="h-3.5 w-3.5" /> {view.lastDice}
-                    </span>
-                  )}
-                </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
