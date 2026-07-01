@@ -1318,6 +1318,26 @@
         "de-honte": "Dé de la honte",
         "pile-face": "Pile ou face"
       },
+      "online": {
+        "title": "Petit Buveur — En ligne",
+        "turn": "Tour {count}",
+        "leave": "Quitter",
+        "dice": "Dé",
+        "caseLabel": "Case",
+        "rollDice": "Lancer le dé",
+        "continueCase": "Continuer",
+        "chooseTarget": "Choisis une cible pour {case}",
+        "teleportPrompt": "Téléport — échanger ta position avec…",
+        "teleportLeader": "Le leader",
+        "teleportLast": "Le dernier",
+        "you": "(vous)",
+        "waitingFor": "En attente de {name}…",
+        "winner": "{name} a gagné !",
+        "gameOver": "Partie terminée",
+        "rematch": "Rejouer",
+        "rematchWaiting": "En attente… ({count}/{total})",
+        "loading": "Chargement de la partie…"
+      },
       "defis": [
         {
           "text": "Fais 10 pompes",

@@ -1318,6 +1318,26 @@
         "de-honte": "Dice of shame",
         "pile-face": "Heads or tails"
       },
+      "online": {
+        "title": "Petit Buveur — Online",
+        "turn": "Turn {count}",
+        "leave": "Leave",
+        "dice": "Die",
+        "caseLabel": "Square",
+        "rollDice": "Roll the die",
+        "continueCase": "Continue",
+        "chooseTarget": "Choose a target for {case}",
+        "teleportPrompt": "Teleport — swap your position with…",
+        "teleportLeader": "The leader",
+        "teleportLast": "The last player",
+        "you": "(you)",
+        "waitingFor": "Waiting for {name}…",
+        "winner": "{name} won!",
+        "gameOver": "Game over",
+        "rematch": "Rematch",
+        "rematchWaiting": "Waiting… ({count}/{total})",
+        "loading": "Loading the game…"
+      },
       "defis": [
         {
           "text": "Do 10 push-ups",

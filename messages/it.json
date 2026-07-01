@@ -1308,6 +1308,26 @@
         "de-honte": "Dadi della vergogna",
         "pile-face": "Testa o croce"
       },
+      "online": {
+        "title": "Petit Buveur — Online",
+        "turn": "Turno {count}",
+        "leave": "Esci",
+        "dice": "Dado",
+        "caseLabel": "Casella",
+        "rollDice": "Lancia il dado",
+        "continueCase": "Continua",
+        "chooseTarget": "Scegli un bersaglio per {case}",
+        "teleportPrompt": "Teletrasporto — scambia la tua posizione con…",
+        "teleportLeader": "Il leader",
+        "teleportLast": "L'ultimo",
+        "you": "(tu)",
+        "waitingFor": "In attesa di {name}…",
+        "winner": "{name} ha vinto!",
+        "gameOver": "Partita finita",
+        "rematch": "Rivincita",
+        "rematchWaiting": "In attesa… ({count}/{total})",
+        "loading": "Caricamento della partita…"
+      },
       "defis": [
         {
           "text": "Fai 10 flessioni",

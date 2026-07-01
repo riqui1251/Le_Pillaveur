@@ -1308,6 +1308,26 @@
         "de-honte": "dados de verguenza",
         "pile-face": "Cara o cruz"
       },
+      "online": {
+        "title": "Petit Buveur — En línea",
+        "turn": "Turno {count}",
+        "leave": "Salir",
+        "dice": "Dado",
+        "caseLabel": "Casilla",
+        "rollDice": "Lanzar el dado",
+        "continueCase": "Continuar",
+        "chooseTarget": "Elige un objetivo para {case}",
+        "teleportPrompt": "Teletransporte — intercambia tu posición con…",
+        "teleportLeader": "El líder",
+        "teleportLast": "El último",
+        "you": "(tú)",
+        "waitingFor": "Esperando a {name}…",
+        "winner": "¡{name} ganó!",
+        "gameOver": "Partida terminada",
+        "rematch": "Revancha",
+        "rematchWaiting": "Esperando… ({count}/{total})",
+        "loading": "Cargando la partida…"
+      },
       "defis": [
         {
           "text": "Haz 10 flexiones",
