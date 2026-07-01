@@ -257,7 +257,10 @@
       "decline": "Rifiuta",
       "remove": "Rimuovi",
       "empty": "Nessun amico per ora",
-      "online": "Online"
+      "online": "Online",
+      "sendRequest": "Aggiungi come amico",
+      "requestSent": "Richiesta inviata",
+      "alreadyFriend": "Amico"
     },
     "nameModerationWarning": "Sono stati registrati diversi tentativi di nome inappropriato su questo account. Usa un soprannome rispettoso — il team di moderazione può consultare la cronologia.",
     "reset": {

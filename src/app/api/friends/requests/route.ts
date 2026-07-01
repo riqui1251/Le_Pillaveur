@@ -16,7 +16,11 @@ export async function GET() {
   return NextResponse.json(requests)
 }
 
-/** Envoie une demande d'ami à partir d'un code de compte (LP-XXXXXX). */
+/**
+ * Envoie une demande d'ami — soit à partir d'un code de compte (LP-XXXXXX),
+ * soit directement par userId (ex. depuis la liste des joueurs d'un lobby,
+ * où l'identité du joueur est déjà connue sans avoir besoin de son code).
+ */
 export async function POST(request: Request) {
   const user = await getCurrentUser()
   if (!user) {
@@ -24,16 +28,26 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const raw = typeof body.accountCode === 'string' ? body.accountCode : ''
-  const accountCode = formatAccountCode(raw)
-  if (!accountCode) {
-    return NextResponse.json({ error: 'Code invalide' }, { status: 400 })
+  const directUserId = typeof body.userId === 'string' ? body.userId.trim() : ''
+
+  let target
+  if (directUserId) {
+    target = await prisma.user.findUnique({ where: { id: directUserId } })
+    if (!target) {
+      return NextResponse.json({ error: 'Joueur introuvable' }, { status: 404 })
+    }
+  } else {
+    const raw = typeof body.accountCode === 'string' ? body.accountCode : ''
+    const accountCode = formatAccountCode(raw)
+    if (!accountCode) {
+      return NextResponse.json({ error: 'Code invalide' }, { status: 400 })
+    }
+    target = await prisma.user.findUnique({ where: { accountCode } })
+    if (!target) {
+      return NextResponse.json({ error: 'Aucun compte avec ce code' }, { status: 404 })
+    }
   }
 
-  const target = await prisma.user.findUnique({ where: { accountCode } })
-  if (!target) {
-    return NextResponse.json({ error: 'Aucun compte avec ce code' }, { status: 404 })
-  }
   if (target.id === user.id) {
     return NextResponse.json({ error: "Impossible de s'ajouter soi-même" }, { status: 400 })
   }

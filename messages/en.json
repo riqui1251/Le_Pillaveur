@@ -267,7 +267,10 @@
       "decline": "Decline",
       "remove": "Remove",
       "empty": "No friends yet",
-      "online": "Online"
+      "online": "Online",
+      "sendRequest": "Add friend",
+      "requestSent": "Request sent",
+      "alreadyFriend": "Friend"
     },
     "nameModerationWarning": "Several inappropriate name attempts have been recorded on this account. Please use a respectful nickname — the moderation team can review the history.",
     "reset": {

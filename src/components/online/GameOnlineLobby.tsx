@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Users } from 'lucide-react'
+import { ArrowLeft, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Users, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -52,12 +52,13 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const { user } = useAuth()
   const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, inviteFriend } = useOnlineRoom()
   const { lobbies } = useOpenLobbies()
-  const { friends } = useFriends()
+  const { friends, incoming, outgoing, sendRequestToUser, acceptRequest } = useFriends()
   const [copied, setCopied] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const tPb = useTranslations('games.petit-buveur.page')
   const tOnline = useTranslations('onlineLobby')
+  const tFriends = useTranslations('account.friends')
 
   const gameLobbies = lobbies.filter((l) => l.gameId === gameId)
   const isHost = room?.hostUserId === user?.id
@@ -367,29 +368,61 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           Joueurs ({room.members.length})
         </div>
         <ul className="space-y-2">
-          {room.members.map((m) => (
-            <li
-              key={m.userId}
-              className={cn(
-                'flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
-                m.isReady ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-white/10 bg-black/20'
-              )}
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base">
-                {m.isHost ? '👑' : '🌐'}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-white">
-                  {m.displayName}
-                  {m.isSelf && <span className="ml-1 text-xs text-white/40">(vous)</span>}
-                </p>
-                <p className={cn('text-xs', m.isReady ? 'text-emerald-300/80' : 'text-white/45')}>
-                  {m.isReady ? '✓ Prêt' : 'Pas encore prêt'}
-                </p>
-              </div>
-              {m.isHost && <Crown className="h-4 w-4 shrink-0 text-amber-400" />}
-            </li>
-          ))}
+          {room.members.map((m) => {
+            const isFriend = friends.some((f) => f.userId === m.userId)
+            const incomingReq = incoming.find((r) => r.userId === m.userId)
+            const outgoingPending = outgoing.some((r) => r.userId === m.userId)
+            return (
+              <li
+                key={m.userId}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
+                  m.isReady ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-white/10 bg-black/20'
+                )}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base">
+                  {m.isHost ? '👑' : '🌐'}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-white">
+                    {m.displayName}
+                    {m.isSelf && <span className="ml-1 text-xs text-white/40">(vous)</span>}
+                  </p>
+                  <p className={cn('text-xs', m.isReady ? 'text-emerald-300/80' : 'text-white/45')}>
+                    {m.isReady ? '✓ Prêt' : 'Pas encore prêt'}
+                  </p>
+                </div>
+                {!m.isSelf && (
+                  isFriend ? (
+                    <span className="shrink-0 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                      {tFriends('alreadyFriend')}
+                    </span>
+                  ) : incomingReq ? (
+                    <button
+                      type="button"
+                      onClick={() => acceptRequest(incomingReq.id)}
+                      className="shrink-0 rounded-lg bg-emerald-500/20 px-2.5 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/30"
+                    >
+                      {tFriends('accept')}
+                    </button>
+                  ) : outgoingPending ? (
+                    <span className="shrink-0 text-[10px] text-white/35">{tFriends('requestSent')}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => sendRequestToUser(m.userId)}
+                      aria-label={tFriends('sendRequest')}
+                      title={tFriends('sendRequest')}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-violet-500/15 hover:text-violet-300"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </button>
+                  )
+                )}
+                {m.isHost && <Crown className="h-4 w-4 shrink-0 text-amber-400" />}
+              </li>
+            )
+          })}
         </ul>
       </div>
 

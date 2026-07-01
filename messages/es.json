@@ -257,7 +257,10 @@
       "decline": "Rechazar",
       "remove": "Eliminar",
       "empty": "Todavía no tienes amigos",
-      "online": "En línea"
+      "online": "En línea",
+      "sendRequest": "Añadir como amigo",
+      "requestSent": "Solicitud enviada",
+      "alreadyFriend": "Amigo"
     },
     "nameModerationWarning": "Se han registrado varios intentos de nombre inapropiado en esta cuenta. Utilice un apodo respetuoso — el equipo de moderación puede consultar el historial.",
     "reset": {

@@ -60,14 +60,14 @@ export function useFriends() {
     void refresh()
   }, [refresh])
 
-  const sendRequest = useCallback(
-    async (accountCode: string) => {
+  const postFriendRequest = useCallback(
+    async (body: { accountCode: string } | { userId: string }) => {
       setError(null)
       const res = await fetch('/api/friends/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ accountCode }),
+        body: JSON.stringify(body),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -78,6 +78,17 @@ export function useFriends() {
       return data.status as 'sent' | 'auto-accepted' | 'already-friends' | 'already-pending'
     },
     [refresh]
+  )
+
+  const sendRequest = useCallback(
+    (accountCode: string) => postFriendRequest({ accountCode }),
+    [postFriendRequest]
+  )
+
+  /** Envoie une demande d'ami directement par userId (ex. depuis la liste des joueurs d'un lobby). */
+  const sendRequestToUser = useCallback(
+    (userId: string) => postFriendRequest({ userId }),
+    [postFriendRequest]
   )
 
   const acceptRequest = useCallback(
@@ -130,5 +141,5 @@ export function useFriends() {
     [refresh]
   )
 
-  return { friends, incoming, outgoing, loading, error, sendRequest, acceptRequest, declineRequest, removeFriend, refresh }
+  return { friends, incoming, outgoing, loading, error, sendRequest, sendRequestToUser, acceptRequest, declineRequest, removeFriend, refresh }
 }

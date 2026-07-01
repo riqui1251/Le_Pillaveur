@@ -267,7 +267,10 @@
       "decline": "Refuser",
       "remove": "Retirer",
       "empty": "Aucun ami pour l'instant",
-      "online": "En ligne"
+      "online": "En ligne",
+      "sendRequest": "Ajouter en ami",
+      "requestSent": "Demande envoyée",
+      "alreadyFriend": "Ami"
     },
     "nameModerationWarning": "Plusieurs tentatives de nom inapproprié ont été enregistrées sur ce compte. Merci d'utiliser un pseudo respectueux — l'équipe de modération peut consulter l'historique.",
     "reset": {
