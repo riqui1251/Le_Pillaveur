@@ -28,9 +28,18 @@ export interface EnginePlayer {
   position: number
   drinks: number
   protected: boolean
+  /** Tours restants de protection (durée : un tour de table). */
+  protectionTurnsLeft?: number
+  /** Tours de malédiction restants (boit 1 gorgée en début de tour). */
   cursed: number
   skipNextTurn: boolean
   anchored: boolean
+  /** Défi-chaîne : lié à ce joueur (boivent ensemble). */
+  linkedTo?: string
+  linkedTurns?: number
+  /** Miroir inversé : quand l'un boit, l'autre boit aussi. */
+  mirrorDrinkTargetId?: string
+  mirrorDrinkTurns?: number
 }
 
 export interface EngineSettings {
@@ -118,16 +127,56 @@ function pushLog(log: LogEntry[], entry: LogEntry): LogEntry[] {
   return [...log.slice(-(LOG_LIMIT - 1)), entry]
 }
 
-/** Ajoute (ou retire) des gorgées en respectant la protection. */
-function addDrinks(p: EnginePlayer, n: number): void {
-  if (p.protected && n > 0) {
-    p.protected = false
-    return
-  }
-  p.drinks = Math.max(0, p.drinks + n)
+/** Protection active pendant un tour de table complet. */
+function isProtected(p: EnginePlayer): boolean {
+  return p.protected && (p.protectionTurnsLeft ?? 0) > 0
 }
 
-/** Applique l'effet direct d'une case (mute la copie `players`). */
+type Propagation = { skipMirror?: boolean; skipChain?: boolean }
+
+/** Fait boire un joueur (gorgées > 0), avec propagation miroir/chaîne + protection. */
+function addDrinks(
+  players: EnginePlayer[],
+  target: EnginePlayer,
+  n: number,
+  prop: Propagation = {}
+): void {
+  if (n <= 0) return
+  if (isProtected(target)) return
+  target.drinks += n
+
+  if (!prop.skipMirror) {
+    for (const init of players) {
+      if ((init.mirrorDrinkTurns ?? 0) <= 0 || !init.mirrorDrinkTargetId) continue
+      if (target.id === init.id) {
+        const partner = players.find((p) => p.id === init.mirrorDrinkTargetId)
+        if (partner) addDrinks(players, partner, n, { ...prop, skipMirror: true })
+        break
+      }
+      if (target.id === init.mirrorDrinkTargetId) {
+        addDrinks(players, init, n, { ...prop, skipMirror: true })
+        break
+      }
+    }
+  }
+
+  if (!prop.skipChain) {
+    for (const init of players) {
+      if (!init.linkedTo || (init.linkedTurns ?? 0) <= 0) continue
+      if (target.id === init.id) {
+        const partner = players.find((p) => p.id === init.linkedTo)
+        if (partner) addDrinks(players, partner, n, { ...prop, skipChain: true })
+        break
+      }
+      if (target.id === init.linkedTo) {
+        addDrinks(players, init, n, { ...prop, skipChain: true })
+        break
+      }
+    }
+  }
+}
+
+/** Applique une case AUTO-RÉSOLUE (no-target : solo, case-bonus, recul-groupe, grappin, pont, loterie). */
 function applyCaseEffect(
   players: EnginePlayer[],
   actorIndex: number,
@@ -137,31 +186,11 @@ function applyCaseEffect(
   const actor = players[actorIndex]
 
   switch (c.type) {
-    // Gorgées sur l'acteur
-    case 'gorgée':
-    case 'defi':
     case 'solo':
-    case 'question':
-    case 'vote':
-    case 'inversion':
-    case 'double-peine':
-    case 'roulette-russe':
-    case 'de-honte':
-    case 'bombe':
-      addDrinks(actor, c.effect)
+      addDrinks(players, actor, c.effect)
       break
-    // Tout le monde boit
-    case 'tous':
-      players.forEach((p) => addDrinks(p, c.effect))
-      break
-    // Déplacement de l'acteur
-    case 'avance':
     case 'case-bonus':
-    case 'miroir-inverse':
       actor.position = clampPos(actor.position + c.effect)
-      break
-    case 'recul':
-      actor.position = clampPos(actor.position + c.effect) // effect = -1
       break
     // Les joueurs derrière reculent d'une case
     case 'recul-groupe':
@@ -190,27 +219,11 @@ function applyCaseEffect(
       const pool = players.filter((p) => p.id !== actor.id)
       if (pool.length >= 2) {
         const shuffled = rng.shuffle(pool)
-        addDrinks(shuffled[0], 2)
+        addDrinks(players, shuffled[0], 2)
         shuffled[1].position = clampPos(shuffled[1].position + 1)
       }
       break
     }
-    // Statuts
-    case 'protection':
-      actor.protected = true
-      break
-    case 'malediction':
-      actor.cursed += 1
-      addDrinks(actor, c.effect)
-      break
-    case 'ancre':
-      actor.anchored = true
-      break
-    case 'passe-tour':
-      actor.skipNextTurn = true
-      break
-    // Sans effet direct ou résolu ailleurs
-    case 'normal':
     default:
       break
   }
@@ -234,7 +247,7 @@ function resolveInteractionCase(
     // Dé de la honte : dé 1-6 → ≤2 rien, 3-4 boit 2, 5 avance +1, 6 recule -1.
     case 'de-honte': {
       const r = rng.int(1, 6)
-      if (r > 2 && r <= 4) addDrinks(actor, 2)
+      if (r > 2 && r <= 4) addDrinks(players, actor, 2)
       else if (r === 5) actor.position = clampPos(actor.position + 1)
       else if (r === 6) actor.position = clampPos(actor.position - 1)
       break
@@ -247,19 +260,19 @@ function resolveInteractionCase(
         ? players.find((p) => p.id === choice.targetId)
         : players.find((_, i) => i !== actorIndex)
       const drinks = lastCase?.effect || 2
-      if (target && side !== flip) addDrinks(target, drinks)
+      if (target && side !== flip) addDrinks(players, target, drinks)
       break
     }
     // Roue : 15 segments, 1 sur 3 « safe » (0), sinon 1-12 gorgées pour l'acteur.
     case 'roue': {
       const seg = rng.pickIndex(15)
       const value = (seg + 1) % 3 === 0 ? 0 : rng.int(1, 12)
-      if (value > 0) addDrinks(actor, value)
+      if (value > 0) addDrinks(players, actor, value)
       break
     }
     // Roue des défis : ~1 fois sur 2, gorgées ; sinon défi (approximé sans pénalité).
     case 'roue-defis':
-      if (rng.chance(0.5)) addDrinks(actor, 2)
+      if (rng.chance(0.5)) addDrinks(players, actor, 2)
       break
     // Chance : l'acteur avance de 2 cases.
     case 'chance':
@@ -284,7 +297,16 @@ function resolveInteractionCase(
       const target =
         (choice?.targetId ? players.find((p) => p.id === choice.targetId) : undefined) ??
         players.find((_, i) => i !== actorIndex)
-      if (target) addDrinks(target, lastCase?.effect || 3)
+      if (target) addDrinks(players, target, lastCase?.effect || 3)
+      break
+    }
+    // Défi-chaîne : l'acteur se lie à la cible (boivent ensemble pendant N tours).
+    case 'defi-chaine': {
+      const target = choice?.targetId ? players.find((p) => p.id === choice.targetId) : undefined
+      if (target && target.id !== actor.id) {
+        actor.linkedTo = target.id
+        actor.linkedTurns = lastCase?.effect || 5
+      }
       break
     }
     // Échange : l'acteur échange sa position avec la cible choisie.
@@ -306,13 +328,35 @@ function resolveInteractionCase(
   }
 }
 
-/** Consomme la protection si active (bloque un effet néfaste). Retourne true si bloqué. */
-function consumeProtectionIfAny(p: EnginePlayer): boolean {
-  if (p.protected) {
-    p.protected = false
-    return true
+/** Décrémente la durée de protection de tous les joueurs (expire après un tour de table). */
+function tickProtection(players: EnginePlayer[]): void {
+  players.forEach((p) => {
+    if (!p.protected || p.protectionTurnsLeft == null) return
+    p.protectionTurnsLeft -= 1
+    if (p.protectionTurnsLeft <= 0) {
+      p.protected = false
+      p.protectionTurnsLeft = undefined
+    }
+  })
+}
+
+/** Fin du tour de l'initiateur : décrémente ses liens miroir/chaîne. */
+function tickInitiatorLinks(p: EnginePlayer): void {
+  if ((p.mirrorDrinkTurns ?? 0) > 0) {
+    p.mirrorDrinkTurns = (p.mirrorDrinkTurns ?? 1) - 1
+    if ((p.mirrorDrinkTurns ?? 0) <= 0) p.mirrorDrinkTargetId = undefined
   }
-  return false
+  if (p.linkedTo && (p.linkedTurns ?? 0) > 0) {
+    p.linkedTurns = (p.linkedTurns ?? 1) - 1
+    if ((p.linkedTurns ?? 0) <= 0) p.linkedTo = undefined
+  }
+}
+
+/** Début du tour : malédiction (boit 1 gorgée si non protégé), décrémente la malédiction. */
+function applyCurseAtTurnStart(players: EnginePlayer[], p: EnginePlayer): void {
+  if (p.cursed <= 0) return
+  if (!isProtected(p)) addDrinks(players, p, 1)
+  p.cursed -= 1
 }
 
 /** Id du joueur ayant atteint la dernière case, ou null. */
@@ -327,6 +371,7 @@ function findWinner(players: EnginePlayer[]): string | null {
  */
 function applyCaseToTarget(
   players: EnginePlayer[],
+  actor: EnginePlayer,
   target: EnginePlayer,
   c: EngineCase,
   rng: SeededRng,
@@ -337,28 +382,29 @@ function applyCaseToTarget(
     case 'gorgée':
     case 'defi':
     case 'question':
-      addDrinks(target, c.effect)
+      addDrinks(players, target, c.effect)
       break
     case 'tous':
       players.forEach((p) => {
-        if (p.id !== target.id) addDrinks(p, c.effect)
+        if (p.id !== target.id) addDrinks(players, p, c.effect)
       })
       break
     case 'avance':
     case 'recul':
-      if (consumeProtectionIfAny(target)) break
+      if (isProtected(target)) break
       if (c.type === 'recul' && target.position === 0) break
       target.position = clampPos(target.position + c.effect)
       break
     case 'bombe':
-      if (consumeProtectionIfAny(target)) break
-      players.forEach((p) => addDrinks(p, p.id === target.id ? c.effect * 2 : c.effect))
+      if (isProtected(target)) break
+      players.forEach((p) => addDrinks(players, p, p.id === target.id ? c.effect * 2 : c.effect))
       break
     case 'protection':
       target.protected = true
+      target.protectionTurnsLeft = Math.max(players.length, 1)
       break
     case 'malediction':
-      if (consumeProtectionIfAny(target)) break
+      if (isProtected(target)) break
       target.cursed = c.effect || 3
       break
     case 'miroir': {
@@ -371,45 +417,49 @@ function applyCaseToTarget(
       break
     }
     case 'piege':
-      addDrinks(target, target.position + 1)
+      addDrinks(players, target, target.position + 1)
       break
     case 'passe-tour':
       target.skipNextTurn = true
       break
     case 'double-peine':
-      addDrinks(target, c.effect * 2)
+      addDrinks(players, target, c.effect * 2)
       break
     case 'copie':
-      if (consumeProtectionIfAny(target)) break
+      if (isProtected(target)) break
       target.position = clampPos(target.position + (lastDice ?? 0))
       break
     case 'roulette-russe':
-      if (consumeProtectionIfAny(target)) break
-      if (rng.chance(1 / 3)) addDrinks(target, c.effect)
+      if (isProtected(target)) break
+      if (rng.chance(1 / 3)) addDrinks(players, target, c.effect)
       break
     case 'ancre':
       target.anchored = true
       break
     case 'inversion': {
-      if (consumeProtectionIfAny(target)) break
+      if (isProtected(target)) break
       const last = players.reduce((min, p) => (p.position < min.position ? p : min))
-      addDrinks(last, c.effect)
+      addDrinks(players, last, c.effect)
       break
     }
     case 'melange': {
-      if (consumeProtectionIfAny(target)) break
+      if (isProtected(target)) break
       const shuffled = rng.shuffle(players.map((p) => p.position))
       players.forEach((p, i) => {
         p.position = shuffled[i]
       })
       break
     }
+    // Miroir inversé : lie l'acteur à la cible (boivent ensemble N tours).
+    case 'miroir-inverse':
+      actor.mirrorDrinkTargetId = target.id
+      actor.mirrorDrinkTurns = c.effect || 1
+      break
     case 'rewind':
       if (lastCase && lastCase.type !== 'rewind') {
-        applyCaseToTarget(players, target, lastCase, rng, lastDice, null)
+        applyCaseToTarget(players, actor, target, lastCase, rng, lastDice, null)
       }
       break
-    // 'normal', 'miroir-inverse', 'repetition'… : pas d'effet ciblé (simplifié).
     default:
       break
   }
@@ -535,7 +585,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
           : undefined) ??
         players.find((_, i) => i !== actorIndex) ??
         players[actorIndex]
-      applyCaseToTarget(players, target, state.lastCase, rng, state.lastDice, null)
+      applyCaseToTarget(players, players[actorIndex], target, state.lastCase, rng, state.lastDice, null)
     } else {
       resolveInteractionCase(players, actorIndex, state.pending.caseType, state.lastCase, rng, action.choice)
     }
@@ -582,6 +632,10 @@ function advanceTurnOnPlayers(
   from: number,
   turnCount: number
 ): { currentPlayer: number; turnCount: number } {
+  // Fin du tour de l'initiateur : liens miroir/chaîne. Puis durée de protection (tous).
+  if (players[from]) tickInitiatorLinks(players[from])
+  tickProtection(players)
+
   const n = players.length
   let idx = from
   let tc = turnCount
@@ -592,6 +646,8 @@ function advanceTurnOnPlayers(
       players[idx].skipNextTurn = false
       continue
     }
+    // Début du tour du nouveau joueur : malédiction.
+    applyCurseAtTurnStart(players, players[idx])
     return { currentPlayer: idx, turnCount: tc }
   }
   return { currentPlayer: from, turnCount: tc }

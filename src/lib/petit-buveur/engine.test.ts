@@ -202,3 +202,38 @@ describe('cases interactives', () => {
     expect(next.players.find((p) => p.id === 'p2')!.position).toBe(3)
   })
 })
+
+describe('effets persistants', () => {
+  const pending = (caseType: CaseType, lastCase: EngineCase, needsTgt = true): EngineState => ({
+    ...createInitialState(PLAYERS, SETTINGS, 'persist'),
+    phase: 'awaiting-interaction',
+    pending: { caseType, playerId: 'p1', needsTarget: needsTgt },
+    lastCase,
+  })
+
+  it('protection : bloque une gorgée ciblée', () => {
+    const s = pending('gorgée', { type: 'gorgée', effect: 3 })
+    s.players[1].protected = true
+    s.players[1].protectionTurnsLeft = 3
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p2' } })
+    expect(next.players.find((p) => p.id === 'p2')!.drinks).toBe(0)
+  })
+
+  it('malédiction : le joueur maudit boit 1 au début de son tour', () => {
+    const s = pending('normal', { type: 'normal', effect: 0 })
+    s.players[1].cursed = 2
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p1' } })
+    expect(next.currentPlayer).toBe(1)
+    expect(next.players.find((p) => p.id === 'p2')!.drinks).toBe(1)
+    expect(next.players.find((p) => p.id === 'p2')!.cursed).toBe(1)
+  })
+
+  it('miroir-inversé : quand l’acteur boit, la cible liée boit aussi', () => {
+    const s = pending('gorgée', { type: 'gorgée', effect: 2 })
+    s.players[0].mirrorDrinkTargetId = 'p2'
+    s.players[0].mirrorDrinkTurns = 3
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p1' } })
+    expect(next.players.find((p) => p.id === 'p1')!.drinks).toBe(2)
+    expect(next.players.find((p) => p.id === 'p2')!.drinks).toBe(2)
+  })
+})

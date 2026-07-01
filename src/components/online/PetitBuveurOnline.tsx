@@ -27,7 +27,7 @@ const TOKEN_COLORS = [
 ]
 
 /** Cases interactives qui demandent de choisir un joueur cible. */
-const TARGET_INTERACTIVE = new Set(['vote', 'echange', 'pile-face'])
+const TARGET_INTERACTIVE = new Set(['vote', 'echange', 'pile-face', 'defi-chaine'])
 
 /** Vue client de l'état moteur (rngState absent de la réponse serveur). */
 type EngineView = Omit<EngineState, 'rngState'>
