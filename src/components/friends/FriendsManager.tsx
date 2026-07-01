@@ -23,6 +23,16 @@ export function FriendsManager({ compact = false }: FriendsManagerProps) {
   const { friends, incoming, outgoing, error, sendRequest, acceptRequest, declineRequest, removeFriend } = useFriends()
   const [codeInput, setCodeInput] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+
+  const handleRemoveFriend = (friendshipId: string) => {
+    if (confirmRemoveId !== friendshipId) {
+      setConfirmRemoveId(friendshipId)
+      return
+    }
+    setConfirmRemoveId(null)
+    void removeFriend(friendshipId)
+  }
 
   const handleAdd = async () => {
     const code = codeInput.trim()
@@ -124,33 +134,53 @@ export function FriendsManager({ compact = false }: FriendsManagerProps) {
           <p className="py-2 text-center text-sm text-white/40">{tFriends('empty')}</p>
         ) : (
           <ul className="space-y-2">
-            {sortedFriends.map((f) => (
-              <li
-                key={f.friendshipId}
-                className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-white/20')}
-                  />
-                  <span className={cn('truncate text-sm font-medium', f.isOnline ? 'text-white' : 'text-white/80')}>
-                    {f.displayName}
-                  </span>
-                  {f.isOnline && (
-                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-emerald-400/80">
-                      {tFriends('online')}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => removeFriend(f.friendshipId)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/15 hover:text-red-400"
-                  title={tFriends('remove')}
+            {sortedFriends.map((f) => {
+              const isConfirming = confirmRemoveId === f.friendshipId
+              return (
+                <li
+                  key={f.friendshipId}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-white/20')}
+                    />
+                    <span className={cn('truncate text-sm font-medium', f.isOnline ? 'text-white' : 'text-white/80')}>
+                      {f.displayName}
+                    </span>
+                    {f.isOnline && (
+                      <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-emerald-400/80">
+                        {tFriends('online')}
+                      </span>
+                    )}
+                  </div>
+                  {isConfirming ? (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        onClick={() => handleRemoveFriend(f.friendshipId)}
+                        className="rounded-lg bg-red-500/20 px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/30"
+                      >
+                        {tCommon('confirm')}
+                      </button>
+                      <button
+                        onClick={() => setConfirmRemoveId(null)}
+                        className="rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-xs font-medium text-white/60 hover:bg-white/10"
+                      >
+                        {tCommon('cancel')}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleRemoveFriend(f.friendshipId)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/15 hover:text-red-400"
+                      title={tFriends('remove')}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>
