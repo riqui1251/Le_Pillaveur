@@ -77,12 +77,14 @@ Deux systèmes online parallèles, aucun pleinement fonctionnel :
   - `lib/petit-buveur/engine.ts` — réducteur `ROLL` / `RESOLVE_INTERACTION` ; boucle complète déterministe (déplacement, victoire, tours, skip/ancre), effets directs fidèles ; cases interactives en `pending`.
   - `lib/petit-buveur/game-data.ts` — données canoniques (gorgées par défi) pour alimenter le moteur côté serveur.
 
-**Reste à faire (prochaines sessions) — étapes précises de câblage :**
-1. **Enrichir le moteur** : logique fine des cases interactives (roue, vote, échange, téléport, pile/face, dé de la honte, défi-chaîne, chance, double-case) + cases à ciblage (bombe, miroir, échange, repetition, copie, rewind, melange, piege…) avec actions dédiées. Tests par case.
-2. **Adaptateur serveur** `lib/online/petit-buveur-engine-adapter.ts` : `buildEngineStateForRoom(members, settings, seed)` (engine player.id = userId), (dé)sérialisation, projection « vue client ».
-3. **Endpoint action** `POST /api/online/rooms/[roomId]/action` (serveur-autoritaire) : valide le tour via `currentPlayerId`, applique `reduce`, persiste `gameStateJson` + `stateVersion` + `currentTurnUserId`, publie en SSE (`publishRoomChanged`).
-4. **Rewire du lancement** : pour `gameId === 'petit-buveur'`, construire un `EngineState` (au lieu de l'ancien `buildPetitBuveurInitialState` client-autoritaire). Stocker une `seed` de partie.
-5. **Rewire `game.tsx`** (4057 l., le plus gros) : en ligne, afficher l'état serveur + envoyer des actions (`ROLL`, `RESOLVE_INTERACTION`) ; en local, utiliser le même moteur en mémoire. Même UI, même ressenti.
-6. **Déconnexion/reconnexion** + rematch côté moteur.
+**Backend serveur-autoritaire — FAIT (commité + poussé) :**
+- ✅ **Adaptateur serveur** `lib/petit-buveur/server-adapter.ts` : `buildPetitBuveurEngineState(members, difficulty, seed)` (engine player.id = userId), (dé)sérialisation, `toClientView` (masque `rngState` = anti-triche), `applyRoomAction` (validation + reduce, testé).
+- ✅ **Endpoint action** `POST /api/online/rooms/[roomId]/action` : valide le tour, applique `reduce`, persiste (`gameStateJson`/`stateVersion`/`currentTurnUserId`), diffuse en SSE. Réponse = vue client.
+- ✅ **Rewire du lancement** : `launchPetitBuveurRoom` construit un `EngineState` (graine aléatoire par partie). Compatible avec le parsing/finished/rematch existants (`EngineState` expose `winner` + `version`).
+
+**Reste à faire (prochaines sessions) :**
+1. **Enrichir le moteur** : logique fine des cases interactives (roue, vote, échange, téléport, pile/face, dé de la honte, défi-chaîne, chance, double-case) + cases à ciblage (bombe, miroir, repetition, copie, rewind, melange, piege…) avec un payload de `choice` dans `RESOLVE_INTERACTION`. **Porter fidèlement la logique depuis `game.tsx`** (comparer local vs online). Tests par case.
+2. **Rewire `game.tsx`** (4057 l., le plus gros) : en ligne, afficher l'état serveur + envoyer des actions (`roll`, `resolve`) via l'endpoint `/action` ; en local, utiliser le même moteur en mémoire. Même UI, même ressenti.
+3. **Déconnexion/reconnexion** + rematch côté moteur.
 
 **Dette préexistante notée** : historique de migrations Prisma cassé (`visitor_ip`/`SitePresence`) → `migrate dev` inutilisable, contourner via `migrate diff` jusqu'à réparation.
