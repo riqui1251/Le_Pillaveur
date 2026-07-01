@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Dice6, Crown, ArrowLeft, RotateCcw, Beer, Trophy, MapPin, Sparkles } from 'lucide-react'
+import { Dice6, Crown, ArrowLeft, RotateCcw, Beer, Trophy, MapPin, Sparkles, Target } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -30,7 +30,6 @@ const TARGET_INTERACTIVE = new Set(['vote', 'echange', 'pile-face', 'defi-chaine
 
 /** Vue client de l'état moteur (rngState absent de la réponse serveur). */
 type EngineView = Omit<EngineState, 'rngState'>
-type EngineViewPlayer = EngineView['players'][number]
 
 function parseView(json: string | null | undefined): EngineView | null {
   if (!json) return null
@@ -297,66 +296,19 @@ export function PetitBuveurOnline() {
             )}
           </AnimatePresence>
 
-          {/* Sélection en attente (cible / téléport) */}
-          {awaitingChoice && view.pending && (
-            <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-4">
-              {view.pending.needsTarget || TARGET_INTERACTIVE.has(view.pending.caseType) ? (
-                <>
-                  <p className="mb-3 flex items-center gap-2 text-center text-sm text-white/80">
-                    <span className="rounded-full border border-violet-400/30 bg-violet-500/20 px-2 py-0.5 text-[11px] font-semibold text-violet-100">
-                      {caseLabel(view.pending.caseType)}
-                    </span>
-                    {t('chooseTarget', { case: caseLabel(view.pending.caseType) })}
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {view.players.map((p) => (
-                      <Button
-                        key={p.id}
-                        disabled={busy}
-                        variant="outline"
-                        onClick={() => sendAction('resolve', { targetId: p.id })}
-                        className="justify-start gap-2 border-white/15 text-white hover:bg-white/10"
-                      >
-                        <span aria-hidden>{iconOf(p.id)}</span>
-                        <span className="truncate">{p.name}</span>
-                        {p.id === user.id ? <span className="text-xs text-white/40">{t('you')}</span> : null}
-                      </Button>
-                    ))}
-                  </div>
-                </>
-              ) : view.pending.caseType === 'teleport' ? (
-                <>
-                  <p className="mb-3 text-center text-sm text-white/80">{t('teleportPrompt')}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      disabled={busy}
-                      variant="outline"
-                      onClick={() => sendAction('resolve', { option: 'leader' })}
-                      className="border-white/15 text-white hover:bg-white/10"
-                    >
-                      {t('teleportLeader')}
-                    </Button>
-                    <Button
-                      disabled={busy}
-                      variant="outline"
-                      onClick={() => sendAction('resolve', { option: 'last' })}
-                      className="border-white/15 text-white hover:bg-white/10"
-                    >
-                      {t('teleportLast')}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <Button
-                  onClick={() => sendAction('resolve')}
-                  disabled={busy}
-                  className="w-full bg-violet-600 py-5 text-base font-bold text-white hover:bg-violet-500"
-                >
-                  {busy ? '…' : `${t('continueCase')} (${caseLabel(view.pending.caseType)})`}
-                </Button>
-              )}
-            </div>
-          )}
+          {/* Simple confirmation (case sans choix explicite) */}
+          {awaitingChoice && view.pending &&
+            !view.pending.needsTarget &&
+            !TARGET_INTERACTIVE.has(view.pending.caseType) &&
+            view.pending.caseType !== 'teleport' && (
+              <Button
+                onClick={() => sendAction('resolve')}
+                disabled={busy}
+                className="w-full bg-violet-600 py-5 text-base font-bold text-white hover:bg-violet-500"
+              >
+                {busy ? '…' : `${t('continueCase')} (${caseLabel(view.pending.caseType)})`}
+              </Button>
+            )}
 
           {/* Plateau */}
           <div className="pb-board">
@@ -552,6 +504,108 @@ export function PetitBuveurOnline() {
           </div>
         </footer>
       )}
+
+      {/* Fenêtre de ciblage / téléport — plein écran mobile (bottom-sheet), centrée sur desktop */}
+      <AnimatePresence>
+        {awaitingChoice && view.pending && (
+          view.pending.needsTarget || TARGET_INTERACTIVE.has(view.pending.caseType) ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label={tGame('target.title')}
+              className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+                className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
+              >
+                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-violet-600/20 to-transparent px-5 pb-4 pt-5 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/20 ring-1 ring-violet-400/30">
+                    <Target className="h-6 w-6 text-violet-300" />
+                  </div>
+                  <span className="rounded-full border border-violet-400/30 bg-violet-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-violet-100">
+                    {caseLabel(view.pending.caseType)}
+                  </span>
+                  <h3 className="text-lg font-bold text-white">{tGame('target.title')}</h3>
+                  <p className="max-w-[18rem] text-sm text-white/50">{tGame('target.hint')}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 overflow-y-auto p-4 sm:grid-cols-3">
+                  {view.players.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => sendAction('resolve', { targetId: p.id })}
+                      className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/10 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                    >
+                      <span className="text-3xl" aria-hidden>{iconOf(p.id)}</span>
+                      <span className="max-w-full truncate text-center text-sm font-semibold text-white">
+                        {p.name}
+                        {p.id === user.id ? ` ${t('you')}` : ''}
+                      </span>
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/50">
+                        {t('caseLabel')} {p.position + 1}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          ) : view.pending.caseType === 'teleport' ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('teleportPrompt')}
+              className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+                className="z-[100] w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
+              >
+                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-violet-600/20 to-transparent px-5 pb-4 pt-5 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/20 ring-1 ring-violet-400/30">
+                    <Target className="h-6 w-6 text-violet-300" />
+                  </div>
+                  <span className="rounded-full border border-violet-400/30 bg-violet-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-violet-100">
+                    {caseLabel(view.pending.caseType)}
+                  </span>
+                  <h3 className="text-lg font-bold text-white">{t('teleportPrompt')}</h3>
+                </div>
+                <div className="grid grid-cols-1 gap-3 p-5">
+                  <Button
+                    disabled={busy}
+                    onClick={() => sendAction('resolve', { option: 'leader' })}
+                    className="h-12 justify-center bg-amber-500 text-base font-bold text-black hover:bg-amber-400"
+                  >
+                    {t('teleportLeader')}
+                  </Button>
+                  <Button
+                    disabled={busy}
+                    variant="secondary"
+                    onClick={() => sendAction('resolve', { option: 'last' })}
+                    className="h-12 justify-center text-base font-bold"
+                  >
+                    {t('teleportLast')}
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          ) : null
+        )}
+      </AnimatePresence>
     </div>
   )
 }
