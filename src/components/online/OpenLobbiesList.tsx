@@ -7,7 +7,7 @@ import { GAMES } from '@/lib/games'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { GameIconById } from '@/components/hub/GameIconById'
 
 export function OpenLobbiesList() {
   const router = useRouter()
@@ -62,40 +62,50 @@ export function OpenLobbiesList() {
       {Array.from(byGame.entries()).map(([gameId, gameLobbies]) => {
         const game = GAMES.find((g) => g.id === gameId)
         return (
-          <div key={gameId} className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-violet-300/80">
-              {game?.emoji} {game?.title ?? gameId}
-            </p>
+          <div key={gameId} className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-4 backdrop-blur-md">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/10">
+                <GameIconById id={gameId} className="h-3.5 w-3.5 text-violet-200" />
+              </span>
+              <p className="text-xs font-semibold uppercase tracking-widest text-violet-300/80">
+                {game?.title ?? gameId}
+              </p>
+            </div>
             <ul className="space-y-2">
               {gameLobbies.map((lobby) => {
                 const readyCount = lobby.members.filter((m) => m.isReady).length
                 return (
                   <li
                     key={lobby.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition-colors hover:border-violet-400/30"
                   >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold tracking-wider text-white">
-                          {lobby.code}
-                        </span>
-                        <span className="flex items-center gap-1 text-xs text-white/45">
-                          <Crown className="h-3 w-3 text-amber-400" />
-                          {lobby.hostName}
-                        </span>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm">
+                        👑
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-bold tracking-wider text-white">
+                            {lobby.code}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-white/45">
+                            <Crown className="h-3 w-3 text-amber-400" />
+                            {lobby.hostName}
+                          </span>
+                        </div>
+                        <p className="mt-1 flex items-center gap-2 text-xs text-white/50">
+                          <Users className="h-3 w-3" />
+                          {lobby.memberCount} joueur{lobby.memberCount > 1 ? 's' : ''}
+                          <span>·</span>
+                          {readyCount}/{lobby.memberCount} prêt{readyCount > 1 ? 's' : ''}
+                        </p>
                       </div>
-                      <p className="mt-1 flex items-center gap-2 text-xs text-white/50">
-                        <Users className="h-3 w-3" />
-                        {lobby.memberCount} joueur{lobby.memberCount > 1 ? 's' : ''}
-                        <span>·</span>
-                        {readyCount}/{lobby.memberCount} prêt{readyCount > 1 ? 's' : ''}
-                      </p>
                     </div>
                     <Button
                       size="sm"
                       disabled={joining}
                       onClick={() => handleJoin(lobby.id, lobby.gameId)}
-                      className="bg-violet-600 text-white hover:bg-violet-500"
+                      className="shrink-0 rounded-xl bg-violet-600 text-white hover:bg-violet-500"
                     >
                       Rejoindre
                     </Button>
