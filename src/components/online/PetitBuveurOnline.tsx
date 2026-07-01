@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Dice6, Crown, ArrowLeft, RotateCcw, Beer, Trophy, MapPin, Sparkles, Target, Shuffle, User } from 'lucide-react'
+import { Dice6, Crown, ArrowLeft, RotateCcw, Beer, Trophy, MapPin, Sparkles, Target, Shuffle, User, HelpCircle, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -67,6 +67,7 @@ export function PetitBuveurOnline() {
   const [busy, setBusy] = useState(false)
   const [rolling, setRolling] = useState(false)
   const [rollDisplay, setRollDisplay] = useState<number | null>(null)
+  const [showLegend, setShowLegend] = useState(false)
   const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -141,6 +142,15 @@ export function PetitBuveurOnline() {
     }
   })
 
+  /** Légende statique de tous les effets possibles (mêmes icônes/couleurs que les pastilles actives). */
+  const legendEffects = [
+    { icon: '🛡️', title: tGame('effects.protection'), desc: tGame('effects.protectionDesc'), accent: 'border-blue-400/50 bg-blue-500/15' },
+    { icon: '👻', title: tGame('effects.curse'), desc: tGame('effects.curseDesc'), accent: 'border-red-400/50 bg-red-500/15' },
+    { icon: '🔗', title: tGame('effects.chain'), desc: tGame('effects.chainDesc'), accent: 'border-indigo-400/50 bg-indigo-500/15' },
+    { icon: '⏭️', title: tGame('effects.skipTurn'), desc: tGame('effects.skipTurnDesc'), accent: 'border-slate-400/50 bg-slate-500/15' },
+    { icon: '⚓', title: tGame('effects.anchor'), desc: tGame('effects.anchorDesc'), accent: 'border-cyan-400/50 bg-cyan-500/15' },
+  ]
+
   const ranking = [...view.players].sort((a, b) => b.position - a.position)
   const rankBorder = (i: number) =>
     i === 0
@@ -214,6 +224,13 @@ export function PetitBuveurOnline() {
           <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/60">
             {DIFFICULTY_EMOJI[difficulty]} {tDiff(difficulty)}
           </span>
+          <button
+            onClick={() => setShowLegend(true)}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
+            aria-label={tGame('effects.active').replace(' :', '')}
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
       </header>
 
@@ -677,6 +694,56 @@ export function PetitBuveurOnline() {
               </motion.div>
             </motion.div>
           ) : null
+        )}
+      </AnimatePresence>
+
+      {/* Légende des effets — informative, fermable (contrairement aux modales de choix). */}
+      <AnimatePresence>
+        {showLegend && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={tGame('effects.active').replace(' :', '')}
+            onClick={() => setShowLegend(false)}
+            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-br from-violet-600/20 to-transparent px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 shrink-0 text-violet-300" />
+                  <h3 className="text-base font-bold text-white">{tGame('effects.active').replace(' :', '')}</h3>
+                </div>
+                <button
+                  onClick={() => setShowLegend(false)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label={tGame('close')}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="min-h-0 space-y-2 overflow-y-auto p-4">
+                {legendEffects.map((e) => (
+                  <div key={e.title} className={cn('flex items-center gap-3 rounded-xl border px-3 py-2.5', e.accent)}>
+                    <span className="text-xl" aria-hidden>{e.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-white">{e.title}</p>
+                      <p className="text-xs text-white/60">{e.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
