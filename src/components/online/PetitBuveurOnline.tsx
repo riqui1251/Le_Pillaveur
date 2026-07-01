@@ -70,7 +70,10 @@ export function PetitBuveurOnline() {
   const colorFor = (id: string) =>
     TOKEN_COLORS[Math.max(0, view.players.findIndex((p) => p.id === id)) % TOKEN_COLORS.length]
 
-  const sendAction = async (action: 'roll' | 'resolve') => {
+  const sendAction = async (
+    action: 'roll' | 'resolve',
+    choice?: { targetId?: string; side?: 'pile' | 'face' }
+  ) => {
     if (!room || busy) return
     setBusy(true)
     try {
@@ -78,7 +81,7 @@ export function PetitBuveurOnline() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ action, expectedVersion: room.stateVersion }),
+        body: JSON.stringify({ action, expectedVersion: room.stateVersion, choice }),
       })
       // Le serveur diffuse le nouvel état (SSE) → useOnlineRoom rafraîchit la vue.
     } finally {
@@ -226,13 +229,36 @@ export function PetitBuveurOnline() {
           </div>
         ) : isMyTurn ? (
           view.pending ? (
-            <Button
-              onClick={() => sendAction('resolve')}
-              disabled={busy}
-              className="w-full bg-violet-600 py-6 text-lg font-bold text-white hover:bg-violet-500"
-            >
-              {busy ? '…' : `Continuer (${view.pending.caseType})`}
-            </Button>
+            view.pending.needsTarget ? (
+              <div className="space-y-2">
+                <p className="text-center text-sm text-white/70">
+                  Choisis une cible pour{' '}
+                  <span className="font-semibold text-amber-200">{view.pending.caseType}</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {view.players.map((p) => (
+                    <Button
+                      key={p.id}
+                      disabled={busy}
+                      variant="outline"
+                      onClick={() => sendAction('resolve', { targetId: p.id })}
+                      className="border-white/15 text-white hover:bg-white/10"
+                    >
+                      {p.name}
+                      {p.id === user.id ? ' (vous)' : ''}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <Button
+                onClick={() => sendAction('resolve')}
+                disabled={busy}
+                className="w-full bg-violet-600 py-6 text-lg font-bold text-white hover:bg-violet-500"
+              >
+                {busy ? '…' : `Continuer (${view.pending.caseType})`}
+              </Button>
+            )
           ) : (
             <Button
               onClick={() => sendAction('roll')}

@@ -1,4 +1,4 @@
-import { BOARD_SIZE, CASES_INTERACTIVE, type CaseType, type Difficulty, type EngineCase } from './types'
+import { BOARD_SIZE, CASES_INTERACTIVE, needsTarget, type CaseType, type Difficulty, type EngineCase } from './types'
 import { rngFromState, hashSeed, type RngState, type SeededRng } from './rng'
 import { generateCase } from './case-generator'
 
@@ -59,8 +59,8 @@ export interface EngineState {
   turnCount: number
   lastDice: number | null
   lastCase: EngineCase | null
-  /** Case interactive en attente de résolution. */
-  pending: { caseType: CaseType; playerId: string } | null
+  /** Case en attente de résolution. `needsTarget` : un joueur cible doit être choisi. */
+  pending: { caseType: CaseType; playerId: string; needsTarget: boolean } | null
   phase: EnginePhase
   /** Id du joueur gagnant, ou null. */
   winner: string | null
@@ -257,6 +257,115 @@ function resolveInteractionCase(
   }
 }
 
+/** Consomme la protection si active (bloque un effet néfaste). Retourne true si bloqué. */
+function consumeProtectionIfAny(p: EnginePlayer): boolean {
+  if (p.protected) {
+    p.protected = false
+    return true
+  }
+  return false
+}
+
+/** Id du joueur ayant atteint la dernière case, ou null. */
+function findWinner(players: EnginePlayer[]): string | null {
+  const w = players.find((p) => p.position === BOARD_SIZE - 1)
+  return w ? w.id : null
+}
+
+/**
+ * Applique une case à la CIBLE choisie (mute `players`). Porté fidèlement depuis
+ * game.tsx#applyEffectToPlayer. `lastDice` = dernier déplacement (pour « copie »).
+ */
+function applyCaseToTarget(
+  players: EnginePlayer[],
+  target: EnginePlayer,
+  c: EngineCase,
+  rng: SeededRng,
+  lastDice: number | null,
+  lastCase: EngineCase | null
+): void {
+  switch (c.type) {
+    case 'gorgée':
+    case 'defi':
+    case 'question':
+      addDrinks(target, c.effect)
+      break
+    case 'tous':
+      players.forEach((p) => {
+        if (p.id !== target.id) addDrinks(p, c.effect)
+      })
+      break
+    case 'avance':
+    case 'recul':
+      if (consumeProtectionIfAny(target)) break
+      if (c.type === 'recul' && target.position === 0) break
+      target.position = clampPos(target.position + c.effect)
+      break
+    case 'bombe':
+      if (consumeProtectionIfAny(target)) break
+      players.forEach((p) => addDrinks(p, p.id === target.id ? c.effect * 2 : c.effect))
+      break
+    case 'protection':
+      target.protected = true
+      break
+    case 'malediction':
+      if (consumeProtectionIfAny(target)) break
+      target.cursed = c.effect || 3
+      break
+    case 'miroir': {
+      const sorted = [...players].sort((a, b) => b.position - a.position)
+      const positions = sorted.map((p) => p.position)
+      players.forEach((p) => {
+        const si = sorted.findIndex((sp) => sp.id === p.id)
+        p.position = positions[positions.length - 1 - si]
+      })
+      break
+    }
+    case 'piege':
+      addDrinks(target, target.position + 1)
+      break
+    case 'passe-tour':
+      target.skipNextTurn = true
+      break
+    case 'double-peine':
+      addDrinks(target, c.effect * 2)
+      break
+    case 'copie':
+      if (consumeProtectionIfAny(target)) break
+      target.position = clampPos(target.position + (lastDice ?? 0))
+      break
+    case 'roulette-russe':
+      if (consumeProtectionIfAny(target)) break
+      if (rng.chance(1 / 3)) addDrinks(target, c.effect)
+      break
+    case 'ancre':
+      target.anchored = true
+      break
+    case 'inversion': {
+      if (consumeProtectionIfAny(target)) break
+      const last = players.reduce((min, p) => (p.position < min.position ? p : min))
+      addDrinks(last, c.effect)
+      break
+    }
+    case 'melange': {
+      if (consumeProtectionIfAny(target)) break
+      const shuffled = rng.shuffle(players.map((p) => p.position))
+      players.forEach((p, i) => {
+        p.position = shuffled[i]
+      })
+      break
+    }
+    case 'rewind':
+      if (lastCase && lastCase.type !== 'rewind') {
+        applyCaseToTarget(players, target, lastCase, rng, lastDice, null)
+      }
+      break
+    // 'normal', 'miroir-inverse', 'repetition'… : pas d'effet ciblé (simplifié).
+    default:
+      break
+  }
+}
+
 export function reduce(state: EngineState, action: EngineAction): EngineState {
   if (state.phase === 'finished') {
     throw new EngineError('GAME_FINISHED')
@@ -313,8 +422,10 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       defiDrinks: state.settings.defiDrinks,
     })
 
-    // Case interactive : on attend une résolution joueur.
-    if (CASES_INTERACTIVE.has(generated.type)) {
+    // Case à cible OU interactive : on attend la résolution du joueur.
+    const interactive = CASES_INTERACTIVE.has(generated.type)
+    const targeted = needsTarget(generated.type)
+    if (interactive || targeted) {
       return {
         ...state,
         version: state.version + 1,
@@ -322,14 +433,28 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         players,
         lastDice: dice,
         lastCase: generated,
-        pending: { caseType: generated.type, playerId: me.id },
+        pending: { caseType: generated.type, playerId: me.id, needsTarget: targeted },
         phase: 'awaiting-interaction',
         log: pushLog(state.log, { turn: state.turnCount, playerId: me.id, message: `case:${generated.type}` }),
       }
     }
 
-    // Effet direct + passage au joueur suivant.
+    // Case auto-résolue (no-target) : effet direct.
     applyCaseEffect(players, actorIndex, generated, rng)
+    const winnerAfterCase = findWinner(players)
+    if (winnerAfterCase) {
+      return {
+        ...state,
+        version: state.version + 1,
+        rngState: rng.getState(),
+        players,
+        lastDice: dice,
+        lastCase: generated,
+        phase: 'finished',
+        winner: winnerAfterCase,
+        log: pushLog(state.log, { turn: state.turnCount, playerId: winnerAfterCase, message: 'win' }),
+      }
+    }
     const turn = advanceTurnOnPlayers(players, actorIndex, state.turnCount)
     return {
       ...state,
@@ -353,7 +478,34 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
     const rng = rngFromState(state.rngState)
     const players = state.players.map((p) => ({ ...p }))
 
-    resolveInteractionCase(players, actorIndex, state.pending.caseType, state.lastCase, rng, action.choice)
+    if (state.pending.needsTarget && state.lastCase) {
+      // Case à cible : le joueur choisit qui subit l'effet.
+      const target =
+        (action.choice?.targetId
+          ? players.find((p) => p.id === action.choice!.targetId)
+          : undefined) ??
+        players.find((_, i) => i !== actorIndex) ??
+        players[actorIndex]
+      applyCaseToTarget(players, target, state.lastCase, rng, state.lastDice, null)
+    } else {
+      resolveInteractionCase(players, actorIndex, state.pending.caseType, state.lastCase, rng, action.choice)
+    }
+
+    // Victoire éventuelle (un joueur poussé sur la dernière case par l'effet).
+    const winnerId = findWinner(players)
+    if (winnerId) {
+      return {
+        ...state,
+        version: state.version + 1,
+        rngState: rng.getState(),
+        players,
+        pending: null,
+        phase: 'finished',
+        winner: winnerId,
+        log: pushLog(state.log, { turn: state.turnCount, playerId: winnerId, message: 'win' }),
+      }
+    }
+
     const turn = advanceTurnOnPlayers(players, actorIndex, state.turnCount)
     return {
       ...state,

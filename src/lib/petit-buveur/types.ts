@@ -84,3 +84,12 @@ export const CASES_INTERACTIVE = new Set<CaseType>([
   'defi-chaine',
   'double-case',
 ])
+
+/**
+ * Une case nécessite le choix d'une cible (joueur) si elle n'est ni auto-résolue
+ * (no-target) ni interactive à modale. C'est le cœur du jeu : lancer le dé →
+ * choisir une cible → l'effet s'applique à elle.
+ */
+export function needsTarget(caseType: CaseType): boolean {
+  return !CASES_NO_TARGET.has(caseType) && !CASES_INTERACTIVE.has(caseType)
+}

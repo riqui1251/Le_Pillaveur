@@ -101,10 +101,10 @@ describe('moteur Petit Buveur — cœur', () => {
 })
 
 describe('cases interactives', () => {
-  const withPending = (caseType: CaseType, lastCase: EngineCase): EngineState => ({
+  const withPending = (caseType: CaseType, lastCase: EngineCase, needsTgt = false): EngineState => ({
     ...createInitialState(PLAYERS, SETTINGS, 'inter'),
     phase: 'awaiting-interaction',
-    pending: { caseType, playerId: 'p1' },
+    pending: { caseType, playerId: 'p1', needsTarget: needsTgt },
     lastCase,
   })
 
@@ -134,5 +134,29 @@ describe('cases interactives', () => {
   it('refuse une résolution par un autre joueur', () => {
     const s = withPending('de-honte', { type: 'de-honte', effect: 0 })
     expect(() => reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p2' })).toThrow(EngineError)
+  })
+
+  it('case à cible : gorgée fait boire la cible choisie', () => {
+    const s = withPending('gorgée', { type: 'gorgée', effect: 3 }, true)
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p2' } })
+    expect(next.players.find((p) => p.id === 'p2')!.drinks).toBe(3)
+    expect(next.players.find((p) => p.id === 'p1')!.drinks).toBe(0)
+    expect(next.phase).toBe('playing')
+  })
+
+  it('case à cible : bombe touche tout le monde, double sur la cible', () => {
+    const s = withPending('bombe', { type: 'bombe', effect: 2 }, true)
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p2' } })
+    expect(next.players.find((p) => p.id === 'p2')!.drinks).toBe(4)
+    expect(next.players.find((p) => p.id === 'p1')!.drinks).toBe(2)
+    expect(next.players.find((p) => p.id === 'p3')!.drinks).toBe(2)
+  })
+
+  it('case à cible : avance peut faire gagner la cible', () => {
+    const base = withPending('avance', { type: 'avance', effect: 1 }, true)
+    base.players[1].position = BOARD_SIZE - 2 // p2 à une case de la fin
+    const next = reduce(base, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p2' } })
+    expect(next.phase).toBe('finished')
+    expect(next.winner).toBe('p2')
   })
 })
