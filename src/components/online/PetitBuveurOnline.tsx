@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Dice6, Crown, ArrowLeft, RotateCcw, Beer, Trophy, MapPin, Sparkles, Target } from 'lucide-react'
+import { Dice6, Crown, ArrowLeft, RotateCcw, Beer, Trophy, MapPin, Sparkles, Target, Shuffle, User } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -525,7 +525,7 @@ export function PetitBuveurOnline() {
                 transition={{ type: 'spring', damping: 26, stiffness: 320 }}
                 className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
               >
-                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-violet-600/20 to-transparent px-5 pb-4 pt-5 text-center">
+                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-violet-600/20 to-transparent px-5 pb-5 pt-5 text-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/20 ring-1 ring-violet-400/30">
                     <Target className="h-6 w-6 text-violet-300" />
                   </div>
@@ -534,27 +534,108 @@ export function PetitBuveurOnline() {
                   </span>
                   <h3 className="text-lg font-bold text-white">{tGame('target.title')}</h3>
                   <p className="max-w-[18rem] text-sm text-white/50">{tGame('target.hint')}</p>
+                  <div
+                    className="mt-1 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-violet-400/40 bg-violet-500/10 text-2xl text-violet-100"
+                    aria-hidden
+                  >
+                    ?
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 overflow-y-auto p-4 sm:grid-cols-3">
-                  {view.players.map((p) => (
-                    <button
-                      key={p.id}
+                <div className="min-h-0 overflow-y-auto px-4 pb-4 pt-4">
+                  {/* Classement compact */}
+                  <div className="mb-4 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+                      {tGame('ranking')}
+                    </p>
+                    <ul className="space-y-1">
+                      {ranking.map((p, index) => {
+                        const isActive = p.id === active?.id
+                        return (
+                          <li
+                            key={p.id}
+                            className={cn(
+                              'flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm',
+                              isActive && 'bg-emerald-500/10'
+                            )}
+                          >
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span
+                                className={cn(
+                                  'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md border px-1 text-[10px] font-bold tabular-nums',
+                                  index === 0
+                                    ? 'border-amber-400/45 bg-amber-500/20 text-amber-100'
+                                    : 'border-white/10 bg-white/5 text-white/50'
+                                )}
+                              >
+                                {index + 1}
+                              </span>
+                              <span className="shrink-0 text-xs" aria-hidden>{iconOf(p.id)}</span>
+                              <span className={cn('truncate font-medium text-white/90', isActive && 'text-emerald-300')}>
+                                {p.name}
+                              </span>
+                            </span>
+                            <span className="shrink-0 text-[10px] text-white/40">
+                              {t('caseLabel')} {p.position + 1}
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+
+                  {/* Cibles (hors soi-même — voir bouton "Moi" ci-dessous) */}
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {view.players
+                      .filter((p) => p.id !== active?.id)
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          disabled={busy}
+                          onClick={() => sendAction('resolve', { targetId: p.id })}
+                          className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/10 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                        >
+                          <span className="text-3xl" aria-hidden>{iconOf(p.id)}</span>
+                          <span className="max-w-full truncate text-center text-sm font-semibold text-white">
+                            {p.name}
+                          </span>
+                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/50">
+                            {t('caseLabel')} {p.position + 1}
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+
+                  {/* Actions rapides */}
+                  <div className="mt-5 space-y-2 border-t border-white/10 pt-4">
+                    <Button
                       type="button"
+                      variant="outline"
                       disabled={busy}
-                      onClick={() => sendAction('resolve', { targetId: p.id })}
-                      className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/10 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                      onClick={() => {
+                        const pick = view.players[Math.floor(Math.random() * view.players.length)]
+                        if (pick) sendAction('resolve', { targetId: pick.id })
+                      }}
+                      className="h-11 w-full gap-2 border-violet-500/30 bg-violet-500/5 text-white hover:bg-violet-500/15"
                     >
-                      <span className="text-3xl" aria-hidden>{iconOf(p.id)}</span>
-                      <span className="max-w-full truncate text-center text-sm font-semibold text-white">
-                        {p.name}
-                        {p.id === user.id ? ` ${t('you')}` : ''}
-                      </span>
-                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/50">
-                        {t('caseLabel')} {p.position + 1}
-                      </span>
-                    </button>
-                  ))}
+                      <Shuffle className="h-4 w-4 text-violet-300" />
+                      {tGame('target.random')}
+                    </Button>
+                    {active && (
+                      <Button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => sendAction('resolve', { targetId: active.id })}
+                        className="h-11 w-full gap-2 border border-amber-500/30 bg-amber-500/10 text-white hover:bg-amber-500/20"
+                      >
+                        <User className="h-4 w-4 opacity-90" />
+                        <span className="flex min-w-0 items-center gap-1 truncate">
+                          {tGame('target.me')} <span className="font-semibold">{active.name}</span>
+                        </span>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
