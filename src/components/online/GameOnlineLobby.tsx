@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { Copy, Crown, Globe, LogOut, Play, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -16,12 +17,22 @@ interface GameOnlineLobbyProps {
   game?: GameMeta
 }
 
+/** Difficultés Petit Buveur (mêmes clés/couleurs que la sélection en local). */
+const PB_DIFFICULTIES = ['facile', 'normal', 'difficile', 'extreme'] as const
+const PB_DIFFICULTY_GRADIENT: Record<(typeof PB_DIFFICULTIES)[number], string> = {
+  facile: 'from-emerald-500 to-green-600 shadow-emerald-500/30',
+  normal: 'from-amber-500 to-yellow-600 shadow-amber-500/30',
+  difficile: 'from-orange-500 to-red-600 shadow-orange-500/30',
+  extreme: 'from-red-600 to-rose-700 shadow-red-500/30',
+}
+
 export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps) {
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
   const { user } = useAuth()
-  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame } = useOnlineRoom()
+  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings } = useOnlineRoom()
   const { lobbies } = useOpenLobbies()
   const [copied, setCopied] = useState(false)
+  const tPb = useTranslations('games.petit-buveur.page')
 
   const gameLobbies = lobbies.filter((l) => l.gameId === gameId)
   const isHost = room?.hostUserId === user?.id
@@ -142,6 +153,37 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </Button>
         </div>
       </div>
+
+      {gameId === 'petit-buveur' && (
+        <div>
+          <p className="mb-3 text-sm font-semibold text-white/70">{tPb('difficulty')}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {PB_DIFFICULTIES.map((value) => {
+              const active = (room.settings.difficulty ?? 'normal') === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={!isHost}
+                  onClick={() => updateSettings({ difficulty: value })}
+                  className={cn(
+                    'rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed',
+                    active
+                      ? `border-transparent bg-gradient-to-r ${PB_DIFFICULTY_GRADIENT[value]} text-white shadow-lg`
+                      : 'border-white/10 bg-white/5 text-white/60',
+                    isHost && !active && 'hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  <span className="block text-sm font-bold">{tPb(`difficulties.${value}.label`)}</span>
+                  <span className={cn('mt-0.5 block text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                    {tPb(`difficulties.${value}.desc`)}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">

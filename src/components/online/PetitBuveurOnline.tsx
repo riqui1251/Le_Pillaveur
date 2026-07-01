@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Dice6, Crown, ArrowLeft, RotateCcw, Beer, Trophy, MapPin, Sparkles, Target, Shuffle, User, HelpCircle, X } from 'lucide-react'
+import ReactConfetti from 'react-confetti'
+import { Dice6, ArrowLeft, RefreshCw, Home, Beer, Trophy, MapPin, Sparkles, Target, Shuffle, User, HelpCircle, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -68,12 +69,20 @@ export function PetitBuveurOnline() {
   const [rolling, setRolling] = useState(false)
   const [rollDisplay, setRollDisplay] = useState<number | null>(null)
   const [showLegend, setShowLegend] = useState(false)
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
   const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     return () => {
       if (rollIntervalRef.current) clearInterval(rollIntervalRef.current)
     }
+  }, [])
+
+  useEffect(() => {
+    const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
   }, [])
 
   const inGame = room?.gameId === 'petit-buveur' && room.status === 'playing'
@@ -441,31 +450,6 @@ export function PetitBuveurOnline() {
             </div>
           </div>
 
-          {/* Fin de partie */}
-          <AnimatePresence>
-            {finished && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-3 rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-orange-500/10 p-5 text-center"
-              >
-                <p className="flex items-center justify-center gap-2 text-lg font-bold text-white">
-                  <Crown className="h-5 w-5 text-amber-400" />
-                  {winner ? t('winner', { name: winner.name }) : t('gameOver')}
-                </p>
-                <Button
-                  onClick={() => voteRematch()}
-                  disabled={iVotedRematch}
-                  className="w-full bg-amber-500 text-black hover:bg-amber-400 disabled:opacity-50"
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  {iVotedRematch
-                    ? t('rematchWaiting', { count: rematchVotes.length, total: view.players.length })
-                    : t('rematch')}
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </main>
 
@@ -513,6 +497,129 @@ export function PetitBuveurOnline() {
           </div>
         </footer>
       )}
+
+      {/* Écran de victoire — fidèle au mode local (confettis, trophée, stats, classement final). */}
+      <AnimatePresence>
+        {finished && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={tGame('victory.winner')}
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          >
+            {windowSize.width > 0 && windowSize.height > 0 && (
+              <ReactConfetti
+                width={windowSize.width}
+                height={windowSize.height}
+                recycle={true}
+                numberOfPieces={200}
+                gravity={0.15}
+              />
+            )}
+            <motion.div
+              initial={{ scale: 0.85, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
+              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-gray-900/95 shadow-2xl backdrop-blur-md"
+            >
+              <div className="bg-gradient-to-br from-amber-600/20 via-transparent to-orange-600/10 p-6">
+                {/* Trophée animé */}
+                <div className="mb-4 flex flex-col items-center gap-3">
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                    className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-4xl shadow-xl shadow-amber-500/40"
+                  >
+                    🏆
+                  </motion.div>
+                  <div className="text-center">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/70">
+                      {tGame('victory.winner')}
+                    </p>
+                    <h2 className="mt-1 text-2xl font-bold text-white">{winner?.name ?? '—'}</h2>
+                    <p className="mt-0.5 text-sm text-white/50">{tGame('victory.wonGame')}</p>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-amber-300">{view.turnCount}</p>
+                    <p className="text-[10px] text-white/40">{tGame('victory.turns')}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-amber-300">{view.players.length}</p>
+                    <p className="text-[10px] text-white/40">{tGame('victory.players')}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl leading-none" aria-hidden>{DIFFICULTY_EMOJI[difficulty]}</p>
+                    <p className="mt-1 text-sm font-bold text-amber-300">{tDiff(difficulty)}</p>
+                    <p className="mt-0.5 text-[10px] text-white/40">{tGame('victory.difficulty')}</p>
+                  </div>
+                </div>
+
+                {/* Classement final */}
+                <div className="mb-5 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+                    {tGame('finalRanking')}
+                  </p>
+                  {ranking.map((p, index) => (
+                    <div
+                      key={p.id}
+                      className={cn(
+                        'flex items-center justify-between rounded-xl px-3 py-2',
+                        p.id === winner?.id ? 'border border-amber-400/30 bg-amber-500/15' : 'bg-white/5'
+                      )}
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={cn(
+                            'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md border px-1 text-[10px] font-bold tabular-nums',
+                            index === 0
+                              ? 'border-amber-400/45 bg-amber-500/20 text-amber-100'
+                              : 'border-white/10 bg-white/5 text-white/50'
+                          )}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className="shrink-0 text-sm" aria-hidden>{iconOf(p.id)}</span>
+                        <span className="truncate text-sm font-semibold text-white">{p.name}</span>
+                      </div>
+                      <div className="flex shrink-0 gap-3 text-xs text-white/50">
+                        <span>{p.drinks}🍺</span>
+                        <span>{t('caseLabel')} {p.position + 1}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2.5">
+                  <Button
+                    onClick={() => voteRematch()}
+                    disabled={iVotedRematch}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:opacity-60"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    {iVotedRematch
+                      ? t('rematchWaiting', { count: rematchVotes.length, total: view.players.length })
+                      : tGame('replay')}
+                  </Button>
+                  <button
+                    onClick={() => leaveRoom()}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
+                  >
+                    <Home className="h-4 w-4" /> {tGame('backToMenu')}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Fenêtre de ciblage / téléport — plein écran mobile (bottom-sheet), centrée sur desktop */}
       <AnimatePresence>
