@@ -1,20 +1,34 @@
 "use client"
 
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { HubShell } from '@/components/hub/HubShell'
 import { SelectedPlayersBar } from '@/components/hub/SelectedPlayersBar'
 import { GamesGrid } from '@/components/hub/GamesGrid'
 import { OpenLobbiesList } from '@/components/online/OpenLobbiesList'
+import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { PlayModeToggle } from '@/components/auth/PlayModeToggle'
 import { useRequireSelectedPlayers } from '@/hooks/useRequireSelectedPlayers'
 import { useAuth } from '@/hooks/useAuth'
+import { useOnlineRoom } from '@/hooks/useOnlineRoom'
+import { GAMES } from '@/lib/games'
 
 export default function GamesHubPage() {
   const t = useTranslations('hub.jeux')
   const tOnline = useTranslations('hub.jeuxOnline')
+  const router = useRouter()
   const { user } = useAuth()
+  const { joinRoom, loading: joining } = useOnlineRoom()
   const isOnline = user?.playMode === 'online'
   const { ready } = useRequireSelectedPlayers('/joueurs', { skipWhenOnline: true })
+
+  const handleJoinInvite = async (roomId: string) => {
+    const room = await joinRoom({ roomId })
+    if (room?.gameId) {
+      const game = GAMES.find((g) => g.id === room.gameId)
+      if (game) router.push(game.path)
+    }
+  }
 
   if (!isOnline && !ready) return null
 
@@ -39,6 +53,7 @@ export default function GamesHubPage() {
         </div>
       )}
 
+      {isOnline && <FriendInviteBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <OpenLobbiesList />}
 
       <GamesGrid />

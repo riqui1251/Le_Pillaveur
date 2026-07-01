@@ -4,10 +4,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle } from 'lucide-react'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, UserPlus, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
+import { useFriends } from '@/hooks/useFriends'
 import { canAccessSupervision } from '@/lib/roles'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
@@ -40,6 +41,10 @@ export function AccountInfo() {
   )
   const { user, logout, refresh } = useAuth()
   const { players, loading, removePlayer, updatePlayer, updatePlayerPreferences } = usePlayers()
+  const tFriends = useTranslations('account.friends')
+  const { friends, incoming, outgoing, error: friendError, sendRequest, acceptRequest, declineRequest, removeFriend } = useFriends()
+  const [friendCodeInput, setFriendCodeInput] = useState('')
+  const [friendFeedback, setFriendFeedback] = useState<string | null>(null)
   const [totalGames, setTotalGames] = useState(0)
   const [totalDrinks, setTotalDrinks] = useState(0)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -118,6 +123,19 @@ export function AccountInfo() {
       window.setTimeout(() => setCodeCopied(false), 2000)
     } catch {
       /* ignore */
+    }
+  }
+
+  const handleAddFriend = async () => {
+    const code = friendCodeInput.trim()
+    if (!code) return
+    setFriendFeedback(null)
+    const status = await sendRequest(code)
+    if (status === 'sent') setFriendFeedback(tFriends('addSuccessSent'))
+    else if (status === 'auto-accepted') setFriendFeedback(tFriends('addSuccessAutoAccepted'))
+    if (status) {
+      setFriendCodeInput('')
+      window.setTimeout(() => setFriendFeedback(null), 3000)
     }
   }
 
@@ -428,6 +446,122 @@ export function AccountInfo() {
           </div>
           {onlineNameError && <p className="mt-2 text-xs text-orange-300">{onlineNameError}</p>}
           {onlineNameSaved && <p className="mt-2 text-xs text-emerald-300">Pseudo online enregistré.</p>}
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
+          <Users className="h-4 w-4 text-violet-300" />
+          {tFriends('title')}
+        </div>
+        <div className="rounded-2xl border border-violet-500/20 bg-violet-500/10 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              value={friendCodeInput}
+              onChange={(e) => setFriendCodeInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void handleAddFriend()
+              }}
+              maxLength={12}
+              placeholder={tFriends('addPlaceholder')}
+              className="h-9 border-violet-300/25 bg-black/20 font-mono text-sm text-white placeholder:text-white/35"
+            />
+            <button
+              type="button"
+              onClick={() => { void handleAddFriend() }}
+              disabled={!friendCodeInput.trim()}
+              className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-violet-500/25 px-3 py-2 text-xs font-semibold text-violet-100 hover:bg-violet-500/35 disabled:opacity-40"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              {tFriends('add')}
+            </button>
+          </div>
+          {friendError && <p className="mt-2 text-xs text-orange-300">{friendError}</p>}
+          {friendFeedback && <p className="mt-2 text-xs text-emerald-300">{friendFeedback}</p>}
+
+          {incoming.length > 0 && (
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-violet-300/70">
+                {tFriends('incomingRequests')}
+              </p>
+              <ul className="space-y-2">
+                {incoming.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                  >
+                    <span className="truncate text-sm font-medium text-white">{r.displayName}</span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        onClick={() => acceptRequest(r.id)}
+                        className="rounded-lg bg-emerald-500/20 px-2.5 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/30"
+                      >
+                        {tFriends('accept')}
+                      </button>
+                      <button
+                        onClick={() => declineRequest(r.id)}
+                        className="rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-xs font-medium text-white/60 hover:bg-white/10"
+                      >
+                        {tFriends('decline')}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {outgoing.length > 0 && (
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-white/40">
+                {tFriends('outgoingRequests')}
+              </p>
+              <ul className="space-y-1.5">
+                {outgoing.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-2 px-1 text-sm text-white/50">
+                    <span className="truncate">{r.displayName}</span>
+                    <button
+                      onClick={() => removeFriend(r.id)}
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-white/30 hover:bg-white/10 hover:text-white/60"
+                      aria-label={tCommon('cancel')}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-4 border-t border-white/10 pt-3">
+            {friends.length === 0 ? (
+              <p className="py-2 text-center text-sm text-white/40">{tFriends('empty')}</p>
+            ) : (
+              <ul className="space-y-2">
+                {friends.map((f) => (
+                  <li
+                    key={f.friendshipId}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span
+                        className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-white/20')}
+                        title={f.isOnline ? tFriends('online') : undefined}
+                      />
+                      <span className="truncate text-sm font-medium text-white">{f.displayName}</span>
+                    </div>
+                    <button
+                      onClick={() => removeFriend(f.friendshipId)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/15 hover:text-red-400"
+                      title={tFriends('remove')}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </section>
 

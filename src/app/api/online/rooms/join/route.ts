@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { canJoinInviteRoom } from '@/lib/online/room-invites'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
@@ -30,6 +31,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ce lobby a déjà démarré' }, { status: 409 })
   }
 
+  if (room.visibility === 'invite' && !(await canJoinInviteRoom(room.id, user.id))) {
+    return NextResponse.json({ error: 'Ce lobby est sur invitation uniquement' }, { status: 403 })
+  }
+
   await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })
 
   await prisma.onlineRoomMember.upsert({
@@ -37,6 +42,13 @@ export async function POST(request: Request) {
     create: { roomId: room.id, userId: user.id, isReady: false },
     update: { lastSeenAt: new Date(), isReady: false },
   })
+
+  if (room.visibility === 'invite') {
+    await prisma.onlineRoomInvite.updateMany({
+      where: { roomId: room.id, invitedUserId: user.id, status: 'pending' },
+      data: { status: 'accepted', respondedAt: new Date() },
+    })
+  }
 
   publishRoomChanged(room.id, { type: 'lobby' })
 

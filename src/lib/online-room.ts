@@ -26,6 +26,7 @@ export type RoomDto = {
   id: string
   code: string
   status: string
+  visibility: string
   gameId: string | null
   hostUserId: string
   members: RoomMemberDto[]
@@ -99,6 +100,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     id: room.id,
     code: room.code,
     status: room.status,
+    visibility: room.visibility,
     gameId: room.gameId,
     hostUserId: room.hostUserId,
     members: memberDtos,
@@ -113,7 +115,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
 
 export async function buildLobbyList(): Promise<LobbyListItem[]> {
   const rooms = await prisma.onlineRoom.findMany({
-    where: { status: 'waiting', gameId: { not: null } },
+    where: { status: 'waiting', gameId: { not: null }, visibility: 'public' },
     include: {
       host: { select: { displayName: true } },
       members: {

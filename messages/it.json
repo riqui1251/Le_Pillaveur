@@ -143,6 +143,31 @@
       "tapToChoose": "Tocca qui per scegliere i tuoi giocatori (minimo 2)."
     }
   },
+  "onlineLobby": {
+    "visibility": {
+      "title": "Visibilità",
+      "public": "Pubblica",
+      "private": "Privata",
+      "invite": "Su invito",
+      "publicDesc": "Visibile nell'elenco delle lobby aperte",
+      "privateDesc": "Accessibile solo con il codice",
+      "inviteDesc": "Accessibile solo su invito"
+    },
+    "joinByCode": {
+      "label": "Unisciti con un codice",
+      "placeholder": "CODICE",
+      "submit": "Unisciti"
+    },
+    "invites": {
+      "invitedYou": "{name} ti ha invitato a unirti a {game}",
+      "join": "Unisciti",
+      "decline": "Ignora",
+      "inviteFriend": "Invita un amico",
+      "invited": "Invitato",
+      "pending": "Invito inviato",
+      "noFriendsToInvite": "Aggiungi amici per invitarli"
+    }
+  },
   "auth": {
     "brand": "Le Pillaveur",
     "login": {
@@ -215,6 +240,24 @@
       "confirmDelete": "Confermare"
     },
     "sync": "I tuoi giocatori vengono salvati sul tuo account e si sincronizzano automaticamente su tutti i tuoi dispositivi connessi.",
+    "friends": {
+      "title": "Amici",
+      "addPlaceholder": "LP-XXXXXX",
+      "add": "Aggiungi",
+      "addSuccessSent": "Richiesta inviata",
+      "addSuccessAutoAccepted": "Ora siete amici!",
+      "addErrorNotFound": "Nessun account con questo codice",
+      "addErrorSelf": "Non puoi aggiungere te stesso",
+      "addErrorAlreadyFriends": "Già amici",
+      "addErrorAlreadyPending": "Richiesta già inviata",
+      "incomingRequests": "Richieste ricevute",
+      "outgoingRequests": "Richieste inviate",
+      "accept": "Accetta",
+      "decline": "Rifiuta",
+      "remove": "Rimuovi",
+      "empty": "Nessun amico per ora",
+      "online": "Online"
+    },
     "nameModerationWarning": "Sono stati registrati diversi tentativi di nome inappropriato su questo account. Usa un soprannome rispettoso — il team di moderazione può consultare la cronologia.",
     "reset": {
       "title": "Nuova password",

@@ -153,6 +153,31 @@
       "tapToChoose": "Tap here to choose your players (minimum 2)."
     }
   },
+  "onlineLobby": {
+    "visibility": {
+      "title": "Visibility",
+      "public": "Public",
+      "private": "Private",
+      "invite": "Invite-only",
+      "publicDesc": "Visible in the open lobbies list",
+      "privateDesc": "Joinable with the code only",
+      "inviteDesc": "Joinable only by invitation"
+    },
+    "joinByCode": {
+      "label": "Join with a code",
+      "placeholder": "CODE",
+      "submit": "Join"
+    },
+    "invites": {
+      "invitedYou": "{name} invited you to join {game}",
+      "join": "Join",
+      "decline": "Dismiss",
+      "inviteFriend": "Invite a friend",
+      "invited": "Invited",
+      "pending": "Invite sent",
+      "noFriendsToInvite": "Add friends to invite them"
+    }
+  },
   "auth": {
     "brand": "Le Pillaveur",
     "login": {
@@ -225,6 +250,24 @@
       "confirmDelete": "Confirm"
     },
     "sync": "Your players are saved to your account and automatically sync across all your connected devices.",
+    "friends": {
+      "title": "Friends",
+      "addPlaceholder": "LP-XXXXXX",
+      "add": "Add",
+      "addSuccessSent": "Request sent",
+      "addSuccessAutoAccepted": "You are now friends!",
+      "addErrorNotFound": "No account with this code",
+      "addErrorSelf": "You can't add yourself",
+      "addErrorAlreadyFriends": "Already friends",
+      "addErrorAlreadyPending": "Request already sent",
+      "incomingRequests": "Incoming requests",
+      "outgoingRequests": "Sent requests",
+      "accept": "Accept",
+      "decline": "Decline",
+      "remove": "Remove",
+      "empty": "No friends yet",
+      "online": "Online"
+    },
     "nameModerationWarning": "Several inappropriate name attempts have been recorded on this account. Please use a respectful nickname — the moderation team can review the history.",
     "reset": {
       "title": "New password",

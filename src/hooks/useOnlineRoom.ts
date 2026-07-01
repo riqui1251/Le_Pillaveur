@@ -234,7 +234,12 @@ export function useOnlineRoom() {
   }, [room])
 
   const updateSettings = useCallback(
-    async (settings: { difficulty?: string; plinkoDifficulty?: string; hiLoMode?: 'standard' | 'traversee' }) => {
+    async (settings: {
+      difficulty?: string
+      plinkoDifficulty?: string
+      hiLoMode?: 'standard' | 'traversee'
+      visibility?: 'public' | 'private' | 'invite'
+    }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {
         method: 'PUT',
@@ -249,6 +254,26 @@ export function useOnlineRoom() {
       }
       setError(data.error ?? 'Erreur')
       return null
+    },
+    [room]
+  )
+
+  const inviteFriend = useCallback(
+    async (friendUserId: string) => {
+      if (!room) return false
+      setError(null)
+      const res = await fetch(`/api/online/rooms/${room.id}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ friendUserId }),
+      })
+      const data = await parseApiJson<{ error?: string }>(res)
+      if (!res.ok) {
+        setError(data.error ?? "Impossible d'inviter cet ami")
+        return false
+      }
+      return true
     },
     [room]
   )
@@ -336,6 +361,7 @@ export function useOnlineRoom() {
     setReady,
     launchGame,
     updateSettings,
+    inviteFriend,
     pushGameState,
     fetchRoom,
     refreshRoom,

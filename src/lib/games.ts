@@ -9,6 +9,7 @@ export type GameMeta = {
   colorFrom?: string;
   colorTo?: string;
   hidden?: boolean;
+  onlineReady?: boolean;
 };
 
 // Source unique de vérité pour les jeux
@@ -56,6 +57,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#059669',
     colorTo: '#2dd4bf',
     fallbackColor: '#10b981',
+    onlineReady: true,
   },
   {
     id: 'hi-lo',

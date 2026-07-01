@@ -7,16 +7,19 @@ import { useLocalizedGames } from '@/lib/games-i18n'
 import { GameCard } from '@/components/hub/GameCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Input } from '@/components/ui/input'
+import { useAuth } from '@/hooks/useAuth'
 
 export function GamesGrid() {
   const t = useTranslations('hub.jeux')
   const tCommon = useTranslations('common')
   const games = useLocalizedGames()
+  const { user } = useAuth()
+  const isOnline = user?.playMode === 'online'
   const [query, setQuery] = useState('')
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const visible = games.filter((g) => !g.hidden)
+    const visible = games.filter((g) => !g.hidden && (!isOnline || g.onlineReady))
     if (!q) return visible
     return visible.filter(
       (g) =>
@@ -24,7 +27,7 @@ export function GamesGrid() {
         g.description.toLowerCase().includes(q) ||
         g.id.toLowerCase().includes(q)
     )
-  }, [games, query])
+  }, [games, query, isOnline])
 
   return (
     <>

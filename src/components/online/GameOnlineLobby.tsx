@@ -3,15 +3,21 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Copy, Check, Crown, Globe, LogOut, Play, Users } from 'lucide-react'
+import { ArrowLeft, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
+import { useFriends } from '@/hooks/useFriends'
 import { GAMES, type GameMeta } from '@/lib/games'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { cn } from '@/lib/utils'
+
+const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
+type Visibility = (typeof VISIBILITY_OPTIONS)[number]
+const VISIBILITY_ICON: Record<Visibility, typeof Globe> = { public: Globe, private: Lock, invite: Mail }
 
 interface GameOnlineLobbyProps {
   gameId: string
@@ -44,15 +50,20 @@ const PB_DIFFICULTY_GRADIENT: Record<(typeof PB_DIFFICULTIES)[number], string> =
 export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps) {
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
   const { user } = useAuth()
-  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings } = useOnlineRoom()
+  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, inviteFriend } = useOnlineRoom()
   const { lobbies } = useOpenLobbies()
+  const { friends } = useFriends()
   const [copied, setCopied] = useState(false)
+  const [joinCode, setJoinCode] = useState('')
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const tPb = useTranslations('games.petit-buveur.page')
+  const tOnline = useTranslations('onlineLobby')
 
   const gameLobbies = lobbies.filter((l) => l.gameId === gameId)
   const isHost = room?.hostUserId === user?.id
   const inThisGameRoom = room?.gameId === gameId
   const selfMember = room?.members.find((m) => m.isSelf)
+  const visibility = (room?.visibility ?? 'public') as Visibility
 
   useEffect(() => {
     if (room && room.gameId !== gameId && room.status === 'waiting') {
@@ -66,6 +77,17 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
+  }
+
+  const handleJoinByCode = () => {
+    const code = joinCode.trim().toUpperCase()
+    if (code.length !== 6) return
+    void joinRoom({ code })
+  }
+
+  const handleInviteFriend = async (friendUserId: string) => {
+    const ok = await inviteFriend(friendUserId)
+    if (ok) setInvitedIds((prev) => new Set(prev).add(friendUserId))
   }
 
   if (!user) {
@@ -121,13 +143,42 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         )}
 
         {!wrongRoom && (
-          <Button
-            onClick={() => createRoom(gameId)}
-            disabled={loading}
-            className="mb-6 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-6 text-lg font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-50"
-          >
-            {loading ? 'Création…' : 'Créer un lobby'}
-          </Button>
+          <>
+            <Button
+              onClick={() => createRoom(gameId)}
+              disabled={loading}
+              className="mb-4 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-6 text-lg font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-50"
+            >
+              {loading ? 'Création…' : 'Créer un lobby'}
+            </Button>
+
+            <div className="mb-6">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-white/40">
+                {tOnline('joinByCode.label')}
+              </p>
+              <div className="flex gap-2">
+                <input
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleJoinByCode()
+                  }}
+                  placeholder={tOnline('joinByCode.placeholder')}
+                  maxLength={6}
+                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center font-mono text-lg font-bold tracking-[0.2em] text-white placeholder:text-white/25 placeholder:tracking-normal focus:border-violet-400/50 focus:outline-none"
+                />
+                <Button
+                  onClick={handleJoinByCode}
+                  disabled={loading || joinCode.trim().length !== 6}
+                  className="shrink-0 rounded-2xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white hover:bg-white/20"
+                >
+                  {tOnline('joinByCode.submit')}
+                </Button>
+              </div>
+            </div>
+
+            <FriendInviteBanner onJoin={(roomId) => joinRoom({ roomId })} joining={loading} />
+          </>
         )}
 
         {gameLobbies.length > 0 && (
@@ -202,6 +253,80 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           {copied ? 'Code copié !' : 'Copier le code'}
         </button>
       </div>
+
+      <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-violet-300/70">
+          {tOnline('visibility.title')}
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {VISIBILITY_OPTIONS.map((value) => {
+            const active = visibility === value
+            const Icon = VISIBILITY_ICON[value]
+            return (
+              <button
+                key={value}
+                type="button"
+                disabled={!isHost}
+                onClick={() => updateSettings({ visibility: value })}
+                title={tOnline(`visibility.${value}Desc`)}
+                className={cn(
+                  'flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
+                  active
+                    ? 'border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg'
+                    : 'border-white/10 bg-white/5 text-white/60',
+                  isHost && !active && 'hover:bg-white/10 hover:text-white'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-xs font-bold">{tOnline(`visibility.${value}`)}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {isHost && visibility !== 'public' && (
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-violet-300/70">
+            {tOnline('invites.inviteFriend')}
+          </p>
+          {friends.length === 0 ? (
+            <p className="text-sm text-white/40">{tOnline('invites.noFriendsToInvite')}</p>
+          ) : (
+            <ul className="space-y-2">
+              {friends
+                .filter((f) => !room.members.some((m) => m.userId === f.userId))
+                .map((f) => {
+                  const invited = invitedIds.has(f.userId)
+                  return (
+                    <li
+                      key={f.userId}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-white/20')} />
+                        <span className="truncate text-sm font-medium text-white">{f.displayName}</span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={invited}
+                        onClick={() => handleInviteFriend(f.userId)}
+                        aria-label={tOnline('invites.inviteFriend')}
+                        className={cn(
+                          'flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
+                          invited ? 'bg-white/10 text-white/40' : 'bg-violet-600 text-white hover:bg-violet-500'
+                        )}
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                        {invited ? tOnline('invites.pending') : tOnline('invites.inviteFriend')}
+                      </button>
+                    </li>
+                  )
+                })}
+            </ul>
+          )}
+        </div>
+      )}
 
       {gameId === 'petit-buveur' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">

@@ -153,6 +153,31 @@
       "tapToChoose": "Touchez ici pour choisir vos joueurs (minimum 2)."
     }
   },
+  "onlineLobby": {
+    "visibility": {
+      "title": "Visibilité",
+      "public": "Public",
+      "private": "Privé",
+      "invite": "Invitation",
+      "publicDesc": "Visible dans la liste des lobbies",
+      "privateDesc": "Accessible avec le code uniquement",
+      "inviteDesc": "Accessible uniquement sur invitation"
+    },
+    "joinByCode": {
+      "label": "Rejoindre avec un code",
+      "placeholder": "CODE",
+      "submit": "Rejoindre"
+    },
+    "invites": {
+      "invitedYou": "{name} vous a invité à rejoindre {game}",
+      "join": "Rejoindre",
+      "decline": "Ignorer",
+      "inviteFriend": "Inviter un ami",
+      "invited": "Invité",
+      "pending": "Invitation envoyée",
+      "noFriendsToInvite": "Ajoutez des amis pour les inviter"
+    }
+  },
   "auth": {
     "brand": "Le Pillaveur",
     "login": {
@@ -225,6 +250,24 @@
       "confirmDelete": "Confirmer"
     },
     "sync": "Vos joueurs sont sauvegardés sur votre compte et se synchronisent automatiquement sur tous vos appareils connectés.",
+    "friends": {
+      "title": "Amis",
+      "addPlaceholder": "LP-XXXXXX",
+      "add": "Ajouter",
+      "addSuccessSent": "Demande envoyée",
+      "addSuccessAutoAccepted": "Vous êtes maintenant amis !",
+      "addErrorNotFound": "Aucun compte avec ce code",
+      "addErrorSelf": "Impossible de s'ajouter soi-même",
+      "addErrorAlreadyFriends": "Déjà ami",
+      "addErrorAlreadyPending": "Demande déjà envoyée",
+      "incomingRequests": "Demandes reçues",
+      "outgoingRequests": "Demandes envoyées",
+      "accept": "Accepter",
+      "decline": "Refuser",
+      "remove": "Retirer",
+      "empty": "Aucun ami pour l'instant",
+      "online": "En ligne"
+    },
     "nameModerationWarning": "Plusieurs tentatives de nom inapproprié ont été enregistrées sur ce compte. Merci d'utiliser un pseudo respectueux — l'équipe de modération peut consulter l'historique.",
     "reset": {
       "title": "Nouveau mot de passe",

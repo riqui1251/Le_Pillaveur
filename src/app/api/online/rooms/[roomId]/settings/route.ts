@@ -8,6 +8,7 @@ import { publishRoomChanged } from '@/lib/online/room-bus'
 type Params = { params: Promise<{ roomId: string }> }
 
 const VALID_DIFFICULTIES = new Set(['facile', 'normal', 'difficile', 'extreme'])
+const VALID_VISIBILITIES = new Set(['public', 'private', 'invite'])
 
 /** L'hôte met à jour les paramètres (difficulté, etc.) pendant le lobby */
 export async function PUT(request: Request, { params }: Params) {
@@ -42,9 +43,14 @@ export async function PUT(request: Request, { params }: Params) {
     next.hiLoMode = body.hiLoMode
   }
 
+  const visibilityUpdate =
+    typeof body.visibility === 'string' && VALID_VISIBILITIES.has(body.visibility)
+      ? { visibility: body.visibility }
+      : {}
+
   await prisma.onlineRoom.update({
     where: { id: roomId },
-    data: { settingsJson: JSON.stringify(next) },
+    data: { settingsJson: JSON.stringify(next), ...visibilityUpdate },
   })
 
   publishRoomChanged(roomId, { type: 'lobby' })

@@ -143,6 +143,31 @@
       "tapToChoose": "Toca aquí para elegir tus jugadores (mínimo 2)."
     }
   },
+  "onlineLobby": {
+    "visibility": {
+      "title": "Visibilidad",
+      "public": "Público",
+      "private": "Privado",
+      "invite": "Invitación",
+      "publicDesc": "Visible en la lista de salas abiertas",
+      "privateDesc": "Accesible solo con el código",
+      "inviteDesc": "Accesible solo por invitación"
+    },
+    "joinByCode": {
+      "label": "Unirse con un código",
+      "placeholder": "CÓDIGO",
+      "submit": "Unirse"
+    },
+    "invites": {
+      "invitedYou": "{name} te invitó a unirte a {game}",
+      "join": "Unirse",
+      "decline": "Ignorar",
+      "inviteFriend": "Invitar a un amigo",
+      "invited": "Invitado",
+      "pending": "Invitación enviada",
+      "noFriendsToInvite": "Añade amigos para invitarlos"
+    }
+  },
   "auth": {
     "brand": "Le Pillaveur",
     "login": {
@@ -215,6 +240,24 @@
       "confirmDelete": "Confirmar"
     },
     "sync": "Sus reproductores se guardan en su cuenta y se sincronizan automáticamente en todos sus dispositivos conectados.",
+    "friends": {
+      "title": "Amigos",
+      "addPlaceholder": "LP-XXXXXX",
+      "add": "Añadir",
+      "addSuccessSent": "Solicitud enviada",
+      "addSuccessAutoAccepted": "¡Ahora sois amigos!",
+      "addErrorNotFound": "Ninguna cuenta con ese código",
+      "addErrorSelf": "No puedes añadirte a ti mismo",
+      "addErrorAlreadyFriends": "Ya sois amigos",
+      "addErrorAlreadyPending": "Solicitud ya enviada",
+      "incomingRequests": "Solicitudes recibidas",
+      "outgoingRequests": "Solicitudes enviadas",
+      "accept": "Aceptar",
+      "decline": "Rechazar",
+      "remove": "Eliminar",
+      "empty": "Todavía no tienes amigos",
+      "online": "En línea"
+    },
     "nameModerationWarning": "Se han registrado varios intentos de nombre inapropiado en esta cuenta. Utilice un apodo respetuoso — el equipo de moderación puede consultar el historial.",
     "reset": {
       "title": "Nueva contraseña",
