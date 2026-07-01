@@ -4,6 +4,7 @@ import {
   serializeEngineState,
   parseEngineState,
   toClientView,
+  applyRoomAction,
 } from './server-adapter'
 import { DEFI_DRINKS } from './game-data'
 
@@ -40,5 +41,27 @@ describe('server-adapter Petit Buveur', () => {
     expect(view.players).toHaveLength(2)
     expect(view.currentPlayer).toBe(0)
     expect(view.phase).toBe('playing')
+  })
+})
+
+describe('applyRoomAction (validation serveur)', () => {
+  it('accepte un roll du joueur courant', () => {
+    const s = buildPetitBuveurEngineState(MEMBERS, 'normal', 'act-1')
+    const r = applyRoomAction(s, 'u1', { type: 'roll' })
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.state.version).toBe(1)
+  })
+
+  it('refuse un roll hors-tour', () => {
+    const s = buildPetitBuveurEngineState(MEMBERS, 'normal', 'act-2')
+    const r = applyRoomAction(s, 'u2', { type: 'roll' })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toBe('NOT_YOUR_TURN')
+  })
+
+  it('refuse une résolution sans interaction en attente', () => {
+    const s = buildPetitBuveurEngineState(MEMBERS, 'normal', 'act-3')
+    const r = applyRoomAction(s, 'u1', { type: 'resolve' })
+    expect(r.ok).toBe(false)
   })
 })

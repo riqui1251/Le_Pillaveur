@@ -1,4 +1,11 @@
-import { createInitialState, type EngineState, type EngineSettings } from './engine'
+import {
+  createInitialState,
+  reduce,
+  EngineError,
+  type EngineState,
+  type EngineSettings,
+  type EngineAction,
+} from './engine'
 import { DEFI_DRINKS } from './game-data'
 import type { Difficulty } from './types'
 
@@ -39,6 +46,33 @@ export function parseEngineState(json: string | null): EngineState | null {
     return parsed
   } catch {
     return null
+  }
+}
+
+/** Action reçue d'un client (mappée vers une action moteur). */
+export type RoomActionInput = { type: 'roll' | 'resolve' }
+
+export type RoomActionResult =
+  | { ok: true; state: EngineState }
+  | { ok: false; error: string }
+
+/**
+ * Applique une action de salle de façon autoritaire. La validation du tour est
+ * portée par le moteur (`reduce` lève NOT_YOUR_TURN, INTERACTION_PENDING, etc.).
+ */
+export function applyRoomAction(
+  state: EngineState,
+  userId: string,
+  input: RoomActionInput
+): RoomActionResult {
+  const action: EngineAction =
+    input.type === 'roll'
+      ? { type: 'ROLL', playerId: userId }
+      : { type: 'RESOLVE_INTERACTION', playerId: userId }
+  try {
+    return { ok: true, state: reduce(state, action) }
+  } catch (e) {
+    return { ok: false, error: e instanceof EngineError ? e.message : 'ENGINE_ERROR' }
   }
 }
 
