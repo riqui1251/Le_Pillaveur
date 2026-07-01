@@ -1,6 +1,12 @@
 import type { Case, PetitBuveurT } from './case-config'
 import type { EffectOutcome } from './case-notification'
 import type { GamePlayer } from './case-types'
+import { outcomeProtectedTarget } from './outcome-helpers'
+
+/** Protection active pendant un tour de table complet — mêmes règles que isPlayerProtected (game.tsx). */
+function isProtected(player: GamePlayer): boolean {
+  return player.protected && (player.protectionTurnsLeft ?? 0) > 0
+}
 
 export type ResolveContext = {
   boardSize: number
@@ -47,6 +53,9 @@ export function resolveNoTargetCase(
 
   switch (caseType.type) {
     case 'solo':
+      if (isProtected(actor)) {
+        return { players: updated, outcome: outcomeProtectedTarget(t, actor.id) }
+      }
       actor.drinks += caseType.effect
       return {
         players: updated,
@@ -140,7 +149,9 @@ export function resolveNoTargetCase(
         }
       }
       const [drinker, mover] = pair
-      drinker.drinks += 2
+      if (!isProtected(drinker)) {
+        drinker.drinks += 2
+      }
       mover.position = Math.min(mover.position + 1, ctx.boardSize - 1)
       return {
         players: updated,

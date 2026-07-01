@@ -237,3 +237,39 @@ describe('effets persistants', () => {
     expect(next.players.find((p) => p.id === 'p2')!.drinks).toBe(2)
   })
 })
+
+describe('ancre (fidèle au mode local : le dé est lancé mais le déplacement est annulé)', () => {
+  it('un joueur ancré ne se déplace pas mais tire quand même une case', () => {
+    const s = createInitialState(PLAYERS, SETTINGS, 'anchor-1')
+    s.players[0].anchored = true
+    s.players[0].position = 10
+    const next = reduce(s, { type: 'ROLL', playerId: 'p1' })
+    const p1 = next.players.find((p) => p.id === 'p1')!
+    expect(p1.anchored).toBe(false)
+    expect(p1.position).toBe(10)
+    expect(next.lastDice).toBeGreaterThanOrEqual(1)
+    expect(next.lastDice).toBeLessThanOrEqual(6)
+    expect(next.lastMoveDelta).toBe(0)
+    expect(next.lastCase).not.toBeNull()
+  })
+
+  it('un joueur non ancré : lastMoveDelta == lastDice', () => {
+    const s = createInitialState(PLAYERS, SETTINGS, 'anchor-2')
+    const next = reduce(s, { type: 'ROLL', playerId: 'p1' })
+    expect(next.lastMoveDelta).toBe(next.lastDice)
+  })
+
+  it('copie utilise lastMoveDelta (0 après une ancre), pas le dé brut', () => {
+    const s: EngineState = {
+      ...createInitialState(PLAYERS, SETTINGS, 'copie-anchor'),
+      phase: 'awaiting-interaction',
+      pending: { caseType: 'copie', playerId: 'p1', needsTarget: true },
+      lastCase: { type: 'copie', effect: 0 },
+      lastDice: 5,
+      lastMoveDelta: 0,
+    }
+    const before = s.players[1].position
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p2' } })
+    expect(next.players.find((p) => p.id === 'p2')!.position).toBe(before)
+  })
+})

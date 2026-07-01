@@ -36,4 +36,22 @@ describe('resolveNoTargetCase', () => {
     const result = resolveNoTargetCase(c, players, { boardSize: 30, actorIndex: 0, lastMoveDelta: 0, lastCase: null }, t, (p) => p.name)
     expect(result.players[0].position).toBe(29)
   })
+
+  it('solo respecte la protection (aucune gorgée si l’acteur est protégé)', () => {
+    const actor = { ...makePlayer('p1', 'A'), protected: true, protectionTurnsLeft: 2 }
+    const c: Case = { type: 'solo', effect: 3 }
+    const result = resolveNoTargetCase(c, [actor], { boardSize: 30, actorIndex: 0, lastMoveDelta: 0, lastCase: null }, t, (p) => p.name)
+    expect(result.players[0].drinks).toBe(0)
+  })
+
+  it('loterie respecte la protection du joueur tiré au sort pour boire', () => {
+    const actor = makePlayer('p1', 'A')
+    // Les deux cibles potentielles sont protégées : quel que soit le tirage, personne ne boit.
+    const p2 = { ...makePlayer('p2', 'B'), protected: true, protectionTurnsLeft: 2 }
+    const p3 = { ...makePlayer('p3', 'C'), protected: true, protectionTurnsLeft: 2 }
+    const c: Case = { type: 'loterie', effect: 0 }
+    const result = resolveNoTargetCase(c, [actor, p2, p3], { boardSize: 30, actorIndex: 0, lastMoveDelta: 0, lastCase: null }, t, (p) => p.name)
+    expect(result.players.find((p) => p.id === 'p2')!.drinks).toBe(0)
+    expect(result.players.find((p) => p.id === 'p3')!.drinks).toBe(0)
+  })
 })

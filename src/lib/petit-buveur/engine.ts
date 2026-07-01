@@ -67,6 +67,8 @@ export interface EngineState {
   currentPlayer: number
   turnCount: number
   lastDice: number | null
+  /** Delta de déplacement réellement appliqué (0 si le joueur était ancré, distinct de lastDice). */
+  lastMoveDelta: number | null
   lastCase: EngineCase | null
   /** Case en attente de résolution. `needsTarget` : un joueur cible doit être choisi. */
   pending: { caseType: CaseType; playerId: string; needsTarget: boolean } | null
@@ -115,6 +117,7 @@ export function createInitialState(
     currentPlayer: 0,
     turnCount: 1,
     lastDice: null,
+    lastMoveDelta: null,
     lastCase: null,
     pending: null,
     phase: 'playing',
@@ -367,7 +370,8 @@ function findWinner(players: EnginePlayer[]): string | null {
 
 /**
  * Applique une case à la CIBLE choisie (mute `players`). Porté fidèlement depuis
- * game.tsx#applyEffectToPlayer. `lastDice` = dernier déplacement (pour « copie »).
+ * game.tsx#applyEffectToPlayer. `lastMoveDelta` = delta réellement appliqué au dernier
+ * déplacement (0 si ancré), utilisé par « copie » — distinct du dé brut (`lastDice`).
  */
 function applyCaseToTarget(
   players: EnginePlayer[],
@@ -375,7 +379,7 @@ function applyCaseToTarget(
   target: EnginePlayer,
   c: EngineCase,
   rng: SeededRng,
-  lastDice: number | null,
+  lastMoveDelta: number | null,
   lastCase: EngineCase | null
 ): void {
   switch (c.type) {
@@ -427,7 +431,7 @@ function applyCaseToTarget(
       break
     case 'copie':
       if (isProtected(target)) break
-      target.position = clampPos(target.position + (lastDice ?? 0))
+      target.position = clampPos(target.position + (lastMoveDelta ?? 0))
       break
     case 'roulette-russe':
       if (isProtected(target)) break
@@ -457,7 +461,7 @@ function applyCaseToTarget(
       break
     case 'rewind':
       if (lastCase && lastCase.type !== 'rewind') {
-        applyCaseToTarget(players, actor, target, lastCase, rng, lastDice, null)
+        applyCaseToTarget(players, actor, target, lastCase, rng, lastMoveDelta, null)
       }
       break
     default:
@@ -482,24 +486,14 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
     const players = state.players.map((p) => ({ ...p }))
     const me = players[actorIndex]
 
-    // Ancré : on saute le déplacement et on consomme le statut.
-    if (me.anchored) {
-      me.anchored = false
-      const turn = advanceTurnOnPlayers(players, actorIndex, state.turnCount)
-      return {
-        ...state,
-        version: state.version + 1,
-        rngState: rng.getState(),
-        players,
-        currentPlayer: turn.currentPlayer,
-        turnCount: turn.turnCount,
-        lastDice: null,
-        log: pushLog(state.log, { turn: state.turnCount, playerId: me.id, message: 'anchored-skip' }),
-      }
-    }
+    // Ancré : le dé est lancé normalement mais le déplacement est annulé (delta 0) ;
+    // une case est quand même tirée et résolue sur la case actuelle (fidèle au mode local).
+    const wasAnchored = me.anchored
+    if (wasAnchored) me.anchored = false
 
     const dice = rng.int(1, 6)
-    me.position = clampPos(me.position + dice)
+    const moveDelta = wasAnchored ? 0 : dice
+    me.position = clampPos(me.position + moveDelta)
 
     // Victoire : atteindre la dernière case.
     if (me.position === BOARD_SIZE - 1) {
@@ -509,6 +503,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         rngState: rng.getState(),
         players,
         lastDice: dice,
+        lastMoveDelta: moveDelta,
         lastCase: null,
         phase: 'finished',
         winner: me.id,
@@ -531,6 +526,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         rngState: rng.getState(),
         players,
         lastDice: dice,
+        lastMoveDelta: moveDelta,
         lastCase: generated,
         pending: { caseType: generated.type, playerId: me.id, needsTarget: targeted },
         phase: 'awaiting-interaction',
@@ -548,6 +544,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         rngState: rng.getState(),
         players,
         lastDice: dice,
+        lastMoveDelta: moveDelta,
         lastCase: generated,
         phase: 'finished',
         winner: winnerAfterCase,
@@ -563,6 +560,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       currentPlayer: turn.currentPlayer,
       turnCount: turn.turnCount,
       lastDice: dice,
+      lastMoveDelta: moveDelta,
       lastCase: generated,
       log: pushLog(state.log, { turn: state.turnCount, playerId: me.id, message: `case:${generated.type}` }),
     }
@@ -585,7 +583,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
           : undefined) ??
         players.find((_, i) => i !== actorIndex) ??
         players[actorIndex]
-      applyCaseToTarget(players, players[actorIndex], target, state.lastCase, rng, state.lastDice, null)
+      applyCaseToTarget(players, players[actorIndex], target, state.lastCase, rng, state.lastMoveDelta, null)
     } else {
       resolveInteractionCase(players, actorIndex, state.pending.caseType, state.lastCase, rng, action.choice)
     }
