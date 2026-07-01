@@ -159,4 +159,46 @@ describe('cases interactives', () => {
     expect(next.phase).toBe('finished')
     expect(next.winner).toBe('p2')
   })
+
+  it('roue : l’acteur boit entre 0 et 12 (déterministe)', () => {
+    const s = withPending('roue', { type: 'roue', effect: 0 })
+    const a = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1' })
+    const b = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1' })
+    expect(a).toEqual(b)
+    const d = a.players.find((p) => p.id === 'p1')!.drinks
+    expect(d).toBeGreaterThanOrEqual(0)
+    expect(d).toBeLessThanOrEqual(12)
+  })
+
+  it('chance : l’acteur avance de 2', () => {
+    const s = withPending('chance', { type: 'chance', effect: 0 })
+    s.players[0].position = 5
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1' })
+    expect(next.players.find((p) => p.id === 'p1')!.position).toBe(7)
+  })
+
+  it('teleport : échange de position avec le leader', () => {
+    const s = withPending('teleport', { type: 'teleport', effect: 0 })
+    s.players[0].position = 2
+    s.players[1].position = 20
+    s.players[2].position = 10
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { option: 'leader' } })
+    expect(next.players.find((p) => p.id === 'p1')!.position).toBe(20)
+    expect(next.players.find((p) => p.id === 'p2')!.position).toBe(2)
+  })
+
+  it('vote : la cible désignée boit', () => {
+    const s = withPending('vote', { type: 'vote', effect: 3 })
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p3' } })
+    expect(next.players.find((p) => p.id === 'p3')!.drinks).toBe(3)
+  })
+
+  it('echange : positions échangées avec la cible', () => {
+    const s = withPending('echange', { type: 'echange', effect: 0 })
+    s.players[0].position = 3
+    s.players[1].position = 15
+    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p2' } })
+    expect(next.players.find((p) => p.id === 'p1')!.position).toBe(15)
+    expect(next.players.find((p) => p.id === 'p2')!.position).toBe(3)
+  })
 })

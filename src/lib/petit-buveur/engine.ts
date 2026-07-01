@@ -67,8 +67,8 @@ export interface EngineState {
   log: LogEntry[]
 }
 
-/** Choix joueur pour résoudre une case interactive (cible, côté de pièce…). */
-export type InteractionChoice = { targetId?: string; side?: 'pile' | 'face' }
+/** Choix joueur pour résoudre une case interactive (cible, côté de pièce, option…). */
+export type InteractionChoice = { targetId?: string; side?: 'pile' | 'face'; option?: string }
 
 export type EngineAction =
   | { type: 'ROLL'; playerId: string }
@@ -248,6 +248,55 @@ function resolveInteractionCase(
         : players.find((_, i) => i !== actorIndex)
       const drinks = lastCase?.effect || 2
       if (target && side !== flip) addDrinks(target, drinks)
+      break
+    }
+    // Roue : 15 segments, 1 sur 3 « safe » (0), sinon 1-12 gorgées pour l'acteur.
+    case 'roue': {
+      const seg = rng.pickIndex(15)
+      const value = (seg + 1) % 3 === 0 ? 0 : rng.int(1, 12)
+      if (value > 0) addDrinks(actor, value)
+      break
+    }
+    // Roue des défis : ~1 fois sur 2, gorgées ; sinon défi (approximé sans pénalité).
+    case 'roue-defis':
+      if (rng.chance(0.5)) addDrinks(actor, 2)
+      break
+    // Chance : l'acteur avance de 2 cases.
+    case 'chance':
+      actor.position = clampPos(actor.position + 2)
+      break
+    // Téléport : l'acteur échange sa position avec le leader ou le dernier.
+    case 'teleport': {
+      const which = choice?.option === 'last' ? 'last' : 'leader'
+      const partner =
+        which === 'leader'
+          ? players.reduce((m, p) => (p.position > m.position ? p : m))
+          : players.reduce((m, p) => (p.position < m.position ? p : m))
+      if (partner && partner.id !== actor.id) {
+        const ap = actor.position
+        actor.position = partner.position
+        partner.position = ap
+      }
+      break
+    }
+    // Vote : la cible désignée boit (effet ou 3 par défaut).
+    case 'vote': {
+      const target =
+        (choice?.targetId ? players.find((p) => p.id === choice.targetId) : undefined) ??
+        players.find((_, i) => i !== actorIndex)
+      if (target) addDrinks(target, lastCase?.effect || 3)
+      break
+    }
+    // Échange : l'acteur échange sa position avec la cible choisie.
+    case 'echange': {
+      const target =
+        (choice?.targetId ? players.find((p) => p.id === choice.targetId) : undefined) ??
+        players.find((_, i) => i !== actorIndex)
+      if (target && target.id !== actor.id) {
+        const ap = actor.position
+        actor.position = target.position
+        target.position = ap
+      }
       break
     }
     default:

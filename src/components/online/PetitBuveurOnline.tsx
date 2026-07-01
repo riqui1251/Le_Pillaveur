@@ -26,6 +26,9 @@ const TOKEN_COLORS = [
   'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-orange-500',
 ]
 
+/** Cases interactives qui demandent de choisir un joueur cible. */
+const TARGET_INTERACTIVE = new Set(['vote', 'echange', 'pile-face'])
+
 /** Vue client de l'état moteur (rngState absent de la réponse serveur). */
 type EngineView = Omit<EngineState, 'rngState'>
 
@@ -72,7 +75,7 @@ export function PetitBuveurOnline() {
 
   const sendAction = async (
     action: 'roll' | 'resolve',
-    choice?: { targetId?: string; side?: 'pile' | 'face' }
+    choice?: { targetId?: string; side?: 'pile' | 'face'; option?: string }
   ) => {
     if (!room || busy) return
     setBusy(true)
@@ -229,7 +232,7 @@ export function PetitBuveurOnline() {
           </div>
         ) : isMyTurn ? (
           view.pending ? (
-            view.pending.needsTarget ? (
+            view.pending.needsTarget || TARGET_INTERACTIVE.has(view.pending.caseType) ? (
               <div className="space-y-2">
                 <p className="text-center text-sm text-white/70">
                   Choisis une cible pour{' '}
@@ -248,6 +251,30 @@ export function PetitBuveurOnline() {
                       {p.id === user.id ? ' (vous)' : ''}
                     </Button>
                   ))}
+                </div>
+              </div>
+            ) : view.pending.caseType === 'teleport' ? (
+              <div className="space-y-2">
+                <p className="text-center text-sm text-white/70">
+                  Téléport — échanger ta position avec…
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    disabled={busy}
+                    variant="outline"
+                    onClick={() => sendAction('resolve', { option: 'leader' })}
+                    className="border-white/15 text-white hover:bg-white/10"
+                  >
+                    Le leader
+                  </Button>
+                  <Button
+                    disabled={busy}
+                    variant="outline"
+                    onClick={() => sendAction('resolve', { option: 'last' })}
+                    className="border-white/15 text-white hover:bg-white/10"
+                  >
+                    Le dernier
+                  </Button>
                 </div>
               </div>
             ) : (
