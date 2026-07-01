@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
-import { buildRoomDto } from '@/lib/online-room'
+import { buildRoomDto, stripEngineSecret } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 
 type Params = { params: Promise<{ roomId: string }> }
@@ -29,7 +29,7 @@ export async function GET(_request: Request, { params }: Params) {
     {
       stateVersion: room.stateVersion,
       currentTurnUserId: room.currentTurnUserId,
-      gameStateJson: room.gameStateJson,
+      gameStateJson: stripEngineSecret(room.gameStateJson),
     },
     { headers: { 'Cache-Control': 'no-store' } }
   )

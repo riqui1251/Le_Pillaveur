@@ -16,6 +16,8 @@ import {
   readGameSession,
   shouldResumeFromSave,
 } from '@/lib/game-session'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { PetitBuveurOnline } from '@/components/online/PetitBuveurOnline'
 
 const GAME_ID = 'petit-buveur'
 const SAVE_KEY = 'petit-buveur-save'
@@ -37,6 +39,7 @@ export default function PetitBuveurPage() {
   const [difficulty, setDifficulty] = useState<Difficulty>('normal')
   const [showRules, setShowRules] = useState(false)
   const [hasActiveSave, setHasActiveSave] = useState(false)
+  const { user } = useAuth()
   const { players } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
   const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
@@ -85,6 +88,15 @@ export default function PetitBuveurPage() {
 
   if (!sessionChecked) {
     return <div className="min-h-screen bg-gray-950" aria-hidden />
+  }
+
+  // Mode en ligne : lobby + partie serveur-autoritaire (indépendant du flux local).
+  if (user?.playMode === 'online') {
+    return (
+      <div className="fixed inset-x-0 bottom-0 top-14 z-20 flex flex-col overflow-y-auto bg-gray-950 sm:top-[3.75rem]">
+        <PetitBuveurOnline />
+      </div>
+    )
   }
 
   if (gameStarted) {

@@ -82,9 +82,15 @@ Deux systèmes online parallèles, aucun pleinement fonctionnel :
 - ✅ **Endpoint action** `POST /api/online/rooms/[roomId]/action` : valide le tour, applique `reduce`, persiste (`gameStateJson`/`stateVersion`/`currentTurnUserId`), diffuse en SSE. Réponse = vue client.
 - ✅ **Rewire du lancement** : `launchPetitBuveurRoom` construit un `EngineState` (graine aléatoire par partie). Compatible avec le parsing/finished/rematch existants (`EngineState` expose `winner` + `version`).
 
+**JOUABLE EN LIGNE (UI minimale) — FAIT :**
+- ✅ `components/online/PetitBuveurOnline.tsx` : écran de jeu online (joueurs/positions/gorgées, « Lancer le dé » / « Continuer » selon le tour, rematch en fin). Consomme l'état serveur (SSE + polling) et poste sur `/action`.
+- ✅ Branchement de `page.tsx` : en `playMode === 'online'`, rend le lobby puis l'écran online (le flux local reste intact).
+- ✅ **Anti-triche réel** : `stripEngineSecret` retire `rngState` sur TOUS les chemins de lecture client (`buildRoomDto`, `/state` GET, réponse `/action`). Le serveur garde l'état complet en base.
+
 **Reste à faire (prochaines sessions) :**
-1. **Enrichir le moteur** : logique fine des cases interactives (roue, vote, échange, téléport, pile/face, dé de la honte, défi-chaîne, chance, double-case) + cases à ciblage (bombe, miroir, repetition, copie, rewind, melange, piege…) avec un payload de `choice` dans `RESOLVE_INTERACTION`. **Porter fidèlement la logique depuis `game.tsx`** (comparer local vs online). Tests par case.
-2. **Rewire `game.tsx`** (4057 l., le plus gros) : en ligne, afficher l'état serveur + envoyer des actions (`roll`, `resolve`) via l'endpoint `/action` ; en local, utiliser le même moteur en mémoire. Même UI, même ressenti.
-3. **Déconnexion/reconnexion** + rematch côté moteur.
+1. **Enrichir le moteur** : logique fine des cases interactives (roue, vote, échange, téléport, pile/face, dé de la honte, défi-chaîne, chance, double-case) + cases à ciblage, avec un payload `choice` dans `RESOLVE_INTERACTION`. **Porter fidèlement depuis `game.tsx`**. Tests par case.
+2. **Parité visuelle** : remplacer l'UI online minimale par l'expérience riche du mode local (rewire de `game.tsx`, 4057 l., pour afficher l'état serveur ; le moteur sert aussi en local). Objectif « même ressenti ».
+3. i18n de l'UI online (actuellement en français en dur, comme le lobby).
+4. **Déconnexion/reconnexion** + robustesse rematch.
 
 **Dette préexistante notée** : historique de migrations Prisma cassé (`visitor_ip`/`SitePresence`) → `migrate dev` inutilisable, contourner via `migrate diff` jusqu'à réparation.

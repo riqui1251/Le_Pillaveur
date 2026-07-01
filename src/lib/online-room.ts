@@ -51,6 +51,25 @@ function computeReadyState(membersWithIds: { userId: string; isReady: boolean }[
   return { allReady, canLaunch: allReady && membersWithIds.length >= 2 }
 }
 
+/**
+ * Retire les champs secrets serveur (ex. `rngState` du moteur Petit Buveur)
+ * avant tout envoi au client — anti-triche : empêche de prédire dés/cases.
+ * No-op pour les jeux sans champ secret.
+ */
+export function stripEngineSecret(json: string | null): string | null {
+  if (!json) return json
+  try {
+    const obj = JSON.parse(json)
+    if (obj && typeof obj === 'object' && 'rngState' in obj) {
+      delete (obj as Record<string, unknown>).rngState
+      return JSON.stringify(obj)
+    }
+    return json
+  } catch {
+    return json
+  }
+}
+
 export async function buildRoomDto(roomId: string, currentUserId: string): Promise<RoomDto | null> {
   const room = await prisma.onlineRoom.findUnique({
     where: { id: roomId },
@@ -88,7 +107,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     settings: parseRoomSettings(room.settingsJson),
     stateVersion: room.stateVersion,
     currentTurnUserId: room.currentTurnUserId,
-    gameStateJson: room.gameStateJson,
+    gameStateJson: stripEngineSecret(room.gameStateJson),
   }
 }
 
