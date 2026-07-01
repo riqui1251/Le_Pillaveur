@@ -67,9 +67,12 @@ export interface EngineState {
   log: LogEntry[]
 }
 
+/** Choix joueur pour résoudre une case interactive (cible, côté de pièce…). */
+export type InteractionChoice = { targetId?: string; side?: 'pile' | 'face' }
+
 export type EngineAction =
   | { type: 'ROLL'; playerId: string }
-  | { type: 'RESOLVE_INTERACTION'; playerId: string }
+  | { type: 'RESOLVE_INTERACTION'; playerId: string; choice?: InteractionChoice }
 
 export type EnginePlayerInit = { id: string; name: string }
 
@@ -115,6 +118,15 @@ function pushLog(log: LogEntry[], entry: LogEntry): LogEntry[] {
   return [...log.slice(-(LOG_LIMIT - 1)), entry]
 }
 
+/** Ajoute (ou retire) des gorgées en respectant la protection. */
+function addDrinks(p: EnginePlayer, n: number): void {
+  if (p.protected && n > 0) {
+    p.protected = false
+    return
+  }
+  p.drinks = Math.max(0, p.drinks + n)
+}
+
 /** Applique l'effet direct d'une case (mute la copie `players`). */
 function applyCaseEffect(
   players: EnginePlayer[],
@@ -123,14 +135,6 @@ function applyCaseEffect(
   rng: SeededRng
 ): void {
   const actor = players[actorIndex]
-
-  const addDrinks = (p: EnginePlayer, n: number) => {
-    if (p.protected && n > 0) {
-      p.protected = false
-      return
-    }
-    p.drinks = Math.max(0, p.drinks + n)
-  }
 
   switch (c.type) {
     // Gorgées sur l'acteur
@@ -208,6 +212,47 @@ function applyCaseEffect(
     // Sans effet direct ou résolu ailleurs
     case 'normal':
     default:
+      break
+  }
+}
+
+/**
+ * Résout une case interactive (mute `players`). Porté fidèlement depuis game.tsx.
+ * Les cases sans logique dédiée retombent sur l'effet numérique par défaut.
+ */
+function resolveInteractionCase(
+  players: EnginePlayer[],
+  actorIndex: number,
+  caseType: CaseType,
+  lastCase: EngineCase | null,
+  rng: SeededRng,
+  choice: InteractionChoice | undefined
+): void {
+  const actor = players[actorIndex]
+
+  switch (caseType) {
+    // Dé de la honte : dé 1-6 → ≤2 rien, 3-4 boit 2, 5 avance +1, 6 recule -1.
+    case 'de-honte': {
+      const r = rng.int(1, 6)
+      if (r > 2 && r <= 4) addDrinks(actor, 2)
+      else if (r === 5) actor.position = clampPos(actor.position + 1)
+      else if (r === 6) actor.position = clampPos(actor.position - 1)
+      break
+    }
+    // Pile ou face : l'acteur mise sur une cible + un côté ; si perdu, la cible boit.
+    case 'pile-face': {
+      const flip: 'pile' | 'face' = rng.chance(0.5) ? 'pile' : 'face'
+      const side = choice?.side ?? 'pile'
+      const target = choice?.targetId
+        ? players.find((p) => p.id === choice.targetId)
+        : players.find((_, i) => i !== actorIndex)
+      const drinks = lastCase?.effect || 2
+      if (target && side !== flip) addDrinks(target, drinks)
+      break
+    }
+    default:
+      // Résolution par défaut (à enrichir case par case ultérieurement).
+      if (lastCase) applyCaseEffect(players, actorIndex, lastCase, rng)
       break
   }
 }
@@ -308,10 +353,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
     const rng = rngFromState(state.rngState)
     const players = state.players.map((p) => ({ ...p }))
 
-    // Résolution par défaut déterministe (à enrichir par case dans la slice suivante).
-    if (state.lastCase) {
-      applyCaseEffect(players, actorIndex, state.lastCase, rng)
-    }
+    resolveInteractionCase(players, actorIndex, state.pending.caseType, state.lastCase, rng, action.choice)
     const turn = advanceTurnOnPlayers(players, actorIndex, state.turnCount)
     return {
       ...state,

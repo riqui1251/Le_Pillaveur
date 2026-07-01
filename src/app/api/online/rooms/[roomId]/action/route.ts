@@ -47,7 +47,14 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const body = await request.json().catch(() => ({}))
-  const actionType = body.action === 'resolve' ? 'resolve' : 'roll'
+  const input =
+    body.action === 'resolve'
+      ? {
+          type: 'resolve' as const,
+          choice:
+            body.choice && typeof body.choice === 'object' ? body.choice : undefined,
+        }
+      : { type: 'roll' as const }
 
   // Concurrence optimiste : évite les actions basées sur un état périmé.
   const expectedVersion =
@@ -59,7 +66,7 @@ export async function POST(request: Request, { params }: Params) {
     )
   }
 
-  const result = applyRoomAction(state, user.id, { type: actionType })
+  const result = applyRoomAction(state, user.id, input)
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 403 })
   }

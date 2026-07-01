@@ -5,6 +5,7 @@ import {
   type EngineState,
   type EngineSettings,
   type EngineAction,
+  type InteractionChoice,
 } from './engine'
 import { DEFI_DRINKS } from './game-data'
 import type { Difficulty } from './types'
@@ -50,7 +51,9 @@ export function parseEngineState(json: string | null): EngineState | null {
 }
 
 /** Action reçue d'un client (mappée vers une action moteur). */
-export type RoomActionInput = { type: 'roll' | 'resolve' }
+export type RoomActionInput =
+  | { type: 'roll' }
+  | { type: 'resolve'; choice?: InteractionChoice }
 
 export type RoomActionResult =
   | { ok: true; state: EngineState }
@@ -68,7 +71,7 @@ export function applyRoomAction(
   const action: EngineAction =
     input.type === 'roll'
       ? { type: 'ROLL', playerId: userId }
-      : { type: 'RESOLVE_INTERACTION', playerId: userId }
+      : { type: 'RESOLVE_INTERACTION', playerId: userId, choice: input.choice }
   try {
     return { ok: true, state: reduce(state, action) }
   } catch (e) {

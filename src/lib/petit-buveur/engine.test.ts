@@ -8,7 +8,7 @@ import {
   type EngineSettings,
   type EnginePlayerInit,
 } from './engine'
-import { BOARD_SIZE } from './types'
+import { BOARD_SIZE, type CaseType, type EngineCase } from './types'
 
 const SETTINGS: EngineSettings = { difficulty: 'normal', defiDrinks: [1, 2, 1, 3, 2, 1, 2] }
 const PLAYERS: EnginePlayerInit[] = [
@@ -97,5 +97,42 @@ describe('moteur Petit Buveur — cœur', () => {
   it('ne peut pas jouer après la fin', () => {
     const { state } = playToEnd('fin')
     expect(() => reduce(state, { type: 'ROLL', playerId: state.players[0].id })).toThrow(EngineError)
+  })
+})
+
+describe('cases interactives', () => {
+  const withPending = (caseType: CaseType, lastCase: EngineCase): EngineState => ({
+    ...createInitialState(PLAYERS, SETTINGS, 'inter'),
+    phase: 'awaiting-interaction',
+    pending: { caseType, playerId: 'p1' },
+    lastCase,
+  })
+
+  it('de-honte : résolution déterministe + effet valide', () => {
+    const s = withPending('de-honte', { type: 'de-honte', effect: 0 })
+    const a = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1' })
+    const b = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1' })
+    expect(a).toEqual(b)
+    expect(a.phase).toBe('playing')
+    expect(a.pending).toBeNull()
+    const p1 = a.players.find((p) => p.id === 'p1')!
+    expect([0, 2]).toContain(p1.drinks)
+    expect(p1.position).toBeGreaterThanOrEqual(0)
+    expect(p1.position).toBeLessThanOrEqual(BOARD_SIZE - 1)
+  })
+
+  it('pile-face : seule la cible peut boire, déterministe', () => {
+    const s = withPending('pile-face', { type: 'pile-face', effect: 2 })
+    const choice = { targetId: 'p2', side: 'pile' as const }
+    const a = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice })
+    const b = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice })
+    expect(a).toEqual(b)
+    expect(a.players.find((p) => p.id === 'p3')!.drinks).toBe(0)
+    expect([0, 2]).toContain(a.players.find((p) => p.id === 'p2')!.drinks)
+  })
+
+  it('refuse une résolution par un autre joueur', () => {
+    const s = withPending('de-honte', { type: 'de-honte', effect: 0 })
+    expect(() => reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p2' })).toThrow(EngineError)
   })
 })
