@@ -21,6 +21,11 @@ import type { EngineState } from '@/lib/petit-buveur/engine'
 
 const BOARD_SIZE = 30
 
+const TOKEN_COLORS = [
+  'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+  'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-orange-500',
+]
+
 /** Vue client de l'état moteur (rngState absent de la réponse serveur). */
 type EngineView = Omit<EngineState, 'rngState'>
 
@@ -62,6 +67,9 @@ export function PetitBuveurOnline() {
   const rematchVotes = (view as { rematchVotes?: string[] }).rematchVotes ?? []
   const iVotedRematch = rematchVotes.includes(user.id)
 
+  const colorFor = (id: string) =>
+    TOKEN_COLORS[Math.max(0, view.players.findIndex((p) => p.id === id)) % TOKEN_COLORS.length]
+
   const sendAction = async (action: 'roll' | 'resolve') => {
     if (!room || busy) return
     setBusy(true)
@@ -94,6 +102,59 @@ export function PetitBuveurOnline() {
           <LogOut className="mr-1 h-4 w-4" />
           Quitter
         </Button>
+      </div>
+
+      {/* Plateau */}
+      <div className="pb-board">
+        <div className="pb-board-grid grid grid-cols-6 gap-1.5">
+          {Array.from({ length: BOARD_SIZE }).map((_, index) => {
+            const onCase = view.players.filter((p) => p.position === index)
+            const isStart = index === 0
+            const isFinish = index === BOARD_SIZE - 1
+            return (
+              <div
+                key={index}
+                className={cn(
+                  'relative flex aspect-square min-h-[2.5rem] items-center justify-center rounded-lg',
+                  isStart
+                    ? 'pb-board-case pb-board-start'
+                    : isFinish
+                      ? 'pb-board-case pb-board-finish'
+                      : 'pb-board-case'
+                )}
+              >
+                {!isFinish && (
+                  <span
+                    className={cn(
+                      'absolute left-0.5 top-0.5 text-[8px] font-semibold',
+                      isStart ? 'text-emerald-400/70' : 'text-white/30'
+                    )}
+                  >
+                    {isStart ? '🏁' : index + 1}
+                  </span>
+                )}
+                {isFinish && onCase.length === 0 && (
+                  <span className="text-2xl" aria-hidden>🏆</span>
+                )}
+                <div className="absolute inset-0 grid grid-cols-1 place-items-center gap-0.5 p-1">
+                  {onCase.map((p) => (
+                    <span
+                      key={p.id}
+                      title={p.name}
+                      className={cn(
+                        'flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ring-1 ring-white/30',
+                        colorFor(p.id),
+                        p.id === user.id && 'ring-2 ring-white'
+                      )}
+                    >
+                      {p.name.slice(0, 1).toUpperCase()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* Joueurs */}
