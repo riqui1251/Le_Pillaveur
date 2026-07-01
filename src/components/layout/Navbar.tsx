@@ -1,15 +1,17 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Gamepad2, ChevronRight, Shield } from 'lucide-react'
+import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
+import { useFriends } from '@/hooks/useFriends'
 import { canAccessSupervision } from '@/lib/roles'
 import { usePageMeta } from '@/lib/nav-meta'
 import { FullscreenButton } from '@/components/ui/fullscreen-button'
 import { FeedbackDialog, FeedbackMenuButton } from '@/components/feedback/FeedbackDialog'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { FriendsPanel } from '@/components/layout/FriendsPanel'
 import { cn } from '@/lib/utils'
 
 const NAV_LINK_KEYS = [
@@ -33,7 +35,10 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [friendsOpen, setFriendsOpen] = useState(false)
   const { user } = useAuth()
+  const { friends, refresh: refreshFriends } = useFriends()
+  const onlineFriendsCount = friends.filter((f) => f.isOnline).length
   const pathname = usePathname()
   const pageMeta = usePageMeta(pathname)
 
@@ -79,6 +84,7 @@ export default function Navbar() {
 
   useEffect(() => {
     setDrawerOpen(false)
+    setFriendsOpen(false)
   }, [pathname])
 
   const toggleDrawer = () => setDrawerOpen((open) => !open)
@@ -101,6 +107,27 @@ export default function Navbar() {
           >
             {drawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
+
+          {user && (
+            <button
+              type="button"
+              aria-label={t('manageFriends')}
+              onClick={() => setFriendsOpen((v) => !v)}
+              className={cn(
+                'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
+                friendsOpen
+                  ? 'border-violet-400/40 bg-violet-500/20 text-violet-200 shadow-[0_0_16px_rgba(139,92,246,0.15)]'
+                  : 'border-white/10 bg-white/[0.04] text-violet-300 hover:border-violet-400/35 hover:bg-violet-500/10'
+              )}
+            >
+              <Users className="h-5 w-5" />
+              {onlineFriendsCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold text-black">
+                  {onlineFriendsCount}
+                </span>
+              )}
+            </button>
+          )}
 
           <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-sm shadow-md sm:h-10 sm:w-10">
@@ -244,6 +271,15 @@ export default function Navbar() {
       </aside>
 
       <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+
+      {user && (
+        <FriendsPanel
+          open={friendsOpen}
+          onClose={() => setFriendsOpen(false)}
+          friends={friends}
+          onRefresh={refreshFriends}
+        />
+      )}
     </>
   )
 }
