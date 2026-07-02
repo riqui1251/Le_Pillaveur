@@ -153,6 +153,21 @@ export function applyTCRoomAction(
   }
 }
 
+/** Conversion directe en bot (joueur inactif expulsé — validation AFK côté route). */
+export function convertTCPlayerToBot(state: TCState, playerId: string): TCState | null {
+  const player = state.players.find((p) => p.id === playerId)
+  if (!player || player.isBot || state.phase === 'finished') return null
+  const next: TCState = {
+    ...state,
+    players: state.players.map((p) =>
+      p.id === playerId ? { ...p, isBot: true, leftAt: null } : p
+    ),
+    version: state.version + 1,
+  }
+  // Si le remplacé n'avait pas encore placé ses navires, le bot le fait.
+  return placeTCBots(next)
+}
+
 export function tcClientViewJson(state: TCState, viewerUserId: string): string {
   return JSON.stringify(toTCClientView(state, viewerUserId))
 }

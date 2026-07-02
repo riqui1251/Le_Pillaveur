@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
@@ -11,6 +11,7 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
+import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
  * Écran de jeu Toucher-Coulé EN LIGNE (serveur-autoritaire).
@@ -31,6 +32,9 @@ function parseView(json: string | null | undefined): TCClientView | null {
 }
 
 const TEAM_LABEL: Record<TeamId, string> = { A: 'A', B: 'B' }
+
+/** Délai avant d'afficher l'avertissement AFK (l'expulsion elle-même est à 3 min, validée serveur). */
+const AFK_WARN_AFTER_MS = 60_000
 
 function teamAccent(team: TeamId): string {
   return team === 'A' ? 'text-sky-300' : 'text-rose-300'
@@ -106,14 +110,57 @@ export function ToucherCouleOnline() {
     }
   }, [view, user, room])
 
-  // Horloge locale pour le compte à rebours « bot dans Xs » (active si un joueur est parti).
+  // Début de tour côté client : remis à zéro à chaque écriture d'état serveur.
+  // Sert de base aux comptes à rebours AFK (l'horloge d'autorité reste le serveur).
+  const stateVersion = room?.stateVersion ?? -1
+  const turnStartRef = useRef({ version: stateVersion, at: Date.now() })
+  if (turnStartRef.current.version !== stateVersion) {
+    turnStartRef.current = { version: stateVersion, at: Date.now() }
+  }
+
+  // Tick AFK : si le joueur au tour (humain, présent, pas moi) ne tire pas
+  // pendant 3 min, n'importe quel autre client demande son remplacement —
+  // le serveur revalide avec SA propre horloge avant d'expulser.
+  const afkTarget =
+    view && view.phase === 'battle'
+      ? view.players.find((p) => p.id === view.turnOrder[view.currentTurnIndex])
+      : undefined
+  const afkWatchable = Boolean(afkTarget && !afkTarget.isBot && !afkTarget.leftAt)
+  useEffect(() => {
+    if (!view || !user || !room || !afkWatchable) return
+    const activeP = view.players.find((p) => p.id === view.turnOrder[view.currentTurnIndex])
+    if (!activeP || activeP.id === user.id) return
+    const expectedVersion = room.stateVersion
+    const check = () => {
+      if (Date.now() - turnStartRef.current.at < ONLINE_REPLACE_GRACE_MS) return
+      void fetch(`/api/online/rooms/${room.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'replace-afk', expectedVersion }),
+      })
+    }
+    const timer = setInterval(check, 5000)
+    return () => clearInterval(timer)
+  }, [view, user, room, afkWatchable])
+
+  // Avertissement AFK affiché après 1 min sans action du joueur au tour.
+  const [afkWatch, setAfkWatch] = useState(false)
+  useEffect(() => {
+    setAfkWatch(false)
+    if (!afkWatchable) return
+    const timer = setTimeout(() => setAfkWatch(true), AFK_WARN_AFTER_MS)
+    return () => clearTimeout(timer)
+  }, [stateVersion, afkWatchable])
+
+  // Horloge locale pour les comptes à rebours (retour d'un parti / AFK).
   const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
   const [clock, setClock] = useState(() => Date.now())
   useEffect(() => {
-    if (!someoneLeft) return
+    if (!someoneLeft && !afkWatch) return
     const timer = setInterval(() => setClock(Date.now()), 1000)
     return () => clearInterval(timer)
-  }, [someoneLeft])
+  }, [someoneLeft, afkWatch])
 
   if (!inGame) {
     return <GameOnlineLobby gameId="toucher-coule" />
@@ -353,6 +400,21 @@ export function ToucherCouleOnline() {
                   </p>
                 )
               })}
+          </div>
+        )}
+
+        {/* Avertissement AFK : le joueur au tour n'a rien joué depuis 1 min */}
+        {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
+          <div className="mb-3 rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center">
+            <p className="text-xs font-semibold text-red-100">
+              {t('afkWarning', {
+                name: afkTarget.name,
+                seconds: Math.max(
+                  0,
+                  Math.ceil((turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
+                ),
+              })}
+            </p>
           </div>
         )}
 

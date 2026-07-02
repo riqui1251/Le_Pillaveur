@@ -176,15 +176,15 @@
     }
   },
   "chat": {
-      "title": "Chat",
-      "tabGame": "Partida",
-      "tabFriends": "Amigos",
-      "placeholder": "Escribe un mensaje…",
-      "send": "Enviar",
-      "noRoom": "No hay partida en curso — únete a una sala para chatear con los jugadores.",
-      "noFriends": "Añade amigos para chatear con ellos.",
-      "back": "Atrás",
-      "empty": "¡Todavía no hay mensajes — inicia la conversación!"
+    "title": "Chat",
+    "tabGame": "Partida",
+    "tabFriends": "Amigos",
+    "placeholder": "Escribe un mensaje…",
+    "send": "Enviar",
+    "noRoom": "No hay partida en curso — únete a una sala para chatear con los jugadores.",
+    "noFriends": "Añade amigos para chatear con ellos.",
+    "back": "Atrás",
+    "empty": "¡Todavía no hay mensajes — inicia la conversación!"
   },
   "auth": {
     "brand": "Le Pillaveur",
@@ -368,7 +368,46 @@
     }
   },
   "games": {
+    "1220": {
+      "title": "1220",
+      "titleBets": "1220 — París",
+      "backToGames": "volver a los juegos",
+      "reconfigure": "Reconfigurar apuestas",
+      "setupInfo": "Cada jugador elige su paridad, su rango, su número a beber y su número a beber. Los dos números deben ser diferentes.",
+      "parityLabel": "Paridad de la suma",
+      "pair": "Par",
+      "impair": "Extraño",
+      "bandLabel": "rango de suma",
+      "bands": {
+        "2-10": "2 – 10",
+        "11-20": "11 – 20",
+        "21-30": "21 – 30"
+      },
+      "drinkNumber": "te hace beber",
+      "giveNumber": "dar un trago",
+      "clashWarning": "⚠️ Los dos números deben ser diferentes.",
+      "validateBets": "Validar apuestas — Iniciar el juego →",
+      "sum": "Suma",
+      "results": "Resultados",
+      "history": "Historial ({count} lanzamientos anteriores)",
+      "rolling": "🎲 Lanzamiento…",
+      "rollDice": "🎲Tira los dados",
+      "rollAriaRolling": "Lanzamiento en progreso",
+      "rollAria": "tira los dados",
+      "outcomes": {
+        "drink": "🍺 Bebidas - suma = {number}.",
+        "give": "🎁 Dar de beber: {label}.",
+        "partialGive": "⚡ Número en un dado ({numbers}) sin suma → {count} sorbo(s) (÷2).",
+        "totalGive": "Total: {count} sorbo(s) a dispensar.",
+        "partialNothing": "⚡ Número(s) en un dado ({numbers}) pero no en total: nada para distribuir.",
+        "nothing": "Nada para ti este tiro."
+      }
+    },
     "catalog": {
+      "1220": {
+        "title": "1220",
+        "description": "Un dado de 12 y un dado de 20: apuesta por la paridad, un rango de suma y dos números clave para beber o hacer beber."
+      },
       "roulette-russe": {
         "title": "Ruleta Rusa",
         "description": "Un juego de azar donde cada jugador se turna para disparar. ¡Sobrevive o bebe!"
@@ -424,10 +463,6 @@
       "trial-poursuite": {
         "title": "Trial Poursuite",
         "description": "¡Acepta desafíos locos bajo presión nuevamente! Coordinación, creatividad y rapidez en el programa."
-      },
-      "1220": {
-        "title": "1220",
-        "description": "Un dado de 12 y un dado de 20: apuesta por la paridad, un rango de suma y dos números clave para beber o hacer beber."
       }
     },
     "roulette-russe": {
@@ -488,41 +523,6 @@
         "doubleNoir": "doble negro",
         "purple": "Purple",
         "doublePurple": "Doble Purple"
-      }
-    },
-    "1220": {
-      "title": "1220",
-      "titleBets": "1220 — París",
-      "backToGames": "volver a los juegos",
-      "reconfigure": "Reconfigurar apuestas",
-      "setupInfo": "Cada jugador elige su paridad, su rango, su número a beber y su número a beber. Los dos números deben ser diferentes.",
-      "parityLabel": "Paridad de la suma",
-      "pair": "Par",
-      "impair": "Extraño",
-      "bandLabel": "rango de suma",
-      "bands": {
-        "2-10": "2 – 10",
-        "11-20": "11 – 20",
-        "21-30": "21 – 30"
-      },
-      "drinkNumber": "te hace beber",
-      "giveNumber": "dar un trago",
-      "clashWarning": "⚠️ Los dos números deben ser diferentes.",
-      "validateBets": "Validar apuestas — Iniciar el juego →",
-      "sum": "Suma",
-      "results": "Resultados",
-      "history": "Historial ({count} lanzamientos anteriores)",
-      "rolling": "🎲 Lanzamiento…",
-      "rollDice": "🎲Tira los dados",
-      "rollAriaRolling": "Lanzamiento en progreso",
-      "rollAria": "tira los dados",
-      "outcomes": {
-        "drink": "🍺 Bebidas - suma = {number}.",
-        "give": "🎁 Dar de beber: {label}.",
-        "partialGive": "⚡ Número en un dado ({numbers}) sin suma → {count} sorbo(s) (÷2).",
-        "totalGive": "Total: {count} sorbo(s) a dispensar.",
-        "partialNothing": "⚡ Número(s) en un dado ({numbers}) pero no en total: nada para distribuir.",
-        "nothing": "Nada para ti este tiro."
       }
     },
     "roue-des-gorgees": {
@@ -1293,9 +1293,18 @@
       "lobby": {
         "mode": "Formato de equipos",
         "modes": {
-          "1v1": { "label": "1 vs 1", "desc": "3 barcos cada uno · cuadrícula 8×8" },
-          "2v2": { "label": "2 vs 2", "desc": "2 barcos cada uno · cuadrícula 10×10" },
-          "3v3": { "label": "3 vs 3", "desc": "2 barcos cada uno · cuadrícula 12×12" }
+          "1v1": {
+            "label": "1 vs 1",
+            "desc": "3 barcos cada uno · cuadrícula 8×8"
+          },
+          "2v2": {
+            "label": "2 vs 2",
+            "desc": "2 barcos cada uno · cuadrícula 10×10"
+          },
+          "3v3": {
+            "label": "3 vs 3",
+            "desc": "2 barcos cada uno · cuadrícula 12×12"
+          }
         },
         "teams": "Equipos",
         "teamA": "Equipo A",
@@ -1339,7 +1348,8 @@
         "legendHit": "Tocado",
         "legendMiss": "Agua",
         "legendSunk": "Hundido",
-        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s"
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
+        "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s"
       }
     },
     "petit-buveur": {
@@ -1451,7 +1461,9 @@
         "gameOver": "Partida terminada",
         "rematch": "Revancha",
         "rematchWaiting": "Esperando… ({count}/{total})",
-        "loading": "Cargando la partida…"
+        "loading": "Cargando la partida…",
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
+        "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s"
       },
       "defis": [
         {

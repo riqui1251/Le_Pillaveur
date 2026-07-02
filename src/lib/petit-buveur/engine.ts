@@ -25,6 +25,10 @@ import { generateCase } from './case-generator'
 export interface EnginePlayer {
   id: string
   name: string
+  /** Joueur contrôlé par le serveur (remplaçant d'un humain parti/inactif). */
+  isBot?: boolean
+  /** Timestamp (ms) du départ du joueur en cours de partie — null/absent s'il est là. */
+  leftAt?: number | null
   position: number
   drinks: number
   protected: boolean

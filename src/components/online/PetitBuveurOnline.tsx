@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
@@ -11,6 +11,7 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PLAYER_ICONS } from '@/lib/players'
+import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
@@ -25,6 +26,9 @@ import '@/styles/petit-buveur-board.css'
 
 const BOARD_SIZE = 30
 const DIFFICULTY_EMOJI: Record<string, string> = { facile: '🌱', normal: '🌟', difficile: '🔥', extreme: '💀' }
+
+/** Délai avant d'afficher l'avertissement AFK (l'expulsion elle-même est à 3 min, validée serveur). */
+const AFK_WARN_AFTER_MS = 60_000
 
 /** Cases interactives qui demandent de choisir un joueur cible. */
 const TARGET_INTERACTIVE = new Set(['vote', 'echange', 'pile-face', 'defi-chaine'])
@@ -86,13 +90,102 @@ export function PetitBuveurOnline() {
   }, [])
 
   const inGame = room?.gameId === 'petit-buveur' && room.status === 'playing'
+  const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
+
+  // Début de tour côté client : remis à zéro à chaque écriture d'état serveur.
+  // Sert de base aux comptes à rebours AFK (l'horloge d'autorité reste le serveur).
+  const stateVersion = room?.stateVersion ?? -1
+  const turnStartRef = useRef({ version: stateVersion, at: Date.now() })
+  if (turnStartRef.current.version !== stateVersion) {
+    turnStartRef.current = { version: stateVersion, at: Date.now() }
+  }
+
+  // Ticks « arbitre » (premier humain PRÉSENT de la partie) :
+  // - tour d'un bot → demande au serveur de jouer UNE action (rythme visible) ;
+  // - joueur parti depuis plus de 3 min → demande son remplacement par un bot.
+  // La garde expectedVersion rend les ticks concurrents inoffensifs.
+  useEffect(() => {
+    if (!view || !user || !room || view.phase === 'finished') return
+    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
+    if (referee?.id !== user.id) return
+    const expectedVersion = room.stateVersion
+    const send = (action: 'bot' | 'replace-left') => {
+      void fetch(`/api/online/rooms/${room.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action, expectedVersion }),
+      })
+    }
+
+    let botTimer: ReturnType<typeof setTimeout> | undefined
+    const activeP = view.players[view.currentPlayer]
+    if (activeP?.isBot) botTimer = setTimeout(() => send('bot'), 1400)
+
+    let replaceTimer: ReturnType<typeof setInterval> | undefined
+    if (view.players.some((p) => !p.isBot && p.leftAt)) {
+      const check = () => {
+        const expired = view.players.some(
+          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
+        )
+        if (expired) send('replace-left')
+      }
+      check()
+      replaceTimer = setInterval(check, 5000)
+    }
+
+    return () => {
+      if (botTimer) clearTimeout(botTimer)
+      if (replaceTimer) clearInterval(replaceTimer)
+    }
+  }, [view, user, room])
+
+  // Tick AFK : si le joueur au tour (humain, présent, pas moi) ne joue rien
+  // pendant 3 min, n'importe quel autre client demande son remplacement —
+  // le serveur revalide avec SA propre horloge avant d'expulser.
+  const afkTarget = view && view.phase !== 'finished' ? view.players[view.currentPlayer] : undefined
+  const afkWatchable = Boolean(afkTarget && !afkTarget.isBot && !afkTarget.leftAt)
+  useEffect(() => {
+    if (!view || !user || !room || !afkWatchable) return
+    const activeP = view.players[view.currentPlayer]
+    if (!activeP || activeP.id === user.id) return
+    const expectedVersion = room.stateVersion
+    const check = () => {
+      if (Date.now() - turnStartRef.current.at < ONLINE_REPLACE_GRACE_MS) return
+      void fetch(`/api/online/rooms/${room.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'replace-afk', expectedVersion }),
+      })
+    }
+    const timer = setInterval(check, 5000)
+    return () => clearInterval(timer)
+  }, [view, user, room, afkWatchable])
+
+  // Avertissement AFK affiché après 1 min sans action du joueur au tour.
+  const [afkWatch, setAfkWatch] = useState(false)
+  useEffect(() => {
+    setAfkWatch(false)
+    if (!afkWatchable) return
+    const timer = setTimeout(() => setAfkWatch(true), AFK_WARN_AFTER_MS)
+    return () => clearTimeout(timer)
+  }, [stateVersion, afkWatchable])
+
+  // Horloge locale 1s pour les comptes à rebours (retour d'un parti / AFK).
+  const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
+  const [clock, setClock] = useState(() => Date.now())
+  useEffect(() => {
+    if (!someoneLeft && !afkWatch) return
+    const timer = setInterval(() => setClock(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [someoneLeft, afkWatch])
 
   // Tant que la partie n'est pas lancée : le lobby gère création/join/prêt/lancer.
   if (!inGame) {
     return <GameOnlineLobby gameId="petit-buveur" />
   }
 
-  const view = parseView(room.gameStateJson)
   if (!view || !user) {
     return (
       <div className="flex flex-1 items-center justify-center p-6 text-white/60">
@@ -112,10 +205,15 @@ export function PetitBuveurOnline() {
     ? room.settings.difficulty
     : 'normal'
 
-  // Icône personnalisée du compte si définie, sinon icône stable dérivée de l'index.
-  const iconOf = (id: string) =>
-    room.members.find((m) => m.userId === id)?.preferences?.icon ??
-    iconFor(Math.max(0, view.players.findIndex((p) => p.id === id)))
+  // Icône personnalisée du compte si définie, sinon icône stable dérivée de
+  // l'index. Les bots (remplaçants inclus) sont signalés par 🤖.
+  const iconOf = (id: string) => {
+    if (view.players.find((p) => p.id === id)?.isBot) return '🤖'
+    return (
+      room.members.find((m) => m.userId === id)?.preferences?.icon ??
+      iconFor(Math.max(0, view.players.findIndex((p) => p.id === id)))
+    )
+  }
   const leaderPos = Math.max(...view.players.map((p) => p.position))
 
   const effectChips: EffectChip[] = []
@@ -265,6 +363,40 @@ export function PetitBuveurOnline() {
               {active ? active.position + 1 : '—'}/{BOARD_SIZE}
             </span>
           </div>
+
+          {/* Joueur(s) parti(s) : en attente de leur retour avant remplacement par un bot */}
+          {someoneLeft && (
+            <div className="space-y-0.5 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-center">
+              {view.players
+                .filter((p) => !p.isBot && p.leftAt)
+                .map((p) => {
+                  const remaining = Math.max(
+                    0,
+                    Math.ceil(((p.leftAt ?? 0) + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
+                  )
+                  return (
+                    <p key={p.id} className="text-xs font-semibold text-amber-100">
+                      {t('waitingReturn', { name: p.name, seconds: remaining })}
+                    </p>
+                  )
+                })}
+            </div>
+          )}
+
+          {/* Avertissement AFK : le joueur au tour n'a rien joué depuis 1 min */}
+          {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
+            <div className="rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center">
+              <p className="text-xs font-semibold text-red-100">
+                {t('afkWarning', {
+                  name: afkTarget.name,
+                  seconds: Math.max(
+                    0,
+                    Math.ceil((turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
+                  ),
+                })}
+              </p>
+            </div>
+          )}
 
           {/* Effets actifs — pastilles compactes (icône + joueur + compteur, détail en title) */}
           {effectChips.length > 0 && (

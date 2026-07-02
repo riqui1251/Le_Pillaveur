@@ -7,6 +7,7 @@ import { canJoinInviteRoom } from '@/lib/online/room-invites'
 import { parseRoomSettings } from '@/lib/online-game-state'
 import { reduceTC, TC_MODES } from '@/lib/toucher-coule/engine'
 import { parseTCState, serializeTCState } from '@/lib/toucher-coule/server-adapter'
+import { parseEngineState, rejoinPlayer, serializeEngineState } from '@/lib/petit-buveur/server-adapter'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
@@ -31,13 +32,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Lobby introuvable' }, { status: 404 })
   }
   if (room.status !== 'waiting') {
-    // Retour en partie (Toucher-Coulé) : un joueur marqué « parti » peut
-    // reprendre sa place tant qu'un bot ne l'a pas remplacé.
-    if (room.status === 'playing' && room.gameId === 'toucher-coule') {
-      const tcState = parseTCState(room.gameStateJson)
-      const player = tcState?.players.find((p) => p.id === user.id && !p.isBot && p.leftAt)
-      if (tcState && player) {
-        const next = reduceTC(tcState, { type: 'REJOIN', playerId: user.id })
+    // Retour en partie : un joueur marqué « parti » peut reprendre sa place
+    // tant qu'un bot ne l'a pas remplacé (voir src/lib/online/replacement.ts).
+    if (room.status === 'playing') {
+      let rejoinedJson: string | null = null
+      if (room.gameId === 'toucher-coule') {
+        const tcState = parseTCState(room.gameStateJson)
+        const player = tcState?.players.find((p) => p.id === user.id && !p.isBot && p.leftAt)
+        if (tcState && player) {
+          rejoinedJson = serializeTCState(reduceTC(tcState, { type: 'REJOIN', playerId: user.id }))
+        }
+      } else if (room.gameId === 'petit-buveur') {
+        const pbState = parseEngineState(room.gameStateJson)
+        const next = pbState ? rejoinPlayer(pbState, user.id) : null
+        if (next) rejoinedJson = serializeEngineState(next)
+      }
+      if (rejoinedJson) {
         await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })
         await prisma.onlineRoomMember.upsert({
           where: { roomId_userId: { roomId: room.id, userId: user.id } },
@@ -46,7 +56,7 @@ export async function POST(request: Request) {
         })
         await prisma.onlineRoom.update({
           where: { id: room.id },
-          data: { gameStateJson: serializeTCState(next), stateVersion: room.stateVersion + 1 },
+          data: { gameStateJson: rejoinedJson, stateVersion: room.stateVersion + 1 },
         })
         publishRoomChanged(room.id, { type: 'changed', stateVersion: room.stateVersion + 1 })
         const dto = await buildRoomDto(room.id, user.id)

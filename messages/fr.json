@@ -186,15 +186,15 @@
     }
   },
   "chat": {
-      "title": "Chat",
-      "tabGame": "Partie",
-      "tabFriends": "Amis",
-      "placeholder": "Écris un message…",
-      "send": "Envoyer",
-      "noRoom": "Aucune partie en cours — rejoins un lobby pour discuter avec les joueurs.",
-      "noFriends": "Ajoute des amis pour discuter avec eux.",
-      "back": "Retour",
-      "empty": "Aucun message pour l’instant — lance la conversation !"
+    "title": "Chat",
+    "tabGame": "Partie",
+    "tabFriends": "Amis",
+    "placeholder": "Écris un message…",
+    "send": "Envoyer",
+    "noRoom": "Aucune partie en cours — rejoins un lobby pour discuter avec les joueurs.",
+    "noFriends": "Ajoute des amis pour discuter avec eux.",
+    "back": "Retour",
+    "empty": "Aucun message pour l’instant — lance la conversation !"
   },
   "auth": {
     "brand": "Le Pillaveur",
@@ -378,7 +378,46 @@
     }
   },
   "games": {
+    "1220": {
+      "title": "1220",
+      "titleBets": "1220 — Paris",
+      "backToGames": "Retour aux jeux",
+      "reconfigure": "Reconfigurer les paris",
+      "setupInfo": "Chaque joueur choisit sa parité, sa plage, son chiffre fait boire et son chiffre donne à boire. Les deux chiffres doivent être différents.",
+      "parityLabel": "Parité de la somme",
+      "pair": "Pair",
+      "impair": "Impair",
+      "bandLabel": "Plage de la somme",
+      "bands": {
+        "2-10": "2 – 10",
+        "11-20": "11 – 20",
+        "21-30": "21 – 30"
+      },
+      "drinkNumber": "Fait boire",
+      "giveNumber": "Donne à boire",
+      "clashWarning": "⚠️ Les deux chiffres doivent être différents.",
+      "validateBets": "Valider les paris — Lancer la partie →",
+      "sum": "Somme",
+      "results": "Résultats",
+      "history": "Historique ({count} lancers précédents)",
+      "rolling": "🎲 Lancement…",
+      "rollDice": "🎲 Lancer les dés",
+      "rollAriaRolling": "Lancer en cours",
+      "rollAria": "Lancer les dés",
+      "outcomes": {
+        "drink": "🍺 Boit — somme = {number}.",
+        "give": "🎁 Donne à boire : {label}.",
+        "partialGive": "⚡ Chiffre sur un dé ({numbers}) sans somme → {count} gorgée(s) (÷2).",
+        "totalGive": "Total : {count} gorgée(s) à distribuer.",
+        "partialNothing": "⚡ Chiffre(s) sur un dé ({numbers}) mais pas en somme — rien à distribuer.",
+        "nothing": "Rien pour toi ce lancer."
+      }
+    },
     "catalog": {
+      "1220": {
+        "title": "1220",
+        "description": "Un dé 12 et un dé 20 : pariez sur la parité, une plage de somme, et deux chiffres clés pour boire ou faire boire."
+      },
       "roulette-russe": {
         "title": "Roulette Russe",
         "description": "Un jeu de hasard où chaque joueur tire à tour de rôle. Survivre ou boire !"
@@ -434,10 +473,6 @@
       "trial-poursuite": {
         "title": "Trial Poursuite",
         "description": "Redez des défis fous sous pression ! Coordination, créativité et rapidité au programme."
-      },
-      "1220": {
-        "title": "1220",
-        "description": "Un dé 12 et un dé 20 : pariez sur la parité, une plage de somme, et deux chiffres clés pour boire ou faire boire."
       }
     },
     "roulette-russe": {
@@ -498,41 +533,6 @@
         "doubleNoir": "Double noir",
         "purple": "Purple",
         "doublePurple": "Double Purple"
-      }
-    },
-    "1220": {
-      "title": "1220",
-      "titleBets": "1220 — Paris",
-      "backToGames": "Retour aux jeux",
-      "reconfigure": "Reconfigurer les paris",
-      "setupInfo": "Chaque joueur choisit sa parité, sa plage, son chiffre fait boire et son chiffre donne à boire. Les deux chiffres doivent être différents.",
-      "parityLabel": "Parité de la somme",
-      "pair": "Pair",
-      "impair": "Impair",
-      "bandLabel": "Plage de la somme",
-      "bands": {
-        "2-10": "2 – 10",
-        "11-20": "11 – 20",
-        "21-30": "21 – 30"
-      },
-      "drinkNumber": "Fait boire",
-      "giveNumber": "Donne à boire",
-      "clashWarning": "⚠️ Les deux chiffres doivent être différents.",
-      "validateBets": "Valider les paris — Lancer la partie →",
-      "sum": "Somme",
-      "results": "Résultats",
-      "history": "Historique ({count} lancers précédents)",
-      "rolling": "🎲 Lancement…",
-      "rollDice": "🎲 Lancer les dés",
-      "rollAriaRolling": "Lancer en cours",
-      "rollAria": "Lancer les dés",
-      "outcomes": {
-        "drink": "🍺 Boit — somme = {number}.",
-        "give": "🎁 Donne à boire : {label}.",
-        "partialGive": "⚡ Chiffre sur un dé ({numbers}) sans somme → {count} gorgée(s) (÷2).",
-        "totalGive": "Total : {count} gorgée(s) à distribuer.",
-        "partialNothing": "⚡ Chiffre(s) sur un dé ({numbers}) mais pas en somme — rien à distribuer.",
-        "nothing": "Rien pour toi ce lancer."
       }
     },
     "roue-des-gorgees": {
@@ -1303,9 +1303,18 @@
       "lobby": {
         "mode": "Format des équipes",
         "modes": {
-          "1v1": { "label": "1 vs 1", "desc": "3 bateaux chacun · grille 8×8" },
-          "2v2": { "label": "2 vs 2", "desc": "2 bateaux chacun · grille 10×10" },
-          "3v3": { "label": "3 vs 3", "desc": "2 bateaux chacun · grille 12×12" }
+          "1v1": {
+            "label": "1 vs 1",
+            "desc": "3 bateaux chacun · grille 8×8"
+          },
+          "2v2": {
+            "label": "2 vs 2",
+            "desc": "2 bateaux chacun · grille 10×10"
+          },
+          "3v3": {
+            "label": "3 vs 3",
+            "desc": "2 bateaux chacun · grille 12×12"
+          }
         },
         "teams": "Équipes",
         "teamA": "Équipe A",
@@ -1349,7 +1358,8 @@
         "legendHit": "Touché",
         "legendMiss": "Raté",
         "legendSunk": "Coulé",
-        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s"
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s"
       }
     },
     "petit-buveur": {
@@ -1461,7 +1471,9 @@
         "gameOver": "Partie terminée",
         "rematch": "Rejouer",
         "rematchWaiting": "En attente… ({count}/{total})",
-        "loading": "Chargement de la partie…"
+        "loading": "Chargement de la partie…",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s"
       },
       "defis": [
         {

@@ -7,6 +7,7 @@ import { parsePetitBuveurState } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { parseTCState, serializeTCState } from '@/lib/toucher-coule/server-adapter'
 import { reduceTC } from '@/lib/toucher-coule/engine'
+import { markPlayerLeft, parseEngineState, serializeEngineState } from '@/lib/petit-buveur/server-adapter'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -77,9 +78,9 @@ export async function DELETE(_request: Request, { params }: Params) {
     await resetRoomToWaitingLobby(roomId)
   }
 
-  // Toucher-Coulé en cours : le joueur qui quitte est marqué « parti » dans
-  // l'état de partie — il peut revenir (bouton Rejoindre) pendant 3 min avant
-  // d'être remplacé par un bot.
+  // Partie en cours (jeux serveur-autoritaires) : le joueur qui quitte est
+  // marqué « parti » dans l'état — il peut revenir (bouton Rejoindre) pendant
+  // 3 min avant d'être remplacé par un bot. Voir src/lib/online/replacement.ts.
   if (room.gameId === 'toucher-coule' && room.status === 'playing') {
     const tcState = parseTCState(room.gameStateJson)
     const player = tcState?.players.find((p) => p.id === user.id && !p.isBot)
@@ -88,6 +89,16 @@ export async function DELETE(_request: Request, { params }: Params) {
       await prisma.onlineRoom.update({
         where: { id: roomId },
         data: { gameStateJson: serializeTCState(next), stateVersion: room.stateVersion + 1 },
+      })
+    }
+  }
+  if (room.gameId === 'petit-buveur' && room.status === 'playing' && !gameFinished) {
+    const pbState = parseEngineState(room.gameStateJson)
+    const next = pbState ? markPlayerLeft(pbState, user.id, Date.now()) : null
+    if (next) {
+      await prisma.onlineRoom.update({
+        where: { id: roomId },
+        data: { gameStateJson: serializeEngineState(next), stateVersion: room.stateVersion + 1 },
       })
     }
   }
