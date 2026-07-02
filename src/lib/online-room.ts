@@ -1,6 +1,8 @@
 import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
+import { parseTCState, tcClientViewJson } from '@/lib/toucher-coule/server-adapter'
+import { TC_MODES } from '@/lib/toucher-coule/engine'
 
 const ROOM_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 const ROOM_CODE_LENGTH = 6
@@ -47,8 +49,17 @@ export type LobbyListItem = {
   members: { displayName: string; isReady: boolean }[]
 }
 
-function computeReadyState(membersWithIds: { userId: string; isReady: boolean }[]) {
+function computeReadyState(
+  membersWithIds: { userId: string; isReady: boolean }[],
+  gameId: string | null,
+  settings: RoomSettings
+) {
   const allReady = membersWithIds.length > 0 && membersWithIds.every((m) => m.isReady)
+  if (gameId === 'toucher-coule') {
+    // Les bots comblent les sièges vides : un seul joueur prêt suffit.
+    const capacity = TC_MODES[settings.tcMode ?? '1v1'].playersPerTeam * 2
+    return { allReady, canLaunch: allReady && membersWithIds.length <= capacity }
+  }
   return { allReady, canLaunch: allReady && membersWithIds.length >= 2 }
 }
 
@@ -69,6 +80,25 @@ export function stripEngineSecret(json: string | null): string | null {
   } catch {
     return json
   }
+}
+
+/**
+ * Variante PAR UTILISATEUR : certains jeux ont des secrets asymétriques
+ * (Toucher-Coulé : les navires ennemis non touchés ne doivent jamais quitter
+ * le serveur). Retombe sur `stripEngineSecret` pour les autres jeux.
+ */
+export function stripEngineSecretForUser(
+  gameId: string | null,
+  json: string | null,
+  userId: string
+): string | null {
+  if (!json) return json
+  if (gameId === 'toucher-coule') {
+    const state = parseTCState(json)
+    if (!state) return null
+    return tcClientViewJson(state, userId)
+  }
+  return stripEngineSecret(json)
 }
 
 export async function buildRoomDto(roomId: string, currentUserId: string): Promise<RoomDto | null> {
@@ -92,8 +122,11 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     isSelf: m.userId === currentUserId,
   }))
 
+  const settings = parseRoomSettings(room.settingsJson)
   const { allReady, canLaunch } = computeReadyState(
-    memberDtos.map((m) => ({ userId: m.userId, isReady: m.isReady }))
+    memberDtos.map((m) => ({ userId: m.userId, isReady: m.isReady })),
+    room.gameId,
+    settings
   )
 
   return {
@@ -106,10 +139,10 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     members: memberDtos,
     allReady,
     canLaunch,
-    settings: parseRoomSettings(room.settingsJson),
+    settings,
     stateVersion: room.stateVersion,
     currentTurnUserId: room.currentTurnUserId,
-    gameStateJson: stripEngineSecret(room.gameStateJson),
+    gameStateJson: stripEngineSecretForUser(room.gameId, room.gameStateJson, currentUserId),
   }
 }
 

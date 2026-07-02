@@ -9,6 +9,7 @@ type Params = { params: Promise<{ roomId: string }> }
 
 const VALID_DIFFICULTIES = new Set(['facile', 'normal', 'difficile', 'extreme'])
 const VALID_VISIBILITIES = new Set(['public', 'private', 'invite'])
+const VALID_TC_MODES = new Set(['1v1', '2v2', '3v3'])
 
 /** L'hôte met à jour les paramètres (difficulté, etc.) pendant le lobby */
 export async function PUT(request: Request, { params }: Params) {
@@ -41,6 +42,9 @@ export async function PUT(request: Request, { params }: Params) {
   }
   if (body.hiLoMode === 'standard' || body.hiLoMode === 'traversee') {
     next.hiLoMode = body.hiLoMode
+  }
+  if (typeof body.tcMode === 'string' && VALID_TC_MODES.has(body.tcMode)) {
+    next.tcMode = body.tcMode as NonNullable<RoomSettings['tcMode']>
   }
 
   const visibilityUpdate =

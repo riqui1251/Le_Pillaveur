@@ -239,6 +239,7 @@ export function useOnlineRoom() {
       plinkoDifficulty?: string
       hiLoMode?: 'standard' | 'traversee'
       visibility?: 'public' | 'private' | 'invite'
+      tcMode?: '1v1' | '2v2' | '3v3'
     }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {
@@ -246,6 +247,26 @@ export function useOnlineRoom() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(settings),
+      })
+      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+      if (res.ok) {
+        setRoom(data.room ?? null)
+        return data.room as RoomDto
+      }
+      setError(data.error ?? 'Erreur')
+      return null
+    },
+    [room]
+  )
+
+  const setTeam = useCallback(
+    async (team: 'A' | 'B') => {
+      if (!room) return null
+      const res = await fetch(`/api/online/rooms/${room.id}/team`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ team }),
       })
       const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
       if (res.ok) {
@@ -361,6 +382,7 @@ export function useOnlineRoom() {
     setReady,
     launchGame,
     updateSettings,
+    setTeam,
     inviteFriend,
     pushGameState,
     fetchRoom,

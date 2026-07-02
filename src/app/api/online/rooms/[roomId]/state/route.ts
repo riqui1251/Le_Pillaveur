@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
-import { buildRoomDto, stripEngineSecret } from '@/lib/online-room'
+import { buildRoomDto, stripEngineSecretForUser } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 
 type Params = { params: Promise<{ roomId: string }> }
@@ -29,7 +29,7 @@ export async function GET(_request: Request, { params }: Params) {
     {
       stateVersion: room.stateVersion,
       currentTurnUserId: room.currentTurnUserId,
-      gameStateJson: stripEngineSecret(room.gameStateJson),
+      gameStateJson: stripEngineSecretForUser(room.gameId, room.gameStateJson, user.id),
     },
     { headers: { 'Cache-Control': 'no-store' } }
   )
@@ -55,6 +55,12 @@ export async function PUT(request: Request, { params }: Params) {
   const isMember = room.members.some((m) => m.userId === user.id)
   if (!isMember) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+  }
+
+  // Jeux serveur-autoritaires : l'état ne peut JAMAIS être poussé par un client
+  // (un état forgé permettrait de tricher) — tout passe par /action.
+  if (room.gameId === 'petit-buveur' || room.gameId === 'toucher-coule') {
+    return NextResponse.json({ error: 'Ce jeu est géré par le serveur' }, { status: 403 })
   }
 
   const body = await request.json()

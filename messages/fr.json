@@ -378,6 +378,10 @@
         "title": "Le Petit Buveur",
         "description": "Un jeu de plateau festif avec des défis et des gorgées"
       },
+      "toucher-coule": {
+        "title": "Toucher-Coulé",
+        "description": "La bataille navale apéro en équipes : touché tu bois, coulé tu trinques !"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Devinez si la prochaine carte sera plus haute ou plus basse"
@@ -1273,6 +1277,62 @@
         "Pas d'eau cette fois"
       ],
       "wordsNote": "Banques de mots dans WORD_CATEGORIES — extraire via script pour traduction EN"
+    },
+    "toucher-coule": {
+      "page": {
+        "onlineOnly": "Toucher-Coulé se joue en ligne : chaque équipe cache sa flotte, impossible sur un seul écran ! Les bots complètent les places vides.",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "mode": "Format des équipes",
+        "modes": {
+          "1v1": { "label": "1 vs 1", "desc": "3 bateaux chacun · grille 8×8" },
+          "2v2": { "label": "2 vs 2", "desc": "2 bateaux chacun · grille 10×10" },
+          "3v3": { "label": "3 vs 3", "desc": "2 bateaux chacun · grille 12×12" }
+        },
+        "teams": "Équipes",
+        "teamA": "Équipe A",
+        "teamB": "Équipe B",
+        "joinTeam": "Rejoindre",
+        "botSlot": "Bot 🤖",
+        "botsFill": "Les places vides seront occupées par des bots."
+      },
+      "game": {
+        "title": "Toucher-Coulé",
+        "placementTitle": "Place tes bateaux",
+        "placementHint": "Choisis un bateau puis touche la grille pour le poser.",
+        "shipLabel": "{size} cases",
+        "horizontal": "↔ Horizontal",
+        "vertical": "↕ Vertical",
+        "random": "🎲 Aléatoire",
+        "clear": "Effacer",
+        "confirmPlacement": "Valider mes bateaux",
+        "waitingPlacement": "En attente des autres joueurs…",
+        "placedCount": "{placed}/{total} joueurs prêts",
+        "yourTurn": "À toi de tirer !",
+        "turnOf": "Au tour de {name}",
+        "hitReplay": "Touché = tu rejoues !",
+        "enemyWaters": "Eaux ennemies",
+        "yourFleet": "Ta flotte",
+        "feedMiss": "💦 À l'eau ! {shooter} boit 1 gorgée",
+        "feedHit": "🎯 Touché ! Le bateau de {owner} prend l'eau — 1 gorgée",
+        "feedSunk": "💥 COULÉ ! {owner} trinque : +3 gorgées",
+        "team": "Équipe {team}",
+        "victoryTitle": "Victoire de l'équipe {team} !",
+        "defeatDrinks": "L'équipe {team} finit ses verres : +3 gorgées chacun 🍻",
+        "statTurns": "Tours",
+        "statAccuracy": "Précision",
+        "statDrinks": "Gorgées",
+        "finalBoard": "Tableau final",
+        "replay": "Rejouer",
+        "rematchWaiting": "En attente des autres ({count}/{total})",
+        "backToMenu": "Retour au menu",
+        "leave": "Quitter",
+        "legendShip": "Bateau allié",
+        "legendHit": "Touché",
+        "legendMiss": "Raté",
+        "legendSunk": "Coulé"
+      }
     },
     "petit-buveur": {
       "page": {

@@ -368,6 +368,10 @@
         "title": "Il Piccolo Bevitore",
         "description": "Un gioco da tavolo festoso con sfide e sorsi"
       },
+      "toucher-coule": {
+        "title": "Colpito e Affondato",
+        "description": "Battaglia navale a squadre, versione festa: colpito bevi, affondato brindi!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Indovina se la carta successiva sarà più alta o più bassa"
@@ -1263,6 +1267,62 @@
         "Niente acqua questa volta"
       ],
       "wordsNote": "Banche di parole in WORD_CATEGORIES — estrai tramite script per la traduzione EN"
+    },
+    "toucher-coule": {
+      "page": {
+        "onlineOnly": "Colpito e Affondato si gioca online: ogni squadra nasconde la propria flotta, impossibile su un solo schermo! I bot riempiono i posti vuoti.",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "mode": "Formato squadre",
+        "modes": {
+          "1v1": { "label": "1 vs 1", "desc": "3 navi a testa · griglia 8×8" },
+          "2v2": { "label": "2 vs 2", "desc": "2 navi a testa · griglia 10×10" },
+          "3v3": { "label": "3 vs 3", "desc": "2 navi a testa · griglia 12×12" }
+        },
+        "teams": "Squadre",
+        "teamA": "Squadra A",
+        "teamB": "Squadra B",
+        "joinTeam": "Unisciti",
+        "botSlot": "Bot 🤖",
+        "botsFill": "I posti vuoti saranno occupati dai bot."
+      },
+      "game": {
+        "title": "Colpito e Affondato",
+        "placementTitle": "Posiziona le tue navi",
+        "placementHint": "Scegli una nave e tocca la griglia per posizionarla.",
+        "shipLabel": "{size} caselle",
+        "horizontal": "↔ Orizzontale",
+        "vertical": "↕ Verticale",
+        "random": "🎲 Casuale",
+        "clear": "Cancella",
+        "confirmPlacement": "Conferma le mie navi",
+        "waitingPlacement": "In attesa degli altri giocatori…",
+        "placedCount": "{placed}/{total} giocatori pronti",
+        "yourTurn": "Tocca a te sparare!",
+        "turnOf": "Turno di {name}",
+        "hitReplay": "Colpito = spari di nuovo!",
+        "enemyWaters": "Acque nemiche",
+        "yourFleet": "La tua flotta",
+        "feedMiss": "💦 Acqua! {shooter} beve 1 sorso",
+        "feedHit": "🎯 Colpito! La nave di {owner} imbarca acqua — 1 sorso",
+        "feedSunk": "💥 AFFONDATO! {owner} brinda: +3 sorsi",
+        "team": "Squadra {team}",
+        "victoryTitle": "Vittoria della squadra {team}!",
+        "defeatDrinks": "La squadra {team} finisce i bicchieri: +3 sorsi ciascuno 🍻",
+        "statTurns": "Turni",
+        "statAccuracy": "Precisione",
+        "statDrinks": "Sorsi",
+        "finalBoard": "Tabellone finale",
+        "replay": "Rigioca",
+        "rematchWaiting": "In attesa degli altri ({count}/{total})",
+        "backToMenu": "Torna al menu",
+        "leave": "Esci",
+        "legendShip": "Nave alleata",
+        "legendHit": "Colpito",
+        "legendMiss": "Acqua",
+        "legendSunk": "Affondato"
+      }
     },
     "petit-buveur": {
       "page": {

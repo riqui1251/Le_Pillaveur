@@ -60,6 +60,18 @@ export const GAMES: GameMeta[] = [
     onlineReady: true,
   },
   {
+    id: 'toucher-coule',
+    title: 'Toucher-Coulé',
+    description: 'La bataille navale apéro en équipes : touché tu bois, coulé tu trinques !',
+    path: '/games/toucher-coule',
+    emoji: '🚢',
+    gradient: 'from-sky-600 to-cyan-400',
+    colorFrom: '#0284c7',
+    colorTo: '#22d3ee',
+    fallbackColor: '#0ea5e9',
+    onlineReady: true,
+  },
+  {
     id: 'hi-lo',
     title: 'Hi/Lo',
     description: 'Devinez si la prochaine carte sera plus haute ou plus basse',

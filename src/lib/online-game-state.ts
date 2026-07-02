@@ -8,6 +8,12 @@ export type RoomSettings = {
 
   hiLoMode?: 'standard' | 'traversee'
 
+  /** Toucher-Coulé : format des équipes. */
+  tcMode?: '1v1' | '2v2' | '3v3'
+
+  /** Toucher-Coulé : choix d'équipe par membre (userId → équipe). */
+  tcTeams?: Record<string, 'A' | 'B'>
+
 }
 
 
@@ -571,6 +577,26 @@ export function parsePlinkoState(json: string | null | undefined): PlinkoSyncedS
 
 
 
+// ─── Toucher-Coulé ───────────────────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/toucher-coule). */
+export type ToucherCouleSyncedState = {
+  version: number
+  phase: 'placement' | 'battle' | 'finished'
+  winner: 'A' | 'B' | null
+  rematchVotes?: string[]
+}
+
+export function parseToucherCouleState(json: string | null | undefined): ToucherCouleSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as ToucherCouleSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -581,6 +607,7 @@ export type AnyOnlineGameState =
   | Monsieur3SyncedState
   | PmuSyncedState
   | PlinkoSyncedState
+  | ToucherCouleSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -601,6 +628,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parsePmuState(json) as T | null
     case 'plinko':
       return parsePlinkoState(json) as T | null
+    case 'toucher-coule':
+      return parseToucherCouleState(json) as T | null
     default:
       return null
   }
@@ -622,6 +651,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return (state as PmuSyncedState).phase === 'results'
     case 'plinko':
       return Boolean((state as PlinkoSyncedState).gameOver)
+    case 'toucher-coule':
+      return Boolean((state as ToucherCouleSyncedState).winner)
     default:
       return false
   }

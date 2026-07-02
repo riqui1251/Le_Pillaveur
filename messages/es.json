@@ -368,6 +368,10 @@
         "title": "El Pequeño Bebedor",
         "description": "Un juego de mesa festivo con desafíos y sorbos."
       },
+      "toucher-coule": {
+        "title": "Tocado y Hundido",
+        "description": "Hundir la flota en equipos, versión fiesta: ¡tocado bebes, hundido brindas!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Adivina si la próxima carta será mayor o menor"
@@ -1263,6 +1267,62 @@
         "Sin agua esta vez"
       ],
       "wordsNote": "Bancos de palabras en WORD_CATEGORIES — extraer mediante script para traducción EN"
+    },
+    "toucher-coule": {
+      "page": {
+        "onlineOnly": "Tocado y Hundido se juega en línea: cada equipo esconde su flota, ¡imposible en una sola pantalla! Los bots ocupan los asientos vacíos.",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "lobby": {
+        "mode": "Formato de equipos",
+        "modes": {
+          "1v1": { "label": "1 vs 1", "desc": "3 barcos cada uno · cuadrícula 8×8" },
+          "2v2": { "label": "2 vs 2", "desc": "2 barcos cada uno · cuadrícula 10×10" },
+          "3v3": { "label": "3 vs 3", "desc": "2 barcos cada uno · cuadrícula 12×12" }
+        },
+        "teams": "Equipos",
+        "teamA": "Equipo A",
+        "teamB": "Equipo B",
+        "joinTeam": "Unirse",
+        "botSlot": "Bot 🤖",
+        "botsFill": "Los asientos vacíos serán ocupados por bots."
+      },
+      "game": {
+        "title": "Tocado y Hundido",
+        "placementTitle": "Coloca tus barcos",
+        "placementHint": "Elige un barco y toca la cuadrícula para colocarlo.",
+        "shipLabel": "{size} casillas",
+        "horizontal": "↔ Horizontal",
+        "vertical": "↕ Vertical",
+        "random": "🎲 Aleatorio",
+        "clear": "Borrar",
+        "confirmPlacement": "Confirmar mis barcos",
+        "waitingPlacement": "Esperando a los demás jugadores…",
+        "placedCount": "{placed}/{total} jugadores listos",
+        "yourTurn": "¡Te toca disparar!",
+        "turnOf": "Turno de {name}",
+        "hitReplay": "¡Tocado = vuelves a disparar!",
+        "enemyWaters": "Aguas enemigas",
+        "yourFleet": "Tu flota",
+        "feedMiss": "💦 ¡Agua! {shooter} bebe 1 sorbo",
+        "feedHit": "🎯 ¡Tocado! El barco de {owner} hace agua — 1 sorbo",
+        "feedSunk": "💥 ¡HUNDIDO! {owner} brinda: +3 sorbos",
+        "team": "Equipo {team}",
+        "victoryTitle": "¡Victoria del equipo {team}!",
+        "defeatDrinks": "El equipo {team} termina sus copas: +3 sorbos cada uno 🍻",
+        "statTurns": "Turnos",
+        "statAccuracy": "Precisión",
+        "statDrinks": "Sorbos",
+        "finalBoard": "Tablero final",
+        "replay": "Jugar de nuevo",
+        "rematchWaiting": "Esperando a los demás ({count}/{total})",
+        "backToMenu": "Volver al menú",
+        "leave": "Salir",
+        "legendShip": "Barco aliado",
+        "legendHit": "Tocado",
+        "legendMiss": "Agua",
+        "legendSunk": "Hundido"
+      }
     },
     "petit-buveur": {
       "page": {

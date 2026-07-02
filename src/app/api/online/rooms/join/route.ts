@@ -4,6 +4,8 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { canJoinInviteRoom } from '@/lib/online/room-invites'
+import { parseRoomSettings } from '@/lib/online-game-state'
+import { TC_MODES } from '@/lib/toucher-coule/engine'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
@@ -33,6 +35,17 @@ export async function POST(request: Request) {
 
   if (room.visibility === 'invite' && !(await canJoinInviteRoom(room.id, user.id))) {
     return NextResponse.json({ error: 'Ce lobby est sur invitation uniquement' }, { status: 403 })
+  }
+
+  if (room.gameId === 'toucher-coule') {
+    const settings = parseRoomSettings(room.settingsJson)
+    const capacity = TC_MODES[settings.tcMode ?? '1v1'].playersPerTeam * 2
+    const others = await prisma.onlineRoomMember.count({
+      where: { roomId: room.id, userId: { not: user.id } },
+    })
+    if (others >= capacity) {
+      return NextResponse.json({ error: 'Ce lobby est complet pour ce format' }, { status: 409 })
+    }
   }
 
   await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })

@@ -1,0 +1,490 @@
+import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+
+/**
+ * Moteur pur Toucher-Coulé (bataille navale par équipes) — SERVEUR-AUTORITAIRE.
+ *
+ * Deux équipes (A/B) partagent chacune UNE grille où chaque joueur place ses
+ * navires. Les équipes tirent à tour de rôle sur la grille adverse (alternance
+ * A/B, rotation des joueurs dans chaque équipe) ; toucher fait rejouer.
+ * La grille grandit avec le nombre de joueurs (donc de navires).
+ *
+ * ANTI-TRICHE : les positions des navires ennemis ne quittent jamais le serveur
+ * tant qu'elles ne sont pas touchées (voir `toClientView`).
+ */
+
+export type TCMode = '1v1' | '2v2' | '3v3'
+export type TeamId = 'A' | 'B'
+
+export type TCModeConfig = {
+  playersPerTeam: number
+  /** Tailles des navires que CHAQUE joueur place. */
+  shipSizesPerPlayer: number[]
+  gridSize: number
+}
+
+export const TC_MODES: Record<TCMode, TCModeConfig> = {
+  '1v1': { playersPerTeam: 1, shipSizesPerPlayer: [4, 3, 2], gridSize: 8 },
+  '2v2': { playersPerTeam: 2, shipSizesPerPlayer: [4, 3], gridSize: 10 },
+  '3v3': { playersPerTeam: 3, shipSizesPerPlayer: [4, 3], gridSize: 12 },
+}
+
+export const TC_BOT_NAMES = [
+  'Amiral Bot',
+  'Corsaire Bot',
+  'Matelot Bot',
+  'Capitaine Bot',
+  'Moussaillon Bot',
+  'Pirate Bot',
+] as const
+
+export type TCPlayer = {
+  id: string
+  name: string
+  team: TeamId
+  isBot: boolean
+  placed: boolean
+  /** Gorgées cumulées à boire (règles apéro : raté = tireur boit, touché = propriétaire boit). */
+  drinks: number
+  shotsFired: number
+  shotsHit: number
+}
+
+export type TCShip = {
+  id: string
+  ownerId: string
+  team: TeamId
+  cells: number[]
+  hits: number[]
+  sunk: boolean
+}
+
+export type TCShotResult = 'miss' | 'hit' | 'sunk'
+
+export type TCLastShot = {
+  shooterId: string
+  targetTeam: TeamId
+  cell: number
+  result: TCShotResult
+  shipOwnerId: string | null
+  winningShot: boolean
+}
+
+export type TCState = {
+  mode: TCMode
+  gridSize: number
+  phase: 'placement' | 'battle' | 'finished'
+  players: TCPlayer[]
+  ships: TCShip[]
+  /** Tirs reçus par la grille de chaque équipe (cellule → résultat). */
+  shotsAt: Record<TeamId, Record<number, 'hit' | 'miss'>>
+  /** Ordre de tir global (alternance A/B), ids de joueurs. */
+  turnOrder: string[]
+  currentTurnIndex: number
+  turnCount: number
+  winner: TeamId | null
+  lastShot: TCLastShot | null
+  rematchVotes: string[]
+  version: number
+  rngState: number
+}
+
+export type TCAction =
+  | { type: 'PLACE'; playerId: string; ships: number[][] }
+  | { type: 'AUTO_PLACE'; playerId: string }
+  | { type: 'FIRE'; playerId: string; cell: number }
+
+export class TCEngineError extends Error {
+  constructor(code: string) {
+    super(code)
+    this.name = 'TCEngineError'
+  }
+}
+
+export function otherTeam(team: TeamId): TeamId {
+  return team === 'A' ? 'B' : 'A'
+}
+
+export function currentTCPlayerId(state: TCState): string | null {
+  if (state.phase !== 'battle') return null
+  return state.turnOrder[state.currentTurnIndex] ?? null
+}
+
+/** Vrai si les cellules forment une ligne droite contiguë (horizontale ou verticale). */
+function isStraightLine(cells: number[], gridSize: number): boolean {
+  if (cells.length === 0) return false
+  const sorted = [...cells].sort((a, b) => a - b)
+  if (new Set(sorted).size !== sorted.length) return false
+  if (sorted.some((c) => c < 0 || c >= gridSize * gridSize)) return false
+  const rows = sorted.map((c) => Math.floor(c / gridSize))
+  const cols = sorted.map((c) => c % gridSize)
+  const sameRow = rows.every((r) => r === rows[0])
+  const sameCol = cols.every((c) => c === cols[0])
+  if (sameRow) return sorted.every((c, i) => i === 0 || c === sorted[i - 1] + 1)
+  if (sameCol) return sorted.every((c, i) => i === 0 || c === sorted[i - 1] + gridSize)
+  return false
+}
+
+function teamShipCells(state: TCState, team: TeamId): Set<number> {
+  const occupied = new Set<number>()
+  for (const ship of state.ships) {
+    if (ship.team !== team) continue
+    for (const c of ship.cells) occupied.add(c)
+  }
+  return occupied
+}
+
+/** Multiset de tailles identique à la config du mode. */
+function sizesMatchConfig(ships: number[][], expected: number[]): boolean {
+  if (ships.length !== expected.length) return false
+  const got = ships.map((s) => s.length).sort((a, b) => a - b)
+  const want = [...expected].sort((a, b) => a - b)
+  return got.every((v, i) => v === want[i])
+}
+
+/** Génère un placement aléatoire valide pour un joueur (utilisé par les bots et le bouton Aléatoire). */
+export function randomPlacement(
+  sizes: number[],
+  gridSize: number,
+  occupied: Set<number>,
+  rng: SeededRng
+): number[][] {
+  const taken = new Set(occupied)
+  const result: number[][] = []
+  for (const size of sizes) {
+    let placedShip: number[] | null = null
+    for (let attempt = 0; attempt < 300 && !placedShip; attempt += 1) {
+      const horizontal = rng.chance(0.5)
+      const row = rng.int(0, gridSize - (horizontal ? 1 : size))
+      const col = rng.int(0, gridSize - (horizontal ? size : 1))
+      const cells: number[] = []
+      for (let i = 0; i < size; i += 1) {
+        cells.push(horizontal ? row * gridSize + col + i : (row + i) * gridSize + col)
+      }
+      if (cells.every((c) => !taken.has(c))) placedShip = cells
+    }
+    if (!placedShip) throw new TCEngineError('PLACEMENT_IMPOSSIBLE')
+    for (const c of placedShip) taken.add(c)
+    result.push(placedShip)
+  }
+  return result
+}
+
+export type TCInitialPlayer = {
+  id: string
+  name: string
+  team: TeamId
+  isBot: boolean
+}
+
+export function createInitialTCState(
+  players: TCInitialPlayer[],
+  mode: TCMode,
+  seed: string | number
+): TCState {
+  const config = TC_MODES[mode]
+  const teamA = players.filter((p) => p.team === 'A')
+  const teamB = players.filter((p) => p.team === 'B')
+  if (teamA.length !== config.playersPerTeam || teamB.length !== config.playersPerTeam) {
+    throw new TCEngineError('INVALID_TEAMS')
+  }
+
+  // Alternance A/B pour l'ordre de tir global.
+  const turnOrder: string[] = []
+  for (let i = 0; i < config.playersPerTeam; i += 1) {
+    turnOrder.push(teamA[i].id, teamB[i].id)
+  }
+
+  return {
+    mode,
+    gridSize: config.gridSize,
+    phase: 'placement',
+    players: players.map((p) => ({
+      ...p,
+      placed: false,
+      drinks: 0,
+      shotsFired: 0,
+      shotsHit: 0,
+    })),
+    ships: [],
+    shotsAt: { A: {}, B: {} },
+    turnOrder,
+    currentTurnIndex: 0,
+    turnCount: 1,
+    winner: null,
+    lastShot: null,
+    rematchVotes: [],
+    version: 1,
+    rngState: createRng(seed).getState(),
+  }
+}
+
+function applyPlacement(state: TCState, playerId: string, shipsCells: number[][]): TCState {
+  if (state.phase !== 'placement') throw new TCEngineError('NOT_PLACEMENT_PHASE')
+  const player = state.players.find((p) => p.id === playerId)
+  if (!player) throw new TCEngineError('UNKNOWN_PLAYER')
+  if (player.placed) throw new TCEngineError('ALREADY_PLACED')
+
+  const config = TC_MODES[state.mode]
+  if (!sizesMatchConfig(shipsCells, config.shipSizesPerPlayer)) {
+    throw new TCEngineError('INVALID_SHIP_SIZES')
+  }
+  const occupied = teamShipCells(state, player.team)
+  for (const cells of shipsCells) {
+    if (!isStraightLine(cells, state.gridSize)) throw new TCEngineError('INVALID_SHIP_SHAPE')
+    for (const c of cells) {
+      if (occupied.has(c)) throw new TCEngineError('SHIPS_OVERLAP')
+      occupied.add(c)
+    }
+  }
+
+  const newShips: TCShip[] = shipsCells.map((cells, i) => ({
+    id: `${playerId}-ship-${i}`,
+    ownerId: playerId,
+    team: player.team,
+    cells: [...cells].sort((a, b) => a - b),
+    hits: [],
+    sunk: false,
+  }))
+
+  const players = state.players.map((p) => (p.id === playerId ? { ...p, placed: true } : p))
+  const allPlaced = players.every((p) => p.placed)
+
+  return {
+    ...state,
+    players,
+    ships: [...state.ships, ...newShips],
+    phase: allPlaced ? 'battle' : 'placement',
+    version: state.version + 1,
+  }
+}
+
+function applyFire(state: TCState, playerId: string, cell: number): TCState {
+  if (state.phase !== 'battle') throw new TCEngineError('NOT_BATTLE_PHASE')
+  if (currentTCPlayerId(state) !== playerId) throw new TCEngineError('NOT_YOUR_TURN')
+  const shooter = state.players.find((p) => p.id === playerId)
+  if (!shooter) throw new TCEngineError('UNKNOWN_PLAYER')
+
+  const targetTeam = otherTeam(shooter.team)
+  if (cell < 0 || cell >= state.gridSize * state.gridSize) throw new TCEngineError('CELL_OUT_OF_BOUNDS')
+  if (state.shotsAt[targetTeam][cell] !== undefined) throw new TCEngineError('CELL_ALREADY_SHOT')
+
+  const players = state.players.map((p) => ({ ...p }))
+  const ships = state.ships.map((s) => ({ ...s, cells: [...s.cells], hits: [...s.hits] }))
+  const me = players.find((p) => p.id === playerId)!
+  me.shotsFired += 1
+
+  const hitShip = ships.find((s) => s.team === targetTeam && s.cells.includes(cell))
+  const shotsAt: TCState['shotsAt'] = {
+    A: { ...state.shotsAt.A },
+    B: { ...state.shotsAt.B },
+  }
+
+  if (!hitShip) {
+    // Raté : le tireur boit et la main passe.
+    shotsAt[targetTeam][cell] = 'miss'
+    me.drinks += 1
+    return {
+      ...state,
+      players,
+      ships,
+      shotsAt,
+      currentTurnIndex: (state.currentTurnIndex + 1) % state.turnOrder.length,
+      turnCount: state.turnCount + 1,
+      lastShot: {
+        shooterId: playerId,
+        targetTeam,
+        cell,
+        result: 'miss',
+        shipOwnerId: null,
+        winningShot: false,
+      },
+      version: state.version + 1,
+    }
+  }
+
+  // Touché : le propriétaire boit, le tireur rejoue.
+  shotsAt[targetTeam][cell] = 'hit'
+  me.shotsHit += 1
+  hitShip.hits.push(cell)
+  const owner = players.find((p) => p.id === hitShip.ownerId)
+  if (owner) owner.drinks += 1
+
+  let result: TCShotResult = 'hit'
+  if (hitShip.hits.length === hitShip.cells.length) {
+    hitShip.sunk = true
+    result = 'sunk'
+    if (owner) owner.drinks += 2
+  }
+
+  const enemyFleetSunk = ships.filter((s) => s.team === targetTeam).every((s) => s.sunk)
+  let phase: TCState['phase'] = state.phase
+  let winner: TeamId | null = state.winner
+  if (enemyFleetSunk) {
+    phase = 'finished'
+    winner = shooter.team
+    for (const p of players) {
+      if (p.team === targetTeam) p.drinks += 3
+    }
+  }
+
+  return {
+    ...state,
+    players,
+    ships,
+    shotsAt,
+    phase,
+    winner,
+    lastShot: {
+      shooterId: playerId,
+      targetTeam,
+      cell,
+      result,
+      shipOwnerId: hitShip.ownerId,
+      winningShot: enemyFleetSunk,
+    },
+    version: state.version + 1,
+  }
+}
+
+export function reduceTC(state: TCState, action: TCAction): TCState {
+  switch (action.type) {
+    case 'PLACE':
+      return applyPlacement(state, action.playerId, action.ships)
+    case 'AUTO_PLACE': {
+      if (state.phase !== 'placement') throw new TCEngineError('NOT_PLACEMENT_PHASE')
+      const player = state.players.find((p) => p.id === action.playerId)
+      if (!player) throw new TCEngineError('UNKNOWN_PLAYER')
+      if (player.placed) throw new TCEngineError('ALREADY_PLACED')
+      const rng = rngFromState(state.rngState)
+      const config = TC_MODES[state.mode]
+      const ships = randomPlacement(
+        config.shipSizesPerPlayer,
+        state.gridSize,
+        teamShipCells(state, player.team),
+        rng
+      )
+      const next = applyPlacement(state, action.playerId, ships)
+      return { ...next, rngState: rng.getState() }
+    }
+    case 'FIRE':
+      return applyFire(state, action.playerId, action.cell)
+    default:
+      throw new TCEngineError('UNKNOWN_ACTION')
+  }
+}
+
+/**
+ * IA bot : chasse (tir aléatoire) puis ciblage (voisins des touches non coulées,
+ * extension de ligne si deux touches alignées). N'utilise QUE l'information
+ * publique (carte des tirs + navires coulés) — le bot ne triche pas.
+ */
+export function botChooseCell(state: TCState, botId: string, rng: SeededRng): number {
+  const bot = state.players.find((p) => p.id === botId)
+  if (!bot) throw new TCEngineError('UNKNOWN_PLAYER')
+  const targetTeam = otherTeam(bot.team)
+  const shots = state.shotsAt[targetTeam]
+  const size = state.gridSize
+
+  const sunkCells = new Set<number>()
+  for (const ship of state.ships) {
+    if (ship.team === targetTeam && ship.sunk) for (const c of ship.cells) sunkCells.add(c)
+  }
+  const openHits: number[] = []
+  for (const key of Object.keys(shots)) {
+    const c = Number(key)
+    if (shots[c] === 'hit' && !sunkCells.has(c)) openHits.push(c)
+  }
+
+  const unshot = (c: number) => c >= 0 && c < size * size && shots[c] === undefined
+  const candidates: number[] = []
+
+  if (openHits.length >= 2) {
+    // Deux touches alignées → prolonger la ligne aux deux extrémités.
+    openHits.sort((a, b) => a - b)
+    const rows = openHits.map((c) => Math.floor(c / size))
+    const cols = openHits.map((c) => c % size)
+    if (rows.every((r) => r === rows[0])) {
+      const lo = openHits[0]
+      const hi = openHits[openHits.length - 1]
+      if (lo % size > 0 && unshot(lo - 1)) candidates.push(lo - 1)
+      if (hi % size < size - 1 && unshot(hi + 1)) candidates.push(hi + 1)
+    } else if (cols.every((c) => c === cols[0])) {
+      const lo = openHits[0]
+      const hi = openHits[openHits.length - 1]
+      if (unshot(lo - size)) candidates.push(lo - size)
+      if (unshot(hi + size)) candidates.push(hi + size)
+    }
+  }
+  if (candidates.length === 0 && openHits.length > 0) {
+    for (const hit of openHits) {
+      const row = Math.floor(hit / size)
+      const col = hit % size
+      if (col > 0 && unshot(hit - 1)) candidates.push(hit - 1)
+      if (col < size - 1 && unshot(hit + 1)) candidates.push(hit + 1)
+      if (row > 0 && unshot(hit - size)) candidates.push(hit - size)
+      if (row < size - 1 && unshot(hit + size)) candidates.push(hit + size)
+    }
+  }
+  if (candidates.length > 0) return rng.pick(candidates)
+
+  const allUnshot: number[] = []
+  for (let c = 0; c < size * size; c += 1) {
+    if (shots[c] === undefined) allUnshot.push(c)
+  }
+  if (allUnshot.length === 0) throw new TCEngineError('NO_CELL_LEFT')
+  return rng.pick(allUnshot)
+}
+
+/**
+ * Fait jouer les bots tant que c'est leur tour (placement puis tirs).
+ * Borné pour éviter toute boucle infinie.
+ */
+export function advanceTCBots(state: TCState): TCState {
+  let current = state
+  for (let guard = 0; guard < 1000; guard += 1) {
+    if (current.phase === 'placement') {
+      const bot = current.players.find((p) => p.isBot && !p.placed)
+      if (!bot) return current
+      current = reduceTC(current, { type: 'AUTO_PLACE', playerId: bot.id })
+      continue
+    }
+    if (current.phase === 'battle') {
+      const activeId = currentTCPlayerId(current)
+      const active = current.players.find((p) => p.id === activeId)
+      if (!active?.isBot) return current
+      const rng = rngFromState(current.rngState)
+      const cell = botChooseCell(current, active.id, rng)
+      current = { ...reduceTC({ ...current, rngState: rng.getState() }, { type: 'FIRE', playerId: active.id, cell }) }
+      continue
+    }
+    return current
+  }
+  return current
+}
+
+/** Vue client par navire : navires ennemis réduits à leurs cellules touchées tant qu'ils flottent. */
+export type TCShipView = TCShip & { revealed: boolean }
+
+export type TCClientView = Omit<TCState, 'rngState' | 'ships'> & {
+  ships: TCShipView[]
+  viewerTeam: TeamId | null
+}
+
+export function toTCClientView(state: TCState, viewerUserId: string): TCClientView {
+  const viewer = state.players.find((p) => p.id === viewerUserId)
+  const viewerTeam = viewer?.team ?? null
+
+  const ships: TCShipView[] = state.ships.map((ship) => {
+    const visible = ship.team === viewerTeam || ship.sunk
+    if (visible) return { ...ship, revealed: true }
+    return { ...ship, cells: [...ship.hits], revealed: false }
+  })
+
+  const view: Omit<TCState, 'rngState'> & { viewerTeam: TeamId | null } = {
+    ...state,
+    ships,
+    viewerTeam,
+  }
+  delete (view as Partial<TCState>).rngState
+  return view as TCClientView
+}

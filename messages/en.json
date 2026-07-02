@@ -378,6 +378,10 @@
         "title": "The Little Drinker",
         "description": "A festive board game with challenges and sips"
       },
+      "toucher-coule": {
+        "title": "Hit & Sunk",
+        "description": "Team battleship, drinking edition: get hit, drink — get sunk, drink up!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Guess if the next card will be higher or lower"
@@ -1273,6 +1277,62 @@
         "No water this time"
       ],
       "wordsNote": "Word banks in WORD_CATEGORIES — extract via script for EN translation"
+    },
+    "toucher-coule": {
+      "page": {
+        "onlineOnly": "Hit & Sunk is played online: each team hides its fleet, impossible on a single screen! Bots fill the empty seats.",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "mode": "Team format",
+        "modes": {
+          "1v1": { "label": "1 vs 1", "desc": "3 ships each · 8×8 grid" },
+          "2v2": { "label": "2 vs 2", "desc": "2 ships each · 10×10 grid" },
+          "3v3": { "label": "3 vs 3", "desc": "2 ships each · 12×12 grid" }
+        },
+        "teams": "Teams",
+        "teamA": "Team A",
+        "teamB": "Team B",
+        "joinTeam": "Join",
+        "botSlot": "Bot 🤖",
+        "botsFill": "Empty seats will be filled by bots."
+      },
+      "game": {
+        "title": "Hit & Sunk",
+        "placementTitle": "Place your ships",
+        "placementHint": "Pick a ship then tap the grid to place it.",
+        "shipLabel": "{size} cells",
+        "horizontal": "↔ Horizontal",
+        "vertical": "↕ Vertical",
+        "random": "🎲 Random",
+        "clear": "Clear",
+        "confirmPlacement": "Confirm my ships",
+        "waitingPlacement": "Waiting for the other players…",
+        "placedCount": "{placed}/{total} players ready",
+        "yourTurn": "Your shot!",
+        "turnOf": "{name}'s turn",
+        "hitReplay": "Hit = shoot again!",
+        "enemyWaters": "Enemy waters",
+        "yourFleet": "Your fleet",
+        "feedMiss": "💦 Splash! {shooter} drinks 1 sip",
+        "feedHit": "🎯 Hit! {owner}'s ship is taking water — 1 sip",
+        "feedSunk": "💥 SUNK! {owner} drinks up: +3 sips",
+        "team": "Team {team}",
+        "victoryTitle": "Team {team} wins!",
+        "defeatDrinks": "Team {team} finishes their drinks: +3 sips each 🍻",
+        "statTurns": "Turns",
+        "statAccuracy": "Accuracy",
+        "statDrinks": "Sips",
+        "finalBoard": "Final board",
+        "replay": "Play again",
+        "rematchWaiting": "Waiting for the others ({count}/{total})",
+        "backToMenu": "Back to menu",
+        "leave": "Leave",
+        "legendShip": "Allied ship",
+        "legendHit": "Hit",
+        "legendMiss": "Miss",
+        "legendSunk": "Sunk"
+      }
     },
     "petit-buveur": {
       "page": {

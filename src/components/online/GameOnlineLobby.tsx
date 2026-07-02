@@ -38,6 +38,14 @@ function LobbyShell({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** Formats d'équipes Toucher-Coulé. */
+const TC_MODE_OPTIONS = ['1v1', '2v2', '3v3'] as const
+const TC_PLAYERS_PER_TEAM: Record<(typeof TC_MODE_OPTIONS)[number], number> = {
+  '1v1': 1,
+  '2v2': 2,
+  '3v3': 3,
+}
+
 /** Difficultés Petit Buveur (mêmes clés/couleurs que la sélection en local). */
 const PB_DIFFICULTIES = ['facile', 'normal', 'difficile', 'extreme'] as const
 const PB_DIFFICULTY_GRADIENT: Record<(typeof PB_DIFFICULTIES)[number], string> = {
@@ -50,13 +58,14 @@ const PB_DIFFICULTY_GRADIENT: Record<(typeof PB_DIFFICULTIES)[number], string> =
 export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps) {
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
   const { user } = useAuth()
-  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, inviteFriend } = useOnlineRoom()
+  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend } = useOnlineRoom()
   const { lobbies } = useOpenLobbies()
   const { friends, incoming, outgoing, sendRequestToUser, acceptRequest } = useFriends()
   const [copied, setCopied] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const tPb = useTranslations('games.petit-buveur.page')
+  const tTc = useTranslations('games.toucher-coule.lobby')
   const tOnline = useTranslations('onlineLobby')
   const tFriends = useTranslations('account.friends')
 
@@ -328,6 +337,105 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           )}
         </div>
       )}
+
+      {gameId === 'toucher-coule' && (() => {
+        const tcMode = (room.settings.tcMode ?? '1v1') as (typeof TC_MODE_OPTIONS)[number]
+        const perTeam = TC_PLAYERS_PER_TEAM[tcMode]
+        const teams = room.settings.tcTeams ?? {}
+        const myTeam = user ? teams[user.id] : undefined
+        const teamMembers = (team: 'A' | 'B') =>
+          room.members.filter((m) => teams[m.userId] === team).slice(0, perTeam)
+        return (
+          <>
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-sky-300/70">
+                {tTc('mode')}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {TC_MODE_OPTIONS.map((value) => {
+                  const active = tcMode === value
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={!isHost}
+                      onClick={() => updateSettings({ tcMode: value })}
+                      title={tTc(`modes.${value}.desc`)}
+                      className={cn(
+                        'rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
+                        active
+                          ? 'border-transparent bg-gradient-to-r from-sky-600 to-cyan-500 text-white shadow-lg shadow-sky-500/25'
+                          : 'border-white/10 bg-white/5 text-white/60',
+                        isHost && !active && 'hover:bg-white/10 hover:text-white'
+                      )}
+                    >
+                      <span className="block text-sm font-bold">{tTc(`modes.${value}.label`)}</span>
+                      <span className={cn('mt-0.5 block text-[10px] leading-tight', active ? 'text-white/80' : 'text-white/35')}>
+                        {tTc(`modes.${value}.desc`)}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-sky-300/70">
+                {tTc('teams')}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {(['A', 'B'] as const).map((team) => {
+                  const inTeam = teamMembers(team)
+                  const slots = Array.from({ length: perTeam })
+                  const isMine = myTeam === team
+                  return (
+                    <div
+                      key={team}
+                      className={cn(
+                        'rounded-xl border p-2.5',
+                        team === 'A' ? 'border-sky-400/25 bg-sky-500/10' : 'border-rose-400/25 bg-rose-500/10'
+                      )}
+                    >
+                      <p className={cn('mb-2 text-xs font-bold', team === 'A' ? 'text-sky-300' : 'text-rose-300')}>
+                        {team === 'A' ? tTc('teamA') : tTc('teamB')}
+                      </p>
+                      <ul className="mb-2 space-y-1">
+                        {slots.map((_, i) => {
+                          const member = inTeam[i]
+                          return (
+                            <li
+                              key={i}
+                              className={cn(
+                                'truncate rounded-lg px-2 py-1 text-xs',
+                                member ? 'bg-black/25 font-medium text-white' : 'bg-white/5 text-white/35'
+                              )}
+                            >
+                              {member ? member.displayName : tTc('botSlot')}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                      {!isMine && (
+                        <button
+                          type="button"
+                          onClick={() => setTeam(team)}
+                          className={cn(
+                            'w-full rounded-lg py-1.5 text-xs font-semibold text-white transition-colors',
+                            team === 'A' ? 'bg-sky-600 hover:bg-sky-500' : 'bg-rose-600 hover:bg-rose-500'
+                          )}
+                        >
+                          {tTc('joinTeam')}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-white/40">{tTc('botsFill')}</p>
+            </div>
+          </>
+        )
+      })()}
 
       {gameId === 'petit-buveur' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
