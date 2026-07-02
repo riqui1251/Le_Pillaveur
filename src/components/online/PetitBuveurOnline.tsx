@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
-import { Dice6, ArrowLeft, RefreshCw, Home, Beer, Trophy, MapPin, Sparkles, Target, Shuffle, User, HelpCircle, X, Volume2, VolumeX } from 'lucide-react'
+import { Dice6, ArrowLeft, RefreshCw, Home, Beer, Trophy, Sparkles, Target, Shuffle, User, HelpCircle, X, Volume2, VolumeX } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -17,6 +17,7 @@ import { TurnOverlay } from '@/components/petit-buveur/TurnOverlay'
 import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositions'
 import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount } from '@/components/petit-buveur/drink-feedback'
 import { useGameSounds } from '@/hooks/useGameSounds'
+import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
@@ -520,38 +521,33 @@ export function PetitBuveurOnline() {
             </div>
           )}
 
-          {/* Dernière case résolue */}
-          <AnimatePresence mode="wait">
-            {view.lastCase && !view.pending && (
-              <motion.div
-                key={view.version}
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/35 bg-gradient-to-br from-amber-500/15 to-orange-500/10 px-3 py-1.5 shadow-sm"
-              >
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                <span className="text-xs font-semibold text-amber-200 sm:text-sm">
-                  {t('caseLabel')} {(active?.position ?? 0) + 1}
-                </span>
-                <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-100">
-                  {caseLabel(view.lastCase.type)}
-                </span>
-                {view.lastDice != null && (
-                  <span className="ml-auto flex items-center gap-1 text-xs text-white/50">
-                    <Dice6 className="h-3.5 w-3.5" /> {view.lastDice}
+          {/* Dernière case résolue — carte flip teintée par la famille de case */}
+          {view.lastCase && !view.pending && (
+            <CaseRevealCard
+              caseType={view.lastCase.type}
+              label={caseLabel(view.lastCase.type)}
+              revealKey={`${view.turnCount}:${view.lastCase.type}:${view.lastDice ?? ''}`}
+              headerExtra={
+                <>
+                  <span className="text-xs font-semibold text-white/70 sm:text-sm">
+                    {t('caseLabel')} {(active?.position ?? 0) + 1}
                   </span>
-                )}
-                {/* Texte du défi tiré (seuls les défis vérifiables sont tirés en ligne). */}
-                {view.lastCase.type === 'defi' && typeof view.lastCase.defiIndex === 'number' && (
-                  <p className="w-full text-sm font-medium text-white/85">
-                    {(tPB.raw('defis') as { text: string }[])[view.lastCase.defiIndex]?.text}
-                  </p>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  {view.lastDice != null && (
+                    <span className="ml-auto flex items-center gap-1 text-xs text-white/50">
+                      <Dice6 className="h-3.5 w-3.5" /> {view.lastDice}
+                    </span>
+                  )}
+                </>
+              }
+            >
+              {/* Texte du défi tiré (seuls les défis vérifiables sont tirés en ligne). */}
+              {view.lastCase.type === 'defi' && typeof view.lastCase.defiIndex === 'number' && (
+                <p className="mt-1.5 text-sm font-medium text-white/85">
+                  {(tPB.raw('defis') as { text: string }[])[view.lastCase.defiIndex]?.text}
+                </p>
+              )}
+            </CaseRevealCard>
+          )}
 
           {/* Simple confirmation (case sans choix explicite) */}
           {awaitingChoice && view.pending &&

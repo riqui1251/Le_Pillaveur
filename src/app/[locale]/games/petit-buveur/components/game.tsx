@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
-import { Dice6, Trophy, ArrowRight, RefreshCw, Home, MapPin, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User, Check, Beer, Volume2, VolumeX } from 'lucide-react'
+import { Dice6, Trophy, ArrowRight, RefreshCw, Home, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User, Check, Beer, Volume2, VolumeX } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { Card } from '@/components/ui/card'
 import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS, getPlayerGameBoost, resolveValidatedPlayerName, getPlayerNameValidationError } from '@/lib/players'
@@ -83,6 +83,8 @@ import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositio
 import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount } from '@/components/petit-buveur/drink-feedback'
 import { useGameSounds } from '@/hooks/useGameSounds'
 import { isSoundMuted } from '@/lib/sound/game-sounds'
+import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
+import { getCaseMeta, getCaseFamilyStyle } from '@/lib/petit-buveur/case-families'
 
 const CASE_TYPES_NO_LAST_CASE: CaseType[] = ['repetition', 'chance', 'echange', 'rewind', 'double-case']
 
@@ -2803,23 +2805,24 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
       {renderLastActionHistory()}
 
-      {/* Case actuelle — visible uniquement après révélation (cible choisie) */}
+      {/* Case actuelle — carte flip teintée par la famille de case */}
       {caseNotification && !showNotification && !showTargetDialog && !showDuelDialog && !showWheel && !showChanceDialog && !showExchangeDialog && !showChainDialog && !showTeleportDialog && !showVoteDialog && !showDeHonteDialog && !showPileFaceDialog && (
-        <div className="mt-3 rounded-xl border border-amber-500/35 bg-gradient-to-br from-amber-500/15 to-orange-500/10 p-3 shadow-sm">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <MapPin className="h-4 w-4 shrink-0 text-amber-400" />
-            <span className="text-sm font-semibold text-amber-200">
+        <CaseRevealCard
+          className="mt-3"
+          caseType={caseNotification.case.type}
+          label={getCaseTypeLabel(caseNotification.case.type, t)}
+          revealKey={`${turnCount}:${caseNotification.case.type}:${pendingPosition ?? ''}`}
+          headerExtra={
+            <span className="text-sm font-semibold text-white/70">
               {t('game.caseLabel', { number: players[currentPlayer]?.position != null ? players[currentPlayer].position + 1 : '—' })}
             </span>
-            <span className="rounded-full border border-amber-400/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-100">
-              {getCaseTypeLabel(caseNotification.case.type, t)}
-            </span>
-          </div>
+          }
+        >
           <div
-            className="max-h-28 overflow-y-auto text-sm leading-relaxed text-foreground/90 [&_strong]:text-amber-100"
+            className="mt-2 max-h-28 overflow-y-auto text-sm leading-relaxed text-foreground/90 [&_strong]:text-amber-100"
             dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(activeNotificationHtml) }}
           />
-        </div>
+        </CaseRevealCard>
       )}
 
       {collectActiveEffects().length > 0 && !showNotification && renderActiveEffectsChips()}
@@ -3942,12 +3945,29 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             >
               <div className="bg-gradient-to-br from-amber-600/15 via-transparent to-orange-600/10 p-5">
                 <div className="mb-4 flex flex-col items-center text-center">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 ring-1 ring-amber-400/30">
-                    <Sparkles className="h-6 w-6 text-amber-400" />
-                  </div>
+                  <motion.div
+                    initial={{ scale: 0, rotate: -25 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 360, damping: 15, delay: 0.05 }}
+                    className={cn(
+                      'mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border text-3xl',
+                      getCaseFamilyStyle(caseNotification.case.type).border,
+                      getCaseFamilyStyle(caseNotification.case.type).bg
+                    )}
+                    aria-hidden
+                  >
+                    {getCaseMeta(caseNotification.case.type).icon}
+                  </motion.div>
                   <h2 className="text-lg font-bold text-white">{t('game.effectTitle')}</h2>
                   <p className="mt-1 text-sm text-white/50">
-                    {getCaseTypeLabel(caseNotification.case.type, t)}
+                    <span
+                      className={cn(
+                        'mr-1 inline-block rounded-full border px-2 py-0.5 text-[11px] font-semibold',
+                        getCaseFamilyStyle(caseNotification.case.type).chip
+                      )}
+                    >
+                      {getCaseTypeLabel(caseNotification.case.type, t)}
+                    </span>
                     {players[currentPlayer] && (
                       <>
                         {' '}· <PlayerName player={players[currentPlayer]} className="font-semibold text-amber-300" />
