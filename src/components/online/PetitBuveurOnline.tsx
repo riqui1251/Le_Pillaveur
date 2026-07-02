@@ -393,7 +393,9 @@ export function PetitBuveurOnline() {
   const awaitingChoice = Boolean(view.pending) && isMyTurn
 
   return (
-    <div className="relative grid h-full min-h-0 w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-gray-950 text-white">
+    // grid-cols-[minmax(0,1fr)] : sans lui, le min-content d'une rangée
+    // (en-tête) étire la colonne implicite au-delà du viewport (mobile).
+    <div className="relative grid h-full min-h-0 w-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] overflow-hidden bg-gray-950 text-white">
       {/* Spectacle des tirages (roue, pièce, dé de la honte) — visible par tous */}
       <InteractionSpectacle
         interaction={view.lastInteraction}

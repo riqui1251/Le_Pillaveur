@@ -2770,7 +2770,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const showDiceActionBar = !hasBlockingDialog() && !(showNotification && caseNotification)
 
   return (
-    <div className="relative grid h-full min-h-0 w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-gray-950 text-white">
+    /* grid-cols-[minmax(0,1fr)] : sans lui, le min-content d'une rangée (en-tête)
+       étire la colonne implicite au-delà du viewport → débordement mobile. */
+    <div className="relative grid h-full min-h-0 w-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] overflow-hidden bg-gray-950 text-white">
       {/* Blobs animés */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
