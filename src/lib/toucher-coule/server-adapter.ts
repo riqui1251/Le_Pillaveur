@@ -3,6 +3,7 @@ import {
   botChooseCell,
   createInitialTCState,
   currentTCPlayerId,
+  placeTCBots,
   reduceTC,
   toTCClientView,
   TCEngineError,
@@ -107,6 +108,8 @@ export type TCRoomActionInput =
   | { type: 'fire'; cell: number }
   /** Tick client : fait jouer UN SEUL tir de bot (rythme visible, pas d'enchaînement invisible). */
   | { type: 'bot' }
+  /** Tick client : remplace par des bots les joueurs partis depuis plus de 3 min (horloge SERVEUR). */
+  | { type: 'replace-left' }
 
 export type TCRoomActionResult = { ok: true; state: TCState } | { ok: false; error: string }
 
@@ -121,6 +124,12 @@ export function applyTCRoomAction(
   input: TCRoomActionInput
 ): TCRoomActionResult {
   try {
+    if (input.type === 'replace-left') {
+      const next = reduceTC(state, { type: 'REPLACE_LEFT', now: Date.now() })
+      if (next === state) return { ok: false, error: 'NOTHING_TO_REPLACE' }
+      // Un remplacé en phase placement doit poser ses navires immédiatement.
+      return { ok: true, state: placeTCBots(next) }
+    }
     if (input.type === 'bot') {
       const activeId = currentTCPlayerId(state)
       const active = state.players.find((p) => p.id === activeId)

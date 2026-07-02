@@ -76,6 +76,8 @@ export async function POST(request: Request, { params }: Params) {
       input = { type: 'fire', cell: body.cell }
     } else if (body.action === 'bot') {
       input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left' }
     } else {
       return NextResponse.json({ error: 'Action invalide' }, { status: 400 })
     }

@@ -10,6 +10,8 @@ export type GameMeta = {
   colorTo?: string;
   hidden?: boolean;
   onlineReady?: boolean;
+  /** Jeu impossible en local (info cachée multi-écrans) : masqué du hub en mode local. */
+  onlineOnly?: boolean;
 };
 
 // Source unique de vérité pour les jeux
@@ -70,6 +72,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#22d3ee',
     fallbackColor: '#0ea5e9',
     onlineReady: true,
+    onlineOnly: true,
   },
   {
     id: 'hi-lo',

@@ -11,6 +11,7 @@
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
     "manageFriends": "Gestionar mis amigos",
+    "chat": "Chat",
     "languageSwitcher": "Cambiar idioma",
     "links": {
       "joueurs": {
@@ -167,7 +168,23 @@
       "invited": "Invitado",
       "pending": "Invitación enviada",
       "noFriendsToInvite": "Añade amigos para invitarlos"
+    },
+    "rejoin": {
+      "title": "¡Tienes una partida en curso!",
+      "cta": "Volver a la partida",
+      "botCountdown": "Un bot te reemplaza en {seconds}s"
     }
+  },
+  "chat": {
+      "title": "Chat",
+      "tabGame": "Partida",
+      "tabFriends": "Amigos",
+      "placeholder": "Escribe un mensaje…",
+      "send": "Enviar",
+      "noRoom": "No hay partida en curso — únete a una sala para chatear con los jugadores.",
+      "noFriends": "Añade amigos para chatear con ellos.",
+      "back": "Atrás",
+      "empty": "¡Todavía no hay mensajes — inicia la conversación!"
   },
   "auth": {
     "brand": "Le Pillaveur",
@@ -1321,7 +1338,8 @@
         "legendShip": "Barco aliado",
         "legendHit": "Tocado",
         "legendMiss": "Agua",
-        "legendSunk": "Hundido"
+        "legendSunk": "Hundido",
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s"
       }
     },
     "petit-buveur": {

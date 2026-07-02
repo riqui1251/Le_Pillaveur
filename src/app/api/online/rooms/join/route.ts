@@ -5,7 +5,8 @@ import { buildRoomDto } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { canJoinInviteRoom } from '@/lib/online/room-invites'
 import { parseRoomSettings } from '@/lib/online-game-state'
-import { TC_MODES } from '@/lib/toucher-coule/engine'
+import { reduceTC, TC_MODES } from '@/lib/toucher-coule/engine'
+import { parseTCState, serializeTCState } from '@/lib/toucher-coule/server-adapter'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
@@ -30,6 +31,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Lobby introuvable' }, { status: 404 })
   }
   if (room.status !== 'waiting') {
+    // Retour en partie (Toucher-Coulé) : un joueur marqué « parti » peut
+    // reprendre sa place tant qu'un bot ne l'a pas remplacé.
+    if (room.status === 'playing' && room.gameId === 'toucher-coule') {
+      const tcState = parseTCState(room.gameStateJson)
+      const player = tcState?.players.find((p) => p.id === user.id && !p.isBot && p.leftAt)
+      if (tcState && player) {
+        const next = reduceTC(tcState, { type: 'REJOIN', playerId: user.id })
+        await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })
+        await prisma.onlineRoomMember.upsert({
+          where: { roomId_userId: { roomId: room.id, userId: user.id } },
+          create: { roomId: room.id, userId: user.id, isReady: true },
+          update: { lastSeenAt: new Date(), isReady: true },
+        })
+        await prisma.onlineRoom.update({
+          where: { id: room.id },
+          data: { gameStateJson: serializeTCState(next), stateVersion: room.stateVersion + 1 },
+        })
+        publishRoomChanged(room.id, { type: 'changed', stateVersion: room.stateVersion + 1 })
+        const dto = await buildRoomDto(room.id, user.id)
+        return NextResponse.json({ room: dto })
+      }
+    }
     return NextResponse.json({ error: 'Ce lobby a déjà démarré' }, { status: 409 })
   }
 

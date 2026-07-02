@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield } from 'lucide-react'
+import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
@@ -12,6 +12,7 @@ import { FullscreenButton } from '@/components/ui/fullscreen-button'
 import { FeedbackDialog, FeedbackMenuButton } from '@/components/feedback/FeedbackDialog'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { FriendsPanel } from '@/components/layout/FriendsPanel'
+import { ChatPanel } from '@/components/chat/ChatPanel'
 import { cn } from '@/lib/utils'
 
 const NAV_LINK_KEYS = [
@@ -36,6 +37,7 @@ export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const { user } = useAuth()
   const { friends, refresh: refreshFriendsBadge } = useFriends()
   const onlineFriendsCount = friends.filter((f) => f.isOnline).length
@@ -85,6 +87,7 @@ export default function Navbar() {
   useEffect(() => {
     setDrawerOpen(false)
     setFriendsOpen(false)
+    setChatOpen(false)
   }, [pathname])
 
   const toggleDrawer = () => setDrawerOpen((open) => !open)
@@ -131,6 +134,22 @@ export default function Navbar() {
                   {onlineFriendsCount}
                 </span>
               )}
+            </button>
+          )}
+
+          {user && (
+            <button
+              type="button"
+              aria-label={t('chat')}
+              onClick={() => setChatOpen((v) => !v)}
+              className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
+                chatOpen
+                  ? 'border-sky-400/40 bg-sky-500/20 text-sky-200 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
+                  : 'border-white/10 bg-white/[0.04] text-sky-300 hover:border-sky-400/35 hover:bg-sky-500/10'
+              )}
+            >
+              <MessageCircle className="h-5 w-5" />
             </button>
           )}
 
@@ -286,6 +305,8 @@ export default function Navbar() {
           }}
         />
       )}
+
+      {user && <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />}
     </>
   )
 }

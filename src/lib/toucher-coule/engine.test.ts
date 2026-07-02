@@ -4,9 +4,11 @@ import {
   botChooseCell,
   createInitialTCState,
   currentTCPlayerId,
+  placeTCBots,
   reduceTC,
   toTCClientView,
   TC_MODES,
+  TC_REJOIN_GRACE_MS,
   type TCInitialPlayer,
   type TCState,
 } from './engine'
@@ -189,6 +191,46 @@ describe('toucher-coule — bots', () => {
     const rng = rngFromState(state.rngState)
     const cell = botChooseCell(state, 'bob', rng)
     expect([16, 18, 9, 25]).toContain(cell)
+  })
+})
+
+describe('toucher-coule — départ / retour / remplacement par bot', () => {
+  function battleState(): TCState {
+    let state = createInitialTCState(players1v1(), '1v1', 42)
+    state = place1v1(state, 'alice')
+    state = place1v1(state, 'bob')
+    return state
+  }
+
+  it('LEAVE marque le départ, REJOIN l\'annule', () => {
+    let state = battleState()
+    state = reduceTC(state, { type: 'LEAVE', playerId: 'bob', at: 1000 })
+    expect(state.players.find((p) => p.id === 'bob')?.leftAt).toBe(1000)
+    state = reduceTC(state, { type: 'REJOIN', playerId: 'bob' })
+    expect(state.players.find((p) => p.id === 'bob')?.leftAt).toBeNull()
+  })
+
+  it('REPLACE_LEFT ne convertit qu\'après le délai de grâce', () => {
+    let state = battleState()
+    state = reduceTC(state, { type: 'LEAVE', playerId: 'bob', at: 1000 })
+    const tooSoon = reduceTC(state, { type: 'REPLACE_LEFT', now: 1000 + TC_REJOIN_GRACE_MS - 1 })
+    expect(tooSoon.players.find((p) => p.id === 'bob')?.isBot).toBe(false)
+    const after = reduceTC(state, { type: 'REPLACE_LEFT', now: 1000 + TC_REJOIN_GRACE_MS })
+    const bob = after.players.find((p) => p.id === 'bob')!
+    expect(bob.isBot).toBe(true)
+    expect(bob.leftAt).toBeNull()
+    // Devenu bot, il n'est plus rejoignable.
+    expect(() => reduceTC(after, { type: 'REJOIN', playerId: 'bob' })).toThrow('CANNOT_REJOIN')
+  })
+
+  it('un remplacé en phase placement pose ses navires via placeTCBots', () => {
+    let state = createInitialTCState(players1v1(), '1v1', 7)
+    state = place1v1(state, 'alice')
+    state = reduceTC(state, { type: 'LEAVE', playerId: 'bob', at: 1000 })
+    state = reduceTC(state, { type: 'REPLACE_LEFT', now: 1000 + TC_REJOIN_GRACE_MS })
+    state = placeTCBots(state)
+    expect(state.players.find((p) => p.id === 'bob')?.placed).toBe(true)
+    expect(state.phase).toBe('battle')
   })
 })
 

@@ -51,6 +51,19 @@ model User {
   nameModerationAttempts NameModerationAttempt[]
   nameModerationWarnedAt DateTime?
   nameModerationWarningDismissedAt DateTime?
+  chatMessages          ChatMessage[]      @relation("ChatMessages")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  /** Canal : `room:<roomId>` (partie) ou `friend:<idA>:<idB>` (ids triés). */
+  channel   String
+  senderId  String
+  sender    User     @relation("ChatMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([channel, createdAt])
 }
 
 model OnlineRoom {

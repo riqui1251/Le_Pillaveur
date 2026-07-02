@@ -47,7 +47,12 @@ export type TCPlayer = {
   drinks: number
   shotsFired: number
   shotsHit: number
+  /** Timestamp (ms) du départ du joueur en cours de partie — null/absent s'il est là. */
+  leftAt?: number | null
 }
+
+/** Délai de grâce avant qu'un joueur parti soit remplacé par un bot. */
+export const TC_REJOIN_GRACE_MS = 3 * 60 * 1000
 
 export type TCShip = {
   id: string
@@ -92,6 +97,9 @@ export type TCAction =
   | { type: 'PLACE'; playerId: string; ships: number[][] }
   | { type: 'AUTO_PLACE'; playerId: string }
   | { type: 'FIRE'; playerId: string; cell: number }
+  | { type: 'LEAVE'; playerId: string; at: number }
+  | { type: 'REJOIN'; playerId: string }
+  | { type: 'REPLACE_LEFT'; now: number }
 
 export class TCEngineError extends Error {
   constructor(code: string) {
@@ -368,9 +376,60 @@ export function reduceTC(state: TCState, action: TCAction): TCState {
     }
     case 'FIRE':
       return applyFire(state, action.playerId, action.cell)
+    case 'LEAVE': {
+      if (state.phase === 'finished') throw new TCEngineError('GAME_FINISHED')
+      const player = state.players.find((p) => p.id === action.playerId)
+      if (!player || player.isBot) throw new TCEngineError('UNKNOWN_PLAYER')
+      if (player.leftAt) return state
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === action.playerId ? { ...p, leftAt: action.at } : p
+        ),
+        version: state.version + 1,
+      }
+    }
+    case 'REJOIN': {
+      const player = state.players.find((p) => p.id === action.playerId)
+      if (!player || player.isBot || !player.leftAt) throw new TCEngineError('CANNOT_REJOIN')
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === action.playerId ? { ...p, leftAt: null } : p
+        ),
+        version: state.version + 1,
+      }
+    }
+    case 'REPLACE_LEFT': {
+      // Convertit en bot tous les joueurs partis depuis plus de TC_REJOIN_GRACE_MS.
+      const expired = state.players.filter(
+        (p) => !p.isBot && p.leftAt && action.now - p.leftAt >= TC_REJOIN_GRACE_MS
+      )
+      if (expired.length === 0) return state
+      const ids = new Set(expired.map((p) => p.id))
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          ids.has(p.id) ? { ...p, isBot: true, leftAt: null } : p
+        ),
+        version: state.version + 1,
+      }
+    }
     default:
       throw new TCEngineError('UNKNOWN_ACTION')
   }
+}
+
+/** Fait uniquement placer les bots (sans tirer) — utilisé après un remplacement en phase placement. */
+export function placeTCBots(state: TCState): TCState {
+  let current = state
+  for (let guard = 0; guard < 20; guard += 1) {
+    if (current.phase !== 'placement') return current
+    const bot = current.players.find((p) => p.isBot && !p.placed)
+    if (!bot) return current
+    current = reduceTC(current, { type: 'AUTO_PLACE', playerId: bot.id })
+  }
+  return current
 }
 
 /**

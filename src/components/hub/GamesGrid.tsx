@@ -19,7 +19,9 @@ export function GamesGrid() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const visible = games.filter((g) => !g.hidden && (!isOnline || g.onlineReady))
+    const visible = games.filter(
+      (g) => !g.hidden && (isOnline ? g.onlineReady : !g.onlineOnly)
+    )
     if (!q) return visible
     return visible.filter(
       (g) =>

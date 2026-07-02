@@ -5,6 +5,8 @@ import { buildRoomDto, touchMemberPresence } from '@/lib/online-room'
 import { resetRoomToWaitingLobby } from '@/lib/online-petit-buveur'
 import { parsePetitBuveurState } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { parseTCState, serializeTCState } from '@/lib/toucher-coule/server-adapter'
+import { reduceTC } from '@/lib/toucher-coule/engine'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -73,6 +75,21 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   if (gameFinished && room.gameId === 'petit-buveur') {
     await resetRoomToWaitingLobby(roomId)
+  }
+
+  // Toucher-Coulé en cours : le joueur qui quitte est marqué « parti » dans
+  // l'état de partie — il peut revenir (bouton Rejoindre) pendant 3 min avant
+  // d'être remplacé par un bot.
+  if (room.gameId === 'toucher-coule' && room.status === 'playing') {
+    const tcState = parseTCState(room.gameStateJson)
+    const player = tcState?.players.find((p) => p.id === user.id && !p.isBot)
+    if (tcState && player && tcState.phase !== 'finished' && !player.leftAt) {
+      const next = reduceTC(tcState, { type: 'LEAVE', playerId: user.id, at: Date.now() })
+      await prisma.onlineRoom.update({
+        where: { id: roomId },
+        data: { gameStateJson: serializeTCState(next), stateVersion: room.stateVersion + 1 },
+      })
+    }
   }
 
   publishRoomChanged(roomId, { type: 'lobby' })

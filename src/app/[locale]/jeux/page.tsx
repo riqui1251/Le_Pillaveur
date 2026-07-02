@@ -7,6 +7,7 @@ import { SelectedPlayersBar } from '@/components/hub/SelectedPlayersBar'
 import { GamesGrid } from '@/components/hub/GamesGrid'
 import { OpenLobbiesList } from '@/components/online/OpenLobbiesList'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
+import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { PlayModeToggle } from '@/components/auth/PlayModeToggle'
 import { useRequireSelectedPlayers } from '@/hooks/useRequireSelectedPlayers'
 import { useAuth } from '@/hooks/useAuth'
@@ -53,6 +54,7 @@ export default function GamesHubPage() {
         </div>
       )}
 
+      {isOnline && <RejoinBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <FriendInviteBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <OpenLobbiesList />}
 

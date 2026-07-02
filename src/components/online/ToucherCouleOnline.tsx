@@ -10,7 +10,7 @@ import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { TC_MODES, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
+import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
 
 /**
  * Écran de jeu Toucher-Coulé EN LIGNE (serveur-autoritaire).
@@ -64,26 +64,56 @@ export function ToucherCouleOnline() {
     if (phase !== 'placement') setPlacedShips([])
   }, [phase])
 
-  // Tick des bots : quand c'est le tour d'un bot, UN client (le premier humain)
-  // demande au serveur de jouer UN tir — chaque tir de bot est donc visible,
-  // au lieu d'un enchaînement instantané illisible.
+  // Ticks « arbitre » (le premier humain PRÉSENT de la partie) :
+  // - tour d'un bot → demande au serveur de jouer UN tir (rythme visible) ;
+  // - joueur parti depuis plus de 3 min → demande son remplacement par un bot.
+  // La garde expectedVersion rend les ticks concurrents inoffensifs.
   useEffect(() => {
-    if (!view || !user || !room || view.phase !== 'battle') return
-    const active = view.players.find((p) => p.id === view.turnOrder[view.currentTurnIndex])
-    if (!active?.isBot) return
-    const referee = view.players.find((p) => !p.isBot)
+    if (!view || !user || !room || view.phase === 'finished') return
+    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
     if (referee?.id !== user.id) return
     const expectedVersion = room.stateVersion
-    const timer = setTimeout(() => {
+    const send = (action: 'bot' | 'replace-left') => {
       void fetch(`/api/online/rooms/${room.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ action: 'bot', expectedVersion }),
+        body: JSON.stringify({ action, expectedVersion }),
       })
-    }, 1100)
-    return () => clearTimeout(timer)
+    }
+
+    let botTimer: ReturnType<typeof setTimeout> | undefined
+    if (view.phase === 'battle') {
+      const active = view.players.find((p) => p.id === view.turnOrder[view.currentTurnIndex])
+      if (active?.isBot) botTimer = setTimeout(() => send('bot'), 1100)
+    }
+
+    let replaceTimer: ReturnType<typeof setInterval> | undefined
+    if (view.players.some((p) => !p.isBot && p.leftAt)) {
+      const check = () => {
+        const expired = view.players.some(
+          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= TC_REJOIN_GRACE_MS
+        )
+        if (expired) send('replace-left')
+      }
+      check()
+      replaceTimer = setInterval(check, 5000)
+    }
+
+    return () => {
+      if (botTimer) clearTimeout(botTimer)
+      if (replaceTimer) clearInterval(replaceTimer)
+    }
   }, [view, user, room])
+
+  // Horloge locale pour le compte à rebours « bot dans Xs » (active si un joueur est parti).
+  const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
+  const [clock, setClock] = useState(() => Date.now())
+  useEffect(() => {
+    if (!someoneLeft) return
+    const timer = setInterval(() => setClock(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [someoneLeft])
 
   if (!inGame) {
     return <GameOnlineLobby gameId="toucher-coule" />
@@ -304,6 +334,25 @@ export function ToucherCouleOnline() {
                 {isMyTurn && <p className="mt-0.5 text-[11px] text-emerald-200/60">{t('hitReplay')}</p>}
               </>
             )}
+          </div>
+        )}
+
+        {/* Joueur(s) parti(s) : en attente de leur retour avant remplacement par un bot */}
+        {someoneLeft && (
+          <div className="mb-3 space-y-0.5 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-center">
+            {view.players
+              .filter((p) => !p.isBot && p.leftAt)
+              .map((p) => {
+                const remaining = Math.max(
+                  0,
+                  Math.ceil(((p.leftAt ?? 0) + TC_REJOIN_GRACE_MS - clock) / 1000)
+                )
+                return (
+                  <p key={p.id} className="text-xs font-semibold text-amber-100">
+                    {t('waitingReturn', { name: p.name, seconds: remaining })}
+                  </p>
+                )
+              })}
           </div>
         )}
 

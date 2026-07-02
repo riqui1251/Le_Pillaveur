@@ -13,6 +13,7 @@ import { useFriends } from '@/hooks/useFriends'
 import { GAMES, type GameMeta } from '@/lib/games'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
+import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { cn } from '@/lib/utils'
 
 const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
@@ -187,6 +188,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               </div>
             </div>
 
+            <RejoinBanner onJoin={(roomId) => joinRoom({ roomId })} joining={loading} />
             <FriendInviteBanner onJoin={(roomId) => joinRoom({ roomId })} joining={loading} />
           </>
         )}
