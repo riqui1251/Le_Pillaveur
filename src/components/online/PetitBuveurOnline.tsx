@@ -12,6 +12,10 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PLAYER_ICONS } from '@/lib/players'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { DiceOverlay, type DiceOverlayState } from '@/components/petit-buveur/DiceOverlay'
+import { TurnOverlay } from '@/components/petit-buveur/TurnOverlay'
+import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositions'
+import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount } from '@/components/petit-buveur/drink-feedback'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
@@ -75,14 +79,16 @@ export function PetitBuveurOnline() {
   const tDiff = useTranslations('games.petit-buveur.difficultyLabels')
   const [busy, setBusy] = useState(false)
   const [rolling, setRolling] = useState(false)
-  const [rollDisplay, setRollDisplay] = useState<number | null>(null)
   const [showLegend, setShowLegend] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
-  const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [diceOverlay, setDiceOverlay] = useState<DiceOverlayState | null>(null)
+  const diceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Dernier dé arrivé par SSE/polling — secours si la réponse HTTP du roll se perd.
+  const rollFallbackRef = useRef<number | null>(null)
 
   useEffect(() => {
     return () => {
-      if (rollIntervalRef.current) clearInterval(rollIntervalRef.current)
+      if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
     }
   }, [])
 
@@ -192,6 +198,25 @@ export function PetitBuveurOnline() {
     return () => clearInterval(timer)
   }, [someoneLeft, afkWatch])
 
+  // Pions animés case par case + feedback gorgées (voir src/components/petit-buveur/).
+  const positionsById = useMemo(() => {
+    const rec: Record<string, number> = {}
+    for (const p of view?.players ?? []) rec[p.id] = p.position
+    return rec
+  }, [view])
+  const { positions: shownPositions } = useSteppedPositions(positionsById)
+  const drinksById = useMemo(() => {
+    const rec: Record<string, number> = {}
+    for (const p of view?.players ?? []) rec[p.id] = p.drinks
+    return rec
+  }, [view])
+  const drinkDeltas = useDrinkDeltas(drinksById)
+
+  // Mémorise le dé de la vue courante (voir rollFallbackRef dans handleRoll).
+  useEffect(() => {
+    rollFallbackRef.current = view?.lastDice ?? null
+  }, [view])
+
   // Tant que la partie n'est pas lancée : le lobby gère création/join/prêt/lancer.
   if (!inGame) {
     return <GameOnlineLobby gameId="petit-buveur" />
@@ -225,7 +250,10 @@ export function PetitBuveurOnline() {
       iconFor(Math.max(0, view.players.findIndex((p) => p.id === id)))
     )
   }
-  const leaderPos = Math.max(...view.players.map((p) => p.position))
+  // Positions AFFICHÉES (le pion avance case par case, l'état réel a déjà sauté).
+  const shownPosOf = (id: string) => shownPositions[id] ?? view.players.find((p) => p.id === id)?.position ?? 0
+  const leaderPos = Math.max(...view.players.map((p) => shownPosOf(p.id)))
+  const activeShownPos = active ? shownPosOf(active.id) : null
 
   const effectChips: EffectChip[] = []
   view.players.forEach((p) => {
@@ -285,36 +313,64 @@ export function PetitBuveurOnline() {
   const sendAction = async (
     action: 'roll' | 'resolve',
     choice?: { targetId?: string; side?: 'pile' | 'face'; option?: string }
-  ) => {
-    if (!room || busy) return
+  ): Promise<{ view?: { lastDice?: number | null } } | null> => {
+    if (!room || busy) return null
     setBusy(true)
     try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
+      const res = await fetch(`/api/online/rooms/${room.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ action, expectedVersion: room.stateVersion, choice }),
       })
       // Le serveur diffuse le nouvel état (SSE) → useOnlineRoom rafraîchit la vue.
+      return (await res.json().catch(() => null)) as { view?: { lastDice?: number | null } } | null
     } finally {
       setBusy(false)
     }
   }
 
   const handleRoll = () => {
-    if (busy || rolling) return
+    if (busy || rolling || !user) return
     setRolling(true)
-    setRollDisplay(1 + Math.floor(Math.random() * 6))
-    rollIntervalRef.current = setInterval(() => {
-      setRollDisplay(1 + Math.floor(Math.random() * 6))
-    }, 90)
-    void sendAction('roll').finally(() => {
-      setTimeout(() => {
-        if (rollIntervalRef.current) clearInterval(rollIntervalRef.current)
-        rollIntervalRef.current = null
+    rollFallbackRef.current = null
+    const meIcon = iconOf(user.id)
+    const meName = view.players.find((p) => p.id === user.id)?.name ?? ''
+    setDiceOverlay({ phase: 'rolling', playerName: meName, playerIcon: meIcon })
+
+    const showResult = (dice: number) => {
+      // Le résultat est déjà tiré par le serveur : on l'affiche, on le laisse
+      // lire un instant, puis le pion part (animation case par case).
+      setDiceOverlay({ phase: 'result', value: dice, playerName: meName, playerIcon: meIcon })
+      diceTimerRef.current = setTimeout(() => {
+        setDiceOverlay(null)
         setRolling(false)
-        setRollDisplay(null)
-      }, 500)
+      }, 750)
+    }
+    const clear = () => {
+      setDiceOverlay(null)
+      setRolling(false)
+    }
+
+    // Filet de sécurité : si la réponse HTTP se perd (connexions saturées),
+    // le SSE/polling apportera l'état quand même — on récupère le dé depuis
+    // la vue, ou on ferme l'overlay plutôt que de le laisser tourner à vide.
+    let settled = false
+    const fallback = setTimeout(() => {
+      if (settled) return
+      settled = true
+      const dice = rollFallbackRef.current
+      if (typeof dice === 'number') showResult(dice)
+      else clear()
+    }, 5000)
+
+    void sendAction('roll').then((body) => {
+      if (settled) return
+      settled = true
+      clearTimeout(fallback)
+      const dice = body?.view?.lastDice
+      if (typeof dice === 'number') showResult(dice)
+      else clear()
     })
   }
 
@@ -322,6 +378,17 @@ export function PetitBuveurOnline() {
 
   return (
     <div className="relative grid h-full min-h-0 w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-gray-950 text-white">
+      {/* Mise en scène du lancer de dé + flash de changement de tour */}
+      <DiceOverlay state={diceOverlay} />
+      <TurnOverlay
+        activeKey={finished || diceOverlay ? null : active?.id ?? null}
+        icon={active ? iconOf(active.id) : ''}
+        name={active?.name ?? ''}
+        isSelf={isMyTurn}
+        labelOf={`${tGame('turnOf')} ${active?.name ?? ''}`}
+        labelSelf={tGame('yourTurn')}
+      />
+
       {/* Blobs animés */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
@@ -487,10 +554,10 @@ export function PetitBuveurOnline() {
           <div className="pb-board">
             <div className="pb-board-grid grid grid-cols-6 gap-2 sm:gap-2.5">
               {Array.from({ length: BOARD_SIZE }).map((_, index) => {
-                const onCase = view.players.filter((p) => p.position === index)
+                const onCase = view.players.filter((p) => shownPosOf(p.id) === index)
                 const isStart = index === 0
                 const isFinish = index === BOARD_SIZE - 1
-                const isActiveCase = active?.position === index
+                const isActiveCase = activeShownPos === index
                 const isLeaderCase = index === leaderPos
                 return (
                   <div
@@ -569,12 +636,13 @@ export function PetitBuveurOnline() {
                   <div
                     key={p.id}
                     className={cn(
-                      'flex w-[8.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:w-[9.5rem] sm:p-2.5',
+                      'relative flex w-[8.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:w-[9.5rem] sm:p-2.5',
                       isActive
                         ? 'border-emerald-400/60 bg-emerald-500/12 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.35)]'
                         : rankBorder(index)
                     )}
                   >
+                    <FloatingDrinkBadge deltas={drinkDeltas.filter((d) => d.playerId === p.id)} />
                     <span
                       className={cn(
                         'inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md border px-1.5 text-xs font-bold tabular-nums',
@@ -596,7 +664,7 @@ export function PetitBuveurOnline() {
                       </div>
                       <span className="flex items-center gap-1.5 text-[10px] font-medium text-white/40">
                         {t('caseLabel')} {p.position + 1}
-                        <Beer className="h-3 w-3" /> {p.drinks}
+                        <Beer className="h-3 w-3" /> <PulsingCount value={p.drinks} />
                       </span>
                     </div>
                   </div>
@@ -637,7 +705,7 @@ export function PetitBuveurOnline() {
               <span className="flex items-center justify-center gap-2">
                 <span>
                   {rolling
-                    ? `${t('rollDice')} ${rollDisplay ?? ''}`
+                    ? t('rollDice')
                     : view.pending
                       ? isMyTurn
                         ? t('continueCase')

@@ -1860,7 +1860,8 @@
           "skipTurnNext": "⏭️ {player} no tirará en el próximo turno!",
           "anchorApplied": "⚓ {player} no podrá avanzar en el próximo turno!",
           "rouletteSafe": "🔫 Click… {player} está a salvo!"
-        }
+        },
+        "yourTurn": "¡Te toca jugar!"
       }
     }
   },

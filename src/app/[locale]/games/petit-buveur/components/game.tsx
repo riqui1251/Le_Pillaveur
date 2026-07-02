@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
@@ -78,6 +77,10 @@ import {
 import { resolveNoTargetCase, getLeader, getLastPlayer } from '../resolve-case'
 import { ShameDice, getDeHonteOutcomeLabel, buildDeHonteDescription } from './shame-dice'
 import { CoinFlip, getPileFaceOutcomeLabel, type CoinSide } from './coin-flip'
+import { DiceOverlay, type DiceOverlayState } from '@/components/petit-buveur/DiceOverlay'
+import { TurnOverlay } from '@/components/petit-buveur/TurnOverlay'
+import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositions'
+import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount } from '@/components/petit-buveur/drink-feedback'
 
 const CASE_TYPES_NO_LAST_CASE: CaseType[] = ['repetition', 'chance', 'echange', 'rewind', 'double-case']
 
@@ -320,13 +323,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [newPlayerNameError, setNewPlayerNameError] = useState<string | null>(null)
   const [currentPlayer, setCurrentPlayer] = useState<number>(0);
   const [gameStarted, setGameStarted] = useState(false);
-  const [diceResult, setDiceResult] = useState<number | null>(null);
   const [caseNotification, setCaseNotification] = useState<CaseNotificationState | null>(null);
   const [winner, setWinner] = useState<GamePlayer | null>(null);
   const [turnCount, setTurnCount] = useState<number>(1);
   const [gameDifficulty, setGameDifficulty] = useState<Difficulty>(difficulty);
   const boardSize = 30;
-  const [animatingPlayer, setAnimatingPlayer] = useState<string | null>(null);
+  const [diceOverlay, setDiceOverlay] = useState<DiceOverlayState | null>(null);
   const [selectingPlayer, setSelectingPlayer] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [pendingCase, setPendingCase] = useState<Case | null>(null);
@@ -353,16 +355,28 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [targetPlayerId, setTargetPlayerId] = useState<string | null>(null);
   const [isProcessingTurn, setIsProcessingTurn] = useState(false);
   const [isDiceRolling, setIsDiceRolling] = useState(false);
-  const [animatedDiceValue, setAnimatedDiceValue] = useState<number | null>(null);
   const [clickCount, setClickCount] = useState<Record<string, number>>({});
   const [showConfirmation, setShowConfirmation] = useState<string | null>(null);
   const [playerToDelete, setPlayerToDelete] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showTargetDialog, setShowTargetDialog] = useState(false);
-  const [diceValue, setDiceValue] = useState<number | null>(null);
   const [showNotification, setShowNotification] = useState(false);
   const [showVictoryScreen, setShowVictoryScreen] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+
+  // Pions animés case par case + feedback gorgées (composants partagés petit-buveur).
+  const positionsById = useMemo(() => {
+    const rec: Record<string, number> = {}
+    for (const p of players) rec[p.id] = p.position
+    return rec
+  }, [players])
+  const { positions: shownPositions } = useSteppedPositions(positionsById)
+  const drinksById = useMemo(() => {
+    const rec: Record<string, number> = {}
+    for (const p of players) rec[p.id] = p.drinks
+    return rec
+  }, [players])
+  const drinkDeltas = useDrinkDeltas(drinksById)
   
   // États pour la sauvegarde
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -825,49 +839,46 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       turnHadDiceRollRef.current = true
       setPlayers(updatedPlayers);
     }
-    
-    // Marquer le début du traitement
+
+    performDiceRoll();
+  };
+
+  /**
+   * Séquence complète d'un lancer, partagée par rollDice et rerollDice :
+   * overlay du dé (roule 750 ms → résultat maintenu 700 ms) → déplacement du
+   * pion case par case (useSteppedPositions) → révélation de la case.
+   * Le résultat est tiré immédiatement ; tout le reste n'est que mise en scène.
+   */
+  const performDiceRoll = () => {
     setIsProcessingTurn(true);
     setIsDiceRolling(true);
-    
-    // Générer un résultat de dé entre 1 et 6
+
+    const player = players[currentPlayer];
+    if (!player) {
+      setIsProcessingTurn(false);
+      setIsDiceRolling(false);
+      return;
+    }
+
     const result = Math.floor(Math.random() * 6) + 1;
-    setDiceResult(result);
-    setDiceValue(result);
-    
-    // Animation simple du dé
-    const duration = 800;
-    const interval = 100;
-    const steps = duration / interval;
-    let currentStep = 0;
-    
-    const rollInterval = setInterval(() => {
-      if (currentStep < steps - 1) {
-        setAnimatedDiceValue(Math.floor(Math.random() * 6) + 1);
-        currentStep++;
-      } else {
-        clearInterval(rollInterval);
-        setAnimatedDiceValue(result);
+    const overlayIcon = <PlayerIcon player={player} size="sm" />;
+    setDiceOverlay({ phase: 'rolling', playerName: player.name, playerIcon: overlayIcon });
+
+    setTimeout(() => {
+      setDiceOverlay({ phase: 'result', value: result, playerName: player.name, playerIcon: overlayIcon });
+
+      setTimeout(() => {
+        setDiceOverlay(null);
         setIsDiceRolling(false);
-        
-        // Obtenir le joueur actuel
-        const player = players[currentPlayer];
-        if (!player) {
-          setIsProcessingTurn(false);
-          return;
-        }
-        
-        let moveDelta = result
+
+        let moveDelta = result;
         if (player.anchored) {
-          moveDelta = 0
+          moveDelta = 0;
         }
-        lastMoveDeltaRef.current = moveDelta
+        lastMoveDeltaRef.current = moveDelta;
 
         const newPosition = Math.min(player.position + moveDelta, boardSize - 1);
-        
-        // Activer l'animation de déplacement
-        setAnimatingPlayer(player.id);
-        
+
         const updatedPlayers = players.map((p, idx) => {
           if (idx === currentPlayer) {
             return {
@@ -878,38 +889,36 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           }
           return p;
         });
-        
-        // Mettre à jour l'état des joueurs immédiatement
+
+        // L'état saute à la position finale ; l'affichage avance case par case.
         setPlayers(updatedPlayers);
-        
-        // Vérifier si le joueur a gagné
+        const hopMs = Math.abs(newPosition - player.position) * 120 + 250;
+
+        // Vérifier si le joueur a gagné (après l'arrivée visuelle du pion)
         if (newPosition === boardSize - 1) {
-          setWinner(updatedPlayers[currentPlayer]);
-          try {
-            updatePlayerStats(player.id, 'petit-buveur', {
-              wins: 1
-            });
-          } catch (error) {
-            console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
-          }
-          setIsProcessingTurn(false);
+          setTimeout(() => {
+            setWinner(updatedPlayers[currentPlayer]);
+            try {
+              updatePlayerStats(player.id, 'petit-buveur', {
+                wins: 1
+              });
+            } catch (error) {
+              console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
+            }
+            setIsProcessingTurn(false);
+          }, hopMs);
           return;
         }
-        
+
         // Générer un effet aléatoire (boost possible pour le joueur actuel)
         const caseType = generateCase(gameDifficulty, t, updatedPlayers[currentPlayer]);
-        
-        // Réinitialiser l'animation après un délai
-        setTimeout(() => {
-          setAnimatingPlayer(null);
-        }, 500);
-        
-        // Appliquer l'effet après un court délai
+
+        // Appliquer l'effet une fois le pion arrivé sur sa case
         setTimeout(() => {
           applyEffectToCurrentPlayer(caseType, newPosition, currentPlayer, updatedPlayers);
-        }, 800);
-      }
-    }, interval);
+        }, hopMs);
+      }, 700);
+    }, 750);
   };
 
   const applyEffectToCurrentPlayer = (caseType: Case, currentPosition: number, playerIndex: number, currentPlayers: GamePlayer[]) => {
@@ -1749,7 +1758,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         }
         {
           const effectPosition = Math.max(0, Math.min(boardSize - 1, targetPlayer.position + caseToApply.effect))
-          setAnimatingPlayer(targetPlayer.id)
           targetPlayer.position = effectPosition
           if (effectPosition === boardSize - 1) {
             setPlayers(updatedPlayers)
@@ -1981,12 +1989,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     
     // Mettre à jour l'état des joueurs
     setPlayers(updatedPlayers);
-    
-    // Réinitialiser l'animation après un délai
-    setTimeout(() => {
-      setAnimatingPlayer(null);
-    }, 500);
-    
+
     // Réinitialiser les états
     setTimeout(() => {
       setPendingCase(null);
@@ -2046,19 +2049,16 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setCurrentPlayer(0);
       setWinner(null);
       setTurnCount(1);
-      setDiceResult(null);
       setCaseNotification(null);
       setLastActionHistory(null);
       lastTargetIdRef.current = null;
       setIsProcessingTurn(false);
       setIsDiceRolling(false);
-      setAnimatedDiceValue(null);
       setSelectingPlayer(false);
       setSelectedPosition(null);
       setPendingCase(null);
       setPendingPosition(null);
       setTargetPlayerId(null);
-      setAnimatingPlayer(null);
       setShowNotification(false);
       setShowNextButton(false);
       setShowTargetDialog(false);
@@ -2117,11 +2117,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setCurrentPlayer(0);
     setWinner(null);
     setShowVictoryScreen(false);
-    setDiceResult(null);
     setCaseNotification(null);
     setIsProcessingTurn(false);
     setIsDiceRolling(false);
-    setAnimatedDiceValue(null);
     setSelectedPosition(null);
     setShowNotification(false);
     setTargetPlayerId(null);
@@ -2348,10 +2346,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             ? 'h-[92%] w-[92%] text-sm sm:text-lg'
             : 'h-[88%] w-[88%] text-xs sm:text-base'
     return (
-      <div
+      <motion.div
         key={player.id}
+        layoutId={`pb-token-${player.id}`}
+        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
         className={cn(
-          'flex h-full w-full items-center justify-center transition-all duration-300',
+          'flex h-full w-full items-center justify-center',
           isActive ? 'z-10' : 'z-0',
           !isActive && playersOnCaseCount > 1 && 'opacity-90'
         )}
@@ -2364,7 +2364,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             isActive && 'scale-110 ring-2 ring-white/80 rounded-full'
           )}
         />
-      </div>
+      </motion.div>
     )
   }
 
@@ -2596,97 +2596,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     // Réinitialiser les états de traitement
     setIsProcessingTurn(false);
     setIsDiceRolling(false);
-    setAnimatedDiceValue(null);
-    setDiceResult(null);
-    setDiceValue(null);
-    
+
     // Masquer toute notification précédente
     setShowNotification(false);
-    
-    // Marquer le début du traitement
-    setIsProcessingTurn(true);
-    setIsDiceRolling(true);
-    
-    // Générer un résultat de dé entre 1 et 6
-    const result = Math.floor(Math.random() * 6) + 1;
-    setDiceResult(result);
-    setDiceValue(result);
-    
-    // Animation simple du dé
-    const duration = 800;
-    const interval = 100;
-    const steps = duration / interval;
-    let currentStep = 0;
-    
-    const rollInterval = setInterval(() => {
-      if (currentStep < steps - 1) {
-        setAnimatedDiceValue(Math.floor(Math.random() * 6) + 1);
-        currentStep++;
-      } else {
-        clearInterval(rollInterval);
-        setAnimatedDiceValue(result);
-        setIsDiceRolling(false);
-        
-        // Obtenir le joueur actuel
-        const player = players[currentPlayer];
-        if (!player) {
-          setIsProcessingTurn(false);
-          return;
-        }
-        
-        let moveDelta = result
-        if (player.anchored) {
-          moveDelta = 0
-        }
-        lastMoveDeltaRef.current = moveDelta
 
-        const newPosition = Math.min(player.position + moveDelta, boardSize - 1);
-        
-        // Activer l'animation de déplacement
-        setAnimatingPlayer(player.id);
-        
-        const updatedPlayers = players.map((p, idx) => {
-          if (idx === currentPlayer) {
-            return {
-              ...p,
-              position: newPosition,
-              anchored: p.anchored ? false : p.anchored,
-            };
-          }
-          return p;
-        });
-        
-        // Mettre à jour l'état des joueurs immédiatement
-        setPlayers(updatedPlayers);
-        
-        // Vérifier si le joueur a gagné
-        if (newPosition === boardSize - 1) {
-          setWinner(updatedPlayers[currentPlayer]);
-          try {
-            updatePlayerStats(player.id, 'petit-buveur', {
-              wins: 1
-            });
-          } catch (error) {
-            console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
-          }
-          setIsProcessingTurn(false);
-          return;
-        }
-        
-        // Générer un effet aléatoire (boost possible pour le joueur actuel)
-        const caseType = generateCase(gameDifficulty, t, updatedPlayers[currentPlayer]);
-        
-        // Réinitialiser l'animation après un délai
-        setTimeout(() => {
-          setAnimatingPlayer(null);
-        }, 500);
-        
-        // Appliquer l'effet après un court délai
-        setTimeout(() => {
-          applyEffectToCurrentPlayer(caseType, newPosition, currentPlayer, updatedPlayers);
-        }, 800);
-      }
-    }, interval);
+    performDiceRoll();
   };
 
   const applyWheelOutcome = useCallback(
@@ -2895,7 +2809,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       <div className="pb-board">
         <div className="pb-board-grid grid grid-cols-6 gap-2 sm:gap-2.5">
         {Array.from({ length: boardSize }).map((_, index) => {
-          const playersOnCase = players.filter(p => p.position === index)
+          const playersOnCase = players.filter(p => (shownPositions[p.id] ?? p.position) === index)
           const isStart = index === 0
           const isFinish = index === boardSize - 1
           const gridCols = playersOnCase.length > 4
@@ -2962,20 +2876,22 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               <div
                 key={player.id}
                 className={cn(
-                  'flex w-[8.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:w-[9.5rem] sm:p-2.5',
+                  'relative flex w-[8.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:w-[9.5rem] sm:p-2.5',
                   isActive
                     ? 'border-emerald-400/60 bg-emerald-500/12 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.35)]'
                     : rankBorder
                 )}
               >
+                <FloatingDrinkBadge deltas={drinkDeltas.filter((d) => d.playerId === player.id)} />
                 {renderRankBadge(index)}
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-center gap-1.5">
                     <PlayerIcon player={player} size="sm" className="h-6 w-6 shrink-0 text-sm" />
                     <PlayerName player={player} className="min-w-0 truncate text-xs font-semibold text-white/90" />
                   </div>
-                  <span className="text-[10px] font-medium text-white/40">
+                  <span className="flex items-center gap-1.5 text-[10px] font-medium text-white/40">
                     {t('game.caseLabel', { number: player.position + 1 })}
+                    <Beer className="h-3 w-3" /> <PulsingCount value={player.drinks} />
                   </span>
                 </div>
               </div>
@@ -3036,6 +2952,21 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           </div>
         </footer>
       )}
+
+      {/* Mise en scène du lancer de dé + flash de changement de tour */}
+      <DiceOverlay state={diceOverlay} />
+      <TurnOverlay
+        activeKey={gameStarted && !winner && !diceOverlay ? players[currentPlayer]?.id ?? null : null}
+        icon={
+          players[currentPlayer] ? (
+            <PlayerIcon player={players[currentPlayer]} size="lg" className="h-16 w-16 text-4xl" />
+          ) : (
+            ''
+          )
+        }
+        name={players[currentPlayer]?.name ?? ''}
+        labelOf={`${t('game.turnOf')} ${players[currentPlayer]?.name ?? ''}`}
+      />
 
       {/* Duel sur case partagée (avant le ciblage) */}
       <AnimatePresence>

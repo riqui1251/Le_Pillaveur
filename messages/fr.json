@@ -1875,7 +1875,8 @@
         "targetLabel": "Joueur ciblé : {player}",
         "sparedLabel": "Joueur épargné : {player}",
         "resultLabel": "Résultat : {outcome}",
-        "resultHeading": "Résultat"
+        "resultHeading": "Résultat",
+        "yourTurn": "À toi de jouer !"
       }
     }
   },
