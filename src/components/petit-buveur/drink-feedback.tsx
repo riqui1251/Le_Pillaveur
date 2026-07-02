@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { playGameSound } from '@/lib/sound/game-sounds'
 
 /**
  * Feedback visuel des gorgées — partagé local + online.
@@ -35,6 +36,7 @@ export function useDrinkDeltas(drinksById: Record<string, number>, ttlMs = 1500)
     }
     if (fresh.length === 0) return
 
+    playGameSound('drink')
     setDeltas((cur) => [...cur, ...fresh])
     const keys = new Set(fresh.map((f) => f.key))
     const timer = setTimeout(() => {

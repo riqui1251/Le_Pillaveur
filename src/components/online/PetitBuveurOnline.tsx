@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
-import { Dice6, ArrowLeft, RefreshCw, Home, Beer, Trophy, MapPin, Sparkles, Target, Shuffle, User, HelpCircle, X } from 'lucide-react'
+import { Dice6, ArrowLeft, RefreshCw, Home, Beer, Trophy, MapPin, Sparkles, Target, Shuffle, User, HelpCircle, X, Volume2, VolumeX } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -16,6 +16,7 @@ import { DiceOverlay, type DiceOverlayState } from '@/components/petit-buveur/Di
 import { TurnOverlay } from '@/components/petit-buveur/TurnOverlay'
 import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositions'
 import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount } from '@/components/petit-buveur/drink-feedback'
+import { useGameSounds } from '@/hooks/useGameSounds'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
@@ -217,6 +218,15 @@ export function PetitBuveurOnline() {
     rollFallbackRef.current = view?.lastDice ?? null
   }, [view])
 
+  // Sons : fanfare de victoire (une seule fois) + toggle mute dans l'en-tête.
+  const { muted, toggleMuted, play } = useGameSounds()
+  const finishedNow = Boolean(view && (view.phase === 'finished' || view.winner))
+  const prevFinishedRef = useRef(false)
+  useEffect(() => {
+    if (finishedNow && !prevFinishedRef.current) play('victory')
+    prevFinishedRef.current = finishedNow
+  }, [finishedNow, play])
+
   // Tant que la partie n'est pas lancée : le lobby gère création/join/prêt/lancer.
   if (!inGame) {
     return <GameOnlineLobby gameId="petit-buveur" />
@@ -412,6 +422,13 @@ export function PetitBuveurOnline() {
           <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/60">
             {DIFFICULTY_EMOJI[difficulty]} {tDiff(difficulty)}
           </span>
+          <button
+            onClick={toggleMuted}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
+            aria-label={muted ? tGame('soundOn') : tGame('soundOff')}
+          >
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
           <button
             onClick={() => setShowLegend(true)}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"

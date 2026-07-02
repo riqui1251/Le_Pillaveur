@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
+import { playGameSound } from '@/lib/sound/game-sounds'
 
 /**
  * Fait avancer les pions CASE PAR CASE vers leur position réelle — partagé
@@ -55,6 +56,7 @@ export function useSteppedPositions(
           if (cur !== goal[id]) {
             next[id] = cur + Math.sign(goal[id] - cur)
             changed = true
+            playGameSound('step')
             onStepRef.current?.(id, next[id])
           } else {
             next[id] = cur

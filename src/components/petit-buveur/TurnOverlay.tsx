@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { playGameSound } from '@/lib/sound/game-sounds'
 
 /**
  * Flash plein écran au changement de tour — partagé local + online.
@@ -41,6 +42,7 @@ export function TurnOverlay({
     if (!activeKey || activeKey === lastKeyRef.current) return
     lastKeyRef.current = activeKey
     setVisible(true)
+    playGameSound('turn')
     if (isSelf) {
       try {
         navigator.vibrate?.(120)

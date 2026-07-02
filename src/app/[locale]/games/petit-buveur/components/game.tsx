@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
-import { Dice6, Trophy, ArrowRight, RefreshCw, Home, MapPin, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User, Check, Beer } from 'lucide-react'
+import { Dice6, Trophy, ArrowRight, RefreshCw, Home, MapPin, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User, Check, Beer, Volume2, VolumeX } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { Card } from '@/components/ui/card'
 import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS, getPlayerGameBoost, resolveValidatedPlayerName, getPlayerNameValidationError } from '@/lib/players'
@@ -81,6 +81,8 @@ import { DiceOverlay, type DiceOverlayState } from '@/components/petit-buveur/Di
 import { TurnOverlay } from '@/components/petit-buveur/TurnOverlay'
 import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositions'
 import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount } from '@/components/petit-buveur/drink-feedback'
+import { useGameSounds } from '@/hooks/useGameSounds'
+import { isSoundMuted } from '@/lib/sound/game-sounds'
 
 const CASE_TYPES_NO_LAST_CASE: CaseType[] = ['repetition', 'chance', 'echange', 'rewind', 'double-case']
 
@@ -377,6 +379,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     return rec
   }, [players])
   const drinkDeltas = useDrinkDeltas(drinksById)
+
+  // Sons : fanfare de victoire (une seule fois) + toggle mute dans l'en-tête.
+  const { muted, toggleMuted, play: playSound } = useGameSounds()
+  const prevWinnerRef = useRef(false)
+  useEffect(() => {
+    const hasWinner = Boolean(winner)
+    if (hasWinner && !prevWinnerRef.current) playSound('victory')
+    prevWinnerRef.current = hasWinner
+  }, [winner, playSound])
   
   // États pour la sauvegarde
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -2481,6 +2492,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }
 
   const playTick = () => {
+    if (isSoundMuted()) return
     const ctx = audioCtxRef.current
     if (!ctx) return
     const now = ctx.currentTime
@@ -2760,6 +2772,13 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/60">
             {difficultyNames[gameDifficulty]}
           </span>
+          <button
+            onClick={toggleMuted}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
+            aria-label={muted ? t('game.soundOn') : t('game.soundOff')}
+          >
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
         </div>
       </header>
 

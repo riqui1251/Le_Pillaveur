@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { playGameSound } from '@/lib/sound/game-sounds'
 
 /**
  * Overlay plein écran du lancer de dé — partagé local + online.
@@ -58,6 +59,13 @@ export function DiceOverlay({ state }: { state: DiceOverlayState | null }) {
     }, 85)
     return () => clearInterval(timer)
   }, [rolling, reduced])
+
+  // Sons : roulement pendant le lancer, clac à l'arrêt sur le résultat.
+  const phase = state?.phase ?? null
+  useEffect(() => {
+    if (phase === 'rolling') playGameSound('dice-roll')
+    else if (phase === 'result') playGameSound('dice-result')
+  }, [phase])
 
   return (
     <AnimatePresence>

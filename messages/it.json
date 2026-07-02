@@ -1861,7 +1861,9 @@
           "anchorApplied": "⚓ {player} non potrà avanzare al prossimo turno!",
           "rouletteSafe": "🔫 Click… {player} è al sicuro!"
         },
-        "yourTurn": "Tocca a te!"
+        "yourTurn": "Tocca a te!",
+        "soundOn": "Attiva l'audio",
+        "soundOff": "Disattiva l'audio"
       }
     }
   },

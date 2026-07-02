@@ -1871,7 +1871,9 @@
           "anchorApplied": "⚓ {player} cannot move forward on the next turn!",
           "rouletteSafe": "🔫 Click… {player} is safe!"
         },
-        "yourTurn": "Your turn!"
+        "yourTurn": "Your turn!",
+        "soundOn": "Turn sound on",
+        "soundOff": "Mute sound"
       }
     }
   },
