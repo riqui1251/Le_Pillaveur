@@ -112,7 +112,10 @@ export function PetitBuveurOnline() {
     ? room.settings.difficulty
     : 'normal'
 
-  const iconOf = (id: string) => iconFor(Math.max(0, view.players.findIndex((p) => p.id === id)))
+  // Icône personnalisée du compte si définie, sinon icône stable dérivée de l'index.
+  const iconOf = (id: string) =>
+    room.members.find((m) => m.userId === id)?.preferences?.icon ??
+    iconFor(Math.max(0, view.players.findIndex((p) => p.id === id)))
   const leaderPos = Math.max(...view.players.map((p) => p.position))
 
   const effectChips: EffectChip[] = []

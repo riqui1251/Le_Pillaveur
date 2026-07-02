@@ -410,7 +410,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                                 member ? 'bg-black/25 font-medium text-white' : 'bg-white/5 text-white/35'
                               )}
                             >
-                              {member ? member.displayName : tTc('botSlot')}
+                              {member
+                                ? `${member.preferences?.icon ? `${member.preferences.icon} ` : ''}${member.displayName}`
+                                : tTc('botSlot')}
                             </li>
                           )
                         })}
@@ -489,7 +491,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 )}
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base">
-                  {m.isHost ? '👑' : '🌐'}
+                  {m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-white">

@@ -13,6 +13,7 @@ import { ensureUserAccountCode } from '@/lib/account-code'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { LOCAL_PLAY_COOKIE, SESSION_COOKIE, VISITOR_COOKIE } from '@/lib/auth-cookies'
 import { normalizeAppLocale } from '@/lib/locale-server'
+import { parseOnlinePreferences, type OnlinePreferences } from '@/lib/online-preferences'
 
 export { SESSION_COOKIE, VISITOR_COOKIE, LOCAL_PLAY_COOKIE } from '@/lib/auth-cookies'
 const SESSION_DAYS = 30
@@ -24,6 +25,7 @@ export type AuthUser = {
   email: string
   displayName: string
   onlineDisplayName: string | null
+  onlinePreferences: OnlinePreferences
   accountCode: string
   role: UserRole
   locale: string
@@ -100,6 +102,7 @@ export async function getUserFromSessionToken(token: string | undefined): Promis
     email: user.email,
     displayName: user.displayName,
     onlineDisplayName: normalizedOnlineName,
+    onlinePreferences: parseOnlinePreferences(user.onlinePreferencesJson),
     accountCode,
     role,
     locale: normalizeAppLocale(user.locale),

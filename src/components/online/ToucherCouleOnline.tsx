@@ -112,6 +112,9 @@ export function ToucherCouleOnline() {
   const humanCount = view.players.filter((p) => !p.isBot).length
 
   const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '—'
+  /** Icône du joueur : 🤖 pour les bots, icône personnalisée du compte pour les humains. */
+  const iconOf = (p: { id: string; isBot: boolean }) =>
+    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? null
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return
@@ -559,7 +562,7 @@ export function ToucherCouleOnline() {
                         )}
                       >
                         <span className="truncate">
-                          {p.isBot ? '🤖 ' : ''}
+                          {iconOf(p) ? `${iconOf(p)} ` : ''}
                           {p.name}
                           {p.id === user.id && ' (vous)'}
                         </span>
@@ -664,7 +667,7 @@ export function ToucherCouleOnline() {
                             {TEAM_LABEL[p.team]}
                           </span>
                           <span className="truncate text-sm font-semibold text-white">
-                            {p.isBot ? '🤖 ' : ''}
+                            {iconOf(p) ? `${iconOf(p)} ` : ''}
                             {p.name}
                           </span>
                           {p.team === winner && <span aria-hidden>🏆</span>}

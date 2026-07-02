@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
 import { parseTCState, tcClientViewJson } from '@/lib/toucher-coule/server-adapter'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
+import { parseOnlinePreferences, type OnlinePreferences } from '@/lib/online-preferences'
 
 const ROOM_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 const ROOM_CODE_LENGTH = 6
@@ -22,6 +23,8 @@ export type RoomMemberDto = {
   isHost: boolean
   isReady: boolean
   isSelf: boolean
+  /** Personnalisation du joueur en ligne (icône/effet/cadre du compte). */
+  preferences: OnlinePreferences
 }
 
 export type RoomDto = {
@@ -120,6 +123,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     isHost: m.userId === room.hostUserId,
     isReady: m.isReady,
     isSelf: m.userId === currentUserId,
+    preferences: parseOnlinePreferences(m.user.onlinePreferencesJson),
   }))
 
   const settings = parseRoomSettings(room.settingsJson)

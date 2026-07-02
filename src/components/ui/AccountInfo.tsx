@@ -54,6 +54,29 @@ export function AccountInfo() {
   const [onlineName, setOnlineName] = useState('')
   const [onlineNameError, setOnlineNameError] = useState<string | null>(null)
   const [onlineNameSaved, setOnlineNameSaved] = useState(false)
+  const [customizingOnline, setCustomizingOnline] = useState(false)
+
+  /** Joueur virtuel représentant l'identité en ligne du compte (pour PlayerIcon/Name/Customizer). */
+  const onlinePlayer = useMemo<Player>(
+    () => ({
+      id: '__online__',
+      name: user?.onlineDisplayName ?? user?.displayName ?? 'Joueur',
+      createdAt: 0,
+      stats: { gamesPlayed: 0, wins: 0, totalDrinks: 0 },
+      preferences: { color: 'bg-amber-500', ...user?.onlinePreferences },
+    }),
+    [user?.onlineDisplayName, user?.displayName, user?.onlinePreferences]
+  )
+
+  const saveOnlinePreferences = async (preferences: Partial<Player['preferences']>) => {
+    await fetch('/api/auth/online-preferences', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(preferences),
+    })
+    await refresh()
+  }
 
   useEffect(() => {
     if (!user) {
@@ -422,6 +445,24 @@ export function AccountInfo() {
           <p className="mb-2 text-xs text-cyan-100/80">
             Ce pseudo est utilisé automatiquement pour les parties online (1 joueur compte). Les mêmes restrictions de pseudo s’appliquent.
           </p>
+
+          {/* Aperçu du joueur en ligne (icône/effet personnalisables comme en local) */}
+          <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
+            <PlayerIcon player={onlinePlayer} size="md" className="h-10 w-10 text-xl" />
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+              <PlayerName player={onlinePlayer} />
+            </p>
+            <button
+              type="button"
+              onClick={() => setCustomizingOnline(true)}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-cyan-500/25 px-2.5 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/35"
+              title={t('playersList.customize')}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {t('playersList.customize')}
+            </button>
+          </div>
+
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               value={onlineName}
@@ -445,6 +486,13 @@ export function AccountInfo() {
           {onlineNameSaved && <p className="mt-2 text-xs text-emerald-300">Pseudo online enregistré.</p>}
         </div>
       </section>
+
+      <PlayerCustomizer
+        player={customizingOnline ? onlinePlayer : null}
+        open={customizingOnline}
+        onOpenChange={(open) => { if (!open) setCustomizingOnline(false) }}
+        onSave={(_playerId, preferences) => { void saveOnlinePreferences(preferences) }}
+      />
 
       <section>
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">

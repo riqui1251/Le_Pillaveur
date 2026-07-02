@@ -13,6 +13,7 @@ model User {
   passwordHash     String    @default("")
   displayName      String    @default("Joueur")
   onlineDisplayName String?
+  onlinePreferencesJson String?
   accountCode      String?   @unique
   role             String    @default("user")
   playMode         String    @default("local")

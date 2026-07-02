@@ -10,12 +10,21 @@ import {
   type ReactNode,
 } from 'react'
 import { useTranslations } from 'next-intl'
+import type { PlayerIconFrame, PlayerSpecialEffect } from '@/lib/players'
+
+export type OnlineUserPreferences = {
+  color: string
+  icon?: string
+  specialEffect?: PlayerSpecialEffect
+  iconFrame?: PlayerIconFrame
+}
 
 export type AuthUser = {
   id: string
   email: string
   displayName: string
   onlineDisplayName: string | null
+  onlinePreferences?: OnlineUserPreferences
   accountCode: string
   role: 'user' | 'moderator' | 'admin' | 'superadmin' | 'fondateur'
   locale: string
