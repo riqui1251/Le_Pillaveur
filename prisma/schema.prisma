@@ -49,6 +49,7 @@ model User {
   feedback             UserFeedback[]
   nameModerationAttempts NameModerationAttempt[]
   nameModerationWarnedAt DateTime?
+  nameModerationWarningDismissedAt DateTime?
 }
 
 model OnlineRoom {

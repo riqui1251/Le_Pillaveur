@@ -93,7 +93,7 @@ export async function linkVisitorNameModerationAttempts(
 }
 
 export async function getNameModerationStatusForUser(userId: string) {
-  const [profanityAttemptCount, totalAttemptCount, user, recentAttempts] = await Promise.all([
+  const [profanityAttemptCount, totalAttemptCount, user, recentAttempts, lastProfanityAttempt] = await Promise.all([
     prisma.nameModerationAttempt.count({
       where: { userId, reason: 'profanity' },
     }),
@@ -102,7 +102,7 @@ export async function getNameModerationStatusForUser(userId: string) {
     }),
     prisma.user.findUnique({
       where: { id: userId },
-      select: { nameModerationWarnedAt: true },
+      select: { nameModerationWarnedAt: true, nameModerationWarningDismissedAt: true },
     }),
     prisma.nameModerationAttempt.findMany({
       where: { userId },
@@ -116,9 +116,19 @@ export async function getNameModerationStatusForUser(userId: string) {
         createdAt: true,
       },
     }),
+    prisma.nameModerationAttempt.findFirst({
+      where: { userId, reason: 'profanity' },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    }),
   ])
 
-  const showWarning = shouldShowNameModerationWarning(profanityAttemptCount)
+  const thresholdCrossed = shouldShowNameModerationWarning(profanityAttemptCount)
+  const dismissedAt = user?.nameModerationWarningDismissedAt ?? null
+  // Le X du bandeau masque l'avertissement jusqu'à la prochaine tentative de pseudo
+  // inapproprié — pas de dismiss permanent qui cacherait un futur abus.
+  const dismissed = dismissedAt !== null && (!lastProfanityAttempt || lastProfanityAttempt.createdAt <= dismissedAt)
+  const showWarning = thresholdCrossed && !dismissed
 
   return {
     profanityAttemptCount,
@@ -130,6 +140,14 @@ export async function getNameModerationStatusForUser(userId: string) {
       createdAt: row.createdAt.toISOString(),
     })),
   }
+}
+
+/** Masque l'avertissement de modération de pseudo jusqu'à une nouvelle tentative inappropriée. */
+export async function dismissNameModerationWarning(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { nameModerationWarningDismissedAt: new Date() },
+  })
 }
 
 export async function listNameModerationAttemptsForAdmin(options?: {

@@ -38,7 +38,6 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null);
   const [onlineName, setOnlineName] = useState('');
-  const [onlineNameError, setOnlineNameError] = useState<string | null>(null);
   const [onlineLoading, setOnlineLoading] = useState(false);
 
   useEffect(() => {
@@ -84,7 +83,6 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
   const handleSaveOnlineName = async () => {
     const value = onlineName.trim();
     if (!value || !user) return false;
-    setOnlineNameError(null);
     setOnlineLoading(true);
     try {
       const response = await fetch('/api/auth/online-display-name', {
@@ -93,11 +91,7 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
         credentials: 'include',
         body: JSON.stringify({ onlineDisplayName: value }),
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setOnlineNameError(data.error ?? 'Pseudo online invalide');
-        return false;
-      }
+      if (!response.ok) return false;
       await refresh();
       return true;
     } finally {
@@ -163,46 +157,14 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
               {!user ? (
                 <p className="text-sm text-cyan-100/90">Connexion requise pour jouer en ligne.</p>
               ) : (
-                <>
-                  {!user.onlineDisplayName && (
-                    <div className="space-y-2">
-                      <p className="text-xs text-cyan-100/85">
-                        Crée ton pseudo online (lié au compte, modifiable plus tard dans Compte).
-                      </p>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Input
-                          value={onlineName}
-                          onChange={(e) => {
-                            setOnlineName(e.target.value);
-                            if (onlineNameError) setOnlineNameError(null);
-                          }}
-                          maxLength={30}
-                          placeholder="Pseudo online"
-                          className="h-9 border-cyan-300/30 bg-black/20"
-                        />
-                        <Button
-                          type="button"
-                          onClick={() => { void handleSaveOnlineName(); }}
-                          disabled={!onlineName.trim() || onlineLoading}
-                          className="bg-cyan-500 text-black hover:bg-cyan-400"
-                        >
-                          Enregistrer
-                        </Button>
-                      </div>
-                      {onlineNameError && <p className="text-xs text-orange-300">{onlineNameError}</p>}
-                    </div>
-                  )}
-                  <div className="mt-3">
-                    <Button
-                      type="button"
-                      onClick={() => { void handleStartOnline(); }}
-                      className="bg-cyan-500 text-black hover:bg-cyan-400"
-                      disabled={onlineLoading}
-                    >
-                      Aller aux jeux en ligne
-                    </Button>
-                  </div>
-                </>
+                <Button
+                  type="button"
+                  onClick={() => { void handleStartOnline(); }}
+                  className="bg-cyan-500 text-black hover:bg-cyan-400"
+                  disabled={onlineLoading}
+                >
+                  Aller aux jeux en ligne
+                </Button>
               )}
             </div>
           )}

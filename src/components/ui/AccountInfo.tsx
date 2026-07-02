@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle } from 'lucide-react'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
@@ -110,6 +110,11 @@ export function AccountInfo() {
 
     updatePlayer(playerId, { name: trimmed })
     cancelRename()
+  }
+
+  const dismissModerationWarning = async () => {
+    setNameModerationWarning(false)
+    await fetch('/api/name-moderation/dismiss-warning', { method: 'POST', credentials: 'include' })
   }
 
   const copyAccountCode = async () => {
@@ -233,7 +238,15 @@ export function AccountInfo() {
           className="flex gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-          <p>{t('nameModerationWarning')}</p>
+          <p className="flex-1">{t('nameModerationWarning')}</p>
+          <button
+            type="button"
+            onClick={() => { void dismissModerationWarning() }}
+            aria-label={tCommon('close')}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-amber-300/70 transition-colors hover:bg-amber-500/20 hover:text-amber-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
