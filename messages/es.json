@@ -1875,7 +1875,8 @@
         },
         "yourTurn": "¡Te toca jugar!",
         "soundOn": "Activar el sonido",
-        "soundOff": "Silenciar"
+        "soundOff": "Silenciar",
+        "tapToSkip": "Toca para saltar"
       }
     }
   },

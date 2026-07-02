@@ -1875,7 +1875,8 @@
         },
         "yourTurn": "Tocca a te!",
         "soundOn": "Attiva l'audio",
-        "soundOff": "Disattiva l'audio"
+        "soundOff": "Disattiva l'audio",
+        "tapToSkip": "Tocca per saltare"
       }
     }
   },

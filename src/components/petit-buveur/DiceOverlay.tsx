@@ -46,7 +46,16 @@ export function DiceFace({ value, accent }: { value: number; accent?: boolean })
   )
 }
 
-export function DiceOverlay({ state }: { state: DiceOverlayState | null }) {
+export function DiceOverlay({
+  state,
+  onSkip,
+  skipLabel,
+}: {
+  state: DiceOverlayState | null
+  /** Tap n'importe où sur l'overlay → le parent écourte la séquence. */
+  onSkip?: () => void
+  skipLabel?: string
+}) {
   const reduced = useReducedMotion()
   // Faces qui défilent pendant le lancer (purement visuel, le résultat est déjà tiré).
   const [spinFace, setSpinFace] = useState(1)
@@ -75,9 +84,13 @@ export function DiceOverlay({ state }: { state: DiceOverlayState | null }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: reduced ? 0 : 0.15 }}
-          className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-[2px]"
+          className={
+            'fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-[2px] ' +
+            (onSkip ? 'cursor-pointer' : 'pointer-events-none')
+          }
           role="status"
           aria-live="polite"
+          onClick={onSkip}
         >
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 rounded-full border border-white/15 bg-gray-900/90 px-4 py-1.5">
@@ -104,6 +117,9 @@ export function DiceOverlay({ state }: { state: DiceOverlayState | null }) {
               >
                 <DiceFace value={state.value} accent />
               </motion.div>
+            )}
+            {onSkip && skipLabel && (
+              <p className="text-[11px] font-medium text-white/40">{skipLabel}</p>
             )}
           </div>
         </motion.div>

@@ -1890,7 +1890,8 @@
         "resultHeading": "Résultat",
         "yourTurn": "À toi de jouer !",
         "soundOn": "Activer le son",
-        "soundOff": "Couper le son"
+        "soundOff": "Couper le son",
+        "tapToSkip": "Toucher pour passer"
       }
     }
   },

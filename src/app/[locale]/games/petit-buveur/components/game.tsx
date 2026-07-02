@@ -333,6 +333,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [gameDifficulty, setGameDifficulty] = useState<Difficulty>(difficulty);
   const boardSize = 30;
   const [diceOverlay, setDiceOverlay] = useState<DiceOverlayState | null>(null);
+  /** « Toucher pour passer » : saute à l'étape suivante de la séquence du dé. */
+  const diceSkipRef = useRef<(() => void) | null>(null);
   const [selectingPlayer, setSelectingPlayer] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [pendingCase, setPendingCase] = useState<Case | null>(null);
@@ -877,10 +879,28 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     const overlayIcon = <PlayerIcon player={player} size="sm" />;
     setDiceOverlay({ phase: 'rolling', playerName: player.name, playerIcon: overlayIcon });
 
-    setTimeout(() => {
+    // Séquence skippable : un tap sur l'overlay saute à l'étape suivante.
+    let proceeded = false;
+    let resultTimer: ReturnType<typeof setTimeout> | undefined;
+    const showResult = () => {
       setDiceOverlay({ phase: 'result', value: result, playerName: player.name, playerIcon: overlayIcon });
+      resultTimer = setTimeout(proceed, 700);
+      diceSkipRef.current = () => {
+        if (resultTimer) clearTimeout(resultTimer);
+        proceed();
+      };
+    };
+    const rollTimer = setTimeout(showResult, 750);
+    diceSkipRef.current = () => {
+      clearTimeout(rollTimer);
+      showResult();
+    };
 
-      setTimeout(() => {
+    function proceed() {
+      if (proceeded) return;
+      proceeded = true;
+      diceSkipRef.current = null;
+      {
         setDiceOverlay(null);
         setIsDiceRolling(false);
 
@@ -930,8 +950,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         setTimeout(() => {
           applyEffectToCurrentPlayer(caseType, newPosition, currentPlayer, updatedPlayers);
         }, hopMs);
-      }, 700);
-    }, 750);
+      }
+    }
   };
 
   const applyEffectToCurrentPlayer = (caseType: Case, currentPosition: number, playerIndex: number, currentPlayers: GamePlayer[]) => {
@@ -2976,7 +2996,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       )}
 
       {/* Mise en scène du lancer de dé + flash de changement de tour */}
-      <DiceOverlay state={diceOverlay} />
+      <DiceOverlay
+        state={diceOverlay}
+        onSkip={() => diceSkipRef.current?.()}
+        skipLabel={t('game.tapToSkip')}
+      />
       <TurnOverlay
         activeKey={gameStarted && !winner && !diceOverlay ? players[currentPlayer]?.id ?? null : null}
         icon={

@@ -86,6 +86,8 @@ export function PetitBuveurOnline() {
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
   const [diceOverlay, setDiceOverlay] = useState<DiceOverlayState | null>(null)
   const diceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** « Toucher pour passer » : écourte le maintien du résultat. */
+  const diceSkipRef = useRef<(() => void) | null>(null)
   // Dernier dé arrivé par SSE/polling — secours si la réponse HTTP du roll se perd.
   const rollFallbackRef = useRef<number | null>(null)
 
@@ -350,18 +352,20 @@ export function PetitBuveurOnline() {
     const meName = view.players.find((p) => p.id === user.id)?.name ?? ''
     setDiceOverlay({ phase: 'rolling', playerName: meName, playerIcon: meIcon })
 
+    const clear = () => {
+      setDiceOverlay(null)
+      setRolling(false)
+      diceSkipRef.current = null
+    }
     const showResult = (dice: number) => {
       // Le résultat est déjà tiré par le serveur : on l'affiche, on le laisse
       // lire un instant, puis le pion part (animation case par case).
       setDiceOverlay({ phase: 'result', value: dice, playerName: meName, playerIcon: meIcon })
-      diceTimerRef.current = setTimeout(() => {
-        setDiceOverlay(null)
-        setRolling(false)
-      }, 750)
-    }
-    const clear = () => {
-      setDiceOverlay(null)
-      setRolling(false)
+      diceTimerRef.current = setTimeout(clear, 750)
+      diceSkipRef.current = () => {
+        if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
+        clear()
+      }
     }
 
     // Filet de sécurité : si la réponse HTTP se perd (connexions saturées),
@@ -420,7 +424,11 @@ export function PetitBuveurOnline() {
       />
 
       {/* Mise en scène du lancer de dé + flash de changement de tour */}
-      <DiceOverlay state={diceOverlay} />
+      <DiceOverlay
+        state={diceOverlay}
+        onSkip={() => diceSkipRef.current?.()}
+        skipLabel={tGame('tapToSkip')}
+      />
       <TurnOverlay
         activeKey={finished || diceOverlay ? null : active?.id ?? null}
         icon={active ? iconOf(active.id) : ''}

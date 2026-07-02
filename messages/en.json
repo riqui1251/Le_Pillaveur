@@ -1885,7 +1885,8 @@
         },
         "yourTurn": "Your turn!",
         "soundOn": "Turn sound on",
-        "soundOff": "Mute sound"
+        "soundOff": "Mute sound",
+        "tapToSkip": "Tap to skip"
       }
     }
   },
