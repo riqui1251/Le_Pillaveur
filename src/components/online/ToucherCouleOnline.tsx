@@ -406,7 +406,7 @@ export function ToucherCouleOnline() {
                         tryPlaceShip(cell)
                       }}
                       className={cn(
-                        'rounded-[3px] transition-colors',
+                        'game-grid-cell rounded-[3px] transition-colors',
                         mine
                           ? 'bg-sky-400'
                           : mate
@@ -466,7 +466,7 @@ export function ToucherCouleOnline() {
                           disabled={!isMyTurn || busy || finished || shot !== undefined}
                           onClick={() => fire(cell)}
                           className={cn(
-                            'flex items-center justify-center rounded-[3px] text-[9px] leading-none transition-colors sm:text-[11px]',
+                            'game-grid-cell flex items-center justify-center rounded-[3px] text-[9px] leading-none transition-colors sm:text-[11px]',
                             sunk
                               ? 'bg-red-800'
                               : shot === 'hit'
@@ -507,7 +507,7 @@ export function ToucherCouleOnline() {
                       <div
                         key={cell}
                         className={cn(
-                          'flex items-center justify-center rounded-[3px] text-[9px] leading-none sm:text-[11px]',
+                          'game-grid-cell flex items-center justify-center rounded-[3px] text-[9px] leading-none sm:text-[11px]',
                           sunk
                             ? 'bg-red-800'
                             : isShip && shot === 'hit'

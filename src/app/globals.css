@@ -62,7 +62,7 @@ body.is-mobile-device,
   color: var(--foreground) !important;
 }
 
-.is-mobile-device button, 
+.is-mobile-device button,
 .is-mobile-device [role="button"],
 .is-mobile-device a {
   touch-action: manipulation;
@@ -70,6 +70,15 @@ body.is-mobile-device,
   min-height: 44px !important;
   /* Ajouter une transition pour aider à forcer le rendu sur mobile */
   transition: background-color 0.01s, color 0.01s !important;
+}
+
+/* Cellules de plateau de jeu : la taille tactile minimale globale (44px)
+   ferait déborder les grilles denses (ex. Toucher-Coulé 10×10 sur 320px).
+   Les cellules remplissent exactement leur case de grille. */
+.is-mobile-device .game-grid-cell,
+.game-grid-cell {
+  min-height: 0 !important;
+  min-width: 0 !important;
 }
 
 /* Ajouter une solution de fallback pour s'assurer que le dark mode s'applique sur mobile */
