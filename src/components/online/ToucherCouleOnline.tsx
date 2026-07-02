@@ -33,8 +33,11 @@ function parseView(json: string | null | undefined): TCClientView | null {
 
 const TEAM_LABEL: Record<TeamId, string> = { A: 'A', B: 'B' }
 
-/** Délai avant d'afficher l'avertissement AFK (l'expulsion elle-même est à 3 min, validée serveur). */
-const AFK_WARN_AFTER_MS = 60_000
+/**
+ * L'avertissement AFK (« joue ! ») s'affiche pendant les 60 dernières secondes
+ * avant l'expulsion (elle-même à 3 min d'inactivité, validée côté serveur).
+ */
+const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 
 function teamAccent(team: TeamId): string {
   return team === 'A' ? 'text-sky-300' : 'text-rose-300'
@@ -125,7 +128,14 @@ export function ToucherCouleOnline() {
     view && view.phase === 'battle'
       ? view.players.find((p) => p.id === view.turnOrder[view.currentTurnIndex])
       : undefined
-  const afkWatchable = Boolean(afkTarget && !afkTarget.isBot && !afkTarget.leftAt)
+  // Surveillé seulement s'il reste un AUTRE humain présent : sans lui, personne
+  // ne peut déclencher l'expulsion (le dernier humain n'est jamais expulsable).
+  const afkWatchable = Boolean(
+    afkTarget &&
+      !afkTarget.isBot &&
+      !afkTarget.leftAt &&
+      view?.players.some((p) => !p.isBot && !p.leftAt && p.id !== afkTarget.id)
+  )
   useEffect(() => {
     if (!view || !user || !room || !afkWatchable) return
     const activeP = view.players.find((p) => p.id === view.turnOrder[view.currentTurnIndex])
@@ -403,17 +413,20 @@ export function ToucherCouleOnline() {
           </div>
         )}
 
-        {/* Avertissement AFK : le joueur au tour n'a rien joué depuis 1 min */}
+        {/* Avertissement AFK (60 dernières secondes avant expulsion) : message
+            direct « joue ! » pour le joueur au tour, informatif pour les autres. */}
         {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
           <div className="mb-3 rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center">
             <p className="text-xs font-semibold text-red-100">
-              {t('afkWarning', {
-                name: afkTarget.name,
-                seconds: Math.max(
+              {(() => {
+                const seconds = Math.max(
                   0,
                   Math.ceil((turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
-                ),
-              })}
+                )
+                return afkTarget.id === user.id
+                  ? t('afkWarningSelf', { seconds })
+                  : t('afkWarning', { name: afkTarget.name, seconds })
+              })()}
             </p>
           </div>
         )}

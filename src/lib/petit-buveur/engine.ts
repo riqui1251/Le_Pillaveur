@@ -50,6 +50,11 @@ export interface EngineSettings {
   difficulty: Difficulty
   /** Gorgées par défi (donnée i18n canonique). */
   defiDrinks: number[]
+  /**
+   * Indices de défis autorisés au tirage (en ligne : uniquement les défis
+   * vérifiables, pas de défi physique). Absent (états existants) = tous.
+   */
+  defiAllowed?: number[]
 }
 
 export type EnginePhase = 'playing' | 'awaiting-interaction' | 'finished'
@@ -518,6 +523,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
     const generated = generateCase(rng, {
       difficulty: state.settings.difficulty,
       defiDrinks: state.settings.defiDrinks,
+      defiAllowed: state.settings.defiAllowed,
     })
 
     // Case à cible OU interactive : on attend la résolution du joueur.

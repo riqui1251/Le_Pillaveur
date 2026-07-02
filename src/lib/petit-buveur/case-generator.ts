@@ -69,6 +69,8 @@ export interface CaseGenContext {
   boostPercent?: number
   /** Nombre de gorgées par défi (donnée i18n canonique, par index). */
   defiDrinks: number[]
+  /** Indices de défis autorisés au tirage (absent = tous). */
+  defiAllowed?: number[]
 }
 
 export function pickCaseType(rng: SeededRng): CaseType {
@@ -95,8 +97,11 @@ export function generateCase(rng: SeededRng, ctx: CaseGenContext): EngineCase {
       return { type, effect: finalDrinks, gorgeeCulSec }
     }
     case 'defi': {
-      const count = Math.max(1, ctx.defiDrinks.length)
-      const idx = rng.pickIndex(count)
+      // Tirage restreint aux défis autorisés (en ligne : vérifiables uniquement).
+      const allowed = ctx.defiAllowed && ctx.defiAllowed.length > 0 ? ctx.defiAllowed : null
+      const count = Math.max(1, allowed ? allowed.length : ctx.defiDrinks.length)
+      const pick = rng.pickIndex(count)
+      const idx = allowed ? allowed[pick] : pick
       const drinks = Math.min((ctx.defiDrinks[idx] ?? 1) * multiplier, 4)
       return { type, effect: drinks, defiIndex: idx }
     }

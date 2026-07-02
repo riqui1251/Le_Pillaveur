@@ -1349,7 +1349,8 @@
         "legendMiss": "Acqua",
         "legendSunk": "Affondato",
         "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
-        "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s"
+        "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s",
+        "afkWarningSelf": "⚠️ Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot"
       }
     },
     "petit-buveur": {
@@ -1463,7 +1464,8 @@
         "rematchWaiting": "In attesa… ({count}/{total})",
         "loading": "Caricamento della partita…",
         "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
-        "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s"
+        "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s",
+        "afkWarningSelf": "⚠️ Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot"
       },
       "defis": [
         {
@@ -1500,11 +1502,13 @@
         },
         {
           "text": "Fai 10 giri su te stesso",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "Balla per 20 secondi",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "Condividi il tuo ricordo serale più imbarazzante",

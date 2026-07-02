@@ -8,7 +8,7 @@ import {
   type EngineAction,
   type InteractionChoice,
 } from './engine'
-import { DEFI_DRINKS } from './game-data'
+import { DEFI_DRINKS, DEFI_VERIFIABLE_ONLINE } from './game-data'
 import type { Difficulty } from './types'
 
 /**
@@ -31,7 +31,13 @@ export function buildPetitBuveurEngineState(
   difficulty: Difficulty,
   seed: string | number
 ): EngineState {
-  const settings: EngineSettings = { difficulty, defiDrinks: DEFI_DRINKS }
+  // En ligne, seuls les défis vérifiables sont tirés (pas de défi physique :
+  // impossible à contrôler à distance). Le texte reste résolu par defiIndex.
+  const settings: EngineSettings = {
+    difficulty,
+    defiDrinks: DEFI_DRINKS,
+    defiAllowed: DEFI_VERIFIABLE_ONLINE.flatMap((ok, i) => (ok ? [i] : [])),
+  }
   const players = members.map((m) => ({ id: m.userId, name: m.displayName }))
   return createInitialState(players, settings, seed)
 }

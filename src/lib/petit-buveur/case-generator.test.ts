@@ -50,6 +50,28 @@ describe('case-generator déterministe', () => {
     expect(seen).toBeGreaterThan(0)
   })
 
+  it('defi : defiAllowed restreint le tirage aux indices autorisés', () => {
+    const allowed = [1, 3, 5] // ex. en ligne : défis vérifiables uniquement
+    const rng = createRng('defi-allowed')
+    let seen = 0
+    for (let i = 0; i < 2000 && seen < 30; i += 1) {
+      const c = generateCase(rng, ctx({ defiAllowed: allowed }))
+      if (c.type === 'defi') {
+        seen += 1
+        expect(allowed).toContain(c.defiIndex)
+      }
+    }
+    expect(seen).toBeGreaterThan(0)
+  })
+
+  it('defi : defiAllowed vide ou absent ⇒ tous les défis restent tirables', () => {
+    const a = createRng('defi-fallback')
+    const b = createRng('defi-fallback')
+    const seqA = Array.from({ length: 50 }, () => generateCase(a, ctx({ defiAllowed: [] })))
+    const seqB = Array.from({ length: 50 }, () => generateCase(b, ctx()))
+    expect(seqA).toEqual(seqB)
+  })
+
   it('gorgée culSec uniquement en difficulté extrême', () => {
     const rngNormal = createRng('g1')
     for (let i = 0; i < 2000; i += 1) {

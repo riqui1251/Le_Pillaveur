@@ -1359,7 +1359,8 @@
         "legendMiss": "Miss",
         "legendSunk": "Sunk",
         "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
-        "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s"
+        "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
+        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
       }
     },
     "petit-buveur": {
@@ -1473,7 +1474,8 @@
         "rematchWaiting": "Waiting… ({count}/{total})",
         "loading": "Loading the game…",
         "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
-        "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s"
+        "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
+        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
       },
       "defis": [
         {
@@ -1510,11 +1512,13 @@
         },
         {
           "text": "Do 10 turns on yourself",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "Dance for 20 seconds",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "Share your most embarrassing evening memory",

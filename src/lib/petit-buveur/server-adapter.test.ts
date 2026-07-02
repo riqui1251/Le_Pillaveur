@@ -6,7 +6,7 @@ import {
   toClientView,
   applyRoomAction,
 } from './server-adapter'
-import { DEFI_DRINKS } from './game-data'
+import { DEFI_DRINKS, DEFI_VERIFIABLE_ONLINE } from './game-data'
 
 const MEMBERS = [
   { userId: 'u1', displayName: 'Alice' },
@@ -20,6 +20,16 @@ describe('server-adapter Petit Buveur', () => {
     expect(s.players.map((p) => p.name)).toEqual(['Alice', 'Bob'])
     expect(s.settings.defiDrinks).toEqual(DEFI_DRINKS)
     expect(s.players.every((p) => p.position === 0)).toBe(true)
+  })
+
+  it('en ligne, seuls les défis vérifiables sont autorisés au tirage', () => {
+    const s = buildPetitBuveurEngineState(MEMBERS, 'normal', 'seed-defi')
+    expect(s.settings.defiAllowed).toBeDefined()
+    expect(s.settings.defiAllowed!.length).toBeGreaterThan(0)
+    expect(s.settings.defiAllowed!.length).toBeLessThan(DEFI_DRINKS.length)
+    for (const idx of s.settings.defiAllowed!) {
+      expect(DEFI_VERIFIABLE_ONLINE[idx]).toBe(true)
+    }
   })
 
   it('sérialise puis reparse à l’identique', () => {

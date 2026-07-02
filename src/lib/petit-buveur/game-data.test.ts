@@ -18,4 +18,10 @@ describe('game-data Petit Buveur', () => {
     expect(DEFI_VERIFIABLE_ONLINE).toHaveLength(DEFI_COUNT)
     expect(DEFI_VERIFIABLE_ONLINE.every((b) => typeof b === 'boolean')).toBe(true)
   })
+
+  it('les défis physiques sont exclus du online (flag false) mais pas tous les défis', () => {
+    // 7 défis physiques (pompes, squats, gainage, tours sur soi, danse, poirier, grenouille).
+    expect(DEFI_VERIFIABLE_ONLINE.filter((b) => !b)).toHaveLength(7)
+    expect(DEFI_VERIFIABLE_ONLINE.some((b) => b)).toBe(true)
+  })
 })

@@ -1359,7 +1359,8 @@
         "legendMiss": "Raté",
         "legendSunk": "Coulé",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
-        "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s"
+        "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
+        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
       }
     },
     "petit-buveur": {
@@ -1473,7 +1474,8 @@
         "rematchWaiting": "En attente… ({count}/{total})",
         "loading": "Chargement de la partie…",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
-        "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s"
+        "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
+        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
       },
       "defis": [
         {
@@ -1513,11 +1515,13 @@
         },
         {
           "text": "Fais 10 tours sur toi-même",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "Danse pendant 20 secondes",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "Raconte ton souvenir de soirée le plus gênant",

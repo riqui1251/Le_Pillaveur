@@ -27,8 +27,11 @@ import '@/styles/petit-buveur-board.css'
 const BOARD_SIZE = 30
 const DIFFICULTY_EMOJI: Record<string, string> = { facile: '🌱', normal: '🌟', difficile: '🔥', extreme: '💀' }
 
-/** Délai avant d'afficher l'avertissement AFK (l'expulsion elle-même est à 3 min, validée serveur). */
-const AFK_WARN_AFTER_MS = 60_000
+/**
+ * L'avertissement AFK (« joue ! ») s'affiche pendant les 60 dernières secondes
+ * avant l'expulsion (elle-même à 3 min d'inactivité, validée côté serveur).
+ */
+const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 
 /** Cases interactives qui demandent de choisir un joueur cible. */
 const TARGET_INTERACTIVE = new Set(['vote', 'echange', 'pile-face', 'defi-chaine'])
@@ -66,6 +69,7 @@ export function PetitBuveurOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.petit-buveur.online')
+  const tPB = useTranslations('games.petit-buveur')
   const tCase = useTranslations('games.petit-buveur.caseTypes')
   const tGame = useTranslations('games.petit-buveur.game')
   const tDiff = useTranslations('games.petit-buveur.difficultyLabels')
@@ -144,7 +148,14 @@ export function PetitBuveurOnline() {
   // pendant 3 min, n'importe quel autre client demande son remplacement —
   // le serveur revalide avec SA propre horloge avant d'expulser.
   const afkTarget = view && view.phase !== 'finished' ? view.players[view.currentPlayer] : undefined
-  const afkWatchable = Boolean(afkTarget && !afkTarget.isBot && !afkTarget.leftAt)
+  // Surveillé seulement s'il reste un AUTRE humain présent : sans lui, personne
+  // ne peut déclencher l'expulsion (le dernier humain n'est jamais expulsable).
+  const afkWatchable = Boolean(
+    afkTarget &&
+      !afkTarget.isBot &&
+      !afkTarget.leftAt &&
+      view?.players.some((p) => !p.isBot && !p.leftAt && p.id !== afkTarget.id)
+  )
   useEffect(() => {
     if (!view || !user || !room || !afkWatchable) return
     const activeP = view.players[view.currentPlayer]
@@ -383,17 +394,20 @@ export function PetitBuveurOnline() {
             </div>
           )}
 
-          {/* Avertissement AFK : le joueur au tour n'a rien joué depuis 1 min */}
+          {/* Avertissement AFK (60 dernières secondes avant expulsion) : message
+              direct « joue ! » pour le joueur au tour, informatif pour les autres. */}
           {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
             <div className="rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center">
               <p className="text-xs font-semibold text-red-100">
-                {t('afkWarning', {
-                  name: afkTarget.name,
-                  seconds: Math.max(
+                {(() => {
+                  const seconds = Math.max(
                     0,
                     Math.ceil((turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
-                  ),
-                })}
+                  )
+                  return afkTarget.id === user.id
+                    ? t('afkWarningSelf', { seconds })
+                    : t('afkWarning', { name: afkTarget.name, seconds })
+                })()}
               </p>
             </div>
           )}
@@ -444,6 +458,12 @@ export function PetitBuveurOnline() {
                   <span className="ml-auto flex items-center gap-1 text-xs text-white/50">
                     <Dice6 className="h-3.5 w-3.5" /> {view.lastDice}
                   </span>
+                )}
+                {/* Texte du défi tiré (seuls les défis vérifiables sont tirés en ligne). */}
+                {view.lastCase.type === 'defi' && typeof view.lastCase.defiIndex === 'number' && (
+                  <p className="w-full text-sm font-medium text-white/85">
+                    {(tPB.raw('defis') as { text: string }[])[view.lastCase.defiIndex]?.text}
+                  </p>
                 )}
               </motion.div>
             )}
