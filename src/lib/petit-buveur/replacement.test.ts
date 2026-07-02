@@ -8,7 +8,7 @@ import {
   convertPlayerToBot,
   applyBotAction,
 } from './server-adapter'
-import { currentPlayerId } from './engine'
+import { currentPlayerId, reduce } from './engine'
 import { findLeftHumanPlayer, ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 const MEMBERS = [
@@ -121,6 +121,64 @@ describe('applyBotAction', () => {
     // le tick bot doit alors refuser de jouer à sa place.
     expect(currentPlayerId(s)).not.toBe('u1')
     expect(applyBotAction(s).ok).toBe(false)
+  })
+})
+
+describe('lastInteraction (spectacle client des tirages)', () => {
+  function withPending(caseType: 'de-honte' | 'pile-face' | 'roue' | 'roue-defis') {
+    const s = freshState('spectacle-' + caseType)
+    return {
+      ...s,
+      phase: 'awaiting-interaction' as const,
+      pending: { caseType, playerId: 'u1', needsTarget: false },
+      lastCase: { type: caseType, effect: 2 },
+    }
+  }
+
+  it('de-honte expose la valeur du dé (1-6) et son acteur', () => {
+    const next = reduce(withPending('de-honte'), { type: 'RESOLVE_INTERACTION', playerId: 'u1' })
+    expect(next.lastInteraction?.kind).toBe('de-honte')
+    if (next.lastInteraction?.kind === 'de-honte') {
+      expect(next.lastInteraction.actorId).toBe('u1')
+      expect(next.lastInteraction.value).toBeGreaterThanOrEqual(1)
+      expect(next.lastInteraction.value).toBeLessThanOrEqual(6)
+    }
+  })
+
+  it('pile-face expose côté misé, résultat et gorgées cohérentes', () => {
+    const next = reduce(withPending('pile-face'), {
+      type: 'RESOLVE_INTERACTION',
+      playerId: 'u1',
+      choice: { targetId: 'u2', side: 'pile' },
+    })
+    expect(next.lastInteraction?.kind).toBe('pile-face')
+    if (next.lastInteraction?.kind === 'pile-face') {
+      const li = next.lastInteraction
+      expect(li.side).toBe('pile')
+      expect(li.targetId).toBe('u2')
+      const lost = li.side !== li.flip
+      expect(li.drinks).toBe(lost ? 2 : 0)
+      const target = next.players.find((p) => p.id === 'u2')!
+      expect(target.drinks).toBe(li.drinks)
+    }
+  })
+
+  it('roue expose le segment tiré (0-14) et les gorgées appliquées', () => {
+    const next = reduce(withPending('roue'), { type: 'RESOLVE_INTERACTION', playerId: 'u1' })
+    expect(next.lastInteraction?.kind).toBe('roue')
+    if (next.lastInteraction?.kind === 'roue') {
+      expect(next.lastInteraction.segment).toBeGreaterThanOrEqual(0)
+      expect(next.lastInteraction.segment).toBeLessThan(15)
+      expect(next.players.find((p) => p.id === 'u1')!.drinks).toBe(next.lastInteraction.drinks)
+    }
+  })
+
+  it('le ROLL suivant efface le spectacle précédent', () => {
+    const resolved = reduce(withPending('roue-defis'), { type: 'RESOLVE_INTERACTION', playerId: 'u1' })
+    expect(resolved.lastInteraction).not.toBeNull()
+    const roller = currentPlayerId(resolved)!
+    const next = reduce(resolved, { type: 'ROLL', playerId: roller })
+    expect(next.lastInteraction).toBeNull()
   })
 })
 

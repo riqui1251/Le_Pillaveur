@@ -59,6 +59,25 @@ export interface EngineSettings {
 
 export type EnginePhase = 'playing' | 'awaiting-interaction' | 'finished'
 
+/**
+ * Résultat PUBLIC de la dernière case interactive résolue — permet au client
+ * d'animer le tirage (roue qui tourne, pièce qui retombe, dé qui roule) vers
+ * un résultat déjà décidé par le serveur, chez TOUS les joueurs (acteur,
+ * spectateurs, tours de bots). Aucune information secrète ici.
+ */
+export type LastInteraction =
+  | { kind: 'de-honte'; actorId: string; value: number }
+  | {
+      kind: 'pile-face'
+      actorId: string
+      targetId: string | null
+      side: 'pile' | 'face'
+      flip: 'pile' | 'face'
+      drinks: number
+    }
+  | { kind: 'roue'; actorId: string; segment: number; drinks: number }
+  | { kind: 'roue-defis'; actorId: string; drinks: number }
+
 export interface LogEntry {
   turn: number
   playerId: string
@@ -81,6 +100,8 @@ export interface EngineState {
   lastCase: EngineCase | null
   /** Case en attente de résolution. `needsTarget` : un joueur cible doit être choisi. */
   pending: { caseType: CaseType; playerId: string; needsTarget: boolean } | null
+  /** Spectacle client : résultat public du dernier tirage interactif (absent sur les états anciens). */
+  lastInteraction?: LastInteraction | null
   phase: EnginePhase
   /** Id du joueur gagnant, ou null. */
   winner: string | null
@@ -129,6 +150,7 @@ export function createInitialState(
     lastMoveDelta: null,
     lastCase: null,
     pending: null,
+    lastInteraction: null,
     phase: 'playing',
     winner: null,
     log: [],
@@ -244,6 +266,8 @@ function applyCaseEffect(
 /**
  * Résout une case interactive (mute `players`). Porté fidèlement depuis game.tsx.
  * Les cases sans logique dédiée retombent sur l'effet numérique par défaut.
+ * Retourne le résultat PUBLIC du tirage pour les cases « spectacle »
+ * (roue, pièce, dé de la honte) — null pour les autres.
  */
 function resolveInteractionCase(
   players: EnginePlayer[],
@@ -252,7 +276,7 @@ function resolveInteractionCase(
   lastCase: EngineCase | null,
   rng: SeededRng,
   choice: InteractionChoice | undefined
-): void {
+): LastInteraction | null {
   const actor = players[actorIndex]
 
   switch (caseType) {
@@ -262,7 +286,7 @@ function resolveInteractionCase(
       if (r > 2 && r <= 4) addDrinks(players, actor, 2)
       else if (r === 5) actor.position = clampPos(actor.position + 1)
       else if (r === 6) actor.position = clampPos(actor.position - 1)
-      break
+      return { kind: 'de-honte', actorId: actor.id, value: r }
     }
     // Pile ou face : l'acteur mise sur une cible + un côté ; si perdu, la cible boit.
     case 'pile-face': {
@@ -272,20 +296,30 @@ function resolveInteractionCase(
         ? players.find((p) => p.id === choice.targetId)
         : players.find((_, i) => i !== actorIndex)
       const drinks = lastCase?.effect || 2
-      if (target && side !== flip) addDrinks(players, target, drinks)
-      break
+      const lost = Boolean(target && side !== flip)
+      if (target && lost) addDrinks(players, target, drinks)
+      return {
+        kind: 'pile-face',
+        actorId: actor.id,
+        targetId: target?.id ?? null,
+        side,
+        flip,
+        drinks: lost ? drinks : 0,
+      }
     }
     // Roue : 15 segments, 1 sur 3 « safe » (0), sinon 1-12 gorgées pour l'acteur.
     case 'roue': {
       const seg = rng.pickIndex(15)
       const value = (seg + 1) % 3 === 0 ? 0 : rng.int(1, 12)
       if (value > 0) addDrinks(players, actor, value)
-      break
+      return { kind: 'roue', actorId: actor.id, segment: seg, drinks: value }
     }
     // Roue des défis : ~1 fois sur 2, gorgées ; sinon défi (approximé sans pénalité).
-    case 'roue-defis':
-      if (rng.chance(0.5)) addDrinks(players, actor, 2)
-      break
+    case 'roue-defis': {
+      const hit = rng.chance(0.5)
+      if (hit) addDrinks(players, actor, 2)
+      return { kind: 'roue-defis', actorId: actor.id, drinks: hit ? 2 : 0 }
+    }
     // Chance : l'acteur avance de 2 cases.
     case 'chance':
       actor.position = clampPos(actor.position + 2)
@@ -338,6 +372,7 @@ function resolveInteractionCase(
       if (lastCase) applyCaseEffect(players, actorIndex, lastCase, rng)
       break
   }
+  return null
 }
 
 /** Décrémente la durée de protection de tous les joueurs (expire après un tour de table). */
@@ -491,6 +526,9 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
     if (state.pending) throw new EngineError('INTERACTION_PENDING')
     if (!actor || actor.id !== action.playerId) throw new EngineError('NOT_YOUR_TURN')
 
+    // Nouveau tour de dé : le spectacle du tirage précédent est terminé.
+    state = { ...state, lastInteraction: null }
+
     const rng = rngFromState(state.rngState)
     const players = state.players.map((p) => ({ ...p }))
     const me = players[actorIndex]
@@ -585,6 +623,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
     const rng = rngFromState(state.rngState)
     const players = state.players.map((p) => ({ ...p }))
 
+    let lastInteraction: LastInteraction | null = null
     if (state.pending.needsTarget && state.lastCase) {
       // Case à cible : le joueur choisit qui subit l'effet.
       const target =
@@ -595,7 +634,14 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         players[actorIndex]
       applyCaseToTarget(players, players[actorIndex], target, state.lastCase, rng, state.lastMoveDelta, null)
     } else {
-      resolveInteractionCase(players, actorIndex, state.pending.caseType, state.lastCase, rng, action.choice)
+      lastInteraction = resolveInteractionCase(
+        players,
+        actorIndex,
+        state.pending.caseType,
+        state.lastCase,
+        rng,
+        action.choice
+      )
     }
 
     // Victoire éventuelle (un joueur poussé sur la dernière case par l'effet).
@@ -607,6 +653,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         rngState: rng.getState(),
         players,
         pending: null,
+        lastInteraction,
         phase: 'finished',
         winner: winnerId,
         log: pushLog(state.log, { turn: state.turnCount, playerId: winnerId, message: 'win' }),
@@ -622,6 +669,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       currentPlayer: turn.currentPlayer,
       turnCount: turn.turnCount,
       pending: null,
+      lastInteraction,
       phase: 'playing',
       log: pushLog(state.log, {
         turn: state.turnCount,

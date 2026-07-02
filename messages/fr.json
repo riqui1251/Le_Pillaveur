@@ -1475,7 +1475,19 @@
         "loading": "Chargement de la partie…",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
-        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
+        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot",
+        "spectacle": {
+          "wheelSafe": "SAFE — rien à boire !",
+          "wheelDrinks": "{count} gorgée(s) !",
+          "pfWin": "Pari gagné — personne ne boit",
+          "pfLose": "{name} boit {count} gorgée(s) !",
+          "pile": "PILE",
+          "face": "FACE",
+          "deHonteSafe": "Sauvé !",
+          "deHonteDrink": "2 gorgées !",
+          "deHonteForward": "Avance d'une case !",
+          "deHonteBack": "Recule d'une case !"
+        }
       },
       "defis": [
         {

@@ -1465,7 +1465,19 @@
         "loading": "Cargando la partida…",
         "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
         "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
-        "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot"
+        "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot",
+        "spectacle": {
+          "wheelSafe": "SAFE — ¡nada que beber!",
+          "wheelDrinks": "¡{count} trago(s)!",
+          "pfWin": "Apuesta ganada — nadie bebe",
+          "pfLose": "¡{name} bebe {count} trago(s)!",
+          "pile": "CARA",
+          "face": "CRUZ",
+          "deHonteSafe": "¡Salvado!",
+          "deHonteDrink": "¡2 tragos!",
+          "deHonteForward": "¡Avanza una casilla!",
+          "deHonteBack": "¡Retrocede una casilla!"
+        }
       },
       "defis": [
         {

@@ -18,6 +18,7 @@ import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositio
 import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount } from '@/components/petit-buveur/drink-feedback'
 import { useGameSounds } from '@/hooks/useGameSounds'
 import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
+import { InteractionSpectacle } from '@/components/petit-buveur/InteractionSpectacle'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
@@ -389,6 +390,35 @@ export function PetitBuveurOnline() {
 
   return (
     <div className="relative grid h-full min-h-0 w-full grid-rows-[auto_1fr_auto] overflow-hidden bg-gray-950 text-white">
+      {/* Spectacle des tirages (roue, pièce, dé de la honte) — visible par tous */}
+      <InteractionSpectacle
+        interaction={view.lastInteraction}
+        caseLabel={view.lastInteraction ? caseLabel(view.lastInteraction.kind) : ''}
+        actorName={
+          view.lastInteraction
+            ? view.players.find((p) => p.id === view.lastInteraction?.actorId)?.name ?? ''
+            : ''
+        }
+        targetName={
+          view.lastInteraction?.kind === 'pile-face'
+            ? view.players.find((p) => p.id === (view.lastInteraction as { targetId?: string | null }).targetId)?.name ?? ''
+            : ''
+        }
+        labels={{
+          wheelSafe: t('spectacle.wheelSafe'),
+          // gabarits avec {placeholders} interpolés par le composant → raw
+          wheelDrinks: t.raw('spectacle.wheelDrinks') as string,
+          pfWin: t('spectacle.pfWin'),
+          pfLose: t.raw('spectacle.pfLose') as string,
+          pile: t('spectacle.pile'),
+          face: t('spectacle.face'),
+          deHonteSafe: t('spectacle.deHonteSafe'),
+          deHonteDrink: t('spectacle.deHonteDrink'),
+          deHonteForward: t('spectacle.deHonteForward'),
+          deHonteBack: t('spectacle.deHonteBack'),
+        }}
+      />
+
       {/* Mise en scène du lancer de dé + flash de changement de tour */}
       <DiceOverlay state={diceOverlay} />
       <TurnOverlay

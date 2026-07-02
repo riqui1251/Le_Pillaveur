@@ -1475,7 +1475,19 @@
         "loading": "Loading the game…",
         "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
         "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
-        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
+        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot",
+        "spectacle": {
+          "wheelSafe": "SAFE — nothing to drink!",
+          "wheelDrinks": "{count} sip(s)!",
+          "pfWin": "Bet won — nobody drinks",
+          "pfLose": "{name} drinks {count} sip(s)!",
+          "pile": "HEADS",
+          "face": "TAILS",
+          "deHonteSafe": "Safe!",
+          "deHonteDrink": "2 sips!",
+          "deHonteForward": "Move forward one square!",
+          "deHonteBack": "Move back one square!"
+        }
       },
       "defis": [
         {

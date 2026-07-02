@@ -26,7 +26,7 @@ const PIPS: Record<number, [number, number][]> = {
   6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]],
 }
 
-function DiceFace({ value, accent }: { value: number; accent?: boolean }) {
+export function DiceFace({ value, accent }: { value: number; accent?: boolean }) {
   const pips = PIPS[value] ?? PIPS[1]
   return (
     <div
