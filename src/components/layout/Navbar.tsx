@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
 import { useFriends } from '@/hooks/useFriends'
+import { useChatUnread } from '@/hooks/useChatUnread'
 import { canAccessSupervision } from '@/lib/roles'
 import { usePageMeta } from '@/lib/nav-meta'
 import { FullscreenButton } from '@/components/ui/fullscreen-button'
@@ -40,6 +41,7 @@ export default function Navbar() {
   const [chatOpen, setChatOpen] = useState(false)
   const { user } = useAuth()
   const { friends, refresh: refreshFriendsBadge } = useFriends()
+  const { unread, refresh: refreshUnread } = useChatUnread()
   const onlineFriendsCount = friends.filter((f) => f.isOnline).length
   const pathname = usePathname()
   const pageMeta = usePageMeta(pathname)
@@ -143,13 +145,18 @@ export default function Navbar() {
               aria-label={t('chat')}
               onClick={() => setChatOpen((v) => !v)}
               className={cn(
-                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
+                'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
                 chatOpen
                   ? 'border-sky-400/40 bg-sky-500/20 text-sky-200 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
                   : 'border-white/10 bg-white/[0.04] text-sky-300 hover:border-sky-400/35 hover:bg-sky-500/10'
               )}
             >
               <MessageCircle className="h-5 w-5" />
+              {unread.total > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                  {unread.total > 9 ? '9+' : unread.total}
+                </span>
+              )}
             </button>
           )}
 
@@ -306,7 +313,17 @@ export default function Navbar() {
         />
       )}
 
-      {user && <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />}
+      {user && (
+        <ChatPanel
+          open={chatOpen}
+          onClose={() => {
+            setChatOpen(false)
+            void refreshUnread()
+          }}
+          unread={unread}
+          onRead={refreshUnread}
+        />
+      )}
     </>
   )
 }

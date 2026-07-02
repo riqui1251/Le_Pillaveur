@@ -52,6 +52,17 @@ model User {
   nameModerationWarnedAt DateTime?
   nameModerationWarningDismissedAt DateTime?
   chatMessages          ChatMessage[]      @relation("ChatMessages")
+  chatReads             ChatRead[]         @relation("ChatReads")
+}
+
+model ChatRead {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("ChatReads", fields: [userId], references: [id], onDelete: Cascade)
+  channel    String
+  lastReadAt DateTime @default(now())
+
+  @@unique([userId, channel])
 }
 
 model ChatMessage {

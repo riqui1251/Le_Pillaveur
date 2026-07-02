@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, type AuthUser } from '@/lib/auth-server'
 import { areFriends } from '@/lib/friends'
 import { parseOnlinePreferences } from '@/lib/online-preferences'
+import { censorChatMessage } from '@/lib/chat-moderation'
+import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 
 /**
  * Chat léger par canal :
@@ -79,6 +81,13 @@ export async function GET(request: Request) {
     include: { sender: { select: { displayName: true, onlinePreferencesJson: true } } },
   })
 
+  // Consulter une conversation la marque comme lue (indicateur non-lu).
+  await prisma.chatRead.upsert({
+    where: { userId_channel: { userId: user.id, channel: resolved.channel } },
+    create: { userId: user.id, channel: resolved.channel },
+    update: { lastReadAt: new Date() },
+  })
+
   return NextResponse.json(
     { messages: rows.reverse().map((m) => toDto(m, user.id)) },
     { headers: { 'Cache-Control': 'no-store' } }
@@ -103,8 +112,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   }
 
+  // Filtre anti-insultes : les termes injurieux sont masqués (***), le
+  // message est délivré censuré (termes de modération DB inclus).
+  await ensureServerModerationTermsLoaded()
+  const { text: cleanBody } = censorChatMessage(body)
+
   const created = await prisma.chatMessage.create({
-    data: { channel: resolved.channel, senderId: user.id, body },
+    data: { channel: resolved.channel, senderId: user.id, body: cleanBody },
     include: { sender: { select: { displayName: true, onlinePreferencesJson: true } } },
   })
 

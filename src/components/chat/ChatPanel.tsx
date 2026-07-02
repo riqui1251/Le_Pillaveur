@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Gamepad2, MessageCircle, Send, Users, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useFriends } from '@/hooks/useFriends'
+import type { ChatUnread } from '@/hooks/useChatUnread'
 import { cn } from '@/lib/utils'
 
 const POLL_MS = 3000
@@ -23,7 +24,7 @@ type ChatMessage = {
 type ChatScope = { scope: 'room' } | { scope: 'friend'; friendUserId: string }
 
 /** Conversation (partie ou ami) : polling léger tant qu'elle est affichée. */
-function ChatConversation({ target }: { target: ChatScope }) {
+function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () => void }) {
   const t = useTranslations('chat')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [noRoom, setNoRoom] = useState(false)
@@ -54,10 +55,13 @@ function ChatConversation({ target }: { target: ChatScope }) {
       if (nextLastId !== lastIdRef.current) {
         lastIdRef.current = nextLastId
         setMessages(next)
+        // Le serveur vient de marquer la conversation lue → rafraîchit le badge.
+        onRead?.()
       }
     } finally {
       inFlightRef.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
 
   useEffect(() => {
@@ -169,10 +173,12 @@ function ChatConversation({ target }: { target: ChatScope }) {
 interface ChatPanelProps {
   open: boolean
   onClose: () => void
+  unread?: ChatUnread
+  onRead?: () => void
 }
 
 /** Panneau de chat (bouton header) : onglet Partie (salle en cours) + onglet Amis (conversations privées). */
-export function ChatPanel({ open, onClose }: ChatPanelProps) {
+export function ChatPanel({ open, onClose, unread, onRead }: ChatPanelProps) {
   const t = useTranslations('chat')
   const tNav = useTranslations('nav')
   const { user } = useAuth()
@@ -255,6 +261,11 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
                 >
                   <Gamepad2 className="h-3.5 w-3.5" />
                   {t('tabGame')}
+                  {(unread?.room ?? 0) > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                      {unread!.room > 9 ? '9+' : unread!.room}
+                    </span>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -268,14 +279,17 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
                 >
                   <Users className="h-3.5 w-3.5" />
                   {t('tabFriends')}
+                  {Object.values(unread?.friends ?? {}).some((n) => n > 0) && (
+                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                  )}
                 </button>
               </div>
             )}
 
             {activeFriend ? (
-              <ChatConversation target={{ scope: 'friend', friendUserId: activeFriend.userId }} />
+              <ChatConversation target={{ scope: 'friend', friendUserId: activeFriend.userId }} onRead={onRead} />
             ) : tab === 'game' ? (
-              <ChatConversation target={{ scope: 'room' }} />
+              <ChatConversation target={{ scope: 'room' }} onRead={onRead} />
             ) : friends.length === 0 ? (
               <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-white/40">
                 {t('noFriends')}
@@ -295,7 +309,13 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
                         <span className={cn('truncate text-sm font-medium', f.isOnline ? 'text-white' : 'text-white/60')}>
                           {f.displayName}
                         </span>
-                        <MessageCircle className="ml-auto h-3.5 w-3.5 shrink-0 text-white/25" />
+                        {(unread?.friends?.[f.userId] ?? 0) > 0 ? (
+                          <span className="ml-auto flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                            {unread!.friends[f.userId] > 9 ? '9+' : unread!.friends[f.userId]}
+                          </span>
+                        ) : (
+                          <MessageCircle className="ml-auto h-3.5 w-3.5 shrink-0 text-white/25" />
+                        )}
                       </button>
                     </li>
                   ))}
