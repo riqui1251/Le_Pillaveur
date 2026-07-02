@@ -1,6 +1,8 @@
 import {
   advanceTCBots,
+  botChooseCell,
   createInitialTCState,
+  currentTCPlayerId,
   reduceTC,
   toTCClientView,
   TCEngineError,
@@ -12,6 +14,7 @@ import {
   type TCState,
   type TeamId,
 } from './engine'
+import { rngFromState } from '@/lib/petit-buveur/rng'
 
 /**
  * Pont serveur entre une salle en ligne et le moteur Toucher-Coulé.
@@ -102,21 +105,40 @@ export function parseTCState(json: string | null): TCState | null {
 export type TCRoomActionInput =
   | { type: 'place'; ships: number[][] }
   | { type: 'fire'; cell: number }
+  /** Tick client : fait jouer UN SEUL tir de bot (rythme visible, pas d'enchaînement invisible). */
+  | { type: 'bot' }
 
 export type TCRoomActionResult = { ok: true; state: TCState } | { ok: false; error: string }
 
-/** Applique l'action d'un humain puis fait jouer les bots jusqu'au prochain humain. */
+/**
+ * Applique une action de salle. Les bots ne jouent qu'UN tir à la fois via le
+ * tick `bot` (déclenché par un client quand c'est le tour d'un bot) : chaque
+ * tir de bot est donc un état diffusé séparément, visible par tous.
+ */
 export function applyTCRoomAction(
   state: TCState,
   userId: string,
   input: TCRoomActionInput
 ): TCRoomActionResult {
   try {
-    const afterHuman =
+    if (input.type === 'bot') {
+      const activeId = currentTCPlayerId(state)
+      const active = state.players.find((p) => p.id === activeId)
+      if (!active?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
+      const rng = rngFromState(state.rngState)
+      const cell = botChooseCell(state, active.id, rng)
+      const next = reduceTC({ ...state, rngState: rng.getState() }, {
+        type: 'FIRE',
+        playerId: active.id,
+        cell,
+      })
+      return { ok: true, state: next }
+    }
+    const next =
       input.type === 'place'
         ? reduceTC(state, { type: 'PLACE', playerId: userId, ships: input.ships })
         : reduceTC(state, { type: 'FIRE', playerId: userId, cell: input.cell })
-    return { ok: true, state: advanceTCBots(afterHuman) }
+    return { ok: true, state: next }
   } catch (e) {
     return { ok: false, error: e instanceof TCEngineError ? e.message : 'ENGINE_ERROR' }
   }

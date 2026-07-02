@@ -64,6 +64,27 @@ export function ToucherCouleOnline() {
     if (phase !== 'placement') setPlacedShips([])
   }, [phase])
 
+  // Tick des bots : quand c'est le tour d'un bot, UN client (le premier humain)
+  // demande au serveur de jouer UN tir — chaque tir de bot est donc visible,
+  // au lieu d'un enchaînement instantané illisible.
+  useEffect(() => {
+    if (!view || !user || !room || view.phase !== 'battle') return
+    const active = view.players.find((p) => p.id === view.turnOrder[view.currentTurnIndex])
+    if (!active?.isBot) return
+    const referee = view.players.find((p) => !p.isBot)
+    if (referee?.id !== user.id) return
+    const expectedVersion = room.stateVersion
+    const timer = setTimeout(() => {
+      void fetch(`/api/online/rooms/${room.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'bot', expectedVersion }),
+      })
+    }, 1100)
+    return () => clearTimeout(timer)
+  }, [view, user, room])
+
   if (!inGame) {
     return <GameOnlineLobby gameId="toucher-coule" />
   }
@@ -206,8 +227,17 @@ export function ToucherCouleOnline() {
         : t('feedSunk', { owner: nameOf(lastShot.shipOwnerId) })
     : null
 
-  const gridStyle = { gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }
+  // Carré garanti : ratio 1:1 sur le CONTENEUR + lignes en 1fr (l'aspect-ratio
+  // par cellule se déforme sur certains mobiles quand la hauteur de ligne dérive).
+  const gridStyle = {
+    gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
+    aspectRatio: '1 / 1',
+  }
   const placementPhase = view.phase === 'placement'
+  // Un seul board à la fois (lisibilité mobile) : la grille ennemie quand mon
+  // équipe tire, ma flotte quand l'équipe adverse tire ou pendant l'attente.
+  const showEnemyBoard = !placementPhase && (finished || activePlayer?.team === myTeam)
 
   const teamPlayers = (team: TeamId) => view.players.filter((p) => p.team === team)
 
@@ -376,7 +406,7 @@ export function ToucherCouleOnline() {
                         tryPlaceShip(cell)
                       }}
                       className={cn(
-                        'aspect-square rounded-[3px] transition-colors',
+                        'rounded-[3px] transition-colors',
                         mine
                           ? 'bg-sky-400'
                           : mate
@@ -405,8 +435,8 @@ export function ToucherCouleOnline() {
         {/* ── PHASE BATAILLE (+ attente de placement une fois validé) ── */}
         {(!placementPhase || (me && me.placed)) && (
           <div className="space-y-4">
-            {/* Grille ennemie */}
-            {!placementPhase && (
+            {/* Grille ennemie — affichée quand mon équipe est au tir */}
+            {showEnemyBoard && (
               <div>
                 <div className="mb-1.5 flex items-center justify-between px-1">
                   <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-rose-300/80">
@@ -436,7 +466,7 @@ export function ToucherCouleOnline() {
                           disabled={!isMyTurn || busy || finished || shot !== undefined}
                           onClick={() => fire(cell)}
                           className={cn(
-                            'flex aspect-square items-center justify-center rounded-[3px] text-[9px] leading-none transition-colors sm:text-[11px]',
+                            'flex items-center justify-center rounded-[3px] text-[9px] leading-none transition-colors sm:text-[11px]',
                             sunk
                               ? 'bg-red-800'
                               : shot === 'hit'
@@ -455,7 +485,8 @@ export function ToucherCouleOnline() {
               </div>
             )}
 
-            {/* Ma flotte */}
+            {/* Ma flotte — affichée pendant le placement et quand l'ennemi tire */}
+            {!showEnemyBoard && (
             <div>
               <div className="mb-1.5 flex items-center justify-between px-1">
                 <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-sky-300/80">
@@ -476,7 +507,7 @@ export function ToucherCouleOnline() {
                       <div
                         key={cell}
                         className={cn(
-                          'flex aspect-square items-center justify-center rounded-[3px] text-[9px] leading-none sm:text-[11px]',
+                          'flex items-center justify-center rounded-[3px] text-[9px] leading-none sm:text-[11px]',
                           sunk
                             ? 'bg-red-800'
                             : isShip && shot === 'hit'
@@ -495,6 +526,7 @@ export function ToucherCouleOnline() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Légende + équipes/gorgées */}
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] text-white/45">

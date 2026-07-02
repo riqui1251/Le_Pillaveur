@@ -74,6 +74,8 @@ export async function POST(request: Request, { params }: Params) {
       input = { type: 'place', ships: body.ships as number[][] }
     } else if (body.action === 'fire' && typeof body.cell === 'number') {
       input = { type: 'fire', cell: body.cell }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
     } else {
       return NextResponse.json({ error: 'Action invalide' }, { status: 400 })
     }
