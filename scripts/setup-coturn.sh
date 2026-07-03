@@ -35,7 +35,31 @@ static-auth-secret=${SECRET}
 min-port=49160
 max-port=49200
 
-# Durcissement : uniquement du relais, pas de fonctionnalités annexes
+# ── Durcissement ────────────────────────────────────────────────────────────
+# Interdire tout relais vers l'intérieur de la machine ou des réseaux privés :
+# sans ces règles, un utilisateur authentifié pourrait atteindre des services
+# internes du VPS (127.0.0.1, adresses privées) à travers le relais.
+no-multicast-peers
+denied-peer-ip=0.0.0.0-0.255.255.255
+denied-peer-ip=10.0.0.0-10.255.255.255
+denied-peer-ip=100.64.0.0-100.127.255.255
+denied-peer-ip=127.0.0.0-127.255.255.255
+denied-peer-ip=169.254.0.0-169.254.255.255
+denied-peer-ip=172.16.0.0-172.31.255.255
+denied-peer-ip=192.168.0.0-192.168.255.255
+denied-peer-ip=::1
+denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+
+# Le média WebRTC relaie en UDP — pas besoin de relais TCP (surface en moins).
+no-tcp-relay
+
+# Limites anti-abus : l'audio Opus consomme ~40 kbit/s par flux ; on plafonne
+# large (128 kbit/s par allocation) et on borne le nombre d'allocations.
+max-bps=131072
+user-quota=12
+total-quota=600
+
+# Uniquement du relais, pas de fonctionnalités annexes
 no-cli
 no-tlsv1
 no-tlsv1_1
