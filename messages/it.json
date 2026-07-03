@@ -1016,7 +1016,8 @@
           "totals": "Totali →",
           "newGame": "Nuova partita",
           "back": "Indietro",
-          "roundDrinksAll": "🥂 {count} giro/i generale/i — tutti bevono!"
+          "roundDrinksAll": "🥂 {count} giro/i generale/i — tutti bevono!",
+          "seeAllHint": "Scorri tutti i giocatori per vedere i totali"
         },
         "turnLabel": "Turno di",
         "nextUp": "Poi"

@@ -1026,7 +1026,8 @@
           "totals": "Totaux →",
           "newGame": "Nouvelle partie",
           "back": "Retour",
-          "roundDrinksAll": "🥂 {count} Tournée(s) Générale(s) — tout le monde boit !"
+          "roundDrinksAll": "🥂 {count} Tournée(s) Générale(s) — tout le monde boit !",
+          "seeAllHint": "Parcourez tous les joueurs pour afficher les totaux"
         },
         "turnLabel": "Au tour de",
         "nextUp": "Ensuite"

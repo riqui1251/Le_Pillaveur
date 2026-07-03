@@ -453,6 +453,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   // États pour l'affichage des résultats
   const [resultDisplayPhase, setResultDisplayPhase] = useState<ResultDisplayPhase>('tournees');
   const [currentPlayerResultIndex, setCurrentPlayerResultIndex] = useState(0);
+  // Plus haut index de joueur déjà consulté en phase « détails » : on n'ouvre
+  // l'accès aux totaux qu'après avoir vu TOUS les joueurs.
+  const [maxPlayerResultIndexReached, setMaxPlayerResultIndexReached] = useState(0);
 
   // Flash visuel sur collision de pin
   const flashingPinsRef = useRef<Map<string, number>>(new Map())
@@ -575,6 +578,21 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     );
     setSlotSipValues(newSlotValues);
   }, [difficulty, gameVersion]); // Ajouter gameVersion comme dépendance
+
+  // À la fin de la partie : ne présenter l'écran « Tournées générales » que s'il
+  // y en a réellement eu ; sinon on saute directement au détail des joueurs.
+  useEffect(() => {
+    if (gameOver) {
+      setResultDisplayPhase(roundDrinksCount > 0 ? 'tournees' : 'details')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameOver])
+
+  // Mémoriser le joueur le plus loin consulté (navigation séquentielle) : sert à
+  // n'autoriser les totaux qu'après avoir parcouru tout le monde.
+  useEffect(() => {
+    setMaxPlayerResultIndexReached((prev) => Math.max(prev, currentPlayerResultIndex))
+  }, [currentPlayerResultIndex])
 
   // --- MODIFICATION: Mise à jour de onRestartGame pour incrémenter gameVersion ---
   const handleRestartGame = () => {
@@ -1843,30 +1861,49 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 </button>
               )}
 
-              {resultDisplayPhase === 'details' && (
-                <>
-                  <button
-                    onClick={() => setCurrentPlayerResultIndex(p => Math.max(0, p - 1))}
-                    disabled={currentPlayerResultIndex === 0}
-                    className="rounded-xl border border-violet-800/30 bg-violet-950/30 px-4 py-2.5 text-sm text-white/70 disabled:opacity-30 hover:bg-violet-900/40"
-                  >
-                    {t('game.results.previous')}
-                  </button>
-                  <button
-                    onClick={() => setCurrentPlayerResultIndex(p => Math.min(players.length - 1, p + 1))}
-                    disabled={currentPlayerResultIndex === players.length - 1}
-                    className="rounded-xl border border-violet-800/30 bg-violet-950/30 px-4 py-2.5 text-sm text-white/70 disabled:opacity-30 hover:bg-violet-900/40"
-                  >
-                    {t('game.results.nextPlayer')}
-                  </button>
-                  <button
-                    onClick={() => setResultDisplayPhase('final')}
-                    className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600"
-                  >
-                    {t('game.results.totals')}
-                  </button>
-                </>
-              )}
+              {resultDisplayPhase === 'details' && (() => {
+                const isLastPlayer = currentPlayerResultIndex >= players.length - 1
+                const allPlayersSeen = maxPlayerResultIndexReached >= players.length - 1
+                return (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-wrap justify-center gap-3">
+                      <button
+                        onClick={() => setCurrentPlayerResultIndex(p => Math.max(0, p - 1))}
+                        disabled={currentPlayerResultIndex === 0}
+                        className="rounded-xl border border-violet-800/30 bg-violet-950/30 px-4 py-2.5 text-sm text-white/70 disabled:opacity-30 hover:bg-violet-900/40"
+                      >
+                        {t('game.results.previous')}
+                      </button>
+                      {/* « Joueur suivant » : CTA principal tant que tout le monde n'a pas été vu */}
+                      {!isLastPlayer && (
+                        <button
+                          onClick={() => setCurrentPlayerResultIndex(p => Math.min(players.length - 1, p + 1))}
+                          className={cn(
+                            'rounded-xl px-5 py-2.5 text-sm font-semibold',
+                            allPlayersSeen
+                              ? 'border border-violet-800/30 bg-violet-950/30 text-white/70 hover:bg-violet-900/40'
+                              : 'bg-gradient-to-r from-violet-600 to-purple-700 text-white hover:from-violet-500 hover:to-purple-600',
+                          )}
+                        >
+                          {t('game.results.nextPlayer')}
+                        </button>
+                      )}
+                      {/* Totaux : uniquement après avoir parcouru TOUS les joueurs */}
+                      {allPlayersSeen && (
+                        <button
+                          onClick={() => setResultDisplayPhase('final')}
+                          className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600"
+                        >
+                          {t('game.results.totals')}
+                        </button>
+                      )}
+                    </div>
+                    {!allPlayersSeen && (
+                      <p className="text-xs text-white/40">{t('game.results.seeAllHint')}</p>
+                    )}
+                  </div>
+                )
+              })()}
 
               {resultDisplayPhase === 'final' && (
                 <>

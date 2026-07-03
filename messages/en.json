@@ -1026,7 +1026,8 @@
           "totals": "Totals →",
           "newGame": "New game",
           "back": "Back",
-          "roundDrinksAll": "🥂 {count} round(s) for all — everyone drinks!"
+          "roundDrinksAll": "🥂 {count} round(s) for all — everyone drinks!",
+          "seeAllHint": "Go through every player to reveal the totals"
         },
         "turnLabel": "Turn of",
         "nextUp": "Next up"
