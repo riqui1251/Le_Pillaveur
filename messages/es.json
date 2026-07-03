@@ -1479,7 +1479,8 @@
           "deHonteBack": "¡Retrocede una casilla!",
           "wheelLegendSafe": "Salvado",
           "wheelLegendDrink": "Tragos"
-        }
+        },
+        "outcomeNothing": "Sin daños — ¡a salvo!"
       },
       "defis": [
         {

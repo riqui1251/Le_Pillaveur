@@ -18,6 +18,7 @@ import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositio
 import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount } from '@/components/petit-buveur/drink-feedback'
 import { useGameSounds } from '@/hooks/useGameSounds'
 import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
+import { getCaseMeta } from '@/lib/petit-buveur/case-families'
 import { InteractionSpectacle } from '@/components/petit-buveur/InteractionSpectacle'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
@@ -209,7 +210,11 @@ export function PetitBuveurOnline() {
     for (const p of view?.players ?? []) rec[p.id] = p.position
     return rec
   }, [view])
-  const { positions: shownPositions } = useSteppedPositions(positionsById)
+  // Pions gelés tant que l'overlay du dé est affiché : le déplacement ne
+  // démarre qu'après la lecture du résultat (séquence dé → hop → case).
+  const { positions: shownPositions } = useSteppedPositions(positionsById, {
+    frozen: Boolean(diceOverlay),
+  })
   const drinksById = useMemo(() => {
     const rec: Record<string, number> = {}
     for (const p of view?.players ?? []) rec[p.id] = p.drinks
@@ -348,6 +353,7 @@ export function PetitBuveurOnline() {
     if (busy || rolling || !user) return
     setRolling(true)
     rollFallbackRef.current = null
+    const rollStartedAt = Date.now()
     const meIcon = iconOf(user.id)
     const meName = view.players.find((p) => p.id === user.id)?.name ?? ''
     setDiceOverlay({ phase: 'rolling', playerName: meName, playerIcon: meIcon })
@@ -385,8 +391,14 @@ export function PetitBuveurOnline() {
       settled = true
       clearTimeout(fallback)
       const dice = body?.view?.lastDice
-      if (typeof dice === 'number') showResult(dice)
-      else clear()
+      if (typeof dice === 'number') {
+        // Durée MINIMALE de roulement : un serveur très rapide ne doit pas
+        // court-circuiter l'animation (le dé paraissait « instantané »).
+        const wait = Math.max(0, 700 - (Date.now() - rollStartedAt))
+        diceTimerRef.current = setTimeout(() => showResult(dice), wait)
+      } else {
+        clear()
+      }
     })
   }
 
@@ -440,6 +452,7 @@ export function PetitBuveurOnline() {
         isSelf={isMyTurn}
         labelOf={`${tGame('turnOf')} ${active?.name ?? ''}`}
         labelSelf={tGame('yourTurn')}
+        delayMs={1600}
       />
 
       {/* Blobs animés */}
@@ -587,6 +600,39 @@ export function PetitBuveurOnline() {
                 <p className="mt-1.5 text-sm font-medium text-white/85">
                   {(tPB.raw('defis') as { text: string }[])[view.lastCase.defiIndex]?.text}
                 </p>
+              )}
+              {/* CE QUE la case a fait : gorgées prises, déplacements — lisible
+                  avant que le joueur suivant ne joue. */}
+              {view.lastOutcome && view.lastOutcome.caseType === view.lastCase.type && (
+                view.lastOutcome.changes.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {view.lastOutcome.changes.map((c) => {
+                      const p = view.players.find((pl) => pl.id === c.playerId)
+                      return (
+                        <span
+                          key={c.playerId}
+                          className="flex items-center gap-1 rounded-full border border-white/15 bg-gray-950/60 px-2 py-0.5 text-xs font-semibold text-white/90"
+                        >
+                          <span aria-hidden>{iconOf(c.playerId)}</span>
+                          <span className="max-w-[6rem] truncate">{p?.name}</span>
+                          {c.drinks > 0 && <span className="text-amber-300">+{c.drinks} 🍺</span>}
+                          {c.to !== c.from && (
+                            <span className="text-sky-300">
+                              → {t('caseLabel')} {c.to + 1}
+                            </span>
+                          )}
+                        </span>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  getCaseMeta(view.lastCase.type).family !== 'neutral' &&
+                  getCaseMeta(view.lastCase.type).family !== 'bonus' && (
+                    <p className="mt-2 text-xs font-semibold text-emerald-300">
+                      {t('outcomeNothing')}
+                    </p>
+                  )
+                )
               )}
             </CaseRevealCard>
           )}

@@ -1489,7 +1489,8 @@
           "deHonteBack": "Recule d'une case !",
           "wheelLegendSafe": "Sauvé",
           "wheelLegendDrink": "Gorgées"
-        }
+        },
+        "outcomeNothing": "Aucun dégât — sauvé !"
       },
       "defis": [
         {

@@ -78,6 +78,17 @@ export type LastInteraction =
   | { kind: 'roue'; actorId: string; segment: number; drinks: number }
   | { kind: 'roue-defis'; actorId: string; drinks: number }
 
+/** Ce qu'un joueur a subi lors de la dernière case résolue (gorgées, déplacement). */
+export type LastOutcomeChange = { playerId: string; drinks: number; from: number; to: number }
+
+/**
+ * Résultat PUBLIC de la dernière case appliquée — calculé par diff avant/après
+ * pour que le client affiche lisiblement CE QUE la case a fait (« Wanda +6 🍺 »,
+ * « Momo → case 12 ») avant de passer au joueur suivant. Ne couvre pas le
+ * déplacement du dé lui-même (déjà raconté par lastDice + pions animés).
+ */
+export type LastOutcome = { caseType: CaseType; actorId: string; changes: LastOutcomeChange[] }
+
 export interface LogEntry {
   turn: number
   playerId: string
@@ -102,6 +113,8 @@ export interface EngineState {
   pending: { caseType: CaseType; playerId: string; needsTarget: boolean } | null
   /** Spectacle client : résultat public du dernier tirage interactif (absent sur les états anciens). */
   lastInteraction?: LastInteraction | null
+  /** Lisibilité client : effets appliqués par la dernière case (absent sur les états anciens). */
+  lastOutcome?: LastOutcome | null
   phase: EnginePhase
   /** Id du joueur gagnant, ou null. */
   winner: string | null
@@ -151,10 +164,25 @@ export function createInitialState(
     lastCase: null,
     pending: null,
     lastInteraction: null,
+    lastOutcome: null,
     phase: 'playing',
     winner: null,
     log: [],
   }
+}
+
+/** Diff avant/après d'une résolution de case : gorgées prises et déplacements. */
+function diffOutcome(before: EnginePlayer[], after: EnginePlayer[]): LastOutcomeChange[] {
+  const changes: LastOutcomeChange[] = []
+  for (const b of before) {
+    const a = after.find((p) => p.id === b.id)
+    if (!a) continue
+    const drinks = a.drinks - b.drinks
+    if (drinks > 0 || a.position !== b.position) {
+      changes.push({ playerId: a.id, drinks: Math.max(0, drinks), from: b.position, to: a.position })
+    }
+  }
+  return changes
 }
 
 function pushLog(log: LogEntry[], entry: LogEntry): LogEntry[] {
@@ -526,8 +554,8 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
     if (state.pending) throw new EngineError('INTERACTION_PENDING')
     if (!actor || actor.id !== action.playerId) throw new EngineError('NOT_YOUR_TURN')
 
-    // Nouveau tour de dé : le spectacle du tirage précédent est terminé.
-    state = { ...state, lastInteraction: null }
+    // Nouveau tour de dé : le spectacle et l'effet du tour précédent sont terminés.
+    state = { ...state, lastInteraction: null, lastOutcome: null }
 
     const rng = rngFromState(state.rngState)
     const players = state.players.map((p) => ({ ...p }))
@@ -582,8 +610,15 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       }
     }
 
-    // Case auto-résolue (no-target) : effet direct.
+    // Case auto-résolue (no-target) : effet direct. On capture ce que la case
+    // a changé (diff APRÈS le déplacement du dé) pour l'afficher au client.
+    const beforeCase = players.map((p) => ({ ...p }))
     applyCaseEffect(players, actorIndex, generated, rng)
+    const lastOutcome: LastOutcome = {
+      caseType: generated.type,
+      actorId: me.id,
+      changes: diffOutcome(beforeCase, players),
+    }
     const winnerAfterCase = findWinner(players)
     if (winnerAfterCase) {
       return {
@@ -594,6 +629,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         lastDice: dice,
         lastMoveDelta: moveDelta,
         lastCase: generated,
+        lastOutcome,
         phase: 'finished',
         winner: winnerAfterCase,
         log: pushLog(state.log, { turn: state.turnCount, playerId: winnerAfterCase, message: 'win' }),
@@ -610,6 +646,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       lastDice: dice,
       lastMoveDelta: moveDelta,
       lastCase: generated,
+      lastOutcome,
       log: pushLog(state.log, { turn: state.turnCount, playerId: me.id, message: `case:${generated.type}` }),
     }
   }
@@ -622,6 +659,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
 
     const rng = rngFromState(state.rngState)
     const players = state.players.map((p) => ({ ...p }))
+    const beforeResolve = state.players
 
     let lastInteraction: LastInteraction | null = null
     if (state.pending.needsTarget && state.lastCase) {
@@ -644,6 +682,13 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       )
     }
 
+    // Effets appliqués par la résolution — affichés lisiblement côté client.
+    const lastOutcome: LastOutcome = {
+      caseType: state.pending.caseType,
+      actorId: action.playerId,
+      changes: diffOutcome(beforeResolve, players),
+    }
+
     // Victoire éventuelle (un joueur poussé sur la dernière case par l'effet).
     const winnerId = findWinner(players)
     if (winnerId) {
@@ -654,6 +699,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         players,
         pending: null,
         lastInteraction,
+        lastOutcome,
         phase: 'finished',
         winner: winnerId,
         log: pushLog(state.log, { turn: state.turnCount, playerId: winnerId, message: 'win' }),
@@ -670,6 +716,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       turnCount: turn.turnCount,
       pending: null,
       lastInteraction,
+      lastOutcome,
       phase: 'playing',
       log: pushLog(state.log, {
         turn: state.turnCount,

@@ -15,12 +15,17 @@ import { playGameSound } from '@/lib/sound/game-sounds'
  */
 export function useSteppedPositions(
   targets: Record<string, number>,
-  onStep?: (playerId: string, position: number) => void
+  opts?: {
+    /** Suspend l'animation (ex. pendant l'overlay du dé) — reprend au dégel. */
+    frozen?: boolean
+    onStep?: (playerId: string, position: number) => void
+  }
 ): { positions: Record<string, number>; isStepping: boolean } {
   const reduced = useReducedMotion()
+  const frozen = opts?.frozen ?? false
   const [display, setDisplay] = useState<Record<string, number>>(targets)
-  const onStepRef = useRef(onStep)
-  onStepRef.current = onStep
+  const onStepRef = useRef(opts?.onStep)
+  onStepRef.current = opts?.onStep
 
   const targetsKey = useMemo(() => JSON.stringify(targets), [targets])
 
@@ -31,6 +36,7 @@ export function useSteppedPositions(
       setDisplay(goal)
       return
     }
+    if (frozen) return
 
     // Purge les pions disparus, initialise les nouveaux à leur position réelle.
     setDisplay((prev) => {
@@ -72,7 +78,7 @@ export function useSteppedPositions(
 
     return () => clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- display volontairement absent : lu au démarrage seulement
-  }, [targetsKey, reduced])
+  }, [targetsKey, reduced, frozen])
 
   const isStepping = useMemo(() => {
     const goal: Record<string, number> = JSON.parse(targetsKey)

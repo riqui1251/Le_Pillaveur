@@ -1479,7 +1479,8 @@
           "deHonteBack": "Indietreggia di una casella!",
           "wheelLegendSafe": "Salvo",
           "wheelLegendDrink": "Sorsi"
-        }
+        },
+        "outcomeNothing": "Nessun danno — salvo!"
       },
       "defis": [
         {

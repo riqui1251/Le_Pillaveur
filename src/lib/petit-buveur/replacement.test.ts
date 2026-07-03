@@ -173,6 +173,25 @@ describe('lastInteraction (spectacle client des tirages)', () => {
     }
   })
 
+  it("lastOutcome expose lisiblement l'effet appliqué (vote : la cible boit)", () => {
+    const s = freshState('outcome-vote')
+    const crafted = {
+      ...s,
+      phase: 'awaiting-interaction' as const,
+      pending: { caseType: 'vote' as const, playerId: 'u1', needsTarget: false },
+      lastCase: { type: 'vote' as const, effect: 3 },
+    }
+    const next = reduce(crafted, {
+      type: 'RESOLVE_INTERACTION',
+      playerId: 'u1',
+      choice: { targetId: 'u2' },
+    })
+    expect(next.lastOutcome?.caseType).toBe('vote')
+    expect(next.lastOutcome?.actorId).toBe('u1')
+    const change = next.lastOutcome?.changes.find((c) => c.playerId === 'u2')
+    expect(change?.drinks).toBe(3)
+  })
+
   it('le ROLL suivant efface le spectacle précédent', () => {
     const resolved = reduce(withPending('roue-defis'), { type: 'RESOLVE_INTERACTION', playerId: 'u1' })
     expect(resolved.lastInteraction).not.toBeNull()

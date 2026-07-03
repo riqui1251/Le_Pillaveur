@@ -1489,7 +1489,8 @@
           "deHonteBack": "Move back one square!",
           "wheelLegendSafe": "Safe",
           "wheelLegendDrink": "Sips"
-        }
+        },
+        "outcomeNothing": "No damage — safe!"
       },
       "defis": [
         {

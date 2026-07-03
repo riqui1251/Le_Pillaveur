@@ -17,6 +17,7 @@ export function TurnOverlay({
   isSelf = false,
   labelOf,
   labelSelf,
+  delayMs = 0,
 }: {
   /** Identifiant du joueur au tour — le flash se déclenche quand il change. */
   activeKey: string | null
@@ -27,20 +28,24 @@ export function TurnOverlay({
   labelOf: string
   /** Libellé « À toi de jouer ! » (prioritaire si isSelf). */
   labelSelf?: string
+  /** Retarde le flash (laisse le temps de LIRE l'effet de la case précédente). */
+  delayMs?: number
 }) {
   const reduced = useReducedMotion()
   const [visible, setVisible] = useState(false)
   // Dernier joueur déjà annoncé : le flash ne part qu'à un VRAI changement
   // (pas au premier rendu, pas quand activeKey repasse par null puis revient).
   const lastKeyRef = useRef<string | null | undefined>(undefined)
-  // Minuteur de fermeture en ref : il doit SURVIVRE aux re-exécutions de
-  // l'effet (joueur rapide → activeKey rebouge avant 1,1 s), sinon le flash
-  // reste bloqué à l'écran. Nettoyé uniquement au démontage.
+  // Minuteurs en refs : ils doivent SURVIVRE aux re-exécutions de l'effet
+  // (joueur rapide → activeKey rebouge avant la fin), sinon le flash reste
+  // bloqué à l'écran ou ne part jamais. Nettoyés au démontage.
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+      if (showTimerRef.current) clearTimeout(showTimerRef.current)
     }
   }, [])
 
@@ -50,26 +55,36 @@ export function TurnOverlay({
       return
     }
     if (!activeKey) {
-      // Le sujet du flash a disparu (dé lancé, partie finie…) : fermer tout de suite.
+      // Le sujet du flash a disparu (dé lancé, partie finie…) : tout annuler.
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+      if (showTimerRef.current) clearTimeout(showTimerRef.current)
       hideTimerRef.current = null
+      showTimerRef.current = null
       setVisible(false)
       return
     }
     if (activeKey === lastKeyRef.current) return
     lastKeyRef.current = activeKey
-    setVisible(true)
-    playGameSound('turn')
-    if (isSelf) {
-      try {
-        navigator.vibrate?.(120)
-      } catch {
-        // vibration non supportée — silencieux
+
+    const show = () => {
+      showTimerRef.current = null
+      setVisible(true)
+      playGameSound('turn')
+      if (isSelf) {
+        try {
+          navigator.vibrate?.(120)
+        } catch {
+          // vibration non supportée — silencieux
+        }
       }
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = setTimeout(() => setVisible(false), 1100)
     }
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
-    hideTimerRef.current = setTimeout(() => setVisible(false), 1100)
-  }, [activeKey, isSelf])
+
+    if (showTimerRef.current) clearTimeout(showTimerRef.current)
+    if (delayMs > 0) showTimerRef.current = setTimeout(show, delayMs)
+    else show()
+  }, [activeKey, isSelf, delayMs])
 
   return (
     <AnimatePresence>
