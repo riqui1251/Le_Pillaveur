@@ -1009,8 +1009,8 @@
         "drinks": "Boit",
         "gives": "Donne",
         "roundDrinksShort": "Tournée",
-        "launch": "Lancer 🎯",
-        "inGame": "En jeu…",
+        "launch": "Lâcher les balles",
+        "inGame": "En chute…",
         "nextTurn": "Tour suivant",
         "next": "suivant",
         "specialPins": "Pins spéciaux",
@@ -1027,7 +1027,9 @@
           "newGame": "Nouvelle partie",
           "back": "Retour",
           "roundDrinksAll": "🥂 {count} Tournée(s) Générale(s) — tout le monde boit !"
-        }
+        },
+        "turnLabel": "Au tour de",
+        "nextUp": "Ensuite"
       },
       "a11y": {
         "turnResult": "Résultat : {drinks} gorgées à boire, {gives} à donner.",

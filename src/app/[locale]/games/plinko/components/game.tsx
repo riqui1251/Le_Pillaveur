@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Volume2, VolumeX, ChevronDown } from 'lucide-react'
+import { Volume2, VolumeX, ChevronDown, ChevronsDown, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Player } from '@/types/game'
 import { getPlayerGameBoost } from '@/lib/players'
@@ -73,16 +73,7 @@ const DROP_START_X_MAX = 90;
 const ADD_BALL_START_X_MIN = 10;
 const ADD_BALL_START_X_MAX = 90;
 const ADD_BALL_VELOCITY_X_MAGNITUDE = 2.0;
-// Petite impulsion vers le bas au lancer (px/s) : la balle s'engage franchement
-// au lieu de flotter/rebondir ~0,4 s dans les premières rangées avant de tomber.
-const INITIAL_VELOCITY_Y = 130;
-// Pas de temps FIXE pour l'intégration physique : la boucle rAF accumule le
-// temps réel écoulé et rejoue autant de sous-pas de durée constante que
-// nécessaire. Résultat déterministe et identique quel que soit le frame-rate
-// (60 Hz, 120 Hz, ou appareil qui rame), là où l'ancien pas variable rendait la
-// trajectoire — donc la case d'arrivée — dépendante de la machine.
-const PHYSICS_FIXED_DT_MS = 1000 / 120; // ~8,33 ms
-const PHYSICS_MAX_SUBSTEPS = 8;         // borne le rattrapage (anti « spirale de la mort » après un onglet en arrière-plan)
+const INITIAL_VELOCITY_Y = 0.1;
 // ---------------------------------------------------------
 
 // Nombre cible de cases en bas
@@ -454,6 +445,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     redSips: number | null;
     greenSips: number | null;
     extraSips?: number | null;
+    player: Player; // joueur qui vient de jouer (l'index courant, lui, a déjà avancé)
   } | null>(null);
   const [playerResults, setPlayerResults] = useState<Record<string, TurnResult[]>>({});
   const [roundDrinksCount, setRoundDrinksCount] = useState(0);
@@ -730,9 +722,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
     const animState: AnimationState = {
       red: {
-          id: 'red', 
-          x: startX, y: 0, 
-          velocityY: INITIAL_VELOCITY_Y, velocityX: 0, 
+          id: 'red',
+          x: startX, y: 0,
+          velocityY: INITIAL_VELOCITY_Y, velocityX: 0,
           active: true, color: 'red',
           firstPinHit: false,
           effects: { multiplierCount: 0, sipsToAdd: 0, sipsToSubtract: 0, hitCountPerPin: new Map<string, number>(), effectsReset: false, jackpotHit: false },
@@ -740,9 +732,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
           // effectLog: [] // SUPPRIMÉ
       },
       green: {
-          id: 'green', 
-          x: startX, y: 0, 
-          velocityY: INITIAL_VELOCITY_Y, velocityX: 0, 
+          id: 'green',
+          x: startX, y: 0,
+          velocityY: INITIAL_VELOCITY_Y, velocityX: 0,
           active: true, color: 'green',
           firstPinHit: false,
           effects: { multiplierCount: 0, sipsToAdd: 0, sipsToSubtract: 0, hitCountPerPin: new Map<string, number>(), effectsReset: false, jackpotHit: false },
@@ -753,7 +745,6 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     };
 
     let lastTime = performance.now();
-    let accumulatorMs = 0; // temps réel en attente d'être consommé en sous-pas fixes
     const lastCollisionPin = new Map<string, string | null>();
     // --- MODIFICATION: Stocker les données complètes des balles extra finies ---
     const finishedExtraBallsDataThisTurn: BallAnimationData[] = []; 
@@ -800,16 +791,15 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         const ballRadiusPx = visualBallDiameterPx / 2;
         const pinRadiusPx = visualPinDiameterPx / 2;
 
-        // Intégration à pas FIXE (voir PHYSICS_FIXED_DT_MS) : déterministe et
-        // indépendante du frame-rate.
+        // Intégration plus réaliste (échelle en pixels et traînée légère)
         const nowMs = performance.now();
-        let dtSec = PHYSICS_FIXED_DT_MS / 1000;
+        let dtSec = Math.max(0.001, Math.min(0.033, deltaTime / 1000));
         // Slow motion effect
         if ((ballData.effects.slowMotionUntilMs ?? 0) > nowMs) {
           dtSec *= 0.5;
         }
         // Gravité (inversée si Gravity Flip actif)
-        const baseGravityPx = heightPx * 2.3;
+        const baseGravityPx = heightPx * 2.0;
         const gravitySign = ((ballData.effects.gravityFlipUntilMs ?? 0) > nowMs) ? -1 : 1;
         const GRAVITY_PX = baseGravityPx * gravitySign;
         const AIR_DRAG = 0.002;
@@ -822,8 +812,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         vy += GRAVITY_PX * dtSec;
         xPx += vx * dtSec;
         yPx += vy * dtSec;
-        vx *= Math.max(0.0, 1 - AIR_DRAG * (PHYSICS_FIXED_DT_MS / 16));
-        vy *= Math.max(0.0, 1 - (AIR_DRAG * 0.5) * (PHYSICS_FIXED_DT_MS / 16));
+        vx *= Math.max(0.0, 1 - AIR_DRAG * (deltaTime / 16));
+        vy *= Math.max(0.0, 1 - (AIR_DRAG * 0.5) * (deltaTime / 16));
 
         // Aimantation gauche/droite
         if ((ballData.effects.magnetUntilMs ?? 0) > nowMs && ballData.effects.magnetDir) {
@@ -841,10 +831,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         const hitboxScale = isSmBreakpoint ? 1 : 0.85;
         const sumRadiusPx = (ballRadiusPx * hitboxScale) + (pinRadiusPx * hitboxScale);
         const sumRadiusSqPx = sumRadiusPx * sumRadiusPx;
-        // Rebond plus amorti : l'ancienne valeur 0.9 (quasi élastique) faisait
-        // patiner la balle le long du haut du plateau ~0,8 s avant de tomber.
-        // ~0,6 donne une chute franche qui accélère, sans « coller » pour autant.
-        const RESTITUTION = 0.6;
+        const RESTITUTION = 0.9;
 
         let collisionOccurred = false;
 
@@ -882,7 +869,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 if (!ballData.firstPinHit) {
                   const side = Math.random() < 0.5 ? -1 : 1;
                   const tx = -ny; const ty = nx; // tangente
-                  const tangentBoost = isSmBreakpoint ? 90 : 60; // px/s (adouci : moins d'éjection latérale/vers le haut)
+                  const tangentBoost = isSmBreakpoint ? 120 : 80; // px/s
                   ballData.velocityX += tx * tangentBoost * side;
                   ballData.velocityY += ty * tangentBoost * side;
                   ballData.firstPinHit = true;
@@ -922,7 +909,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     if (!ballData.firstPinHit) {
                       const side = Math.random() < 0.5 ? -1 : 1;
                       const txS = -nyS; const tyS = nxS;
-                      const tangentBoostS = isSmBreakpoint ? 90 : 60;
+                      const tangentBoostS = isSmBreakpoint ? 120 : 80;
                       ballData.velocityX += txS * tangentBoostS * side;
                       ballData.velocityY += tyS * tangentBoostS * side;
                       ballData.firstPinHit = true;
@@ -1275,23 +1262,13 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         }
       };
 
-      // Consommer le temps réel écoulé en sous-pas de durée FIXE. On borne le
-      // rattrapage (PHYSICS_MAX_SUBSTEPS) pour éviter une avalanche de sous-pas
-      // si l'onglet a été en arrière-plan. La physique mute `animState` ; l'état
-      // React n'est synchronisé qu'une fois par frame, après tous les sous-pas.
-      accumulatorMs += Math.min(deltaTime, PHYSICS_FIXED_DT_MS * PHYSICS_MAX_SUBSTEPS);
-      while (accumulatorMs >= PHYSICS_FIXED_DT_MS) {
-        if (currentAnimState.red) processBallFrame(currentAnimState.red);
-        if (currentAnimState.green) processBallFrame(currentAnimState.green);
-        // Balles extra générées pendant ce sous-pas (split/addBall) : intégrées
-        // et traitées dans le même sous-pas, puis vidées pour ne pas ré-ajouter.
-        if (newlyAddedBalls.length > 0) {
-            currentAnimState.extra.push(...newlyAddedBalls);
-            newlyAddedBalls.length = 0;
-        }
-        currentAnimState.extra.forEach(extraBall => processBallFrame(extraBall));
-        accumulatorMs -= PHYSICS_FIXED_DT_MS;
+      if (currentAnimState.red) processBallFrame(currentAnimState.red);
+      if (currentAnimState.green) processBallFrame(currentAnimState.green);
+      // Ajouter les nouvelles balles extra générées pendant ce frame
+      if (newlyAddedBalls.length > 0) {
+          currentAnimState.extra.push(...newlyAddedBalls);
       }
+      currentAnimState.extra.forEach(extraBall => processBallFrame(extraBall));
 
       // --- Mise à jour de l'état React pour la position visuelle (inchangé) ---
       if (currentAnimState.red) {
@@ -1390,7 +1367,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
 
     const extraSipsForDisplay = finishedExtraBalls.reduce((sum, ballData) => sum + (ballData.finalSipResult ?? 0), 0);
-    setTurnResult({ redSips: totalRedSips, greenSips: totalGreenSips, extraSips: extraSipsForDisplay > 0 ? extraSipsForDisplay : null });
+    setTurnResult({ redSips: totalRedSips, greenSips: totalGreenSips, extraSips: extraSipsForDisplay > 0 ? extraSipsForDisplay : null, player: currentPlayer });
 
     // Mettre à jour l'historique du tour actuel // SUPPRIMÉ
     // const currentTurnLogs = { ... };
@@ -1439,40 +1416,69 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     : ''
 
   const actionBar = !gameOver ? (
-    <div className="flex w-full items-center gap-3">
-      <PlayerIcon player={currentPlayer} size="md" className="h-8 w-8 text-base" />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-white/45">{t('game.yourTurn')}</p>
-        <p className="truncate text-sm font-bold leading-tight">
-          <PlayerName player={currentPlayer} />
-        </p>
-      </div>
-
-      {/* Résultat du tour */}
-      {turnResult && (
-        <div className="flex shrink-0 gap-1.5">
-          <span className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-bold text-red-400">
-            {t('game.drinks')} {turnResult.redSips ?? 0} 🍺
-          </span>
-          <span className="rounded-lg bg-emerald-500/20 px-2 py-1 text-xs font-bold text-emerald-400">
-            {t('game.gives')} {turnResult.greenSips ?? 0} 🍺
-          </span>
-          {roundDrinksCount > 0 && (
-            <span className="rounded-lg bg-amber-500/20 px-2 py-1 text-xs font-bold text-amber-400">
-              {t('game.roundDrinksShort')} 🥂
+    <div className="flex w-full items-center gap-2.5">
+      {turnResult ? (
+        // ── État RÉSULTAT : le joueur qui vient de jouer + son score, puis « ensuite » ──
+        <>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="shrink-0 rounded-full ring-2 ring-white/25">
+              <PlayerIcon player={turnResult.player} size="md" className="h-9 w-9 text-base" />
             </span>
-          )}
-        </div>
-      )}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-bold text-red-400">
+                {t('game.drinks')} {turnResult.redSips ?? 0} 🍺
+              </span>
+              <span className="rounded-lg bg-emerald-500/20 px-2 py-1 text-xs font-bold text-emerald-400">
+                {t('game.gives')} {turnResult.greenSips ?? 0} 🍺
+              </span>
+              {roundDrinksCount > 0 && (
+                <span className="rounded-lg bg-amber-500/20 px-2 py-1 text-xs font-bold text-amber-400">
+                  {t('game.roundDrinksShort')} 🥂
+                </span>
+              )}
+            </div>
+          </div>
 
-      {/* Bouton action */}
-      <Button
-        onClick={dropBalls}
-        disabled={isAnimating || !!turnResult}
-        className="shrink-0 bg-gradient-to-r from-violet-600 to-purple-700 text-white font-semibold hover:from-violet-500 hover:to-purple-600 disabled:opacity-50"
-      >
-        {isAnimating ? t('game.inGame') : turnResult ? t('game.nextTurn') : t('game.launch')}
-      </Button>
+          {/* Qui vient ensuite (l'index a déjà avancé vers currentPlayer) */}
+          <div className="ml-auto flex shrink-0 items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5">
+            <ArrowRight className="h-4 w-4 shrink-0 text-violet-300" aria-hidden />
+            <div className="leading-tight">
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-violet-300/70">{t('game.nextUp')}</p>
+              <p className="max-w-[92px] truncate text-xs font-bold text-white"><PlayerName player={currentPlayer} /></p>
+            </div>
+            <PlayerIcon player={currentPlayer} size="sm" className="h-6 w-6 shrink-0 text-xs" />
+          </div>
+        </>
+      ) : (
+        // ── État PRÊT (à lancer) ou EN CHUTE ──
+        <>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="relative flex shrink-0">
+              {!isAnimating && <span className="absolute inset-0 -m-0.5 animate-ping rounded-full bg-violet-500/40" aria-hidden />}
+              <span className="relative rounded-full ring-2 ring-violet-400/80">
+                <PlayerIcon player={currentPlayer} size="md" className="h-10 w-10 text-lg" />
+              </span>
+            </span>
+            <div className="min-w-0 leading-tight">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-300/70">{t('game.turnLabel')}</p>
+              <p className="truncate text-base font-extrabold text-white"><PlayerName player={currentPlayer} /></p>
+            </div>
+          </div>
+
+          <div className="relative ml-auto shrink-0">
+            {!isAnimating && <span className="pointer-events-none absolute inset-0 animate-ping rounded-md bg-violet-500/25" aria-hidden />}
+            <Button
+              onClick={dropBalls}
+              disabled={isAnimating}
+              className="relative h-11 gap-1.5 bg-gradient-to-r from-violet-600 to-purple-700 px-5 text-base font-bold text-white shadow-lg shadow-violet-900/40 hover:from-violet-500 hover:to-purple-600 disabled:opacity-60"
+            >
+              {isAnimating
+                ? <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 animate-pulse rounded-full bg-white/80" />{t('game.inGame')}</span>
+                : <><ChevronsDown className="h-5 w-5 shrink-0" aria-hidden />{t('game.launch')}</>}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   ) : undefined
 
@@ -1499,14 +1505,17 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                   const isActive = distance === 0
                   return (
                     <div key={p.id} className={cn(
-                      'flex shrink-0 items-center gap-1.5 rounded-xl border px-2 py-1 transition-all duration-200',
-                      isActive ? 'border-violet-500/50 bg-violet-500/10' : 'border-white/[0.07] bg-white/[0.03] opacity-50',
+                      'flex shrink-0 items-center gap-1.5 rounded-xl border transition-all duration-200',
+                      isActive
+                        ? 'border-violet-400/70 bg-violet-500/20 px-2.5 py-1.5 shadow-lg shadow-violet-900/30 ring-1 ring-violet-400/30'
+                        : 'border-white/[0.07] bg-white/[0.03] px-2 py-1 opacity-45',
                     )}>
-                      <PlayerIcon player={p} size="sm" className="h-5 w-5 text-xs" />
-                      <span className={cn('text-xs font-semibold', isActive ? 'text-white' : 'text-white/50')}>
+                      {isActive && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-violet-300" aria-hidden />}
+                      <PlayerIcon player={p} size="sm" className={cn(isActive ? 'h-6 w-6' : 'h-5 w-5', 'text-xs')} />
+                      <span className={cn('font-semibold', isActive ? 'text-sm text-white' : 'text-xs text-white/50')}>
                         <PlayerName player={p} />
                       </span>
-                      {distance === 1 && <span className="text-[9px] text-white/30">{t('game.next')}</span>}
+                      {distance === 1 && <span className="text-[9px] uppercase tracking-wide text-white/30">{t('game.next')}</span>}
                     </div>
                   )
                 })}

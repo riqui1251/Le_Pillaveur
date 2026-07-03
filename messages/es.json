@@ -999,8 +999,8 @@
         "drinks": "Bebe",
         "gives": "Reparte",
         "roundDrinksShort": "Ronda",
-        "launch": "Lanzar 🎯",
-        "inGame": "En juego…",
+        "launch": "Soltar las bolas",
+        "inGame": "Cayendo…",
         "nextTurn": "Siguiente turno",
         "next": "siguiente",
         "specialPins": "Pins especiales",
@@ -1017,7 +1017,9 @@
           "newGame": "Nueva partida",
           "back": "Volver",
           "roundDrinksAll": "🥂 {count} ronda(s) general(es) — ¡todos beben!"
-        }
+        },
+        "turnLabel": "Turno de",
+        "nextUp": "Después"
       },
       "a11y": {
         "turnResult": "Resultado: {drinks} tragos para beber, {gives} para repartir.",

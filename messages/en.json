@@ -1009,8 +1009,8 @@
         "drinks": "Drinks",
         "gives": "Gives",
         "roundDrinksShort": "Round",
-        "launch": "Drop 🎯",
-        "inGame": "Playing…",
+        "launch": "Drop the balls",
+        "inGame": "Falling…",
         "nextTurn": "Next turn",
         "next": "next",
         "specialPins": "Special pins",
@@ -1027,7 +1027,9 @@
           "newGame": "New game",
           "back": "Back",
           "roundDrinksAll": "🥂 {count} round(s) for all — everyone drinks!"
-        }
+        },
+        "turnLabel": "Turn of",
+        "nextUp": "Next up"
       },
       "a11y": {
         "turnResult": "Result: {drinks} sips to drink, {gives} to give.",

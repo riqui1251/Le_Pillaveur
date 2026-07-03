@@ -999,8 +999,8 @@
         "drinks": "Beve",
         "gives": "Distribuisce",
         "roundDrinksShort": "Giro",
-        "launch": "Lancia 🎯",
-        "inGame": "In gioco…",
+        "launch": "Lascia le palline",
+        "inGame": "In caduta…",
         "nextTurn": "Turno successivo",
         "next": "successivo",
         "specialPins": "Pin speciali",
@@ -1017,7 +1017,9 @@
           "newGame": "Nuova partita",
           "back": "Indietro",
           "roundDrinksAll": "🥂 {count} giro/i generale/i — tutti bevono!"
-        }
+        },
+        "turnLabel": "Turno di",
+        "nextUp": "Poi"
       },
       "a11y": {
         "turnResult": "Risultato: {drinks} sorsi da bere, {gives} da dare.",
