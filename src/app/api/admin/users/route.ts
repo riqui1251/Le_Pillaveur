@@ -19,6 +19,7 @@ import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-t
 import { resolveRequestLocale } from '@/lib/name-moderation/request-locale'
 import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { getIpsBySubjectKeys, subjectKeyFor } from '@/lib/ip-history-server'
+import { listFeatureBansForUsers, type FeatureBanState } from '@/lib/feature-bans'
 
 function serializeUser(user: {
   id: string
@@ -92,11 +93,13 @@ export async function GET() {
     })
 
     const ipsMap = await getIpsBySubjectKeys(users.map((u) => subjectKeyFor(u.id, '')))
+    const featureBansMap = await listFeatureBansForUsers(users.map((u) => u.id))
 
     return NextResponse.json({
       users: users.map((u) => ({
         ...serializeUser(u),
         ips: ipsMap.get(subjectKeyFor(u.id, '')) ?? [],
+        featureBans: featureBansMap.get(u.id) ?? ([] as FeatureBanState[]),
       })),
     })
   } catch (error) {

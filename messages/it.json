@@ -2282,6 +2282,26 @@
       "unbanDenied": "Sbannamento rifiutato",
       "loadAccounts": "Impossibile caricare gli account",
       "historyUnavailable": "Cronologia non disponibile"
+    },
+    "siteSettings": {
+      "title": "Impostazioni del sito",
+      "desc": "Opzioni globali, applicate a tutti i giocatori.",
+      "voiceLabel": "Chat vocale",
+      "voiceOn": "Attiva su tutto il sito.",
+      "voiceOff": "Disattivata: nessuno può entrare in una chat vocale.",
+      "enable": "Attiva",
+      "disable": "Disattiva"
+    },
+    "featureBans": {
+      "voice": "vocale",
+      "chat": "chat",
+      "ban": "Escludi dal {feature}",
+      "lift": "Riautorizza il {feature}",
+      "permanent": "Esclusione permanente",
+      "permanentShort": "permanente",
+      "confirm": "Escludi",
+      "dialogVoiceTitle": "Escludi dalla chat vocale",
+      "dialogChatTitle": "Escludi dalla chat scritta"
     }
   },
   "voice": {
@@ -2303,6 +2323,8 @@
     "nobody": "Ancora nessuno nel vocale",
     "micDenied": "Microfono negato — consentilo nel browser.",
     "unsupported": "Il tuo browser non supporta il vocale.",
-    "networkError": "Impossibile connettersi al vocale — riprova."
+    "networkError": "Impossibile connettersi al vocale — riprova.",
+    "disabled": "La chat vocale è stata disattivata sul sito da un amministratore.",
+    "banned": "Sei stato escluso dalla chat vocale."
   }
 }

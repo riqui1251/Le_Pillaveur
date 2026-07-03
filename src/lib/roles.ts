@@ -68,6 +68,19 @@ export function canBanUsers(role: string): boolean {
   return roleRank(role) >= ROLE_RANK.moderator
 }
 
+/** Réglages globaux du site (ex. activer/désactiver le vocal) : super admin+. */
+export function canManageSiteSettings(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.superadmin
+}
+
+/**
+ * Bannir un joueur d'une fonctionnalité (vocal / chat écrit) : modérateur+,
+ * et uniquement un grade strictement inférieur (même règle que les bans compte).
+ */
+export function canBanFeatureTarget(actorRole: string, targetRole: string): boolean {
+  return canBanUsers(actorRole) && isStrictlyHigher(actorRole, targetRole)
+}
+
 /** Ban temporaire : grade strictement supérieur à la cible. */
 export function canTemporaryBanTarget(actorRole: string, targetRole: string): boolean {
   return canBanUsers(actorRole) && isStrictlyHigher(actorRole, targetRole)

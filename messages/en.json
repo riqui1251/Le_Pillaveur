@@ -2292,6 +2292,26 @@
       "unbanDenied": "Unban denied",
       "loadAccounts": "Unable to load accounts",
       "historyUnavailable": "History unavailable"
+    },
+    "siteSettings": {
+      "title": "Site settings",
+      "desc": "Global options, applied to every player.",
+      "voiceLabel": "Voice chat",
+      "voiceOn": "Enabled site-wide.",
+      "voiceOff": "Disabled: nobody can join a voice chat.",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "featureBans": {
+      "voice": "voice",
+      "chat": "chat",
+      "ban": "Ban from {feature}",
+      "lift": "Re-allow {feature}",
+      "permanent": "Permanent ban",
+      "permanentShort": "permanent",
+      "confirm": "Ban",
+      "dialogVoiceTitle": "Ban from voice chat",
+      "dialogChatTitle": "Ban from text chat"
     }
   },
   "voice": {
@@ -2313,6 +2333,8 @@
     "nobody": "Nobody in voice yet",
     "micDenied": "Microphone denied — allow it in your browser settings.",
     "unsupported": "Your browser does not support voice chat.",
-    "networkError": "Could not connect to voice — try again."
+    "networkError": "Could not connect to voice — try again.",
+    "disabled": "Voice chat has been disabled site-wide by an administrator.",
+    "banned": "You have been banned from voice chat."
   }
 }

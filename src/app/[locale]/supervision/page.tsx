@@ -31,6 +31,10 @@ import {
   Smartphone,
   Laptop,
   Tablet,
+  Radio,
+  Mic,
+  MicOff,
+  MessageSquare,
 } from 'lucide-react'
 import { deviceLabel } from '@/lib/device-from-user-agent'
 import { useAuth } from '@/hooks/useAuth'
@@ -40,6 +44,8 @@ import {
   canAssignRoles,
   canPermanentBanTarget,
   canTemporaryBanTarget,
+  canBanFeatureTarget,
+  canManageSiteSettings,
   canManageUsers,
   canModifyTarget,
   canDeleteTarget,
@@ -172,6 +178,15 @@ type AdminUser = {
     bannedUntil: string | null
     banComment: string | null
   }
+  featureBans?: FeatureBanEntry[]
+}
+
+type FeatureBanEntry = {
+  feature: 'voice' | 'chat'
+  permanent: boolean
+  until: string | null
+  comment: string | null
+  createdAt: string
 }
 
 type ActiveBan = {
@@ -956,6 +971,17 @@ export default function SupervisionPage() {
     displayName: string
   } | null>(null)
 
+  // Réglage global du vocal (super admin) + sanctions ciblées vocal/chat.
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean | null>(null)
+  const [featureBanDialog, setFeatureBanDialog] = useState<{
+    userId: string
+    displayName: string
+    feature: 'voice' | 'chat'
+  } | null>(null)
+  const [featureBanComment, setFeatureBanComment] = useState('')
+  const [featureBanDays, setFeatureBanDays] = useState('7')
+  const [featureBanPermanent, setFeatureBanPermanent] = useState(false)
+
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([])
   const [feedbackSearch, setFeedbackSearch] = useState('')
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null)
@@ -1085,6 +1111,13 @@ export default function SupervisionPage() {
           (usersData.users as AdminUser[]).map((u) => [u.id, u.displayName])
         )
       )
+
+      // Réglages globaux du site (ex. vocal) — lecture pour tout le staff.
+      const settingsRes = await fetch('/api/admin/site-settings', { credentials: 'include' })
+      if (settingsRes.ok) {
+        const settings = await settingsRes.json()
+        setVoiceEnabled(Boolean(settings.voiceEnabled))
+      }
 
       if (analytics) {
         const statsRes = await fetch('/api/admin/stats', { credentials: 'include' })
@@ -1305,6 +1338,77 @@ export default function SupervisionPage() {
       if (!res.ok) throw new Error(data.error ?? t('apiErrors.unbanDenied'))
       setUnbanDialog(null)
       setUnbanComment('')
+      await loadAll()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tErrors('generic'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const toggleGlobalVoice = async (enabled: boolean) => {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/site-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ voiceEnabled: enabled }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? tErrors('generic'))
+      setVoiceEnabled(data.voiceEnabled)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tErrors('generic'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const submitFeatureBan = async () => {
+    if (!featureBanDialog) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/users/feature-ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          userId: featureBanDialog.userId,
+          feature: featureBanDialog.feature,
+          action: 'ban',
+          durationDays: featureBanPermanent ? undefined : Number(featureBanDays) || 7,
+          comment: featureBanComment,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? tErrors('generic'))
+      setFeatureBanDialog(null)
+      setFeatureBanComment('')
+      setFeatureBanDays('7')
+      setFeatureBanPermanent(false)
+      await loadAll()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tErrors('generic'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const liftFeatureBan = async (userId: string, feature: 'voice' | 'chat') => {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/users/feature-ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId, feature, action: 'unban' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? tErrors('generic'))
       await loadAll()
     } catch (e) {
       setError(e instanceof Error ? e.message : tErrors('generic'))
@@ -1676,7 +1780,41 @@ export default function SupervisionPage() {
         </>
         )}
 
-        <TabsContent value="accounts">
+        <TabsContent value="accounts" className="space-y-4">
+          {user && canManageSiteSettings(user.role) && (
+            <Card className="border-white/10 bg-white/[0.03]">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Radio className="h-5 w-5 text-emerald-400" />
+                  {t('siteSettings.title')}
+                </CardTitle>
+                <CardDescription>{t('siteSettings.desc')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">{t('siteSettings.voiceLabel')}</p>
+                    <p className="text-xs text-white/50">
+                      {voiceEnabled === null
+                        ? '…'
+                        : voiceEnabled
+                          ? t('siteSettings.voiceOn')
+                          : t('siteSettings.voiceOff')}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={voiceEnabled ? 'destructive' : 'default'}
+                    disabled={busy || voiceEnabled === null}
+                    onClick={() => void toggleGlobalVoice(!voiceEnabled)}
+                  >
+                    {voiceEnabled ? t('siteSettings.disable') : t('siteSettings.enable')}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="border-white/10 bg-white/[0.03]">
             <CardHeader>
               <CardTitle className="text-white">{t('accounts.adminTitle')}</CardTitle>
@@ -1990,6 +2128,63 @@ export default function SupervisionPage() {
                       )}
                     </div>
                   )}
+
+                  {/* Sanctions ciblées : couper le vocal ou le chat écrit sans
+                      bannir le compte (modérateur+ sur un grade inférieur). */}
+                  {u.id !== user.id && canBanFeatureTarget(user.role, u.role) && (
+                    <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                      {(['voice', 'chat'] as const).map((feature) => {
+                        const active = (u.featureBans ?? []).find((b) => b.feature === feature)
+                        const Icon = feature === 'voice' ? Mic : MessageSquare
+                        const label =
+                          feature === 'voice'
+                            ? t('featureBans.voice')
+                            : t('featureBans.chat')
+                        return active ? (
+                          <Button
+                            key={feature}
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy}
+                            className="gap-1"
+                            onClick={() => void liftFeatureBan(u.id, feature)}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {t('featureBans.lift', { feature: label })}
+                            <span className="ml-1 text-[10px] text-white/50">
+                              {active.permanent
+                                ? t('featureBans.permanentShort')
+                                : active.until
+                                  ? format.dateTime(new Date(active.until), { dateStyle: 'short' })
+                                  : ''}
+                            </span>
+                          </Button>
+                        ) : (
+                          <Button
+                            key={feature}
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            className="gap-1 border-orange-500/40 text-orange-300"
+                            onClick={() =>
+                              setFeatureBanDialog({
+                                userId: u.id,
+                                displayName: u.displayName,
+                                feature,
+                              })
+                            }
+                          >
+                            {feature === 'voice' ? (
+                              <MicOff className="h-3.5 w-3.5" />
+                            ) : (
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            )}
+                            {t('featureBans.ban', { feature: label })}
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )))}
             </CardContent>
@@ -2235,6 +2430,69 @@ export default function SupervisionPage() {
             </Button>
             <Button variant="destructive" disabled={busy} onClick={submitBan}>
               {t('dialogs.banConfirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!featureBanDialog} onOpenChange={(open) => !open && setFeatureBanDialog(null)}>
+        <DialogContent className="border-white/10 bg-[#0c0b12] text-white">
+          <DialogHeader>
+            <DialogTitle>
+              {featureBanDialog?.feature === 'voice'
+                ? t('featureBans.dialogVoiceTitle')
+                : t('featureBans.dialogChatTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-white/50">
+              <strong className="text-white">{featureBanDialog?.displayName}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                id="feature-ban-permanent"
+                type="checkbox"
+                className="h-4 w-4 accent-red-500"
+                checked={featureBanPermanent}
+                onChange={(e) => setFeatureBanPermanent(e.target.checked)}
+              />
+              <label htmlFor="feature-ban-permanent" className="text-sm text-white/80">
+                {t('featureBans.permanent')}
+              </label>
+            </div>
+            {!featureBanPermanent && (
+              <div>
+                <label className="mb-1 block text-xs text-white/50">{t('dialogs.durationDays')}</label>
+                <Select value={featureBanDays} onValueChange={setFeatureBanDays}>
+                  <SelectTrigger className="bg-black/30">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">{t('dialogs.day', { count: 1 })}</SelectItem>
+                    <SelectItem value="3">{t('dialogs.days', { count: 3 })}</SelectItem>
+                    <SelectItem value="7">{t('dialogs.days', { count: 7 })}</SelectItem>
+                    <SelectItem value="14">{t('dialogs.days', { count: 14 })}</SelectItem>
+                    <SelectItem value="30">{t('dialogs.days', { count: 30 })}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div>
+              <label className="mb-1 block text-xs text-white/50">{t('dialogs.banCommentLabel')}</label>
+              <textarea
+                className="min-h-[70px] w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/30"
+                placeholder={t('dialogs.banCommentPlaceholder')}
+                value={featureBanComment}
+                onChange={(e) => setFeatureBanComment(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFeatureBanDialog(null)}>
+              {t('dialogs.cancel')}
+            </Button>
+            <Button variant="destructive" disabled={busy} onClick={submitFeatureBan}>
+              {t('featureBans.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

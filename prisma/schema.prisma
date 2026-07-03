@@ -53,6 +53,8 @@ model User {
   nameModerationWarningDismissedAt DateTime?
   chatMessages          ChatMessage[]      @relation("ChatMessages")
   chatReads             ChatRead[]         @relation("ChatReads")
+  featureBans           FeatureBan[]       @relation("FeatureBanTarget")
+  featureBansIssued     FeatureBan[]       @relation("FeatureBanActor")
 }
 
 model ChatRead {
@@ -277,4 +279,28 @@ model NameModerationAttempt {
   @@index([visitorId, createdAt])
   @@index([reason, createdAt])
   @@index([createdAt])
+}
+
+/// Réglages globaux du site (clé/valeur). Ex. : voiceEnabled = "1" | "0".
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+/// Bannissement CIBLÉ d'une fonctionnalité (vocal ou chat écrit), indépendant
+/// du ban de compte. `until` null = permanent ; sinon expire à cette date.
+model FeatureBan {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation("FeatureBanTarget", fields: [userId], references: [id], onDelete: Cascade)
+  feature   String    // 'voice' | 'chat'
+  until     DateTime?
+  comment   String?
+  actorId   String?
+  actor     User?     @relation("FeatureBanActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, feature])
+  @@index([userId])
 }

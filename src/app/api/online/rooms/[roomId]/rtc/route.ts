@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { publishRtcSignal, type RtcSignal } from '@/lib/online/room-bus'
+import { isVoiceEnabled } from '@/lib/site-settings'
+import { isFeatureBanned } from '@/lib/feature-bans'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -31,6 +33,17 @@ export async function POST(request: Request, { params }: Params) {
   }
   if (to === user.id) {
     return NextResponse.json({ error: 'Signal invalide' }, { status: 400 })
+  }
+
+  // Défense en profondeur : même si un client contourne l'absence
+  // d'identifiants ICE, il ne peut pas signaler si le vocal est coupé
+  // (site entier) ou s'il en est banni.
+  const [enabled, banned] = await Promise.all([
+    isVoiceEnabled(),
+    isFeatureBanned(user.id, 'voice'),
+  ])
+  if (!enabled || banned) {
+    return NextResponse.json({ error: 'Vocal indisponible' }, { status: 403 })
   }
   if (JSON.stringify(body?.payload ?? null).length > MAX_PAYLOAD_BYTES) {
     return NextResponse.json({ error: 'Signal trop volumineux' }, { status: 413 })

@@ -18,7 +18,7 @@ import type { IceServer } from '@/lib/rtc/ice'
  */
 
 export type VoicePeerStatus = 'connecting' | 'connected' | 'failed'
-export type VoiceError = 'mic-denied' | 'unsupported' | 'network' | null
+export type VoiceError = 'mic-denied' | 'unsupported' | 'network' | 'disabled' | 'banned' | null
 
 type MemberLite = { userId: string }
 type PeerEntry = {
@@ -293,6 +293,20 @@ export function useVoiceChat(
     setJoining(true)
     setError(null)
     try {
+      // Droit d'accès AVANT de demander le micro : si le vocal est coupé
+      // (site) ou que le joueur en est banni, on n'ouvre pas le micro.
+      const credsRes = await fetch('/api/rtc/credentials', { credentials: 'include' })
+      if (credsRes.status === 403) {
+        const reason = (await credsRes.json().catch(() => null))?.reason
+        setError(reason === 'banned' ? 'banned' : 'disabled')
+        setJoining(false)
+        return
+      }
+      const creds = credsRes.ok ? await credsRes.json().catch(() => null) : null
+      iceServersRef.current = creds?.iceServers ?? [
+        { urls: 'stun:stun.l.google.com:19302' },
+      ]
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       })
@@ -301,13 +315,6 @@ export function useVoiceChat(
         t.enabled = !micMutedRef.current
       })
       attachAnalyser(selfId, stream)
-
-      const creds = await fetch('/api/rtc/credentials', { credentials: 'include' })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null)
-      iceServersRef.current = creds?.iceServers ?? [
-        { urls: 'stun:stun.l.google.com:19302' },
-      ]
 
       // Flux SSE dédié à la signalisation (ouvert seulement pendant le vocal).
       const es = new EventSource(`/api/online/rooms/${roomId}/stream`)

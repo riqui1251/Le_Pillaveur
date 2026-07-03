@@ -2282,6 +2282,26 @@
       "unbanDenied": "Desbaneo denegado",
       "loadAccounts": "No se pueden cargar las cuentas",
       "historyUnavailable": "Historial no disponible"
+    },
+    "siteSettings": {
+      "title": "Ajustes del sitio",
+      "desc": "Opciones globales, aplicadas a todos los jugadores.",
+      "voiceLabel": "Chat de voz",
+      "voiceOn": "Activado en todo el sitio.",
+      "voiceOff": "Desactivado: nadie puede unirse a un chat de voz.",
+      "enable": "Activar",
+      "disable": "Desactivar"
+    },
+    "featureBans": {
+      "voice": "voz",
+      "chat": "chat",
+      "ban": "Bloquear el {feature}",
+      "lift": "Volver a permitir el {feature}",
+      "permanent": "Bloqueo permanente",
+      "permanentShort": "permanente",
+      "confirm": "Bloquear",
+      "dialogVoiceTitle": "Bloquear del chat de voz",
+      "dialogChatTitle": "Bloquear del chat escrito"
     }
   },
   "voice": {
@@ -2303,6 +2323,8 @@
     "nobody": "Nadie en la voz todavía",
     "micDenied": "Micrófono denegado — permítelo en tu navegador.",
     "unsupported": "Tu navegador no soporta la voz.",
-    "networkError": "No se pudo conectar a la voz — reinténtalo."
+    "networkError": "No se pudo conectar a la voz — reinténtalo.",
+    "disabled": "El chat de voz ha sido desactivado en el sitio por un administrador.",
+    "banned": "Has sido bloqueado del chat de voz."
   }
 }

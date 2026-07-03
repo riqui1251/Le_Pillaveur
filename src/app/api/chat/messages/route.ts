@@ -5,6 +5,7 @@ import { areFriends } from '@/lib/friends'
 import { parseOnlinePreferences } from '@/lib/online-preferences'
 import { censorChatMessage } from '@/lib/chat-moderation'
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
+import { isFeatureBanned } from '@/lib/feature-bans'
 
 /**
  * Chat léger par canal :
@@ -105,6 +106,11 @@ export async function POST(request: Request) {
 
   if (!body || body.length > MAX_BODY_LENGTH) {
     return NextResponse.json({ error: 'Message invalide' }, { status: 400 })
+  }
+
+  // Ban de chat écrit (modérateur) : lecture autorisée, envoi bloqué.
+  if (await isFeatureBanned(user.id, 'chat')) {
+    return NextResponse.json({ error: 'chat-banned' }, { status: 403 })
   }
 
   const resolved = await resolveChannel(user, scope, friendUserId)

@@ -2297,6 +2297,26 @@
       "unbanDenied": "Débannissement refusé",
       "loadAccounts": "Impossible de charger les comptes",
       "historyUnavailable": "Historique indisponible"
+    },
+    "siteSettings": {
+      "title": "Réglages du site",
+      "desc": "Options globales, appliquées à tous les joueurs.",
+      "voiceLabel": "Chat vocal",
+      "voiceOn": "Activé sur tout le site.",
+      "voiceOff": "Désactivé : personne ne peut rejoindre un vocal.",
+      "enable": "Activer",
+      "disable": "Désactiver"
+    },
+    "featureBans": {
+      "voice": "vocal",
+      "chat": "chat",
+      "ban": "Bannir du {feature}",
+      "lift": "Réautoriser le {feature}",
+      "permanent": "Bannissement permanent",
+      "permanentShort": "permanent",
+      "confirm": "Bannir",
+      "dialogVoiceTitle": "Bannir du chat vocal",
+      "dialogChatTitle": "Bannir du chat écrit"
     }
   },
   "voice": {
@@ -2318,6 +2338,8 @@
     "nobody": "Personne en vocal pour l'instant",
     "micDenied": "Micro refusé — autorise-le dans les réglages de ton navigateur.",
     "unsupported": "Ton navigateur ne supporte pas le vocal.",
-    "networkError": "Connexion au vocal impossible — réessaie."
+    "networkError": "Connexion au vocal impossible — réessaie.",
+    "disabled": "Le vocal est désactivé sur le site par un administrateur.",
+    "banned": "Tu as été banni du chat vocal."
   }
 }
