@@ -1490,7 +1490,11 @@
           "wheelLegendSafe": "Sauvé",
           "wheelLegendDrink": "Gorgées"
         },
-        "outcomeNothing": "Aucun dégât — sauvé !"
+        "outcomeNothing": "Aucun dégât — sauvé !",
+        "history": {
+          "title": "Historique des effets",
+          "empty": "Aucun effet pour l'instant"
+        }
       },
       "defis": [
         {

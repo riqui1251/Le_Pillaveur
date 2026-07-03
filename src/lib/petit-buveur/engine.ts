@@ -89,6 +89,16 @@ export type LastOutcomeChange = { playerId: string; drinks: number; from: number
  */
 export type LastOutcome = { caseType: CaseType; actorId: string; changes: LastOutcomeChange[] }
 
+/** Entrée d'historique : un effet résolu, daté par tour et dé. */
+export type OutcomeEntry = LastOutcome & { turn: number; dice: number | null }
+
+const OUTCOME_HISTORY_LIMIT = 25
+
+/** Ajoute un effet à l'historique public (borné, plus récent en dernier). */
+function pushOutcome(history: OutcomeEntry[] | undefined, entry: OutcomeEntry): OutcomeEntry[] {
+  return [...(history ?? []).slice(-(OUTCOME_HISTORY_LIMIT - 1)), entry]
+}
+
 export interface LogEntry {
   turn: number
   playerId: string
@@ -115,6 +125,8 @@ export interface EngineState {
   lastInteraction?: LastInteraction | null
   /** Lisibilité client : effets appliqués par la dernière case (absent sur les états anciens). */
   lastOutcome?: LastOutcome | null
+  /** Historique public des effets résolus (borné, absent sur les états anciens). */
+  outcomeHistory?: OutcomeEntry[]
   phase: EnginePhase
   /** Id du joueur gagnant, ou null. */
   winner: string | null
@@ -165,6 +177,7 @@ export function createInitialState(
     pending: null,
     lastInteraction: null,
     lastOutcome: null,
+    outcomeHistory: [],
     phase: 'playing',
     winner: null,
     log: [],
@@ -619,6 +632,11 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       actorId: me.id,
       changes: diffOutcome(beforeCase, players),
     }
+    const outcomeHistory = pushOutcome(state.outcomeHistory, {
+      ...lastOutcome,
+      turn: state.turnCount,
+      dice,
+    })
     const winnerAfterCase = findWinner(players)
     if (winnerAfterCase) {
       return {
@@ -630,6 +648,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         lastMoveDelta: moveDelta,
         lastCase: generated,
         lastOutcome,
+        outcomeHistory,
         phase: 'finished',
         winner: winnerAfterCase,
         log: pushLog(state.log, { turn: state.turnCount, playerId: winnerAfterCase, message: 'win' }),
@@ -647,6 +666,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       lastMoveDelta: moveDelta,
       lastCase: generated,
       lastOutcome,
+      outcomeHistory,
       log: pushLog(state.log, { turn: state.turnCount, playerId: me.id, message: `case:${generated.type}` }),
     }
   }
@@ -688,6 +708,11 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       actorId: action.playerId,
       changes: diffOutcome(beforeResolve, players),
     }
+    const outcomeHistory = pushOutcome(state.outcomeHistory, {
+      ...lastOutcome,
+      turn: state.turnCount,
+      dice: state.lastDice,
+    })
 
     // Victoire éventuelle (un joueur poussé sur la dernière case par l'effet).
     const winnerId = findWinner(players)
@@ -700,6 +725,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
         pending: null,
         lastInteraction,
         lastOutcome,
+        outcomeHistory,
         phase: 'finished',
         winner: winnerId,
         log: pushLog(state.log, { turn: state.turnCount, playerId: winnerId, message: 'win' }),
@@ -717,6 +743,7 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
       pending: null,
       lastInteraction,
       lastOutcome,
+      outcomeHistory,
       phase: 'playing',
       log: pushLog(state.log, {
         turn: state.turnCount,

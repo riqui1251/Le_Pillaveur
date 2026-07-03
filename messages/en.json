@@ -1490,7 +1490,11 @@
           "wheelLegendSafe": "Safe",
           "wheelLegendDrink": "Sips"
         },
-        "outcomeNothing": "No damage — safe!"
+        "outcomeNothing": "No damage — safe!",
+        "history": {
+          "title": "Effect history",
+          "empty": "No effects yet"
+        }
       },
       "defis": [
         {

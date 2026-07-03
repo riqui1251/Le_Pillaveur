@@ -1480,7 +1480,11 @@
           "wheelLegendSafe": "Salvo",
           "wheelLegendDrink": "Sorsi"
         },
-        "outcomeNothing": "Nessun danno — salvo!"
+        "outcomeNothing": "Nessun danno — salvo!",
+        "history": {
+          "title": "Cronologia degli effetti",
+          "empty": "Ancora nessun effetto"
+        }
       },
       "defis": [
         {

@@ -192,6 +192,30 @@ describe('lastInteraction (spectacle client des tirages)', () => {
     expect(change?.drinks).toBe(3)
   })
 
+  it("outcomeHistory accumule les effets (borné, plus récent en dernier) et survit au ROLL", () => {
+    const s = freshState('outcome-history')
+    const crafted = {
+      ...s,
+      phase: 'awaiting-interaction' as const,
+      pending: { caseType: 'vote' as const, playerId: 'u1', needsTarget: false },
+      lastCase: { type: 'vote' as const, effect: 3 },
+    }
+    const resolved = reduce(crafted, {
+      type: 'RESOLVE_INTERACTION',
+      playerId: 'u1',
+      choice: { targetId: 'u2' },
+    })
+    expect(resolved.outcomeHistory).toHaveLength(1)
+    expect(resolved.outcomeHistory?.[0].caseType).toBe('vote')
+    expect(resolved.outcomeHistory?.[0].turn).toBe(1)
+
+    // Le tour suivant AJOUTE à l'historique (contrairement à lastOutcome qui est remplacé).
+    const roller = currentPlayerId(resolved)!
+    const afterRoll = reduce(resolved, { type: 'ROLL', playerId: roller })
+    expect(afterRoll.outcomeHistory?.length).toBeGreaterThanOrEqual(1)
+    expect(afterRoll.outcomeHistory?.[0].caseType).toBe('vote')
+  })
+
   it('le ROLL suivant efface le spectacle précédent', () => {
     const resolved = reduce(withPending('roue-defis'), { type: 'RESOLVE_INTERACTION', playerId: 'u1' })
     expect(resolved.lastInteraction).not.toBeNull()

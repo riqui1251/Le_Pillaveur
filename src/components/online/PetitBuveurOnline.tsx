@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
-import { Dice6, ArrowLeft, RefreshCw, Home, Beer, Trophy, Sparkles, Target, Shuffle, User, HelpCircle, X, Volume2, VolumeX } from 'lucide-react'
+import { Dice6, ArrowLeft, RefreshCw, Home, Beer, Trophy, Sparkles, Target, Shuffle, User, HelpCircle, History, X, Volume2, VolumeX } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -84,6 +84,7 @@ export function PetitBuveurOnline() {
   const [busy, setBusy] = useState(false)
   const [rolling, setRolling] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
   const [diceOverlay, setDiceOverlay] = useState<DiceOverlayState | null>(null)
   const diceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -478,6 +479,13 @@ export function PetitBuveurOnline() {
           <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/60">
             {DIFFICULTY_EMOJI[difficulty]} {tDiff(difficulty)}
           </span>
+          <button
+            onClick={() => setShowHistory(true)}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
+            aria-label={t('history.title')}
+          >
+            <History className="h-4 w-4" />
+          </button>
           <button
             onClick={toggleMuted}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
@@ -1172,6 +1180,107 @@ export function PetitBuveurOnline() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Historique des effets précédents — informatif, fermable */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('history.title')}
+            onClick={() => setShowHistory(false)}
+            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <History className="h-5 w-5 shrink-0 text-amber-300" />
+                  <h3 className="text-base font-bold text-white">{t('history.title')}</h3>
+                </div>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label={tGame('close')}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="min-h-0 space-y-2 overflow-y-auto p-4">
+                {(view.outcomeHistory ?? []).length === 0 ? (
+                  <p className="py-6 text-center text-sm text-white/50">{t('history.empty')}</p>
+                ) : (
+                  [...(view.outcomeHistory ?? [])].reverse().map((entry, i) => {
+                    const actor = view.players.find((p) => p.id === entry.actorId)
+                    return (
+                      <div
+                        key={`${entry.turn}-${entry.caseType}-${i}`}
+                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="rounded-md border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white/60">
+                            T{entry.turn}
+                          </span>
+                          <span className="text-base leading-none" aria-hidden>
+                            {getCaseMeta(entry.caseType).icon}
+                          </span>
+                          <span className="text-xs font-semibold text-white/90">
+                            {caseLabel(entry.caseType)}
+                          </span>
+                          {entry.dice != null && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-white/40">
+                              <Dice6 className="h-3 w-3" /> {entry.dice}
+                            </span>
+                          )}
+                          <span className="ml-auto flex items-center gap-1 text-[11px] text-white/50">
+                            <span aria-hidden>{iconOf(entry.actorId)}</span>
+                            <span className="max-w-[5.5rem] truncate">{actor?.name}</span>
+                          </span>
+                        </div>
+                        {entry.changes.length > 0 ? (
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {entry.changes.map((c) => {
+                              const p = view.players.find((pl) => pl.id === c.playerId)
+                              return (
+                                <span
+                                  key={c.playerId}
+                                  className="flex items-center gap-1 rounded-full border border-white/15 bg-gray-950/60 px-2 py-0.5 text-[11px] font-semibold text-white/85"
+                                >
+                                  <span aria-hidden>{iconOf(c.playerId)}</span>
+                                  <span className="max-w-[5rem] truncate">{p?.name}</span>
+                                  {c.drinks > 0 && <span className="text-amber-300">+{c.drinks} 🍺</span>}
+                                  {c.to !== c.from && (
+                                    <span className="text-sky-300">
+                                      → {t('caseLabel')} {c.to + 1}
+                                    </span>
+                                  )}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <p className="mt-1 text-[11px] font-medium text-emerald-300/80">
+                            {t('outcomeNothing')}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </motion.div>
           </motion.div>

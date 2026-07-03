@@ -1480,7 +1480,11 @@
           "wheelLegendSafe": "Salvado",
           "wheelLegendDrink": "Tragos"
         },
-        "outcomeNothing": "Sin daños — ¡a salvo!"
+        "outcomeNothing": "Sin daños — ¡a salvo!",
+        "history": {
+          "title": "Historial de efectos",
+          "empty": "Aún no hay efectos"
+        }
       },
       "defis": [
         {
