@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { UserSearch } from 'lucide-react'
+import { SectionCard } from '@/components/supervision/SupervisionLayout'
 import { AlertTriangle } from 'lucide-react'
 
 type AttemptRow = {
@@ -72,12 +73,7 @@ export function NameModerationAttemptsPanel() {
     })
 
   return (
-    <Card className="border-white/10 bg-white/[0.03]">
-      <CardHeader>
-        <CardTitle className="text-white">{t('attemptsTitle')}</CardTitle>
-        <CardDescription className="text-white/55">{t('attemptsDescription')}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <SectionCard icon={UserSearch} title={t('attemptsTitle')} description={t('attemptsDescription')} bodyClassName="space-y-6">
         {loading ? (
           <p className="text-sm text-white/50">{t('loading')}</p>
         ) : error ? (
@@ -152,7 +148,6 @@ export function NameModerationAttemptsPanel() {
             )}
           </>
         )}
-      </CardContent>
-    </Card>
+    </SectionCard>
   )
 }

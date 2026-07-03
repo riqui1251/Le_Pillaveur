@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ShieldAlert } from 'lucide-react'
+import { SectionCard } from '@/components/supervision/SupervisionLayout'
 import {
   Select,
   SelectContent,
@@ -109,12 +110,7 @@ export function ModerationTermsPanel() {
 
   return (
     <div className="space-y-4">
-      <Card className="border-white/10 bg-white/[0.03]">
-        <CardHeader>
-          <CardTitle className="text-white">{t('title')}</CardTitle>
-          <CardDescription className="text-white/55">{t('description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SectionCard icon={ShieldAlert} title={t('title')} description={t('description')} bodyClassName="space-y-4">
           {loading ? (
             <p className="text-sm text-white/50">{t('loading')}</p>
           ) : stats ? (
@@ -212,8 +208,7 @@ export function ModerationTermsPanel() {
               </ul>
             </div>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
     </div>
   )
 }

@@ -18,7 +18,6 @@ import {
   Users,
   Gamepad2,
   Trash2,
-  MessageSquarePlus,
   ChevronDown,
   ChevronRight,
   Filter,
@@ -61,7 +60,6 @@ import {
 } from '@/lib/roles'
 import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration } from '@/lib/format-presence'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -605,44 +603,41 @@ function CountryList({
   const scope = title.toLowerCase().includes('aujourd') || title.toLowerCase().includes('today') || title.toLowerCase().includes('oggi') || title.toLowerCase().includes('hoy') ? 'today' : 'online'
 
   return (
-    <Card className="border-white/10 bg-white/[0.03]">
-      <CardHeader className="p-4 sm:p-6">
-        <CardTitle className="flex items-center gap-2 text-base text-white sm:text-lg">
-          <Globe className="h-5 w-5 shrink-0 text-amber-400" />
-          {title}
-        </CardTitle>
-        <CardDescription className="leading-relaxed">
+    <SectionCard
+      icon={Globe}
+      title={title}
+      description={
+        <>
           {description}
           {onCountryClick && t('geo.tapCountry')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 pt-0 sm:p-6">
-        {rows.length === 0 ? (
-          <p className="text-sm text-white/45">{t('geo.noData')}</p>
-        ) : (
-          <ul className="space-y-2">
-            {rows.map((row) => (
-              <li key={row.country ?? 'unknown'}>
-                <button
-                  type="button"
-                  onClick={() => onCountryClick?.(row.country, scope)}
-                  className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-left transition-colors hover:bg-white/[0.05]"
-                >
-                  <span className="flex items-center gap-2 text-sm text-white">
-                    <span>{countryFlag(row.country)}</span>
-                    {countryLabel(row.country, locale, t('unknownCountry'))}
-                    {row.country && row.country !== '??' && (
-                      <span className="text-xs text-white/35">({row.country})</span>
-                    )}
-                  </span>
-                  <Badge variant="secondary">{row.count}</Badge>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+        </>
+      }
+    >
+      {rows.length === 0 ? (
+        <EmptyState icon={Inbox} title={t('geo.noData')} />
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((row) => (
+            <li key={row.country ?? 'unknown'}>
+              <button
+                type="button"
+                onClick={() => onCountryClick?.(row.country, scope)}
+                className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-left transition-colors hover:border-white/[0.16] hover:bg-white/[0.05]"
+              >
+                <span className="flex items-center gap-2 text-sm text-white">
+                  <span>{countryFlag(row.country)}</span>
+                  {countryLabel(row.country, locale, t('unknownCountry'))}
+                  {row.country && row.country !== '??' && (
+                    <span className="text-xs text-white/35">({row.country})</span>
+                  )}
+                </span>
+                <Badge variant="secondary">{row.count}</Badge>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionCard>
   )
 }
 
@@ -802,17 +797,13 @@ function IpVisitorList({
   }
 
   return (
-    <Card className="border-white/10 bg-white/[0.03] md:col-span-2">
-      <CardHeader className="p-4 sm:p-6">
-        <CardTitle className="flex items-center gap-2 text-base text-white sm:text-lg">
-          <Network className="h-5 w-5 shrink-0 text-amber-400" />
-          {t('geo.visitorsTitle')}
-        </CardTitle>
-        <CardDescription className="leading-relaxed">
-          {t('geo.visitorsDesc')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3 p-4 pt-0 sm:p-6">
+    <SectionCard
+      className="md:col-span-2"
+      icon={Network}
+      title={t('geo.visitorsTitle')}
+      description={t('geo.visitorsDesc')}
+      bodyClassName="space-y-3"
+    >
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
           <Input
@@ -823,11 +814,10 @@ function IpVisitorList({
           />
         </div>
         {filtered.length === 0 ? (
-          <p className="py-6 text-center text-sm text-white/45">
-            {rows.length === 0
-              ? t('geo.noVisitors')
-              : t('geo.noSearchResults')}
-          </p>
+          <EmptyState
+            icon={Inbox}
+            title={rows.length === 0 ? t('geo.noVisitors') : t('geo.noSearchResults')}
+          />
         ) : (
           <div className="space-y-2">
             {filtered.map((row) => {
@@ -846,10 +836,17 @@ function IpVisitorList({
                     expanded ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10'
                   }`}
                 >
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleExpand(row.subjectKey)}
-                    className="w-full p-3 text-left"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        toggleExpand(row.subjectKey)
+                      }
+                    }}
+                    className="w-full cursor-pointer p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1 space-y-2">
@@ -881,15 +878,14 @@ function IpVisitorList({
                         </p>
                       </div>
                     </div>
-                  </button>
+                  </div>
                   {expanded && <div className="px-3 pb-3"><VisitorDetailPanel row={{ ...row, ips }} onIpClick={onIpClick} /></div>}
                 </div>
               )
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </SectionCard>
   )
 }
 
@@ -1556,96 +1552,60 @@ export default function SupervisionPage() {
           )}
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-white/10 bg-white/[0.03]">
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="flex items-center gap-2 text-base text-white sm:text-lg">
-                  <Users className="h-5 w-5 shrink-0 text-amber-400" />
-                  {t('accounts.registered')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 p-4 pt-0 sm:p-6">
-                <div className="rounded-xl border border-white/10 bg-black/20 p-2.5 sm:p-3">
-                  <p className="text-xl font-bold text-white sm:text-2xl">{stats?.accounts.total ?? 0}</p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.total')}</p>
-                </div>
-                <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-2.5 sm:p-3">
-                  <p className="text-xl font-bold text-violet-200 sm:text-2xl">
-                    {stats?.accounts.byRole.moderator ?? 0}
-                  </p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.moderators')}</p>
-                </div>
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 sm:p-3">
-                  <p className="text-xl font-bold text-amber-200 sm:text-2xl">
-                    {stats?.accounts.byRole.admin ?? 0}
-                  </p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.admins')}</p>
-                </div>
-                <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-2.5 sm:p-3">
-                  <p className="text-xl font-bold text-rose-200 sm:text-2xl">
-                    {stats?.accounts.byRole.superadmin ?? 0}
-                  </p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.superAdmins')}</p>
-                </div>
-                <div className="col-span-2 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-2.5 sm:col-span-1 sm:p-3">
-                  <p className="text-xl font-bold text-yellow-200 sm:text-2xl">
-                    {stats?.accounts.byRole.fondateur ?? 0}
-                  </p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.founders')}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <SectionCard icon={Users} title={t('accounts.registered')} bodyClassName="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 lg:grid-cols-5">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5 sm:p-3">
+                <p className="text-xl font-bold text-white sm:text-2xl">{stats?.accounts.total ?? 0}</p>
+                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.total')}</p>
+              </div>
+              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-2.5 sm:p-3">
+                <p className="text-xl font-bold text-violet-200 sm:text-2xl">{stats?.accounts.byRole.moderator ?? 0}</p>
+                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.moderators')}</p>
+              </div>
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 sm:p-3">
+                <p className="text-xl font-bold text-amber-200 sm:text-2xl">{stats?.accounts.byRole.admin ?? 0}</p>
+                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.admins')}</p>
+              </div>
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-2.5 sm:p-3">
+                <p className="text-xl font-bold text-rose-200 sm:text-2xl">{stats?.accounts.byRole.superadmin ?? 0}</p>
+                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.superAdmins')}</p>
+              </div>
+              <div className="col-span-2 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-2.5 sm:col-span-1 sm:p-3">
+                <p className="text-xl font-bold text-yellow-200 sm:text-2xl">{stats?.accounts.byRole.fondateur ?? 0}</p>
+                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.founders')}</p>
+              </div>
+            </SectionCard>
 
-            <Card className="border-white/10 bg-white/[0.03]">
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="text-base text-white sm:text-lg">{t('bans.activeTitle')}</CardTitle>
-                <CardDescription className="leading-relaxed">{t('bans.suspendedCount', { count: bans.length })}</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 sm:p-6">
-                {bans.length === 0 ? (
-                  <p className="text-sm text-white/45">{t('bans.noneOverview')}</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {bans.slice(0, 5).map((b) => (
-                      <li key={b.id} className="text-sm text-white/70">
-                        <span className="font-medium text-white">{b.displayName}</span>
-                        {b.accountCode && (
-                          <span className="font-mono text-amber-200/70"> {b.accountCode}</span>
-                        )}
-                        {' — '}
-                        {b.banType === 'permanent'
-                          ? t('bans.permanent').toLowerCase()
-                          : t('bans.until', {
-                              date: b.bannedUntil
-                                ? format.dateTime(new Date(b.bannedUntil), { dateStyle: 'medium' })
-                                : '?',
-                            })}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard icon={Gavel} title={t('bans.activeTitle')} description={t('bans.suspendedCount', { count: bans.length })}>
+              {bans.length === 0 ? (
+                <EmptyState icon={ShieldCheck} title={t('bans.noneOverview')} />
+              ) : (
+                <ul className="space-y-2">
+                  {bans.slice(0, 5).map((b) => (
+                    <li key={b.id} className="text-sm text-white/70">
+                      <span className="font-medium text-white">{b.displayName}</span>
+                      {b.accountCode && <span className="font-mono text-amber-200/70"> {b.accountCode}</span>}
+                      {' — '}
+                      {b.banType === 'permanent'
+                        ? t('bans.permanent').toLowerCase()
+                        : t('bans.until', {
+                            date: b.bannedUntil ? format.dateTime(new Date(b.bannedUntil), { dateStyle: 'medium' }) : '?',
+                          })}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionCard>
           </div>
 
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-base text-white sm:text-lg">
-                <Globe className="h-5 w-5 shrink-0 text-amber-400" />
-                {t('connected.recentTitle')}
-              </CardTitle>
-              <CardDescription className="leading-relaxed">
-                {t('connected.recentDesc')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 sm:p-6">
+          <SectionCard icon={Globe} title={t('connected.recentTitle')} description={t('connected.recentDesc')}>
               {(stats?.connectedAccounts ?? []).length === 0 ? (
-                <p className="text-sm text-white/45">{t('connected.noneRecent')}</p>
+                <EmptyState icon={Inbox} title={t('connected.noneRecent')} />
               ) : (
                 <ul className="space-y-2">
                   {stats?.connectedAccounts.map((acc) => (
                     <li
                       key={acc.id}
-                      className="space-y-2.5 rounded-xl border border-white/10 bg-black/20 p-3"
+                      className="space-y-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-3"
                     >
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                         <span className="text-base leading-none">{countryFlag(acc.country)}</span>
@@ -1686,16 +1646,13 @@ export default function SupervisionPage() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
 
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-base text-white sm:text-lg">
-                <Gamepad2 className="h-5 w-5 shrink-0 text-amber-400" />
-                {t('games.playedTitle')}
-              </CardTitle>
-              <CardDescription className="leading-relaxed">
+          <SectionCard
+            icon={Gamepad2}
+            title={t('games.playedTitle')}
+            description={
+              <>
                 {t('games.playedDesc')}
                 {stats?.games?.totalParties != null && (
                   <>
@@ -1705,17 +1662,17 @@ export default function SupervisionPage() {
                     })}
                   </>
                 )}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 sm:p-6">
+              </>
+            }
+          >
               {(stats?.games?.games ?? []).length === 0 ? (
-                <p className="text-sm text-white/45">{t('games.noneRecorded')}</p>
+                <EmptyState icon={Gamepad2} title={t('games.noneRecorded')} />
               ) : (
                 <ul className="space-y-2">
                   {stats?.games?.games.map((game) => (
                     <li
                       key={game.gameId}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2.5"
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5"
                     >
                       <span className="flex items-center gap-2.5 text-sm text-white">
                         <span className="text-lg">{game.emoji}</span>
@@ -1729,8 +1686,7 @@ export default function SupervisionPage() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
         </TabsContent>
 
         <TabsContent value="geo" className="grid gap-4 md:grid-cols-2">
@@ -1753,47 +1709,31 @@ export default function SupervisionPage() {
 
         <TabsContent value="accounts" className="space-y-4">
           {user && canManageSiteSettings(user.role) && (
-            <Card className="border-white/10 bg-white/[0.03]">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Radio className="h-5 w-5 text-emerald-400" />
-                  {t('siteSettings.title')}
-                </CardTitle>
-                <CardDescription>{t('siteSettings.desc')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white">{t('siteSettings.voiceLabel')}</p>
-                    <p className="text-xs text-white/50">
-                      {voiceEnabled === null
-                        ? '…'
-                        : voiceEnabled
-                          ? t('siteSettings.voiceOn')
-                          : t('siteSettings.voiceOff')}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant={voiceEnabled ? 'destructive' : 'default'}
-                    disabled={busy || voiceEnabled === null}
-                    onClick={() => void toggleGlobalVoice(!voiceEnabled)}
-                  >
-                    {voiceEnabled ? t('siteSettings.disable') : t('siteSettings.enable')}
-                  </Button>
+            <SectionCard icon={Radio} title={t('siteSettings.title')} description={t('siteSettings.desc')}>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">{t('siteSettings.voiceLabel')}</p>
+                  <p className="text-xs text-white/50">
+                    {voiceEnabled === null
+                      ? '…'
+                      : voiceEnabled
+                        ? t('siteSettings.voiceOn')
+                        : t('siteSettings.voiceOff')}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+                <Button
+                  size="sm"
+                  variant={voiceEnabled ? 'destructive' : 'default'}
+                  disabled={busy || voiceEnabled === null}
+                  onClick={() => void toggleGlobalVoice(!voiceEnabled)}
+                >
+                  {voiceEnabled ? t('siteSettings.disable') : t('siteSettings.enable')}
+                </Button>
+              </div>
+            </SectionCard>
           )}
 
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardHeader>
-              <CardTitle className="text-white">{t('accounts.adminTitle')}</CardTitle>
-              <CardDescription>
-                {t('accounts.adminDesc')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <SectionCard title={t('accounts.adminTitle')} description={t('accounts.adminDesc')} bodyClassName="space-y-3">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                 <Input
@@ -2171,25 +2111,14 @@ export default function SupervisionPage() {
                 )
               })
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
         </TabsContent>
 
         {showBansTab && (
         <TabsContent value="bans">
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Ban className="h-5 w-5 text-red-400" />
-                {t('bans.currentTitle')}
-              </CardTitle>
-              <CardDescription>
-                {t('bans.currentDesc')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <SectionCard icon={Ban} title={t('bans.currentTitle')} description={t('bans.currentDesc')} bodyClassName="space-y-3">
               {bans.length === 0 ? (
-                <p className="text-sm text-white/50">{t('bans.noneActive')}</p>
+                <EmptyState icon={ShieldCheck} title={t('bans.noneActive')} />
               ) : (
                 bans.map((b) => (
                   <div
@@ -2236,8 +2165,7 @@ export default function SupervisionPage() {
                   </div>
                 ))
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
         </TabsContent>
         )}
 
@@ -2250,15 +2178,7 @@ export default function SupervisionPage() {
 
         {showFeedbackTab && (
         <TabsContent value="feedback" className="space-y-4">
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <MessageSquarePlus className="h-5 w-5 text-violet-400" />
-                {t('feedback.activeTitle')}
-              </CardTitle>
-              <CardDescription>{t('feedback.activeDesc')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <SectionCard icon={MessageSquareWarning} title={t('feedback.activeTitle')} description={t('feedback.activeDesc')} bodyClassName="space-y-4">
               <FeedbackSearchBar
                 value={feedbackSearch}
                 onChange={setFeedbackSearch}
@@ -2275,22 +2195,13 @@ export default function SupervisionPage() {
                 }
                 onSelect={setSelectedFeedback}
               />
-            </CardContent>
-          </Card>
+          </SectionCard>
         </TabsContent>
         )}
 
         {showFeedbackTab && (
         <TabsContent value="feedback-resolved" className="space-y-4">
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <MessageSquarePlus className="h-5 w-5 text-emerald-400" />
-                {t('feedback.resolvedTitle')}
-              </CardTitle>
-              <CardDescription>{t('feedback.resolvedDesc')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <SectionCard icon={CheckCheck} title={t('feedback.resolvedTitle')} description={t('feedback.resolvedDesc')} bodyClassName="space-y-4">
               <FeedbackSearchBar
                 value={feedbackSearch}
                 onChange={setFeedbackSearch}
@@ -2307,8 +2218,7 @@ export default function SupervisionPage() {
                 }
                 onSelect={setSelectedFeedback}
               />
-            </CardContent>
-          </Card>
+          </SectionCard>
         </TabsContent>
         )}
       </Tabs>
