@@ -2068,7 +2068,12 @@
       "bans": "Bannis ({count})",
       "feedback": "Retours ({count})",
       "feedbackResolved": "Résolus ({count})",
-      "moderation": "Modération noms"
+      "moderation": "Modération noms",
+      "accountsShort": "Comptes",
+      "bansShort": "Sanctions",
+      "moderationShort": "Termes",
+      "feedbackShort": "Signalements",
+      "feedbackResolvedShort": "Traités"
     },
     "moderation": {
       "title": "Filtre anti-insultes",
@@ -2317,6 +2322,19 @@
       "confirm": "Bannir",
       "dialogVoiceTitle": "Bannir du chat vocal",
       "dialogChatTitle": "Bannir du chat écrit"
+    },
+    "kicker": "Supervision",
+    "header": {
+      "onlineCount": "{count} en ligne",
+      "refresh": "Actualiser"
+    },
+    "navGroups": {
+      "analysis": "Analyse",
+      "community": "Communauté",
+      "moderation": "Modération"
+    },
+    "states": {
+      "retry": "Réessayer"
     }
   },
   "voice": {

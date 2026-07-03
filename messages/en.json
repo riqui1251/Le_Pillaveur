@@ -2063,7 +2063,12 @@
       "bans": "Banned ({count})",
       "feedback": "Feedback ({count})",
       "feedbackResolved": "Resolved ({count})",
-      "moderation": "Name moderation"
+      "moderation": "Name moderation",
+      "accountsShort": "Accounts",
+      "bansShort": "Sanctions",
+      "moderationShort": "Terms",
+      "feedbackShort": "Reports",
+      "feedbackResolvedShort": "Resolved"
     },
     "moderation": {
       "title": "Profanity filter",
@@ -2312,6 +2317,19 @@
       "confirm": "Ban",
       "dialogVoiceTitle": "Ban from voice chat",
       "dialogChatTitle": "Ban from text chat"
+    },
+    "kicker": "Supervision",
+    "header": {
+      "onlineCount": "{count} online",
+      "refresh": "Refresh"
+    },
+    "navGroups": {
+      "analysis": "Analytics",
+      "community": "Community",
+      "moderation": "Moderation"
+    },
+    "states": {
+      "retry": "Retry"
     }
   },
   "voice": {

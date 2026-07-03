@@ -2053,7 +2053,12 @@
       "bans": "Baneados ({count})",
       "feedback": "Comentarios ({count})",
       "feedbackResolved": "Resueltos ({count})",
-      "moderation": "Moderación nombres"
+      "moderation": "Moderación nombres",
+      "accountsShort": "Cuentas",
+      "bansShort": "Sanciones",
+      "moderationShort": "Términos",
+      "feedbackShort": "Reportes",
+      "feedbackResolvedShort": "Resueltos"
     },
     "moderation": {
       "title": "Filtro anti-insultos",
@@ -2302,6 +2307,19 @@
       "confirm": "Bloquear",
       "dialogVoiceTitle": "Bloquear del chat de voz",
       "dialogChatTitle": "Bloquear del chat escrito"
+    },
+    "kicker": "Supervisión",
+    "header": {
+      "onlineCount": "{count} en línea",
+      "refresh": "Actualizar"
+    },
+    "navGroups": {
+      "analysis": "Análisis",
+      "community": "Comunidad",
+      "moderation": "Moderación"
+    },
+    "states": {
+      "retry": "Reintentar"
     }
   },
   "voice": {

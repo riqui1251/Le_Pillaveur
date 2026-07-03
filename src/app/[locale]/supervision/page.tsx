@@ -4,11 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
 import {
-  Activity,
   Ban,
-  Calendar,
   CalendarDays,
-  CalendarRange,
   Clock,
   Crown,
   Globe,
@@ -16,7 +13,6 @@ import {
   Info,
   Network,
   Search,
-  Shield,
   ShieldCheck,
   UserX,
   Users,
@@ -35,6 +31,13 @@ import {
   Mic,
   MicOff,
   MessageSquare,
+  LayoutDashboard,
+  Gavel,
+  ScrollText,
+  MessageSquareWarning,
+  CheckCheck,
+  Inbox,
+  AlertTriangle,
 } from 'lucide-react'
 import { deviceLabel } from '@/lib/device-from-user-agent'
 import { useAuth } from '@/hooks/useAuth'
@@ -69,7 +72,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -78,9 +81,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ModerationTermsPanel } from '@/components/supervision/ModerationTermsPanel'
 import { NameModerationAttemptsPanel } from '@/components/supervision/NameModerationAttemptsPanel'
+import {
+  SupervisionShell,
+  SupervisionHeader,
+  SupervisionNav,
+  SectionCard,
+  KpiBento,
+  SkeletonRows,
+  EmptyState,
+  ErrorState,
+  type SupervisionNavGroup,
+} from '@/components/supervision/SupervisionLayout'
 import { cn } from '@/lib/utils'
 
 type CountryRow = { country: string | null; count: number }
@@ -261,31 +274,6 @@ type UserDetail = {
     createdAt: string
     actorName: string
   }>
-}
-
-function StatCard({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string
-  value: number
-  hint: string
-  icon: React.ComponentType<{ className?: string }>
-}) {
-  return (
-    <Card className="border-white/10 bg-white/[0.03]">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 sm:p-6">
-        <CardTitle className="text-sm font-medium leading-snug text-white/80">{label}</CardTitle>
-        <Icon className="h-4 w-4 shrink-0 text-amber-400/80" />
-      </CardHeader>
-      <CardContent className="p-4 pt-0 sm:p-6">
-        <div className="text-2xl font-bold text-white sm:text-3xl">{value}</div>
-        <p className="mt-1 text-xs leading-relaxed text-white/45">{hint}</p>
-      </CardContent>
-    </Card>
-  )
 }
 
 function AccountCodeBadge({ code }: { code: string | null | undefined }) {
@@ -919,6 +907,8 @@ export default function SupervisionPage() {
   const [bans, setBans] = useState<ActiveBan[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Premier chargement des données (≠ auth) → squelette plutôt que page vide.
+  const [dataLoaded, setDataLoaded] = useState(false)
   const [editingNames, setEditingNames] = useState<Record<string, string>>({})
   const [accountSearch, setAccountSearch] = useState('')
   const [activeTab, setActiveTab] = useState('overview')
@@ -1041,30 +1031,54 @@ export default function SupervisionPage() {
     [feedbackItems]
   )
 
-  const tabOptions = useMemo(() => {
-    const tabs: Array<{ value: string; label: string }> = []
+  // Navigation groupée par famille (Analyse / Communauté / Modération).
+  const navGroups = useMemo<SupervisionNavGroup[]>(() => {
+    const groups: SupervisionNavGroup[] = []
     if (showAnalytics) {
-      tabs.push({ value: 'overview', label: t('tabs.overview') })
-      tabs.push({ value: 'geo', label: t('tabs.geo') })
-    }
-    tabs.push({
-      value: 'accounts',
-      label: t('tabs.accounts', { count: users.length || stats?.accounts.total || '…' }),
-    })
-    if (showBansTab) {
-      tabs.push({ value: 'bans', label: t('tabs.bans', { count: bans.length }) })
-    }
-    if (canEditAccounts) {
-      tabs.push({ value: 'moderation', label: t('tabs.moderation') })
-    }
-    if (showFeedbackTab) {
-      tabs.push({ value: 'feedback', label: t('tabs.feedback', { count: activeFeedbackTotal }) })
-      tabs.push({
-        value: 'feedback-resolved',
-        label: t('tabs.feedbackResolved', { count: resolvedFeedbackTotal }),
+      groups.push({
+        label: t('navGroups.analysis'),
+        items: [
+          { value: 'overview', label: t('tabs.overview'), icon: LayoutDashboard },
+          { value: 'geo', label: t('tabs.geo'), icon: Globe },
+        ],
       })
     }
-    return tabs
+    const community: SupervisionNavGroup = {
+      label: t('navGroups.community'),
+      items: [{ value: 'accounts', label: t('tabs.accountsShort'), icon: Users, count: users.length || stats?.accounts.total || '' }],
+    }
+    if (showBansTab) {
+      community.items.push({
+        value: 'bans',
+        label: t('tabs.bansShort'),
+        icon: Gavel,
+        count: bans.length || '',
+        tone: bans.length > 0 ? 'danger' : 'neutral',
+      })
+    }
+    groups.push(community)
+
+    const moderation: SupervisionNavGroup = { label: t('navGroups.moderation'), items: [] }
+    if (canEditAccounts) {
+      moderation.items.push({ value: 'moderation', label: t('tabs.moderationShort'), icon: ScrollText })
+    }
+    if (showFeedbackTab) {
+      moderation.items.push({
+        value: 'feedback',
+        label: t('tabs.feedbackShort'),
+        icon: MessageSquareWarning,
+        count: activeFeedbackTotal || '',
+        tone: activeFeedbackTotal > 0 ? 'warning' : 'neutral',
+      })
+      moderation.items.push({
+        value: 'feedback-resolved',
+        label: t('tabs.feedbackResolvedShort'),
+        icon: CheckCheck,
+        count: resolvedFeedbackTotal || '',
+      })
+    }
+    if (moderation.items.length > 0) groups.push(moderation)
+    return groups
   }, [
     showAnalytics,
     showBansTab,
@@ -1159,6 +1173,7 @@ export default function SupervisionPage() {
       }
     } finally {
       if (!silent) setBusy(false)
+      setDataLoaded(true)
     }
   }, [router, userId, userRole])
 
@@ -1457,132 +1472,88 @@ export default function SupervisionPage() {
 
   if (loading || !user || !canAccessSupervision(user.role)) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-white/60">
-        {t('loading')}
-      </div>
+      <SupervisionShell>
+        <div className="h-9 w-56 animate-pulse rounded-lg bg-white/[0.06]" />
+        <div className="h-11 w-full animate-pulse rounded-2xl bg-white/[0.04]" />
+        <SkeletonRows rows={5} />
+      </SupervisionShell>
     )
   }
 
   return (
-    <div className="w-full min-w-0 overflow-x-hidden">
-      <div className="mx-auto max-w-6xl space-y-4 px-3 pb-24 pt-3 sm:space-y-6 sm:px-6 sm:pb-16 sm:pt-6">
-      {/* En-tête mobile : pas de titre dupliqué (déjà dans la navbar) */}
-      <div className="md:hidden">
-        <p className="break-words text-sm leading-relaxed text-white/50">{subtitle}</p>
-      </div>
+    <SupervisionShell>
+      <SupervisionHeader
+        kicker={t('kicker')}
+        title={t('title')}
+        roleBadge={<RoleBadge role={user.role} compact />}
+        onlineLabel={t('header.onlineCount', { count: stats?.visitors.onlineNow ?? 0 })}
+        onRefresh={() => void loadAll()}
+        refreshLabel={t('header.refresh')}
+        refreshing={busy}
+      />
 
-      {/* En-tête desktop */}
-      <div className="hidden md:block">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <Shield className="h-6 w-6 shrink-0 text-amber-400" />
-          <h1 className="text-2xl font-bold text-white">{t('title')}</h1>
-          <RoleBadge role={user.role} compact />
-        </div>
-        <p className="max-w-2xl break-words text-sm leading-relaxed text-white/50">{subtitle}</p>
-      </div>
-
-      <Alert className="border-amber-500/25 bg-amber-500/5 p-3 sm:p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="mr-auto text-sm text-white/50">{subtitle}</p>
         <button
           type="button"
-          className="flex w-full min-w-0 items-center justify-between gap-2 text-left"
           onClick={() => setRolesHelpOpen((open) => !open)}
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-white/60 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+          aria-expanded={rolesHelpOpen}
         >
-          <div className="flex min-w-0 flex-1 items-start gap-2">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-            <AlertTitle className="text-sm leading-snug text-amber-100 sm:text-base">{t('rolesHelpTitle')}</AlertTitle>
-          </div>
-          {rolesHelpOpen ? (
-            <ChevronDown className="h-4 w-4 shrink-0 text-amber-300" />
-          ) : (
-            <ChevronRight className="h-4 w-4 shrink-0 text-amber-300" />
-          )}
+          <Info className="h-3.5 w-3.5" />
+          {t('rolesHelpTitle')}
+          {rolesHelpOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </button>
-        {rolesHelpOpen && (
-          <AlertDescription className="mt-2 space-y-2 text-sm leading-relaxed text-white/70">
-            <p>
-              <strong className="text-yellow-200">{t('roles.fondateur')}</strong> — {ROLE_DESCRIPTIONS.fondateur}
-            </p>
-            <p>
-              <strong className="text-rose-200">{t('roles.superadmin')}</strong> — {ROLE_DESCRIPTIONS.superadmin}
-            </p>
-            <p>
-              <strong className="text-amber-200">{t('roles.admin')}</strong> — {ROLE_DESCRIPTIONS.admin}
-            </p>
-            <p>
-              <strong className="text-violet-200">{t('roles.moderator')}</strong> — {ROLE_DESCRIPTIONS.moderator}
-            </p>
-            <p>
-              <strong className="text-white/80">{t('roles.user')}</strong> — {ROLE_DESCRIPTIONS.user}
-            </p>
-            <p className="text-xs text-white/40">
-              {t('rolesHierarchy')}
-            </p>
-          </AlertDescription>
-        )}
-      </Alert>
+      </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          {error}
+      {rolesHelpOpen && (
+        <div className="space-y-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 text-sm leading-relaxed text-white/70">
+          <p><strong className="text-yellow-200">{t('roles.fondateur')}</strong> — {ROLE_DESCRIPTIONS.fondateur}</p>
+          <p><strong className="text-rose-200">{t('roles.superadmin')}</strong> — {ROLE_DESCRIPTIONS.superadmin}</p>
+          <p><strong className="text-amber-200">{t('roles.admin')}</strong> — {ROLE_DESCRIPTIONS.admin}</p>
+          <p><strong className="text-violet-200">{t('roles.moderator')}</strong> — {ROLE_DESCRIPTIONS.moderator}</p>
+          <p><strong className="text-white/80">{t('roles.user')}</strong> — {ROLE_DESCRIPTIONS.user}</p>
+          <p className="text-xs text-white/40">{t('rolesHierarchy')}</p>
         </div>
       )}
 
+      {error && (
+        <ErrorState
+          icon={AlertTriangle}
+          message={error}
+          retryLabel={t('states.retry')}
+          onRetry={() => void loadAll()}
+        />
+      )}
+
+      <SupervisionNav
+        groups={navGroups}
+        active={activeTab}
+        onSelect={setActiveTab}
+        groupAria={t('tabs.section')}
+      />
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0 space-y-4">
-        <div className="md:hidden">
-          <label htmlFor="supervision-tab-select" className="mb-1.5 block text-xs font-medium text-white/45">
-            {t('tabs.section')}
-          </label>
-          <Select value={activeTab} onValueChange={setActiveTab}>
-            <SelectTrigger id="supervision-tab-select" className="h-11 w-full border-white/10 bg-white/[0.04]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {tabOptions.map((tab) => (
-                <SelectItem key={tab.value} value={tab.value}>
-                  {tab.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <TabsList className="hidden h-auto w-full flex-wrap justify-start gap-1 bg-white/5 p-1 md:flex">
-          {tabOptions.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="px-3 py-1.5 text-sm">
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
         {showAnalytics && (
         <>
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-            <StatCard
-              label={t('stats.onlineNow')}
-              value={stats?.visitors.onlineNow ?? 0}
-              hint={t('stats.onlineNowHint')}
-              icon={Activity}
-            />
-            <StatCard
-              label={t('stats.today')}
-              value={stats?.visitors.today ?? 0}
-              hint={t('stats.todayHint')}
-              icon={Calendar}
-            />
-            <StatCard
-              label={t('stats.week')}
-              value={stats?.visitors.week ?? 0}
-              hint={t('stats.weekHint')}
-              icon={CalendarDays}
-            />
-            <StatCard
-              label={t('stats.month')}
-              value={stats?.visitors.month ?? 0}
-              hint={t('stats.monthHint')}
-              icon={CalendarRange}
-            />
-          </div>
+          {!dataLoaded ? (
+            <SkeletonRows rows={4} />
+          ) : (
+          <KpiBento
+            hero={{
+              label: t('stats.week'),
+              value: stats?.visitors.week ?? 0,
+              hint: t('stats.weekHint'),
+              icon: CalendarDays,
+            }}
+            metrics={[
+              { label: t('stats.onlineNow'), value: stats?.visitors.onlineNow ?? 0, hint: t('stats.onlineNowHint') },
+              { label: t('stats.today'), value: stats?.visitors.today ?? 0, hint: t('stats.todayHint') },
+              { label: t('stats.month'), value: stats?.visitors.month ?? 0, hint: t('stats.monthHint') },
+            ]}
+          />
+          )}
 
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="border-white/10 bg-white/[0.03]">
@@ -1925,14 +1896,25 @@ export default function SupervisionPage() {
                   {t('accounts.noMatch')}
                 </p>
               ) : (
-              filteredUsers.map((u) => (
+              filteredUsers.map((u) => {
+                const isOnline =
+                  u.lastSeenAt != null && new Date(u.lastSeenAt).getTime() >= onlineSinceMs
+                return (
                 <div
                   key={u.id}
-                  className="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/20 p-4"
+                  className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3.5 transition-colors hover:border-white/[0.16]"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={cn(
+                            'h-2 w-2 shrink-0 rounded-full',
+                            isOnline ? 'bg-emerald-400' : 'bg-white/20'
+                          )}
+                          title={isOnline ? t('accounts.online') : undefined}
+                          aria-hidden
+                        />
                         {canEditAccounts && canModifyTarget(user!.role, u.role) ? (
                           <Input
                             className="w-full max-w-full bg-black/30 sm:max-w-[200px]"
@@ -2186,7 +2168,9 @@ export default function SupervisionPage() {
                     </div>
                   )}
                 </div>
-              )))}
+                )
+              })
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -2827,7 +2811,6 @@ export default function SupervisionPage() {
           )}
         </DialogContent>
       </Dialog>
-      </div>
-    </div>
+    </SupervisionShell>
   )
 }

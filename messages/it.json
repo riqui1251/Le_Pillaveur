@@ -2053,7 +2053,12 @@
       "bans": "Bannati ({count})",
       "feedback": "Feedback ({count})",
       "feedbackResolved": "Risolti ({count})",
-      "moderation": "Moderazione nomi"
+      "moderation": "Moderazione nomi",
+      "accountsShort": "Account",
+      "bansShort": "Sanzioni",
+      "moderationShort": "Termini",
+      "feedbackShort": "Segnalazioni",
+      "feedbackResolvedShort": "Risolti"
     },
     "moderation": {
       "title": "Filtro anti-insulti",
@@ -2302,6 +2307,19 @@
       "confirm": "Escludi",
       "dialogVoiceTitle": "Escludi dalla chat vocale",
       "dialogChatTitle": "Escludi dalla chat scritta"
+    },
+    "kicker": "Supervisione",
+    "header": {
+      "onlineCount": "{count} online",
+      "refresh": "Aggiorna"
+    },
+    "navGroups": {
+      "analysis": "Analisi",
+      "community": "Comunità",
+      "moderation": "Moderazione"
+    },
+    "states": {
+      "retry": "Riprova"
     }
   },
   "voice": {
