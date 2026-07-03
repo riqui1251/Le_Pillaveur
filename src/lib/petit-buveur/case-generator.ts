@@ -58,7 +58,9 @@ const CASE_TYPE_POOL: { type: CaseType; weight: number }[] = [
   { type: 'loterie', weight: 2 },
   { type: 'inversion', weight: 2 },
   { type: 'double-case', weight: 1 },
-  { type: 'roue-defis', weight: 2 },
+  // 'roue-defis' est volontairement ABSENTE du tirage en ligne : sans défis
+  // réalisables à distance, elle se réduisait à un pile-ou-face de gorgées.
+  // Sa résolution reste supportée (états de parties déjà en cours).
   { type: 'de-honte', weight: 2 },
   { type: 'pile-face', weight: 2 },
 ]

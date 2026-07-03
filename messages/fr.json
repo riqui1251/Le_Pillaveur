@@ -1486,7 +1486,9 @@
           "deHonteSafe": "Sauvé !",
           "deHonteDrink": "2 gorgées !",
           "deHonteForward": "Avance d'une case !",
-          "deHonteBack": "Recule d'une case !"
+          "deHonteBack": "Recule d'une case !",
+          "wheelLegendSafe": "Sauvé",
+          "wheelLegendDrink": "Gorgées"
         }
       },
       "defis": [

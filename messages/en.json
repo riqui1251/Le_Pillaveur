@@ -1486,7 +1486,9 @@
           "deHonteSafe": "Safe!",
           "deHonteDrink": "2 sips!",
           "deHonteForward": "Move forward one square!",
-          "deHonteBack": "Move back one square!"
+          "deHonteBack": "Move back one square!",
+          "wheelLegendSafe": "Safe",
+          "wheelLegendDrink": "Sips"
         }
       },
       "defis": [

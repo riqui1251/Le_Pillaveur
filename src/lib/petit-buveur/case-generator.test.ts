@@ -50,6 +50,13 @@ describe('case-generator déterministe', () => {
     expect(seen).toBeGreaterThan(0)
   })
 
+  it("la roue des défis n'est jamais tirée en ligne (sans défis réalisables à distance)", () => {
+    const rng = createRng('no-roue-defis')
+    for (let i = 0; i < 3000; i += 1) {
+      expect(generateCase(rng, ctx()).type).not.toBe('roue-defis')
+    }
+  })
+
   it('defi : defiAllowed restreint le tirage aux indices autorisés', () => {
     const allowed = [1, 3, 5] // ex. en ligne : défis vérifiables uniquement
     const rng = createRng('defi-allowed')

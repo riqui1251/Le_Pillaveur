@@ -123,12 +123,12 @@ const PLAYERS: Record<GameSound, (ac: AudioContext) => void> = {
     notes.forEach((f, i) => tone(ac, { freq: f, at: i * 0.13, dur: 0.28, type: 'triangle', gain: 0.1 }))
     tone(ac, { freq: 1318.5, at: 0.55, dur: 0.4, type: 'sine', gain: 0.08 })
   },
-  // Roue : tic-tic qui ralentit (comme un cliquet qui s'essouffle).
+  // Roue : tic-tic qui ralentit (~4,3 s, calé sur la rotation de la roue).
   wheel: (ac) => {
     let at = 0
-    for (let i = 0; i < 14; i += 1) {
+    for (let i = 0; i < 24; i += 1) {
       tone(ac, { freq: 1100, at, dur: 0.03, type: 'square', gain: 0.05 })
-      at += 0.05 + i * 0.014
+      at += 0.04 + i * 0.012
     }
   },
 }

@@ -414,6 +414,8 @@ export function PetitBuveurOnline() {
           wheelSafe: t('spectacle.wheelSafe'),
           // gabarits avec {placeholders} interpolés par le composant → raw
           wheelDrinks: t.raw('spectacle.wheelDrinks') as string,
+          wheelLegendSafe: t('spectacle.wheelLegendSafe'),
+          wheelLegendDrink: t('spectacle.wheelLegendDrink'),
           pfWin: t('spectacle.pfWin'),
           pfLose: t.raw('spectacle.pfLose') as string,
           pile: t('spectacle.pile'),

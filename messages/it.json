@@ -1476,7 +1476,9 @@
           "deHonteSafe": "Salvo!",
           "deHonteDrink": "2 sorsi!",
           "deHonteForward": "Avanza di una casella!",
-          "deHonteBack": "Indietreggia di una casella!"
+          "deHonteBack": "Indietreggia di una casella!",
+          "wheelLegendSafe": "Salvo",
+          "wheelLegendDrink": "Sorsi"
         }
       },
       "defis": [

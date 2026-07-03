@@ -16,11 +16,14 @@ import { playGameSound } from '@/lib/sound/game-sounds'
  */
 
 const WHEEL_SEGMENTS = 15
-const WHEEL_COLORS = ['#f59e0b', '#8b5cf6', '#10b981']
+/** Un segment sur trois est « sauvé » — même règle que le moteur (roue). */
+const isSafeSegment = (i: number) => (i + 1) % 3 === 0
 
 type Labels = {
   wheelSafe: string
   wheelDrinks: string
+  wheelLegendSafe: string
+  wheelLegendDrink: string
   pfWin: string
   pfLose: string
   pile: string
@@ -54,30 +57,67 @@ function outcomeText(inter: LastInteraction, labels: Labels, targetName: string)
   }
 }
 
-function SpinningWheel({ segment, reduced }: { segment: number; reduced: boolean }) {
+function SpinningWheel({
+  segment,
+  reduced,
+  legendSafe,
+  legendDrink,
+}: {
+  segment: number
+  reduced: boolean
+  legendSafe: string
+  legendDrink: string
+}) {
   // La roue s'arrête avec le segment tiré sous l'aiguille (en haut).
+  // Couleurs SIGNIFIANTES : vert = sauvé, rouge/orangé = gorgées.
   const segAngle = 360 / WHEEL_SEGMENTS
-  const finalRotation = 360 * 4 - (segment * segAngle + segAngle / 2)
+  const finalRotation = 360 * 5 - (segment * segAngle + segAngle / 2)
   const gradient = useMemo(() => {
     const stops = Array.from({ length: WHEEL_SEGMENTS }, (_, i) => {
-      const color = WHEEL_COLORS[i % WHEEL_COLORS.length]
+      const color = isSafeSegment(i) ? '#10b981' : i % 2 === 0 ? '#ef4444' : '#f97316'
       return `${color} ${i * segAngle}deg ${(i + 1) * segAngle}deg`
     })
     return `conic-gradient(${stops.join(', ')})`
   }, [segAngle])
 
   return (
-    <div className="relative">
-      <div className="absolute -top-1 left-1/2 z-10 -translate-x-1/2 text-xl" aria-hidden>
-        🔻
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative">
+        <div className="absolute -top-2 left-1/2 z-10 -translate-x-1/2 text-xl drop-shadow" aria-hidden>
+          🔻
+        </div>
+        <motion.div
+          initial={{ rotate: 0 }}
+          animate={{ rotate: reduced ? finalRotation % 360 : finalRotation }}
+          transition={reduced ? { duration: 0 } : { duration: 4.5, ease: [0.12, 0.68, 0.16, 1] }}
+          className="relative h-40 w-40 rounded-full border-4 border-white/25 shadow-2xl"
+          style={{ backgroundImage: gradient }}
+        >
+          {/* Picto au centre de chaque segment : ✓ sauvé, 🍺 gorgées */}
+          {Array.from({ length: WHEEL_SEGMENTS }).map((_, i) => (
+            <span
+              key={i}
+              className="absolute left-1/2 top-1/2 text-[13px] font-black text-white drop-shadow"
+              style={{
+                transform: `translate(-50%, -50%) rotate(${(i + 0.5) * segAngle}deg) translateY(-62px)`,
+              }}
+              aria-hidden
+            >
+              {isSafeSegment(i) ? '✓' : '🍺'}
+            </span>
+          ))}
+          <span className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/40 bg-gray-900" />
+        </motion.div>
       </div>
-      <motion.div
-        initial={{ rotate: 0 }}
-        animate={{ rotate: reduced ? finalRotation % 360 : finalRotation }}
-        transition={reduced ? { duration: 0 } : { duration: 2.4, ease: [0.15, 0.6, 0.25, 1] }}
-        className="h-36 w-36 rounded-full border-4 border-white/25 shadow-2xl"
-        style={{ backgroundImage: gradient }}
-      />
+      {/* Légende */}
+      <div className="flex items-center gap-4 rounded-full border border-white/15 bg-gray-900/90 px-3 py-1 text-[11px] font-semibold text-white/80">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden /> {legendSafe}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden /> 🍺 {legendDrink}
+        </span>
+      </div>
     </div>
   )
 }
@@ -171,12 +211,13 @@ export function InteractionSpectacle({
     setCurrent(inter)
     setShowOutcome(false)
     playGameSound(inter.kind === 'de-honte' ? 'dice-roll' : 'wheel')
-    const spinMs = reduced ? 150 : inter.kind === 'de-honte' ? 1300 : inter.kind === 'pile-face' ? 1900 : 2500
+    // Durée du suspense alignée sur chaque animation (la roue tourne 4,5 s).
+    const spinMs = reduced ? 150 : inter.kind === 'de-honte' ? 1300 : inter.kind === 'pile-face' ? 1900 : 4600
     const outcomeTimer = setTimeout(() => {
       setShowOutcome(true)
       playGameSound(interactionDrinks(inter) > 0 ? 'drink' : 'dice-result')
     }, spinMs)
-    const hideTimer = setTimeout(() => setCurrent(null), spinMs + 1900)
+    const hideTimer = setTimeout(() => setCurrent(null), spinMs + 2200)
     return () => {
       clearTimeout(outcomeTimer)
       clearTimeout(hideTimer)
@@ -207,6 +248,8 @@ export function InteractionSpectacle({
                 key={lastSeenRef.current}
                 segment={current.kind === 'roue' ? current.segment : current.drinks > 0 ? 1 : 2}
                 reduced={reduced}
+                legendSafe={labels.wheelLegendSafe}
+                legendDrink={labels.wheelLegendDrink}
               />
             )}
             {current.kind === 'pile-face' && (

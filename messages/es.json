@@ -1476,7 +1476,9 @@
           "deHonteSafe": "¡Salvado!",
           "deHonteDrink": "¡2 tragos!",
           "deHonteForward": "¡Avanza una casilla!",
-          "deHonteBack": "¡Retrocede una casilla!"
+          "deHonteBack": "¡Retrocede una casilla!",
+          "wheelLegendSafe": "Salvado",
+          "wheelLegendDrink": "Tragos"
         }
       },
       "defis": [
