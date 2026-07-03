@@ -1,6 +1,7 @@
 "use client"
 
 import { useRequireSelectedPlayers } from "@/hooks/useRequireSelectedPlayers"
+import { VoiceDock } from "@/components/voice/VoiceDock"
 
 export default function GamesLayout({
   children,
@@ -14,6 +15,9 @@ export default function GamesLayout({
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-3 rounded-md bg-gray-900 p-2 text-white sm:space-y-6 sm:rounded-xl sm:p-6">
         {children}
       </div>
+      {/* Vocal de salle — apparaît dès qu'on est dans une salle en ligne,
+          pour TOUS les jeux (actuels et futurs), lobby inclus. */}
+      <VoiceDock />
     </div>
   )
 } 

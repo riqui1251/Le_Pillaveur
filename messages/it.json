@@ -2283,5 +2283,26 @@
       "loadAccounts": "Impossibile caricare gli account",
       "historyUnavailable": "Cronologia non disponibile"
     }
+  },
+  "voice": {
+    "title": "Vocale della partita",
+    "close": "Chiudi",
+    "join": "Entra nel vocale",
+    "joinHint": "Il vocale è riservato ai giocatori di questa partita. Il microfono si attiva solo dopo essere entrato.",
+    "leave": "Esci",
+    "connecting": "Connessione…",
+    "micMute": "Muta",
+    "micUnmute": "Micro",
+    "deafen": "Silenzia tutto",
+    "undeafen": "Ascolta",
+    "mutePeer": "Non sentire più questo giocatore",
+    "unmutePeer": "Risenti questo giocatore",
+    "you": "(tu)",
+    "inVoice": "In vocale",
+    "notInVoice": "assente",
+    "nobody": "Ancora nessuno nel vocale",
+    "micDenied": "Microfono negato — consentilo nel browser.",
+    "unsupported": "Il tuo browser non supporta il vocale.",
+    "networkError": "Impossibile connettersi al vocale — riprova."
   }
 }

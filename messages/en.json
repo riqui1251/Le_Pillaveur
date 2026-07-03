@@ -2293,5 +2293,26 @@
       "loadAccounts": "Unable to load accounts",
       "historyUnavailable": "History unavailable"
     }
+  },
+  "voice": {
+    "title": "Game voice chat",
+    "close": "Close",
+    "join": "Join voice",
+    "joinHint": "Voice is only for players in this game. Your mic only turns on after you join.",
+    "leave": "Leave",
+    "connecting": "Connecting…",
+    "micMute": "Mute",
+    "micUnmute": "Mic",
+    "deafen": "Deafen",
+    "undeafen": "Listen",
+    "mutePeer": "Stop hearing this player",
+    "unmutePeer": "Hear this player again",
+    "you": "(you)",
+    "inVoice": "In voice",
+    "notInVoice": "away",
+    "nobody": "Nobody in voice yet",
+    "micDenied": "Microphone denied — allow it in your browser settings.",
+    "unsupported": "Your browser does not support voice chat.",
+    "networkError": "Could not connect to voice — try again."
   }
 }

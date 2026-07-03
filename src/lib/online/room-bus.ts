@@ -47,3 +47,37 @@ export function subscribeRoom(roomId: string, listener: (event: RoomEvent) => vo
     bus.off(ch, listener)
   }
 }
+
+// ─── Signalisation WebRTC (vocal de salle) ───────────────────────────────────
+// Relai éphémère de messages offer/answer/ice/hello/bye entre DEUX membres
+// d'une même salle. Ciblé par destinataire : chaque flux SSE n'écoute que son
+// propre canal — un joueur ne voit jamais la signalisation des autres paires.
+
+export type RtcSignal = {
+  from: string
+  kind: 'hello' | 'offer' | 'answer' | 'ice' | 'bye'
+  payload: unknown
+  at: number
+}
+
+function rtcChannel(roomId: string, userId: string): string {
+  return `rtc:${roomId}:${userId}`
+}
+
+/** Envoie un message de signalisation à UN membre précis de la salle. */
+export function publishRtcSignal(roomId: string, toUserId: string, signal: RtcSignal): void {
+  bus.emit(rtcChannel(roomId, toUserId), signal)
+}
+
+/** Abonne le flux SSE d'un membre à SA signalisation. */
+export function subscribeRtc(
+  roomId: string,
+  userId: string,
+  listener: (signal: RtcSignal) => void
+): () => void {
+  const ch = rtcChannel(roomId, userId)
+  bus.on(ch, listener)
+  return () => {
+    bus.off(ch, listener)
+  }
+}

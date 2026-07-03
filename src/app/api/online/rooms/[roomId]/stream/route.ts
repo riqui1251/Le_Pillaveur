@@ -1,6 +1,6 @@
 import { getCurrentUser } from '@/lib/auth-server'
 import { prisma } from '@/lib/prisma'
-import { subscribeRoom } from '@/lib/online/room-bus'
+import { subscribeRoom, subscribeRtc } from '@/lib/online/room-bus'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +49,11 @@ export async function GET(request: Request, { params }: Params) {
         safeEnqueue(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
       })
 
+      // Signalisation vocale : uniquement les messages ADRESSÉS à ce membre.
+      const unsubscribeRtc = subscribeRtc(roomId, user.id, (signal) => {
+        safeEnqueue(`event: rtc\ndata: ${JSON.stringify(signal)}\n\n`)
+      })
+
       const heartbeat = setInterval(() => {
         safeEnqueue(`: ping ${Date.now()}\n\n`)
       }, HEARTBEAT_MS)
@@ -58,6 +63,7 @@ export async function GET(request: Request, { params }: Params) {
         closed = true
         clearInterval(heartbeat)
         unsubscribe()
+        unsubscribeRtc()
         try {
           controller.close()
         } catch {

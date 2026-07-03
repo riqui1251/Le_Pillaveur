@@ -2298,5 +2298,26 @@
       "loadAccounts": "Impossible de charger les comptes",
       "historyUnavailable": "Historique indisponible"
     }
+  },
+  "voice": {
+    "title": "Vocal de la partie",
+    "close": "Fermer",
+    "join": "Rejoindre le vocal",
+    "joinHint": "Le vocal est réservé aux joueurs de cette partie. Ton micro ne s'active qu'après avoir rejoint.",
+    "leave": "Quitter",
+    "connecting": "Connexion…",
+    "micMute": "Couper",
+    "micUnmute": "Micro",
+    "deafen": "Sourdine",
+    "undeafen": "Écouter",
+    "mutePeer": "Ne plus entendre ce joueur",
+    "unmutePeer": "Réentendre ce joueur",
+    "you": "(toi)",
+    "inVoice": "En vocal",
+    "notInVoice": "absent",
+    "nobody": "Personne en vocal pour l'instant",
+    "micDenied": "Micro refusé — autorise-le dans les réglages de ton navigateur.",
+    "unsupported": "Ton navigateur ne supporte pas le vocal.",
+    "networkError": "Connexion au vocal impossible — réessaie."
   }
 }

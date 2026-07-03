@@ -2283,5 +2283,26 @@
       "loadAccounts": "No se pueden cargar las cuentas",
       "historyUnavailable": "Historial no disponible"
     }
+  },
+  "voice": {
+    "title": "Voz de la partida",
+    "close": "Cerrar",
+    "join": "Unirse a la voz",
+    "joinHint": "La voz es solo para los jugadores de esta partida. Tu micro solo se activa al unirte.",
+    "leave": "Salir",
+    "connecting": "Conectando…",
+    "micMute": "Silenciar",
+    "micUnmute": "Micro",
+    "deafen": "Ensordecer",
+    "undeafen": "Escuchar",
+    "mutePeer": "Dejar de oír a este jugador",
+    "unmutePeer": "Volver a oír a este jugador",
+    "you": "(tú)",
+    "inVoice": "En voz",
+    "notInVoice": "ausente",
+    "nobody": "Nadie en la voz todavía",
+    "micDenied": "Micrófono denegado — permítelo en tu navegador.",
+    "unsupported": "Tu navegador no soporta la voz.",
+    "networkError": "No se pudo conectar a la voz — reinténtalo."
   }
 }
