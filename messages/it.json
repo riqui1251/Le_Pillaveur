@@ -1018,6 +1018,12 @@
           "back": "Indietro",
           "roundDrinksAll": "🥂 {count} giro/i generale/i — tutti bevono!"
         }
+      },
+      "a11y": {
+        "turnResult": "Risultato: {drinks} sorsi da bere, {gives} da dare.",
+        "roundDrinks": "Giro per tutti!",
+        "mute": "Disattiva audio",
+        "unmute": "Attiva audio"
       }
     },
     "trial-poursuite": {

@@ -1018,6 +1018,12 @@
           "back": "Volver",
           "roundDrinksAll": "🥂 {count} ronda(s) general(es) — ¡todos beben!"
         }
+      },
+      "a11y": {
+        "turnResult": "Resultado: {drinks} tragos para beber, {gives} para repartir.",
+        "roundDrinks": "¡Ronda general!",
+        "mute": "Silenciar sonido",
+        "unmute": "Activar sonido"
       }
     },
     "trial-poursuite": {

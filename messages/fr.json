@@ -1028,6 +1028,12 @@
           "back": "Retour",
           "roundDrinksAll": "🥂 {count} Tournée(s) Générale(s) — tout le monde boit !"
         }
+      },
+      "a11y": {
+        "turnResult": "Résultat : {drinks} gorgées à boire, {gives} à donner.",
+        "roundDrinks": "Tournée générale !",
+        "mute": "Couper le son",
+        "unmute": "Activer le son"
       }
     },
     "trial-poursuite": {

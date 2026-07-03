@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { Volume2, VolumeX, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Player } from '@/types/game'
 import { getPlayerGameBoost } from '@/lib/players'
@@ -9,6 +10,7 @@ import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { GameShell } from '@/components/game/GameShell'
 import { cn } from '@/lib/utils'
+import { playGameSound, isSoundMuted, setSoundMuted as persistSoundMuted } from '@/lib/sound/game-sounds'
 
 // --- MODIFICATION: Exporter le type DifficultyLevel ---
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
@@ -62,14 +64,25 @@ const PHYSICS_OVERLAP_PUSH_MULTIPLIER = 1.1; // Pour mieux séparer après colli
 // Desktop (>= sm): tailles précédentes
 const VISUAL_BALL_SIZE_CLASS = 'w-4 h-4 sm:w-5 sm:h-5';
 const VISUAL_NORMAL_PIN_SIZE_CLASS = 'w-2.5 h-2.5 sm:w-3.5 sm:h-3.5';
-const VISUAL_SPECIAL_PIN_SIZE_CLASS = 'w-3 h-3 sm:w-4 sm:h-4';
+// Pins spéciaux agrandis (16px mobile / 20px desktop) : place pour le glyphe et
+// alignement avec la hitbox de collision (déjà ~16/20px, cf. specialSumRadius).
+const VISUAL_SPECIAL_PIN_SIZE_CLASS = 'w-4 h-4 sm:w-5 sm:h-5';
 // Paramètres de départ des balles
 const DROP_START_X_MIN = 10;
 const DROP_START_X_MAX = 90;
 const ADD_BALL_START_X_MIN = 10;
 const ADD_BALL_START_X_MAX = 90;
 const ADD_BALL_VELOCITY_X_MAGNITUDE = 2.0;
-const INITIAL_VELOCITY_Y = 0.1;
+// Petite impulsion vers le bas au lancer (px/s) : la balle s'engage franchement
+// au lieu de flotter/rebondir ~0,4 s dans les premières rangées avant de tomber.
+const INITIAL_VELOCITY_Y = 130;
+// Pas de temps FIXE pour l'intégration physique : la boucle rAF accumule le
+// temps réel écoulé et rejoue autant de sous-pas de durée constante que
+// nécessaire. Résultat déterministe et identique quel que soit le frame-rate
+// (60 Hz, 120 Hz, ou appareil qui rame), là où l'ancien pas variable rendait la
+// trajectoire — donc la case d'arrivée — dépendante de la machine.
+const PHYSICS_FIXED_DT_MS = 1000 / 120; // ~8,33 ms
+const PHYSICS_MAX_SUBSTEPS = 8;         // borne le rattrapage (anti « spirale de la mort » après un onglet en arrière-plan)
 // ---------------------------------------------------------
 
 // Nombre cible de cases en bas
@@ -134,27 +147,31 @@ type SpecialPinType =
     'magnetRight';
 // ----------------------------------------------
 
-// Couleurs des pins spéciaux (Tailwind classes)
-// --- MODIFICATION: Ajouter les couleurs des nouveaux pins ---
-const SPECIAL_PIN_COLORS: Record<SpecialPinType, { border: string; bg: string; }> = {
-  multiplier:   { border: 'border-red-800',    bg: 'bg-red-400' },    
-  addBall:      { border: 'border-blue-800',   bg: 'bg-blue-400' },   
-  addSip:       { border: 'border-green-800',  bg: 'bg-green-400' },  
-  subtractSip:  { border: 'border-orange-800', bg: 'bg-orange-400' }, 
-  cancellation: { border: 'border-gray-800',   bg: 'bg-gray-400' },   
-  colorSwap:    { border: 'border-pink-800',   bg: 'bg-pink-400' },   
-  mystery:      { border: 'border-indigo-800', bg: 'bg-indigo-400' }, 
-  shake:        { border: 'border-yellow-800', bg: 'bg-yellow-400' }, 
-  roundDrinks:  { border: 'border-teal-800',   bg: 'bg-teal-400' },   
-  jackpot:      { border: 'border-amber-800',  bg: 'bg-amber-400' },  
-  teleportation: { border: 'border-purple-800', bg: 'bg-purple-400' },
-  gravityFlip:  { border: 'border-sky-800',    bg: 'bg-sky-400' },
-  slowMotion:   { border: 'border-cyan-800',   bg: 'bg-cyan-400' },
-  split:        { border: 'border-lime-800',   bg: 'bg-lime-400' },
-  scoreSwap:    { border: 'border-fuchsia-800',bg: 'bg-fuchsia-400' },
-  doubleEffect: { border: 'border-rose-800',   bg: 'bg-rose-400' },
-  magnetLeft:   { border: 'border-blue-900',   bg: 'bg-blue-500' },
-  magnetRight:  { border: 'border-blue-900',   bg: 'bg-blue-500' },
+// Couleurs ET pictogramme de chaque pin spécial.
+// Le pictogramme (glyph) est l'identifiant PRIMAIRE : la couleur seule ne suffit
+// pas à distinguer 18 types (et est inaccessible aux daltoniens). Le glyphe est
+// rendu au centre du pin ; la couleur reste un repère secondaire.
+// magnetLeft / magnetRight partagent volontairement la même couleur : c'est la
+// flèche (← / →) qui les distingue.
+const SPECIAL_PIN_COLORS: Record<SpecialPinType, { border: string; bg: string; glyph: string }> = {
+  multiplier:   { border: 'border-red-900',     bg: 'bg-red-400',     glyph: '×2' },
+  addBall:      { border: 'border-blue-900',    bg: 'bg-blue-400',    glyph: '🎱' },
+  addSip:       { border: 'border-green-900',   bg: 'bg-green-400',   glyph: '+1' },
+  subtractSip:  { border: 'border-orange-900',  bg: 'bg-orange-400',  glyph: '−1' },
+  cancellation: { border: 'border-gray-900',    bg: 'bg-gray-300',    glyph: '🚫' },
+  colorSwap:    { border: 'border-pink-900',    bg: 'bg-pink-400',    glyph: '🎨' },
+  mystery:      { border: 'border-indigo-900',  bg: 'bg-indigo-400',  glyph: '❓' },
+  shake:        { border: 'border-yellow-900',  bg: 'bg-yellow-300',  glyph: '🔀' },
+  roundDrinks:  { border: 'border-teal-900',    bg: 'bg-teal-400',    glyph: '🍻' },
+  jackpot:      { border: 'border-amber-900',   bg: 'bg-amber-300',   glyph: '💰' },
+  teleportation:{ border: 'border-purple-900',  bg: 'bg-purple-400',  glyph: '🌀' },
+  gravityFlip:  { border: 'border-sky-900',     bg: 'bg-sky-400',     glyph: '↕' },
+  slowMotion:   { border: 'border-cyan-900',    bg: 'bg-cyan-300',    glyph: '🐌' },
+  split:        { border: 'border-lime-900',    bg: 'bg-lime-400',    glyph: '✂️' },
+  scoreSwap:    { border: 'border-fuchsia-900', bg: 'bg-fuchsia-400', glyph: '🔄' },
+  doubleEffect: { border: 'border-rose-900',    bg: 'bg-rose-400',    glyph: '💥' },
+  magnetLeft:   { border: 'border-slate-900',   bg: 'bg-slate-400',   glyph: '←' },
+  magnetRight:  { border: 'border-zinc-900',    bg: 'bg-zinc-500',    glyph: '→' },
 };
 // -------------------------------------------------------
 
@@ -452,13 +469,37 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   // Tooltip sur pin spécial (tap mobile)
   const [pinTooltip, setPinTooltip] = useState<{ id: string; x: number; y: number; type: SpecialPinType } | null>(null)
 
+  // Légende repliée par défaut : les pins portent désormais leur glyphe, la
+  // légende n'est qu'un rappel — et repliée elle ne déborde plus sous le pli mobile.
+  const [legendOpen, setLegendOpen] = useState(false)
+
+  // Son / vibration (mute partagé avec le reste du site via localStorage)
+  const [muted, setMuted] = useState(false)
+  useEffect(() => { setMuted(isSoundMuted()) }, [])
+  const toggleMute = () => {
+    setMuted(prev => {
+      const next = !prev
+      persistSoundMuted(next)
+      if (!next) playGameSound('step') // petit retour audible à la réactivation
+      return next
+    })
+  }
+  // Throttle des tics de rebond : une collision de pin peut survenir à chaque
+  // sous-pas physique — sans throttle, ce serait un grésillement continu.
+  const lastBounceSoundRef = useRef(0)
+
   const canvasRef = useRef<HTMLDivElement>(null)
   const animationRefs = useRef<{ red: number | null, green: number | null }>({ red: null, green: null })
 
-  // Flash bref sur un pin touché
+  // Flash bref sur un pin touché (+ tic sonore throttlé)
   const triggerPinFlash = (id: string) => {
     flashingPinsRef.current.set(id, Date.now() + 350)
     forceFlashRender(n => n + 1)
+    const now = Date.now()
+    if (now - lastBounceSoundRef.current > 55) {
+      lastBounceSoundRef.current = now
+      playGameSound('step')
+    }
     setTimeout(() => {
       flashingPinsRef.current.delete(id)
       forceFlashRender(n => n + 1)
@@ -712,6 +753,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     };
 
     let lastTime = performance.now();
+    let accumulatorMs = 0; // temps réel en attente d'être consommé en sous-pas fixes
     const lastCollisionPin = new Map<string, string | null>();
     // --- MODIFICATION: Stocker les données complètes des balles extra finies ---
     const finishedExtraBallsDataThisTurn: BallAnimationData[] = []; 
@@ -758,15 +800,16 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         const ballRadiusPx = visualBallDiameterPx / 2;
         const pinRadiusPx = visualPinDiameterPx / 2;
 
-        // Intégration plus réaliste (échelle en pixels et traînée légère)
+        // Intégration à pas FIXE (voir PHYSICS_FIXED_DT_MS) : déterministe et
+        // indépendante du frame-rate.
         const nowMs = performance.now();
-        let dtSec = Math.max(0.001, Math.min(0.033, deltaTime / 1000));
+        let dtSec = PHYSICS_FIXED_DT_MS / 1000;
         // Slow motion effect
         if ((ballData.effects.slowMotionUntilMs ?? 0) > nowMs) {
           dtSec *= 0.5;
         }
         // Gravité (inversée si Gravity Flip actif)
-        const baseGravityPx = heightPx * 2.0;
+        const baseGravityPx = heightPx * 2.3;
         const gravitySign = ((ballData.effects.gravityFlipUntilMs ?? 0) > nowMs) ? -1 : 1;
         const GRAVITY_PX = baseGravityPx * gravitySign;
         const AIR_DRAG = 0.002;
@@ -779,8 +822,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         vy += GRAVITY_PX * dtSec;
         xPx += vx * dtSec;
         yPx += vy * dtSec;
-        vx *= Math.max(0.0, 1 - AIR_DRAG * (deltaTime / 16));
-        vy *= Math.max(0.0, 1 - (AIR_DRAG * 0.5) * (deltaTime / 16));
+        vx *= Math.max(0.0, 1 - AIR_DRAG * (PHYSICS_FIXED_DT_MS / 16));
+        vy *= Math.max(0.0, 1 - (AIR_DRAG * 0.5) * (PHYSICS_FIXED_DT_MS / 16));
 
         // Aimantation gauche/droite
         if ((ballData.effects.magnetUntilMs ?? 0) > nowMs && ballData.effects.magnetDir) {
@@ -798,7 +841,10 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         const hitboxScale = isSmBreakpoint ? 1 : 0.85;
         const sumRadiusPx = (ballRadiusPx * hitboxScale) + (pinRadiusPx * hitboxScale);
         const sumRadiusSqPx = sumRadiusPx * sumRadiusPx;
-        const RESTITUTION = 0.9;
+        // Rebond plus amorti : l'ancienne valeur 0.9 (quasi élastique) faisait
+        // patiner la balle le long du haut du plateau ~0,8 s avant de tomber.
+        // ~0,6 donne une chute franche qui accélère, sans « coller » pour autant.
+        const RESTITUTION = 0.6;
 
         let collisionOccurred = false;
 
@@ -836,7 +882,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 if (!ballData.firstPinHit) {
                   const side = Math.random() < 0.5 ? -1 : 1;
                   const tx = -ny; const ty = nx; // tangente
-                  const tangentBoost = isSmBreakpoint ? 120 : 80; // px/s
+                  const tangentBoost = isSmBreakpoint ? 90 : 60; // px/s (adouci : moins d'éjection latérale/vers le haut)
                   ballData.velocityX += tx * tangentBoost * side;
                   ballData.velocityY += ty * tangentBoost * side;
                   ballData.firstPinHit = true;
@@ -876,7 +922,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     if (!ballData.firstPinHit) {
                       const side = Math.random() < 0.5 ? -1 : 1;
                       const txS = -nyS; const tyS = nxS;
-                      const tangentBoostS = isSmBreakpoint ? 120 : 80;
+                      const tangentBoostS = isSmBreakpoint ? 90 : 60;
                       ballData.velocityX += txS * tangentBoostS * side;
                       ballData.velocityY += tyS * tangentBoostS * side;
                       ballData.firstPinHit = true;
@@ -1212,6 +1258,13 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
             ballData.finalSipResult = finalSips; // Stocker le résultat
             ballData.active = false; // Marquer comme inactive
 
+            // Retour d'atterrissage : son + courte vibration (le mute son coupe
+            // aussi la vibration — un seul réglage pour tout le feedback).
+            playGameSound('reveal')
+            if (!isSoundMuted() && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+              navigator.vibrate(18)
+            }
+
             if (ballData.id === 'red' || ballData.id === 'green') {
                 setFinalSlotIndices(prev => ({ ...prev, [ballData.id as 'red' | 'green']: slotIndex }));
             } else {
@@ -1222,13 +1275,23 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         }
       };
 
-      if (currentAnimState.red) processBallFrame(currentAnimState.red);
-      if (currentAnimState.green) processBallFrame(currentAnimState.green);
-      // Ajouter les nouvelles balles extra générées pendant ce frame
-      if (newlyAddedBalls.length > 0) {
-          currentAnimState.extra.push(...newlyAddedBalls);
+      // Consommer le temps réel écoulé en sous-pas de durée FIXE. On borne le
+      // rattrapage (PHYSICS_MAX_SUBSTEPS) pour éviter une avalanche de sous-pas
+      // si l'onglet a été en arrière-plan. La physique mute `animState` ; l'état
+      // React n'est synchronisé qu'une fois par frame, après tous les sous-pas.
+      accumulatorMs += Math.min(deltaTime, PHYSICS_FIXED_DT_MS * PHYSICS_MAX_SUBSTEPS);
+      while (accumulatorMs >= PHYSICS_FIXED_DT_MS) {
+        if (currentAnimState.red) processBallFrame(currentAnimState.red);
+        if (currentAnimState.green) processBallFrame(currentAnimState.green);
+        // Balles extra générées pendant ce sous-pas (split/addBall) : intégrées
+        // et traitées dans le même sous-pas, puis vidées pour ne pas ré-ajouter.
+        if (newlyAddedBalls.length > 0) {
+            currentAnimState.extra.push(...newlyAddedBalls);
+            newlyAddedBalls.length = 0;
+        }
+        currentAnimState.extra.forEach(extraBall => processBallFrame(extraBall));
+        accumulatorMs -= PHYSICS_FIXED_DT_MS;
       }
-      currentAnimState.extra.forEach(extraBall => processBallFrame(extraBall));
 
       // --- Mise à jour de l'état React pour la position visuelle (inchangé) ---
       if (currentAnimState.red) {
@@ -1369,6 +1432,12 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
   const currentPlayer = players[currentPlayerIndex]
 
+  // Annonce lecteur d'écran du résultat du tour (région aria-live plus bas).
+  const turnAnnouncement = turnResult
+    ? t('a11y.turnResult', { drinks: turnResult.redSips ?? 0, gives: turnResult.greenSips ?? 0 })
+      + (roundDrinksCount > 0 ? ` ${t('a11y.roundDrinks')}` : '')
+    : ''
+
   const actionBar = !gameOver ? (
     <div className="flex w-full items-center gap-3">
       <PlayerIcon player={currentPlayer} size="md" className="h-8 w-8 text-base" />
@@ -1416,25 +1485,41 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         {/* ── Plateau de jeu ───────────────────────────────────────────── */}
         {!gameOver && (
           <>
-            {/* File d'attente joueurs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              {players.map((p, i) => {
-                const distance = ((i - currentPlayerIndex) + players.length) % players.length
-                if (distance > 2) return null
-                const isActive = distance === 0
-                return (
-                  <div key={p.id} className={cn(
-                    'flex shrink-0 items-center gap-1.5 rounded-xl border px-2 py-1 transition-all duration-200',
-                    isActive ? 'border-violet-500/50 bg-violet-500/10' : 'border-white/[0.07] bg-white/[0.03] opacity-50',
-                  )}>
-                    <PlayerIcon player={p} size="sm" className="h-5 w-5 text-xs" />
-                    <span className={cn('text-xs font-semibold', isActive ? 'text-white' : 'text-white/50')}>
-                      <PlayerName player={p} />
-                    </span>
-                    {distance === 1 && <span className="text-[9px] text-white/30">{t('game.next')}</span>}
-                  </div>
-                )
-              })}
+            {/* Annonce du résultat pour lecteurs d'écran (invisible à l'œil) */}
+            <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+              {turnAnnouncement}
+            </div>
+
+            {/* File d'attente joueurs + bouton son */}
+            <div className="flex items-center gap-2">
+              <div className="flex flex-1 items-center gap-2 overflow-x-auto pb-1">
+                {players.map((p, i) => {
+                  const distance = ((i - currentPlayerIndex) + players.length) % players.length
+                  if (distance > 2) return null
+                  const isActive = distance === 0
+                  return (
+                    <div key={p.id} className={cn(
+                      'flex shrink-0 items-center gap-1.5 rounded-xl border px-2 py-1 transition-all duration-200',
+                      isActive ? 'border-violet-500/50 bg-violet-500/10' : 'border-white/[0.07] bg-white/[0.03] opacity-50',
+                    )}>
+                      <PlayerIcon player={p} size="sm" className="h-5 w-5 text-xs" />
+                      <span className={cn('text-xs font-semibold', isActive ? 'text-white' : 'text-white/50')}>
+                        <PlayerName player={p} />
+                      </span>
+                      {distance === 1 && <span className="text-[9px] text-white/30">{t('game.next')}</span>}
+                    </div>
+                  )
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={toggleMute}
+                aria-label={muted ? t('a11y.unmute') : t('a11y.mute')}
+                aria-pressed={muted}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-white/60 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+              >
+                {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </button>
             </div>
 
             <div
@@ -1464,11 +1549,18 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 const colors = SPECIAL_PIN_COLORS[pin.type]
                 const isFlashing = (flashingPinsRef.current.get(pin.id) ?? 0) > Date.now()
                 const isTooltipOpen = pinTooltip?.id === pin.id
+                const openTooltip = () => setPinTooltip({ id: pin.id, x: pin.x, y: pin.y, type: pin.type })
                 return (
-                  <div
+                  <button
                     key={pin.id}
+                    type="button"
+                    aria-label={`${getPinLabel(pin.type)} — ${getPinEffect(pin.type)}`}
+                    aria-pressed={isTooltipOpen}
                     className={cn(
-                      `absolute ${VISUAL_SPECIAL_PIN_SIZE_CLASS} rounded-full border-2 cursor-pointer transition-all duration-75`,
+                      // game-grid-cell : neutralise le min tap-target 40/44px que
+                      // globals.css impose à tout <button> sur mobile (sinon le
+                      // pin s'affiche à 40px au lieu de 16/20px).
+                      `game-grid-cell absolute ${VISUAL_SPECIAL_PIN_SIZE_CLASS} flex items-center justify-center rounded-full border-2 cursor-pointer transition-all duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80`,
                       colors.border, colors.bg,
                       isFlashing && 'scale-[2.5] brightness-150',
                     )}
@@ -1477,7 +1569,15 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                       e.stopPropagation()
                       setPinTooltip(prev => prev?.id === pin.id ? null : { id: pin.id, x: pin.x, y: pin.y, type: pin.type })
                     }}
-                  />
+                    onFocus={openTooltip}
+                  >
+                    <span
+                      aria-hidden
+                      className="pointer-events-none select-none text-[9px] font-black leading-none text-black/80 drop-shadow-sm sm:text-[11px]"
+                    >
+                      {colors.glyph}
+                    </span>
+                  </button>
                 )
               })}
 
@@ -1491,7 +1591,10 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     transform: 'translate(-50%, -100%)',
                   }}
                 >
-                  <p className="whitespace-nowrap text-xs font-bold text-white">{getPinLabel(pinTooltip.type)}</p>
+                  <p className="flex items-center gap-1.5 whitespace-nowrap text-xs font-bold text-white">
+                    <span aria-hidden className="text-sm leading-none">{SPECIAL_PIN_COLORS[pinTooltip.type].glyph}</span>
+                    {getPinLabel(pinTooltip.type)}
+                  </p>
                   <p className="mt-0.5 max-w-[180px] text-[10px] leading-tight text-white/60">{getPinEffect(pinTooltip.type)}</p>
                 </div>
               )}
@@ -1563,22 +1666,39 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
               ))}
             </div>
 
-            {/* ── Légende compacte ───────────────────────────────────────── */}
-            <div className="rounded-2xl border border-violet-800/20 bg-violet-950/30 p-3">
-              <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-violet-400/60">{t('game.specialPins')}</p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
-                {ALL_PIN_TYPES.map((type) => {
-                  const colors = SPECIAL_PIN_COLORS[type]
-                  const description = getPinEffect(type)
-                  if (!colors) return null
-                  return (
-                    <div key={type} className="flex items-center gap-2 min-w-0">
-                      <div className={`w-2.5 h-2.5 shrink-0 rounded-full border ${colors.border} ${colors.bg}`} />
-                      <span className="truncate text-xs text-white/50" title={description}>{description}</span>
-                    </div>
-                  )
-                })}
-              </div>
+            {/* ── Légende repliable des pins spéciaux ─────────────────────── */}
+            <div className="rounded-2xl border border-violet-800/20 bg-violet-950/30">
+              <button
+                type="button"
+                onClick={() => setLegendOpen(o => !o)}
+                aria-expanded={legendOpen}
+                className="flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+              >
+                <span className="text-xs font-semibold uppercase tracking-widest text-violet-400/60">{t('game.specialPins')}</span>
+                <ChevronDown className={cn('h-4 w-4 shrink-0 text-white/40 transition-transform', legendOpen && 'rotate-180')} />
+              </button>
+              {legendOpen && (
+                <div className="grid grid-cols-1 gap-x-4 gap-y-2 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {ALL_PIN_TYPES.map((type) => {
+                    const colors = SPECIAL_PIN_COLORS[type]
+                    if (!colors) return null
+                    return (
+                      <div key={type} className="flex items-center gap-2 min-w-0">
+                        <span
+                          aria-hidden
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[8px] font-black leading-none text-black/80 ${colors.border} ${colors.bg}`}
+                        >
+                          {colors.glyph}
+                        </span>
+                        <span className="min-w-0 truncate text-xs text-white/55">
+                          <span className="font-semibold text-white/75">{getPinLabel(type)}</span>
+                          <span className="text-white/40"> · {getPinEffect(type)}</span>
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </>
         )}

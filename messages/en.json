@@ -1028,6 +1028,12 @@
           "back": "Back",
           "roundDrinksAll": "🥂 {count} round(s) for all — everyone drinks!"
         }
+      },
+      "a11y": {
+        "turnResult": "Result: {drinks} sips to drink, {gives} to give.",
+        "roundDrinks": "Round on the house!",
+        "mute": "Mute sound",
+        "unmute": "Unmute sound"
       }
     },
     "trial-poursuite": {
