@@ -12,7 +12,7 @@ import { createUniqueRoomCode } from '@/lib/online-room'
  */
 export const dynamic = 'force-dynamic'
 
-const CASTABLE_GAMES = new Set(['plinko'])
+const CASTABLE_GAMES = new Set(['plinko', 'pmu'])
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()

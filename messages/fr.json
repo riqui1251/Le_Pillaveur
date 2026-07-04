@@ -2400,6 +2400,7 @@
     "castToTv": "Caster sur la TV",
     "castHint": "Sur ta télé, ouvre lepillaveur.fr/tv et entre :",
     "drinkVerb": "Boit",
-    "giveVerb": "Donne"
+    "giveVerb": "Donne",
+    "racing": "En course !"
   }
 }

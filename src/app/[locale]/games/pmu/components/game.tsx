@@ -1,16 +1,18 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion } from 'framer-motion'
 import { Player as BasePlayer, getPlayerGameBoost } from '@/lib/players'
 import { usePlayers } from '@/hooks/usePlayers'
+import { useCastRoom } from '@/hooks/useCastRoom'
+import type { PmuCastState } from '@/lib/cast-types'
 import { GameShell } from '@/components/game/GameShell'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { X, CheckCircle2, Minus, Plus } from 'lucide-react'
+import { X, CheckCircle2, Minus, Plus, Tv } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -305,6 +307,59 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
 
   const allPlayers = initialPlayersRef.current
 
+  // ── Cast sur TV ────────────────────────────────────────────────────────────
+  const tTv = useTranslations('tv')
+  const { code: castCode, active: castActive, start: startCast, push: pushCast, pushFrame: pushCastFrame, stop: stopCast } = useCastRoom('pmu')
+
+  const buildCastState = useCallback((): PmuCastState => {
+    const castPhase: PmuCastState['phase'] =
+      phase === 'racing' ? 'racing' : phase === 'payout' || phase === 'results' ? 'finished' : 'waiting'
+    return {
+      castKind: 'pmu',
+      phase: castPhase,
+      finish: FINISH,
+      horses: horses.map((h) => ({
+        key: h.key,
+        name: h.name,
+        emoji: h.emoji,
+        colorFrom: h.colorFrom,
+        colorTo: h.colorTo,
+        players: h.players.map((p) => p.name),
+        position: Math.min(h.position, FINISH),
+      })),
+      winnerKey: winner?.key ?? null,
+    }
+  }, [phase, horses, winner, FINISH])
+
+  const buildRef = useRef(buildCastState)
+  buildRef.current = buildCastState
+
+  const toggleCast = () => {
+    if (castActive) void stopCast()
+    else void startCast(JSON.stringify(buildCastState()))
+  }
+
+  // Pousse le plateau/état sur les transitions STABLES (phase, vainqueur, parieurs)
+  // — surtout pas à chaque tick de course (les positions passent par les trames).
+  const horsePlayersSig = horses.map((h) => `${h.key}:${h.players.map((p) => p.id).join(',')}`).join('|')
+  useEffect(() => {
+    if (castActive) pushCast(JSON.stringify(buildRef.current()))
+  }, [castActive, phase, winner, horsePlayersSig, pushCast])
+
+  // Diffuse les positions des chevaux pendant la course (~12/s).
+  const lastFrameRef = useRef(0)
+  useEffect(() => {
+    if (!castActive || phase !== 'racing') return
+    const now = Date.now()
+    if (now - lastFrameRef.current < 80) return
+    lastFrameRef.current = now
+    const positions: Record<string, number> = {}
+    horses.forEach((h) => {
+      positions[h.key] = Math.min(h.position, FINISH)
+    })
+    pushCastFrame(JSON.stringify({ positions }))
+  }, [castActive, phase, horses, pushCastFrame, FINISH])
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   // Retourne l'index du cheval du joueur, ou -1 s'il n'est pas assigné
@@ -549,6 +604,28 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
     return (
       <GameShell title={t('titleRacing')} onBack={onGameEnd} maxWidth={800}>
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {castActive && castCode && (
+              <span className="flex items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-xs text-violet-100">
+                <Tv className="h-3.5 w-3.5 text-violet-300" /> {tTv('castHint')}{' '}
+                <span className="font-mono font-black text-white">{castCode}</span>
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={toggleCast}
+              aria-pressed={castActive}
+              className={cn(
+                'flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors',
+                castActive
+                  ? 'border-violet-400/50 bg-violet-500/20 text-violet-200'
+                  : 'border-white/10 bg-white/[0.05] text-white/60 hover:border-white/20 hover:text-white',
+              )}
+            >
+              <Tv className="h-4 w-4" /> {tTv('castToTv')}
+            </button>
+          </div>
+
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#0f1a0a] to-[#0a1208]">
             <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2">
               <span className="text-xs font-semibold uppercase tracking-widest text-white/30">{t('race.track')}</span>

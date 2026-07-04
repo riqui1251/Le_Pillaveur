@@ -36,4 +36,29 @@ export type PlinkoCastFrame = {
   balls: { x: number; y: number; color: 'red' | 'green' }[]
 }
 
-export type CastState = PlinkoCastState
+/** Course PMU : 4 chevaux courent jusqu'à `finish`. */
+export type PmuCastState = {
+  castKind: 'pmu'
+  phase: 'waiting' | 'racing' | 'finished'
+  finish: number
+  horses: {
+    key: string
+    name: string
+    emoji: string
+    colorFrom: string
+    colorTo: string
+    /** Noms des parieurs sur ce cheval. */
+    players: string[]
+    /** Position 0..finish (instantané ; positions live via les trames pendant la course). */
+    position: number
+  }[]
+  winnerKey: string | null
+}
+
+/** Positions live des chevaux pendant la course (canal éphémère, ~12/s). */
+export type PmuCastFrame = {
+  positions: Record<string, number>
+}
+
+export type CastState = PlinkoCastState | PmuCastState
+export type CastFrame = PlinkoCastFrame | PmuCastFrame

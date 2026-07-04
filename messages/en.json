@@ -2395,6 +2395,7 @@
     "castToTv": "Cast to TV",
     "castHint": "On your TV, open lepillaveur.fr/tv and enter:",
     "drinkVerb": "Drinks",
-    "giveVerb": "Gives"
+    "giveVerb": "Gives",
+    "racing": "Racing!"
   }
 }
