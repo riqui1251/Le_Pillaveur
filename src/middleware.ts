@@ -16,6 +16,8 @@ const intlMiddleware = createIntlMiddleware({
 const PUBLIC_PREFIXES = [
   '/compte',
   '/legal',
+  // Écran TV : afficheur public d'une salle par code (aucun login requis).
+  '/tv',
   '/api/',
   '/_next',
   '/favicon.ico',

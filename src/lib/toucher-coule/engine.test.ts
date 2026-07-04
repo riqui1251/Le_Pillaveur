@@ -7,6 +7,7 @@ import {
   placeTCBots,
   reduceTC,
   toTCClientView,
+  toTCSpectatorView,
   TC_MODES,
   TC_REJOIN_GRACE_MS,
   type TCInitialPlayer,
@@ -262,5 +263,47 @@ describe('toucher-coule — anti-triche (vue client)', () => {
     const sunk = view.ships.find((s) => s.id === smallShip.id)!
     expect(sunk.sunk).toBe(true)
     expect(sunk.cells).toHaveLength(2)
+  })
+})
+
+describe('toucher-coule — vue spectateur neutre (écran TV)', () => {
+  function battleState(): TCState {
+    let state = createInitialTCState(players1v1(), '1v1', 7)
+    state = place1v1(state, 'alice', 0)
+    state = place1v1(state, 'bob', 0)
+    return state
+  }
+
+  it("cache les cases intactes des DEUX équipes (navire non coulé = seules ses cases touchées)", () => {
+    const state = battleState()
+    // Un navire touché mais pas coulé (une seule case atteinte).
+    const withHit: TCState = {
+      ...state,
+      ships: state.ships.map((s, i) => (i === 0 ? { ...s, hits: [s.cells[0]] } : s)),
+    }
+    const view = toTCSpectatorView(withHit)
+
+    expect(view.viewerTeam).toBeNull()
+    expect('rngState' in view).toBe(false)
+
+    const hitShip = view.ships[0]
+    expect(hitShip.revealed).toBe(false)
+    expect(hitShip.cells).toEqual([state.ships[0].cells[0]]) // uniquement la case touchée
+
+    // Aucun navire non coulé n'expose plus de cases que celles réellement touchées.
+    for (const s of view.ships) {
+      if (!s.sunk) expect(s.cells.length).toBe(s.hits.length)
+    }
+  })
+
+  it('révèle entièrement un navire coulé', () => {
+    const state = battleState()
+    const sunkState: TCState = {
+      ...state,
+      ships: state.ships.map((s, i) => (i === 0 ? { ...s, hits: [...s.cells], sunk: true } : s)),
+    }
+    const view = toTCSpectatorView(sunkState)
+    expect(view.ships[0].revealed).toBe(true)
+    expect(view.ships[0].cells).toEqual(state.ships[0].cells)
   })
 })

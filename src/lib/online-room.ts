@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
-import { parseTCState, tcClientViewJson } from '@/lib/toucher-coule/server-adapter'
+import { parseTCState, tcClientViewJson, tcSpectatorViewJson } from '@/lib/toucher-coule/server-adapter'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { parseOnlinePreferences, type OnlinePreferences } from '@/lib/online-preferences'
 
@@ -102,6 +102,72 @@ export function stripEngineSecretForUser(
     return tcClientViewJson(state, userId)
   }
   return stripEngineSecret(json)
+}
+
+/**
+ * Variante SPECTATEUR NEUTRE (écran TV partagé, aucun viewer précis) : masque
+ * tous les secrets pour un observateur sans équipe. PB → retire `rngState` ;
+ * TC → `toTCSpectatorView` (navires intacts des DEUX équipes cachés).
+ */
+export function stripEngineSecretForSpectator(gameId: string | null, json: string | null): string | null {
+  if (!json) return json
+  if (gameId === 'toucher-coule') {
+    const state = parseTCState(json)
+    if (!state) return null
+    return tcSpectatorViewJson(state)
+  }
+  return stripEngineSecret(json)
+}
+
+/** DTO minimal en LECTURE SEULE pour l'écran TV — pas de notion de « soi ». */
+export type TvRoomDto = {
+  code: string
+  status: string
+  gameId: string | null
+  hostUserId: string
+  members: Array<{
+    userId: string
+    displayName: string
+    isHost: boolean
+    isReady: boolean
+    preferences: OnlinePreferences
+  }>
+  settings: RoomSettings
+  stateVersion: number
+  currentTurnUserId: string | null
+  gameStateJson: string | null
+}
+
+/**
+ * Construit le DTO TV d'une salle À PARTIR DE SON CODE (le code = jeton d'accès
+ * pour un écran non authentifié). État de jeu passé par le masquage spectateur.
+ */
+export async function buildTvRoomDto(code: string): Promise<TvRoomDto | null> {
+  const room = await prisma.onlineRoom.findUnique({
+    where: { code },
+    include: {
+      members: { include: { user: true }, orderBy: { joinedAt: 'asc' } },
+    },
+  })
+  if (!room) return null
+
+  return {
+    code: room.code,
+    status: room.status,
+    gameId: room.gameId,
+    hostUserId: room.hostUserId,
+    members: room.members.map((m) => ({
+      userId: m.userId,
+      displayName: m.user.displayName,
+      isHost: m.userId === room.hostUserId,
+      isReady: m.isReady,
+      preferences: parseOnlinePreferences(m.user.onlinePreferencesJson),
+    })),
+    settings: parseRoomSettings(room.settingsJson),
+    stateVersion: room.stateVersion,
+    currentTurnUserId: room.currentTurnUserId,
+    gameStateJson: stripEngineSecretForSpectator(room.gameId, room.gameStateJson),
+  }
 }
 
 export async function buildRoomDto(roomId: string, currentUserId: string): Promise<RoomDto | null> {

@@ -6,6 +6,7 @@ import {
   placeTCBots,
   reduceTC,
   toTCClientView,
+  toTCSpectatorView,
   TCEngineError,
   TC_BOT_NAMES,
   TC_MODES,
@@ -170,6 +171,11 @@ export function convertTCPlayerToBot(state: TCState, playerId: string): TCState 
 
 export function tcClientViewJson(state: TCState, viewerUserId: string): string {
   return JSON.stringify(toTCClientView(state, viewerUserId))
+}
+
+/** Vue spectateur neutre en JSON (écran TV) : aucun navire intact révélé. */
+export function tcSpectatorViewJson(state: TCState): string {
+  return JSON.stringify(toTCSpectatorView(state))
 }
 
 export type { TCClientView }

@@ -94,6 +94,11 @@ export default function Navbar() {
 
   const toggleDrawer = () => setDrawerOpen((open) => !open)
 
+  // Écran TV : plein écran sans chrome (la barre de nav n'a pas de sens sur une télé).
+  if (pathname === '/tv' || pathname.startsWith('/tv/')) {
+    return null
+  }
+
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#0c0b12]/85 backdrop-blur-xl supports-[backdrop-filter]:bg-[#0c0b12]/70">

@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
-import { ArrowLeft, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Users, UserPlus } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
+import { ArrowLeft, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Users, UserPlus, Tv } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -14,6 +14,7 @@ import { GAMES, type GameMeta } from '@/lib/games'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
+import { JoinQR } from '@/components/tv/JoinQR'
 import { cn } from '@/lib/utils'
 
 const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
@@ -65,6 +66,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const [copied, setCopied] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
+  const [showTv, setShowTv] = useState(false)
+  const tTv = useTranslations('tv')
+  const locale = useLocale()
   const tPb = useTranslations('games.petit-buveur.page')
   const tTc = useTranslations('games.toucher-coule.lobby')
   const tOnline = useTranslations('onlineLobby')
@@ -264,6 +268,29 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
           {copied ? 'Code copié !' : 'Copier le code'}
         </button>
+      </div>
+
+      {/* Mode TV : afficher la partie sur une télé */}
+      <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md">
+        <button
+          type="button"
+          onClick={() => setShowTv((v) => !v)}
+          aria-expanded={showTv}
+          className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:text-white"
+        >
+          <Tv className="h-4 w-4 text-violet-300" />
+          {tTv('modeTv')}
+        </button>
+        {showTv && (
+          <div className="flex flex-col items-center gap-3 border-t border-white/10 px-4 py-4 text-center">
+            <p className="text-xs leading-relaxed text-white/60">{tTv('modeTvHint')}</p>
+            <JoinQR
+              url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/jeux?join=${room.code}`}
+              size={128}
+            />
+            <p className="text-[11px] text-white/40">{tTv('scanToJoin')}</p>
+          </div>
+        )}
       </div>
 
       <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">

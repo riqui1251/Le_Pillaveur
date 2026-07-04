@@ -547,3 +547,24 @@ export function toTCClientView(state: TCState, viewerUserId: string): TCClientVi
   delete (view as Partial<TCState>).rngState
   return view as TCClientView
 }
+
+/**
+ * Vue SPECTATEUR NEUTRE (écran TV partagé) : n'appartient à AUCUNE équipe, donc
+ * seuls les navires COULÉS sont révélés ; les navires intacts sont réduits à
+ * leurs cases déjà touchées (comme pour un adversaire). Empêche de spoiler les
+ * placements des deux équipes sur un écran vu par tout le monde.
+ */
+export function toTCSpectatorView(state: TCState): TCClientView {
+  const ships: TCShipView[] = state.ships.map((ship) => {
+    if (ship.sunk) return { ...ship, revealed: true }
+    return { ...ship, cells: [...ship.hits], revealed: false }
+  })
+
+  const view: Omit<TCState, 'rngState'> & { viewerTeam: TeamId | null } = {
+    ...state,
+    ships,
+    viewerTeam: null,
+  }
+  delete (view as Partial<TCState>).rngState
+  return view as TCClientView
+}

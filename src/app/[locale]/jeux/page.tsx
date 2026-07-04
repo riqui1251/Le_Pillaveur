@@ -1,6 +1,7 @@
 "use client"
 
-import { useRouter } from 'next/navigation'
+import { useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { HubShell } from '@/components/hub/HubShell'
 import { SelectedPlayersBar } from '@/components/hub/SelectedPlayersBar'
@@ -22,6 +23,27 @@ export default function GamesHubPage() {
   const { joinRoom, loading: joining } = useOnlineRoom()
   const isOnline = user?.playMode === 'online'
   const { ready } = useRequireSelectedPlayers('/joueurs', { skipWhenOnline: true })
+  const searchParams = useSearchParams()
+  const joinAttemptedRef = useRef(false)
+
+  // Deep-link « scanner le QR de la TV » : ?join=CODE → rejoint la salle et
+  // ouvre le jeu. Uniquement en mode online (sinon on ne toucherait pas à
+  // l'état local du joueur) ; le middleware assure déjà que l'utilisateur est
+  // connecté avant d'arriver ici.
+  useEffect(() => {
+    const raw = searchParams.get('join')
+    if (!raw || joinAttemptedRef.current || !isOnline || !user) return
+    const code = raw.trim().toUpperCase()
+    if (!/^[A-Z0-9]{6}$/.test(code)) return
+    joinAttemptedRef.current = true
+    void (async () => {
+      const joined = await joinRoom({ code })
+      if (joined?.gameId) {
+        const game = GAMES.find((g) => g.id === joined.gameId)
+        if (game) router.replace(game.path)
+      }
+    })()
+  }, [searchParams, isOnline, user, joinRoom, router])
 
   const handleJoinInvite = async (roomId: string) => {
     const room = await joinRoom({ roomId })
