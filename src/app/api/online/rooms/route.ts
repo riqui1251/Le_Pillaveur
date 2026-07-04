@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto, createUniqueRoomCode } from '@/lib/online-room'
 import { GAMES } from '@/lib/games'
+import { LOCALE_COOKIE } from '@/lib/locale-cookies'
+
+const ROOM_LANGS = new Set(['fr', 'en', 'es', 'it'])
 
 /** Créer un lobby pour un jeu précis */
 export async function POST(request: Request) {
@@ -21,6 +25,11 @@ export async function POST(request: Request) {
 
     await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })
 
+    // Langue de la SALLE (contenu localisé côté serveur, ex. mots de
+    // l'Imposteur) : celle du créateur au moment de la création.
+    const cookieLang = (await cookies()).get(LOCALE_COOKIE)?.value
+    const lang = cookieLang && ROOM_LANGS.has(cookieLang) ? cookieLang : 'fr'
+
     const code = await createUniqueRoomCode()
     const room = await prisma.onlineRoom.create({
       data: {
@@ -29,8 +38,8 @@ export async function POST(request: Request) {
         hostUserId: user.id,
         settingsJson: JSON.stringify(
           gameId === 'plinko'
-            ? { plinkoDifficulty: 'medium' }
-            : { difficulty: 'normal' }
+            ? { plinkoDifficulty: 'medium', lang }
+            : { difficulty: 'normal', lang }
         ),
         members: {
           create: { userId: user.id, isReady: false },

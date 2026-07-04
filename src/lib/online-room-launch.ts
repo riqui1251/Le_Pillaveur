@@ -8,6 +8,7 @@ import { launchPmuRoom } from '@/lib/online-pmu'
 import { launchPlinkoRoom } from '@/lib/online-plinko'
 import { launchToucherCouleRoom } from '@/lib/online-toucher-coule'
 import { launchMenteurRoom } from '@/lib/online-menteur'
+import { launchImposteurRoom } from '@/lib/online-imposteur'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 
 export type RoomWithMembers = {
@@ -66,6 +67,9 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
       break
     case 'menteur':
       await launchMenteurRoom(roomId, room)
+      break
+    case 'imposteur':
+      await launchImposteurRoom(roomId, room)
       break
     default: {
       const memberUserIds = room.members.map((m) => m.userId)

@@ -37,6 +37,24 @@ import {
   MENTEUR_MAX_PLAYERS,
   type MenteurState,
 } from '@/lib/menteur/engine'
+import {
+  parseImposteurState,
+  serializeImposteurState,
+  applyImposteurRoomAction,
+  convertImposteurPlayerToBot,
+  markImposteurPlayerLeft,
+  rejoinImposteurPlayer,
+  imposteurClientViewJson,
+  imposteurSpectatorViewJson,
+  type ImposteurRoomActionInput,
+} from '@/lib/imposteur/server-adapter'
+import {
+  currentImposteurActorId,
+  toImposteurClientView,
+  IMPOSTEUR_MIN_PLAYERS,
+  IMPOSTEUR_MAX_PLAYERS,
+  type ImposteurState,
+} from '@/lib/imposteur/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -232,12 +250,64 @@ const menteurAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinMenteurPlayer(state as MenteurState, userId),
 }
 
+// ─── L'Imposteur ─────────────────────────────────────────────────────────────
+
+const imposteurAdapter: GameAdapter = {
+  // 4 joueurs requis au LOBBY (une bonne partie a besoin d'humains) ; le
+  // rematch avec moins de membres est comblé par des bots (buildImposteurState).
+  minPlayers: IMPOSTEUR_MIN_PLAYERS,
+  maxPlayers: IMPOSTEUR_MAX_PLAYERS,
+  parse: (json) => parseImposteurState(json),
+  serialize: (state) => serializeImposteurState(state as ImposteurState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as ImposteurState
+    let input: ImposteurRoomActionInput
+    if (body.action === 'clue' && typeof body.text === 'string') {
+      input = { type: 'clue', text: body.text }
+    } else if (body.action === 'vote' && typeof body.targetId === 'string') {
+      input = { type: 'vote', targetId: body.targetId }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyImposteurRoomAction(state, userId, input)
+    if (!result.ok) {
+      // Les erreurs de tick (déjà avancé / pas encore l'heure) sont des 409
+      // « conflits » attendus, pas des interdictions.
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertImposteurPlayerToBot(state as ImposteurState, userId),
+  isFinished: (state) => (state as ImposteurState).phase === 'finished',
+  currentActorId: (state) => currentImposteurActorId(state as ImposteurState),
+  clientViewJson: (state, viewerId) => imposteurClientViewJson(state as ImposteurState, viewerId),
+  spectatorViewJson: (state) => imposteurSpectatorViewJson(state as ImposteurState),
+  actionResponse: (state, viewerId) => ({
+    view: toImposteurClientView(state as ImposteurState, viewerId),
+    viewJson: imposteurClientViewJson(state as ImposteurState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markImposteurPlayerLeft(state as ImposteurState, userId, at),
+  rejoin: (state, userId) => rejoinImposteurPlayer(state as ImposteurState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   'petit-buveur': petitBuveurAdapter,
   'toucher-coule': toucherCouleAdapter,
   menteur: menteurAdapter,
+  imposteur: imposteurAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

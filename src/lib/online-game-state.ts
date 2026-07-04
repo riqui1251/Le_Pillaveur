@@ -4,6 +4,9 @@ export type RoomSettings = {
 
   difficulty?: 'facile' | 'normal' | 'difficile' | 'extreme'
 
+  /** Langue de la salle (contenu localisé serveur — ex. mots de l'Imposteur). */
+  lang?: 'fr' | 'en' | 'es' | 'it'
+
   plinkoDifficulty?: 'easy' | 'medium' | 'hard'
 
   hiLoMode?: 'standard' | 'traversee'
@@ -617,6 +620,28 @@ export function parseMenteurSyncedState(json: string | null | undefined): Menteu
   }
 }
 
+// ─── L'Imposteur ─────────────────────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/imposteur). */
+export type ImposteurSyncedState = {
+  version: number
+  phase: 'clue' | 'vote' | 'reveal' | 'finished'
+  winnerTeam: 'civil' | 'imposteur' | null
+  rematchVotes?: string[]
+}
+
+export function parseImposteurSyncedState(
+  json: string | null | undefined
+): ImposteurSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as ImposteurSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -629,6 +654,7 @@ export type AnyOnlineGameState =
   | PlinkoSyncedState
   | ToucherCouleSyncedState
   | MenteurSyncedState
+  | ImposteurSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -653,6 +679,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parseToucherCouleState(json) as T | null
     case 'menteur':
       return parseMenteurSyncedState(json) as T | null
+    case 'imposteur':
+      return parseImposteurSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -681,6 +709,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return Boolean((state as ToucherCouleSyncedState).winner)
     case 'menteur':
       return (state as MenteurSyncedState).phase === 'finished'
+    case 'imposteur':
+      return (state as ImposteurSyncedState).phase === 'finished'
     default:
       return false
   }

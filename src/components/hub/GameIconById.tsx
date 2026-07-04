@@ -32,5 +32,6 @@ export function GameIconById({ id, className }: { id: string; className?: string
   if (id === '1220') return <Dice1220Icon className={className} />
   if (id === 'toucher-coule') return <span className={className} aria-hidden>🚢</span>
   if (id === 'menteur') return <span className={className} aria-hidden>🎲</span>
+  if (id === 'imposteur') return <span className={className} aria-hidden>🕵️</span>
   return <span className={className} aria-hidden>🎮</span>
 }
