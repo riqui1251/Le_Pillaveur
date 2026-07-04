@@ -428,6 +428,10 @@
         "title": "Colpito e Affondato",
         "description": "Battaglia navale a squadre, versione festa: colpito bevi, affondato brindi!"
       },
+      "menteur": {
+        "title": "Il Bugiardo",
+        "description": "Dadi nascosti, rilanci e bluff: grida «Bugiardo!» al momento giusto o bevi!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Indovina se la carta successiva sarà più alta o più bassa"
@@ -1357,6 +1361,47 @@
         "legendHit": "Colpito",
         "legendMiss": "Acqua",
         "legendSunk": "Affondato",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s",
+        "afkWarningSelf": "⚠️ Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot"
+      }
+    },
+    "menteur": {
+      "page": {
+        "onlineOnly": "Il Bugiardo si gioca online: ogni giocatore nasconde i propri dadi sotto il bicchiere, impossibile su un solo schermo!",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "game": {
+        "round": "Manche {n}",
+        "diceOnTable": "{n} dadi sul tavolo",
+        "you": "(tu)",
+        "eliminated": "Eliminato 💀",
+        "spectator": "Niente più dadi — goditi lo spettacolo 👀",
+        "currentBid": "Rilancio in corso",
+        "bidBy": "di {name}",
+        "noBid": "Nessun rilancio — apri la manche!",
+        "pillaveurHint": "Gli 1 ⚀ sono jolly: contano per tutte le facce.",
+        "yourTurn": "Tocca a te: rilancia o grida BUGIARDO!",
+        "turnOf": "Tocca a {name}…",
+        "yourDice": "I tuoi dadi",
+        "hideDice": "Nascondi i miei dadi",
+        "showDice": "Guarda i miei dadi",
+        "bid": "Rilancia",
+        "dudo": "BUGIARDO!",
+        "illegalBid": "Rilancio troppo basso: alza la quantità o la faccia.",
+        "reveal": {
+          "title": "Bicchieri alzati!",
+          "bidHeld": "Il rilancio reggeva: {count} dadi (annunciati {qty} ×)",
+          "bidFailed": "Bugiardo smascherato: solo {count} dadi (annunciati {qty} ×)",
+          "loser": "{name} perde un dado e beve {sips} sorso{sips, plural, one {} other {i}} 🍺",
+          "eliminatedMsg": "💀 {name} non ha più dadi — tutto d'un fiato, eliminato!",
+          "continue": "Manche successiva"
+        },
+        "victoryTitle": "{name} vince il tavolo!",
+        "victoryDrinks": "I bugiardi smascherati finiscono il bicchiere 🍻",
+        "replay": "Rigioca",
+        "rematchWaiting": "In attesa degli altri ({count}/{total})",
+        "backToMenu": "Torna al menu",
         "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
         "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s",
         "afkWarningSelf": "⚠️ Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot"

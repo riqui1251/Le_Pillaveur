@@ -428,6 +428,10 @@
         "title": "Tocado y Hundido",
         "description": "Hundir la flota en equipos, versión fiesta: ¡tocado bebes, hundido brindas!"
       },
+      "menteur": {
+        "title": "El Mentiroso",
+        "description": "Dados ocultos, apuestas y farol: ¡grita «¡Mentiroso!» en el momento justo o bebe!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Adivina si la próxima carta será mayor o menor"
@@ -1357,6 +1361,47 @@
         "legendHit": "Tocado",
         "legendMiss": "Agua",
         "legendSunk": "Hundido",
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
+        "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
+        "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot"
+      }
+    },
+    "menteur": {
+      "page": {
+        "onlineOnly": "El Mentiroso se juega en línea: cada jugador esconde sus dados bajo el cubilete, ¡imposible en una sola pantalla!",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "game": {
+        "round": "Ronda {n}",
+        "diceOnTable": "{n} dados en la mesa",
+        "you": "(tú)",
+        "eliminated": "Eliminado 💀",
+        "spectator": "Sin dados — disfruta del espectáculo 👀",
+        "currentBid": "Apuesta actual",
+        "bidBy": "de {name}",
+        "noBid": "Sin apuesta — ¡abre la ronda!",
+        "pillaveurHint": "Los 1 ⚀ son comodines: cuentan para todas las caras.",
+        "yourTurn": "Te toca: sube la apuesta o grita ¡MENTIROSO!",
+        "turnOf": "Turno de {name}…",
+        "yourDice": "Tus dados",
+        "hideDice": "Ocultar mis dados",
+        "showDice": "Ver mis dados",
+        "bid": "Apostar",
+        "dudo": "¡MENTIROSO!",
+        "illegalBid": "Apuesta demasiado baja: sube la cantidad o la cara.",
+        "reveal": {
+          "title": "¡Cubiletes arriba!",
+          "bidHeld": "La apuesta aguantó: {count} dados (anunciados {qty} ×)",
+          "bidFailed": "Mentiroso al descubierto: solo {count} dados (anunciados {qty} ×)",
+          "loser": "{name} pierde un dado y bebe {sips} trago{sips, plural, one {} other {s}} 🍺",
+          "eliminatedMsg": "💀 {name} se queda sin dados — ¡de un trago, eliminado!",
+          "continue": "Siguiente ronda"
+        },
+        "victoryTitle": "¡{name} gana la mesa!",
+        "victoryDrinks": "Los mentirosos descubiertos terminan su copa 🍻",
+        "replay": "Jugar de nuevo",
+        "rematchWaiting": "Esperando a los demás ({count}/{total})",
+        "backToMenu": "Volver al menú",
         "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
         "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
         "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot"

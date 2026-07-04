@@ -438,6 +438,10 @@
         "title": "Hit & Sunk",
         "description": "Team battleship, drinking edition: get hit, drink — get sunk, drink up!"
       },
+      "menteur": {
+        "title": "Liar's Dice",
+        "description": "Hidden dice, bids and bluff: shout \"Liar!\" at the right moment or drink up!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Guess if the next card will be higher or lower"
@@ -1367,6 +1371,47 @@
         "legendHit": "Hit",
         "legendMiss": "Miss",
         "legendSunk": "Sunk",
+        "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
+        "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
+        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
+      }
+    },
+    "menteur": {
+      "page": {
+        "onlineOnly": "Liar's Dice is played online: every player hides their dice under a cup, impossible on a single screen!",
+        "switchOnline": "Switch to online mode"
+      },
+      "game": {
+        "round": "Round {n}",
+        "diceOnTable": "{n} dice on the table",
+        "you": "(you)",
+        "eliminated": "Eliminated 💀",
+        "spectator": "No dice left — enjoy the show 👀",
+        "currentBid": "Current bid",
+        "bidBy": "by {name}",
+        "noBid": "No bid yet — open the round!",
+        "pillaveurHint": "Ones ⚀ are wild: they count for every face.",
+        "yourTurn": "Your move: raise the bid or shout LIAR!",
+        "turnOf": "{name}'s turn…",
+        "yourDice": "Your dice",
+        "hideDice": "Hide my dice",
+        "showDice": "Show my dice",
+        "bid": "Bid",
+        "dudo": "LIAR!",
+        "illegalBid": "Bid too low: raise the quantity or the face.",
+        "reveal": {
+          "title": "Cups up!",
+          "bidHeld": "The bid held: {count} dice (called {qty} ×)",
+          "bidFailed": "Liar exposed: only {count} dice (called {qty} ×)",
+          "loser": "{name} loses a die and drinks {sips} sip{sips, plural, one {} other {s}} 🍺",
+          "eliminatedMsg": "💀 {name} has no dice left — bottoms up, eliminated!",
+          "continue": "Next round"
+        },
+        "victoryTitle": "{name} wins the table!",
+        "victoryDrinks": "Exposed liars finish their drinks 🍻",
+        "replay": "Play again",
+        "rematchWaiting": "Waiting for the others ({count}/{total})",
+        "backToMenu": "Back to menu",
         "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
         "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
         "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"

@@ -20,6 +20,23 @@ import {
   type TCRoomActionInput,
 } from '@/lib/toucher-coule/server-adapter'
 import { currentTCPlayerId, reduceTC, toTCClientView, type TCState } from '@/lib/toucher-coule/engine'
+import {
+  parseMenteurState,
+  serializeMenteurState,
+  applyMenteurRoomAction,
+  convertMenteurPlayerToBot,
+  markMenteurPlayerLeft,
+  rejoinMenteurPlayer,
+  menteurClientViewJson,
+  menteurSpectatorViewJson,
+  type MenteurRoomActionInput,
+} from '@/lib/menteur/server-adapter'
+import {
+  currentMenteurActorId,
+  toMenteurClientView,
+  MENTEUR_MAX_PLAYERS,
+  type MenteurState,
+} from '@/lib/menteur/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -163,11 +180,64 @@ const toucherCouleAdapter: GameAdapter = {
   },
 }
 
+// ─── Le Menteur ──────────────────────────────────────────────────────────────
+
+const menteurAdapter: GameAdapter = {
+  // Un joueur seul peut lancer : les bots comblent jusqu'à 2 joueurs
+  // (buildMenteurState) — même philosophie que le Toucher-Coulé.
+  minPlayers: 1,
+  maxPlayers: MENTEUR_MAX_PLAYERS,
+  parse: (json) => parseMenteurState(json),
+  serialize: (state) => serializeMenteurState(state as MenteurState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as MenteurState
+    let input: MenteurRoomActionInput
+    if (
+      body.action === 'bid' &&
+      typeof body.qty === 'number' &&
+      typeof body.face === 'number'
+    ) {
+      input = { type: 'bid', qty: body.qty, face: body.face }
+    } else if (body.action === 'dudo') {
+      input = { type: 'dudo' }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyMenteurRoomAction(state, userId, input)
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: result.error,
+        status: result.error === 'NOTHING_TO_REPLACE' ? 409 : 403,
+      }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertMenteurPlayerToBot(state as MenteurState, userId),
+  isFinished: (state) => (state as MenteurState).phase === 'finished',
+  currentActorId: (state) => currentMenteurActorId(state as MenteurState),
+  clientViewJson: (state, viewerId) => menteurClientViewJson(state as MenteurState, viewerId),
+  spectatorViewJson: (state) => menteurSpectatorViewJson(state as MenteurState),
+  actionResponse: (state, viewerId) => ({
+    view: toMenteurClientView(state as MenteurState, viewerId),
+    viewJson: menteurClientViewJson(state as MenteurState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markMenteurPlayerLeft(state as MenteurState, userId, at),
+  rejoin: (state, userId) => rejoinMenteurPlayer(state as MenteurState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   'petit-buveur': petitBuveurAdapter,
   'toucher-coule': toucherCouleAdapter,
+  menteur: menteurAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

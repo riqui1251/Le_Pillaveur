@@ -597,6 +597,26 @@ export function parseToucherCouleState(json: string | null | undefined): Toucher
   }
 }
 
+// ─── Le Menteur ──────────────────────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/menteur). */
+export type MenteurSyncedState = {
+  version: number
+  phase: 'bidding' | 'reveal' | 'finished'
+  winnerId: string | null
+  rematchVotes?: string[]
+}
+
+export function parseMenteurSyncedState(json: string | null | undefined): MenteurSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as MenteurSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -608,6 +628,7 @@ export type AnyOnlineGameState =
   | PmuSyncedState
   | PlinkoSyncedState
   | ToucherCouleSyncedState
+  | MenteurSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -630,6 +651,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parsePlinkoState(json) as T | null
     case 'toucher-coule':
       return parseToucherCouleState(json) as T | null
+    case 'menteur':
+      return parseMenteurSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -656,6 +679,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return Boolean((state as PlinkoSyncedState).gameOver)
     case 'toucher-coule':
       return Boolean((state as ToucherCouleSyncedState).winner)
+    case 'menteur':
+      return (state as MenteurSyncedState).phase === 'finished'
     default:
       return false
   }

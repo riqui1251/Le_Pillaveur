@@ -438,6 +438,10 @@
         "title": "Toucher-Coulé",
         "description": "La bataille navale apéro en équipes : touché tu bois, coulé tu trinques !"
       },
+      "menteur": {
+        "title": "Le Menteur",
+        "description": "Dés cachés, enchères et bluff : crie « Menteur ! » au bon moment ou trinque !"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Devinez si la prochaine carte sera plus haute ou plus basse"
@@ -1367,6 +1371,47 @@
         "legendHit": "Touché",
         "legendMiss": "Raté",
         "legendSunk": "Coulé",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
+        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
+      }
+    },
+    "menteur": {
+      "page": {
+        "onlineOnly": "Le Menteur se joue en ligne : chaque joueur cache ses dés sous son gobelet, impossible sur un seul écran !",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "game": {
+        "round": "Manche {n}",
+        "diceOnTable": "{n} dés sur la table",
+        "you": "(toi)",
+        "eliminated": "Éliminé 💀",
+        "spectator": "Tu n'as plus de dés — profite du spectacle 👀",
+        "currentBid": "Enchère en cours",
+        "bidBy": "par {name}",
+        "noBid": "Aucune enchère — ouvre la manche !",
+        "pillaveurHint": "Les 1 « Pillaveurs » ⚀ sont jokers : ils comptent pour toutes les faces.",
+        "yourTurn": "À toi : surenchéris ou crie MENTEUR !",
+        "turnOf": "Au tour de {name}…",
+        "yourDice": "Tes dés",
+        "hideDice": "Cacher mes dés",
+        "showDice": "Regarder mes dés",
+        "bid": "Enchérir",
+        "dudo": "MENTEUR !",
+        "illegalBid": "Enchère trop basse : monte la quantité ou la face.",
+        "reveal": {
+          "title": "Les gobelets sont levés !",
+          "bidHeld": "L'enchère tenait : {count} dés (annoncé {qty} ×)",
+          "bidFailed": "Menteur démasqué : seulement {count} dés (annoncé {qty} ×)",
+          "loser": "{name} perd un dé et boit {sips} gorgée{sips, plural, one {} other {s}} 🍺",
+          "eliminatedMsg": "💀 {name} n'a plus de dés — cul sec, éliminé !",
+          "continue": "Manche suivante"
+        },
+        "victoryTitle": "{name} remporte la table !",
+        "victoryDrinks": "Les menteurs démasqués finissent leur verre 🍻",
+        "replay": "Rejouer",
+        "rematchWaiting": "En attente des autres ({count}/{total})",
+        "backToMenu": "Retour au menu",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
         "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
