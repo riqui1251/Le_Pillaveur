@@ -5,11 +5,13 @@ import { useLocale, useTranslations } from 'next-intl'
 import { useTvRoom } from '@/hooks/useTvRoom'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import type { TCClientView } from '@/lib/toucher-coule/engine'
+import type { CastState } from '@/lib/cast-types'
 import { TvStage } from './TvStage'
 import { TvLobby } from './TvLobby'
 import { TvPetitBuveur } from './TvPetitBuveur'
 import { TvToucherCoule } from './TvToucherCoule'
 import { TvVictory } from './TvVictory'
+import { TvPlinko } from './TvPlinko'
 
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
@@ -56,6 +58,22 @@ export function TvRoomView({ code }: { code: string }) {
         <div className="flex flex-1 items-center justify-center">
           <p className="text-3xl text-white/50">{t('loading')}</p>
         </div>
+      </TvStage>
+    )
+  }
+
+  // Salle de CAST (jeu LOCAL diffusé) : rendu par castKind, aucune notion de join.
+  if (room.status === 'cast') {
+    const castState = parseState(room.gameStateJson) as unknown as CastState | null
+    return (
+      <TvStage title={castState?.castKind === 'plinko' ? 'Plinko' : t('brand')} code={room.code}>
+        {castState?.castKind === 'plinko' ? (
+          <TvPlinko state={castState} />
+        ) : (
+          <div className="flex flex-1 items-center justify-center">
+            <p className="text-3xl text-white/50">{t('loading')}</p>
+          </div>
+        )}
       </TvStage>
     )
   }

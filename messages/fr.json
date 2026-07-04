@@ -2396,6 +2396,10 @@
     "teamB": "Équipe B",
     "bot": "Bot",
     "modeTv": "Mode TV",
-    "modeTvHint": "Ouvre lepillaveur.fr/tv sur ta télé et entre ce code"
+    "modeTvHint": "Ouvre lepillaveur.fr/tv sur ta télé et entre ce code",
+    "castToTv": "Caster sur la TV",
+    "castHint": "Sur ta télé, ouvre lepillaveur.fr/tv et entre :",
+    "drinkVerb": "Boit",
+    "giveVerb": "Donne"
   }
 }

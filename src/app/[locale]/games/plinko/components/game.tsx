@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Volume2, VolumeX, ChevronDown, ChevronsDown, ArrowRight } from 'lucide-react'
+import { Volume2, VolumeX, ChevronDown, ChevronsDown, ArrowRight, Tv } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Player } from '@/types/game'
 import { getPlayerGameBoost } from '@/lib/players'
@@ -11,6 +11,8 @@ import { PlayerName } from '@/components/ui/PlayerName'
 import { GameShell } from '@/components/game/GameShell'
 import { cn } from '@/lib/utils'
 import { playGameSound, isSoundMuted, setSoundMuted as persistSoundMuted } from '@/lib/sound/game-sounds'
+import { useCastRoom } from '@/hooks/useCastRoom'
+import type { PlinkoCastState } from '@/lib/cast-types'
 
 // --- MODIFICATION: Exporter le type DifficultyLevel ---
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
@@ -413,6 +415,7 @@ const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercent
 
 export default function Game({ players, onGameEnd, onRestartGame, difficulty, isCumulativeMode }: GameProps) {
   const t = useTranslations('games.plinko')
+  const tTv = useTranslations('tv')
   const getPinEffect = useCallback((type: SpecialPinType) => t(`pinEffects.${type}`), [t])
   const getPinLabel = useCallback((type: SpecialPinType) => t(`pinLabels.${type}`), [t])
 
@@ -482,6 +485,55 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   // Throttle des tics de rebond : une collision de pin peut survenir à chaque
   // sous-pas physique — sans throttle, ce serait un grésillement continu.
   const lastBounceSoundRef = useRef(0)
+
+  // Cast sur TV : diffusion de l'état d'affichage vers une salle éphémère.
+  const { code: castCode, active: castActive, start: startCast, push: pushCast, stop: stopCast } = useCastRoom('plinko')
+
+  /** État d'affichage poussé à la TV — uniquement des infos publiques. */
+  const buildCastState = useCallback((): PlinkoCastState => {
+    const cp = players[currentPlayerIndex]
+    const phase: PlinkoCastState['phase'] = gameOver
+      ? 'finished'
+      : isAnimating
+        ? 'dropping'
+        : turnResult
+          ? 'result'
+          : 'ready'
+    return {
+      castKind: 'plinko',
+      phase,
+      currentPlayerName: cp?.name ?? null,
+      slots: slotSipValues,
+      lastDrop: turnResult
+        ? {
+            playerName: turnResult.player?.name ?? cp?.name ?? '',
+            redSlot: finalSlotIndices.red,
+            greenSlot: finalSlotIndices.green,
+            redSips: turnResult.redSips ?? 0,
+            greenSips: turnResult.greenSips ?? 0,
+          }
+        : null,
+      scoreboard: players.map((p) => {
+        const rs = playerResults[p.id] ?? []
+        return {
+          name: p.name,
+          totalRed: rs.reduce((s, r) => s + r.redSips, 0),
+          totalGreen: rs.reduce((s, r) => s + r.greenSips, 0),
+        }
+      }),
+      roundDrinks: roundDrinksCount,
+    }
+  }, [players, currentPlayerIndex, gameOver, isAnimating, turnResult, slotSipValues, finalSlotIndices, playerResults, roundDrinksCount])
+
+  const toggleCast = () => {
+    if (castActive) void stopCast()
+    else void startCast(JSON.stringify(buildCastState()))
+  }
+
+  // Pousse le nouvel état à chaque transition significative (tour, résultat, fin).
+  useEffect(() => {
+    if (castActive) pushCast(JSON.stringify(buildCastState()))
+  }, [castActive, buildCastState, pushCast])
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const animationRefs = useRef<{ red: number | null, green: number | null }>({ red: null, green: null })
@@ -1547,7 +1599,31 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
               >
                 {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </button>
+              <button
+                type="button"
+                onClick={toggleCast}
+                aria-label={tTv('castToTv')}
+                aria-pressed={castActive}
+                className={cn(
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60',
+                  castActive
+                    ? 'border-violet-400/50 bg-violet-500/20 text-violet-200'
+                    : 'border-white/10 bg-white/[0.04] text-white/60 hover:border-white/20 hover:text-white',
+                )}
+              >
+                <Tv className="h-4 w-4" />
+              </button>
             </div>
+
+            {castActive && castCode && (
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-center text-xs text-violet-100">
+                <Tv className="h-4 w-4 shrink-0 text-violet-300" />
+                <span>
+                  {tTv('castHint')}{' '}
+                  <span className="font-mono text-sm font-black tracking-widest text-white">{castCode}</span>
+                </span>
+              </div>
+            )}
 
             <div
               ref={canvasRef}
