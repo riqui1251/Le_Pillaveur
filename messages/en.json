@@ -2363,6 +2363,9 @@
     "networkError": "Could not connect to voice — try again.",
     "disabled": "Voice chat has been disabled site-wide by an administrator.",
     "banned": "You have been banned from voice chat.",
+    "speaker": "Speaker",
+    "on": "On",
+    "off": "Earpiece",
     "prompt": {
       "title": "Enable your mic for this game?",
       "hint": "Talk with the other players in the room.",

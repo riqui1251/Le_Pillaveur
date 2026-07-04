@@ -2353,6 +2353,9 @@
     "networkError": "Impossibile connettersi al vocale — riprova.",
     "disabled": "La chat vocale è stata disattivata sul sito da un amministratore.",
     "banned": "Sei stato escluso dalla chat vocale.",
+    "speaker": "Altoparlante",
+    "on": "Attivo",
+    "off": "Auricolare",
     "prompt": {
       "title": "Attivare il microfono per questa partita?",
       "hint": "Parla con gli altri giocatori della stanza.",

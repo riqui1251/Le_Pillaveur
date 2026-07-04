@@ -2353,6 +2353,9 @@
     "networkError": "No se pudo conectar a la voz — reinténtalo.",
     "disabled": "El chat de voz ha sido desactivado en el sitio por un administrador.",
     "banned": "Has sido bloqueado del chat de voz.",
+    "speaker": "Altavoz",
+    "on": "Activado",
+    "off": "Auricular",
     "prompt": {
       "title": "¿Activar el micro para esta partida?",
       "hint": "Habla con los demás jugadores de la sala.",

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, MicOff, Headphones, PhoneCall, PhoneOff, Volume2, VolumeX, X, Loader2 } from 'lucide-react'
+import { Mic, MicOff, Headphones, PhoneCall, PhoneOff, Volume2, VolumeX, Speaker, Ear, X, Loader2 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useVoiceChat } from '@/hooks/useVoiceChat'
@@ -154,6 +154,34 @@ export function VoiceDock() {
                     {t('leave')}
                   </button>
                 </div>
+              )}
+
+              {/* Sortie audio : haut-parleur (fort) ou écouteur (discret). */}
+              {voice.joined && (
+                <button
+                  onClick={voice.toggleSpeaker}
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-xl border px-3 py-2 text-xs font-semibold transition-all',
+                    voice.speaker
+                      ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
+                      : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
+                  )}
+                  aria-label={t('speaker')}
+                  aria-pressed={voice.speaker}
+                >
+                  <span className="flex items-center gap-2">
+                    {voice.speaker ? <Speaker className="h-4 w-4" /> : <Ear className="h-4 w-4" />}
+                    {t('speaker')}
+                  </span>
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                      voice.speaker ? 'bg-emerald-500/30 text-emerald-100' : 'bg-white/10 text-white/50'
+                    )}
+                  >
+                    {voice.speaker ? t('on') : t('off')}
+                  </span>
+                </button>
               )}
 
               {/* Joueurs de la salle */}

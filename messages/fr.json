@@ -2368,6 +2368,9 @@
     "networkError": "Connexion au vocal impossible — réessaie.",
     "disabled": "Le vocal est désactivé sur le site par un administrateur.",
     "banned": "Tu as été banni du chat vocal.",
+    "speaker": "Haut-parleur",
+    "on": "Activé",
+    "off": "Écouteur",
     "prompt": {
       "title": "Activer le micro pour cette partie ?",
       "hint": "Parle avec les autres joueurs de la salle.",

@@ -29,6 +29,7 @@ type PeerEntry = {
 type RtcSignalMessage = { from: string; kind: string; payload: unknown }
 
 const MUTED_PEERS_KEY = 'lp-voice-muted-peers'
+const SPEAKER_KEY = 'lp-voice-speaker'
 const SPEAKING_POLL_MS = 250
 const SPEAKING_THRESHOLD = 0.015
 
@@ -42,6 +43,17 @@ function loadMutedPeers(): Set<string> {
   }
 }
 
+// Haut-parleur activé par défaut : sur mobile (surtout iOS) l'audio WebRTC sort
+// sinon par l'écouteur, trop faible pour une partie à plusieurs.
+function loadSpeakerPref(): boolean {
+  if (typeof window === 'undefined') return true
+  try {
+    return window.localStorage.getItem(SPEAKER_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
 export function useVoiceChat(
   roomId: string | null,
   selfId: string | undefined,
@@ -52,6 +64,7 @@ export function useVoiceChat(
   const [error, setError] = useState<VoiceError>(null)
   const [micMuted, setMicMuted] = useState(false)
   const [deafened, setDeafened] = useState(false)
+  const [speaker, setSpeaker] = useState<boolean>(loadSpeakerPref)
   const [mutedPeers, setMutedPeers] = useState<Set<string>>(loadMutedPeers)
   /** Membres actuellement EN VOCAL (soi exclu). */
   const [roster, setRoster] = useState<Set<string>>(new Set())
@@ -64,12 +77,15 @@ export function useVoiceChat(
   const iceServersRef = useRef<IceServer[]>([])
   const audioCtxRef = useRef<AudioContext | null>(null)
   const analysersRef = useRef<Map<string, AnalyserNode>>(new Map())
+  const gainsRef = useRef<Map<string, GainNode>>(new Map())
   const deafenedRef = useRef(deafened)
   const mutedPeersRef = useRef(mutedPeers)
   const micMutedRef = useRef(micMuted)
+  const speakerRef = useRef(speaker)
   deafenedRef.current = deafened
   mutedPeersRef.current = mutedPeers
   micMutedRef.current = micMuted
+  speakerRef.current = speaker
 
   const supported =
     typeof window !== 'undefined' &&
@@ -96,12 +112,29 @@ export function useVoiceChat(
     [roomId]
   )
 
-  const applyOutputMute = useCallback((peerId: string) => {
+  // Routage de la sortie d'un pair selon le mode haut-parleur + les silences.
+  const applyOutputRoute = useCallback((peerId: string) => {
     const entry = peersRef.current.get(peerId)
-    if (entry) entry.audio.muted = deafenedRef.current || mutedPeersRef.current.has(peerId)
+    if (!entry) return
+    const silenced = deafenedRef.current || mutedPeersRef.current.has(peerId)
+    const gain = gainsRef.current.get(peerId)
+    if (gain && speakerRef.current) {
+      // Haut-parleur : la sortie passe par Web Audio (force le haut-parleur sur
+      // mobile, surtout iOS où l'audio WebRTC sortirait sinon par l'écouteur).
+      // L'élément <audio> reste muet pour éviter le double son, mais continue de
+      // « jouer » le flux — indispensable pour que Web Audio le capte sur iOS.
+      gain.gain.value = silenced ? 0 : 1
+      entry.audio.muted = true
+    } else {
+      // Écouteur (ou Web Audio indisponible) : lecture par l'élément <audio>.
+      if (gain) gain.gain.value = 0
+      entry.audio.muted = silenced
+    }
   }, [])
 
-  const attachAnalyser = useCallback((id: string, stream: MediaStream) => {
+  // Construit le graphe Web Audio d'un flux : toujours un analyseur (indicateur
+  // de parole) ; pour un pair (`audible`), une branche source → gain → sortie.
+  const attachAnalyser = useCallback((id: string, stream: MediaStream, audible = false) => {
     try {
       const AC =
         window.AudioContext ??
@@ -115,8 +148,15 @@ export function useVoiceChat(
       analyser.fftSize = 256
       source.connect(analyser)
       analysersRef.current.set(id, analyser)
+      if (audible) {
+        const gain = ctx.createGain()
+        gain.gain.value = 0 // réglé juste après par applyOutputRoute
+        source.connect(gain)
+        gain.connect(ctx.destination)
+        gainsRef.current.set(id, gain)
+      }
     } catch {
-      // pas d'indicateur de parole — non bloquant
+      // pas d'indicateur de parole / routage — non bloquant
     }
   }, [])
 
@@ -131,6 +171,15 @@ export function useVoiceChat(
     }
     entry.audio.srcObject = null
     analysersRef.current.delete(peerId)
+    const gain = gainsRef.current.get(peerId)
+    if (gain) {
+      try {
+        gain.disconnect()
+      } catch {
+        /* déjà déconnecté */
+      }
+    }
+    gainsRef.current.delete(peerId)
     setPeerStatus((prev) => {
       const next = { ...prev }
       delete next[peerId]
@@ -159,11 +208,11 @@ export function useVoiceChat(
       pc.ontrack = (ev) => {
         const remote = ev.streams[0] ?? new MediaStream([ev.track])
         audio.srcObject = remote
-        applyOutputMute(peerId)
+        attachAnalyser(peerId, remote, true)
+        applyOutputRoute(peerId)
         void audio.play().catch(() => {
           // iOS : sera relancé au prochain geste utilisateur
         })
-        attachAnalyser(peerId, remote)
       }
       pc.onicecandidate = (ev) => {
         if (ev.candidate) void sendSignal(peerId, 'ice', ev.candidate.toJSON())
@@ -193,7 +242,7 @@ export function useVoiceChat(
       setPeerStatus((prev) => ({ ...prev, [peerId]: 'connecting' }))
       return entry
     },
-    [applyOutputMute, attachAnalyser, closePeer, isInitiator, sendSignal]
+    [applyOutputRoute, attachAnalyser, closePeer, isInitiator, sendSignal]
   )
 
   const startOffer = useCallback(
@@ -278,6 +327,7 @@ export function useVoiceChat(
     esRef.current?.close()
     esRef.current = null
     analysersRef.current.clear()
+    gainsRef.current.clear()
     setJoined(false)
     setRoster(new Set())
     setSpeaking({})
@@ -357,10 +407,19 @@ export function useVoiceChat(
     })
   }, [micMuted])
 
-  // Sourdine générale / mute ciblé → sur les sorties audio locales.
+  // Sourdine générale / mute ciblé / bascule haut-parleur → sorties audio.
   useEffect(() => {
-    for (const peerId of peersRef.current.keys()) applyOutputMute(peerId)
-  }, [deafened, mutedPeers, applyOutputMute])
+    for (const peerId of peersRef.current.keys()) applyOutputRoute(peerId)
+  }, [deafened, mutedPeers, speaker, applyOutputRoute])
+
+  // Persistance de la préférence haut-parleur.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SPEAKER_KEY, speaker ? '1' : '0')
+    } catch {
+      /* stockage indisponible */
+    }
+  }, [speaker])
 
   // Persistance du mute ciblé.
   useEffect(() => {
@@ -419,6 +478,7 @@ export function useVoiceChat(
 
   const toggleMic = useCallback(() => setMicMuted((v) => !v), [])
   const toggleDeafen = useCallback(() => setDeafened((v) => !v), [])
+  const toggleSpeaker = useCallback(() => setSpeaker((v) => !v), [])
   const toggleMutePeer = useCallback((peerId: string) => {
     setMutedPeers((prev) => {
       const next = new Set(prev)
@@ -435,6 +495,7 @@ export function useVoiceChat(
     error,
     micMuted,
     deafened,
+    speaker,
     mutedPeers,
     roster,
     speaking,
@@ -443,6 +504,7 @@ export function useVoiceChat(
     leave,
     toggleMic,
     toggleDeafen,
+    toggleSpeaker,
     toggleMutePeer,
   }
 }
