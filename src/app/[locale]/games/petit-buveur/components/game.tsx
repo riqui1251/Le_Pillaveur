@@ -2830,11 +2830,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             aria-pressed={castActive}
             aria-label={tTv('castToTv')}
             className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all',
+              'flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-xs font-bold transition-all',
               castActive ? 'bg-violet-500/25 text-violet-200' : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white',
             )}
           >
-            <Tv className="h-4 w-4" />
+            <Tv className="h-4 w-4 shrink-0" /> {tTv('castShort')}
           </button>
         </div>
         {castActive && castCode && (

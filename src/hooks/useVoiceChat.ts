@@ -293,10 +293,21 @@ export function useVoiceChat(
     setJoining(true)
     setError(null)
     try {
-      // Droit d'accès AVANT de demander le micro : si le vocal est coupé
-      // (site) ou que le joueur en est banni, on n'ouvre pas le micro.
-      const credsRes = await fetch('/api/rtc/credentials', { credentials: 'include' })
+      // ⚠️ iOS Safari (et d'autres navigateurs mobiles) CONSOMMENT l'activation
+      // utilisateur dès le premier `await`. Si on récupérait les identifiants
+      // (fetch) AVANT `getUserMedia`, le micro échouerait « alors que la
+      // permission est accordée ». On demande donc le micro EN PREMIER, dans le
+      // geste, en parallèle des identifiants.
+      const [stream, credsRes] = await Promise.all([
+        navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        }),
+        fetch('/api/rtc/credentials', { credentials: 'include' }),
+      ])
+
+      // Droit d'accès : vocal coupé (site) ou joueur banni → on relâche le micro.
       if (credsRes.status === 403) {
+        stream.getTracks().forEach((tr) => tr.stop())
         const reason = (await credsRes.json().catch(() => null))?.reason
         setError(reason === 'banned' ? 'banned' : 'disabled')
         setJoining(false)
@@ -307,9 +318,6 @@ export function useVoiceChat(
         { urls: 'stun:stun.l.google.com:19302' },
       ]
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      })
       localStreamRef.current = stream
       stream.getAudioTracks().forEach((t) => {
         t.enabled = !micMutedRef.current

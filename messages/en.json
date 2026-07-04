@@ -2362,7 +2362,13 @@
     "unsupported": "Your browser does not support voice chat.",
     "networkError": "Could not connect to voice — try again.",
     "disabled": "Voice chat has been disabled site-wide by an administrator.",
-    "banned": "You have been banned from voice chat."
+    "banned": "You have been banned from voice chat.",
+    "prompt": {
+      "title": "Enable your mic for this game?",
+      "hint": "Talk with the other players in the room.",
+      "enable": "Enable",
+      "later": "Later"
+    }
   },
   "tv": {
     "brand": "Le Pillaveur",
@@ -2396,6 +2402,7 @@
     "castHint": "On your TV, open lepillaveur.fr/tv and enter:",
     "drinkVerb": "Drinks",
     "giveVerb": "Gives",
-    "racing": "Racing!"
+    "racing": "Racing!",
+    "castShort": "TV"
   }
 }

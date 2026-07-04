@@ -2352,7 +2352,13 @@
     "unsupported": "Tu navegador no soporta la voz.",
     "networkError": "No se pudo conectar a la voz — reinténtalo.",
     "disabled": "El chat de voz ha sido desactivado en el sitio por un administrador.",
-    "banned": "Has sido bloqueado del chat de voz."
+    "banned": "Has sido bloqueado del chat de voz.",
+    "prompt": {
+      "title": "¿Activar el micro para esta partida?",
+      "hint": "Habla con los demás jugadores de la sala.",
+      "enable": "Activar",
+      "later": "Más tarde"
+    }
   },
   "tv": {
     "brand": "Le Pillaveur",
@@ -2386,6 +2392,7 @@
     "castHint": "En tu televisor, abre lepillaveur.fr/tv e introduce:",
     "drinkVerb": "Bebe",
     "giveVerb": "Da",
-    "racing": "¡En carrera!"
+    "racing": "¡En carrera!",
+    "castShort": "TV"
   }
 }

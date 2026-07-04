@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mic, MicOff, Headphones, PhoneCall, PhoneOff, Volume2, VolumeX, X, Loader2 } from 'lucide-react'
@@ -24,7 +24,29 @@ export function VoiceDock() {
   const members = useMemo(() => room?.members ?? [], [room])
   const voice = useVoiceChat(room?.id ?? null, user?.id, members)
 
+  // Prompt « Activer le micro ? » à CHAQUE partie : proposé une fois par salle,
+  // dès l'entrée. Un tap est de toute façon requis pour ouvrir le micro (geste).
+  const [micPromptRoomId, setMicPromptRoomId] = useState<string | null>(null)
+  const handledRoomsRef = useRef<Set<string>>(new Set())
+  const roomId = room?.id ?? null
+  useEffect(() => {
+    if (!roomId || voice.joined) return
+    if (handledRoomsRef.current.has(roomId)) return
+    setMicPromptRoomId(roomId)
+  }, [roomId, voice.joined])
+
   if (!room || !user) return null
+
+  const dismissPrompt = () => {
+    handledRoomsRef.current.add(room.id)
+    setMicPromptRoomId(null)
+  }
+  const acceptPrompt = () => {
+    dismissPrompt()
+    setOpen(true)
+    void voice.join()
+  }
+  const showMicPrompt = micPromptRoomId === room.id && !voice.joined && !open
 
   const someoneSpeaking = Object.entries(voice.speaking).some(([id, s]) => s && id !== user.id)
   const iconOf = (userId: string) =>
@@ -195,6 +217,40 @@ export function VoiceDock() {
                 })}
               </ul>
               {!voice.joined && <p className="text-[11px] text-white/40">{t('joinHint')}</p>}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Prompt « Activer le micro ? » à l'entrée d'une partie */}
+      <AnimatePresence>
+        {showMicPrompt && (
+          <motion.div
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 24 }}
+            className="w-64 rounded-2xl border border-emerald-400/30 bg-gray-900/95 p-3 shadow-2xl backdrop-blur-md"
+            role="dialog"
+            aria-label={t('prompt.title')}
+          >
+            <p className="flex items-center gap-2 text-sm font-bold text-white">
+              <Mic className="h-4 w-4 text-emerald-300" /> {t('prompt.title')}
+            </p>
+            <p className="mt-1 text-xs text-white/50">{t('prompt.hint')}</p>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={acceptPrompt}
+                className="flex-1 rounded-xl bg-emerald-600 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-500"
+              >
+                {t('prompt.enable')}
+              </button>
+              <button
+                onClick={dismissPrompt}
+                className="flex-1 rounded-xl border border-white/15 bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
+              >
+                {t('prompt.later')}
+              </button>
             </div>
           </motion.div>
         )}

@@ -2367,7 +2367,13 @@
     "unsupported": "Ton navigateur ne supporte pas le vocal.",
     "networkError": "Connexion au vocal impossible — réessaie.",
     "disabled": "Le vocal est désactivé sur le site par un administrateur.",
-    "banned": "Tu as été banni du chat vocal."
+    "banned": "Tu as été banni du chat vocal.",
+    "prompt": {
+      "title": "Activer le micro pour cette partie ?",
+      "hint": "Parle avec les autres joueurs de la salle.",
+      "enable": "Activer",
+      "later": "Plus tard"
+    }
   },
   "tv": {
     "brand": "Le Pillaveur",
@@ -2401,6 +2407,7 @@
     "castHint": "Sur ta télé, ouvre lepillaveur.fr/tv et entre :",
     "drinkVerb": "Boit",
     "giveVerb": "Donne",
-    "racing": "En course !"
+    "racing": "En course !",
+    "castShort": "TV"
   }
 }

@@ -2352,7 +2352,13 @@
     "unsupported": "Il tuo browser non supporta il vocale.",
     "networkError": "Impossibile connettersi al vocale — riprova.",
     "disabled": "La chat vocale è stata disattivata sul sito da un amministratore.",
-    "banned": "Sei stato escluso dalla chat vocale."
+    "banned": "Sei stato escluso dalla chat vocale.",
+    "prompt": {
+      "title": "Attivare il microfono per questa partita?",
+      "hint": "Parla con gli altri giocatori della stanza.",
+      "enable": "Attiva",
+      "later": "Più tardi"
+    }
   },
   "tv": {
     "brand": "Le Pillaveur",
@@ -2386,6 +2392,7 @@
     "castHint": "Sulla TV, apri lepillaveur.fr/tv e inserisci:",
     "drinkVerb": "Beve",
     "giveVerb": "Dà",
-    "racing": "In gara!"
+    "racing": "In gara!",
+    "castShort": "TV"
   }
 }

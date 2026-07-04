@@ -1582,13 +1582,13 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 aria-label={tTv('castToTv')}
                 aria-pressed={castActive}
                 className={cn(
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60',
+                  'flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60',
                   castActive
                     ? 'border-violet-400/50 bg-violet-500/20 text-violet-200'
                     : 'border-white/10 bg-white/[0.04] text-white/60 hover:border-white/20 hover:text-white',
                 )}
               >
-                <Tv className="h-4 w-4" />
+                <Tv className="h-4 w-4 shrink-0" /> {tTv('castShort')}
               </button>
             </div>
 
