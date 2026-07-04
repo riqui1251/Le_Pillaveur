@@ -442,6 +442,10 @@
         "title": "Le Menteur",
         "description": "Dés cachés, enchères et bluff : crie « Menteur ! » au bon moment ou trinque !"
       },
+      "imposteur": {
+        "title": "L'Imposteur",
+        "description": "Un mot secret, un intrus parmi vous : indices, votes et bluff au sommet !"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Devinez si la prochaine carte sera plus haute ou plus basse"
@@ -1412,6 +1416,60 @@
         "replay": "Rejouer",
         "rematchWaiting": "En attente des autres ({count}/{total})",
         "backToMenu": "Retour au menu",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
+        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
+      }
+    },
+    "imposteur": {
+      "page": {
+        "onlineOnly": "L'Imposteur se joue en ligne : chacun reçoit un mot secret sur SON téléphone, impossible sur un seul écran !",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "game": {
+        "round": "Manche {n}",
+        "phaseClue": "Indices",
+        "phaseVote": "Vote",
+        "phaseReveal": "Révélation",
+        "you": "(toi)",
+        "yourWord": "Ton mot secret",
+        "wordHint": "Décris-le sans le dire — l'imposteur a un mot différent…",
+        "hideWord": "Cacher mon mot",
+        "showWord": "Voir mon mot",
+        "eliminatedYou": "Éliminé — spectateur 👻",
+        "cluesTitle": "Indices — manche {n}",
+        "yourTurnClue": "À toi : donne UN indice sur ton mot !",
+        "turnOf": "{name} réfléchit à son indice…",
+        "pastClues": "Manches précédentes",
+        "cluePlaceholder": "Ton indice (un mot, une idée…)",
+        "clueSend": "Envoyer l'indice",
+        "clueInvalid": "Indice invalide : pas ton mot (ni un bout trop parlant) !",
+        "votePrompt": "Qui est l'imposteur ? Vote en secret !",
+        "voted": "Vote enregistré — on attend les autres…",
+        "spectatorVote": "Les vivants votent…",
+        "reveal": {
+          "outTitle": "{name} est éliminé !",
+          "outWord": "Son mot était « {word} »",
+          "wasImposteur": "C'était l'IMPOSTEUR !",
+          "wasCivil": "C'était un innocent…",
+          "sips": "{name} boit {sips} gorgée{sips, plural, one {} other {s}} 🍺",
+          "tieTitle": "Égalité !",
+          "tieMsg": "Personne ne sort — l'imposteur respire encore…",
+          "continue": "Manche suivante",
+          "seeResult": "Voir le verdict"
+        },
+        "victory": {
+          "civilWin": "Le village a démasqué l'imposteur !",
+          "imposteurWin": "L'imposteur a gagné !",
+          "civilDrinks": "L'imposteur finit son verre 🍻",
+          "imposteurDrinks": "Les civils trinquent : 3 gorgées chacun 🍺",
+          "fullReveal": "Les mots étaient…",
+          "teamCivil": "Civil",
+          "teamImposteur": "Imposteur",
+          "replay": "Rejouer",
+          "rematchWaiting": "En attente des autres ({count}/{total})",
+          "backToMenu": "Retour au menu"
+        },
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
         "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"

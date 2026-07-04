@@ -17,6 +17,8 @@ import { TvPmu } from './TvPmu'
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
   'toucher-coule': 'Toucher-Coulé',
+  menteur: 'Le Menteur',
+  imposteur: "L'Imposteur",
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null

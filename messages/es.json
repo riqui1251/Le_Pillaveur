@@ -432,6 +432,10 @@
         "title": "El Mentiroso",
         "description": "Dados ocultos, apuestas y farol: ¡grita «¡Mentiroso!» en el momento justo o bebe!"
       },
+      "imposteur": {
+        "title": "El Impostor",
+        "description": "Una palabra secreta, un intruso entre vosotros: ¡pistas, votos y farol al máximo!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Adivina si la próxima carta será mayor o menor"
@@ -1402,6 +1406,60 @@
         "replay": "Jugar de nuevo",
         "rematchWaiting": "Esperando a los demás ({count}/{total})",
         "backToMenu": "Volver al menú",
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
+        "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
+        "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot"
+      }
+    },
+    "imposteur": {
+      "page": {
+        "onlineOnly": "El Impostor se juega en línea: cada uno recibe una palabra secreta en SU móvil, ¡imposible en una sola pantalla!",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "game": {
+        "round": "Ronda {n}",
+        "phaseClue": "Pistas",
+        "phaseVote": "Votación",
+        "phaseReveal": "Revelación",
+        "you": "(tú)",
+        "yourWord": "Tu palabra secreta",
+        "wordHint": "Descríbela sin decirla — el impostor tiene otra palabra…",
+        "hideWord": "Ocultar mi palabra",
+        "showWord": "Ver mi palabra",
+        "eliminatedYou": "Eliminado — espectador 👻",
+        "cluesTitle": "Pistas — ronda {n}",
+        "yourTurnClue": "Te toca: ¡da UNA pista sobre tu palabra!",
+        "turnOf": "{name} está pensando su pista…",
+        "pastClues": "Rondas anteriores",
+        "cluePlaceholder": "Tu pista (una palabra, una idea…)",
+        "clueSend": "Enviar pista",
+        "clueInvalid": "Pista inválida: ¡ni tu palabra ni un trozo demasiado revelador!",
+        "votePrompt": "¿Quién es el impostor? ¡Vota en secreto!",
+        "voted": "Voto registrado — esperando a los demás…",
+        "spectatorVote": "Los vivos están votando…",
+        "reveal": {
+          "outTitle": "¡{name} queda eliminado!",
+          "outWord": "Su palabra era «{word}»",
+          "wasImposteur": "¡Era el IMPOSTOR!",
+          "wasCivil": "Era inocente…",
+          "sips": "{name} bebe {sips} trago{sips, plural, one {} other {s}} 🍺",
+          "tieTitle": "¡Empate!",
+          "tieMsg": "Nadie sale — el impostor sigue respirando…",
+          "continue": "Siguiente ronda",
+          "seeResult": "Ver el veredicto"
+        },
+        "victory": {
+          "civilWin": "¡El pueblo desenmascaró al impostor!",
+          "imposteurWin": "¡El impostor gana!",
+          "civilDrinks": "El impostor termina su copa 🍻",
+          "imposteurDrinks": "Los civiles beben: 3 tragos cada uno 🍺",
+          "fullReveal": "Las palabras eran…",
+          "teamCivil": "Civil",
+          "teamImposteur": "Impostor",
+          "replay": "Jugar de nuevo",
+          "rematchWaiting": "Esperando a los demás ({count}/{total})",
+          "backToMenu": "Volver al menú"
+        },
         "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
         "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
         "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot"

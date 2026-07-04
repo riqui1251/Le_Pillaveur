@@ -442,6 +442,10 @@
         "title": "Liar's Dice",
         "description": "Hidden dice, bids and bluff: shout \"Liar!\" at the right moment or drink up!"
       },
+      "imposteur": {
+        "title": "The Impostor",
+        "description": "A secret word, one intruder among you: clues, votes and top-level bluffing!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Guess if the next card will be higher or lower"
@@ -1412,6 +1416,60 @@
         "replay": "Play again",
         "rematchWaiting": "Waiting for the others ({count}/{total})",
         "backToMenu": "Back to menu",
+        "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
+        "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
+        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
+      }
+    },
+    "imposteur": {
+      "page": {
+        "onlineOnly": "The Impostor is played online: everyone gets a secret word on THEIR phone, impossible on a single screen!",
+        "switchOnline": "Switch to online mode"
+      },
+      "game": {
+        "round": "Round {n}",
+        "phaseClue": "Clues",
+        "phaseVote": "Vote",
+        "phaseReveal": "Reveal",
+        "you": "(you)",
+        "yourWord": "Your secret word",
+        "wordHint": "Describe it without saying it — the impostor has a different word…",
+        "hideWord": "Hide my word",
+        "showWord": "Show my word",
+        "eliminatedYou": "Eliminated — spectator 👻",
+        "cluesTitle": "Clues — round {n}",
+        "yourTurnClue": "Your turn: give ONE clue about your word!",
+        "turnOf": "{name} is thinking of a clue…",
+        "pastClues": "Previous rounds",
+        "cluePlaceholder": "Your clue (a word, an idea…)",
+        "clueSend": "Send clue",
+        "clueInvalid": "Invalid clue: not your word (nor a telling piece of it)!",
+        "votePrompt": "Who is the impostor? Vote in secret!",
+        "voted": "Vote saved — waiting for the others…",
+        "spectatorVote": "The living are voting…",
+        "reveal": {
+          "outTitle": "{name} is eliminated!",
+          "outWord": "Their word was \"{word}\"",
+          "wasImposteur": "They were the IMPOSTOR!",
+          "wasCivil": "They were innocent…",
+          "sips": "{name} drinks {sips} sip{sips, plural, one {} other {s}} 🍺",
+          "tieTitle": "It's a tie!",
+          "tieMsg": "Nobody is out — the impostor lives on…",
+          "continue": "Next round",
+          "seeResult": "See the verdict"
+        },
+        "victory": {
+          "civilWin": "The village unmasked the impostor!",
+          "imposteurWin": "The impostor wins!",
+          "civilDrinks": "The impostor finishes their drink 🍻",
+          "imposteurDrinks": "The civilians drink: 3 sips each 🍺",
+          "fullReveal": "The words were…",
+          "teamCivil": "Civilian",
+          "teamImposteur": "Impostor",
+          "replay": "Play again",
+          "rematchWaiting": "Waiting for the others ({count}/{total})",
+          "backToMenu": "Back to menu"
+        },
         "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
         "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
         "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"

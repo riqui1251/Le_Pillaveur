@@ -432,6 +432,10 @@
         "title": "Il Bugiardo",
         "description": "Dadi nascosti, rilanci e bluff: grida «Bugiardo!» al momento giusto o bevi!"
       },
+      "imposteur": {
+        "title": "L'Impostore",
+        "description": "Una parola segreta, un intruso tra di voi: indizi, voti e bluff ai massimi livelli!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Indovina se la carta successiva sarà più alta o più bassa"
@@ -1402,6 +1406,60 @@
         "replay": "Rigioca",
         "rematchWaiting": "In attesa degli altri ({count}/{total})",
         "backToMenu": "Torna al menu",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s",
+        "afkWarningSelf": "⚠️ Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot"
+      }
+    },
+    "imposteur": {
+      "page": {
+        "onlineOnly": "L'Impostore si gioca online: ognuno riceve una parola segreta sul PROPRIO telefono, impossibile su un solo schermo!",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "game": {
+        "round": "Manche {n}",
+        "phaseClue": "Indizi",
+        "phaseVote": "Voto",
+        "phaseReveal": "Rivelazione",
+        "you": "(tu)",
+        "yourWord": "La tua parola segreta",
+        "wordHint": "Descrivila senza dirla — l'impostore ha una parola diversa…",
+        "hideWord": "Nascondi la mia parola",
+        "showWord": "Mostra la mia parola",
+        "eliminatedYou": "Eliminato — spettatore 👻",
+        "cluesTitle": "Indizi — manche {n}",
+        "yourTurnClue": "Tocca a te: dai UN indizio sulla tua parola!",
+        "turnOf": "{name} sta pensando al suo indizio…",
+        "pastClues": "Manche precedenti",
+        "cluePlaceholder": "Il tuo indizio (una parola, un'idea…)",
+        "clueSend": "Invia indizio",
+        "clueInvalid": "Indizio non valido: né la tua parola né un pezzo troppo rivelatore!",
+        "votePrompt": "Chi è l'impostore? Vota in segreto!",
+        "voted": "Voto registrato — in attesa degli altri…",
+        "spectatorVote": "I vivi stanno votando…",
+        "reveal": {
+          "outTitle": "{name} è eliminato!",
+          "outWord": "La sua parola era «{word}»",
+          "wasImposteur": "Era l'IMPOSTORE!",
+          "wasCivil": "Era innocente…",
+          "sips": "{name} beve {sips} sorso{sips, plural, one {} other {i}} 🍺",
+          "tieTitle": "Pareggio!",
+          "tieMsg": "Nessuno esce — l'impostore respira ancora…",
+          "continue": "Manche successiva",
+          "seeResult": "Vedi il verdetto"
+        },
+        "victory": {
+          "civilWin": "Il villaggio ha smascherato l'impostore!",
+          "imposteurWin": "L'impostore vince!",
+          "civilDrinks": "L'impostore finisce il bicchiere 🍻",
+          "imposteurDrinks": "I civili bevono: 3 sorsi ciascuno 🍺",
+          "fullReveal": "Le parole erano…",
+          "teamCivil": "Civile",
+          "teamImposteur": "Impostore",
+          "replay": "Rigioca",
+          "rematchWaiting": "In attesa degli altri ({count}/{total})",
+          "backToMenu": "Torna al menu"
+        },
         "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
         "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s",
         "afkWarningSelf": "⚠️ Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot"
