@@ -25,8 +25,11 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
   {
+    // microphone=(self) : requis pour le vocal WebRTC (getUserMedia). Sans ça,
+    // le micro est bloqué au niveau de la PAGE et échoue « alors que la
+    // permission navigateur est accordée ». camera/geolocation restent coupés.
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
+    value: 'camera=(), microphone=(self), geolocation=(), browsing-topics=()',
   },
   {
     key: 'Strict-Transport-Security',
