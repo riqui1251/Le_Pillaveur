@@ -67,13 +67,25 @@ export function TvRoomView({ code }: { code: string }) {
   if (room.status === 'cast') {
     const castState = parseState(room.gameStateJson) as unknown as CastState | null
     const castTitle =
-      castState?.castKind === 'plinko' ? 'Plinko' : castState?.castKind === 'pmu' ? 'Course PMU' : t('brand')
+      castState?.castKind === 'plinko'
+        ? 'Plinko'
+        : castState?.castKind === 'pmu'
+          ? 'Course PMU'
+          : castState?.castKind === 'petit-buveur'
+            ? 'Le Petit Buveur'
+            : t('brand')
     return (
       <TvStage title={castTitle} code={room.code}>
         {castState?.castKind === 'plinko' ? (
           <TvPlinko state={castState} frame={frame as PlinkoCastFrame | null} />
         ) : castState?.castKind === 'pmu' ? (
           <TvPmu state={castState} frame={frame as PmuCastFrame | null} />
+        ) : castState?.castKind === 'petit-buveur' ? (
+          castState.winner ? (
+            <TvVictory room={room} gameId="petit-buveur" state={castState as unknown as EngineState} />
+          ) : (
+            <TvPetitBuveur room={room} state={castState as unknown as EngineState} />
+          )
         ) : (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-3xl text-white/50">{t('loading')}</p>

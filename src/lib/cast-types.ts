@@ -60,5 +60,18 @@ export type PmuCastFrame = {
   positions: Record<string, number>
 }
 
-export type CastState = PlinkoCastState | PmuCastState
+/**
+ * Petit Buveur LOCAL : plateau 30 cases + pions. Tour par tour → pas de trame
+ * (les positions changent au lancer, capturées par le payload principal).
+ * Compatible avec le rendu `TvPetitBuveur` (mêmes champs lus).
+ */
+export type PetitBuveurCastState = {
+  castKind: 'petit-buveur'
+  players: { id: string; name: string; position: number; drinks: number }[]
+  currentPlayer: number
+  phase: 'playing' | 'finished'
+  winner: string | null
+}
+
+export type CastState = PlinkoCastState | PmuCastState | PetitBuveurCastState
 export type CastFrame = PlinkoCastFrame | PmuCastFrame

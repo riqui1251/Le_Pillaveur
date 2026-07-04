@@ -5,8 +5,10 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
-import { Dice6, Trophy, ArrowRight, RefreshCw, Home, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User, Check, Beer, Volume2, VolumeX } from 'lucide-react'
+import { Dice6, Trophy, ArrowRight, RefreshCw, Home, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User, Check, Beer, Volume2, VolumeX, Tv } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
+import { useCastRoom } from '@/hooks/useCastRoom'
+import type { PetitBuveurCastState } from '@/lib/cast-types'
 import { Card } from '@/components/ui/card'
 import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS, getPlayerGameBoost, resolveValidatedPlayerName, getPlayerNameValidationError } from '@/lib/players'
 import { nameValidationI18nKey } from '@/lib/name-moderation'
@@ -386,6 +388,26 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   // Sons : fanfare de victoire (une seule fois) + toggle mute dans l'en-tête.
   const { muted, toggleMuted, play: playSound } = useGameSounds()
+
+  // ── Cast sur TV (jeu local diffusé) ──────────────────────────────────────
+  const tTv = useTranslations('tv')
+  const { code: castCode, active: castActive, start: startCast, push: pushCast, stop: stopCast } = useCastRoom('petit-buveur')
+  const buildPbCastState = useCallback((): PetitBuveurCastState => ({
+    castKind: 'petit-buveur',
+    players: players.map((p) => ({ id: p.id, name: p.name, position: p.position, drinks: p.drinks })),
+    currentPlayer,
+    phase: winner ? 'finished' : 'playing',
+    winner: winner?.id ?? null,
+  }), [players, currentPlayer, winner])
+  const toggleCast = () => {
+    if (castActive) void stopCast()
+    else void startCast(JSON.stringify(buildPbCastState()))
+  }
+  // Tour par tour → push à chaque changement d'état (positions, tour, vainqueur).
+  useEffect(() => {
+    if (castActive) pushCast(JSON.stringify(buildPbCastState()))
+  }, [castActive, buildPbCastState, pushCast])
+
   const prevWinnerRef = useRef(false)
   useEffect(() => {
     const hasWinner = Boolean(winner)
@@ -2803,7 +2825,24 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           >
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
+          <button
+            onClick={toggleCast}
+            aria-pressed={castActive}
+            aria-label={tTv('castToTv')}
+            className={cn(
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all',
+              castActive ? 'bg-violet-500/25 text-violet-200' : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white',
+            )}
+          >
+            <Tv className="h-4 w-4" />
+          </button>
         </div>
+        {castActive && castCode && (
+          <div className="mx-auto flex max-w-3xl items-center justify-center gap-2 border-t border-violet-400/20 bg-violet-500/10 px-4 py-1.5 text-center text-xs text-violet-100">
+            <Tv className="h-3.5 w-3.5 shrink-0 text-violet-300" /> {tTv('castHint')}{' '}
+            <span className="font-mono text-sm font-black tracking-widest text-white">{castCode}</span>
+          </div>
+        )}
       </header>
 
       {/* Zone scrollable : plateau + classement uniquement (barre d'action en footer fixe) */}
