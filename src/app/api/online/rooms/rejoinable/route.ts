@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { findLeftHumanPlayer, ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { SERVER_AUTHORITATIVE_GAMES } from '@/lib/online/game-adapters'
 
-const REPLACEABLE_GAMES = ['petit-buveur', 'toucher-coule']
+const REPLACEABLE_GAMES = SERVER_AUTHORITATIVE_GAMES
 
 /**
  * Partie en cours que l'utilisateur peut REJOINDRE : il en est parti

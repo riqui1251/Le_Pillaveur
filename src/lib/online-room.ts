@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
-import { parseTCState, tcClientViewJson, tcSpectatorViewJson } from '@/lib/toucher-coule/server-adapter'
+import { getGameAdapter } from '@/lib/online/game-adapters'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { parseOnlinePreferences, type OnlinePreferences } from '@/lib/online-preferences'
 
@@ -63,7 +63,14 @@ function computeReadyState(
     const capacity = TC_MODES[settings.tcMode ?? '1v1'].playersPerTeam * 2
     return { allReady, canLaunch: allReady && membersWithIds.length <= capacity }
   }
-  return { allReady, canLaunch: allReady && membersWithIds.length >= 2 }
+  // Bornes du registre (jeux serveur-autoritaires) ; 2 joueurs par défaut.
+  const adapter = getGameAdapter(gameId)
+  const min = adapter?.minPlayers ?? 2
+  const max = adapter?.maxPlayers ?? Number.MAX_SAFE_INTEGER
+  return {
+    allReady,
+    canLaunch: allReady && membersWithIds.length >= min && membersWithIds.length <= max,
+  }
 }
 
 /**
@@ -88,7 +95,8 @@ export function stripEngineSecret(json: string | null): string | null {
 /**
  * Variante PAR UTILISATEUR : certains jeux ont des secrets asymétriques
  * (Toucher-Coulé : les navires ennemis non touchés ne doivent jamais quitter
- * le serveur). Retombe sur `stripEngineSecret` pour les autres jeux.
+ * le serveur). Passe par le registre d'adaptateurs ; retombe sur
+ * `stripEngineSecret` pour les jeux client-autoritaires.
  */
 export function stripEngineSecretForUser(
   gameId: string | null,
@@ -96,25 +104,27 @@ export function stripEngineSecretForUser(
   userId: string
 ): string | null {
   if (!json) return json
-  if (gameId === 'toucher-coule') {
-    const state = parseTCState(json)
+  const adapter = getGameAdapter(gameId)
+  if (adapter) {
+    const state = adapter.parse(json)
     if (!state) return null
-    return tcClientViewJson(state, userId)
+    return adapter.clientViewJson(state, userId)
   }
   return stripEngineSecret(json)
 }
 
 /**
  * Variante SPECTATEUR NEUTRE (écran TV partagé, aucun viewer précis) : masque
- * tous les secrets pour un observateur sans équipe. PB → retire `rngState` ;
- * TC → `toTCSpectatorView` (navires intacts des DEUX équipes cachés).
+ * tous les secrets pour un observateur sans camp (TC : navires intacts des
+ * DEUX équipes cachés). Registre d'adaptateurs, même repli que ci-dessus.
  */
 export function stripEngineSecretForSpectator(gameId: string | null, json: string | null): string | null {
   if (!json) return json
-  if (gameId === 'toucher-coule') {
-    const state = parseTCState(json)
+  const adapter = getGameAdapter(gameId)
+  if (adapter) {
+    const state = adapter.parse(json)
     if (!state) return null
-    return tcSpectatorViewJson(state)
+    return adapter.spectatorViewJson(state)
   }
   return stripEngineSecret(json)
 }

@@ -5,9 +5,8 @@ import { buildRoomDto } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { canJoinInviteRoom } from '@/lib/online/room-invites'
 import { parseRoomSettings } from '@/lib/online-game-state'
-import { reduceTC, TC_MODES } from '@/lib/toucher-coule/engine'
-import { parseTCState, serializeTCState } from '@/lib/toucher-coule/server-adapter'
-import { parseEngineState, rejoinPlayer, serializeEngineState } from '@/lib/petit-buveur/server-adapter'
+import { TC_MODES } from '@/lib/toucher-coule/engine'
+import { getGameAdapter } from '@/lib/online/game-adapters'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
@@ -36,16 +35,11 @@ export async function POST(request: Request) {
     // tant qu'un bot ne l'a pas remplacé (voir src/lib/online/replacement.ts).
     if (room.status === 'playing') {
       let rejoinedJson: string | null = null
-      if (room.gameId === 'toucher-coule') {
-        const tcState = parseTCState(room.gameStateJson)
-        const player = tcState?.players.find((p) => p.id === user.id && !p.isBot && p.leftAt)
-        if (tcState && player) {
-          rejoinedJson = serializeTCState(reduceTC(tcState, { type: 'REJOIN', playerId: user.id }))
-        }
-      } else if (room.gameId === 'petit-buveur') {
-        const pbState = parseEngineState(room.gameStateJson)
-        const next = pbState ? rejoinPlayer(pbState, user.id) : null
-        if (next) rejoinedJson = serializeEngineState(next)
+      const adapter = getGameAdapter(room.gameId)
+      if (adapter) {
+        const state = adapter.parse(room.gameStateJson)
+        const next = state ? adapter.rejoin(state, user.id) : null
+        if (next) rejoinedJson = adapter.serialize(next)
       }
       if (rejoinedJson) {
         await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })

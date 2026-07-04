@@ -5,9 +5,7 @@ import { buildRoomDto, touchMemberPresence } from '@/lib/online-room'
 import { resetRoomToWaitingLobby } from '@/lib/online-petit-buveur'
 import { parsePetitBuveurState } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
-import { parseTCState, serializeTCState } from '@/lib/toucher-coule/server-adapter'
-import { reduceTC } from '@/lib/toucher-coule/engine'
-import { markPlayerLeft, parseEngineState, serializeEngineState } from '@/lib/petit-buveur/server-adapter'
+import { getGameAdapter } from '@/lib/online/game-adapters'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -81,24 +79,14 @@ export async function DELETE(_request: Request, { params }: Params) {
   // Partie en cours (jeux serveur-autoritaires) : le joueur qui quitte est
   // marqué « parti » dans l'état — il peut revenir (bouton Rejoindre) pendant
   // 3 min avant d'être remplacé par un bot. Voir src/lib/online/replacement.ts.
-  if (room.gameId === 'toucher-coule' && room.status === 'playing') {
-    const tcState = parseTCState(room.gameStateJson)
-    const player = tcState?.players.find((p) => p.id === user.id && !p.isBot)
-    if (tcState && player && tcState.phase !== 'finished' && !player.leftAt) {
-      const next = reduceTC(tcState, { type: 'LEAVE', playerId: user.id, at: Date.now() })
-      await prisma.onlineRoom.update({
-        where: { id: roomId },
-        data: { gameStateJson: serializeTCState(next), stateVersion: room.stateVersion + 1 },
-      })
-    }
-  }
-  if (room.gameId === 'petit-buveur' && room.status === 'playing' && !gameFinished) {
-    const pbState = parseEngineState(room.gameStateJson)
-    const next = pbState ? markPlayerLeft(pbState, user.id, Date.now()) : null
+  const adapter = getGameAdapter(room.gameId)
+  if (adapter && room.status === 'playing') {
+    const state = adapter.parse(room.gameStateJson)
+    const next = state ? adapter.markLeft(state, user.id, Date.now()) : null
     if (next) {
       await prisma.onlineRoom.update({
         where: { id: roomId },
-        data: { gameStateJson: serializeEngineState(next), stateVersion: room.stateVersion + 1 },
+        data: { gameStateJson: adapter.serialize(next), stateVersion: room.stateVersion + 1 },
       })
     }
   }

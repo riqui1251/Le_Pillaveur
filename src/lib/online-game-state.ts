@@ -630,6 +630,9 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parsePlinkoState(json) as T | null
     case 'toucher-coule':
       return parseToucherCouleState(json) as T | null
+    // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
+    // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
+    // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
     default:
       return null
   }
