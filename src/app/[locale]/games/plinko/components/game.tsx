@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { playGameSound, isSoundMuted, setSoundMuted as persistSoundMuted } from '@/lib/sound/game-sounds'
 import { useCastRoom } from '@/hooks/useCastRoom'
 import type { PlinkoCastState } from '@/lib/cast-types'
+import { SPECIAL_PIN_COLORS, type SpecialPinType } from '@/lib/plinko-pins'
 
 // --- MODIFICATION: Exporter le type DifficultyLevel ---
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
@@ -117,56 +118,8 @@ const WEIGHTED_PIN_TYPES: SpecialPinType[] = (Object.entries(PIN_TYPE_WEIGHTS) a
   .flatMap(([type, w]) => Array<SpecialPinType>(w).fill(type))
 // -----------------------------------------------------------------------
 
-// Types de pins spéciaux
-// --- MODIFICATION: Ajouter les nouveaux types ---
-type SpecialPinType = 
-    'multiplier' | 
-    'addBall' | 
-    'addSip' | 
-    'subtractSip' | 
-    'cancellation' | 
-    'colorSwap' | 
-    'mystery' | 
-    'shake' | 
-    'roundDrinks' | 
-    'jackpot' |
-    'teleportation' |
-    'gravityFlip' |
-    'slowMotion' |
-    'split' |
-    'scoreSwap' |
-    'doubleEffect' |
-    'magnetLeft' |
-    'magnetRight';
-// ----------------------------------------------
-
-// Couleurs ET pictogramme de chaque pin spécial.
-// Le pictogramme (glyph) est l'identifiant PRIMAIRE : la couleur seule ne suffit
-// pas à distinguer 18 types (et est inaccessible aux daltoniens). Le glyphe est
-// rendu au centre du pin ; la couleur reste un repère secondaire.
-// magnetLeft / magnetRight partagent volontairement la même couleur : c'est la
-// flèche (← / →) qui les distingue.
-const SPECIAL_PIN_COLORS: Record<SpecialPinType, { border: string; bg: string; glyph: string }> = {
-  multiplier:   { border: 'border-red-900',     bg: 'bg-red-400',     glyph: '×2' },
-  addBall:      { border: 'border-blue-900',    bg: 'bg-blue-400',    glyph: '🎱' },
-  addSip:       { border: 'border-green-900',   bg: 'bg-green-400',   glyph: '+1' },
-  subtractSip:  { border: 'border-orange-900',  bg: 'bg-orange-400',  glyph: '−1' },
-  cancellation: { border: 'border-gray-900',    bg: 'bg-gray-300',    glyph: '🚫' },
-  colorSwap:    { border: 'border-pink-900',    bg: 'bg-pink-400',    glyph: '🎨' },
-  mystery:      { border: 'border-indigo-900',  bg: 'bg-indigo-400',  glyph: '❓' },
-  shake:        { border: 'border-yellow-900',  bg: 'bg-yellow-300',  glyph: '🔀' },
-  roundDrinks:  { border: 'border-teal-900',    bg: 'bg-teal-400',    glyph: '🍻' },
-  jackpot:      { border: 'border-amber-900',   bg: 'bg-amber-300',   glyph: '💰' },
-  teleportation:{ border: 'border-purple-900',  bg: 'bg-purple-400',  glyph: '🌀' },
-  gravityFlip:  { border: 'border-sky-900',     bg: 'bg-sky-400',     glyph: '↕' },
-  slowMotion:   { border: 'border-cyan-900',    bg: 'bg-cyan-300',    glyph: '🐌' },
-  split:        { border: 'border-lime-900',    bg: 'bg-lime-400',    glyph: '✂️' },
-  scoreSwap:    { border: 'border-fuchsia-900', bg: 'bg-fuchsia-400', glyph: '🔄' },
-  doubleEffect: { border: 'border-rose-900',    bg: 'bg-rose-400',    glyph: '💥' },
-  magnetLeft:   { border: 'border-slate-900',   bg: 'bg-slate-400',   glyph: '←' },
-  magnetRight:  { border: 'border-zinc-900',    bg: 'bg-zinc-500',    glyph: '→' },
-};
-// -------------------------------------------------------
+// SpecialPinType et SPECIAL_PIN_COLORS sont désormais partagés avec le rendu TV
+// (cast) — voir l'import depuis '@/lib/plinko-pins'.
 
 const ALL_PIN_TYPES = Object.keys(PIN_TYPE_WEIGHTS) as SpecialPinType[]
 
@@ -487,9 +440,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   const lastBounceSoundRef = useRef(0)
 
   // Cast sur TV : diffusion de l'état d'affichage vers une salle éphémère.
-  const { code: castCode, active: castActive, start: startCast, push: pushCast, stop: stopCast } = useCastRoom('plinko')
+  const { code: castCode, active: castActive, start: startCast, push: pushCast, pushFrame: pushCastFrame, stop: stopCast } = useCastRoom('plinko')
 
-  /** État d'affichage poussé à la TV — uniquement des infos publiques. */
+  /** État d'affichage poussé à la TV — uniquement des infos publiques (dont le plateau). */
   const buildCastState = useCallback((): PlinkoCastState => {
     const cp = players[currentPlayerIndex]
     const phase: PlinkoCastState['phase'] = gameOver
@@ -503,7 +456,11 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
       castKind: 'plinko',
       phase,
       currentPlayerName: cp?.name ?? null,
-      slots: slotSipValues,
+      board: {
+        normalPins: pinPositions.map((p) => ({ x: p.x, y: p.y })),
+        specialPins: specialPins.map((p) => ({ x: p.x, y: p.y, type: p.type })),
+        slots: slotSipValues,
+      },
       lastDrop: turnResult
         ? {
             playerName: turnResult.player?.name ?? cp?.name ?? '',
@@ -523,17 +480,37 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
       }),
       roundDrinks: roundDrinksCount,
     }
-  }, [players, currentPlayerIndex, gameOver, isAnimating, turnResult, slotSipValues, finalSlotIndices, playerResults, roundDrinksCount])
+  }, [players, currentPlayerIndex, gameOver, isAnimating, turnResult, slotSipValues, finalSlotIndices, playerResults, roundDrinksCount, pinPositions, specialPins])
 
   const toggleCast = () => {
     if (castActive) void stopCast()
     else void startCast(JSON.stringify(buildCastState()))
   }
 
-  // Pousse le nouvel état à chaque transition significative (tour, résultat, fin).
+  // Pousse le nouvel état (plateau, scores) à chaque transition (tour, résultat, fin).
   useEffect(() => {
     if (castActive) pushCast(JSON.stringify(buildCastState()))
   }, [castActive, buildCastState, pushCast])
+
+  // Diffuse la position des billes pendant la chute (~12/s) pour l'animer sur la TV.
+  const lastFramePushRef = useRef(0)
+  useEffect(() => {
+    if (!castActive || !isAnimating) return
+    const now = Date.now()
+    if (now - lastFramePushRef.current < 80) return
+    lastFramePushRef.current = now
+    const balls: { x: number; y: number; color: 'red' | 'green' }[] = []
+    if (ballPositions.red && ballPositions.red.y >= 0) {
+      balls.push({ x: ballPositions.red.x, y: ballPositions.red.y, color: ballPositions.red.color })
+    }
+    if (ballPositions.green && ballPositions.green.y >= 0) {
+      balls.push({ x: ballPositions.green.x, y: ballPositions.green.y, color: ballPositions.green.color })
+    }
+    extraBalls.forEach((b) => {
+      if (b.y >= 0) balls.push({ x: b.x, y: b.y, color: b.color })
+    })
+    pushCastFrame(JSON.stringify({ balls }))
+  }, [castActive, isAnimating, ballPositions, extraBalls, pushCastFrame])
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const animationRefs = useRef<{ red: number | null, green: number | null }>({ red: null, green: null })

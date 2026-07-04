@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { subscribeRoom } from '@/lib/online/room-bus'
+import { subscribeRoom, subscribeCastFrame } from '@/lib/online/room-bus'
 
 /**
  * Flux SSE des changements d'une salle pour l'écran TV — PUBLIC, indexé par CODE
@@ -43,6 +43,11 @@ export async function GET(request: Request, { params }: Params) {
         safeEnqueue(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
       })
 
+      // Trames de bille (cast d'un jeu local) : relayées telles quelles.
+      const unsubscribeFrame = subscribeCastFrame(room.id, (frame) => {
+        safeEnqueue(`event: castframe\ndata: ${JSON.stringify(frame)}\n\n`)
+      })
+
       const heartbeat = setInterval(() => {
         safeEnqueue(`: ping ${Date.now()}\n\n`)
       }, HEARTBEAT_MS)
@@ -52,6 +57,7 @@ export async function GET(request: Request, { params }: Params) {
         closed = true
         clearInterval(heartbeat)
         unsubscribe()
+        unsubscribeFrame()
         try {
           controller.close()
         } catch {

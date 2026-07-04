@@ -68,6 +68,18 @@ export function useCastRoom(gameId: string) {
     [doPush],
   )
 
+  /** Trame de bille (canal éphémère) — le throttle est géré par l'appelant. */
+  const pushFrame = useCallback((frame: string) => {
+    const c = codeRef.current
+    if (!c) return
+    void fetch(`/api/tv/cast/${c}/frame`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: frame,
+    }).catch(() => {})
+  }, [])
+
   const stop = useCallback(async () => {
     const c = codeRef.current
     codeRef.current = null
@@ -89,5 +101,5 @@ export function useCastRoom(gameId: string) {
     }
   }, [])
 
-  return { code, active: code != null, start, push, stop }
+  return { code, active: code != null, start, push, pushFrame, stop }
 }

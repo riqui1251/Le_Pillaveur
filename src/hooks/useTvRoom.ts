@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TvRoomDto } from '@/lib/online-room'
+import type { PlinkoCastFrame } from '@/lib/cast-types'
 
 /**
  * Abonnement LECTURE SEULE d'un écran TV à une salle, par CODE. Calqué sur le
@@ -14,6 +15,8 @@ export function useTvRoom(code: string) {
   const [room, setRoom] = useState<TvRoomDto | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Dernière trame de bille reçue (cast d'un jeu local) — animation de la chute.
+  const [frame, setFrame] = useState<PlinkoCastFrame | null>(null)
 
   const inFlightRef = useRef(false)
   const lastSigRef = useRef('')
@@ -72,13 +75,21 @@ export function useTvRoom(code: string) {
     const onEvent = () => {
       void fetchState()
     }
+    const onFrame = (e: MessageEvent) => {
+      try {
+        setFrame(JSON.parse(e.data) as PlinkoCastFrame)
+      } catch {
+        /* trame illisible ignorée */
+      }
+    }
     es.addEventListener('changed', onEvent)
     es.addEventListener('lobby', onEvent)
     es.addEventListener('finished', onEvent)
+    es.addEventListener('castframe', onFrame as EventListener)
     return () => {
       es.close()
     }
   }, [code, fetchState])
 
-  return { room, notFound, error }
+  return { room, notFound, error, frame }
 }

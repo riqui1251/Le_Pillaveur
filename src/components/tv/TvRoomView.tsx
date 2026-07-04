@@ -39,7 +39,7 @@ export function TvRoomView({ code }: { code: string }) {
   const t = useTranslations('tv')
   const locale = useLocale()
   const normalized = code.toUpperCase()
-  const { room, notFound } = useTvRoom(normalized)
+  const { room, notFound, frame } = useTvRoom(normalized)
 
   if (notFound) {
     return (
@@ -68,7 +68,7 @@ export function TvRoomView({ code }: { code: string }) {
     return (
       <TvStage title={castState?.castKind === 'plinko' ? 'Plinko' : t('brand')} code={room.code}>
         {castState?.castKind === 'plinko' ? (
-          <TvPlinko state={castState} />
+          <TvPlinko state={castState} frame={frame} />
         ) : (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-3xl text-white/50">{t('loading')}</p>

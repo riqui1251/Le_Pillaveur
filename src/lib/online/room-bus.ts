@@ -81,3 +81,23 @@ export function subscribeRtc(
     bus.off(ch, listener)
   }
 }
+
+// ─── Trames de cast (positions de billes, jeu local diffusé sur TV) ──────────
+// Canal ÉPHÉMÈRE : relaie les positions de billes du téléphone vers la TV sans
+// écriture DB (haute fréquence). Le contenu est un JSON opaque (PlinkoCastFrame).
+
+function castFrameChannel(roomId: string): string {
+  return `castframe:${roomId}`
+}
+
+export function publishCastFrame(roomId: string, frame: unknown): void {
+  bus.emit(castFrameChannel(roomId), frame)
+}
+
+export function subscribeCastFrame(roomId: string, listener: (frame: unknown) => void): () => void {
+  const ch = castFrameChannel(roomId)
+  bus.on(ch, listener)
+  return () => {
+    bus.off(ch, listener)
+  }
+}
