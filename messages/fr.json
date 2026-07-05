@@ -485,6 +485,10 @@
       "quiz": {
         "title": "Le Grand Pillaveur",
         "description": "Le quiz apéro : réponds vite et juste, ou bois ! Téléphones-buzzers et podium final."
+      },
+      "loup-garou": {
+        "title": "Loup-Garou",
+        "description": "Le classique des soirées, version apéro : loups, voyante, débats et lynchages qui trinquent !"
       }
     },
     "roulette-russe": {
@@ -2046,6 +2050,102 @@
         "replay": "Rejouer",
         "rematchWaiting": "En attente des autres ({count}/{total})",
         "backToMenu": "Retour au menu"
+      }
+    },
+    "loup-garou": {
+      "page": {
+        "onlineOnly": "Le Loup-Garou se joue en ligne : chacun reçoit un rôle secret sur SON téléphone. 5 joueurs minimum !",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "debate": "Durée du débat",
+        "minutes": "min"
+      },
+      "game": {
+        "round": "Nuit/Jour {n}",
+        "phases": {
+          "reveal-role": "Vos rôles",
+          "night-seer": "La voyante rêve…",
+          "night-wolves": "Les loups rôdent…",
+          "night-witch": "La sorcière mijote…",
+          "dawn": "L’aube",
+          "hunter-shot": "Le chasseur",
+          "day-debate": "Débat",
+          "day-vote": "Vote",
+          "day-revote": "Revote"
+        },
+        "ghostBanner": "👻 Tu es un fantôme : tu vois TOUT… mais chuuut, pas un mot au vocal !",
+        "yourRole": "Ton rôle secret",
+        "hideRole": "Cacher mon rôle",
+        "showRole": "Voir mon rôle",
+        "accomplices": "Tes complices",
+        "you": "(toi)",
+        "roles": {
+          "loup": {
+            "name": "Loup-Garou",
+            "desc": "Chaque nuit, dévore un villageois avec ta meute."
+          },
+          "voyante": {
+            "name": "Voyante",
+            "desc": "Chaque nuit, sonde le camp d’un joueur."
+          },
+          "sorciere": {
+            "name": "Sorcière",
+            "desc": "Une potion de vie, une de mort — une seule fois chacune. Chaque potion se paie d’une gorgée."
+          },
+          "chasseur": {
+            "name": "Chasseur",
+            "desc": "Si tu meurs, tu emportes quelqu’un dans la tombe."
+          },
+          "villageois": {
+            "name": "Villageois",
+            "desc": "Débats, flaire les loups… et survis."
+          }
+        },
+        "revealPrompt": "Mémorise ton rôle !",
+        "revealHint": "La nuit tombe dans quelques secondes…",
+        "seerPrompt": "🔮 Qui veux-tu sonder cette nuit ?",
+        "seerDone": "Vision reçue — le village dort encore…",
+        "seerResult": "{name} est du camp {team} !",
+        "teamLoups": "des LOUPS 🐺",
+        "teamVillage": "du village 🧑‍🌾",
+        "wolfPrompt": "🐺 Choisissez votre proie (modifiable jusqu’à la fin)",
+        "wolfPack": "La meute",
+        "witchVictim": "🧪 Les loups ont attaqué {name}…",
+        "witchNoVictim": "🧪 Les loups n’ont mordu personne cette nuit.",
+        "witchDone": "Choix scellé — la nuit suit son cours…",
+        "witchKillPrompt": "Qui empoisonner ?",
+        "witchCancel": "Annuler",
+        "witchSave": "Sauver {name} (potion de vie)",
+        "witchKill": "Potion de mort…",
+        "witchNone": "Ne rien faire",
+        "dawnNobody": "Personne n’est mort cette nuit ! 🎉",
+        "dawnDeath": "💀 {name} est mort — c’était {role} (+3 🍺)",
+        "hunterPrompt": "🏹 Dernier souffle : emporte quelqu’un !",
+        "hunterWaiting": "{name} arme son fusil…",
+        "debatePrompt": "🗣️ Débattez au vocal : qui est le loup ?",
+        "debateHint": "Accusez, défendez-vous, bluffez…",
+        "skipToVote": "Passer au vote ({n}/{total})",
+        "skipWaiting": "En attente des autres ({n}/{total})",
+        "votePrompt": "Qui lynchez-vous ? Vote secret !",
+        "revotePrompt": "Égalité ! Départagez les ex-aequo.",
+        "voted": "Vote scellé — on attend les autres…",
+        "spectatorVote": "Les vivants votent…",
+        "voteBanner": "⚖️ {name} a été lynché — c’était {role}",
+        "voteTieBanner": "⚖️ Égalité au vote — personne n’est sorti",
+        "village": "Le village ({alive}/{total} vivants)",
+        "victory": {
+          "village": "Le village a gagné !",
+          "loups": "Les Loups-Garous ont gagné !",
+          "villageDrinks": "Les loups finissent leur verre cul sec 🍻",
+          "loupsDrinks": "Le village finit son verre 🍺",
+          "fullReveal": "Les rôles étaient…",
+          "replay": "Rejouer",
+          "rematchWaiting": "En attente des autres ({count}/{total})",
+          "backToMenu": "Retour au menu"
+        },
+        "sleep": "🌙 Le village dort…",
+        "sleepHint": "Certains rêvent, d’autres complotent…"
       }
     }
   },

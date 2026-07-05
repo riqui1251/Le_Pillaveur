@@ -422,6 +422,23 @@ describe('vues anti-triche (3 niveaux + TV)', () => {
     expect(JSON.stringify(v)).not.toContain('"dayVotes"')
   })
 
+  it('l’état des potions de la sorcière ne fuite pas aux autres vivants', () => {
+    const s = craft(SIX, 'night-witch', {
+      nightVictimId: 'vil1',
+      witchSaveUsed: true,
+      witchActed: true,
+    })
+    const villager = toLGClientView(s, 'vil1')
+    expect(villager.witchPotions).toBeNull()
+    expect(villager.witchActed).toBeNull()
+    const json = JSON.stringify(villager)
+    expect(json).not.toContain('witchSaveUsed')
+    expect(json).not.toContain('witchKillUsed')
+    // La sorcière et les fantômes, eux, voient tout.
+    expect(toLGClientView(s, 'sor').witchPotions).toEqual({ save: false, kill: true })
+    expect(toLGClientView(s, 'sor').witchActed).toBe(true)
+  })
+
   it('currentActorId ne trahit jamais un rôle de vivant', () => {
     expect(currentLGActorId(craft(SIX, 'night-seer'))).toBeNull()
     expect(currentLGActorId(craft(SIX, 'night-wolves'))).toBeNull()
@@ -430,6 +447,16 @@ describe('vues anti-triche (3 niveaux + TV)', () => {
     expect(
       currentLGActorId(craft(SIX, 'hunter-shot', { pendingHunterId: 'cha' }))
     ).toBe('cha')
+  })
+})
+
+describe('buildLGState (adaptateur)', () => {
+  it('complète avec des bots jusqu’à 5 (résilience du rematch)', async () => {
+    const { buildLGState } = await import('./server-adapter')
+    const s = buildLGState([{ userId: 'u1', user: { displayName: 'Riri' } }], undefined, 42)
+    expect(s.players).toHaveLength(5)
+    expect(s.players.filter((p) => p.isBot)).toHaveLength(4)
+    expect(s.players[0]).toMatchObject({ id: 'u1', isBot: false })
   })
 })
 

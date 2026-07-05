@@ -686,8 +686,20 @@ export type LGPlayerView = Omit<LGPlayer, 'role'> & {
 
 export type LGClientView = Omit<
   LGState,
-  'rngState' | 'players' | 'wolfVotes' | 'seerPeeks' | 'dayVotes' | 'nightVictimId' | 'witchSavedId' | 'witchKillId'
+  | 'rngState'
+  | 'players'
+  | 'wolfVotes'
+  | 'seerPeeks'
+  | 'dayVotes'
+  | 'nightVictimId'
+  | 'witchSavedId'
+  | 'witchKillId'
+  | 'witchSaveUsed'
+  | 'witchKillUsed'
+  | 'witchActed'
 > & {
+  /** La Sorcière a déjà agi cette nuit — elle seule (+ fantômes). */
+  witchActed: boolean | null
   players: LGPlayerView[]
   phaseKey: string
   /** Mon rôle (null pour le spectateur TV). */
@@ -717,11 +729,16 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
     nightVictimId,
     witchSavedId: _ws,
     witchKillId: _wk,
+    witchSaveUsed: _wsu,
+    witchKillUsed: _wku,
+    witchActed,
     ...rest
   } = state
   void _rng
   void _ws
   void _wk
+  void _wsu
+  void _wku
 
   const me = players.find((p) => p.id === viewerId)
   const finished = state.phase === 'finished'
@@ -765,6 +782,7 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
       iAmWitch || ghost || finished
         ? { save: !state.witchSaveUsed, kill: !state.witchKillUsed }
         : null,
+    witchActed: iAmWitch || ghost || finished ? witchActed : null,
     hasVoted,
     myVote: dayVotes[viewerId] ?? null,
   }

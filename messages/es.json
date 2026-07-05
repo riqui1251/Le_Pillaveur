@@ -475,6 +475,10 @@
       "quiz": {
         "title": "El Gran Pillaveur",
         "description": "El quiz de fiesta: ¡responde rápido y bien, o bebe! Móviles-pulsadores y podio final."
+      },
+      "loup-garou": {
+        "title": "Hombre Lobo",
+        "description": "¡El clásico de las fiestas, versión bebida: lobos, vidente, debates y linchamientos que brindan!"
       }
     },
     "roulette-russe": {
@@ -2031,6 +2035,102 @@
         "replay": "Jugar de nuevo",
         "rematchWaiting": "Esperando a los demás ({count}/{total})",
         "backToMenu": "Volver al menú"
+      }
+    },
+    "loup-garou": {
+      "page": {
+        "onlineOnly": "El Hombre Lobo se juega en línea: cada uno recibe un rol secreto en SU móvil. ¡Mínimo 5 jugadores!",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "lobby": {
+        "debate": "Duración del debate",
+        "minutes": "min"
+      },
+      "game": {
+        "round": "Noche/Día {n}",
+        "phases": {
+          "reveal-role": "Vuestros roles",
+          "night-seer": "La vidente sueña…",
+          "night-wolves": "Los lobos acechan…",
+          "night-witch": "La bruja prepara…",
+          "dawn": "El alba",
+          "hunter-shot": "El cazador",
+          "day-debate": "Debate",
+          "day-vote": "Votación",
+          "day-revote": "Segunda votación"
+        },
+        "ghostBanner": "👻 Eres un fantasma: lo ves TODO… pero shhh, ¡ni una palabra por voz!",
+        "yourRole": "Tu rol secreto",
+        "hideRole": "Ocultar mi rol",
+        "showRole": "Ver mi rol",
+        "accomplices": "Tus cómplices",
+        "you": "(tú)",
+        "roles": {
+          "loup": {
+            "name": "Hombre Lobo",
+            "desc": "Cada noche, devora a un aldeano con tu manada."
+          },
+          "voyante": {
+            "name": "Vidente",
+            "desc": "Cada noche, descubre el bando de un jugador."
+          },
+          "sorciere": {
+            "name": "Bruja",
+            "desc": "Una poción de vida y una de muerte — una sola vez cada una. Cada poción cuesta un trago."
+          },
+          "chasseur": {
+            "name": "Cazador",
+            "desc": "Si mueres, te llevas a alguien contigo."
+          },
+          "villageois": {
+            "name": "Aldeano",
+            "desc": "Debate, olfatea a los lobos… y sobrevive."
+          }
+        },
+        "revealPrompt": "¡Memoriza tu rol!",
+        "revealHint": "La noche cae en unos segundos…",
+        "seerPrompt": "🔮 ¿A quién sondeas esta noche?",
+        "seerDone": "Visión recibida — el pueblo aún duerme…",
+        "seerResult": "¡{name} es del bando {team}!",
+        "teamLoups": "de los LOBOS 🐺",
+        "teamVillage": "del pueblo 🧑‍🌾",
+        "wolfPrompt": "🐺 Elegid a vuestra presa (modificable hasta el final)",
+        "wolfPack": "La manada",
+        "witchVictim": "🧪 Los lobos atacaron a {name}…",
+        "witchNoVictim": "🧪 Los lobos no mordieron a nadie esta noche.",
+        "witchDone": "Decisión sellada — la noche sigue…",
+        "witchKillPrompt": "¿A quién envenenas?",
+        "witchCancel": "Cancelar",
+        "witchSave": "Salvar a {name} (poción de vida)",
+        "witchKill": "Poción de muerte…",
+        "witchNone": "No hacer nada",
+        "dawnNobody": "¡Nadie murió esta noche! 🎉",
+        "dawnDeath": "💀 {name} ha muerto — era {role} (+3 🍺)",
+        "hunterPrompt": "🏹 Último aliento: ¡llévate a alguien!",
+        "hunterWaiting": "{name} carga su rifle…",
+        "debatePrompt": "🗣️ Debatid por voz: ¿quién es el lobo?",
+        "debateHint": "Acusad, defendeos, farolead…",
+        "skipToVote": "Pasar a la votación ({n}/{total})",
+        "skipWaiting": "Esperando a los demás ({n}/{total})",
+        "votePrompt": "¿A quién lincháis? ¡Voto secreto!",
+        "revotePrompt": "¡Empate! Desempatad entre los igualados.",
+        "voted": "Voto sellado — esperando a los demás…",
+        "spectatorVote": "Los vivos están votando…",
+        "voteBanner": "⚖️ {name} fue linchado — era {role}",
+        "voteTieBanner": "⚖️ Empate — nadie fue expulsado",
+        "village": "El pueblo ({alive}/{total} vivos)",
+        "victory": {
+          "village": "¡El pueblo gana!",
+          "loups": "¡Los Hombres Lobo ganan!",
+          "villageDrinks": "Los lobos se acaban la copa de un trago 🍻",
+          "loupsDrinks": "El pueblo termina su copa 🍺",
+          "fullReveal": "Los roles eran…",
+          "replay": "Jugar de nuevo",
+          "rematchWaiting": "Esperando a los demás ({count}/{total})",
+          "backToMenu": "Volver al menú"
+        },
+        "sleep": "🌙 El pueblo duerme…",
+        "sleepHint": "Unos sueñan, otros conspiran…"
       }
     }
   },

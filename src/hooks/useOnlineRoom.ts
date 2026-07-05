@@ -241,6 +241,7 @@ export function useOnlineRoom() {
       visibility?: 'public' | 'private' | 'invite'
       tcMode?: '1v1' | '2v2' | '3v3'
       quizCount?: number
+      lgDebateMin?: number
     }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {

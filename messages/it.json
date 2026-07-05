@@ -475,6 +475,10 @@
       "quiz": {
         "title": "Il Gran Pillaveur",
         "description": "Il quiz da festa: rispondi veloce e giusto, o bevi! Telefoni-pulsanti e podio finale."
+      },
+      "loup-garou": {
+        "title": "Lupo Mannaro",
+        "description": "Il classico delle feste, versione alcolica: lupi, veggente, dibattiti e linciaggi che brindano!"
       }
     },
     "roulette-russe": {
@@ -2031,6 +2035,102 @@
         "replay": "Rigioca",
         "rematchWaiting": "In attesa degli altri ({count}/{total})",
         "backToMenu": "Torna al menu"
+      }
+    },
+    "loup-garou": {
+      "page": {
+        "onlineOnly": "Il Lupo Mannaro si gioca online: ognuno riceve un ruolo segreto sul PROPRIO telefono. Minimo 5 giocatori!",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "debate": "Durata del dibattito",
+        "minutes": "min"
+      },
+      "game": {
+        "round": "Notte/Giorno {n}",
+        "phases": {
+          "reveal-role": "I vostri ruoli",
+          "night-seer": "La veggente sogna…",
+          "night-wolves": "I lupi si aggirano…",
+          "night-witch": "La strega prepara…",
+          "dawn": "L’alba",
+          "hunter-shot": "Il cacciatore",
+          "day-debate": "Dibattito",
+          "day-vote": "Voto",
+          "day-revote": "Secondo voto"
+        },
+        "ghostBanner": "👻 Sei un fantasma: vedi TUTTO… ma shhh, non una parola in vocale!",
+        "yourRole": "Il tuo ruolo segreto",
+        "hideRole": "Nascondi il mio ruolo",
+        "showRole": "Mostra il mio ruolo",
+        "accomplices": "I tuoi complici",
+        "you": "(tu)",
+        "roles": {
+          "loup": {
+            "name": "Lupo Mannaro",
+            "desc": "Ogni notte, divora un contadino con il tuo branco."
+          },
+          "voyante": {
+            "name": "Veggente",
+            "desc": "Ogni notte, scopri la fazione di un giocatore."
+          },
+          "sorciere": {
+            "name": "Strega",
+            "desc": "Una pozione di vita e una di morte — una sola volta ciascuna. Ogni pozione costa un sorso."
+          },
+          "chasseur": {
+            "name": "Cacciatore",
+            "desc": "Se muori, porti qualcuno con te."
+          },
+          "villageois": {
+            "name": "Contadino",
+            "desc": "Dibatti, fiuta i lupi… e sopravvivi."
+          }
+        },
+        "revealPrompt": "Memorizza il tuo ruolo!",
+        "revealHint": "La notte cala tra pochi secondi…",
+        "seerPrompt": "🔮 Chi vuoi sondare stanotte?",
+        "seerDone": "Visione ricevuta — il villaggio dorme ancora…",
+        "seerResult": "{name} è della fazione {team}!",
+        "teamLoups": "dei LUPI 🐺",
+        "teamVillage": "del villaggio 🧑‍🌾",
+        "wolfPrompt": "🐺 Scegliete la vostra preda (modificabile fino alla fine)",
+        "wolfPack": "Il branco",
+        "witchVictim": "🧪 I lupi hanno attaccato {name}…",
+        "witchNoVictim": "🧪 I lupi non hanno morso nessuno stanotte.",
+        "witchDone": "Scelta sigillata — la notte continua…",
+        "witchKillPrompt": "Chi avveleni?",
+        "witchCancel": "Annulla",
+        "witchSave": "Salva {name} (pozione di vita)",
+        "witchKill": "Pozione di morte…",
+        "witchNone": "Non fare nulla",
+        "dawnNobody": "Nessuno è morto stanotte! 🎉",
+        "dawnDeath": "💀 {name} è morto — era {role} (+3 🍺)",
+        "hunterPrompt": "🏹 Ultimo respiro: porta qualcuno con te!",
+        "hunterWaiting": "{name} carica il fucile…",
+        "debatePrompt": "🗣️ Dibattete in vocale: chi è il lupo?",
+        "debateHint": "Accusate, difendetevi, bluffate…",
+        "skipToVote": "Passa al voto ({n}/{total})",
+        "skipWaiting": "In attesa degli altri ({n}/{total})",
+        "votePrompt": "Chi linciate? Voto segreto!",
+        "revotePrompt": "Pareggio! Decidete tra i pari merito.",
+        "voted": "Voto sigillato — in attesa degli altri…",
+        "spectatorVote": "I vivi stanno votando…",
+        "voteBanner": "⚖️ {name} è stato linciato — era {role}",
+        "voteTieBanner": "⚖️ Pareggio — nessuno è stato cacciato",
+        "village": "Il villaggio ({alive}/{total} vivi)",
+        "victory": {
+          "village": "Il villaggio vince!",
+          "loups": "I Lupi Mannari vincono!",
+          "villageDrinks": "I lupi scolano il bicchiere 🍻",
+          "loupsDrinks": "Il villaggio finisce il bicchiere 🍺",
+          "fullReveal": "I ruoli erano…",
+          "replay": "Rigioca",
+          "rematchWaiting": "In attesa degli altri ({count}/{total})",
+          "backToMenu": "Torna al menu"
+        },
+        "sleep": "🌙 Il villaggio dorme…",
+        "sleepHint": "Alcuni sognano, altri complottano…"
       }
     }
   },

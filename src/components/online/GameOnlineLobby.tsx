@@ -72,6 +72,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tPb = useTranslations('games.petit-buveur.page')
   const tTc = useTranslations('games.toucher-coule.lobby')
   const tQuiz = useTranslations('games.quiz.lobby')
+  const tLg = useTranslations('games.loup-garou.lobby')
   const tOnline = useTranslations('onlineLobby')
   const tFriends = useTranslations('account.friends')
 
@@ -527,6 +528,39 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   <span className="block text-lg font-black">{value}</span>
                   <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
                     {tQuiz('questions')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {gameId === 'loup-garou' && (
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-indigo-400/70">
+            {tLg('debate')}
+          </p>
+          <div className="grid grid-cols-5 gap-2">
+            {[1, 2, 3, 4, 5].map((value) => {
+              const active = (room.settings.lgDebateMin ?? 3) === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={!isHost}
+                  onClick={() => updateSettings({ lgDebateMin: value })}
+                  className={cn(
+                    'rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
+                    active
+                      ? 'border-transparent bg-gradient-to-r from-slate-600 to-indigo-500 text-white shadow-lg'
+                      : 'border-white/10 bg-white/5 text-white/60',
+                    isHost && !active && 'hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  <span className="block text-lg font-black">{value}</span>
+                  <span className={cn('mt-0.5 block text-[9px]', active ? 'text-white/80' : 'text-white/35')}>
+                    {tLg('minutes')}
                   </span>
                 </button>
               )

@@ -485,6 +485,10 @@
       "quiz": {
         "title": "The Big Pillaveur Quiz",
         "description": "The party quiz: answer fast and right, or drink! Phone buzzers and a final podium."
+      },
+      "loup-garou": {
+        "title": "Werewolf",
+        "description": "The party classic, drinking edition: wolves, seer, debates and lynchings that drink!"
       }
     },
     "roulette-russe": {
@@ -2041,6 +2045,102 @@
         "replay": "Play again",
         "rematchWaiting": "Waiting for the others ({count}/{total})",
         "backToMenu": "Back to menu"
+      }
+    },
+    "loup-garou": {
+      "page": {
+        "onlineOnly": "Werewolf is played online: everyone gets a secret role on THEIR phone. 5 players minimum!",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "debate": "Debate length",
+        "minutes": "min"
+      },
+      "game": {
+        "round": "Night/Day {n}",
+        "phases": {
+          "reveal-role": "Your roles",
+          "night-seer": "The seer dreams…",
+          "night-wolves": "The wolves prowl…",
+          "night-witch": "The witch brews…",
+          "dawn": "Dawn",
+          "hunter-shot": "The hunter",
+          "day-debate": "Debate",
+          "day-vote": "Vote",
+          "day-revote": "Revote"
+        },
+        "ghostBanner": "👻 You are a ghost: you see EVERYTHING… but shhh, not a word on voice!",
+        "yourRole": "Your secret role",
+        "hideRole": "Hide my role",
+        "showRole": "Show my role",
+        "accomplices": "Your accomplices",
+        "you": "(you)",
+        "roles": {
+          "loup": {
+            "name": "Werewolf",
+            "desc": "Each night, devour a villager with your pack."
+          },
+          "voyante": {
+            "name": "Seer",
+            "desc": "Each night, probe one player’s side."
+          },
+          "sorciere": {
+            "name": "Witch",
+            "desc": "One life potion, one death potion — once each. Every potion costs you a sip."
+          },
+          "chasseur": {
+            "name": "Hunter",
+            "desc": "If you die, you take someone with you."
+          },
+          "villageois": {
+            "name": "Villager",
+            "desc": "Debate, sniff out the wolves… and survive."
+          }
+        },
+        "revealPrompt": "Memorise your role!",
+        "revealHint": "Night falls in a few seconds…",
+        "seerPrompt": "🔮 Who do you probe tonight?",
+        "seerDone": "Vision received — the village still sleeps…",
+        "seerResult": "{name} is on the {team} side!",
+        "teamLoups": "WOLVES 🐺",
+        "teamVillage": "village 🧑‍🌾",
+        "wolfPrompt": "🐺 Pick your prey (changeable until the end)",
+        "wolfPack": "The pack",
+        "witchVictim": "🧪 The wolves attacked {name}…",
+        "witchNoVictim": "🧪 The wolves bit no one tonight.",
+        "witchDone": "Choice sealed — the night goes on…",
+        "witchKillPrompt": "Who gets poisoned?",
+        "witchCancel": "Cancel",
+        "witchSave": "Save {name} (life potion)",
+        "witchKill": "Death potion…",
+        "witchNone": "Do nothing",
+        "dawnNobody": "Nobody died tonight! 🎉",
+        "dawnDeath": "💀 {name} is dead — they were {role} (+3 🍺)",
+        "hunterPrompt": "🏹 Last breath: take someone with you!",
+        "hunterWaiting": "{name} is loading their rifle…",
+        "debatePrompt": "🗣️ Debate on voice: who is the wolf?",
+        "debateHint": "Accuse, defend, bluff…",
+        "skipToVote": "Skip to the vote ({n}/{total})",
+        "skipWaiting": "Waiting for the others ({n}/{total})",
+        "votePrompt": "Who gets lynched? Secret vote!",
+        "revotePrompt": "Tie! Break it between the tied players.",
+        "voted": "Vote sealed — waiting for the others…",
+        "spectatorVote": "The living are voting…",
+        "voteBanner": "⚖️ {name} was lynched — they were {role}",
+        "voteTieBanner": "⚖️ Tied vote — nobody was banished",
+        "village": "The village ({alive}/{total} alive)",
+        "victory": {
+          "village": "The village wins!",
+          "loups": "The Werewolves win!",
+          "villageDrinks": "The wolves down their drinks 🍻",
+          "loupsDrinks": "The village finishes their drinks 🍺",
+          "fullReveal": "The roles were…",
+          "replay": "Play again",
+          "rematchWaiting": "Waiting for the others ({count}/{total})",
+          "backToMenu": "Back to menu"
+        },
+        "sleep": "🌙 The village sleeps…",
+        "sleepHint": "Some dream, others scheme…"
       }
     }
   },
