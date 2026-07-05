@@ -12,6 +12,12 @@ import { TvPetitBuveur } from './TvPetitBuveur'
 import { TvToucherCoule } from './TvToucherCoule'
 import { TvQuiz } from './TvQuiz'
 import type { QuizClientView } from '@/lib/quiz/engine'
+import { TvMenteur } from './TvMenteur'
+import type { MenteurClientView } from '@/lib/menteur/engine'
+import { TvImposteur } from './TvImposteur'
+import type { ImposteurClientView } from '@/lib/imposteur/engine'
+import { TvLoupGarou } from './TvLoupGarou'
+import type { LGClientView } from '@/lib/loup-garou/engine'
 import { TvVictory } from './TvVictory'
 import { TvPlinko } from './TvPlinko'
 import { TvPmu } from './TvPmu'
@@ -107,17 +113,31 @@ export function TvRoomView({ code }: { code: string }) {
   const state = parseState(room.gameStateJson)
   const finished = isFinished(state)
 
+  // Chaque nouveau jeu gère sa propre fin de partie ; TvVictory (écran
+  // historique) ne sert qu'au Petit Buveur et au Toucher-Coulé.
   let content: ReactNode
   if (room.status === 'waiting' || !state) {
     content = <TvLobby room={room} joinUrl={joinUrl} />
-  } else if (finished) {
-    content = <TvVictory room={room} gameId={room.gameId ?? ''} state={state as unknown as EngineState | TCClientView} />
   } else if (room.gameId === 'petit-buveur') {
-    content = <TvPetitBuveur room={room} state={state as unknown as EngineState} />
+    content = finished ? (
+      <TvVictory room={room} gameId="petit-buveur" state={state as unknown as EngineState} />
+    ) : (
+      <TvPetitBuveur room={room} state={state as unknown as EngineState} />
+    )
   } else if (room.gameId === 'toucher-coule') {
-    content = <TvToucherCoule room={room} state={state as unknown as TCClientView} />
+    content = finished ? (
+      <TvVictory room={room} gameId="toucher-coule" state={state as unknown as TCClientView} />
+    ) : (
+      <TvToucherCoule room={room} state={state as unknown as TCClientView} />
+    )
   } else if (room.gameId === 'quiz') {
     content = <TvQuiz room={room} state={state as unknown as QuizClientView} />
+  } else if (room.gameId === 'menteur') {
+    content = <TvMenteur room={room} state={state as unknown as MenteurClientView} />
+  } else if (room.gameId === 'imposteur') {
+    content = <TvImposteur room={room} state={state as unknown as ImposteurClientView} />
+  } else if (room.gameId === 'loup-garou') {
+    content = <TvLoupGarou room={room} state={state as unknown as LGClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

@@ -11,6 +11,7 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { isLegalRaise, type MenteurBid, type MenteurClientView } from '@/lib/menteur/engine'
+import { CssDie } from '@/components/games/CssDie'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -20,15 +21,7 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
  * Mobile-first : gros dés tactiles, enchère en steppers, bouton MENTEUR !
  */
 
-/** Positions des points (ligne, colonne) sur une grille 3×3, par face. */
-const DIE_PIPS: Record<number, Array<[number, number]>> = {
-  1: [[1, 1]],
-  2: [[0, 2], [2, 0]],
-  3: [[0, 2], [1, 1], [2, 0]],
-  4: [[0, 0], [0, 2], [2, 0], [2, 2]],
-  5: [[0, 0], [0, 2], [1, 1], [2, 0], [2, 2]],
-  6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]],
-}
+// Le dé CSS vit dans components/games/CssDie (partagé avec l'écran TV).
 
 function parseView(json: string | null | undefined): MenteurClientView | null {
   if (!json) return null
@@ -60,45 +53,7 @@ function minimalLegalBid(
 
 const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 
-/**
- * Dé dessiné en CSS (carré arrondi + points sur grille 3×3) : les glyphes
- * Unicode ⚀-⚅ étaient illisibles sur beaucoup de téléphones (points
- * minuscules, rendu dépendant de la police système).
- */
-function Die({ face, size = 'md' }: { face: number; size?: 'sm' | 'md' | 'lg' }) {
-  const pips = DIE_PIPS[face] ?? []
-  return (
-    <span
-      role="img"
-      aria-label={`${face}`}
-      className={cn(
-        'inline-grid select-none grid-cols-3 grid-rows-3 place-items-center rounded-lg border shadow-inner',
-        size === 'lg' && 'h-12 w-12 p-1.5',
-        size === 'md' && 'h-10 w-10 p-[5px]',
-        size === 'sm' && 'h-8 w-8 p-1',
-        face === 1
-          ? 'border-amber-400/60 bg-amber-500/20 text-amber-300'
-          : 'border-white/25 bg-white/95 text-gray-900'
-      )}
-    >
-      {Array.from({ length: 9 }, (_, i) => {
-        const row = Math.floor(i / 3)
-        const col = i % 3
-        const on = pips.some(([r, c]) => r === row && c === col)
-        return (
-          <span
-            key={i}
-            className={cn(
-              'rounded-full bg-current',
-              size === 'lg' ? 'h-2 w-2' : size === 'md' ? 'h-[7px] w-[7px]' : 'h-1.5 w-1.5',
-              !on && 'opacity-0'
-            )}
-          />
-        )
-      })}
-    </span>
-  )
-}
+const Die = CssDie
 
 export function MenteurOnline() {
   const { user } = useAuth()

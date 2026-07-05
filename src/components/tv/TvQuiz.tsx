@@ -40,6 +40,38 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
   const iconOf = (id: string, isBot: boolean) =>
     isBot ? '🤖' : room.members.find((m) => m.userId === id)?.preferences?.icon ?? '👤'
 
+  // ── Podium final ─────────────────────────────────────────────────────────
+  if (state.phase === 'finished') {
+    const last = ranking[ranking.length - 1]
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
+        <p className="text-5xl font-black text-white">
+          🏆 {tQ('victoryTitle', { name: ranking[0]?.name ?? '—' })}
+        </p>
+        {last && <p className="text-2xl text-amber-200">{tQ('lastDrinks', { name: last.name })}</p>}
+        <div className="flex flex-wrap justify-center gap-3">
+          {ranking.map((p, idx) => (
+            <div
+              key={p.id}
+              className={cn(
+                'flex items-center gap-3 rounded-2xl border px-5 py-3 text-2xl font-bold',
+                idx === 0
+                  ? 'border-amber-400/50 bg-amber-500/15 text-amber-100'
+                  : 'border-white/10 bg-white/5 text-white/75'
+              )}
+            >
+              <span>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`}</span>
+              <span aria-hidden>{iconOf(p.id, p.isBot)}</span>
+              {p.name}
+              <span className="tabular-nums text-cyan-200">{p.score}</span>
+              <span className="text-lg text-white/50">🍺{p.sips}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full w-full flex-col gap-4 p-4">
       {/* Progression + timer */}
