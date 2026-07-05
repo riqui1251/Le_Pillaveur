@@ -22,6 +22,7 @@ const GAME_TITLES: Record<string, string> = {
   menteur: 'Le Menteur',
   imposteur: "L'Imposteur",
   quiz: 'Le Grand Pillaveur',
+  'loup-garou': 'Loup-Garou',
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null

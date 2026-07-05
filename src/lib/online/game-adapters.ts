@@ -72,6 +72,24 @@ import {
   QUIZ_MAX_PLAYERS,
   type QuizState,
 } from '@/lib/quiz/engine'
+import {
+  parseLGState,
+  serializeLGState,
+  applyLGRoomAction,
+  convertLGPlayerToBot,
+  markLGPlayerLeft,
+  rejoinLGPlayer,
+  lgClientViewJson,
+  lgSpectatorViewJson,
+  type LGRoomActionInput,
+} from '@/lib/loup-garou/server-adapter'
+import {
+  currentLGActorId,
+  toLGClientView,
+  LG_MIN_PLAYERS,
+  LG_MAX_PLAYERS,
+  type LGState,
+} from '@/lib/loup-garou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -364,6 +382,68 @@ const quizAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinQuizPlayer(state as QuizState, userId),
 }
 
+// ─── Loup-Garou ──────────────────────────────────────────────────────────────
+
+const loupGarouAdapter: GameAdapter = {
+  // 5 joueurs requis au LOBBY (déduction sociale = humains) ; le rematch avec
+  // moins de membres est comblé par des bots (buildLGState).
+  minPlayers: LG_MIN_PLAYERS,
+  maxPlayers: LG_MAX_PLAYERS,
+  parse: (json) => parseLGState(json),
+  serialize: (state) => serializeLGState(state as LGState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as LGState
+    let input: LGRoomActionInput
+    if (body.action === 'seer-peek' && typeof body.targetId === 'string') {
+      input = { type: 'seer-peek', targetId: body.targetId }
+    } else if (body.action === 'wolf-vote' && typeof body.targetId === 'string') {
+      input = { type: 'wolf-vote', targetId: body.targetId }
+    } else if (
+      body.action === 'witch' &&
+      (body.witchAction === 'save' || body.witchAction === 'kill' || body.witchAction === 'none')
+    ) {
+      input = {
+        type: 'witch',
+        witchAction: body.witchAction,
+        targetId: typeof body.targetId === 'string' ? body.targetId : undefined,
+      }
+    } else if (body.action === 'hunter-shot' && typeof body.targetId === 'string') {
+      input = { type: 'hunter-shot', targetId: body.targetId }
+    } else if (body.action === 'debate-skip') {
+      input = { type: 'debate-skip' }
+    } else if (body.action === 'day-vote' && typeof body.targetId === 'string') {
+      input = { type: 'day-vote', targetId: body.targetId }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyLGRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED', 'NOT_BOT_TURN'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertLGPlayerToBot(state as LGState, userId),
+  isFinished: (state) => (state as LGState).phase === 'finished',
+  currentActorId: (state) => currentLGActorId(state as LGState),
+  clientViewJson: (state, viewerId) => lgClientViewJson(state as LGState, viewerId),
+  spectatorViewJson: (state) => lgSpectatorViewJson(state as LGState),
+  actionResponse: (state, viewerId) => ({
+    view: toLGClientView(state as LGState, viewerId),
+    viewJson: lgClientViewJson(state as LGState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markLGPlayerLeft(state as LGState, userId, at),
+  rejoin: (state, userId) => rejoinLGPlayer(state as LGState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -372,6 +452,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   menteur: menteurAdapter,
   imposteur: imposteurAdapter,
   quiz: quizAdapter,
+  'loup-garou': loupGarouAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

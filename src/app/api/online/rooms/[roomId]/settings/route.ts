@@ -49,6 +49,9 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.quizCount === 'number' && [10, 15, 20].includes(body.quizCount)) {
     next.quizCount = body.quizCount
   }
+  if (typeof body.lgDebateMin === 'number' && [1, 2, 3, 4, 5].includes(body.lgDebateMin)) {
+    next.lgDebateMin = body.lgDebateMin
+  }
 
   const visibilityUpdate =
     typeof body.visibility === 'string' && VALID_VISIBILITIES.has(body.visibility)

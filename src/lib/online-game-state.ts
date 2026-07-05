@@ -10,6 +10,9 @@ export type RoomSettings = {
   /** Quiz : nombre de questions de la partie (10/15/20). */
   quizCount?: number
 
+  /** Loup-Garou : durée du débat en minutes (1-5). */
+  lgDebateMin?: number
+
   plinkoDifficulty?: 'easy' | 'medium' | 'hard'
 
   hiLoMode?: 'standard' | 'traversee'
@@ -664,6 +667,28 @@ export function parseQuizSyncedState(json: string | null | undefined): QuizSynce
   }
 }
 
+// ─── Loup-Garou ──────────────────────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/loup-garou). */
+export type LoupGarouSyncedState = {
+  version: number
+  phase: string
+  winnerTeam: 'village' | 'loups' | null
+  rematchVotes?: string[]
+}
+
+export function parseLoupGarouSyncedState(
+  json: string | null | undefined
+): LoupGarouSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as LoupGarouSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -678,6 +703,7 @@ export type AnyOnlineGameState =
   | MenteurSyncedState
   | ImposteurSyncedState
   | QuizSyncedState
+  | LoupGarouSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -706,6 +732,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parseImposteurSyncedState(json) as T | null
     case 'quiz':
       return parseQuizSyncedState(json) as T | null
+    case 'loup-garou':
+      return parseLoupGarouSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -738,6 +766,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return (state as ImposteurSyncedState).phase === 'finished'
     case 'quiz':
       return (state as QuizSyncedState).phase === 'finished'
+    case 'loup-garou':
+      return (state as LoupGarouSyncedState).phase === 'finished'
     default:
       return false
   }
