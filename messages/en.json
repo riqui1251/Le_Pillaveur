@@ -1402,7 +1402,7 @@
         "currentBid": "Current bid",
         "bidBy": "by {name}",
         "noBid": "No bid yet — open the round!",
-        "pillaveurHint": "Ones ⚀ are wild: they count for every face.",
+        "pillaveurHint": "Ones are wild: they count for every face.",
         "yourTurn": "Your move: raise the bid or shout LIAR!",
         "turnOf": "{name}'s turn…",
         "yourDice": "Your dice",

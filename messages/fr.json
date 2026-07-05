@@ -1402,7 +1402,7 @@
         "currentBid": "Enchère en cours",
         "bidBy": "par {name}",
         "noBid": "Aucune enchère — ouvre la manche !",
-        "pillaveurHint": "Les 1 « Pillaveurs » ⚀ sont jokers : ils comptent pour toutes les faces.",
+        "pillaveurHint": "Les 1 « Pillaveurs » sont jokers : ils comptent pour toutes les faces.",
         "yourTurn": "À toi : surenchéris ou crie MENTEUR !",
         "turnOf": "Au tour de {name}…",
         "yourDice": "Tes dés",

@@ -1392,7 +1392,7 @@
         "currentBid": "Apuesta actual",
         "bidBy": "de {name}",
         "noBid": "Sin apuesta — ¡abre la ronda!",
-        "pillaveurHint": "Los 1 ⚀ son comodines: cuentan para todas las caras.",
+        "pillaveurHint": "Los 1 son comodines: cuentan para todas las caras.",
         "yourTurn": "Te toca: sube la apuesta o grita ¡MENTIROSO!",
         "turnOf": "Turno de {name}…",
         "yourDice": "Tus dados",

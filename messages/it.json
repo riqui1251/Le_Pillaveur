@@ -1392,7 +1392,7 @@
         "currentBid": "Rilancio in corso",
         "bidBy": "di {name}",
         "noBid": "Nessun rilancio — apri la manche!",
-        "pillaveurHint": "Gli 1 ⚀ sono jolly: contano per tutte le facce.",
+        "pillaveurHint": "Gli 1 sono jolly: contano per tutte le facce.",
         "yourTurn": "Tocca a te: rilancia o grida BUGIARDO!",
         "turnOf": "Tocca a {name}…",
         "yourDice": "I tuoi dadi",
