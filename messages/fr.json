@@ -183,6 +183,12 @@
       "title": "Tu as une partie en cours !",
       "cta": "Rejoindre la partie",
       "botCountdown": "Un bot te remplace dans {seconds}s"
+    },
+    "botsFill": {
+      "title": "Compléter avec des bots",
+      "hint": "Lance même sans {min} joueurs — des bots prennent les places vides.",
+      "on": "Activé",
+      "off": "Désactivé"
     }
   },
   "chat": {
@@ -2054,7 +2060,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "Le Loup-Garou se joue en ligne : chacun reçoit un rôle secret sur SON téléphone. Les bots complètent les places vides — idéal à 3+ humains !",
+        "onlineOnly": "Le Loup-Garou se joue en ligne : chacun reçoit un rôle secret sur SON téléphone. 3 joueurs minimum — ou active l’option bots au lobby !",
         "switchOnline": "Passer en mode en ligne"
       },
       "lobby": {

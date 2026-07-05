@@ -183,6 +183,12 @@
       "title": "You have a game in progress!",
       "cta": "Rejoin the game",
       "botCountdown": "A bot replaces you in {seconds}s"
+    },
+    "botsFill": {
+      "title": "Fill with bots",
+      "hint": "Launch even without {min} players — bots take the empty seats.",
+      "on": "On",
+      "off": "Off"
     }
   },
   "chat": {
@@ -2049,7 +2055,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "Werewolf is played online: everyone gets a secret role on THEIR phone. Bots fill the empty seats — best with 3+ humans!",
+        "onlineOnly": "Werewolf is played online: everyone gets a secret role on THEIR phone. 3 players minimum — or enable the bots option in the lobby!",
         "switchOnline": "Switch to online mode"
       },
       "lobby": {

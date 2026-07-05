@@ -173,6 +173,12 @@
       "title": "¡Tienes una partida en curso!",
       "cta": "Volver a la partida",
       "botCountdown": "Un bot te reemplaza en {seconds}s"
+    },
+    "botsFill": {
+      "title": "Completar con bots",
+      "hint": "Lanza incluso sin {min} jugadores — los bots ocupan los asientos vacíos.",
+      "on": "Activado",
+      "off": "Desactivado"
     }
   },
   "chat": {
@@ -2039,7 +2045,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "El Hombre Lobo se juega en línea: cada uno recibe un rol secreto en SU móvil. Los bots ocupan los asientos vacíos — ¡mejor con 3+ humanos!",
+        "onlineOnly": "El Hombre Lobo se juega en línea: cada uno recibe un rol secreto en SU móvil. ¡Mínimo 3 jugadores — o activa la opción de bots en la sala!",
         "switchOnline": "Cambiar al modo en línea"
       },
       "lobby": {

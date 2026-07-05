@@ -13,6 +13,9 @@ export type RoomSettings = {
   /** Loup-Garou : durée du débat en minutes (1-5). */
   lgDebateMin?: number
 
+  /** Compléter avec des bots (hôte) : lancer sous le minimum d'humains. */
+  botsFill?: boolean
+
   plinkoDifficulty?: 'easy' | 'medium' | 'hard'
 
   hiLoMode?: 'standard' | 'traversee'

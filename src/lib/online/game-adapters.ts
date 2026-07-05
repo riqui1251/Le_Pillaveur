@@ -51,6 +51,7 @@ import {
 import {
   currentImposteurActorId,
   toImposteurClientView,
+  IMPOSTEUR_MIN_PLAYERS,
   IMPOSTEUR_MAX_PLAYERS,
   type ImposteurState,
 } from '@/lib/imposteur/engine'
@@ -85,6 +86,7 @@ import {
 import {
   currentLGActorId,
   toLGClientView,
+  LG_MIN_PLAYERS,
   LG_MAX_PLAYERS,
   type LGState,
 } from '@/lib/loup-garou/engine'
@@ -110,6 +112,12 @@ export type GameAdapter = {
   /** Bornes de lancement (enforcement lobby ; TC garde sa logique par équipes). */
   minPlayers: number
   maxPlayers: number
+  /**
+   * Le jeu peut être lancé sous `minPlayers` humains quand l'hôte active
+   * l'option « compléter avec des bots » (RoomSettings.botsFill) — le launch
+   * comble alors les places jusqu'au minimum du moteur.
+   */
+  botsFillable?: boolean
   /** Parse l'état persisté. Null si absent/corrompu. */
   parse(json: string | null): unknown
   serialize(state: unknown): string
@@ -234,10 +242,11 @@ const toucherCouleAdapter: GameAdapter = {
 // ─── Le Menteur ──────────────────────────────────────────────────────────────
 
 const menteurAdapter: GameAdapter = {
-  // Un joueur seul peut lancer : les bots comblent jusqu'à 2 joueurs
-  // (buildMenteurState) — même philosophie que le Toucher-Coulé.
-  minPlayers: 1,
+  // 2 humains par défaut ; avec l'option bots du lobby, un joueur seul peut
+  // lancer (buildMenteurState comble jusqu'à 2).
+  minPlayers: 2,
   maxPlayers: MENTEUR_MAX_PLAYERS,
+  botsFillable: true,
   parse: (json) => parseMenteurState(json),
   serialize: (state) => serializeMenteurState(state as MenteurState),
   applyAction(rawState, userId, body) {
@@ -286,11 +295,11 @@ const menteurAdapter: GameAdapter = {
 // ─── L'Imposteur ─────────────────────────────────────────────────────────────
 
 const imposteurAdapter: GameAdapter = {
-  // Un joueur seul peut lancer : les bots comblent jusqu'à 3
-  // (buildImposteurState) — même philosophie que le Toucher-Coulé. Une bonne
-  // partie reste à 3+ humains, mais on ne bloque pas les tests/petites tables.
-  minPlayers: 1,
+  // 3 humains par défaut (déduction sociale) ; avec l'option bots du lobby,
+  // un joueur seul peut lancer (buildImposteurState comble jusqu'à 3).
+  minPlayers: IMPOSTEUR_MIN_PLAYERS,
   maxPlayers: IMPOSTEUR_MAX_PLAYERS,
+  botsFillable: true,
   parse: (json) => parseImposteurState(json),
   serialize: (state) => serializeImposteurState(state as ImposteurState),
   applyAction(rawState, userId, body) {
@@ -338,9 +347,11 @@ const imposteurAdapter: GameAdapter = {
 // ─── Le Grand Pillaveur (quiz) ───────────────────────────────────────────────
 
 const quizAdapter: GameAdapter = {
-  // Un joueur seul peut lancer : bots de complément jusqu'à 2 (buildQuizState).
-  minPlayers: 1,
+  // 2 humains par défaut ; avec l'option bots du lobby, un joueur seul peut
+  // lancer (buildQuizState comble jusqu'à 2).
+  minPlayers: 2,
   maxPlayers: QUIZ_MAX_PLAYERS,
+  botsFillable: true,
   parse: (json) => parseQuizState(json),
   serialize: (state) => serializeQuizState(state as QuizState),
   applyAction(rawState, userId, body) {
@@ -384,10 +395,11 @@ const quizAdapter: GameAdapter = {
 // ─── Loup-Garou ──────────────────────────────────────────────────────────────
 
 const loupGarouAdapter: GameAdapter = {
-  // Un joueur seul peut lancer : les bots comblent jusqu'à 3 (buildLGState).
-  // Une bonne partie reste à 3+ humains, mais on ne bloque pas les tests.
-  minPlayers: 1,
+  // 3 humains par défaut (déduction sociale) ; avec l'option bots du lobby,
+  // un joueur seul peut lancer (buildLGState comble jusqu'à 3).
+  minPlayers: LG_MIN_PLAYERS,
   maxPlayers: LG_MAX_PLAYERS,
+  botsFillable: true,
   parse: (json) => parseLGState(json),
   serialize: (state) => serializeLGState(state as LGState),
   applyAction(rawState, userId, body) {

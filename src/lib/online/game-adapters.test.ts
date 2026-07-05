@@ -15,6 +15,9 @@ describe('bornes de joueurs : registre ↔ GAMES', () => {
       expect(meta?.onlineReady, `${gameId} devrait être onlineReady`).toBe(true)
       expect(meta?.minPlayers, `minPlayers de ${gameId}`).toBe(adapter.minPlayers)
       expect(meta?.maxPlayers, `maxPlayers de ${gameId}`).toBe(adapter.maxPlayers)
+      expect(Boolean(meta?.botsFillable), `botsFillable de ${gameId}`).toBe(
+        Boolean(adapter.botsFillable)
+      )
     })
   }
 })

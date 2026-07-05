@@ -84,8 +84,10 @@ export async function POST(_request: Request, { params }: Params) {
     }
   } else {
     // Bornes du registre (jeux serveur-autoritaires) ; 2 joueurs par défaut.
+    // Option « compléter avec des bots » (hôte) : minimum 1, le launch comble.
     const adapter = getGameAdapter(room.gameId)
-    const min = adapter?.minPlayers ?? 2
+    const settings = parseRoomSettings(room.settingsJson)
+    const min = settings.botsFill && adapter?.botsFillable ? 1 : adapter?.minPlayers ?? 2
     const max = adapter?.maxPlayers ?? Number.MAX_SAFE_INTEGER
     if (room.members.length < min) {
       return NextResponse.json(

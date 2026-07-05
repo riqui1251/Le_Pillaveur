@@ -52,6 +52,9 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.lgDebateMin === 'number' && [1, 2, 3, 4, 5].includes(body.lgDebateMin)) {
     next.lgDebateMin = body.lgDebateMin
   }
+  if (typeof body.botsFill === 'boolean') {
+    next.botsFill = body.botsFill
+  }
 
   const visibilityUpdate =
     typeof body.visibility === 'string' && VALID_VISIBILITIES.has(body.visibility)

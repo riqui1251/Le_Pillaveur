@@ -19,6 +19,8 @@ export type GameMeta = {
    */
   minPlayers?: number;
   maxPlayers?: number;
+  /** L'hôte peut activer « compléter avec des bots » au lobby (lancer sous le minimum). */
+  botsFillable?: boolean;
 };
 
 // Source unique de vérité pour les jeux
@@ -96,7 +98,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#ef4444',
     fallbackColor: '#f97316',
     onlineReady: true,
-    minPlayers: 1,
+    minPlayers: 2,
+    botsFillable: true,
     maxPlayers: 6,
     onlineOnly: true,
   },
@@ -111,7 +114,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#d946ef',
     fallbackColor: '#a855f7',
     onlineReady: true,
-    minPlayers: 1,
+    minPlayers: 3,
+    botsFillable: true,
     maxPlayers: 10,
     onlineOnly: true,
   },
@@ -126,7 +130,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#22d3ee',
     fallbackColor: '#3b82f6',
     onlineReady: true,
-    minPlayers: 1,
+    minPlayers: 2,
+    botsFillable: true,
     maxPlayers: 12,
     onlineOnly: true,
   },
@@ -141,7 +146,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
     onlineReady: true,
-    minPlayers: 1,
+    minPlayers: 3,
+    botsFillable: true,
     maxPlayers: 12,
     onlineOnly: true,
   },

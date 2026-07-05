@@ -173,6 +173,12 @@
       "title": "Hai una partita in corso!",
       "cta": "Rientra in partita",
       "botCountdown": "Un bot ti sostituisce tra {seconds}s"
+    },
+    "botsFill": {
+      "title": "Completa con i bot",
+      "hint": "Lancia anche senza {min} giocatori — i bot prendono i posti vuoti.",
+      "on": "Attivo",
+      "off": "Disattivo"
     }
   },
   "chat": {
@@ -2039,7 +2045,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "Il Lupo Mannaro si gioca online: ognuno riceve un ruolo segreto sul PROPRIO telefono. I bot riempiono i posti vuoti — meglio con 3+ umani!",
+        "onlineOnly": "Il Lupo Mannaro si gioca online: ognuno riceve un ruolo segreto sul PROPRIO telefono. Minimo 3 giocatori — o attiva l’opzione bot nella lobby!",
         "switchOnline": "Passa alla modalità online"
       },
       "lobby": {
