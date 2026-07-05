@@ -12,6 +12,13 @@ export type GameMeta = {
   onlineReady?: boolean;
   /** Jeu impossible en local (info cachée multi-écrans) : masqué du hub en mode local. */
   onlineOnly?: boolean;
+  /**
+   * Bornes de joueurs EN LIGNE — informatif UI (hub + lobby). La vérité côté
+   * serveur vit dans `src/lib/online/game-adapters.ts` ; un test vérifie que
+   * les deux restent synchronisés.
+   */
+  minPlayers?: number;
+  maxPlayers?: number;
 };
 
 // Source unique de vérité pour les jeux
@@ -60,6 +67,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#2dd4bf',
     fallbackColor: '#10b981',
     onlineReady: true,
+    minPlayers: 2,
+    maxPlayers: 99,
   },
   {
     id: 'toucher-coule',
@@ -72,6 +81,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#22d3ee',
     fallbackColor: '#0ea5e9',
     onlineReady: true,
+    minPlayers: 1,
+    maxPlayers: 6,
     onlineOnly: true,
   },
   {
@@ -85,6 +96,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#ef4444',
     fallbackColor: '#f97316',
     onlineReady: true,
+    minPlayers: 1,
+    maxPlayers: 6,
     onlineOnly: true,
   },
   {
@@ -98,6 +111,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#d946ef',
     fallbackColor: '#a855f7',
     onlineReady: true,
+    minPlayers: 3,
+    maxPlayers: 10,
     onlineOnly: true,
   },
   {
@@ -111,6 +126,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#22d3ee',
     fallbackColor: '#3b82f6',
     onlineReady: true,
+    minPlayers: 1,
+    maxPlayers: 12,
     onlineOnly: true,
   },
   {
@@ -124,6 +141,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
     onlineReady: true,
+    minPlayers: 3,
+    maxPlayers: 12,
     onlineOnly: true,
   },
   {

@@ -23,7 +23,7 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  * phases dont l'acteur est PUBLIQUEMENT mort sont sautées.
  */
 
-export const LG_MIN_PLAYERS = 5
+export const LG_MIN_PLAYERS = 3
 export const LG_MAX_PLAYERS = 12
 export const LG_REVEAL_MS = 10_000
 export const LG_SEER_MS = 30_000

@@ -12,6 +12,14 @@ interface GameCardProps {
   icon: ReactNode
 }
 
+/** Badge « nombre de joueurs » : 3-12, ou 2+ quand il n'y a pas de vrai plafond. */
+function playersLabel(min?: number, max?: number): string | null {
+  if (!min) return null
+  if (!max || max >= 13) return `${min}+`
+  if (max === min) return `${min}`
+  return `${min}-${max}`
+}
+
 export function GameCard({ game, icon }: GameCardProps) {
   const router = useRouter()
   const { user } = useAuth()
@@ -19,6 +27,8 @@ export function GameCard({ game, icon }: GameCardProps) {
   const isOnline = user?.playMode === "online"
   const from = game.colorFrom || game.fallbackColor
   const to = game.colorTo || game.fallbackColor
+  // Le nombre de joueurs concerne les salles EN LIGNE (en local, c'est libre).
+  const players = isOnline ? playersLabel(game.minPlayers, game.maxPlayers) : null
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (isOnline) return
@@ -54,6 +64,14 @@ export function GameCard({ game, icon }: GameCardProps) {
               {game.description}
             </p>
           </div>
+          {players && (
+            <span
+              className="absolute right-1.5 top-1.5 rounded-full border border-white/20 bg-black/40 px-1.5 py-0.5 text-[10px] font-bold text-white/90 backdrop-blur-sm"
+              aria-label={`${players} joueurs`}
+            >
+              👥 {players}
+            </span>
+          )}
         </div>
       </article>
     </Link>

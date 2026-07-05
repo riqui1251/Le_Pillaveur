@@ -288,7 +288,7 @@ const menteurAdapter: GameAdapter = {
 // ─── L'Imposteur ─────────────────────────────────────────────────────────────
 
 const imposteurAdapter: GameAdapter = {
-  // 4 joueurs requis au LOBBY (une bonne partie a besoin d'humains) ; le
+  // 3 joueurs requis au LOBBY (une bonne partie a besoin d'humains) ; le
   // rematch avec moins de membres est comblé par des bots (buildImposteurState).
   minPlayers: IMPOSTEUR_MIN_PLAYERS,
   maxPlayers: IMPOSTEUR_MAX_PLAYERS,
@@ -385,7 +385,7 @@ const quizAdapter: GameAdapter = {
 // ─── Loup-Garou ──────────────────────────────────────────────────────────────
 
 const loupGarouAdapter: GameAdapter = {
-  // 5 joueurs requis au LOBBY (déduction sociale = humains) ; le rematch avec
+  // 3 joueurs requis au LOBBY (déduction sociale = humains) ; le rematch avec
   // moins de membres est comblé par des bots (buildLGState).
   minPlayers: LG_MIN_PLAYERS,
   maxPlayers: LG_MAX_PLAYERS,

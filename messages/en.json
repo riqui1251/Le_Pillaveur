@@ -2049,7 +2049,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "Werewolf is played online: everyone gets a secret role on THEIR phone. 5 players minimum!",
+        "onlineOnly": "Werewolf is played online: everyone gets a secret role on THEIR phone. 3 players minimum!",
         "switchOnline": "Switch to online mode"
       },
       "lobby": {

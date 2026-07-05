@@ -16,7 +16,7 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  * `ADVANCE` à l'échéance — validé par l'horloge SERVEUR uniquement.
  */
 
-export const IMPOSTEUR_MIN_PLAYERS = 4
+export const IMPOSTEUR_MIN_PLAYERS = 3
 export const IMPOSTEUR_MAX_PLAYERS = 10
 /** Temps pour donner SON indice. */
 export const IMPOSTEUR_CLUE_MS = 45_000
@@ -336,7 +336,10 @@ export function reduceImposteur(state: ImposteurState, action: ImposteurAction):
           version: state.version + 1,
         }
       }
-      if (alive.length <= 3) {
+      // L'imposteur gagne en atteignant les 3 derniers — sauf table de 3
+      // joueurs, où la partie DÉMARRE à 3 : il doit y survivre jusqu'à 2.
+      const imposteurWinAt = state.players.length <= 3 ? 2 : 3
+      if (alive.length <= imposteurWinAt) {
         return {
           ...state,
           phase: 'finished',

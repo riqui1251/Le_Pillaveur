@@ -31,7 +31,7 @@ export interface LGRoomMember {
 const LG_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
 
 /**
- * Construit l'état initial. Le lobby exige 5 joueurs (la déduction sociale a
+ * Construit l'état initial. Le lobby exige 3 joueurs (la déduction sociale a
  * besoin d'humains) ; un REMATCH après des départs est complété par des bots
  * (leçon Menteur : tout launch doit tolérer peu de membres).
  */

@@ -70,10 +70,11 @@ describe('createImposteurState', () => {
     expect(seven.players.filter((p) => p.team === 'imposteur')).toHaveLength(2)
   })
 
-  it('borne 4-10 joueurs et démarre en phase indice chronométrée', () => {
-    expect(() => createImposteurState(FOUR.slice(0, 3), PAIRS, 1, T0)).toThrow(
+  it('borne 3-10 joueurs et démarre en phase indice chronométrée', () => {
+    expect(() => createImposteurState(FOUR.slice(0, 2), PAIRS, 1, T0)).toThrow(
       ImposteurEngineError
     )
+    expect(createImposteurState(FOUR.slice(0, 3), PAIRS, 1, T0).players).toHaveLength(3)
     const eleven = Array.from({ length: 11 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
     expect(() => createImposteurState(eleven, PAIRS, 1, T0)).toThrow(ImposteurEngineError)
     const s = make(4)
@@ -236,6 +237,16 @@ describe('révélation, gorgées et victoires', () => {
     const done = reduceImposteur(s, { type: 'CONTINUE', playerId: imposteur.id, now: T0 })
     expect(done.phase).toBe('finished')
     expect(done.winnerTeam).toBe('civil')
+  })
+
+  it('table de 3 : la partie démarre (pas de victoire immédiate), imposteur gagne à 2', () => {
+    const s0 = createImposteurState(FOUR.slice(0, 3), PAIRS, 'trio', T0)
+    expect(s0.phase).toBe('clue') // pas fini d'entrée de jeu
+    const civil = s0.players.find((p) => p.team === 'civil')!
+    const s = eliminate(s0, civil.id)
+    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: civil.id, now: T0 })
+    expect(done.phase).toBe('finished') // 2 vivants dont l'imposteur
+    expect(done.winnerTeam).toBe('imposteur')
   })
 
   it("l'imposteur gagne s'il atteint les 3 derniers", () => {

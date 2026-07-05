@@ -100,13 +100,17 @@ describe('création et rôles', () => {
     expect(lgRolesFor(12)).toHaveLength(12)
   })
 
-  it('création : bornes 5-12, reproductible, phase reveal-role chronométrée', () => {
+  it('création : bornes 3-12, reproductible, phase reveal-role chronométrée', () => {
     const players = Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
     const s = createLGState(players, 'seed', LG_DEBATE_DEFAULT_MS, T0)
     expect(s.phase).toBe('reveal-role')
     expect(s.phaseEndsAt).toBe(T0 + LG_REVEAL_MS)
     expect(s).toEqual(createLGState(players, 'seed', LG_DEBATE_DEFAULT_MS, T0))
-    expect(() => createLGState(players.slice(0, 4), 1, LG_DEBATE_DEFAULT_MS, T0)).toThrow(
+    // Table de 3 : 1 loup + voyante + villageois — jouable, pas de victoire d'entrée.
+    const trio = createLGState(players.slice(0, 3), 'seed', LG_DEBATE_DEFAULT_MS, T0)
+    expect(trio.players.map((p) => p.role).sort()).toEqual(['loup', 'villageois', 'voyante'])
+    expect(trio.winnerTeam).toBeNull()
+    expect(() => createLGState(players.slice(0, 2), 1, LG_DEBATE_DEFAULT_MS, T0)).toThrow(
       LGEngineError
     )
     const thirteen = Array.from({ length: 13 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
@@ -451,11 +455,11 @@ describe('vues anti-triche (3 niveaux + TV)', () => {
 })
 
 describe('buildLGState (adaptateur)', () => {
-  it('complète avec des bots jusqu’à 5 (résilience du rematch)', async () => {
+  it('complète avec des bots jusqu’au minimum (résilience du rematch)', async () => {
     const { buildLGState } = await import('./server-adapter')
     const s = buildLGState([{ userId: 'u1', user: { displayName: 'Riri' } }], undefined, 42)
-    expect(s.players).toHaveLength(5)
-    expect(s.players.filter((p) => p.isBot)).toHaveLength(4)
+    expect(s.players).toHaveLength(3) // = LG_MIN_PLAYERS
+    expect(s.players.filter((p) => p.isBot)).toHaveLength(2)
     expect(s.players[0]).toMatchObject({ id: 'u1', isBot: false })
   })
 })

@@ -653,11 +653,16 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-5 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Play className="mr-2 h-5 w-5" />
-            {room.canLaunch
-              ? 'Lancer la partie'
-              : room.members.length < 2
-                ? 'En attente de joueurs (min. 2)'
-                : `En attente (${room.members.filter((m) => m.isReady).length}/${room.members.length} prêts)`}
+            {(() => {
+              // Minimum PAR JEU (affichage — la vérité serveur est dans le
+              // registre game-adapters, synchronisée par test avec GAMES).
+              const minPlayers = GAMES.find((g) => g.id === gameId)?.minPlayers ?? 2
+              return room.canLaunch
+                ? 'Lancer la partie'
+                : room.members.length < minPlayers
+                  ? `En attente de joueurs (min. ${minPlayers})`
+                  : `En attente (${room.members.filter((m) => m.isReady).length}/${room.members.length} prêts)`
+            })()}
           </Button>
         ) : (
           <p className="text-center text-sm text-white/50">

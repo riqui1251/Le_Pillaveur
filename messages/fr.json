@@ -2054,7 +2054,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "Le Loup-Garou se joue en ligne : chacun reçoit un rôle secret sur SON téléphone. 5 joueurs minimum !",
+        "onlineOnly": "Le Loup-Garou se joue en ligne : chacun reçoit un rôle secret sur SON téléphone. 3 joueurs minimum !",
         "switchOnline": "Passer en mode en ligne"
       },
       "lobby": {

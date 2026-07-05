@@ -28,7 +28,7 @@ export interface ImposteurRoomMember {
 const IMPOSTEUR_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
 
 /**
- * Construit l'état initial. Le lobby exige 4 joueurs pour une bonne partie,
+ * Construit l'état initial. Le lobby exige 3 joueurs pour une bonne partie,
  * mais un REMATCH après des départs peut en avoir moins : on complète alors
  * avec des bots (leçon du Menteur — tout launch doit tolérer peu de membres).
  */
