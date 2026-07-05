@@ -51,7 +51,6 @@ import {
 import {
   currentImposteurActorId,
   toImposteurClientView,
-  IMPOSTEUR_MIN_PLAYERS,
   IMPOSTEUR_MAX_PLAYERS,
   type ImposteurState,
 } from '@/lib/imposteur/engine'
@@ -86,7 +85,6 @@ import {
 import {
   currentLGActorId,
   toLGClientView,
-  LG_MIN_PLAYERS,
   LG_MAX_PLAYERS,
   type LGState,
 } from '@/lib/loup-garou/engine'
@@ -288,9 +286,10 @@ const menteurAdapter: GameAdapter = {
 // ─── L'Imposteur ─────────────────────────────────────────────────────────────
 
 const imposteurAdapter: GameAdapter = {
-  // 3 joueurs requis au LOBBY (une bonne partie a besoin d'humains) ; le
-  // rematch avec moins de membres est comblé par des bots (buildImposteurState).
-  minPlayers: IMPOSTEUR_MIN_PLAYERS,
+  // Un joueur seul peut lancer : les bots comblent jusqu'à 3
+  // (buildImposteurState) — même philosophie que le Toucher-Coulé. Une bonne
+  // partie reste à 3+ humains, mais on ne bloque pas les tests/petites tables.
+  minPlayers: 1,
   maxPlayers: IMPOSTEUR_MAX_PLAYERS,
   parse: (json) => parseImposteurState(json),
   serialize: (state) => serializeImposteurState(state as ImposteurState),
@@ -385,9 +384,9 @@ const quizAdapter: GameAdapter = {
 // ─── Loup-Garou ──────────────────────────────────────────────────────────────
 
 const loupGarouAdapter: GameAdapter = {
-  // 3 joueurs requis au LOBBY (déduction sociale = humains) ; le rematch avec
-  // moins de membres est comblé par des bots (buildLGState).
-  minPlayers: LG_MIN_PLAYERS,
+  // Un joueur seul peut lancer : les bots comblent jusqu'à 3 (buildLGState).
+  // Une bonne partie reste à 3+ humains, mais on ne bloque pas les tests.
+  minPlayers: 1,
   maxPlayers: LG_MAX_PLAYERS,
   parse: (json) => parseLGState(json),
   serialize: (state) => serializeLGState(state as LGState),

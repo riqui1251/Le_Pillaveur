@@ -2039,7 +2039,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "Il Lupo Mannaro si gioca online: ognuno riceve un ruolo segreto sul PROPRIO telefono. Minimo 3 giocatori!",
+        "onlineOnly": "Il Lupo Mannaro si gioca online: ognuno riceve un ruolo segreto sul PROPRIO telefono. I bot riempiono i posti vuoti — meglio con 3+ umani!",
         "switchOnline": "Passa alla modalità online"
       },
       "lobby": {
