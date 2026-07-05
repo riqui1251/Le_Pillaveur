@@ -7,6 +7,9 @@ export type RoomSettings = {
   /** Langue de la salle (contenu localisé serveur — ex. mots de l'Imposteur). */
   lang?: 'fr' | 'en' | 'es' | 'it'
 
+  /** Quiz : nombre de questions de la partie (10/15/20). */
+  quizCount?: number
+
   plinkoDifficulty?: 'easy' | 'medium' | 'hard'
 
   hiLoMode?: 'standard' | 'traversee'
@@ -642,6 +645,25 @@ export function parseImposteurSyncedState(
   }
 }
 
+// ─── Le Grand Pillaveur (quiz) ───────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/quiz). */
+export type QuizSyncedState = {
+  version: number
+  phase: 'question' | 'reveal' | 'finished'
+  rematchVotes?: string[]
+}
+
+export function parseQuizSyncedState(json: string | null | undefined): QuizSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as QuizSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -655,6 +677,7 @@ export type AnyOnlineGameState =
   | ToucherCouleSyncedState
   | MenteurSyncedState
   | ImposteurSyncedState
+  | QuizSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -681,6 +704,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parseMenteurSyncedState(json) as T | null
     case 'imposteur':
       return parseImposteurSyncedState(json) as T | null
+    case 'quiz':
+      return parseQuizSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -711,6 +736,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return (state as MenteurSyncedState).phase === 'finished'
     case 'imposteur':
       return (state as ImposteurSyncedState).phase === 'finished'
+    case 'quiz':
+      return (state as QuizSyncedState).phase === 'finished'
     default:
       return false
   }

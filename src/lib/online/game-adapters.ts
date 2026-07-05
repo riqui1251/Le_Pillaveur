@@ -55,6 +55,23 @@ import {
   IMPOSTEUR_MAX_PLAYERS,
   type ImposteurState,
 } from '@/lib/imposteur/engine'
+import {
+  parseQuizState,
+  serializeQuizState,
+  applyQuizRoomAction,
+  convertQuizPlayerToBot,
+  markQuizPlayerLeft,
+  rejoinQuizPlayer,
+  quizClientViewJson,
+  quizSpectatorViewJson,
+  type QuizRoomActionInput,
+} from '@/lib/quiz/server-adapter'
+import {
+  currentQuizActorId,
+  toQuizClientView,
+  QUIZ_MAX_PLAYERS,
+  type QuizState,
+} from '@/lib/quiz/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -301,6 +318,52 @@ const imposteurAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinImposteurPlayer(state as ImposteurState, userId),
 }
 
+// ─── Le Grand Pillaveur (quiz) ───────────────────────────────────────────────
+
+const quizAdapter: GameAdapter = {
+  // Un joueur seul peut lancer : bots de complément jusqu'à 2 (buildQuizState).
+  minPlayers: 1,
+  maxPlayers: QUIZ_MAX_PLAYERS,
+  parse: (json) => parseQuizState(json),
+  serialize: (state) => serializeQuizState(state as QuizState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as QuizState
+    let input: QuizRoomActionInput
+    if (body.action === 'answer' && typeof body.choice === 'number') {
+      input = { type: 'answer', choice: body.choice }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyQuizRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertQuizPlayerToBot(state as QuizState, userId),
+  isFinished: (state) => (state as QuizState).phase === 'finished',
+  currentActorId: () => currentQuizActorId(),
+  clientViewJson: (state, viewerId) => quizClientViewJson(state as QuizState, viewerId),
+  spectatorViewJson: (state) => quizSpectatorViewJson(state as QuizState),
+  actionResponse: (state, viewerId) => ({
+    view: toQuizClientView(state as QuizState, viewerId),
+    viewJson: quizClientViewJson(state as QuizState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markQuizPlayerLeft(state as QuizState, userId, at),
+  rejoin: (state, userId) => rejoinQuizPlayer(state as QuizState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -308,6 +371,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   'toucher-coule': toucherCouleAdapter,
   menteur: menteurAdapter,
   imposteur: imposteurAdapter,
+  quiz: quizAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {
