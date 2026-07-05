@@ -10,6 +10,7 @@ import { launchOnlineRoom } from '@/lib/online-room-launch'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
+import { getGameAdapter } from '@/lib/online/game-adapters'
 
 
 
@@ -71,7 +72,7 @@ export async function POST(_request: Request, { params }: Params) {
 
   }
 
-  // Toucher-Coulé : les bots comblent les sièges vides, un joueur seul peut lancer.
+  // Toucher-Coulé : capacité dépendante du format d'équipes (bots de complément).
   if (room.gameId === 'toucher-coule') {
     const settings = parseRoomSettings(room.settingsJson)
     const capacity = TC_MODES[settings.tcMode ?? '1v1'].playersPerTeam * 2
@@ -81,10 +82,23 @@ export async function POST(_request: Request, { params }: Params) {
         { status: 400 }
       )
     }
-  } else if (room.members.length < 2) {
-
-    return NextResponse.json({ error: 'Au moins 2 joueurs requis pour lancer' }, { status: 400 })
-
+  } else {
+    // Bornes du registre (jeux serveur-autoritaires) ; 2 joueurs par défaut.
+    const adapter = getGameAdapter(room.gameId)
+    const min = adapter?.minPlayers ?? 2
+    const max = adapter?.maxPlayers ?? Number.MAX_SAFE_INTEGER
+    if (room.members.length < min) {
+      return NextResponse.json(
+        { error: `Au moins ${min} joueur${min > 1 ? 's' : ''} requis pour lancer` },
+        { status: 400 }
+      )
+    }
+    if (room.members.length > max) {
+      return NextResponse.json(
+        { error: `Trop de joueurs pour ce jeu (max ${max})` },
+        { status: 400 }
+      )
+    }
   }
 
   if (!room.members.every((m) => m.isReady)) {

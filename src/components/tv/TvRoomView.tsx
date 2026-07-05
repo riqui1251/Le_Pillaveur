@@ -10,6 +10,8 @@ import { TvStage } from './TvStage'
 import { TvLobby } from './TvLobby'
 import { TvPetitBuveur } from './TvPetitBuveur'
 import { TvToucherCoule } from './TvToucherCoule'
+import { TvQuiz } from './TvQuiz'
+import type { QuizClientView } from '@/lib/quiz/engine'
 import { TvVictory } from './TvVictory'
 import { TvPlinko } from './TvPlinko'
 import { TvPmu } from './TvPmu'
@@ -19,6 +21,7 @@ const GAME_TITLES: Record<string, string> = {
   'toucher-coule': 'Toucher-Coulé',
   menteur: 'Le Menteur',
   imposteur: "L'Imposteur",
+  quiz: 'Le Grand Pillaveur',
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
@@ -112,6 +115,8 @@ export function TvRoomView({ code }: { code: string }) {
     content = <TvPetitBuveur room={room} state={state as unknown as EngineState} />
   } else if (room.gameId === 'toucher-coule') {
     content = <TvToucherCoule room={room} state={state as unknown as TCClientView} />
+  } else if (room.gameId === 'quiz') {
+    content = <TvQuiz room={room} state={state as unknown as QuizClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

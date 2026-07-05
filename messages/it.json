@@ -471,6 +471,10 @@
       "trial-poursuite": {
         "title": "Trial Poursuite",
         "description": "Affronta di nuovo sfide folli sotto pressione! Coordinazione, creatività e velocità nel programma."
+      },
+      "quiz": {
+        "title": "Il Gran Pillaveur",
+        "description": "Il quiz da festa: rispondi veloce e giusto, o bevi! Telefoni-pulsanti e podio finale."
       }
     },
     "roulette-russe": {
@@ -1997,6 +2001,37 @@
         "soundOff": "Disattiva l'audio",
         "tapToSkip": "Tocca per saltare"
       }
+    },
+    "quiz": {
+      "page": {
+        "onlineOnly": "Il quiz si gioca online: ognuno risponde in segreto dal PROPRIO telefono, come un vero pulsante!",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "questionCount": "Numero di domande",
+        "questions": "domande"
+      },
+      "game": {
+        "progress": "Domanda {n}/{total}",
+        "cat": {
+          "culture": "Cultura generale",
+          "bouffe": "Cibo e alcol",
+          "musique": "Musica",
+          "sport": "Sport",
+          "ecrans": "Cinema e serie",
+          "fete": "Il mondo della festa"
+        },
+        "answerPrompt": "Rispondi veloce: più sei rapido, più punti fai!",
+        "answerSent": "Risposta inviata — in attesa degli altri… ⚡",
+        "correct": "Giusto: +{points} punti!",
+        "wrong": "Sbagliato… {sips} sorsi 🍺",
+        "skipReveal": "Prossima domanda →",
+        "victoryTitle": "{name} vince il quiz!",
+        "lastDrinks": "{name} finisce il bicchiere 🍻",
+        "replay": "Rigioca",
+        "rematchWaiting": "In attesa degli altri ({count}/{total})",
+        "backToMenu": "Torna al menu"
+      }
     }
   },
   "stats": {
@@ -2499,6 +2534,7 @@
     "drinkVerb": "Beve",
     "giveVerb": "Dà",
     "racing": "In gara!",
-    "castShort": "TV"
+    "castShort": "TV",
+    "answerOnPhone": "Rispondete dai vostri telefoni!"
   }
 }

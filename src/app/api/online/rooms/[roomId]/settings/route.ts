@@ -46,6 +46,9 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.tcMode === 'string' && VALID_TC_MODES.has(body.tcMode)) {
     next.tcMode = body.tcMode as NonNullable<RoomSettings['tcMode']>
   }
+  if (typeof body.quizCount === 'number' && [10, 15, 20].includes(body.quizCount)) {
+    next.quizCount = body.quizCount
+  }
 
   const visibilityUpdate =
     typeof body.visibility === 'string' && VALID_VISIBILITIES.has(body.visibility)

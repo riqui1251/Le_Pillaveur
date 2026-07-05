@@ -481,6 +481,10 @@
       "trial-poursuite": {
         "title": "Trial Poursuite",
         "description": "Take on crazy challenges under pressure again! Coordination, creativity and speed on the program."
+      },
+      "quiz": {
+        "title": "The Big Pillaveur Quiz",
+        "description": "The party quiz: answer fast and right, or drink! Phone buzzers and a final podium."
       }
     },
     "roulette-russe": {
@@ -2007,6 +2011,37 @@
         "soundOff": "Mute sound",
         "tapToSkip": "Tap to skip"
       }
+    },
+    "quiz": {
+      "page": {
+        "onlineOnly": "The quiz is played online: everyone answers secretly on THEIR phone, like a real buzzer!",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "questionCount": "Number of questions",
+        "questions": "questions"
+      },
+      "game": {
+        "progress": "Question {n}/{total}",
+        "cat": {
+          "culture": "General knowledge",
+          "bouffe": "Food & Drinks",
+          "musique": "Music",
+          "sport": "Sport",
+          "ecrans": "Movies & Series",
+          "fete": "Party world"
+        },
+        "answerPrompt": "Answer fast: the quicker you are, the more you score!",
+        "answerSent": "Answer sent — waiting for the others… ⚡",
+        "correct": "Correct: +{points} points!",
+        "wrong": "Wrong… {sips} sips 🍺",
+        "skipReveal": "Next question →",
+        "victoryTitle": "{name} wins the quiz!",
+        "lastDrinks": "{name} finishes their drink 🍻",
+        "replay": "Play again",
+        "rematchWaiting": "Waiting for the others ({count}/{total})",
+        "backToMenu": "Back to menu"
+      }
     }
   },
   "stats": {
@@ -2509,6 +2544,7 @@
     "drinkVerb": "Drinks",
     "giveVerb": "Gives",
     "racing": "Racing!",
-    "castShort": "TV"
+    "castShort": "TV",
+    "answerOnPhone": "Answer on your phones!"
   }
 }

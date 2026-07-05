@@ -481,6 +481,10 @@
       "trial-poursuite": {
         "title": "Trial Poursuite",
         "description": "Redez des défis fous sous pression ! Coordination, créativité et rapidité au programme."
+      },
+      "quiz": {
+        "title": "Le Grand Pillaveur",
+        "description": "Le quiz apéro : réponds vite et juste, ou bois ! Téléphones-buzzers et podium final."
       }
     },
     "roulette-russe": {
@@ -2012,6 +2016,37 @@
         "soundOff": "Couper le son",
         "tapToSkip": "Toucher pour passer"
       }
+    },
+    "quiz": {
+      "page": {
+        "onlineOnly": "Le Grand Pillaveur se joue en ligne : chacun répond en secret sur SON téléphone, comme un vrai buzzer !",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "questionCount": "Nombre de questions",
+        "questions": "questions"
+      },
+      "game": {
+        "progress": "Question {n}/{total}",
+        "cat": {
+          "culture": "Culture générale",
+          "bouffe": "Bouffe & Alcool",
+          "musique": "Musique",
+          "sport": "Sport",
+          "ecrans": "Ciné & Séries",
+          "fete": "Le monde de la fête"
+        },
+        "answerPrompt": "Réponds vite : plus tu es rapide, plus tu marques !",
+        "answerSent": "Réponse envoyée — on attend les autres… ⚡",
+        "correct": "Bonne réponse : +{points} points !",
+        "wrong": "Raté… {sips} gorgées 🍺",
+        "skipReveal": "Question suivante →",
+        "victoryTitle": "{name} remporte le quiz !",
+        "lastDrinks": "{name} finit son verre 🍻",
+        "replay": "Rejouer",
+        "rematchWaiting": "En attente des autres ({count}/{total})",
+        "backToMenu": "Retour au menu"
+      }
     }
   },
   "stats": {
@@ -2514,6 +2549,7 @@
     "drinkVerb": "Boit",
     "giveVerb": "Donne",
     "racing": "En course !",
-    "castShort": "TV"
+    "castShort": "TV",
+    "answerOnPhone": "Répondez sur vos téléphones !"
   }
 }

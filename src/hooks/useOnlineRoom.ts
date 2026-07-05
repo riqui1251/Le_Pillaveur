@@ -240,6 +240,7 @@ export function useOnlineRoom() {
       hiLoMode?: 'standard' | 'traversee'
       visibility?: 'public' | 'private' | 'invite'
       tcMode?: '1v1' | '2v2' | '3v3'
+      quizCount?: number
     }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {
