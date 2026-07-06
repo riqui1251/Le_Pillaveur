@@ -41,7 +41,7 @@ function playFullGame(count: number, seed: string): LGState {
 }
 
 describe('simulation : des bots seuls finissent toujours une partie', () => {
-  for (const count of [3, 5, 7, 9, 12]) {
+  for (const count of [4, 5, 7, 9, 12]) {
     it(`table de ${count} joueurs`, () => {
       for (let seed = 0; seed < 5; seed += 1) {
         const s = playFullGame(count, `smoke-${count}-${seed}`)

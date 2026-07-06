@@ -62,16 +62,22 @@ describe('createMenteurState', () => {
     expect(() => createMenteurState(seven, 1)).toThrow(MenteurEngineError)
   })
 
-  it('buildMenteurState comble les sièges vides avec des bots (solo + rematch)', () => {
-    const solo = buildMenteurState([{ userId: 'u1', user: { displayName: 'Riri' } }], 42)
+  it('buildMenteurState : bots choisis par l’hôte + filet jusqu’au minimum', () => {
+    // Filet : sans bots demandés, complété à 2 (rematch résilient).
+    const solo = buildMenteurState([{ userId: 'u1', user: { displayName: 'Riri' } }], 0, 42)
     expect(solo.players).toHaveLength(2)
     expect(solo.players[0]).toMatchObject({ id: 'u1', isBot: false })
     expect(solo.players[1].isBot).toBe(true)
+    // Nombre choisi : 1 humain + 3 bots = 4 joueurs.
+    const withBots = buildMenteurState([{ userId: 'u1', user: { displayName: 'Riri' } }], 3, 42)
+    expect(withBots.players).toHaveLength(4)
+    expect(withBots.players.filter((p) => p.isBot)).toHaveLength(3)
     const duo = buildMenteurState(
       [
         { userId: 'u1', user: { displayName: 'A' } },
         { userId: 'u2', user: { displayName: 'B' } },
       ],
+      0,
       42
     )
     expect(duo.players).toHaveLength(2)

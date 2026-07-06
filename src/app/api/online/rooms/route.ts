@@ -36,6 +36,9 @@ export async function POST(request: Request) {
         code,
         gameId,
         hostUserId: user.id,
+        // Privé par défaut : la salle ne s'affiche pas dans la liste publique
+        // (on la rejoint par code/QR/invitation) ; l'hôte peut l'ouvrir.
+        visibility: 'private',
         settingsJson: JSON.stringify(
           gameId === 'plinko'
             ? { plinkoDifficulty: 'medium', lang }

@@ -67,8 +67,25 @@ export function QuizOnline() {
     return () => clearInterval(timer)
   }, [view])
 
-  // Ticks « arbitre » : bots (délai naturel aléatoire), échéance de phase,
-  // remplacement des partis. Tous revalidés côté serveur (idempotents).
+  // ÉCHÉANCE DE PHASE : TOUS les clients envoient le tick « advance »
+  // (idempotent, jitter) — un arbitre unique au téléphone verrouillé
+  // laissait la partie bloquée jusqu'au refresh.
+  useEffect(() => {
+    if (!view || !room || view.phase === 'finished' || view.phaseEndsAt === null) return
+    const expectedVersion = room.stateVersion
+    const delay = Math.max(250, view.phaseEndsAt - Date.now() + 300 + Math.random() * 700)
+    const timer = setTimeout(() => {
+      void fetch(`/api/online/rooms/${room.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
+      })
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [view, room])
+
+  // Ticks « arbitre » (bots + remplacement des partis).
   useEffect(() => {
     if (!view || !user || !room || view.phase === 'finished') return
     const referee = view.players.find((p) => !p.isBot && !p.leftAt)
@@ -91,12 +108,6 @@ export function QuizOnline() {
       botTimer = setTimeout(() => send({ action: 'bot' }), 2500 + Math.random() * 4500)
     }
 
-    let advanceTimer: ReturnType<typeof setTimeout> | undefined
-    if (view.phaseEndsAt !== null) {
-      const delay = Math.max(250, view.phaseEndsAt - Date.now() + 400)
-      advanceTimer = setTimeout(() => send({ action: 'advance', phaseKey: view.phaseKey }), delay)
-    }
-
     let replaceTimer: ReturnType<typeof setInterval> | undefined
     if (view.players.some((p) => !p.isBot && p.leftAt)) {
       const check = () => {
@@ -111,7 +122,6 @@ export function QuizOnline() {
 
     return () => {
       if (botTimer) clearTimeout(botTimer)
-      if (advanceTimer) clearTimeout(advanceTimer)
       if (replaceTimer) clearInterval(replaceTimer)
     }
   }, [view, user, room])

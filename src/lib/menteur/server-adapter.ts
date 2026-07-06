@@ -8,6 +8,7 @@ import {
   toMenteurClientView,
   toMenteurSpectatorView,
   MenteurEngineError,
+  MENTEUR_MAX_PLAYERS,
   type MenteurBid,
   type MenteurState,
 } from './engine'
@@ -28,14 +29,18 @@ export interface MenteurRoomMember {
 const MENTEUR_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
 
 /**
- * Construit l'état initial. Comme au Toucher-Coulé, les sièges vides sont
- * comblés par des bots : un joueur seul peut lancer (ou relancer) une partie —
- * indispensable aussi pour le rematch quand des joueurs sont partis.
+ * Construit l'état initial : les membres + le nombre de bots CHOISI par
+ * l'hôte. Filet : on complète quand même jusqu'au minimum du moteur
+ * (rematch après départs).
  */
-export function buildMenteurState(members: MenteurRoomMember[], seed?: string | number): MenteurState {
+export function buildMenteurState(
+  members: MenteurRoomMember[],
+  botsCount: number = 0,
+  seed?: string | number
+): MenteurState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
-  while (players.length < 2) {
+  const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
       name: MENTEUR_BOT_NAMES[botIndex % MENTEUR_BOT_NAMES.length],
@@ -43,6 +48,9 @@ export function buildMenteurState(members: MenteurRoomMember[], seed?: string | 
     })
     botIndex += 1
   }
+  const wanted = Math.max(0, Math.min(botsCount, MENTEUR_MAX_PLAYERS - players.length))
+  for (let i = 0; i < wanted; i += 1) addBot()
+  while (players.length < 2) addBot()
   return createMenteurState(players, seed ?? randomSeed())
 }
 

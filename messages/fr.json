@@ -185,8 +185,8 @@
       "botCountdown": "Un bot te remplace dans {seconds}s"
     },
     "botsFill": {
-      "title": "Compléter avec des bots",
-      "hint": "Lance même sans {min} joueurs — des bots prennent les places vides.",
+      "title": "Ajouter des bots",
+      "hint": "Ils comptent dans le minimum de {min} joueurs et prennent les places vides.",
       "on": "Activé",
       "off": "Désactivé"
     }
@@ -2060,7 +2060,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "Le Loup-Garou se joue en ligne : chacun reçoit un rôle secret sur SON téléphone. 3 joueurs minimum — ou active l’option bots au lobby !",
+        "onlineOnly": "Le Loup-Garou se joue en ligne : chacun reçoit un rôle secret sur SON téléphone. 4 joueurs minimum — ou ajoute des bots au lobby !",
         "switchOnline": "Passer en mode en ligne"
       },
       "lobby": {
@@ -2151,7 +2151,12 @@
           "backToMenu": "Retour au menu"
         },
         "sleep": "🌙 Le village dort…",
-        "sleepHint": "Certains rêvent, d’autres complotent…"
+        "sleepHint": "Certains rêvent, d’autres complotent…",
+        "botSay": {
+          "suspect": "Je trouve {name} louche… il cache quelque chose 🤨",
+          "defend": "Quoi ?! {name} raconte n’importe quoi, je suis innocent !",
+          "ally": "Faisons équipe avec {name}, je le sens bien 🤝"
+        }
       }
     }
   },

@@ -64,15 +64,16 @@ function computeReadyState(
     return { allReady, canLaunch: allReady && membersWithIds.length <= capacity }
   }
   // Bornes du registre (jeux serveur-autoritaires) ; 2 joueurs par défaut.
-  // Option « compléter avec des bots » (hôte) : le minimum tombe à 1, le
-  // launch comble les places jusqu'au minimum du moteur.
+  // L'hôte peut AJOUTER des bots (settings.botsCount) : le minimum s'applique
+  // au TOTAL humains + bots.
   const adapter = getGameAdapter(gameId)
-  const min =
-    settings.botsFill && adapter?.botsFillable ? 1 : adapter?.minPlayers ?? 2
+  const min = adapter?.minPlayers ?? 2
   const max = adapter?.maxPlayers ?? Number.MAX_SAFE_INTEGER
+  const bots = adapter?.botsFillable ? Math.max(0, settings.botsCount ?? 0) : 0
+  const total = membersWithIds.length + bots
   return {
     allReady,
-    canLaunch: allReady && membersWithIds.length >= min && membersWithIds.length <= max,
+    canLaunch: allReady && total >= min && membersWithIds.length <= max && total <= max,
   }
 }
 

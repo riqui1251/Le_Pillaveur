@@ -1,4 +1,4 @@
-import { createRng, rngFromState } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -23,7 +23,7 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  * phases dont l'acteur est PUBLIQUEMENT mort sont sautées.
  */
 
-export const LG_MIN_PLAYERS = 3
+export const LG_MIN_PLAYERS = 4
 export const LG_MAX_PLAYERS = 12
 export const LG_REVEAL_MS = 10_000
 export const LG_SEER_MS = 30_000
@@ -73,6 +73,17 @@ export type LGDeathCause = 'loups' | 'sorciere' | 'vote' | 'chasseur'
 /** Mort PUBLIQUE : le rôle est révélé à l'annonce. */
 export type LGDeath = { playerId: string; role: LGRole; cause: LGDeathCause; round: number }
 
+/**
+ * Prise de parole PUBLIQUE au débat (utilisée par les bots — les humains
+ * parlent au vocal). Structurée pour être localisée côté client.
+ */
+export type LGDebateSpeech = {
+  playerId: string
+  kind: 'suspect' | 'defend' | 'ally'
+  targetId: string | null
+  round: number
+}
+
 export type LGVoteResult = {
   round: number
   tally: Record<string, number>
@@ -107,6 +118,8 @@ export type LGState = TimedPhaseState & {
   dayVotes: Record<string, string>
   /** Public — joueurs voulant passer au vote. */
   debateSkips: string[]
+  /** Public — paroles du débat (bots : accusations, défenses, alliances). */
+  debateSpeech: LGDebateSpeech[]
   /** Revote : seuls ces candidats sont votables. */
   revoteCandidates: string[] | null
   /** Chasseur mort qui doit tirer (public — sa mort est annoncée). */
@@ -129,6 +142,12 @@ export type LGAction =
   | { type: 'WITCH_ACTION'; playerId: string; action: 'save' | 'kill' | 'none'; targetId?: string }
   | { type: 'HUNTER_SHOT'; playerId: string; targetId: string; now: number }
   | { type: 'DEBATE_SKIP'; playerId: string; now: number }
+  | {
+      type: 'DEBATE_SPEAK'
+      playerId: string
+      kind: LGDebateSpeech['kind']
+      targetId: string | null
+    }
   | { type: 'DAY_VOTE'; playerId: string; targetId: string; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'LEAVE'; playerId: string; at: number }
@@ -146,13 +165,21 @@ export type LGInitialPlayer = { id: string; name: string; isBot?: boolean }
 
 // ─── Rôles selon l'effectif ──────────────────────────────────────────────────
 
-export function lgRolesFor(count: number): LGRole[] {
+/**
+ * Composition avec ROULEMENT : loups selon la taille + Voyante toujours,
+ * puis la Sorcière et le Chasseur tournent d'une partie à l'autre (tirage
+ * seedé) — même à 4 joueurs, on ne retombe pas toujours sur la même table.
+ */
+export function lgRolesFor(count: number, rng: SeededRng): LGRole[] {
   const roles: LGRole[] = []
   const wolves = count >= 11 ? 3 : count >= 7 ? 2 : 1
   for (let i = 0; i < wolves; i += 1) roles.push('loup')
   roles.push('voyante')
-  if (count >= 7) roles.push('sorciere')
-  if (count >= 9) roles.push('chasseur')
+  // Rôles spéciaux en rotation (ordre et présence tirés au sort).
+  for (const special of rng.shuffle(['sorciere', 'chasseur'] as const)) {
+    if (roles.length >= count) break
+    if (rng.chance(0.65)) roles.push(special)
+  }
   while (roles.length < count) roles.push('villageois')
   return roles
 }
@@ -200,7 +227,7 @@ export function createLGState(
   if (players.length > LG_MAX_PLAYERS) throw new LGEngineError('TOO_MANY_PLAYERS')
 
   const rng = createRng(seed)
-  const roles = rng.shuffle(lgRolesFor(players.length))
+  const roles = rng.shuffle(lgRolesFor(players.length, rng))
 
   return {
     version: 1,
@@ -227,6 +254,7 @@ export function createLGState(
     witchKillId: null,
     dayVotes: {},
     debateSkips: [],
+    debateSpeech: [],
     revoteCandidates: null,
     pendingHunterId: null,
     afterHunter: null,
@@ -269,6 +297,7 @@ function startNight(state: LGState, now: number): LGState {
     witchKillId: null,
     dayVotes: {},
     debateSkips: [],
+    debateSpeech: [],
     revoteCandidates: null,
     pendingHunterId: null,
     afterHunter: null,
@@ -545,6 +574,29 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
         version: state.version + 1,
       }
       return afterHunterShot(next, action.now)
+    }
+
+    case 'DEBATE_SPEAK': {
+      if (state.phase !== 'day-debate') throw new LGEngineError('NOT_DEBATE_PHASE')
+      const actor = playerOf(state, action.playerId)
+      if (!actor?.alive) throw new LGEngineError('NOT_ALIVE')
+      if (action.targetId) {
+        const target = playerOf(state, action.targetId)
+        if (!target?.alive || target.id === actor.id) throw new LGEngineError('INVALID_TARGET')
+      }
+      // Deux prises de parole max par joueur et par manche (anti-spam).
+      const mine = state.debateSpeech.filter(
+        (sp) => sp.playerId === actor.id && sp.round === state.round
+      )
+      if (mine.length >= 2) throw new LGEngineError('ALREADY_SPOKE')
+      return {
+        ...state,
+        debateSpeech: [
+          ...state.debateSpeech,
+          { playerId: actor.id, kind: action.kind, targetId: action.targetId, round: state.round },
+        ],
+        version: state.version + 1,
+      }
     }
 
     case 'DEBATE_SKIP': {

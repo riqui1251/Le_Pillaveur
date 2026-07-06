@@ -8,6 +8,7 @@ import {
   ImposteurEngineError,
   IMPOSTEUR_EMPTY_CLUE,
   IMPOSTEUR_MIN_PLAYERS,
+  IMPOSTEUR_MAX_PLAYERS,
   type ImposteurState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
@@ -28,18 +29,19 @@ export interface ImposteurRoomMember {
 const IMPOSTEUR_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
 
 /**
- * Construit l'état initial. Le lobby exige 3 joueurs pour une bonne partie,
- * mais un REMATCH après des départs peut en avoir moins : on complète alors
- * avec des bots (leçon du Menteur — tout launch doit tolérer peu de membres).
+ * Construit l'état initial : les membres + le nombre de bots CHOISI par
+ * l'hôte. Filet : on complète quand même jusqu'au minimum du moteur
+ * (rematch après départs — leçon du Menteur).
  */
 export function buildImposteurState(
   members: ImposteurRoomMember[],
   lang: string | null | undefined,
+  botsCount: number = 0,
   seed?: string | number
 ): ImposteurState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
-  while (players.length < IMPOSTEUR_MIN_PLAYERS) {
+  const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
       name: IMPOSTEUR_BOT_NAMES[botIndex % IMPOSTEUR_BOT_NAMES.length],
@@ -47,6 +49,9 @@ export function buildImposteurState(
     })
     botIndex += 1
   }
+  const wanted = Math.max(0, Math.min(botsCount, IMPOSTEUR_MAX_PLAYERS - players.length))
+  for (let i = 0; i < wanted; i += 1) addBot()
+  while (players.length < IMPOSTEUR_MIN_PLAYERS) addBot()
   return createImposteurState(players, getImposteurPairs(lang), seed ?? randomSeed())
 }
 

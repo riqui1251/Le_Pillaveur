@@ -84,18 +84,20 @@ export async function POST(_request: Request, { params }: Params) {
     }
   } else {
     // Bornes du registre (jeux serveur-autoritaires) ; 2 joueurs par défaut.
-    // Option « compléter avec des bots » (hôte) : minimum 1, le launch comble.
+    // Le minimum s'applique au TOTAL humains + bots choisis par l'hôte.
     const adapter = getGameAdapter(room.gameId)
     const settings = parseRoomSettings(room.settingsJson)
-    const min = settings.botsFill && adapter?.botsFillable ? 1 : adapter?.minPlayers ?? 2
+    const min = adapter?.minPlayers ?? 2
     const max = adapter?.maxPlayers ?? Number.MAX_SAFE_INTEGER
-    if (room.members.length < min) {
+    const bots = adapter?.botsFillable ? Math.max(0, settings.botsCount ?? 0) : 0
+    const total = room.members.length + bots
+    if (total < min) {
       return NextResponse.json(
-        { error: `Au moins ${min} joueur${min > 1 ? 's' : ''} requis pour lancer` },
+        { error: `Au moins ${min} joueur${min > 1 ? 's' : ''} requis pour lancer (bots inclus)` },
         { status: 400 }
       )
     }
-    if (room.members.length > max) {
+    if (room.members.length > max || total > max) {
       return NextResponse.json(
         { error: `Trop de joueurs pour ce jeu (max ${max})` },
         { status: 400 }

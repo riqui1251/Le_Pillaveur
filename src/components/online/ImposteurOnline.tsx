@@ -65,12 +65,29 @@ export function ImposteurOnline() {
     return () => clearInterval(timer)
   }, [view])
 
-  // Ticks « arbitre » (premier humain présent) : bots, remplacement des
-  // partis, et ÉCHÉANCE DE PHASE (advance). Le serveur revalide tout
-  // (expectedVersion + horloge serveur), les doublons sont inoffensifs.
+  // ÉCHÉANCE DE PHASE : TOUS les clients envoient le tick « advance »
+  // (idempotent, jitter) — un arbitre unique au téléphone verrouillé
+  // laissait la partie bloquée jusqu'au refresh.
+  useEffect(() => {
+    if (!view || !room || view.phase === 'finished' || view.phaseEndsAt === null) return
+    const expectedVersion = room.stateVersion
+    const delay = Math.max(250, view.phaseEndsAt - Date.now() + 300 + Math.random() * 700)
+    const timer = setTimeout(() => {
+      void fetch(`/api/online/rooms/${room.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
+      })
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [view, room])
+
+  // Ticks « arbitre » (bots + remplacement) : premier humain restant,
+  // éliminé inclus (un spectateur peut encore piloter les ticks).
   useEffect(() => {
     if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt && !p.eliminated)
+    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
     if (referee?.id !== user.id) return
     const expectedVersion = room.stateVersion
     const send = (body: Record<string, unknown>) => {
@@ -92,16 +109,6 @@ export function ImposteurOnline() {
       botTimer = setTimeout(() => send({ action: 'bot' }), view.phase === 'reveal' ? 3200 : 1500)
     }
 
-    // Échéance de phase → advance (le serveur tranche avec SA pendule).
-    let advanceTimer: ReturnType<typeof setTimeout> | undefined
-    if (view.phaseEndsAt !== null) {
-      const delay = Math.max(250, view.phaseEndsAt - Date.now() + 400)
-      advanceTimer = setTimeout(
-        () => send({ action: 'advance', phaseKey: view.phaseKey }),
-        delay
-      )
-    }
-
     let replaceTimer: ReturnType<typeof setInterval> | undefined
     if (view.players.some((p) => !p.isBot && p.leftAt)) {
       const check = () => {
@@ -116,7 +123,6 @@ export function ImposteurOnline() {
 
     return () => {
       if (botTimer) clearTimeout(botTimer)
-      if (advanceTimer) clearTimeout(advanceTimer)
       if (replaceTimer) clearInterval(replaceTimer)
     }
   }, [view, user, room])

@@ -503,41 +503,46 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </div>
       )}
 
-      {/* Option « compléter avec des bots » : lancer sous le minimum d'humains. */}
-      {game?.botsFillable && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <button
-            type="button"
-            disabled={!isHost}
-            onClick={() => updateSettings({ botsFill: !(room.settings.botsFill ?? false) })}
-            className={cn(
-              'flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed',
-              room.settings.botsFill
-                ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
-                : 'border-white/10 bg-white/5 text-white/70',
-              isHost && 'hover:bg-white/10'
-            )}
-            aria-pressed={Boolean(room.settings.botsFill)}
-          >
-            <span className="min-w-0">
-              <span className="block text-sm font-bold">🤖 {tOnline('botsFill.title')}</span>
-              <span className="mt-0.5 block text-[11px] text-white/45">
-                {tOnline('botsFill.hint', { min: game?.minPlayers ?? 2 })}
-              </span>
-            </span>
-            <span
-              className={cn(
-                'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide',
-                room.settings.botsFill
-                  ? 'bg-emerald-500/30 text-emerald-100'
-                  : 'bg-white/10 text-white/50'
-              )}
-            >
-              {room.settings.botsFill ? tOnline('botsFill.on') : tOnline('botsFill.off')}
-            </span>
-          </button>
-        </div>
-      )}
+      {/* Nombre de bots ajoutés (hôte) : permet de lancer sous le minimum d'humains. */}
+      {game?.botsFillable && (() => {
+        const botsCount = Math.max(0, room.settings.botsCount ?? 0)
+        const maxBots = Math.max(0, (game.maxPlayers ?? 12) - room.members.length)
+        return (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-white">🤖 {tOnline('botsFill.title')}</p>
+                <p className="mt-0.5 text-[11px] text-white/45">
+                  {tOnline('botsFill.hint', { min: game.minPlayers ?? 2 })}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-2 py-1.5">
+                <button
+                  type="button"
+                  disabled={!isHost || botsCount <= 0}
+                  onClick={() => updateSettings({ botsCount: botsCount - 1 })}
+                  className="game-grid-cell flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-lg font-black text-white transition-colors hover:bg-white/15 disabled:opacity-30"
+                  aria-label="-1 bot"
+                >
+                  −
+                </button>
+                <span className="w-6 text-center text-lg font-black tabular-nums text-white">
+                  {botsCount}
+                </span>
+                <button
+                  type="button"
+                  disabled={!isHost || botsCount >= maxBots}
+                  onClick={() => updateSettings({ botsCount: botsCount + 1 })}
+                  className="game-grid-cell flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-lg font-black text-white transition-colors hover:bg-white/15 disabled:opacity-30"
+                  aria-label="+1 bot"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {gameId === 'quiz' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
@@ -692,10 +697,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             {(() => {
               // Minimum PAR JEU (affichage — la vérité serveur est dans le
               // registre game-adapters, synchronisée par test avec GAMES).
-              // Option bots active → un seul humain suffit.
+              // Les bots ajoutés comptent dans le total.
               const meta = GAMES.find((g) => g.id === gameId)
-              const minPlayers =
-                room.settings.botsFill && meta?.botsFillable ? 1 : meta?.minPlayers ?? 2
+              const bots = meta?.botsFillable ? Math.max(0, room.settings.botsCount ?? 0) : 0
+              const minPlayers = Math.max(1, (meta?.minPlayers ?? 2) - bots)
               return room.canLaunch
                 ? 'Lancer la partie'
                 : room.members.length < minPlayers

@@ -24,6 +24,7 @@ import {
   type LGState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
+import { createRng } from '@/lib/petit-buveur/rng'
 
 const T0 = 1_000_000
 
@@ -62,6 +63,7 @@ function craft(
     witchKillId: null,
     dayVotes: {},
     debateSkips: [],
+    debateSpeech: [],
     revoteCandidates: null,
     pendingHunterId: null,
     afterHunter: null,
@@ -89,28 +91,38 @@ const advance = (s: LGState, now: number) =>
   reduceLG(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now })
 
 describe('création et rôles', () => {
-  it('distribution des rôles selon l’effectif', () => {
-    expect(lgRolesFor(5).filter((r) => r === 'loup')).toHaveLength(1)
-    expect(lgRolesFor(5)).toContain('voyante')
-    expect(lgRolesFor(5)).not.toContain('sorciere')
-    expect(lgRolesFor(7).filter((r) => r === 'loup')).toHaveLength(2)
-    expect(lgRolesFor(7)).toContain('sorciere')
-    expect(lgRolesFor(9)).toContain('chasseur')
-    expect(lgRolesFor(11).filter((r) => r === 'loup')).toHaveLength(3)
-    expect(lgRolesFor(12)).toHaveLength(12)
+  it('distribution avec ROULEMENT : loups fixes, spéciaux en rotation', () => {
+    for (let seed = 0; seed < 20; seed += 1) {
+      for (const count of [4, 5, 7, 9, 11, 12]) {
+        const roles = lgRolesFor(count, createRng(`rot-${seed}`))
+        expect(roles).toHaveLength(count)
+        const wolves = count >= 11 ? 3 : count >= 7 ? 2 : 1
+        expect(roles.filter((r) => r === 'loup')).toHaveLength(wolves)
+        expect(roles.filter((r) => r === 'voyante')).toHaveLength(1)
+        expect(roles.filter((r) => r === 'sorciere').length).toBeLessThanOrEqual(1)
+        expect(roles.filter((r) => r === 'chasseur').length).toBeLessThanOrEqual(1)
+      }
+    }
+    // Le roulement produit bien des compositions DIFFÉRENTES à 4 joueurs.
+    const compositions = new Set(
+      Array.from({ length: 30 }, (_, i) =>
+        lgRolesFor(4, createRng(`var-${i}`)).sort().join(',')
+      )
+    )
+    expect(compositions.size).toBeGreaterThan(1)
   })
 
-  it('création : bornes 3-12, reproductible, phase reveal-role chronométrée', () => {
+  it('création : bornes 4-12, reproductible, phase reveal-role chronométrée', () => {
     const players = Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
     const s = createLGState(players, 'seed', LG_DEBATE_DEFAULT_MS, T0)
     expect(s.phase).toBe('reveal-role')
     expect(s.phaseEndsAt).toBe(T0 + LG_REVEAL_MS)
     expect(s).toEqual(createLGState(players, 'seed', LG_DEBATE_DEFAULT_MS, T0))
-    // Table de 3 : 1 loup + voyante + villageois — jouable, pas de victoire d'entrée.
-    const trio = createLGState(players.slice(0, 3), 'seed', LG_DEBATE_DEFAULT_MS, T0)
-    expect(trio.players.map((p) => p.role).sort()).toEqual(['loup', 'villageois', 'voyante'])
-    expect(trio.winnerTeam).toBeNull()
-    expect(() => createLGState(players.slice(0, 2), 1, LG_DEBATE_DEFAULT_MS, T0)).toThrow(
+    // Table de 4 : jouable, pas de victoire d'entrée de jeu.
+    const quad = createLGState(players.slice(0, 4), 'seed', LG_DEBATE_DEFAULT_MS, T0)
+    expect(quad.players.filter((p) => p.role === 'loup')).toHaveLength(1)
+    expect(quad.winnerTeam).toBeNull()
+    expect(() => createLGState(players.slice(0, 3), 1, LG_DEBATE_DEFAULT_MS, T0)).toThrow(
       LGEngineError
     )
     const thirteen = Array.from({ length: 13 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
@@ -455,12 +467,32 @@ describe('vues anti-triche (3 niveaux + TV)', () => {
 })
 
 describe('buildLGState (adaptateur)', () => {
-  it('complète avec des bots jusqu’au minimum (résilience du rematch)', async () => {
+  it('ajoute le nombre de bots CHOISI, avec filet jusqu’au minimum', async () => {
     const { buildLGState } = await import('./server-adapter')
-    const s = buildLGState([{ userId: 'u1', user: { displayName: 'Riri' } }], undefined, 42)
-    expect(s.players).toHaveLength(3) // = LG_MIN_PLAYERS
-    expect(s.players.filter((p) => p.isBot)).toHaveLength(2)
-    expect(s.players[0]).toMatchObject({ id: 'u1', isBot: false })
+    // Filet rematch : sans bots demandés, on complète quand même à 4.
+    const fallback = buildLGState([{ userId: 'u1', user: { displayName: 'Riri' } }], undefined, 0, 42)
+    expect(fallback.players).toHaveLength(4) // = LG_MIN_PLAYERS
+    expect(fallback.players.filter((p) => p.isBot)).toHaveLength(3)
+    // Nombre choisi par l'hôte : 1 humain + 5 bots = 6 joueurs.
+    const chosen = buildLGState([{ userId: 'u1', user: { displayName: 'Riri' } }], undefined, 5, 42)
+    expect(chosen.players).toHaveLength(6)
+    expect(chosen.players.filter((p) => p.isBot)).toHaveLength(5)
+    expect(chosen.players[0]).toMatchObject({ id: 'u1', isBot: false })
+  })
+})
+
+describe('paroles du débat (DEBATE_SPEAK)', () => {
+  it('publiques, limitées à 2 par joueur/manche, remises à zéro la nuit', () => {
+    let s = craft(SIX, 'day-debate', { phaseEndsAt: T0 + LG_DEBATE_DEFAULT_MS })
+    s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'suspect', targetId: 'loup1' })
+    s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'loup1', kind: 'defend', targetId: 'vil1' })
+    s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'ally', targetId: 'voy' })
+    expect(() =>
+      reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'suspect', targetId: 'cha' })
+    ).toThrow('ALREADY_SPOKE')
+    expect(s.debateSpeech).toHaveLength(3)
+    // Visible de tous (public) — y compris la TV neutre.
+    expect(toLGSpectatorView(s).debateSpeech).toHaveLength(3)
   })
 })
 

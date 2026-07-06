@@ -185,8 +185,8 @@
       "botCountdown": "A bot replaces you in {seconds}s"
     },
     "botsFill": {
-      "title": "Fill with bots",
-      "hint": "Launch even without {min} players — bots take the empty seats.",
+      "title": "Add bots",
+      "hint": "They count toward the {min}-player minimum and take the empty seats.",
       "on": "On",
       "off": "Off"
     }
@@ -2055,7 +2055,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "Werewolf is played online: everyone gets a secret role on THEIR phone. 3 players minimum — or enable the bots option in the lobby!",
+        "onlineOnly": "Werewolf is played online: everyone gets a secret role on THEIR phone. 4 players minimum — or add bots in the lobby!",
         "switchOnline": "Switch to online mode"
       },
       "lobby": {
@@ -2146,7 +2146,12 @@
           "backToMenu": "Back to menu"
         },
         "sleep": "🌙 The village sleeps…",
-        "sleepHint": "Some dream, others scheme…"
+        "sleepHint": "Some dream, others scheme…",
+        "botSay": {
+          "suspect": "I find {name} shady… they are hiding something 🤨",
+          "defend": "What?! {name} is talking nonsense, I am innocent!",
+          "ally": "Let’s team up with {name}, I trust them 🤝"
+        }
       }
     }
   },

@@ -20,7 +20,7 @@ export async function launchQuizRoom(roomId: string, room: LaunchRoom) {
   const count = QUIZ_COUNTS.includes(settings.quizCount as (typeof QUIZ_COUNTS)[number])
     ? (settings.quizCount as number)
     : QUIZ_DEFAULT_COUNT
-  const state = buildQuizState(room.members, settings.lang, count)
+  const state = buildQuizState(room.members, settings.lang, count, settings.botsCount ?? 0)
 
   await prisma.onlineRoom.update({
     where: { id: roomId },

@@ -6,6 +6,7 @@ import {
   QuizEngineError,
   QUIZ_DEFAULT_COUNT,
   QUIZ_MIN_PLAYERS,
+  QUIZ_MAX_PLAYERS,
   type QuizState,
 } from './engine'
 import { getQuizQuestions } from './data'
@@ -24,16 +25,20 @@ export interface QuizRoomMember {
 
 const QUIZ_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
 
-/** Sièges vides comblés par des bots (solo lançable + rematch résilient). */
+/**
+ * Construit l'état initial : les membres + le nombre de bots CHOISI par
+ * l'hôte. Filet : complète jusqu'au minimum du moteur (rematch résilient).
+ */
 export function buildQuizState(
   members: QuizRoomMember[],
   lang: string | null | undefined,
   count?: number,
+  botsCount: number = 0,
   seed?: string | number
 ): QuizState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
-  while (players.length < QUIZ_MIN_PLAYERS) {
+  const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
       name: QUIZ_BOT_NAMES[botIndex % QUIZ_BOT_NAMES.length],
@@ -41,6 +46,9 @@ export function buildQuizState(
     })
     botIndex += 1
   }
+  const wanted = Math.max(0, Math.min(botsCount, QUIZ_MAX_PLAYERS - players.length))
+  for (let i = 0; i < wanted; i += 1) addBot()
+  while (players.length < QUIZ_MIN_PLAYERS) addBot()
   return createQuizState(
     players,
     getQuizQuestions(lang),

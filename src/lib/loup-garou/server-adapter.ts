@@ -8,6 +8,8 @@ import {
   LGEngineError,
   LG_DEBATE_DEFAULT_MS,
   LG_MIN_PLAYERS,
+  LG_MAX_PLAYERS,
+  type LGPlayer,
   type LGState,
 } from './engine'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -31,18 +33,19 @@ export interface LGRoomMember {
 const LG_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
 
 /**
- * Construit l'état initial. Le lobby exige 3 joueurs (la déduction sociale a
- * besoin d'humains) ; un REMATCH après des départs est complété par des bots
- * (leçon Menteur : tout launch doit tolérer peu de membres).
+ * Construit l'état initial : les membres + le nombre de bots CHOISI par
+ * l'hôte (réglage lobby). Filet de sécurité : on complète quand même
+ * jusqu'au minimum du moteur (rematch après départs — leçon Menteur).
  */
 export function buildLGState(
   members: LGRoomMember[],
   debateMs: number = LG_DEBATE_DEFAULT_MS,
+  botsCount: number = 0,
   seed?: string | number
 ): LGState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
-  while (players.length < LG_MIN_PLAYERS) {
+  const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
       name: LG_BOT_NAMES[botIndex % LG_BOT_NAMES.length],
@@ -50,6 +53,9 @@ export function buildLGState(
     })
     botIndex += 1
   }
+  const wanted = Math.max(0, Math.min(botsCount, LG_MAX_PLAYERS - players.length))
+  for (let i = 0; i < wanted; i += 1) addBot()
+  while (players.length < LG_MIN_PLAYERS) addBot()
   return createLGState(players, seed ?? randomSeed(), debateMs)
 }
 
@@ -68,6 +74,7 @@ export function parseLGState(json: string | null): LGState | null {
       wolfVotes: raw.wolfVotes ?? {},
       dayVotes: raw.dayVotes ?? {},
       debateSkips: raw.debateSkips ?? [],
+      debateSpeech: raw.debateSpeech ?? [],
       seerPeeks: raw.seerPeeks ?? [],
     }
   } catch {
@@ -257,26 +264,84 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
         }
       }
     } else if (next.phase === 'day-debate') {
-      for (const bot of alive().filter((p) => p.isBot)) {
-        if (next.phase !== 'day-debate') break
-        if (next.debateSkips.includes(bot.id)) continue
-        next = reduceLG(next, { type: 'DEBATE_SKIP', playerId: bot.id, now: Date.now() })
-        acted = true
+      // Étape 1 : chaque bot PARLE (se défend s'il est accusé, sinon accuse —
+      // les loups détournent les soupçons vers des non-loups — ou propose une
+      // alliance). Étape 2 (tick suivant) : quand tous ont parlé, ils passent
+      // au vote.
+      const bots = alive().filter((p) => p.isBot)
+      const spoke = (id: string) =>
+        next.debateSpeech.some((sp) => sp.playerId === id && sp.round === next.round)
+      const silent = bots.filter((b) => !spoke(b.id))
+      if (silent.length > 0) {
+        for (const bot of silent) {
+          if (next.phase !== 'day-debate') break
+          const accusedBy = next.debateSpeech.find(
+            (sp) => sp.round === next.round && sp.kind === 'suspect' && sp.targetId === bot.id
+          )
+          let kind: 'suspect' | 'defend' | 'ally'
+          let target: LGPlayer | undefined
+          if (accusedBy && accusedBy.playerId !== bot.id) {
+            kind = 'defend'
+            target = next.players.find((p) => p.id === accusedBy.playerId && p.alive)
+          }
+          if (!target) {
+            kind = Math.random() < 0.3 ? 'ally' : 'suspect'
+            const pool = alive().filter(
+              (p) => p.id !== bot.id && (bot.role !== 'loup' || p.role !== 'loup')
+            )
+            if (pool.length === 0) continue
+            target = pickRandom(pool)
+          }
+          next = reduceLG(next, {
+            type: 'DEBATE_SPEAK',
+            playerId: bot.id,
+            kind: kind!,
+            targetId: target.id,
+          })
+          acted = true
+        }
+      } else {
+        for (const bot of bots) {
+          if (next.phase !== 'day-debate') break
+          if (next.debateSkips.includes(bot.id)) continue
+          next = reduceLG(next, { type: 'DEBATE_SKIP', playerId: bot.id, now: Date.now() })
+          acted = true
+        }
       }
     } else if (next.phase === 'day-vote' || next.phase === 'day-revote') {
+      // Vote informé par le débat : cible la plus accusée (les loups évitent
+      // toujours leurs complices).
+      const tally = new Map<string, number>()
+      for (const sp of next.debateSpeech) {
+        if (sp.round === next.round && sp.kind === 'suspect' && sp.targetId) {
+          tally.set(sp.targetId, (tally.get(sp.targetId) ?? 0) + 1)
+        }
+      }
       for (const bot of alive().filter((p) => p.isBot)) {
         if (next.phase !== 'day-vote' && next.phase !== 'day-revote') break
         if (next.dayVotes[bot.id]) continue
         const pool = alive().filter(
           (p) =>
             p.id !== bot.id &&
+            (bot.role !== 'loup' || p.role !== 'loup') &&
             (!next.revoteCandidates || next.revoteCandidates.includes(p.id))
         )
-        if (pool.length === 0) continue
+        const fallback = alive().filter(
+          (p) =>
+            p.id !== bot.id &&
+            (!next.revoteCandidates || next.revoteCandidates.includes(p.id))
+        )
+        const candidates = pool.length > 0 ? pool : fallback
+        if (candidates.length === 0) continue
+        const best = [...candidates].sort(
+          (a, b) => (tally.get(b.id) ?? 0) - (tally.get(a.id) ?? 0)
+        )
+        const top = tally.get(best[0].id) ?? 0
+        const tied = best.filter((p) => (tally.get(p.id) ?? 0) === top)
         next = reduceLG(next, {
           type: 'DAY_VOTE',
           playerId: bot.id,
-          targetId: pickRandom(pool).id,
+          targetId: pickRandom(tied).id,
           now: Date.now(),
         })
         acted = true

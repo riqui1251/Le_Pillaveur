@@ -133,11 +133,30 @@ export function LoupGarouOnline() {
     setWitchKillMode(false)
   }, [stateVersion])
 
-  // Ticks « arbitre » : échéance de phase, bots (tick AVEUGLE — seul le
-  // serveur connaît les rôles), remplacement des partis. Tous idempotents.
+  // ÉCHÉANCE DE PHASE : TOUS les clients envoient le tick « advance »
+  // (idempotent — 409 PHASE_CHANGED pour les retardataires, jitter pour
+  // étaler). Un arbitre unique ne suffisait pas : téléphone verrouillé =
+  // timers gelés = partie bloquée jusqu'au refresh.
+  useEffect(() => {
+    if (!view || !room || view.phase === 'finished' || view.phaseEndsAt === null) return
+    const expectedVersion = room.stateVersion
+    const delay = Math.max(250, view.phaseEndsAt - Date.now() + 300 + Math.random() * 700)
+    const timer = setTimeout(() => {
+      void fetch(`/api/online/rooms/${room.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
+      })
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [view, room])
+
+  // Ticks « arbitre » (bots + remplacement) : premier humain RESTANT —
+  // vivant OU fantôme (un mort peut encore piloter les ticks).
   useEffect(() => {
     if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt && p.alive)
+    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
     if (referee?.id !== user.id) return
     const expectedVersion = room.stateVersion
     const send = (body: Record<string, unknown>) => {
@@ -147,12 +166,6 @@ export function LoupGarouOnline() {
         credentials: 'include',
         body: JSON.stringify({ ...body, expectedVersion }),
       })
-    }
-
-    let advanceTimer: ReturnType<typeof setTimeout> | undefined
-    if (view.phaseEndsAt !== null) {
-      const delay = Math.max(250, view.phaseEndsAt - Date.now() + 400)
-      advanceTimer = setTimeout(() => send({ action: 'advance', phaseKey: view.phaseKey }), delay)
     }
 
     // Tick bot « au cas où » : NOT_BOT_TURN (409) si aucun bot concerné.
@@ -174,7 +187,6 @@ export function LoupGarouOnline() {
     }
 
     return () => {
-      if (advanceTimer) clearTimeout(advanceTimer)
       if (botTimer) clearTimeout(botTimer)
       if (replaceTimer) clearInterval(replaceTimer)
     }
@@ -579,20 +591,38 @@ export function LoupGarouOnline() {
               </div>
             ))}
 
-          {view.phase === 'day-debate' && me?.alive && (
+          {view.phase === 'day-debate' && (
             <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="text-center text-sm font-bold">{t('debatePrompt')}</p>
               <p className="text-center text-[11px] text-white/45">{t('debateHint')}</p>
-              <Button
-                onClick={() => void sendAction({ action: 'debate-skip' })}
-                disabled={busy || view.debateSkips.includes(user.id)}
-                className="w-full rounded-xl bg-gradient-to-r from-slate-600 to-indigo-500 py-3 text-sm font-bold"
-              >
-                <Vote className="mr-2 h-4 w-4" />
-                {view.debateSkips.includes(user.id)
-                  ? t('skipWaiting', { n: view.debateSkips.length, total: alive.length })
-                  : t('skipToVote', { n: view.debateSkips.length, total: alive.length })}
-              </Button>
+              {/* Paroles des bots : accusations, défenses, alliances. */}
+              {view.debateSpeech.filter((sp) => sp.round === view.round).length > 0 && (
+                <ul className="space-y-1">
+                  {view.debateSpeech
+                    .filter((sp) => sp.round === view.round)
+                    .map((sp, i) => (
+                      <li
+                        key={i}
+                        className="rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-white/80"
+                      >
+                        <span className="font-bold">🤖 {nameOf(sp.playerId)}</span>{' '}
+                        {t(`botSay.${sp.kind}`, { name: nameOf(sp.targetId) })}
+                      </li>
+                    ))}
+                </ul>
+              )}
+              {me?.alive && (
+                <Button
+                  onClick={() => void sendAction({ action: 'debate-skip' })}
+                  disabled={busy || view.debateSkips.includes(user.id)}
+                  className="w-full rounded-xl bg-gradient-to-r from-slate-600 to-indigo-500 py-3 text-sm font-bold"
+                >
+                  <Vote className="mr-2 h-4 w-4" />
+                  {view.debateSkips.includes(user.id)
+                    ? t('skipWaiting', { n: view.debateSkips.length, total: alive.length })
+                    : t('skipToVote', { n: view.debateSkips.length, total: alive.length })}
+                </Button>
+              )}
             </div>
           )}
 

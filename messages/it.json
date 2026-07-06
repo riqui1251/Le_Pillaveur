@@ -175,8 +175,8 @@
       "botCountdown": "Un bot ti sostituisce tra {seconds}s"
     },
     "botsFill": {
-      "title": "Completa con i bot",
-      "hint": "Lancia anche senza {min} giocatori — i bot prendono i posti vuoti.",
+      "title": "Aggiungi bot",
+      "hint": "Contano nel minimo di {min} giocatori e prendono i posti vuoti.",
       "on": "Attivo",
       "off": "Disattivo"
     }
@@ -2045,7 +2045,7 @@
     },
     "loup-garou": {
       "page": {
-        "onlineOnly": "Il Lupo Mannaro si gioca online: ognuno riceve un ruolo segreto sul PROPRIO telefono. Minimo 3 giocatori — o attiva l’opzione bot nella lobby!",
+        "onlineOnly": "Il Lupo Mannaro si gioca online: ognuno riceve un ruolo segreto sul PROPRIO telefono. Minimo 4 giocatori — o aggiungi bot nella lobby!",
         "switchOnline": "Passa alla modalità online"
       },
       "lobby": {
@@ -2136,7 +2136,12 @@
           "backToMenu": "Torna al menu"
         },
         "sleep": "🌙 Il villaggio dorme…",
-        "sleepHint": "Alcuni sognano, altri complottano…"
+        "sleepHint": "Alcuni sognano, altri complottano…",
+        "botSay": {
+          "suspect": "{name} mi sembra sospetto… nasconde qualcosa 🤨",
+          "defend": "Cosa?! {name} dice sciocchezze, sono innocente!",
+          "ally": "Facciamo squadra con {name}, mi fido 🤝"
+        }
       }
     }
   },

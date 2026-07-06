@@ -15,11 +15,82 @@ import { cn } from '@/lib/utils'
  * quel que soit le jeu, actuel ou futur. Opt-in : le micro ne s'ouvre qu'au
  * clic « Rejoindre le vocal ».
  */
+const DOCK_POS_KEY = 'lp-voice-dock-pos'
+
+function loadDockPos(): { dx: number; dy: number } {
+  if (typeof window === 'undefined') return { dx: 0, dy: 0 }
+  try {
+    const raw = window.localStorage.getItem(DOCK_POS_KEY)
+    const p = raw ? (JSON.parse(raw) as { dx: number; dy: number }) : null
+    return p && Number.isFinite(p.dx) && Number.isFinite(p.dy) ? p : { dx: 0, dy: 0 }
+  } catch {
+    return { dx: 0, dy: 0 }
+  }
+}
+
 export function VoiceDock() {
   const { user } = useAuth()
   const { room } = useOnlineRoom()
   const [open, setOpen] = useState(false)
   const t = useTranslations('voice')
+
+  // Dock DÉPLAÇABLE : glisser le bouton le repositionne (position mémorisée) —
+  // il pouvait masquer des commandes de certains jeux. Un tap simple ouvre.
+  const [dockPos, setDockPos] = useState(loadDockPos)
+  const dragRef = useRef<{
+    startX: number
+    startY: number
+    baseDx: number
+    baseDy: number
+    moved: boolean
+    lastDx: number
+    lastDy: number
+  } | null>(null)
+
+  const clampPos = (dx: number, dy: number) => ({
+    dx: Math.min(12, Math.max(-(window.innerWidth - 72), dx)),
+    dy: Math.min(12, Math.max(-(window.innerHeight - 140), dy)),
+  })
+
+  const onDockPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      baseDx: dockPos.dx,
+      baseDy: dockPos.dy,
+      moved: false,
+      lastDx: dockPos.dx,
+      lastDy: dockPos.dy,
+    }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onDockPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current
+    if (!d) return
+    const mx = e.clientX - d.startX
+    const my = e.clientY - d.startY
+    if (!d.moved && Math.abs(mx) + Math.abs(my) > 8) d.moved = true
+    if (d.moved) {
+      const next = clampPos(d.baseDx + mx, d.baseDy + my)
+      d.lastDx = next.dx
+      d.lastDy = next.dy
+      setDockPos(next)
+    }
+  }
+  const onDockPointerUp = () => {
+    const d = dragRef.current
+    dragRef.current = null
+    if (!d) return
+    if (d.moved) {
+      try {
+        window.localStorage.setItem(DOCK_POS_KEY, JSON.stringify({ dx: d.lastDx, dy: d.lastDy }))
+      } catch {
+        /* stockage indisponible */
+      }
+    } else {
+      setOpen((v) => !v) // tap simple = ouvrir/fermer
+    }
+  }
 
   const members = useMemo(() => room?.members ?? [], [room])
   const voice = useVoiceChat(room?.id ?? null, user?.id, members)
@@ -53,7 +124,10 @@ export function VoiceDock() {
     members.find((m) => m.userId === userId)?.preferences?.icon ?? '👤'
 
   return (
-    <div className="fixed bottom-24 right-3 z-[90] flex flex-col items-end gap-2 sm:bottom-28 sm:right-4">
+    <div
+      className="fixed bottom-24 right-3 z-[90] flex flex-col items-end gap-2 sm:bottom-28 sm:right-4"
+      style={{ transform: `translate(${dockPos.dx}px, ${dockPos.dy}px)` }}
+    >
       <AnimatePresence>
         {open && (
           <motion.div
@@ -284,11 +358,17 @@ export function VoiceDock() {
         )}
       </AnimatePresence>
 
-      {/* Bouton flottant */}
+      {/* Bouton flottant — glisser pour déplacer, tap pour ouvrir */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onPointerDown={onDockPointerDown}
+        onPointerMove={onDockPointerMove}
+        onPointerUp={onDockPointerUp}
+        onPointerCancel={() => {
+          dragRef.current = null
+        }}
+        style={{ touchAction: 'none' }}
         className={cn(
-          'relative flex h-12 w-12 items-center justify-center rounded-2xl border shadow-lg backdrop-blur-md transition-all active:scale-95',
+          'relative flex h-12 w-12 cursor-grab items-center justify-center rounded-2xl border shadow-lg backdrop-blur-md transition-all active:scale-95 active:cursor-grabbing',
           voice.joined
             ? 'border-emerald-400/50 bg-emerald-600/90 text-white'
             : 'border-white/15 bg-gray-900/90 text-white/80 hover:bg-gray-800',

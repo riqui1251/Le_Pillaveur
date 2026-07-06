@@ -146,7 +146,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
     onlineReady: true,
-    minPlayers: 3,
+    minPlayers: 4,
     botsFillable: true,
     maxPlayers: 12,
     onlineOnly: true,

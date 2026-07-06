@@ -1,8 +1,10 @@
 import { prisma } from '@/lib/prisma'
+import { parseRoomSettings } from '@/lib/online-game-state'
 import { buildMenteurState, serializeMenteurState } from '@/lib/menteur/server-adapter'
 import { currentMenteurActorId } from '@/lib/menteur/engine'
 
 type LaunchRoom = {
+  settingsJson: string | null
   members: {
     userId: string
     user: { displayName: string }
@@ -14,7 +16,8 @@ type LaunchRoom = {
  * Graine par partie : dés reproductibles côté serveur, jamais côté client.
  */
 export async function launchMenteurRoom(roomId: string, room: LaunchRoom) {
-  const state = buildMenteurState(room.members)
+  const settings = parseRoomSettings(room.settingsJson)
+  const state = buildMenteurState(room.members, settings.botsCount ?? 0)
 
   await prisma.onlineRoom.update({
     where: { id: roomId },
