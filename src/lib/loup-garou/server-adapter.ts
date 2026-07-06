@@ -76,6 +76,11 @@ export function parseLGState(json: string | null): LGState | null {
       debateSkips: raw.debateSkips ?? [],
       debateSpeech: raw.debateSpeech ?? [],
       seerPeeks: raw.seerPeeks ?? [],
+      // Parties sérialisées avant l'arrivée du Salvateur/Corbeau/Ancien.
+      guardProtectedId: raw.guardProtectedId ?? null,
+      guardLastProtectedId: raw.guardLastProtectedId ?? null,
+      ravenTargetId: raw.ravenTargetId ?? null,
+      elderLifeUsed: raw.elderLifeUsed ?? false,
     }
   } catch {
     return null
@@ -83,6 +88,8 @@ export function parseLGState(json: string | null): LGState | null {
 }
 
 export type LGRoomActionInput =
+  | { type: 'guard-protect'; targetId: string }
+  | { type: 'raven-mark'; targetId: string }
   | { type: 'seer-peek'; targetId: string }
   | { type: 'wolf-vote'; targetId: string }
   | { type: 'witch'; witchAction: 'save' | 'kill' | 'none'; targetId?: string }
@@ -102,6 +109,24 @@ export function applyLGRoomAction(
 ): LGRoomActionResult {
   try {
     switch (input.type) {
+      case 'guard-protect':
+        return {
+          ok: true,
+          state: reduceLG(state, {
+            type: 'GUARD_PROTECT',
+            playerId: userId,
+            targetId: input.targetId,
+          }),
+        }
+      case 'raven-mark':
+        return {
+          ok: true,
+          state: reduceLG(state, {
+            type: 'RAVEN_MARK',
+            playerId: userId,
+            targetId: input.targetId,
+          }),
+        }
       case 'seer-peek':
         return {
           ok: true,
@@ -220,7 +245,34 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
     let acted = false
     const alive = () => lgAlive(next)
 
-    if (next.phase === 'night-seer') {
+    if (next.phase === 'night-guard') {
+      const guard = alive().find((p) => p.isBot && p.role === 'salvateur')
+      if (guard && !next.guardProtectedId) {
+        // Protège un vivant au hasard (lui compris) — jamais le protégé d'hier.
+        const targets = alive().filter((p) => p.id !== next.guardLastProtectedId)
+        if (targets.length > 0) {
+          next = reduceLG(next, {
+            type: 'GUARD_PROTECT',
+            playerId: guard.id,
+            targetId: pickRandom(targets).id,
+          })
+          acted = true
+        }
+      }
+    } else if (next.phase === 'night-raven') {
+      const raven = alive().find((p) => p.isBot && p.role === 'corbeau')
+      if (raven && !next.ravenTargetId) {
+        const targets = alive().filter((p) => p.id !== raven.id)
+        if (targets.length > 0) {
+          next = reduceLG(next, {
+            type: 'RAVEN_MARK',
+            playerId: raven.id,
+            targetId: pickRandom(targets).id,
+          })
+          acted = true
+        }
+      }
+    } else if (next.phase === 'night-seer') {
       const seer = alive().find((p) => p.isBot && p.role === 'voyante')
       if (seer && !next.seerPeeks.some((pk) => pk.round === next.round)) {
         const targets = alive().filter((p) => p.id !== seer.id)

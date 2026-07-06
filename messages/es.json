@@ -2071,7 +2071,9 @@
           "hunter-shot": "El cazador",
           "day-debate": "Debate",
           "day-vote": "Votación",
-          "day-revote": "Segunda votación"
+          "day-revote": "Segunda votación",
+          "night-guard": "El salvador vela…",
+          "night-raven": "El cuervo planea…"
         },
         "ghostBanner": "👻 Eres un fantasma: lo ves TODO… pero shhh, ¡ni una palabra por voz!",
         "yourRole": "Tu rol secreto",
@@ -2095,6 +2097,18 @@
           "chasseur": {
             "name": "Cazador",
             "desc": "Si mueres, te llevas a alguien contigo."
+          },
+          "salvateur": {
+            "name": "Salvador",
+            "desc": "Cada noche protege a un jugador de los lobos — nunca al mismo dos noches seguidas."
+          },
+          "corbeau": {
+            "name": "Cuervo",
+            "desc": "Cada noche marca a un jugador: +2 votos en su contra en la votación del día."
+          },
+          "ancien": {
+            "name": "Anciano",
+            "desc": "Demasiado duro para los lobos: sobrevive a su primer ataque."
           },
           "villageois": {
             "name": "Aldeano",
@@ -2153,8 +2167,15 @@
         "legend": {
           "title": "Leyenda de roles",
           "close": "Cerrar",
-          "hint": "La Bruja y el Cazador no siempre están en juego — la composición cambia en cada aldea. El número de lobos depende del tamaño de la mesa (1 con 4-6, 2 con 7-10, 3 con 11-12)."
-        }
+          "hint": "La composición cambia en cada aldea: Bruja, Cazador, Salvador, Cuervo y Anciano rotan de partida en partida. El número de lobos depende del tamaño de la mesa (1 con 4-6, 2 con 7-10, 3 con 11-12)."
+        },
+        "guardPrompt": "¿A quién proteges de los lobos esta noche?",
+        "guardDone": "Esta noche velas por {name}. 🛡️",
+        "guardForbidden": "Prohibido: {name} (ya protegido la noche pasada).",
+        "ravenPrompt": "¿A quién marcas con tu pluma negra?",
+        "ravenDone": "Tu marca pesa sobre {name}. 🐦‍⬛",
+        "ravenMarkBanner": "🐦‍⬛ ¡{name} lleva la marca del Cuervo: +2 votos en su contra hoy!",
+        "ravenMarkBadge": "Marcado por el Cuervo (+2 votos)"
       }
     }
   },

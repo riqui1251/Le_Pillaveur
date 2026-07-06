@@ -35,12 +35,29 @@ const ROLE_META: Record<LGRole, { icon: string; color: string }> = {
   voyante: { icon: '🔮', color: 'text-violet-300' },
   sorciere: { icon: '🧪', color: 'text-emerald-300' },
   chasseur: { icon: '🏹', color: 'text-amber-300' },
+  salvateur: { icon: '🛡️', color: 'text-cyan-300' },
+  corbeau: { icon: '🐦‍⬛', color: 'text-slate-300' },
+  ancien: { icon: '🧓', color: 'text-orange-300' },
   villageois: { icon: '🧑‍🌾', color: 'text-sky-300' },
 }
 
+/** Ordre d'affichage de la légende. */
+const LEGEND_ROLES: LGRole[] = [
+  'loup',
+  'voyante',
+  'sorciere',
+  'chasseur',
+  'salvateur',
+  'corbeau',
+  'ancien',
+  'villageois',
+]
+
 const PHASE_TOTAL_MS: Record<string, number> = {
   'reveal-role': 10_000,
+  'night-guard': 25_000,
   'night-seer': 30_000,
+  'night-raven': 25_000,
   'night-wolves': 45_000,
   'night-witch': 30_000,
   dawn: 10_000,
@@ -49,7 +66,13 @@ const PHASE_TOTAL_MS: Record<string, number> = {
   'day-revote': 45_000,
 }
 
-const NIGHT_PHASES = new Set(['night-seer', 'night-wolves', 'night-witch'])
+const NIGHT_PHASES = new Set([
+  'night-guard',
+  'night-seer',
+  'night-raven',
+  'night-wolves',
+  'night-witch',
+])
 
 /** Grille de cibles (sonde / vote loup / potion / tir / vote du jour). */
 function TargetGrid({
@@ -245,6 +268,12 @@ export function LoupGarouOnline() {
   const iAmActingWitch = Boolean(
     myRole === 'sorciere' && me?.alive && view.phase === 'night-witch'
   )
+  const iAmActingGuard = Boolean(
+    myRole === 'salvateur' && me?.alive && view.phase === 'night-guard'
+  )
+  const iAmActingRaven = Boolean(
+    myRole === 'corbeau' && me?.alive && view.phase === 'night-raven'
+  )
   const iAmHunter = view.phase === 'hunter-shot' && view.pendingHunterId === user.id
   const wolves = view.players.filter((p) => p.role === 'loup')
 
@@ -400,7 +429,7 @@ export function LoupGarouOnline() {
                 </button>
               </div>
               <ul className="space-y-1.5">
-                {(['loup', 'voyante', 'sorciere', 'chasseur', 'villageois'] as LGRole[]).map(
+                {LEGEND_ROLES.map(
                   (role) => (
                     <li
                       key={role}
@@ -500,7 +529,51 @@ export function LoupGarouOnline() {
 
           {/* NUIT : acteurs — ou écran de sommeil IDENTIQUE pour tous */}
           {isNight &&
-            (iAmActingSeer ? (
+            (iAmActingGuard ? (
+              <div className="space-y-2 rounded-2xl border border-cyan-400/30 bg-gray-900/80 p-4">
+                <p className="text-center text-sm font-bold text-cyan-200">
+                  {view.guardProtectedId
+                    ? t('guardDone', { name: nameOf(view.guardProtectedId) })
+                    : t('guardPrompt')}
+                </p>
+                {!view.guardProtectedId && (
+                  <>
+                    <TargetGrid
+                      players={alive}
+                      iconOf={iconOf}
+                      onPick={(id) => void sendAction({ action: 'guard-protect', targetId: id })}
+                      disabled={busy}
+                      excludeIds={view.guardLastProtectedId ? [view.guardLastProtectedId] : []}
+                      youLabel={t('you')}
+                      selfId={user.id}
+                    />
+                    {view.guardLastProtectedId && (
+                      <p className="text-center text-[10px] text-white/45">
+                        {t('guardForbidden', { name: nameOf(view.guardLastProtectedId) })}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : iAmActingRaven ? (
+              <div className="space-y-2 rounded-2xl border border-slate-400/30 bg-gray-900/80 p-4">
+                <p className="text-center text-sm font-bold text-slate-200">
+                  {view.ravenTargetId
+                    ? t('ravenDone', { name: nameOf(view.ravenTargetId) })
+                    : t('ravenPrompt')}
+                </p>
+                {!view.ravenTargetId && (
+                  <TargetGrid
+                    players={alive.filter((p) => p.id !== user.id)}
+                    iconOf={iconOf}
+                    onPick={(id) => void sendAction({ action: 'raven-mark', targetId: id })}
+                    disabled={busy}
+                    youLabel={t('you')}
+                    selfId={user.id}
+                  />
+                )}
+              </div>
+            ) : iAmActingSeer ? (
               <div className="space-y-2 rounded-2xl border border-violet-400/30 bg-gray-900/80 p-4">
                 <p className="text-center text-sm font-bold text-violet-200">
                   {myPeek ? t('seerDone') : t('seerPrompt')}
@@ -633,6 +706,11 @@ export function LoupGarouOnline() {
                   ))}
                 </div>
               )}
+              {view.ravenTargetId && (
+                <p className="mt-2 rounded-xl bg-slate-500/15 px-3 py-1.5 text-xs font-bold text-slate-200">
+                  {t('ravenMarkBanner', { name: nameOf(view.ravenTargetId) })}
+                </p>
+              )}
             </div>
           )}
 
@@ -661,6 +739,11 @@ export function LoupGarouOnline() {
             <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="text-center text-sm font-bold">{t('debatePrompt')}</p>
               <p className="text-center text-[11px] text-white/45">{t('debateHint')}</p>
+              {view.ravenTargetId && (
+                <p className="rounded-xl bg-slate-500/15 px-3 py-1.5 text-center text-xs font-bold text-slate-200">
+                  {t('ravenMarkBanner', { name: nameOf(view.ravenTargetId) })}
+                </p>
+              )}
               {/* Paroles des bots : accusations, défenses, alliances. */}
               {view.debateSpeech.filter((sp) => sp.round === view.round).length > 0 && (
                 <ul className="space-y-1">
@@ -729,6 +812,15 @@ export function LoupGarouOnline() {
                           {p.name}
                           {isMe && <span className="text-white/40"> {t('you')}</span>}
                         </span>
+                        {view.ravenTargetId === p.id && view.phase === 'day-vote' && (
+                          <span
+                            className="shrink-0 text-[10px] font-black text-slate-300"
+                            title={t('ravenMarkBadge')}
+                            aria-label={t('ravenMarkBadge')}
+                          >
+                            🐦‍⬛+2
+                          </span>
+                        )}
                         {view.hasVoted[p.id] && (
                           <span className="shrink-0 text-[10px] font-bold text-emerald-300">✓</span>
                         )}

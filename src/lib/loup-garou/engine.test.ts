@@ -61,6 +61,10 @@ function craft(
     nightVictimId: null,
     witchSavedId: null,
     witchKillId: null,
+    guardProtectedId: null,
+    guardLastProtectedId: null,
+    ravenTargetId: null,
+    elderLifeUsed: false,
     dayVotes: {},
     debateSkips: [],
     debateSpeech: [],
@@ -101,7 +105,23 @@ describe('création et rôles', () => {
         expect(roles.filter((r) => r === 'voyante')).toHaveLength(1)
         expect(roles.filter((r) => r === 'sorciere').length).toBeLessThanOrEqual(1)
         expect(roles.filter((r) => r === 'chasseur').length).toBeLessThanOrEqual(1)
+        expect(roles.filter((r) => r === 'salvateur').length).toBeLessThanOrEqual(1)
+        expect(roles.filter((r) => r === 'corbeau').length).toBeLessThanOrEqual(1)
+        expect(roles.filter((r) => r === 'ancien').length).toBeLessThanOrEqual(1)
+        // Plafond de spéciaux selon la taille (les villageois survivent).
+        const specials = roles.filter((r) =>
+          ['sorciere', 'chasseur', 'salvateur', 'corbeau', 'ancien'].includes(r)
+        ).length
+        expect(specials).toBeLessThanOrEqual(count >= 9 ? 4 : count >= 6 ? 3 : 2)
       }
+    }
+    // Sur beaucoup de tirages à 9+, chacun des 5 spéciaux apparaît au moins une fois.
+    const seen = new Set<string>()
+    for (let i = 0; i < 60; i += 1) {
+      for (const r of lgRolesFor(9, createRng(`pool-${i}`))) seen.add(r)
+    }
+    for (const special of ['sorciere', 'chasseur', 'salvateur', 'corbeau', 'ancien']) {
+      expect(seen.has(special), `jamais tiré : ${special}`).toBe(true)
     }
     // Le roulement produit bien des compositions DIFFÉRENTES à 4 joueurs.
     const compositions = new Set(
@@ -493,6 +513,137 @@ describe('paroles du débat (DEBATE_SPEAK)', () => {
     expect(s.debateSpeech).toHaveLength(3)
     // Visible de tous (public) — y compris la TV neutre.
     expect(toLGSpectatorView(s).debateSpeech).toHaveLength(3)
+  })
+})
+
+describe('nouveaux rôles : Salvateur, Corbeau, Ancien', () => {
+  /** Table à 7 : 1 loup + voyante + les 3 nouveaux + 2 villageois. */
+  const SEVEN = [
+    P('loup1', 'loup'),
+    P('voy', 'voyante'),
+    P('gar', 'salvateur'),
+    P('cor', 'corbeau'),
+    P('anc', 'ancien'),
+    P('vil1', 'villageois'),
+    P('vil2', 'villageois'),
+  ]
+
+  it('ordre de réveil : garde → voyante → corbeau → loups (morts sautés)', () => {
+    const s = craft(SEVEN, 'reveal-role', { round: 0, phaseEndsAt: T0 + LG_REVEAL_MS })
+    let n = advance(s, T0 + LG_REVEAL_MS)
+    expect(n.phase).toBe('night-guard')
+    n = advance(n, n.phaseEndsAt!)
+    expect(n.phase).toBe('night-seer')
+    n = advance(n, n.phaseEndsAt!)
+    expect(n.phase).toBe('night-raven')
+    n = advance(n, n.phaseEndsAt!)
+    expect(n.phase).toBe('night-wolves')
+    // Garde et voyante morts → la nuit ouvre directement chez le corbeau.
+    const dead = SEVEN.map((p) =>
+      p.id === 'gar' || p.id === 'voy' ? { ...p, alive: false } : p
+    )
+    const s2 = craft(dead, 'reveal-role', { round: 0, phaseEndsAt: T0 + LG_REVEAL_MS })
+    expect(advance(s2, T0 + LG_REVEAL_MS).phase).toBe('night-raven')
+  })
+
+  it('salvateur : protège des loups, jamais la même cible 2 nuits de suite', () => {
+    let s = craft(SEVEN, 'night-guard', { guardLastProtectedId: 'vil2' })
+    expect(() =>
+      reduceLG(s, { type: 'GUARD_PROTECT', playerId: 'vil1', targetId: 'vil2' })
+    ).toThrow('NOT_GUARD')
+    expect(() =>
+      reduceLG(s, { type: 'GUARD_PROTECT', playerId: 'gar', targetId: 'vil2' })
+    ).toThrow('SAME_TARGET_TWICE')
+    s = reduceLG(s, { type: 'GUARD_PROTECT', playerId: 'gar', targetId: 'vil1' })
+    expect(s.phase).toBe('night-guard') // bufferisé, pas d'avance anticipée
+    expect(() =>
+      reduceLG(s, { type: 'GUARD_PROTECT', playerId: 'gar', targetId: 'anc' })
+    ).toThrow('ALREADY_PROTECTED')
+    // Les loups attaquent le protégé → personne ne meurt à l'aube.
+    const night = craft(SEVEN, 'night-wolves', {
+      guardProtectedId: 'vil1',
+      wolfVotes: { loup1: 'vil1' },
+    })
+    const dawn = advance(night, T0 + 60_000)
+    expect(dawn.phase).toBe('dawn')
+    expect(dawn.lastNightDeaths).toEqual([])
+    expect(dawn.players.find((p) => p.id === 'vil1')?.alive).toBe(true)
+    // La protection d'hier devient l'interdit de ce soir.
+    const nextNight = advance(
+      craft(SEVEN, 'day-vote', { guardProtectedId: 'vil1', phaseEndsAt: T0 + LG_VOTE_MS }),
+      T0 + LG_VOTE_MS
+    )
+    expect(nextNight.guardLastProtectedId).toBe('vil1')
+    expect(nextNight.guardProtectedId).toBeNull()
+  })
+
+  it('corbeau : marque secrète la nuit, publique le jour, +2 voix au vote', () => {
+    let s = craft(SEVEN, 'night-raven')
+    expect(() =>
+      reduceLG(s, { type: 'RAVEN_MARK', playerId: 'vil1', targetId: 'vil2' })
+    ).toThrow('NOT_RAVEN')
+    expect(() =>
+      reduceLG(s, { type: 'RAVEN_MARK', playerId: 'cor', targetId: 'cor' })
+    ).toThrow('INVALID_TARGET')
+    s = reduceLG(s, { type: 'RAVEN_MARK', playerId: 'cor', targetId: 'vil1' })
+    // Nuit : seuls le corbeau et les fantômes voient la marque.
+    expect(toLGClientView(s, 'cor').ravenTargetId).toBe('vil1')
+    expect(toLGClientView(s, 'vil2').ravenTargetId).toBeNull()
+    expect(toLGSpectatorView(s).ravenTargetId).toBeNull()
+    // Jour : la marque est publique.
+    const day = craft(SEVEN, 'day-vote', { ravenTargetId: 'vil1', phaseEndsAt: T0 + LG_VOTE_MS })
+    expect(toLGClientView(day, 'vil2').ravenTargetId).toBe('vil1')
+    // 1 voix contre vil2, 0 humaine contre vil1 marqué → 2 > 1 : vil1 sort.
+    const voted = reduceLG(day, { type: 'DAY_VOTE', playerId: 'loup1', targetId: 'vil2', now: T0 })
+    const resolved = advance(voted, T0 + LG_VOTE_MS)
+    expect(resolved.lastVoteResult?.tally).toMatchObject({ vil1: 2, vil2: 1 })
+    expect(resolved.lastVoteResult?.eliminatedId).toBe('vil1')
+  })
+
+  it("ancien : survit à la première attaque des loups, pas à la seconde", () => {
+    const night = craft(SEVEN, 'night-wolves', { wolfVotes: { loup1: 'anc' } })
+    const dawn = advance(night, T0 + 60_000)
+    expect(dawn.lastNightDeaths).toEqual([]) // il a encaissé
+    expect(dawn.elderLifeUsed).toBe(true)
+    expect(dawn.players.find((p) => p.id === 'anc')?.alive).toBe(true)
+    // Seconde attaque : plus de bouclier.
+    const night2 = craft(SEVEN, 'night-wolves', {
+      wolfVotes: { loup1: 'anc' },
+      elderLifeUsed: true,
+    })
+    const dawn2 = advance(night2, T0 + 60_000)
+    expect(dawn2.lastNightDeaths.map((d) => d.playerId)).toEqual(['anc'])
+    // La potion de mort de la sorcière, elle, ignore le bouclier.
+    const witchNight = craft(SEVEN, 'night-witch', { witchKillId: 'anc' })
+    const dawn3 = advance(witchNight, T0 + 60_000)
+    expect(dawn3.lastNightDeaths.map((d) => [d.playerId, d.cause])).toEqual([
+      ['anc', 'sorciere'],
+    ])
+  })
+
+  it('les secrets du salvateur/corbeau/ancien ne fuitent pas aux vivants', () => {
+    const s = craft(SEVEN, 'night-wolves', {
+      guardProtectedId: 'vil1',
+      guardLastProtectedId: 'vil2',
+      ravenTargetId: 'anc',
+      elderLifeUsed: true,
+    })
+    const villager = toLGClientView(s, 'vil1')
+    expect(villager.guardProtectedId).toBeNull()
+    expect(villager.guardLastProtectedId).toBeNull()
+    expect(villager.ravenTargetId).toBeNull()
+    expect(villager.elderLifeUsed).toBeNull()
+    // Le salvateur voit SA protection ; le fantôme voit tout.
+    expect(toLGClientView(s, 'gar').guardProtectedId).toBe('vil1')
+    const withGhost = craft(
+      SEVEN.map((p) => (p.id === 'vil2' ? { ...p, alive: false } : p)),
+      'night-wolves',
+      { guardProtectedId: 'vil1', ravenTargetId: 'anc', elderLifeUsed: true }
+    )
+    const ghost = toLGClientView(withGhost, 'vil2')
+    expect(ghost.guardProtectedId).toBe('vil1')
+    expect(ghost.ravenTargetId).toBe('anc')
+    expect(ghost.elderLifeUsed).toBe(true)
   })
 })
 

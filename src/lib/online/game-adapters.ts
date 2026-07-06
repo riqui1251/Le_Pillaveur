@@ -405,7 +405,11 @@ const loupGarouAdapter: GameAdapter = {
   applyAction(rawState, userId, body) {
     const state = rawState as LGState
     let input: LGRoomActionInput
-    if (body.action === 'seer-peek' && typeof body.targetId === 'string') {
+    if (body.action === 'guard-protect' && typeof body.targetId === 'string') {
+      input = { type: 'guard-protect', targetId: body.targetId }
+    } else if (body.action === 'raven-mark' && typeof body.targetId === 'string') {
+      input = { type: 'raven-mark', targetId: body.targetId }
+    } else if (body.action === 'seer-peek' && typeof body.targetId === 'string') {
       input = { type: 'seer-peek', targetId: body.targetId }
     } else if (body.action === 'wolf-vote' && typeof body.targetId === 'string') {
       input = { type: 'wolf-vote', targetId: body.targetId }

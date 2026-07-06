@@ -26,7 +26,9 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
 export const LG_MIN_PLAYERS = 4
 export const LG_MAX_PLAYERS = 12
 export const LG_REVEAL_MS = 10_000
+export const LG_GUARD_MS = 25_000
 export const LG_SEER_MS = 30_000
+export const LG_RAVEN_MS = 25_000
 export const LG_WOLVES_MS = 45_000
 export const LG_WITCH_MS = 30_000
 export const LG_DAWN_MS = 10_000
@@ -40,13 +42,25 @@ export const LG_SIPS_DEATH = 3
 export const LG_SIPS_BAD_LYNCH = 2
 export const LG_SIPS_WOLF_LYNCHED = 3
 export const LG_SIPS_POTION = 1
+/** Voix ajoutées contre le marqué du Corbeau au vote du jour. */
+export const LG_RAVEN_EXTRA_VOTES = 2
 
-export type LGRole = 'loup' | 'voyante' | 'sorciere' | 'chasseur' | 'villageois'
+export type LGRole =
+  | 'loup'
+  | 'voyante'
+  | 'sorciere'
+  | 'chasseur'
+  | 'salvateur'
+  | 'corbeau'
+  | 'ancien'
+  | 'villageois'
 export type LGTeam = 'village' | 'loups'
 
 export type LGPhase =
   | 'reveal-role'
+  | 'night-guard'
   | 'night-seer'
+  | 'night-raven'
   | 'night-wolves'
   | 'night-witch'
   | 'dawn'
@@ -113,6 +127,14 @@ export type LGState = TimedPhaseState & {
   nightVictimId: string | null
   witchSavedId: string | null
   witchKillId: string | null
+  /** SECRET — protégé du Salvateur cette nuit (immunisé contre les loups). */
+  guardProtectedId: string | null
+  /** SECRET Salvateur — protégé de la nuit précédente (interdit 2× de suite). */
+  guardLastProtectedId: string | null
+  /** Marque du Corbeau : secrète la nuit, PUBLIQUE au jour (+2 voix au vote). */
+  ravenTargetId: string | null
+  /** L'Ancien a déjà encaissé (et survécu à) une attaque des loups. */
+  elderLifeUsed: boolean
   // ── Jour ───────────────────────────────────────────────────────────────
   /** SECRET — votes du jour. */
   dayVotes: Record<string, string>
@@ -137,6 +159,8 @@ export type LGState = TimedPhaseState & {
 }
 
 export type LGAction =
+  | { type: 'GUARD_PROTECT'; playerId: string; targetId: string }
+  | { type: 'RAVEN_MARK'; playerId: string; targetId: string }
   | { type: 'SEER_PEEK'; playerId: string; targetId: string }
   | { type: 'WOLF_VOTE'; playerId: string; targetId: string }
   | { type: 'WITCH_ACTION'; playerId: string; action: 'save' | 'kill' | 'none'; targetId?: string }
@@ -165,20 +189,35 @@ export type LGInitialPlayer = { id: string; name: string; isBot?: boolean }
 
 // ─── Rôles selon l'effectif ──────────────────────────────────────────────────
 
+/** Rôles spéciaux qui tournent d'une partie à l'autre (hors Voyante, fixe). */
+export const LG_SPECIAL_ROLES = [
+  'sorciere',
+  'chasseur',
+  'salvateur',
+  'corbeau',
+  'ancien',
+] as const
+
 /**
  * Composition avec ROULEMENT : loups selon la taille + Voyante toujours,
- * puis la Sorcière et le Chasseur tournent d'une partie à l'autre (tirage
- * seedé) — même à 4 joueurs, on ne retombe pas toujours sur la même table.
+ * puis les rôles spéciaux (Sorcière, Chasseur, Salvateur, Corbeau, Ancien)
+ * tournent d'une partie à l'autre (tirage seedé) — même à 4 joueurs, on ne
+ * retombe pas toujours sur la même table. Leur nombre est plafonné selon
+ * l'effectif pour garder des villageois « simples ».
  */
 export function lgRolesFor(count: number, rng: SeededRng): LGRole[] {
   const roles: LGRole[] = []
   const wolves = count >= 11 ? 3 : count >= 7 ? 2 : 1
   for (let i = 0; i < wolves; i += 1) roles.push('loup')
   roles.push('voyante')
-  // Rôles spéciaux en rotation (ordre et présence tirés au sort).
-  for (const special of rng.shuffle(['sorciere', 'chasseur'] as const)) {
-    if (roles.length >= count) break
-    if (rng.chance(0.65)) roles.push(special)
+  const maxSpecials = count >= 9 ? 4 : count >= 6 ? 3 : 2
+  let specials = 0
+  for (const special of rng.shuffle(LG_SPECIAL_ROLES)) {
+    if (roles.length >= count || specials >= maxSpecials) break
+    if (rng.chance(0.55)) {
+      roles.push(special)
+      specials += 1
+    }
   }
   while (roles.length < count) roles.push('villageois')
   return roles
@@ -252,6 +291,10 @@ export function createLGState(
     nightVictimId: null,
     witchSavedId: null,
     witchKillId: null,
+    guardProtectedId: null,
+    guardLastProtectedId: null,
+    ravenTargetId: null,
+    elderLifeUsed: false,
     dayVotes: {},
     debateSkips: [],
     debateSpeech: [],
@@ -282,6 +325,31 @@ function finish(state: LGState, winner: LGTeam, now: number): LGState {
 }
 
 /**
+ * Ordre de réveil : Salvateur → Voyante → Corbeau → Loups (→ Sorcière).
+ * Chaque phase n'existe que si son rôle est VIVANT (sa mort est publique).
+ */
+function nightPhaseAfterSeer(state: LGState): { phase: LGPhase; ms: number } {
+  if (aliveWithRole(state, 'corbeau').length > 0) {
+    return { phase: 'night-raven', ms: LG_RAVEN_MS }
+  }
+  return { phase: 'night-wolves', ms: LG_WOLVES_MS }
+}
+
+function nightPhaseAfterGuard(state: LGState): { phase: LGPhase; ms: number } {
+  if (aliveWithRole(state, 'voyante').length > 0) {
+    return { phase: 'night-seer', ms: LG_SEER_MS }
+  }
+  return nightPhaseAfterSeer(state)
+}
+
+function firstNightPhase(state: LGState): { phase: LGPhase; ms: number } {
+  if (aliveWithRole(state, 'salvateur').length > 0) {
+    return { phase: 'night-guard', ms: LG_GUARD_MS }
+  }
+  return nightPhaseAfterGuard(state)
+}
+
+/**
  * Nouvelle nuit : remise à zéro des buffers, saut des rôles morts.
  * `lastVoteResult` PERSISTE (bannière « X a été lynché » pendant la nuit) —
  * il est remplacé au prochain dépouillement.
@@ -295,6 +363,10 @@ function startNight(state: LGState, now: number): LGState {
     nightVictimId: null,
     witchSavedId: null,
     witchKillId: null,
+    // Le protégé d'hier devient « interdit » ce soir (jamais 2× de suite).
+    guardLastProtectedId: state.guardProtectedId,
+    guardProtectedId: null,
+    ravenTargetId: null,
     dayVotes: {},
     debateSkips: [],
     debateSpeech: [],
@@ -302,11 +374,8 @@ function startNight(state: LGState, now: number): LGState {
     pendingHunterId: null,
     afterHunter: null,
   }
-  // Voyante vivante → sa phase ; sinon directement les loups (sa mort est publique).
-  if (aliveWithRole(next, 'voyante').length > 0) {
-    return { ...toPhase(next, 'night-seer', LG_SEER_MS, now), version: state.version + 1 }
-  }
-  return { ...toPhase(next, 'night-wolves', LG_WOLVES_MS, now), version: state.version + 1 }
+  const first = firstNightPhase(next)
+  return { ...toPhase(next, first.phase, first.ms, now), version: state.version + 1 }
 }
 
 /** Fin de la phase des loups : victime = cible majoritaire (égalité → RNG). */
@@ -342,16 +411,29 @@ function resolveWolves(state: LGState, now: number): LGState {
   return resolveNight(next, now)
 }
 
-/** Aube : applique victime des loups (sauf sauvée) + potion de mort. */
+/**
+ * Aube : applique victime des loups (sauf sauvée par la Sorcière, protégée
+ * par le Salvateur, ou Ancien à sa première attaque) + potion de mort.
+ */
 function resolveNight(state: LGState, now: number): LGState {
   const deaths: LGDeath[] = []
   const deadIds = new Set<string>()
+  let elderLifeUsed = state.elderLifeUsed
 
-  if (state.nightVictimId && state.witchSavedId !== state.nightVictimId) {
+  if (
+    state.nightVictimId &&
+    state.witchSavedId !== state.nightVictimId &&
+    state.guardProtectedId !== state.nightVictimId
+  ) {
     const victim = playerOf(state, state.nightVictimId)
     if (victim?.alive) {
-      deaths.push({ playerId: victim.id, role: victim.role, cause: 'loups', round: state.round })
-      deadIds.add(victim.id)
+      if (victim.role === 'ancien' && !elderLifeUsed) {
+        // L'Ancien encaisse la première morsure : personne ne meurt cette nuit.
+        elderLifeUsed = true
+      } else {
+        deaths.push({ playerId: victim.id, role: victim.role, cause: 'loups', round: state.round })
+        deadIds.add(victim.id)
+      }
     }
   }
   if (state.witchKillId) {
@@ -369,6 +451,7 @@ function resolveNight(state: LGState, now: number): LGState {
   const next: LGState = {
     ...state,
     players,
+    elderLifeUsed,
     lastNightDeaths: deaths,
     deaths: [...state.deaths, ...deaths],
     pendingHunterId: hunter?.playerId ?? null,
@@ -388,6 +471,11 @@ function afterDawn(state: LGState, now: number): LGState {
 /** Dépouillement du vote du jour (ou du revote). */
 function resolveDayVote(state: LGState, now: number, isRevote: boolean): LGState {
   const tally: Record<string, number> = {}
+  // La marque du Corbeau pèse +2 voix (premier vote du jour uniquement).
+  if (!isRevote && state.ravenTargetId) {
+    const marked = playerOf(state, state.ravenTargetId)
+    if (marked?.alive) tally[marked.id] = LG_RAVEN_EXTRA_VOTES
+  }
   for (const targetId of Object.values(state.dayVotes)) {
     tally[targetId] = (tally[targetId] ?? 0) + 1
   }
@@ -482,6 +570,32 @@ function afterHunterShot(state: LGState, now: number): LGState {
 
 export function reduceLG(state: LGState, action: LGAction): LGState {
   switch (action.type) {
+    case 'GUARD_PROTECT': {
+      if (state.phase !== 'night-guard') throw new LGEngineError('NOT_GUARD_PHASE')
+      const actor = playerOf(state, action.playerId)
+      if (!actor?.alive || actor.role !== 'salvateur') throw new LGEngineError('NOT_GUARD')
+      if (state.guardProtectedId) throw new LGEngineError('ALREADY_PROTECTED')
+      const target = playerOf(state, action.targetId)
+      // Il peut se protéger lui-même — mais jamais la même cible 2 nuits de suite.
+      if (!target?.alive) throw new LGEngineError('INVALID_TARGET')
+      if (target.id === state.guardLastProtectedId) {
+        throw new LGEngineError('SAME_TARGET_TWICE')
+      }
+      // Bufferisé : la phase garde sa durée pleine (anti-leak de timing).
+      return { ...state, guardProtectedId: target.id, version: state.version + 1 }
+    }
+
+    case 'RAVEN_MARK': {
+      if (state.phase !== 'night-raven') throw new LGEngineError('NOT_RAVEN_PHASE')
+      const actor = playerOf(state, action.playerId)
+      if (!actor?.alive || actor.role !== 'corbeau') throw new LGEngineError('NOT_RAVEN')
+      if (state.ravenTargetId) throw new LGEngineError('ALREADY_MARKED')
+      const target = playerOf(state, action.targetId)
+      if (!target?.alive || target.id === actor.id) throw new LGEngineError('INVALID_TARGET')
+      // Bufferisé : la marque ne devient publique qu'au lever du jour.
+      return { ...state, ravenTargetId: target.id, version: state.version + 1 }
+    }
+
     case 'SEER_PEEK': {
       if (state.phase !== 'night-seer') throw new LGEngineError('NOT_SEER_PHASE')
       const actor = playerOf(state, action.playerId)
@@ -641,7 +755,15 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       switch (state.phase) {
         case 'reveal-role':
           return startNight(state, now)
-        case 'night-seer':
+        case 'night-guard': {
+          const after = nightPhaseAfterGuard(state)
+          return { ...toPhase(state, after.phase, after.ms, now), version: state.version + 1 }
+        }
+        case 'night-seer': {
+          const after = nightPhaseAfterSeer(state)
+          return { ...toPhase(state, after.phase, after.ms, now), version: state.version + 1 }
+        }
+        case 'night-raven':
           return { ...toPhase(state, 'night-wolves', LG_WOLVES_MS, now), version: state.version + 1 }
         case 'night-wolves':
           return resolveWolves(state, now)
@@ -749,7 +871,19 @@ export type LGClientView = Omit<
   | 'witchSaveUsed'
   | 'witchKillUsed'
   | 'witchActed'
+  | 'guardProtectedId'
+  | 'guardLastProtectedId'
+  | 'ravenTargetId'
+  | 'elderLifeUsed'
 > & {
+  /** Protégé du Salvateur cette nuit — lui seul (+ fantômes). */
+  guardProtectedId: string | null
+  /** Cible interdite ce soir (protégée hier) — Salvateur seul (+ fantômes). */
+  guardLastProtectedId: string | null
+  /** Marque du Corbeau : Corbeau la nuit ; PUBLIQUE le jour (+2 voix). */
+  ravenTargetId: string | null
+  /** L'Ancien a déjà servi de bouclier — fantômes/fin de partie uniquement. */
+  elderLifeUsed: boolean | null
   /** La Sorcière a déjà agi cette nuit — elle seule (+ fantômes). */
   witchActed: boolean | null
   players: LGPlayerView[]
@@ -784,6 +918,10 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
     witchSaveUsed: _wsu,
     witchKillUsed: _wku,
     witchActed,
+    guardProtectedId,
+    guardLastProtectedId,
+    ravenTargetId,
+    elderLifeUsed,
     ...rest
   } = state
   void _rng
@@ -799,6 +937,11 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
   const iAmWolf = Boolean(me?.alive && me.role === 'loup')
   const iAmSeer = Boolean(me?.alive && me.role === 'voyante')
   const iAmWitch = Boolean(me?.alive && me.role === 'sorciere')
+  const iAmGuard = Boolean(me?.alive && me.role === 'salvateur')
+  const iAmRaven = Boolean(me?.alive && me.role === 'corbeau')
+  /** La marque du Corbeau devient publique au lever du jour. */
+  const dayPhases: LGPhase[] = ['dawn', 'hunter-shot', 'day-debate', 'day-vote', 'day-revote']
+  const ravenPublic = dayPhases.includes(state.phase)
 
   const roleVisible = (p: LGPlayer): boolean =>
     finished ||
@@ -835,6 +978,10 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
         ? { save: !state.witchSaveUsed, kill: !state.witchKillUsed }
         : null,
     witchActed: iAmWitch || ghost || finished ? witchActed : null,
+    guardProtectedId: iAmGuard || ghost || finished ? guardProtectedId : null,
+    guardLastProtectedId: iAmGuard || ghost || finished ? guardLastProtectedId : null,
+    ravenTargetId: iAmRaven || ravenPublic || ghost || finished ? ravenTargetId : null,
+    elderLifeUsed: ghost || finished ? elderLifeUsed : null,
     hasVoted,
     myVote: dayVotes[viewerId] ?? null,
   }

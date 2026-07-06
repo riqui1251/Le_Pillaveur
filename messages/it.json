@@ -2071,7 +2071,9 @@
           "hunter-shot": "Il cacciatore",
           "day-debate": "Dibattito",
           "day-vote": "Voto",
-          "day-revote": "Secondo voto"
+          "day-revote": "Secondo voto",
+          "night-guard": "Il guardiano veglia…",
+          "night-raven": "Il corvo volteggia…"
         },
         "ghostBanner": "👻 Sei un fantasma: vedi TUTTO… ma shhh, non una parola in vocale!",
         "yourRole": "Il tuo ruolo segreto",
@@ -2095,6 +2097,18 @@
           "chasseur": {
             "name": "Cacciatore",
             "desc": "Se muori, porti qualcuno con te."
+          },
+          "salvateur": {
+            "name": "Guardiano",
+            "desc": "Ogni notte protegge un giocatore dai lupi — mai lo stesso due notti di fila."
+          },
+          "corbeau": {
+            "name": "Corvo",
+            "desc": "Ogni notte marchia un giocatore: +2 voti contro di lui al voto del giorno."
+          },
+          "ancien": {
+            "name": "Anziano",
+            "desc": "Troppo duro per i lupi: sopravvive al loro primo attacco."
           },
           "villageois": {
             "name": "Contadino",
@@ -2153,8 +2167,15 @@
         "legend": {
           "title": "Legenda dei ruoli",
           "close": "Chiudi",
-          "hint": "La Strega e il Cacciatore non sono sempre in gioco — la composizione cambia a ogni villaggio. Il numero di lupi dipende dalla taglia del tavolo (1 con 4-6, 2 con 7-10, 3 con 11-12)."
-        }
+          "hint": "La composizione cambia a ogni villaggio: Strega, Cacciatore, Guardiano, Corvo e Anziano ruotano da una partita all’altra. Il numero di lupi dipende dalla taglia del tavolo (1 con 4-6, 2 con 7-10, 3 con 11-12)."
+        },
+        "guardPrompt": "Chi proteggi dai lupi questa notte?",
+        "guardDone": "Questa notte vegli su {name}. 🛡️",
+        "guardForbidden": "Vietato: {name} (già protetto la notte scorsa).",
+        "ravenPrompt": "Chi marchi con la tua piuma nera?",
+        "ravenDone": "Il tuo marchio pesa su {name}. 🐦‍⬛",
+        "ravenMarkBanner": "🐦‍⬛ {name} porta il marchio del Corvo: +2 voti contro di lui oggi!",
+        "ravenMarkBadge": "Marchiato dal Corvo (+2 voti)"
       }
     }
   },

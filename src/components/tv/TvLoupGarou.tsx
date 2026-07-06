@@ -18,12 +18,17 @@ const ROLE_META: Record<LGRole, { icon: string; color: string }> = {
   voyante: { icon: '🔮', color: 'text-violet-300' },
   sorciere: { icon: '🧪', color: 'text-emerald-300' },
   chasseur: { icon: '🏹', color: 'text-amber-300' },
+  salvateur: { icon: '🛡️', color: 'text-cyan-300' },
+  corbeau: { icon: '🐦‍⬛', color: 'text-slate-300' },
+  ancien: { icon: '🧓', color: 'text-orange-300' },
   villageois: { icon: '🧑‍🌾', color: 'text-sky-300' },
 }
 
 const PHASE_TOTAL_MS: Record<string, number> = {
   'reveal-role': 10_000,
+  'night-guard': 25_000,
   'night-seer': 30_000,
+  'night-raven': 25_000,
   'night-wolves': 45_000,
   'night-witch': 30_000,
   dawn: 10_000,
@@ -32,7 +37,14 @@ const PHASE_TOTAL_MS: Record<string, number> = {
   'day-revote': 45_000,
 }
 
-const NIGHT_PHASES = new Set(['reveal-role', 'night-seer', 'night-wolves', 'night-witch'])
+const NIGHT_PHASES = new Set([
+  'reveal-role',
+  'night-guard',
+  'night-seer',
+  'night-raven',
+  'night-wolves',
+  'night-witch',
+])
 
 export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientView }) {
   const t = useTranslations('games.loup-garou.game')
@@ -148,6 +160,11 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
                   {t('dawnDeath', { name: nameOf(d.playerId), role: roleName(d.role) })}
                 </p>
               ))
+            )}
+            {state.ravenTargetId && (
+              <p className="text-2xl font-bold text-slate-200">
+                {t('ravenMarkBanner', { name: nameOf(state.ravenTargetId) })}
+              </p>
             )}
           </>
         )}

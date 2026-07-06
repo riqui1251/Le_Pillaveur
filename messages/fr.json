@@ -2086,7 +2086,9 @@
           "hunter-shot": "Le chasseur",
           "day-debate": "Débat",
           "day-vote": "Vote",
-          "day-revote": "Revote"
+          "day-revote": "Revote",
+          "night-guard": "Le salvateur veille…",
+          "night-raven": "Le corbeau plane…"
         },
         "ghostBanner": "👻 Tu es un fantôme : tu vois TOUT… mais chuuut, pas un mot au vocal !",
         "yourRole": "Ton rôle secret",
@@ -2110,6 +2112,18 @@
           "chasseur": {
             "name": "Chasseur",
             "desc": "Si tu meurs, tu emportes quelqu’un dans la tombe."
+          },
+          "salvateur": {
+            "name": "Salvateur",
+            "desc": "Chaque nuit, protège un joueur des loups — jamais le même deux nuits de suite."
+          },
+          "corbeau": {
+            "name": "Corbeau",
+            "desc": "Chaque nuit, marque un joueur : +2 voix contre lui au vote du lendemain."
+          },
+          "ancien": {
+            "name": "Ancien",
+            "desc": "Trop coriace pour les loups : il survit à leur première attaque."
           },
           "villageois": {
             "name": "Villageois",
@@ -2168,8 +2182,15 @@
         "legend": {
           "title": "Légende des rôles",
           "close": "Fermer",
-          "hint": "La Sorcière et le Chasseur ne sont pas toujours de la partie — la composition change à chaque village. Le nombre de loups dépend de la taille de la table (1 à 4-6, 2 à 7-10, 3 à 11-12)."
-        }
+          "hint": "La composition change à chaque village : Sorcière, Chasseur, Salvateur, Corbeau et Ancien tournent d’une partie à l’autre. Le nombre de loups dépend de la taille de la table (1 à 4-6, 2 à 7-10, 3 à 11-12)."
+        },
+        "guardPrompt": "Qui protèges-tu des loups cette nuit ?",
+        "guardDone": "Tu veilles sur {name} cette nuit. 🛡️",
+        "guardForbidden": "Interdit : {name} (déjà protégé la nuit dernière).",
+        "ravenPrompt": "Qui marques-tu de ta plume noire ?",
+        "ravenDone": "Ta marque pèse sur {name}. 🐦‍⬛",
+        "ravenMarkBanner": "🐦‍⬛ {name} porte la marque du Corbeau : +2 voix contre lui au vote !",
+        "ravenMarkBadge": "Marqué par le Corbeau (+2 voix)"
       }
     }
   },

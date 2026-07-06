@@ -2081,7 +2081,9 @@
           "hunter-shot": "The hunter",
           "day-debate": "Debate",
           "day-vote": "Vote",
-          "day-revote": "Revote"
+          "day-revote": "Revote",
+          "night-guard": "The bodyguard watches…",
+          "night-raven": "The raven circles…"
         },
         "ghostBanner": "👻 You are a ghost: you see EVERYTHING… but shhh, not a word on voice!",
         "yourRole": "Your secret role",
@@ -2105,6 +2107,18 @@
           "chasseur": {
             "name": "Hunter",
             "desc": "If you die, you take someone with you."
+          },
+          "salvateur": {
+            "name": "Bodyguard",
+            "desc": "Each night, shields one player from the wolves — never the same player twice in a row."
+          },
+          "corbeau": {
+            "name": "Raven",
+            "desc": "Each night, marks a player: +2 votes against them at the next day’s vote."
+          },
+          "ancien": {
+            "name": "Elder",
+            "desc": "Too tough for the wolves: survives their first attack."
           },
           "villageois": {
             "name": "Villager",
@@ -2163,8 +2177,15 @@
         "legend": {
           "title": "Role legend",
           "close": "Close",
-          "hint": "The Witch and the Hunter are not always in play — the line-up changes every village. The number of wolves depends on the table size (1 at 4-6, 2 at 7-10, 3 at 11-12)."
-        }
+          "hint": "The line-up changes every village: Witch, Hunter, Bodyguard, Raven and Elder rotate from game to game. The number of wolves depends on the table size (1 at 4-6, 2 at 7-10, 3 at 11-12)."
+        },
+        "guardPrompt": "Who do you shield from the wolves tonight?",
+        "guardDone": "You are watching over {name} tonight. 🛡️",
+        "guardForbidden": "Not allowed: {name} (protected last night).",
+        "ravenPrompt": "Who gets your black feather?",
+        "ravenDone": "Your mark weighs on {name}. 🐦‍⬛",
+        "ravenMarkBanner": "🐦‍⬛ {name} bears the Raven’s mark: +2 votes against them today!",
+        "ravenMarkBadge": "Marked by the Raven (+2 votes)"
       }
     }
   },
