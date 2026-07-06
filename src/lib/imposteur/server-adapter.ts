@@ -26,7 +26,18 @@ export interface ImposteurRoomMember {
   user: { displayName: string }
 }
 
-const IMPOSTEUR_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
+const IMPOSTEUR_BOT_NAMES = [
+  'Barnabé 🤖',
+  'Gépéto 🤖',
+  'Raoul 🤖',
+  'Suzette 🤖',
+  'Marcel 🤖',
+  'Gaston 🤖',
+  'Bernadette 🤖',
+  'Norbert 🤖',
+  'Ginette 🤖',
+  'Roger 🤖',
+]
 
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par

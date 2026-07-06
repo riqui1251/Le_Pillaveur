@@ -30,7 +30,18 @@ export interface LGRoomMember {
   user: { displayName: string }
 }
 
-const LG_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
+const LG_BOT_NAMES = [
+  'Barnabé 🤖',
+  'Gépéto 🤖',
+  'Raoul 🤖',
+  'Suzette 🤖',
+  'Marcel 🤖',
+  'Gaston 🤖',
+  'Bernadette 🤖',
+  'Norbert 🤖',
+  'Ginette 🤖',
+  'Roger 🤖',
+]
 
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par

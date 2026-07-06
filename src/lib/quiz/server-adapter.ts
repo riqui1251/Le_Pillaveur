@@ -23,7 +23,18 @@ export interface QuizRoomMember {
   user: { displayName: string }
 }
 
-const QUIZ_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
+const QUIZ_BOT_NAMES = [
+  'Barnabé 🤖',
+  'Gépéto 🤖',
+  'Raoul 🤖',
+  'Suzette 🤖',
+  'Marcel 🤖',
+  'Gaston 🤖',
+  'Bernadette 🤖',
+  'Norbert 🤖',
+  'Ginette 🤖',
+  'Roger 🤖',
+]
 
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par

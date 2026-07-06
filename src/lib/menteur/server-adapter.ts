@@ -26,7 +26,18 @@ export interface MenteurRoomMember {
 }
 
 /** Noms des bots de complément (clin d'œil apéro). */
-const MENTEUR_BOT_NAMES = ['Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖']
+const MENTEUR_BOT_NAMES = [
+  'Barnabé 🤖',
+  'Gépéto 🤖',
+  'Raoul 🤖',
+  'Suzette 🤖',
+  'Marcel 🤖',
+  'Gaston 🤖',
+  'Bernadette 🤖',
+  'Norbert 🤖',
+  'Ginette 🤖',
+  'Roger 🤖',
+]
 
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par
