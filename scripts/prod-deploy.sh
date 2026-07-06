@@ -8,6 +8,26 @@ cd "$APP_DIR"
 tar xf "$ARCHIVE"
 find scripts -name '*.sh' -exec sed -i 's/\r$//' {} + 2>/dev/null || true
 
+# tar xf n'ecrase/n'ajoute que les fichiers presents dans l'archive : les
+# fichiers retires du depot (ex. anciennes pages pre-i18n hors [locale])
+# restent orphelins sur le disque d'un deploiement a l'autre. Next.js
+# compile TOUTE page.tsx sous src/app, donc un orphelin qui importe un
+# composant partage dont la signature a change casse le build. On purge
+# ici tout ce qui n'est plus dans l'archive, limite a src/app (la seule
+# zone ou un fichier mort devient une route compilee).
+echo "=== Purge des pages orphelines (src/app) ==="
+if [ -d src/app ]; then
+  tar tf "$ARCHIVE" | grep -E '^src/app/' | cut -d/ -f1-3 | sort -u > /tmp/.deploy-app-manifest.txt
+  for entry in src/app/*; do
+    [ -e "$entry" ] || continue
+    if ! grep -qxF "$entry" /tmp/.deploy-app-manifest.txt; then
+      echo "  orpheline supprimee : $entry"
+      rm -rf "$entry"
+    fi
+  done
+  rm -f /tmp/.deploy-app-manifest.txt
+fi
+
 echo "=== Build image ==="
 docker build -t le-pillaveur:latest . 2>&1 | tail -20
 docker build --target builder -t le-pillaveur:builder . >/dev/null
