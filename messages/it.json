@@ -2141,6 +2141,11 @@
           "suspect": "{name} mi sembra sospetto… nasconde qualcosa 🤨",
           "defend": "Cosa?! {name} dice sciocchezze, sono innocente!",
           "ally": "Facciamo squadra con {name}, mi fido 🤝"
+        },
+        "legend": {
+          "title": "Legenda dei ruoli",
+          "close": "Chiudi",
+          "hint": "La Strega e il Cacciatore non sono sempre in gioco — la composizione cambia a ogni villaggio. Il numero di lupi dipende dalla taglia del tavolo (1 con 4-6, 2 con 7-10, 3 con 11-12)."
         }
       }
     }

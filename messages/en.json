@@ -2151,6 +2151,11 @@
           "suspect": "I find {name} shady… they are hiding something 🤨",
           "defend": "What?! {name} is talking nonsense, I am innocent!",
           "ally": "Let’s team up with {name}, I trust them 🤝"
+        },
+        "legend": {
+          "title": "Role legend",
+          "close": "Close",
+          "hint": "The Witch and the Hunter are not always in play — the line-up changes every village. The number of wolves depends on the table size (1 at 4-6, 2 at 7-10, 3 at 11-12)."
         }
       }
     }

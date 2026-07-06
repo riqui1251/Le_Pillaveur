@@ -2141,6 +2141,11 @@
           "suspect": "{name} me parece sospechoso… esconde algo 🤨",
           "defend": "¡¿Qué?! {name} dice tonterías, ¡soy inocente!",
           "ally": "Hagamos equipo con {name}, confío en él 🤝"
+        },
+        "legend": {
+          "title": "Leyenda de roles",
+          "close": "Cerrar",
+          "hint": "La Bruja y el Cazador no siempre están en juego — la composición cambia en cada aldea. El número de lobos depende del tamaño de la mesa (1 con 4-6, 2 con 7-10, 3 con 11-12)."
         }
       }
     }

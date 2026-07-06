@@ -2156,6 +2156,11 @@
           "suspect": "Je trouve {name} louche… il cache quelque chose 🤨",
           "defend": "Quoi ?! {name} raconte n’importe quoi, je suis innocent !",
           "ally": "Faisons équipe avec {name}, je le sens bien 🤝"
+        },
+        "legend": {
+          "title": "Légende des rôles",
+          "close": "Fermer",
+          "hint": "La Sorcière et le Chasseur ne sont pas toujours de la partie — la composition change à chaque village. Le nombre de loups dépend de la taille de la table (1 à 4-6, 2 à 7-10, 3 à 11-12)."
         }
       }
     }

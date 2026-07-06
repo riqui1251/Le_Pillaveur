@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
-import { Beer, Eye, EyeOff, Home, Moon, RefreshCw, Sun, Trophy, Vote } from 'lucide-react'
+import { Beer, BookOpen, Eye, EyeOff, Home, Moon, RefreshCw, Sun, Trophy, Vote, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -108,6 +108,7 @@ export function LoupGarouOnline() {
   const t = useTranslations('games.loup-garou.game')
   const [busy, setBusy] = useState(false)
   const [hideRole, setHideRole] = useState(false)
+  const [showLegend, setShowLegend] = useState(false)
   const [witchKillMode, setWitchKillMode] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
@@ -344,8 +345,23 @@ export function LoupGarouOnline() {
             )}
             {t('round', { n: Math.max(1, view.round) })}
           </span>
-          <span className="text-xs font-semibold uppercase tracking-wide text-indigo-300">
-            {t(`phases.${view.phase}`)}
+          <span className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-indigo-300">
+              {t(`phases.${view.phase}`)}
+            </span>
+            <button
+              onClick={() => setShowLegend((v) => !v)}
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded-lg border transition-colors',
+                showLegend
+                  ? 'border-indigo-400/50 bg-indigo-500/20 text-indigo-200'
+                  : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
+              )}
+              aria-label={t('legend.title')}
+              aria-expanded={showLegend}
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+            </button>
           </span>
         </div>
         {timeLeftMs !== null && (
@@ -360,6 +376,56 @@ export function LoupGarouOnline() {
           </div>
         )}
       </div>
+
+      {/* Légende des rôles (repliable) */}
+      <AnimatePresence>
+        {showLegend && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-2 rounded-2xl border border-indigo-400/25 bg-gray-900/80 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wide text-indigo-200">
+                  📖 {t('legend.title')}
+                </p>
+                <button
+                  onClick={() => setShowLegend(false)}
+                  className="flex h-6 w-6 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white"
+                  aria-label={t('legend.close')}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <ul className="space-y-1.5">
+                {(['loup', 'voyante', 'sorciere', 'chasseur', 'villageois'] as LGRole[]).map(
+                  (role) => (
+                    <li
+                      key={role}
+                      className="flex items-start gap-2 rounded-xl border border-white/8 bg-white/4 px-3 py-2"
+                    >
+                      <span className="text-lg leading-none" aria-hidden>
+                        {ROLE_META[role].icon}
+                      </span>
+                      <span className="min-w-0">
+                        <span className={cn('block text-xs font-bold', ROLE_META[role].color)}>
+                          {roleName(role)}
+                        </span>
+                        <span className="block text-[11px] leading-snug text-white/55">
+                          {t(`roles.${role}.desc`)}
+                        </span>
+                      </span>
+                    </li>
+                  )
+                )}
+              </ul>
+              <p className="text-[10px] text-white/40">{t('legend.hint')}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Fantôme */}
       {view.ghost && (
