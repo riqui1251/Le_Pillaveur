@@ -30,47 +30,60 @@ export function useOnlineRoom() {
       setRoom(null)
       return null
     }
-    const res = await fetch('/api/online/rooms/me', { credentials: 'include' })
-    if (!res.ok) return null
-    const data = await parseApiJson<{ room?: RoomDto }>(res)
-    setRoom(data.room ?? null)
-    return data.room as RoomDto | null
+    try {
+      const res = await fetch('/api/online/rooms/me', { credentials: 'include' })
+      if (!res.ok) return null
+      const data = await parseApiJson<{ room?: RoomDto }>(res)
+      setRoom(data.room ?? null)
+      return data.room as RoomDto | null
+    } catch {
+      // Raté réseau ponctuel : on retentera au tick de polling suivant.
+      return null
+    }
   }, [user])
 
   const refreshRoom = useCallback(async (roomId: string) => {
-    const res = await fetch(`/api/online/rooms/${roomId}`, { credentials: 'include' })
-    if (!res.ok) return null
-    const data = await parseApiJson<{ room?: RoomDto }>(res)
-    setRoom(data.room ?? null)
-    return data.room as RoomDto | null
+    try {
+      const res = await fetch(`/api/online/rooms/${roomId}`, { credentials: 'include' })
+      if (!res.ok) return null
+      const data = await parseApiJson<{ room?: RoomDto }>(res)
+      setRoom(data.room ?? null)
+      return data.room as RoomDto | null
+    } catch {
+      return null
+    }
   }, [])
 
   /** Polling léger — uniquement l'état de partie (plus rapide qu'un refresh complet) */
   const refreshGameState = useCallback(async (roomId: string) => {
-    const res = await fetch(`/api/online/rooms/${roomId}/state`, { credentials: 'include' })
-    if (!res.ok) return null
-    const data = await parseApiJson<{
-      stateVersion: number
-      currentTurnUserId: string | null
-      gameStateJson: string | null
-    }>(res)
-    setRoom((prev) => {
-      if (!prev || prev.id !== roomId) return prev
-      if (
-        prev.stateVersion === data.stateVersion &&
-        prev.gameStateJson === data.gameStateJson &&
-        prev.currentTurnUserId === data.currentTurnUserId
-      ) {
-        return prev
-      }
-      return {
-        ...prev,
-        stateVersion: data.stateVersion,
-        gameStateJson: data.gameStateJson,
-        currentTurnUserId: data.currentTurnUserId,
-      }
-    })
-    return data
+    try {
+      const res = await fetch(`/api/online/rooms/${roomId}/state`, { credentials: 'include' })
+      if (!res.ok) return null
+      const data = await parseApiJson<{
+        stateVersion: number
+        currentTurnUserId: string | null
+        gameStateJson: string | null
+      }>(res)
+      setRoom((prev) => {
+        if (!prev || prev.id !== roomId) return prev
+        if (
+          prev.stateVersion === data.stateVersion &&
+          prev.gameStateJson === data.gameStateJson &&
+          prev.currentTurnUserId === data.currentTurnUserId
+        ) {
+          return prev
+        }
+        return {
+          ...prev,
+          stateVersion: data.stateVersion,
+          gameStateJson: data.gameStateJson,
+          currentTurnUserId: data.currentTurnUserId,
+        }
+      })
+      return data
+    } catch {
+      return null
+    }
   }, [])
 
   const getPollDelay = useCallback((r: RoomDto | null) => {
@@ -104,8 +117,17 @@ export function useOnlineRoom() {
     if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
     const delay = getPollDelay(roomRef.current)
     pollTimerRef.current = setTimeout(async () => {
-      await pollTick()
-      schedulePoll()
+      // Un raté réseau ponctuel (Wi-Fi qui coupe, onglet mis en veille…) ne
+      // doit JAMAIS arrêter la boucle : sans ce filet, une seule requête en
+      // échec tue le polling pour le reste de la session (plus aucune mise à
+      // jour tant que la page n'est pas rechargée manuellement).
+      try {
+        await pollTick()
+      } catch {
+        // Ignoré : on retente au prochain tick, à la cadence normale.
+      } finally {
+        schedulePoll()
+      }
     }, delay)
   }, [getPollDelay, pollTick])
 
