@@ -1382,6 +1382,22 @@
         "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
         "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s",
         "afkWarningSelf": "⚠️ Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Battaglia navale a squadre",
+            "body": "Due squadre si sfidano: ognuna posiziona la propria flotta in segreto sulla propria griglia prima di iniziare a sparare."
+          },
+          {
+            "title": "Colpito o mancato…",
+            "body": "A turno, sparate su una casella della griglia avversaria. Colpito, mancato o affondato — la griglia si svela poco a poco."
+          },
+          {
+            "title": "Chi perde beve",
+            "body": "Perdere una nave o essere colpiti costa sorsi. La partita finisce quando una flotta è completamente affondata."
+          }
+        ]
       }
     },
     "menteur": {
@@ -1423,6 +1439,22 @@
         "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
         "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s",
         "afkWarningSelf": "⚠️ Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Il gioco del bugiardo",
+            "body": "Ognuno nasconde i propri dadi sotto il bicchiere. L’obiettivo: indovinare (o bluffare) il numero totale di dadi con un certo valore su tutto il tavolo."
+          },
+          {
+            "title": "Rilanciare o dubitare",
+            "body": "Al tuo turno, alza la puntata precedente, oppure grida BUGIARDO! se pensi che il giocatore precedente stia bluffando."
+          },
+          {
+            "title": "Chi beve?",
+            "body": "I dadi vengono contati: chi perde la scommessa beve in base alla differenza. I dadi vengono rilanciati e la partita continua."
+          }
+        ]
       }
     },
     "imposteur": {
@@ -1481,6 +1513,22 @@
           "title": "Preparatevi!",
           "hint": "Memorizza la tua parola segreta — arrivano gli indizi…"
         }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Una parola, due squadre",
+            "body": "Ognuno riceve una parola segreta. Quasi tutti hanno la stessa — uno o due giocatori (gli impostori) hanno una parola simile ma diversa."
+          },
+          {
+            "title": "Un indizio, mai la parola",
+            "body": "Ad ogni turno, dai un indizio sulla tua parola senza mai pronunciarla. Ascolta gli altri per capire chi ha una parola diversa."
+          },
+          {
+            "title": "Vota e vinci",
+            "body": "Dopo gli indizi, votate per eliminare un sospettato. Il villaggio vince smascherando tutti gli impostori; gli impostori vincono sopravvivendo fino a pareggiare gli altri."
+          }
+        ]
       }
     },
     "petit-buveur": {
@@ -2014,6 +2062,22 @@
         "soundOn": "Attiva l'audio",
         "soundOff": "Disattiva l'audio",
         "tapToSkip": "Tocca per saltare"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Il tabellone",
+            "body": "Avanza sulle 30 caselle a turno. Ogni casella ha il suo effetto: un sorso, un bonus, una maledizione, un minigioco…"
+          },
+          {
+            "title": "Il tuo turno",
+            "body": "Lancia il dado quando tocca a te, scopri l’effetto della tua casella e a volte scegli un bersaglio per un effetto che colpisce un altro giocatore."
+          },
+          {
+            "title": "E i sorsi?",
+            "body": "Alcune caselle ti fanno bere, altre ti risparmiano — tocca a tutti, sorso dopo sorso, fino alla fine della partita."
+          }
+        ]
       }
     },
     "quiz": {
@@ -2049,6 +2113,22 @@
           "title": "Preparatevi!",
           "hint": "Arriva la prima domanda…"
         }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Il grande quiz",
+            "body": "Appare una domanda a scelta multipla per tutti. Il tuo telefono diventa un buzzer!"
+          },
+          {
+            "title": "Rispondi veloce",
+            "body": "Scegli la tua risposta il più velocemente possibile: più sei veloce, più punti fai. Una risposta sbagliata (o troppo lenta) costa sorsi."
+          },
+          {
+            "title": "Il podio",
+            "body": "Alla fine di tutte le domande appare la classifica — e l’ultimo del podio finisce il bicchiere."
+          }
+        ]
       }
     },
     "loup-garou": {
@@ -2176,6 +2256,22 @@
         "ravenDone": "Il tuo marchio pesa su {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ {name} porta il marchio del Corvo: +2 voti contro di lui oggi!",
         "ravenMarkBadge": "Marchiato dal Corvo (+2 voti)"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Un villaggio pieno di segreti",
+            "body": "Ognuno riceve un ruolo segreto: villico, lupo mannaro, o ruoli speciali (veggente, strega, guardiano…)."
+          },
+          {
+            "title": "Notte e giorno",
+            "body": "Di notte, i lupi scelgono una vittima mentre i ruoli speciali agiscono in segreto. Di giorno, tutto il villaggio discute e vota per eliminare un sospettato."
+          },
+          {
+            "title": "Chi vince?",
+            "body": "Il villaggio vince eliminando tutti i lupi; i lupi vincono se eguagliano (o superano) il resto del villaggio. I morti diventano fantasmi 👻 e osservano il resto della partita."
+          }
+        ]
       }
     }
   },
@@ -2681,5 +2777,13 @@
     "racing": "In gara!",
     "castShort": "TV",
     "answerOnPhone": "Rispondete dai vostri telefoni!"
+  },
+  "gameTutorial": {
+    "next": "Avanti",
+    "prev": "Indietro",
+    "gotIt": "Capito!",
+    "close": "Chiudi",
+    "stepCounter": "Passo {n}/{total}",
+    "reopenAria": "Come si gioca?"
   }
 }

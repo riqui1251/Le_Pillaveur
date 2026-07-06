@@ -1382,6 +1382,22 @@
         "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
         "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
         "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Batalla naval por equipos",
+            "body": "Dos equipos se enfrentan: cada uno coloca su flota en secreto en su propia cuadrícula antes de empezar a disparar."
+          },
+          {
+            "title": "Tocado o agua…",
+            "body": "Por turnos, disparad a una casilla de la cuadrícula rival. Tocado, agua o hundido — la cuadrícula se revela poco a poco."
+          },
+          {
+            "title": "Quien pierde bebe",
+            "body": "Perder un barco o recibir un disparo cuesta tragos. La partida termina cuando una flota queda completamente hundida."
+          }
+        ]
       }
     },
     "menteur": {
@@ -1423,6 +1439,22 @@
         "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
         "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
         "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "El juego del mentiroso",
+            "body": "Cada uno esconde sus dados bajo su cubilete. El objetivo: adivinar (o farolear) el número total de dados con un valor determinado en toda la mesa."
+          },
+          {
+            "title": "Apostar o desconfiar",
+            "body": "En tu turno, sube la apuesta anterior, o grita ¡MENTIROSO! si crees que el jugador anterior está mintiendo."
+          },
+          {
+            "title": "¿Quién bebe?",
+            "body": "Se cuentan los dados: el perdedor de la apuesta bebe según la diferencia. Los dados se vuelven a tirar y la partida continúa."
+          }
+        ]
       }
     },
     "imposteur": {
@@ -1481,6 +1513,22 @@
           "title": "¡Preparaos!",
           "hint": "Memoriza tu palabra secreta — llegan las pistas…"
         }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Una palabra, dos bandos",
+            "body": "Cada uno recibe una palabra secreta. Casi todos tienen la misma — uno o dos jugadores (los impostores) tienen una palabra parecida pero distinta."
+          },
+          {
+            "title": "Una pista, nunca la palabra",
+            "body": "En cada ronda, da una pista sobre tu palabra sin decirla nunca. Escucha a los demás para detectar quién tiene una palabra distinta."
+          },
+          {
+            "title": "Vota y gana",
+            "body": "Tras las pistas, votad para eliminar a un sospechoso. La aldea gana desenmascarando a todos los impostores; los impostores ganan si sobreviven hasta igualar al resto."
+          }
+        ]
       }
     },
     "petit-buveur": {
@@ -2014,6 +2062,22 @@
         "soundOn": "Activar el sonido",
         "soundOff": "Silenciar",
         "tapToSkip": "Toca para saltar"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "El tablero",
+            "body": "Avanza por las 30 casillas por turnos. Cada casilla tiene su truco: un trago, una bonificación, una maldición, un minijuego…"
+          },
+          {
+            "title": "En tu turno",
+            "body": "Tira el dado en tu turno, descubre el efecto de tu casilla y a veces elige un objetivo para un efecto que afecta a otro jugador."
+          },
+          {
+            "title": "¿Y los tragos?",
+            "body": "Algunas casillas te hacen beber, otras te libran — a todos les toca, trago tras trago, hasta el final de la partida."
+          }
+        ]
       }
     },
     "quiz": {
@@ -2049,6 +2113,22 @@
           "title": "¡Preparaos!",
           "hint": "Llega la primera pregunta…"
         }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "El gran quiz",
+            "body": "Aparece una pregunta con varias opciones para todos. ¡Tu móvil se convierte en un buzzer!"
+          },
+          {
+            "title": "Responde rápido",
+            "body": "Elige tu respuesta lo más rápido posible: cuanto más rápido, más puntos. Una respuesta incorrecta (o demasiado lenta) cuesta tragos."
+          },
+          {
+            "title": "El podio",
+            "body": "Al final de todas las preguntas aparece la clasificación — y el último del podio se termina la copa."
+          }
+        ]
       }
     },
     "loup-garou": {
@@ -2176,6 +2256,22 @@
         "ravenDone": "Tu marca pesa sobre {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ ¡{name} lleva la marca del Cuervo: +2 votos en su contra hoy!",
         "ravenMarkBadge": "Marcado por el Cuervo (+2 votos)"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Una aldea llena de secretos",
+            "body": "Cada uno recibe un rol secreto: aldeano, hombre lobo, o roles especiales (vidente, bruja, salvador…)."
+          },
+          {
+            "title": "Noche y día",
+            "body": "De noche, los lobos eligen a una víctima mientras los roles especiales actúan en secreto. De día, toda la aldea debate y vota para eliminar a un sospechoso."
+          },
+          {
+            "title": "¿Quién gana?",
+            "body": "La aldea gana eliminando a todos los lobos; los lobos ganan si igualan (o superan) al resto de la aldea. Los muertos se convierten en fantasmas 👻 y observan el resto de la partida."
+          }
+        ]
       }
     }
   },
@@ -2681,5 +2777,13 @@
     "racing": "¡En carrera!",
     "castShort": "TV",
     "answerOnPhone": "¡Responded desde vuestros móviles!"
+  },
+  "gameTutorial": {
+    "next": "Siguiente",
+    "prev": "Anterior",
+    "gotIt": "¡Entendido!",
+    "close": "Cerrar",
+    "stepCounter": "Paso {n}/{total}",
+    "reopenAria": "¿Cómo se juega?"
   }
 }

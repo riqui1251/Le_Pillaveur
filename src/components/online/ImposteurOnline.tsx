@@ -16,6 +16,7 @@ import {
   type ImposteurClientView,
 } from '@/lib/imposteur/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 
 /**
  * L'IMPOSTEUR en ligne (serveur-autoritaire). La vue est déjà filtrée par le
@@ -41,6 +42,8 @@ export function ImposteurOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.imposteur.game')
+  const tTutorial = useTranslations('games.imposteur.tutorial')
+  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [hideWord, setHideWord] = useState(false)
   const [clueInput, setClueInput] = useState('')
@@ -56,6 +59,7 @@ export function ImposteurOnline() {
   const inGame = room?.gameId === 'imposteur' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const stateVersion = room?.stateVersion ?? -1
+  const tutorial = useGameTutorial('imposteur', inGame)
 
   // Horloge locale pour le compte à rebours de phase (décoratif).
   const [clock, setClock] = useState(() => Date.now())
@@ -324,15 +328,19 @@ export function ImposteurOnline() {
   // ── Partie en cours ──────────────────────────────────────────────────────
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   return (
+    <>
     <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
       {/* Bandeau : manche + phase + timer */}
       <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
         <div className="flex items-center justify-between">
           <span className="text-sm font-bold text-white/80">{t('round', { n: view.round })}</span>
-          <span className="text-xs font-semibold uppercase tracking-wide text-violet-300">
-            {view.phase === 'clue' && t('phaseClue')}
-            {view.phase === 'vote' && t('phaseVote')}
-            {view.phase === 'reveal' && t('phaseReveal')}
+          <span className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+              {view.phase === 'clue' && t('phaseClue')}
+              {view.phase === 'vote' && t('phaseVote')}
+              {view.phase === 'reveal' && t('phaseReveal')}
+            </span>
+            <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
           </span>
         </div>
         {timeLeftMs !== null && (
@@ -594,5 +602,9 @@ export function ImposteurOnline() {
         </div>
       )}
     </div>
+    <AnimatePresence>
+      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+    </AnimatePresence>
+    </>
   )
 }

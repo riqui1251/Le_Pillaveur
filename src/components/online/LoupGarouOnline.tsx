@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 
 /**
  * LOUP-GAROU en ligne. La vue reçue est déjà filtrée par le serveur selon QUI
@@ -129,6 +130,8 @@ export function LoupGarouOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.loup-garou.game')
+  const tTutorial = useTranslations('games.loup-garou.tutorial')
+  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [hideRole, setHideRole] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
@@ -145,6 +148,7 @@ export function LoupGarouOnline() {
   const inGame = room?.gameId === 'loup-garou' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const stateVersion = room?.stateVersion ?? -1
+  const tutorial = useGameTutorial('loup-garou', inGame)
 
   // Horloge locale (le serveur seul fait foi) + reset du mode potion.
   const [clock, setClock] = useState(() => Date.now())
@@ -357,6 +361,7 @@ export function LoupGarouOnline() {
 
   // ── Partie en cours ──────────────────────────────────────────────────────
   return (
+    <>
     <div
       className={cn(
         'flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg',
@@ -391,6 +396,7 @@ export function LoupGarouOnline() {
             >
               <BookOpen className="h-3.5 w-3.5" />
             </button>
+            <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
           </span>
         </div>
         {timeLeftMs !== null && (
@@ -865,5 +871,9 @@ export function LoupGarouOnline() {
         </div>
       </div>
     </div>
+    <AnimatePresence>
+      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+    </AnimatePresence>
+    </>
   )
 }

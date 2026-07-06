@@ -16,6 +16,7 @@ import {
   type QuizClientView,
 } from '@/lib/quiz/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 
 /**
  * LE GRAND PILLAVEUR en ligne — le téléphone devient un BUZZER : 4 gros
@@ -46,6 +47,8 @@ export function QuizOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.quiz.game')
+  const tTutorial = useTranslations('games.quiz.tutorial')
+  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
@@ -58,6 +61,7 @@ export function QuizOnline() {
 
   const inGame = room?.gameId === 'quiz' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
+  const tutorial = useGameTutorial('quiz', inGame)
 
   // Horloge locale (compte à rebours décoratif — l'échéance serveur fait foi).
   const [clock, setClock] = useState(() => Date.now())
@@ -260,6 +264,7 @@ export function QuizOnline() {
 
   // ── Partie en cours ──────────────────────────────────────────────────────
   return (
+    <>
     <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
       {/* Bandeau : progression + score + timer */}
       <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
@@ -274,6 +279,7 @@ export function QuizOnline() {
               </span>
             )}
             <span className="tabular-nums text-cyan-200">{me?.score ?? 0} pts</span>
+            <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
           </span>
         </div>
         {timeLeftMs !== null && (
@@ -414,5 +420,9 @@ export function QuizOnline() {
         </div>
       )}
     </div>
+    <AnimatePresence>
+      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+    </AnimatePresence>
+    </>
   )
 }

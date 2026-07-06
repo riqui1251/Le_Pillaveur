@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 
 /**
  * Écran de jeu Toucher-Coulé EN LIGNE (serveur-autoritaire).
@@ -47,6 +48,8 @@ export function ToucherCouleOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.toucher-coule.game')
+  const tTutorial = useTranslations('games.toucher-coule.tutorial')
+  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
@@ -63,6 +66,7 @@ export function ToucherCouleOnline() {
   }, [])
 
   const inGame = room?.gameId === 'toucher-coule' && room.status === 'playing'
+  const tutorial = useGameTutorial('toucher-coule', inGame)
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
 
   // Nettoie le placement local dès que la bataille démarre (prêt pour un éventuel rematch).
@@ -332,6 +336,7 @@ export function ToucherCouleOnline() {
   const teamPlayers = (team: TeamId) => view.players.filter((p) => p.team === team)
 
   return (
+    <>
     <div className="relative min-h-full bg-gray-950 text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-sky-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
@@ -354,6 +359,7 @@ export function ToucherCouleOnline() {
           <span className="shrink-0 rounded-full border border-sky-400/30 bg-sky-500/15 px-2.5 py-1 text-[11px] font-semibold text-sky-200">
             {view.mode} · {size}×{size}
           </span>
+          <TutorialReopenButton onClick={tutorial.reopen} />
         </div>
 
         {/* Bandeau de tour / phase */}
@@ -825,5 +831,9 @@ export function ToucherCouleOnline() {
         )}
       </AnimatePresence>
     </div>
+    <AnimatePresence>
+      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+    </AnimatePresence>
+    </>
   )
 }

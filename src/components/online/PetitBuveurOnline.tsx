@@ -20,6 +20,7 @@ import { useGameSounds } from '@/hooks/useGameSounds'
 import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
 import { getCaseMeta } from '@/lib/petit-buveur/case-families'
 import { InteractionSpectacle } from '@/components/petit-buveur/InteractionSpectacle'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
@@ -78,6 +79,8 @@ export function PetitBuveurOnline() {
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.petit-buveur.online')
   const tPB = useTranslations('games.petit-buveur')
+  const tTutorial = useTranslations('games.petit-buveur.tutorial')
+  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const tCase = useTranslations('games.petit-buveur.caseTypes')
   const tGame = useTranslations('games.petit-buveur.game')
   const tDiff = useTranslations('games.petit-buveur.difficultyLabels')
@@ -108,6 +111,7 @@ export function PetitBuveurOnline() {
 
   const inGame = room?.gameId === 'petit-buveur' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
+  const tutorial = useGameTutorial('petit-buveur', inGame)
 
   // Début de tour côté client : remis à zéro à chaque écriture d'état serveur.
   // Sert de base aux comptes à rebours AFK (l'horloge d'autorité reste le serveur).
@@ -405,9 +409,10 @@ export function PetitBuveurOnline() {
 
   const awaitingChoice = Boolean(view.pending) && isMyTurn
 
+  // grid-cols-[minmax(0,1fr)] : sans lui, le min-content d'une rangée
+  // (en-tête) étire la colonne implicite au-delà du viewport (mobile).
   return (
-    // grid-cols-[minmax(0,1fr)] : sans lui, le min-content d'une rangée
-    // (en-tête) étire la colonne implicite au-delà du viewport (mobile).
+    <>
     <div className="relative grid h-full min-h-0 w-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] overflow-hidden bg-gray-950 text-white">
       {/* Spectacle des tirages (roue, pièce, dé de la honte) — visible par tous */}
       <InteractionSpectacle
@@ -500,6 +505,7 @@ export function PetitBuveurOnline() {
           >
             <HelpCircle className="h-4 w-4" />
           </button>
+          <TutorialReopenButton onClick={tutorial.reopen} />
         </div>
       </header>
 
@@ -1287,5 +1293,9 @@ export function PetitBuveurOnline() {
         )}
       </AnimatePresence>
     </div>
+    <AnimatePresence>
+      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+    </AnimatePresence>
+    </>
   )
 }

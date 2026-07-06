@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { isLegalRaise, type MenteurBid, type MenteurClientView } from '@/lib/menteur/engine'
 import { CssDie } from '@/components/games/CssDie'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 
 /**
  * LE MENTEUR en ligne (serveur-autoritaire). La vue reçue est déjà filtrée :
@@ -59,6 +60,8 @@ export function MenteurOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.menteur.game')
+  const tTutorial = useTranslations('games.menteur.tutorial')
+  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [hideDice, setHideDice] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
@@ -71,6 +74,7 @@ export function MenteurOnline() {
   }, [])
 
   const inGame = room?.gameId === 'menteur' && room.status === 'playing'
+  const tutorial = useGameTutorial('menteur', inGame)
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
 
   const totalDice = useMemo(
@@ -306,11 +310,15 @@ export function MenteurOnline() {
 
   // ── Partie en cours ──────────────────────────────────────────────────────
   return (
+    <>
     <div className="flex flex-1 flex-col gap-3 p-3 pb-40 text-white sm:mx-auto sm:w-full sm:max-w-lg sm:pb-44">
       {/* Bandeau haut : manche + dés sur la table */}
       <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
         <span className="text-sm font-bold text-white/80">{t('round', { n: view.round })}</span>
-        <span className="text-xs font-semibold text-white/50">{t('diceOnTable', { n: totalDice })}</span>
+        <span className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-white/50">{t('diceOnTable', { n: totalDice })}</span>
+          <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
+        </span>
       </div>
 
       {/* Bannières retour / AFK */}
@@ -565,5 +573,9 @@ export function MenteurOnline() {
         </div>
       </div>
     </div>
+    <AnimatePresence>
+      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+    </AnimatePresence>
+    </>
   )
 }

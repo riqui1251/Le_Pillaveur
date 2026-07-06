@@ -1392,6 +1392,22 @@
         "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
         "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
         "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Team battleship",
+            "body": "Two teams face off: each secretly places its fleet on its own grid before the shooting begins."
+          },
+          {
+            "title": "Hit or miss…",
+            "body": "Take turns firing at a tile on the enemy grid. Hit, miss, or sunk — the grid is revealed bit by bit."
+          },
+          {
+            "title": "Losers drink",
+            "body": "Losing a ship or getting hit costs sips. The game ends when one fleet is completely sunk."
+          }
+        ]
       }
     },
     "menteur": {
@@ -1433,6 +1449,22 @@
         "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
         "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
         "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "The liar’s game",
+            "body": "Everyone hides their dice under a cup. The goal: guess (or bluff) the total number of dice showing a given value across the whole table."
+          },
+          {
+            "title": "Bid or call it out",
+            "body": "On your turn, raise the previous bid, or shout LIAR! if you think the last player is bluffing."
+          },
+          {
+            "title": "Who drinks?",
+            "body": "The dice get revealed: the loser of the bet drinks based on the gap. Dice are re-rolled and the game goes on."
+          }
+        ]
       }
     },
     "imposteur": {
@@ -1491,6 +1523,22 @@
           "title": "Get ready!",
           "hint": "Memorise your secret word — clues are coming…"
         }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "One word, two teams",
+            "body": "Everyone gets a secret word. Almost everyone shares the same one — one or two players (the impostors) get a different, close word."
+          },
+          {
+            "title": "One clue, never the word",
+            "body": "Each round, give a clue about your word without ever saying it. Listen to the others to spot who has a different word."
+          },
+          {
+            "title": "Vote and win",
+            "body": "After the clues, vote to eliminate a suspect. The village wins by unmasking every impostor; the impostors win by surviving until they’re tied with the rest."
+          }
+        ]
       }
     },
     "petit-buveur": {
@@ -2024,6 +2072,22 @@
         "soundOn": "Turn sound on",
         "soundOff": "Mute sound",
         "tapToSkip": "Tap to skip"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "The board",
+            "body": "Move around the 30 tiles in turn order. Each tile has its own twist: a sip, a bonus, a curse, a mini-game…"
+          },
+          {
+            "title": "On your turn",
+            "body": "Roll the dice on your turn, discover your tile’s effect, and sometimes pick a target for an effect that hits another player."
+          },
+          {
+            "title": "About the sips",
+            "body": "Some tiles make you drink, others spare you — everyone gets their turn, sip after sip, until the game ends."
+          }
+        ]
       }
     },
     "quiz": {
@@ -2059,6 +2123,22 @@
           "title": "Get ready!",
           "hint": "First question coming up…"
         }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "The big quiz",
+            "body": "A multiple-choice question appears for everyone. Your phone becomes a buzzer!"
+          },
+          {
+            "title": "Answer fast",
+            "body": "Pick your answer as fast as you can: the quicker you are, the more points you score. A wrong (or too slow) answer costs sips."
+          },
+          {
+            "title": "The podium",
+            "body": "After all the questions, the final ranking appears — and whoever’s last finishes their drink."
+          }
+        ]
       }
     },
     "loup-garou": {
@@ -2186,6 +2266,22 @@
         "ravenDone": "Your mark weighs on {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ {name} bears the Raven’s mark: +2 votes against them today!",
         "ravenMarkBadge": "Marked by the Raven (+2 votes)"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "A village full of secrets",
+            "body": "Everyone gets a secret role: villager, werewolf, or special roles (seer, witch, bodyguard…)."
+          },
+          {
+            "title": "Night and day",
+            "body": "At night, the wolves pick a victim while special roles act in secret. By day, the whole village debates and votes to eliminate a suspect."
+          },
+          {
+            "title": "Who wins?",
+            "body": "The village wins by eliminating every wolf; the wolves win once they equal (or outnumber) the rest of the village. The dead become ghosts 👻 and watch the rest of the game."
+          }
+        ]
       }
     }
   },
@@ -2691,5 +2787,13 @@
     "racing": "Racing!",
     "castShort": "TV",
     "answerOnPhone": "Answer on your phones!"
+  },
+  "gameTutorial": {
+    "next": "Next",
+    "prev": "Previous",
+    "gotIt": "Got it!",
+    "close": "Close",
+    "stepCounter": "Step {n}/{total}",
+    "reopenAria": "How to play?"
   }
 }

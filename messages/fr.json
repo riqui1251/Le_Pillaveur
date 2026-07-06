@@ -1392,6 +1392,22 @@
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
         "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Bataille navale par équipes",
+            "body": "Deux équipes s’affrontent : chacune place sa flotte en secret sur sa grille avant le début des tirs."
+          },
+          {
+            "title": "Touché, coulé…",
+            "body": "À tour de rôle, tirez une case sur la grille adverse. Touché, raté ou coulé — la grille se révèle petit à petit."
+          },
+          {
+            "title": "Qui perd boit",
+            "body": "Perdre un navire ou se faire tirer dessus coûte des gorgées. La partie se termine quand une flotte est entièrement coulée."
+          }
+        ]
       }
     },
     "menteur": {
@@ -1433,6 +1449,22 @@
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
         "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Le jeu du menteur",
+            "body": "Chacun cache ses dés sous son gobelet. Le but : deviner (ou bluffer) le nombre total de dés d’une valeur donnée sur la table."
+          },
+          {
+            "title": "Enchérir ou douter",
+            "body": "À ton tour, annonce un pari plus élevé que le précédent, ou crie MENTEUR ! si tu penses que le joueur précédent bluffe."
+          },
+          {
+            "title": "Qui boit ?",
+            "body": "Les dés sont comptés : le perdant du pari boit des gorgées selon l’écart. Les dés sont relancés et la partie continue."
+          }
+        ]
       }
     },
     "imposteur": {
@@ -1491,6 +1523,22 @@
           "title": "Préparez-vous !",
           "hint": "Mémorise ton mot secret — les indices arrivent…"
         }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Un mot, deux camps",
+            "body": "Chacun reçoit un mot secret. Presque tout le monde a le même — un ou deux joueurs (les imposteurs) ont un mot proche mais différent."
+          },
+          {
+            "title": "Un indice, jamais le mot",
+            "body": "À chaque manche, donne un indice sur ton mot sans jamais le prononcer. Écoute les autres pour repérer qui a un mot différent."
+          },
+          {
+            "title": "Vote et victoire",
+            "body": "Après les indices, votez pour éliminer un suspect. Le village gagne en démasquant tous les imposteurs ; les imposteurs gagnent en survivant jusqu’à égalité."
+          }
+        ]
       }
     },
     "petit-buveur": {
@@ -2029,6 +2077,22 @@
         "soundOn": "Activer le son",
         "soundOff": "Couper le son",
         "tapToSkip": "Toucher pour passer"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Le plateau",
+            "body": "Avance sur les 30 cases à tour de rôle. Chaque case a son petit effet : gorgée, bonus, malédiction, mini-jeu…"
+          },
+          {
+            "title": "À ton tour",
+            "body": "Lance le dé quand c’est ton tour, découvre l’effet de ta case et parfois choisis une cible pour un effet qui touche un autre joueur."
+          },
+          {
+            "title": "Et les gorgées ?",
+            "body": "Certaines cases te font boire, d’autres t’en épargnent — tout le monde y passe, gorgée après gorgée, jusqu’à la fin de la partie."
+          }
+        ]
       }
     },
     "quiz": {
@@ -2064,6 +2128,22 @@
           "title": "Préparez-vous !",
           "hint": "La première question arrive…"
         }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Le grand quiz",
+            "body": "Une question à choix multiples s’affiche pour tout le monde. Ton téléphone devient un buzzer !"
+          },
+          {
+            "title": "Réponds vite",
+            "body": "Choisis ta réponse le plus vite possible : plus tu es rapide, plus tu marques de points. Une mauvaise réponse (ou trop lente) coûte des gorgées."
+          },
+          {
+            "title": "Le podium",
+            "body": "À la fin de toutes les questions, le classement s’affiche — et le dernier du podium termine son verre."
+          }
+        ]
       }
     },
     "loup-garou": {
@@ -2191,6 +2271,22 @@
         "ravenDone": "Ta marque pèse sur {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ {name} porte la marque du Corbeau : +2 voix contre lui au vote !",
         "ravenMarkBadge": "Marqué par le Corbeau (+2 voix)"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Un village, des secrets",
+            "body": "Chacun reçoit un rôle secret : villageois, loups-garous, ou rôles spéciaux (voyante, sorcière, salvateur…)."
+          },
+          {
+            "title": "Nuit et jour",
+            "body": "La nuit, les loups choisissent une victime pendant que les rôles spéciaux agissent en secret. Le jour, tout le village débat et vote pour éliminer un suspect."
+          },
+          {
+            "title": "Qui gagne ?",
+            "body": "Le village gagne en éliminant tous les loups ; les loups gagnent s’ils sont aussi nombreux (ou plus) que le reste du village. Les morts deviennent fantômes 👻 et regardent la suite."
+          }
+        ]
       }
     }
   },
@@ -2696,5 +2792,13 @@
     "racing": "En course !",
     "castShort": "TV",
     "answerOnPhone": "Répondez sur vos téléphones !"
+  },
+  "gameTutorial": {
+    "next": "Suivant",
+    "prev": "Précédent",
+    "gotIt": "Compris !",
+    "close": "Fermer",
+    "stepCounter": "Étape {n}/{total}",
+    "reopenAria": "Comment jouer ?"
   }
 }
