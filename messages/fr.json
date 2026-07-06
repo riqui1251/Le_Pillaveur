@@ -119,11 +119,6 @@
   },
   "hub": {
     "brand": "Le Pillaveur",
-    "stepsAria": "Étapes de la soirée",
-    "steps": {
-      "joueurs": "Joueurs",
-      "jeux": "Jeux"
-    },
     "joueurs": {
       "title": "Qui joue ce soir ?",
       "subtitle": "Ajoutez vos amis, sélectionnez l'équipe et passez à l'étape suivante pour choisir le jeu.",

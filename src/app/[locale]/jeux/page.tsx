@@ -57,7 +57,6 @@ export default function GamesHubPage() {
 
   return (
     <HubShell
-      step="jeux"
       title={isOnline ? tOnline('title') : t('title')}
       subtitle={isOnline ? tOnline('subtitle') : t('subtitle')}
       headerExtra={

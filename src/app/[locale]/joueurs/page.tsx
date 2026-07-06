@@ -16,7 +16,6 @@ export default function JoueursPage() {
 
   return (
     <HubShell
-      step="joueurs"
       title={t('title')}
       subtitle={t('subtitle')}
     >

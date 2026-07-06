@@ -2,26 +2,16 @@
 
 import { ReactNode } from "react"
 import { useTranslations } from "next-intl"
-import { cn } from "@/lib/utils"
-
-type HubStep = "joueurs" | "jeux"
 
 interface HubShellProps {
-  step: HubStep
   title: string
   subtitle: string
   children: ReactNode
   headerExtra?: ReactNode
 }
 
-export function HubShell({ step, title, subtitle, children, headerExtra }: HubShellProps) {
+export function HubShell({ title, subtitle, children, headerExtra }: HubShellProps) {
   const t = useTranslations('hub')
-  const steps = [
-    { id: "joueurs" as const, label: t('steps.joueurs'), number: 1 },
-    { id: "jeux" as const, label: t('steps.jeux'), number: 2 },
-  ]
-  const activeIndex = steps.findIndex((s) => s.id === step)
-
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#07060b] text-white">
       <div className="pointer-events-none absolute inset-0">
@@ -39,46 +29,6 @@ export function HubShell({ step, title, subtitle, children, headerExtra }: HubSh
       </div>
 
       <div className="relative container mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
-        <nav aria-label={t('stepsAria')} className="mb-8 flex items-center justify-center gap-2 sm:gap-4">
-          {steps.map((s, index) => {
-            const isActive = s.id === step
-            const isDone = index < activeIndex
-
-            return (
-              <div key={s.id} className="flex items-center gap-2 sm:gap-4">
-                <div
-                  className={cn(
-                    "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-all sm:px-4",
-                    isActive && "border-amber-400/50 bg-amber-500/15 text-amber-100 shadow-[0_0_24px_rgba(245,158,11,0.2)]",
-                    isDone && "border-emerald-400/40 bg-emerald-500/10 text-emerald-100",
-                    !isActive && !isDone && "border-white/10 bg-white/[0.03] text-white/50"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
-                      isActive && "bg-amber-500 text-black",
-                      isDone && "bg-emerald-500 text-black",
-                      !isActive && !isDone && "bg-white/10 text-white/60"
-                    )}
-                  >
-                    {isDone ? "✓" : s.number}
-                  </span>
-                  <span className="font-medium">{s.label}</span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={cn(
-                      "hidden h-px w-8 sm:block sm:w-14",
-                      index < activeIndex ? "bg-emerald-500/50" : "bg-white/10"
-                    )}
-                  />
-                )}
-              </div>
-            )
-          })}
-        </nav>
-
         <header className="mb-8 space-y-3 text-center sm:mb-10">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300/80">
             {t('brand')}

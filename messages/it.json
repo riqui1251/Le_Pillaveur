@@ -119,11 +119,6 @@
   },
   "hub": {
     "brand": "Le Pillaveur",
-    "stepsAria": "Tappe della serata",
-    "steps": {
-      "joueurs": "Giocatori",
-      "jeux": "Giochi"
-    },
     "joueurs": {
       "title": "Chi suona stasera?",
       "subtitle": "Aggiungi i tuoi amici, seleziona la squadra e vai al passaggio successivo per scegliere il gioco.",

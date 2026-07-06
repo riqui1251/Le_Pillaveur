@@ -119,11 +119,6 @@
   },
   "hub": {
     "brand": "Le Pillaveur",
-    "stepsAria": "Stages of the evening",
-    "steps": {
-      "joueurs": "Players",
-      "jeux": "Games"
-    },
     "joueurs": {
       "title": "Who's playing tonight?",
       "subtitle": "Add your friends, select the team and go to the next step to choose the game.",

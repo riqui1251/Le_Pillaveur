@@ -119,11 +119,6 @@
   },
   "hub": {
     "brand": "Le Pillaveur",
-    "stepsAria": "Etapas de la tarde",
-    "steps": {
-      "joueurs": "Jugadores",
-      "jeux": "Juegos"
-    },
     "joueurs": {
       "title": "¿Quién toca esta noche?",
       "subtitle": "Agrega a tus amigos, selecciona el equipo y ve al siguiente paso para elegir el juego.",
