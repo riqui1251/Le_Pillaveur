@@ -17,6 +17,8 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
 
 export const QUIZ_QUESTION_MS = 15_000
 export const QUIZ_REVEAL_MS = 6_000
+/** Compte à rebours d'échauffement au lancement (5… 4… 3… 2… 1…). */
+export const QUIZ_COUNTDOWN_MS = 5_000
 export const QUIZ_POINTS_BASE = 100
 export const QUIZ_POINTS_SPEED_MAX = 100
 export const QUIZ_SIPS_WRONG = 2
@@ -64,7 +66,7 @@ export type QuizQuestionResult = {
   >
 }
 
-export type QuizPhase = 'question' | 'reveal' | 'finished'
+export type QuizPhase = 'countdown' | 'question' | 'reveal' | 'finished'
 
 export type QuizState = TimedPhaseState & {
   version: number
@@ -113,12 +115,27 @@ export function createQuizState(
   if (pool.length === 0) throw new QuizEngineError('NO_QUESTIONS')
 
   const rng = createRng(seed)
-  const drawn = rng.shuffle(pool).slice(0, Math.min(count, pool.length))
+  // Les choix de chaque question tirée sont eux aussi mélangés (seed de la
+  // partie) : revoir une question à la partie suivante ne donne jamais la
+  // même disposition de réponses.
+  const drawn = rng
+    .shuffle(pool)
+    .slice(0, Math.min(count, pool.length))
+    .map((q) => {
+      const order = rng.shuffle([0, 1, 2, 3])
+      return {
+        ...q,
+        choices: order.map((i) => q.choices[i]) as QuizQuestion['choices'],
+        answer: order.indexOf(q.answer),
+      }
+    })
 
   return {
     version: 1,
-    ...enterPhase(0, 'question', QUIZ_QUESTION_MS, now),
-    phase: 'question',
+    // La partie s'ouvre sur un compte à rebours ; la 1re question (et son
+    // chrono de vitesse) ne démarre qu'à l'échéance.
+    ...enterPhase(0, 'countdown', QUIZ_COUNTDOWN_MS, now),
+    phase: 'countdown',
     players: players.map((p) => ({
       id: p.id,
       name: p.name,
@@ -225,6 +242,15 @@ export function reduceQuiz(state: QuizState, action: QuizAction): QuizState {
     case 'ADVANCE': {
       const check = checkAdvance(state, action.claimedKey, action.now)
       if (!check.ok) throw new QuizEngineError(check.error)
+      if (state.phase === 'countdown') {
+        return {
+          ...state,
+          questionStartAt: action.now,
+          ...enterPhase(state.phaseSeq, 'question', QUIZ_QUESTION_MS, action.now),
+          phase: 'question',
+          version: state.version + 1,
+        }
+      }
       if (state.phase === 'question') return resolveQuestion(state, action.now)
       if (state.phase === 'reveal') return advanceFromReveal(state, action.now)
       throw new QuizEngineError('NOTHING_TO_ADVANCE')
@@ -317,7 +343,12 @@ export type QuizClientView = Omit<
 export function toQuizClientView(state: QuizState, viewerId: string): QuizClientView {
   const { rngState: _rng, questions, answers, players, ...rest } = state
   void _rng
-  const current = state.phase === 'finished' ? null : questions[state.qIdx] ?? null
+  // Pendant le countdown, l'énoncé reste caché : personne ne gagne 5 s de
+  // lecture d'avance sur le bonus de vitesse.
+  const current =
+    state.phase === 'finished' || state.phase === 'countdown'
+      ? null
+      : questions[state.qIdx] ?? null
   return {
     ...rest,
     phaseKey: phaseKey(state),

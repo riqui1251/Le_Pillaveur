@@ -6,6 +6,7 @@ import {
   toQuizClientView,
   toQuizSpectatorView,
   QuizEngineError,
+  QUIZ_COUNTDOWN_MS,
   QUIZ_POINTS_BASE,
   QUIZ_POINTS_SPEED_MAX,
   QUIZ_QUESTION_MS,
@@ -32,8 +33,10 @@ const DUO = [
   { id: 'b', name: 'B' },
 ]
 
+/** Partie créée puis countdown consommé : 1re question pile à T0. */
 function make(count = 3): QuizState {
-  return createQuizState(DUO, POOL, count, 'seed', T0)
+  const raw = createQuizState(DUO, POOL, count, 'seed', T0 - QUIZ_COUNTDOWN_MS)
+  return reduceQuiz(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
 }
 
 /** La bonne réponse de la question courante (côté test, on lit l'état brut). */
@@ -43,14 +46,50 @@ function answerOf(state: QuizState): number {
 
 describe('createQuizState', () => {
   it('tire N questions sans doublon, reproductible par graine', () => {
+    const raw = createQuizState(DUO, POOL, 3, 'seed', T0)
+    expect(raw.questions).toHaveLength(3)
+    expect(new Set(raw.questions.map((q) => q.id)).size).toBe(3)
+    expect(createQuizState(DUO, POOL, 3, 'seed', T0)).toEqual(raw)
+    expect(createQuizState(DUO, POOL, 3, 'autre', T0).questions).not.toEqual(raw.questions)
+    // Compte à rebours d'abord ; le chrono de la 1re question part à l'échéance.
+    expect(raw.phase).toBe('countdown')
+    expect(raw.phaseEndsAt).toBe(T0 + QUIZ_COUNTDOWN_MS)
     const s = make(3)
-    expect(s.questions).toHaveLength(3)
-    expect(new Set(s.questions.map((q) => q.id)).size).toBe(3)
-    expect(createQuizState(DUO, POOL, 3, 'seed', T0)).toEqual(s)
-    expect(createQuizState(DUO, POOL, 3, 'autre', T0).questions).not.toEqual(s.questions)
     expect(s.phase).toBe('question')
     expect(s.phaseEndsAt).toBe(T0 + QUIZ_QUESTION_MS)
     expect(s.questionStartAt).toBe(T0)
+  })
+
+  it('cache l’énoncé pendant le countdown (pas de lecture d’avance)', () => {
+    const raw = createQuizState(DUO, POOL, 3, 'seed', T0)
+    expect(toQuizClientView(raw, 'a').currentQuestion).toBeNull()
+    const s = reduceQuiz(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 + QUIZ_COUNTDOWN_MS })
+    expect(toQuizClientView(s, 'a').currentQuestion).not.toBeNull()
+  })
+
+  it('mélange les choix par partie en gardant la bonne réponse', () => {
+    // Choix distincts par question pour tracer la permutation.
+    const pool: QuizQuestion[] = Array.from({ length: 8 }, (_, i) => ({
+      id: `q${i}`,
+      cat: 'culture',
+      diff: 1,
+      q: `Question ${i} ?`,
+      choices: [`${i}-A`, `${i}-B`, `${i}-C`, `${i}-D`],
+      answer: i % 4,
+    }))
+    const byId = new Map(pool.map((q) => [q.id, q]))
+    const s1 = createQuizState(DUO, pool, 8, 'seed-1', T0)
+    for (const q of s1.questions) {
+      const original = byId.get(q.id)!
+      // Mêmes 4 choix (à l'ordre près) et l'index pointe toujours le bon texte.
+      expect([...q.choices].sort()).toEqual([...original.choices].sort())
+      expect(q.choices[q.answer]).toBe(original.choices[original.answer])
+    }
+    // Deux graines → au moins une disposition différente quelque part.
+    const s2 = createQuizState(DUO, pool, 8, 'seed-2', T0)
+    const layout = (s: QuizState) =>
+      [...s.questions].sort((a, b) => a.id.localeCompare(b.id)).map((q) => q.choices.join('|'))
+    expect(layout(s2)).not.toEqual(layout(s1))
   })
 
   it('borne joueurs et pool', () => {
