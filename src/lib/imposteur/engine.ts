@@ -18,6 +18,8 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
 
 export const IMPOSTEUR_MIN_PLAYERS = 3
 export const IMPOSTEUR_MAX_PLAYERS = 10
+/** Compte à rebours d'échauffement au lancement (5… 4… 3… 2… 1…). */
+export const IMPOSTEUR_COUNTDOWN_MS = 5_000
 /** Temps pour donner SON indice. */
 export const IMPOSTEUR_CLUE_MS = 45_000
 /** Temps pour voter (les retardataires s'abstiennent). */
@@ -62,7 +64,7 @@ export type ImposteurReveal = {
   sips: number
 }
 
-export type ImposteurPhase = 'clue' | 'vote' | 'reveal' | 'finished'
+export type ImposteurPhase = 'countdown' | 'clue' | 'vote' | 'reveal' | 'finished'
 
 export type ImposteurState = TimedPhaseState & {
   version: number
@@ -171,8 +173,10 @@ export function createImposteurState(
 
   return {
     version: 1,
-    ...enterPhase(0, 'clue', IMPOSTEUR_CLUE_MS, now),
-    phase: 'clue',
+    // La partie s'ouvre sur un compte à rebours : chacun découvre son mot
+    // calmement avant que le chrono du premier indice ne démarre.
+    ...enterPhase(0, 'countdown', IMPOSTEUR_COUNTDOWN_MS, now),
+    phase: 'countdown',
     players: withRoles,
     clueOrder,
     clueTurnIdx: 0,
@@ -308,6 +312,14 @@ export function reduceImposteur(state: ImposteurState, action: ImposteurAction):
     case 'ADVANCE': {
       const check = checkAdvance(state, action.claimedKey, action.now)
       if (!check.ok) throw new ImposteurEngineError(check.error)
+      if (state.phase === 'countdown') {
+        return {
+          ...state,
+          ...enterPhase(state.phaseSeq, 'clue', IMPOSTEUR_CLUE_MS, action.now),
+          phase: 'clue',
+          version: state.version + 1,
+        }
+      }
       if (state.phase === 'clue') {
         // Le joueur muet donne l'indice automatique « … ».
         return pushClueAndAdvance(state, IMPOSTEUR_EMPTY_CLUE, action.now)

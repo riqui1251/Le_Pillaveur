@@ -1476,7 +1476,11 @@
         },
         "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
         "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
-        "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot"
+        "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot",
+        "countdown": {
+          "title": "¡Preparaos!",
+          "hint": "Memoriza tu palabra secreta — llegan las pistas…"
+        }
       }
     },
     "petit-buveur": {
@@ -2040,7 +2044,11 @@
         "lastDrinks": "{name} termina su copa 🍻",
         "replay": "Jugar de nuevo",
         "rematchWaiting": "Esperando a los demás ({count}/{total})",
-        "backToMenu": "Volver al menú"
+        "backToMenu": "Volver al menú",
+        "countdown": {
+          "title": "¡Preparaos!",
+          "hint": "Llega la primera pregunta…"
+        }
       }
     },
     "loup-garou": {

@@ -77,6 +77,25 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
     )
   }
 
+  // ── Compte à rebours de lancement ────────────────────────────────────────
+  if (state.phase === 'countdown') {
+    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
+        <p className="text-3xl font-black uppercase tracking-widest text-violet-300/80">
+          {t('countdown.title')}
+        </p>
+        <span
+          key={secondsLeft}
+          className="animate-in zoom-in text-[12rem] font-black leading-none tabular-nums text-violet-200 duration-300"
+        >
+          {secondsLeft}
+        </span>
+        <p className="text-xl text-white/50">{t('countdown.hint')}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full w-full flex-col gap-4 p-6">
       {/* Manche + phase + timer */}

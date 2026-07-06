@@ -233,6 +233,31 @@ export function QuizOnline() {
     )
   }
 
+  // ── Compte à rebours de lancement ────────────────────────────────────────
+  if (view.phase === 'countdown') {
+    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
+        <p className="text-sm font-bold uppercase tracking-widest text-cyan-300/80">
+          {t('countdown.title')}
+        </p>
+        <AnimatePresence mode="popLayout">
+          <motion.span
+            key={secondsLeft}
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 1.6, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="text-8xl font-black tabular-nums text-cyan-200"
+          >
+            {secondsLeft}
+          </motion.span>
+        </AnimatePresence>
+        <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
+      </div>
+    )
+  }
+
   // ── Partie en cours ──────────────────────────────────────────────────────
   return (
     <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">

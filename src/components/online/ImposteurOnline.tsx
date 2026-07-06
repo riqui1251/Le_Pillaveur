@@ -288,6 +288,39 @@ export function ImposteurOnline() {
     )
   }
 
+  // ── Compte à rebours de lancement ────────────────────────────────────────
+  if (view.phase === 'countdown') {
+    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
+        <p className="text-sm font-bold uppercase tracking-widest text-violet-300/80">
+          {t('countdown.title')}
+        </p>
+        <AnimatePresence mode="popLayout">
+          <motion.span
+            key={secondsLeft}
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 1.6, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="text-8xl font-black tabular-nums text-violet-200"
+          >
+            {secondsLeft}
+          </motion.span>
+        </AnimatePresence>
+        {me && (
+          <div className="w-full max-w-xs rounded-2xl border border-violet-400/30 bg-gradient-to-br from-violet-600/15 to-transparent px-4 py-3 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
+              {t('yourWord')}
+            </p>
+            <p className="truncate text-2xl font-black tracking-wide">{me.word}</p>
+          </div>
+        )}
+        <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
+      </div>
+    )
+  }
+
   // ── Partie en cours ──────────────────────────────────────────────────────
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   return (

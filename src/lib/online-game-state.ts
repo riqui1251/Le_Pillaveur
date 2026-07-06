@@ -634,7 +634,7 @@ export function parseMenteurSyncedState(json: string | null | undefined): Menteu
 /** État minimal côté parsing générique (l'état complet vit dans lib/imposteur). */
 export type ImposteurSyncedState = {
   version: number
-  phase: 'clue' | 'vote' | 'reveal' | 'finished'
+  phase: 'countdown' | 'clue' | 'vote' | 'reveal' | 'finished'
   winnerTeam: 'civil' | 'imposteur' | null
   rematchVotes?: string[]
 }
@@ -656,7 +656,7 @@ export function parseImposteurSyncedState(
 /** État minimal côté parsing générique (l'état complet vit dans lib/quiz). */
 export type QuizSyncedState = {
   version: number
-  phase: 'question' | 'reveal' | 'finished'
+  phase: 'countdown' | 'question' | 'reveal' | 'finished'
   rematchVotes?: string[]
 }
 

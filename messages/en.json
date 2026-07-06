@@ -1486,7 +1486,11 @@
         },
         "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
         "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
-        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
+        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot",
+        "countdown": {
+          "title": "Get ready!",
+          "hint": "Memorise your secret word — clues are coming…"
+        }
       }
     },
     "petit-buveur": {
@@ -2050,7 +2054,11 @@
         "lastDrinks": "{name} finishes their drink 🍻",
         "replay": "Play again",
         "rematchWaiting": "Waiting for the others ({count}/{total})",
-        "backToMenu": "Back to menu"
+        "backToMenu": "Back to menu",
+        "countdown": {
+          "title": "Get ready!",
+          "hint": "First question coming up…"
+        }
       }
     },
     "loup-garou": {
