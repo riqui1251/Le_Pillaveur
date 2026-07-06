@@ -1461,6 +1461,10 @@
             "body": "À ton tour, annonce un pari plus élevé que le précédent, ou crie MENTEUR ! si tu penses que le joueur précédent bluffe."
           },
           {
+            "title": "Le 1 : un joker spécial",
+            "body": "Le 1 compte comme n’importe quelle valeur dans le pari en cours — c’est le joker. Mais si tu bascules ton enchère sur les 1, la quantité exigée est quasi divisée par deux ; si tu repars des 1 vers une autre valeur, elle double (et +1)."
+          },
+          {
             "title": "Qui boit ?",
             "body": "Les dés sont comptés : le perdant du pari boit des gorgées selon l’écart. Les dés sont relancés et la partie continue."
           }

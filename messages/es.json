@@ -1451,6 +1451,10 @@
             "body": "En tu turno, sube la apuesta anterior, o grita ¡MENTIROSO! si crees que el jugador anterior está mintiendo."
           },
           {
+            "title": "El 1: un comodín especial",
+            "body": "El 1 cuenta como cualquier valor en la apuesta en curso — es el comodín. Pero si cambias tu apuesta a unos, la cantidad exigida se reduce casi a la mitad; si vuelves de los unos a otro valor, se duplica (+1)."
+          },
+          {
             "title": "¿Quién bebe?",
             "body": "Se cuentan los dados: el perdedor de la apuesta bebe según la diferencia. Los dados se vuelven a tirar y la partida continúa."
           }

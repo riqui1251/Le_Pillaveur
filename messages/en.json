@@ -1461,6 +1461,10 @@
             "body": "On your turn, raise the previous bid, or shout LIAR! if you think the last player is bluffing."
           },
           {
+            "title": "The 1: a special wildcard",
+            "body": "The 1 counts as any value in the current bid — it’s the wildcard. But switching your bid to 1s roughly halves the required quantity; switching back from 1s to another value roughly doubles it (+1)."
+          },
+          {
             "title": "Who drinks?",
             "body": "The dice get revealed: the loser of the bet drinks based on the gap. Dice are re-rolled and the game goes on."
           }

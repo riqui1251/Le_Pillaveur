@@ -1451,6 +1451,10 @@
             "body": "Al tuo turno, alza la puntata precedente, oppure grida BUGIARDO! se pensi che il giocatore precedente stia bluffando."
           },
           {
+            "title": "L’1: un jolly speciale",
+            "body": "L’1 vale come qualsiasi valore nella puntata in corso — è il jolly. Ma se sposti la tua puntata sugli 1, la quantità richiesta si dimezza quasi; se torni dagli 1 a un altro valore, raddoppia (+1)."
+          },
+          {
             "title": "Chi beve?",
             "body": "I dadi vengono contati: chi perde la scommessa beve in base alla differenza. I dadi vengono rilanciati e la partita continua."
           }
