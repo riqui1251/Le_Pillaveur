@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { getGameAdapter } from '@/lib/online/game-adapters'
+import { recordMatchResults } from '@/lib/online/match-results'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -119,16 +120,35 @@ export async function POST(request: Request, { params }: Params) {
 
   const nextVersion = room.stateVersion + 1
   const finished = adapter.isFinished(next)
+  const wasFinished = adapter.isFinished(state)
 
-  await prisma.onlineRoom.update({
-    where: { id: roomId },
+  // Compare-and-swap sur stateVersion : si deux actions concurrentes ont lu
+  // la même version (ex. ticks « advance » envoyés par tous les clients),
+  // une seule écrit — l'autre reçoit un 409 inoffensif. Garantit aussi que
+  // la transition vers `finished` (et donc l'enregistrement du classement)
+  // ne se produit qu'UNE fois.
+  const updated = await prisma.onlineRoom.updateMany({
+    where: { id: roomId, stateVersion: room.stateVersion },
     data: {
       gameStateJson: adapter.serialize(next),
       stateVersion: nextVersion,
       currentTurnUserId: finished ? null : adapter.currentActorId(next),
     },
   })
+  if (updated.count === 0) {
+    return NextResponse.json({ error: 'Conflit de version' }, { status: 409 })
+  }
   if (kickedUserId) await kickMember(roomId, room.hostUserId, kickedUserId)
+
+  // Partie qui VIENT de se terminer → résultats du classement en ligne.
+  if (finished && !wasFinished && room.gameId) {
+    try {
+      await recordMatchResults(prisma, { roomId, gameId: room.gameId, state: next })
+    } catch (e) {
+      // Le classement ne doit jamais casser la fin de partie côté joueurs.
+      console.error('[match-results] enregistrement échoué', e)
+    }
+  }
 
   publishRoomChanged(roomId, {
     type: finished ? 'finished' : 'changed',

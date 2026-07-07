@@ -55,6 +55,7 @@ model User {
   chatReads             ChatRead[]         @relation("ChatReads")
   featureBans           FeatureBan[]       @relation("FeatureBanTarget")
   featureBansIssued     FeatureBan[]       @relation("FeatureBanActor")
+  onlineMatchResults    OnlineMatchResult[]
 }
 
 model ChatRead {
@@ -142,6 +143,28 @@ model OnlineRoomMember {
   lastSeenAt DateTime   @default(now())
 
   @@unique([roomId, userId])
+}
+
+// Résultat d'une partie EN LIGNE terminée : une ligne par COMPTE humain.
+// Historique brut (jamais mis à jour) — victoires/défaites/% agrégés à la
+// lecture. Les gorgées n'entrent pas dans le classement. Pas de FK vers
+// OnlineRoom : la salle est éphémère, le résultat lui survit.
+model OnlineMatchResult {
+  id          String   @id @default(cuid())
+  roomId      String
+  gameId      String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outcome     String // 'win' | 'loss'
+  // Rang final quand le jeu en produit un (Quiz) — null sinon.
+  rank        Int?
+  // Effectif total de la partie (bots inclus) et comptes humains.
+  playerCount Int
+  humanCount  Int
+  finishedAt  DateTime @default(now())
+
+  @@index([gameId, userId])
+  @@index([userId, finishedAt])
 }
 
 model AccountBanEvent {
