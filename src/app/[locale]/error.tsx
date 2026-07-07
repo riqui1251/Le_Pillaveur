@@ -17,6 +17,28 @@ export default function Error({
     console.error(t('logPrefix'), error)
   }, [error, t])
 
+  // Chunk périmé après un redéploiement : le navigateur avait l'ancienne
+  // version ouverte et demande des fichiers JS/CSS qui n'existent plus sur
+  // le serveur. Un rechargement suffit — on le fait automatiquement, avec
+  // une garde sessionStorage pour ne jamais boucler si l'erreur persiste.
+  useEffect(() => {
+    const msg = `${error?.name ?? ''} ${error?.message ?? ''}`
+    const isStaleChunk =
+      /ChunkLoadError|Loading chunk|Loading CSS chunk|dynamically imported module|Importing a module script failed/i.test(
+        msg
+      )
+    if (!isStaleChunk) return
+    try {
+      const KEY = 'lp-chunk-reload-at'
+      const last = Number(window.sessionStorage.getItem(KEY) ?? 0)
+      if (Date.now() - last < 30_000) return // déjà tenté : on laisse l'écran s'afficher
+      window.sessionStorage.setItem(KEY, String(Date.now()))
+    } catch {
+      return
+    }
+    window.location.reload()
+  }, [error])
+
   return (
     <div
       style={{
