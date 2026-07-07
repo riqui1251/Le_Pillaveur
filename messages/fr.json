@@ -2355,28 +2355,7 @@
   },
   "ranking": {
     "title": "Classement",
-    "summary": "{players} joueurs · {games} parties · {gameCount} jeux",
-    "tabs": {
-      "global": "Global",
-      "byGame": "Par jeu",
-      "online": "En ligne"
-    },
-    "sections": {
-      "topWins": "Top victoires",
-      "mostActive": "Plus actifs",
-      "ranking": "Classement"
-    },
-    "metrics": {
-      "winsShort": "{count} vic.",
-      "gamesShort": "{count} parties"
-    },
-    "noDataForGame": "Aucune donnée pour ce jeu",
     "online": {
-      "filterAll": "Tous les jeux",
-      "colPlayer": "Joueur",
-      "colWins": "V",
-      "colLosses": "D",
-      "colGames": "Parties",
       "you": "toi",
       "winsShort": "V",
       "lossesShort": "D",
@@ -2384,7 +2363,11 @@
       "empty": "Aucune partie en ligne classée pour l’instant — lancez une partie à plusieurs !",
       "loginRequired": "Connectez-vous pour voir le classement en ligne.",
       "myTitle": "Mes stats en ligne",
-      "myEmpty": "Aucune partie en ligne classée pour l’instant. Les parties à 2 comptes ou plus comptent pour le classement."
+      "myEmpty": "Aucune partie en ligne classée pour l’instant. Les parties à 2 comptes ou plus comptent pour le classement.",
+      "subtitle": "Classement des parties en ligne — victoires, défaites et % (les gorgées ne comptent pas).",
+      "generalTitle": "Classement général",
+      "emptyGame": "Aucune partie classée pour l’instant.",
+      "legend": "Colonnes : victoires · défaites · parties · % de victoires"
     }
   },
   "feedback": {

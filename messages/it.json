@@ -2340,28 +2340,7 @@
   },
   "ranking": {
     "title": "Classifica",
-    "summary": "{players} giocatori · {games} giochi · {gameCount} giochi",
-    "tabs": {
-      "global": "Complessivamente",
-      "byGame": "Per gioco",
-      "online": "Online"
-    },
-    "sections": {
-      "topWins": "Le migliori vittorie",
-      "mostActive": "Più attivo",
-      "ranking": "Classifica"
-    },
-    "metrics": {
-      "winsShort": "{count} vic.",
-      "gamesShort": "{count} parti"
-    },
-    "noDataForGame": "Nessun dato per questo gioco",
     "online": {
-      "filterAll": "Tutti i giochi",
-      "colPlayer": "Giocatore",
-      "colWins": "V",
-      "colLosses": "S",
-      "colGames": "Partite",
       "you": "tu",
       "winsShort": "V",
       "lossesShort": "S",
@@ -2369,7 +2348,11 @@
       "empty": "Nessuna partita online in classifica per ora — gioca una partita con gli amici!",
       "loginRequired": "Accedi per vedere la classifica online.",
       "myTitle": "Le mie statistiche online",
-      "myEmpty": "Nessuna partita online in classifica per ora. Le partite con 2+ account contano per la classifica."
+      "myEmpty": "Nessuna partita online in classifica per ora. Le partite con 2+ account contano per la classifica.",
+      "subtitle": "Classifica delle partite online — vittorie, sconfitte e % (i sorsi non contano).",
+      "generalTitle": "Classifica generale",
+      "emptyGame": "Nessuna partita in classifica per ora.",
+      "legend": "Colonne: vittorie · sconfitte · partite · % di vittorie"
     }
   },
   "feedback": {

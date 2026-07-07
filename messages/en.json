@@ -2350,28 +2350,7 @@
   },
   "ranking": {
     "title": "Ranking",
-    "summary": "{players} players · {games} games · {gameCount} games",
-    "tabs": {
-      "global": "Overall",
-      "byGame": "By game",
-      "online": "Online"
-    },
-    "sections": {
-      "topWins": "Top wins",
-      "mostActive": "More active",
-      "ranking": "Ranking"
-    },
-    "metrics": {
-      "winsShort": "{count} vic.",
-      "gamesShort": "{count} parts"
-    },
-    "noDataForGame": "No data for this game",
     "online": {
-      "filterAll": "All games",
-      "colPlayer": "Player",
-      "colWins": "W",
-      "colLosses": "L",
-      "colGames": "Games",
       "you": "you",
       "winsShort": "W",
       "lossesShort": "L",
@@ -2379,7 +2358,11 @@
       "empty": "No ranked online games yet — play a game with friends!",
       "loginRequired": "Log in to see the online leaderboard.",
       "myTitle": "My online stats",
-      "myEmpty": "No ranked online games yet. Games with 2+ accounts count towards the leaderboard."
+      "myEmpty": "No ranked online games yet. Games with 2+ accounts count towards the leaderboard.",
+      "subtitle": "Online games leaderboard — wins, losses and win rate (sips don’t count).",
+      "generalTitle": "Overall ranking",
+      "emptyGame": "No ranked games yet.",
+      "legend": "Columns: wins · losses · games · win rate"
     }
   },
   "feedback": {

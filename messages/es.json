@@ -2340,28 +2340,7 @@
   },
   "ranking": {
     "title": "Categoría",
-    "summary": "{players} jugadores · {games} juegos · {gameCount} juegos",
-    "tabs": {
-      "global": "En general",
-      "byGame": "Por juego",
-      "online": "En línea"
-    },
-    "sections": {
-      "topWins": "Principales victorias",
-      "mostActive": "Más activo",
-      "ranking": "Categoría"
-    },
-    "metrics": {
-      "winsShort": "{count} víctima.",
-      "gamesShort": "{count} partes"
-    },
-    "noDataForGame": "No hay datos para este juego.",
     "online": {
-      "filterAll": "Todos los juegos",
-      "colPlayer": "Jugador",
-      "colWins": "V",
-      "colLosses": "D",
-      "colGames": "Partidas",
       "you": "tú",
       "winsShort": "V",
       "lossesShort": "D",
@@ -2369,7 +2348,11 @@
       "empty": "¡Aún no hay partidas en línea clasificadas — juega una partida con amigos!",
       "loginRequired": "Inicia sesión para ver la clasificación en línea.",
       "myTitle": "Mis estadísticas en línea",
-      "myEmpty": "Aún no hay partidas en línea clasificadas. Las partidas con 2+ cuentas cuentan para la clasificación."
+      "myEmpty": "Aún no hay partidas en línea clasificadas. Las partidas con 2+ cuentas cuentan para la clasificación.",
+      "subtitle": "Clasificación de partidas en línea — victorias, derrotas y % (los tragos no cuentan).",
+      "generalTitle": "Clasificación general",
+      "emptyGame": "Aún no hay partidas clasificadas.",
+      "legend": "Columnas: victorias · derrotas · partidas · % de victorias"
     }
   },
   "feedback": {
