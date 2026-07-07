@@ -2353,7 +2353,8 @@
     "summary": "{players} players · {games} games · {gameCount} games",
     "tabs": {
       "global": "Overall",
-      "byGame": "By game"
+      "byGame": "By game",
+      "online": "Online"
     },
     "sections": {
       "topWins": "Top wins",
@@ -2364,7 +2365,22 @@
       "winsShort": "{count} vic.",
       "gamesShort": "{count} parts"
     },
-    "noDataForGame": "No data for this game"
+    "noDataForGame": "No data for this game",
+    "online": {
+      "filterAll": "All games",
+      "colPlayer": "Player",
+      "colWins": "W",
+      "colLosses": "L",
+      "colGames": "Games",
+      "you": "you",
+      "winsShort": "W",
+      "lossesShort": "L",
+      "minGamesHint": "Win rate becomes meaningful after {min} games.",
+      "empty": "No ranked online games yet — play a game with friends!",
+      "loginRequired": "Log in to see the online leaderboard.",
+      "myTitle": "My online stats",
+      "myEmpty": "No ranked online games yet. Games with 2+ accounts count towards the leaderboard."
+    }
   },
   "feedback": {
     "menuTitle": "Report / Suggest",

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { FriendsManager } from '@/components/friends/FriendsManager'
+import { MyOnlineStats } from '@/components/online/MyOnlineStats'
 import { canAccessSupervision } from '@/lib/roles'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
@@ -284,6 +285,8 @@ export function AccountInfo() {
           <StatCard label={t('stats.sips')} value={totalDrinks} color="text-rose-300" />
         </div>
       </section>
+
+      <MyOnlineStats />
 
       <section>
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">

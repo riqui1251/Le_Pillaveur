@@ -3,7 +3,8 @@
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { usePlayers } from '@/hooks/usePlayers'
-import { Trophy, Star, ChevronDown } from 'lucide-react'
+import { Trophy, Star, ChevronDown, Globe } from 'lucide-react'
+import { OnlineRankingBoard } from '@/components/online/OnlineRankingBoard'
 import { Player } from '@/lib/players'
 import { getMetricsForGame } from '@/lib/gameMetrics'
 import { useGameMetricLabels } from '@/lib/gameMetrics-i18n'
@@ -47,7 +48,7 @@ export default function ClassementPage() {
   const tNav = useTranslations('nav')
   const { players, topPlayers, mostActivePlayers } = usePlayers()
   const games = useLocalizedGames()
-  const [activeTab, setActiveTab] = useState<'global' | 'jeu'>('global')
+  const [activeTab, setActiveTab] = useState<'global' | 'jeu' | 'online'>('global')
   const [selectedGame, setSelectedGame] = useState(games[0]?.id ?? '')
   const [selectedMetricByGame, setSelectedMetricByGame] = useState<Record<string, string>>({})
   const [gamePickerOpen, setGamePickerOpen] = useState(false)
@@ -124,6 +125,18 @@ export default function ClassementPage() {
             <Star className="h-4 w-4" />
             {t('tabs.byGame')}
           </button>
+          <button
+            onClick={() => setActiveTab('online')}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-all',
+              activeTab === 'online'
+                ? 'bg-amber-500/20 text-amber-100 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.25)]'
+                : 'text-white/50 hover:text-white/80'
+            )}
+          >
+            <Globe className="h-4 w-4" />
+            {t('tabs.online')}
+          </button>
         </div>
 
         {activeTab === 'global' && (
@@ -158,6 +171,8 @@ export default function ClassementPage() {
             </Section>
           </div>
         )}
+
+        {activeTab === 'online' && <OnlineRankingBoard />}
 
         {activeTab === 'jeu' && (
           <div className="space-y-4">
