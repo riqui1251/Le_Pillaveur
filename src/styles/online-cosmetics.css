@@ -1,0 +1,235 @@
+/*
+ * Cosmétiques EN LIGNE — système visuel séparé du local (player-effects.css /
+ * player-icon-frames.css). Classes appliquées uniquement par les composants
+ * online/OnlinePlayerTag.tsx : effets de pseudo (on-fx-*), cadres d'icône
+ * (on-frame-*, niveau + rôle) et écusson de rang (on-crest-*).
+ *
+ * Rareté des effets (dérivée du niveau requis, voir cosmetics.ts) :
+ * commun = statique · rare = dégradé animé · épique = dégradé riche ·
+ * légendaire = le plus dynamique.
+ */
+
+@keyframes on-slide { to { background-position: -220% 0; } }
+@keyframes on-flicker { from { filter: brightness(0.9); } to { filter: brightness(1.25); } }
+@keyframes on-glitch {
+  0%, 88% { transform: none; }
+  90% { transform: translateX(2px); }
+  94% { transform: translateX(-2px); }
+  98% { transform: none; }
+}
+@keyframes on-bubbles {
+  from { transform: translateY(4px); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: translateY(-6px); opacity: 0; }
+}
+
+/* ── Effets de pseudo ────────────────────────────────────────────── */
+
+.on-fx {
+  font-weight: 800;
+}
+
+/* Commun : couleur fixe + halo, sans animation. */
+.on-fx-red { color: #f87171; text-shadow: 0 0 10px rgba(248, 113, 113, 0.55); }
+.on-fx-blue { color: #60a5fa; text-shadow: 0 0 10px rgba(96, 165, 250, 0.55); }
+.on-fx-emerald { color: #34d399; text-shadow: 0 0 10px rgba(52, 211, 153, 0.55); }
+.on-fx-ocean { color: #38bdf8; text-shadow: 0 0 10px rgba(14, 165, 233, 0.55); }
+
+/* Rare : dégradé à 2-3 tons, glisse ou clignote. */
+.on-fx-ice {
+  background: linear-gradient(100deg, #bfe8ff, #6ec6ff 45%, #e8f8ff 55%, #8fd4ff);
+  background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: on-slide 3.2s linear infinite;
+}
+.on-fx-fire {
+  background: linear-gradient(0deg, #f97316, #fbbf24 60%, #fde68a);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: on-flicker 0.9s ease-in-out infinite alternate;
+}
+.on-fx-purple {
+  background: linear-gradient(100deg, #c084fc, #7c3aed 45%, #e9d5ff 55%, #a855f7);
+  background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: on-slide 3.4s linear infinite;
+}
+.on-fx-sunset {
+  background: linear-gradient(90deg, #fb923c, #f472b6 50%, #fb923c);
+  background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: on-slide 3.6s linear infinite;
+}
+.on-fx-lightning {
+  color: #fde047; text-shadow: 0 0 14px rgba(250, 204, 21, 0.85);
+  animation: on-lightning 1.1s linear infinite;
+}
+@keyframes on-lightning { 0%, 90%, 100% { opacity: 1; } 5%, 85% { opacity: 0.35; } }
+.on-fx-neon {
+  background: linear-gradient(100deg, #22d3ee, #e879f9 50%, #22d3ee);
+  background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: on-slide 2.4s linear infinite;
+}
+
+/* Épique : dégradés plus riches (shimmer métallique, nébuleuse, glitch digital). */
+.on-fx-gold {
+  background: linear-gradient(105deg, #7a5a12 8%, #fcd34d 28%, #fffbe6 40%, #fcd34d 52%, #7a5a12 78%);
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: on-slide 2.6s linear infinite;
+}
+.on-fx-galaxy {
+  background: linear-gradient(120deg, #c084fc, #818cf8 40%, #f0abfc 65%, #c084fc);
+  background-size: 240% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: on-slide 4s linear infinite;
+}
+.on-fx-matrix {
+  color: #4ade80; text-shadow: 0 0 6px #22c55e, 0 0 14px rgba(34, 197, 94, 0.6);
+  animation: on-matrix-glow 2s ease-in-out infinite;
+}
+@keyframes on-matrix-glow {
+  0%, 100% { text-shadow: 0 0 5px #22c55e, 0 0 12px rgba(34, 197, 94, 0.5); }
+  50% { text-shadow: 0 0 9px #4ade80, 0 0 22px rgba(74, 222, 128, 0.8); }
+}
+
+/* Légendaire : le plus dynamique — flux continu, glitch RVB, mousse signature. */
+.on-fx-rainbow {
+  background: linear-gradient(90deg, #f87171, #fbbf24, #4ade80, #22d3ee, #a78bfa, #f87171);
+  background-size: 320% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: on-slide 3s linear infinite;
+}
+.on-fx-cyber {
+  color: #e5e7eb;
+  text-shadow: 2px 0 rgba(34, 211, 238, 0.85), -2px 0 rgba(244, 114, 182, 0.85);
+  animation: on-glitch 1.6s steps(2, end) infinite;
+}
+.on-fx-toast {
+  position: relative;
+  background: linear-gradient(0deg, #d97706 5%, #fbbf24 55%, #fef3c7 85%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: on-flicker 1.4s ease-in-out infinite alternate;
+}
+.on-fx-toast::after {
+  content: 'ᵒ ᵒ ᵒ';
+  position: absolute; top: -0.55em; left: 8%; font-size: 0.5em;
+  color: rgba(254, 243, 199, 0.85);
+  animation: on-bubbles 1.8s linear infinite;
+}
+
+/* ── Cadres d'icône (niveau) ─────────────────────────────────────── */
+
+.on-frame { position: relative; border-radius: 50%; }
+
+.on-frame-silver { box-shadow: 0 0 0 3px #9ca3af, 0 0 12px rgba(156, 163, 175, 0.45); }
+.on-frame-gold { box-shadow: 0 0 0 3px #f5a623, 0 0 14px rgba(245, 166, 35, 0.55); }
+.on-frame-ember {
+  box-shadow: 0 0 0 3px #f97316, 0 0 16px rgba(249, 115, 22, 0.6);
+  animation: on-flicker 0.8s ease-in-out infinite alternate;
+}
+.on-frame-ember::after {
+  content: '🔥'; position: absolute; top: -11px; right: -6px; font-size: 13px;
+}
+.on-frame-neon {
+  box-shadow: 0 0 0 3px #22d3ee, 0 0 16px rgba(34, 211, 238, 0.75);
+  animation: on-pulse-neon 1.6s ease-in-out infinite;
+}
+@keyframes on-pulse-neon { 50% { box-shadow: 0 0 0 3px #22d3ee, 0 0 28px rgba(34, 211, 238, 1); } }
+.on-frame-royal { box-shadow: 0 0 0 3px #a78bfa, 0 0 14px rgba(167, 139, 250, 0.55); }
+.on-frame-royal::after {
+  content: '👑'; position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-size: 14px;
+}
+.on-frame-diamond { box-shadow: 0 0 0 3px #67e8f9, 0 0 16px rgba(103, 232, 249, 0.65); }
+.on-frame-diamond::after {
+  content: '✦'; position: absolute; top: -7px; right: -3px; color: #cffafe; font-size: 13px;
+  animation: on-sparkle 1.5s ease-in-out infinite;
+}
+@keyframes on-sparkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+.on-frame-crown {
+  box-shadow: 0 0 0 3px #fbbf24, 0 0 20px rgba(251, 191, 36, 0.75);
+  animation: on-pulse-gold 2s ease-in-out infinite;
+}
+@keyframes on-pulse-gold { 50% { box-shadow: 0 0 0 4px #fbbf24, 0 0 32px rgba(251, 191, 36, 1); } }
+.on-frame-crown::after {
+  content: '👑'; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 16px;
+  filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.9));
+}
+
+/* ── Cadres de rôle (staff) — réservés au grade, mêmes mécaniques CSS. ── */
+
+.on-frame-sentinel { box-shadow: 0 0 0 3px #34d399, 0 0 12px rgba(52, 211, 153, 0.5); }
+.on-frame-sentinel::after {
+  content: '🛡'; position: absolute; bottom: -5px; right: -4px; font-size: 12px;
+}
+.on-frame-blade { box-shadow: 0 0 0 3px #60a5fa, 0 0 14px rgba(96, 165, 250, 0.55); }
+.on-frame-blade::before, .on-frame-blade::after {
+  content: ''; position: absolute; width: 13px; height: 2px; background: #93c5fd; top: 50%;
+}
+.on-frame-blade::before { left: -11px; transform: rotate(35deg); }
+.on-frame-blade::after { right: -11px; transform: rotate(-35deg); }
+.on-frame-eagle {
+  box-shadow: 0 0 0 3px #a78bfa, 0 0 18px rgba(167, 139, 250, 0.7);
+  animation: on-pulse-violet 1.8s ease-in-out infinite;
+}
+@keyframes on-pulse-violet { 50% { box-shadow: 0 0 0 3px #c4b5fd, 0 0 28px rgba(167, 139, 250, 1); } }
+.on-frame-eagle::after {
+  content: '⚔'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 13px; color: #ddd6fe;
+}
+.on-frame-prestige { animation: on-prestige-ring 2.6s ease-in-out infinite; }
+@keyframes on-prestige-ring {
+  0%, 100% { box-shadow: 0 0 0 3px #fbbf24, 0 0 20px rgba(251, 191, 36, 0.65); }
+  50% { box-shadow: 0 0 0 3px #a78bfa, 0 0 26px rgba(167, 139, 250, 0.8); }
+}
+.on-frame-prestige::after {
+  content: '👑'; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 15px;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.9));
+}
+
+/* ── Écusson de rang — devant le pseudo, automatique, non désactivable. ── */
+
+.on-crest { position: relative; display: inline-block; width: 42px; height: 42px; flex-shrink: 0; }
+.on-crest-disc {
+  position: absolute; inset: 0; border-radius: 50%;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.35), inset 0 -5px 7px rgba(0, 0, 0, 0.45), 0 3px 9px rgba(0, 0, 0, 0.5);
+}
+.on-crest-gem {
+  position: absolute; top: 50%; left: 50%; font-size: 14px; line-height: 1;
+  transform: translate(-50%, -54%);
+  filter: drop-shadow(0 0 4px currentColor);
+}
+.on-crest-wing {
+  position: absolute; top: 50%; width: 12px; height: 19px;
+  clip-path: polygon(0 50%, 100% 6%, 64% 50%, 100% 94%);
+}
+.on-crest-wing.l { left: -7px; transform: translateY(-50%) scaleX(-1); }
+.on-crest-wing.r { right: -7px; transform: translateY(-50%); }
+.on-crest.sm { width: 20px; height: 20px; }
+.on-crest.sm .on-crest-gem { font-size: 8px; }
+.on-crest.sm .on-crest-wing { display: none; }
+
+.on-crest-mod .on-crest-disc { background: radial-gradient(circle at 32% 26%, #99f6e4, #14b8a6 55%, #0f766e 100%); }
+.on-crest-mod .on-crest-gem { color: #f0fdfa; }
+.on-crest-mod .on-crest-wing { background: linear-gradient(180deg, #5eead4, #0f766e); }
+
+.on-crest-admin .on-crest-disc { background: radial-gradient(circle at 32% 26%, #bfdbfe, #3b82f6 55%, #1e3a8a 100%); }
+.on-crest-admin .on-crest-gem { color: #eff6ff; }
+.on-crest-admin .on-crest-wing { background: linear-gradient(180deg, #93c5fd, #1e3a8a); }
+
+.on-crest-superadmin .on-crest-disc { background: radial-gradient(circle at 32% 26%, #ddd6fe, #7c3aed 55%, #4c1d95 100%); }
+.on-crest-superadmin .on-crest-gem { color: #f5f3ff; }
+.on-crest-superadmin .on-crest-wing { background: linear-gradient(180deg, #c4b5fd, #4c1d95); }
+
+.on-crest-fondateur .on-crest-disc {
+  background: radial-gradient(circle at 32% 26%, #fef3c7, #f59e0b 45%, #92400e 100%);
+  animation: on-crest-glow 2.4s ease-in-out infinite;
+}
+.on-crest-fondateur .on-crest-gem { color: #fffbeb; }
+.on-crest-fondateur .on-crest-wing { background: linear-gradient(180deg, #fcd34d, #7c2d12); }
+@keyframes on-crest-glow {
+  0%, 100% { box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -5px 7px rgba(0, 0, 0, 0.4), 0 0 9px rgba(251, 191, 36, 0.6); }
+  50% { box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -5px 7px rgba(0, 0, 0, 0.4), 0 0 18px rgba(167, 139, 250, 0.85); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .on-fx, .on-fx-ice, .on-fx-fire, .on-fx-purple, .on-fx-sunset, .on-fx-lightning, .on-fx-neon,
+  .on-fx-gold, .on-fx-galaxy, .on-fx-matrix, .on-fx-rainbow, .on-fx-cyber, .on-fx-toast, .on-fx-toast::after,
+  .on-frame-ember, .on-frame-neon, .on-frame-crown, .on-frame-diamond::after,
+  .on-frame-eagle, .on-frame-prestige, .on-crest-fondateur .on-crest-disc {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

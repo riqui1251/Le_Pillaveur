@@ -14,7 +14,11 @@ import { roleRank } from '@/lib/roles'
  *  - le niveau est DÉRIVÉ de l'XP (jamais stocké) — pas de désynchronisation ;
  *  - un cosmétique est débloqué par niveau, par grant manuel (fondateur) ou
  *    d'office à partir du grade super administrateur ;
- *  - le cadre `staff` reste réservé au staff (modérateur et au-dessus).
+ *  - les 4 cadres de RÔLE et le cadre `staff` sont réservés au grade
+ *    correspondant, hors catalogue de niveaux (voir ROLE_FRAME_MIN_RANK) ;
+ *  - le système visuel EN LIGNE (icônes/effets/cadres/écusson) est
+ *    entièrement séparé du local : catalogue et CSS (online-cosmetics.css)
+ *    dédiés, aucune donnée ni classe partagée avec players.ts / le CSS local.
  */
 
 export const XP_WIN = 50
@@ -48,38 +52,76 @@ export function progressForXp(xp: number): {
   return { level, current: xp - floor, required: next - floor }
 }
 
-export type CosmeticKind = 'effect' | 'frame'
+export type CosmeticKind = 'effect' | 'frame' | 'icon'
+export type CosmeticRarity = 'commun' | 'rare' | 'epique' | 'legendaire'
 
 export type Cosmetic = {
   id: string
   kind: CosmeticKind
-  /** Niveau requis pour le débloquer (hors grant / staff). */
+  /** Niveau requis pour le débloquer (hors grant / rôle). */
   unlockLevel: number
 }
 
+/** Rareté DÉRIVÉE du niveau requis — un seul axe de vérité, pas de doublon à maintenir. */
+export function effectRarity(unlockLevel: number): CosmeticRarity {
+  if (unlockLevel >= 20) return 'legendaire'
+  if (unlockLevel >= 12) return 'epique'
+  if (unlockLevel >= 5) return 'rare'
+  return 'commun'
+}
+
+/**
+ * Séries d'icônes EN LIGNE — collections thématiques exclusives, débloquées
+ * en bloc à un niveau donné. Totalement indépendantes de PLAYER_ICONS
+ * (grille libre du local) : un joueur online ne peut équiper qu'une icône
+ * d'une série qu'il a débloquée.
+ */
+export type IconSeries = {
+  id: string
+  icons: readonly string[]
+  unlockLevel: number
+}
+
+export const ICON_SERIES: IconSeries[] = [
+  { id: 'apero', icons: ['🍺', '🍷', '🥂', '🍹', '🥃', '🍾', '🍻', '🧊'], unlockLevel: 1 },
+  { id: 'fetard', icons: ['🪩', '🎉', '🎭', '🃏', '🎲', '🎯', '🎤', '🕺'], unlockLevel: 4 },
+  { id: 'bestiaire', icons: ['🦊', '🐺', '🦉', '🐍', '🦈', '🐉', '🦁', '🐙'], unlockLevel: 8 },
+  { id: 'nuit', icons: ['🌙', '⭐', '☄️', '🌌', '🔮', '🧿', '👻', '🧛'], unlockLevel: 14 },
+  { id: 'legende', icons: ['👑', '⚡', '🔱', '💎', '🏆', '🗡️', '🛡️', '🔥'], unlockLevel: 25 },
+  // Hors progression normale : accordable via grant fondateur (ou déjà
+  // débloqué d'office pour superadmin/fondateur par la règle générale).
+  { id: 'fondateur', icons: ['🌟', '🦄'], unlockLevel: 999 },
+]
+
+/** Icône par défaut : toujours débloquée (série Apéro, niveau 1). */
+export const DEFAULT_ONLINE_ICON = '🍺'
+
 /**
  * Catalogue : chaque effet de pseudo et cadre d'icône existant, associé à un
- * niveau. Les ids DOIVENT rester alignés sur PLAYER_EFFECTS / PLAYER_FRAMES
- * (vérifié par test). Le cadre `staff` n'apparaît pas ici : réservé au rôle.
+ * niveau. Les ids d'effet DOIVENT rester alignés sur PLAYER_EFFECTS
+ * (vérifié par test) ; les 7 cadres de niveau sur PLAYER_FRAMES. Les icônes
+ * sont dérivées d'ICON_SERIES. Le cadre `staff` et les 4 cadres de rôle
+ * n'apparaissent pas ici : réservés au grade (voir ROLE_FRAME_MIN_RANK).
  */
 export const COSMETICS: Cosmetic[] = [
-  // Effets de pseudo (animation du nom)
+  // Effets de pseudo (animation du nom) — 4 raretés dérivées du niveau.
   { id: 'red', kind: 'effect', unlockLevel: 1 },
   { id: 'blue', kind: 'effect', unlockLevel: 1 },
-  { id: 'ice', kind: 'effect', unlockLevel: 2 },
-  { id: 'fire', kind: 'effect', unlockLevel: 3 },
-  { id: 'emerald', kind: 'effect', unlockLevel: 4 },
-  { id: 'ocean', kind: 'effect', unlockLevel: 5 },
-  { id: 'purple', kind: 'effect', unlockLevel: 6 },
-  { id: 'sunset', kind: 'effect', unlockLevel: 7 },
-  { id: 'lightning', kind: 'effect', unlockLevel: 8 },
+  { id: 'emerald', kind: 'effect', unlockLevel: 3 },
+  { id: 'ocean', kind: 'effect', unlockLevel: 4 },
+  { id: 'ice', kind: 'effect', unlockLevel: 5 },
+  { id: 'fire', kind: 'effect', unlockLevel: 6 },
+  { id: 'purple', kind: 'effect', unlockLevel: 7 },
+  { id: 'sunset', kind: 'effect', unlockLevel: 8 },
+  { id: 'lightning', kind: 'effect', unlockLevel: 9 },
   { id: 'neon', kind: 'effect', unlockLevel: 10 },
   { id: 'gold', kind: 'effect', unlockLevel: 12 },
-  { id: 'rainbow', kind: 'effect', unlockLevel: 14 },
   { id: 'galaxy', kind: 'effect', unlockLevel: 16 },
   { id: 'matrix', kind: 'effect', unlockLevel: 18 },
-  { id: 'cyber', kind: 'effect', unlockLevel: 20 },
-  // Cadres d'icône
+  { id: 'rainbow', kind: 'effect', unlockLevel: 20 },
+  { id: 'cyber', kind: 'effect', unlockLevel: 24 },
+  { id: 'toast', kind: 'effect', unlockLevel: 30 },
+  // Cadres d'icône (niveau)
   { id: 'silver', kind: 'frame', unlockLevel: 5 },
   { id: 'gold', kind: 'frame', unlockLevel: 10 },
   { id: 'ember', kind: 'frame', unlockLevel: 15 },
@@ -87,9 +129,13 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'royal', kind: 'frame', unlockLevel: 25 },
   { id: 'diamond', kind: 'frame', unlockLevel: 30 },
   { id: 'crown', kind: 'frame', unlockLevel: 40 },
+  // Icônes (dérivées des séries)
+  ...ICON_SERIES.flatMap((series) =>
+    series.icons.map((icon) => ({ id: icon, kind: 'icon' as const, unlockLevel: series.unlockLevel }))
+  ),
 ]
 
-/** Clé unique d'un cosmétique (les ids se recoupent entre effets et cadres). */
+/** Clé unique d'un cosmétique (les ids se recoupent entre effets/cadres/icônes). */
 export function cosmeticKey(kind: CosmeticKind, id: string): string {
   return `${kind}:${id}`
 }
@@ -106,6 +152,19 @@ export const FREE_EFFECT_IDS = COSMETICS.filter(
 const SUPERADMIN_RANK = 3
 const STAFF_FRAME_ID = 'staff'
 
+/**
+ * Cadres de RÔLE — réservés au grade, jamais au niveau. Rang minimum requis
+ * (mêmes valeurs que ROLE_RANK dans src/lib/roles.ts : user 0, moderator 1,
+ * admin 2, superadmin 3, fondateur 4). `eagle` (superadmin) est déjà couvert
+ * par la règle générale ci-dessous — gardé explicite pour la lisibilité.
+ */
+export const ROLE_FRAME_MIN_RANK: Record<string, number> = {
+  sentinel: 1,
+  blade: 2,
+  eagle: 3,
+  prestige: 4,
+}
+
 export type UnlockContext = {
   xp: number
   role: string
@@ -120,13 +179,16 @@ export function isCosmeticUnlocked(ctx: UnlockContext, kind: CosmeticKind, id: s
     // Réservé au staff, hors catalogue de niveaux.
     return roleRank(ctx.role) > 0
   }
+  if (kind === 'frame' && id in ROLE_FRAME_MIN_RANK) {
+    return roleRank(ctx.role) >= ROLE_FRAME_MIN_RANK[id]
+  }
   const cosmetic = findCosmetic(kind, id)
   if (!cosmetic) return false
   if (ctx.grantedKeys.has(cosmeticKey(kind, id))) return true
   return levelForXp(ctx.xp) >= cosmetic.unlockLevel
 }
 
-/** Toutes les clés `kind:id` débloquées (catalogue + staff éventuel). */
+/** Toutes les clés `kind:id` débloquées (catalogue + rôle éventuel). */
 export function unlockedCosmeticKeys(ctx: UnlockContext): Set<string> {
   const keys = new Set<string>()
   for (const c of COSMETICS) {
@@ -135,9 +197,27 @@ export function unlockedCosmeticKeys(ctx: UnlockContext): Set<string> {
   if (isCosmeticUnlocked(ctx, 'frame', STAFF_FRAME_ID)) {
     keys.add(cosmeticKey('frame', STAFF_FRAME_ID))
   }
+  for (const id of Object.keys(ROLE_FRAME_MIN_RANK)) {
+    if (isCosmeticUnlocked(ctx, 'frame', id)) keys.add(cosmeticKey('frame', id))
+  }
   return keys
 }
 
 /** Garde-fous d'alignement avec players.ts (utilisés par les tests). */
 export const KNOWN_EFFECT_IDS = PLAYER_EFFECTS.filter((e) => e.id !== null).map((e) => e.id as string)
 export const KNOWN_FRAME_IDS = PLAYER_FRAMES.filter((f) => f.id !== null).map((f) => f.id as string)
+
+/**
+ * Sources de validation STRUCTURELLE pour les préférences en ligne (« est-ce
+ * un id de cosmétique online reconnu ? », indépendant du niveau/rôle du
+ * joueur — voir isCosmeticUnlocked pour le gating). Utilisées par
+ * sanitizeOnlinePreferences, découplées de PLAYER_EFFECTS/FRAMES/ICONS
+ * (catalogue local) pour respecter la séparation stricte local/online.
+ */
+export const ONLINE_EFFECT_IDS = COSMETICS.filter((c) => c.kind === 'effect').map((c) => c.id)
+export const ONLINE_ICON_IDS = COSMETICS.filter((c) => c.kind === 'icon').map((c) => c.id)
+export const ONLINE_FRAME_IDS = [
+  ...COSMETICS.filter((c) => c.kind === 'frame').map((c) => c.id),
+  STAFF_FRAME_ID,
+  ...Object.keys(ROLE_FRAME_MIN_RANK),
+]

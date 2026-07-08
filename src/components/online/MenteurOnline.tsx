@@ -14,7 +14,7 @@ import { isLegalRaise, type MenteurBid, type MenteurClientView } from '@/lib/men
 import { CssDie } from '@/components/games/CssDie'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
-import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
 /**
@@ -368,6 +368,7 @@ export function MenteurOnline() {
                 dead && 'opacity-45'
               )}
             >
+              <RankCrest role={cosmetics.get(p.id)?.role} />
               <span className="text-lg" aria-hidden>{iconOf(p)}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-bold">

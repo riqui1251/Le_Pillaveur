@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
-import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
 /**
@@ -802,6 +802,7 @@ export function ToucherCouleOnline() {
                         )}
                       >
                         <div className="flex min-w-0 items-center gap-2">
+                          <RankCrest role={cosmetics.get(p.id)?.role} />
                           <span className={cn('shrink-0 text-[10px] font-bold', teamAccent(p.team))}>
                             {TEAM_LABEL[p.team]}
                           </span>

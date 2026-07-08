@@ -150,6 +150,31 @@
     "level": "Livello {level}",
     "progress": "{current} / {required} XP"
   },
+  "onlineCollection": {
+    "title": "Collezione di {name}",
+    "preview": "Anteprima",
+    "icons": "Icone",
+    "effects": "Effetti del nome",
+    "frames": "Cornici",
+    "roleFrames": "Cornici di grado",
+    "roleFramesHint": "Riservate al tuo grado — non ottenibili per livello.",
+    "unlockAt": "Lv. {level}",
+    "grantOnly": "Solo su assegnazione",
+    "rarity": {
+      "commun": "Comune",
+      "rare": "Rara",
+      "epique": "Epica",
+      "legendaire": "Leggendaria"
+    },
+    "seriesNames": {
+      "apero": "Aperitivo",
+      "fetard": "Festa",
+      "bestiaire": "Bestiario",
+      "nuit": "Notte",
+      "legende": "Leggenda",
+      "fondateur": "Fondatore"
+    }
+  },
   "onlineLobby": {
     "visibility": {
       "title": "Visibilità",
@@ -370,7 +395,8 @@
       "gold": "Oro",
       "emerald": "Smeraldo",
       "purple": "Viola",
-      "cyber": "Cibernetico"
+      "cyber": "Cibernetico",
+      "toast": "Salute!"
     },
     "frames": {
       "none": "Nessuno",
@@ -381,7 +407,11 @@
       "royal": "Reale",
       "diamond": "Diamante",
       "staff": "Personale",
-      "crown": "Corona"
+      "crown": "Corona",
+      "sentinel": "Sentinella",
+      "blade": "Lama",
+      "eagle": "Aquila",
+      "prestige": "Prestigio"
     },
     "customizer": {
       "title": "Personalizza {name}",

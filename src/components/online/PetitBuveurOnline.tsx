@@ -21,7 +21,7 @@ import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
 import { getCaseMeta } from '@/lib/petit-buveur/case-families'
 import { InteractionSpectacle } from '@/components/petit-buveur/InteractionSpectacle'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
-import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
@@ -944,6 +944,7 @@ export function PetitBuveurOnline() {
                         >
                           {index + 1}
                         </span>
+                        <RankCrest role={cosmetics.get(p.id)?.role} />
                         <span className="shrink-0 text-sm" aria-hidden>{iconOf(p.id)}</span>
                         <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="truncate text-sm font-semibold text-white" />
                       </div>

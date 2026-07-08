@@ -5,6 +5,7 @@
 /* Import des styles pour les effets spéciaux des joueurs */
 @import '../styles/player-effects.css';
 @import '../styles/player-icon-frames.css';
+@import '../styles/online-cosmetics.css';
 @import '../styles/petit-buveur-board.css';
 
 /* Styles de centrage pour le mode plein écran */

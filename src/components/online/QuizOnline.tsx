@@ -17,7 +17,7 @@ import {
 } from '@/lib/quiz/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
-import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
 /**
@@ -216,6 +216,7 @@ export function QuizOnline() {
               <span className="w-7 text-center text-lg font-black text-white/50">
                 {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
               </span>
+              <RankCrest role={cosmetics.get(p.id)?.role} />
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
               <span className="text-sm font-black tabular-nums text-cyan-200">{p.score}</span>

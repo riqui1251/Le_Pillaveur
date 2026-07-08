@@ -28,6 +28,8 @@ export type RoomMemberDto = {
   preferences: OnlinePreferences
   /** Niveau de progression en ligne (dérivé de l'XP). */
   level: number
+  /** Rôle brut du compte — sert à dériver l'écusson de rang (crestTierForRole). */
+  role: string
 }
 
 export type RoomDto = {
@@ -149,6 +151,7 @@ export type TvRoomDto = {
     isReady: boolean
     preferences: OnlinePreferences
     level: number
+    role: string
   }>
   settings: RoomSettings
   stateVersion: number
@@ -181,6 +184,7 @@ export async function buildTvRoomDto(code: string): Promise<TvRoomDto | null> {
       isReady: m.isReady,
       preferences: parseOnlinePreferences(m.user.onlinePreferencesJson),
       level: levelForXp(m.user.onlineXp),
+      role: m.user.role,
     })),
     settings: parseRoomSettings(room.settingsJson),
     stateVersion: room.stateVersion,
@@ -210,6 +214,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     isSelf: m.userId === currentUserId,
     preferences: parseOnlinePreferences(m.user.onlinePreferencesJson),
     level: levelForXp(m.user.onlineXp),
+    role: m.user.role,
   }))
 
   const settings = parseRoomSettings(room.settingsJson)

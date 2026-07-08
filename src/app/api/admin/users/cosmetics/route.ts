@@ -41,7 +41,8 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}))
   const userId = typeof body.userId === 'string' ? body.userId : ''
-  const kind = body.kind === 'frame' ? 'frame' : body.kind === 'effect' ? 'effect' : null
+  const kind =
+    body.kind === 'frame' ? 'frame' : body.kind === 'effect' ? 'effect' : body.kind === 'icon' ? 'icon' : null
   const id = typeof body.id === 'string' ? body.id : ''
   const action = body.action === 'revoke' ? 'revoke' : 'grant'
 

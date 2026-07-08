@@ -15,7 +15,10 @@ import { canAccessSupervision } from '@/lib/roles'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer'
+import { OnlineCollection } from '@/components/online/OnlineCollection'
+import { OnlinePlayerIcon, OnlinePlayerName, RankCrest } from '@/components/online/OnlinePlayerTag'
 import { Player, getPlayerNameValidationError } from '@/lib/players'
+import type { OnlinePreferences } from '@/lib/online-preferences'
 import { nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { getSafeStorage } from '@/lib/storage'
@@ -61,19 +64,17 @@ export function AccountInfo() {
   // Liste des joueurs locaux repliée par défaut (elle peut être très longue).
   const [showLocalPlayers, setShowLocalPlayers] = useState(false)
 
-  /** Joueur virtuel représentant l'identité en ligne du compte (pour PlayerIcon/Name/Customizer). */
-  const onlinePlayer = useMemo<Player>(
+  const onlineDisplayName = user?.onlineDisplayName ?? user?.displayName ?? 'Joueur'
+  const onlineMemberCosmetics = useMemo(
     () => ({
-      id: '__online__',
-      name: user?.onlineDisplayName ?? user?.displayName ?? 'Joueur',
-      createdAt: 0,
-      stats: { gamesPlayed: 0, wins: 0, totalDrinks: 0 },
-      preferences: { color: 'bg-amber-500', ...user?.onlinePreferences },
+      preferences: { color: 'bg-amber-500' as const, ...user?.onlinePreferences },
+      level: progression?.level ?? 1,
+      role: user?.role ?? 'user',
     }),
-    [user?.onlineDisplayName, user?.displayName, user?.onlinePreferences]
+    [user?.onlinePreferences, user?.role, progression?.level]
   )
 
-  const saveOnlinePreferences = async (preferences: Partial<Player['preferences']>) => {
+  const saveOnlinePreferences = async (preferences: Partial<OnlinePreferences>) => {
     await fetch('/api/auth/online-preferences', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -332,11 +333,12 @@ export function AccountInfo() {
               Ce pseudo est utilisé automatiquement pour les parties online (1 joueur compte). Les mêmes restrictions de pseudo s’appliquent.
             </p>
 
-            {/* Aperçu du joueur en ligne (icône/effet personnalisables comme en local) */}
+            {/* Aperçu de l'identité en ligne (écusson de rang + icône encadrée + effet) */}
             <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
-              <PlayerIcon player={onlinePlayer} size="md" className="h-10 w-10 text-xl" />
+              <RankCrest role={user?.role} />
+              <OnlinePlayerIcon cosmetics={onlineMemberCosmetics} className="h-10 w-10 text-xl" />
               <p className="min-w-0 flex-1 truncate text-sm font-semibold">
-                <PlayerName player={onlinePlayer} />
+                <OnlinePlayerName name={onlineDisplayName} cosmetics={onlineMemberCosmetics} />
               </p>
               <button
                 type="button"
@@ -555,12 +557,14 @@ export function AccountInfo() {
         onSave={updatePlayerPreferences}
       />
 
-      <PlayerCustomizer
-        player={customizingOnline ? onlinePlayer : null}
+      <OnlineCollection
         open={customizingOnline}
-        onOpenChange={(open) => { if (!open) setCustomizingOnline(false) }}
-        onSave={(_playerId, preferences) => { void saveOnlinePreferences(preferences) }}
+        onOpenChange={setCustomizingOnline}
+        displayName={onlineDisplayName}
+        role={user?.role ?? 'user'}
+        preferences={onlineMemberCosmetics.preferences}
         progression={progression}
+        onSave={(preferences) => { void saveOnlinePreferences(preferences) }}
       />
 
       <section>

@@ -160,6 +160,31 @@
     "level": "Niveau {level}",
     "progress": "{current} / {required} XP"
   },
+  "onlineCollection": {
+    "title": "Collection de {name}",
+    "preview": "Aperçu",
+    "icons": "Icônes",
+    "effects": "Effets de pseudo",
+    "frames": "Cadres",
+    "roleFrames": "Cadres de rôle",
+    "roleFramesHint": "Réservés à ton grade — non attribuables par niveau.",
+    "unlockAt": "Nv. {level}",
+    "grantOnly": "Sur attribution",
+    "rarity": {
+      "commun": "Commun",
+      "rare": "Rare",
+      "epique": "Épique",
+      "legendaire": "Légendaire"
+    },
+    "seriesNames": {
+      "apero": "Apéro",
+      "fetard": "Fêtard",
+      "bestiaire": "Bestiaire",
+      "nuit": "Nuit",
+      "legende": "Légende",
+      "fondateur": "Fondateur"
+    }
+  },
   "onlineLobby": {
     "visibility": {
       "title": "Visibilité",
@@ -380,7 +405,8 @@
       "gold": "Or",
       "emerald": "Émeraude",
       "purple": "Violet",
-      "cyber": "Cyber"
+      "cyber": "Cyber",
+      "toast": "Toast !"
     },
     "frames": {
       "none": "Aucun",
@@ -391,7 +417,11 @@
       "royal": "Royal",
       "diamond": "Diamant",
       "staff": "Staff",
-      "crown": "Couronne"
+      "crown": "Couronne",
+      "sentinel": "Sentinelle",
+      "blade": "Lame",
+      "eagle": "Aigle",
+      "prestige": "Prestige"
     },
     "customizer": {
       "title": "Personnaliser {name}",

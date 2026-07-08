@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { cn } from '@/lib/utils'
+import { RankCrest } from '@/components/online/OnlinePlayerTag'
 import { JoinQR } from './JoinQR'
 import { TvAvatar } from './tv-shared'
 
@@ -28,6 +29,7 @@ export function TvLobby({ room, joinUrl }: { room: TvRoomDto; joinUrl: string })
               key={m.userId}
               className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
             >
+              <RankCrest role={m.role} size="lg" />
               <TvAvatar name={m.displayName} index={i} size={44} />
               <span className="flex-1 truncate text-xl font-bold">{m.displayName}</span>
               {m.isHost && (

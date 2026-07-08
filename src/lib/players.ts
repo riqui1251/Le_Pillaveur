@@ -35,7 +35,9 @@ export type PlayerSpecialEffect =
   | 'emerald'
   | 'purple'
   | 'cyber'
-  | 'cyber'
+  // Exclusif EN LIGNE (catalogue de progression, voir src/lib/online/cosmetics.ts) —
+  // absent de PLAYER_EFFECTS/CSS local : jamais proposé ni rendu en local.
+  | 'toast'
   | null;
 
 export type PlayerIconFrame =
@@ -47,6 +49,12 @@ export type PlayerIconFrame =
   | 'diamond'
   | 'staff'
   | 'crown'
+  // Cadres de RÔLE, exclusifs EN LIGNE (voir src/lib/online/cosmetics.ts) —
+  // absents de PLAYER_FRAMES/CSS local, débloqués par grade et non par niveau.
+  | 'sentinel'
+  | 'blade'
+  | 'eagle'
+  | 'prestige'
   | null;
 
 export interface PlayerPreferences {

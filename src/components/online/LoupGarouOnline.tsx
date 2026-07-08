@@ -14,7 +14,7 @@ import { lgTeamOf } from '@/lib/loup-garou/engine'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
-import { OnlinePlayerName, useMemberCosmetics, type MemberCosmetics } from './OnlinePlayerTag'
+import { OnlinePlayerName, RankCrest, useMemberCosmetics, type MemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
 /**
@@ -334,6 +334,7 @@ export function LoupGarouOnline() {
                 !p.alive && 'opacity-60'
               )}
             >
+              <RankCrest role={cosmetics.get(p.id)?.role} />
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold">

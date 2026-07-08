@@ -160,6 +160,31 @@
     "level": "Level {level}",
     "progress": "{current} / {required} XP"
   },
+  "onlineCollection": {
+    "title": "{name}'s collection",
+    "preview": "Preview",
+    "icons": "Icons",
+    "effects": "Name effects",
+    "frames": "Frames",
+    "roleFrames": "Rank frames",
+    "roleFramesHint": "Reserved to your rank — not earnable by level.",
+    "unlockAt": "Lv. {level}",
+    "grantOnly": "By grant only",
+    "rarity": {
+      "commun": "Common",
+      "rare": "Rare",
+      "epique": "Epic",
+      "legendaire": "Legendary"
+    },
+    "seriesNames": {
+      "apero": "Drinks",
+      "fetard": "Party",
+      "bestiaire": "Bestiary",
+      "nuit": "Night",
+      "legende": "Legend",
+      "fondateur": "Founder"
+    }
+  },
   "onlineLobby": {
     "visibility": {
       "title": "Visibility",
@@ -380,7 +405,8 @@
       "gold": "Gold",
       "emerald": "Emerald",
       "purple": "Purple",
-      "cyber": "Cyber"
+      "cyber": "Cyber",
+      "toast": "Cheers!"
     },
     "frames": {
       "none": "None",
@@ -391,7 +417,11 @@
       "royal": "Royal",
       "diamond": "Diamond",
       "staff": "Staff",
-      "crown": "Crown"
+      "crown": "Crown",
+      "sentinel": "Sentinel",
+      "blade": "Blade",
+      "eagle": "Eagle",
+      "prestige": "Prestige"
     },
     "customizer": {
       "title": "Customize {name}",

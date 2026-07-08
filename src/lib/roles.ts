@@ -167,3 +167,25 @@ export function roleLabel(role: string): string {
       return 'Joueur'
   }
 }
+
+export type CrestTier = 'mod' | 'admin' | 'superadmin' | 'fondateur'
+
+/**
+ * Écusson de rang à afficher devant le pseudo en ligne (lobby, jeux, TV) —
+ * automatique et non désactivable, séparé des cadres du catalogue (voir
+ * src/lib/online/cosmetics.ts). `null` pour un joueur sans grade staff.
+ */
+export function crestTierForRole(role: string): CrestTier | null {
+  switch (normalizeRole(role)) {
+    case 'fondateur':
+      return 'fondateur'
+    case 'superadmin':
+      return 'superadmin'
+    case 'admin':
+      return 'admin'
+    case 'moderator':
+      return 'mod'
+    default:
+      return null
+  }
+}
