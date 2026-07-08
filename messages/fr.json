@@ -269,6 +269,12 @@
       "games": "Parties",
       "sips": "Gorgées"
     },
+    "onlineSection": {
+      "title": "Compte en ligne"
+    },
+    "localSection": {
+      "title": "Jeux locaux (cet appareil)"
+    },
     "progression": {
       "title": "Progression en ligne",
       "level": "Niveau {level}",

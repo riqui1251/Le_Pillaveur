@@ -259,6 +259,12 @@
       "games": "Parti",
       "sips": "Sorsi"
     },
+    "onlineSection": {
+      "title": "Account online"
+    },
+    "localSection": {
+      "title": "Giochi locali (questo dispositivo)"
+    },
     "progression": {
       "title": "Progressione online",
       "level": "Livello {level}",

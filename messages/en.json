@@ -269,6 +269,12 @@
       "games": "Parts",
       "sips": "Sips"
     },
+    "onlineSection": {
+      "title": "Online account"
+    },
+    "localSection": {
+      "title": "Local games (this device)"
+    },
     "progression": {
       "title": "Online progression",
       "level": "Level {level}",

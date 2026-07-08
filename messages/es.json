@@ -259,6 +259,12 @@
       "games": "Regiones",
       "sips": "sorbos"
     },
+    "onlineSection": {
+      "title": "Cuenta en línea"
+    },
+    "localSection": {
+      "title": "Juegos locales (este dispositivo)"
+    },
     "progression": {
       "title": "Progresión en línea",
       "level": "Nivel {level}",

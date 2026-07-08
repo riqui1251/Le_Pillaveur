@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Star } from 'lucide-react'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Globe, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
@@ -58,6 +58,8 @@ export function AccountInfo() {
   const [onlineNameError, setOnlineNameError] = useState<string | null>(null)
   const [onlineNameSaved, setOnlineNameSaved] = useState(false)
   const [customizingOnline, setCustomizingOnline] = useState(false)
+  // Liste des joueurs locaux repliée par défaut (elle peut être très longue).
+  const [showLocalPlayers, setShowLocalPlayers] = useState(false)
 
   /** Joueur virtuel représentant l'identité en ligne du compte (pour PlayerIcon/Name/Customizer). */
   const onlinePlayer = useMemo<Player>(
@@ -276,10 +278,109 @@ export function AccountInfo() {
         </div>
       )}
 
+      {/* ── COMPTE EN LIGNE — mis en avant ──────────────────────────────── */}
+      <section className="rounded-3xl border border-amber-500/25 bg-gradient-to-b from-amber-500/[0.07] via-amber-500/[0.03] to-transparent p-4 sm:p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15">
+            <Globe className="h-4 w-4 text-amber-300" />
+          </span>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-amber-200">
+            {t('onlineSection.title')}
+          </h2>
+        </div>
+
+        <div className="space-y-4">
+          {progression && (
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/15 text-base font-extrabold text-amber-300">
+                  {progression.level}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-white">
+                    {t('progression.level', { level: progression.level })}
+                  </p>
+                  <p className="text-xs text-white/45">
+                    {t('progression.xpToNext', {
+                      current: progression.current,
+                      required: progression.required,
+                    })}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs tabular-nums text-white/40">
+                  {t('progression.totalXp', { xp: progression.xp })}
+                </span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all"
+                  style={{
+                    width: `${Math.min(100, Math.round((progression.current / Math.max(1, progression.required)) * 100))}%`,
+                  }}
+                />
+              </div>
+              <p className="mt-2 text-[11px] text-white/40">{t('progression.hint')}</p>
+            </div>
+          )}
+
+          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/70">
+              <Cloud className="h-4 w-4 text-cyan-300" />
+              Pseudo online (compte)
+            </div>
+            <p className="mb-2 text-xs text-cyan-100/80">
+              Ce pseudo est utilisé automatiquement pour les parties online (1 joueur compte). Les mêmes restrictions de pseudo s’appliquent.
+            </p>
+
+            {/* Aperçu du joueur en ligne (icône/effet personnalisables comme en local) */}
+            <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
+              <PlayerIcon player={onlinePlayer} size="md" className="h-10 w-10 text-xl" />
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+                <PlayerName player={onlinePlayer} />
+              </p>
+              <button
+                type="button"
+                onClick={() => setCustomizingOnline(true)}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-cyan-500/25 px-2.5 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/35"
+                title={t('playersList.customize')}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                {t('playersList.customize')}
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                value={onlineName}
+                onChange={(e) => {
+                  setOnlineName(e.target.value)
+                  if (onlineNameError) setOnlineNameError(null)
+                }}
+                maxLength={30}
+                placeholder="Ton pseudo online"
+                className="h-9 border-cyan-300/25 bg-black/20 text-sm text-white placeholder:text-white/35"
+              />
+              <button
+                type="button"
+                onClick={() => { void saveOnlineName() }}
+                className="rounded-lg bg-cyan-500/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/35"
+              >
+                Enregistrer
+              </button>
+            </div>
+            {onlineNameError && <p className="mt-2 text-xs text-orange-300">{onlineNameError}</p>}
+            {onlineNameSaved && <p className="mt-2 text-xs text-emerald-300">Pseudo online enregistré.</p>}
+          </div>
+
+          <MyOnlineStats />
+        </div>
+      </section>
+
+      {/* ── JEUX LOCAUX (cet appareil) ──────────────────────────────────── */}
       <section>
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
           <BarChart3 className="h-4 w-4 text-amber-300" />
-          {t('stats.title')}
+          {t('localSection.title')}
         </div>
         <div className="grid grid-cols-3 gap-3">
           <StatCard label={t('stats.players')} value={players.length} color="text-amber-300" />
@@ -288,15 +389,28 @@ export function AccountInfo() {
         </div>
       </section>
 
-      <MyOnlineStats />
-
       <section>
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
+        {/* Liste repliable : elle peut compter des dizaines de joueurs. */}
+        <button
+          type="button"
+          onClick={() => setShowLocalPlayers((v) => !v)}
+          aria-expanded={showLocalPlayers}
+          className="mb-3 flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.06]"
+        >
           <Users className="h-4 w-4 text-amber-300" />
           {t('playersList.title')}
-        </div>
+          <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[11px] tabular-nums text-white/60">
+            {players.length}
+          </span>
+          <ChevronDown
+            className={cn(
+              'ml-auto h-4 w-4 text-white/40 transition-transform',
+              showLocalPlayers && 'rotate-180'
+            )}
+          />
+        </button>
 
-        {players.length === 0 ? (
+        {showLocalPlayers && (players.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-10 text-center">
             <User className="mb-2 h-7 w-7 text-white/20" />
             <p className="text-sm text-white/40">{t('playersList.empty')}</p>
@@ -431,7 +545,7 @@ export function AccountInfo() {
               )
             })}
           </ul>
-        )}
+        ))}
       </section>
 
       <PlayerCustomizer
@@ -440,96 +554,6 @@ export function AccountInfo() {
         onOpenChange={(open) => { if (!open) setCustomizingPlayer(null) }}
         onSave={updatePlayerPreferences}
       />
-
-      {progression && (
-        <section>
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
-            <Star className="h-4 w-4 text-amber-300" />
-            {t('progression.title')}
-          </div>
-          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/15 text-base font-extrabold text-amber-300">
-                {progression.level}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white">
-                  {t('progression.level', { level: progression.level })}
-                </p>
-                <p className="text-xs text-white/45">
-                  {t('progression.xpToNext', {
-                    current: progression.current,
-                    required: progression.required,
-                  })}
-                </p>
-              </div>
-              <span className="shrink-0 text-xs tabular-nums text-white/40">
-                {t('progression.totalXp', { xp: progression.xp })}
-              </span>
-            </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all"
-                style={{
-                  width: `${Math.min(100, Math.round((progression.current / Math.max(1, progression.required)) * 100))}%`,
-                }}
-              />
-            </div>
-            <p className="mt-2 text-[11px] text-white/40">{t('progression.hint')}</p>
-          </div>
-        </section>
-      )}
-
-      <section>
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
-          <Cloud className="h-4 w-4 text-cyan-300" />
-          Pseudo online (compte)
-        </div>
-        <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
-          <p className="mb-2 text-xs text-cyan-100/80">
-            Ce pseudo est utilisé automatiquement pour les parties online (1 joueur compte). Les mêmes restrictions de pseudo s’appliquent.
-          </p>
-
-          {/* Aperçu du joueur en ligne (icône/effet personnalisables comme en local) */}
-          <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
-            <PlayerIcon player={onlinePlayer} size="md" className="h-10 w-10 text-xl" />
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold">
-              <PlayerName player={onlinePlayer} />
-            </p>
-            <button
-              type="button"
-              onClick={() => setCustomizingOnline(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-cyan-500/25 px-2.5 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/35"
-              title={t('playersList.customize')}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              {t('playersList.customize')}
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              value={onlineName}
-              onChange={(e) => {
-                setOnlineName(e.target.value)
-                if (onlineNameError) setOnlineNameError(null)
-              }}
-              maxLength={30}
-              placeholder="Ton pseudo online"
-              className="h-9 border-cyan-300/25 bg-black/20 text-sm text-white placeholder:text-white/35"
-            />
-            <button
-              type="button"
-              onClick={() => { void saveOnlineName() }}
-              className="rounded-lg bg-cyan-500/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/35"
-            >
-              Enregistrer
-            </button>
-          </div>
-          {onlineNameError && <p className="mt-2 text-xs text-orange-300">{onlineNameError}</p>}
-          {onlineNameSaved && <p className="mt-2 text-xs text-emerald-300">Pseudo online enregistré.</p>}
-        </div>
-      </section>
 
       <PlayerCustomizer
         player={customizingOnline ? onlinePlayer : null}
