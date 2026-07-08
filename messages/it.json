@@ -22,6 +22,10 @@
         "label": "Giochi",
         "description": "Scegli un gioco"
       },
+      "classement": {
+        "label": "Classifica",
+        "description": "Punteggi online"
+      },
       "compte": {
         "label": "Account",
         "description": "Impostazioni"
@@ -174,7 +178,8 @@
       "hint": "Contano nel minimo di {min} giocatori e prendono i posti vuoti.",
       "on": "Attivo",
       "off": "Disattivo"
-    }
+    },
+    "top5Badge": "Top {rank} di questo gioco"
   },
   "chat": {
     "title": "Chat",
@@ -2352,7 +2357,10 @@
       "subtitle": "Classifica delle partite online — vittorie, sconfitte e % (i sorsi non contano).",
       "generalTitle": "Classifica generale",
       "emptyGame": "Nessuna partita in classifica per ora.",
-      "legend": "Colonne: vittorie · sconfitte · partite · % di vittorie"
+      "legend": "Colonne: vittorie · sconfitte · partite · % di vittorie",
+      "showFull": "Vedi la classifica completa",
+      "showLess": "Riduci",
+      "loadingMore": "Caricamento…"
     }
   },
   "feedback": {

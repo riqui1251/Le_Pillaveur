@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle } from 'lucide-react'
+import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 const NAV_LINK_KEYS = [
   { href: '/joueurs', key: 'joueurs', icon: User },
   { href: '/jeux', key: 'jeux', icon: Gamepad2 },
+  { href: '/classement', key: 'classement', icon: Trophy },
   { href: '/compte', key: 'compte', icon: Home },
 ] as const
 

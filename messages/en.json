@@ -22,6 +22,10 @@
         "label": "Games",
         "description": "Choose a game"
       },
+      "classement": {
+        "label": "Ranking",
+        "description": "Online scores"
+      },
       "compte": {
         "label": "Account",
         "description": "Settings"
@@ -184,7 +188,8 @@
       "hint": "They count toward the {min}-player minimum and take the empty seats.",
       "on": "On",
       "off": "Off"
-    }
+    },
+    "top5Badge": "Top {rank} in this game"
   },
   "chat": {
     "title": "Chat",
@@ -2362,7 +2367,10 @@
       "subtitle": "Online games leaderboard — wins, losses and win rate (sips don’t count).",
       "generalTitle": "Overall ranking",
       "emptyGame": "No ranked games yet.",
-      "legend": "Columns: wins · losses · games · win rate"
+      "legend": "Columns: wins · losses · games · win rate",
+      "showFull": "View full leaderboard",
+      "showLess": "Show less",
+      "loadingMore": "Loading…"
     }
   },
   "feedback": {

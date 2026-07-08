@@ -22,6 +22,10 @@
         "label": "Juegos",
         "description": "Elige un juego"
       },
+      "classement": {
+        "label": "Clasificación",
+        "description": "Puntuaciones online"
+      },
       "compte": {
         "label": "Cuenta",
         "description": "Ajustes"
@@ -174,7 +178,8 @@
       "hint": "Cuentan para el mínimo de {min} jugadores y ocupan los asientos vacíos.",
       "on": "Activado",
       "off": "Desactivado"
-    }
+    },
+    "top5Badge": "Top {rank} de este juego"
   },
   "chat": {
     "title": "Chat",
@@ -2352,7 +2357,10 @@
       "subtitle": "Clasificación de partidas en línea — victorias, derrotas y % (los tragos no cuentan).",
       "generalTitle": "Clasificación general",
       "emptyGame": "Aún no hay partidas clasificadas.",
-      "legend": "Columnas: victorias · derrotas · partidas · % de victorias"
+      "legend": "Columnas: victorias · derrotas · partidas · % de victorias",
+      "showFull": "Ver la clasificación completa",
+      "showLess": "Mostrar menos",
+      "loadingMore": "Cargando…"
     }
   },
   "feedback": {

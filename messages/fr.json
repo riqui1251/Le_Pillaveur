@@ -22,6 +22,10 @@
         "label": "Jeux",
         "description": "Choisir un jeu"
       },
+      "classement": {
+        "label": "Classement",
+        "description": "Scores en ligne"
+      },
       "compte": {
         "label": "Compte",
         "description": "Paramètres"
@@ -184,7 +188,8 @@
       "hint": "Ils comptent dans le minimum de {min} joueurs et prennent les places vides.",
       "on": "Activé",
       "off": "Désactivé"
-    }
+    },
+    "top5Badge": "Top {rank} de ce jeu"
   },
   "chat": {
     "title": "Chat",
@@ -2367,7 +2372,10 @@
       "subtitle": "Classement des parties en ligne — victoires, défaites et % (les gorgées ne comptent pas).",
       "generalTitle": "Classement général",
       "emptyGame": "Aucune partie classée pour l’instant.",
-      "legend": "Colonnes : victoires · défaites · parties · % de victoires"
+      "legend": "Colonnes : victoires · défaites · parties · % de victoires",
+      "showFull": "Voir le classement complet",
+      "showLess": "Réduire",
+      "loadingMore": "Chargement…"
     }
   },
   "feedback": {

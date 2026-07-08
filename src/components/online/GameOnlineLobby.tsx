@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { ArrowLeft, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Users, UserPlus, Tv } from 'lucide-react'
+import { ArrowLeft, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Users, UserPlus, Tv, Trophy } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -67,6 +67,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const [joinCode, setJoinCode] = useState('')
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [showTv, setShowTv] = useState(false)
+  const [top5, setTop5] = useState<Map<string, number>>(new Map())
   const tTv = useTranslations('tv')
   const locale = useLocale()
   const tPb = useTranslations('games.petit-buveur.page')
@@ -87,6 +88,26 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       setError('Vous êtes dans un lobby pour un autre jeu. Quittez-le pour continuer.')
     }
   }, [room, gameId, setError])
+
+  // Badge « top 5 » : classement de CE jeu, pour repérer d'un coup d'œil les
+  // meilleurs joueurs de la table avant de lancer.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(`/api/online/rankings?gameId=${gameId}`, { credentials: 'include' })
+        if (!res.ok || cancelled) return
+        const data = (await res.json()) as { rows: { userId: string; position: number }[] }
+        if (cancelled) return
+        setTop5(new Map(data.rows.slice(0, 5).map((r) => [r.userId, r.position])))
+      } catch {
+        // Badge purement décoratif : un échec réseau ne doit rien casser.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [gameId])
 
   const copyCode = () => {
     if (!room?.code) return
@@ -640,6 +661,14 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     {m.isReady ? '✓ Prêt' : 'Pas encore prêt'}
                   </p>
                 </div>
+                {top5.has(m.userId) && (
+                  <span
+                    className="flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-300"
+                    title={tOnline('top5Badge', { rank: top5.get(m.userId) ?? 0 })}
+                  >
+                    <Trophy className="h-3 w-3" />#{top5.get(m.userId)}
+                  </span>
+                )}
                 {!m.isSelf && (
                   isFriend ? (
                     <span className="shrink-0 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">

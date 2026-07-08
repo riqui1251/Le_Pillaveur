@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Beer, Trophy } from 'lucide-react'
+import { Beer, ChevronDown, Trophy } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,13 @@ const RANKED_GAME_IDS = [
   'quiz',
   'loup-garou',
 ] as const
+
+/**
+ * Doit rester égal à RANKING_OVERVIEW_TOP côté serveur
+ * (src/lib/online/rankings.ts) — dupliqué ici pour ne PAS importer ce
+ * module côté client (il tire tout le registre serveur des jeux).
+ */
+const OVERVIEW_TOP = 5
 
 type RankingRow = {
   userId: string
@@ -100,6 +107,8 @@ function BoardCard({
   icon,
   title,
   board,
+  /** Valeur du `?gameId=` à interroger pour le classement complet ('all' pour le général). */
+  fullGameId,
   emptyLabel,
   youLabel,
   minGames,
@@ -109,14 +118,41 @@ function BoardCard({
   icon: React.ReactNode
   title: string
   board: RankingBoard | null
+  fullGameId: string
   emptyLabel: string
   youLabel: string
   minGames: number
   viewerId: string | undefined
   highlight?: boolean
 }) {
-  const rows = board?.rows ?? []
-  const meInTop = Boolean(board?.me && rows.some((r) => r.userId === board.me?.userId))
+  const t = useTranslations('ranking.online')
+  const [expanded, setExpanded] = useState(false)
+  const [full, setFull] = useState<{ rows: RankingRow[]; me: RankingRow | null } | null>(null)
+  const [loadingFull, setLoadingFull] = useState(false)
+
+  const rows = expanded && full ? full.rows : board?.rows ?? []
+  const me = expanded && full ? full.me : board?.me ?? null
+  const meInTop = Boolean(me && rows.some((r) => r.userId === me?.userId))
+  const canExpand = (board?.totalPlayers ?? 0) > OVERVIEW_TOP
+
+  const toggleExpanded = async () => {
+    if (!expanded && !full) {
+      setLoadingFull(true)
+      try {
+        const res = await fetch(`/api/online/rankings?gameId=${fullGameId}`, {
+          credentials: 'include',
+        })
+        if (res.ok) {
+          const json = (await res.json()) as { rows: RankingRow[]; me: RankingRow | null }
+          setFull(json)
+        }
+      } finally {
+        setLoadingFull(false)
+      }
+    }
+    setExpanded((v) => !v)
+  }
+
   return (
     <div
       className={cn(
@@ -136,23 +172,46 @@ function BoardCard({
           {emptyLabel}
         </p>
       ) : (
-        <div className="space-y-1.5">
-          {rows.map((row) => (
-            <RowCard
-              key={row.userId}
-              row={row}
-              isMe={row.userId === viewerId}
-              youLabel={youLabel}
-              minGames={minGames}
-            />
-          ))}
-          {board?.me && !meInTop && (
-            <>
-              <p className="text-center text-[10px] leading-none text-white/30">⋯</p>
-              <RowCard row={board.me} isMe youLabel={youLabel} minGames={minGames} />
-            </>
+        <>
+          <div
+            className={cn(
+              'space-y-1.5',
+              expanded && 'max-h-80 overflow-y-auto overscroll-contain pr-1'
+            )}
+          >
+            {rows.map((row) => (
+              <RowCard
+                key={row.userId}
+                row={row}
+                isMe={row.userId === viewerId}
+                youLabel={youLabel}
+                minGames={minGames}
+              />
+            ))}
+            {me && !meInTop && (
+              <>
+                <p className="text-center text-[10px] leading-none text-white/30">⋯</p>
+                <RowCard row={me} isMe youLabel={youLabel} minGames={minGames} />
+              </>
+            )}
+          </div>
+          {canExpand && (
+            <button
+              onClick={() => void toggleExpanded()}
+              disabled={loadingFull}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-[11px] font-medium text-white/40 transition-colors hover:bg-white/[0.04] hover:text-white/70 disabled:opacity-50"
+            >
+              {loadingFull ? (
+                t('loadingMore')
+              ) : (
+                <>
+                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
+                  {expanded ? t('showLess') : t('showFull')}
+                </>
+              )}
+            </button>
           )}
-        </div>
+        </>
       )}
     </div>
   )
@@ -227,6 +286,7 @@ export function OnlineRankingBoard() {
         icon={<Trophy className="h-4 w-4" />}
         title={t('generalTitle')}
         board={data.general}
+        fullGameId="all"
         emptyLabel={t('emptyGame')}
         youLabel={t('you')}
         minGames={minGames}
@@ -244,6 +304,7 @@ export function OnlineRankingBoard() {
               icon={<span>{game?.emoji ?? '🎮'}</span>}
               title={game?.title ?? id}
               board={boardFor(id)}
+              fullGameId={id}
               emptyLabel={t('emptyGame')}
               youLabel={t('you')}
               minGames={minGames}
