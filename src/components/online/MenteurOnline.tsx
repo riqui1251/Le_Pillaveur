@@ -14,6 +14,7 @@ import { isLegalRaise, type MenteurBid, type MenteurClientView } from '@/lib/men
 import { CssDie } from '@/components/games/CssDie'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 
 /**
  * LE MENTEUR en ligne (serveur-autoritaire). La vue reçue est déjà filtrée :
@@ -75,6 +76,7 @@ export function MenteurOnline() {
 
   const inGame = room?.gameId === 'menteur' && room.status === 'playing'
   const tutorial = useGameTutorial('menteur', inGame)
+  const cosmetics = useMemberCosmetics(room)
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
 
   const totalDice = useMemo(
@@ -268,7 +270,7 @@ export function MenteurOnline() {
             >
               <span className="w-6 text-center text-lg font-black text-white/50">{idx + 1}</span>
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>
-              <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
+              <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
               <span className="flex items-center gap-1 text-sm text-white/60">
                 <Beer className="h-4 w-4 text-amber-300" /> {p.lostCount}
               </span>
@@ -362,7 +364,7 @@ export function MenteurOnline() {
               <span className="text-lg" aria-hidden>{iconOf(p)}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-bold">
-                  {p.name}
+                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                   {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
                 </p>
                 <p className="text-[10px] text-white/50">

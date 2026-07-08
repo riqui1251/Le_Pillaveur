@@ -4,10 +4,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X } from 'lucide-react'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Star } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
+import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { FriendsManager } from '@/components/friends/FriendsManager'
 import { MyOnlineStats } from '@/components/online/MyOnlineStats'
 import { canAccessSupervision } from '@/lib/roles'
@@ -41,6 +42,7 @@ export function AccountInfo() {
     [games]
   )
   const { user, logout, refresh } = useAuth()
+  const { progression, refresh: refreshProgression } = useOnlineProgression()
   const { players, loading, removePlayer, updatePlayer, updatePlayerPreferences } = usePlayers()
   const tFriends = useTranslations('account.friends')
   const [totalGames, setTotalGames] = useState(0)
@@ -76,7 +78,7 @@ export function AccountInfo() {
       credentials: 'include',
       body: JSON.stringify(preferences),
     })
-    await refresh()
+    await Promise.all([refresh(), refreshProgression()])
   }
 
   useEffect(() => {
@@ -439,6 +441,45 @@ export function AccountInfo() {
         onSave={updatePlayerPreferences}
       />
 
+      {progression && (
+        <section>
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
+            <Star className="h-4 w-4 text-amber-300" />
+            {t('progression.title')}
+          </div>
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/15 text-base font-extrabold text-amber-300">
+                {progression.level}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white">
+                  {t('progression.level', { level: progression.level })}
+                </p>
+                <p className="text-xs text-white/45">
+                  {t('progression.xpToNext', {
+                    current: progression.current,
+                    required: progression.required,
+                  })}
+                </p>
+              </div>
+              <span className="shrink-0 text-xs tabular-nums text-white/40">
+                {t('progression.totalXp', { xp: progression.xp })}
+              </span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all"
+                style={{
+                  width: `${Math.min(100, Math.round((progression.current / Math.max(1, progression.required)) * 100))}%`,
+                }}
+              />
+            </div>
+            <p className="mt-2 text-[11px] text-white/40">{t('progression.hint')}</p>
+          </div>
+        </section>
+      )}
+
       <section>
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
           <Cloud className="h-4 w-4 text-cyan-300" />
@@ -495,6 +536,7 @@ export function AccountInfo() {
         open={customizingOnline}
         onOpenChange={(open) => { if (!open) setCustomizingOnline(false) }}
         onSave={(_playerId, preferences) => { void saveOnlinePreferences(preferences) }}
+        progression={progression}
       />
 
       <section>

@@ -17,6 +17,7 @@ import {
 } from '@/lib/quiz/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 
 /**
  * LE GRAND PILLAVEUR en ligne — le téléphone devient un BUZZER : 4 gros
@@ -62,6 +63,7 @@ export function QuizOnline() {
   const inGame = room?.gameId === 'quiz' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const tutorial = useGameTutorial('quiz', inGame)
+  const cosmetics = useMemberCosmetics(room)
 
   // Horloge locale (compte à rebours décoratif — l'échéance serveur fait foi).
   const [clock, setClock] = useState(() => Date.now())
@@ -205,7 +207,7 @@ export function QuizOnline() {
                 {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
               </span>
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>
-              <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
+              <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
               <span className="text-sm font-black tabular-nums text-cyan-200">{p.score}</span>
               <span className="flex items-center gap-1 text-xs text-white/50">
                 <Beer className="h-3.5 w-3.5 text-amber-300" /> {p.sips}
@@ -376,7 +378,7 @@ export function QuizOnline() {
                 return (
                   <div key={p.id} className="flex items-center gap-2 text-xs">
                     <span aria-hidden>{iconOf(p)}</span>
-                    <span className="min-w-0 flex-1 truncate font-semibold text-white/75">{p.name}</span>
+                    <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-semibold text-white/75" />
                     {r && (
                       <span className={cn('font-bold', r.correct ? 'text-emerald-300' : 'text-red-300/80')}>
                         {r.correct ? `+${r.points}` : r.choice === null ? '💤' : '✗'}
@@ -413,7 +415,7 @@ export function QuizOnline() {
               )}
             >
               <span aria-hidden>{iconOf(p)}</span>
-              {p.name}
+              <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
               {p.hasAnswered && ' ✓'}
             </span>
           ))}

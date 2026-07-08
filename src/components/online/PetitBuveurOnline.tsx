@@ -21,6 +21,7 @@ import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
 import { getCaseMeta } from '@/lib/petit-buveur/case-families'
 import { InteractionSpectacle } from '@/components/petit-buveur/InteractionSpectacle'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
@@ -112,6 +113,7 @@ export function PetitBuveurOnline() {
   const inGame = room?.gameId === 'petit-buveur' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const tutorial = useGameTutorial('petit-buveur', inGame)
+  const cosmetics = useMemberCosmetics(room)
 
   // Début de tour côté client : remis à zéro à chaque écriture d'état serveur.
   // Sert de base aux comptes à rebours AFK (l'horloge d'autorité reste le serveur).
@@ -521,7 +523,9 @@ export function PetitBuveurOnline() {
               <p className="hidden text-[10px] uppercase tracking-widest text-white/40 sm:mb-0.5 sm:block">{tGame('turnOf')}</p>
               <div className="flex items-center justify-center gap-1.5 truncate text-sm font-bold sm:text-base">
                 {active && <span aria-hidden>{iconOf(active.id)}</span>}
-                <span className="truncate">{active?.name}</span>
+                {active && (
+                  <OnlinePlayerName name={active.name} cosmetics={cosmetics.get(active.id)} className="truncate" />
+                )}
               </div>
             </div>
             <span className="shrink-0 text-xs font-medium text-white/40">
@@ -628,7 +632,9 @@ export function PetitBuveurOnline() {
                           className="flex items-center gap-1 rounded-full border border-white/15 bg-gray-950/60 px-2 py-0.5 text-xs font-semibold text-white/90"
                         >
                           <span aria-hidden>{iconOf(c.playerId)}</span>
-                          <span className="max-w-[6rem] truncate">{p?.name}</span>
+                          {p && (
+                            <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="max-w-[6rem] truncate" />
+                          )}
                           {c.drinks > 0 && <span className="text-amber-300">+{c.drinks} 🍺</span>}
                           {c.to !== c.from && (
                             <span className="text-sky-300">
@@ -775,7 +781,7 @@ export function PetitBuveurOnline() {
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center gap-1.5">
                         <span className="shrink-0 text-sm" aria-hidden>{iconOf(p.id)}</span>
-                        <span className="min-w-0 truncate text-xs font-semibold text-white/90">{p.name}</span>
+                        <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 truncate text-xs font-semibold text-white/90" />
                       </div>
                       <span className="flex items-center gap-1.5 text-[10px] font-medium text-white/40">
                         {t('caseLabel')} {p.position + 1}
@@ -805,9 +811,11 @@ export function PetitBuveurOnline() {
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="text-lg" aria-hidden>{iconOf(active.id)}</span>
-                  <span className="max-w-[5.5rem] truncate text-sm font-bold text-emerald-100 sm:max-w-[7.5rem] sm:text-base">
-                    {active.name}
-                  </span>
+                  <OnlinePlayerName
+                    name={active.name}
+                    cosmetics={cosmetics.get(active.id)}
+                    className="max-w-[5.5rem] truncate text-sm font-bold text-emerald-100 sm:max-w-[7.5rem] sm:text-base"
+                  />
                 </div>
               </div>
             )}
@@ -877,7 +885,13 @@ export function PetitBuveurOnline() {
                     <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/70">
                       {tGame('victory.winner')}
                     </p>
-                    <h2 className="mt-1 text-2xl font-bold text-white">{winner?.name ?? '—'}</h2>
+                    <h2 className="mt-1 text-2xl font-bold text-white">
+                      {winner ? (
+                        <OnlinePlayerName name={winner.name} cosmetics={cosmetics.get(winner.id)} />
+                      ) : (
+                        '—'
+                      )}
+                    </h2>
                     <p className="mt-0.5 text-sm text-white/50">{tGame('victory.wonGame')}</p>
                   </div>
                 </div>
@@ -924,7 +938,7 @@ export function PetitBuveurOnline() {
                           {index + 1}
                         </span>
                         <span className="shrink-0 text-sm" aria-hidden>{iconOf(p.id)}</span>
-                        <span className="truncate text-sm font-semibold text-white">{p.name}</span>
+                        <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="truncate text-sm font-semibold text-white" />
                       </div>
                       <div className="flex shrink-0 gap-3 text-xs text-white/50">
                         <span>{p.drinks}🍺</span>
@@ -1025,9 +1039,11 @@ export function PetitBuveurOnline() {
                                 {index + 1}
                               </span>
                               <span className="shrink-0 text-xs" aria-hidden>{iconOf(p.id)}</span>
-                              <span className={cn('truncate font-medium text-white/90', isActive && 'text-emerald-300')}>
-                                {p.name}
-                              </span>
+                              <OnlinePlayerName
+                                name={p.name}
+                                cosmetics={cosmetics.get(p.id)}
+                                className={cn('truncate font-medium text-white/90', isActive && 'text-emerald-300')}
+                              />
                             </span>
                             <span className="shrink-0 text-[10px] text-white/40">
                               {t('caseLabel')} {p.position + 1}
@@ -1051,9 +1067,11 @@ export function PetitBuveurOnline() {
                           className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/10 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                         >
                           <span className="text-3xl" aria-hidden>{iconOf(p.id)}</span>
-                          <span className="max-w-full truncate text-center text-sm font-semibold text-white">
-                            {p.name}
-                          </span>
+                          <OnlinePlayerName
+                            name={p.name}
+                            cosmetics={cosmetics.get(p.id)}
+                            className="max-w-full truncate text-center text-sm font-semibold text-white"
+                          />
                           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/50">
                             {t('caseLabel')} {p.position + 1}
                           </span>
@@ -1085,7 +1103,8 @@ export function PetitBuveurOnline() {
                       >
                         <User className="h-4 w-4 opacity-90" />
                         <span className="flex min-w-0 items-center gap-1 truncate">
-                          {tGame('target.me')} <span className="font-semibold">{active.name}</span>
+                          {tGame('target.me')}{' '}
+                          <OnlinePlayerName name={active.name} cosmetics={cosmetics.get(active.id)} className="font-semibold" />
                         </span>
                       </Button>
                     )}
@@ -1254,7 +1273,9 @@ export function PetitBuveurOnline() {
                           )}
                           <span className="ml-auto flex items-center gap-1 text-[11px] text-white/50">
                             <span aria-hidden>{iconOf(entry.actorId)}</span>
-                            <span className="max-w-[5.5rem] truncate">{actor?.name}</span>
+                            {actor && (
+                              <OnlinePlayerName name={actor.name} cosmetics={cosmetics.get(actor.id)} className="max-w-[5.5rem] truncate" />
+                            )}
                           </span>
                         </div>
                         {entry.changes.length > 0 ? (
@@ -1267,7 +1288,9 @@ export function PetitBuveurOnline() {
                                   className="flex items-center gap-1 rounded-full border border-white/15 bg-gray-950/60 px-2 py-0.5 text-[11px] font-semibold text-white/85"
                                 >
                                   <span aria-hidden>{iconOf(c.playerId)}</span>
-                                  <span className="max-w-[5rem] truncate">{p?.name}</span>
+                                  {p && (
+                                    <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="max-w-[5rem] truncate" />
+                                  )}
                                   {c.drinks > 0 && <span className="text-amber-300">+{c.drinks} 🍺</span>}
                                   {c.to !== c.from && (
                                     <span className="text-sky-300">

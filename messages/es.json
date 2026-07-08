@@ -253,6 +253,13 @@
       "games": "Regiones",
       "sips": "sorbos"
     },
+    "progression": {
+      "title": "Progresión en línea",
+      "level": "Nivel {level}",
+      "xpToNext": "{current} / {required} XP para el siguiente nivel",
+      "totalXp": "{xp} XP",
+      "hint": "Gana XP jugando en línea (victoria +50, derrota +20) y desbloquea efectos de nombre y marcos en «Personalizar»."
+    },
     "playersList": {
       "title": "Jugadores registrados",
       "empty": "No hay jugadores registrados",
@@ -370,7 +377,8 @@
       "icon": "Icono",
       "effect": "Efecto del apodo",
       "frame": "Marco de icono",
-      "frameStaffOnly": "Reservado para miembros del personal (moderador+)"
+      "frameStaffOnly": "Reservado para miembros del personal (moderador+)",
+      "lockedLevel": "Nv. {level}"
     }
   },
   "games": {
@@ -2701,6 +2709,21 @@
       "confirm": "Bloquear",
       "dialogVoiceTitle": "Bloquear del chat de voz",
       "dialogChatTitle": "Bloquear del chat escrito"
+    },
+    "cosmetics": {
+      "manage": "Cosméticos",
+      "title": "Cosméticos de {name}",
+      "subtitle": "Nivel {level} — desbloquea manualmente efectos o marcos en esta cuenta.",
+      "loading": "Cargando…",
+      "effects": "Efectos de nombre",
+      "frames": "Marcos de icono",
+      "levelRequired": "Nv. {level}",
+      "stateGranted": "regalado",
+      "stateUnlocked": "desbloqueado",
+      "stateLocked": "bloqueado",
+      "grant": "Regalar",
+      "revoke": "Quitar",
+      "close": "Cerrar"
     },
     "kicker": "Supervisión",
     "header": {

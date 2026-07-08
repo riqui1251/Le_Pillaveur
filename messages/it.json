@@ -253,6 +253,13 @@
       "games": "Parti",
       "sips": "Sorsi"
     },
+    "progression": {
+      "title": "Progressione online",
+      "level": "Livello {level}",
+      "xpToNext": "{current} / {required} XP al livello successivo",
+      "totalXp": "{xp} XP",
+      "hint": "Guadagna XP giocando online (vittoria +50, sconfitta +20) e sblocca effetti del nome e cornici in «Personalizza»."
+    },
     "playersList": {
       "title": "Giocatori registrati",
       "empty": "Nessun giocatore registrato",
@@ -370,7 +377,8 @@
       "icon": "Icona",
       "effect": "Effetto del soprannome",
       "frame": "Cornice dell'icona",
-      "frameStaffOnly": "Riservato ai membri dello staff (moderatore+)"
+      "frameStaffOnly": "Riservato ai membri dello staff (moderatore+)",
+      "lockedLevel": "Lv. {level}"
     }
   },
   "games": {
@@ -2701,6 +2709,21 @@
       "confirm": "Escludi",
       "dialogVoiceTitle": "Escludi dalla chat vocale",
       "dialogChatTitle": "Escludi dalla chat scritta"
+    },
+    "cosmetics": {
+      "manage": "Cosmetici",
+      "title": "Cosmetici di {name}",
+      "subtitle": "Livello {level} — sblocca manualmente effetti o cornici su questo account.",
+      "loading": "Caricamento…",
+      "effects": "Effetti del nome",
+      "frames": "Cornici dell'icona",
+      "levelRequired": "Lv. {level}",
+      "stateGranted": "regalato",
+      "stateUnlocked": "sbloccato",
+      "stateLocked": "bloccato",
+      "grant": "Regala",
+      "revoke": "Rimuovi",
+      "close": "Chiudi"
     },
     "kicker": "Supervisione",
     "header": {

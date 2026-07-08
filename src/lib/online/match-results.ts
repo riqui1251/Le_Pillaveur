@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
+import { XP_LOSS, XP_WIN } from '@/lib/online/cosmetics'
 import { lgTeamOf, type LGState } from '@/lib/loup-garou/engine'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import type { TCState } from '@/lib/toucher-coule/engine'
@@ -147,5 +148,20 @@ export async function recordMatchResults(
       humanCount: r.humanCount,
     })),
   })
+  // XP de progression : mêmes règles de comptage que le classement.
+  const winners = rows.filter((r) => r.outcome === 'win').map((r) => r.userId)
+  const losers = rows.filter((r) => r.outcome === 'loss').map((r) => r.userId)
+  if (winners.length > 0) {
+    await client.user.updateMany({
+      where: { id: { in: winners } },
+      data: { onlineXp: { increment: XP_WIN } },
+    })
+  }
+  if (losers.length > 0) {
+    await client.user.updateMany({
+      where: { id: { in: losers } },
+      data: { onlineXp: { increment: XP_LOSS } },
+    })
+  }
   return rows.length
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { computeMatchResults, matchOutcomesFor, type MatchOutcome } from './match-results'
+import type { PrismaClient } from '@prisma/client'
+import { XP_LOSS, XP_WIN } from '@/lib/online/cosmetics'
+import {
+  computeMatchResults,
+  matchOutcomesFor,
+  recordMatchResults,
+  type MatchOutcome,
+} from './match-results'
 
 /**
  * Règles du classement en ligne : qui est enregistré, qui gagne, qui perd.
@@ -156,5 +163,59 @@ describe('bout en bout : extraction + règles', () => {
     expect(rows.find((r) => r.userId === 'u2')?.outcome).toBe('loss')
     expect(rows[0].playerCount).toBe(4)
     expect(rows[0].humanCount).toBe(2)
+  })
+})
+
+describe('recordMatchResults (enregistrement + XP)', () => {
+  /** Faux client Prisma : capture createMany + updateMany. */
+  function fakeClient() {
+    const created: unknown[] = []
+    const xpUpdates: { ids: string[]; increment: number }[] = []
+    const client = {
+      onlineMatchResult: {
+        createMany: async ({ data }: { data: unknown[] }) => {
+          created.push(...data)
+          return { count: data.length }
+        },
+      },
+      user: {
+        updateMany: async (args: {
+          where: { id: { in: string[] } }
+          data: { onlineXp: { increment: number } }
+        }) => {
+          xpUpdates.push({ ids: args.where.id.in, increment: args.data.onlineXp.increment })
+          return { count: args.where.id.in.length }
+        },
+      },
+    }
+    return { client: client as unknown as PrismaClient, created, xpUpdates }
+  }
+
+  it('crédite XP_WIN aux gagnants et XP_LOSS aux perdants', async () => {
+    const { client, created, xpUpdates } = fakeClient()
+    const state = { players: [
+      { id: 'u1', isBot: false },
+      { id: 'u2', isBot: false },
+      { id: 'bot-1', isBot: true },
+    ], winner: 'u1' }
+    const n = await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
+    expect(n).toBe(2)
+    expect(created).toHaveLength(2)
+    expect(xpUpdates).toEqual([
+      { ids: ['u1'], increment: XP_WIN },
+      { ids: ['u2'], increment: XP_LOSS },
+    ])
+  })
+
+  it('partie non comptée (1 seul compte) : ni ligne ni XP', async () => {
+    const { client, created, xpUpdates } = fakeClient()
+    const state = { players: [
+      { id: 'u1', isBot: false },
+      { id: 'bot-1', isBot: true },
+    ], winner: 'u1' }
+    const n = await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
+    expect(n).toBe(0)
+    expect(created).toHaveLength(0)
+    expect(xpUpdates).toHaveLength(0)
   })
 })

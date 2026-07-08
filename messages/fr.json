@@ -263,6 +263,13 @@
       "games": "Parties",
       "sips": "Gorgées"
     },
+    "progression": {
+      "title": "Progression en ligne",
+      "level": "Niveau {level}",
+      "xpToNext": "{current} / {required} XP vers le niveau suivant",
+      "totalXp": "{xp} XP",
+      "hint": "Gagne de l'XP en jouant en ligne (victoire +50, défaite +20) et débloque effets de pseudo et cadres dans « Personnaliser »."
+    },
     "playersList": {
       "title": "Joueurs enregistrés",
       "empty": "Aucun joueur enregistré",
@@ -380,7 +387,8 @@
       "icon": "Icône",
       "effect": "Effet du pseudo",
       "frame": "Cadre d'icône",
-      "frameStaffOnly": "Réservé aux membres staff (modérateur+)"
+      "frameStaffOnly": "Réservé aux membres staff (modérateur+)",
+      "lockedLevel": "Nv. {level}"
     }
   },
   "games": {
@@ -2716,6 +2724,21 @@
       "confirm": "Bannir",
       "dialogVoiceTitle": "Bannir du chat vocal",
       "dialogChatTitle": "Bannir du chat écrit"
+    },
+    "cosmetics": {
+      "manage": "Cosmétiques",
+      "title": "Cosmétiques de {name}",
+      "subtitle": "Niveau {level} — débloque manuellement des effets ou cadres sur ce compte.",
+      "loading": "Chargement…",
+      "effects": "Effets de pseudo",
+      "frames": "Cadres d'icône",
+      "levelRequired": "Nv. {level}",
+      "stateGranted": "offert",
+      "stateUnlocked": "débloqué",
+      "stateLocked": "verrouillé",
+      "grant": "Offrir",
+      "revoke": "Retirer",
+      "close": "Fermer"
     },
     "kicker": "Supervision",
     "header": {

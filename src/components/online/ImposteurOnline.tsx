@@ -17,6 +17,7 @@ import {
 } from '@/lib/imposteur/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 
 /**
  * L'IMPOSTEUR en ligne (serveur-autoritaire). La vue est déjà filtrée par le
@@ -60,6 +61,7 @@ export function ImposteurOnline() {
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const stateVersion = room?.stateVersion ?? -1
   const tutorial = useGameTutorial('imposteur', inGame)
+  const cosmetics = useMemberCosmetics(room)
 
   // Horloge locale pour le compte à rebours de phase (décoratif).
   const [clock, setClock] = useState(() => Date.now())
@@ -250,7 +252,7 @@ export function ImposteurOnline() {
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold">
-                  {p.name}
+                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                   {p.eliminated && <span className="text-white/40"> 💀</span>}
                 </p>
                 <p className="text-xs text-white/50">« {p.word} »</p>
@@ -503,7 +505,7 @@ export function ImposteurOnline() {
                   >
                     <span className="text-lg" aria-hidden>{iconOf(p)}</span>
                     <span className="min-w-0 flex-1 truncate text-xs font-bold">
-                      {p.name}
+                      <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                       {isMe && <span className="text-white/40"> {t('you')}</span>}
                     </span>
                     {p.hasVoted && (
@@ -545,7 +547,7 @@ export function ImposteurOnline() {
               >
                 <span className="text-base" aria-hidden>{iconOf(p)}</span>
                 <span className="w-24 shrink-0 truncate text-xs font-semibold text-white/70">
-                  {p.name}
+                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                   {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm font-bold">

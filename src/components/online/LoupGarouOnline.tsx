@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { OnlinePlayerName, useMemberCosmetics, type MemberCosmetics } from './OnlinePlayerTag'
 
 /**
  * LOUP-GAROU en ligne. La vue reçue est déjà filtrée par le serveur selon QUI
@@ -85,6 +86,7 @@ function TargetGrid({
   excludeIds = [],
   youLabel,
   selfId,
+  cosmetics,
 }: {
   players: LGPlayerView[]
   iconOf: (p: { id: string; isBot: boolean }) => string
@@ -94,6 +96,7 @@ function TargetGrid({
   excludeIds?: string[]
   youLabel: string
   selfId: string
+  cosmetics?: Map<string, MemberCosmetics>
 }) {
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -116,7 +119,7 @@ function TargetGrid({
           >
             <span className="text-lg" aria-hidden>{iconOf(p)}</span>
             <span className="min-w-0 flex-1 truncate text-xs font-bold">
-              {p.name}
+              <OnlinePlayerName name={p.name} cosmetics={cosmetics?.get(p.id)} />
               {p.id === selfId && <span className="text-white/40"> {youLabel}</span>}
             </span>
           </button>
@@ -149,6 +152,7 @@ export function LoupGarouOnline() {
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const stateVersion = room?.stateVersion ?? -1
   const tutorial = useGameTutorial('loup-garou', inGame)
+  const cosmetics = useMemberCosmetics(room)
 
   // Horloge locale (le serveur seul fait foi) + reset du mode potion.
   const [clock, setClock] = useState(() => Date.now())
@@ -320,7 +324,7 @@ export function LoupGarouOnline() {
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold">
-                  {p.name}
+                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                   {!p.alive && <span className="text-white/40"> 💀</span>}
                 </p>
                 {p.role && (
@@ -547,6 +551,7 @@ export function LoupGarouOnline() {
                     <TargetGrid
                       players={alive}
                       iconOf={iconOf}
+                      cosmetics={cosmetics}
                       onPick={(id) => void sendAction({ action: 'guard-protect', targetId: id })}
                       disabled={busy}
                       excludeIds={view.guardLastProtectedId ? [view.guardLastProtectedId] : []}
@@ -572,6 +577,7 @@ export function LoupGarouOnline() {
                   <TargetGrid
                     players={alive.filter((p) => p.id !== user.id)}
                     iconOf={iconOf}
+                    cosmetics={cosmetics}
                     onPick={(id) => void sendAction({ action: 'raven-mark', targetId: id })}
                     disabled={busy}
                     youLabel={t('you')}
@@ -595,6 +601,7 @@ export function LoupGarouOnline() {
                   <TargetGrid
                     players={alive.filter((p) => p.id !== user.id)}
                     iconOf={iconOf}
+                    cosmetics={cosmetics}
                     onPick={(id) => void sendAction({ action: 'seer-peek', targetId: id })}
                     disabled={busy}
                     youLabel={t('you')}
@@ -608,6 +615,7 @@ export function LoupGarouOnline() {
                 <TargetGrid
                   players={alive.filter((p) => p.role !== 'loup')}
                   iconOf={iconOf}
+                  cosmetics={cosmetics}
                   onPick={(id) => void sendAction({ action: 'wolf-vote', targetId: id })}
                   disabled={busy}
                   chosenId={view.wolfVotes?.[user.id] ?? null}
@@ -640,6 +648,7 @@ export function LoupGarouOnline() {
                     <TargetGrid
                       players={alive.filter((p) => p.id !== user.id)}
                       iconOf={iconOf}
+                      cosmetics={cosmetics}
                       onPick={(id) =>
                         void sendAction({ action: 'witch', witchAction: 'kill', targetId: id })
                       }
@@ -727,6 +736,7 @@ export function LoupGarouOnline() {
                 <TargetGrid
                   players={alive}
                   iconOf={iconOf}
+                  cosmetics={cosmetics}
                   onPick={(id) => void sendAction({ action: 'hunter-shot', targetId: id })}
                   disabled={busy}
                   youLabel={t('you')}
@@ -815,7 +825,7 @@ export function LoupGarouOnline() {
                       >
                         <span className="text-lg" aria-hidden>{iconOf(p)}</span>
                         <span className="min-w-0 flex-1 truncate text-xs font-bold">
-                          {p.name}
+                          <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                           {isMe && <span className="text-white/40"> {t('you')}</span>}
                         </span>
                         {view.ravenTargetId === p.id && view.phase === 'day-vote' && (
@@ -855,7 +865,7 @@ export function LoupGarouOnline() {
             >
               <span className="text-sm" aria-hidden>{p.alive ? iconOf(p) : '💀'}</span>
               <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
-                {p.name}
+                <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                 {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
               </span>
               {p.role && (

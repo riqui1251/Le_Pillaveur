@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 
 /**
  * Écran de jeu Toucher-Coulé EN LIGNE (serveur-autoritaire).
@@ -67,6 +68,7 @@ export function ToucherCouleOnline() {
 
   const inGame = room?.gameId === 'toucher-coule' && room.status === 'playing'
   const tutorial = useGameTutorial('toucher-coule', inGame)
+  const cosmetics = useMemberCosmetics(room)
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
 
   // Nettoie le placement local dès que la bataille démarre (prêt pour un éventuel rematch).
@@ -693,7 +695,7 @@ export function ToucherCouleOnline() {
                       >
                         <span className="truncate">
                           {iconOf(p) ? `${iconOf(p)} ` : ''}
-                          {p.name}
+                          <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                           {p.id === user.id && ' (vous)'}
                         </span>
                         <span className="shrink-0 text-white/45">{p.drinks}🍺</span>
@@ -798,7 +800,7 @@ export function ToucherCouleOnline() {
                           </span>
                           <span className="truncate text-sm font-semibold text-white">
                             {iconOf(p) ? `${iconOf(p)} ` : ''}
-                            {p.name}
+                            <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                           </span>
                           {p.team === winner && <span aria-hidden>🏆</span>}
                         </div>

@@ -4,6 +4,7 @@ import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { parseOnlinePreferences, type OnlinePreferences } from '@/lib/online-preferences'
+import { levelForXp } from '@/lib/online/cosmetics'
 
 const ROOM_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 const ROOM_CODE_LENGTH = 6
@@ -25,6 +26,8 @@ export type RoomMemberDto = {
   isSelf: boolean
   /** Personnalisation du joueur en ligne (icône/effet/cadre du compte). */
   preferences: OnlinePreferences
+  /** Niveau de progression en ligne (dérivé de l'XP). */
+  level: number
 }
 
 export type RoomDto = {
@@ -145,6 +148,7 @@ export type TvRoomDto = {
     isHost: boolean
     isReady: boolean
     preferences: OnlinePreferences
+    level: number
   }>
   settings: RoomSettings
   stateVersion: number
@@ -176,6 +180,7 @@ export async function buildTvRoomDto(code: string): Promise<TvRoomDto | null> {
       isHost: m.userId === room.hostUserId,
       isReady: m.isReady,
       preferences: parseOnlinePreferences(m.user.onlinePreferencesJson),
+      level: levelForXp(m.user.onlineXp),
     })),
     settings: parseRoomSettings(room.settingsJson),
     stateVersion: room.stateVersion,
@@ -204,6 +209,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     isReady: m.isReady,
     isSelf: m.userId === currentUserId,
     preferences: parseOnlinePreferences(m.user.onlinePreferencesJson),
+    level: levelForXp(m.user.onlineXp),
   }))
 
   const settings = parseRoomSettings(room.settingsJson)

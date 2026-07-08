@@ -37,6 +37,7 @@ import {
   CheckCheck,
   Inbox,
   AlertTriangle,
+  Sparkles,
 } from 'lucide-react'
 import { deviceLabel } from '@/lib/device-from-user-agent'
 import { useAuth } from '@/hooks/useAuth'
@@ -81,6 +82,7 @@ import {
 } from '@/components/ui/dialog'
 import { ModerationTermsPanel } from '@/components/supervision/ModerationTermsPanel'
 import { NameModerationAttemptsPanel } from '@/components/supervision/NameModerationAttemptsPanel'
+import { CosmeticGrantsDialog } from '@/components/supervision/CosmeticGrantsDialog'
 import {
   SupervisionShell,
   SupervisionHeader,
@@ -967,6 +969,12 @@ export default function SupervisionPage() {
   const [featureBanComment, setFeatureBanComment] = useState('')
   const [featureBanDays, setFeatureBanDays] = useState('7')
   const [featureBanPermanent, setFeatureBanPermanent] = useState(false)
+
+  // Déblocage manuel de cosmétiques (fondateur uniquement).
+  const [cosmeticsDialog, setCosmeticsDialog] = useState<{
+    userId: string
+    displayName: string
+  } | null>(null)
 
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([])
   const [feedbackSearch, setFeedbackSearch] = useState('')
@@ -2107,6 +2115,25 @@ export default function SupervisionPage() {
                       })}
                     </div>
                   )}
+
+                  {/* Cosmétiques : déblocage manuel par un FONDATEUR sur un
+                      autre compte (effets de pseudo / cadres). */}
+                  {user.role === 'fondateur' && u.id !== user.id && (
+                    <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        className="gap-1 border-amber-500/40 text-amber-300"
+                        onClick={() =>
+                          setCosmeticsDialog({ userId: u.id, displayName: u.displayName })
+                        }
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        {t('cosmetics.manage')}
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 )
               })
@@ -2391,6 +2418,8 @@ export default function SupervisionPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CosmeticGrantsDialog target={cosmeticsDialog} onClose={() => setCosmeticsDialog(null)} />
 
       <Dialog
         open={!!historyUserId}

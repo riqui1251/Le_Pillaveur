@@ -33,6 +33,7 @@ model User {
   lastSeenAt       DateTime?
   lastLoginAt      DateTime?
   totalPresenceSeconds Int   @default(0)
+  onlineXp         Int       @default(0)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   stats            Stats[]
@@ -56,6 +57,8 @@ model User {
   featureBans           FeatureBan[]       @relation("FeatureBanTarget")
   featureBansIssued     FeatureBan[]       @relation("FeatureBanActor")
   onlineMatchResults    OnlineMatchResult[]
+  cosmeticGrants        CosmeticGrant[]    @relation("CosmeticGrantTarget")
+  cosmeticGrantsIssued  CosmeticGrant[]    @relation("CosmeticGrantActor")
 }
 
 model ChatRead {
@@ -165,6 +168,20 @@ model OnlineMatchResult {
 
   @@index([gameId, userId])
   @@index([userId, finishedAt])
+}
+
+// Déblocage MANUEL d'un cosmétique (effet de pseudo / cadre) par un fondateur.
+// La clé cosmétique = `kind:id` (ex. `frame:diamond`) — voir src/lib/online/cosmetics.ts.
+model CosmeticGrant {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("CosmeticGrantTarget", fields: [userId], references: [id], onDelete: Cascade)
+  cosmeticKey String
+  grantedById String?
+  grantedBy   User?    @relation("CosmeticGrantActor", fields: [grantedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, cosmeticKey])
 }
 
 model AccountBanEvent {

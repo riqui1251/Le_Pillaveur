@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { Lock } from 'lucide-react'
 import { Player, PLAYER_ICONS, PlayerSpecialEffect, PlayerIconFrame, PlayerPreferences } from '@/lib/players'
 import { usePlayerEffectLabels, usePlayerFrameLabels } from '@/lib/players-i18n'
 import { useAuth } from '@/hooks/useAuth'
 import { canCustomizePlayerFrame } from '@/lib/roles'
+import { cosmeticKey, findCosmetic, type CosmeticKind } from '@/lib/online/cosmetics'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import {
@@ -23,15 +25,22 @@ interface PlayerCustomizerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: (playerId: string, preferences: Partial<PlayerPreferences>) => void
+  /**
+   * Mode ONLINE : progression du compte. Quand fourni, les cosmétiques suivent
+   * les déblocages par niveau (cadenas + « Nv. X ») et les cadres deviennent
+   * accessibles à tous les comptes (plus seulement au staff). Absent = mode
+   * LOCAL historique : effets libres, cadres réservés au staff.
+   */
+  progression?: { level: number; unlockedKeys: string[] } | null
 }
 
-export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerCustomizerProps) {
+export function PlayerCustomizer({ player, open, onOpenChange, onSave, progression }: PlayerCustomizerProps) {
   const t = useTranslations('players.customizer')
   const tCommon = useTranslations('common')
   const effectLabels = usePlayerEffectLabels()
   const frameLabels = usePlayerFrameLabels()
   const { user } = useAuth()
-  const canSetFrame = canCustomizePlayerFrame(user?.role)
+  const canSetFrame = progression ? true : canCustomizePlayerFrame(user?.role)
   const [selectedIcon, setSelectedIcon] = useState<string>('')
   const [selectedEffect, setSelectedEffect] = useState<PlayerSpecialEffect>(null)
   const [selectedFrame, setSelectedFrame] = useState<PlayerIconFrame>(null)
@@ -43,6 +52,19 @@ export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerC
       setSelectedFrame(player.preferences.iconFrame ?? null)
     }
   }, [player])
+
+  /** En mode online : null = déverrouillé, sinon niveau requis (cadenas). */
+  const lockedLevel = (kind: CosmeticKind, id: string | null): number | null => {
+    if (!progression || id === null) return null
+    if (progression.unlockedKeys.includes(cosmeticKey(kind, id))) return null
+    return findCosmetic(kind, id)?.unlockLevel ?? null
+  }
+
+  /** Le cadre staff n'apparaît en ligne que s'il est débloqué (rôle staff). */
+  const frameVisible = (id: PlayerIconFrame): boolean => {
+    if (!progression || id !== 'staff') return true
+    return progression.unlockedKeys.includes(cosmeticKey('frame', 'staff'))
+  }
 
   const previewPlayer = useMemo<Player | null>(() => {
     if (!player) return null
@@ -119,18 +141,27 @@ export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerC
                     specialEffect: effect.id,
                   },
                 }
+                const locked = lockedLevel('effect', effect.id)
                 return (
                   <button
                     key={effect.id ?? 'classic'}
                     type="button"
+                    disabled={locked !== null}
                     onClick={() => setSelectedEffect(effect.id)}
                     className={cn(
                       'rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06]',
-                      selectedEffect === effect.id && 'border-amber-400/50 bg-amber-500/10 ring-1 ring-amber-400/50'
+                      selectedEffect === effect.id && 'border-amber-400/50 bg-amber-500/10 ring-1 ring-amber-400/50',
+                      locked !== null && 'opacity-45 hover:bg-white/[0.03]'
                     )}
                   >
-                    <span className="text-sm">
+                    <span className="flex items-center justify-between gap-1 text-sm">
                       <PlayerName player={effectPreview} />
+                      {locked !== null && (
+                        <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-white/40">
+                          <Lock className="h-3 w-3" />
+                          {t('lockedLevel', { level: locked })}
+                        </span>
+                      )}
                     </span>
                   </button>
                 )
@@ -141,9 +172,11 @@ export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerC
           {canSetFrame && (
             <div>
               <p className="mb-1 text-sm font-medium text-white/70">{t('frame')}</p>
-              <p className="mb-2 text-xs text-emerald-300/70">{t('frameStaffOnly')}</p>
+              {!progression && (
+                <p className="mb-2 text-xs text-emerald-300/70">{t('frameStaffOnly')}</p>
+              )}
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {frameLabels.map((frame) => {
+                {frameLabels.filter((f) => frameVisible(f.id)).map((frame) => {
                   const framePreview: Player = {
                     ...player,
                     preferences: {
@@ -152,18 +185,24 @@ export function PlayerCustomizer({ player, open, onOpenChange, onSave }: PlayerC
                       iconFrame: frame.id,
                     },
                   }
+                  const locked = lockedLevel('frame', frame.id)
                   return (
                     <button
                       key={frame.id ?? 'none'}
                       type="button"
+                      disabled={locked !== null}
                       onClick={() => setSelectedFrame(frame.id)}
                       className={cn(
                         'flex flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-2.5 transition-colors hover:bg-white/[0.06]',
-                        selectedFrame === frame.id && 'border-amber-400/50 bg-amber-500/10 ring-1 ring-amber-400/50'
+                        selectedFrame === frame.id && 'border-amber-400/50 bg-amber-500/10 ring-1 ring-amber-400/50',
+                        locked !== null && 'opacity-45 hover:bg-white/[0.03]'
                       )}
                     >
                       <PlayerIcon player={framePreview} size="md" />
-                      <span className="text-[10px] text-white/60">{frame.label}</span>
+                      <span className="flex items-center gap-0.5 text-[10px] text-white/60">
+                        {locked !== null && <Lock className="h-3 w-3 text-white/40" />}
+                        {locked !== null ? t('lockedLevel', { level: locked }) : frame.label}
+                      </span>
                     </button>
                   )
                 })}

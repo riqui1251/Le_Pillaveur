@@ -14,6 +14,7 @@ import { GAMES, type GameMeta } from '@/lib/games'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
+import { OnlinePlayerIcon, OnlinePlayerName, OnlineLevelBadge } from '@/components/online/OnlinePlayerTag'
 import { JoinQR } from '@/components/tv/JoinQR'
 import { cn } from '@/lib/utils'
 
@@ -649,12 +650,19 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   m.isReady ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-white/10 bg-black/20'
                 )}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base">
-                  {m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
-                </span>
+                <OnlinePlayerIcon
+                  icon={m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
+                  cosmetics={{ preferences: m.preferences, level: m.level }}
+                  className="h-9 w-9 border border-white/10 bg-white/5 text-base"
+                />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-white">
-                    {m.displayName}
+                  <p className="flex items-center gap-1.5 truncate font-medium text-white">
+                    <OnlinePlayerName
+                      name={m.displayName}
+                      cosmetics={{ preferences: m.preferences, level: m.level }}
+                      className="truncate"
+                    />
+                    <OnlineLevelBadge cosmetics={{ preferences: m.preferences, level: m.level }} />
                     {m.isSelf && <span className="ml-1 text-xs text-white/40">(vous)</span>}
                   </p>
                   <p className={cn('text-xs', m.isReady ? 'text-emerald-300/80' : 'text-white/45')}>

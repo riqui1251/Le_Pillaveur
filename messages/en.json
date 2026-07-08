@@ -263,6 +263,13 @@
       "games": "Parts",
       "sips": "Sips"
     },
+    "progression": {
+      "title": "Online progression",
+      "level": "Level {level}",
+      "xpToNext": "{current} / {required} XP to next level",
+      "totalXp": "{xp} XP",
+      "hint": "Earn XP by playing online (win +50, loss +20) and unlock name effects and frames in \"Customize\"."
+    },
     "playersList": {
       "title": "Registered players",
       "empty": "No registered players",
@@ -380,7 +387,8 @@
       "icon": "Icon",
       "effect": "Effect of nickname",
       "frame": "Icon frame",
-      "frameStaffOnly": "Reserved for staff members (moderator+)"
+      "frameStaffOnly": "Reserved for staff members (moderator+)",
+      "lockedLevel": "Lv. {level}"
     }
   },
   "games": {
@@ -2711,6 +2719,21 @@
       "confirm": "Ban",
       "dialogVoiceTitle": "Ban from voice chat",
       "dialogChatTitle": "Ban from text chat"
+    },
+    "cosmetics": {
+      "manage": "Cosmetics",
+      "title": "{name}'s cosmetics",
+      "subtitle": "Level {level} — manually unlock name effects or frames on this account.",
+      "loading": "Loading…",
+      "effects": "Name effects",
+      "frames": "Icon frames",
+      "levelRequired": "Lv. {level}",
+      "stateGranted": "gifted",
+      "stateUnlocked": "unlocked",
+      "stateLocked": "locked",
+      "grant": "Gift",
+      "revoke": "Remove",
+      "close": "Close"
     },
     "kicker": "Supervision",
     "header": {
