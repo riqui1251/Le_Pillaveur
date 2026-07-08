@@ -18,6 +18,7 @@ import {
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { XpGainBanner } from './XpGainBanner'
 
 /**
  * L'IMPOSTEUR en ligne (serveur-autoritaire). La vue est déjà filtrée par le
@@ -232,6 +233,12 @@ export function ImposteurOnline() {
             {civilWon ? t('victory.civilDrinks') : t('victory.imposteurDrinks')}
           </p>
         </motion.div>
+
+        <XpGainBanner
+          won={view.players.find((p) => p.id === user.id)?.team === view.winnerTeam}
+          playerIds={view.players.map((p) => p.id)}
+          className="w-full max-w-sm"
+        />
 
         {/* Révélation complète */}
         <div className="w-full max-w-sm space-y-2">

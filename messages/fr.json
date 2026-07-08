@@ -154,6 +154,12 @@
       "tapToChoose": "Touchez ici pour choisir vos joueurs (minimum 2)."
     }
   },
+  "onlineXp": {
+    "gained": "+{xp} XP",
+    "levelUp": "Niveau {level} !",
+    "level": "Niveau {level}",
+    "progress": "{current} / {required} XP"
+  },
   "onlineLobby": {
     "visibility": {
       "title": "Visibilité",

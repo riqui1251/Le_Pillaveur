@@ -10,10 +10,12 @@ import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { lgTeamOf } from '@/lib/loup-garou/engine'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics, type MemberCosmetics } from './OnlinePlayerTag'
+import { XpGainBanner } from './XpGainBanner'
 
 /**
  * LOUP-GAROU en ligne. La vue reçue est déjà filtrée par le serveur selon QUI
@@ -307,6 +309,17 @@ export function LoupGarouOnline() {
             {villageWon ? t('victory.villageDrinks') : t('victory.loupsDrinks')}
           </p>
         </motion.div>
+
+        <XpGainBanner
+          won={(() => {
+            const meFinal = view.players.find((p) => p.id === user.id)
+            return Boolean(
+              meFinal?.role && view.winnerTeam !== null && lgTeamOf(meFinal.role) === view.winnerTeam
+            )
+          })()}
+          playerIds={view.players.map((p) => p.id)}
+          className="w-full max-w-sm"
+        />
 
         <div className="w-full max-w-sm space-y-2">
           <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-white/40">

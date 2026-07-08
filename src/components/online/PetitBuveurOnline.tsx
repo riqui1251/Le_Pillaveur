@@ -22,6 +22,7 @@ import { getCaseMeta } from '@/lib/petit-buveur/case-families'
 import { InteractionSpectacle } from '@/components/petit-buveur/InteractionSpectacle'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { XpGainBanner } from './XpGainBanner'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
@@ -895,6 +896,12 @@ export function PetitBuveurOnline() {
                     <p className="mt-0.5 text-sm text-white/50">{tGame('victory.wonGame')}</p>
                   </div>
                 </div>
+
+                <XpGainBanner
+                  won={winner?.id === user?.id}
+                  playerIds={view.players.map((p) => p.id)}
+                  className="mb-4"
+                />
 
                 {/* Stats */}
                 <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">

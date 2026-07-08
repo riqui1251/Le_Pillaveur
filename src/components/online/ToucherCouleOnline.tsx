@@ -14,6 +14,7 @@ import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { XpGainBanner } from './XpGainBanner'
 
 /**
  * Écran de jeu Toucher-Coulé EN LIGNE (serveur-autoritaire).
@@ -766,6 +767,12 @@ export function ToucherCouleOnline() {
                     </p>
                   </div>
                 </div>
+
+                <XpGainBanner
+                  won={me?.team === winner}
+                  playerIds={view.players.map((p) => p.id)}
+                  className="mb-4"
+                />
 
                 <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
                   <div className="text-center">

@@ -18,6 +18,7 @@ import {
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { XpGainBanner } from './XpGainBanner'
 
 /**
  * LE GRAND PILLAVEUR en ligne — le téléphone devient un BUZZER : 4 gros
@@ -193,6 +194,15 @@ export function QuizOnline() {
           <h2 className="text-3xl font-black">{t('victoryTitle', { name: ranking[0]?.name ?? '—' })}</h2>
           {last && <p className="text-sm text-amber-200">{t('lastDrinks', { name: last.name })}</p>}
         </motion.div>
+
+        <XpGainBanner
+          won={
+            ranking.length > 0 &&
+            ranking.find((p) => p.id === user?.id)?.score === ranking[0].score
+          }
+          playerIds={view.players.map((p) => p.id)}
+          className="w-full max-w-sm"
+        />
 
         <div className="w-full max-w-sm space-y-2">
           {ranking.map((p, idx) => (

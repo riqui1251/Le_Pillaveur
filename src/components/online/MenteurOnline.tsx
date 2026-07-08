@@ -15,6 +15,7 @@ import { CssDie } from '@/components/games/CssDie'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { XpGainBanner } from './XpGainBanner'
 
 /**
  * LE MENTEUR en ligne (serveur-autoritaire). La vue reçue est déjà filtrée :
@@ -256,6 +257,12 @@ export function MenteurOnline() {
           <h2 className="text-3xl font-black">{t('victoryTitle', { name: winner?.name ?? '—' })}</h2>
           <p className="text-sm text-white/60">{t('victoryDrinks')}</p>
         </motion.div>
+
+        <XpGainBanner
+          won={view.winnerId === user.id}
+          playerIds={view.players.map((p) => p.id)}
+          className="w-full max-w-sm"
+        />
 
         <div className="w-full max-w-sm space-y-2">
           {ranking.map((p, idx) => (
