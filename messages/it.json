@@ -3308,6 +3308,7 @@
     "reopenAria": "Come si gioca?"
   },
   "partyCanvas": {
-    "clear": "Cancella"
+    "clear": "Cancella",
+    "eraser": "Gomma"
   }
 }

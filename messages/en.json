@@ -3318,6 +3318,7 @@
     "reopenAria": "How to play?"
   },
   "partyCanvas": {
-    "clear": "Clear"
+    "clear": "Clear",
+    "eraser": "Eraser"
   }
 }

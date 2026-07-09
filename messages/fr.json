@@ -3318,6 +3318,7 @@
     "reopenAria": "Comment jouer ?"
   },
   "partyCanvas": {
-    "clear": "Effacer"
+    "clear": "Effacer",
+    "eraser": "Gomme"
   }
 }

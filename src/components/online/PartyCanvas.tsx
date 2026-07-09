@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { Eraser } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -23,7 +24,9 @@ export type Stroke = {
   width: number
 }
 
-const COLORS = ['#f8fafc', '#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#020617']
+/** Couleur de fond du canvas — un trait de cette couleur agit comme une gomme. */
+const BG_COLOR = '#f8fafc'
+const COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#020617']
 const WIDTHS = [3, 6, 12] as const
 
 export function PartyCanvas({
@@ -43,7 +46,7 @@ export function PartyCanvas({
   const t = useTranslations('partyCanvas')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [color, setColor] = useState<string>(COLORS[6])
+  const [color, setColor] = useState<string>(COLORS[COLORS.length - 1])
   const [width, setWidth] = useState<number>(WIDTHS[1])
   const drawingRef = useRef<number[] | null>(null)
 
@@ -54,7 +57,7 @@ export function PartyCanvas({
     const w = canvas.width
     const h = canvas.height
     ctx.clearRect(0, 0, w, h)
-    ctx.fillStyle = '#f8fafc'
+    ctx.fillStyle = BG_COLOR
     ctx.fillRect(0, 0, w, h)
 
     const drawStroke = (points: number[], strokeColor: string, strokeWidth: number) => {
@@ -145,6 +148,18 @@ export function PartyCanvas({
       {!readOnly && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => setColor(BG_COLOR)}
+              aria-label={t('eraser')}
+              title={t('eraser')}
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded-full border-2 bg-white transition-transform',
+                color === BG_COLOR ? 'scale-110 border-emerald-400' : 'border-white/20'
+              )}
+            >
+              <Eraser className="h-3.5 w-3.5 text-slate-500" />
+            </button>
             {COLORS.map((c) => (
               <button
                 key={c}
