@@ -10,10 +10,13 @@ import { OpenLobbiesList } from '@/components/online/OpenLobbiesList'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { PlayModeToggle } from '@/components/auth/PlayModeToggle'
+import { AmbianceModeToggle } from '@/components/auth/AmbianceModeToggle'
 import { useRequireSelectedPlayers } from '@/hooks/useRequireSelectedPlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GAMES } from '@/lib/games'
+import { Link } from '@/i18n/navigation'
+import { FlaskConical } from 'lucide-react'
 
 export default function GamesHubPage() {
   const t = useTranslations('hub.jeux')
@@ -62,6 +65,7 @@ export default function GamesHubPage() {
       headerExtra={
         <div className="flex flex-col items-center gap-4">
           <PlayModeToggle />
+          {isOnline && <AmbianceModeToggle />}
           {!isOnline && <SelectedPlayersBar />}
         </div>
       }
@@ -78,6 +82,14 @@ export default function GamesHubPage() {
       {isOnline && <RejoinBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <FriendInviteBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <OpenLobbiesList />}
+
+      <Link
+        href="/test-nouveaux-jeux"
+        className="mb-4 flex items-center gap-2 rounded-xl border border-dashed border-amber-400/30 bg-amber-400/[0.06] px-4 py-2.5 text-sm text-amber-200 transition-colors hover:bg-amber-400/[0.12]"
+      >
+        <FlaskConical className="h-4 w-4 shrink-0" aria-hidden />
+        Tester les 5 nouveaux jeux (Bluff, Espion, Tabou, Crobard, Téléphone Dessiné)
+      </Link>
 
       <GamesGrid />
     </HubShell>
