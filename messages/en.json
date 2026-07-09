@@ -514,6 +514,10 @@
         "title": "Taboo Voice",
         "description": "Describe a word out loud without saying the 4 forbidden words: your team guesses, the opponents listen for a slip!"
       },
+      "crobard": {
+        "title": "Crobard",
+        "description": "Pick a word, draw it live on screen: the first to guess scores big, the artist too!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Guess if the next card will be higher or lower"
@@ -1800,6 +1804,64 @@
           {
             "title": "The other team is listening",
             "body": "If the describer says a taboo word, an opponent who hears it clicks TABOO! — the word is skipped, no point for anyone."
+          }
+        ]
+      }
+    },
+    "crobard": {
+      "page": {
+        "onlineOnly": "Crobard is online only: the secret word travels through the server, only the artist sees it.",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "roundsCount": "Number of rounds",
+        "rounds": "rounds"
+      },
+      "game": {
+        "round": "Round {round}/{total}",
+        "foundCount": "{found}/{total} found it",
+        "yourWord": "THE WORD",
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "youFoundIt": "You found it! 🎉",
+        "guessPlaceholder": "Your guess…",
+        "feedback": {
+          "close": "Close!",
+          "wrong": "Wrong!"
+        },
+        "choosing": {
+          "pickWord": "Pick a word to draw",
+          "waitingFor": "{name} is picking a word…"
+        },
+        "roundEnd": {
+          "title": "Round summary",
+          "wordWas": "The word was: {word}",
+          "continue": "Next round",
+          "seeResult": "See the result"
+        },
+        "victory": {
+          "title": "{name} wins the game!",
+          "replay": "Play again",
+          "rematchWaiting": "Waiting for the others ({count}/{total})",
+          "backToMenu": "Back to menu"
+        },
+        "countdown": {
+          "title": "Get ready!",
+          "hint": "The first round starts now…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Pick a word",
+            "body": "When it's your turn to draw, pick 1 word out of the 3 offered — no one else can see them!"
+          },
+          {
+            "title": "Draw, others guess",
+            "body": "Draw the word on the canvas while everyone else types their guesses. First correct guess scores big, and you score too!"
+          },
+          {
+            "title": "Early round end",
+            "body": "As soon as everyone has guessed, the round ends. Otherwise, time runs out and the word is revealed to everyone."
           }
         ]
       }

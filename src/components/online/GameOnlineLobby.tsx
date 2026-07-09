@@ -82,6 +82,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tBluff = useTranslations('games.bluff.lobby')
   const tEspion = useTranslations('games.espion.lobby')
   const tTabou = useTranslations('games.tabou.lobby')
+  const tCrobard = useTranslations('games.crobard.lobby')
   const tOnline = useTranslations('onlineLobby')
   const tFriends = useTranslations('account.friends')
 
@@ -819,6 +820,39 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </>
         )
       })()}
+
+      {gameId === 'crobard' && (
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-fuchsia-400/70">
+            {tCrobard('roundsCount')}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[6, 8, 10].map((value) => {
+              const active = (room.settings.crobardRounds ?? 8) === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={!isHost}
+                  onClick={() => updateSettings({ crobardRounds: value })}
+                  className={cn(
+                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
+                    active
+                      ? 'border-transparent bg-gradient-to-r from-fuchsia-600 to-orange-500 text-white shadow-lg'
+                      : 'border-white/10 bg-white/5 text-white/60',
+                    isHost && !active && 'hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  <span className="block text-lg font-black">{value}</span>
+                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                    {tCrobard('rounds')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {gameId === 'loup-garou' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">

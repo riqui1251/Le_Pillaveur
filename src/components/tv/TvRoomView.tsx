@@ -31,6 +31,8 @@ import { TvEspion } from './TvEspion'
 import type { EspionClientView } from '@/lib/espion/engine'
 import { TvTabou } from './TvTabou'
 import type { TabouClientView } from '@/lib/tabou/engine'
+import { TvCrobard } from './TvCrobard'
+import type { CrobardClientView } from '@/lib/crobard/engine'
 
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
@@ -44,6 +46,7 @@ const GAME_TITLES: Record<string, string> = {
   bluff: 'Le Grand Bluff',
   espion: "Qui est l'Espion ?",
   tabou: 'Tabou Vocal',
+  crobard: 'Crobard',
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
@@ -163,6 +166,8 @@ export function TvRoomView({ code }: { code: string }) {
     content = <TvEspion room={room} state={state as unknown as EspionClientView} />
   } else if (room.gameId === 'tabou') {
     content = <TvTabou room={room} state={state as unknown as TabouClientView} />
+  } else if (room.gameId === 'crobard') {
+    content = <TvCrobard room={room} state={state as unknown as CrobardClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

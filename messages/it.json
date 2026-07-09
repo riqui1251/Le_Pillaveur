@@ -504,6 +504,10 @@
         "title": "Tabù Vocale",
         "description": "Descrivi una parola ad alta voce senza dire le 4 parole proibite: la tua squadra indovina, gli avversari sono in agguato!"
       },
+      "crobard": {
+        "title": "Crobard",
+        "description": "Scegli una parola e disegnala dal vivo sullo schermo: il primo che indovina segna tanti punti, anche il disegnatore!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Indovina se la carta successiva sarà più alta o più bassa"
@@ -1790,6 +1794,64 @@
           {
             "title": "La squadra avversaria è in agguato",
             "body": "Se chi descrive dice una parola tabù, un avversario che la sente clicca TABÙ! — la parola viene saltata, nessun punto per nessuno."
+          }
+        ]
+      }
+    },
+    "crobard": {
+      "page": {
+        "onlineOnly": "Crobard si gioca online: la parola segreta passa dal server, solo il disegnatore la vede.",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "roundsCount": "Numero di manche",
+        "rounds": "manche"
+      },
+      "game": {
+        "round": "Manche {round}/{total}",
+        "foundCount": "{found}/{total} hanno indovinato",
+        "yourWord": "LA PAROLA",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "youFoundIt": "Hai indovinato! 🎉",
+        "guessPlaceholder": "La tua risposta…",
+        "feedback": {
+          "close": "Vicino!",
+          "wrong": "Sbagliato!"
+        },
+        "choosing": {
+          "pickWord": "Scegli una parola da disegnare",
+          "waitingFor": "{name} sta scegliendo una parola…"
+        },
+        "roundEnd": {
+          "title": "Riepilogo manche",
+          "wordWas": "La parola era: {word}",
+          "continue": "Manche successiva",
+          "seeResult": "Vedi il risultato"
+        },
+        "victory": {
+          "title": "{name} vince la partita!",
+          "replay": "Rigioca",
+          "rematchWaiting": "In attesa degli altri ({count}/{total})",
+          "backToMenu": "Torna al menu"
+        },
+        "countdown": {
+          "title": "Preparatevi!",
+          "hint": "La prima manche inizia ora…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Scegli una parola",
+            "body": "Quando tocca a te disegnare, scegli 1 parola tra le 3 proposte — nessun altro le vede!"
+          },
+          {
+            "title": "Disegna, gli altri indovinano",
+            "body": "Disegna la parola sulla lavagna mentre gli altri scrivono le loro risposte. Il primo che indovina segna tanti punti, e anche tu!"
+          },
+          {
+            "title": "Fine manche anticipata",
+            "body": "Appena tutti hanno indovinato, la manche termina. Altrimenti il tempo scade e la parola viene rivelata a tutti."
           }
         ]
       }

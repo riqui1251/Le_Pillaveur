@@ -504,6 +504,10 @@
         "title": "Tabú Vocal",
         "description": "Describe una palabra en voz alta sin decir las 4 palabras prohibidas: tu equipo adivina, los rivales están al acecho del fallo!"
       },
+      "crobard": {
+        "title": "Crobard",
+        "description": "Elige una palabra y dibújala en directo en la pantalla: el primero en adivinar suma muchos puntos, ¡el dibujante también!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Adivina si la próxima carta será mayor o menor"
@@ -1790,6 +1794,64 @@
           {
             "title": "El equipo rival está al acecho",
             "body": "Si quien describe dice una palabra tabú, un rival que lo oiga pulsa ¡TABÚ! — la palabra se salta, sin punto para nadie."
+          }
+        ]
+      }
+    },
+    "crobard": {
+      "page": {
+        "onlineOnly": "Crobard se juega en línea: la palabra secreta pasa por el servidor, solo el dibujante la ve.",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "lobby": {
+        "roundsCount": "Número de rondas",
+        "rounds": "rondas"
+      },
+      "game": {
+        "round": "Ronda {round}/{total}",
+        "foundCount": "{found}/{total} han acertado",
+        "yourWord": "LA PALABRA",
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
+        "youFoundIt": "¡Lo has adivinado! 🎉",
+        "guessPlaceholder": "Tu respuesta…",
+        "feedback": {
+          "close": "¡Cerca!",
+          "wrong": "¡Incorrecto!"
+        },
+        "choosing": {
+          "pickWord": "Elige una palabra para dibujar",
+          "waitingFor": "{name} está eligiendo una palabra…"
+        },
+        "roundEnd": {
+          "title": "Resumen de la ronda",
+          "wordWas": "La palabra era: {word}",
+          "continue": "Siguiente ronda",
+          "seeResult": "Ver el resultado"
+        },
+        "victory": {
+          "title": "¡{name} gana la partida!",
+          "replay": "Jugar de nuevo",
+          "rematchWaiting": "Esperando a los demás ({count}/{total})",
+          "backToMenu": "Volver al menú"
+        },
+        "countdown": {
+          "title": "¡Preparaos!",
+          "hint": "La primera ronda empieza ya…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Elige una palabra",
+            "body": "Cuando te toque dibujar, elige 1 palabra entre las 3 propuestas — ¡nadie más las ve!"
+          },
+          {
+            "title": "Dibuja, los demás adivinan",
+            "body": "Dibuja la palabra en el lienzo mientras los demás escriben sus respuestas. ¡El primero en acertar suma muchos puntos, y tú también!"
+          },
+          {
+            "title": "Fin de ronda anticipado",
+            "body": "En cuanto todos hayan acertado, la ronda termina. Si no, se acaba el tiempo y la palabra se revela a todos."
           }
         ]
       }

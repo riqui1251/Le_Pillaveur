@@ -514,6 +514,10 @@
         "title": "Tabou Vocal",
         "description": "Décris un mot à voix haute sans prononcer les 4 mots tabous : ton équipe devine, les adversaires guettent la faute !"
       },
+      "crobard": {
+        "title": "Crobard",
+        "description": "Choisis un mot, dessine-le en direct sur l'écran : premier qui devine marque gros, le dessinateur aussi !"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Devinez si la prochaine carte sera plus haute ou plus basse"
@@ -1800,6 +1804,64 @@
           {
             "title": "L'équipe adverse surveille",
             "body": "Si le décrivant prononce un mot tabou, un adversaire qui l'entend clique TABOU ! — le mot passe, sans point pour personne."
+          }
+        ]
+      }
+    },
+    "crobard": {
+      "page": {
+        "onlineOnly": "Crobard se joue en ligne : le mot secret transite par le serveur, seul le dessinateur le voit.",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "roundsCount": "Nombre de manches",
+        "rounds": "manches"
+      },
+      "game": {
+        "round": "Manche {round}/{total}",
+        "foundCount": "{found}/{total} ont trouvé",
+        "yourWord": "LE MOT",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "youFoundIt": "Tu as trouvé ! 🎉",
+        "guessPlaceholder": "Ta réponse…",
+        "feedback": {
+          "close": "Proche !",
+          "wrong": "Faux !"
+        },
+        "choosing": {
+          "pickWord": "Choisis un mot à dessiner",
+          "waitingFor": "{name} choisit un mot…"
+        },
+        "roundEnd": {
+          "title": "Bilan de la manche",
+          "wordWas": "Le mot était : {word}",
+          "continue": "Manche suivante",
+          "seeResult": "Voir le résultat"
+        },
+        "victory": {
+          "title": "{name} remporte la partie !",
+          "replay": "Rejouer",
+          "rematchWaiting": "En attente des autres ({count}/{total})",
+          "backToMenu": "Retour au menu"
+        },
+        "countdown": {
+          "title": "Préparez-vous !",
+          "hint": "La première manche commence…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Choisis un mot",
+            "body": "À ton tour de dessiner, choisis 1 mot parmi les 3 proposés — les autres ne le voient jamais !"
+          },
+          {
+            "title": "Dessine, les autres devinent",
+            "body": "Dessine le mot sur le canvas pendant que les autres tapent leurs propositions. Premier bon devineur = gros score, toi aussi tu marques des points !"
+          },
+          {
+            "title": "Fin de manche anticipée",
+            "body": "Dès que tout le monde a trouvé, la manche s'arrête. Sinon, le temps s'écoule et le mot est révélé pour tous."
           }
         ]
       }
