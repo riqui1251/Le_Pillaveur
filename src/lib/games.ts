@@ -289,6 +289,24 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     softModeReady: true,
   },
+  {
+    id: 'espion',
+    title: "Qui est l'Espion ?",
+    description:
+      "Un lieu secret, un espion qui ne sait rien : questionnez-vous, accusez, ou devinez le lieu avant la fin du temps imparti !",
+    path: '/games/espion',
+    emoji: '🕵️',
+    gradient: 'from-slate-700 to-cyan-600',
+    colorFrom: '#334155',
+    colorTo: '#0891b2',
+    fallbackColor: '#0e7490',
+    onlineReady: true,
+    minPlayers: 3,
+    maxPlayers: 8,
+    onlineOnly: true,
+    botsFillable: true,
+    softModeReady: true,
+  },
 ];
 
 export function getGameById(id: string): GameMeta | undefined {

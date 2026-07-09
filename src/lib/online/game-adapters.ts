@@ -146,6 +146,24 @@ import {
   BLUFF_MAX_PLAYERS,
   type BluffState,
 } from '@/lib/bluff/engine'
+import {
+  parseEspionState,
+  serializeEspionState,
+  applyEspionRoomAction,
+  convertEspionPlayerToBot,
+  markEspionPlayerLeft,
+  rejoinEspionPlayer,
+  espionClientViewJson,
+  espionSpectatorViewJson,
+  type EspionRoomActionInput,
+} from '@/lib/espion/server-adapter'
+import {
+  currentEspionActorId,
+  toEspionClientView,
+  ESPION_MIN_PLAYERS,
+  ESPION_MAX_PLAYERS,
+  type EspionState,
+} from '@/lib/espion/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -669,6 +687,58 @@ const bluffAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinBluffPlayer(state as BluffState, userId),
 }
 
+// ─── Qui est l'Espion ? ──────────────────────────────────────────────────────
+
+const espionAdapter: GameAdapter = {
+  // 3 humains par défaut ; avec l'option bots du lobby, un joueur seul peut
+  // lancer (buildEspionState comble jusqu'à 3).
+  minPlayers: ESPION_MIN_PLAYERS,
+  maxPlayers: ESPION_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parseEspionState(json),
+  serialize: (state) => serializeEspionState(state as EspionState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as EspionState
+    let input: EspionRoomActionInput
+    if (body.action === 'accuse' && typeof body.targetId === 'string') {
+      input = { type: 'accuse', targetId: body.targetId }
+    } else if (body.action === 'support') {
+      input = { type: 'support' }
+    } else if (body.action === 'guess-location' && typeof body.location === 'string') {
+      input = { type: 'guess-location', location: body.location }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyEspionRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertEspionPlayerToBot(state as EspionState, userId),
+  isFinished: (state) => (state as EspionState).phase === 'finished',
+  currentActorId: (state) => currentEspionActorId(state as EspionState),
+  clientViewJson: (state, viewerId) => espionClientViewJson(state as EspionState, viewerId),
+  spectatorViewJson: (state) => espionSpectatorViewJson(state as EspionState),
+  actionResponse: (state, viewerId) => ({
+    view: toEspionClientView(state as EspionState, viewerId),
+    viewJson: espionClientViewJson(state as EspionState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markEspionPlayerLeft(state as EspionState, userId, at),
+  rejoin: (state, userId) => rejoinEspionPlayer(state as EspionState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -681,6 +751,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   '1220': game1220Adapter,
   purple: purpleAdapter,
   bluff: bluffAdapter,
+  espion: espionAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

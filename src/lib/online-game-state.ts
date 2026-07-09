@@ -41,6 +41,12 @@ export type RoomSettings = {
   /** Le Grand Bluff : nombre de manches choisi par l'hôte (6/8/10). */
   bluffRounds?: number
 
+  /** Qui est l'Espion ? : durée de discussion en minutes choisie par l'hôte (3/5/7). */
+  espionDiscussionMin?: number
+
+  /** Qui est l'Espion ? : nombre de manches à gagner choisi par l'hôte (3/5/7). */
+  espionRoundsToWin?: number
+
 }
 
 
@@ -738,6 +744,26 @@ export function parseBluffSyncedState(json: string | null | undefined): BluffSyn
   }
 }
 
+// ─── Qui est l'Espion ? ──────────────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/espion). */
+export type EspionSyncedState = {
+  version: number
+  phase: 'countdown' | 'discussion' | 'reveal' | 'finished'
+  winnerTeam: 'spy' | 'crew' | null
+  rematchVotes?: string[]
+}
+
+export function parseEspionSyncedState(json: string | null | undefined): EspionSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as EspionSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -754,6 +780,7 @@ export type AnyOnlineGameState =
   | QuizSyncedState
   | LoupGarouSyncedState
   | BluffSyncedState
+  | EspionSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -786,6 +813,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parseLoupGarouSyncedState(json) as T | null
     case 'bluff':
       return parseBluffSyncedState(json) as T | null
+    case 'espion':
+      return parseEspionSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -822,6 +851,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return (state as LoupGarouSyncedState).phase === 'finished'
     case 'bluff':
       return (state as BluffSyncedState).phase === 'finished'
+    case 'espion':
+      return (state as EspionSyncedState).phase === 'finished'
     default:
       return false
   }

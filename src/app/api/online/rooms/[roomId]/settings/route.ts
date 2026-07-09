@@ -80,6 +80,12 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.bluffRounds === 'number' && [6, 8, 10].includes(body.bluffRounds)) {
     next.bluffRounds = body.bluffRounds
   }
+  if (typeof body.espionDiscussionMin === 'number' && [3, 5, 7].includes(body.espionDiscussionMin)) {
+    next.espionDiscussionMin = body.espionDiscussionMin
+  }
+  if (typeof body.espionRoundsToWin === 'number' && [3, 5, 7].includes(body.espionRoundsToWin)) {
+    next.espionRoundsToWin = body.espionRoundsToWin
+  }
 
   const visibilityUpdate =
     typeof body.visibility === 'string' && VALID_VISIBILITIES.has(body.visibility)
