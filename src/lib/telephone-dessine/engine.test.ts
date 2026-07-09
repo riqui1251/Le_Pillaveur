@@ -185,6 +185,28 @@ describe('partie complète (N=3) jusqu’au reveal', () => {
     const s = make(3)
     expect(() => reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })).toThrow('NOT_REVEAL')
   })
+
+  it('seul le meneur (premier joueur actif) peut CONTINUE/PREVIOUS ; les autres sont rejetés', () => {
+    let s = make(3)
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p0', text: 'a', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p1', text: 'b', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p2', text: 'c', now: T0 })
+    for (const id of ['p0', 'p1', 'p2']) s = reduceTelephone(s, { type: 'SUBMIT', playerId: id, now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p0', text: 'd', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p1', text: 'e', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p2', text: 'f', now: T0 })
+    expect(s.phase).toBe('reveal')
+    expect(currentTelephoneActorId(s)).toBe('p0')
+
+    expect(() => reduceTelephone(s, { type: 'CONTINUE', playerId: 'p1', now: T0 })).toThrow('NOT_LEADER')
+    expect(() => reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p1' })).toThrow('NOT_LEADER')
+
+    s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    expect(s.revealIdx).toBe(1)
+    s = reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0' })
+    expect(s.revealIdx).toBe(0)
+    expect(() => reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0' })).toThrow('ALREADY_FIRST_CHAIN')
+  })
 })
 
 describe('LEAVE / REJOIN / REPLACE_LEFT', () => {

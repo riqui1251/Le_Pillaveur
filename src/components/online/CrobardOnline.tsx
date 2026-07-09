@@ -56,7 +56,6 @@ export function CrobardOnline() {
 
   const inGame = room?.gameId === 'crobard' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
-  const stateVersion = room?.stateVersion ?? -1
   const tutorial = useGameTutorial('crobard', inGame)
   const cosmetics = useMemberCosmetics(room)
 
@@ -124,7 +123,7 @@ export function CrobardOnline() {
   useEffect(() => {
     setGuessText('')
     setGuessFeedback(null)
-  }, [stateVersion])
+  }, [view?.round])
 
   if (!inGame) {
     return <GameOnlineLobby gameId="crobard" />

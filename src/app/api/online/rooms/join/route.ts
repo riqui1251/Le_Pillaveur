@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
-import { buildRoomDto } from '@/lib/online-room'
+import { buildRoomDto, deleteRoomIfEmpty } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { canJoinInviteRoom } from '@/lib/online/room-invites'
 import { parseRoomSettings } from '@/lib/online-game-state'
@@ -42,12 +42,17 @@ export async function POST(request: Request) {
         if (next) rejoinedJson = adapter.serialize(next)
       }
       if (rejoinedJson) {
+        const previousMemberships = await prisma.onlineRoomMember.findMany({
+          where: { userId: user.id, roomId: { not: room.id } },
+          select: { roomId: true },
+        })
         await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })
         await prisma.onlineRoomMember.upsert({
           where: { roomId_userId: { roomId: room.id, userId: user.id } },
           create: { roomId: room.id, userId: user.id, isReady: true },
           update: { lastSeenAt: new Date(), isReady: true },
         })
+        await Promise.all(previousMemberships.map((m) => deleteRoomIfEmpty(m.roomId)))
         await prisma.onlineRoom.update({
           where: { id: room.id },
           data: { gameStateJson: rejoinedJson, stateVersion: room.stateVersion + 1 },
@@ -75,6 +80,10 @@ export async function POST(request: Request) {
     }
   }
 
+  const previousMemberships = await prisma.onlineRoomMember.findMany({
+    where: { userId: user.id, roomId: { not: room.id } },
+    select: { roomId: true },
+  })
   await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })
 
   await prisma.onlineRoomMember.upsert({
@@ -82,6 +91,7 @@ export async function POST(request: Request) {
     create: { roomId: room.id, userId: user.id, isReady: false },
     update: { lastSeenAt: new Date(), isReady: false },
   })
+  await Promise.all(previousMemberships.map((m) => deleteRoomIfEmpty(m.roomId)))
 
   if (room.visibility === 'invite') {
     await prisma.onlineRoomInvite.updateMany({

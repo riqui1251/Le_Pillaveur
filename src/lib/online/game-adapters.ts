@@ -941,6 +941,8 @@ const telephoneAdapter: GameAdapter = {
       input = { type: 'advance', phaseKey: body.phaseKey }
     } else if (body.action === 'continue') {
       input = { type: 'continue' }
+    } else if (body.action === 'previous') {
+      input = { type: 'previous' }
     } else if (body.action === 'bot') {
       input = { type: 'bot' }
     } else if (body.action === 'replace-left') {

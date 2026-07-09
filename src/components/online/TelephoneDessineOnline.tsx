@@ -197,6 +197,12 @@ export function TelephoneDessineOnline() {
 
   // ── Révélation des chaînes ────────────────────────────────────────────────
   if (view.phase === 'reveal' && view.revealChain) {
+    // Un seul meneur (le premier joueur encore en jeu) fait défiler les
+    // chaînes pour tout le monde — évite que plusieurs clics simultanés ne
+    // fassent sauter des dessins avant que tout le monde ait pu les voir.
+    const isLeader = room.currentTurnUserId === user.id
+    const leaderName =
+      view.players.find((p) => p.id === room.currentTurnUserId)?.name ?? ''
     return (
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
         <p className="text-center text-xs font-bold uppercase tracking-widest text-teal-300/80">
@@ -205,7 +211,7 @@ export function TelephoneDessineOnline() {
         <p className="text-center text-lg font-black">{t('reveal.chainOf', { name: view.revealChain.ownerName })}</p>
         <div className="flex flex-col gap-3">
           {view.revealChain.links.map((link, i) => (
-            <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div key={`${view.revealIdx}-${i}`} className="rounded-2xl border border-white/10 bg-white/5 p-3">
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/40">
                 {t('reveal.step', { n: i + 1 })}
               </p>
@@ -221,13 +227,31 @@ export function TelephoneDessineOnline() {
             </div>
           ))}
         </div>
-        <Button
-          onClick={() => void sendAction({ action: 'continue' })}
-          disabled={busy}
-          className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-500 py-4 text-sm font-bold"
-        >
-          {view.revealIdx + 1 >= view.revealOrder.length ? t('reveal.finish') : t('reveal.nextChain')}
-        </Button>
+        {isLeader ? (
+          <div className="flex gap-2">
+            {view.revealIdx > 0 && (
+              <Button
+                onClick={() => void sendAction({ action: 'previous' })}
+                disabled={busy}
+                variant="outline"
+                className="flex-1 rounded-2xl border-white/15 bg-white/5 py-4 text-sm font-bold text-white/80 hover:bg-white/10"
+              >
+                {t('reveal.previousChain')}
+              </Button>
+            )}
+            <Button
+              onClick={() => void sendAction({ action: 'continue' })}
+              disabled={busy}
+              className="flex-1 rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-500 py-4 text-sm font-bold"
+            >
+              {view.revealIdx + 1 >= view.revealOrder.length ? t('reveal.finish') : t('reveal.nextChain')}
+            </Button>
+          </div>
+        ) : (
+          <p className="text-center text-xs font-semibold text-white/50">
+            {t('reveal.waitingLeader', { name: leaderName })}
+          </p>
+        )}
       </div>
     )
   }

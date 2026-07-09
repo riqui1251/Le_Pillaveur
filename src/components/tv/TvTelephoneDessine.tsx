@@ -57,7 +57,7 @@ export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: Te
         </p>
         <div className="mx-auto grid w-full max-w-5xl flex-1 grid-cols-3 gap-4 overflow-y-auto">
           {state.revealChain.links.map((link, i) => (
-            <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div key={`${state.revealIdx}-${i}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-white/40">
                 {t('reveal.step', { n: i + 1 })}
               </p>

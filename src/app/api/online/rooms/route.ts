@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
-import { buildRoomDto, createUniqueRoomCode } from '@/lib/online-room'
+import { buildRoomDto, createUniqueRoomCode, deleteRoomIfEmpty } from '@/lib/online-room'
 import { GAMES } from '@/lib/games'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 
@@ -23,7 +23,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Jeu invalide' }, { status: 400 })
     }
 
+    const previousMemberships = await prisma.onlineRoomMember.findMany({
+      where: { userId: user.id },
+      select: { roomId: true },
+    })
     await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })
+    await Promise.all(previousMemberships.map((m) => deleteRoomIfEmpty(m.roomId)))
 
     // Langue de la SALLE (contenu localisé côté serveur, ex. mots de
     // l'Imposteur) : celle du créateur au moment de la création.

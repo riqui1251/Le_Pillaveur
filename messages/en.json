@@ -1936,8 +1936,10 @@
           "chainOf": "{name}'s chain",
           "step": "Link {n}",
           "blank": "(nothing was submitted)",
+          "previousChain": "Previous chain",
           "nextChain": "Next chain",
-          "finish": "See the end"
+          "finish": "See the end",
+          "waitingLeader": "{name} is steering the chains for everyone…"
         },
         "victory": {
           "title": "All chains revealed!",

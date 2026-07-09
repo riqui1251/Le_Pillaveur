@@ -1926,8 +1926,10 @@
           "chainOf": "La cadena de {name}",
           "step": "Eslabón {n}",
           "blank": "(no se envió nada)",
+          "previousChain": "Cadena anterior",
           "nextChain": "Cadena siguiente",
-          "finish": "Ver el final"
+          "finish": "Ver el final",
+          "waitingLeader": "{name} está avanzando las cadenas para todos…"
         },
         "victory": {
           "title": "¡Todas las cadenas reveladas!",

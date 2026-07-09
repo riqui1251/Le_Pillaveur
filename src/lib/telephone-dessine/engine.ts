@@ -71,6 +71,7 @@ export type TelephoneAction =
   | { type: 'SUBMIT'; playerId: string; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
+  | { type: 'PREVIOUS'; playerId: string }
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
@@ -290,9 +291,7 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
 
     case 'CONTINUE': {
       if (state.phase !== 'reveal') throw new TelephoneEngineError('NOT_REVEAL')
-      if (!state.players.some((p) => p.id === action.playerId)) {
-        throw new TelephoneEngineError('UNKNOWN_PLAYER')
-      }
+      if (action.playerId !== currentTelephoneActorId(state)) throw new TelephoneEngineError('NOT_LEADER')
       const nextIdx = state.revealIdx + 1
       if (nextIdx >= state.revealOrder.length) {
         return {
@@ -304,6 +303,13 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
         }
       }
       return { ...state, revealIdx: nextIdx, version: state.version + 1 }
+    }
+
+    case 'PREVIOUS': {
+      if (state.phase !== 'reveal') throw new TelephoneEngineError('NOT_REVEAL')
+      if (action.playerId !== currentTelephoneActorId(state)) throw new TelephoneEngineError('NOT_LEADER')
+      if (state.revealIdx <= 0) throw new TelephoneEngineError('ALREADY_FIRST_CHAIN')
+      return { ...state, revealIdx: state.revealIdx - 1, version: state.version + 1 }
     }
 
     case 'LEAVE': {

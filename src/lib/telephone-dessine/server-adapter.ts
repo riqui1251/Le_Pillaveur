@@ -64,6 +64,7 @@ export type TelephoneRoomActionInput =
   | { type: 'submit' }
   | { type: 'advance'; phaseKey: string }
   | { type: 'continue' }
+  | { type: 'previous' }
   | { type: 'bot' }
   | { type: 'replace-left'; graceMs: number }
 
@@ -113,6 +114,11 @@ export function applyTelephoneRoomAction(
         return {
           ok: true,
           state: reduceTelephone(state, { type: 'CONTINUE', playerId: userId, now: Date.now() }),
+        }
+      case 'previous':
+        return {
+          ok: true,
+          state: reduceTelephone(state, { type: 'PREVIOUS', playerId: userId }),
         }
       case 'bot':
         return applyTelephoneBotAction(state)

@@ -450,6 +450,24 @@ describe('vues anti-triche (3 niveaux + TV)', () => {
     expect(alive.players.find((p) => p.id === 'loup1')?.role).toBeNull()
   })
 
+  it('chasseur en train de tirer : pas encore fantôme, ne voit PAS qui est le loup', () => {
+    const eight = [...SIX, P('vil3', 'villageois'), P('vil4', 'villageois')]
+    const pending = craft(
+      eight.map((p) => (p.id === 'cha' ? { ...p, alive: false } : p)),
+      'hunter-shot',
+      { pendingHunterId: 'cha', afterHunter: 'day', wolfVotes: { loup1: 'cha' } }
+    )
+    const hunterView = toLGClientView(pending, 'cha')
+    expect(hunterView.ghost).toBe(false)
+    expect(hunterView.players.find((p) => p.id === 'loup1')?.role).toBeNull()
+    expect(hunterView.wolfVotes).toBeNull()
+    // Une fois le tir résolu (pendingHunterId vidé), il redevient fantôme omniscient.
+    const afterShot = reduceLG(pending, { type: 'HUNTER_SHOT', playerId: 'cha', targetId: 'vil3', now: T0 })
+    const ghostView = toLGClientView(afterShot, 'cha')
+    expect(ghostView.ghost).toBe(true)
+    expect(ghostView.players.find((p) => p.id === 'loup1')?.role).toBe('loup')
+  })
+
   it('TV neutre : aucun secret de vivant ; vote du jour → « a voté » public, choix secret', () => {
     const tv = toLGSpectatorView(night)
     expect(tv.myRole).toBeNull()

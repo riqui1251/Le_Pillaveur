@@ -1926,8 +1926,10 @@
           "chainOf": "La catena di {name}",
           "step": "Anello {n}",
           "blank": "(non è stato inviato nulla)",
+          "previousChain": "Catena precedente",
           "nextChain": "Catena successiva",
-          "finish": "Vedi la fine"
+          "finish": "Vedi la fine",
+          "waitingLeader": "{name} sta facendo scorrere le catene per tutti…"
         },
         "victory": {
           "title": "Tutte le catene sono state rivelate!",

@@ -934,8 +934,15 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
 
   const me = players.find((p) => p.id === viewerId)
   const finished = state.phase === 'finished'
-  /** Fantôme = mort : vue omnisciente (il ne peut plus fausser la partie). */
-  const ghost = Boolean(me && !me.alive)
+  /**
+   * Fantôme = mort : vue omnisciente (il ne peut plus fausser la partie).
+   * Exception : le chasseur en train de choisir sa cible reste mort dans
+   * `players` (`alive: false` posé dès `resolveNight`/`resolveDayVote`) mais
+   * ne doit PAS voir les rôles secrets (loups compris) avant de tirer —
+   * sinon son tir devient une certitude au lieu d'un pari.
+   */
+  const isPendingHunter = viewerId === state.pendingHunterId
+  const ghost = Boolean(me && !me.alive) && !isPendingHunter
   const iAmWolf = Boolean(me?.alive && me.role === 'loup')
   const iAmSeer = Boolean(me?.alive && me.role === 'voyante')
   const iAmWitch = Boolean(me?.alive && me.role === 'sorciere')

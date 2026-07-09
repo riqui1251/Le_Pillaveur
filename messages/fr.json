@@ -1936,8 +1936,10 @@
           "chainOf": "La chaîne de {name}",
           "step": "Maillon {n}",
           "blank": "(rien n'a été soumis)",
+          "previousChain": "Chaîne précédente",
           "nextChain": "Chaîne suivante",
-          "finish": "Voir la fin"
+          "finish": "Voir la fin",
+          "waitingLeader": "{name} fait défiler les chaînes pour tout le monde…"
         },
         "victory": {
           "title": "Toutes les chaînes sont révélées !",

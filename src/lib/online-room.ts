@@ -282,3 +282,15 @@ export async function touchMemberPresence(roomId: string, userId: string): Promi
     data: { lastSeenAt: new Date() },
   })
 }
+
+/**
+ * Supprime une salle si elle n'a plus aucun membre — évite les lobbys
+ * fantômes quand un joueur en quitte une pour en créer/rejoindre une autre
+ * (create/join retirent sa membership sans jamais passer par DELETE).
+ */
+export async function deleteRoomIfEmpty(roomId: string): Promise<void> {
+  const remaining = await prisma.onlineRoomMember.count({ where: { roomId } })
+  if (remaining === 0) {
+    await prisma.onlineRoom.delete({ where: { id: roomId } }).catch(() => {})
+  }
+}
