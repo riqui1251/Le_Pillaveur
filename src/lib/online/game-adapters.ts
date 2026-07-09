@@ -182,6 +182,25 @@ import {
   TABOU_MAX_PLAYERS,
   type TabouState,
 } from '@/lib/tabou/engine'
+import {
+  parseCrobardState,
+  serializeCrobardState,
+  applyCrobardRoomAction,
+  convertCrobardPlayerToBot,
+  markCrobardPlayerLeft,
+  rejoinCrobardPlayer,
+  crobardClientViewJson,
+  crobardSpectatorViewJson,
+  type CrobardRoomActionInput,
+} from '@/lib/crobard/server-adapter'
+import {
+  currentCrobardActorId,
+  toCrobardClientView,
+  CROBARD_MIN_PLAYERS,
+  CROBARD_MAX_PLAYERS,
+  type CrobardState,
+  type Stroke,
+} from '@/lib/crobard/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -810,6 +829,70 @@ const tabouAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinTabouPlayer(state as TabouState, userId),
 }
 
+// ─── Crobard ─────────────────────────────────────────────────────────────────
+
+const crobardAdapter: GameAdapter = {
+  // 1 humain suffit pour lancer : buildCrobardState comble jusqu'au minimum
+  // avec des bots choisis par l'hôte.
+  minPlayers: CROBARD_MIN_PLAYERS,
+  maxPlayers: CROBARD_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parseCrobardState(json),
+  serialize: (state) => serializeCrobardState(state as CrobardState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as CrobardState
+    let input: CrobardRoomActionInput
+    if (body.action === 'choose-word' && typeof body.index === 'number') {
+      input = { type: 'choose-word', index: body.index }
+    } else if (
+      body.action === 'draw-stroke' &&
+      body.stroke &&
+      typeof body.stroke === 'object' &&
+      Array.isArray((body.stroke as { points?: unknown }).points)
+    ) {
+      input = { type: 'draw-stroke', stroke: body.stroke as Stroke }
+    } else if (body.action === 'clear') {
+      input = { type: 'clear' }
+    } else if (body.action === 'guess' && typeof body.text === 'string') {
+      input = { type: 'guess', text: body.text }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyCrobardRoomAction(state, userId, input)
+    if (!result.ok) {
+      // Une réponse fausse/proche n'est PAS une erreur de validation — c'est
+      // une issue normale du jeu, jamais persistée dans l'état partagé.
+      if (result.error === 'GUESS_WRONG' || result.error === 'GUESS_CLOSE') {
+        return { ok: false, error: result.error, status: 200 }
+      }
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertCrobardPlayerToBot(state as CrobardState, userId),
+  isFinished: (state) => (state as CrobardState).phase === 'finished',
+  currentActorId: (state) => currentCrobardActorId(state as CrobardState),
+  clientViewJson: (state, viewerId) => crobardClientViewJson(state as CrobardState, viewerId),
+  spectatorViewJson: (state) => crobardSpectatorViewJson(state as CrobardState),
+  actionResponse: (state, viewerId) => ({
+    view: toCrobardClientView(state as CrobardState, viewerId),
+    viewJson: crobardClientViewJson(state as CrobardState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markCrobardPlayerLeft(state as CrobardState, userId, at),
+  rejoin: (state, userId) => rejoinCrobardPlayer(state as CrobardState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -824,6 +907,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   bluff: bluffAdapter,
   espion: espionAdapter,
   tabou: tabouAdapter,
+  crobard: crobardAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

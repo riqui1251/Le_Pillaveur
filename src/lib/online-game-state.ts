@@ -53,6 +53,9 @@ export type RoomSettings = {
   /** Tabou Vocal : score cible choisi par l'hôte (15/20/25). */
   tabouTargetScore?: number
 
+  /** Crobard : nombre de manches choisi par l'hôte (6/8/10). */
+  crobardRounds?: number
+
 }
 
 
@@ -790,6 +793,26 @@ export function parseTabouSyncedState(json: string | null | undefined): TabouSyn
   }
 }
 
+// ─── Crobard ─────────────────────────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/crobard). */
+export type CrobardSyncedState = {
+  version: number
+  phase: 'countdown' | 'choosing' | 'drawing' | 'roundEnd' | 'finished'
+  winnerId: string | null
+  rematchVotes?: string[]
+}
+
+export function parseCrobardSyncedState(json: string | null | undefined): CrobardSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as CrobardSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -808,6 +831,7 @@ export type AnyOnlineGameState =
   | BluffSyncedState
   | EspionSyncedState
   | TabouSyncedState
+  | CrobardSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -844,6 +868,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parseEspionSyncedState(json) as T | null
     case 'tabou':
       return parseTabouSyncedState(json) as T | null
+    case 'crobard':
+      return parseCrobardSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -884,6 +910,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return (state as EspionSyncedState).phase === 'finished'
     case 'tabou':
       return (state as TabouSyncedState).phase === 'finished'
+    case 'crobard':
+      return (state as CrobardSyncedState).phase === 'finished'
     default:
       return false
   }

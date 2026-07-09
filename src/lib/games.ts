@@ -325,6 +325,24 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     softModeReady: true,
   },
+  {
+    id: 'crobard',
+    title: 'Crobard',
+    description:
+      "Choisis un mot, dessine-le en direct sur l'écran : premier qui devine marque gros, le dessinateur aussi !",
+    path: '/games/crobard',
+    emoji: '🎨',
+    gradient: 'from-fuchsia-600 to-orange-500',
+    colorFrom: '#c026d3',
+    colorTo: '#f97316',
+    fallbackColor: '#e11d48',
+    onlineReady: true,
+    minPlayers: 3,
+    maxPlayers: 12,
+    onlineOnly: true,
+    botsFillable: true,
+    softModeReady: true,
+  },
 ];
 
 export function getGameById(id: string): GameMeta | undefined {

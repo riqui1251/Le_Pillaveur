@@ -14,6 +14,7 @@ import { launchLoupGarouRoom } from '@/lib/online-loup-garou'
 import { launchBluffRoom } from '@/lib/online-bluff'
 import { launchEspionRoom } from '@/lib/online-espion'
 import { launchTabouRoom } from '@/lib/online-tabou'
+import { launchCrobardRoom } from '@/lib/online-crobard'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 
 export type RoomWithMembers = {
@@ -90,6 +91,9 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
       break
     case 'tabou':
       await launchTabouRoom(roomId, room)
+      break
+    case 'crobard':
+      await launchCrobardRoom(roomId, room)
       break
     default: {
       const memberUserIds = room.members.map((m) => m.userId)
