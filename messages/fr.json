@@ -518,6 +518,10 @@
         "title": "Crobard",
         "description": "Choisis un mot, dessine-le en direct sur l'écran : premier qui devine marque gros, le dessinateur aussi !"
       },
+      "telephone-dessine": {
+        "title": "Téléphone Dessiné",
+        "description": "Écris une phrase, le suivant la dessine, le suivant la devine... jusqu'au fou rire collectif en fin de partie !"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Devinez si la prochaine carte sera plus haute ou plus basse"
@@ -1862,6 +1866,56 @@
           {
             "title": "Fin de manche anticipée",
             "body": "Dès que tout le monde a trouvé, la manche s'arrête. Sinon, le temps s'écoule et le mot est révélé pour tous."
+          }
+        ]
+      }
+    },
+    "telephone-dessine": {
+      "page": {
+        "onlineOnly": "Téléphone Dessiné se joue en ligne : chaque joueur ne voit que le maillon qui lui est assigné, jamais la chaîne complète avant la révélation finale.",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "game": {
+        "submittedCount": "{count}/{total} ont soumis",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "waitingOthers": "En attente des autres…",
+        "writeInitial": "Écris une phrase de départ",
+        "writePlaceholder": "Ta phrase…",
+        "youReceived": "Tu as reçu :",
+        "guessInstruction": "Devine en une phrase :",
+        "drawInstruction": "Dessine cette phrase :",
+        "submitDrawing": "Valider le dessin",
+        "reveal": {
+          "title": "Chaîne {current}/{total}",
+          "chainOf": "La chaîne de {name}",
+          "step": "Maillon {n}",
+          "blank": "(rien n'a été soumis)",
+          "nextChain": "Chaîne suivante",
+          "finish": "Voir la fin"
+        },
+        "victory": {
+          "title": "Toutes les chaînes sont révélées !",
+          "subtitle": "Merci d'avoir joué — à refaire entre amis 😄",
+          "backToMenu": "Retour au menu"
+        },
+        "countdown": {
+          "title": "Préparez-vous !",
+          "hint": "Chacun va écrire sa propre phrase de départ…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Écris une phrase de départ",
+            "body": "Chaque joueur démarre sa propre chaîne avec une phrase — elle va circuler et se transformer au fil de la partie !"
+          },
+          {
+            "title": "Dessine ou devine, en alternance",
+            "body": "À chaque manche, tu reçois le dernier maillon d'une chaîne : une phrase à dessiner, ou un dessin à deviner en une phrase. Tu ne vois jamais toute la chaîne !"
+          },
+          {
+            "title": "Le fou rire final",
+            "body": "Une fois toutes les manches jouées, chaque chaîne complète est révélée du début à la fin — préparez-vous à rigoler !"
           }
         ]
       }

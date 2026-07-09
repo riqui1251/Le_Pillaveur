@@ -508,6 +508,10 @@
         "title": "Crobard",
         "description": "Elige una palabra y dibújala en directo en la pantalla: el primero en adivinar suma muchos puntos, ¡el dibujante también!"
       },
+      "telephone-dessine": {
+        "title": "Teléfono Dibujado",
+        "description": "Escribe una frase, el siguiente la dibuja, el siguiente la adivina... ¡hasta las carcajadas colectivas al final!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Adivina si la próxima carta será mayor o menor"
@@ -1852,6 +1856,56 @@
           {
             "title": "Fin de ronda anticipado",
             "body": "En cuanto todos hayan acertado, la ronda termina. Si no, se acaba el tiempo y la palabra se revela a todos."
+          }
+        ]
+      }
+    },
+    "telephone-dessine": {
+      "page": {
+        "onlineOnly": "El Teléfono Dibujado se juega en línea: cada jugador solo ve el eslabón que le corresponde, nunca la cadena completa antes de la revelación final.",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "game": {
+        "submittedCount": "{count}/{total} han enviado",
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
+        "waitingOthers": "Esperando a los demás…",
+        "writeInitial": "Escribe una frase inicial",
+        "writePlaceholder": "Tu frase…",
+        "youReceived": "Has recibido:",
+        "guessInstruction": "Adivina en una frase:",
+        "drawInstruction": "Dibuja esta frase:",
+        "submitDrawing": "Validar el dibujo",
+        "reveal": {
+          "title": "Cadena {current}/{total}",
+          "chainOf": "La cadena de {name}",
+          "step": "Eslabón {n}",
+          "blank": "(no se envió nada)",
+          "nextChain": "Cadena siguiente",
+          "finish": "Ver el final"
+        },
+        "victory": {
+          "title": "¡Todas las cadenas reveladas!",
+          "subtitle": "Gracias por jugar — repetir entre amigos 😄",
+          "backToMenu": "Volver al menú"
+        },
+        "countdown": {
+          "title": "¡Prepárate!",
+          "hint": "Cada uno va a escribir su propia frase inicial…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Escribe una frase inicial",
+            "body": "Cada jugador inicia su propia cadena con una frase — ¡circulará y se transformará a lo largo de la partida!"
+          },
+          {
+            "title": "Dibuja o adivina, alternando",
+            "body": "En cada ronda, recibes el último eslabón de una cadena: una frase para dibujar, o un dibujo para adivinar en una frase. ¡Nunca ves toda la cadena!"
+          },
+          {
+            "title": "Las carcajadas finales",
+            "body": "Una vez jugadas todas las rondas, cada cadena completa se revela de principio a fin — ¡prepárate para reír!"
           }
         ]
       }

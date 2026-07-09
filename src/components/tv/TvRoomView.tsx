@@ -33,6 +33,8 @@ import { TvTabou } from './TvTabou'
 import type { TabouClientView } from '@/lib/tabou/engine'
 import { TvCrobard } from './TvCrobard'
 import type { CrobardClientView } from '@/lib/crobard/engine'
+import { TvTelephoneDessine } from './TvTelephoneDessine'
+import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
 
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
@@ -47,6 +49,7 @@ const GAME_TITLES: Record<string, string> = {
   espion: "Qui est l'Espion ?",
   tabou: 'Tabou Vocal',
   crobard: 'Crobard',
+  'telephone-dessine': 'Téléphone Dessiné',
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
@@ -168,6 +171,8 @@ export function TvRoomView({ code }: { code: string }) {
     content = <TvTabou room={room} state={state as unknown as TabouClientView} />
   } else if (room.gameId === 'crobard') {
     content = <TvCrobard room={room} state={state as unknown as CrobardClientView} />
+  } else if (room.gameId === 'telephone-dessine') {
+    content = <TvTelephoneDessine room={room} state={state as unknown as TelephoneClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

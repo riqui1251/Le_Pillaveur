@@ -518,6 +518,10 @@
         "title": "Crobard",
         "description": "Pick a word, draw it live on screen: the first to guess scores big, the artist too!"
       },
+      "telephone-dessine": {
+        "title": "Drawn Telephone",
+        "description": "Write a sentence, the next player draws it, the next one guesses it... until the final collective laugh!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Guess if the next card will be higher or lower"
@@ -1862,6 +1866,56 @@
           {
             "title": "Early round end",
             "body": "As soon as everyone has guessed, the round ends. Otherwise, time runs out and the word is revealed to everyone."
+          }
+        ]
+      }
+    },
+    "telephone-dessine": {
+      "page": {
+        "onlineOnly": "Drawn Telephone is online only: each player only sees the link assigned to them, never the full chain before the final reveal.",
+        "switchOnline": "Switch to online mode"
+      },
+      "game": {
+        "submittedCount": "{count}/{total} submitted",
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "waitingOthers": "Waiting for the others…",
+        "writeInitial": "Write a starting sentence",
+        "writePlaceholder": "Your sentence…",
+        "youReceived": "You received:",
+        "guessInstruction": "Guess it in one sentence:",
+        "drawInstruction": "Draw this sentence:",
+        "submitDrawing": "Submit the drawing",
+        "reveal": {
+          "title": "Chain {current}/{total}",
+          "chainOf": "{name}'s chain",
+          "step": "Link {n}",
+          "blank": "(nothing was submitted)",
+          "nextChain": "Next chain",
+          "finish": "See the end"
+        },
+        "victory": {
+          "title": "All chains revealed!",
+          "subtitle": "Thanks for playing — do it again with friends 😄",
+          "backToMenu": "Back to menu"
+        },
+        "countdown": {
+          "title": "Get ready!",
+          "hint": "Everyone is about to write their own starting sentence…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Write a starting sentence",
+            "body": "Each player starts their own chain with a sentence — it will circulate and transform throughout the game!"
+          },
+          {
+            "title": "Draw or guess, alternating",
+            "body": "Each round, you receive the last link of a chain: a sentence to draw, or a drawing to guess in one sentence. You never see the whole chain!"
+          },
+          {
+            "title": "The final laugh",
+            "body": "Once every round is played, each complete chain is revealed from start to finish — get ready to laugh!"
           }
         ]
       }

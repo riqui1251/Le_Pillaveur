@@ -508,6 +508,10 @@
         "title": "Crobard",
         "description": "Scegli una parola e disegnala dal vivo sullo schermo: il primo che indovina segna tanti punti, anche il disegnatore!"
       },
+      "telephone-dessine": {
+        "title": "Telefono Disegnato",
+        "description": "Scrivi una frase, il prossimo la disegna, il prossimo la indovina... fino alla risata collettiva finale!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Indovina se la carta successiva sarà più alta o più bassa"
@@ -1852,6 +1856,56 @@
           {
             "title": "Fine manche anticipata",
             "body": "Appena tutti hanno indovinato, la manche termina. Altrimenti il tempo scade e la parola viene rivelata a tutti."
+          }
+        ]
+      }
+    },
+    "telephone-dessine": {
+      "page": {
+        "onlineOnly": "Il Telefono Disegnato si gioca online: ogni giocatore vede solo l'anello a lui assegnato, mai la catena completa prima della rivelazione finale.",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "game": {
+        "submittedCount": "{count}/{total} hanno inviato",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "waitingOthers": "In attesa degli altri…",
+        "writeInitial": "Scrivi una frase iniziale",
+        "writePlaceholder": "La tua frase…",
+        "youReceived": "Hai ricevuto:",
+        "guessInstruction": "Indovina in una frase:",
+        "drawInstruction": "Disegna questa frase:",
+        "submitDrawing": "Convalida il disegno",
+        "reveal": {
+          "title": "Catena {current}/{total}",
+          "chainOf": "La catena di {name}",
+          "step": "Anello {n}",
+          "blank": "(non è stato inviato nulla)",
+          "nextChain": "Catena successiva",
+          "finish": "Vedi la fine"
+        },
+        "victory": {
+          "title": "Tutte le catene sono state rivelate!",
+          "subtitle": "Grazie per aver giocato — da rifare tra amici 😄",
+          "backToMenu": "Torna al menu"
+        },
+        "countdown": {
+          "title": "Preparatevi!",
+          "hint": "Ognuno sta per scrivere la propria frase iniziale…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Scrivi una frase iniziale",
+            "body": "Ogni giocatore avvia la propria catena con una frase — circolerà e si trasformerà nel corso della partita!"
+          },
+          {
+            "title": "Disegna o indovina, in alternanza",
+            "body": "Ad ogni manche, ricevi l'ultimo anello di una catena: una frase da disegnare, o un disegno da indovinare in una frase. Non vedi mai l'intera catena!"
+          },
+          {
+            "title": "La risata finale",
+            "body": "Una volta giocate tutte le manche, ogni catena completa viene rivelata dall'inizio alla fine — preparatevi a ridere!"
           }
         ]
       }
