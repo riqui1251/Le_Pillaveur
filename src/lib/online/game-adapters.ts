@@ -90,6 +90,62 @@ import {
   LG_MAX_PLAYERS,
   type LGState,
 } from '@/lib/loup-garou/engine'
+import {
+  parseGame1220State,
+  serializeGame1220State,
+  applyGame1220RoomAction,
+  convertGame1220PlayerToBot,
+  markGame1220PlayerLeft,
+  rejoinGame1220Player,
+  game1220ClientViewJson,
+  game1220SpectatorViewJson,
+  type Game1220RoomActionInput,
+} from '@/lib/1220/server-adapter'
+import {
+  currentGame1220ActorId,
+  toGame1220ClientView,
+  GAME_1220_MIN_PLAYERS,
+  GAME_1220_MAX_PLAYERS,
+  type Game1220State,
+} from '@/lib/1220/engine'
+import type { Choices1220 } from '@/lib/game-1220'
+import {
+  parsePurpleState,
+  serializePurpleState,
+  applyPurpleRoomAction,
+  convertPurplePlayerToBot,
+  markPurplePlayerLeft,
+  rejoinPurplePlayer,
+  purpleClientViewJson,
+  purpleSpectatorViewJson,
+  type PurpleRoomActionInput,
+} from '@/lib/purple/server-adapter'
+import {
+  currentPurpleActorId,
+  toPurpleClientView,
+  PURPLE_MIN_PLAYERS,
+  PURPLE_MAX_PLAYERS,
+  type PurpleState,
+  type PurpleBet,
+} from '@/lib/purple/engine'
+import {
+  parseBluffState,
+  serializeBluffState,
+  applyBluffRoomAction,
+  convertBluffPlayerToBot,
+  markBluffPlayerLeft,
+  rejoinBluffPlayer,
+  bluffClientViewJson,
+  bluffSpectatorViewJson,
+  type BluffRoomActionInput,
+} from '@/lib/bluff/server-adapter'
+import {
+  currentBluffActorId,
+  toBluffClientView,
+  BLUFF_MIN_PLAYERS,
+  BLUFF_MAX_PLAYERS,
+  type BluffState,
+} from '@/lib/bluff/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -195,7 +251,7 @@ const toucherCouleAdapter: GameAdapter = {
   // Informatif : la capacité réelle dépend du format d'équipes (settings.tcMode),
   // gérée par les branches dédiées du lobby/join (bots de complément).
   minPlayers: 1,
-  maxPlayers: 6,
+  maxPlayers: 8,
   parse: (json) => parseTCState(json),
   serialize: (state) => serializeTCState(state as TCState),
   applyAction(rawState, userId, body) {
@@ -204,7 +260,7 @@ const toucherCouleAdapter: GameAdapter = {
     if (body.action === 'place' && Array.isArray(body.ships)) {
       input = { type: 'place', ships: body.ships as number[][] }
     } else if (body.action === 'fire' && typeof body.cell === 'number') {
-      input = { type: 'fire', cell: body.cell }
+      input = { type: 'fire', cell: body.cell, bomb: body.bomb === true }
     } else if (body.action === 'bot') {
       input = { type: 'bot' }
     } else if (body.action === 'replace-left') {
@@ -459,6 +515,160 @@ const loupGarouAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinLGPlayer(state as LGState, userId),
 }
 
+// ─── 1220 ────────────────────────────────────────────────────────────────────
+
+const game1220Adapter: GameAdapter = {
+  // Jeu de paris simultané ; avec l'option bots du lobby, un joueur seul peut
+  // lancer (buildGame1220State comble jusqu'à 2).
+  minPlayers: GAME_1220_MIN_PLAYERS,
+  maxPlayers: GAME_1220_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parseGame1220State(json),
+  serialize: (state) => serializeGame1220State(state as Game1220State),
+  applyAction(rawState, userId, body) {
+    const state = rawState as Game1220State
+    let input: Game1220RoomActionInput
+    if (body.action === 'set-draft' && body.choices && typeof body.choices === 'object') {
+      input = { type: 'set-draft', choices: body.choices as Partial<Choices1220> }
+    } else if (body.action === 'ready') {
+      input = { type: 'ready' }
+    } else if (body.action === 'roll') {
+      input = { type: 'roll' }
+    } else if (body.action === 'end') {
+      input = { type: 'end' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyGame1220RoomAction(state, userId, input)
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: result.error,
+        status: result.error === 'NOTHING_TO_REPLACE' ? 409 : 403,
+      }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertGame1220PlayerToBot(state as Game1220State, userId),
+  isFinished: (state) => (state as Game1220State).phase === 'finished',
+  currentActorId: (state) => currentGame1220ActorId(state as Game1220State),
+  clientViewJson: (state) => game1220ClientViewJson(state as Game1220State),
+  spectatorViewJson: (state) => game1220SpectatorViewJson(state as Game1220State),
+  actionResponse: (state) => ({
+    view: toGame1220ClientView(state as Game1220State),
+    viewJson: game1220ClientViewJson(state as Game1220State),
+  }),
+  markLeft: (state, userId, at) => markGame1220PlayerLeft(state as Game1220State, userId, at),
+  rejoin: (state, userId) => rejoinGame1220Player(state as Game1220State, userId),
+}
+
+// ─── Purple ──────────────────────────────────────────────────────────────────
+
+const purpleAdapter: GameAdapter = {
+  // Jeu de paris tour par tour ; avec l'option bots du lobby, un joueur seul
+  // peut lancer (buildPurpleState comble jusqu'à 2).
+  minPlayers: PURPLE_MIN_PLAYERS,
+  maxPlayers: PURPLE_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parsePurpleState(json),
+  serialize: (state) => serializePurpleState(state as PurpleState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as PurpleState
+    let input: PurpleRoomActionInput
+    if (body.action === 'bet' && typeof body.bet === 'string') {
+      input = { type: 'bet', bet: body.bet as PurpleBet }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'pass') {
+      input = { type: 'pass' }
+    } else if (body.action === 'close-reveal') {
+      input = { type: 'close-reveal' }
+    } else if (body.action === 'end') {
+      input = { type: 'end' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyPurpleRoomAction(state, userId, input)
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: result.error,
+        status: result.error === 'NOTHING_TO_REPLACE' ? 409 : 403,
+      }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertPurplePlayerToBot(state as PurpleState, userId),
+  isFinished: (state) => (state as PurpleState).phase === 'finished',
+  currentActorId: (state) => currentPurpleActorId(state as PurpleState),
+  clientViewJson: (state) => purpleClientViewJson(state as PurpleState),
+  spectatorViewJson: (state) => purpleSpectatorViewJson(state as PurpleState),
+  actionResponse: (state) => ({
+    view: toPurpleClientView(state as PurpleState),
+    viewJson: purpleClientViewJson(state as PurpleState),
+  }),
+  markLeft: (state, userId, at) => markPurplePlayerLeft(state as PurpleState, userId, at),
+  rejoin: (state, userId) => rejoinPurplePlayer(state as PurpleState, userId),
+}
+
+// ─── Le Grand Bluff ──────────────────────────────────────────────────────────
+
+const bluffAdapter: GameAdapter = {
+  // 3 humains par défaut ; avec l'option bots du lobby, un joueur seul peut
+  // lancer (buildBluffState comble jusqu'à 3).
+  minPlayers: BLUFF_MIN_PLAYERS,
+  maxPlayers: BLUFF_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parseBluffState(json),
+  serialize: (state) => serializeBluffState(state as BluffState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as BluffState
+    let input: BluffRoomActionInput
+    if (body.action === 'submit-fake' && typeof body.text === 'string') {
+      input = { type: 'submit-fake', text: body.text }
+    } else if (body.action === 'vote' && typeof body.candidateId === 'string') {
+      input = { type: 'vote', candidateId: body.candidateId }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyBluffRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertBluffPlayerToBot(state as BluffState, userId),
+  isFinished: (state) => (state as BluffState).phase === 'finished',
+  currentActorId: (state) => currentBluffActorId(state as BluffState),
+  clientViewJson: (state, viewerId) => bluffClientViewJson(state as BluffState, viewerId),
+  spectatorViewJson: (state) => bluffSpectatorViewJson(state as BluffState),
+  actionResponse: (state, viewerId) => ({
+    view: toBluffClientView(state as BluffState, viewerId),
+    viewJson: bluffClientViewJson(state as BluffState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markBluffPlayerLeft(state as BluffState, userId, at),
+  rejoin: (state, userId) => rejoinBluffPlayer(state as BluffState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -468,6 +678,9 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   imposteur: imposteurAdapter,
   quiz: quizAdapter,
   'loup-garou': loupGarouAdapter,
+  '1220': game1220Adapter,
+  purple: purpleAdapter,
+  bluff: bluffAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

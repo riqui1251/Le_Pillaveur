@@ -26,6 +26,21 @@ export type RoomSettings = {
   /** Toucher-Coulé : choix d'équipe par membre (userId → équipe). */
   tcTeams?: Record<string, 'A' | 'B'>
 
+  /** Toucher-Coulé : power-up "Bombe" (tir 2×2, un usage par joueur). */
+  tcPowerups?: boolean
+
+  /** L'Imposteur : nombre d'imposteurs choisi par l'hôte (défaut : dérivé du nombre de joueurs). */
+  imposteurCount?: number
+
+  /** Le Menteur : variante Palifico (1 dé → les 1 perdent leur statut de joker, face verrouillée). */
+  menteurPalifico?: boolean
+
+  /** Le Menteur : variante Calza (parier « pile la quantité » pour regagner un dé). */
+  menteurCalza?: boolean
+
+  /** Le Grand Bluff : nombre de manches choisi par l'hôte (6/8/10). */
+  bluffRounds?: number
+
 }
 
 
@@ -338,27 +353,28 @@ export type SerializedCard = {
 
 
 // ─── Purple ──────────────────────────────────────────────────────────────────
+// ⚠️ Fichier CLIENT (useOnlineRoom) : forme jumelle (pas d'import) de
+// `src/lib/purple/engine.ts`, seule source de vérité côté serveur.
+
+export type PurplePlayer = { id: string; name: string; isBot: boolean; leftAt: number | null }
 
 export type PurpleSyncedState = {
   version: number
-  memberUserIds: string[]
-  gameStarted: boolean
+  players: PurplePlayer[]
   currentPlayer: number
+  phase: 'playing' | 'finished'
   drinkCounter: number
   deck: SerializedCard[]
   gameResults: Record<string, number>
   drawnCards: SerializedCard[]
   lastBet: string | null
   isCorrect: boolean | null
-  isRevealing: boolean
   canContinue: boolean
-  showResult: boolean
+  pendingReveal: boolean
   amountToDrink: number
   cardHistory: SerializedCard[]
   totalCardsDrawn: number
   rematchVotes?: string[]
-  gameEnded?: boolean
-  pushedByUserId?: string
 }
 
 export function parsePurpleState(json: string | null | undefined): PurpleSyncedState | null {
@@ -374,37 +390,47 @@ export function parsePurpleState(json: string | null | undefined): PurpleSyncedS
 
 
 // ─── 1220 ────────────────────────────────────────────────────────────────────
+// ⚠️ Fichier CLIENT (useOnlineRoom) : forme jumelle (pas d'import) de
+// `src/lib/1220/engine.ts`, seule source de vérité côté serveur.
 
-export type Serialized1220Config = {
-  playerId: string
-  name: string
+export type Serialized1220Choices = {
   parity: 'pair' | 'impair'
   band: '2-10' | '11-20' | '21-30'
   drinkNumber: number
   giveNumber: number
 }
 
+export type Serialized1220Config = Serialized1220Choices & { playerId: string; name: string }
+
+export type Serialized1220RollResult = {
+  playerId: string
+  name: string
+  drinkSips: number
+  giveEffective: number
+  /** Identifiants structurels ('band' | 'parity' | 'giveNum') — texte traduit côté client. */
+  giveReasons: string[]
+  partialHit: boolean
+  partialNumbers: number[]
+}
+
 export type Serialized1220History = {
   d12: number
   d20: number
-  results: { playerId: string; name: string; text: string[] }[]
+  results: Serialized1220RollResult[]
 }
+
+export type Game1220Player = { id: string; name: string; isBot: boolean; leftAt: number | null }
 
 export type Game1220SyncedState = {
   version: number
-  memberUserIds: string[]
-  gameStarted: boolean
-  currentPlayer: number
-  phase: 'setup' | 'play'
-  draft: Record<string, { parity: 'pair' | 'impair'; band: '2-10' | '11-20' | '21-30'; drinkNumber: number; giveNumber: number }>
+  players: Game1220Player[]
+  phase: 'setup' | 'play' | 'finished'
+  draft: Record<string, Serialized1220Choices>
   setupReady: string[]
   configs: Serialized1220Config[] | null
-  d12: number
-  d20: number
-  rolling: boolean
+  lastRoll: Serialized1220History | null
   history: Serialized1220History[]
   rematchVotes?: string[]
-  pushedByUserId?: string
 }
 
 export function parse1220State(json: string | null | undefined): Game1220SyncedState | null {
@@ -692,6 +718,26 @@ export function parseLoupGarouSyncedState(
   }
 }
 
+// ─── Le Grand Bluff ──────────────────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/bluff). */
+export type BluffSyncedState = {
+  version: number
+  phase: 'countdown' | 'submit' | 'vote' | 'reveal' | 'finished'
+  winnerId: string | null
+  rematchVotes?: string[]
+}
+
+export function parseBluffSyncedState(json: string | null | undefined): BluffSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as BluffSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -707,6 +753,7 @@ export type AnyOnlineGameState =
   | ImposteurSyncedState
   | QuizSyncedState
   | LoupGarouSyncedState
+  | BluffSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -737,6 +784,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parseQuizSyncedState(json) as T | null
     case 'loup-garou':
       return parseLoupGarouSyncedState(json) as T | null
+    case 'bluff':
+      return parseBluffSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -750,9 +799,9 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
     case 'petit-buveur':
       return Boolean((state as PetitBuveurSyncedState).winner)
     case 'purple':
-      return Boolean((state as PurpleSyncedState).gameEnded)
+      return (state as PurpleSyncedState).phase === 'finished'
     case '1220':
-      return false
+      return (state as Game1220SyncedState).phase === 'finished'
     case 'hi-lo':
       return Boolean((state as HiLoSyncedState).gameOver)
     case 'monsieur-3':
@@ -771,6 +820,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return (state as QuizSyncedState).phase === 'finished'
     case 'loup-garou':
       return (state as LoupGarouSyncedState).phase === 'finished'
+    case 'bluff':
+      return (state as BluffSyncedState).phase === 'finished'
     default:
       return false
   }

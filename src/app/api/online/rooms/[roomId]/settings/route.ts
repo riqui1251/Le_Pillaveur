@@ -9,7 +9,7 @@ type Params = { params: Promise<{ roomId: string }> }
 
 const VALID_DIFFICULTIES = new Set(['facile', 'normal', 'difficile', 'extreme'])
 const VALID_VISIBILITIES = new Set(['public', 'private', 'invite'])
-const VALID_TC_MODES = new Set(['1v1', '2v2', '3v3'])
+const VALID_TC_MODES = new Set(['1v1', '2v2', '3v3', '4v4'])
 
 /** L'hôte met à jour les paramètres (difficulté, etc.) pendant le lobby */
 export async function PUT(request: Request, { params }: Params) {
@@ -59,6 +59,26 @@ export async function PUT(request: Request, { params }: Params) {
     body.botsCount <= 11
   ) {
     next.botsCount = body.botsCount
+  }
+  if (typeof body.menteurPalifico === 'boolean') {
+    next.menteurPalifico = body.menteurPalifico
+  }
+  if (typeof body.menteurCalza === 'boolean') {
+    next.menteurCalza = body.menteurCalza
+  }
+  if (typeof body.tcPowerups === 'boolean') {
+    next.tcPowerups = body.tcPowerups
+  }
+  if (
+    typeof body.imposteurCount === 'number' &&
+    Number.isInteger(body.imposteurCount) &&
+    body.imposteurCount >= 1 &&
+    body.imposteurCount <= 3
+  ) {
+    next.imposteurCount = body.imposteurCount
+  }
+  if (typeof body.bluffRounds === 'number' && [6, 8, 10].includes(body.bluffRounds)) {
+    next.bluffRounds = body.bluffRounds
   }
 
   const visibilityUpdate =

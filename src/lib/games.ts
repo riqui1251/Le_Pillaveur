@@ -21,21 +21,12 @@ export type GameMeta = {
   maxPlayers?: number;
   /** L'hôte peut activer « compléter avec des bots » au lobby (lancer sous le minimum). */
   botsFillable?: boolean;
+  /** Proposé en mode Soft (sans gorgées) — sous-ensemble des jeux onlineReady. */
+  softModeReady?: boolean;
 };
 
 // Source unique de vérité pour les jeux
 export const GAMES: GameMeta[] = [
-  {
-    id: 'roulette-russe',
-    title: 'Roulette Russe',
-    description: "Un jeu de hasard où chaque joueur tire à tour de rôle. Survivre ou boire !",
-    path: '/games/roulette-russe',
-    emoji: '🎲',
-    gradient: 'from-red-600 to-amber-500',
-    colorFrom: '#dc2626',
-    colorTo: '#f59e0b',
-    fallbackColor: '#f97316',
-  },
   {
     id: 'monsieur-3',
     title: 'Monsieur 3',
@@ -84,8 +75,9 @@ export const GAMES: GameMeta[] = [
     fallbackColor: '#0ea5e9',
     onlineReady: true,
     minPlayers: 1,
-    maxPlayers: 6,
+    maxPlayers: 8,
     onlineOnly: true,
+    softModeReady: true,
   },
   {
     id: 'menteur',
@@ -102,6 +94,7 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     maxPlayers: 6,
     onlineOnly: true,
+    softModeReady: true,
   },
   {
     id: 'imposteur',
@@ -118,6 +111,7 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     maxPlayers: 10,
     onlineOnly: true,
+    softModeReady: true,
   },
   {
     id: 'quiz',
@@ -134,6 +128,7 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     maxPlayers: 12,
     onlineOnly: true,
+    softModeReady: true,
   },
   {
     id: 'loup-garou',
@@ -150,6 +145,7 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     maxPlayers: 12,
     onlineOnly: true,
+    softModeReady: true,
   },
   {
     id: 'hi-lo',
@@ -172,6 +168,10 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#9333ea',
     colorTo: '#8b5cf6',
     fallbackColor: '#a855f7',
+    onlineReady: true,
+    minPlayers: 2,
+    maxPlayers: 10,
+    botsFillable: true,
   },
   {
     id: 'pyramide',
@@ -266,6 +266,28 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#7c3aed',
     colorTo: '#f59e0b',
     fallbackColor: '#a855f7',
+    onlineReady: true,
+    minPlayers: 2,
+    maxPlayers: 12,
+    botsFillable: true,
+  },
+  {
+    id: 'bluff',
+    title: 'Le Grand Bluff',
+    description:
+      'Une question, une fausse réponse à inventer, et un vote parmi les bluffs : trouve la vraie ou trompe tout le monde !',
+    path: '/games/bluff',
+    emoji: '🃏',
+    gradient: 'from-rose-600 to-amber-500',
+    colorFrom: '#e11d48',
+    colorTo: '#f59e0b',
+    fallbackColor: '#f43f5e',
+    onlineReady: true,
+    minPlayers: 3,
+    maxPlayers: 10,
+    onlineOnly: true,
+    botsFillable: true,
+    softModeReady: true,
   },
 ];
 
