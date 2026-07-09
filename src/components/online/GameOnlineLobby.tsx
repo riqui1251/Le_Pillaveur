@@ -80,6 +80,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tMenteur = useTranslations('games.menteur.lobby')
   const tImposteur = useTranslations('games.imposteur.lobby')
   const tBluff = useTranslations('games.bluff.lobby')
+  const tEspion = useTranslations('games.espion.lobby')
   const tOnline = useTranslations('onlineLobby')
   const tFriends = useTranslations('account.friends')
 
@@ -663,6 +664,71 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             })}
           </div>
         </div>
+      )}
+
+      {gameId === 'espion' && (
+        <>
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-cyan-400/70">
+              {tEspion('discussionMin')}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {[3, 5, 7].map((value) => {
+                const active = (room.settings.espionDiscussionMin ?? 5) === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={!isHost}
+                    onClick={() => updateSettings({ espionDiscussionMin: value })}
+                    className={cn(
+                      'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
+                      active
+                        ? 'border-transparent bg-gradient-to-r from-slate-600 to-cyan-500 text-white shadow-lg'
+                        : 'border-white/10 bg-white/5 text-white/60',
+                      isHost && !active && 'hover:bg-white/10 hover:text-white'
+                    )}
+                  >
+                    <span className="block text-lg font-black">{value}</span>
+                    <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                      {tEspion('minutes')}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-cyan-400/70">
+              {tEspion('roundsToWin')}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {[3, 5, 7].map((value) => {
+                const active = (room.settings.espionRoundsToWin ?? 3) === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={!isHost}
+                    onClick={() => updateSettings({ espionRoundsToWin: value })}
+                    className={cn(
+                      'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
+                      active
+                        ? 'border-transparent bg-gradient-to-r from-slate-600 to-cyan-500 text-white shadow-lg'
+                        : 'border-white/10 bg-white/5 text-white/60',
+                      isHost && !active && 'hover:bg-white/10 hover:text-white'
+                    )}
+                  >
+                    <span className="block text-lg font-black">{value}</span>
+                    <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                      {tEspion('rounds')}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </>
       )}
 
       {gameId === 'loup-garou' && (

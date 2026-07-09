@@ -496,6 +496,10 @@
         "title": "Il Grande Bluff",
         "description": "Una domanda, una falsa risposta da inventare, e un voto tra i bluff: trova quella vera o inganna tutti!"
       },
+      "espion": {
+        "title": "Chi è la Spia?",
+        "description": "Un luogo segreto, una spia che non sa nulla: fatevi domande, accusate, o indovinate il luogo prima che scada il tempo!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Indovina se la carta successiva sarà più alta o più bassa"
@@ -1642,6 +1646,79 @@
           {
             "title": "Punti doppi",
             "body": "Trova la risposta vera per guadagnare punti. E se qualcuno vota il TUO bluff, guadagni punti anche tu — più persone inganni, più vinci!"
+          }
+        ]
+      }
+    },
+    "espion": {
+      "page": {
+        "onlineOnly": "Chi è la Spia? si gioca online: il luogo segreto e l'identità della spia passano dal server, discutete ad alta voce!",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "discussionMin": "Durata della discussione",
+        "minutes": "min",
+        "roundsToWin": "Manche da vincere",
+        "rounds": "manche"
+      },
+      "game": {
+        "score": "Spia {spy} · Squadra {crew}",
+        "phaseDiscussion": "Discussione",
+        "yourLocation": "Il luogo",
+        "youAreSpy": "Sei la SPIA 🕵️",
+        "spyHint": "Nessuno sa dove siete — fai domande per capirlo senza farti smascherare!",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "accuseButton": "Accuso qualcuno!",
+        "accuseWho": "Chi accusi?",
+        "cancel": "Annulla",
+        "guessButton": "Indovina il luogo",
+        "guessWhich": "Qual è il luogo?",
+        "accusation": {
+          "title": "{accuser} accusa {target}!",
+          "support": "{count}/{needed} sostegni necessari",
+          "supportButton": "Sostengo questa accusa",
+          "supported": "Sostegno registrato — in attesa degli altri…",
+          "youAreAccused": "Sei stato accusato! Difenditi ad alta voce…"
+        },
+        "reveal": {
+          "location": "Il luogo era: {location}",
+          "seeResult": "Vedi il risultato",
+          "continue": "Manche successiva",
+          "outcome": {
+            "spyCaught": "{name} era la spia — smascherata!",
+            "accusationFailed": "Bersaglio sbagliato… la spia fugge!",
+            "spyGuessedRight": "{name} ha indovinato il luogo!",
+            "spyGuessedWrong": "Risposta sbagliata della spia!",
+            "timeout": "Tempo scaduto — {name} la fa franca!"
+          }
+        },
+        "victory": {
+          "crewWin": "La squadra ha smascherato la spia!",
+          "spyWin": "La spia vince!",
+          "score": "Spia {spy} · Squadra {crew}",
+          "replay": "Rigioca",
+          "rematchWaiting": "In attesa degli altri ({count}/{total})",
+          "backToMenu": "Torna al menu"
+        },
+        "countdown": {
+          "title": "Preparatevi!",
+          "hint": "Scopri il tuo ruolo — la discussione inizia ora…"
+        },
+        "tvDiscussionHint": "La discussione è nel vivo…"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Un luogo segreto, una spia",
+            "body": "Tutti conoscono il luogo... tranne la spia, che non sa nulla! Fatevi domande ad alta voce per smascherare l'intrusa senza svelare il luogo."
+          },
+          {
+            "title": "Accusare o sostenere",
+            "body": "Pensi di aver trovato la spia? Accusala! Gli altri hanno 15 secondi per sostenerti — serve la maggioranza per rivelare la verità."
+          },
+          {
+            "title": "La spia può indovinare",
+            "body": "Nel frattempo, la spia può provare a indovinare il luogo in qualsiasi momento per vincere subito. Se sbaglia, la squadra vince la manche!"
           }
         ]
       }

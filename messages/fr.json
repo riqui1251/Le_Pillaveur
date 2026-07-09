@@ -506,6 +506,10 @@
         "title": "Le Grand Bluff",
         "description": "Une question, une fausse réponse à inventer, et un vote parmi les bluffs : trouve la vraie ou trompe tout le monde !"
       },
+      "espion": {
+        "title": "Qui est l'Espion ?",
+        "description": "Un lieu secret, un espion qui ne sait rien : questionnez-vous, accusez, ou devinez le lieu avant la fin du temps imparti !"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Devinez si la prochaine carte sera plus haute ou plus basse"
@@ -1652,6 +1656,79 @@
           {
             "title": "Points doubles",
             "body": "Trouve la vraie réponse pour gagner des points. Et si quelqu'un vote pour TON bluff, tu marques aussi des points — plus tu trompes de monde, plus tu gagnes !"
+          }
+        ]
+      }
+    },
+    "espion": {
+      "page": {
+        "onlineOnly": "Qui est l'Espion ? se joue en ligne : le lieu secret et l'identité de l'espion transitent par le serveur, discutez à voix haute !",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "discussionMin": "Durée de la discussion",
+        "minutes": "min",
+        "roundsToWin": "Manches à gagner",
+        "rounds": "manches"
+      },
+      "game": {
+        "score": "Espion {spy} · Équipe {crew}",
+        "phaseDiscussion": "Discussion",
+        "yourLocation": "Le lieu",
+        "youAreSpy": "Tu es l'ESPION 🕵️",
+        "spyHint": "Personne ne sait où vous êtes — pose des questions pour deviner sans te faire démasquer !",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "accuseButton": "J'accuse quelqu'un !",
+        "accuseWho": "Qui accuses-tu ?",
+        "cancel": "Annuler",
+        "guessButton": "Je devine le lieu",
+        "guessWhich": "Quel est le lieu ?",
+        "accusation": {
+          "title": "{accuser} accuse {target} !",
+          "support": "{count}/{needed} soutiens nécessaires",
+          "supportButton": "Je soutiens l'accusation",
+          "supported": "Soutien enregistré — en attente des autres…",
+          "youAreAccused": "Tu es accusé ! Défends-toi à voix haute…"
+        },
+        "reveal": {
+          "location": "Le lieu était : {location}",
+          "seeResult": "Voir le résultat",
+          "continue": "Manche suivante",
+          "outcome": {
+            "spyCaught": "{name} était l'espion — démasqué !",
+            "accusationFailed": "Mauvaise cible… l'espion s'échappe !",
+            "spyGuessedRight": "{name} a deviné le lieu !",
+            "spyGuessedWrong": "Mauvaise réponse de l'espion !",
+            "timeout": "Le temps est écoulé — {name} s'en sort !"
+          }
+        },
+        "victory": {
+          "crewWin": "L'équipe a démasqué l'espion !",
+          "spyWin": "L'espion l'emporte !",
+          "score": "Espion {spy} · Équipe {crew}",
+          "replay": "Rejouer",
+          "rematchWaiting": "En attente des autres ({count}/{total})",
+          "backToMenu": "Retour au menu"
+        },
+        "countdown": {
+          "title": "Préparez-vous !",
+          "hint": "Découvrez votre rôle — la discussion commence…"
+        },
+        "tvDiscussionHint": "La discussion bat son plein…"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Un lieu secret, un espion",
+            "body": "Tout le monde connaît le lieu... sauf l'espion, qui ne sait rien ! Posez-vous des questions à voix haute pour démasquer l'intrus sans trahir le lieu."
+          },
+          {
+            "title": "Accuser ou soutenir",
+            "body": "Si tu penses avoir trouvé l'espion, accuse-le ! Les autres ont 15 secondes pour soutenir — la majorité doit être atteinte pour révéler la vérité."
+          },
+          {
+            "title": "L'espion peut deviner",
+            "body": "De son côté, l'espion peut tenter de deviner le lieu à tout moment pour gagner directement. S'il se trompe, l'équipe gagne la manche !"
           }
         ]
       }

@@ -34,5 +34,6 @@ export function GameIconById({ id, className }: { id: string; className?: string
   if (id === 'quiz') return <span className={className} aria-hidden>🧠</span>
   if (id === 'loup-garou') return <span className={className} aria-hidden>🐺</span>
   if (id === 'bluff') return <span className={className} aria-hidden>🃏</span>
+  if (id === 'espion') return <span className={className} aria-hidden>🕵️</span>
   return <span className={className} aria-hidden>🎮</span>
 }

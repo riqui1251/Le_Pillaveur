@@ -506,6 +506,10 @@
         "title": "The Big Bluff",
         "description": "A question, a fake answer to invent, and a vote among the bluffs: find the real one or fool everyone!"
       },
+      "espion": {
+        "title": "Who's the Spy?",
+        "description": "A secret location, a spy who knows nothing: ask questions, accuse, or guess the location before time runs out!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Guess if the next card will be higher or lower"
@@ -1652,6 +1656,79 @@
           {
             "title": "Double points",
             "body": "Find the real answer to score points. And if someone votes for YOUR bluff, you score too — the more people you fool, the more you win!"
+          }
+        ]
+      }
+    },
+    "espion": {
+      "page": {
+        "onlineOnly": "Who's the Spy? is online only: the secret location and the spy's identity travel through the server, discuss out loud!",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "discussionMin": "Discussion length",
+        "minutes": "min",
+        "roundsToWin": "Rounds to win",
+        "rounds": "rounds"
+      },
+      "game": {
+        "score": "Spy {spy} · Crew {crew}",
+        "phaseDiscussion": "Discussion",
+        "yourLocation": "The location",
+        "youAreSpy": "You are the SPY 🕵️",
+        "spyHint": "No one knows where you are — ask questions to figure it out without getting caught!",
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "accuseButton": "I accuse someone!",
+        "accuseWho": "Who do you accuse?",
+        "cancel": "Cancel",
+        "guessButton": "Guess the location",
+        "guessWhich": "Which location is it?",
+        "accusation": {
+          "title": "{accuser} accuses {target}!",
+          "support": "{count}/{needed} supporters needed",
+          "supportButton": "I support this accusation",
+          "supported": "Support registered — waiting for the others…",
+          "youAreAccused": "You've been accused! Defend yourself out loud…"
+        },
+        "reveal": {
+          "location": "The location was: {location}",
+          "seeResult": "See the result",
+          "continue": "Next round",
+          "outcome": {
+            "spyCaught": "{name} was the spy — caught!",
+            "accusationFailed": "Wrong target… the spy gets away!",
+            "spyGuessedRight": "{name} guessed the location!",
+            "spyGuessedWrong": "Wrong guess from the spy!",
+            "timeout": "Time's up — {name} gets away with it!"
+          }
+        },
+        "victory": {
+          "crewWin": "The crew unmasked the spy!",
+          "spyWin": "The spy wins!",
+          "score": "Spy {spy} · Crew {crew}",
+          "replay": "Play again",
+          "rematchWaiting": "Waiting for the others ({count}/{total})",
+          "backToMenu": "Back to menu"
+        },
+        "countdown": {
+          "title": "Get ready!",
+          "hint": "Discover your role — discussion starts now…"
+        },
+        "tvDiscussionHint": "Discussion in full swing…"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "A secret location, a spy",
+            "body": "Everyone knows the location... except the spy, who knows nothing! Ask each other questions out loud to unmask the intruder without giving away the location."
+          },
+          {
+            "title": "Accuse or support",
+            "body": "Think you've found the spy? Accuse them! The others have 15 seconds to support — a majority is needed to reveal the truth."
+          },
+          {
+            "title": "The spy can guess",
+            "body": "Meanwhile, the spy can try to guess the location at any time to win instantly. If they're wrong, the crew wins the round!"
           }
         ]
       }

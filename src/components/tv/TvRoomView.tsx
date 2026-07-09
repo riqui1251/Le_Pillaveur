@@ -27,6 +27,8 @@ import { TvPurple } from './TvPurple'
 import type { PurpleSyncedState } from '@/lib/online-game-state'
 import { TvBluff } from './TvBluff'
 import type { BluffClientView } from '@/lib/bluff/engine'
+import { TvEspion } from './TvEspion'
+import type { EspionClientView } from '@/lib/espion/engine'
 
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
@@ -38,6 +40,7 @@ const GAME_TITLES: Record<string, string> = {
   '1220': '1220',
   purple: 'Purple',
   bluff: 'Le Grand Bluff',
+  espion: "Qui est l'Espion ?",
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
@@ -153,6 +156,8 @@ export function TvRoomView({ code }: { code: string }) {
     content = <TvPurple room={room} state={state as unknown as PurpleSyncedState} />
   } else if (room.gameId === 'bluff') {
     content = <TvBluff room={room} state={state as unknown as BluffClientView} />
+  } else if (room.gameId === 'espion') {
+    content = <TvEspion room={room} state={state as unknown as EspionClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

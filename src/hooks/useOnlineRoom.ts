@@ -270,6 +270,8 @@ export function useOnlineRoom() {
       menteurCalza?: boolean
       imposteurCount?: number
       bluffRounds?: number
+      espionDiscussionMin?: number
+      espionRoundsToWin?: number
     }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {

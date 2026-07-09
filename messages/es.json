@@ -496,6 +496,10 @@
         "title": "El Gran Farol",
         "description": "Una pregunta, una respuesta falsa que inventar, y una votación entre los faroles: ¡encuentra la verdadera o engaña a todos!"
       },
+      "espion": {
+        "title": "¿Quién es el Espía?",
+        "description": "Un lugar secreto, un espía que no sabe nada: preguntaos entre vosotros, acusad, o adivinad el lugar antes de que se acabe el tiempo!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Adivina si la próxima carta será mayor o menor"
@@ -1642,6 +1646,79 @@
           {
             "title": "Puntos dobles",
             "body": "Encuentra la respuesta verdadera para ganar puntos. Y si alguien vota por TU farol, tú también ganas puntos — ¡cuanta más gente engañes, más ganas!"
+          }
+        ]
+      }
+    },
+    "espion": {
+      "page": {
+        "onlineOnly": "¿Quién es el Espía? se juega en línea: el lugar secreto y la identidad del espía pasan por el servidor, ¡discutid en voz alta!",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "lobby": {
+        "discussionMin": "Duración de la discusión",
+        "minutes": "min",
+        "roundsToWin": "Rondas a ganar",
+        "rounds": "rondas"
+      },
+      "game": {
+        "score": "Espía {spy} · Equipo {crew}",
+        "phaseDiscussion": "Discusión",
+        "yourLocation": "El lugar",
+        "youAreSpy": "Eres el ESPÍA 🕵️",
+        "spyHint": "Nadie sabe dónde estáis — ¡haz preguntas para adivinarlo sin que te descubran!",
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
+        "accuseButton": "¡Acuso a alguien!",
+        "accuseWho": "¿A quién acusas?",
+        "cancel": "Cancelar",
+        "guessButton": "Adivinar el lugar",
+        "guessWhich": "¿Cuál es el lugar?",
+        "accusation": {
+          "title": "¡{accuser} acusa a {target}!",
+          "support": "{count}/{needed} apoyos necesarios",
+          "supportButton": "Apoyo esta acusación",
+          "supported": "Apoyo registrado — esperando a los demás…",
+          "youAreAccused": "¡Te han acusado! Defiéndete en voz alta…"
+        },
+        "reveal": {
+          "location": "El lugar era: {location}",
+          "seeResult": "Ver el resultado",
+          "continue": "Siguiente ronda",
+          "outcome": {
+            "spyCaught": "¡{name} era el espía — descubierto!",
+            "accusationFailed": "Objetivo equivocado… ¡el espía escapa!",
+            "spyGuessedRight": "¡{name} adivinó el lugar!",
+            "spyGuessedWrong": "¡Respuesta equivocada del espía!",
+            "timeout": "Se acabó el tiempo — ¡{name} se libra!"
+          }
+        },
+        "victory": {
+          "crewWin": "¡El equipo desenmascaró al espía!",
+          "spyWin": "¡El espía gana!",
+          "score": "Espía {spy} · Equipo {crew}",
+          "replay": "Jugar de nuevo",
+          "rematchWaiting": "Esperando a los demás ({count}/{total})",
+          "backToMenu": "Volver al menú"
+        },
+        "countdown": {
+          "title": "¡Preparaos!",
+          "hint": "Descubre tu papel — la discusión empieza ya…"
+        },
+        "tvDiscussionHint": "La discusión está en pleno apogeo…"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Un lugar secreto, un espía",
+            "body": "Todos conocen el lugar... ¡excepto el espía, que no sabe nada! Haceos preguntas en voz alta para desenmascarar al intruso sin revelar el lugar."
+          },
+          {
+            "title": "Acusar o apoyar",
+            "body": "¿Crees haber encontrado al espía? ¡Acúsalo! Los demás tienen 15 segundos para apoyar — se necesita mayoría para revelar la verdad."
+          },
+          {
+            "title": "El espía puede adivinar",
+            "body": "Mientras tanto, el espía puede intentar adivinar el lugar en cualquier momento para ganar al instante. ¡Si se equivoca, el equipo gana la ronda!"
           }
         ]
       }
