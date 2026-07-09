@@ -3075,5 +3075,8 @@
     "close": "Close",
     "stepCounter": "Step {n}/{total}",
     "reopenAria": "How to play?"
+  },
+  "partyCanvas": {
+    "clear": "Clear"
   }
 }

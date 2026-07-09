@@ -3080,5 +3080,8 @@
     "close": "Fermer",
     "stepCounter": "Étape {n}/{total}",
     "reopenAria": "Comment jouer ?"
+  },
+  "partyCanvas": {
+    "clear": "Effacer"
   }
 }
