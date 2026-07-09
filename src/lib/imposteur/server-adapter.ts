@@ -2,6 +2,7 @@ import {
   createImposteurState,
   currentImposteurActorId,
   imposteurAlive,
+  maxImposteurCount,
   reduceImposteur,
   toImposteurClientView,
   toImposteurSpectatorView,
@@ -48,7 +49,8 @@ export function buildImposteurState(
   members: ImposteurRoomMember[],
   lang: string | null | undefined,
   botsCount: number = 0,
-  seed?: string | number
+  seed?: string | number,
+  imposteurCount?: number
 ): ImposteurState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
@@ -63,7 +65,8 @@ export function buildImposteurState(
   const wanted = Math.max(0, Math.min(botsCount, IMPOSTEUR_MAX_PLAYERS - players.length))
   for (let i = 0; i < wanted; i += 1) addBot()
   while (players.length < IMPOSTEUR_MIN_PLAYERS) addBot()
-  return createImposteurState(players, getImposteurPairs(lang), seed ?? randomSeed())
+  const count = imposteurCount ? Math.min(imposteurCount, maxImposteurCount(players.length)) : undefined
+  return createImposteurState(players, getImposteurPairs(lang), seed ?? randomSeed(), Date.now(), count)
 }
 
 export function serializeImposteurState(state: ImposteurState): string {
@@ -75,7 +78,12 @@ export function parseImposteurState(json: string | null): ImposteurState | null 
   try {
     const raw = JSON.parse(json) as ImposteurState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [], pendingVotes: raw.pendingVotes ?? {} }
+    return {
+      ...raw,
+      rematchVotes: raw.rematchVotes ?? [],
+      pendingVotes: raw.pendingVotes ?? {},
+      imposteurCount: raw.imposteurCount ?? raw.players.filter((p) => p.team === 'imposteur').length,
+    }
   } catch {
     return null
   }

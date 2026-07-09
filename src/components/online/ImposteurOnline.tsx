@@ -42,6 +42,7 @@ const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 
 export function ImposteurOnline() {
   const { user } = useAuth()
+  const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.imposteur.game')
   const tTutorial = useTranslations('games.imposteur.tutorial')
@@ -229,9 +230,11 @@ export function ImposteurOnline() {
           <h2 className="text-3xl font-black">
             {civilWon ? t('victory.civilWin') : t('victory.imposteurWin')}
           </h2>
-          <p className="text-sm text-white/60">
-            {civilWon ? t('victory.civilDrinks') : t('victory.imposteurDrinks')}
-          </p>
+          {!isSoft && (
+            <p className="text-sm text-white/60">
+              {civilWon ? t('victory.civilDrinks') : t('victory.imposteurDrinks')}
+            </p>
+          )}
         </motion.div>
 
         <XpGainBanner
@@ -445,9 +448,11 @@ export function ImposteurOnline() {
                 >
                   {reveal.team === 'imposteur' ? t('reveal.wasImposteur') : t('reveal.wasCivil')}
                 </p>
-                <p className="text-sm font-bold text-amber-200">
-                  {t('reveal.sips', { name: nameOf(reveal.eliminatedId), sips: reveal.sips })}
-                </p>
+                {!isSoft && (
+                  <p className="text-sm font-bold text-amber-200">
+                    {t('reveal.sips', { name: nameOf(reveal.eliminatedId), sips: reveal.sips })}
+                  </p>
+                )}
               </>
             ) : (
               <>

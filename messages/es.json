@@ -136,6 +136,11 @@
       "emptyTitle": "No se encontraron juegos",
       "emptyHint": "Pruebe con otra palabra clave."
     },
+    "ambianceMode": {
+      "label": "Ambiente",
+      "alcool": "Alcohol",
+      "soft": "Soft"
+    },
     "selectedPlayers": {
       "ready": "{count, plural, one {# jugador listo} other {# jugadores listos}}",
       "none": "No hay jugadores seleccionados",
@@ -457,16 +462,26 @@
         "totalGive": "Total: {count} sorbo(s) a dispensar.",
         "partialNothing": "⚡ Número(s) en un dado ({numbers}) pero no en total: nada para distribuir.",
         "nothing": "Nada para ti este tiro."
+      },
+      "online": {
+        "waitingSetup": "Cada uno ajusta sus apuestas y luego se declara listo.",
+        "myBets": "Mis apuestas",
+        "ready": "Estoy listo",
+        "readyDone": "Listo — esperando a los demás…",
+        "anyoneRolls": "Cualquiera puede lanzar los dados.",
+        "endGame": "Terminar la partida",
+        "finishedTitle": "Partida terminada",
+        "totalRolls": "{count} tiradas en total",
+        "replay": "Volver a jugar",
+        "rematchWaiting": "Esperando ({count}/{total})",
+        "backToMenu": "Volver al menú",
+        "waitingReturn": "{name} se fue — será reemplazado en {seconds}s si no vuelve"
       }
     },
     "catalog": {
       "1220": {
         "title": "1220",
         "description": "Un dado de 12 y un dado de 20: apuesta por la paridad, un rango de suma y dos números clave para beber o hacer beber."
-      },
-      "roulette-russe": {
-        "title": "Ruleta Rusa",
-        "description": "Un juego de azar donde cada jugador se turna para disparar. ¡Sobrevive o bebe!"
       },
       "monsieur-3": {
         "title": "Monsieur 3",
@@ -482,11 +497,13 @@
       },
       "toucher-coule": {
         "title": "Tocado y Hundido",
-        "description": "Hundir la flota en equipos, versión fiesta: ¡tocado bebes, hundido brindas!"
+        "description": "Hundir la flota en equipos, versión fiesta: ¡tocado bebes, hundido brindas!",
+        "softDescription": "Batalla naval en equipos: ¡localiza y hunde la flota rival!"
       },
       "menteur": {
         "title": "El Mentiroso",
-        "description": "Dados ocultos, apuestas y farol: ¡grita «¡Mentiroso!» en el momento justo o bebe!"
+        "description": "Dados ocultos, apuestas y farol: ¡grita «¡Mentiroso!» en el momento justo o bebe!",
+        "softDescription": "Dados ocultos, apuestas y farol: ¡grita «¡Mentiroso!» en el momento justo!"
       },
       "imposteur": {
         "title": "El Impostor",
@@ -550,30 +567,14 @@
       },
       "quiz": {
         "title": "El Gran Pillaveur",
-        "description": "El quiz de fiesta: ¡responde rápido y bien, o bebe! Móviles-pulsadores y podio final."
+        "description": "El quiz de fiesta: ¡responde rápido y bien, o bebe! Móviles-pulsadores y podio final.",
+        "softTitle": "Quiz Party",
+        "softDescription": "El quiz de fiesta: ¡responde rápido y bien! Móviles-pulsadores y podio final."
       },
       "loup-garou": {
         "title": "Hombre Lobo",
-        "description": "¡El clásico de las fiestas, versión bebida: lobos, vidente, debates y linchamientos que brindan!"
-      }
-    },
-    "roulette-russe": {
-      "title": "Ruleta Rusa",
-      "alive": "Envidiar",
-      "eliminated": "Eliminado",
-      "pull": "{name} tira",
-      "lastSurvivor": "¡{name} es el último superviviente!",
-      "recapTitle": "Resumen de sorbos:",
-      "sipsCount": "{count} sorbos",
-      "replay": "Repetición",
-      "home": "Bienvenido",
-      "config": {
-        "rules": [
-          "Cada jugador se turna para disparar.",
-          "Si el jugador sobrevive, bebe un trago.",
-          "Si el jugador pierde, queda eliminado.",
-          "El último jugador vivo gana el juego."
-        ]
+        "description": "¡El clásico de las fiestas, versión bebida: lobos, vidente, debates y linchamientos que brindan!",
+        "softDescription": "¡El clásico de las fiestas: lobos, vidente, debates y linchamientos!"
       }
     },
     "ballon-surprise": {
@@ -615,6 +616,18 @@
         "doubleNoir": "doble negro",
         "purple": "Purple",
         "doublePurple": "Doble Purple"
+      },
+      "online": {
+        "yourTurn": "Te toca apostar",
+        "waitingBet": "{name} está eligiendo una apuesta…",
+        "waitingDecision": "Esperando a {name}…",
+        "endGame": "Terminar la partida",
+        "finishedTitle": "Partida terminada",
+        "totalCards": "{count} cartas sacadas en total",
+        "replay": "Jugar de nuevo",
+        "rematchWaiting": "Esperando ({count}/{total})",
+        "backToMenu": "Volver al menú",
+        "waitingReturn": "{name} se ha ido — reemplazo en {seconds}s si no vuelve"
       }
     },
     "roue-des-gorgees": {
@@ -1405,6 +1418,10 @@
           "3v3": {
             "label": "3 vs 3",
             "desc": "2 barcos cada uno · cuadrícula 12×12"
+          },
+          "4v4": {
+            "label": "4 vs 4",
+            "desc": "2 barcos cada uno · cuadrícula 14×14"
           }
         },
         "teams": "Equipos",
@@ -1412,7 +1429,10 @@
         "teamB": "Equipo B",
         "joinTeam": "Unirse",
         "botSlot": "Bot 🤖",
-        "botsFill": "Los asientos vacíos serán ocupados por bots."
+        "botsFill": "Los asientos vacíos serán ocupados por bots.",
+        "variants": "Variantes",
+        "powerups": "Bomba (disparo 2×2)",
+        "powerupsHint": "Cada jugador recibe una bomba de un solo uso: un disparo que golpea un cuadrado de 2×2."
       },
       "game": {
         "title": "Tocado y Hundido",
@@ -1432,8 +1452,14 @@
         "enemyWaters": "Aguas enemigas",
         "yourFleet": "Tu flota",
         "feedMiss": "💦 ¡Agua! {shooter} bebe 1 sorbo",
+        "feedMissSoft": "💦 ¡Agua!",
         "feedHit": "🎯 ¡Tocado! El barco de {owner} hace agua — 1 sorbo",
+        "feedHitSoft": "🎯 ¡Tocado! El barco de {owner} hace agua",
         "feedSunk": "💥 ¡HUNDIDO! {owner} brinda: +3 sorbos",
+        "feedSunkSoft": "💥 ¡HUNDIDO!",
+        "feedBomb": "💣 ¡Bomba! {hits}/{total} casillas tocadas",
+        "bombButton": "Bomba",
+        "bombHint": "Apunta a la esquina superior izquierda: la bomba golpea un cuadrado de 4 casillas.",
         "team": "Equipo {team}",
         "victoryTitle": "¡Victoria del equipo {team}!",
         "defeatDrinks": "El equipo {team} termina sus copas: +3 sorbos cada uno 🍻",
@@ -1475,6 +1501,13 @@
         "onlineOnly": "El Mentiroso se juega en línea: cada jugador esconde sus dados bajo el cubilete, ¡imposible en una sola pantalla!",
         "switchOnline": "Cambiar al modo en línea"
       },
+      "lobby": {
+        "variants": "Variantes",
+        "palifico": "Palifico",
+        "palificoHint": "1 dado restante: los 1 dejan de ser comodines, cara bloqueada",
+        "calza": "Calza",
+        "calzaHint": "Apuesta la cantidad exacta para recuperar un dado"
+      },
       "game": {
         "round": "Ronda {n}",
         "diceOnTable": "{n} dados en la mesa",
@@ -1485,6 +1518,8 @@
         "bidBy": "de {name}",
         "noBid": "Sin apuesta — ¡abre la ronda!",
         "pillaveurHint": "Los 1 son comodines: cuentan para todas las caras.",
+        "palificoBadge": "🔒 Ronda Palifico: sin comodines, cara bloqueada en {face}",
+        "palificoBadgeOpen": "🔒 Ronda Palifico: sin comodines, la primera apuesta fija la cara",
         "yourTurn": "Te toca: sube la apuesta o grita ¡MENTIROSO!",
         "turnOf": "Turno de {name}…",
         "yourDice": "Tus dados",
@@ -1492,12 +1527,18 @@
         "showDice": "Ver mis dados",
         "bid": "Apostar",
         "dudo": "¡MENTIROSO!",
+        "calza": "¡CALZA!",
         "illegalBid": "Apuesta demasiado baja: sube la cantidad o la cara.",
         "reveal": {
           "title": "¡Cubiletes arriba!",
           "bidHeld": "La apuesta aguantó: {count} dados (anunciados {qty} ×)",
           "bidFailed": "Mentiroso al descubierto: solo {count} dados (anunciados {qty} ×)",
           "loser": "{name} pierde un dado y bebe {sips} trago{sips, plural, one {} other {s}} 🍺",
+          "loserSoft": "{name} pierde un dado",
+          "calzaWon": "🎯 ¡Calza acertado: {name} recupera un dado!",
+          "calzaWonCapped": "🎯 Calza acertado: {name} ya tiene el máximo de dados, nada que recuperar.",
+          "calzaLost": "{name} intentó Calza y falló: pierde un dado y bebe {sips} trago{sips, plural, one {} other {s}} 🍺",
+          "calzaLostSoft": "{name} intentó Calza y falló: pierde un dado",
           "eliminatedMsg": "💀 {name} se queda sin dados — ¡de un trago, eliminado!",
           "continue": "Siguiente ronda"
         },
@@ -1535,6 +1576,11 @@
       "page": {
         "onlineOnly": "El Impostor se juega en línea: cada uno recibe una palabra secreta en SU móvil, ¡imposible en una sola pantalla!",
         "switchOnline": "Cambiar al modo en línea"
+      },
+      "lobby": {
+        "count": "Número de impostores",
+        "imposteurSingular": "impostor",
+        "imposteursPlural": "impostores"
       },
       "game": {
         "round": "Ronda {n}",
@@ -2046,7 +2092,8 @@
       "defis": [
         {
           "text": "Haz 10 flexiones",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "contar un chiste",
@@ -2062,11 +2109,13 @@
         },
         {
           "text": "Haz 10 sentadillas",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Haz 30 segundos de entrenamiento central.",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Mimica una película sin hablar",
@@ -2096,7 +2145,8 @@
         },
         {
           "text": "Hacer el pino contra una pared",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Adivina una palabra sin hablar",
@@ -2108,7 +2158,8 @@
         },
         {
           "text": "Haz 5 saltos de rana",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "No toques tu teléfono durante 3 rondas",
@@ -2116,6 +2167,78 @@
         },
         {
           "text": "Bebe sin usar las manos",
+          "drinks": 2
+        },
+        {
+          "text": "Habla como un robot durante 2 turnos",
+          "drinks": 2
+        },
+        {
+          "text": "Inventa una excusa mala por llegar tarde",
+          "drinks": 2
+        },
+        {
+          "text": "Haz que adivinen una película solo con mímica de manos",
+          "drinks": 2
+        },
+        {
+          "text": "Haz playback con la próxima canción que suene",
+          "drinks": 2
+        },
+        {
+          "text": "Cuenta tu recuerdo más vergonzoso del colegio",
+          "drinks": 3
+        },
+        {
+          "text": "Habla susurrando durante 2 turnos",
+          "drinks": 2
+        },
+        {
+          "text": "Imita la voz de otro jugador",
+          "drinks": 2
+        },
+        {
+          "text": "Recita los días de la semana al revés",
+          "drinks": 2
+        },
+        {
+          "text": "Haz un cumplido sincero a cada jugador",
+          "drinks": 2
+        },
+        {
+          "text": "Cuenta un chiste en 30 segundos",
+          "drinks": 2
+        },
+        {
+          "text": "Encuentra una palabra que rime con el nombre del jugador a tu izquierda",
+          "drinks": 2
+        },
+        {
+          "text": "Describe tu peor cita sin decir el nombre",
+          "drinks": 3
+        },
+        {
+          "text": "Habla solo con preguntas durante 2 turnos",
+          "drinks": 2
+        },
+        {
+          "text": "Da 3 razones por las que eres el/la mejor de esta mesa",
+          "drinks": 2
+        },
+        {
+          "text": "Improvisa un anuncio de un objeto al azar en la sala",
+          "drinks": 2
+        },
+        {
+          "text": "Nombra 5 marcas de cerveza en 10 segundos",
+          "drinks": 2
+        },
+        {
+          "text": "Cuenta tu sueño más raro",
+          "drinks": 2
+        },
+        {
+          "text": "Haz que adivinen tu trabajo soñado con una frase misteriosa",
           "drinks": 2
         }
       ],
@@ -2482,6 +2605,7 @@
         "answerSent": "Respuesta enviada — esperando a los demás… ⚡",
         "correct": "¡Correcto: +{points} puntos!",
         "wrong": "Fallaste… {sips} tragos 🍺",
+        "wrongSoft": "Fallaste…",
         "skipReveal": "Siguiente pregunta →",
         "victoryTitle": "¡{name} gana el quiz!",
         "lastDrinks": "{name} termina su copa 🍻",
@@ -2593,6 +2717,7 @@
         "witchNone": "No hacer nada",
         "dawnNobody": "¡Nadie murió esta noche! 🎉",
         "dawnDeath": "💀 {name} ha muerto — era {role} (+3 🍺)",
+        "dawnDeathSoft": "💀 {name} ha muerto — era {role}",
         "hunterPrompt": "🏹 Último aliento: ¡llévate a alguien!",
         "hunterWaiting": "{name} carga su rifle…",
         "debatePrompt": "🗣️ Debatid por voz: ¿quién es el lobo?",
@@ -2683,8 +2808,6 @@
       "gamesPlinko": "Partes Plinko",
       "winsMonsieur3": "Victorias Monsieur 3",
       "gamesMonsieur3": "Partes Monsieur 3",
-      "winsRouletteRusse": "La ruleta rusa gana",
-      "gamesRouletteRusse": "Juegos de ruleta rusa",
       "winsBallonSurprise": "Victorias sorpresa en globos",
       "gamesBallonSurprise": "Fiestas Sorpresa con Globos",
       "winsPetitsPoints": "Victorias de pequeños puntos",

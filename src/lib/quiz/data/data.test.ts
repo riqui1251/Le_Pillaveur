@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { getQuizQuestions } from './index'
 
-/** Garde-fou du contenu écrit à la main (4 langues × 150 questions). */
+/** Garde-fou du contenu écrit à la main (4 langues × 786 questions). */
 describe('quiz data', () => {
   for (const lang of ['fr', 'en', 'es', 'it'] as const) {
-    it(`${lang} : 150 questions valides (ids uniques, 4 choix, réponse 0-3)`, () => {
+    it(`${lang} : 786 questions valides (ids uniques, 4 choix, réponse 0-3)`, () => {
       const pool = getQuizQuestions(lang)
-      expect(pool.length).toBe(150)
+      expect(pool.length).toBe(786)
       expect(new Set(pool.map((q) => q.id)).size).toBe(pool.length)
       for (const q of pool) {
         expect(q.id.startsWith(`${lang}-`)).toBe(true)
@@ -17,10 +17,13 @@ describe('quiz data', () => {
         expect([1, 2, 3]).toContain(q.diff)
         expect(q.q.length).toBeGreaterThan(5)
       }
-      // 6 catégories × 25.
+      // 6 catégories × 131.
       const byCat = new Map<string, number>()
       for (const q of pool) byCat.set(q.cat, (byCat.get(q.cat) ?? 0) + 1)
-      expect([...byCat.values()]).toEqual([25, 25, 25, 25, 25, 25])
+      expect([...byCat.values()]).toEqual([131, 131, 131, 131, 131, 131])
+      // Renfort difficulté 3 : au moins 50 questions difficiles par langue.
+      const hardCount = pool.filter((q) => q.diff === 3).length
+      expect(hardCount).toBeGreaterThanOrEqual(50)
     })
   }
 

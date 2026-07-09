@@ -48,6 +48,7 @@ function teamAccent(team: TeamId): string {
 
 export function ToucherCouleOnline() {
   const { user } = useAuth()
+  const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.toucher-coule.game')
   const tTutorial = useTranslations('games.toucher-coule.tutorial')
@@ -59,6 +60,8 @@ export function ToucherCouleOnline() {
   const [placedShips, setPlacedShips] = useState<number[][]>([])
   const [selectedShip, setSelectedShip] = useState(0)
   const [horizontal, setHorizontal] = useState(true)
+  // Bombe (power-up) armée : le prochain tir touche un carré 2×2 au lieu d'une case.
+  const [bombArmed, setBombArmed] = useState(false)
 
   useEffect(() => {
     const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
@@ -123,6 +126,7 @@ export function ToucherCouleOnline() {
   // Début de tour côté client : remis à zéro à chaque écriture d'état serveur.
   // Sert de base aux comptes à rebours AFK (l'horloge d'autorité reste le serveur).
   const stateVersion = room?.stateVersion ?? -1
+  useEffect(() => { setBombArmed(false) }, [stateVersion])
   const turnStartRef = useRef({ version: stateVersion, at: Date.now() })
   if (turnStartRef.current.version !== stateVersion) {
     turnStartRef.current = { version: stateVersion, at: Date.now() }
@@ -309,19 +313,39 @@ export function ToucherCouleOnline() {
     }
   }
 
+  /** Vrai si le carré 2×2 ancré sur `cell` tient dans la grille et est entièrement vierge. */
+  const bombFits = (cell: number) => {
+    const row = Math.floor(cell / size)
+    const col = cell % size
+    if (row >= size - 1 || col >= size - 1) return false
+    const cells = [cell, cell + 1, cell + size, cell + size + 1]
+    return cells.every((c) => enemyShots[c] === undefined)
+  }
+
   const fire = (cell: number) => {
     if (!isMyTurn || busy || finished) return
+    if (bombArmed) {
+      if (!bombFits(cell)) return
+      setBombArmed(false)
+      void sendAction({ action: 'fire', cell, bomb: true })
+      return
+    }
     if (enemyShots[cell] !== undefined) return
     void sendAction({ action: 'fire', cell })
   }
 
   const lastShot = view.lastShot
   const feedMessage = lastShot
-    ? lastShot.result === 'miss'
-      ? t('feedMiss', { shooter: nameOf(lastShot.shooterId) })
-      : lastShot.result === 'hit'
-        ? t('feedHit', { owner: nameOf(lastShot.shipOwnerId) })
-        : t('feedSunk', { owner: nameOf(lastShot.shipOwnerId) })
+    ? lastShot.bombResults
+      ? t('feedBomb', {
+          hits: lastShot.bombResults.filter((r) => r.result !== 'miss').length,
+          total: lastShot.bombResults.length,
+        })
+      : lastShot.result === 'miss'
+        ? t(isSoft ? 'feedMissSoft' : 'feedMiss', { shooter: nameOf(lastShot.shooterId) })
+        : lastShot.result === 'hit'
+          ? t(isSoft ? 'feedHitSoft' : 'feedHit', { owner: nameOf(lastShot.shipOwnerId) })
+          : t(isSoft ? 'feedSunkSoft' : 'feedSunk', { owner: nameOf(lastShot.shipOwnerId) })
     : null
 
   // Carré garanti : ratio 1:1 sur le CONTENEUR + lignes en 1fr (l'aspect-ratio
@@ -451,11 +475,13 @@ export function ToucherCouleOnline() {
               transition={{ duration: 0.2 }}
               className={cn(
                 'mb-3 rounded-xl border px-3 py-2 text-center text-xs font-semibold sm:text-sm',
-                lastShot?.result === 'miss'
-                  ? 'border-sky-400/30 bg-sky-500/10 text-sky-100'
-                  : lastShot?.result === 'hit'
-                    ? 'border-amber-400/35 bg-amber-500/15 text-amber-100'
-                    : 'border-red-400/40 bg-red-500/15 text-red-100'
+                lastShot?.bombResults
+                  ? 'border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-100'
+                  : lastShot?.result === 'miss'
+                    ? 'border-sky-400/30 bg-sky-500/10 text-sky-100'
+                    : lastShot?.result === 'hit'
+                      ? 'border-amber-400/35 bg-amber-500/15 text-amber-100'
+                      : 'border-red-400/40 bg-red-500/15 text-red-100'
               )}
             >
               {feedMessage}
@@ -574,14 +600,31 @@ export function ToucherCouleOnline() {
             {/* Grille ennemie — affichée quand mon équipe est au tir */}
             {showEnemyBoard && (
               <div>
-                <div className="mb-1.5 flex items-center justify-between px-1">
+                <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
                   <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-rose-300/80">
                     <Crosshair className="h-3.5 w-3.5" />
                     {t('enemyWaters')}
                   </p>
-                  <span className={cn('text-[11px] font-bold', teamAccent(enemy))}>
-                    {t('team', { team: TEAM_LABEL[enemy] })}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {me?.hasBomb && isMyTurn && !finished && (
+                      <button
+                        type="button"
+                        onClick={() => setBombArmed((v) => !v)}
+                        title={t('bombHint')}
+                        className={cn(
+                          'rounded-full border px-2 py-0.5 text-[11px] font-bold transition-colors',
+                          bombArmed
+                            ? 'border-fuchsia-400 bg-fuchsia-500/25 text-fuchsia-100'
+                            : 'border-white/15 bg-white/10 text-white/70 hover:bg-white/20'
+                        )}
+                      >
+                        💣 {t('bombButton')}
+                      </button>
+                    )}
+                    <span className={cn('text-[11px] font-bold', teamAccent(enemy))}>
+                      {t('team', { team: TEAM_LABEL[enemy] })}
+                    </span>
+                  </div>
                 </div>
                 <div
                   className={cn(
@@ -609,7 +652,14 @@ export function ToucherCouleOnline() {
                                 ? 'bg-red-500/90'
                                 : shot === 'miss'
                                   ? 'bg-sky-900/70'
-                                  : cn('bg-white/[0.07]', isMyTurn && !finished && 'hover:bg-emerald-400/40 active:bg-emerald-400/60')
+                                  : cn(
+                                      'bg-white/[0.07]',
+                                      isMyTurn &&
+                                        !finished &&
+                                        (bombArmed
+                                          ? 'hover:bg-fuchsia-400/40 active:bg-fuchsia-400/60'
+                                          : 'hover:bg-emerald-400/40 active:bg-emerald-400/60')
+                                    )
                           )}
                         >
                           {sunk ? '💀' : shot === 'hit' ? '💥' : shot === 'miss' ? '·' : ''}
@@ -699,7 +749,10 @@ export function ToucherCouleOnline() {
                           <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                           {p.id === user.id && ' (vous)'}
                         </span>
-                        <span className="shrink-0 text-white/45">{p.drinks}🍺</span>
+                        <span className="flex shrink-0 items-center gap-1 text-white/45">
+                          {p.hasBomb && <span aria-hidden title={t('bombButton')}>💣</span>}
+                          {!isSoft && <>{p.drinks}🍺</>}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -762,9 +815,11 @@ export function ToucherCouleOnline() {
                     <h2 className="text-2xl font-bold text-white">
                       {t('victoryTitle', { team: TEAM_LABEL[winner] })}
                     </h2>
-                    <p className="mt-1 text-sm text-white/50">
-                      {t('defeatDrinks', { team: TEAM_LABEL[otherTeam(winner)] })}
-                    </p>
+                    {!isSoft && (
+                      <p className="mt-1 text-sm text-white/50">
+                        {t('defeatDrinks', { team: TEAM_LABEL[otherTeam(winner)] })}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -792,7 +847,11 @@ export function ToucherCouleOnline() {
                     {t('finalBoard')}
                   </p>
                   {[...view.players]
-                    .sort((a, b) => b.drinks - a.drinks)
+                    .sort((a, b) =>
+                      isSoft
+                        ? (a.team === winner ? 0 : 1) - (b.team === winner ? 0 : 1) || a.name.localeCompare(b.name)
+                        : b.drinks - a.drinks
+                    )
                     .map((p) => (
                       <div
                         key={p.id}
@@ -812,7 +871,7 @@ export function ToucherCouleOnline() {
                           </span>
                           {p.team === winner && <span aria-hidden>🏆</span>}
                         </div>
-                        <span className="shrink-0 text-xs text-white/50">{p.drinks}🍺</span>
+                        {!isSoft && <span className="shrink-0 text-xs text-white/50">{p.drinks}🍺</span>}
                       </div>
                     ))}
                 </div>

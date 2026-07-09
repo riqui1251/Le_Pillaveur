@@ -29,6 +29,7 @@ export type AuthUser = {
   role: 'user' | 'moderator' | 'admin' | 'superadmin' | 'fondateur'
   locale: string
   playMode: 'local' | 'online'
+  ambianceMode: 'alcool' | 'soft'
 }
 
 type AuthContextValue = {
@@ -39,6 +40,7 @@ type AuthContextValue = {
   logout: () => Promise<void>
   refresh: () => Promise<void>
   setPlayMode: (mode: 'local' | 'online') => Promise<string | null>
+  setAmbianceMode: (mode: 'alcool' | 'soft') => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -122,9 +124,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null
   }, [])
 
+  const setAmbianceMode = useCallback(async (mode: 'alcool' | 'soft') => {
+    const res = await fetch('/api/auth/ambiance', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ mode }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) return data.error ?? 'Erreur'
+    setUser((prev) => (prev ? { ...prev, ambianceMode: mode } : prev))
+    return null
+  }, [])
+
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, refresh, setPlayMode }),
-    [user, loading, login, register, logout, refresh, setPlayMode]
+    () => ({ user, loading, login, register, logout, refresh, setPlayMode, setAmbianceMode }),
+    [user, loading, login, register, logout, refresh, setPlayMode, setAmbianceMode]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -138,6 +153,7 @@ const SSR_AUTH_FALLBACK: AuthContextValue = {
   logout: async () => {},
   refresh: async () => {},
   setPlayMode: async () => 'Non disponible',
+  setAmbianceMode: async () => 'Non disponible',
 }
 
 export function useAuth() {

@@ -5,6 +5,7 @@ import {
   imposteurAlive,
   imposteurCountFor,
   isValidClue,
+  maxImposteurCount,
   reduceImposteur,
   toImposteurClientView,
   toImposteurSpectatorView,
@@ -91,6 +92,64 @@ describe('createImposteurState', () => {
     expect(s.phase).toBe('clue')
     expect(s.phaseEndsAt).toBe(T0 + IMPOSTEUR_CLUE_MS)
     expect(s.clueOrder).toHaveLength(4)
+  })
+})
+
+describe('nombre d’imposteurs configurable', () => {
+  it('maxImposteurCount : toujours minoritaires, plafonné à 3', () => {
+    expect(maxImposteurCount(3)).toBe(1)
+    expect(maxImposteurCount(4)).toBe(1)
+    expect(maxImposteurCount(5)).toBe(2)
+    expect(maxImposteurCount(6)).toBe(2)
+    expect(maxImposteurCount(7)).toBe(3)
+    expect(maxImposteurCount(10)).toBe(3) // plafond, malgré floor((10-1)/2)=4
+  })
+
+  it('createImposteurState honore un imposteurCount explicite', () => {
+    const s = createImposteurState(Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: `P${i}` })), PAIRS, 1, T0, 3)
+    expect(s.imposteurCount).toBe(3)
+    expect(s.players.filter((p) => p.team === 'imposteur')).toHaveLength(3)
+  })
+
+  it('refuse un imposteurCount hors bornes', () => {
+    const seven = Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    expect(() => createImposteurState(seven, PAIRS, 1, T0, 0)).toThrow('INVALID_IMPOSTEUR_COUNT')
+    expect(() => createImposteurState(seven, PAIRS, 1, T0, 4)).toThrow('INVALID_IMPOSTEUR_COUNT') // max(7)=3
+    const four = Array.from({ length: 4 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    expect(() => createImposteurState(four, PAIRS, 1, T0, 2)).toThrow('INVALID_IMPOSTEUR_COUNT') // max(4)=1
+  })
+
+  it('sans imposteurCount, retombe sur le défaut historique (imposteurCountFor)', () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    const s = createImposteurState(six, PAIRS, 1, T0)
+    expect(s.imposteurCount).toBe(imposteurCountFor(6))
+  })
+
+  it('victoire imposteur généralisée : parité déclenche la victoire pour N>1 imposteurs', () => {
+    // 5 joueurs, 2 imposteurs (max pour 5) : à 4 vivants (2 imp + 2 civils),
+    // la parité est déjà atteinte — l'ancien seuil fixe (alive<=3) ne l'aurait pas détecté.
+    const raw = createImposteurState(
+      Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, name: `P${i}` })),
+      PAIRS,
+      'parity',
+      T0 - IMPOSTEUR_COUNTDOWN_MS,
+      2
+    )
+    const s0 = reduceImposteur(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+    expect(s0.imposteurCount).toBe(2)
+    const civils = s0.players.filter((p) => p.team === 'civil')
+    expect(civils).toHaveLength(3)
+
+    // Élimine un civil → 4 vivants (2 imposteurs + 2 civils) = parité.
+    let s = clueAll(s0, T0)
+    for (const p of imposteurAlive(s)) {
+      const targetId = p.id === civils[0].id ? civils[1].id : civils[0].id
+      s = reduceImposteur(s, { type: 'VOTE', playerId: p.id, targetId, now: T0 })
+    }
+    expect(s.lastReveal?.eliminatedId).toBe(civils[0].id)
+    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: civils[0].id, now: T0 })
+    expect(done.phase).toBe('finished')
+    expect(done.winnerTeam).toBe('imposteur')
   })
 })
 

@@ -146,6 +146,11 @@
       "local": "Local",
       "online": "Online"
     },
+    "ambianceMode": {
+      "label": "Ambiance",
+      "alcool": "Alcohol",
+      "soft": "Soft"
+    },
     "selectedPlayers": {
       "ready": "{count, plural, one {# player ready} other {# players ready}}",
       "none": "No players selected",
@@ -467,16 +472,26 @@
         "totalGive": "Total: {count} sip(s) to dispense.",
         "partialNothing": "⚡ Number(s) on a die ({numbers}) but not in total — nothing to distribute.",
         "nothing": "Nothing for you this throw."
+      },
+      "online": {
+        "waitingSetup": "Everyone sets their bets, then marks themselves ready.",
+        "myBets": "My bets",
+        "ready": "I'm ready",
+        "readyDone": "Ready — waiting for the others…",
+        "anyoneRolls": "Anyone can roll the dice.",
+        "endGame": "End game",
+        "finishedTitle": "Game over",
+        "totalRolls": "{count} rolls in total",
+        "replay": "Play again",
+        "rematchWaiting": "Waiting ({count}/{total})",
+        "backToMenu": "Back to menu",
+        "waitingReturn": "{name} left — replaced in {seconds}s if they don't return"
       }
     },
     "catalog": {
       "1220": {
         "title": "1220",
         "description": "A 12 die and a 20 die: bet on parity, a sum range, and two key numbers to drink or make people drink."
-      },
-      "roulette-russe": {
-        "title": "Russian Roulette",
-        "description": "A game of chance where each player takes a turn. Survive or drink!"
       },
       "monsieur-3": {
         "title": "Monsieur 3",
@@ -492,11 +507,13 @@
       },
       "toucher-coule": {
         "title": "Hit & Sunk",
-        "description": "Team battleship, drinking edition: get hit, drink — get sunk, drink up!"
+        "description": "Team battleship, drinking edition: get hit, drink — get sunk, drink up!",
+        "softDescription": "Team battleship: spot and sink the enemy fleet!"
       },
       "menteur": {
         "title": "Liar's Dice",
-        "description": "Hidden dice, bids and bluff: shout \"Liar!\" at the right moment or drink up!"
+        "description": "Hidden dice, bids and bluff: shout \"Liar!\" at the right moment or drink up!",
+        "softDescription": "Hidden dice, bids and bluff: shout \"Liar!\" at the right moment!"
       },
       "imposteur": {
         "title": "The Impostor",
@@ -560,30 +577,14 @@
       },
       "quiz": {
         "title": "The Big Pillaveur Quiz",
-        "description": "The party quiz: answer fast and right, or drink! Phone buzzers and a final podium."
+        "description": "The party quiz: answer fast and right, or drink! Phone buzzers and a final podium.",
+        "softTitle": "Quiz Party",
+        "softDescription": "The party quiz: answer fast and right! Phone buzzers and a final podium."
       },
       "loup-garou": {
         "title": "Werewolf",
-        "description": "The party classic, drinking edition: wolves, seer, debates and lynchings that drink!"
-      }
-    },
-    "roulette-russe": {
-      "title": "Russian Roulette",
-      "alive": "Envy",
-      "eliminated": "Eliminated",
-      "pull": "{name} pulls",
-      "lastSurvivor": "{name} is the last survivor!",
-      "recapTitle": "Sip Summary:",
-      "sipsCount": "{count} sips",
-      "replay": "Replay",
-      "home": "Welcome",
-      "config": {
-        "rules": [
-          "Each player takes turns shooting",
-          "If the player survives, he drinks a shot",
-          "If the player loses, he is eliminated",
-          "The last player alive wins the game"
-        ]
+        "description": "The party classic, drinking edition: wolves, seer, debates and lynchings that drink!",
+        "softDescription": "The party classic: wolves, seer, debates and lynchings!"
       }
     },
     "ballon-surprise": {
@@ -625,6 +626,18 @@
         "doubleNoir": "Double black",
         "purple": "Purple",
         "doublePurple": "Double Purple"
+      },
+      "online": {
+        "yourTurn": "Your turn to bet",
+        "waitingBet": "{name} is choosing a bet…",
+        "waitingDecision": "Waiting for {name}…",
+        "endGame": "End the game",
+        "finishedTitle": "Game over",
+        "totalCards": "{count} cards drawn in total",
+        "replay": "Play again",
+        "rematchWaiting": "Waiting ({count}/{total})",
+        "backToMenu": "Back to menu",
+        "waitingReturn": "{name} left — replaced in {seconds}s if not back"
       }
     },
     "roue-des-gorgees": {
@@ -1415,6 +1428,10 @@
           "3v3": {
             "label": "3 vs 3",
             "desc": "2 ships each · 12×12 grid"
+          },
+          "4v4": {
+            "label": "4 vs 4",
+            "desc": "2 ships each · 14×14 grid"
           }
         },
         "teams": "Teams",
@@ -1422,7 +1439,10 @@
         "teamB": "Team B",
         "joinTeam": "Join",
         "botSlot": "Bot 🤖",
-        "botsFill": "Empty seats will be filled by bots."
+        "botsFill": "Empty seats will be filled by bots.",
+        "variants": "Variants",
+        "powerups": "Bomb (2×2 shot)",
+        "powerupsHint": "Each player gets one single-use bomb: a shot that hits a 2×2 square."
       },
       "game": {
         "title": "Hit & Sunk",
@@ -1442,8 +1462,14 @@
         "enemyWaters": "Enemy waters",
         "yourFleet": "Your fleet",
         "feedMiss": "💦 Splash! {shooter} drinks 1 sip",
+        "feedMissSoft": "💦 Splash!",
         "feedHit": "🎯 Hit! {owner}'s ship is taking water — 1 sip",
+        "feedHitSoft": "🎯 Hit! {owner}'s ship is taking water",
         "feedSunk": "💥 SUNK! {owner} drinks up: +3 sips",
+        "feedSunkSoft": "💥 SUNK!",
+        "feedBomb": "💣 Bomb! {hits}/{total} cells hit",
+        "bombButton": "Bomb",
+        "bombHint": "Aim the top-left corner: the bomb hits a 4-cell square.",
         "team": "Team {team}",
         "victoryTitle": "Team {team} wins!",
         "defeatDrinks": "Team {team} finishes their drinks: +3 sips each 🍻",
@@ -1485,6 +1511,13 @@
         "onlineOnly": "Liar's Dice is played online: every player hides their dice under a cup, impossible on a single screen!",
         "switchOnline": "Switch to online mode"
       },
+      "lobby": {
+        "variants": "Variants",
+        "palifico": "Palifico",
+        "palificoHint": "1 die left: ones lose their wild status, face locked",
+        "calza": "Calza",
+        "calzaHint": "Bet the exact quantity to win back a die"
+      },
       "game": {
         "round": "Round {n}",
         "diceOnTable": "{n} dice on the table",
@@ -1495,6 +1528,8 @@
         "bidBy": "by {name}",
         "noBid": "No bid yet — open the round!",
         "pillaveurHint": "Ones are wild: they count for every face.",
+        "palificoBadge": "🔒 Palifico round: no wilds, face locked on {face}",
+        "palificoBadgeOpen": "🔒 Palifico round: no wilds, the first bid sets the face",
         "yourTurn": "Your move: raise the bid or shout LIAR!",
         "turnOf": "{name}'s turn…",
         "yourDice": "Your dice",
@@ -1502,12 +1537,18 @@
         "showDice": "Show my dice",
         "bid": "Bid",
         "dudo": "LIAR!",
+        "calza": "CALZA!",
         "illegalBid": "Bid too low: raise the quantity or the face.",
         "reveal": {
           "title": "Cups up!",
           "bidHeld": "The bid held: {count} dice (called {qty} ×)",
           "bidFailed": "Liar exposed: only {count} dice (called {qty} ×)",
           "loser": "{name} loses a die and drinks {sips} sip{sips, plural, one {} other {s}} 🍺",
+          "loserSoft": "{name} loses a die",
+          "calzaWon": "🎯 Calza landed: {name} wins back a die!",
+          "calzaWonCapped": "🎯 Calza landed: {name} already has the max dice, nothing to win back.",
+          "calzaLost": "{name} tried Calza and missed: loses a die and drinks {sips} sip{sips, plural, one {} other {s}} 🍺",
+          "calzaLostSoft": "{name} tried Calza and missed: loses a die",
           "eliminatedMsg": "💀 {name} has no dice left — bottoms up, eliminated!",
           "continue": "Next round"
         },
@@ -1545,6 +1586,11 @@
       "page": {
         "onlineOnly": "The Impostor is played online: everyone gets a secret word on THEIR phone, impossible on a single screen!",
         "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "count": "Number of impostors",
+        "imposteurSingular": "impostor",
+        "imposteursPlural": "impostors"
       },
       "game": {
         "round": "Round {n}",
@@ -2056,7 +2102,8 @@
       "defis": [
         {
           "text": "Do 10 push-ups",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Tell a joke",
@@ -2072,11 +2119,13 @@
         },
         {
           "text": "Do 10 squats",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Do 30 seconds of core training",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Mime a movie without speaking",
@@ -2106,7 +2155,8 @@
         },
         {
           "text": "Do a handstand against a wall",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Guess a word without speaking",
@@ -2118,7 +2168,8 @@
         },
         {
           "text": "Do 5 frog jumps",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "Don't touch your phone for 3 rounds",
@@ -2126,6 +2177,78 @@
         },
         {
           "text": "Drink without using your hands",
+          "drinks": 2
+        },
+        {
+          "text": "Talk like a robot for 2 rounds",
+          "drinks": 2
+        },
+        {
+          "text": "Make up a lame excuse for being late",
+          "drinks": 2
+        },
+        {
+          "text": "Have someone guess a movie by miming with your hands only",
+          "drinks": 2
+        },
+        {
+          "text": "Lip-sync to the next song that plays",
+          "drinks": 2
+        },
+        {
+          "text": "Tell your most embarrassing school memory",
+          "drinks": 3
+        },
+        {
+          "text": "Whisper for 2 rounds",
+          "drinks": 2
+        },
+        {
+          "text": "Imitate another player's voice",
+          "drinks": 2
+        },
+        {
+          "text": "Recite the days of the week backwards",
+          "drinks": 2
+        },
+        {
+          "text": "Give a sincere compliment to every player",
+          "drinks": 2
+        },
+        {
+          "text": "Tell a joke against a 30-second timer",
+          "drinks": 2
+        },
+        {
+          "text": "Find a word that rhymes with the name of the player to your left",
+          "drinks": 2
+        },
+        {
+          "text": "Describe your worst date without giving a name",
+          "drinks": 3
+        },
+        {
+          "text": "Speak only in questions for 2 rounds",
+          "drinks": 2
+        },
+        {
+          "text": "Give 3 reasons why you're the best person at this table",
+          "drinks": 2
+        },
+        {
+          "text": "Improvise an ad for a random object in the room",
+          "drinks": 2
+        },
+        {
+          "text": "Name 5 beer brands in 10 seconds",
+          "drinks": 2
+        },
+        {
+          "text": "Tell your weirdest dream",
+          "drinks": 2
+        },
+        {
+          "text": "Have someone guess your dream job with one mysterious sentence",
           "drinks": 2
         }
       ],
@@ -2492,6 +2615,7 @@
         "answerSent": "Answer sent — waiting for the others… ⚡",
         "correct": "Correct: +{points} points!",
         "wrong": "Wrong… {sips} sips 🍺",
+        "wrongSoft": "Wrong…",
         "skipReveal": "Next question →",
         "victoryTitle": "{name} wins the quiz!",
         "lastDrinks": "{name} finishes their drink 🍻",
@@ -2603,6 +2727,7 @@
         "witchNone": "Do nothing",
         "dawnNobody": "Nobody died tonight! 🎉",
         "dawnDeath": "💀 {name} is dead — they were {role} (+3 🍺)",
+        "dawnDeathSoft": "💀 {name} is dead — they were {role}",
         "hunterPrompt": "🏹 Last breath: take someone with you!",
         "hunterWaiting": "{name} is loading their rifle…",
         "debatePrompt": "🗣️ Debate on voice: who is the wolf?",
@@ -2693,8 +2818,6 @@
       "gamesPlinko": "Parts Plinko",
       "winsMonsieur3": "Victories Monsieur 3",
       "gamesMonsieur3": "Parts Monsieur 3",
-      "winsRouletteRusse": "Russian Roulette Wins",
-      "gamesRouletteRusse": "Russian Roulette Games",
       "winsBallonSurprise": "Surprise Balloon Victories",
       "gamesBallonSurprise": "Surprise Balloon Parties",
       "winsPetitsPoints": "Small Points Victories",

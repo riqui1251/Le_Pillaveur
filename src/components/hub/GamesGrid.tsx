@@ -15,12 +15,13 @@ export function GamesGrid() {
   const games = useLocalizedGames()
   const { user } = useAuth()
   const isOnline = user?.playMode === 'online'
+  const isSoft = isOnline && user?.ambianceMode === 'soft'
   const [query, setQuery] = useState('')
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const visible = games.filter(
-      (g) => !g.hidden && (isOnline ? g.onlineReady : !g.onlineOnly)
+      (g) => !g.hidden && (isOnline ? g.onlineReady && (!isSoft || g.softModeReady) : !g.onlineOnly)
     )
     if (!q) return visible
     return visible.filter(
@@ -29,7 +30,7 @@ export function GamesGrid() {
         g.description.toLowerCase().includes(q) ||
         g.id.toLowerCase().includes(q)
     )
-  }, [games, query, isOnline])
+  }, [games, query, isOnline, isSoft])
 
   return (
     <>

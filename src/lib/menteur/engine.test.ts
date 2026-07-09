@@ -37,6 +37,9 @@ const craft = (players: MenteurPlayer[], over: Partial<MenteurState> = {}): Ment
   winnerId: null,
   rematchVotes: [],
   rngState: 12345,
+  rulePalifico: false,
+  ruleCalza: false,
+  palifico: false,
   ...over,
 })
 
@@ -318,6 +321,138 @@ describe('vues anti-triche', () => {
   })
 })
 
+describe('Palifico', () => {
+  it('countMatches ignore les jokers en Palifico', () => {
+    const players = [P('a', [1, 3, 3]), P('b', [1, 5])]
+    expect(countMatches(players, 3, true)).toBe(2) // les 1 ne comptent plus
+    expect(countMatches(players, 1, true)).toBe(2) // seulement les 1 eux-mêmes
+  })
+
+  it('isLegalRaise : face verrouillée, seule la quantité monte', () => {
+    const prev = { qty: 3, face: 4, by: 'a' }
+    expect(isLegalRaise(prev, 4, 4, 10, true)).toBe(true)
+    expect(isLegalRaise(prev, 4, 5, 10, true)).toBe(false) // changement de face interdit
+    expect(isLegalRaise(prev, 3, 4, 10, true)).toBe(false) // quantité qui ne monte pas
+    // Première enchère de la manche : toujours libre, même en Palifico.
+    expect(isLegalRaise(null, 2, 5, 10, true)).toBe(true)
+  })
+
+  it('createMenteurState active rulePalifico et calcule palifico initial', () => {
+    const s = createMenteurState(
+      [
+        { id: 'a', name: 'A' },
+        { id: 'b', name: 'B' },
+      ],
+      'seed',
+      { palifico: true }
+    )
+    expect(s.rulePalifico).toBe(true)
+    expect(s.palifico).toBe(false) // 5 dés chacun au départ
+  })
+
+  it('CONTINUE recalcule palifico quand un joueur tombe à 1 dé', () => {
+    const s = craft([P('a', [2]), P('b', [3, 4])], {
+      rulePalifico: true,
+      phase: 'reveal',
+      lastReveal: {
+        bid: { qty: 5, face: 6, by: 'b' },
+        challengerId: 'a',
+        allDice: [],
+        matchCount: 0,
+        bidHeld: false,
+        loserId: 'b',
+        sips: 1,
+        eliminatedId: null,
+        mode: 'dudo',
+        gainedId: null,
+      },
+    })
+    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'a' })
+    // a n'a qu'un dé → la manche suivante est Palifico.
+    expect(after.palifico).toBe(true)
+  })
+
+  it('BID rejette un changement de face en manche Palifico', () => {
+    const s = craft([P('a', [2, 3]), P('b', [4, 5])], {
+      rulePalifico: true,
+      palifico: true,
+      currentBid: { qty: 2, face: 3, by: 'b' },
+      turnIdx: 0,
+    })
+    expect(() => reduceMenteur(s, { type: 'BID', playerId: 'a', qty: 3, face: 4 })).toThrow('ILLEGAL_BID')
+    const after = reduceMenteur(s, { type: 'BID', playerId: 'a', qty: 3, face: 3 })
+    expect(after.currentBid).toEqual({ qty: 3, face: 3, by: 'a' })
+  })
+})
+
+describe('Calza', () => {
+  it('refuse Calza si la règle est désactivée', () => {
+    const s = craft([P('a', [3, 2]), P('b', [3, 5])], {
+      ruleCalza: false,
+      currentBid: { qty: 2, face: 3, by: 'b' },
+      turnIdx: 0,
+    })
+    expect(() => reduceMenteur(s, { type: 'CALZA', playerId: 'a' })).toThrow('CALZA_DISABLED')
+  })
+
+  it('Calza exact → regagne un dé, personne ne boit', () => {
+    // 2 face 3 exactement sur la table (un 3 chez a, un 3 chez b, aucun joker).
+    const s = craft([P('a', [3, 2]), P('b', [3, 5])], {
+      ruleCalza: true,
+      currentBid: { qty: 2, face: 3, by: 'b' },
+      turnIdx: 0,
+    })
+    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a' })
+    expect(after.lastReveal).toMatchObject({ mode: 'calza', matchCount: 2, loserId: null, sips: 0 })
+    expect(after.lastReveal?.gainedId).toBe('a')
+    expect(after.players[0].dice.length).toBe(3) // a avait 2 dés (3 perdus), en regagne 1
+  })
+
+  it('Calza raté → le joueur perd un dé et boit', () => {
+    // 1 seul dé face 6 sur la table, annoncé 3 → pas exact.
+    const s = craft([P('a', [2, 2]), P('b', [6, 5])], {
+      ruleCalza: true,
+      currentBid: { qty: 3, face: 6, by: 'b' },
+      turnIdx: 0,
+    })
+    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a' })
+    expect(after.lastReveal).toMatchObject({ mode: 'calza', matchCount: 1, loserId: 'a', gainedId: null })
+    expect(after.players[0].dice.length).toBe(1)
+  })
+
+  it('Calza réussi ne dépasse pas le nombre de dés de départ', () => {
+    const s = craft([P('a', [3, 2, 4, 5, 6]), P('b', [3])], {
+      ruleCalza: true,
+      currentBid: { qty: 2, face: 3, by: 'b' },
+      turnIdx: 0,
+    })
+    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a' })
+    expect(after.lastReveal?.gainedId).toBeNull() // déjà à 5 dés, plafond atteint
+    expect(after.players[0].dice.length).toBe(5)
+  })
+
+  it('CONTINUE après un Calza réussi : le joueur central rouvre la manche', () => {
+    const s = craft([P('a', [3, 2]), P('b', [3, 5])], {
+      ruleCalza: true,
+      phase: 'reveal',
+      lastReveal: {
+        bid: { qty: 2, face: 3, by: 'b' },
+        challengerId: 'a',
+        allDice: [],
+        matchCount: 2,
+        bidHeld: true,
+        loserId: null,
+        sips: 0,
+        eliminatedId: null,
+        mode: 'calza',
+        gainedId: 'a',
+      },
+    })
+    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'a' })
+    expect(after.turnIdx).toBe(0) // a (challengerId) rouvre, pas de loserId à suivre
+  })
+})
+
 describe('IA du bot', () => {
   it('refuse de jouer si l’acteur n’est pas un bot', () => {
     const s = craft([P('a', [2, 2, 3, 4, 5]), P('b', [1, 2, 3, 4, 6])])
@@ -350,6 +485,27 @@ describe('IA du bot', () => {
           { id: 'y', name: 'Y', isBot: true },
         ],
         seed
+      )
+      let guard = 0
+      while (s.phase !== 'finished' && guard < 500) {
+        const r = applyMenteurBotAction(s)
+        expect(r.ok).toBe(true)
+        if (r.ok) s = r.state
+        guard += 1
+      }
+      expect(s.phase).toBe('finished')
+      expect(s.winnerId).not.toBeNull()
+    }
+  })
+  it('des bots seuls terminent toujours une partie avec Palifico + Calza activés', () => {
+    for (let seed = 200; seed < 210; seed += 1) {
+      let s = createMenteurState(
+        [
+          { id: 'x', name: 'X', isBot: true },
+          { id: 'y', name: 'Y', isBot: true },
+        ],
+        seed,
+        { palifico: true, calza: true }
       )
       let guard = 0
       while (s.phase !== 'finished' && guard < 500) {

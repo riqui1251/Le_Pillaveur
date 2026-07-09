@@ -112,7 +112,11 @@ describe('création et rôles', () => {
         const specials = roles.filter((r) =>
           ['sorciere', 'chasseur', 'salvateur', 'corbeau', 'ancien'].includes(r)
         ).length
-        expect(specials).toBeLessThanOrEqual(count >= 9 ? 4 : count >= 6 ? 3 : 2)
+        expect(specials).toBeLessThanOrEqual(count >= 9 ? 4 : count >= 6 ? 3 : 1)
+        // À 4-5 joueurs, le plafond garantit au moins un villageois simple.
+        if (count < 6) {
+          expect(roles.filter((r) => r === 'villageois').length).toBeGreaterThanOrEqual(1)
+        }
       }
     }
     // Sur beaucoup de tirages à 9+, chacun des 5 spéciaux apparaît au moins une fois.

@@ -41,11 +41,16 @@ export type MenteurReveal = {
   allDice: { playerId: string; dice: number[] }[]
   matchCount: number
   bidHeld: boolean
-  loserId: string
+  /** DUDO, ou Calza raté : qui boit. Calza réussi : null (personne ne boit). */
+  loserId: string | null
   /** Gorgées du perdant (= son total de dés perdus). */
   sips: number
   /** Joueur éliminé sur ce défi (cul sec), sinon null. */
   eliminatedId: string | null
+  /** 'dudo' (par défaut) ou 'calza' (pari « pile la quantité »). */
+  mode?: 'dudo' | 'calza'
+  /** Calza réussi seulement : qui regagne un dé. */
+  gainedId?: string | null
 }
 
 export type MenteurPhase = 'bidding' | 'reveal' | 'finished'
@@ -63,11 +68,19 @@ export type MenteurState = {
   rematchVotes: string[]
   /** SECRET serveur — jamais dans une vue client. */
   rngState: number
+  /** Règle Palifico activée pour la partie (choix hôte, figé au lancement). */
+  rulePalifico: boolean
+  /** Règle Calza activée pour la partie (choix hôte, figé au lancement). */
+  ruleCalza: boolean
+  /** Manche Palifico en cours (un joueur vivant n'a plus qu'un dé) : les 1 ne
+   * sont plus jokers et la face de l'enchère est verrouillée sur la manche. */
+  palifico: boolean
 }
 
 export type MenteurAction =
   | { type: 'BID'; playerId: string; qty: number; face: number }
   | { type: 'DUDO'; playerId: string }
+  | { type: 'CALZA'; playerId: string }
   | { type: 'CONTINUE'; playerId: string }
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
@@ -108,13 +121,14 @@ function nextAliveIdx(state: MenteurState, fromIdx: number): number {
 
 /**
  * Nombre de dés sur la table qui satisfont une face d'enchère :
- * la face exacte + les 1 jokers (sauf si l'enchère porte sur les 1).
+ * la face exacte + les 1 jokers (sauf si l'enchère porte sur les 1, ou en
+ * manche Palifico où les 1 perdent leur statut de joker).
  */
-export function countMatches(players: MenteurPlayer[], face: number): number {
+export function countMatches(players: MenteurPlayer[], face: number, palifico = false): number {
   let count = 0
   for (const p of players) {
     for (const d of p.dice) {
-      if (d === face || (face !== 1 && d === 1)) count += 1
+      if (d === face || (!palifico && face !== 1 && d === 1)) count += 1
     }
   }
   return count
@@ -127,17 +141,21 @@ export function countMatches(players: MenteurPlayer[], face: number): number {
  * - aux 1 → normal : quantité ≥ double + 1 ;
  * - aux 1 → aux 1 : quantité qui monte.
  * Première enchère : libre. Toujours 1 ≤ qty ≤ dés sur la table, face 1-6.
+ * En manche Palifico : la première enchère fixe la face pour toute la manche,
+ * les suivantes ne peuvent que monter la quantité (face inchangée).
  */
 export function isLegalRaise(
   prev: MenteurBid | null,
   qty: number,
   face: number,
-  totalDice: number
+  totalDice: number,
+  palifico = false
 ): boolean {
   if (!Number.isInteger(qty) || !Number.isInteger(face)) return false
   if (face < 1 || face > 6) return false
   if (qty < 1 || qty > totalDice) return false
   if (!prev) return true
+  if (palifico) return qty > prev.qty && face === prev.face
   if (prev.face === 1 && face === 1) return qty > prev.qty
   if (prev.face === 1 && face > 1) return qty >= prev.qty * 2 + 1
   if (prev.face > 1 && face === 1) return qty >= Math.ceil(prev.qty / 2)
@@ -150,11 +168,19 @@ function rollDice(rng: SeededRng, count: number): number[] {
   return dice
 }
 
+/** Une manche Palifico débute quand un joueur vivant n'a plus qu'un dé. */
+function computePalifico(players: MenteurPlayer[], rulePalifico: boolean): boolean {
+  return rulePalifico && players.some((p) => p.dice.length === 1)
+}
+
+export type MenteurRules = { palifico?: boolean; calza?: boolean }
+
 // ─── Création ────────────────────────────────────────────────────────────────
 
 export function createMenteurState(
   players: MenteurInitialPlayer[],
-  seed: string | number
+  seed: string | number,
+  rules: MenteurRules = {}
 ): MenteurState {
   if (players.length < MENTEUR_MIN_PLAYERS) throw new MenteurEngineError('NOT_ENOUGH_PLAYERS')
   if (players.length > MENTEUR_MAX_PLAYERS) throw new MenteurEngineError('TOO_MANY_PLAYERS')
@@ -167,6 +193,7 @@ export function createMenteurState(
     dice: rollDice(rng, MENTEUR_START_DICE),
     lostCount: 0,
   }))
+  const rulePalifico = Boolean(rules.palifico)
   return {
     version: 1,
     phase: 'bidding',
@@ -178,6 +205,9 @@ export function createMenteurState(
     winnerId: null,
     rematchVotes: [],
     rngState: rng.getState(),
+    rulePalifico,
+    ruleCalza: Boolean(rules.calza),
+    palifico: computePalifico(withDice, rulePalifico),
   }
 }
 
@@ -189,7 +219,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       if (state.phase !== 'bidding') throw new MenteurEngineError('NOT_BIDDING')
       const actor = state.players[state.turnIdx]
       if (actor.id !== action.playerId) throw new MenteurEngineError('NOT_YOUR_TURN')
-      if (!isLegalRaise(state.currentBid, action.qty, action.face, menteurTotalDice(state))) {
+      if (!isLegalRaise(state.currentBid, action.qty, action.face, menteurTotalDice(state), state.palifico)) {
         throw new MenteurEngineError('ILLEGAL_BID')
       }
       return {
@@ -208,7 +238,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       if (!bid) throw new MenteurEngineError('NO_BID_TO_CHALLENGE')
 
       const alive = menteurAlivePlayers(state)
-      const matchCount = countMatches(alive, bid.face)
+      const matchCount = countMatches(alive, bid.face, state.palifico)
       const bidHeld = matchCount >= bid.qty
       const loserId = bidHeld ? actor.id : bid.by
       const allDice = alive.map((p) => ({ playerId: p.id, dice: [...p.dice] }))
@@ -237,6 +267,83 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
           loserId,
           sips,
           eliminatedId,
+          mode: 'dudo',
+          gainedId: null,
+        },
+        version: state.version + 1,
+      }
+    }
+
+    case 'CALZA': {
+      if (state.phase !== 'bidding') throw new MenteurEngineError('NOT_BIDDING')
+      if (!state.ruleCalza) throw new MenteurEngineError('CALZA_DISABLED')
+      const actor = state.players[state.turnIdx]
+      if (actor.id !== action.playerId) throw new MenteurEngineError('NOT_YOUR_TURN')
+      const bid = state.currentBid
+      if (!bid) throw new MenteurEngineError('NO_BID_TO_CHALLENGE')
+
+      const alive = menteurAlivePlayers(state)
+      const matchCount = countMatches(alive, bid.face, state.palifico)
+      const exact = matchCount === bid.qty
+      const allDice = alive.map((p) => ({ playerId: p.id, dice: [...p.dice] }))
+
+      if (exact) {
+        // Pari gagné : le joueur regagne un dé (plafonné au départ), rien à boire.
+        const rng = rngFromState(state.rngState)
+        let gainedId: string | null = null
+        const players = state.players.map((p) => {
+          if (p.id !== actor.id || p.dice.length >= MENTEUR_START_DICE) return p
+          gainedId = p.id
+          return { ...p, dice: [...p.dice, rng.int(1, 6)] }
+        })
+        return {
+          ...state,
+          players,
+          phase: 'reveal',
+          lastReveal: {
+            bid,
+            challengerId: actor.id,
+            allDice,
+            matchCount,
+            bidHeld: true,
+            loserId: null,
+            sips: 0,
+            eliminatedId: null,
+            mode: 'calza',
+            gainedId,
+          },
+          rngState: rng.getState(),
+          version: state.version + 1,
+        }
+      }
+
+      // Pari raté : le joueur perd un dé, comme un DUDO manqué contre lui-même.
+      let eliminatedId: string | null = null
+      let sips = 0
+      const players = state.players.map((p) => {
+        if (p.id !== actor.id) return p
+        const dice = p.dice.slice(0, -1)
+        const lostCount = p.lostCount + 1
+        sips = lostCount
+        if (dice.length === 0) eliminatedId = p.id
+        return { ...p, dice, lostCount }
+      })
+
+      return {
+        ...state,
+        players,
+        phase: 'reveal',
+        lastReveal: {
+          bid,
+          challengerId: actor.id,
+          allDice,
+          matchCount,
+          bidHeld: matchCount >= bid.qty,
+          loserId: actor.id,
+          sips,
+          eliminatedId,
+          mode: 'calza',
+          gainedId: null,
         },
         version: state.version + 1,
       }
@@ -258,17 +365,19 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
         }
       }
       // Nouvelle manche : tout le monde relance ses dés (RNG seedé), et le
-      // perdant du défi rouvre les enchères (s'il est éliminé : le suivant).
+      // perdant du défi rouvre les enchères (s'il est éliminé, ou en cas de
+      // Calza réussi sans perdant : le joueur central du défi ; sinon le suivant).
       const rng = rngFromState(state.rngState)
       const players = state.players.map((p) =>
         isMenteurAlive(p) ? { ...p, dice: rollDice(rng, p.dice.length) } : p
       )
-      const loserIdx = state.players.findIndex((p) => p.id === state.lastReveal?.loserId)
+      const leaderId = state.lastReveal?.loserId ?? state.lastReveal?.challengerId
+      const leaderIdx = state.players.findIndex((p) => p.id === leaderId)
       const base: MenteurState = { ...state, players }
       const turnIdx =
-        loserIdx >= 0 && isMenteurAlive(players[loserIdx])
-          ? loserIdx
-          : nextAliveIdx(base, Math.max(0, loserIdx))
+        leaderIdx >= 0 && isMenteurAlive(players[leaderIdx])
+          ? leaderIdx
+          : nextAliveIdx(base, Math.max(0, leaderIdx))
       return {
         ...base,
         phase: 'bidding',
@@ -277,6 +386,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
         lastReveal: null,
         round: state.round + 1,
         rngState: rng.getState(),
+        palifico: computePalifico(players, state.rulePalifico),
         version: state.version + 1,
       }
     }

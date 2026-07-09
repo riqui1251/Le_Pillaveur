@@ -146,6 +146,11 @@
       "local": "Local",
       "online": "En ligne"
     },
+    "ambianceMode": {
+      "label": "Ambiance",
+      "alcool": "Alcool",
+      "soft": "Soft"
+    },
     "selectedPlayers": {
       "ready": "{count, plural, one {# joueur prêt} other {# joueurs prêts}}",
       "none": "Aucun joueur sélectionné",
@@ -467,16 +472,26 @@
         "totalGive": "Total : {count} gorgée(s) à distribuer.",
         "partialNothing": "⚡ Chiffre(s) sur un dé ({numbers}) mais pas en somme — rien à distribuer.",
         "nothing": "Rien pour toi ce lancer."
+      },
+      "online": {
+        "waitingSetup": "Chacun règle ses paris, puis se déclare prêt.",
+        "myBets": "Mes paris",
+        "ready": "Je suis prêt",
+        "readyDone": "Prêt — en attente des autres…",
+        "anyoneRolls": "N'importe qui peut lancer les dés.",
+        "endGame": "Terminer la partie",
+        "finishedTitle": "Partie terminée",
+        "totalRolls": "{count} lancers au total",
+        "replay": "Rejouer",
+        "rematchWaiting": "En attente ({count}/{total})",
+        "backToMenu": "Retour au menu",
+        "waitingReturn": "{name} est parti — remplacement dans {seconds}s si pas de retour"
       }
     },
     "catalog": {
       "1220": {
         "title": "1220",
         "description": "Un dé 12 et un dé 20 : pariez sur la parité, une plage de somme, et deux chiffres clés pour boire ou faire boire."
-      },
-      "roulette-russe": {
-        "title": "Roulette Russe",
-        "description": "Un jeu de hasard où chaque joueur tire à tour de rôle. Survivre ou boire !"
       },
       "monsieur-3": {
         "title": "Monsieur 3",
@@ -492,11 +507,13 @@
       },
       "toucher-coule": {
         "title": "Toucher-Coulé",
-        "description": "La bataille navale apéro en équipes : touché tu bois, coulé tu trinques !"
+        "description": "La bataille navale apéro en équipes : touché tu bois, coulé tu trinques !",
+        "softDescription": "La bataille navale en équipes : repérez et coulez la flotte adverse !"
       },
       "menteur": {
         "title": "Le Menteur",
-        "description": "Dés cachés, enchères et bluff : crie « Menteur ! » au bon moment ou trinque !"
+        "description": "Dés cachés, enchères et bluff : crie « Menteur ! » au bon moment ou trinque !",
+        "softDescription": "Dés cachés, enchères et bluff : crie « Menteur ! » au bon moment !"
       },
       "imposteur": {
         "title": "L'Imposteur",
@@ -560,30 +577,14 @@
       },
       "quiz": {
         "title": "Le Grand Pillaveur",
-        "description": "Le quiz apéro : réponds vite et juste, ou bois ! Téléphones-buzzers et podium final."
+        "description": "Le quiz apéro : réponds vite et juste, ou bois ! Téléphones-buzzers et podium final.",
+        "softTitle": "Quiz Party",
+        "softDescription": "Le quiz de soirée : réponds vite et juste ! Téléphones-buzzers et podium final."
       },
       "loup-garou": {
         "title": "Loup-Garou",
-        "description": "Le classique des soirées, version apéro : loups, voyante, débats et lynchages qui trinquent !"
-      }
-    },
-    "roulette-russe": {
-      "title": "Roulette Russe",
-      "alive": "En vie",
-      "eliminated": "Éliminé",
-      "pull": "{name} tire",
-      "lastSurvivor": "{name} est le dernier survivant !",
-      "recapTitle": "Récapitulatif des gorgées :",
-      "sipsCount": "{count} gorgées",
-      "replay": "Rejouer",
-      "home": "Accueil",
-      "config": {
-        "rules": [
-          "Chaque joueur tire à tour de rôle",
-          "Si le joueur survit, il boit un shot",
-          "Si le joueur perd, il est éliminé",
-          "Le dernier joueur en vie gagne la partie"
-        ]
+        "description": "Le classique des soirées, version apéro : loups, voyante, débats et lynchages qui trinquent !",
+        "softDescription": "Le classique des soirées : loups, voyante, débats et lynchages !"
       }
     },
     "ballon-surprise": {
@@ -625,6 +626,18 @@
         "doubleNoir": "Double noir",
         "purple": "Purple",
         "doublePurple": "Double Purple"
+      },
+      "online": {
+        "yourTurn": "À toi de parier",
+        "waitingBet": "{name} choisit son pari…",
+        "waitingDecision": "En attente de {name}…",
+        "endGame": "Terminer la partie",
+        "finishedTitle": "Partie terminée",
+        "totalCards": "{count} cartes tirées au total",
+        "replay": "Rejouer",
+        "rematchWaiting": "En attente ({count}/{total})",
+        "backToMenu": "Retour au menu",
+        "waitingReturn": "{name} est parti — remplacement dans {seconds}s si pas de retour"
       }
     },
     "roue-des-gorgees": {
@@ -1415,6 +1428,10 @@
           "3v3": {
             "label": "3 vs 3",
             "desc": "2 bateaux chacun · grille 12×12"
+          },
+          "4v4": {
+            "label": "4 vs 4",
+            "desc": "2 bateaux chacun · grille 14×14"
           }
         },
         "teams": "Équipes",
@@ -1422,7 +1439,10 @@
         "teamB": "Équipe B",
         "joinTeam": "Rejoindre",
         "botSlot": "Bot 🤖",
-        "botsFill": "Les places vides seront occupées par des bots."
+        "botsFill": "Les places vides seront occupées par des bots.",
+        "variants": "Variantes",
+        "powerups": "Bombe (tir 2×2)",
+        "powerupsHint": "Chaque joueur reçoit une bombe à usage unique : un tir qui touche un carré de 4 cases."
       },
       "game": {
         "title": "Toucher-Coulé",
@@ -1442,8 +1462,14 @@
         "enemyWaters": "Eaux ennemies",
         "yourFleet": "Ta flotte",
         "feedMiss": "💦 À l'eau ! {shooter} boit 1 gorgée",
+        "feedMissSoft": "💦 À l'eau !",
         "feedHit": "🎯 Touché ! Le bateau de {owner} prend l'eau — 1 gorgée",
+        "feedHitSoft": "🎯 Touché ! Le bateau de {owner} prend l'eau",
         "feedSunk": "💥 COULÉ ! {owner} trinque : +3 gorgées",
+        "feedSunkSoft": "💥 COULÉ !",
+        "feedBomb": "💣 Bombe ! {hits}/{total} cases touchées",
+        "bombButton": "Bombe",
+        "bombHint": "Vise le coin haut-gauche : la bombe touche un carré de 4 cases.",
         "team": "Équipe {team}",
         "victoryTitle": "Victoire de l'équipe {team} !",
         "defeatDrinks": "L'équipe {team} finit ses verres : +3 gorgées chacun 🍻",
@@ -1485,6 +1511,13 @@
         "onlineOnly": "Le Menteur se joue en ligne : chaque joueur cache ses dés sous son gobelet, impossible sur un seul écran !",
         "switchOnline": "Passer en mode en ligne"
       },
+      "lobby": {
+        "variants": "Variantes",
+        "palifico": "Palifico",
+        "palificoHint": "1 dé restant : les 1 ne sont plus jokers, face verrouillée",
+        "calza": "Calza",
+        "calzaHint": "Parie pile la quantité pour regagner un dé"
+      },
       "game": {
         "round": "Manche {n}",
         "diceOnTable": "{n} dés sur la table",
@@ -1495,6 +1528,8 @@
         "bidBy": "par {name}",
         "noBid": "Aucune enchère — ouvre la manche !",
         "pillaveurHint": "Les 1 « Pillaveurs » sont jokers : ils comptent pour toutes les faces.",
+        "palificoBadge": "🔒 Manche Palifico : plus de jokers, face verrouillée sur {face}",
+        "palificoBadgeOpen": "🔒 Manche Palifico : plus de jokers, la première enchère fixe la face",
         "yourTurn": "À toi : surenchéris ou crie MENTEUR !",
         "turnOf": "Au tour de {name}…",
         "yourDice": "Tes dés",
@@ -1502,12 +1537,18 @@
         "showDice": "Regarder mes dés",
         "bid": "Enchérir",
         "dudo": "MENTEUR !",
+        "calza": "CALZA !",
         "illegalBid": "Enchère trop basse : monte la quantité ou la face.",
         "reveal": {
           "title": "Les gobelets sont levés !",
           "bidHeld": "L'enchère tenait : {count} dés (annoncé {qty} ×)",
           "bidFailed": "Menteur démasqué : seulement {count} dés (annoncé {qty} ×)",
           "loser": "{name} perd un dé et boit {sips} gorgée{sips, plural, one {} other {s}} 🍺",
+          "loserSoft": "{name} perd un dé",
+          "calzaWon": "🎯 Calza réussi : {name} regagne un dé !",
+          "calzaWonCapped": "🎯 Calza réussi : {name} a déjà le maximum de dés, rien à regagner.",
+          "calzaLost": "{name} a tenté Calza et se plante : perd un dé et boit {sips} gorgée{sips, plural, one {} other {s}} 🍺",
+          "calzaLostSoft": "{name} a tenté Calza et se plante : perd un dé",
           "eliminatedMsg": "💀 {name} n'a plus de dés — cul sec, éliminé !",
           "continue": "Manche suivante"
         },
@@ -1545,6 +1586,11 @@
       "page": {
         "onlineOnly": "L'Imposteur se joue en ligne : chacun reçoit un mot secret sur SON téléphone, impossible sur un seul écran !",
         "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "count": "Nombre d'imposteurs",
+        "imposteurSingular": "imposteur",
+        "imposteursPlural": "imposteurs"
       },
       "game": {
         "round": "Manche {n}",
@@ -2132,6 +2178,78 @@
         {
           "text": "Bois sans utiliser tes mains",
           "drinks": 2
+        },
+        {
+          "text": "Parle comme un robot pendant 2 tours",
+          "drinks": 2
+        },
+        {
+          "text": "Invente une excuse bidon pour être en retard",
+          "drinks": 2
+        },
+        {
+          "text": "Fais deviner un film en mimant seulement avec les mains",
+          "drinks": 2
+        },
+        {
+          "text": "Chante en playback sur la prochaine chanson qui passe",
+          "drinks": 2
+        },
+        {
+          "text": "Raconte ta pire honte au collège",
+          "drinks": 3
+        },
+        {
+          "text": "Parle en chuchotant pendant 2 tours",
+          "drinks": 2
+        },
+        {
+          "text": "Imite la voix d'un autre joueur",
+          "drinks": 2
+        },
+        {
+          "text": "Récite les jours de la semaine à l'envers",
+          "drinks": 2
+        },
+        {
+          "text": "Fais un compliment sincère à chaque joueur",
+          "drinks": 2
+        },
+        {
+          "text": "Raconte une blague en 30 secondes chrono",
+          "drinks": 2
+        },
+        {
+          "text": "Trouve un mot qui rime avec le prénom du joueur à ta gauche",
+          "drinks": 2
+        },
+        {
+          "text": "Décris ton pire rencard sans donner de nom",
+          "drinks": 3
+        },
+        {
+          "text": "Parle uniquement par questions pendant 2 tours",
+          "drinks": 2
+        },
+        {
+          "text": "Donne 3 raisons pour lesquelles tu es le/la meilleur(e) à cette table",
+          "drinks": 2
+        },
+        {
+          "text": "Improvise une pub pour un objet au hasard dans la pièce",
+          "drinks": 2
+        },
+        {
+          "text": "Cite 5 marques de bière en 10 secondes",
+          "drinks": 2
+        },
+        {
+          "text": "Raconte ton rêve le plus bizarre",
+          "drinks": 2
+        },
+        {
+          "text": "Fais deviner ton métier de rêve en une phrase mystérieuse",
+          "drinks": 2
         }
       ],
       "defiWheelChallenges": [
@@ -2497,6 +2615,7 @@
         "answerSent": "Réponse envoyée — on attend les autres… ⚡",
         "correct": "Bonne réponse : +{points} points !",
         "wrong": "Raté… {sips} gorgées 🍺",
+        "wrongSoft": "Raté…",
         "skipReveal": "Question suivante →",
         "victoryTitle": "{name} remporte le quiz !",
         "lastDrinks": "{name} finit son verre 🍻",
@@ -2608,6 +2727,7 @@
         "witchNone": "Ne rien faire",
         "dawnNobody": "Personne n’est mort cette nuit ! 🎉",
         "dawnDeath": "💀 {name} est mort — c’était {role} (+3 🍺)",
+        "dawnDeathSoft": "💀 {name} est mort — c’était {role}",
         "hunterPrompt": "🏹 Dernier souffle : emporte quelqu’un !",
         "hunterWaiting": "{name} arme son fusil…",
         "debatePrompt": "🗣️ Débattez au vocal : qui est le loup ?",
@@ -2698,8 +2818,6 @@
       "gamesPlinko": "Parties Plinko",
       "winsMonsieur3": "Victoires Monsieur 3",
       "gamesMonsieur3": "Parties Monsieur 3",
-      "winsRouletteRusse": "Victoires Roulette Russe",
-      "gamesRouletteRusse": "Parties Roulette Russe",
       "winsBallonSurprise": "Victoires Ballon Surprise",
       "gamesBallonSurprise": "Parties Ballon Surprise",
       "winsPetitsPoints": "Victoires Petits Points",

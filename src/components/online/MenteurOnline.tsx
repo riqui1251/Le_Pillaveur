@@ -60,6 +60,7 @@ const Die = CssDie
 
 export function MenteurOnline() {
   const { user } = useAuth()
+  const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.menteur.game')
   const tTutorial = useTranslations('games.menteur.tutorial')
@@ -93,6 +94,12 @@ export function MenteurOnline() {
   useEffect(() => {
     if (!view || syncedVersionRef.current === stateVersion) return
     syncedVersionRef.current = stateVersion
+    // En manche Palifico avec enchère en cours, la face est verrouillée.
+    if (view.palifico && view.currentBid) {
+      setBidQty(view.currentBid.qty + 1)
+      setBidFace(view.currentBid.face)
+      return
+    }
     const suggestion = minimalLegalBid(view.currentBid, totalDice)
     setBidQty(suggestion.qty)
     setBidFace(suggestion.face)
@@ -232,7 +239,7 @@ export function MenteurOnline() {
     }
   }
 
-  const bidLegal = isLegalRaise(view.currentBid, bidQty, bidFace, totalDice)
+  const bidLegal = isLegalRaise(view.currentBid, bidQty, bidFace, totalDice, view.palifico)
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
 
   // ── Écran de victoire ────────────────────────────────────────────────────
@@ -255,7 +262,7 @@ export function MenteurOnline() {
         >
           <Trophy className="h-14 w-14 text-amber-400" />
           <h2 className="text-3xl font-black">{t('victoryTitle', { name: winner?.name ?? '—' })}</h2>
-          <p className="text-sm text-white/60">{t('victoryDrinks')}</p>
+          {!isSoft && <p className="text-sm text-white/60">{t('victoryDrinks')}</p>}
         </motion.div>
 
         <XpGainBanner
@@ -329,6 +336,12 @@ export function MenteurOnline() {
           <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
         </span>
       </div>
+
+      {view.palifico && (
+        <div className="rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-center text-xs font-semibold text-fuchsia-100">
+          {view.currentBid ? t('palificoBadge', { face: view.currentBid.face }) : t('palificoBadgeOpen')}
+        </div>
+      )}
 
       {/* Bannières retour / AFK */}
       {leftPlayer?.leftAt && (
@@ -450,7 +463,7 @@ export function MenteurOnline() {
                         key={i}
                         className={cn(
                           'transition-opacity',
-                          d === reveal.bid.face || (reveal.bid.face !== 1 && d === 1)
+                          d === reveal.bid.face || (!view.palifico && reveal.bid.face !== 1 && d === 1)
                             ? ''
                             : 'opacity-35'
                         )}
@@ -462,9 +475,23 @@ export function MenteurOnline() {
                 </div>
               ))}
             </div>
-            <p className="text-center text-sm font-bold text-red-200">
-              {t('reveal.loser', { name: nameOf(reveal.loserId), sips: reveal.sips })}
-            </p>
+            {reveal.mode === 'calza' && reveal.loserId ? (
+              <p className="text-center text-sm font-bold text-red-200">
+                {t(isSoft ? 'reveal.calzaLostSoft' : 'reveal.calzaLost', { name: nameOf(reveal.loserId), sips: reveal.sips })}
+              </p>
+            ) : reveal.mode === 'calza' && reveal.gainedId ? (
+              <p className="text-center text-sm font-bold text-emerald-200">
+                {t('reveal.calzaWon', { name: nameOf(reveal.gainedId) })}
+              </p>
+            ) : reveal.mode === 'calza' ? (
+              <p className="text-center text-sm font-bold text-emerald-200">
+                {t('reveal.calzaWonCapped', { name: nameOf(reveal.challengerId) })}
+              </p>
+            ) : (
+              <p className="text-center text-sm font-bold text-red-200">
+                {t(isSoft ? 'reveal.loserSoft' : 'reveal.loser', { name: nameOf(reveal.loserId), sips: reveal.sips })}
+              </p>
+            )}
             {reveal.eliminatedId && (
               <p className="text-center text-xs font-bold text-amber-200">
                 {t('reveal.eliminatedMsg', { name: nameOf(reveal.eliminatedId) })}
@@ -542,22 +569,29 @@ export function MenteurOnline() {
                 </div>
                 <span className="text-lg font-black text-white/40">×</span>
                 {/* Face */}
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5, 6].map((face) => (
-                    <button
-                      key={face}
-                      onClick={() => setBidFace(face)}
-                      className={cn(
-                        'game-grid-cell rounded-lg transition-all',
-                        bidFace === face ? 'scale-110 ring-2 ring-orange-400' : 'opacity-60'
-                      )}
-                      aria-label={`${face}`}
-                      aria-pressed={bidFace === face}
-                    >
-                      <Die face={face} size="sm" />
-                    </button>
-                  ))}
-                </div>
+                {(() => {
+                  const faceLocked = view.palifico && Boolean(view.currentBid)
+                  return (
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5, 6].map((face) => (
+                        <button
+                          key={face}
+                          onClick={() => !faceLocked && setBidFace(face)}
+                          disabled={faceLocked && face !== bidFace}
+                          className={cn(
+                            'game-grid-cell rounded-lg transition-all disabled:cursor-not-allowed',
+                            bidFace === face ? 'scale-110 ring-2 ring-orange-400' : 'opacity-60',
+                            faceLocked && face !== bidFace && 'opacity-20'
+                          )}
+                          aria-label={`${face}`}
+                          aria-pressed={bidFace === face}
+                        >
+                          <Die face={face} size="sm" />
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
               <div className="flex gap-2">
                 <Button
@@ -574,6 +608,15 @@ export function MenteurOnline() {
                 >
                   {t('dudo')}
                 </Button>
+                {view.ruleCalza && (
+                  <Button
+                    onClick={() => void sendAction({ action: 'calza' })}
+                    disabled={busy || !view.currentBid}
+                    className="flex-1 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-purple-500 py-4 text-sm font-black tracking-wide disabled:opacity-40"
+                  >
+                    {t('calza')}
+                  </Button>
+                )}
               </div>
               {!bidLegal && (
                 <p className="text-center text-[10px] font-semibold text-red-300/80">{t('illegalBid')}</p>

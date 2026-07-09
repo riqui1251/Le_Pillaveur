@@ -64,6 +64,12 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
         <span>{t('diceOnTable', { n: totalDice })}</span>
       </div>
 
+      {state.palifico && (
+        <p className="text-center text-lg font-bold text-fuchsia-200">
+          {state.currentBid ? t('palificoBadge', { face: state.currentBid.face }) : t('palificoBadgeOpen')}
+        </p>
+      )}
+
       {/* Enchère en cours (GÉANTE) ou révélation */}
       {state.phase === 'reveal' && reveal ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
@@ -83,7 +89,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
                     <span
                       key={i}
                       className={cn(
-                        d === reveal.bid.face || (reveal.bid.face !== 1 && d === 1)
+                        d === reveal.bid.face || (!state.palifico && reveal.bid.face !== 1 && d === 1)
                           ? ''
                           : 'opacity-30'
                       )}
@@ -95,9 +101,23 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
               </div>
             ))}
           </div>
-          <p className="text-3xl font-black text-red-200">
-            {t('reveal.loser', { name: nameOf(reveal.loserId), sips: reveal.sips })}
-          </p>
+          {reveal.mode === 'calza' && reveal.loserId ? (
+            <p className="text-3xl font-black text-red-200">
+              {t('reveal.calzaLost', { name: nameOf(reveal.loserId), sips: reveal.sips })}
+            </p>
+          ) : reveal.mode === 'calza' && reveal.gainedId ? (
+            <p className="text-3xl font-black text-emerald-200">
+              {t('reveal.calzaWon', { name: nameOf(reveal.gainedId) })}
+            </p>
+          ) : reveal.mode === 'calza' ? (
+            <p className="text-3xl font-black text-emerald-200">
+              {t('reveal.calzaWonCapped', { name: nameOf(reveal.challengerId) })}
+            </p>
+          ) : (
+            <p className="text-3xl font-black text-red-200">
+              {t('reveal.loser', { name: nameOf(reveal.loserId), sips: reveal.sips })}
+            </p>
+          )}
           {reveal.eliminatedId && (
             <p className="text-2xl font-bold text-amber-200">
               {t('reveal.eliminatedMsg', { name: nameOf(reveal.eliminatedId) })}

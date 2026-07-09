@@ -23,7 +23,7 @@ export async function launchToucherCouleRoom(roomId: string, room: LaunchRoom) {
   const teamChoices = (settings.tcTeams ?? {}) as Record<string, TeamId>
   const members = room.members.map((m) => ({ userId: m.userId, displayName: m.user.displayName }))
 
-  const state = buildTCState(members, mode, teamChoices, randomSeed())
+  const state = buildTCState(members, mode, teamChoices, randomSeed(), { powerups: settings.tcPowerups })
 
   await prisma.onlineRoom.update({
     where: { id: roomId },

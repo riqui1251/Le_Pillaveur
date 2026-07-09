@@ -8,6 +8,8 @@ import { PlayerIcon } from "@/components/ui/PlayerIcon"
 import { PlayerName } from "@/components/ui/PlayerName"
 import { Link } from "@/i18n/navigation"
 import { ArrowLeft } from "lucide-react"
+import { useAuth } from '@/components/providers/AuthProvider'
+import { Game1220Online } from '@/components/online/Game1220Online'
 import Game from "./components/game"
 
 export default function Game1220Page() {
@@ -15,11 +17,21 @@ export default function Game1220Page() {
   const tCatalog = useTranslations('games.catalog')
   const tPlayers = useTranslations('players')
   const tCommon = useTranslations('common')
+  const { user } = useAuth()
   const { players } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
   const router = useRouter()
 
   const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
+
+  // Mode en ligne : lobby + partie serveur-autoritaire (indépendant du flux local).
+  if (user?.playMode === 'online') {
+    return (
+      <div className="fixed inset-x-0 bottom-0 top-14 z-20 flex flex-col overflow-y-auto bg-[#07060b] sm:top-[3.75rem]">
+        <Game1220Online />
+      </div>
+    )
+  }
 
   if (selectedPlayers.length >= 2) {
     return <Game players={selectedPlayers} onGameEnd={() => router.push("/jeux")} />

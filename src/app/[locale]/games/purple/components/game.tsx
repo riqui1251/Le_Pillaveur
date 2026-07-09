@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { Player, getPlayerGameBoost } from '@/lib/players'
+import { Player } from '@/lib/players'
 import { RotateCcw, X } from 'lucide-react'
 import { GameShell } from '@/components/game/GameShell'
 import { GameMode } from '../page'
@@ -177,9 +177,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
 
     setTimeout(() => {
       const player = players[currentPlayerIndex]
-      const boost = player ? getPlayerGameBoost(player, 'purple') : 0
-      let correct = checkBetResult(bet, drawn)
-      if (!correct && boost > 0 && Math.random() * 100 < boost) correct = true
+      const correct = checkBetResult(bet, drawn)
       setIsCorrect(correct)
       setCardHistory(prev => [...prev, ...drawn].slice(-6))
 

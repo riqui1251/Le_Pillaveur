@@ -1,3 +1,6 @@
+"use client"
+
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 /** Palette d'avatars TV (lisible de loin, contrastée sur fond sombre). */
@@ -34,5 +37,51 @@ export function TvAvatar({
     >
       {initial}
     </span>
+  )
+}
+
+/** Barre de temps animée — partagée entre tous les rendus TV à minuteur. */
+export function TvTimeBar({
+  timeLeftMs,
+  totalMs,
+  dangerMs,
+  colorClass = 'bg-cyan-400',
+  dangerClass = 'bg-red-400',
+}: {
+  timeLeftMs: number
+  totalMs: number
+  dangerMs: number
+  colorClass?: string
+  dangerClass?: string
+}) {
+  const reduced = useReducedMotion()
+  const pct = Math.min(100, Math.max(0, (timeLeftMs / totalMs) * 100))
+  return (
+    <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/10">
+      <motion.div
+        className={cn('h-full rounded-full', timeLeftMs < dangerMs ? dangerClass : colorClass)}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: reduced ? 0 : 0.3, ease: 'linear' }}
+      />
+    </div>
+  )
+}
+
+/** Grand compte à rebours (lancement de manche) — partagé entre tous les rendus TV. */
+export function TvBigCountdown({ seconds, colorClass = 'text-cyan-200' }: { seconds: number; colorClass?: string }) {
+  const reduced = useReducedMotion()
+  return (
+    <AnimatePresence mode="wait">
+      <motion.span
+        key={seconds}
+        initial={reduced ? { opacity: 1 } : { opacity: 0, scale: 1.4 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={reduced ? { opacity: 1 } : { opacity: 0, scale: 0.7 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        className={cn('text-[12rem] font-black leading-none tabular-nums', colorClass)}
+      >
+        {seconds}
+      </motion.span>
+    </AnimatePresence>
   )
 }

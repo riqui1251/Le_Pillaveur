@@ -1,10 +1,24 @@
 import { prisma } from '@/lib/prisma'
-import { createSeededRng, randomSeed } from '@/lib/online-rng'
-import { createPurpleDeck } from '@/lib/online-purple'
+import { createSeededRng, randomSeed, shuffleWithRng } from '@/lib/online-rng'
+import type { SerializedCard } from '@/lib/online-game-state'
 import { parseRoomSettings } from '@/lib/online-game-state'
 import type { RoomWithMembers } from '@/lib/online-room-launch'
 import { getMemberUserIds, getFirstTurnUserId } from '@/lib/online-members'
 import { onlinePlayerId } from '@/lib/online-players'
+
+const CARD_VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R', 'A'] as const
+const CARD_SUITS = ['♠', '♥', '♦', '♣'] as const
+
+function createHiLoDeck(rng: () => number): SerializedCard[] {
+  const deck = CARD_SUITS.flatMap((suit) =>
+    CARD_VALUES.map((value) => ({
+      value,
+      suit,
+      color: suit === '♥' || suit === '♦' ? ('red' as const) : ('black' as const),
+    }))
+  )
+  return shuffleWithRng(deck, rng)
+}
 
 export function buildHiLoInitialState(room: RoomWithMembers) {
   const settings = parseRoomSettings(room.settingsJson)
@@ -12,7 +26,7 @@ export function buildHiLoInitialState(room: RoomWithMembers) {
   const memberUserIds = getMemberUserIds(room)
   const playerIds = room.members.map((m) => onlinePlayerId(m.userId))
   const rng = createSeededRng(randomSeed())
-  const deck = createPurpleDeck(() => rng())
+  const deck = createHiLoDeck(() => rng())
   const firstCard = deck[0] ?? null
   const remainingDeck = deck.slice(1)
   const firstPlayer =

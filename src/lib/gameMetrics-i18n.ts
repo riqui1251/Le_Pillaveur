@@ -20,8 +20,6 @@ const METRIC_KEY_MAP: Record<string, string> = {
   'games@plinko': 'gamesPlinko',
   'wins@monsieur-3': 'winsMonsieur3',
   'games@monsieur-3': 'gamesMonsieur3',
-  'wins@roulette-russe': 'winsRouletteRusse',
-  'games@roulette-russe': 'gamesRouletteRusse',
   'wins@ballon-surprise': 'winsBallonSurprise',
   'games@ballon-surprise': 'gamesBallonSurprise',
   'wins@petits-points': 'winsPetitsPoints',

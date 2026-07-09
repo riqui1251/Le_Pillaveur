@@ -6,6 +6,7 @@ import type { TvRoomDto } from '@/lib/online-room'
 import type { QuizClientView } from '@/lib/quiz/engine'
 import { QUIZ_QUESTION_MS, QUIZ_REVEAL_MS } from '@/lib/quiz/engine'
 import { cn } from '@/lib/utils'
+import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
  * LE GRAND PILLAVEUR sur grand écran : la question en TRÈS grand, les
@@ -80,12 +81,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
         <p className="text-3xl font-black uppercase tracking-widest text-cyan-300/80">
           {tQ('countdown.title')}
         </p>
-        <span
-          key={secondsLeft}
-          className="animate-in zoom-in text-[12rem] font-black leading-none tabular-nums text-cyan-200 duration-300"
-        >
-          {secondsLeft}
-        </span>
+        <TvBigCountdown seconds={secondsLeft} colorClass="text-cyan-200" />
         <p className="text-xl text-white/50">{t('answerOnPhone')}</p>
       </div>
     )
@@ -99,15 +95,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
           {tQ('progress', { n: state.qIdx + 1, total: state.questionCount })}
         </span>
         {timeLeftMs !== null && (
-          <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-300 ease-linear',
-                timeLeftMs < 5000 ? 'bg-red-400' : 'bg-cyan-400'
-              )}
-              style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
-            />
-          </div>
+          <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={5000} colorClass="bg-cyan-400" dangerClass="bg-red-400" />
         )}
       </div>
 

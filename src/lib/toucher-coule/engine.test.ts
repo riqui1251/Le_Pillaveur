@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   advanceTCBots,
   botChooseCell,
+  botShouldUseBomb,
   createInitialTCState,
   currentTCPlayerId,
   placeTCBots,
@@ -37,15 +38,33 @@ function place1v1(state: TCState, playerId: string, offset = 0): TCState {
 }
 
 describe('toucher-coule — configuration des modes', () => {
-  it('respecte les quotas de navires demandés (3/joueur en 1v1, 2/joueur en 2v2 et 3v3)', () => {
+  it('respecte les quotas de navires demandés (3/joueur en 1v1, 2/joueur en 2v2, 3v3 et 4v4)', () => {
     expect(TC_MODES['1v1'].shipSizesPerPlayer).toHaveLength(3)
     expect(TC_MODES['2v2'].shipSizesPerPlayer).toHaveLength(2)
     expect(TC_MODES['3v3'].shipSizesPerPlayer).toHaveLength(2)
+    expect(TC_MODES['4v4'].shipSizesPerPlayer).toHaveLength(2)
   })
 
   it('agrandit la grille avec le nombre de joueurs', () => {
     expect(TC_MODES['1v1'].gridSize).toBeLessThan(TC_MODES['2v2'].gridSize)
     expect(TC_MODES['2v2'].gridSize).toBeLessThan(TC_MODES['3v3'].gridSize)
+    expect(TC_MODES['3v3'].gridSize).toBeLessThan(TC_MODES['4v4'].gridSize)
+  })
+
+  it('4v4 : 4 joueurs par équipe, ordre de tir interleaved', () => {
+    const players: TCInitialPlayer[] = [
+      { id: 'a1', name: 'A1', team: 'A', isBot: false },
+      { id: 'a2', name: 'A2', team: 'A', isBot: false },
+      { id: 'a3', name: 'A3', team: 'A', isBot: false },
+      { id: 'a4', name: 'A4', team: 'A', isBot: false },
+      { id: 'b1', name: 'B1', team: 'B', isBot: false },
+      { id: 'b2', name: 'B2', team: 'B', isBot: false },
+      { id: 'b3', name: 'B3', team: 'B', isBot: false },
+      { id: 'b4', name: 'B4', team: 'B', isBot: false },
+    ]
+    const state = createInitialTCState(players, '4v4', 1)
+    expect(state.turnOrder).toEqual(['a1', 'b1', 'a2', 'b2', 'a3', 'b3', 'a4', 'b4'])
+    expect(state.gridSize).toBe(14)
   })
 })
 
@@ -151,6 +170,94 @@ describe('toucher-coule — tirs et règles apéro', () => {
     expect(state.lastShot?.winningShot).toBe(true)
     // Coulé = +2 pour le propriétaire, défaite = +3 ; 9 touches + 3×2 + 3 = 18.
     expect(state.players.find((p) => p.id === 'bob')?.drinks).toBe(18)
+  })
+})
+
+describe('toucher-coule — power-up Bombe', () => {
+  function battleStateWithBomb(): TCState {
+    let state = createInitialTCState(players1v1(), '1v1', 42, { powerups: true })
+    state = place1v1(state, 'alice')
+    state = place1v1(state, 'bob')
+    return state
+  }
+
+  it('createInitialTCState : hasBomb suit rulePowerups', () => {
+    const on = createInitialTCState(players1v1(), '1v1', 1, { powerups: true })
+    expect(on.rulePowerups).toBe(true)
+    expect(on.players.every((p) => p.hasBomb)).toBe(true)
+
+    const off = createInitialTCState(players1v1(), '1v1', 1)
+    expect(off.rulePowerups).toBe(false)
+    expect(off.players.every((p) => !p.hasBomb)).toBe(true)
+  })
+
+  it('refuse la bombe si la règle est désactivée', () => {
+    let state = createInitialTCState(players1v1(), '1v1', 42)
+    state = place1v1(state, 'alice')
+    state = place1v1(state, 'bob')
+    expect(() => reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 0, bomb: true })).toThrow(
+      'POWERUPS_DISABLED'
+    )
+  })
+
+  it('refuse un ancrage qui déborderait de la grille', () => {
+    const state = battleStateWithBomb()
+    // Coin bas-droit (row=7, col=7 sur une grille 8×8) : le carré 2×2 sortirait.
+    expect(() => reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 63, bomb: true })).toThrow(
+      'BOMB_OUT_OF_BOUNDS'
+    )
+  })
+
+  it('refuse si une des 4 cases est déjà tirée', () => {
+    let state = battleStateWithBomb()
+    state = reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 9 })
+    state = reduceTC(state, { type: 'FIRE', playerId: 'bob', cell: 63 }) // main repasse à alice
+    expect(() => reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 0, bomb: true })).toThrow(
+      'CELL_ALREADY_SHOT'
+    )
+  })
+
+  it('bombe mixte (touché + raté) : résout les 4 cases, consomme la charge, le tireur rejoue', () => {
+    let state = battleStateWithBomb()
+    // Ancrage 0 → cases [0,1,8,9]. Bob a un navire sur [0,1,2,3] : 0 et 1 touchent, 8 et 9 ratent.
+    const before = state.players.find((p) => p.id === 'bob')!.drinks
+    state = reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 0, bomb: true })
+    expect(state.players.find((p) => p.id === 'alice')?.hasBomb).toBe(false)
+    expect(state.lastShot?.bombResults).toHaveLength(4)
+    const results = state.lastShot!.bombResults!
+    expect(results.filter((r) => r.result === 'hit')).toHaveLength(2)
+    expect(results.filter((r) => r.result === 'miss')).toHaveLength(2)
+    // Le propriétaire boit 1 gorgée par case touchée, le tireur ne boit rien (au moins un hit).
+    expect(state.players.find((p) => p.id === 'bob')?.drinks).toBe(before + 2)
+    expect(state.players.find((p) => p.id === 'alice')?.drinks).toBe(0)
+    // Touché → le tireur rejoue.
+    expect(currentTCPlayerId(state)).toBe('alice')
+  })
+
+  it('bombe entièrement dans l\'eau : le tireur boit 1 et la main passe', () => {
+    let state = battleStateWithBomb()
+    // Ancrage 54 (row 6, col 6) → cases [54,55,62,63], loin des navires de Bob (lignes 0/2/4).
+    state = reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 54, bomb: true })
+    expect(state.lastShot?.bombResults?.every((r) => r.result === 'miss')).toBe(true)
+    expect(state.players.find((p) => p.id === 'alice')?.drinks).toBe(1)
+    expect(currentTCPlayerId(state)).toBe('bob')
+  })
+
+  it('une seule bombe par joueur : la 2e tentative échoue', () => {
+    let state = battleStateWithBomb()
+    state = reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 54, bomb: true }) // rate tout → main passe
+    state = reduceTC(state, { type: 'FIRE', playerId: 'bob', cell: 63 })
+    expect(() => reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 40, bomb: true })).toThrow(
+      'NO_BOMB_CHARGE'
+    )
+  })
+
+  it('botShouldUseBomb : jamais sans charge, jamais hors grille', () => {
+    const state = battleStateWithBomb()
+    const bob = state.players.find((p) => p.id === 'bob')!
+    const rng = rngFromState(state.rngState)
+    expect(botShouldUseBomb(state, { ...bob, hasBomb: false }, 0, rng)).toBe(false)
+    expect(botShouldUseBomb(state, bob, 63, rng)).toBe(false) // coin bas-droit, hors bornes pour une bombe
   })
 })
 

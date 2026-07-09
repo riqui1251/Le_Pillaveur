@@ -140,6 +140,7 @@ export async function POST(request: Request) {
         role: 'user' as const,
         locale: userLocale,
         playMode: user.playMode === 'online' ? 'online' : 'local',
+        ambianceMode: user.ambianceMode === 'soft' ? 'soft' : 'alcool',
       },
     })
     response.cookies.set(sessionCookieOptions(token))

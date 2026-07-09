@@ -30,6 +30,7 @@ export type AuthUser = {
   role: UserRole
   locale: string
   playMode: 'local' | 'online'
+  ambianceMode: 'alcool' | 'soft'
   /** XP de progression en ligne (niveau dérivé via levelForXp). */
   onlineXp: number
 }
@@ -109,6 +110,7 @@ export async function getUserFromSessionToken(token: string | undefined): Promis
     role,
     locale: normalizeAppLocale(user.locale),
     playMode: user.playMode === 'online' ? 'online' : 'local',
+    ambianceMode: user.ambianceMode === 'soft' ? 'soft' : 'alcool',
     onlineXp: user.onlineXp,
   }
 }

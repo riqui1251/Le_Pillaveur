@@ -12,7 +12,7 @@ import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
  * tant qu'elles ne sont pas touchées (voir `toClientView`).
  */
 
-export type TCMode = '1v1' | '2v2' | '3v3'
+export type TCMode = '1v1' | '2v2' | '3v3' | '4v4'
 export type TeamId = 'A' | 'B'
 
 export type TCModeConfig = {
@@ -26,6 +26,7 @@ export const TC_MODES: Record<TCMode, TCModeConfig> = {
   '1v1': { playersPerTeam: 1, shipSizesPerPlayer: [4, 3, 2], gridSize: 8 },
   '2v2': { playersPerTeam: 2, shipSizesPerPlayer: [4, 3], gridSize: 10 },
   '3v3': { playersPerTeam: 3, shipSizesPerPlayer: [4, 3], gridSize: 12 },
+  '4v4': { playersPerTeam: 4, shipSizesPerPlayer: [4, 3], gridSize: 14 },
 }
 
 export const TC_BOT_NAMES = [
@@ -49,6 +50,8 @@ export type TCPlayer = {
   shotsHit: number
   /** Timestamp (ms) du départ du joueur en cours de partie — null/absent s'il est là. */
   leftAt?: number | null
+  /** Power-up "Bombe" (tir 2×2) disponible — un seul usage par partie, accordé si la règle est activée. */
+  hasBomb: boolean
 }
 
 /** Délai de grâce avant qu'un joueur parti soit remplacé par un bot. */
@@ -65,6 +68,9 @@ export type TCShip = {
 
 export type TCShotResult = 'miss' | 'hit' | 'sunk'
 
+/** Résultat d'UNE cellule d'un tir "Bombe" (2×2). */
+export type TCBombCellResult = { cell: number; result: TCShotResult; shipOwnerId: string | null }
+
 export type TCLastShot = {
   shooterId: string
   targetTeam: TeamId
@@ -72,6 +78,8 @@ export type TCLastShot = {
   result: TCShotResult
   shipOwnerId: string | null
   winningShot: boolean
+  /** Tir "Bombe" (2×2) : détail des 4 cellules ; absent pour un tir simple. */
+  bombResults?: TCBombCellResult[]
 }
 
 export type TCState = {
@@ -91,12 +99,14 @@ export type TCState = {
   rematchVotes: string[]
   version: number
   rngState: number
+  /** Power-up "Bombe" activé pour la partie (choix hôte, figé au lancement). */
+  rulePowerups: boolean
 }
 
 export type TCAction =
   | { type: 'PLACE'; playerId: string; ships: number[][] }
   | { type: 'AUTO_PLACE'; playerId: string }
-  | { type: 'FIRE'; playerId: string; cell: number }
+  | { type: 'FIRE'; playerId: string; cell: number; bomb?: boolean }
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number }
@@ -187,7 +197,8 @@ export type TCInitialPlayer = {
 export function createInitialTCState(
   players: TCInitialPlayer[],
   mode: TCMode,
-  seed: string | number
+  seed: string | number,
+  rules: { powerups?: boolean } = {}
 ): TCState {
   const config = TC_MODES[mode]
   const teamA = players.filter((p) => p.team === 'A')
@@ -202,6 +213,8 @@ export function createInitialTCState(
     turnOrder.push(teamA[i].id, teamB[i].id)
   }
 
+  const rulePowerups = Boolean(rules.powerups)
+
   return {
     mode,
     gridSize: config.gridSize,
@@ -212,6 +225,7 @@ export function createInitialTCState(
       drinks: 0,
       shotsFired: 0,
       shotsHit: 0,
+      hasBomb: rulePowerups,
     })),
     ships: [],
     shotsAt: { A: {}, B: {} },
@@ -223,6 +237,7 @@ export function createInitialTCState(
     rematchVotes: [],
     version: 1,
     rngState: createRng(seed).getState(),
+    rulePowerups,
   }
 }
 
@@ -266,7 +281,7 @@ function applyPlacement(state: TCState, playerId: string, shipsCells: number[][]
   }
 }
 
-function applyFire(state: TCState, playerId: string, cell: number): TCState {
+function applyFire(state: TCState, playerId: string, cell: number, bomb = false): TCState {
   if (state.phase !== 'battle') throw new TCEngineError('NOT_BATTLE_PHASE')
   if (currentTCPlayerId(state) !== playerId) throw new TCEngineError('NOT_YOUR_TURN')
   const shooter = state.players.find((p) => p.id === playerId)
@@ -274,55 +289,56 @@ function applyFire(state: TCState, playerId: string, cell: number): TCState {
 
   const targetTeam = otherTeam(shooter.team)
   if (cell < 0 || cell >= state.gridSize * state.gridSize) throw new TCEngineError('CELL_OUT_OF_BOUNDS')
-  if (state.shotsAt[targetTeam][cell] !== undefined) throw new TCEngineError('CELL_ALREADY_SHOT')
+
+  let cellsToResolve = [cell]
+  if (bomb) {
+    if (!state.rulePowerups) throw new TCEngineError('POWERUPS_DISABLED')
+    if (!shooter.hasBomb) throw new TCEngineError('NO_BOMB_CHARGE')
+    const row = Math.floor(cell / state.gridSize)
+    const col = cell % state.gridSize
+    if (row >= state.gridSize - 1 || col >= state.gridSize - 1) throw new TCEngineError('BOMB_OUT_OF_BOUNDS')
+    cellsToResolve = [cell, cell + 1, cell + state.gridSize, cell + state.gridSize + 1]
+  }
+  for (const c of cellsToResolve) {
+    if (state.shotsAt[targetTeam][c] !== undefined) throw new TCEngineError('CELL_ALREADY_SHOT')
+  }
 
   const players = state.players.map((p) => ({ ...p }))
   const ships = state.ships.map((s) => ({ ...s, cells: [...s.cells], hits: [...s.hits] }))
   const me = players.find((p) => p.id === playerId)!
   me.shotsFired += 1
+  if (bomb) me.hasBomb = false
 
-  const hitShip = ships.find((s) => s.team === targetTeam && s.cells.includes(cell))
   const shotsAt: TCState['shotsAt'] = {
     A: { ...state.shotsAt.A },
     B: { ...state.shotsAt.B },
   }
 
-  if (!hitShip) {
-    // Raté : le tireur boit et la main passe.
-    shotsAt[targetTeam][cell] = 'miss'
-    me.drinks += 1
-    return {
-      ...state,
-      players,
-      ships,
-      shotsAt,
-      currentTurnIndex: (state.currentTurnIndex + 1) % state.turnOrder.length,
-      turnCount: state.turnCount + 1,
-      lastShot: {
-        shooterId: playerId,
-        targetTeam,
-        cell,
-        result: 'miss',
-        shipOwnerId: null,
-        winningShot: false,
-      },
-      version: state.version + 1,
+  const bombResults: TCBombCellResult[] = []
+  let anyHit = false
+  for (const c of cellsToResolve) {
+    const hitShip = ships.find((s) => s.team === targetTeam && s.cells.includes(c))
+    if (!hitShip) {
+      shotsAt[targetTeam][c] = 'miss'
+      bombResults.push({ cell: c, result: 'miss', shipOwnerId: null })
+      continue
     }
+    anyHit = true
+    shotsAt[targetTeam][c] = 'hit'
+    me.shotsHit += 1
+    hitShip.hits.push(c)
+    const owner = players.find((p) => p.id === hitShip.ownerId)
+    if (owner) owner.drinks += 1
+    let result: TCShotResult = 'hit'
+    if (hitShip.hits.length === hitShip.cells.length) {
+      hitShip.sunk = true
+      result = 'sunk'
+      if (owner) owner.drinks += 2
+    }
+    bombResults.push({ cell: c, result, shipOwnerId: hitShip.ownerId })
   }
-
-  // Touché : le propriétaire boit, le tireur rejoue.
-  shotsAt[targetTeam][cell] = 'hit'
-  me.shotsHit += 1
-  hitShip.hits.push(cell)
-  const owner = players.find((p) => p.id === hitShip.ownerId)
-  if (owner) owner.drinks += 1
-
-  let result: TCShotResult = 'hit'
-  if (hitShip.hits.length === hitShip.cells.length) {
-    hitShip.sunk = true
-    result = 'sunk'
-    if (owner) owner.drinks += 2
-  }
+  // Raté (tir simple, ou bombe entièrement dans l'eau) : le tireur boit.
+  if (!anyHit) me.drinks += 1
 
   const enemyFleetSunk = ships.filter((s) => s.team === targetTeam).every((s) => s.sunk)
   let phase: TCState['phase'] = state.phase
@@ -335,6 +351,13 @@ function applyFire(state: TCState, playerId: string, cell: number): TCState {
     }
   }
 
+  // Touché (au moins une cellule) → le tireur rejoue ; raté partout → la main passe.
+  const advance = !anyHit
+  const primary =
+    bombResults.find((r) => r.result === 'sunk') ??
+    bombResults.find((r) => r.result === 'hit') ??
+    bombResults[0]
+
   return {
     ...state,
     players,
@@ -342,13 +365,16 @@ function applyFire(state: TCState, playerId: string, cell: number): TCState {
     shotsAt,
     phase,
     winner,
+    currentTurnIndex: advance ? (state.currentTurnIndex + 1) % state.turnOrder.length : state.currentTurnIndex,
+    turnCount: advance ? state.turnCount + 1 : state.turnCount,
     lastShot: {
       shooterId: playerId,
       targetTeam,
-      cell,
-      result,
-      shipOwnerId: hitShip.ownerId,
+      cell: primary.cell,
+      result: primary.result,
+      shipOwnerId: primary.shipOwnerId,
       winningShot: enemyFleetSunk,
+      ...(bomb ? { bombResults } : {}),
     },
     version: state.version + 1,
   }
@@ -375,7 +401,7 @@ export function reduceTC(state: TCState, action: TCAction): TCState {
       return { ...next, rngState: rng.getState() }
     }
     case 'FIRE':
-      return applyFire(state, action.playerId, action.cell)
+      return applyFire(state, action.playerId, action.cell, action.bomb)
     case 'LEAVE': {
       if (state.phase === 'finished') throw new TCEngineError('GAME_FINISHED')
       const player = state.players.find((p) => p.id === action.playerId)
@@ -495,6 +521,28 @@ export function botChooseCell(state: TCState, botId: string, rng: SeededRng): nu
 }
 
 /**
+ * Le bot utilise sa Bombe (si dispo) sur une case de chasse choisie par
+ * `botChooseCell`, seulement si le carré 2×2 tient dans la grille et que les
+ * 4 cases sont encore vierges — sinon il tire simple. ~50% de chances quand
+ * l'occasion se présente (pas systématique, pour rester lisible/imprévisible).
+ */
+export function botShouldUseBomb(
+  state: TCState,
+  bot: TCPlayer,
+  cell: number,
+  rng: SeededRng
+): boolean {
+  if (!bot.hasBomb) return false
+  const row = Math.floor(cell / state.gridSize)
+  const col = cell % state.gridSize
+  if (row >= state.gridSize - 1 || col >= state.gridSize - 1) return false
+  const targetTeam = otherTeam(bot.team)
+  const bombCells = [cell, cell + 1, cell + state.gridSize, cell + state.gridSize + 1]
+  const bombFits = bombCells.every((c) => state.shotsAt[targetTeam][c] === undefined)
+  return bombFits && rng.chance(0.5)
+}
+
+/**
  * Fait jouer les bots tant que c'est leur tour (placement puis tirs).
  * Borné pour éviter toute boucle infinie.
  */
@@ -513,7 +561,8 @@ export function advanceTCBots(state: TCState): TCState {
       if (!active?.isBot) return current
       const rng = rngFromState(current.rngState)
       const cell = botChooseCell(current, active.id, rng)
-      current = { ...reduceTC({ ...current, rngState: rng.getState() }, { type: 'FIRE', playerId: active.id, cell }) }
+      const bomb = botShouldUseBomb(current, active, cell, rng)
+      current = { ...reduceTC({ ...current, rngState: rng.getState() }, { type: 'FIRE', playerId: active.id, cell, bomb }) }
       continue
     }
     return current

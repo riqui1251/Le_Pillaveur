@@ -118,25 +118,6 @@ export function PyramidIcon({ className = 'w-6 h-6' }: IconProps) {
   )
 }
 
-// Roulette russe: barillet (cylindre) simplifié 6 chambres
-export function PistolIcon({ className = 'w-6 h-6' }: IconProps) {
-  // Silhouette de pistolet (profil) plus claire
-  return (
-    <svg viewBox="0 0 24 24" className={className}>
-      {/* Glissière */}
-      <rect x="4" y="8" width="11" height="3" rx="0.6" className="text-slate-300" fill="currentColor" />
-      {/* Canon */}
-      <rect x="15" y="9" width="5" height="1.5" className="text-slate-300" fill="currentColor" />
-      {/* Garde de détente */}
-      <path d="M11 12.5a1.8 1.8 0 0 0 2 1.8" stroke="currentColor" className="text-slate-400" strokeWidth="1.2" fill="none" />
-      {/* Poignée */}
-      <path d="M14.5 11.5L12.5 17H8.5l1.7-5.5h4.3Z" className="text-slate-400" fill="currentColor" />
-      {/* Détente */}
-      <rect x="11.4" y="11.2" width="0.8" height="1.2" className="fill-current" />
-    </svg>
-  )
-}
-
 export function DieThreeIcon({ className = 'w-6 h-6' }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">

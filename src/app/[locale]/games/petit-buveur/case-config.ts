@@ -1,6 +1,3 @@
-import type { GamePlayer } from './case-types'
-import { getPlayerGameBoost } from '@/lib/players'
-
 export type CaseType =
   | 'normal'
   | 'defi'
@@ -158,16 +155,7 @@ export const CASES_SPECIAL_MODAL = new Set<CaseType>([
   'double-case',
 ])
 
-export function generateCase(difficulty: Difficulty, t: PetitBuveurT, currentPlayer?: GamePlayer): Case {
-  const boost = currentPlayer ? getPlayerGameBoost(currentPlayer, 'petit-buveur') : 0
-  if (boost > 0 && Math.random() * 100 < boost) {
-    const avanceSpaces = Math.floor(Math.random() * 3) + 1
-    return {
-      type: 'avance',
-      effect: avanceSpaces,
-    }
-  }
-
+export function generateCase(difficulty: Difficulty, t: PetitBuveurT): Case {
   const type = pickCaseType()
   const multiplier = difficultyMultipliers[difficulty]
 

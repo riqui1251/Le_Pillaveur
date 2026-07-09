@@ -136,6 +136,11 @@
       "emptyTitle": "Nessun gioco trovato",
       "emptyHint": "Prova un'altra parola chiave."
     },
+    "ambianceMode": {
+      "label": "Atmosfera",
+      "alcool": "Alcol",
+      "soft": "Soft"
+    },
     "selectedPlayers": {
       "ready": "{count, plural, one {# giocatore pronto} other {# giocatori pronti}}",
       "none": "Nessun giocatore selezionato",
@@ -457,16 +462,26 @@
         "totalGive": "Totale: {count} sorso/i da erogare.",
         "partialNothing": "⚡ Numero/i su un dado ({numbers}) ma non in totale: niente da distribuire.",
         "nothing": "Niente per te questo lancio."
+      },
+      "online": {
+        "waitingSetup": "Ognuno regola le proprie scommesse, poi si dichiara pronto.",
+        "myBets": "Le mie scommesse",
+        "ready": "Sono pronto",
+        "readyDone": "Pronto — in attesa degli altri…",
+        "anyoneRolls": "Chiunque può lanciare i dadi.",
+        "endGame": "Termina la partita",
+        "finishedTitle": "Partita terminata",
+        "totalRolls": "{count} lanci in totale",
+        "replay": "Rigioca",
+        "rematchWaiting": "In attesa ({count}/{total})",
+        "backToMenu": "Torna al menu",
+        "waitingReturn": "{name} è uscito — sostituito tra {seconds}s se non torna"
       }
     },
     "catalog": {
       "1220": {
         "title": "1220",
         "description": "Un dado da 12 e un dado da 20: scommessa sulla parità, un intervallo di somma e due numeri chiave per bere o far bere."
-      },
-      "roulette-russe": {
-        "title": "Roulette russa",
-        "description": "Un gioco d'azzardo in cui ogni giocatore, a turno, spara. Sopravvivi o bevi!"
       },
       "monsieur-3": {
         "title": "Monsieur 3",
@@ -482,11 +497,13 @@
       },
       "toucher-coule": {
         "title": "Colpito e Affondato",
-        "description": "Battaglia navale a squadre, versione festa: colpito bevi, affondato brindi!"
+        "description": "Battaglia navale a squadre, versione festa: colpito bevi, affondato brindi!",
+        "softDescription": "Battaglia navale a squadre: individua e affonda la flotta avversaria!"
       },
       "menteur": {
         "title": "Il Bugiardo",
-        "description": "Dadi nascosti, rilanci e bluff: grida «Bugiardo!» al momento giusto o bevi!"
+        "description": "Dadi nascosti, rilanci e bluff: grida «Bugiardo!» al momento giusto o bevi!",
+        "softDescription": "Dadi nascosti, rilanci e bluff: grida «Bugiardo!» al momento giusto!"
       },
       "imposteur": {
         "title": "L'Impostore",
@@ -550,30 +567,14 @@
       },
       "quiz": {
         "title": "Il Gran Pillaveur",
-        "description": "Il quiz da festa: rispondi veloce e giusto, o bevi! Telefoni-pulsanti e podio finale."
+        "description": "Il quiz da festa: rispondi veloce e giusto, o bevi! Telefoni-pulsanti e podio finale.",
+        "softTitle": "Quiz Party",
+        "softDescription": "Il quiz da festa: rispondi veloce e giusto! Telefoni-pulsanti e podio finale."
       },
       "loup-garou": {
         "title": "Lupo Mannaro",
-        "description": "Il classico delle feste, versione alcolica: lupi, veggente, dibattiti e linciaggi che brindano!"
-      }
-    },
-    "roulette-russe": {
-      "title": "Roulette russa",
-      "alive": "Invidia",
-      "eliminated": "Eliminato",
-      "pull": "{name} tira",
-      "lastSurvivor": "{name} è l'ultimo sopravvissuto!",
-      "recapTitle": "Riepilogo del sorso:",
-      "sipsCount": "{count} sorseggia",
-      "replay": "Rigiocare",
-      "home": "Benvenuto",
-      "config": {
-        "rules": [
-          "Ogni giocatore, a turno, spara",
-          "Se il giocatore sopravvive, beve un bicchierino",
-          "Se il giocatore perde, viene eliminato",
-          "L'ultimo giocatore vivo vince la partita"
-        ]
+        "description": "Il classico delle feste, versione alcolica: lupi, veggente, dibattiti e linciaggi che brindano!",
+        "softDescription": "Il classico delle feste: lupi, veggente, dibattiti e linciaggi!"
       }
     },
     "ballon-surprise": {
@@ -615,6 +616,18 @@
         "doubleNoir": "Doppio nero",
         "purple": "Purple",
         "doublePurple": "Doppio Purple"
+      },
+      "online": {
+        "yourTurn": "Tocca a te scommettere",
+        "waitingBet": "{name} sta scegliendo una scommessa…",
+        "waitingDecision": "In attesa di {name}…",
+        "endGame": "Termina la partita",
+        "finishedTitle": "Partita terminata",
+        "totalCards": "{count} carte pescate in totale",
+        "replay": "Rigioca",
+        "rematchWaiting": "In attesa ({count}/{total})",
+        "backToMenu": "Torna al menu",
+        "waitingReturn": "{name} se n'è andato — sostituito tra {seconds}s se non torna"
       }
     },
     "roue-des-gorgees": {
@@ -1405,6 +1418,10 @@
           "3v3": {
             "label": "3 vs 3",
             "desc": "2 navi a testa · griglia 12×12"
+          },
+          "4v4": {
+            "label": "4 vs 4",
+            "desc": "2 navi a testa · griglia 14×14"
           }
         },
         "teams": "Squadre",
@@ -1412,7 +1429,10 @@
         "teamB": "Squadra B",
         "joinTeam": "Unisciti",
         "botSlot": "Bot 🤖",
-        "botsFill": "I posti vuoti saranno occupati dai bot."
+        "botsFill": "I posti vuoti saranno occupati dai bot.",
+        "variants": "Varianti",
+        "powerups": "Bomba (colpo 2×2)",
+        "powerupsHint": "Ogni giocatore riceve una bomba monouso: un colpo che centra un quadrato di 2×2."
       },
       "game": {
         "title": "Colpito e Affondato",
@@ -1432,8 +1452,14 @@
         "enemyWaters": "Acque nemiche",
         "yourFleet": "La tua flotta",
         "feedMiss": "💦 Acqua! {shooter} beve 1 sorso",
+        "feedMissSoft": "💦 Acqua!",
         "feedHit": "🎯 Colpito! La nave di {owner} imbarca acqua — 1 sorso",
+        "feedHitSoft": "🎯 Colpito! La nave di {owner} imbarca acqua",
         "feedSunk": "💥 AFFONDATO! {owner} brinda: +3 sorsi",
+        "feedSunkSoft": "💥 AFFONDATO!",
+        "feedBomb": "💣 Bomba! {hits}/{total} caselle colpite",
+        "bombButton": "Bomba",
+        "bombHint": "Punta l'angolo in alto a sinistra: la bomba colpisce un quadrato di 4 caselle.",
         "team": "Squadra {team}",
         "victoryTitle": "Vittoria della squadra {team}!",
         "defeatDrinks": "La squadra {team} finisce i bicchieri: +3 sorsi ciascuno 🍻",
@@ -1475,6 +1501,13 @@
         "onlineOnly": "Il Bugiardo si gioca online: ogni giocatore nasconde i propri dadi sotto il bicchiere, impossibile su un solo schermo!",
         "switchOnline": "Passa alla modalità online"
       },
+      "lobby": {
+        "variants": "Varianti",
+        "palifico": "Palifico",
+        "palificoHint": "1 dado rimasto: gli 1 non sono più jolly, faccia bloccata",
+        "calza": "Calza",
+        "calzaHint": "Scommetti la quantità esatta per riavere un dado"
+      },
       "game": {
         "round": "Manche {n}",
         "diceOnTable": "{n} dadi sul tavolo",
@@ -1485,6 +1518,8 @@
         "bidBy": "di {name}",
         "noBid": "Nessun rilancio — apri la manche!",
         "pillaveurHint": "Gli 1 sono jolly: contano per tutte le facce.",
+        "palificoBadge": "🔒 Manche Palifico: niente jolly, faccia bloccata su {face}",
+        "palificoBadgeOpen": "🔒 Manche Palifico: niente jolly, il primo rilancio fissa la faccia",
         "yourTurn": "Tocca a te: rilancia o grida BUGIARDO!",
         "turnOf": "Tocca a {name}…",
         "yourDice": "I tuoi dadi",
@@ -1492,12 +1527,18 @@
         "showDice": "Guarda i miei dadi",
         "bid": "Rilancia",
         "dudo": "BUGIARDO!",
+        "calza": "CALZA!",
         "illegalBid": "Rilancio troppo basso: alza la quantità o la faccia.",
         "reveal": {
           "title": "Bicchieri alzati!",
           "bidHeld": "Il rilancio reggeva: {count} dadi (annunciati {qty} ×)",
           "bidFailed": "Bugiardo smascherato: solo {count} dadi (annunciati {qty} ×)",
           "loser": "{name} perde un dado e beve {sips} sorso{sips, plural, one {} other {i}} 🍺",
+          "loserSoft": "{name} perde un dado",
+          "calzaWon": "🎯 Calza riuscito: {name} riguadagna un dado!",
+          "calzaWonCapped": "🎯 Calza riuscito: {name} ha già il massimo di dadi, niente da riguadagnare.",
+          "calzaLost": "{name} ha tentato Calza e ha sbagliato: perde un dado e beve {sips} sorso{sips, plural, one {} other {i}} 🍺",
+          "calzaLostSoft": "{name} ha tentato Calza e ha sbagliato: perde un dado",
           "eliminatedMsg": "💀 {name} non ha più dadi — tutto d'un fiato, eliminato!",
           "continue": "Manche successiva"
         },
@@ -1535,6 +1576,11 @@
       "page": {
         "onlineOnly": "L'Impostore si gioca online: ognuno riceve una parola segreta sul PROPRIO telefono, impossibile su un solo schermo!",
         "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "count": "Numero di impostori",
+        "imposteurSingular": "impostore",
+        "imposteursPlural": "impostori"
       },
       "game": {
         "round": "Manche {n}",
@@ -2046,7 +2092,8 @@
       "defis": [
         {
           "text": "Fai 10 flessioni",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Racconta una barzelletta",
@@ -2062,11 +2109,13 @@
         },
         {
           "text": "Fai 10 squat",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Esegui 30 secondi di allenamento di base",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Mima un film senza parlare",
@@ -2096,7 +2145,8 @@
         },
         {
           "text": "Esegui una verticale contro un muro",
-          "drinks": 3
+          "drinks": 3,
+          "verifiableOnline": false
         },
         {
           "text": "Indovina una parola senza parlare",
@@ -2108,7 +2158,8 @@
         },
         {
           "text": "Esegui 5 salti della rana",
-          "drinks": 2
+          "drinks": 2,
+          "verifiableOnline": false
         },
         {
           "text": "Non toccare il telefono per 3 round",
@@ -2116,6 +2167,78 @@
         },
         {
           "text": "Bevi senza usare le mani",
+          "drinks": 2
+        },
+        {
+          "text": "Parla come un robot per 2 turni",
+          "drinks": 2
+        },
+        {
+          "text": "Inventa una scusa scadente per il tuo ritardo",
+          "drinks": 2
+        },
+        {
+          "text": "Fai indovinare un film mimando solo con le mani",
+          "drinks": 2
+        },
+        {
+          "text": "Fai playback sulla prossima canzone che parte",
+          "drinks": 2
+        },
+        {
+          "text": "Racconta il tuo ricordo più imbarazzante delle medie",
+          "drinks": 3
+        },
+        {
+          "text": "Parla sussurrando per 2 turni",
+          "drinks": 2
+        },
+        {
+          "text": "Imita la voce di un altro giocatore",
+          "drinks": 2
+        },
+        {
+          "text": "Recita i giorni della settimana al contrario",
+          "drinks": 2
+        },
+        {
+          "text": "Fai un complimento sincero a ogni giocatore",
+          "drinks": 2
+        },
+        {
+          "text": "Racconta una barzelletta in 30 secondi",
+          "drinks": 2
+        },
+        {
+          "text": "Trova una parola che faccia rima col nome del giocatore alla tua sinistra",
+          "drinks": 2
+        },
+        {
+          "text": "Descrivi il tuo peggior appuntamento senza dire il nome",
+          "drinks": 3
+        },
+        {
+          "text": "Parla solo per domande per 2 turni",
+          "drinks": 2
+        },
+        {
+          "text": "Dai 3 motivi per cui sei il/la migliore a questo tavolo",
+          "drinks": 2
+        },
+        {
+          "text": "Improvvisa una pubblicità per un oggetto a caso nella stanza",
+          "drinks": 2
+        },
+        {
+          "text": "Cita 5 marche di birra in 10 secondi",
+          "drinks": 2
+        },
+        {
+          "text": "Racconta il tuo sogno più strano",
+          "drinks": 2
+        },
+        {
+          "text": "Fai indovinare il tuo lavoro dei sogni con una frase misteriosa",
           "drinks": 2
         }
       ],
@@ -2482,6 +2605,7 @@
         "answerSent": "Risposta inviata — in attesa degli altri… ⚡",
         "correct": "Giusto: +{points} punti!",
         "wrong": "Sbagliato… {sips} sorsi 🍺",
+        "wrongSoft": "Sbagliato…",
         "skipReveal": "Prossima domanda →",
         "victoryTitle": "{name} vince il quiz!",
         "lastDrinks": "{name} finisce il bicchiere 🍻",
@@ -2593,6 +2717,7 @@
         "witchNone": "Non fare nulla",
         "dawnNobody": "Nessuno è morto stanotte! 🎉",
         "dawnDeath": "💀 {name} è morto — era {role} (+3 🍺)",
+        "dawnDeathSoft": "💀 {name} è morto — era {role}",
         "hunterPrompt": "🏹 Ultimo respiro: porta qualcuno con te!",
         "hunterWaiting": "{name} carica il fucile…",
         "debatePrompt": "🗣️ Dibattete in vocale: chi è il lupo?",
@@ -2683,8 +2808,6 @@
       "gamesPlinko": "Parti Plinko",
       "winsMonsieur3": "Vittorie Monsieur 3",
       "gamesMonsieur3": "Parti Monsieur 3",
-      "winsRouletteRusse": "Vince la roulette russa",
-      "gamesRouletteRusse": "Giochi di roulette russa",
       "winsBallonSurprise": "Vittorie di palloncini a sorpresa",
       "gamesBallonSurprise": "Feste in mongolfiera a sorpresa",
       "winsPetitsPoints": "Vittorie a punti piccoli",

@@ -6,6 +6,7 @@ import type { TvRoomDto } from '@/lib/online-room'
 import type { ImposteurClientView } from '@/lib/imposteur/engine'
 import { IMPOSTEUR_CLUE_MS, IMPOSTEUR_VOTE_MS } from '@/lib/imposteur/engine'
 import { cn } from '@/lib/utils'
+import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
  * L'IMPOSTEUR sur grand écran : les indices en grand, qui parle, qui a voté —
@@ -85,12 +86,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
         <p className="text-3xl font-black uppercase tracking-widest text-violet-300/80">
           {t('countdown.title')}
         </p>
-        <span
-          key={secondsLeft}
-          className="animate-in zoom-in text-[12rem] font-black leading-none tabular-nums text-violet-200 duration-300"
-        >
-          {secondsLeft}
-        </span>
+        <TvBigCountdown seconds={secondsLeft} colorClass="text-violet-200" />
         <p className="text-xl text-white/50">{t('countdown.hint')}</p>
       </div>
     )
@@ -107,15 +103,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
           {state.phase === 'reveal' && t('phaseReveal')}
         </span>
         {timeLeftMs !== null && (
-          <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-300 ease-linear',
-                timeLeftMs < 10_000 ? 'bg-red-400' : 'bg-violet-400'
-              )}
-              style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
-            />
-          </div>
+          <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={10_000} colorClass="bg-violet-400" dangerClass="bg-red-400" />
         )}
       </div>
 

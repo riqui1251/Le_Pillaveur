@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl'
 import { Volume2, VolumeX, ChevronDown, ChevronsDown, ArrowRight, Tv } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Player } from '@/types/game'
-import { getPlayerGameBoost } from '@/lib/players'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { GameShell } from '@/components/game/GameShell'
@@ -123,45 +122,6 @@ const WEIGHTED_PIN_TYPES: SpecialPinType[] = (Object.entries(PIN_TYPE_WEIGHTS) a
 
 const ALL_PIN_TYPES = Object.keys(PIN_TYPE_WEIGHTS) as SpecialPinType[]
 
-/* // Désactivé car non utilisé pour l'instant
-// Composant Badge pour afficher un pin avec son type et sa couleur
-const SpecialPinBadge = ({ type }: { type: SpecialPinType }) => {
-  const colors = SPECIAL_PIN_COLORS[type];
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${colors.border.replace('border-', 'text-')} bg-slate-800 border ${colors.border} mr-1`}>
-      {type}
-    </span>
-  );
-};
-*/
-
-// Composant pour afficher les logs d'effets avec une meilleure présentation
-/* // Désactivé car non utilisé pour l'instant
-const EffectLogItem = ({ log }: { log: string }) => {
-  // Cherche si le log commence par "Pin X:" pour extraire le type
-  const pinTypeMatch = log.match(/^Pin (\w+):/);
-  if (pinTypeMatch && pinTypeMatch[1]) {
-    const pinType = pinTypeMatch[1] as SpecialPinType;
-    const restOfLog = log.replace(/^Pin \w+: /, '');
-    
-    return (
-      <li className="flex items-start">
-        <SpecialPinBadge type={pinType} />
-        <span>{restOfLog}</span>
-      </li>
-    );
-  }
-  
-  // Pour les logs d'effets induits (commençant par "->")
-  if (log.startsWith('->')) {
-    return <li className="ml-5 text-slate-400">{log}</li>;
-  }
-  
-  // Fallback pour les autres types de logs
-  return <li>{log}</li>;
-};
-*/
-
 // Structure du plateau : nombre de compartiments - Dépendra de l'état
 // const NUM_SLOTS = SLOT_VALUES.length // Supprimé
 
@@ -224,9 +184,6 @@ interface AnimationState {
 }
 // --- Fin Interface ---
 
-// --- SUPPRIMÉ: État pour l'historique complet des effets ---
-// const [gameHistory, setGameHistory] = useState<...>([]);
-
 // Ajouter après les autres interfaces
 interface PowerupEvent {
   type: SpecialPinType;
@@ -242,31 +199,6 @@ interface TurnResult {
 }
 
 type ResultDisplayPhase = 'tournees' | 'details' | 'final';
-
-// Hook personnalisé pour la gestion des pins
-// const usePinCalculator = (pinsPerRowConfig: Map<number, number>) => {
-//   return useCallback((row: number) => {
-//     let pinsInRow = pinsPerRowConfig.get(row);
-//     if (pinsInRow === undefined) {
-//         pinsInRow = DEFAULT_PINS_PER_ROW_FALLBACK(row);
-//         console.warn(`Configuration manquante pour la rangée ${row + 1} (index ${row}). Utilisation du fallback: ${pinsInRow} pins.`);
-//     }
-    
-//     const isEvenRow = row % 2 === 0;
-//     const intervals = pinsInRow + (isEvenRow ? 0 : 1); 
-    
-//     return Array.from({ length: pinsInRow }).map((_, index) => {
-//       let xPos;
-//       if (isEvenRow) {
-//         xPos = ((index + 0.5) * 100) / pinsInRow;
-//       } else {
-//         xPos = ((index + 1) * 100) / intervals;
-//       }
-//       const yPos = (row + 1) * (100 / (ROWS + 1));
-//       return { x: xPos, y: yPos };
-//     });
-//   }, [pinsPerRowConfig]);
-// };
 
 // Génération statique des pins
 const generateStaticPinsConfig = (rows: number, minPinsPerRow: number, maxPinsPerRow: number) => {
@@ -1406,23 +1338,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     });
 
     const currentPlayer = players[currentPlayerIndex];
-    const boost = currentPlayer ? getPlayerGameBoost(currentPlayer, 'plinko') : 0;
-    if (boost > 0) {
-      totalGreenSips += Math.floor(totalGreenSips * boost / 100);
-      totalRedSips = Math.max(0, totalRedSips - Math.floor(totalRedSips * boost / 100));
-    }
-
 
     const extraSipsForDisplay = finishedExtraBalls.reduce((sum, ballData) => sum + (ballData.finalSipResult ?? 0), 0);
     setTurnResult({ redSips: totalRedSips, greenSips: totalGreenSips, extraSips: extraSipsForDisplay > 0 ? extraSipsForDisplay : null, player: currentPlayer });
-
-    // Mettre à jour l'historique du tour actuel // SUPPRIMÉ
-    // const currentTurnLogs = { ... };
-    // setTurnEffectLogs(currentTurnLogs);
-
-    // Ajouter à l'historique global // SUPPRIMÉ
-    // const currentPlayer = players[currentPlayerIndex];
-    // if (...) { setGameHistory(...) }
 
     // currentPlayer déjà défini plus haut
     const currentResults = playerResults[currentPlayer.id] || [];

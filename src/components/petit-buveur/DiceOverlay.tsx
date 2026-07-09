@@ -26,20 +26,21 @@ const PIPS: Record<number, [number, number][]> = {
   6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]],
 }
 
-export function DiceFace({ value, accent }: { value: number; accent?: boolean }) {
+export function DiceFace({ value, accent, size = 96 }: { value: number; accent?: boolean; size?: number }) {
   const pips = PIPS[value] ?? PIPS[1]
   return (
     <div
       className={
-        'relative grid h-24 w-24 grid-cols-3 grid-rows-3 place-items-center rounded-2xl bg-white p-3 shadow-2xl ' +
+        'relative grid grid-cols-3 grid-rows-3 place-items-center rounded-2xl bg-white p-3 shadow-2xl ' +
         (accent ? 'ring-4 ring-amber-400/80 shadow-amber-500/40' : 'shadow-black/50')
       }
+      style={{ width: size, height: size }}
     >
       {pips.map(([row, col], i) => (
         <span
           key={i}
-          className="h-4 w-4 rounded-full bg-gray-900"
-          style={{ gridRow: row + 1, gridColumn: col + 1 }}
+          className="rounded-full bg-gray-900"
+          style={{ gridRow: row + 1, gridColumn: col + 1, width: size * 0.167, height: size * 0.167 }}
         />
       ))}
     </div>

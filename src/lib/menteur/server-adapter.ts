@@ -10,6 +10,7 @@ import {
   MenteurEngineError,
   MENTEUR_MAX_PLAYERS,
   type MenteurBid,
+  type MenteurRules,
   type MenteurState,
 } from './engine'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -47,7 +48,8 @@ const MENTEUR_BOT_NAMES = [
 export function buildMenteurState(
   members: MenteurRoomMember[],
   botsCount: number = 0,
-  seed?: string | number
+  seed?: string | number,
+  rules?: MenteurRules
 ): MenteurState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
@@ -62,7 +64,7 @@ export function buildMenteurState(
   const wanted = Math.max(0, Math.min(botsCount, MENTEUR_MAX_PLAYERS - players.length))
   for (let i = 0; i < wanted; i += 1) addBot()
   while (players.length < 2) addBot()
-  return createMenteurState(players, seed ?? randomSeed())
+  return createMenteurState(players, seed ?? randomSeed(), rules)
 }
 
 export function serializeMenteurState(state: MenteurState): string {
@@ -83,6 +85,7 @@ export function parseMenteurState(json: string | null): MenteurState | null {
 export type MenteurRoomActionInput =
   | { type: 'bid'; qty: number; face: number }
   | { type: 'dudo' }
+  | { type: 'calza' }
   | { type: 'continue' }
   | { type: 'bot' }
   | { type: 'replace-left'; graceMs: number }
@@ -102,6 +105,8 @@ export function applyMenteurRoomAction(
         return { ok: true, state: reduceMenteur(state, { type: 'BID', playerId: userId, qty: input.qty, face: input.face }) }
       case 'dudo':
         return { ok: true, state: reduceMenteur(state, { type: 'DUDO', playerId: userId }) }
+      case 'calza':
+        return { ok: true, state: reduceMenteur(state, { type: 'CALZA', playerId: userId }) }
       case 'continue':
         return { ok: true, state: reduceMenteur(state, { type: 'CONTINUE', playerId: userId }) }
       case 'bot':
@@ -158,15 +163,17 @@ export function menteurSpectatorViewJson(state: MenteurState): string {
 
 // ─── IA du bot ───────────────────────────────────────────────────────────────
 
-/** Dés du joueur qui comptent pour une face (jokers 1 inclus hors enchère aux 1). */
-function countMine(dice: number[], face: number): number {
-  return dice.filter((d) => d === face || (face !== 1 && d === 1)).length
+/** Dés du joueur qui comptent pour une face (jokers 1 inclus hors enchère aux 1, désactivés en Palifico). */
+function countMine(dice: number[], face: number, palifico = false): number {
+  return dice.filter((d) => d === face || (!palifico && face !== 1 && d === 1)).length
 }
 
 /**
  * Décision du bot, probabiliste : espérance de la face enchérie =
- * (mes dés qui matchent) + (dés inconnus × 1/3, ou 1/6 pour les 1).
- * Enchère trop au-dessus → « Menteur ! », sinon relance plausible.
+ * (mes dés qui matchent) + (dés inconnus × 1/3, ou 1/6 pour les 1, ou 1/6
+ * pour toute face en manche Palifico où les 1 ne sont plus jokers).
+ * Enchère trop au-dessus → « Menteur ! » (ou « Calza ! » si pile dessus et
+ * la règle est activée), sinon relance plausible.
  * Le hasard des CHOIX utilise Math.random (entrée « joueur ») ; les dés
  * restent tirés par le RNG seedé du moteur.
  */
@@ -184,15 +191,20 @@ export function applyMenteurBotAction(state: MenteurState): MenteurRoomActionRes
     const totalDice = menteurTotalDice(state)
     const unknown = totalDice - actor.dice.length
     const bid = state.currentBid
+    const { palifico } = state
 
     if (bid) {
-      const expected =
-        countMine(actor.dice, bid.face) + unknown * (bid.face === 1 ? 1 / 6 : 1 / 3)
+      const perDieOdds = palifico ? 1 / 6 : bid.face === 1 ? 1 / 6 : 1 / 3
+      const expected = countMine(actor.dice, bid.face, palifico) + unknown * perDieOdds
+      // Pile dessus et Calza dispo → tenté de temps en temps plutôt que de relancer.
+      if (state.ruleCalza && Math.abs(bid.qty - expected) < 0.5 && Math.random() < 0.4) {
+        return { ok: true, state: reduceMenteur(state, { type: 'CALZA', playerId: actor.id }) }
+      }
       // Marge légèrement aléatoire pour ne pas être prévisible.
       if (bid.qty > expected + 0.6 + Math.random() * 0.8) {
         return { ok: true, state: reduceMenteur(state, { type: 'DUDO', playerId: actor.id }) }
       }
-      const candidate = pickRaise(bid, actor.dice, totalDice)
+      const candidate = pickRaise(bid, actor.dice, totalDice, palifico)
       if (!candidate) {
         return { ok: true, state: reduceMenteur(state, { type: 'DUDO', playerId: actor.id }) }
       }
@@ -208,10 +220,10 @@ export function applyMenteurBotAction(state: MenteurState): MenteurRoomActionRes
     }
 
     // Première enchère de la manche : sa meilleure face, quantité prudente.
-    const bestFace = bestOwnFace(actor.dice)
+    const bestFace = bestOwnFace(actor.dice, palifico)
     const qty = Math.max(
       1,
-      Math.min(totalDice, countMine(actor.dice, bestFace) + Math.floor(unknown / 4))
+      Math.min(totalDice, countMine(actor.dice, bestFace, palifico) + Math.floor(unknown / 4))
     )
     return {
       ok: true,
@@ -223,12 +235,12 @@ export function applyMenteurBotAction(state: MenteurState): MenteurRoomActionRes
   }
 }
 
-/** Face 2-6 la plus représentée dans sa main (jokers inclus). */
-function bestOwnFace(dice: number[]): number {
+/** Face 2-6 la plus représentée dans sa main (jokers inclus hors Palifico). */
+function bestOwnFace(dice: number[], palifico = false): number {
   let best = 2
   let bestCount = -1
   for (let face = 2; face <= 6; face += 1) {
-    const c = countMine(dice, face)
+    const c = countMine(dice, face, palifico)
     if (c > bestCount) {
       best = face
       bestCount = c
@@ -241,24 +253,30 @@ function bestOwnFace(dice: number[]): number {
 function pickRaise(
   bid: MenteurBid,
   dice: number[],
-  totalDice: number
+  totalDice: number,
+  palifico = false
 ): { qty: number; face: number } | null {
-  const bestFace = bestOwnFace(dice)
+  const bestFace = bestOwnFace(dice, palifico)
   const candidates: { qty: number; face: number }[] = []
-  // Même quantité, face supérieure que je possède.
-  for (let face = bid.face + 1; face <= 6; face += 1) {
-    if (countMine(dice, face) > 0) candidates.push({ qty: bid.qty, face })
+  if (palifico) {
+    // Face verrouillée pour la manche : seule la quantité peut monter.
+    candidates.push({ qty: bid.qty + 1, face: bid.face })
+  } else {
+    // Même quantité, face supérieure que je possède.
+    for (let face = bid.face + 1; face <= 6; face += 1) {
+      if (countMine(dice, face) > 0) candidates.push({ qty: bid.qty, face })
+    }
+    // Quantité +1 sur ma meilleure face, puis sur la face courante.
+    candidates.push({ qty: bid.qty + 1, face: bestFace })
+    candidates.push({ qty: bid.qty + 1, face: bid.face })
+    // Bascule vers les 1 si j'en tiens.
+    if (dice.includes(1)) candidates.push({ qty: Math.ceil(bid.qty / 2), face: 1 })
+    // Sortie des 1.
+    if (bid.face === 1) candidates.push({ qty: bid.qty * 2 + 1, face: bestFace })
   }
-  // Quantité +1 sur ma meilleure face, puis sur la face courante.
-  candidates.push({ qty: bid.qty + 1, face: bestFace })
-  candidates.push({ qty: bid.qty + 1, face: bid.face })
-  // Bascule vers les 1 si j'en tiens.
-  if (dice.includes(1)) candidates.push({ qty: Math.ceil(bid.qty / 2), face: 1 })
-  // Sortie des 1.
-  if (bid.face === 1) candidates.push({ qty: bid.qty * 2 + 1, face: bestFace })
 
   for (const c of candidates) {
-    if (isLegalRaise(bid, c.qty, c.face, totalDice)) return c
+    if (isLegalRaise(bid, c.qty, c.face, totalDice, palifico)) return c
   }
   return null
 }

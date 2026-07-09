@@ -17,7 +17,13 @@ type LaunchRoom = {
  */
 export async function launchImposteurRoom(roomId: string, room: LaunchRoom) {
   const settings = parseRoomSettings(room.settingsJson)
-  const state = buildImposteurState(room.members, settings.lang, settings.botsCount ?? 0)
+  const state = buildImposteurState(
+    room.members,
+    settings.lang,
+    settings.botsCount ?? 0,
+    undefined,
+    settings.imposteurCount
+  )
 
   await prisma.onlineRoom.update({
     where: { id: roomId },

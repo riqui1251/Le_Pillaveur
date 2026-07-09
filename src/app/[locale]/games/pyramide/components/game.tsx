@@ -11,14 +11,24 @@ import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
+import {
+  type Card,
+  type Suit,
+  type PreludeStep,
+  type PreludeResult,
+  rankValue,
+  createDeck,
+  shuffleDeck,
+  createPyramid,
+  totalCardsForHeight,
+  findNextCardToFlip as findNextCardToFlipPure,
+  evaluatePreludeChoice,
+  computeTotalsByPlayer,
+  computeScoreSummary,
+  buildClassicPyramid,
+} from '@/lib/pyramide/engine'
 
 // ── Helpers partagés ─────────────────────────────────────────────────────────
-
-/** Convertit A/J/Q/K en 10 pts, sinon valeur numérique */
-const valueToPoints = (v: string): number => {
-  if (v === 'A' || v === 'J' || v === 'Q' || v === 'K') return 10
-  return parseInt(v, 10)
-}
 
 /** Composant Avatar réutilisable */
 function PlayerAvatar({ player, size = 'md' }: { player: BasePlayer; size?: 'sm' | 'md' | 'lg' }) {
@@ -26,33 +36,6 @@ function PlayerAvatar({ player, size = 'md' }: { player: BasePlayer; size?: 'sm'
   return (
     <PlayerIcon player={player} size={size} className={cn(sizeClass, 'shrink-0')} />
   )
-}
-
-// Types de cartes
-type Suit = 'hearts' | 'diamonds' | 'clubs' | 'spades'
-type Value = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K'
-type Card = {
-  suit: Suit
-  value: Value
-  faceUp: boolean
-  position: { row: number; col: number }
-}
-
-// Valeurs numériques des cartes pour les comparaisons
-const cardValues: Record<Value, number> = {
-  'A': 1,
-  '2': 2,
-  '3': 3,
-  '4': 4,
-  '5': 5,
-  '6': 6,
-  '7': 7,
-  '8': 8,
-  '9': 9,
-  '10': 10,
-  'J': 11,
-  'Q': 12,
-  'K': 13
 }
 
 interface GameProps {
@@ -86,29 +69,15 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   const [readyToStart, setReadyToStart] = useState(false)
 
   // Pré-jeu : prédictions en 4 étapes
-  type PredictionResult = {
-    step: 'color' | 'higherLower' | 'insideOutside' | 'suit'
-    choice: string
-    card: Card
-    success: boolean
-  }
   const [preludeDeck, setPreludeDeck] = useState<Card[]>([])
   const [preludeCurrentPlayer, setPreludeCurrentPlayer] = useState<number>(0)
-  const [preludeStep, setPreludeStep] = useState<'color' | 'higherLower' | 'insideOutside' | 'suit'>('color')
-  const [preludeResultsByPlayer, setPreludeResultsByPlayer] = useState<Record<string, PredictionResult[]>>({})
+  const [preludeStep, setPreludeStep] = useState<PreludeStep>('color')
+  const [preludeResultsByPlayer, setPreludeResultsByPlayer] = useState<Record<string, PreludeResult[]>>({})
   const [preludeDrinksByPlayer, setPreludeDrinksByPlayer] = useState<Record<string, number>>({})
   const [preludeRevealed, setPreludeRevealed] = useState<Card[]>([])
 
-  const rankValue = (v: Value) => (v === 'A' ? 14 : cardValues[v])
-
-  const computePreludeTotals = (): Record<string, number> => {
-    const totals: Record<string, number> = {}
-    players.forEach(p => {
-      const res = preludeResultsByPlayer[p.id] || []
-      totals[p.id] = res.reduce((acc, r) => acc + valueToPoints(r.card.value), 0)
-    })
-    return totals
-  }
+  const computePreludeTotals = (): Record<string, number> =>
+    computeTotalsByPlayer(players.map(p => p.id), preludeResultsByPlayer)
 
   const drawPreludeCard = (): Card | null => {
     if (preludeDeck.length === 0) return null
@@ -152,34 +121,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     if (!revealed) return
     setPreludeRevealed(prev => [...prev, revealed])
 
-    let success = false
-    let penalty = 0
-    if (preludeStep === 'color') {
-      const isRed = revealed.suit === 'hearts' || revealed.suit === 'diamonds'
-      success = (choice === 'red' && isRed) || (choice === 'black' && !isRed)
-      penalty = 1
-    } else if (preludeStep === 'higherLower') {
-      const first = preludeRevealed[0]
-      if (first) {
-        const cmp = rankValue(revealed.value) - rankValue(first.value)
-        success = (choice === 'higher' && cmp > 0) || (choice === 'lower' && cmp < 0)
-      }
-      penalty = 2
-    } else if (preludeStep === 'insideOutside') {
-      const a = preludeRevealed[0]
-      const b = preludeRevealed[1]
-      if (a && b) {
-        const minV = Math.min(rankValue(a.value), rankValue(b.value))
-        const maxV = Math.max(rankValue(a.value), rankValue(b.value))
-        const r = rankValue(revealed.value)
-        const isInside = r > minV && r < maxV
-        success = (choice === 'inside' && isInside) || (choice === 'outside' && !isInside)
-      }
-      penalty = 3
-    } else if (preludeStep === 'suit') {
-      success = choice === revealed.suit
-      penalty = 4
-    }
+    const { success, penalty } = evaluatePreludeChoice(preludeStep, choice, revealed, preludeRevealed)
 
     setPreludeResultsByPlayer(prev => ({
       ...prev,
@@ -242,17 +184,13 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
       setGameOver(false)
       setGameStarted(true)
       setIsCardFlipping(false)
-      
+
       // Calculer le nombre total de cartes dans la pyramide
-      let totalCardCount = 0
-      for (let i = 0; i < pyramidHeight; i++) {
-        totalCardCount += i + 1
-      }
-      setTotalCards(totalCardCount)
-      
+      setTotalCards(totalCardsForHeight(pyramidHeight))
+
       // Réinitialiser le compteur de cartes retournées
       setTotalCardsFlipped(0)
-      
+
       // Définir la première carte à retourner (en bas à gauche)
       setNextCardToFlip({ row: pyramidHeight - 1, col: 0 })
       
@@ -291,62 +229,6 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     initializeGame()
   }, [initializeGame]);
 
-  // Créer un jeu de cartes
-  const createDeck = (deckCount: number): Card[] => {
-    const suits: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades']
-    const values: Value[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
-    const deck: Card[] = []
-    
-    // Création de 1 ou 2 paquets selon le paramètre
-    for (let i = 0; i < deckCount; i++) {
-      for (const suit of suits) {
-        for (const value of values) {
-          deck.push({
-            suit,
-            value,
-            faceUp: false,
-            position: { row: 0, col: 0 }
-          })
-        }
-      }
-    }
-    
-    return deck
-  }
-
-  // Mélanger le jeu de cartes
-  const shuffleDeck = (deck: Card[]): Card[] => {
-    const shuffled = [...deck]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    return shuffled
-  }
-
-  // Créer la pyramide de cartes
-  const createPyramid = (deck: Card[], rows: number): { pyramidCards: Card[][]; remainingDeck: Card[] } => {
-    const pyramidCards: Card[][] = [];
-    let deckIndex = 0;
-    
-    for (let row = 0; row < rows; row++) {
-      const rowCards: Card[] = [];
-      for (let col = 0; col <= row; col++) {
-        if (deckIndex < deck.length) {
-          const card = { ...deck[deckIndex], faceUp: false, position: { row, col } };
-          rowCards.push(card);
-          deckIndex++;
-        }
-      }
-      pyramidCards.push(rowCards);
-    }
-    
-    return {
-      pyramidCards,
-      remainingDeck: deck.slice(deckIndex)
-    };
-  };
-
   // Retourner la prochaine carte
   const flipNextCard = () => {
     if (!nextCardToFlip || isCardFlipping) return
@@ -383,39 +265,19 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
 
   // Trouver la prochaine carte à retourner
   const findNextCardToFlip = (currentPyramid: Card[][], currentRow: number, currentCol: number) => {
-    // Stratégie: parcourir la pyramide ligne par ligne, de bas en haut
-    // D'abord, essayer la colonne suivante dans la même rangée
-    if (currentCol + 1 < currentPyramid[currentRow].length) {
-      setNextCardToFlip({ row: currentRow, col: currentCol + 1 });
-      return;
-    }
-    
-    // Si nous sommes à la fin de la rangée, passer à la rangée au-dessus
-    if (currentRow > 0) {
-      setNextCardToFlip({ row: currentRow - 1, col: 0 });
-      return;
-    }
-    
-    // Si nous sommes arrivés ici, il n'y a plus de cartes à retourner
-    setNextCardToFlip(null);
+    setNextCardToFlip(findNextCardToFlipPure(currentPyramid, currentRow, currentCol))
   }
 
   const computeScores = () => {
-    const scores: Record<string, number> = {}
-    players.forEach(p => {
-      const results = preludeResultsByPlayer[p.id] || []
-      scores[p.id] = results.reduce((acc, r) => acc + valueToPoints(r.card.value), 0)
-    })
-    const entries = Object.entries(scores)
-    if (entries.length === 0) return null
-    let min = entries[0], max = entries[0]
-    for (const e of entries) {
-      if (e[1] < min[1]) min = e
-      if (e[1] > max[1]) max = e
+    const summary = computeScoreSummary(players.map(p => p.id), preludeResultsByPlayer)
+    if (!summary) return null
+    const minPlayer = players.find(p => p.id === summary.minPlayerId)
+    const maxPlayer = players.find(p => p.id === summary.maxPlayerId)
+    return {
+      scores: summary.scores,
+      min: { player: minPlayer, score: summary.minScore },
+      max: { player: maxPlayer, score: summary.maxScore }
     }
-    const minPlayer = players.find(p => p.id === min[0])
-    const maxPlayer = players.find(p => p.id === max[0])
-    return { scores, min: { player: minPlayer, score: min[1] }, max: { player: maxPlayer, score: max[1] } }
   }
 
   // Obtenir la couleur de la carte en fonction de sa couleur
@@ -441,92 +303,27 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   const startClassicGame = () => {
     // On passe à la phase de jeu
     setClassicGamePhase('play');
-    
+
     // Récupérer toutes les cartes sélectionnées par les joueurs
     const allSelectedCards: Card[] = [];
     Object.values(selectedCardsByPlayer).forEach(cards => {
       allSelectedCards.push(...cards);
     });
-    
-    // Obtenir toutes les cartes disponibles (non sélectionnées)
-    const availableCards = availableCardsForSelection;
-    
-    // Créer un tableau avec les valeurs et le nombre d'occurrences à retirer
-    const cardCounts: Record<Value, number> = {
-      'A': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0,
-      '8': 0, '9': 0, '10': 0, 'J': 0, 'Q': 0, 'K': 0
-    };
-    
-    // Compter les occurrences de chaque valeur de carte sélectionnée
-    allSelectedCards.forEach(card => {
-      cardCounts[card.value]++;
-    });
-    
-    // Mélanger les cartes disponibles
-    const shuffledAvailableCards = shuffleDeck(availableCards);
-    
-    // Créer la pyramide en excluant les cartes sélectionnées
-    const pyramidCards: Card[][] = [];
-    let cardIndex = 0;
-    
-    // Pour chaque niveau de la pyramide - toujours utiliser la hauteur sélectionnée par l'utilisateur
-    for (let row = 0; row < pyramidHeight; row++) {
-      const rowCards: Card[] = [];
-      
-      // Pour chaque colonne dans ce niveau
-      for (let col = 0; col <= row; col++) {
-        // Trouver la prochaine carte qui n'est pas dans la liste des valeurs sélectionnées
-        // ou qui a encore des occurrences disponibles
-        let validCard: Card | null = null;
-        
-        while (cardIndex < shuffledAvailableCards.length && !validCard) {
-          const currentCard = shuffledAvailableCards[cardIndex];
-          
-          // Si cette valeur de carte a été suffisamment sélectionnée, on peut l'utiliser
-          if (cardCounts[currentCard.value] <= 0) {
-            validCard = { ...currentCard, position: { row, col }, faceUp: false };
-            cardIndex++;
-          } else {
-            // Sinon, on réduit le compteur et on passe à la carte suivante
-            cardCounts[currentCard.value]--;
-            cardIndex++;
-          }
-        }
-        
-        if (validCard) {
-          rowCards.push(validCard);
-        } else {
-          // Si on manque de cartes, créer une carte vide (ne devrait pas arriver)
-          console.error("Plus de cartes disponibles pour la pyramide!");
-          const emptyCard: Card = {
-            suit: 'hearts',
-            value: 'A',
-            faceUp: false,
-            position: { row, col }
-          };
-          rowCards.push(emptyCard);
-        }
-      }
-      
-      pyramidCards.push(rowCards);
-    }
-    
+
+    // Construire la pyramide en excluant les valeurs déjà mémorisées
+    const pyramidCards = buildClassicPyramid(availableCardsForSelection, allSelectedCards, pyramidHeight);
+
     // Mettre à jour les états du jeu
     setPyramid(pyramidCards);
-    
+
     // Calculer le nombre total de cartes dans la pyramide
-    let totalCardCount = 0;
-    for (let i = 0; i < pyramidHeight; i++) {
-      totalCardCount += i + 1;
-    }
-    setTotalCards(totalCardCount);
-    
+    setTotalCards(totalCardsForHeight(pyramidHeight));
+
     // Réinitialiser le compteur de cartes retournées
     setTotalCardsFlipped(0);
-    
+
     // Définir la première carte à retourner (en bas à gauche)
     setNextCardToFlip({ row: pyramidHeight - 1, col: 0 });
-    
   };
 
   return (

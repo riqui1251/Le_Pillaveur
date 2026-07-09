@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RotateCcw, ArrowLeft } from 'lucide-react'
 import confetti from 'canvas-confetti'
-import { Player as BasePlayer, PlayerPreferences, getPlayerGameBoost } from '@/lib/players'
+import { Player as BasePlayer, PlayerPreferences } from '@/lib/players'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
@@ -152,10 +152,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
 
   const handleSetupRoll = (roll: number) => {
     const p = players[currentPlayerIndex]
-    const base = initialBasePlayers.find(b => b.id === p.id)
-    const boost = base ? getPlayerGameBoost(base, 'monsieur-3') : 0
-    let effective = roll
-    if (roll === 3 && boost > 0 && Math.random() * 100 < boost) effective = 4
+    const effective = roll
 
     const newRolls = [...setupRolls, { playerName: p.name, roll: effective }]
     setSetupRolls(newRolls)
@@ -196,8 +193,6 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
     const sum = dice1 + dice2
     const isDouble = dice1 === dice2
     const p = players[currentPlayerIndex]
-    const base = initialBasePlayers.find(b => b.id === p.id)
-    const boost = base ? getPlayerGameBoost(base, 'monsieur-3') : 0
 
     let msg = ''
     let m3Drinks = false
@@ -219,10 +214,6 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
       if (sum === 5) msg = t('messages.sum5')
       else if (sum === 8) msg = t('messages.sum8')
       else msg = t('messages.m3Drinks')
-    }
-    if (!p.isMonsieur3 && !m3Drinks && monsieur3Index >= 0 && boost > 0 && Math.random() * 100 < boost) {
-      m3Drinks = true; ruleTriggered = true
-      msg = t('messages.m3Drinks')
     }
     if (isDouble) {
       msg += msg ? ' — ' : ''

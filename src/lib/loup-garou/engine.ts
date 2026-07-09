@@ -210,7 +210,9 @@ export function lgRolesFor(count: number, rng: SeededRng): LGRole[] {
   const wolves = count >= 11 ? 3 : count >= 7 ? 2 : 1
   for (let i = 0; i < wolves; i += 1) roles.push('loup')
   roles.push('voyante')
-  const maxSpecials = count >= 9 ? 4 : count >= 6 ? 3 : 2
+  // À 4-5 joueurs, plafonner à 1 spécial garantit au moins un villageois
+  // simple (1 loup + voyante + 1 spécial max < count).
+  const maxSpecials = count >= 9 ? 4 : count >= 6 ? 3 : 1
   let specials = 0
   for (const special of rng.shuffle(LG_SPECIAL_ROLES)) {
     if (roles.length >= count || specials >= maxSpecials) break

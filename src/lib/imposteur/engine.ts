@@ -81,6 +81,8 @@ export type ImposteurState = TimedPhaseState & {
   round: number
   winnerTeam: ImposteurTeam | null
   rematchVotes: string[]
+  /** Nombre d'imposteurs de la partie (choix hôte ou défaut, figé au lancement). */
+  imposteurCount: number
   /** SECRET serveur. */
   rngState: number
 }
@@ -111,6 +113,17 @@ export function imposteurAlive(state: ImposteurState): ImposteurPlayer[] {
 
 export function imposteurCountFor(playerCount: number): number {
   return playerCount >= 7 ? 2 : 1
+}
+
+/** Plafond UI : au-delà, le camp imposteur devient trop dur à masquer. */
+export const IMPOSTEUR_MAX_COUNT = 3
+
+/**
+ * Nombre maximum d'imposteurs autorisé pour une table donnée : toujours
+ * minoritaires (strictement moins de la moitié), et plafonné à IMPOSTEUR_MAX_COUNT.
+ */
+export function maxImposteurCount(playerCount: number): number {
+  return Math.min(IMPOSTEUR_MAX_COUNT, Math.max(1, Math.floor((playerCount - 1) / 2)))
 }
 
 /** Normalisation permissive (minuscules + sans accents) pour la validation. */
@@ -145,11 +158,17 @@ export function createImposteurState(
   players: ImposteurInitialPlayer[],
   pairs: ImposteurWordPair[],
   seed: string | number,
-  now: number = Date.now()
+  now: number = Date.now(),
+  imposteurCount?: number
 ): ImposteurState {
   if (players.length < IMPOSTEUR_MIN_PLAYERS) throw new ImposteurEngineError('NOT_ENOUGH_PLAYERS')
   if (players.length > IMPOSTEUR_MAX_PLAYERS) throw new ImposteurEngineError('TOO_MANY_PLAYERS')
   if (pairs.length === 0) throw new ImposteurEngineError('NO_WORD_PAIRS')
+
+  const count = imposteurCount ?? imposteurCountFor(players.length)
+  if (!Number.isInteger(count) || count < 1 || count > maxImposteurCount(players.length)) {
+    throw new ImposteurEngineError('INVALID_IMPOSTEUR_COUNT')
+  }
 
   const rng: SeededRng = createRng(seed)
   const pair = pairs[rng.pickIndex(pairs.length)]
@@ -157,7 +176,7 @@ export function createImposteurState(
   const [civilWord, imposteurWord] = rng.chance(0.5) ? [pair.a, pair.b] : [pair.b, pair.a]
 
   const shuffledIds = rng.shuffle(players.map((p) => p.id))
-  const imposteurIds = new Set(shuffledIds.slice(0, imposteurCountFor(players.length)))
+  const imposteurIds = new Set(shuffledIds.slice(0, count))
 
   const withRoles: ImposteurPlayer[] = players.map((p) => ({
     id: p.id,
@@ -186,6 +205,7 @@ export function createImposteurState(
     round: 1,
     winnerTeam: null,
     rematchVotes: [],
+    imposteurCount: count,
     rngState: rng.getState(),
   }
 }
@@ -350,8 +370,11 @@ export function reduceImposteur(state: ImposteurState, action: ImposteurAction):
       }
       // L'imposteur gagne en atteignant les 3 derniers — sauf table de 3
       // joueurs, où la partie DÉMARRE à 3 : il doit y survivre jusqu'à 2.
+      // Généralisation à N imposteurs : gagné aussi dès que les imposteurs
+      // ne sont plus minoritaires parmi les vivants (parité).
       const imposteurWinAt = state.players.length <= 3 ? 2 : 3
-      if (alive.length <= imposteurWinAt) {
+      const civilsAlive = alive.length - imposteursAlive.length
+      if (imposteursAlive.length >= civilsAlive || alive.length <= imposteurWinAt) {
         return {
           ...state,
           phase: 'finished',

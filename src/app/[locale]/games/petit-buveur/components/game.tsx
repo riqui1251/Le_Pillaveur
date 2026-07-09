@@ -10,7 +10,7 @@ import { usePlayers } from '@/hooks/usePlayers'
 import { useCastRoom } from '@/hooks/useCastRoom'
 import type { PetitBuveurCastState } from '@/lib/cast-types'
 import { Card } from '@/components/ui/card'
-import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS, getPlayerGameBoost, resolveValidatedPlayerName, getPlayerNameValidationError } from '@/lib/players'
+import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS, resolveValidatedPlayerName, getPlayerNameValidationError } from '@/lib/players'
 import { nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -965,8 +965,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           return;
         }
 
-        // Générer un effet aléatoire (boost possible pour le joueur actuel)
-        const caseType = generateCase(gameDifficulty, t, updatedPlayers[currentPlayer]);
+        // Générer un effet aléatoire
+        const caseType = generateCase(gameDifficulty, t);
 
         // Appliquer l'effet une fois le pion arrivé sur sa case
         setTimeout(() => {
@@ -1454,8 +1454,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       return
     }
     if (caseType.type === 'double-case') {
-      const first = generateCase(gameDifficulty, t, players[currentPlayer])
-      const second = generateCase(gameDifficulty, t, players[currentPlayer])
+      const first = generateCase(gameDifficulty, t)
+      const second = generateCase(gameDifficulty, t)
       extraCaseQueueRef.current = [second]
       setPendingCase(first)
       setTimeout(() => continueCaseFlow(first), 0)
@@ -2058,17 +2058,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const selectRandomPlayer = () => {
     const eligiblePlayers = [...players];
     if (eligiblePlayers.length > 0) {
-      const weights = eligiblePlayers.map((p) => 1 / (1 + getPlayerGameBoost(p, 'petit-buveur') / 100));
-      const totalWeight = weights.reduce((a, b) => a + b, 0);
-      let r = Math.random() * totalWeight;
-      let chosen = eligiblePlayers[0];
-      for (let i = 0; i < eligiblePlayers.length; i++) {
-        r -= weights[i];
-        if (r <= 0) {
-          chosen = eligiblePlayers[i];
-          break;
-        }
-      }
+      const chosen = eligiblePlayers[Math.floor(Math.random() * eligiblePlayers.length)];
       handleTargetSelection(chosen.id);
     } else {
       handleTargetSelection(players[currentPlayer].id);

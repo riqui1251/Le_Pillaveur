@@ -17,7 +17,10 @@ type LaunchRoom = {
  */
 export async function launchMenteurRoom(roomId: string, room: LaunchRoom) {
   const settings = parseRoomSettings(room.settingsJson)
-  const state = buildMenteurState(room.members, settings.botsCount ?? 0)
+  const state = buildMenteurState(room.members, settings.botsCount ?? 0, undefined, {
+    palifico: settings.menteurPalifico,
+    calza: settings.menteurCalza,
+  })
 
   await prisma.onlineRoom.update({
     where: { id: roomId },

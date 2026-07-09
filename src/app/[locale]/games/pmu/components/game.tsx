@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion } from 'framer-motion'
-import { Player as BasePlayer, getPlayerGameBoost } from '@/lib/players'
+import { Player as BasePlayer } from '@/lib/players'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useCastRoom } from '@/hooks/useCastRoom'
 import type { PmuCastState } from '@/lib/cast-types'
@@ -410,10 +410,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
 
       setHorses(prev => {
         const updated = prev.map((h, i) => {
-          const boost = h.players.length > 0
-            ? Math.max(...h.players.map(p => getPlayerGameBoost(p, 'pmu')))
-            : 0
-          const step = Math.random() * baseStep * (speedFactorsRef.current[i] ?? 1) * (1 + boost / 800)
+          const step = Math.random() * baseStep * (speedFactorsRef.current[i] ?? 1)
           return { ...h, position: h.position + step }
         })
         const w = updated.find(h => h.position >= FINISH)

@@ -133,6 +133,7 @@ function TargetGrid({
 
 export function LoupGarouOnline() {
   const { user } = useAuth()
+  const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.loup-garou.game')
   const tTutorial = useTranslations('games.loup-garou.tutorial')
@@ -305,9 +306,11 @@ export function LoupGarouOnline() {
           <h2 className="text-3xl font-black">
             {villageWon ? t('victory.village') : t('victory.loups')}
           </h2>
-          <p className="text-sm text-white/60">
-            {villageWon ? t('victory.villageDrinks') : t('victory.loupsDrinks')}
-          </p>
+          {!isSoft && (
+            <p className="text-sm text-white/60">
+              {villageWon ? t('victory.villageDrinks') : t('victory.loupsDrinks')}
+            </p>
+          )}
         </motion.div>
 
         <XpGainBanner
@@ -347,9 +350,11 @@ export function LoupGarouOnline() {
                   </p>
                 )}
               </div>
-              <span className="flex items-center gap-1 text-xs text-white/50">
-                <Beer className="h-3.5 w-3.5 text-amber-300" /> {p.sips}
-              </span>
+              {!isSoft && (
+                <span className="flex items-center gap-1 text-xs text-white/50">
+                  <Beer className="h-3.5 w-3.5 text-amber-300" /> {p.sips}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -727,7 +732,7 @@ export function LoupGarouOnline() {
                 <div className="mt-2 space-y-1.5">
                   {view.lastNightDeaths.map((d) => (
                     <p key={d.playerId} className="text-sm font-bold text-red-200">
-                      {t('dawnDeath', {
+                      {t(isSoft ? 'dawnDeathSoft' : 'dawnDeath', {
                         name: nameOf(d.playerId),
                         role: roleName(d.role),
                       })}
@@ -887,7 +892,7 @@ export function LoupGarouOnline() {
                   {ROLE_META[p.role].icon}
                 </span>
               )}
-              {p.sips > 0 && (
+              {!isSoft && p.sips > 0 && (
                 <span className="shrink-0 text-[9px] text-amber-200/80">🍺{p.sips}</span>
               )}
             </div>

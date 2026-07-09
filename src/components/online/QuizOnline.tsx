@@ -47,6 +47,7 @@ const CHOICE_STYLE = [
 
 export function QuizOnline() {
   const { user } = useAuth()
+  const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.quiz.game')
   const tTutorial = useTranslations('games.quiz.tutorial')
@@ -192,7 +193,7 @@ export function QuizOnline() {
         >
           <Trophy className="h-14 w-14 text-amber-400" />
           <h2 className="text-3xl font-black">{t('victoryTitle', { name: ranking[0]?.name ?? '—' })}</h2>
-          {last && <p className="text-sm text-amber-200">{t('lastDrinks', { name: last.name })}</p>}
+          {!isSoft && last && <p className="text-sm text-amber-200">{t('lastDrinks', { name: last.name })}</p>}
         </motion.div>
 
         <XpGainBanner
@@ -220,9 +221,11 @@ export function QuizOnline() {
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
               <span className="text-sm font-black tabular-nums text-cyan-200">{p.score}</span>
-              <span className="flex items-center gap-1 text-xs text-white/50">
-                <Beer className="h-3.5 w-3.5 text-amber-300" /> {p.sips}
-              </span>
+              {!isSoft && (
+                <span className="flex items-center gap-1 text-xs text-white/50">
+                  <Beer className="h-3.5 w-3.5 text-amber-300" /> {p.sips}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -379,7 +382,7 @@ export function QuizOnline() {
               >
                 {myResult.correct
                   ? t('correct', { points: myResult.points })
-                  : t('wrong', { sips: myResult.sips })}
+                  : t(isSoft ? 'wrongSoft' : 'wrong', { sips: myResult.sips })}
               </p>
             )}
             {/* Mini classement live */}

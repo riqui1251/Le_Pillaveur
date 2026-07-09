@@ -455,16 +455,3 @@ export function getPlayerStatsByGame(playerId: string, gameId: string): { gamesP
   }
   return player.stats.gameStats[gameId];
 }
-
-const BOOSTED_GAME_IDS = ['pmu', 'purple', 'petit-buveur', 'plinko', 'monsieur-3'] as const
-
-/** Easter egg Sim : léger avantage sur certains jeux. */
-export function getPlayerGameBoost(player: unknown, gameId: string): number {
-  const p = player as { name?: string } | null | undefined;
-  if (!p) return 0
-  const isSim = p.name?.toLowerCase() === 'sim'
-  if (isSim && BOOSTED_GAME_IDS.includes(gameId as (typeof BOOSTED_GAME_IDS)[number])) {
-    return 20
-  }
-  return 0
-} 

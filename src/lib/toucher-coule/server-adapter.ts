@@ -1,6 +1,7 @@
 import {
   advanceTCBots,
   botChooseCell,
+  botShouldUseBomb,
   createInitialTCState,
   currentTCPlayerId,
   placeTCBots,
@@ -82,11 +83,12 @@ export function buildTCState(
   members: TCRoomMember[],
   mode: TCMode,
   teamChoices: Record<string, TeamId>,
-  seed: string | number
+  seed: string | number,
+  rules: { powerups?: boolean } = {}
 ): TCState {
   const players = buildTCPlayers(members, mode, teamChoices)
   // Les bots placent leurs navires immédiatement.
-  return advanceTCBots(createInitialTCState(players, mode, seed))
+  return advanceTCBots(createInitialTCState(players, mode, seed, rules))
 }
 
 export function serializeTCState(state: TCState): string {
@@ -106,7 +108,7 @@ export function parseTCState(json: string | null): TCState | null {
 
 export type TCRoomActionInput =
   | { type: 'place'; ships: number[][] }
-  | { type: 'fire'; cell: number }
+  | { type: 'fire'; cell: number; bomb?: boolean }
   /** Tick client : fait jouer UN SEUL tir de bot (rythme visible, pas d'enchaînement invisible). */
   | { type: 'bot' }
   /** Tick client : remplace par des bots les joueurs partis depuis plus de 3 min (horloge SERVEUR). */
@@ -137,17 +139,19 @@ export function applyTCRoomAction(
       if (!active?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
       const rng = rngFromState(state.rngState)
       const cell = botChooseCell(state, active.id, rng)
+      const bomb = botShouldUseBomb(state, active, cell, rng)
       const next = reduceTC({ ...state, rngState: rng.getState() }, {
         type: 'FIRE',
         playerId: active.id,
         cell,
+        bomb,
       })
       return { ok: true, state: next }
     }
     const next =
       input.type === 'place'
         ? reduceTC(state, { type: 'PLACE', playerId: userId, ships: input.ships })
-        : reduceTC(state, { type: 'FIRE', playerId: userId, cell: input.cell })
+        : reduceTC(state, { type: 'FIRE', playerId: userId, cell: input.cell, bomb: input.bomb })
     return { ok: true, state: next }
   } catch (e) {
     return { ok: false, error: e instanceof TCEngineError ? e.message : 'ENGINE_ERROR' }
