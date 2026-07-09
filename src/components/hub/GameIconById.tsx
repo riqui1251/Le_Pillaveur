@@ -6,7 +6,6 @@ import {
   HiLoIcon,
   PurpleIcon,
   PyramidIcon,
-  PistolIcon,
   BalloonIcon,
   CrosshairIcon,
   DieThreeIcon,
@@ -22,7 +21,6 @@ export function GameIconById({ id, className }: { id: string; className?: string
   if (id === 'hi-lo') return <HiLoIcon className={className} />
   if (id === 'purple') return <PurpleIcon className={className} />
   if (id === 'pyramide') return <PyramidIcon className={className} />
-  if (id === 'roulette-russe') return <PistolIcon className={className} />
   if (id === 'monsieur-3') return <DieThreeIcon className={className} />
   if (id === 'ballon-surprise') return <BalloonIcon className={className} />
   if (id === 'petits-points') return <CrosshairIcon className={className} />
@@ -35,5 +33,6 @@ export function GameIconById({ id, className }: { id: string; className?: string
   if (id === 'imposteur') return <span className={className} aria-hidden>🕵️</span>
   if (id === 'quiz') return <span className={className} aria-hidden>🧠</span>
   if (id === 'loup-garou') return <span className={className} aria-hidden>🐺</span>
+  if (id === 'bluff') return <span className={className} aria-hidden>🃏</span>
   return <span className={className} aria-hidden>🎮</span>
 }

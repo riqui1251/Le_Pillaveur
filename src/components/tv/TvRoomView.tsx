@@ -21,6 +21,12 @@ import type { LGClientView } from '@/lib/loup-garou/engine'
 import { TvVictory } from './TvVictory'
 import { TvPlinko } from './TvPlinko'
 import { TvPmu } from './TvPmu'
+import { TvGame1220 } from './TvGame1220'
+import type { Game1220SyncedState } from '@/lib/online-game-state'
+import { TvPurple } from './TvPurple'
+import type { PurpleSyncedState } from '@/lib/online-game-state'
+import { TvBluff } from './TvBluff'
+import type { BluffClientView } from '@/lib/bluff/engine'
 
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
@@ -29,6 +35,9 @@ const GAME_TITLES: Record<string, string> = {
   imposteur: "L'Imposteur",
   quiz: 'Le Grand Pillaveur',
   'loup-garou': 'Loup-Garou',
+  '1220': '1220',
+  purple: 'Purple',
+  bluff: 'Le Grand Bluff',
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
@@ -138,6 +147,12 @@ export function TvRoomView({ code }: { code: string }) {
     content = <TvImposteur room={room} state={state as unknown as ImposteurClientView} />
   } else if (room.gameId === 'loup-garou') {
     content = <TvLoupGarou room={room} state={state as unknown as LGClientView} />
+  } else if (room.gameId === '1220') {
+    content = <TvGame1220 room={room} state={state as unknown as Game1220SyncedState} />
+  } else if (room.gameId === 'purple') {
+    content = <TvPurple room={room} state={state as unknown as PurpleSyncedState} />
+  } else if (room.gameId === 'bluff') {
+    content = <TvBluff room={room} state={state as unknown as BluffClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

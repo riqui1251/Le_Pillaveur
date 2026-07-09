@@ -492,6 +492,10 @@
         "title": "El Impostor",
         "description": "Una palabra secreta, un intruso entre vosotros: ¡pistas, votos y farol al máximo!"
       },
+      "bluff": {
+        "title": "El Gran Farol",
+        "description": "Una pregunta, una respuesta falsa que inventar, y una votación entre los faroles: ¡encuentra la verdadera o engaña a todos!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Adivina si la próxima carta será mayor o menor"
@@ -1581,6 +1585,63 @@
           {
             "title": "Vota y gana",
             "body": "Tras las pistas, votad para eliminar a un sospechoso. La aldea gana desenmascarando a todos los impostores; los impostores ganan si sobreviven hasta igualar al resto."
+          }
+        ]
+      }
+    },
+    "bluff": {
+      "page": {
+        "onlineOnly": "El Gran Farol se juega en línea: ¡cada uno inventa su farol y vota en secreto en SU móvil!",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "lobby": {
+        "roundsCount": "Número de rondas",
+        "rounds": "rondas"
+      },
+      "game": {
+        "round": "Ronda {n}/{total}",
+        "phaseSubmit": "Farol",
+        "phaseVote": "Votación",
+        "phaseReveal": "Revelación",
+        "promptLabel": "Pregunta",
+        "submitPrompt": "¡Inventa una respuesta falsa creíble!",
+        "submitPlaceholder": "Tu respuesta falsa…",
+        "submitSend": "Enviar el farol",
+        "submitted": "Farol enviado — esperando a los demás… ({count}/{total})",
+        "votePrompt": "¿Cuál es la respuesta VERDADERA?",
+        "voted": "Voto registrado — esperando a los demás… ({count}/{total})",
+        "reveal": {
+          "realAnswer": "La respuesta verdadera: «{answer}»",
+          "continue": "Siguiente ronda",
+          "seeResult": "Ver el resultado"
+        },
+        "victory": {
+          "winnerIs": "¡{name} gana la partida!",
+          "tie": "¡Empate!",
+          "finalScore": "Puntuación final",
+          "replay": "Jugar de nuevo",
+          "rematchWaiting": "Esperando a los demás ({count}/{total})",
+          "backToMenu": "Volver al menú"
+        },
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
+        "countdown": {
+          "title": "¡Preparaos!",
+          "hint": "La primera pregunta llega en unos segundos…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Una pregunta, un farol",
+            "body": "Aparece una pregunta. Nadie conoce (todavía) la respuesta verdadera — ¡inventa la respuesta falsa más creíble que puedas!"
+          },
+          {
+            "title": "Adivina la respuesta verdadera",
+            "body": "Todos los faroles y la respuesta verdadera se mezclan y se muestran sin autor. Vota por la que creas que es la verdadera — ¡nunca la tuya!"
+          },
+          {
+            "title": "Puntos dobles",
+            "body": "Encuentra la respuesta verdadera para ganar puntos. Y si alguien vota por TU farol, tú también ganas puntos — ¡cuanta más gente engañes, más ganas!"
           }
         ]
       }

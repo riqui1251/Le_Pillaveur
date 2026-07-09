@@ -492,6 +492,10 @@
         "title": "L'Impostore",
         "description": "Una parola segreta, un intruso tra di voi: indizi, voti e bluff ai massimi livelli!"
       },
+      "bluff": {
+        "title": "Il Grande Bluff",
+        "description": "Una domanda, una falsa risposta da inventare, e un voto tra i bluff: trova quella vera o inganna tutti!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Indovina se la carta successiva sarà più alta o più bassa"
@@ -1581,6 +1585,63 @@
           {
             "title": "Vota e vinci",
             "body": "Dopo gli indizi, votate per eliminare un sospettato. Il villaggio vince smascherando tutti gli impostori; gli impostori vincono sopravvivendo fino a pareggiare gli altri."
+          }
+        ]
+      }
+    },
+    "bluff": {
+      "page": {
+        "onlineOnly": "Il Grande Bluff si gioca online: ognuno inventa il proprio bluff e vota in segreto sul PROPRIO telefono!",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "roundsCount": "Numero di manche",
+        "rounds": "manche"
+      },
+      "game": {
+        "round": "Manche {n}/{total}",
+        "phaseSubmit": "Bluff",
+        "phaseVote": "Voto",
+        "phaseReveal": "Rivelazione",
+        "promptLabel": "Domanda",
+        "submitPrompt": "Inventa una risposta falsa credibile!",
+        "submitPlaceholder": "La tua risposta falsa…",
+        "submitSend": "Invia il bluff",
+        "submitted": "Bluff inviato — in attesa degli altri… ({count}/{total})",
+        "votePrompt": "Qual è la risposta VERA?",
+        "voted": "Voto registrato — in attesa degli altri… ({count}/{total})",
+        "reveal": {
+          "realAnswer": "La risposta vera: «{answer}»",
+          "continue": "Manche successiva",
+          "seeResult": "Vedi il risultato"
+        },
+        "victory": {
+          "winnerIs": "{name} vince la partita!",
+          "tie": "Pareggio!",
+          "finalScore": "Punteggio finale",
+          "replay": "Rigioca",
+          "rematchWaiting": "In attesa degli altri ({count}/{total})",
+          "backToMenu": "Torna al menu"
+        },
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "countdown": {
+          "title": "Preparatevi!",
+          "hint": "Prima domanda tra qualche secondo…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Una domanda, un bluff",
+            "body": "Appare una domanda. Nessuno conosce (ancora) la risposta vera — inventa la risposta falsa più credibile possibile!"
+          },
+          {
+            "title": "Indovina la risposta vera",
+            "body": "Tutti i bluff e la risposta vera vengono mescolati e mostrati senza autore. Vota quella che pensi sia vera — mai la tua!"
+          },
+          {
+            "title": "Punti doppi",
+            "body": "Trova la risposta vera per guadagnare punti. E se qualcuno vota il TUO bluff, guadagni punti anche tu — più persone inganni, più vinci!"
           }
         ]
       }

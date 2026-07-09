@@ -17,6 +17,7 @@ import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { OnlinePlayerIcon, OnlinePlayerName, OnlineLevelBadge, RankCrest } from '@/components/online/OnlinePlayerTag'
 import { JoinQR } from '@/components/tv/JoinQR'
 import { cn } from '@/lib/utils'
+import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
 
 const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
 type Visibility = (typeof VISIBILITY_OPTIONS)[number]
@@ -42,11 +43,12 @@ function LobbyShell({ children }: { children: React.ReactNode }) {
 }
 
 /** Formats d'équipes Toucher-Coulé. */
-const TC_MODE_OPTIONS = ['1v1', '2v2', '3v3'] as const
+const TC_MODE_OPTIONS = ['1v1', '2v2', '3v3', '4v4'] as const
 const TC_PLAYERS_PER_TEAM: Record<(typeof TC_MODE_OPTIONS)[number], number> = {
   '1v1': 1,
   '2v2': 2,
   '3v3': 3,
+  '4v4': 4,
 }
 
 /** Difficultés Petit Buveur (mêmes clés/couleurs que la sélection en local). */
@@ -75,6 +77,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tTc = useTranslations('games.toucher-coule.lobby')
   const tQuiz = useTranslations('games.quiz.lobby')
   const tLg = useTranslations('games.loup-garou.lobby')
+  const tMenteur = useTranslations('games.menteur.lobby')
+  const tImposteur = useTranslations('games.imposteur.lobby')
+  const tBluff = useTranslations('games.bluff.lobby')
   const tOnline = useTranslations('onlineLobby')
   const tFriends = useTranslations('account.friends')
 
@@ -404,7 +409,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-sky-300/70">
                 {tTc('mode')}
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {TC_MODE_OPTIONS.map((value) => {
                   const active = tcMode === value
                   return (
@@ -487,6 +492,34 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 })}
               </div>
               <p className="mt-2 text-[11px] text-white/40">{tTc('botsFill')}</p>
+            </div>
+
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-sky-300/70">
+                {tTc('variants')}
+              </p>
+              {(() => {
+                const active = Boolean(room.settings.tcPowerups)
+                return (
+                  <button
+                    type="button"
+                    disabled={!isHost}
+                    onClick={() => updateSettings({ tcPowerups: !active })}
+                    className={cn(
+                      'w-full rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed',
+                      active
+                        ? 'border-transparent bg-gradient-to-r from-sky-600 to-cyan-500 text-white shadow-lg'
+                        : 'border-white/10 bg-white/5 text-white/60',
+                      isHost && !active && 'hover:bg-white/10 hover:text-white'
+                    )}
+                  >
+                    <span className="block text-sm font-black">💣 {tTc('powerups')}</span>
+                    <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                      {tTc('powerupsHint')}
+                    </span>
+                  </button>
+                )
+              })()}
             </div>
           </>
         )
@@ -599,6 +632,39 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </div>
       )}
 
+      {gameId === 'bluff' && (
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-rose-400/70">
+            {tBluff('roundsCount')}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[6, 8, 10].map((value) => {
+              const active = (room.settings.bluffRounds ?? 8) === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={!isHost}
+                  onClick={() => updateSettings({ bluffRounds: value })}
+                  className={cn(
+                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
+                    active
+                      ? 'border-transparent bg-gradient-to-r from-rose-600 to-amber-500 text-white shadow-lg'
+                      : 'border-white/10 bg-white/5 text-white/60',
+                    isHost && !active && 'hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  <span className="block text-lg font-black">{value}</span>
+                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                    {tBluff('rounds')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {gameId === 'loup-garou' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-indigo-400/70">
@@ -631,6 +697,83 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </div>
         </div>
       )}
+
+      {gameId === 'menteur' && (
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-orange-400/70">
+            {tMenteur('variants')}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { key: 'menteurPalifico' as const, label: tMenteur('palifico'), hint: tMenteur('palificoHint') },
+                { key: 'menteurCalza' as const, label: tMenteur('calza'), hint: tMenteur('calzaHint') },
+              ]
+            ).map(({ key, label, hint }) => {
+              const active = Boolean(room.settings[key])
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={!isHost}
+                  onClick={() => updateSettings({ [key]: !active })}
+                  className={cn(
+                    'rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed',
+                    active
+                      ? 'border-transparent bg-gradient-to-r from-orange-600 to-red-500 text-white shadow-lg'
+                      : 'border-white/10 bg-white/5 text-white/60',
+                    isHost && !active && 'hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  <span className="block text-sm font-black">{label}</span>
+                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                    {hint}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {gameId === 'imposteur' && (() => {
+        const estPlayers = Math.max(IMPOSTEUR_MIN_PLAYERS, room.members.length + (room.settings.botsCount ?? 0))
+        const maxCount = maxImposteurCount(estPlayers)
+        const current = Math.min(room.settings.imposteurCount ?? imposteurCountFor(estPlayers), maxCount)
+        const options = Array.from({ length: maxCount }, (_, i) => i + 1)
+        return (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-violet-400/70">
+              {tImposteur('count')}
+            </p>
+            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+              {options.map((value) => {
+                const active = current === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={!isHost}
+                    onClick={() => updateSettings({ imposteurCount: value })}
+                    className={cn(
+                      'rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
+                      active
+                        ? 'border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white shadow-lg'
+                        : 'border-white/10 bg-white/5 text-white/60',
+                      isHost && !active && 'hover:bg-white/10 hover:text-white'
+                    )}
+                  >
+                    <span className="block text-lg font-black">{value}</span>
+                    <span className={cn('mt-0.5 block text-[9px]', active ? 'text-white/80' : 'text-white/35')}>
+                      {tImposteur(value > 1 ? 'imposteursPlural' : 'imposteurSingular')}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
         <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-white/45">
