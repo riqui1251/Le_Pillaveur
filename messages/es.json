@@ -500,6 +500,10 @@
         "title": "¿Quién es el Espía?",
         "description": "Un lugar secreto, un espía que no sabe nada: preguntaos entre vosotros, acusad, o adivinad el lugar antes de que se acabe el tiempo!"
       },
+      "tabou": {
+        "title": "Tabú Vocal",
+        "description": "Describe una palabra en voz alta sin decir las 4 palabras prohibidas: tu equipo adivina, los rivales están al acecho del fallo!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Adivina si la próxima carta será mayor o menor"
@@ -1719,6 +1723,73 @@
           {
             "title": "El espía puede adivinar",
             "body": "Mientras tanto, el espía puede intentar adivinar el lugar en cualquier momento para ganar al instante. ¡Si se equivoca, el equipo gana la ronda!"
+          }
+        ]
+      }
+    },
+    "tabou": {
+      "page": {
+        "onlineOnly": "Tabú Vocal se juega en línea: las palabras y los tabúes pasan por el servidor, ¡jugad en voz alta con tu equipo!",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "lobby": {
+        "teams": "Equipos",
+        "teamA": "Equipo A",
+        "teamB": "Equipo B",
+        "joinTeam": "Unirse",
+        "botSlot": "Bot",
+        "botsFill": "Las plazas vacías se completarán con bots.",
+        "targetScore": "Puntuación objetivo",
+        "points": "pts"
+      },
+      "game": {
+        "score": "Equipo A {a} · Equipo B {b}",
+        "phaseDescribing": "Ronda en curso",
+        "describerIs": "{name} está describiendo…",
+        "teamA": "Equipo A",
+        "teamB": "Equipo B",
+        "yourWord": "LA PALABRA",
+        "tabooWords": "Palabras prohibidas",
+        "passButton": "Pasar",
+        "foundButton": "¡ACERTADO!",
+        "tabooButton": "¡TABÚ!",
+        "teammateHint": "{name} está describiendo una palabra en voz alta — ¡pulsa en cuanto tu equipo acierte!",
+        "opponentHint": "Escucha bien: ¡si {name} dice una palabra prohibida, denúncialo!",
+        "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
+        "roundEnd": {
+          "title": "Resumen de la ronda",
+          "wordWas": "La palabra era: {word}",
+          "found": "acertadas",
+          "passed": "pasadas",
+          "taboo": "tabúes",
+          "continue": "Siguiente ronda",
+          "seeResult": "Ver el resultado"
+        },
+        "victory": {
+          "teamAWin": "¡El equipo A gana la partida!",
+          "teamBWin": "¡El equipo B gana la partida!",
+          "replay": "Jugar de nuevo",
+          "rematchWaiting": "Esperando a los demás ({count}/{total})",
+          "backToMenu": "Volver al menú"
+        },
+        "countdown": {
+          "title": "¡Preparaos!",
+          "hint": "La primera ronda empieza ya…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Describe sin las palabras tabú",
+            "body": "Haz que tu equipo adivine la palabra en voz alta, ¡sin decir nunca las 4 palabras prohibidas que aparecen debajo!"
+          },
+          {
+            "title": "Tu equipo pulsa ACERTADO",
+            "body": "En cuanto un compañero adivine la palabra, pulsa ACERTADO: +1 punto y la siguiente palabra aparece al instante. El que describe también puede PASAR una palabra demasiado difícil."
+          },
+          {
+            "title": "El equipo rival está al acecho",
+            "body": "Si quien describe dice una palabra tabú, un rival que lo oiga pulsa ¡TABÚ! — la palabra se salta, sin punto para nadie."
           }
         ]
       }

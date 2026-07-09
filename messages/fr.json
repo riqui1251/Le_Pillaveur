@@ -510,6 +510,10 @@
         "title": "Qui est l'Espion ?",
         "description": "Un lieu secret, un espion qui ne sait rien : questionnez-vous, accusez, ou devinez le lieu avant la fin du temps imparti !"
       },
+      "tabou": {
+        "title": "Tabou Vocal",
+        "description": "Décris un mot à voix haute sans prononcer les 4 mots tabous : ton équipe devine, les adversaires guettent la faute !"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Devinez si la prochaine carte sera plus haute ou plus basse"
@@ -1729,6 +1733,73 @@
           {
             "title": "L'espion peut deviner",
             "body": "De son côté, l'espion peut tenter de deviner le lieu à tout moment pour gagner directement. S'il se trompe, l'équipe gagne la manche !"
+          }
+        ]
+      }
+    },
+    "tabou": {
+      "page": {
+        "onlineOnly": "Tabou Vocal se joue en ligne : les mots et les tabous transitent par le serveur, joue au vocal avec ton équipe !",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "teams": "Équipes",
+        "teamA": "Équipe A",
+        "teamB": "Équipe B",
+        "joinTeam": "Rejoindre",
+        "botSlot": "Bot",
+        "botsFill": "Les places vides seront occupées par des bots.",
+        "targetScore": "Score cible",
+        "points": "pts"
+      },
+      "game": {
+        "score": "Équipe A {a} · Équipe B {b}",
+        "phaseDescribing": "Manche en cours",
+        "describerIs": "{name} décrit…",
+        "teamA": "Équipe A",
+        "teamB": "Équipe B",
+        "yourWord": "LE MOT",
+        "tabooWords": "Mots interdits",
+        "passButton": "Passer",
+        "foundButton": "TROUVÉ !",
+        "tabooButton": "TABOU !",
+        "teammateHint": "{name} décrit un mot à voix haute — clique dès que ton équipe trouve !",
+        "opponentHint": "Écoute bien : si {name} prononce un mot interdit, dénonce-le !",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "roundEnd": {
+          "title": "Bilan de la manche",
+          "wordWas": "Le mot était : {word}",
+          "found": "trouvés",
+          "passed": "passés",
+          "taboo": "tabous",
+          "continue": "Manche suivante",
+          "seeResult": "Voir le résultat"
+        },
+        "victory": {
+          "teamAWin": "L'équipe A remporte la partie !",
+          "teamBWin": "L'équipe B remporte la partie !",
+          "replay": "Rejouer",
+          "rematchWaiting": "En attente des autres ({count}/{total})",
+          "backToMenu": "Retour au menu"
+        },
+        "countdown": {
+          "title": "Préparez-vous !",
+          "hint": "La première manche commence…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Décris sans les mots tabous",
+            "body": "Fais deviner le mot à ton équipe à voix haute, sans jamais prononcer les 4 mots tabous affichés en dessous !"
+          },
+          {
+            "title": "Ton équipe clique TROUVÉ",
+            "body": "Dès qu'un coéquipier devine le mot, il clique TROUVÉ : +1 point et le mot suivant arrive aussitôt. Le décrivant peut aussi PASSER un mot trop difficile."
+          },
+          {
+            "title": "L'équipe adverse surveille",
+            "body": "Si le décrivant prononce un mot tabou, un adversaire qui l'entend clique TABOU ! — le mot passe, sans point pour personne."
           }
         ]
       }

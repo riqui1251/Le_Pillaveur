@@ -81,6 +81,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tImposteur = useTranslations('games.imposteur.lobby')
   const tBluff = useTranslations('games.bluff.lobby')
   const tEspion = useTranslations('games.espion.lobby')
+  const tTabou = useTranslations('games.tabou.lobby')
   const tOnline = useTranslations('onlineLobby')
   const tFriends = useTranslations('account.friends')
 
@@ -730,6 +731,94 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </div>
         </>
       )}
+
+      {gameId === 'tabou' && (() => {
+        const teams = room.settings.tabouTeams ?? {}
+        const teamMembers = (team: 'A' | 'B') => room.members.filter((m) => teams[m.userId] === team)
+        const myTeam = user ? teams[user.id] : undefined
+        return (
+          <>
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-emerald-400/70">
+                {tTabou('teams')}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {(['A', 'B'] as const).map((team) => {
+                  const inTeam = teamMembers(team)
+                  const isMine = myTeam === team
+                  return (
+                    <div
+                      key={team}
+                      className={cn(
+                        'rounded-xl border p-2.5',
+                        team === 'A' ? 'border-sky-400/25 bg-sky-500/10' : 'border-rose-400/25 bg-rose-500/10'
+                      )}
+                    >
+                      <p className={cn('mb-2 text-xs font-bold', team === 'A' ? 'text-sky-300' : 'text-rose-300')}>
+                        {team === 'A' ? tTabou('teamA') : tTabou('teamB')}
+                      </p>
+                      <ul className="mb-2 min-h-[1.75rem] space-y-1">
+                        {inTeam.length === 0 && (
+                          <li className="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/35">{tTabou('botSlot')}</li>
+                        )}
+                        {inTeam.map((member) => (
+                          <li key={member.userId} className="truncate rounded-lg bg-black/25 px-2 py-1 text-xs font-medium text-white">
+                            {member.preferences?.icon ? `${member.preferences.icon} ` : ''}{member.displayName}
+                          </li>
+                        ))}
+                      </ul>
+                      {!isMine && (
+                        <button
+                          type="button"
+                          onClick={() => setTeam(team)}
+                          className={cn(
+                            'w-full rounded-lg py-1.5 text-xs font-semibold text-white transition-colors',
+                            team === 'A' ? 'bg-sky-600 hover:bg-sky-500' : 'bg-rose-600 hover:bg-rose-500'
+                          )}
+                        >
+                          {tTabou('joinTeam')}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-white/40">{tTabou('botsFill')}</p>
+            </div>
+
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-emerald-400/70">
+                {tTabou('targetScore')}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {[15, 20, 25].map((value) => {
+                  const active = (room.settings.tabouTargetScore ?? 20) === value
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={!isHost}
+                      onClick={() => updateSettings({ tabouTargetScore: value })}
+                      className={cn(
+                        'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
+                        active
+                          ? 'border-transparent bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg'
+                          : 'border-white/10 bg-white/5 text-white/60',
+                        isHost && !active && 'hover:bg-white/10 hover:text-white'
+                      )}
+                    >
+                      <span className="block text-lg font-black">{value}</span>
+                      <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                        {tTabou('points')}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {gameId === 'loup-garou' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">

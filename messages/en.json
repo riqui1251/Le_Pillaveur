@@ -510,6 +510,10 @@
         "title": "Who's the Spy?",
         "description": "A secret location, a spy who knows nothing: ask questions, accuse, or guess the location before time runs out!"
       },
+      "tabou": {
+        "title": "Taboo Voice",
+        "description": "Describe a word out loud without saying the 4 forbidden words: your team guesses, the opponents listen for a slip!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Guess if the next card will be higher or lower"
@@ -1729,6 +1733,73 @@
           {
             "title": "The spy can guess",
             "body": "Meanwhile, the spy can try to guess the location at any time to win instantly. If they're wrong, the crew wins the round!"
+          }
+        ]
+      }
+    },
+    "tabou": {
+      "page": {
+        "onlineOnly": "Taboo Voice is online only: the words and taboos travel through the server, play out loud with your team!",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "teams": "Teams",
+        "teamA": "Team A",
+        "teamB": "Team B",
+        "joinTeam": "Join",
+        "botSlot": "Bot",
+        "botsFill": "Empty seats will be filled with bots.",
+        "targetScore": "Target score",
+        "points": "pts"
+      },
+      "game": {
+        "score": "Team A {a} · Team B {b}",
+        "phaseDescribing": "Round in progress",
+        "describerIs": "{name} is describing…",
+        "teamA": "Team A",
+        "teamB": "Team B",
+        "yourWord": "THE WORD",
+        "tabooWords": "Forbidden words",
+        "passButton": "Pass",
+        "foundButton": "GOT IT!",
+        "tabooButton": "TABOO!",
+        "teammateHint": "{name} is describing a word out loud — click as soon as your team guesses it!",
+        "opponentHint": "Listen closely: if {name} says a forbidden word, call it out!",
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "roundEnd": {
+          "title": "Round summary",
+          "wordWas": "The word was: {word}",
+          "found": "guessed",
+          "passed": "passed",
+          "taboo": "taboos",
+          "continue": "Next round",
+          "seeResult": "See the result"
+        },
+        "victory": {
+          "teamAWin": "Team A wins the game!",
+          "teamBWin": "Team B wins the game!",
+          "replay": "Play again",
+          "rematchWaiting": "Waiting for the others ({count}/{total})",
+          "backToMenu": "Back to menu"
+        },
+        "countdown": {
+          "title": "Get ready!",
+          "hint": "The first round starts now…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Describe without the taboo words",
+            "body": "Get your team to guess the word out loud, without ever saying the 4 forbidden words shown below!"
+          },
+          {
+            "title": "Your team clicks GOT IT",
+            "body": "As soon as a teammate guesses the word, they click GOT IT: +1 point and the next word appears instantly. The describer can also PASS a word that's too hard."
+          },
+          {
+            "title": "The other team is listening",
+            "body": "If the describer says a taboo word, an opponent who hears it clicks TABOO! — the word is skipped, no point for anyone."
           }
         ]
       }

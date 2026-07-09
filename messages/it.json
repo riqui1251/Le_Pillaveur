@@ -500,6 +500,10 @@
         "title": "Chi è la Spia?",
         "description": "Un luogo segreto, una spia che non sa nulla: fatevi domande, accusate, o indovinate il luogo prima che scada il tempo!"
       },
+      "tabou": {
+        "title": "Tabù Vocale",
+        "description": "Descrivi una parola ad alta voce senza dire le 4 parole proibite: la tua squadra indovina, gli avversari sono in agguato!"
+      },
       "hi-lo": {
         "title": "Hi/Lo",
         "description": "Indovina se la carta successiva sarà più alta o più bassa"
@@ -1719,6 +1723,73 @@
           {
             "title": "La spia può indovinare",
             "body": "Nel frattempo, la spia può provare a indovinare il luogo in qualsiasi momento per vincere subito. Se sbaglia, la squadra vince la manche!"
+          }
+        ]
+      }
+    },
+    "tabou": {
+      "page": {
+        "onlineOnly": "Tabù Vocale si gioca online: le parole e i tabù passano dal server, gioca ad alta voce con la tua squadra!",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "teams": "Squadre",
+        "teamA": "Squadra A",
+        "teamB": "Squadra B",
+        "joinTeam": "Unisciti",
+        "botSlot": "Bot",
+        "botsFill": "I posti vuoti saranno occupati da bot.",
+        "targetScore": "Punteggio obiettivo",
+        "points": "pt"
+      },
+      "game": {
+        "score": "Squadra A {a} · Squadra B {b}",
+        "phaseDescribing": "Manche in corso",
+        "describerIs": "{name} sta descrivendo…",
+        "teamA": "Squadra A",
+        "teamB": "Squadra B",
+        "yourWord": "LA PAROLA",
+        "tabooWords": "Parole vietate",
+        "passButton": "Passa",
+        "foundButton": "TROVATA!",
+        "tabooButton": "TABÙ!",
+        "teammateHint": "{name} sta descrivendo una parola ad alta voce — clicca appena la tua squadra indovina!",
+        "opponentHint": "Ascolta bene: se {name} dice una parola vietata, segnalala!",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "roundEnd": {
+          "title": "Riepilogo manche",
+          "wordWas": "La parola era: {word}",
+          "found": "indovinate",
+          "passed": "passate",
+          "taboo": "tabù",
+          "continue": "Manche successiva",
+          "seeResult": "Vedi il risultato"
+        },
+        "victory": {
+          "teamAWin": "La squadra A vince la partita!",
+          "teamBWin": "La squadra B vince la partita!",
+          "replay": "Rigioca",
+          "rematchWaiting": "In attesa degli altri ({count}/{total})",
+          "backToMenu": "Torna al menu"
+        },
+        "countdown": {
+          "title": "Preparatevi!",
+          "hint": "La prima manche inizia ora…"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Descrivi senza le parole tabù",
+            "body": "Fai indovinare la parola alla tua squadra ad alta voce, senza mai dire le 4 parole proibite mostrate qui sotto!"
+          },
+          {
+            "title": "La tua squadra clicca TROVATA",
+            "body": "Appena un compagno indovina la parola, clicca TROVATA: +1 punto e la parola successiva arriva subito. Chi descrive può anche PASSARE una parola troppo difficile."
+          },
+          {
+            "title": "La squadra avversaria è in agguato",
+            "body": "Se chi descrive dice una parola tabù, un avversario che la sente clicca TABÙ! — la parola viene saltata, nessun punto per nessuno."
           }
         ]
       }
