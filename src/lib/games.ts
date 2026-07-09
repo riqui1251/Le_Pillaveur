@@ -343,6 +343,23 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     softModeReady: true,
   },
+  {
+    id: 'telephone-dessine',
+    title: 'Téléphone Dessiné',
+    description:
+      "Écris une phrase, le suivant la dessine, le suivant la devine... jusqu'au fou rire collectif en fin de partie !",
+    path: '/games/telephone-dessine',
+    emoji: '📞',
+    gradient: 'from-teal-600 to-indigo-500',
+    colorFrom: '#0d9488',
+    colorTo: '#6366f1',
+    fallbackColor: '#14b8a6',
+    onlineReady: true,
+    minPlayers: 3,
+    maxPlayers: 8,
+    onlineOnly: true,
+    softModeReady: true,
+  },
 ];
 
 export function getGameById(id: string): GameMeta | undefined {

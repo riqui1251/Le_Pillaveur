@@ -201,6 +201,24 @@ import {
   type CrobardState,
   type Stroke,
 } from '@/lib/crobard/engine'
+import {
+  parseTelephoneState,
+  serializeTelephoneState,
+  applyTelephoneRoomAction,
+  convertTelephonePlayerToBot,
+  markTelephonePlayerLeft,
+  rejoinTelephonePlayer,
+  telephoneClientViewJson,
+  telephoneSpectatorViewJson,
+  type TelephoneRoomActionInput,
+} from '@/lib/telephone-dessine/server-adapter'
+import {
+  currentTelephoneActorId,
+  toTelephoneClientView,
+  TELEPHONE_MIN_PLAYERS,
+  TELEPHONE_MAX_PLAYERS,
+  type TelephoneState,
+} from '@/lib/telephone-dessine/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -893,6 +911,65 @@ const crobardAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinCrobardPlayer(state as CrobardState, userId),
 }
 
+// ─── Téléphone Dessiné ───────────────────────────────────────────────────────
+
+const telephoneAdapter: GameAdapter = {
+  // Pas de complément par bots au lancement (botsFillable: false) : un
+  // maillon tenu par un bot dès le départ casserait l'effet de surprise
+  // final. Le remplacement en cours de partie reste possible.
+  minPlayers: TELEPHONE_MIN_PLAYERS,
+  maxPlayers: TELEPHONE_MAX_PLAYERS,
+  parse: (json) => parseTelephoneState(json),
+  serialize: (state) => serializeTelephoneState(state as TelephoneState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as TelephoneState
+    let input: TelephoneRoomActionInput
+    if (body.action === 'write' && typeof body.text === 'string') {
+      input = { type: 'write', text: body.text }
+    } else if (
+      body.action === 'draw-stroke' &&
+      body.stroke &&
+      typeof body.stroke === 'object' &&
+      Array.isArray((body.stroke as { points?: unknown }).points)
+    ) {
+      input = { type: 'draw-stroke', stroke: body.stroke as Stroke }
+    } else if (body.action === 'clear') {
+      input = { type: 'clear' }
+    } else if (body.action === 'submit') {
+      input = { type: 'submit' }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyTelephoneRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertTelephonePlayerToBot(state as TelephoneState, userId),
+  isFinished: (state) => (state as TelephoneState).phase === 'finished',
+  currentActorId: (state) => currentTelephoneActorId(state as TelephoneState),
+  clientViewJson: (state, viewerId) => telephoneClientViewJson(state as TelephoneState, viewerId),
+  spectatorViewJson: (state) => telephoneSpectatorViewJson(state as TelephoneState),
+  actionResponse: (state, viewerId) => ({
+    view: toTelephoneClientView(state as TelephoneState, viewerId),
+    viewJson: telephoneClientViewJson(state as TelephoneState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markTelephonePlayerLeft(state as TelephoneState, userId, at),
+  rejoin: (state, userId) => rejoinTelephonePlayer(state as TelephoneState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -908,6 +985,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   espion: espionAdapter,
   tabou: tabouAdapter,
   crobard: crobardAdapter,
+  'telephone-dessine': telephoneAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

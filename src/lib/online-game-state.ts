@@ -813,6 +813,25 @@ export function parseCrobardSyncedState(json: string | null | undefined): Crobar
   }
 }
 
+// ─── Téléphone Dessiné ───────────────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/telephone-dessine). */
+export type TelephoneSyncedState = {
+  version: number
+  phase: 'countdown' | 'contributing' | 'reveal' | 'finished'
+  rematchVotes?: string[]
+}
+
+export function parseTelephoneSyncedState(json: string | null | undefined): TelephoneSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as TelephoneSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -832,6 +851,7 @@ export type AnyOnlineGameState =
   | EspionSyncedState
   | TabouSyncedState
   | CrobardSyncedState
+  | TelephoneSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -870,6 +890,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parseTabouSyncedState(json) as T | null
     case 'crobard':
       return parseCrobardSyncedState(json) as T | null
+    case 'telephone-dessine':
+      return parseTelephoneSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -912,6 +934,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return (state as TabouSyncedState).phase === 'finished'
     case 'crobard':
       return (state as CrobardSyncedState).phase === 'finished'
+    case 'telephone-dessine':
+      return (state as TelephoneSyncedState).phase === 'finished'
     default:
       return false
   }
