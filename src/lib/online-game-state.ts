@@ -47,6 +47,12 @@ export type RoomSettings = {
   /** Qui est l'Espion ? : nombre de manches à gagner choisi par l'hôte (3/5/7). */
   espionRoundsToWin?: number
 
+  /** Tabou Vocal : choix d'équipe par membre (userId → équipe). */
+  tabouTeams?: Record<string, 'A' | 'B'>
+
+  /** Tabou Vocal : score cible choisi par l'hôte (15/20/25). */
+  tabouTargetScore?: number
+
 }
 
 
@@ -764,6 +770,26 @@ export function parseEspionSyncedState(json: string | null | undefined): EspionS
   }
 }
 
+// ─── Tabou Vocal ─────────────────────────────────────────────────────────────
+
+/** État minimal côté parsing générique (l'état complet vit dans lib/tabou). */
+export type TabouSyncedState = {
+  version: number
+  phase: 'countdown' | 'describing' | 'roundEnd' | 'finished'
+  winnerTeam: 'A' | 'B' | null
+  rematchVotes?: string[]
+}
+
+export function parseTabouSyncedState(json: string | null | undefined): TabouSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as TabouSyncedState
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
@@ -781,6 +807,7 @@ export type AnyOnlineGameState =
   | LoupGarouSyncedState
   | BluffSyncedState
   | EspionSyncedState
+  | TabouSyncedState
 
 export function parseOnlineGameState<T = AnyOnlineGameState>(
   gameId: string,
@@ -815,6 +842,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parseBluffSyncedState(json) as T | null
     case 'espion':
       return parseEspionSyncedState(json) as T | null
+    case 'tabou':
+      return parseTabouSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -853,6 +882,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return (state as BluffSyncedState).phase === 'finished'
     case 'espion':
       return (state as EspionSyncedState).phase === 'finished'
+    case 'tabou':
+      return (state as TabouSyncedState).phase === 'finished'
     default:
       return false
   }

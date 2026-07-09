@@ -86,6 +86,9 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.espionRoundsToWin === 'number' && [3, 5, 7].includes(body.espionRoundsToWin)) {
     next.espionRoundsToWin = body.espionRoundsToWin
   }
+  if (typeof body.tabouTargetScore === 'number' && [15, 20, 25].includes(body.tabouTargetScore)) {
+    next.tabouTargetScore = body.tabouTargetScore
+  }
 
   const visibilityUpdate =
     typeof body.visibility === 'string' && VALID_VISIBILITIES.has(body.visibility)

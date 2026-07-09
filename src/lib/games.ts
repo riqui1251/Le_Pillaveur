@@ -307,6 +307,24 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     softModeReady: true,
   },
+  {
+    id: 'tabou',
+    title: 'Tabou Vocal',
+    description:
+      'Décris un mot à voix haute sans prononcer les 4 mots tabous : ton équipe devine, les adversaires guettent la faute !',
+    path: '/games/tabou',
+    emoji: '🤐',
+    gradient: 'from-emerald-600 to-teal-500',
+    colorFrom: '#059669',
+    colorTo: '#14b8a6',
+    fallbackColor: '#10b981',
+    onlineReady: true,
+    minPlayers: 4,
+    maxPlayers: 12,
+    onlineOnly: true,
+    botsFillable: true,
+    softModeReady: true,
+  },
 ];
 
 export function getGameById(id: string): GameMeta | undefined {

@@ -9,6 +9,7 @@ import {
   TabouEngineError,
   TABOU_COUNTDOWN_MS,
   TABOU_ROUND_MS,
+  TABOU_BOT_DESCRIBER_ROUND_MS,
   type TabouState,
   type TabouEntry,
 } from './engine'
@@ -192,6 +193,26 @@ describe('CONTINUE', () => {
   it('refuse hors phase roundEnd ou pour un joueur inconnu', () => {
     const s = make(4)
     expect(() => reduceTabou(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })).toThrow('NOT_ROUND_END')
+  })
+})
+
+describe('décrivant bot', () => {
+  it('écourte la manche quand le décrivant tiré est un bot (ne peut pas décrire à voix haute)', () => {
+    const players = [
+      { id: 'p0', name: 'P0', team: 'A' as const },
+      { id: 'bot-1', name: 'Bot', team: 'B' as const, isBot: true },
+      { id: 'p2', name: 'P2', team: 'A' as const },
+      { id: 'p3', name: 'P3', team: 'B' as const },
+    ]
+    const raw = createTabouState(players, WORDS, 'seed', T0 - TABOU_COUNTDOWN_MS, 100)
+    let s = reduceTabou(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+    // Le premier décrivant (p0) est humain → manche normale.
+    expect(s.phaseEndsAt).toBe(T0 + TABOU_ROUND_MS)
+    s = reduceTabou(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + TABOU_ROUND_MS })
+    s = reduceTabou(s, { type: 'CONTINUE', playerId: 'p0', now: T0 + TABOU_ROUND_MS })
+    // Le décrivant suivant (bot-1) est un bot → manche écourtée.
+    expect(s.describerId).toBe('bot-1')
+    expect(s.phaseEndsAt).toBe(T0 + TABOU_ROUND_MS + TABOU_BOT_DESCRIBER_ROUND_MS)
   })
 })
 

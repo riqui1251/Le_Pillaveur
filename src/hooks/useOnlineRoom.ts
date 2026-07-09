@@ -272,6 +272,7 @@ export function useOnlineRoom() {
       bluffRounds?: number
       espionDiscussionMin?: number
       espionRoundsToWin?: number
+      tabouTargetScore?: number
     }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {

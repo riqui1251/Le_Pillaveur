@@ -164,6 +164,24 @@ import {
   ESPION_MAX_PLAYERS,
   type EspionState,
 } from '@/lib/espion/engine'
+import {
+  parseTabouState,
+  serializeTabouState,
+  applyTabouRoomAction,
+  convertTabouPlayerToBot,
+  markTabouPlayerLeft,
+  rejoinTabouPlayer,
+  tabouClientViewJson,
+  tabouSpectatorViewJson,
+  type TabouRoomActionInput,
+} from '@/lib/tabou/server-adapter'
+import {
+  currentTabouActorId,
+  toTabouClientView,
+  TABOU_MIN_PLAYERS,
+  TABOU_MAX_PLAYERS,
+  type TabouState,
+} from '@/lib/tabou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -739,6 +757,59 @@ const espionAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinEspionPlayer(state as EspionState, userId),
 }
 
+// ─── Tabou Vocal ─────────────────────────────────────────────────────────────
+
+const tabouAdapter: GameAdapter = {
+  // 1 humain suffit pour lancer : buildTabouPlayers comble chaque équipe
+  // jusqu'à 2 avec des bots (contrainte du moteur), + les bots choisis par
+  // l'hôte au-delà.
+  minPlayers: TABOU_MIN_PLAYERS,
+  maxPlayers: TABOU_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parseTabouState(json),
+  serialize: (state) => serializeTabouState(state as TabouState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as TabouState
+    let input: TabouRoomActionInput
+    if (body.action === 'found') {
+      input = { type: 'found' }
+    } else if (body.action === 'pass') {
+      input = { type: 'pass' }
+    } else if (body.action === 'taboo-called') {
+      input = { type: 'taboo-called' }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyTabouRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertTabouPlayerToBot(state as TabouState, userId),
+  isFinished: (state) => (state as TabouState).phase === 'finished',
+  currentActorId: (state) => currentTabouActorId(state as TabouState),
+  clientViewJson: (state, viewerId) => tabouClientViewJson(state as TabouState, viewerId),
+  spectatorViewJson: (state) => tabouSpectatorViewJson(state as TabouState),
+  actionResponse: (state, viewerId) => ({
+    view: toTabouClientView(state as TabouState, viewerId),
+    viewJson: tabouClientViewJson(state as TabouState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markTabouPlayerLeft(state as TabouState, userId, at),
+  rejoin: (state, userId) => rejoinTabouPlayer(state as TabouState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -752,6 +823,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   purple: purpleAdapter,
   bluff: bluffAdapter,
   espion: espionAdapter,
+  tabou: tabouAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

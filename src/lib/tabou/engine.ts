@@ -19,6 +19,12 @@ export const TABOU_MAX_PLAYERS = 12
 export const TABOU_COUNTDOWN_MS = 5_000
 /** Durée d'une manche de description. */
 export const TABOU_ROUND_MS = 60_000
+/**
+ * Durée écourtée quand le décrivant tiré au sort est un bot (un bot ne
+ * peut pas décrire un mot à voix haute) — la manche se résout d'elle-même
+ * au bout de quelques secondes plutôt que de bloquer la partie 60 s.
+ */
+export const TABOU_BOT_DESCRIBER_ROUND_MS = 5_000
 /** Options de score cible proposées au lobby. */
 export const TABOU_TARGET_SCORE_OPTIONS = [15, 20, 25] as const
 export const TABOU_DEFAULT_TARGET_SCORE = 20
@@ -106,6 +112,12 @@ function buildDescriberOrder(players: TabouInitialPlayer[]): string[] {
     if (b[i]) order.push(b[i])
   }
   return order
+}
+
+/** Un bot ne peut pas décrire à voix haute → manche écourtée pour ne pas bloquer la partie. */
+function roundDurationFor(state: TabouState, describerId: string): number {
+  const describer = state.players.find((p) => p.id === describerId)
+  return describer?.isBot ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS
 }
 
 /** Tire le prochain mot sans répétition ; réamorce la file si épuisée. */
@@ -244,7 +256,12 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       if (state.phase === 'countdown') {
         return {
           ...state,
-          ...enterPhase(state.phaseSeq, 'describing', TABOU_ROUND_MS, action.now),
+          ...enterPhase(
+            state.phaseSeq,
+            'describing',
+            roundDurationFor(state, state.describerId),
+            action.now
+          ),
           phase: 'describing',
           version: state.version + 1,
         }
@@ -273,16 +290,17 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       const rng = rngFromState(state.rngState)
       const { word, remaining } = pickWord(rng, state.remainingWords, state.allWords)
       const describerIdx = (state.describerIdx + 1) % state.describerOrder.length
+      const describerId = state.describerOrder[describerIdx]
       return {
         ...state,
         describerIdx,
-        describerId: state.describerOrder[describerIdx],
+        describerId,
         currentWord: word,
         remainingWords: remaining,
         roundStats: { found: 0, passed: 0, taboo: 0 },
         lastRoundWord: null,
         round: state.round + 1,
-        ...enterPhase(state.phaseSeq, 'describing', TABOU_ROUND_MS, action.now),
+        ...enterPhase(state.phaseSeq, 'describing', roundDurationFor(state, describerId), action.now),
         phase: 'describing',
         rngState: rng.getState(),
         version: state.version + 1,
