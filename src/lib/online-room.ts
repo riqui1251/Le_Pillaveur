@@ -5,6 +5,7 @@ import { getGameAdapter } from '@/lib/online/game-adapters'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { parseOnlinePreferences, type OnlinePreferences } from '@/lib/online-preferences'
 import { levelForXp } from '@/lib/online/cosmetics'
+import { parseBriefing, type RoomBriefing } from '@/lib/online/briefing'
 
 const ROOM_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 const ROOM_CODE_LENGTH = 6
@@ -46,6 +47,8 @@ export type RoomDto = {
   stateVersion: number
   currentTurnUserId: string | null
   gameStateJson: string | null
+  /** Briefing tuto en cours (statut 'briefing') : qui a fini de lire. */
+  briefing: RoomBriefing | null
 }
 
 export type LobbyListItem = {
@@ -238,6 +241,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     stateVersion: room.stateVersion,
     currentTurnUserId: room.currentTurnUserId,
     gameStateJson: stripEngineSecretForUser(room.gameId, room.gameStateJson, currentUserId),
+    briefing: room.status === 'briefing' ? parseBriefing(room.briefingJson) : null,
   }
 }
 

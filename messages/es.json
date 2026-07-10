@@ -431,7 +431,14 @@
   "games": {
     "1220": {
       "title": "1220",
-      "titleBets": "1220 — París",
+      "tutorial": {
+        "steps": [
+          { "title": "Dos dados: 12 y 20", "body": "Antes de jugar, cada uno fija sus apuestas: paridad de la suma, un rango (2-10, 11-20, 21-30), un número «bebes» y un número «repartes»." },
+          { "title": "Se lanza y se compara", "body": "Cualquiera lanza los dados. ¿La suma es tu número «bebes»? Bebes. ¿Es tu «repartes»? Repartes tragos." },
+          { "title": "Paridad, rango y combos", "body": "Paridad o rango acertado: también repartes. Un número presente en UN solo dado cuenta la mitad — ¡acumula combos para regar la mesa!" }
+        ]
+      },
+      "titleBets": "1220 — Apuestas",
       "backToGames": "volver a los juegos",
       "reconfigure": "Reconfigurar apuestas",
       "setupInfo": "Cada jugador elige su paridad, su rango, su número a beber y su número a beber. Los dos números deben ser diferentes.",
@@ -598,6 +605,13 @@
     },
     "purple": {
       "title": "Purple",
+      "tutorial": {
+        "steps": [
+          { "title": "Rojo, Negro… o Purple", "body": "En tu turno, apuesta por el color de las dos próximas cartas: Rojo, Negro o Purple (una roja + una negra)." },
+          { "title": "El contador sube", "body": "Cada apuesta acertada añade tragos al contador. Las apuestas dobles (doble rojo, doble negro, doble Purple) añaden aún más." },
+          { "title": "¿Fallaste? A beber", "body": "Combinación equivocada: bebes todo el contador y vuelve a cero. ¿Hasta dónde te atreverás a dejar crecer el bote?" }
+        ]
+      },
       "minPlayers": "Se requieren al menos 2 jugadores.",
       "newGame": "Nueva parte",
       "yourTurn": "es el turno de",
@@ -3313,6 +3327,21 @@
     "close": "Cerrar",
     "stepCounter": "Paso {n}/{total}",
     "reopenAria": "¿Cómo se juega?"
+  },
+  "briefing": {
+    "title": "Cómo se juega",
+    "subtitle": "La partida empieza cuando todos hayan terminado de leer.",
+    "stepCounter": "Paso {n}/{total}",
+    "next": "Siguiente",
+    "prev": "Anterior",
+    "ready": "¡Estoy listo!",
+    "skip": "Ya conozco las reglas — ¡listo!",
+    "youAreReady": "¡Anotado! Esperando a los demás…",
+    "waitingCount": "{n}/{total} han leído las reglas",
+    "autoStart": "Inicio automático en {s} s",
+    "you": "(tú)",
+    "done": "listo",
+    "reading": "leyendo las reglas…"
   },
   "partyCanvas": {
     "clear": "Borrar",

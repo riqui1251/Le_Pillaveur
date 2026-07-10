@@ -13,6 +13,7 @@ import { useFriends } from '@/hooks/useFriends'
 import { GAMES, type GameMeta } from '@/lib/games'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
+import { GameBriefing } from '@/components/online/GameBriefing'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { OnlinePlayerIcon, OnlinePlayerName, OnlineLevelBadge, RankCrest } from '@/components/online/OnlinePlayerTag'
 import { JoinQR } from '@/components/tv/JoinQR'
@@ -149,6 +150,15 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <Link href="/compte">Se connecter</Link>
           </Button>
         </div>
+      </LobbyShell>
+    )
+  }
+
+  // Briefing tuto synchronisé : tout le monde lit les règles avant le début.
+  if (inThisGameRoom && room && room.status === 'briefing') {
+    return (
+      <LobbyShell>
+        <GameBriefing room={room} gameId={gameId} />
       </LobbyShell>
     )
   }

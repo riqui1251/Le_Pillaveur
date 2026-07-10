@@ -441,6 +441,13 @@
   "games": {
     "1220": {
       "title": "1220",
+      "tutorial": {
+        "steps": [
+          { "title": "Two dice: 12 and 20", "body": "Before playing, everyone sets their bets: parity of the sum, a range (2-10, 11-20, 21-30), a \"you drink\" number and a \"you give\" number." },
+          { "title": "Roll and compare", "body": "Anyone rolls the dice. Sum equals your \"you drink\" number: you drink. Equals your \"you give\" number: you hand out sips." },
+          { "title": "Parity, range and combos", "body": "Right parity or right range: you hand out sips too. A number showing on ONE die counts for half — stack combos to soak the table!" }
+        ]
+      },
       "titleBets": "1220 — Paris",
       "backToGames": "Back to games",
       "reconfigure": "Reconfigure bets",
@@ -608,6 +615,13 @@
     },
     "purple": {
       "title": "Purple",
+      "tutorial": {
+        "steps": [
+          { "title": "Red, Black… or Purple", "body": "On your turn, bet on the colour of the next two cards: Red, Black, or Purple (one red + one black)." },
+          { "title": "The counter climbs", "body": "Every winning bet adds sips to the counter. Double bets (double red, double black, double Purple) add even more." },
+          { "title": "Wrong? Drink up", "body": "Wrong combination: you drink the whole counter and it resets to zero. How high will you dare to let the pot grow?" }
+        ]
+      },
       "minPlayers": "At least 2 players required.",
       "newGame": "New part",
       "yourTurn": "It's the turn of",
@@ -3323,6 +3337,21 @@
     "close": "Close",
     "stepCounter": "Step {n}/{total}",
     "reopenAria": "How to play?"
+  },
+  "briefing": {
+    "title": "How to play",
+    "subtitle": "The game starts once everyone has finished reading.",
+    "stepCounter": "Step {n}/{total}",
+    "next": "Next",
+    "prev": "Previous",
+    "ready": "I'm ready!",
+    "skip": "I already know the rules — ready!",
+    "youAreReady": "Got it! Waiting for the others…",
+    "waitingCount": "{n}/{total} have read the rules",
+    "autoStart": "Auto-start in {s}s",
+    "you": "(you)",
+    "done": "ready",
+    "reading": "reading the rules…"
   },
   "partyCanvas": {
     "clear": "Clear",

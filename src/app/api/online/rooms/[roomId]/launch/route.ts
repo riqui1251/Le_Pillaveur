@@ -6,8 +6,8 @@ import { getCurrentUser } from '@/lib/auth-server'
 
 import { buildRoomDto } from '@/lib/online-room'
 
-import { launchOnlineRoom } from '@/lib/online-room-launch'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { serializeBriefing } from '@/lib/online/briefing'
 import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { getGameAdapter } from '@/lib/online/game-adapters'
@@ -113,7 +113,17 @@ export async function POST(_request: Request, { params }: Params) {
 
 
 
-  await launchOnlineRoom(roomId, room)
+  // La partie ne démarre PAS tout de suite : briefing tuto synchronisé — la
+  // vraie création de l'état de jeu a lieu dans /briefing-ack, quand TOUS les
+  // joueurs ont fini de lire (ou au timeout). Le rematch, lui, appelle
+  // launchOnlineRoom en direct et saute donc le briefing.
+  await prisma.onlineRoom.update({
+    where: { id: roomId },
+    data: {
+      status: 'briefing',
+      briefingJson: serializeBriefing({ startedAt: Date.now(), acks: [] }),
+    },
+  })
 
   publishRoomChanged(roomId, { type: 'changed' })
 

@@ -95,6 +95,8 @@ model OnlineRoom {
   selectedMemberIdsJson String?
   settingsJson          String?
   gameStateJson         String?
+  /// Briefing tuto avant la partie : { startedAt: number, acks: string[] }
+  briefingJson          String?
   stateVersion          Int      @default(0)
   currentTurnUserId     String?
   createdAt             DateTime @default(now())

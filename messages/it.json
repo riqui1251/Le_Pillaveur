@@ -431,7 +431,14 @@
   "games": {
     "1220": {
       "title": "1220",
-      "titleBets": "1220 — Parigi",
+      "tutorial": {
+        "steps": [
+          { "title": "Due dadi: 12 e 20", "body": "Prima di giocare, ognuno imposta le sue scommesse: parità della somma, una fascia (2-10, 11-20, 21-30), un numero «bevi» e un numero «fai bere»." },
+          { "title": "Si lancia e si confronta", "body": "Chiunque lancia i dadi. La somma è il tuo numero «bevi»? Bevi. È il tuo «fai bere»? Distribuisci sorsi." },
+          { "title": "Parità, fascia e combo", "body": "Parità o fascia giusta: distribuisci anche tu. Un numero presente su UN solo dado vale la metà — accumula combo per annaffiare il tavolo!" }
+        ]
+      },
+      "titleBets": "1220 — Scommesse",
       "backToGames": "Torniamo ai giochi",
       "reconfigure": "Riconfigurare le scommesse",
       "setupInfo": "Ogni giocatore sceglie la sua parità, il suo range, il suo numero da bere e il suo numero da bere. I due numeri devono essere diversi.",
@@ -598,6 +605,13 @@
     },
     "purple": {
       "title": "Purple",
+      "tutorial": {
+        "steps": [
+          { "title": "Rosso, Nero… o Purple", "body": "Al tuo turno, scommetti sul colore delle prossime due carte: Rosso, Nero o Purple (una rossa + una nera)." },
+          { "title": "Il contatore sale", "body": "Ogni scommessa vinta aggiunge sorsi al contatore. Le scommesse doppie (doppio rosso, doppio nero, doppio Purple) ne aggiungono di più." },
+          { "title": "Sbagliato? Si beve", "body": "Combinazione sbagliata: bevi tutto il contatore e si riparte da zero. Fin dove oserai far crescere il piatto?" }
+        ]
+      },
       "minPlayers": "Sono richiesti almeno 2 giocatori.",
       "newGame": "Nuova parte",
       "yourTurn": "È il turno di",
@@ -3313,6 +3327,21 @@
     "close": "Chiudi",
     "stepCounter": "Passo {n}/{total}",
     "reopenAria": "Come si gioca?"
+  },
+  "briefing": {
+    "title": "Come si gioca",
+    "subtitle": "La partita inizia quando tutti hanno finito di leggere.",
+    "stepCounter": "Passo {n}/{total}",
+    "next": "Avanti",
+    "prev": "Indietro",
+    "ready": "Sono pronto!",
+    "skip": "Conosco già le regole — pronto!",
+    "youAreReady": "Fatto! Aspettiamo gli altri…",
+    "waitingCount": "{n}/{total} hanno letto le regole",
+    "autoStart": "Avvio automatico tra {s} s",
+    "you": "(tu)",
+    "done": "pronto",
+    "reading": "sta leggendo…"
   },
   "partyCanvas": {
     "clear": "Cancella",
