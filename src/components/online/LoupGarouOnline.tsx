@@ -1,20 +1,46 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
-import { Beer, BookOpen, Eye, EyeOff, Home, MessageCircle, Moon, RefreshCw, Send, Sun, Trophy, Vote, X } from 'lucide-react'
+import {
+  Beer,
+  Bird,
+  BookOpen,
+  Eye,
+  EyeOff,
+  FlaskConical,
+  Heart,
+  Home,
+  Hourglass,
+  Medal,
+  MessageCircle,
+  Moon,
+  RefreshCw,
+  Send,
+  Shield,
+  Skull,
+  Sparkles,
+  Sun,
+  Target,
+  Trophy,
+  Vote,
+  Wheat,
+  X,
+} from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
+import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
+import { WolfIcon } from '@/components/icons/GameIcons'
 import { cn } from '@/lib/utils'
 import { lgTeamOf } from '@/lib/loup-garou/engine'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
-import { OnlinePlayerName, RankCrest, useMemberCosmetics, type MemberCosmetics } from './OnlinePlayerTag'
+import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
 /**
@@ -34,15 +60,23 @@ function parseView(json: string | null | undefined): LGClientView | null {
   }
 }
 
-const ROLE_META: Record<LGRole, { icon: string; color: string }> = {
-  loup: { icon: '🐺', color: 'text-red-300' },
-  voyante: { icon: '🔮', color: 'text-violet-300' },
-  sorciere: { icon: '🧪', color: 'text-emerald-300' },
-  chasseur: { icon: '🏹', color: 'text-amber-300' },
-  salvateur: { icon: '🛡️', color: 'text-cyan-300' },
-  corbeau: { icon: '🐦‍⬛', color: 'text-slate-300' },
-  ancien: { icon: '🧓', color: 'text-orange-300' },
-  villageois: { icon: '🧑‍🌾', color: 'text-sky-300' },
+/**
+ * Icône SVG + couleurs de chaque rôle : `color` sur feutre (fond sombre),
+ * `ink` sur carte crème (encre foncée) — les cosmétiques clairs des pseudos
+ * ne s'affichent QUE sur feutre, jamais sur crème (contraste).
+ */
+const ROLE_META: Record<
+  LGRole,
+  { Icon: ComponentType<{ className?: string }>; color: string; ink: string }
+> = {
+  loup: { Icon: WolfIcon, color: 'text-red-300', ink: 'text-suit-red' },
+  voyante: { Icon: Sparkles, color: 'text-purple-300', ink: 'text-purple-800' },
+  sorciere: { Icon: FlaskConical, color: 'text-emerald-300', ink: 'text-emerald-800' },
+  chasseur: { Icon: Target, color: 'text-amber-300', ink: 'text-amber-700' },
+  salvateur: { Icon: Shield, color: 'text-cyan-300', ink: 'text-cyan-800' },
+  corbeau: { Icon: Bird, color: 'text-slate-300', ink: 'text-slate-600' },
+  ancien: { Icon: Hourglass, color: 'text-orange-300', ink: 'text-orange-800' },
+  villageois: { Icon: Wheat, color: 'text-sky-300', ink: 'text-sky-800' },
 }
 
 /** Ordre d'affichage de la légende. */
@@ -79,7 +113,11 @@ const NIGHT_PHASES = new Set([
   'night-witch',
 ])
 
-/** Grille de cibles (sonde / vote loup / potion / tir / vote du jour). */
+/**
+ * Grille de cibles (sonde / vote loup / potion / tir / vote du jour) —
+ * chaque cible est une mini-carte crème qu'on « abat » sur la table. Noms en
+ * encre pure (pas de cosmétiques : illisibles sur crème).
+ */
 function TargetGrid({
   players,
   iconOf,
@@ -89,7 +127,6 @@ function TargetGrid({
   excludeIds = [],
   youLabel,
   selfId,
-  cosmetics,
 }: {
   players: LGPlayerView[]
   iconOf: (p: { id: string; isBot: boolean }) => string
@@ -99,7 +136,6 @@ function TargetGrid({
   excludeIds?: string[]
   youLabel: string
   selfId: string
-  cosmetics?: Map<string, MemberCosmetics>
 }) {
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -112,18 +148,19 @@ function TargetGrid({
             onClick={() => onPick(p.id)}
             disabled={disabled || excluded}
             className={cn(
-              'flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition-all',
+              'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[#24201A] transition-all',
+              'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)]',
               chosen
-                ? 'border-indigo-400/70 bg-indigo-500/20 ring-2 ring-indigo-400'
-                : 'border-white/10 bg-white/5',
-              !disabled && !excluded && 'hover:bg-white/10 active:scale-95',
+                ? '-translate-y-0.5 border-gold bg-cream ring-2 ring-gold'
+                : 'border-[#D8CCAE] bg-cream',
+              !disabled && !excluded && 'hover:-translate-y-0.5 active:scale-95',
               excluded && 'opacity-35'
             )}
           >
             <span className="text-lg" aria-hidden>{iconOf(p)}</span>
             <span className="min-w-0 flex-1 truncate text-xs font-bold">
-              <OnlinePlayerName name={p.name} cosmetics={cosmetics?.get(p.id)} />
-              {p.id === selfId && <span className="text-white/40"> {youLabel}</span>}
+              {p.name}
+              {p.id === selfId && <span className="text-[#6B6455]"> {youLabel}</span>}
             </span>
           </button>
         )
@@ -212,9 +249,9 @@ function WolfChatPanel({ open }: { open: boolean }) {
   if (!open) return null
 
   return (
-    <div className="space-y-2 rounded-2xl border border-red-400/30 bg-gray-900/80 p-3">
-      <p className="text-center text-xs font-bold uppercase tracking-wide text-red-200">
-        🐺 {t('wolfChatTitle')}
+    <div className="space-y-2 rounded-2xl border border-suit-red/40 bg-felt-deep/90 p-3">
+      <p className="flex items-center justify-center gap-1.5 text-center text-xs font-bold uppercase tracking-wide text-red-200">
+        <WolfIcon className="h-4 w-4" /> {t('wolfChatTitle')}
       </p>
       <div ref={listRef} className="max-h-40 min-h-[3rem] space-y-1.5 overflow-y-auto">
         {messages.length === 0 ? (
@@ -226,7 +263,7 @@ function WolfChatPanel({ open }: { open: boolean }) {
                 className={cn(
                   'max-w-[80%] rounded-xl px-2.5 py-1.5',
                   m.self
-                    ? 'rounded-br-sm bg-red-500/20 text-red-50'
+                    ? 'rounded-br-sm bg-suit-red/25 text-red-50'
                     : 'rounded-bl-sm bg-white/[0.07] text-white/90'
                 )}
               >
@@ -254,7 +291,7 @@ function WolfChatPanel({ open }: { open: boolean }) {
           }}
           maxLength={500}
           placeholder={tChat('placeholder')}
-          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:border-red-400/50 focus:outline-none"
+          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:border-suit-red/60 focus:outline-none"
         />
         <button
           type="button"
@@ -263,7 +300,7 @@ function WolfChatPanel({ open }: { open: boolean }) {
           }}
           disabled={!draft.trim() || sending}
           aria-label={tChat('send')}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-suit-red text-white transition-colors hover:bg-red-600 disabled:opacity-40"
         >
           <Send className="h-3.5 w-3.5" />
         </button>
@@ -376,7 +413,7 @@ export function LoupGarouOnline() {
   if (!view || !user || !room) {
     return (
       <div className="flex flex-1 items-center justify-center p-6 text-white/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-400/30 border-t-indigo-400" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
       </div>
     )
   }
@@ -453,8 +490,8 @@ export function LoupGarouOnline() {
           transition={{ type: 'spring', stiffness: 220, damping: 18 }}
           className="flex flex-col items-center gap-2 text-center"
         >
-          <Trophy className={cn('h-14 w-14', villageWon ? 'text-emerald-400' : 'text-red-400')} />
-          <h2 className="text-3xl font-black">
+          <Trophy className="h-14 w-14 text-gold" />
+          <h2 className={cn('font-display text-3xl font-bold', villageWon ? 'text-emerald-200' : 'text-red-200')}>
             {villageWon ? t('victory.village') : t('victory.loups')}
           </h2>
           {!isSoft && (
@@ -476,7 +513,7 @@ export function LoupGarouOnline() {
         />
 
         <div className="w-full max-w-sm space-y-2">
-          <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-white/40">
+          <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-gold/60">
             {t('victory.fullReveal')}
           </p>
           {view.players.map((p) => (
@@ -484,20 +521,24 @@ export function LoupGarouOnline() {
               key={p.id}
               className={cn(
                 'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
-                p.role === 'loup' ? 'border-red-400/40 bg-red-500/10' : 'border-white/10 bg-white/5',
+                p.role === 'loup' ? 'border-suit-red/40 bg-suit-red/10' : 'border-gold/10 bg-felt-deep/60',
                 !p.alive && 'opacity-60'
               )}
             >
               <RankCrest role={cosmetics.get(p.id)?.role} />
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold">
+                <p className="flex items-center gap-1 truncate text-sm font-bold">
                   <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                  {!p.alive && <span className="text-white/40"> 💀</span>}
+                  {!p.alive && <Skull aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/40" />}
                 </p>
                 {p.role && (
-                  <p className={cn('text-xs font-semibold', ROLE_META[p.role].color)}>
-                    {ROLE_META[p.role].icon} {roleName(p.role)}
+                  <p className={cn('flex items-center gap-1 text-xs font-semibold', ROLE_META[p.role].color)}>
+                    {(() => {
+                      const RoleIcon = ROLE_META[p.role].Icon
+                      return <RoleIcon className="h-3.5 w-3.5 shrink-0" />
+                    })()}
+                    {roleName(p.role)}
                   </p>
                 )}
               </div>
@@ -514,7 +555,7 @@ export function LoupGarouOnline() {
           <Button
             onClick={() => void voteRematch()}
             disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-slate-600 to-indigo-500 py-5 text-base font-bold"
+            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
             {iVotedRematch && humanCount > 1
@@ -539,22 +580,22 @@ export function LoupGarouOnline() {
     <div
       className={cn(
         'flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg',
-        isNight && 'bg-gradient-to-b from-indigo-950/40 to-transparent'
+        isNight && 'bg-gradient-to-b from-chip-blue/25 to-transparent'
       )}
     >
-      {/* Bandeau : nuit/jour + phase + timer */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
+      {/* Bandeau : nuit/jour + phase + timer (filet d'or qui se consume) */}
+      <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 px-4 py-2.5">
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2 text-sm font-bold text-white/80">
+          <span className="flex items-center gap-2 text-sm font-bold text-cream/85">
             {isNight || view.phase === 'reveal-role' ? (
-              <Moon className="h-4 w-4 text-indigo-300" />
+              <Moon className="h-4 w-4 text-sky-300" />
             ) : (
-              <Sun className="h-4 w-4 text-amber-300" />
+              <Sun className="h-4 w-4 text-gold" />
             )}
             {t('round', { n: Math.max(1, view.round) })}
           </span>
           <span className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-indigo-300">
+            <span className="font-display text-xs font-semibold uppercase tracking-wide text-gold">
               {t(`phases.${view.phase}`)}
             </span>
             <button
@@ -562,7 +603,7 @@ export function LoupGarouOnline() {
               className={cn(
                 'flex h-7 w-7 items-center justify-center rounded-lg border transition-colors',
                 showLegend
-                  ? 'border-indigo-400/50 bg-indigo-500/20 text-indigo-200'
+                  ? 'border-gold/50 bg-gold/15 text-gold'
                   : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
               )}
               aria-label={t('legend.title')}
@@ -576,7 +617,7 @@ export function LoupGarouOnline() {
                 className={cn(
                   'flex h-7 w-7 items-center justify-center rounded-lg border transition-colors',
                   showWolfChat
-                    ? 'border-red-400/50 bg-red-500/20 text-red-200'
+                    ? 'border-suit-red/60 bg-suit-red/15 text-red-200'
                     : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
                 )}
                 aria-label={t('wolfChatTitle')}
@@ -593,7 +634,7 @@ export function LoupGarouOnline() {
             <div
               className={cn(
                 'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 10_000 ? 'bg-red-400' : 'bg-indigo-400'
+                timeLeftMs < 10_000 ? 'bg-suit-red' : 'bg-gold'
               )}
               style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
             />
@@ -610,10 +651,10 @@ export function LoupGarouOnline() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="space-y-2 rounded-2xl border border-indigo-400/25 bg-gray-900/80 p-3">
+            <div className="space-y-2 rounded-2xl border border-gold/20 bg-felt-deep/80 p-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-wide text-indigo-200">
-                  📖 {t('legend.title')}
+                <p className="flex items-center gap-1.5 font-display text-xs font-bold uppercase tracking-wide text-gold">
+                  <BookOpen className="h-3.5 w-3.5" /> {t('legend.title')}
                 </p>
                 <button
                   onClick={() => setShowLegend(false)}
@@ -625,24 +666,25 @@ export function LoupGarouOnline() {
               </div>
               <ul className="space-y-1.5">
                 {LEGEND_ROLES.map(
-                  (role) => (
-                    <li
-                      key={role}
-                      className="flex items-start gap-2 rounded-xl border border-white/8 bg-white/4 px-3 py-2"
-                    >
-                      <span className="text-lg leading-none" aria-hidden>
-                        {ROLE_META[role].icon}
-                      </span>
-                      <span className="min-w-0">
-                        <span className={cn('block text-xs font-bold', ROLE_META[role].color)}>
-                          {roleName(role)}
+                  (role) => {
+                    const RoleIcon = ROLE_META[role].Icon
+                    return (
+                      <li
+                        key={role}
+                        className="flex items-start gap-2 rounded-xl border border-white/8 bg-white/4 px-3 py-2"
+                      >
+                        <RoleIcon aria-hidden className={cn('h-5 w-5 shrink-0', ROLE_META[role].color)} />
+                        <span className="min-w-0">
+                          <span className={cn('block text-xs font-bold', ROLE_META[role].color)}>
+                            {roleName(role)}
+                          </span>
+                          <span className="block text-[11px] leading-snug text-white/55">
+                            {t(`roles.${role}.desc`)}
+                          </span>
                         </span>
-                        <span className="block text-[11px] leading-snug text-white/55">
-                          {t(`roles.${role}.desc`)}
-                        </span>
-                      </span>
-                    </li>
-                  )
+                      </li>
+                    )
+                  }
                 )}
               </ul>
               <p className="text-[10px] text-white/40">{t('legend.hint')}</p>
@@ -669,7 +711,7 @@ export function LoupGarouOnline() {
 
       {/* Fantôme */}
       {view.ghost && (
-        <div className="rounded-2xl border border-violet-400/30 bg-violet-500/10 px-4 py-2 text-center text-xs font-bold text-violet-100">
+        <div className="rounded-2xl border border-cream/25 bg-cream/10 px-4 py-2 text-center text-xs font-bold text-cream/90">
           {t('ghostBanner')}
         </div>
       )}
@@ -683,45 +725,84 @@ export function LoupGarouOnline() {
         </div>
       )}
 
-      {/* Ma carte de rôle */}
+      {/* Ma carte de rôle : carte à jouer retournable — face crème quand
+          visible, dos treillis or quand masquée (rien du rôle dans le DOM). */}
       {myRole && (
-        <div
-          className={cn(
-            'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3',
-            me?.alive
-              ? 'border-indigo-400/30 bg-gradient-to-br from-indigo-600/15 to-transparent'
-              : 'border-white/10 bg-white/5 opacity-70'
+        <AnimatePresence mode="wait" initial={false}>
+          {hideRole ? (
+            <motion.div
+              key="role-back"
+              initial={{ rotateY: 90, opacity: 0 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              exit={{ rotateY: 90, opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              className="relative"
+            >
+              <PlayingCardBack className="h-[5.75rem]" />
+              <button
+                onClick={() => setHideRole(false)}
+                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold transition-colors hover:bg-gold/20"
+                aria-label={t('showRole')}
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="role-face"
+              initial={{ rotateY: 90, opacity: 0 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              exit={{ rotateY: 90, opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              className="relative"
+            >
+              <PlayingCard
+                suit={lgTeamOf(myRole) === 'loups' ? 'spade' : 'heart'}
+                rank="A"
+                className={cn('min-h-[5.75rem]', !me?.alive && 'opacity-70')}
+              >
+                <div className="flex items-center gap-3 py-3 pl-7 pr-12">
+                  {(() => {
+                    const RoleIcon = ROLE_META[myRole].Icon
+                    return (
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#24201A]/15 bg-[#24201A]/5">
+                        <RoleIcon aria-hidden className={cn('h-6 w-6', ROLE_META[myRole].ink)} />
+                      </div>
+                    )
+                  })()}
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">
+                      {t('yourRole')}
+                    </p>
+                    <p className={cn('truncate font-display text-xl font-bold', ROLE_META[myRole].ink)}>
+                      {roleName(myRole)}
+                    </p>
+                    <p className="mt-0.5 text-[10px] leading-snug text-[#6B6455]">
+                      {t(`roles.${myRole}.desc`)}
+                    </p>
+                    {myRole === 'loup' && wolves.length > 1 && (
+                      <p className="mt-1 text-[10px] font-semibold text-suit-red">
+                        {t('accomplices')} : {wolves.filter((w) => w.id !== user.id).map((w) => w.name).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </PlayingCard>
+              <button
+                onClick={() => setHideRole(true)}
+                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-[#24201A]/15 bg-[#24201A]/5 text-[#24201A]/60 transition-colors hover:bg-[#24201A]/10"
+                aria-label={t('hideRole')}
+              >
+                <EyeOff className="h-4 w-4" />
+              </button>
+            </motion.div>
           )}
-        >
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
-              {t('yourRole')}
-            </p>
-            <p className={cn('truncate text-xl font-black', hideRole ? 'text-white/70' : ROLE_META[myRole].color)}>
-              {hideRole ? '••••••' : `${ROLE_META[myRole].icon} ${roleName(myRole)}`}
-            </p>
-            {!hideRole && (
-              <p className="mt-0.5 text-[10px] text-white/40">{t(`roles.${myRole}.desc`)}</p>
-            )}
-            {!hideRole && myRole === 'loup' && wolves.length > 1 && (
-              <p className="mt-1 text-[10px] font-semibold text-red-200/80">
-                {t('accomplices')} : {wolves.filter((w) => w.id !== user.id).map((w) => w.name).join(', ')}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={() => setHideRole((v) => !v)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/60 transition-colors hover:bg-white/10"
-            aria-label={hideRole ? t('showRole') : t('hideRole')}
-          >
-            {hideRole ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-          </button>
-        </div>
+        </AnimatePresence>
       )}
 
       {/* Bannière du dernier lynchage (persiste pendant la nuit) */}
       {view.lastVoteResult && view.phase !== 'day-vote' && view.phase !== 'day-revote' && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-center text-xs font-semibold text-white/70">
+        <div className="rounded-2xl border border-gold/10 bg-felt-deep/60 px-4 py-2 text-center text-xs font-semibold text-cream/75">
           {view.lastVoteResult.eliminatedId
             ? t('voteBanner', {
                 name: nameOf(view.lastVoteResult.eliminatedId),
@@ -741,14 +822,14 @@ export function LoupGarouOnline() {
           className="space-y-3"
         >
           {view.phase === 'reveal-role' && (
-            <div className="rounded-2xl border border-indigo-400/25 bg-gray-900/70 p-5 text-center">
-              <p className="text-lg font-black">{t('revealPrompt')}</p>
+            <div className="rounded-2xl border border-gold/25 bg-felt-deep/80 p-5 text-center">
+              <p className="font-display text-lg font-bold text-gold">{t('revealPrompt')}</p>
               <p className="mt-1 text-xs text-white/50">{t('revealHint')}</p>
             </div>
           )}
 
           {view.phase === 'mayor-election' && (
-            <div className="space-y-2 rounded-2xl border border-amber-400/30 bg-gray-900/80 p-4">
+            <div className="space-y-2 rounded-2xl border border-amber-400/30 bg-felt-deep/80 p-4">
               <p className="text-center text-sm font-bold text-amber-200">
                 {!me?.alive ? t('spectatorVote') : view.myMayorVote ? t('mayorVoted') : t('mayorPrompt')}
               </p>
@@ -762,20 +843,21 @@ export function LoupGarouOnline() {
                       onClick={() => void sendAction({ action: 'mayor-vote', targetId: p.id })}
                       disabled={disabled}
                       className={cn(
-                        'flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition-all',
+                        'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[#24201A] transition-all',
+                        'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)]',
                         chosen
-                          ? 'border-amber-400/70 bg-amber-500/15 ring-2 ring-amber-400'
-                          : 'border-white/10 bg-white/5',
-                        !disabled && 'hover:bg-white/10 active:scale-95'
+                          ? '-translate-y-0.5 border-gold bg-cream ring-2 ring-gold'
+                          : 'border-[#D8CCAE] bg-cream',
+                        !disabled && 'hover:-translate-y-0.5 active:scale-95'
                       )}
                     >
                       <span className="text-lg" aria-hidden>{iconOf(p)}</span>
                       <span className="min-w-0 flex-1 truncate text-xs font-bold">
-                        <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                        {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
+                        {p.name}
+                        {p.id === user.id && <span className="text-[#6B6455]"> {t('you')}</span>}
                       </span>
                       {view.hasVotedMayor[p.id] && (
-                        <span className="shrink-0 text-[10px] font-bold text-emerald-300">✓</span>
+                        <span className="shrink-0 text-[10px] font-bold text-emerald-700">✓</span>
                       )}
                     </button>
                   )
@@ -787,7 +869,7 @@ export function LoupGarouOnline() {
           {/* NUIT : acteurs — ou écran de sommeil IDENTIQUE pour tous */}
           {isNight &&
             (iAmActingGuard ? (
-              <div className="space-y-2 rounded-2xl border border-cyan-400/30 bg-gray-900/80 p-4">
+              <div className="space-y-2 rounded-2xl border border-cyan-400/30 bg-felt-deep/80 p-4">
                 <p className="text-center text-sm font-bold text-cyan-200">
                   {view.guardProtectedId
                     ? t('guardDone', { name: nameOf(view.guardProtectedId) })
@@ -798,7 +880,6 @@ export function LoupGarouOnline() {
                     <TargetGrid
                       players={alive}
                       iconOf={iconOf}
-                      cosmetics={cosmetics}
                       onPick={(id) => void sendAction({ action: 'guard-protect', targetId: id })}
                       disabled={busy}
                       excludeIds={view.guardLastProtectedId ? [view.guardLastProtectedId] : []}
@@ -814,7 +895,7 @@ export function LoupGarouOnline() {
                 )}
               </div>
             ) : iAmActingRaven ? (
-              <div className="space-y-2 rounded-2xl border border-slate-400/30 bg-gray-900/80 p-4">
+              <div className="space-y-2 rounded-2xl border border-slate-400/30 bg-felt-deep/80 p-4">
                 <p className="text-center text-sm font-bold text-slate-200">
                   {view.ravenTargetId
                     ? t('ravenDone', { name: nameOf(view.ravenTargetId) })
@@ -824,7 +905,6 @@ export function LoupGarouOnline() {
                   <TargetGrid
                     players={alive.filter((p) => p.id !== user.id)}
                     iconOf={iconOf}
-                    cosmetics={cosmetics}
                     onPick={(id) => void sendAction({ action: 'raven-mark', targetId: id })}
                     disabled={busy}
                     youLabel={t('you')}
@@ -833,12 +913,12 @@ export function LoupGarouOnline() {
                 )}
               </div>
             ) : iAmActingSeer ? (
-              <div className="space-y-2 rounded-2xl border border-violet-400/30 bg-gray-900/80 p-4">
-                <p className="text-center text-sm font-bold text-violet-200">
+              <div className="space-y-2 rounded-2xl border border-purple-400/30 bg-felt-deep/80 p-4">
+                <p className="text-center text-sm font-bold text-purple-200">
                   {myPeek ? t('seerDone') : t('seerPrompt')}
                 </p>
                 {myPeek ? (
-                  <p className="rounded-xl bg-violet-500/15 px-3 py-2 text-center text-sm font-black">
+                  <p className="rounded-xl bg-purple-500/15 px-3 py-2 text-center text-sm font-black">
                     {t('seerResult', {
                       name: nameOf(myPeek.targetId),
                       team: myPeek.team === 'loups' ? t('teamLoups') : t('teamVillage'),
@@ -848,7 +928,6 @@ export function LoupGarouOnline() {
                   <TargetGrid
                     players={alive.filter((p) => p.id !== user.id)}
                     iconOf={iconOf}
-                    cosmetics={cosmetics}
                     onPick={(id) => void sendAction({ action: 'seer-peek', targetId: id })}
                     disabled={busy}
                     youLabel={t('you')}
@@ -857,12 +936,11 @@ export function LoupGarouOnline() {
                 )}
               </div>
             ) : iAmActingWolf ? (
-              <div className="space-y-2 rounded-2xl border border-red-400/30 bg-gray-900/80 p-4">
+              <div className="space-y-2 rounded-2xl border border-suit-red/40 bg-felt-deep/80 p-4">
                 <p className="text-center text-sm font-bold text-red-200">{t('wolfPrompt')}</p>
                 <TargetGrid
                   players={alive.filter((p) => p.role !== 'loup')}
                   iconOf={iconOf}
-                  cosmetics={cosmetics}
                   onPick={(id) => void sendAction({ action: 'wolf-vote', targetId: id })}
                   disabled={busy}
                   chosenId={view.wolfVotes?.[user.id] ?? null}
@@ -879,7 +957,7 @@ export function LoupGarouOnline() {
                 )}
               </div>
             ) : iAmActingWitch ? (
-              <div className="space-y-2.5 rounded-2xl border border-emerald-400/30 bg-gray-900/80 p-4">
+              <div className="space-y-2.5 rounded-2xl border border-emerald-400/30 bg-felt-deep/80 p-4">
                 <p className="text-center text-sm font-bold text-emerald-200">
                   {view.nightVictimId
                     ? t('witchVictim', { name: nameOf(view.nightVictimId) })
@@ -895,7 +973,6 @@ export function LoupGarouOnline() {
                     <TargetGrid
                       players={alive.filter((p) => p.id !== user.id)}
                       iconOf={iconOf}
-                      cosmetics={cosmetics}
                       onPick={(id) =>
                         void sendAction({ action: 'witch', witchAction: 'kill', targetId: id })
                       }
@@ -919,16 +996,16 @@ export function LoupGarouOnline() {
                         disabled={busy}
                         className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 py-3 text-sm font-bold"
                       >
-                        💚 {t('witchSave', { name: nameOf(view.nightVictimId) })}
+                        <Heart className="mr-2 h-4 w-4" /> {t('witchSave', { name: nameOf(view.nightVictimId) })}
                       </Button>
                     )}
                     {view.witchPotions?.kill && (
                       <Button
                         onClick={() => setWitchKillMode(true)}
                         disabled={busy}
-                        className="w-full rounded-xl bg-gradient-to-r from-red-700 to-rose-600 py-3 text-sm font-bold"
+                        className="w-full rounded-xl bg-gradient-to-r from-suit-red to-red-700 py-3 text-sm font-bold"
                       >
-                        ☠️ {t('witchKill')}
+                        <Skull className="mr-2 h-4 w-4" /> {t('witchKill')}
                       </Button>
                     )}
                     <Button
@@ -944,18 +1021,18 @@ export function LoupGarouOnline() {
               </div>
             ) : (
               /* Écran de sommeil — IDENTIQUE pour tous les non-acteurs. */
-              <div className="rounded-2xl border border-indigo-400/20 bg-gray-900/70 p-6 text-center">
-                <Moon className="mx-auto h-10 w-10 animate-pulse text-indigo-300" />
-                <p className="mt-2 text-lg font-black text-indigo-100">{t('sleep')}</p>
+              <div className="rounded-2xl border border-chip-blue/40 bg-felt-deep/80 p-6 text-center">
+                <Moon className="mx-auto h-10 w-10 animate-pulse text-sky-300" />
+                <p className="mt-2 font-display text-lg font-bold text-cream">{t('sleep')}</p>
                 <p className="mt-1 text-xs text-white/40">{t('sleepHint')}</p>
               </div>
             ))}
 
           {view.phase === 'dawn' && (
-            <div className="rounded-2xl border border-amber-400/25 bg-gray-900/80 p-4 text-center">
-              <Sun className="mx-auto h-8 w-8 text-amber-300" />
+            <div className="rounded-2xl border border-amber-400/25 bg-felt-deep/80 p-4 text-center">
+              <Sun className="mx-auto h-8 w-8 text-gold" />
               {view.lastNightDeaths.length === 0 ? (
-                <p className="mt-2 text-sm font-black text-emerald-200">{t('dawnNobody')}</p>
+                <p className="mt-2 font-display text-base font-bold text-emerald-200">{t('dawnNobody')}</p>
               ) : (
                 <div className="mt-2 space-y-1.5">
                   {view.lastNightDeaths.map((d) => (
@@ -978,12 +1055,11 @@ export function LoupGarouOnline() {
 
           {view.phase === 'hunter-shot' &&
             (iAmHunter ? (
-              <div className="space-y-2 rounded-2xl border border-amber-400/30 bg-gray-900/80 p-4">
+              <div className="space-y-2 rounded-2xl border border-amber-400/30 bg-felt-deep/80 p-4">
                 <p className="text-center text-sm font-bold text-amber-200">{t('hunterPrompt')}</p>
                 <TargetGrid
                   players={alive}
                   iconOf={iconOf}
-                  cosmetics={cosmetics}
                   onPick={(id) => void sendAction({ action: 'hunter-shot', targetId: id })}
                   disabled={busy}
                   youLabel={t('you')}
@@ -991,15 +1067,15 @@ export function LoupGarouOnline() {
                 />
               </div>
             ) : (
-              <div className="rounded-2xl border border-amber-400/25 bg-gray-900/80 p-5 text-center">
-                <p className="text-lg font-black text-amber-200">
+              <div className="rounded-2xl border border-amber-400/25 bg-felt-deep/80 p-5 text-center">
+                <p className="font-display text-lg font-bold text-gold">
                   {t('hunterWaiting', { name: nameOf(view.pendingHunterId) })}
                 </p>
               </div>
             ))}
 
           {view.phase === 'day-debate' && (
-            <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="space-y-2.5 rounded-2xl border border-gold/15 bg-felt-deep/70 p-4">
               <p className="text-center text-sm font-bold">{t('debatePrompt')}</p>
               <p className="text-center text-[11px] text-white/45">{t('debateHint')}</p>
               {view.ravenTargetId && (
@@ -1027,7 +1103,7 @@ export function LoupGarouOnline() {
                 <Button
                   onClick={() => void sendAction({ action: 'debate-skip' })}
                   disabled={busy || view.debateSkips.includes(user.id)}
-                  className="w-full rounded-xl bg-gradient-to-r from-slate-600 to-indigo-500 py-3 text-sm font-bold"
+                  className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 text-sm font-bold hover:from-amber-400 hover:to-amber-500"
                 >
                   <Vote className="mr-2 h-4 w-4" />
                   {view.debateSkips.includes(user.id)
@@ -1039,7 +1115,7 @@ export function LoupGarouOnline() {
           )}
 
           {(view.phase === 'day-vote' || view.phase === 'day-revote') && (
-            <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="space-y-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-4">
               <p className="text-center text-sm font-bold">
                 {!me?.alive
                   ? t('spectatorVote')
@@ -1062,30 +1138,32 @@ export function LoupGarouOnline() {
                         onClick={() => void sendAction({ action: 'day-vote', targetId: p.id })}
                         disabled={disabled}
                         className={cn(
-                          'flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition-all',
+                          'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[#24201A] transition-all',
+                          'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)]',
                           chosen
-                            ? 'border-red-400/70 bg-red-500/15 ring-2 ring-red-400'
-                            : 'border-white/10 bg-white/5',
-                          !disabled && 'hover:bg-white/10 active:scale-95',
+                            ? '-translate-y-0.5 border-suit-red bg-cream ring-2 ring-suit-red'
+                            : 'border-[#D8CCAE] bg-cream',
+                          !disabled && 'hover:-translate-y-0.5 active:scale-95',
                           isMe && 'opacity-40'
                         )}
                       >
                         <span className="text-lg" aria-hidden>{iconOf(p)}</span>
                         <span className="min-w-0 flex-1 truncate text-xs font-bold">
-                          <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                          {isMe && <span className="text-white/40"> {t('you')}</span>}
+                          {p.name}
+                          {isMe && <span className="text-[#6B6455]"> {t('you')}</span>}
                         </span>
                         {view.ravenTargetId === p.id && view.phase === 'day-vote' && (
                           <span
-                            className="shrink-0 text-[10px] font-black text-slate-300"
+                            className="flex shrink-0 items-center gap-0.5 text-[10px] font-black text-slate-600"
                             title={t('ravenMarkBadge')}
                             aria-label={t('ravenMarkBadge')}
                           >
-                            🐦‍⬛+2
+                            <Bird aria-hidden className="h-3 w-3" />
+                            +2
                           </span>
                         )}
                         {view.hasVoted[p.id] && (
-                          <span className="shrink-0 text-[10px] font-bold text-emerald-300">✓</span>
+                          <span className="shrink-0 text-[10px] font-bold text-emerald-700">✓</span>
                         )}
                       </button>
                     )
@@ -1096,40 +1174,69 @@ export function LoupGarouOnline() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Le village (vivants + morts, rôles quand visibles) */}
-      <div className="space-y-1.5 rounded-2xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
+      {/* Le village : mini-cartes posées sur la table — crème pour les
+          vivants, retournées côté feutre pour les morts. */}
+      <div className="space-y-1.5 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-gold/60">
           {t('village', { alive: alive.length, total: view.players.length })}
         </p>
         <div className="grid grid-cols-2 gap-1.5">
-          {view.players.map((p) => (
-            <div
-              key={p.id}
-              className={cn(
-                'flex items-center gap-1.5 rounded-xl border px-2 py-1.5',
-                p.alive ? 'border-white/8 bg-white/4' : 'border-white/5 bg-white/2 opacity-50'
-              )}
-            >
-              <span className="text-sm" aria-hidden>{p.alive ? iconOf(p) : '💀'}</span>
-              <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
-                <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
-              </span>
-              {view.mayorId === p.id && (
-                <span className="shrink-0 text-xs" title={t('mayorBadge')} aria-label={t('mayorBadge')}>
-                  🎖️
+          {view.players.map((p) => {
+            const RoleIcon = p.role ? ROLE_META[p.role].Icon : null
+            return p.alive ? (
+              <div
+                key={p.id}
+                className="flex items-center gap-1.5 rounded-lg border border-[#D8CCAE] bg-cream px-2 py-1.5 text-[#24201A] shadow-[0_4px_10px_-6px_rgba(0,0,0,0.5)]"
+              >
+                <span className="text-sm" aria-hidden>{iconOf(p)}</span>
+                <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
+                  {p.name}
+                  {p.id === user.id && <span className="text-[#6B6455]"> {t('you')}</span>}
                 </span>
-              )}
-              {p.role && (
-                <span className="shrink-0 text-xs" title={roleName(p.role)} aria-label={roleName(p.role)}>
-                  {ROLE_META[p.role].icon}
+                {view.mayorId === p.id && (
+                  <Medal className="h-3.5 w-3.5 shrink-0 text-amber-700" aria-label={t('mayorBadge')} />
+                )}
+                {p.role && RoleIcon && (
+                  <RoleIcon
+                    aria-label={roleName(p.role)}
+                    className={cn('h-3.5 w-3.5 shrink-0', ROLE_META[p.role].ink)}
+                  />
+                )}
+                {!isSoft && p.sips > 0 && (
+                  <span className="flex shrink-0 items-center gap-0.5 text-[9px] font-semibold text-amber-700">
+                    <Beer aria-hidden className="h-3 w-3" />
+                    {p.sips}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div
+                key={p.id}
+                className="flex items-center gap-1.5 rounded-lg border border-gold/25 bg-felt-deep px-2 py-1.5 opacity-80"
+              >
+                <Skull aria-hidden className="h-3.5 w-3.5 shrink-0 text-cream/50" />
+                <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-cream/60">
+                  {p.name}
+                  {p.id === user.id && <span className="text-cream/40"> {t('you')}</span>}
                 </span>
-              )}
-              {!isSoft && p.sips > 0 && (
-                <span className="shrink-0 text-[9px] text-amber-200/80">🍺{p.sips}</span>
-              )}
-            </div>
-          ))}
+                {view.mayorId === p.id && (
+                  <Medal className="h-3.5 w-3.5 shrink-0 text-gold/70" aria-label={t('mayorBadge')} />
+                )}
+                {p.role && RoleIcon && (
+                  <RoleIcon
+                    aria-label={roleName(p.role)}
+                    className={cn('h-3.5 w-3.5 shrink-0', ROLE_META[p.role].color)}
+                  />
+                )}
+                {!isSoft && p.sips > 0 && (
+                  <span className="flex shrink-0 items-center gap-0.5 text-[9px] font-semibold text-amber-200/80">
+                    <Beer aria-hidden className="h-3 w-3" />
+                    {p.sips}
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
