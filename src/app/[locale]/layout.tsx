@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Playfair_Display, Source_Sans_3 } from 'next/font/google'
 import { notFound } from 'next/navigation'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server'
@@ -13,14 +13,16 @@ import { FullscreenLayoutProvider } from '@/components/providers/FullscreenLayou
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { routing } from '@/i18n/routing'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+// Identité « Cartes sur Table » : Source Sans 3 (texte) + Playfair Display (voix du croupier).
+const sourceSans = Source_Sans_3({ subsets: ['latin'], variable: '--font-sans' })
+const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-display' })
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f5f5f4' },
-    { media: '(prefers-color-scheme: dark)', color: '#09090b' },
+    { media: '(prefers-color-scheme: light)', color: '#F3EAD3' },
+    { media: '(prefers-color-scheme: dark)', color: '#0E3B2E' },
   ],
 }
 
@@ -67,14 +69,14 @@ export default async function LocaleLayout({
   const messages = await getMessages()
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning className={`${sourceSans.variable} ${playfair.variable}`}>
       <head />
-      <body className={`${inter.className} antialiased`}>
+      <body className="font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ErrorBoundary>
             <Providers>
               <FullscreenLayoutProvider>
-                <div className="relative flex min-h-screen flex-col bg-[#07060b] fullscreen-container">
+                <div className="relative flex min-h-screen flex-col app-felt fullscreen-container">
                   <Navbar />
                   <LocaleSync />
                   <div className="content-container flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">

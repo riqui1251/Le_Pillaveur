@@ -89,8 +89,8 @@ body.is-mobile-device,
   }
   
   html.is-mobile-device:not(.light) {
-    background-color: hsl(240 10% 3.9%) !important;
-    color: hsl(0 0% 98%) !important;
+    background-color: #0A2C22 !important; /* feutre profond */
+    color: #F3EAD3 !important;           /* carte crème */
   }
 }
 
@@ -141,33 +141,73 @@ body.is-mobile-device,
   --emerald-500: #10b981;
 }
 
+/* ═══ Identité « Cartes sur Table » ═══════════════════════════════════
+   Feutre vert de table de jeu + or patiné + cartes crème. Le thème est
+   forcé en dark (ThemeProvider forcedTheme="dark") : ce bloc EST le thème.
+   Mode Soft : [data-ambiance="soft"] glisse le feutre vers un bleu nuit. */
 .dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 20% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 215 27.9% 16.9%;
-  --ring: 240 5% 65%;
+  --background: 162 63% 11%;        /* feutre profond #0A2C22 */
+  --foreground: 43 57% 89%;         /* carte crème #F3EAD3 */
+  --primary: 39 67% 55%;            /* or patiné #D9A441 */
+  --primary-foreground: 41 64% 9%;  /* encre dorée #241B08 */
+  --secondary: 163 58% 17%;
+  --secondary-foreground: 43 57% 89%;
+  --muted: 163 35% 16%;
+  --muted-foreground: 45 30% 70%;
+  --accent: 163 45% 20%;
+  --accent-foreground: 43 57% 89%;
+  --card: 165 55% 13%;              /* feutre carte #0F332A */
+  --card-foreground: 43 57% 89%;
+  --popover: 162 63% 11%;
+  --popover-foreground: 43 57% 89%;
+  --destructive: 5 59% 44%;         /* rouge carreau #B3382E */
+  --destructive-foreground: 20 60% 96%;
+  --border: 160 30% 22%;
+  --input: 160 30% 22%;
+  --ring: 39 67% 55%;               /* focus = or */
   --shadow: 0 0% 0% / 0.4;
   --shadow-strong: 0 0% 0% / 0.7;
-  --chart-1: 220 70% 50%;
+  --chart-1: 39 67% 55%;
   --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
+  --chart-3: 5 59% 50%;
+  --chart-4: 220 55% 55%;
+  --chart-5: 43 57% 75%;
+}
+
+/* Tokens de marque — consommés par Tailwind (rgb(var(--x-rgb)/<alpha>))
+   ET disponibles en hex pour les styles inline. */
+:root, .dark {
+  --felt: #0E3B2E;
+  --felt-deep: #0A2C22;
+  --gold: #D9A441;
+  --gold-strong: #B8862F;
+  --cream: #F3EAD3;
+  --suit-red: #B3382E;
+  --chip-blue: #274B8F;
+  --felt-rgb: 14 59 46;
+  --felt-deep-rgb: 10 44 34;
+  --gold-rgb: 217 164 65;
+  --gold-strong-rgb: 184 134 47;
+  --cream-rgb: 243 234 211;
+  --suit-red-rgb: 179 56 46;
+  --chip-blue-rgb: 39 75 143;
+}
+
+/* Mode Soft : la table de bridge du dimanche — feutre bleu nuit.
+   Même marque, température différente ; tout ce qui consomme les tokens suit. */
+.dark[data-ambiance='soft'] {
+  --background: 218 45% 15%;        /* bleu nuit profond #152238 */
+  --card: 219 40% 18%;
+  --popover: 218 45% 15%;
+  --secondary: 219 42% 22%;
+  --muted: 219 30% 20%;
+  --accent: 219 35% 24%;
+  --border: 219 28% 28%;
+  --input: 219 28% 28%;
+  --felt: #1C2B4A;
+  --felt-deep: #152238;
+  --felt-rgb: 28 43 74;
+  --felt-deep-rgb: 21 34 56;
 }
 
 @layer base {
@@ -257,6 +297,13 @@ body.is-mobile-device,
 }
 
 @layer utilities {
+  /* Fond signature « Cartes sur Table » : le feutre de la table, éclairé
+     par le haut comme sous une suspension de salle de jeu. Suit le mode
+     Soft automatiquement (variables --felt / --felt-deep). */
+  .app-felt {
+    background: radial-gradient(140% 100% at 50% 0%, var(--felt), var(--felt-deep));
+  }
+
   /* Respect des encoches / barres système (iOS notch, Android nav bar) */
   .safe-top {
     padding-top: env(safe-area-inset-top);

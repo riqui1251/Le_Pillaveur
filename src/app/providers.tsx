@@ -4,6 +4,7 @@ import { ThemeProvider } from 'next-themes'
 import { BrowserCapabilitiesProvider } from '@/components/providers/BrowserCapabilitiesProvider'
 import { PlayerEffectsProvider } from '@/components/providers/PlayerEffectsProvider'
 import { AuthProvider } from '@/components/providers/AuthProvider'
+import { AmbianceAttribute } from '@/components/providers/AmbianceAttribute'
 import { OnlineRoomProvider } from '@/components/providers/OnlineRoomProvider'
 import { VisitTracker } from '@/components/analytics/VisitTracker'
 import { ToastProvider } from '@/components/ui/toast'
@@ -23,6 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <BrowserCapabilitiesProvider>
             <PlayerEffectsProvider>
               <ToastProvider>
+                <AmbianceAttribute />
                 <VisitTracker />
                 <AgeGate />
                 {children}

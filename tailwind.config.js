@@ -45,7 +45,51 @@ module.exports = {
   			xl: '1280px',
   			'2xl': '1536px'
   		},
+  		fontFamily: {
+  			// Identité « Cartes sur Table » : Source Sans 3 (texte) + Playfair Display (display).
+  			sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+  			display: ['var(--font-display)', 'Georgia', 'Times New Roman', 'serif'],
+  		},
   		colors: {
+  			// ── Tokens de marque (suivent le mode Soft via les variables) ──
+  			felt: 'rgb(var(--felt-rgb) / <alpha-value>)',
+  			'felt-deep': 'rgb(var(--felt-deep-rgb) / <alpha-value>)',
+  			gold: {
+  				DEFAULT: 'rgb(var(--gold-rgb) / <alpha-value>)',
+  				strong: 'rgb(var(--gold-strong-rgb) / <alpha-value>)'
+  			},
+  			cream: 'rgb(var(--cream-rgb) / <alpha-value>)',
+  			suit: { red: 'rgb(var(--suit-red-rgb) / <alpha-value>)' },
+  			chip: { blue: 'rgb(var(--chip-blue-rgb) / <alpha-value>)' },
+  			// ── Remap : l'ancien accent ambre devient l'or patiné de la marque.
+  			// Les ~250 classes amber-* existantes basculent sans refactor.
+  			amber: {
+  				50: '#FBF6E9',
+  				100: '#F6ECD2',
+  				200: '#EFDCA9',
+  				300: '#E7C97D',
+  				400: '#E0B65C',
+  				500: '#D9A441',
+  				600: '#B8862F',
+  				700: '#946A24',
+  				800: '#77551F',
+  				900: '#61451C',
+  				950: '#38270E'
+  			},
+  			// L'orange des gradients CTA (from-amber-500 to-orange-600) devient or cuivré.
+  			orange: {
+  				50: '#FBF4E6',
+  				100: '#F6E7C9',
+  				200: '#EDD199',
+  				300: '#E3B96A',
+  				400: '#D89A3D',
+  				500: '#C8862C',
+  				600: '#A96D22',
+  				700: '#8A571C',
+  				800: '#6E4517',
+  				900: '#5A3914',
+  				950: '#33200A'
+  			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			primary: {
