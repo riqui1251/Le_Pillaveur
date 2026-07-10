@@ -192,7 +192,7 @@ export function QuizOnline() {
           className="flex flex-col items-center gap-2 text-center"
         >
           <Trophy className="h-14 w-14 text-amber-400" />
-          <h2 className="text-3xl font-black">{t('victoryTitle', { name: ranking[0]?.name ?? '—' })}</h2>
+          <h2 className="font-display text-3xl font-bold text-gold">{t('victoryTitle', { name: ranking[0]?.name ?? '—' })}</h2>
           {!isSoft && last && <p className="text-sm text-amber-200">{t('lastDrinks', { name: last.name })}</p>}
         </motion.div>
 
@@ -371,7 +371,7 @@ export function QuizOnline() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="space-y-2.5 rounded-2xl border border-white/10 bg-gray-900/80 p-3"
+            className="space-y-2.5 rounded-2xl border border-gold/15 bg-felt-deep/80 p-3"
           >
             {myResult && (
               <p

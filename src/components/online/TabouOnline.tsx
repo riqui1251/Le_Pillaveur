@@ -180,7 +180,7 @@ export function TabouOnline() {
           className="flex flex-col items-center gap-2 text-center"
         >
           <Trophy className={cn('h-14 w-14', view.winnerTeam === 'A' ? 'text-sky-400' : 'text-rose-400')} />
-          <h2 className="text-3xl font-black">
+          <h2 className="font-display text-3xl font-bold text-gold">
             {view.winnerTeam === 'A' ? t('victory.teamAWin') : t('victory.teamBWin')}
           </h2>
           <p className="text-sm text-white/60">{t('score', { a: view.scores.A, b: view.scores.B })}</p>

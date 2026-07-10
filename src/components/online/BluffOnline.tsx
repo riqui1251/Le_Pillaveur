@@ -192,7 +192,7 @@ export function BluffOnline() {
           className="flex flex-col items-center gap-2 text-center"
         >
           <Trophy className="h-14 w-14 text-amber-400" />
-          <h2 className="text-3xl font-black">
+          <h2 className="font-display text-3xl font-bold text-gold">
             {view.winnerId ? t('victory.winnerIs', { name: nameOf(view.winnerId) }) : t('victory.tie')}
           </h2>
         </motion.div>
@@ -327,7 +327,7 @@ export function BluffOnline() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-3 rounded-2xl border border-rose-400/30 bg-gray-900/80 p-4"
+            className="space-y-3 rounded-2xl border border-rose-400/30 bg-felt-deep/80 p-4"
           >
             <p className="text-center text-sm font-bold text-emerald-200">
               {t('reveal.realAnswer', { answer: reveal.realAnswer })}
