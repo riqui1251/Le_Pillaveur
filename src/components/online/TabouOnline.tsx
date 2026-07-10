@@ -41,7 +41,7 @@ const TEAM_STYLES: Record<TabouTeam, { chip: string; card: string; text: string 
 
 export function TabouOnline() {
   const { user } = useAuth()
-  const { room, voteRematch, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.tabou.game')
   const tTutorial = useTranslations('games.tabou.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -124,7 +124,7 @@ export function TabouOnline() {
   }, [view, user, room])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="tabou" />
+    return <GameOnlineLobby gameId="tabou" onLaunch={fetchRoom} />
   }
 
   if (!view || !user || !room) {

@@ -61,7 +61,7 @@ function PlayingCardUI({ card, size = 'lg' }: { card: SerializedCard; size?: 'sm
 
 export function PurpleOnline() {
   const { user } = useAuth()
-  const { room, voteRematch, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.purple')
   const tCommon = useTranslations('common')
   const [busy, setBusy] = useState(false)
@@ -123,7 +123,7 @@ export function PurpleOnline() {
   }, [someoneLeft])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="purple" />
+    return <GameOnlineLobby gameId="purple" onLaunch={fetchRoom} />
   }
 
   if (!view || !user || !room) {

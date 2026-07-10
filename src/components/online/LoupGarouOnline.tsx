@@ -275,7 +275,7 @@ function WolfChatPanel({ open }: { open: boolean }) {
 export function LoupGarouOnline() {
   const { user } = useAuth()
   const isSoft = user?.ambianceMode === 'soft'
-  const { room, voteRematch, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.loup-garou.game')
   const tTutorial = useTranslations('games.loup-garou.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -370,7 +370,7 @@ export function LoupGarouOnline() {
   }, [view, user, room])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="loup-garou" />
+    return <GameOnlineLobby gameId="loup-garou" onLaunch={fetchRoom} />
   }
 
   if (!view || !user || !room) {
@@ -400,12 +400,21 @@ export function LoupGarouOnline() {
     if (!room || busy) return
     setBusy(true)
     try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
-      })
+      const post = (expectedVersion: number) =>
+        fetch(`/api/online/rooms/${room.id}/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ ...body, expectedVersion }),
+        })
+      const res = await post(room.stateVersion)
+      if (res.status === 409) {
+        // Version périmée (ex: un loup coéquipier ou un bot a agi entre-temps) —
+        // resynchronise puis retente une fois avec la version fraîche, sinon un
+        // changement de cible loup pouvait silencieusement ne rien faire.
+        const fresh = await fetchRoom()
+        if (fresh) await post(fresh.stateVersion)
+      }
     } finally {
       setBusy(false)
     }

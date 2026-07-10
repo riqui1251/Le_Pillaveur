@@ -156,44 +156,51 @@ describe('création et rôles', () => {
     expect(() => createLGState(thirteen, 1, LG_DEBATE_DEFAULT_MS, T0)).toThrow(LGEngineError)
   })
 
-  it('reveal-role → ADVANCE → élection du maire → ADVANCE → nuit de la voyante (round 1)', () => {
+  it('reveal-role → ADVANCE → première nuit directe : voyante (round 1)', () => {
     const s = craft(SIX, 'reveal-role', { round: 0, phaseEndsAt: T0 + LG_REVEAL_MS })
-    const mayor = advance(s, T0 + LG_REVEAL_MS)
-    expect(mayor.phase).toBe('mayor-election')
-    const night = advance(mayor, mayor.phaseEndsAt!)
+    const night = advance(s, T0 + LG_REVEAL_MS)
     expect(night.phase).toBe('night-seer')
     expect(night.round).toBe(1)
-    expect(night.phaseEndsAt).toBe(mayor.phaseEndsAt! + LG_SEER_MS)
+    expect(night.phaseEndsAt).toBe(T0 + LG_REVEAL_MS + LG_SEER_MS)
   })
 
   it('voyante morte → la nuit saute directement aux loups', () => {
     const dead = SIX.map((p) => (p.id === 'voy' ? { ...p, alive: false } : p))
     const s = craft(dead, 'reveal-role', { round: 0, phaseEndsAt: T0 + LG_REVEAL_MS })
-    const mayor = advance(s, T0 + LG_REVEAL_MS)
-    expect(advance(mayor, mayor.phaseEndsAt!).phase).toBe('night-wolves')
+    expect(advance(s, T0 + LG_REVEAL_MS).phase).toBe('night-wolves')
   })
 })
 
-describe('élection du maire', () => {
+describe('élection du maire (1er jour, après la 1ère nuit)', () => {
+  it('première aube → élection ; maire déjà élu → débat direct', () => {
+    const first = advance(craft(SIX, 'dawn', { phaseEndsAt: T0 + LG_DAWN_MS }), T0 + LG_DAWN_MS)
+    expect(first.phase).toBe('mayor-election')
+    expect(first.phaseEndsAt).toBe(T0 + LG_DAWN_MS + LG_MAYOR_MS)
+    const later = advance(
+      craft(SIX, 'dawn', { mayorId: 'vil1', phaseEndsAt: T0 + LG_DAWN_MS }),
+      T0 + LG_DAWN_MS
+    )
+    expect(later.phase).toBe('day-debate')
+  })
+
   it('majorité simple → mayorId élu, résolution immédiate dès que tous ont voté, auto-candidature OK', () => {
-    let s = craft(SIX, 'mayor-election', { round: 0 })
+    let s = craft(SIX, 'mayor-election')
     expect(s.mayorId).toBeNull()
     s = reduceLG(s, { type: 'MAYOR_VOTE', playerId: 'loup1', targetId: 'voy', now: T0 })
     s = reduceLG(s, { type: 'MAYOR_VOTE', playerId: 'voy', targetId: 'voy', now: T0 }) // auto-candidature
     s = reduceLG(s, { type: 'MAYOR_VOTE', playerId: 'sor', targetId: 'voy', now: T0 })
     s = reduceLG(s, { type: 'MAYOR_VOTE', playerId: 'cha', targetId: 'vil1', now: T0 })
     s = reduceLG(s, { type: 'MAYOR_VOTE', playerId: 'vil1', targetId: 'vil1', now: T0 })
-    // Dernier vote → tous ont voté → dépouillement immédiat + entrée en 1ère nuit.
+    // Dernier vote → tous ont voté → dépouillement immédiat + place au débat.
     s = reduceLG(s, { type: 'MAYOR_VOTE', playerId: 'vil2', targetId: 'voy', now: T0 })
     expect(s.mayorId).toBe('voy')
     expect(s.mayorVotes).toEqual({})
-    expect(s.phase).not.toBe('mayor-election')
-    expect(s.round).toBe(1)
+    expect(s.phase).toBe('day-debate')
   })
 
   it('refuse un second vote, une phase incorrecte, ou une cible morte', () => {
     const dead = SIX.map((p) => (p.id === 'vil1' ? { ...p, alive: false } : p))
-    const s = craft(dead, 'mayor-election', { round: 0 })
+    const s = craft(dead, 'mayor-election')
     const voted = reduceLG(s, { type: 'MAYOR_VOTE', playerId: 'loup1', targetId: 'voy', now: T0 })
     expect(() =>
       reduceLG(voted, { type: 'MAYOR_VOTE', playerId: 'loup1', targetId: 'sor', now: T0 })
@@ -208,13 +215,13 @@ describe('élection du maire', () => {
   })
 
   it('égalité → ADVANCE départage par RNG (un maire est quand même élu)', () => {
-    let s = craft(SIX, 'mayor-election', { round: 0, phaseEndsAt: T0 + LG_MAYOR_MS })
+    let s = craft(SIX, 'mayor-election', { phaseEndsAt: T0 + LG_MAYOR_MS })
     s = reduceLG(s, { type: 'MAYOR_VOTE', playerId: 'loup1', targetId: 'voy', now: T0 })
     s = reduceLG(s, { type: 'MAYOR_VOTE', playerId: 'voy', targetId: 'sor', now: T0 })
     // Timeout avant que tout le monde ait voté → ADVANCE dépouille quand même.
     const after = advance(s, T0 + LG_MAYOR_MS)
     expect(['voy', 'sor']).toContain(after.mayorId)
-    expect(after.phase).not.toBe('mayor-election')
+    expect(after.phase).toBe('day-debate')
   })
 
   it('le vote du maire compte double au lynchage (peut renverser le résultat)', () => {
@@ -313,7 +320,8 @@ describe('nuit : loups puis sorcière', () => {
 describe('aube, chasseur et victoire de nuit', () => {
   it('chasseur tué la nuit → phase de tir → sa cible meurt → débat', () => {
     const eight = [...SIX, P('vil3', 'villageois'), P('vil4', 'villageois')]
-    let s = craft(eight, 'night-wolves', { phaseEndsAt: T0 + LG_WOLVES_MS })
+    // Maire déjà élu (l'élection a lieu au tout premier jour) → le tir mène au débat.
+    let s = craft(eight, 'night-wolves', { mayorId: 'vil1', phaseEndsAt: T0 + LG_WOLVES_MS })
     s = reduceLG(s, { type: 'WOLF_VOTE', playerId: 'loup1', targetId: 'cha' })
     s = advance(s, T0 + LG_WOLVES_MS) // → night-witch
     s = reduceLG(s, { type: 'WITCH_ACTION', playerId: 'sor', action: 'none' })
@@ -350,6 +358,7 @@ describe('aube, chasseur et victoire de nuit', () => {
       players: eight.map((p) => (p.id === 'cha' ? { ...p, alive: false } : p)),
       pendingHunterId: 'cha',
       afterHunter: 'day',
+      mayorId: 'vil1',
       phaseEndsAt: T0 + 20_000,
     })
     const after = advance(s, T0 + 20_000)
@@ -618,8 +627,6 @@ describe('nouveaux rôles : Salvateur, Corbeau, Ancien', () => {
   it('ordre de réveil : garde → voyante → corbeau → loups (morts sautés)', () => {
     const s = craft(SEVEN, 'reveal-role', { round: 0, phaseEndsAt: T0 + LG_REVEAL_MS })
     let n = advance(s, T0 + LG_REVEAL_MS)
-    expect(n.phase).toBe('mayor-election')
-    n = advance(n, n.phaseEndsAt!)
     expect(n.phase).toBe('night-guard')
     n = advance(n, n.phaseEndsAt!)
     expect(n.phase).toBe('night-seer')
@@ -632,8 +639,7 @@ describe('nouveaux rôles : Salvateur, Corbeau, Ancien', () => {
       p.id === 'gar' || p.id === 'voy' ? { ...p, alive: false } : p
     )
     const s2 = craft(dead, 'reveal-role', { round: 0, phaseEndsAt: T0 + LG_REVEAL_MS })
-    const mayor2 = advance(s2, T0 + LG_REVEAL_MS)
-    expect(advance(mayor2, mayor2.phaseEndsAt!).phase).toBe('night-raven')
+    expect(advance(s2, T0 + LG_REVEAL_MS).phase).toBe('night-raven')
   })
 
   it('salvateur : protège des loups, jamais la même cible 2 nuits de suite', () => {

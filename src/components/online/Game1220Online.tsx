@@ -34,7 +34,7 @@ const BAND_KEYS: Band1220[] = ['2-10', '11-20', '21-30']
 
 export function Game1220Online() {
   const { user } = useAuth()
-  const { room, voteRematch, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.1220')
   const [busy, setBusy] = useState(false)
 
@@ -81,7 +81,7 @@ export function Game1220Online() {
   }, [someoneLeft])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="1220" />
+    return <GameOnlineLobby gameId="1220" onLaunch={fetchRoom} />
   }
 
   if (!view || !user || !room) {

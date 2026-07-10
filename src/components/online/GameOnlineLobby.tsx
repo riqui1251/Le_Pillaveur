@@ -26,6 +26,13 @@ const VISIBILITY_ICON: Record<Visibility, typeof Globe> = { public: Globe, priva
 interface GameOnlineLobbyProps {
   gameId: string
   game?: GameMeta
+  /**
+   * Appelé juste après un lancement réussi. Le parent (XOnline.tsx) a sa
+   * PROPRE instance de useOnlineRoom() (état non partagé) — sans ce signal
+   * explicite, elle n'apprend le changement de statut qu'à son prochain tick
+   * de polling/SSE, ce qui peut laisser le lobby affiché plusieurs secondes.
+   */
+  onLaunch?: () => void
 }
 
 /** Fond dégradé + conteneur centré partagé par tous les écrans du lobby (parité visuelle avec le pré-jeu local). */
@@ -60,7 +67,7 @@ const PB_DIFFICULTY_GRADIENT: Record<(typeof PB_DIFFICULTIES)[number], string> =
   extreme: 'from-red-600 to-rose-700 shadow-red-500/30',
 }
 
-export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps) {
+export function GameOnlineLobby({ gameId, game: gameProp, onLaunch }: GameOnlineLobbyProps) {
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
   const { user } = useAuth()
   const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend } = useOnlineRoom()
@@ -1060,7 +1067,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
         {isHost ? (
           <Button
-            onClick={() => launchGame()}
+            onClick={() => {
+              void launchGame().then((r) => {
+                if (r) onLaunch?.()
+              })
+            }}
             disabled={!room.canLaunch || loading}
             className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-5 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
           >

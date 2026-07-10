@@ -78,7 +78,7 @@ type EffectChip = {
 
 export function PetitBuveurOnline() {
   const { user } = useAuth()
-  const { room, voteRematch, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.petit-buveur.online')
   const tPB = useTranslations('games.petit-buveur')
   const tTutorial = useTranslations('games.petit-buveur.tutorial')
@@ -246,7 +246,7 @@ export function PetitBuveurOnline() {
 
   // Tant que la partie n'est pas lancée : le lobby gère création/join/prêt/lancer.
   if (!inGame) {
-    return <GameOnlineLobby gameId="petit-buveur" />
+    return <GameOnlineLobby gameId="petit-buveur" onLaunch={fetchRoom} />
   }
 
   if (!view || !user) {

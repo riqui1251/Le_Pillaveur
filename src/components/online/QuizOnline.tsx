@@ -48,7 +48,7 @@ const CHOICE_STYLE = [
 export function QuizOnline() {
   const { user } = useAuth()
   const isSoft = user?.ambianceMode === 'soft'
-  const { room, voteRematch, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.quiz.game')
   const tTutorial = useTranslations('games.quiz.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -135,7 +135,7 @@ export function QuizOnline() {
   }, [view, user, room])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="quiz" />
+    return <GameOnlineLobby gameId="quiz" onLaunch={fetchRoom} />
   }
 
   if (!view || !user || !room) {

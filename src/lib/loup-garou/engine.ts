@@ -391,9 +391,10 @@ function startNight(state: LGState, now: number): LGState {
 }
 
 /**
- * Dépouillement de l'élection du maire (une fois, avant la première nuit) :
- * majorité simple, égalité départagée par RNG (pas de revote — juste un
- * apéro, pas un vote qui doit être irréprochable).
+ * Dépouillement de l'élection du maire (une fois, en plein jour — après la
+ * première nuit, avant le premier débat) : majorité simple, égalité
+ * départagée par RNG (pas de revote — juste un apéro, pas un vote qui doit
+ * être irréprochable). Une fois élu, direct au débat.
  */
 function resolveMayorElection(state: LGState, now: number): LGState {
   const tally: Record<string, number> = {}
@@ -418,7 +419,19 @@ function resolveMayorElection(state: LGState, now: number): LGState {
     mayorId = rng.pick(tied)
     rngState = rng.getState()
   }
-  return startNight({ ...state, mayorId, mayorVotes: {}, rngState, version: state.version + 1 }, now)
+  const next = { ...state, mayorId, mayorVotes: {}, rngState, version: state.version + 1 }
+  return { ...toPhase(next, 'day-debate', next.debateMs, now), version: next.version + 1 }
+}
+
+/**
+ * Entrée en phase de jour : le tout premier jour, on élit d'abord le maire
+ * (une fois pour toute la partie, avant le débat) ; ensuite direct au débat.
+ */
+function enterDay(state: LGState, now: number): LGState {
+  if (state.mayorId === null) {
+    return { ...toPhase(state, 'mayor-election', LG_MAYOR_MS, now), version: state.version + 1 }
+  }
+  return { ...toPhase(state, 'day-debate', state.debateMs, now), version: state.version + 1 }
 }
 
 /** Fin de la phase des loups : victime = cible majoritaire (égalité → RNG). */
@@ -508,7 +521,7 @@ function resolveNight(state: LGState, now: number): LGState {
 function afterDawn(state: LGState, now: number): LGState {
   const winner = winnerOf(state.players)
   if (winner) return finish(state, winner, now)
-  return { ...toPhase(state, 'day-debate', state.debateMs, now), version: state.version + 1 }
+  return enterDay(state, now)
 }
 
 /** Dépouillement du vote du jour (ou du revote). */
@@ -606,7 +619,7 @@ function afterHunterShot(state: LGState, now: number): LGState {
   const winner = winnerOf(cleared.players)
   if (winner) return finish(cleared, winner, now)
   if (dest === 'day') {
-    return { ...toPhase(cleared, 'day-debate', cleared.debateMs, now), version: state.version + 1 }
+    return enterDay(cleared, now)
   }
   return startNight(cleared, now)
 }
@@ -816,7 +829,7 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       const now = action.now
       switch (state.phase) {
         case 'reveal-role':
-          return { ...toPhase(state, 'mayor-election', LG_MAYOR_MS, now), version: state.version + 1 }
+          return startNight(state, now)
         case 'mayor-election':
           return resolveMayorElection(state, now)
         case 'night-guard': {

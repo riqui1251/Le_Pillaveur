@@ -38,7 +38,7 @@ function parseView(json: string | null | undefined): CrobardClientView | null {
 
 export function CrobardOnline() {
   const { user } = useAuth()
-  const { room, voteRematch, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.crobard.game')
   const tTutorial = useTranslations('games.crobard.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -126,7 +126,7 @@ export function CrobardOnline() {
   }, [view?.round])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="crobard" />
+    return <GameOnlineLobby gameId="crobard" onLaunch={fetchRoom} />
   }
 
   if (!view || !user || !room) {

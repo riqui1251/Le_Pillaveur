@@ -43,7 +43,7 @@ const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 export function ImposteurOnline() {
   const { user } = useAuth()
   const isSoft = user?.ambianceMode === 'soft'
-  const { room, voteRematch, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.imposteur.game')
   const tTutorial = useTranslations('games.imposteur.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -163,7 +163,7 @@ export function ImposteurOnline() {
   }, [stateVersion])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="imposteur" />
+    return <GameOnlineLobby gameId="imposteur" onLaunch={fetchRoom} />
   }
 
   if (!view || !user || !room) {

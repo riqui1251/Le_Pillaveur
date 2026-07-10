@@ -35,7 +35,7 @@ function parseView(json: string | null | undefined): TelephoneClientView | null 
 
 export function TelephoneDessineOnline() {
   const { user } = useAuth()
-  const { room, leaveRoom } = useOnlineRoom()
+  const { room, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.telephone-dessine.game')
   const tTutorial = useTranslations('games.telephone-dessine.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -117,7 +117,7 @@ export function TelephoneDessineOnline() {
   }, [view, user, room])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="telephone-dessine" />
+    return <GameOnlineLobby gameId="telephone-dessine" onLaunch={fetchRoom} />
   }
 
   if (!view || !user || !room) {
