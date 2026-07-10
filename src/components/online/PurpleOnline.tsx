@@ -43,8 +43,8 @@ function PlayingCardUI({ card, size = 'lg' }: { card: SerializedCard; size?: 'sm
   if (size === 'sm') {
     return (
       <div className="flex h-14 w-10 shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/20 bg-white shadow-md">
-        <span className={cn('text-xs font-extrabold leading-none', isRed ? 'text-red-600' : 'text-gray-900')}>{card.value}</span>
-        <span className={cn('text-sm leading-none', isRed ? 'text-red-600' : 'text-gray-900')}>{card.suit}</span>
+        <span className={cn('text-xs font-extrabold leading-none', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.value}</span>
+        <span className={cn('text-sm leading-none', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.suit}</span>
       </div>
     )
   }
@@ -53,8 +53,8 @@ function PlayingCardUI({ card, size = 'lg' }: { card: SerializedCard; size?: 'sm
       'flex h-32 w-20 sm:h-36 sm:w-24 flex-col items-center justify-center rounded-2xl border-2 bg-white shadow-xl',
       isRed ? 'border-red-400' : 'border-gray-800',
     )}>
-      <span className={cn('text-3xl sm:text-4xl font-extrabold', isRed ? 'text-red-600' : 'text-gray-900')}>{card.value}</span>
-      <span className={cn('text-2xl sm:text-3xl leading-tight', isRed ? 'text-red-600' : 'text-gray-900')}>{card.suit}</span>
+      <span className={cn('text-3xl sm:text-4xl font-extrabold', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.value}</span>
+      <span className={cn('text-2xl sm:text-3xl leading-tight', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.suit}</span>
     </div>
   )
 }
@@ -129,7 +129,7 @@ export function PurpleOnline() {
   if (!view || !user || !room) {
     return (
       <div className="flex flex-1 items-center justify-center p-6 text-white/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
       </div>
     )
   }
@@ -180,7 +180,7 @@ export function PurpleOnline() {
               <RankCrest role={cosmetics.get(p.id)?.role} size="sm" />
               <span className="text-sm" aria-hidden>{iconOf(p)}</span>
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate text-xs font-semibold" />
-              <span className="text-xs font-bold text-violet-300">{view.gameResults[p.id] ?? 0} 🍺</span>
+              <span className="text-xs font-bold text-amber-300">{view.gameResults[p.id] ?? 0} 🍺</span>
             </div>
           ))}
         </div>
@@ -190,7 +190,7 @@ export function PurpleOnline() {
             <Button
               onClick={() => void voteRematch()}
               disabled={iVotedRematch}
-              className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-5 text-base font-bold"
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
               {iVotedRematch
@@ -200,7 +200,7 @@ export function PurpleOnline() {
           ) : (
             <Button
               onClick={() => void voteRematch()}
-              className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-5 text-base font-bold"
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
             >
               <RefreshCw className="mr-2 h-4 w-4" /> {t('online.replay')}
             </Button>
@@ -231,7 +231,7 @@ export function PurpleOnline() {
 
       {/* ── Joueur actif ─────────────────────────────────────────────── */}
       {currentActor && (
-        <div className="flex items-center gap-3 rounded-2xl border border-violet-800/20 bg-violet-950/30 p-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
           <RankCrest role={cosmetics.get(currentActor.id)?.role} />
           <span className="text-2xl" aria-hidden>{iconOf(currentActor)}</span>
           <div className="min-w-0 flex-1">
@@ -272,7 +272,7 @@ export function PurpleOnline() {
                   <button
                     onClick={() => void sendAction({ action: 'continue' })}
                     disabled={busy}
-                    className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600 disabled:opacity-50"
+                    className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2 text-sm font-semibold text-white hover:from-amber-400 hover:to-amber-500 disabled:opacity-50"
                   >
                     {tCommon('continue')}
                   </button>
@@ -295,7 +295,7 @@ export function PurpleOnline() {
       {/* ── Boutons de paris ─────────────────────────────────────────── */}
       {!view.canContinue && !view.pendingReveal && (
         <div className="space-y-2">
-          <p className="text-center text-xs font-semibold uppercase tracking-widest text-violet-400/60">
+          <p className="text-center text-xs font-semibold uppercase tracking-widest text-gold/60">
             {isMyTurn ? t('chooseBet') : t('online.waitingBet', { name: currentActor?.name ?? '' })}
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -371,7 +371,7 @@ export function PurpleOnline() {
                   <button
                     onClick={() => void sendAction({ action: 'close-reveal' })}
                     disabled={busy}
-                    className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3 text-sm font-bold text-white hover:from-violet-500 hover:to-purple-600 disabled:opacity-50"
+                    className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 text-sm font-bold text-white hover:from-amber-400 hover:to-amber-500 disabled:opacity-50"
                   >
                     {tCommon('understoodNext')}
                   </button>

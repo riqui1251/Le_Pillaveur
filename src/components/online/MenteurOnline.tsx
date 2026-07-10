@@ -338,7 +338,7 @@ export function MenteurOnline() {
       </div>
 
       {view.palifico && (
-        <div className="rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-center text-xs font-semibold text-fuchsia-100">
+        <div className="rounded-2xl border border-chip-blue/50 bg-chip-blue/20 px-4 py-2 text-center text-xs font-semibold text-sky-100">
           {view.currentBid ? t('palificoBadge', { face: view.currentBid.face }) : t('palificoBadgeOpen')}
         </div>
       )}
@@ -443,7 +443,7 @@ export function MenteurOnline() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-3 rounded-2xl border border-orange-400/30 bg-gray-900/80 p-4"
+            className="space-y-3 rounded-2xl border border-amber-400/30 bg-felt-deep/80 p-4"
           >
             <p className="text-center text-sm font-bold">
               {reveal.bidHeld
@@ -612,7 +612,7 @@ export function MenteurOnline() {
                   <Button
                     onClick={() => void sendAction({ action: 'calza' })}
                     disabled={busy || !view.currentBid}
-                    className="flex-1 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-purple-500 py-4 text-sm font-black tracking-wide disabled:opacity-40"
+                    className="flex-1 rounded-2xl bg-gradient-to-r from-chip-blue to-blue-800 py-4 text-sm font-black tracking-wide disabled:opacity-40"
                   >
                     {t('calza')}
                   </Button>

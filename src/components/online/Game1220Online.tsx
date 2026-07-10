@@ -142,7 +142,7 @@ export function Game1220Online() {
             <Button
               onClick={() => void voteRematch()}
               disabled={iVotedRematch}
-              className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-5 text-base font-bold"
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
               {iVotedRematch
@@ -152,7 +152,7 @@ export function Game1220Online() {
           ) : (
             <Button
               onClick={() => void voteRematch()}
-              className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-5 text-base font-bold"
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold"
             >
               <RefreshCw className="mr-2 h-4 w-4" /> {t('online.replay')}
             </Button>
@@ -235,7 +235,7 @@ export function Game1220Online() {
                     className={cn(
                       'rounded-xl border py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50',
                       myDraft.band === b
-                        ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-300'
+                        ? 'border-gold/50 bg-gold/15 text-gold'
                         : 'border-white/10 bg-white/[0.04] text-white/50 hover:bg-white/[0.08]'
                     )}
                   >
@@ -289,7 +289,7 @@ export function Game1220Online() {
             <Button
               onClick={() => void sendAction({ action: 'ready' })}
               disabled={busy || iAmReady || myDraft.drinkNumber === myDraft.giveNumber}
-              className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-4 text-sm font-bold disabled:opacity-40"
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-bold disabled:opacity-40"
             >
               {iAmReady ? t('online.readyDone') : t('online.ready')}
             </Button>
@@ -429,7 +429,7 @@ export function Game1220Online() {
         <Button
           onClick={() => void sendAction({ action: 'roll' })}
           disabled={busy}
-          className="flex-1 rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-600 py-4 text-base font-bold shadow-[0_8px_24px_rgba(20,184,166,0.3)] disabled:opacity-40"
+          className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-base font-bold shadow-[0_8px_24px_rgba(217,164,65,0.3)] disabled:opacity-40"
         >
           {t('rollDice')}
         </Button>

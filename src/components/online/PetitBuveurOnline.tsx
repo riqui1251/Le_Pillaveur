@@ -301,7 +301,7 @@ export function PetitBuveurOnline() {
       effectChips.push({
         id: `link-${p.id}`, icon: '🔗', title: tGame('effects.chain'), desc: tGame('effects.chainDesc'),
         remaining: p.linkedTurns ?? 1, playerName: p.name, linkedName: linked?.name,
-        accent: 'border-indigo-400/50 bg-indigo-500/15',
+        accent: 'border-chip-blue/60 bg-chip-blue/20',
       })
     }
     if (p.skipNextTurn) {
@@ -322,7 +322,7 @@ export function PetitBuveurOnline() {
   const legendEffects = [
     { icon: '🛡️', title: tGame('effects.protection'), desc: tGame('effects.protectionDesc'), accent: 'border-blue-400/50 bg-blue-500/15' },
     { icon: '👻', title: tGame('effects.curse'), desc: tGame('effects.curseDesc'), accent: 'border-red-400/50 bg-red-500/15' },
-    { icon: '🔗', title: tGame('effects.chain'), desc: tGame('effects.chainDesc'), accent: 'border-indigo-400/50 bg-indigo-500/15' },
+    { icon: '🔗', title: tGame('effects.chain'), desc: tGame('effects.chainDesc'), accent: 'border-chip-blue/60 bg-chip-blue/20' },
     { icon: '⏭️', title: tGame('effects.skipTurn'), desc: tGame('effects.skipTurnDesc'), accent: 'border-slate-400/50 bg-slate-500/15' },
     { icon: '⚓', title: tGame('effects.anchor'), desc: tGame('effects.anchorDesc'), accent: 'border-cyan-400/50 bg-cyan-500/15' },
   ]
@@ -573,8 +573,8 @@ export function PetitBuveurOnline() {
 
           {/* Effets actifs — pastilles compactes (icône + joueur + compteur, détail en title) */}
           {effectChips.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5">
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-300" aria-hidden />
+            <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5">
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-300" aria-hidden />
               {effectChips.map((e) => (
                 <span
                   key={e.id}
@@ -666,7 +666,7 @@ export function PetitBuveurOnline() {
               <Button
                 onClick={() => sendAction('resolve')}
                 disabled={busy}
-                className="w-full bg-violet-600 py-5 text-base font-bold text-white hover:bg-violet-500"
+                className="w-full bg-amber-600 py-5 text-base font-bold text-white hover:bg-amber-500"
               >
                 {busy ? '…' : `${t('continueCase')} (${caseLabel(view.pending.caseType)})`}
               </Button>
@@ -870,7 +870,7 @@ export function PetitBuveurOnline() {
               initial={{ scale: 0.85, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-gray-900/95 shadow-2xl backdrop-blur-md"
+              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-felt-deep/95 shadow-2xl backdrop-blur-md"
             >
               <div className="bg-gradient-to-br from-amber-600/20 via-transparent to-orange-600/10 p-6">
                 {/* Trophée animé */}
@@ -999,19 +999,19 @@ export function PetitBuveurOnline() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 16, scale: 0.97 }}
                 transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-                className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
+                className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-felt-deep shadow-2xl"
               >
-                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-violet-600/20 to-transparent px-5 pb-5 pt-5 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/20 ring-1 ring-violet-400/30">
-                    <Target className="h-6 w-6 text-violet-300" />
+                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 pb-5 pt-5 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20 ring-1 ring-amber-400/30">
+                    <Target className="h-6 w-6 text-amber-300" />
                   </div>
-                  <span className="rounded-full border border-violet-400/30 bg-violet-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-violet-100">
+                  <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-100">
                     {caseLabel(view.pending.caseType)}
                   </span>
                   <h3 className="text-lg font-bold text-white">{tGame('target.title')}</h3>
                   <p className="max-w-[18rem] text-sm text-white/50">{tGame('target.hint')}</p>
                   <div
-                    className="mt-1 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-violet-400/40 bg-violet-500/10 text-2xl text-violet-100"
+                    className="mt-1 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-amber-400/40 bg-amber-500/10 text-2xl text-amber-100"
                     aria-hidden
                   >
                     ?
@@ -1097,9 +1097,9 @@ export function PetitBuveurOnline() {
                         const pick = view.players[Math.floor(Math.random() * view.players.length)]
                         if (pick) sendAction('resolve', { targetId: pick.id })
                       }}
-                      className="h-11 w-full gap-2 border-violet-500/30 bg-violet-500/5 text-white hover:bg-violet-500/15"
+                      className="h-11 w-full gap-2 border-amber-500/30 bg-amber-500/5 text-white hover:bg-amber-500/15"
                     >
-                      <Shuffle className="h-4 w-4 text-violet-300" />
+                      <Shuffle className="h-4 w-4 text-amber-300" />
                       {tGame('target.random')}
                     </Button>
                     {active && (
@@ -1135,13 +1135,13 @@ export function PetitBuveurOnline() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 16, scale: 0.97 }}
                 transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-                className="z-[100] w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
+                className="z-[100] w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-felt-deep shadow-2xl"
               >
-                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-violet-600/20 to-transparent px-5 pb-4 pt-5 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/20 ring-1 ring-violet-400/30">
-                    <Target className="h-6 w-6 text-violet-300" />
+                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 pb-4 pt-5 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20 ring-1 ring-amber-400/30">
+                    <Target className="h-6 w-6 text-amber-300" />
                   </div>
-                  <span className="rounded-full border border-violet-400/30 bg-violet-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-violet-100">
+                  <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-100">
                     {caseLabel(view.pending.caseType)}
                   </span>
                   <h3 className="text-lg font-bold text-white">{t('teleportPrompt')}</h3>
@@ -1188,11 +1188,11 @@ export function PetitBuveurOnline() {
               exit={{ opacity: 0, y: 16, scale: 0.97 }}
               transition={{ type: 'spring', damping: 26, stiffness: 320 }}
               onClick={(e) => e.stopPropagation()}
-              className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
+              className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-felt-deep shadow-2xl"
             >
-              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-br from-violet-600/20 to-transparent px-5 py-4">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 py-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 shrink-0 text-violet-300" />
+                  <Sparkles className="h-5 w-5 shrink-0 text-amber-300" />
                   <h3 className="text-base font-bold text-white">{tGame('effects.active').replace(' :', '')}</h3>
                 </div>
                 <button
@@ -1238,7 +1238,7 @@ export function PetitBuveurOnline() {
               exit={{ opacity: 0, y: 16, scale: 0.97 }}
               transition={{ type: 'spring', damping: 26, stiffness: 320 }}
               onClick={(e) => e.stopPropagation()}
-              className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
+              className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-felt-deep shadow-2xl"
             >
               <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 py-4">
                 <div className="flex items-center gap-2">
