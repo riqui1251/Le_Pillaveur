@@ -261,7 +261,7 @@ export function MenteurOnline() {
           className="flex flex-col items-center gap-2 text-center"
         >
           <Trophy className="h-14 w-14 text-amber-400" />
-          <h2 className="text-3xl font-black">{t('victoryTitle', { name: winner?.name ?? '—' })}</h2>
+          <h2 className="font-display text-3xl font-bold text-gold">{t('victoryTitle', { name: winner?.name ?? '—' })}</h2>
           {!isSoft && <p className="text-sm text-white/60">{t('victoryDrinks')}</p>}
         </motion.div>
 

@@ -170,7 +170,7 @@ export function PurpleOnline() {
           className="flex flex-col items-center gap-2 text-center"
         >
           <span className="text-5xl">🟣</span>
-          <h2 className="text-3xl font-black">{t('online.finishedTitle')}</h2>
+          <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
           <p className="text-sm text-white/60">{t('online.totalCards', { count: view.totalCardsDrawn })}</p>
         </motion.div>
 

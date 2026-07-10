@@ -133,7 +133,7 @@ export function Game1220Online() {
           className="flex flex-col items-center gap-2 text-center"
         >
           <Dices className="h-14 w-14 text-teal-400" />
-          <h2 className="text-3xl font-black">{t('online.finishedTitle')}</h2>
+          <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
           <p className="text-sm text-white/60">{t('online.totalRolls', { count: view.history.length })}</p>
         </motion.div>
 

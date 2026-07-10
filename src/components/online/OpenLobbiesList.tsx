@@ -34,16 +34,16 @@ export function OpenLobbiesList() {
 
   if (loading && lobbies.length === 0) {
     return (
-      <div className="mb-6 flex items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/5 py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" />
+      <div className="mb-6 flex items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/5 py-8">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
       </div>
     )
   }
 
   if (lobbies.length === 0) {
     return (
-      <div className="mb-6 rounded-2xl border border-dashed border-violet-500/25 bg-violet-500/5 p-5 text-center">
-        <Globe className="mx-auto mb-2 h-7 w-7 text-violet-300/60" />
+      <div className="mb-6 rounded-2xl border border-dashed border-amber-500/25 bg-amber-500/5 p-5 text-center">
+        <Globe className="mx-auto mb-2 h-7 w-7 text-amber-300/60" />
         <p className="text-sm font-medium text-white/75">Aucun lobby ouvert pour l&apos;instant</p>
         <p className="mt-1 text-xs text-white/45">
           Choisissez un jeu ci-dessous pour en créer un.
@@ -54,7 +54,7 @@ export function OpenLobbiesList() {
 
   return (
     <div className="mb-6 space-y-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-violet-200">
+      <div className="flex items-center gap-2 text-sm font-semibold text-amber-200">
         <Globe className="h-4 w-4" />
         Lobbies ouverts ({lobbies.length})
       </div>
@@ -62,12 +62,12 @@ export function OpenLobbiesList() {
       {Array.from(byGame.entries()).map(([gameId, gameLobbies]) => {
         const game = GAMES.find((g) => g.id === gameId)
         return (
-          <div key={gameId} className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-4 backdrop-blur-md">
+          <div key={gameId} className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 backdrop-blur-md">
             <div className="mb-3 flex items-center gap-2">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/10">
-                <GameIconById id={gameId} className="h-3.5 w-3.5 text-violet-200" />
+                <GameIconById id={gameId} className="h-3.5 w-3.5 text-amber-200" />
               </span>
-              <p className="text-xs font-semibold uppercase tracking-widest text-violet-300/80">
+              <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/80">
                 {game?.title ?? gameId}
               </p>
             </div>
@@ -77,7 +77,7 @@ export function OpenLobbiesList() {
                 return (
                   <li
                     key={lobby.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition-colors hover:border-violet-400/30"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition-colors hover:border-amber-400/30"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm">
@@ -105,7 +105,7 @@ export function OpenLobbiesList() {
                       size="sm"
                       disabled={joining}
                       onClick={() => handleJoin(lobby.id, lobby.gameId)}
-                      className="shrink-0 rounded-xl bg-violet-600 text-white hover:bg-violet-500"
+                      className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
                     >
                       Rejoindre
                     </Button>

@@ -159,7 +159,7 @@ export function TelephoneDessineOnline() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-center text-white">
         <Sparkles className="h-14 w-14 text-teal-300" />
-        <h2 className="text-3xl font-black">{t('victory.title')}</h2>
+        <h2 className="font-display text-3xl font-bold text-gold">{t('victory.title')}</h2>
         <p className="text-sm text-white/60">{t('victory.subtitle')}</p>
         <Button
           onClick={() => void leaveRoom()}
@@ -242,7 +242,7 @@ export function TelephoneDessineOnline() {
             <Button
               onClick={() => void sendAction({ action: 'continue' })}
               disabled={busy}
-              className="flex-1 rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-500 py-4 text-sm font-bold"
+              className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-bold"
             >
               {view.revealIdx + 1 >= view.revealOrder.length ? t('reveal.finish') : t('reveal.nextChain')}
             </Button>
@@ -314,7 +314,7 @@ export function TelephoneDessineOnline() {
             <Button
               onClick={() => void submitText()}
               disabled={busy || !text.trim()}
-              className="rounded-xl bg-gradient-to-r from-teal-600 to-indigo-500 px-4"
+              className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4"
             >
               <Send className="h-4 w-4" />
             </Button>
@@ -347,7 +347,7 @@ export function TelephoneDessineOnline() {
             <Button
               onClick={() => void submitText()}
               disabled={busy || !text.trim()}
-              className="rounded-xl bg-gradient-to-r from-teal-600 to-indigo-500 px-4"
+              className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4"
             >
               <Send className="h-4 w-4" />
             </Button>
@@ -376,7 +376,7 @@ export function TelephoneDessineOnline() {
           <Button
             onClick={() => void sendAction({ action: 'submit' })}
             disabled={busy}
-            className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-500 py-4 text-sm font-bold"
+            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-bold"
           >
             {t('submitDrawing')}
           </Button>

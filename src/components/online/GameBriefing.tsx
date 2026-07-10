@@ -130,7 +130,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -12 }}
                 transition={{ duration: 0.15 }}
-                className="min-h-[7rem] rounded-2xl border border-white/10 bg-gray-900/60 p-4"
+                className="min-h-[7rem] rounded-2xl border border-gold/10 bg-felt-deep/70 p-4"
               >
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
                   {t('stepCounter', { n: idx + 1, total: steps.length })}

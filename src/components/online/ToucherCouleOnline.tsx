@@ -476,7 +476,7 @@ export function ToucherCouleOnline() {
               className={cn(
                 'mb-3 rounded-xl border px-3 py-2 text-center text-xs font-semibold sm:text-sm',
                 lastShot?.bombResults
-                  ? 'border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-100'
+                  ? 'border-rose-400/40 bg-rose-500/15 text-rose-100'
                   : lastShot?.result === 'miss'
                     ? 'border-sky-400/30 bg-sky-500/10 text-sky-100'
                     : lastShot?.result === 'hit'
@@ -614,7 +614,7 @@ export function ToucherCouleOnline() {
                         className={cn(
                           'rounded-full border px-2 py-0.5 text-[11px] font-bold transition-colors',
                           bombArmed
-                            ? 'border-fuchsia-400 bg-fuchsia-500/25 text-fuchsia-100'
+                            ? 'border-rose-400 bg-rose-500/25 text-rose-100'
                             : 'border-white/15 bg-white/10 text-white/70 hover:bg-white/20'
                         )}
                       >
@@ -631,7 +631,7 @@ export function ToucherCouleOnline() {
                     'rounded-2xl border p-2 transition-colors',
                     isMyTurn && !finished
                       ? 'border-emerald-400/40 bg-emerald-950/30 shadow-[0_0_24px_rgba(52,211,153,0.1)]'
-                      : 'border-white/10 bg-gray-900/50'
+                      : 'border-white/10 bg-felt-deep/50'
                   )}
                 >
                   <div className="grid gap-[2px]" style={gridStyle}>
@@ -657,7 +657,7 @@ export function ToucherCouleOnline() {
                                       isMyTurn &&
                                         !finished &&
                                         (bombArmed
-                                          ? 'hover:bg-fuchsia-400/40 active:bg-fuchsia-400/60'
+                                          ? 'hover:bg-rose-400/40 active:bg-rose-400/60'
                                           : 'hover:bg-emerald-400/40 active:bg-emerald-400/60')
                                     )
                           )}
@@ -788,7 +788,7 @@ export function ToucherCouleOnline() {
               initial={{ scale: 0.85, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-gray-900/95 shadow-2xl backdrop-blur-md"
+              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-felt-deep/95 shadow-2xl backdrop-blur-md"
             >
               <div
                 className={cn(

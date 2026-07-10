@@ -132,7 +132,7 @@ export function CrobardOnline() {
   if (!view || !user || !room) {
     return (
       <div className="flex flex-1 items-center justify-center p-6 text-white/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-fuchsia-400/30 border-t-fuchsia-400" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
       </div>
     )
   }
@@ -196,8 +196,8 @@ export function CrobardOnline() {
           transition={{ type: 'spring', stiffness: 220, damping: 18 }}
           className="flex flex-col items-center gap-2 text-center"
         >
-          <Trophy className="h-14 w-14 text-fuchsia-400" />
-          <h2 className="text-3xl font-black">{t('victory.title', { name: nameOf(view.winnerId) })}</h2>
+          <Trophy className="h-14 w-14 text-gold" />
+          <h2 className="font-display text-3xl font-bold text-gold">{t('victory.title', { name: nameOf(view.winnerId) })}</h2>
         </motion.div>
 
         <div className="flex w-full max-w-sm flex-col gap-1.5">
@@ -206,7 +206,7 @@ export function CrobardOnline() {
               key={p.id}
               className={cn(
                 'flex items-center gap-2 rounded-xl border px-3 py-2',
-                i === 0 ? 'border-fuchsia-400/40 bg-fuchsia-500/10' : 'border-white/10 bg-white/5'
+                i === 0 ? 'border-amber-400/40 bg-amber-500/10' : 'border-white/10 bg-white/5'
               )}
             >
               <span className="w-5 text-center text-xs font-black text-white/50">{i + 1}</span>
@@ -214,7 +214,7 @@ export function CrobardOnline() {
               <span className="min-w-0 flex-1 truncate text-sm font-bold">
                 <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
               </span>
-              <span className="text-sm font-black text-fuchsia-300">{p.score}</span>
+              <span className="text-sm font-black text-amber-300">{p.score}</span>
             </div>
           ))}
         </div>
@@ -225,7 +225,7 @@ export function CrobardOnline() {
           <Button
             onClick={() => void voteRematch()}
             disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-orange-500 py-5 text-base font-bold"
+            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
             {iVotedRematch && humanCount > 1
@@ -249,7 +249,7 @@ export function CrobardOnline() {
     const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
-        <p className="text-sm font-bold uppercase tracking-widest text-fuchsia-300/80">{t('countdown.title')}</p>
+        <p className="text-sm font-bold uppercase tracking-widest text-amber-300/80">{t('countdown.title')}</p>
         <AnimatePresence mode="popLayout">
           <motion.span
             key={secondsLeft}
@@ -257,7 +257,7 @@ export function CrobardOnline() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 1.6, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="text-8xl font-black tabular-nums text-fuchsia-200"
+            className="font-display text-8xl font-bold tabular-nums text-gold"
           >
             {secondsLeft}
           </motion.span>
@@ -271,7 +271,7 @@ export function CrobardOnline() {
   if (view.phase === 'roundEnd') {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center text-white">
-        <p className="text-xs font-bold uppercase tracking-widest text-fuchsia-300/80">{t('roundEnd.title')}</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-amber-300/80">{t('roundEnd.title')}</p>
         {view.lastRoundWord && (
           <p className="text-3xl font-black">{t('roundEnd.wordWas', { word: view.lastRoundWord })}</p>
         )}
@@ -283,14 +283,14 @@ export function CrobardOnline() {
               <span className="min-w-0 flex-1 truncate font-semibold">
                 <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
               </span>
-              <span className="font-black text-fuchsia-300">{p.score}</span>
+              <span className="font-black text-amber-300">{p.score}</span>
             </div>
           ))}
         </div>
         <Button
           onClick={() => void sendAction({ action: 'continue' })}
           disabled={busy}
-          className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-fuchsia-600 to-orange-500 py-4 text-sm font-bold"
+          className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-bold"
         >
           {view.round >= view.totalRounds ? t('roundEnd.seeResult') : t('roundEnd.continue')}
         </Button>
@@ -303,7 +303,7 @@ export function CrobardOnline() {
     return (
       <>
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center text-white">
-        <p className="text-xs font-bold uppercase tracking-widest text-fuchsia-300/80">
+        <p className="text-xs font-bold uppercase tracking-widest text-amber-300/80">
           {t('round', { round: view.round, total: view.totalRounds })}
         </p>
         {view.isDrawer && view.wordChoices ? (
@@ -315,7 +315,7 @@ export function CrobardOnline() {
                   key={word}
                   onClick={() => void sendAction({ action: 'choose-word', index: i })}
                   disabled={busy}
-                  className="w-full rounded-2xl bg-gradient-to-r from-fuchsia-600 to-orange-500 py-5 text-base font-bold"
+                  className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold"
                 >
                   {word}
                 </Button>
@@ -349,7 +349,7 @@ export function CrobardOnline() {
             {t('round', { round: view.round, total: view.totalRounds })}
           </span>
           <span className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-fuchsia-300">
+            <span className="text-xs font-semibold uppercase tracking-wide text-amber-300">
               {t('foundCount', { found: view.correctGuessers.length, total: nonDrawerCount })}
             </span>
             <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
@@ -360,7 +360,7 @@ export function CrobardOnline() {
             <div
               className={cn(
                 'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 15_000 ? 'bg-red-400' : 'bg-fuchsia-400'
+                timeLeftMs < 15_000 ? 'bg-red-400' : 'bg-amber-400'
               )}
               style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
             />
@@ -378,7 +378,7 @@ export function CrobardOnline() {
       )}
 
       {view.isDrawer && view.word && (
-        <div className="rounded-2xl border border-fuchsia-400/30 bg-gradient-to-br from-fuchsia-600/15 to-transparent px-4 py-2.5 text-center">
+        <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-600/15 to-transparent px-4 py-2.5 text-center">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">{t('yourWord')}</p>
           <p className="text-2xl font-black tracking-wide">{view.word}</p>
         </div>
@@ -413,7 +413,7 @@ export function CrobardOnline() {
                 <Button
                   onClick={() => void submitGuess()}
                   disabled={busy || !guessText.trim()}
-                  className="rounded-xl bg-gradient-to-r from-fuchsia-600 to-orange-500 px-4"
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
@@ -446,7 +446,7 @@ export function CrobardOnline() {
             className={cn(
               'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold',
               p.id === view.drawerId
-                ? 'border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-200'
+                ? 'border-amber-400/40 bg-amber-500/10 text-amber-200'
                 : view.correctGuessers.includes(p.id)
                   ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
                   : 'border-white/10 bg-white/5 text-white/70',

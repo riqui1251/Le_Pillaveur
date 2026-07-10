@@ -25,11 +25,11 @@ export function FriendInviteBanner({ onJoin, joining }: FriendInviteBannerProps)
         return (
           <div
             key={invite.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 backdrop-blur-md"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 backdrop-blur-md"
           >
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/20">
-                <Mail className="h-4 w-4 text-violet-300" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
+                <Mail className="h-4 w-4 text-amber-300" />
               </span>
               <p className="min-w-0 text-sm text-white/85">
                 {t('invitedYou', { name: invite.hostDisplayName, game: game?.title ?? invite.gameId ?? '' })}
@@ -40,7 +40,7 @@ export function FriendInviteBanner({ onJoin, joining }: FriendInviteBannerProps)
                 size="sm"
                 disabled={joining}
                 onClick={() => onJoin(invite.roomId)}
-                className="rounded-xl bg-violet-600 text-white hover:bg-violet-500"
+                className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
               >
                 {t('join')}
               </Button>
