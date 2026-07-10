@@ -370,7 +370,7 @@ export function LoupGarouOnline() {
   }, [view, user, room])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="loup-garou" onLaunch={fetchRoom} />
+    return <GameOnlineLobby gameId="loup-garou" />
   }
 
   if (!view || !user || !room) {

@@ -36,7 +36,7 @@ function parseView(json: string | null | undefined): EspionClientView | null {
 
 export function EspionOnline() {
   const { user } = useAuth()
-  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.espion.game')
   const tTutorial = useTranslations('games.espion.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -136,7 +136,7 @@ export function EspionOnline() {
   }, [stateVersion])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="espion" onLaunch={fetchRoom} />
+    return <GameOnlineLobby gameId="espion" />
   }
 
   if (!view || !user || !room) {

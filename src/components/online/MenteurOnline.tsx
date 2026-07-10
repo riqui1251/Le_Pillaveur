@@ -61,7 +61,7 @@ const Die = CssDie
 export function MenteurOnline() {
   const { user } = useAuth()
   const isSoft = user?.ambianceMode === 'soft'
-  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.menteur.game')
   const tTutorial = useTranslations('games.menteur.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -196,7 +196,7 @@ export function MenteurOnline() {
   }, [someoneLeft, afkWatch])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="menteur" onLaunch={fetchRoom} />
+    return <GameOnlineLobby gameId="menteur" />
   }
 
   if (!view || !user || !room) {

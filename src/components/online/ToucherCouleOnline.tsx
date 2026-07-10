@@ -49,7 +49,7 @@ function teamAccent(team: TeamId): string {
 export function ToucherCouleOnline() {
   const { user } = useAuth()
   const isSoft = user?.ambianceMode === 'soft'
-  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.toucher-coule.game')
   const tTutorial = useTranslations('games.toucher-coule.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -184,7 +184,7 @@ export function ToucherCouleOnline() {
   }, [someoneLeft, afkWatch])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="toucher-coule" onLaunch={fetchRoom} />
+    return <GameOnlineLobby gameId="toucher-coule" />
   }
 
   if (!view || !user) {

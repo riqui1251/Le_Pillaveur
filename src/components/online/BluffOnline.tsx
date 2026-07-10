@@ -36,7 +36,7 @@ function parseView(json: string | null | undefined): BluffClientView | null {
 
 export function BluffOnline() {
   const { user } = useAuth()
-  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.bluff.game')
   const tTutorial = useTranslations('games.bluff.tutorial')
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
@@ -131,7 +131,7 @@ export function BluffOnline() {
   }, [stateVersion])
 
   if (!inGame) {
-    return <GameOnlineLobby gameId="bluff" onLaunch={fetchRoom} />
+    return <GameOnlineLobby gameId="bluff" />
   }
 
   if (!view || !user || !room) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import type { RoomDto } from '@/lib/online-room'
 import { parseApiJson } from '@/lib/api-response'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
@@ -13,7 +13,14 @@ const POLL_PLAYING_WAIT_MS = 1500
 /** Partie en cours — c'est notre tour (secours si push raté) */
 const POLL_PLAYING_ACTIVE_MS = 1500
 
-export function useOnlineRoom() {
+/**
+ * TOUTE la logique salon (état, polling, SSE, actions) vit dans CE hook, mais
+ * il n'est instancié qu'UNE fois — par OnlineRoomProvider. Les composants
+ * consomment l'état PARTAGÉ via useOnlineRoom() (contexte). Historiquement
+ * chaque composant avait sa propre instance : états divergents (lobby qui
+ * restait affiché après le lancement), 4-6 pollings et flux SSE dupliqués.
+ */
+export function useOnlineRoomState() {
   const { user } = useAuth()
   const [room, setRoom] = useState<RoomDto | null>(null)
   const [loading, setLoading] = useState(false)
@@ -45,7 +52,12 @@ export function useOnlineRoom() {
   const refreshRoom = useCallback(async (roomId: string) => {
     try {
       const res = await fetch(`/api/online/rooms/${roomId}`, { credentials: 'include' })
-      if (!res.ok) return null
+      if (!res.ok) {
+        // Salon quitté/supprimé : on purge l'état, sinon le polling boucle
+        // en 403/404 sur l'ancien id jusqu'au rechargement de la page.
+        if (res.status === 403 || res.status === 404) setRoom(null)
+        return null
+      }
       const data = await parseApiJson<{ room?: RoomDto }>(res)
       setRoom(data.room ?? null)
       return data.room as RoomDto | null
@@ -58,7 +70,10 @@ export function useOnlineRoom() {
   const refreshGameState = useCallback(async (roomId: string) => {
     try {
       const res = await fetch(`/api/online/rooms/${roomId}/state`, { credentials: 'include' })
-      if (!res.ok) return null
+      if (!res.ok) {
+        if (res.status === 403 || res.status === 404) setRoom(null)
+        return null
+      }
       const data = await parseApiJson<{
         stateVersion: number
         currentTurnUserId: string | null
@@ -423,4 +438,17 @@ export function useOnlineRoom() {
     refreshRoom,
     refreshGameState,
   }
+}
+
+export type OnlineRoomApi = ReturnType<typeof useOnlineRoomState>
+
+export const OnlineRoomContext = createContext<OnlineRoomApi | null>(null)
+
+/** État salon PARTAGÉ (une seule instance, fournie par OnlineRoomProvider). */
+export function useOnlineRoom(): OnlineRoomApi {
+  const ctx = useContext(OnlineRoomContext)
+  if (!ctx) {
+    throw new Error('useOnlineRoom doit être utilisé sous <OnlineRoomProvider>')
+  }
+  return ctx
 }
