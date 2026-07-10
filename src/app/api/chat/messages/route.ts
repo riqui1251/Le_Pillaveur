@@ -6,11 +6,15 @@ import { parseOnlinePreferences } from '@/lib/online-preferences'
 import { censorChatMessage } from '@/lib/chat-moderation'
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 import { isFeatureBanned } from '@/lib/feature-bans'
+import { parseLGState } from '@/lib/loup-garou/server-adapter'
 
 /**
  * Chat léger par canal :
  * - `room:<roomId>`  — chat de la partie/lobby en cours (réservé aux membres) ;
- * - `friend:<idA>:<idB>` — conversation privée entre deux amis (ids triés).
+ * - `friend:<idA>:<idB>` — conversation privée entre deux amis (ids triés) ;
+ * - `wolves:<roomId>` — chat privé des loups (Loup-Garou uniquement, réservé
+ *   aux joueurs dont le rôle réel est `loup`, vérifié à chaque requête sur
+ *   l'état serveur — jamais fait confiance au client).
  * Lecture par polling côté client (pattern établi), 50 derniers messages.
  */
 
@@ -40,6 +44,26 @@ async function resolveChannel(
     }
     const [a, b] = [user.id, friendUserId].sort()
     return { ok: true, channel: `friend:${a}:${b}` }
+  }
+  if (scope === 'wolves') {
+    const membership = await prisma.onlineRoomMember.findFirst({
+      where: { userId: user.id },
+      select: { roomId: true },
+    })
+    if (!membership) return { ok: false, error: 'Aucune partie en cours', status: 404 }
+    const room = await prisma.onlineRoom.findUnique({
+      where: { id: membership.roomId },
+      select: { gameId: true, gameStateJson: true },
+    })
+    if (!room || room.gameId !== 'loup-garou') {
+      return { ok: false, error: 'Canal invalide', status: 400 }
+    }
+    const state = parseLGState(room.gameStateJson)
+    const me = state?.players.find((p) => p.id === user.id)
+    if (!me || me.role !== 'loup') {
+      return { ok: false, error: 'Réservé aux loups', status: 403 }
+    }
+    return { ok: true, channel: `wolves:${membership.roomId}` }
   }
   return { ok: false, error: 'Canal invalide', status: 400 }
 }

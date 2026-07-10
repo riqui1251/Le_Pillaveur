@@ -83,6 +83,8 @@ export function parseLGState(json: string | null): LGState | null {
       ...raw,
       rematchVotes: raw.rematchVotes ?? [],
       wolfVotes: raw.wolfVotes ?? {},
+      mayorId: raw.mayorId ?? null,
+      mayorVotes: raw.mayorVotes ?? {},
       dayVotes: raw.dayVotes ?? {},
       debateSkips: raw.debateSkips ?? [],
       debateSpeech: raw.debateSpeech ?? [],
@@ -99,6 +101,7 @@ export function parseLGState(json: string | null): LGState | null {
 }
 
 export type LGRoomActionInput =
+  | { type: 'mayor-vote'; targetId: string }
   | { type: 'guard-protect'; targetId: string }
   | { type: 'raven-mark'; targetId: string }
   | { type: 'seer-peek'; targetId: string }
@@ -120,6 +123,16 @@ export function applyLGRoomAction(
 ): LGRoomActionResult {
   try {
     switch (input.type) {
+      case 'mayor-vote':
+        return {
+          ok: true,
+          state: reduceLG(state, {
+            type: 'MAYOR_VOTE',
+            playerId: userId,
+            targetId: input.targetId,
+            now: Date.now(),
+          }),
+        }
       case 'guard-protect':
         return {
           ok: true,
@@ -256,7 +269,20 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
     let acted = false
     const alive = () => lgAlive(next)
 
-    if (next.phase === 'night-guard') {
+    if (next.phase === 'mayor-election') {
+      for (const bot of alive().filter((p) => p.isBot)) {
+        if (next.mayorVotes[bot.id]) continue
+        const candidates = alive()
+        if (candidates.length === 0) continue
+        next = reduceLG(next, {
+          type: 'MAYOR_VOTE',
+          playerId: bot.id,
+          targetId: pickRandom(candidates).id,
+          now: Date.now(),
+        })
+        acted = true
+      }
+    } else if (next.phase === 'night-guard') {
       const guard = alive().find((p) => p.isBot && p.role === 'salvateur')
       if (guard && !next.guardProtectedId) {
         // Protège un vivant au hasard (lui compris) — jamais le protégé d'hier.

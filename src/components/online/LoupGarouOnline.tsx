@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
-import { Beer, BookOpen, Eye, EyeOff, Home, Moon, RefreshCw, Sun, Trophy, Vote, X } from 'lucide-react'
+import { Beer, BookOpen, Eye, EyeOff, Home, MessageCircle, Moon, RefreshCw, Send, Sun, Trophy, Vote, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -59,6 +59,7 @@ const LEGEND_ROLES: LGRole[] = [
 
 const PHASE_TOTAL_MS: Record<string, number> = {
   'reveal-role': 10_000,
+  'mayor-election': 30_000,
   'night-guard': 25_000,
   'night-seer': 30_000,
   'night-raven': 25_000,
@@ -131,6 +132,146 @@ function TargetGrid({
   )
 }
 
+const WOLF_CHAT_POLL_MS = 3000
+
+type WolfChatMessage = {
+  id: string
+  senderId: string
+  senderName: string
+  senderIcon: string | null
+  body: string
+  createdAt: string
+  self: boolean
+}
+
+/**
+ * Chat privé des loups. Canal `wolves:<roomId>`, gardé côté serveur (le
+ * viewer doit avoir role==='loup' dans l'état RÉEL) — ce composant se fie au
+ * serveur (404/403 = rien ne s'affiche), il ne fait qu'ouvrir/fermer.
+ */
+function WolfChatPanel({ open }: { open: boolean }) {
+  const t = useTranslations('games.loup-garou.game')
+  const tChat = useTranslations('chat')
+  const [messages, setMessages] = useState<WolfChatMessage[]>([])
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const inFlightRef = useRef(false)
+  const lastIdRef = useRef<string | null>(null)
+
+  const fetchMessages = useCallback(async () => {
+    if (inFlightRef.current) return
+    inFlightRef.current = true
+    try {
+      const res = await fetch('/api/chat/messages?scope=wolves', { credentials: 'include' })
+      if (!res.ok) return
+      const data = await res.json()
+      const next: WolfChatMessage[] = Array.isArray(data?.messages) ? data.messages : []
+      const nextLastId = next[next.length - 1]?.id ?? null
+      if (nextLastId !== lastIdRef.current) {
+        lastIdRef.current = nextLastId
+        setMessages(next)
+      }
+    } finally {
+      inFlightRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    void fetchMessages()
+    const timer = setInterval(fetchMessages, WOLF_CHAT_POLL_MS)
+    return () => clearInterval(timer)
+  }, [open, fetchMessages])
+
+  useEffect(() => {
+    const el = listRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [messages.length])
+
+  const send = async () => {
+    const body = draft.trim()
+    if (!body || sending) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ scope: 'wolves', body }),
+      })
+      if (res.ok) {
+        setDraft('')
+        await fetchMessages()
+      }
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (!open) return null
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-red-400/30 bg-gray-900/80 p-3">
+      <p className="text-center text-xs font-bold uppercase tracking-wide text-red-200">
+        🐺 {t('wolfChatTitle')}
+      </p>
+      <div ref={listRef} className="max-h-40 min-h-[3rem] space-y-1.5 overflow-y-auto">
+        {messages.length === 0 ? (
+          <p className="py-3 text-center text-xs text-white/35">{tChat('empty')}</p>
+        ) : (
+          messages.map((m) => (
+            <div key={m.id} className={cn('flex', m.self ? 'justify-end' : 'justify-start')}>
+              <div
+                className={cn(
+                  'max-w-[80%] rounded-xl px-2.5 py-1.5',
+                  m.self
+                    ? 'rounded-br-sm bg-red-500/20 text-red-50'
+                    : 'rounded-bl-sm bg-white/[0.07] text-white/90'
+                )}
+              >
+                {!m.self && (
+                  <p className="mb-0.5 text-[9px] font-semibold text-red-300">
+                    {m.senderIcon ? `${m.senderIcon} ` : ''}
+                    {m.senderName}
+                  </p>
+                )}
+                <p className="whitespace-pre-wrap break-words text-xs">{m.body}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              void send()
+            }
+          }}
+          maxLength={500}
+          placeholder={tChat('placeholder')}
+          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:border-red-400/50 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            void send()
+          }}
+          disabled={!draft.trim() || sending}
+          aria-label={tChat('send')}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+        >
+          <Send className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function LoupGarouOnline() {
   const { user } = useAuth()
   const isSoft = user?.ambianceMode === 'soft'
@@ -141,6 +282,7 @@ export function LoupGarouOnline() {
   const [busy, setBusy] = useState(false)
   const [hideRole, setHideRole] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
+  const [showWolfChat, setShowWolfChat] = useState(false)
   const [witchKillMode, setWitchKillMode] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
@@ -419,6 +561,21 @@ export function LoupGarouOnline() {
             >
               <BookOpen className="h-3.5 w-3.5" />
             </button>
+            {myRole === 'loup' && (
+              <button
+                onClick={() => setShowWolfChat((v) => !v)}
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center rounded-lg border transition-colors',
+                  showWolfChat
+                    ? 'border-red-400/50 bg-red-500/20 text-red-200'
+                    : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
+                )}
+                aria-label={t('wolfChatTitle')}
+                aria-expanded={showWolfChat}
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+              </button>
+            )}
             <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
           </span>
         </div>
@@ -485,10 +642,35 @@ export function LoupGarouOnline() {
         )}
       </AnimatePresence>
 
+      {/* Chat privé des loups (loups uniquement, repliable) */}
+      {myRole === 'loup' && (
+        <AnimatePresence>
+          {showWolfChat && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <WolfChatPanel open={showWolfChat} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+
       {/* Fantôme */}
       {view.ghost && (
         <div className="rounded-2xl border border-violet-400/30 bg-violet-500/10 px-4 py-2 text-center text-xs font-bold text-violet-100">
           {t('ghostBanner')}
+        </div>
+      )}
+
+      {/* Le maire (une fois élu, visible de tous en permanence) */}
+      {view.mayorId && view.phase !== 'mayor-election' && (
+        <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-2 text-center text-xs font-bold text-amber-100">
+          {view.mayorId === user.id
+            ? t('youAreMayor')
+            : t('mayorBanner', { name: nameOf(view.mayorId) })}
         </div>
       )}
 
@@ -506,7 +688,7 @@ export function LoupGarouOnline() {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
               {t('yourRole')}
             </p>
-            <p className={cn('truncate text-xl font-black', ROLE_META[myRole].color)}>
+            <p className={cn('truncate text-xl font-black', hideRole ? 'text-white/70' : ROLE_META[myRole].color)}>
               {hideRole ? '••••••' : `${ROLE_META[myRole].icon} ${roleName(myRole)}`}
             </p>
             {!hideRole && (
@@ -553,6 +735,43 @@ export function LoupGarouOnline() {
             <div className="rounded-2xl border border-indigo-400/25 bg-gray-900/70 p-5 text-center">
               <p className="text-lg font-black">{t('revealPrompt')}</p>
               <p className="mt-1 text-xs text-white/50">{t('revealHint')}</p>
+            </div>
+          )}
+
+          {view.phase === 'mayor-election' && (
+            <div className="space-y-2 rounded-2xl border border-amber-400/30 bg-gray-900/80 p-4">
+              <p className="text-center text-sm font-bold text-amber-200">
+                {!me?.alive ? t('spectatorVote') : view.myMayorVote ? t('mayorVoted') : t('mayorPrompt')}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {alive.map((p) => {
+                  const chosen = view.myMayorVote === p.id
+                  const disabled = !me?.alive || Boolean(view.myMayorVote) || busy
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => void sendAction({ action: 'mayor-vote', targetId: p.id })}
+                      disabled={disabled}
+                      className={cn(
+                        'flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition-all',
+                        chosen
+                          ? 'border-amber-400/70 bg-amber-500/15 ring-2 ring-amber-400'
+                          : 'border-white/10 bg-white/5',
+                        !disabled && 'hover:bg-white/10 active:scale-95'
+                      )}
+                    >
+                      <span className="text-lg" aria-hidden>{iconOf(p)}</span>
+                      <span className="min-w-0 flex-1 truncate text-xs font-bold">
+                        <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
+                        {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
+                      </span>
+                      {view.hasVotedMayor[p.id] && (
+                        <span className="shrink-0 text-[10px] font-bold text-emerald-300">✓</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
 
@@ -887,6 +1106,11 @@ export function LoupGarouOnline() {
                 <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                 {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
               </span>
+              {view.mayorId === p.id && (
+                <span className="shrink-0 text-xs" title={t('mayorBadge')} aria-label={t('mayorBadge')}>
+                  🎖️
+                </span>
+              )}
               {p.role && (
                 <span className="shrink-0 text-xs" title={roleName(p.role)} aria-label={roleName(p.role)}>
                   {ROLE_META[p.role].icon}

@@ -26,6 +26,7 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
 export const LG_MIN_PLAYERS = 4
 export const LG_MAX_PLAYERS = 12
 export const LG_REVEAL_MS = 10_000
+export const LG_MAYOR_MS = 30_000
 export const LG_GUARD_MS = 25_000
 export const LG_SEER_MS = 30_000
 export const LG_RAVEN_MS = 25_000
@@ -58,6 +59,7 @@ export type LGTeam = 'village' | 'loups'
 
 export type LGPhase =
   | 'reveal-role'
+  | 'mayor-election'
   | 'night-guard'
   | 'night-seer'
   | 'night-raven'
@@ -135,6 +137,11 @@ export type LGState = TimedPhaseState & {
   ravenTargetId: string | null
   /** L'Ancien a déjà encaissé (et survécu à) une attaque des loups. */
   elderLifeUsed: boolean
+  // ── Maire (élu une fois, avant la première nuit) ───────────────────────
+  /** Maire élu — PUBLIC une fois connu ; son vote compte double au lynchage. */
+  mayorId: string | null
+  /** SECRET — votes de l'élection du maire (en cours). */
+  mayorVotes: Record<string, string>
   // ── Jour ───────────────────────────────────────────────────────────────
   /** SECRET — votes du jour. */
   dayVotes: Record<string, string>
@@ -159,6 +166,7 @@ export type LGState = TimedPhaseState & {
 }
 
 export type LGAction =
+  | { type: 'MAYOR_VOTE'; playerId: string; targetId: string; now: number }
   | { type: 'GUARD_PROTECT'; playerId: string; targetId: string }
   | { type: 'RAVEN_MARK'; playerId: string; targetId: string }
   | { type: 'SEER_PEEK'; playerId: string; targetId: string }
@@ -207,7 +215,7 @@ export const LG_SPECIAL_ROLES = [
  */
 export function lgRolesFor(count: number, rng: SeededRng): LGRole[] {
   const roles: LGRole[] = []
-  const wolves = count >= 11 ? 3 : count >= 7 ? 2 : 1
+  const wolves = count >= 11 ? 3 : count >= 5 ? 2 : 1
   for (let i = 0; i < wolves; i += 1) roles.push('loup')
   roles.push('voyante')
   // À 4-5 joueurs, plafonner à 1 spécial garantit au moins un villageois
@@ -297,6 +305,8 @@ export function createLGState(
     guardLastProtectedId: null,
     ravenTargetId: null,
     elderLifeUsed: false,
+    mayorId: null,
+    mayorVotes: {},
     dayVotes: {},
     debateSkips: [],
     debateSpeech: [],
@@ -378,6 +388,37 @@ function startNight(state: LGState, now: number): LGState {
   }
   const first = firstNightPhase(next)
   return { ...toPhase(next, first.phase, first.ms, now), version: state.version + 1 }
+}
+
+/**
+ * Dépouillement de l'élection du maire (une fois, avant la première nuit) :
+ * majorité simple, égalité départagée par RNG (pas de revote — juste un
+ * apéro, pas un vote qui doit être irréprochable).
+ */
+function resolveMayorElection(state: LGState, now: number): LGState {
+  const tally: Record<string, number> = {}
+  for (const targetId of Object.values(state.mayorVotes)) {
+    tally[targetId] = (tally[targetId] ?? 0) + 1
+  }
+  let best = 0
+  let tied: string[] = []
+  for (const [id, count] of Object.entries(tally)) {
+    if (count > best) {
+      best = count
+      tied = [id]
+    } else if (count === best) {
+      tied.push(id)
+    }
+  }
+  let mayorId: string | null = null
+  let rngState = state.rngState
+  if (tied.length === 1) mayorId = tied[0]
+  else if (tied.length > 1) {
+    const rng = rngFromState(rngState)
+    mayorId = rng.pick(tied)
+    rngState = rng.getState()
+  }
+  return startNight({ ...state, mayorId, mayorVotes: {}, rngState, version: state.version + 1 }, now)
 }
 
 /** Fin de la phase des loups : victime = cible majoritaire (égalité → RNG). */
@@ -478,8 +519,10 @@ function resolveDayVote(state: LGState, now: number, isRevote: boolean): LGState
     const marked = playerOf(state, state.ravenTargetId)
     if (marked?.alive) tally[marked.id] = LG_RAVEN_EXTRA_VOTES
   }
-  for (const targetId of Object.values(state.dayVotes)) {
-    tally[targetId] = (tally[targetId] ?? 0) + 1
+  // Le maire pèse double au lynchage (élu au tout début de la partie).
+  for (const [voterId, targetId] of Object.entries(state.dayVotes)) {
+    const weight = voterId === state.mayorId ? 2 : 1
+    tally[targetId] = (tally[targetId] ?? 0) + weight
   }
   let best = 0
   let tied: string[] = []
@@ -572,6 +615,23 @@ function afterHunterShot(state: LGState, now: number): LGState {
 
 export function reduceLG(state: LGState, action: LGAction): LGState {
   switch (action.type) {
+    case 'MAYOR_VOTE': {
+      if (state.phase !== 'mayor-election') throw new LGEngineError('NOT_MAYOR_PHASE')
+      const actor = playerOf(state, action.playerId)
+      if (!actor?.alive) throw new LGEngineError('NOT_ALIVE')
+      if (state.mayorVotes[actor.id]) throw new LGEngineError('ALREADY_VOTED')
+      const target = playerOf(state, action.targetId)
+      // Auto-candidature autorisée — contrairement au lynchage.
+      if (!target?.alive) throw new LGEngineError('INVALID_TARGET')
+      const mayorVotes = { ...state.mayorVotes, [actor.id]: target.id }
+      const next = { ...state, mayorVotes, version: state.version + 1 }
+      // Tous les vivants ont voté → dépouillement immédiat.
+      if (lgAlive(state).every((p) => mayorVotes[p.id])) {
+        return resolveMayorElection(next, action.now)
+      }
+      return next
+    }
+
     case 'GUARD_PROTECT': {
       if (state.phase !== 'night-guard') throw new LGEngineError('NOT_GUARD_PHASE')
       const actor = playerOf(state, action.playerId)
@@ -756,7 +816,9 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       const now = action.now
       switch (state.phase) {
         case 'reveal-role':
-          return startNight(state, now)
+          return { ...toPhase(state, 'mayor-election', LG_MAYOR_MS, now), version: state.version + 1 }
+        case 'mayor-election':
+          return resolveMayorElection(state, now)
         case 'night-guard': {
           const after = nightPhaseAfterGuard(state)
           return { ...toPhase(state, after.phase, after.ms, now), version: state.version + 1 }
@@ -866,6 +928,7 @@ export type LGClientView = Omit<
   | 'players'
   | 'wolfVotes'
   | 'seerPeeks'
+  | 'mayorVotes'
   | 'dayVotes'
   | 'nightVictimId'
   | 'witchSavedId'
@@ -905,6 +968,9 @@ export type LGClientView = Omit<
   /** Vote du jour : qui a déjà voté (public) + mon vote. */
   hasVoted: Record<string, boolean>
   myVote: string | null
+  /** Élection du maire : qui a déjà voté (public) + mon vote. */
+  hasVotedMayor: Record<string, boolean>
+  myMayorVote: string | null
 }
 
 export function toLGClientView(state: LGState, viewerId: string): LGClientView {
@@ -913,6 +979,7 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
     players,
     wolfVotes,
     seerPeeks,
+    mayorVotes,
     dayVotes,
     nightVictimId,
     witchSavedId: _ws,
@@ -963,6 +1030,10 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
   if (state.phase === 'day-vote' || state.phase === 'day-revote') {
     for (const p of players) hasVoted[p.id] = Boolean(dayVotes[p.id])
   }
+  const hasVotedMayor: Record<string, boolean> = {}
+  if (state.phase === 'mayor-election') {
+    for (const p of players) hasVotedMayor[p.id] = Boolean(mayorVotes[p.id])
+  }
 
   return {
     ...rest,
@@ -993,6 +1064,8 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
     elderLifeUsed: ghost || finished ? elderLifeUsed : null,
     hasVoted,
     myVote: dayVotes[viewerId] ?? null,
+    hasVotedMayor,
+    myMayorVote: mayorVotes[viewerId] ?? null,
   }
 }
 

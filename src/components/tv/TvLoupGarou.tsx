@@ -26,6 +26,7 @@ const ROLE_META: Record<LGRole, { icon: string; color: string }> = {
 
 const PHASE_TOTAL_MS: Record<string, number> = {
   'reveal-role': 10_000,
+  'mayor-election': 30_000,
   'night-guard': 25_000,
   'night-seer': 30_000,
   'night-raven': 25_000,
@@ -94,6 +95,11 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
               <span aria-hidden>{iconOf(p)}</span>
               {p.name}
               {!p.alive && ' 💀'}
+              {state.mayorId === p.id && (
+                <span className="text-xl" title={t('mayorBadge')} aria-label={t('mayorBadge')}>
+                  🎖️
+                </span>
+              )}
               {p.role && (
                 <span className={cn('text-xl', ROLE_META[p.role].color)}>
                   {ROLE_META[p.role].icon} {roleName(p.role)}
@@ -186,6 +192,17 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
             {state.phase === 'day-revote' ? t('revotePrompt') : t('votePrompt')}
           </p>
         )}
+        {state.phase === 'mayor-election' && (
+          <>
+            <p className="text-4xl font-black text-amber-200">{t('mayorPrompt')}</p>
+            <p className="text-xl text-white/50">
+              {t('skipWaiting', {
+                n: alive.filter((p) => state.hasVotedMayor[p.id]).length,
+                total: alive.length,
+              })}
+            </p>
+          </>
+        )}
         {/* Bannière du dernier lynchage (persiste pendant la nuit) */}
         {state.lastVoteResult && state.phase !== 'day-vote' && state.phase !== 'day-revote' && (
           <p className="text-xl font-semibold text-white/60">
@@ -195,6 +212,12 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
                   role: state.lastVoteResult.role ? roleName(state.lastVoteResult.role) : '—',
                 })
               : t('voteTieBanner')}
+          </p>
+        )}
+        {/* Bannière du maire (persiste une fois élu) */}
+        {state.mayorId && state.phase !== 'mayor-election' && (
+          <p className="text-lg font-semibold text-amber-200/80">
+            {t('mayorBanner', { name: nameOf(state.mayorId) })}
           </p>
         )}
       </div>
@@ -223,6 +246,11 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
               >
                 <span aria-hidden>{p.alive ? iconOf(p) : '💀'}</span>
                 {p.name}
+                {state.mayorId === p.id && (
+                  <span className="text-lg" title={t('mayorBadge')} aria-label={t('mayorBadge')}>
+                    🎖️
+                  </span>
+                )}
                 {p.role && (
                   <span className="text-lg" title={roleName(p.role)}>
                     {ROLE_META[p.role].icon}
