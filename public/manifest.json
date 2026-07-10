@@ -1,11 +1,11 @@
 {
-  "name": "Jeux à Boire",
-  "short_name": "Jeux",
-  "description": "Collection de jeux festifs entre amis",
+  "name": "Le Pillaveur — La maison des jeux de soirée",
+  "short_name": "Pillaveur",
+  "description": "Party games multijoueurs entre amis : Loup-Garou, quiz, dessin… du mobile à la TV.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#0A2C22",
+  "theme_color": "#0E3B2E",
   "orientation": "portrait-primary",
   "icons": [
     {

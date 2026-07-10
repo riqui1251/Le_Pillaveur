@@ -14,6 +14,7 @@ import { FeedbackDialog, FeedbackMenuButton } from '@/components/feedback/Feedba
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { FriendsPanel } from '@/components/layout/FriendsPanel'
 import { ChatPanel } from '@/components/chat/ChatPanel'
+import { BrandMark } from '@/components/brand/BrandLogo'
 import { cn } from '@/lib/utils'
 
 const NAV_LINK_KEYS = [
@@ -102,7 +103,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#0c0b12]/85 backdrop-blur-xl supports-[backdrop-filter]:bg-[#0c0b12]/70">
+      <header className="sticky top-0 z-40 border-b border-gold/15 bg-felt-deep/85 backdrop-blur-xl supports-[backdrop-filter]:bg-felt-deep/70">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-3 sm:h-[3.75rem] sm:gap-4 sm:px-4">
           <button
             type="button"
@@ -167,8 +168,8 @@ export default function Navbar() {
           )}
 
           <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-sm shadow-md sm:h-10 sm:w-10">
-              🍺
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gold/40 bg-felt-deep p-1 shadow-md sm:h-10 sm:w-10">
+              <BrandMark />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold leading-tight text-white sm:text-base">
@@ -205,7 +206,7 @@ export default function Navbar() {
         aria-label={t('menuLabel')}
         className={cn(
           'fixed left-0 top-0 z-[55] flex h-full w-72 max-w-[85vw] flex-col',
-          'border-r border-white/[0.07] bg-[#0c0b12]/98 backdrop-blur-xl',
+          'border-r border-gold/15 bg-felt-deep/[0.98] backdrop-blur-xl',
           'shadow-[4px_0_40px_rgba(0,0,0,0.6)]',
           'transform transition-transform duration-300 ease-out',
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
@@ -218,8 +219,8 @@ export default function Navbar() {
 
         <div className="relative flex items-center justify-between border-b border-white/[0.07] px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-sm shadow-lg">
-              🍺
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-gold/40 bg-felt-deep p-1 shadow-lg">
+              <BrandMark />
             </div>
             <div>
               <p className="text-sm font-bold leading-none text-white">{t('brand')}</p>

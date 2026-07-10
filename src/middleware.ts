@@ -72,6 +72,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    // icon/apple-icon/opengraph-image : routes de métadonnées générées
+    // (favicon PWA…) — jamais localisées, hors middleware i18n.
+    '/((?!api|_next/static|_next/image|icon|apple-icon|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
