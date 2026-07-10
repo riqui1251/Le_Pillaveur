@@ -13,14 +13,16 @@ export function TvLobby({ room, joinUrl }: { room: TvRoomDto; joinUrl: string })
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-10 px-8 py-8 lg:flex-row lg:gap-16">
       <div className="flex flex-col items-center gap-5">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/40">{t('scanToJoin')}</p>
-        <JoinQR url={joinUrl} size={240} />
-        <p className="font-mono text-6xl font-black tracking-[0.35em] text-violet-200">{room.code}</p>
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-[#D8CCAE] bg-cream px-8 py-6 shadow-[0_14px_30px_-14px_rgba(0,0,0,0.7)]">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#6B6455]">{t('scanToJoin')}</p>
+          <JoinQR url={joinUrl} size={240} />
+          <p className="font-mono text-6xl font-black tracking-[0.35em] text-[#24201A]">{room.code}</p>
+        </div>
         <p className="text-lg text-white/50">{t('waiting')}</p>
       </div>
 
       <div className="w-full max-w-md">
-        <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-violet-300/60">
+        <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-gold/60">
           {t('players')} · {room.members.length}
         </p>
         <div className="space-y-3">

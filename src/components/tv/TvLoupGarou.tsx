@@ -1,27 +1,29 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
-import { Moon, Sun } from 'lucide-react'
+import { Beer, Bird, FlaskConical, Hourglass, Medal, Moon, Shield, Skull, Sparkles, Sun, Target, Trophy, Wheat } from 'lucide-react'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { LGClientView, LGRole } from '@/lib/loup-garou/engine'
+import { WolfIcon } from '@/components/icons/GameIcons'
 import { cn } from '@/lib/utils'
 
 /**
- * LOUP-GAROU sur grand écran : la place du village (vivants/morts, rôles
- * révélés des morts UNIQUEMENT — la vue TV est neutre), la phase en cours
- * avec son compte à rebours, les annonces publiques (aube, lynchages).
+ * LOUP-GAROU sur grand écran : la table vue du dessus — les joueurs sont des
+ * cartes crème disposées en arc, les morts des cartes retournées côté feutre.
+ * Rôles révélés des morts UNIQUEMENT (la vue TV est neutre), annonces
+ * publiques en Playfair géant (aube, lynchages).
  */
 
-const ROLE_META: Record<LGRole, { icon: string; color: string }> = {
-  loup: { icon: '🐺', color: 'text-red-300' },
-  voyante: { icon: '🔮', color: 'text-violet-300' },
-  sorciere: { icon: '🧪', color: 'text-emerald-300' },
-  chasseur: { icon: '🏹', color: 'text-amber-300' },
-  salvateur: { icon: '🛡️', color: 'text-cyan-300' },
-  corbeau: { icon: '🐦‍⬛', color: 'text-slate-300' },
-  ancien: { icon: '🧓', color: 'text-orange-300' },
-  villageois: { icon: '🧑‍🌾', color: 'text-sky-300' },
+const ROLE_META: Record<LGRole, { Icon: ComponentType<{ className?: string }>; color: string; ink: string }> = {
+  loup: { Icon: WolfIcon, color: 'text-red-300', ink: 'text-suit-red' },
+  voyante: { Icon: Sparkles, color: 'text-purple-300', ink: 'text-purple-800' },
+  sorciere: { Icon: FlaskConical, color: 'text-emerald-300', ink: 'text-emerald-800' },
+  chasseur: { Icon: Target, color: 'text-amber-300', ink: 'text-amber-700' },
+  salvateur: { Icon: Shield, color: 'text-cyan-300', ink: 'text-cyan-800' },
+  corbeau: { Icon: Bird, color: 'text-slate-300', ink: 'text-slate-600' },
+  ancien: { Icon: Hourglass, color: 'text-orange-300', ink: 'text-orange-800' },
+  villageois: { Icon: Wheat, color: 'text-sky-300', ink: 'text-sky-800' },
 }
 
 const PHASE_TOTAL_MS: Record<string, number> = {
@@ -74,40 +76,45 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
     const villageWon = state.winnerTeam === 'village'
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
-        <p className="text-5xl font-black text-white">
-          🏆 {villageWon ? t('victory.village') : t('victory.loups')}
+        <p className="flex items-center gap-4 font-display text-5xl font-bold text-gold">
+          <Trophy aria-hidden className="h-12 w-12" />
+          {villageWon ? t('victory.village') : t('victory.loups')}
         </p>
         <p className="text-2xl text-white/60">
           {villageWon ? t('victory.villageDrinks') : t('victory.loupsDrinks')}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          {state.players.map((p) => (
-            <div
-              key={p.id}
-              className={cn(
-                'flex items-center gap-3 rounded-2xl border px-5 py-3 text-2xl font-bold',
-                p.role === 'loup'
-                  ? 'border-red-400/50 bg-red-500/15 text-red-100'
-                  : 'border-white/10 bg-white/5 text-white/80',
-                !p.alive && 'opacity-50'
-              )}
-            >
-              <span aria-hidden>{iconOf(p)}</span>
-              {p.name}
-              {!p.alive && ' 💀'}
-              {state.mayorId === p.id && (
-                <span className="text-xl" title={t('mayorBadge')} aria-label={t('mayorBadge')}>
-                  🎖️
+          {state.players.map((p) => {
+            const RoleIcon = p.role ? ROLE_META[p.role].Icon : null
+            return (
+              <div
+                key={p.id}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl border px-5 py-3 text-2xl font-bold shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]',
+                  p.role === 'loup'
+                    ? 'border-suit-red bg-cream text-suit-red'
+                    : 'border-[#D8CCAE] bg-cream text-[#24201A]',
+                  !p.alive && 'opacity-60'
+                )}
+              >
+                <span aria-hidden>{iconOf(p)}</span>
+                {p.name}
+                {!p.alive && <Skull aria-hidden className="h-6 w-6 text-[#6B6455]" />}
+                {state.mayorId === p.id && (
+                  <Medal className="h-6 w-6 text-amber-700" aria-label={t('mayorBadge')} />
+                )}
+                {p.role && RoleIcon && (
+                  <span className={cn('flex items-center gap-1.5 text-xl', ROLE_META[p.role].ink)}>
+                    <RoleIcon aria-hidden className="h-6 w-6" /> {roleName(p.role)}
+                  </span>
+                )}
+                <span className="flex items-center gap-1 text-lg text-amber-700">
+                  <Beer aria-hidden className="h-5 w-5" />
+                  {p.sips}
                 </span>
-              )}
-              {p.role && (
-                <span className={cn('text-xl', ROLE_META[p.role].color)}>
-                  {ROLE_META[p.role].icon} {roleName(p.role)}
-                </span>
-              )}
-              <span className="text-lg text-amber-200/80">🍺{p.sips}</span>
-            </div>
-          ))}
+              </div>
+            )
+          })}
         </div>
       </div>
     )
@@ -117,20 +124,20 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
     <div
       className={cn(
         'flex h-full w-full flex-col gap-4 p-6',
-        isNight && 'bg-gradient-to-b from-indigo-950/50 to-transparent'
+        isNight && 'bg-gradient-to-b from-chip-blue/30 to-transparent'
       )}
     >
-      {/* Nuit/Jour + phase + timer */}
+      {/* Nuit/Jour + phase + filet d'or */}
       <div className="flex items-center gap-4">
-        <span className="flex items-center gap-3 text-2xl font-black text-white/85">
+        <span className="flex items-center gap-3 text-2xl font-black text-cream/90">
           {isNight ? (
-            <Moon className="h-8 w-8 text-indigo-300" />
+            <Moon className="h-8 w-8 text-sky-300" />
           ) : (
-            <Sun className="h-8 w-8 text-amber-300" />
+            <Sun className="h-8 w-8 text-gold" />
           )}
           {t('round', { n: Math.max(1, state.round) })}
         </span>
-        <span className="text-xl font-semibold uppercase tracking-widest text-indigo-300">
+        <span className="font-display text-xl font-semibold uppercase tracking-widest text-gold">
           {t(`phases.${state.phase}`)}
         </span>
         {timeLeftMs !== null && (
@@ -138,7 +145,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
             <div
               className={cn(
                 'h-full rounded-full transition-[width] duration-300 ease-linear',
-                timeLeftMs < 10_000 ? 'bg-red-400' : 'bg-indigo-400'
+                timeLeftMs < 10_000 ? 'bg-suit-red' : 'bg-gold'
               )}
               style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
             />
@@ -146,23 +153,23 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
         )}
       </div>
 
-      {/* Annonce centrale */}
+      {/* Annonce centrale — Playfair géant */}
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
         {isNight && (
           <>
-            <Moon className="h-16 w-16 animate-pulse text-indigo-300" />
-            <p className="text-4xl font-black text-indigo-100">{t('sleep')}</p>
+            <Moon className="h-16 w-16 animate-pulse text-sky-300" />
+            <p className="font-display text-4xl font-bold text-cream">{t('sleep')}</p>
             <p className="text-xl text-white/40">{t(`phases.${state.phase}`)}</p>
           </>
         )}
         {state.phase === 'dawn' && (
           <>
-            <Sun className="h-16 w-16 text-amber-300" />
+            <Sun className="h-16 w-16 text-gold" />
             {state.lastNightDeaths.length === 0 ? (
-              <p className="text-4xl font-black text-emerald-200">{t('dawnNobody')}</p>
+              <p className="font-display text-4xl font-bold text-emerald-200">{t('dawnNobody')}</p>
             ) : (
               state.lastNightDeaths.map((d) => (
-                <p key={d.playerId} className="text-3xl font-black text-red-200">
+                <p key={d.playerId} className="font-display text-3xl font-bold text-red-200">
                   {t('dawnDeath', { name: nameOf(d.playerId), role: roleName(d.role) })}
                 </p>
               ))
@@ -175,26 +182,26 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
           </>
         )}
         {state.phase === 'hunter-shot' && (
-          <p className="text-4xl font-black text-amber-200">
+          <p className="font-display text-4xl font-bold text-gold">
             {t('hunterWaiting', { name: nameOf(state.pendingHunterId) })}
           </p>
         )}
         {state.phase === 'day-debate' && (
           <>
-            <p className="text-4xl font-black text-white">{t('debatePrompt')}</p>
+            <p className="font-display text-4xl font-bold text-cream">{t('debatePrompt')}</p>
             <p className="text-xl text-white/50">
               {t('skipToVote', { n: state.debateSkips.length, total: alive.length })}
             </p>
           </>
         )}
         {(state.phase === 'day-vote' || state.phase === 'day-revote') && (
-          <p className="text-4xl font-black text-white">
+          <p className="font-display text-4xl font-bold text-cream">
             {state.phase === 'day-revote' ? t('revotePrompt') : t('votePrompt')}
           </p>
         )}
         {state.phase === 'mayor-election' && (
           <>
-            <p className="text-4xl font-black text-amber-200">{t('mayorPrompt')}</p>
+            <p className="font-display text-4xl font-bold text-gold">{t('mayorPrompt')}</p>
             <p className="text-xl text-white/50">
               {t('skipWaiting', {
                 n: alive.filter((p) => state.hasVotedMayor[p.id]).length,
@@ -222,42 +229,75 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
         )}
       </div>
 
-      {/* La place du village */}
-      <div className="space-y-2">
-        <p className="text-center text-lg font-semibold uppercase tracking-widest text-white/40">
+      {/* La table : cartes crème en arc, morts retournés côté feutre */}
+      <div className="space-y-3">
+        <p className="text-center text-lg font-semibold uppercase tracking-widest text-gold/60">
           {t('village', { alive: alive.length, total: state.players.length })}
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          {state.players.map((p) => {
+        <div className="flex flex-wrap items-end justify-center gap-3 pb-2">
+          {state.players.map((p, i) => {
+            const n = state.players.length
+            const offset = i - (n - 1) / 2
+            const arc = {
+              transform: `rotate(${offset * 2.5}deg) translateY(${Math.abs(offset) * 7}px)`,
+            }
             const voted =
               (state.phase === 'day-vote' || state.phase === 'day-revote') &&
               p.alive &&
               state.hasVoted[p.id]
-            return (
+            const RoleIcon = p.role ? ROLE_META[p.role].Icon : null
+            return p.alive ? (
               <span
                 key={p.id}
+                style={arc}
                 className={cn(
-                  'flex items-center gap-2 rounded-full border px-4 py-2 text-xl font-bold',
-                  voted
-                    ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-100'
-                    : 'border-white/10 bg-white/5 text-white/75',
-                  !p.alive && 'opacity-45'
+                  'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xl font-bold text-[#24201A]',
+                  'border-[#D8CCAE] bg-cream shadow-[0_10px_24px_-12px_rgba(0,0,0,0.7)]',
+                  voted && 'ring-4 ring-emerald-400/70'
                 )}
               >
-                <span aria-hidden>{p.alive ? iconOf(p) : '💀'}</span>
+                <span aria-hidden>{iconOf(p)}</span>
                 {p.name}
                 {state.mayorId === p.id && (
-                  <span className="text-lg" title={t('mayorBadge')} aria-label={t('mayorBadge')}>
-                    🎖️
+                  <Medal className="h-5 w-5 text-amber-700" aria-label={t('mayorBadge')} />
+                )}
+                {p.role && RoleIcon && (
+                  <RoleIcon
+                    aria-label={roleName(p.role)}
+                    className={cn('h-5 w-5', ROLE_META[p.role].ink)}
+                  />
+                )}
+                {voted && <span className="text-emerald-700">✓</span>}
+                {p.sips > 0 && (
+                  <span className="flex items-center gap-1 text-base font-semibold text-amber-700">
+                    <Beer aria-hidden className="h-4 w-4" />
+                    {p.sips}
                   </span>
                 )}
-                {p.role && (
-                  <span className="text-lg" title={roleName(p.role)}>
-                    {ROLE_META[p.role].icon}
+              </span>
+            ) : (
+              <span
+                key={p.id}
+                style={arc}
+                className="flex items-center gap-2 rounded-xl border border-gold/30 bg-felt-deep px-4 py-2.5 text-xl font-bold text-cream/60 opacity-80"
+              >
+                <Skull aria-hidden className="h-5 w-5 text-cream/50" />
+                {p.name}
+                {state.mayorId === p.id && (
+                  <Medal className="h-5 w-5 text-gold/70" aria-label={t('mayorBadge')} />
+                )}
+                {p.role && RoleIcon && (
+                  <RoleIcon
+                    aria-label={roleName(p.role)}
+                    className={cn('h-5 w-5', ROLE_META[p.role].color)}
+                  />
+                )}
+                {p.sips > 0 && (
+                  <span className="flex items-center gap-1 text-base font-semibold text-amber-200/80">
+                    <Beer aria-hidden className="h-4 w-4" />
+                    {p.sips}
                   </span>
                 )}
-                {voted && ' ✓'}
-                {p.sips > 0 && <span className="text-base text-amber-200/80">🍺{p.sips}</span>}
               </span>
             )
           })}

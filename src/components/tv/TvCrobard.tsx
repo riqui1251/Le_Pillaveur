@@ -39,7 +39,7 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
           {ranking.map((p, i) => (
             <div key={p.id} className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-2 text-xl">
               <span className="font-bold text-white/80">{i + 1}. {p.name}</span>
-              <span className="font-black text-fuchsia-300">{p.score}</span>
+              <span className="font-black text-amber-300">{p.score}</span>
             </div>
           ))}
         </div>
@@ -51,8 +51,8 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
     const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
-        <p className="text-3xl font-black uppercase tracking-widest text-fuchsia-300/80">{t('countdown.title')}</p>
-        <TvBigCountdown seconds={secondsLeft} colorClass="text-fuchsia-200" />
+        <p className="text-3xl font-black uppercase tracking-widest text-amber-300/80">{t('countdown.title')}</p>
+        <TvBigCountdown seconds={secondsLeft} colorClass="text-gold" />
       </div>
     )
   }
@@ -67,7 +67,7 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
           {ranking.slice(0, 5).map((p, i) => (
             <div key={p.id} className="rounded-xl bg-white/5 px-4 py-2 text-center">
               <p className="text-lg font-bold text-white/70">{i + 1}. {p.name}</p>
-              <p className="text-2xl font-black text-fuchsia-300">{p.score}</p>
+              <p className="text-2xl font-black text-amber-300">{p.score}</p>
             </div>
           ))}
         </div>
@@ -78,7 +78,7 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
   if (state.phase === 'choosing') {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
-        <p className="text-2xl font-black uppercase tracking-widest text-fuchsia-300/80">
+        <p className="text-2xl font-black uppercase tracking-widest text-amber-300/80">
           {t('round', { round: state.round, total: state.totalRounds })}
         </p>
         <p className="text-4xl font-black text-white">{t('choosing.waitingFor', { name: nameOf(state.drawerId) })}</p>
@@ -93,9 +93,9 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
           <span className="text-xl font-black text-white/80">
             {t('round', { round: state.round, total: state.totalRounds })}
           </span>
-          <span className="text-lg font-semibold text-fuchsia-300">{drawer?.name}</span>
+          <span className="text-lg font-semibold text-amber-300">{drawer?.name}</span>
           {timeLeftMs !== null && (
-            <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={15_000} colorClass="bg-fuchsia-400" dangerClass="bg-red-400" />
+            <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={15_000} colorClass="bg-gold" dangerClass="bg-red-400" />
           )}
         </div>
         <PartyCanvas strokes={state.strokes} readOnly className="flex-1" />

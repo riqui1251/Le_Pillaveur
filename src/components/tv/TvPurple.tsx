@@ -19,8 +19,8 @@ function TvCard({ card }: { card: SerializedCard }) {
       'flex h-28 w-20 flex-col items-center justify-center rounded-2xl border-4 bg-white shadow-xl',
       isRed ? 'border-red-400' : 'border-gray-800'
     )}>
-      <span className={cn('text-3xl font-black', isRed ? 'text-red-600' : 'text-gray-900')}>{card.value}</span>
-      <span className={cn('text-2xl leading-tight', isRed ? 'text-red-600' : 'text-gray-900')}>{card.suit}</span>
+      <span className={cn('text-3xl font-black', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.value}</span>
+      <span className={cn('text-2xl leading-tight', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.suit}</span>
     </div>
   )
 }
@@ -38,7 +38,7 @@ export function TvPurple({ room, state }: { room: TvRoomDto; state: PurpleSynced
             <div key={p.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-5 py-3">
               <TvAvatar name={p.name} index={i} size={40} />
               <span className="text-2xl font-bold text-white">{p.name}</span>
-              <span className="text-2xl font-black text-violet-300">{state.gameResults[p.id] ?? 0} 🍺</span>
+              <span className="text-2xl font-black text-amber-300">{state.gameResults[p.id] ?? 0} 🍺</span>
             </div>
           ))}
         </div>
@@ -90,7 +90,7 @@ export function TvPurple({ room, state }: { room: TvRoomDto; state: PurpleSynced
             key={p.id}
             className={cn(
               'flex items-center gap-2 rounded-2xl border px-4 py-2',
-              p.id === currentActor?.id ? 'border-violet-400/50 bg-violet-500/15' : 'border-white/10 bg-white/5'
+              p.id === currentActor?.id ? 'border-gold/50 bg-gold/15' : 'border-white/10 bg-white/5'
             )}
           >
             <TvAvatar name={p.name} index={i} size={28} />

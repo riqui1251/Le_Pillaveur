@@ -78,7 +78,7 @@ export function TvPetitBuveur({ room, state }: { room: TvRoomDto; state: EngineS
           >
             <TvAvatar name={active.name} index={activeIndex} size={64} active />
             <div className="text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-violet-300/60">{t('turnOf')}</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-gold/60">{t('turnOf')}</p>
               <p className="text-4xl font-black sm:text-5xl">{active.name}</p>
             </div>
           </motion.div>
@@ -134,7 +134,7 @@ export function TvPetitBuveur({ room, state }: { room: TvRoomDto; state: EngineS
             key={p.id}
             className={cn(
               'flex items-center gap-2 rounded-full border px-3 py-1.5',
-              p.id === activeId ? 'border-violet-400/60 bg-violet-500/15' : 'border-white/10 bg-white/[0.03]',
+              p.id === activeId ? 'border-gold/60 bg-gold/15' : 'border-white/10 bg-white/[0.03]',
             )}
           >
             <TvAvatar name={p.name} index={idx} size={28} />

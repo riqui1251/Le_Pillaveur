@@ -45,8 +45,8 @@ export function TvTimeBar({
   timeLeftMs,
   totalMs,
   dangerMs,
-  colorClass = 'bg-cyan-400',
-  dangerClass = 'bg-red-400',
+  colorClass = 'bg-gold',
+  dangerClass = 'bg-suit-red',
 }: {
   timeLeftMs: number
   totalMs: number
@@ -68,7 +68,7 @@ export function TvTimeBar({
 }
 
 /** Grand compte à rebours (lancement de manche) — partagé entre tous les rendus TV. */
-export function TvBigCountdown({ seconds, colorClass = 'text-cyan-200' }: { seconds: number; colorClass?: string }) {
+export function TvBigCountdown({ seconds, colorClass = 'text-gold' }: { seconds: number; colorClass?: string }) {
   const reduced = useReducedMotion()
   return (
     <AnimatePresence mode="wait">
@@ -78,7 +78,7 @@ export function TvBigCountdown({ seconds, colorClass = 'text-cyan-200' }: { seco
         animate={{ opacity: 1, scale: 1 }}
         exit={reduced ? { opacity: 1 } : { opacity: 0, scale: 0.7 }}
         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-        className={cn('text-[12rem] font-black leading-none tabular-nums', colorClass)}
+        className={cn('font-display text-[12rem] font-bold leading-none tabular-nums', colorClass)}
       >
         {seconds}
       </motion.span>

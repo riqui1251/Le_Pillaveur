@@ -52,7 +52,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
               className={cn(
                 'flex items-center gap-3 rounded-2xl border px-5 py-3 text-2xl font-bold',
                 p.team === 'imposteur'
-                  ? 'border-fuchsia-400/50 bg-fuchsia-500/15 text-fuchsia-100'
+                  ? 'border-suit-red/50 bg-suit-red/15 text-red-100'
                   : 'border-white/10 bg-white/5 text-white/80',
                 p.eliminated && 'opacity-50'
               )}
@@ -65,7 +65,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
                 className={cn(
                   'rounded-full px-2 py-0.5 text-sm font-black uppercase',
                   p.team === 'imposteur'
-                    ? 'bg-fuchsia-500/30 text-fuchsia-100'
+                    ? 'bg-suit-red/30 text-red-100'
                     : 'bg-emerald-500/20 text-emerald-100'
                 )}
               >
@@ -83,10 +83,10 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
     const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
-        <p className="text-3xl font-black uppercase tracking-widest text-violet-300/80">
+        <p className="text-3xl font-black uppercase tracking-widest text-gold/80">
           {t('countdown.title')}
         </p>
-        <TvBigCountdown seconds={secondsLeft} colorClass="text-violet-200" />
+        <TvBigCountdown seconds={secondsLeft} colorClass="text-gold" />
         <p className="text-xl text-white/50">{t('countdown.hint')}</p>
       </div>
     )
@@ -97,13 +97,13 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
       {/* Manche + phase + timer */}
       <div className="flex items-center gap-4">
         <span className="text-xl font-black text-white/80">{t('round', { n: state.round })}</span>
-        <span className="text-lg font-semibold uppercase tracking-widest text-violet-300">
+        <span className="text-lg font-semibold uppercase tracking-widest text-gold">
           {state.phase === 'clue' && t('phaseClue')}
           {state.phase === 'vote' && t('phaseVote')}
           {state.phase === 'reveal' && t('phaseReveal')}
         </span>
         {timeLeftMs !== null && (
-          <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={10_000} colorClass="bg-violet-400" dangerClass="bg-red-400" />
+          <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={10_000} colorClass="bg-gold" dangerClass="bg-red-400" />
         )}
       </div>
 
@@ -122,7 +122,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
                 className={cn(
                   'rounded-full px-6 py-2 text-3xl font-black uppercase',
                   reveal.team === 'imposteur'
-                    ? 'bg-fuchsia-500/25 text-fuchsia-100'
+                    ? 'bg-suit-red/25 text-red-100'
                     : 'bg-emerald-500/20 text-emerald-100'
                 )}
               >
@@ -146,7 +146,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
         </div>
       ) : (
         <div className="flex flex-1 flex-col justify-center gap-3">
-          <p className="text-center text-2xl font-bold text-violet-200">
+          <p className="text-center text-2xl font-bold text-gold">
             {t('turnOf', { name: nameOf(activeId) })}
           </p>
           <div className="mx-auto w-full max-w-3xl space-y-2">
@@ -160,7 +160,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
                   className={cn(
                     'flex items-center gap-4 rounded-2xl border px-5 py-2.5',
                     pid === activeId
-                      ? 'border-violet-400/50 bg-violet-500/10'
+                      ? 'border-gold/50 bg-gold/10'
                       : 'border-white/10 bg-white/5',
                     p.eliminated && 'opacity-40'
                   )}

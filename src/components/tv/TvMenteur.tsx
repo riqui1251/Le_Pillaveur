@@ -65,7 +65,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
       </div>
 
       {state.palifico && (
-        <p className="text-center text-lg font-bold text-fuchsia-200">
+        <p className="text-center text-lg font-bold text-amber-200">
           {state.currentBid ? t('palificoBadge', { face: state.currentBid.face }) : t('palificoBadgeOpen')}
         </p>
       )}

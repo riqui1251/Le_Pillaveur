@@ -67,7 +67,7 @@ export function TvToucherCoule({ room, state }: { room: TvRoomDto; state: TCClie
     <div className="flex min-h-0 flex-1 flex-col gap-5 px-6 py-5 sm:px-10">
       {active && (
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-violet-300/60">{t('turnOf')}</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-gold/60">{t('turnOf')}</p>
           <p className="text-4xl font-black">
             {active.name}{' '}
             <span className="text-2xl text-white/40">· {active.team === 'A' ? t('teamA') : t('teamB')}</span>

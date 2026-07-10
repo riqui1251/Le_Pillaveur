@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Confetti from 'react-confetti'
+import { Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { EngineState } from '@/lib/petit-buveur/engine'
@@ -62,12 +63,12 @@ export function TvVictory({
   return (
     <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-8 py-10">
       <Confetti width={width} height={height} numberOfPieces={220} recycle={false} gravity={0.25} />
-      <div className="text-center">
-        <p className="text-4xl" aria-hidden>🏆</p>
-        <p className="mt-1 text-sm font-semibold uppercase tracking-[0.3em] text-amber-300/70">
+      <div className="flex flex-col items-center text-center">
+        <Trophy aria-hidden className="h-12 w-12 text-gold" />
+        <p className="mt-1 text-sm font-semibold uppercase tracking-[0.3em] text-gold/70">
           {gameId === 'toucher-coule' ? t('winnerTeam') : t('winner')}
         </p>
-        <p className="mt-2 text-6xl font-black text-amber-200 sm:text-7xl">{winnerLabel}</p>
+        <p className="mt-2 font-display text-6xl font-bold text-gold sm:text-7xl">{winnerLabel}</p>
       </div>
       <div className="w-full max-w-lg">
         <p className="mb-3 text-center text-sm font-semibold uppercase tracking-widest text-white/40">{t('standings')}</p>

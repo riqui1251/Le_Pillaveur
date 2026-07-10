@@ -32,7 +32,7 @@ export function TvPlinko({ state, frame }: { state: PlinkoCastState; frame: Plin
         {board.normalPins.map((p, i) => (
           <div
             key={`n${i}`}
-            className="absolute h-3 w-3 rounded-full bg-violet-400/50"
+            className="absolute h-3 w-3 rounded-full bg-gold/50"
             style={{ left: `${p.x}%`, top: `${p.y}%`, transform: 'translate(-50%,-50%)' }}
           />
         ))}
@@ -58,14 +58,14 @@ export function TvPlinko({ state, frame }: { state: PlinkoCastState; frame: Plin
               <div
                 key={i}
                 className={cn(
-                  'flex h-14 items-center justify-center border-x border-t border-violet-800/25',
+                  'flex h-14 items-center justify-center border-x border-t border-gold/20',
                   isRed && isGreen
-                    ? 'bg-fuchsia-500/40'
+                    ? 'bg-amber-500/40'
                     : isRed
                       ? 'bg-red-500/40'
                       : isGreen
                         ? 'bg-emerald-500/40'
-                        : 'bg-violet-950/40',
+                        : 'bg-felt-deep/60',
                 )}
                 style={{ width: `${100 / SLOT_COUNT}%` }}
               >
@@ -103,7 +103,7 @@ export function TvPlinko({ state, frame }: { state: PlinkoCastState; frame: Plin
             </>
           ) : (
             <>
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-violet-300/60">{t('turnOf')}</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-gold/60">{t('turnOf')}</p>
               <p className="text-4xl font-black sm:text-5xl">{state.currentPlayerName ?? '—'}</p>
             </>
           )}
@@ -134,7 +134,7 @@ export function TvPlinko({ state, frame }: { state: PlinkoCastState; frame: Plin
               className={cn(
                 'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
                 state.currentPlayerName === p.name && !finished
-                  ? 'border-violet-400/60 bg-violet-500/15'
+                  ? 'border-gold/60 bg-gold/15'
                   : 'border-white/10 bg-white/[0.03]',
               )}
             >
