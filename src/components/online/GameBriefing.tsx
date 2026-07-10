@@ -87,13 +87,13 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-indigo-400/25 bg-white/5 p-6 shadow-2xl backdrop-blur-md">
+      <div className="rounded-3xl border border-amber-400/25 bg-white/5 p-6 shadow-2xl backdrop-blur-md">
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/30">
             <GameIconById id={gameId} className="h-6 w-6 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-300">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
               <BookOpen className="h-3.5 w-3.5" /> {t('title')}
             </p>
             <p className="text-sm text-white/60">{t('subtitle')}</p>
@@ -106,7 +106,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
             <div
               className={cn(
                 'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 15_000 ? 'bg-red-400' : 'bg-indigo-400'
+                timeLeftMs < 15_000 ? 'bg-red-400' : 'bg-amber-400'
               )}
               style={{ width: `${Math.min(100, (timeLeftMs / BRIEFING_TIMEOUT_MS) * 100)}%` }}
             />
@@ -146,7 +146,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                   key={i}
                   className={cn(
                     'h-1.5 w-1.5 rounded-full transition-colors',
-                    i === idx ? 'bg-indigo-400' : 'bg-white/15'
+                    i === idx ? 'bg-amber-400' : 'bg-white/15'
                   )}
                 />
               ))}
@@ -174,7 +174,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
               ) : (
                 <Button
                   onClick={() => setIdx((i) => Math.min(steps.length - 1, i + 1))}
-                  className="flex-1 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 py-5 text-base font-bold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-400 hover:to-violet-500"
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold text-white shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500"
                 >
                   {t('next')} <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>

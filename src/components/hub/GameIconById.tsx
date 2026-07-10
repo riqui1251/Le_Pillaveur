@@ -12,8 +12,24 @@ import {
   HangmanIcon,
   TrialMotoIcon,
   Dice1220Icon,
+  WolfIcon,
+  ShipIcon,
+  LiarDiceIcon,
+  MaskIcon,
+  SpyGlassIcon,
+  QuizBoltIcon,
+  BluffCardsIcon,
+  TabooIcon,
+  CrayonIcon,
+  PhoneSketchIcon,
+  GenericGameIcon,
 } from '@/components/icons/GameIcons'
 
+/**
+ * Icône SVG de chaque jeu — un seul langage visuel (stroke 1.75,
+ * currentColor). Identité « Cartes sur Table » : plus aucun emoji
+ * structurel, la teinte vient du contexte (encre sur crème, crème sur feutre).
+ */
 export function GameIconById({ id, className }: { id: string; className?: string }) {
   if (id === 'plinko') return <PlinkoIcon className={className} />
   if (id === 'pmu') return <RaceFlagIcon className={className} />
@@ -28,15 +44,15 @@ export function GameIconById({ id, className }: { id: string; className?: string
   if (id === 'pendu') return <HangmanIcon className={className} />
   if (id === 'trial-poursuite') return <TrialMotoIcon className={className} />
   if (id === '1220') return <Dice1220Icon className={className} />
-  if (id === 'toucher-coule') return <span className={className} aria-hidden>🚢</span>
-  if (id === 'menteur') return <span className={className} aria-hidden>🎲</span>
-  if (id === 'imposteur') return <span className={className} aria-hidden>🕵️</span>
-  if (id === 'quiz') return <span className={className} aria-hidden>🧠</span>
-  if (id === 'loup-garou') return <span className={className} aria-hidden>🐺</span>
-  if (id === 'bluff') return <span className={className} aria-hidden>🃏</span>
-  if (id === 'espion') return <span className={className} aria-hidden>🕵️</span>
-  if (id === 'tabou') return <span className={className} aria-hidden>🤐</span>
-  if (id === 'crobard') return <span className={className} aria-hidden>🎨</span>
-  if (id === 'telephone-dessine') return <span className={className} aria-hidden>📞</span>
-  return <span className={className} aria-hidden>🎮</span>
+  if (id === 'toucher-coule') return <ShipIcon className={className} />
+  if (id === 'menteur') return <LiarDiceIcon className={className} />
+  if (id === 'imposteur') return <MaskIcon className={className} />
+  if (id === 'quiz') return <QuizBoltIcon className={className} />
+  if (id === 'loup-garou') return <WolfIcon className={className} />
+  if (id === 'bluff') return <BluffCardsIcon className={className} />
+  if (id === 'espion') return <SpyGlassIcon className={className} />
+  if (id === 'tabou') return <TabooIcon className={className} />
+  if (id === 'crobard') return <CrayonIcon className={className} />
+  if (id === 'telephone-dessine') return <PhoneSketchIcon className={className} />
+  return <GenericGameIcon className={className} />
 }

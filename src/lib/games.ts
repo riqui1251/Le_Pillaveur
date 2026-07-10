@@ -1,3 +1,6 @@
+/** Enseigne de carte à jouer — identité « Cartes sur Table ». */
+export type GameSuit = 'spade' | 'heart' | 'diamond' | 'club';
+
 export type GameMeta = {
   id: string;
   title: string;
@@ -8,6 +11,13 @@ export type GameMeta = {
   fallbackColor: string;
   colorFrom?: string;
   colorTo?: string;
+  /**
+   * Famille de jeu, exprimée en enseigne de carte :
+   * ♠ rôles cachés / suspense · ♥ culture / social · ♦ hasard / dés · ♣ créa / adresse.
+   */
+  suit?: GameSuit;
+  /** Rang affiché dans le coin de la carte (A, K, Q, J, 10…). */
+  rank?: string;
   hidden?: boolean;
   onlineReady?: boolean;
   /** Jeu impossible en local (info cachée multi-écrans) : masqué du hub en mode local. */
@@ -33,6 +43,8 @@ export const GAMES: GameMeta[] = [
     description: 'Un jeu de dés convivial où vous devez éviter les 3 et autres combinaisons',
     path: '/games/monsieur-3',
     emoji: '🎲',
+    suit: 'diamond',
+    rank: 'J',
     gradient: 'from-sky-500 to-indigo-600',
     colorFrom: '#0ea5e9',
     colorTo: '#4f46e5',
@@ -44,6 +56,8 @@ export const GAMES: GameMeta[] = [
     description: 'Un jeu de paris hippiques entre amis',
     path: '/games/pmu',
     emoji: '🏇',
+    suit: 'diamond',
+    rank: '7',
     gradient: 'from-fuchsia-600 to-violet-700',
     colorFrom: '#c026d3',
     colorTo: '#6d28d9',
@@ -55,6 +69,8 @@ export const GAMES: GameMeta[] = [
     description: 'Un jeu de plateau festif avec des défis et des gorgées',
     path: '/games/petit-buveur',
     emoji: '🎲',
+    suit: 'diamond',
+    rank: 'A',
     gradient: 'from-emerald-600 to-teal-400',
     colorFrom: '#059669',
     colorTo: '#2dd4bf',
@@ -69,6 +85,8 @@ export const GAMES: GameMeta[] = [
     description: 'La bataille navale apéro en équipes : touché tu bois, coulé tu trinques !',
     path: '/games/toucher-coule',
     emoji: '🚢',
+    suit: 'club',
+    rank: 'Q',
     gradient: 'from-sky-600 to-cyan-400',
     colorFrom: '#0284c7',
     colorTo: '#22d3ee',
@@ -85,6 +103,8 @@ export const GAMES: GameMeta[] = [
     description: 'Dés cachés, enchères et bluff : crie « Menteur ! » au bon moment ou trinque !',
     path: '/games/menteur',
     emoji: '🎲',
+    suit: 'spade',
+    rank: 'J',
     gradient: 'from-orange-600 to-red-500',
     colorFrom: '#ea580c',
     colorTo: '#ef4444',
@@ -102,6 +122,8 @@ export const GAMES: GameMeta[] = [
     description: 'Un mot secret, un intrus parmi vous : indices, votes et bluff au sommet !',
     path: '/games/imposteur',
     emoji: '🕵️',
+    suit: 'spade',
+    rank: 'K',
     gradient: 'from-violet-600 to-fuchsia-500',
     colorFrom: '#7c3aed',
     colorTo: '#d946ef',
@@ -119,6 +141,8 @@ export const GAMES: GameMeta[] = [
     description: 'Le quiz apéro : réponds vite et juste, ou bois ! Téléphones-buzzers et podium final.',
     path: '/games/quiz',
     emoji: '🧠',
+    suit: 'heart',
+    rank: 'A',
     gradient: 'from-blue-600 to-cyan-400',
     colorFrom: '#2563eb',
     colorTo: '#22d3ee',
@@ -136,6 +160,8 @@ export const GAMES: GameMeta[] = [
     description: 'Le classique des soirées, version apéro : loups, voyante, débats et lynchages qui trinquent !',
     path: '/games/loup-garou',
     emoji: '🐺',
+    suit: 'spade',
+    rank: 'A',
     gradient: 'from-slate-700 to-indigo-600',
     colorFrom: '#334155',
     colorTo: '#4f46e5',
@@ -153,6 +179,8 @@ export const GAMES: GameMeta[] = [
     description: 'Devinez si la prochaine carte sera plus haute ou plus basse',
     path: '/games/hi-lo',
     emoji: '🃏',
+    suit: 'diamond',
+    rank: '10',
     gradient: 'from-rose-500 to-fuchsia-500',
     colorFrom: '#f43f5e',
     colorTo: '#d946ef',
@@ -164,6 +192,8 @@ export const GAMES: GameMeta[] = [
     description: 'Pariez sur la couleur des cartes : Rouge, Noir ou Purple (alterné)',
     path: '/games/purple',
     emoji: '🟣',
+    suit: 'diamond',
+    rank: 'Q',
     gradient: 'from-purple-600 to-violet-500',
     colorFrom: '#9333ea',
     colorTo: '#8b5cf6',
@@ -179,6 +209,8 @@ export const GAMES: GameMeta[] = [
     description: 'Retournez les cartes et progressez dans la pyramide',
     path: '/games/pyramide',
     emoji: '🔺',
+    suit: 'diamond',
+    rank: '9',
     gradient: 'from-amber-600 to-yellow-400',
     colorFrom: '#d97706',
     colorTo: '#facc15',
@@ -190,6 +222,8 @@ export const GAMES: GameMeta[] = [
     description: 'Faites tomber une balle à travers des obstacles pour gagner des gorgées',
     path: '/games/plinko',
     emoji: '🔵',
+    suit: 'diamond',
+    rank: '8',
     gradient: 'from-emerald-500 to-lime-400',
     colorFrom: '#10b981',
     colorTo: '#a3e635',
@@ -262,6 +296,8 @@ export const GAMES: GameMeta[] = [
       'Un dé 12 et un dé 20 : pariez sur la parité, une plage de somme, et deux chiffres clés pour boire ou faire boire.',
     path: '/games/1220',
     emoji: '🎲',
+    suit: 'diamond',
+    rank: 'K',
     gradient: 'from-violet-600 to-amber-500',
     colorFrom: '#7c3aed',
     colorTo: '#f59e0b',
@@ -278,6 +314,8 @@ export const GAMES: GameMeta[] = [
       'Une question, une fausse réponse à inventer, et un vote parmi les bluffs : trouve la vraie ou trompe tout le monde !',
     path: '/games/bluff',
     emoji: '🃏',
+    suit: 'heart',
+    rank: 'K',
     gradient: 'from-rose-600 to-amber-500',
     colorFrom: '#e11d48',
     colorTo: '#f59e0b',
@@ -296,6 +334,8 @@ export const GAMES: GameMeta[] = [
       "Un lieu secret, un espion qui ne sait rien : questionnez-vous, accusez, ou devinez le lieu avant la fin du temps imparti !",
     path: '/games/espion',
     emoji: '🕵️',
+    suit: 'spade',
+    rank: 'Q',
     gradient: 'from-slate-700 to-cyan-600',
     colorFrom: '#334155',
     colorTo: '#0891b2',
@@ -314,6 +354,8 @@ export const GAMES: GameMeta[] = [
       'Décris un mot à voix haute sans prononcer les 4 mots tabous : ton équipe devine, les adversaires guettent la faute !',
     path: '/games/tabou',
     emoji: '🤐',
+    suit: 'heart',
+    rank: 'Q',
     gradient: 'from-emerald-600 to-teal-500',
     colorFrom: '#059669',
     colorTo: '#14b8a6',
@@ -332,6 +374,8 @@ export const GAMES: GameMeta[] = [
       "Choisis un mot, dessine-le en direct sur l'écran : premier qui devine marque gros, le dessinateur aussi !",
     path: '/games/crobard',
     emoji: '🎨',
+    suit: 'club',
+    rank: 'A',
     gradient: 'from-fuchsia-600 to-orange-500',
     colorFrom: '#c026d3',
     colorTo: '#f97316',
@@ -350,6 +394,8 @@ export const GAMES: GameMeta[] = [
       "Écris une phrase, le suivant la dessine, le suivant la devine... jusqu'au fou rire collectif en fin de partie !",
     path: '/games/telephone-dessine',
     emoji: '📞',
+    suit: 'club',
+    rank: 'K',
     gradient: 'from-teal-600 to-indigo-500',
     colorFrom: '#0d9488',
     colorTo: '#6366f1',

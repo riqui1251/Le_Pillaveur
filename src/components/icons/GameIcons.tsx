@@ -283,3 +283,131 @@ export function TrialMotoIcon({ className = 'w-6 h-6' }: IconProps) {
 }
 
 
+
+/* ─── Identité « Cartes sur Table » : icônes des jeux online ─────────────
+   Un seul langage : stroke 1.75, currentColor, pas de couleur codée en dur
+   (la teinte vient du contexte : encre sur carte crème, crème sur feutre). */
+
+// Loup-Garou : tête de loup stylisée (oreilles + museau)
+export function WolfIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 4l3.2 3.4h7.6L19 4l1 6.2c0 5-3.4 9.3-8 9.3s-8-4.3-8-9.3z" />
+      <circle cx="9.2" cy="11.5" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="14.8" cy="11.5" r="0.9" fill="currentColor" stroke="none" />
+      <path d="M12 14.6l-1.3 1.6h2.6z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+// Toucher-Coulé : navire + périscope de visée
+export function ShipIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 15h18l-2.5 4h-13z" />
+      <path d="M7 15v-3h10v3" />
+      <path d="M11 12V6h4l-1.5 2.5L15 11" />
+      <path d="M2.5 19.5c1 .8 2 .8 3 0s2-.8 3 0 2 .8 3 0 2-.8 3 0 2 .8 3 0 2-.8 3 0" strokeWidth="1.2" opacity=".6" />
+    </svg>
+  )
+}
+
+// Le Menteur : gobelet renversé + dés cachés
+export function LiarDiceIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 4h10l1.5 10h-13z" />
+      <path d="M4 17.5h16" />
+      <rect x="8.5" y="17.5" width="3" height="3" rx="0.6" />
+      <rect x="13" y="17.5" width="3" height="3" rx="0.6" />
+      <circle cx="12" cy="9" r="0.8" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+// L'Imposteur : masque de théâtre
+export function MaskIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 5c2.7 1 5.3 1.5 8 1.5S17.3 6 20 5v6.5c0 4.6-3.4 8.5-8 8.5s-8-3.9-8-8.5z" />
+      <path d="M8 11c.6-.7 1.7-.7 2.3 0M13.7 11c.6-.7 1.7-.7 2.3 0" />
+      <path d="M9 15.5c1.9 1.4 4.1 1.4 6 0" />
+    </svg>
+  )
+}
+
+// Qui est l'Espion ? : loupe sur silhouette
+export function SpyGlassIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M15.3 15.3L21 21" />
+      <circle cx="10.5" cy="9" r="2" />
+      <path d="M7 13.8c.8-1.3 2-2 3.5-2s2.7.7 3.5 2" />
+    </svg>
+  )
+}
+
+// Quiz : éclair de buzzer dans une bulle
+export function QuizBoltIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3a8 8 0 0 1 8 8c0 4.4-3.6 8-8 8h-7l2-3.2A8 8 0 0 1 12 3z" />
+      <path d="M12.8 7.5L10 12h2.6l-1.4 4 4.2-5.5h-2.8z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+// Le Grand Bluff : deux cartes en éventail, point d'interrogation
+export function BluffCardsIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9.5" y="3.5" width="10" height="14" rx="1.8" transform="rotate(9 14.5 10.5)" />
+      <rect x="4" y="5" width="10" height="14" rx="1.8" transform="rotate(-7 9 12)" />
+      <path d="M8 10.2c0-1.1.9-1.9 2-1.9s2 .7 2 1.7c0 1.4-2 1.5-2 3" transform="rotate(-7 9 12)" />
+      <circle cx="10" cy="15.6" r="0.5" fill="currentColor" stroke="none" transform="rotate(-7 9 12)" />
+    </svg>
+  )
+}
+
+// Tabou Vocal : bulle de parole barrée
+export function TabooIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 6h16v9H9l-4 4v-4z" />
+      <path d="M8.5 8.5l7 4M15.5 8.5l-7 4" />
+    </svg>
+  )
+}
+
+// Crobard : crayon qui trace
+export function CrayonIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15.5 4.5l4 4L8 20l-5 1 1-5z" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M13 21c2-.8 4.5-.8 7-.2" strokeWidth="1.2" opacity=".6" />
+    </svg>
+  )
+}
+
+// Téléphone Dessiné : combiné + trait de dessin
+export function PhoneSketchIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 4.5C4.2 4.5 3.5 5.2 3.5 6c0 8 6.5 14.5 14.5 14.5.8 0 1.5-.7 1.5-1.5v-2.6c0-.7-.4-1.2-1-1.4l-3-1c-.6-.2-1.2 0-1.6.5l-.9 1.2a11.6 11.6 0 0 1-5.2-5.2l1.2-.9c.5-.4.7-1 .5-1.6l-1-3c-.2-.6-.7-1-1.4-1z" />
+      <path d="M14 4c2.2.4 4 1.4 5.2 3.2" strokeWidth="1.2" opacity=".6" />
+      <path d="M14.5 7.2c1.2.3 2 1 2.6 2" strokeWidth="1.2" opacity=".6" />
+    </svg>
+  )
+}
+
+// Fallback générique : carte au dos orné
+export function GenericGameIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="3.5" width="12" height="17" rx="2" />
+      <path d="M12 8.5c1.6 1.9 2.6 2.9 2.6 4.2a1.7 1.7 0 0 1-2.6 1.4 1.7 1.7 0 0 1-2.6-1.4c0-1.3 1-2.3 2.6-4.2z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}

@@ -34,7 +34,7 @@ function LobbyShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-full">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-violet-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
+        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
         <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-amber-600/10 blur-[100px] animate-[pulse_10s_ease-in-out_infinite_2s]" />
         <div className="absolute bottom-0 right-1/3 h-72 w-72 rounded-full bg-emerald-600/10 blur-[90px] animate-[pulse_12s_ease-in-out_infinite_4s]" />
       </div>
@@ -177,7 +177,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <ArrowLeft className="h-4 w-4" />
             Retour
           </Link>
-          <span className="flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/15 px-2.5 py-1 text-[11px] font-semibold text-violet-200">
+          <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
             <Globe className="h-3 w-3" /> En ligne
           </span>
         </div>
@@ -204,7 +204,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <Button
               onClick={() => createRoom(gameId)}
               disabled={loading}
-              className="mb-4 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-6 text-lg font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-50"
+              className="mb-4 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-700 py-6 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-amber-600 disabled:opacity-50"
             >
               {loading ? 'Création…' : 'Créer un lobby'}
             </Button>
@@ -222,7 +222,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   }}
                   placeholder={tOnline('joinByCode.placeholder')}
                   maxLength={6}
-                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center font-mono text-lg font-bold tracking-[0.2em] text-white placeholder:text-white/25 placeholder:tracking-normal focus:border-violet-400/50 focus:outline-none"
+                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center font-mono text-lg font-bold tracking-[0.2em] text-white placeholder:text-white/25 placeholder:tracking-normal focus:border-amber-400/50 focus:outline-none"
                 />
                 <Button
                   onClick={handleJoinByCode}
@@ -241,14 +241,14 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
         {gameLobbies.length > 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-violet-300/70">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
               Lobbies ouverts pour ce jeu
             </p>
             <ul className="space-y-2">
               {gameLobbies.map((lobby) => (
                 <li
                   key={lobby.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition-colors hover:border-violet-400/30"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition-colors hover:border-amber-400/30"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm">
@@ -265,7 +265,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     size="sm"
                     disabled={loading || wrongRoom}
                     onClick={() => joinRoom({ roomId: lobby.id })}
-                    className="shrink-0 rounded-xl bg-violet-600 text-white hover:bg-violet-500"
+                    className="shrink-0 rounded-xl bg-amber-600 text-white hover:bg-amber-500"
                   >
                     Rejoindre
                   </Button>
@@ -291,14 +291,14 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           <LogOut className="h-4 w-4" />
           Quitter
         </button>
-        <span className="flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/15 px-2.5 py-1 text-[11px] font-semibold text-violet-200">
+        <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
           <Globe className="h-3 w-3" /> En ligne
         </span>
       </div>
 
-      <div className="mb-4 overflow-hidden rounded-3xl border border-violet-500/25 bg-gradient-to-br from-violet-600/20 via-white/5 to-transparent text-center shadow-2xl backdrop-blur-md">
+      <div className="mb-4 overflow-hidden rounded-3xl border border-amber-500/25 bg-gradient-to-br from-amber-600/20 via-white/5 to-transparent text-center shadow-2xl backdrop-blur-md">
         <div className="px-6 pb-5 pt-6">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-violet-300/80">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-amber-300/80">
             Lobby {game?.title}
           </p>
           <p className="font-mono text-4xl font-bold tracking-[0.3em] text-white">{room.code}</p>
@@ -320,7 +320,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           aria-expanded={showTv}
           className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:text-white"
         >
-          <Tv className="h-4 w-4 text-violet-300" />
+          <Tv className="h-4 w-4 text-amber-300" />
           {tTv('modeTv')}
         </button>
         {showTv && (
@@ -336,7 +336,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       </div>
 
       <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-violet-300/70">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
           {tOnline('visibility.title')}
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -353,7 +353,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 className={cn(
                   'flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
                   active
-                    ? 'border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg'
+                    ? 'border-transparent bg-gradient-to-r from-amber-500 to-amber-700 text-white shadow-lg'
                     : 'border-white/10 bg-white/5 text-white/60',
                   isHost && !active && 'hover:bg-white/10 hover:text-white'
                 )}
@@ -368,7 +368,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {isHost && visibility !== 'public' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-violet-300/70">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
             {tOnline('invites.inviteFriend')}
           </p>
           {friends.length === 0 ? (
@@ -395,7 +395,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         aria-label={tOnline('invites.inviteFriend')}
                         className={cn(
                           'flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
-                          invited ? 'bg-white/10 text-white/40' : 'bg-violet-600 text-white hover:bg-violet-500'
+                          invited ? 'bg-white/10 text-white/40' : 'bg-amber-600 text-white hover:bg-amber-500'
                         )}
                       >
                         <Mail className="h-3.5 w-3.5" />
@@ -833,7 +833,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'crobard' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-fuchsia-400/70">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
             {tCrobard('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -848,7 +848,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   className={cn(
                     'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
                     active
-                      ? 'border-transparent bg-gradient-to-r from-fuchsia-600 to-orange-500 text-white shadow-lg'
+                      ? 'border-transparent bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg'
                       : 'border-white/10 bg-white/5 text-white/60',
                     isHost && !active && 'hover:bg-white/10 hover:text-white'
                   )}
@@ -866,7 +866,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'loup-garou' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-indigo-400/70">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
             {tLg('debate')}
           </p>
           <div className="grid grid-cols-5 gap-2">
@@ -881,7 +881,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   className={cn(
                     'rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
                     active
-                      ? 'border-transparent bg-gradient-to-r from-slate-600 to-indigo-500 text-white shadow-lg'
+                      ? 'border-transparent bg-gradient-to-r from-slate-600 to-amber-500 text-white shadow-lg'
                       : 'border-white/10 bg-white/5 text-white/60',
                     isHost && !active && 'hover:bg-white/10 hover:text-white'
                   )}
@@ -942,7 +942,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         const options = Array.from({ length: maxCount }, (_, i) => i + 1)
         return (
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-violet-400/70">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
               {tImposteur('count')}
             </p>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
@@ -957,7 +957,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     className={cn(
                       'rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
                       active
-                        ? 'border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white shadow-lg'
+                        ? 'border-transparent bg-gradient-to-r from-amber-500 to-amber-700 text-white shadow-lg'
                         : 'border-white/10 bg-white/5 text-white/60',
                       isHost && !active && 'hover:bg-white/10 hover:text-white'
                     )}
@@ -976,7 +976,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
         <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-white/45">
-          <Users className="h-3.5 w-3.5 text-violet-300" />
+          <Users className="h-3.5 w-3.5 text-amber-300" />
           Joueurs ({room.members.length})
         </div>
         <ul className="space-y-2">
@@ -1042,7 +1042,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       onClick={() => sendRequestToUser(m.userId)}
                       aria-label={tFriends('sendRequest')}
                       title={tFriends('sendRequest')}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-violet-500/15 hover:text-violet-300"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
                     >
                       <UserPlus className="h-4 w-4" />
                     </button>
