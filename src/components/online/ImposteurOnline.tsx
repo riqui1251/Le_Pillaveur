@@ -4,11 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
-import { Eye, EyeOff, Home, RefreshCw, Send, Trophy, UserX } from 'lucide-react'
+import { Eye, EyeOff, Home, Pencil, RefreshCw, Send, Skull, Trophy, UserX } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
+import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
 import { cn } from '@/lib/utils'
 import {
   isValidClue,
@@ -169,7 +170,7 @@ export function ImposteurOnline() {
   if (!view || !user || !room) {
     return (
       <div className="flex flex-1 items-center justify-center p-6 text-white/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
       </div>
     )
   }
@@ -226,8 +227,8 @@ export function ImposteurOnline() {
           transition={{ type: 'spring', stiffness: 220, damping: 18 }}
           className="flex flex-col items-center gap-2 text-center"
         >
-          <Trophy className={cn('h-14 w-14', civilWon ? 'text-emerald-400' : 'text-fuchsia-400')} />
-          <h2 className="text-3xl font-black">
+          <Trophy className="h-14 w-14 text-gold" />
+          <h2 className={cn('font-display text-3xl font-bold', civilWon ? 'text-emerald-200' : 'text-red-200')}>
             {civilWon ? t('victory.civilWin') : t('victory.imposteurWin')}
           </h2>
           {!isSoft && (
@@ -245,7 +246,7 @@ export function ImposteurOnline() {
 
         {/* Révélation complète */}
         <div className="w-full max-w-sm space-y-2">
-          <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-white/40">
+          <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-gold/60">
             {t('victory.fullReveal')}
           </p>
           {view.players.map((p) => (
@@ -254,17 +255,17 @@ export function ImposteurOnline() {
               className={cn(
                 'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
                 p.team === 'imposteur'
-                  ? 'border-fuchsia-400/40 bg-fuchsia-500/10'
-                  : 'border-white/10 bg-white/5',
+                  ? 'border-suit-red/40 bg-suit-red/10'
+                  : 'border-gold/10 bg-felt-deep/60',
                 p.eliminated && 'opacity-60'
               )}
             >
               <RankCrest role={cosmetics.get(p.id)?.role} />
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold">
+                <p className="flex items-center gap-1 truncate text-sm font-bold">
                   <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                  {p.eliminated && <span className="text-white/40"> 💀</span>}
+                  {p.eliminated && <Skull aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/40" />}
                 </p>
                 <p className="text-xs text-white/50">« {p.word} »</p>
               </div>
@@ -272,7 +273,7 @@ export function ImposteurOnline() {
                 className={cn(
                   'rounded-full px-2 py-0.5 text-[10px] font-black uppercase',
                   p.team === 'imposteur'
-                    ? 'bg-fuchsia-500/30 text-fuchsia-100'
+                    ? 'bg-suit-red/30 text-red-100'
                     : 'bg-emerald-500/20 text-emerald-100'
                 )}
               >
@@ -286,7 +287,7 @@ export function ImposteurOnline() {
           <Button
             onClick={() => void voteRematch()}
             disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-5 text-base font-bold"
+            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
             {iVotedRematch && humanCount > 1
@@ -310,7 +311,7 @@ export function ImposteurOnline() {
     const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
-        <p className="text-sm font-bold uppercase tracking-widest text-violet-300/80">
+        <p className="font-display text-sm font-bold uppercase tracking-widest text-gold/80">
           {t('countdown.title')}
         </p>
         <AnimatePresence mode="popLayout">
@@ -320,18 +321,22 @@ export function ImposteurOnline() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 1.6, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="text-8xl font-black tabular-nums text-violet-200"
+            className="font-display text-8xl font-bold tabular-nums text-gold"
           >
             {secondsLeft}
           </motion.span>
         </AnimatePresence>
         {me && (
-          <div className="w-full max-w-xs rounded-2xl border border-violet-400/30 bg-gradient-to-br from-violet-600/15 to-transparent px-4 py-3 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
-              {t('yourWord')}
-            </p>
-            <p className="truncate text-2xl font-black tracking-wide">{me.word}</p>
-          </div>
+          <PlayingCard suit="spade" rank="K" className="w-full max-w-xs">
+            <div className="px-6 py-3 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">
+                {t('yourWord')}
+              </p>
+              <p className="truncate font-display text-2xl font-bold tracking-wide text-[#24201A]">
+                {me.word}
+              </p>
+            </div>
+          </PlayingCard>
         )}
         <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
       </div>
@@ -343,12 +348,12 @@ export function ImposteurOnline() {
   return (
     <>
     <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
-      {/* Bandeau : manche + phase + timer */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
+      {/* Bandeau : manche + phase + timer (filet d'or qui se consume) */}
+      <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 px-4 py-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-white/80">{t('round', { n: view.round })}</span>
+          <span className="text-sm font-bold text-cream/85">{t('round', { n: view.round })}</span>
           <span className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+            <span className="font-display text-xs font-semibold uppercase tracking-wide text-gold">
               {view.phase === 'clue' && t('phaseClue')}
               {view.phase === 'vote' && t('phaseVote')}
               {view.phase === 'reveal' && t('phaseReveal')}
@@ -361,7 +366,7 @@ export function ImposteurOnline() {
             <div
               className={cn(
                 'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 10_000 ? 'bg-red-400' : 'bg-violet-400'
+                timeLeftMs < 10_000 ? 'bg-suit-red' : 'bg-gold'
               )}
               style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
             />
@@ -391,33 +396,64 @@ export function ImposteurOnline() {
         </div>
       )}
 
-      {/* Mon mot secret */}
+      {/* Mon mot secret : carte à jouer retournable — face crème quand
+          visible, dos treillis or quand masquée (le mot quitte le DOM). */}
       {me && (
-        <div
-          className={cn(
-            'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3',
-            iAmAlive
-              ? 'border-violet-400/30 bg-gradient-to-br from-violet-600/15 to-transparent'
-              : 'border-white/10 bg-white/5 opacity-70'
+        <AnimatePresence mode="wait" initial={false}>
+          {hideWord ? (
+            <motion.div
+              key="word-back"
+              initial={{ rotateY: 90, opacity: 0 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              exit={{ rotateY: 90, opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              className="relative"
+            >
+              <PlayingCardBack className="h-[5.25rem]" />
+              <button
+                onClick={() => setHideWord(false)}
+                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold transition-colors hover:bg-gold/20"
+                aria-label={t('showWord')}
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="word-face"
+              initial={{ rotateY: 90, opacity: 0 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              exit={{ rotateY: 90, opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              className="relative"
+            >
+              <PlayingCard
+                suit="spade"
+                rank="K"
+                className={cn('min-h-[5.25rem]', !iAmAlive && 'opacity-70')}
+              >
+                <div className="min-w-0 py-3 pl-7 pr-12">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">
+                    {iAmAlive ? t('yourWord') : t('eliminatedYou')}
+                  </p>
+                  <p className="truncate font-display text-xl font-bold tracking-wide text-[#24201A]">
+                    « {me.word} »
+                  </p>
+                  {iAmAlive && (
+                    <p className="mt-0.5 text-[10px] leading-snug text-[#6B6455]">{t('wordHint')}</p>
+                  )}
+                </div>
+              </PlayingCard>
+              <button
+                onClick={() => setHideWord(true)}
+                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-[#24201A]/15 bg-[#24201A]/5 text-[#24201A]/60 transition-colors hover:bg-[#24201A]/10"
+                aria-label={t('hideWord')}
+              >
+                <EyeOff className="h-4 w-4" />
+              </button>
+            </motion.div>
           )}
-        >
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
-              {iAmAlive ? t('yourWord') : t('eliminatedYou')}
-            </p>
-            <p className="truncate text-xl font-black tracking-wide">
-              {hideWord ? '••••••' : `« ${me.word} »`}
-            </p>
-            {iAmAlive && <p className="mt-0.5 text-[10px] text-white/40">{t('wordHint')}</p>}
-          </div>
-          <button
-            onClick={() => setHideWord((v) => !v)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/60 transition-colors hover:bg-white/10"
-            aria-label={hideWord ? t('showWord') : t('hideWord')}
-          >
-            {hideWord ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-          </button>
-        </div>
+        </AnimatePresence>
       )}
 
       {/* Révélation */}
@@ -427,12 +463,12 @@ export function ImposteurOnline() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-3 rounded-2xl border border-violet-400/30 bg-gray-900/80 p-4 text-center"
+            className="space-y-3 rounded-2xl border border-gold/25 bg-felt-deep/80 p-4 text-center"
           >
             {reveal.eliminatedId ? (
               <>
                 <UserX className="mx-auto h-8 w-8 text-red-300" />
-                <p className="text-lg font-black">
+                <p className="font-display text-lg font-bold text-gold">
                   {t('reveal.outTitle', { name: nameOf(reveal.eliminatedId) })}
                 </p>
                 <p className="text-sm text-white/70">
@@ -442,7 +478,7 @@ export function ImposteurOnline() {
                   className={cn(
                     'mx-auto w-fit rounded-full px-3 py-1 text-sm font-black uppercase',
                     reveal.team === 'imposteur'
-                      ? 'bg-fuchsia-500/25 text-fuchsia-100'
+                      ? 'bg-suit-red/25 text-red-100'
                       : 'bg-emerald-500/20 text-emerald-100'
                   )}
                 >
@@ -456,7 +492,7 @@ export function ImposteurOnline() {
               </>
             ) : (
               <>
-                <p className="text-lg font-black">{t('reveal.tieTitle')}</p>
+                <p className="font-display text-lg font-bold text-gold">{t('reveal.tieTitle')}</p>
                 <p className="text-sm text-white/60">{t('reveal.tieMsg')}</p>
               </>
             )}
@@ -475,7 +511,7 @@ export function ImposteurOnline() {
             <Button
               onClick={() => void sendAction({ action: 'continue' })}
               disabled={busy}
-              className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-4 text-sm font-bold"
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-bold hover:from-amber-400 hover:to-amber-500"
             >
               {aliveCount <= 3 || reveal.team === 'imposteur'
                 ? t('reveal.seeResult')
@@ -485,9 +521,9 @@ export function ImposteurOnline() {
         )}
       </AnimatePresence>
 
-      {/* Vote */}
+      {/* Vote : cartes crème qu'on abat (noms en encre, pas de cosmétiques) */}
       {view.phase === 'vote' && (
-        <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+        <div className="space-y-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
           <p className="text-center text-sm font-bold">
             {iAmAlive
               ? view.myVote
@@ -508,21 +544,22 @@ export function ImposteurOnline() {
                     onClick={() => void sendAction({ action: 'vote', targetId: p.id })}
                     disabled={disabled}
                     className={cn(
-                      'flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition-all',
+                      'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[#24201A] transition-all',
+                      'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)]',
                       chosen
-                        ? 'border-violet-400/70 bg-violet-500/20 ring-2 ring-violet-400'
-                        : 'border-white/10 bg-white/5',
-                      !disabled && 'hover:bg-white/10 active:scale-95',
+                        ? '-translate-y-0.5 border-suit-red bg-cream ring-2 ring-suit-red'
+                        : 'border-[#D8CCAE] bg-cream',
+                      !disabled && 'hover:-translate-y-0.5 active:scale-95',
                       isMe && 'opacity-40'
                     )}
                   >
                     <span className="text-lg" aria-hidden>{iconOf(p)}</span>
                     <span className="min-w-0 flex-1 truncate text-xs font-bold">
-                      <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                      {isMe && <span className="text-white/40"> {t('you')}</span>}
+                      {p.name}
+                      {isMe && <span className="text-[#6B6455]"> {t('you')}</span>}
                     </span>
                     {p.hasVoted && (
-                      <span className="shrink-0 text-[10px] font-bold text-emerald-300">✓</span>
+                      <span className="shrink-0 text-[10px] font-bold text-emerald-700">✓</span>
                     )}
                   </button>
                 )
@@ -532,12 +569,12 @@ export function ImposteurOnline() {
       )}
 
       {/* Fil d'indices */}
-      <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
+      <div className="space-y-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-gold/60">
           {t('cluesTitle', { n: view.round })}
         </p>
         {view.phase === 'clue' && (
-          <p className="text-center text-sm font-bold text-violet-200">
+          <p className="text-center text-sm font-bold text-gold">
             {isMyClueTurn ? t('yourTurnClue') : t('turnOf', { name: nameOf(activeId) })}
           </p>
         )}
@@ -553,7 +590,7 @@ export function ImposteurOnline() {
                 className={cn(
                   'flex items-center gap-2 rounded-xl border px-3 py-2',
                   isActive
-                    ? 'border-violet-400/50 bg-violet-500/10'
+                    ? 'border-gold/50 bg-gold/10'
                     : 'border-white/8 bg-white/4',
                   p.eliminated && 'opacity-45'
                 )}
@@ -563,8 +600,14 @@ export function ImposteurOnline() {
                   <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                   {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-bold">
-                  {clue ? `« ${clue.text} »` : isActive ? '✏️…' : ''}
+                <span className="flex min-w-0 flex-1 items-center gap-1 truncate text-sm font-bold">
+                  {clue ? (
+                    `« ${clue.text} »`
+                  ) : isActive ? (
+                    <Pencil aria-hidden className="h-3.5 w-3.5 animate-pulse text-gold/70" />
+                  ) : (
+                    ''
+                  )}
                 </span>
               </li>
             )
@@ -587,7 +630,7 @@ export function ImposteurOnline() {
 
       {/* Saisie d'indice (à mon tour) */}
       {isMyClueTurn && me && (
-        <div className="space-y-1.5 rounded-2xl border border-violet-400/40 bg-gray-900/85 p-3">
+        <div className="space-y-1.5 rounded-2xl border border-gold/40 bg-felt-deep/85 p-3">
           <div className="flex gap-2">
             <input
               value={clueInput}
@@ -600,12 +643,12 @@ export function ImposteurOnline() {
               maxLength={IMPOSTEUR_CLUE_MAX_LEN}
               placeholder={t('cluePlaceholder')}
               autoFocus
-              className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/8 px-3 py-2.5 text-sm font-semibold text-white placeholder:text-white/30 focus:border-violet-400 focus:outline-none"
+              className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/8 px-3 py-2.5 text-sm font-semibold text-white placeholder:text-white/30 focus:border-gold focus:outline-none"
             />
             <Button
               onClick={() => void sendAction({ action: 'clue', text: clueTrimmed })}
               disabled={busy || !clueOk}
-              className="shrink-0 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-4 font-bold"
+              className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 font-bold hover:from-amber-400 hover:to-amber-500"
               aria-label={t('clueSend')}
             >
               <Send className="h-4 w-4" />

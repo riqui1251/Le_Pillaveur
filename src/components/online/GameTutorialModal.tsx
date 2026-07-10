@@ -100,7 +100,7 @@ export function GameTutorialModal({
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-2xl border border-white/10 bg-gray-900 p-5 text-white shadow-2xl"
+        className="w-full max-w-sm rounded-2xl border border-gold/20 bg-felt-deep p-5 text-white shadow-2xl"
       >
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
@@ -133,7 +133,7 @@ export function GameTutorialModal({
                 key={i}
                 className={cn(
                   'h-1.5 w-1.5 rounded-full transition-colors',
-                  i === idx ? 'bg-indigo-400' : 'bg-white/15'
+                  i === idx ? 'bg-gold' : 'bg-white/15'
                 )}
               />
             ))}
@@ -150,7 +150,7 @@ export function GameTutorialModal({
             )}
             <button
               onClick={() => (isLast ? onClose() : setIdx((v) => v + 1))}
-              className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-500 px-4 py-1.5 text-xs font-bold"
+              className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-1.5 text-xs font-bold hover:from-amber-400 hover:to-amber-500"
             >
               {isLast ? t('gotIt') : t('next')}
               {!isLast && <ChevronRight className="h-3.5 w-3.5" />}

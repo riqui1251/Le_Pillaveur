@@ -9,6 +9,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
+import { PlayingCard } from '@/components/ui/PlayingCard'
 import { cn } from '@/lib/utils'
 import type { EspionClientView } from '@/lib/espion/engine'
 import { getEspionLocations } from '@/lib/espion/data'
@@ -199,8 +200,8 @@ export function EspionOnline() {
           transition={{ type: 'spring', stiffness: 220, damping: 18 }}
           className="flex flex-col items-center gap-2 text-center"
         >
-          <Trophy className={cn('h-14 w-14', crewWon ? 'text-cyan-400' : 'text-slate-300')} />
-          <h2 className="text-3xl font-black">
+          <Trophy className="h-14 w-14 text-gold" />
+          <h2 className={cn('font-display text-3xl font-bold', crewWon ? 'text-cyan-200' : 'text-slate-200')}>
             {crewWon ? t('victory.crewWin') : t('victory.spyWin')}
           </h2>
           <p className="text-sm text-white/60">
@@ -214,7 +215,7 @@ export function EspionOnline() {
           <Button
             onClick={() => void voteRematch()}
             disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-slate-700 to-cyan-600 py-5 text-base font-bold"
+            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
             {iVotedRematch && humanCount > 1
@@ -238,7 +239,7 @@ export function EspionOnline() {
     const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
-        <p className="text-sm font-bold uppercase tracking-widest text-cyan-300/80">{t('countdown.title')}</p>
+        <p className="font-display text-sm font-bold uppercase tracking-widest text-gold/80">{t('countdown.title')}</p>
         <AnimatePresence mode="popLayout">
           <motion.span
             key={secondsLeft}
@@ -246,19 +247,21 @@ export function EspionOnline() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 1.6, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="text-8xl font-black tabular-nums text-cyan-200"
+            className="font-display text-8xl font-bold tabular-nums text-gold"
           >
             {secondsLeft}
           </motion.span>
         </AnimatePresence>
         {view.location ? (
-          <div className="w-full max-w-xs rounded-2xl border border-cyan-400/30 bg-gradient-to-br from-cyan-600/15 to-transparent px-4 py-3 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">{t('yourLocation')}</p>
-            <p className="truncate text-2xl font-black tracking-wide">{view.location}</p>
-          </div>
+          <PlayingCard suit="spade" rank="Q" className="w-full max-w-xs">
+            <div className="px-6 py-3 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">{t('yourLocation')}</p>
+              <p className="truncate font-display text-2xl font-bold tracking-wide text-[#24201A]">{view.location}</p>
+            </div>
+          </PlayingCard>
         ) : (
-          <div className="w-full max-w-xs rounded-2xl border border-slate-400/30 bg-slate-600/15 px-4 py-3 text-center">
-            <p className="text-sm font-black">{t('youAreSpy')}</p>
+          <div className="w-full max-w-xs rounded-2xl border border-slate-400/30 bg-felt-deep/80 px-4 py-3 text-center">
+            <p className="font-display text-sm font-bold text-slate-200">{t('youAreSpy')}</p>
           </div>
         )}
         <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
@@ -281,7 +284,7 @@ export function EspionOnline() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center text-white">
         <Siren className={cn('h-10 w-10', reveal.winner === 'crew' ? 'text-cyan-300' : 'text-slate-300')} />
-        <p className="text-2xl font-black">{outcomeText}</p>
+        <p className="font-display text-2xl font-bold text-gold">{outcomeText}</p>
         <p className="text-sm text-white/60">{t('reveal.location', { location: reveal.location })}</p>
         <p className="text-sm font-bold text-cyan-200">
           {t('victory.score', { spy: view.roundWins.spy, crew: view.roundWins.crew })}
@@ -289,7 +292,7 @@ export function EspionOnline() {
         <Button
           onClick={() => void sendAction({ action: 'continue' })}
           disabled={busy}
-          className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-slate-700 to-cyan-600 py-4 text-sm font-bold"
+          className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-bold hover:from-amber-400 hover:to-amber-500"
         >
           {view.roundWins.spy >= view.roundsToWin || view.roundWins.crew >= view.roundsToWin
             ? t('reveal.seeResult')
@@ -304,13 +307,13 @@ export function EspionOnline() {
   return (
     <>
     <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
-      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
+      <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 px-4 py-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-white/80">
+          <span className="text-sm font-bold text-cream/85">
             {t('score', { spy: view.roundWins.spy, crew: view.roundWins.crew })}
           </span>
           <span className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
+            <span className="font-display text-xs font-semibold uppercase tracking-wide text-gold">
               {t('phaseDiscussion')}
             </span>
             <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
@@ -321,7 +324,7 @@ export function EspionOnline() {
             <div
               className={cn(
                 'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 30_000 ? 'bg-red-400' : 'bg-cyan-400'
+                timeLeftMs < 30_000 ? 'bg-suit-red' : 'bg-gold'
               )}
               style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
             />
@@ -338,15 +341,17 @@ export function EspionOnline() {
         </div>
       )}
 
-      {/* Lieu ou statut espion */}
+      {/* Lieu (carte à jouer crème) ou statut espion (feutre) */}
       {view.location ? (
-        <div className="rounded-2xl border border-cyan-400/30 bg-gradient-to-br from-cyan-600/15 to-transparent px-4 py-3 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">{t('yourLocation')}</p>
-          <p className="text-xl font-black tracking-wide">{view.location}</p>
-        </div>
+        <PlayingCard suit="spade" rank="Q">
+          <div className="px-6 py-3 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">{t('yourLocation')}</p>
+            <p className="font-display text-xl font-bold tracking-wide text-[#24201A]">{view.location}</p>
+          </div>
+        </PlayingCard>
       ) : (
-        <div className="rounded-2xl border border-slate-400/30 bg-slate-600/15 px-4 py-3 text-center">
-          <p className="text-sm font-black">{t('youAreSpy')}</p>
+        <div className="rounded-2xl border border-slate-400/30 bg-felt-deep/80 px-4 py-3 text-center">
+          <p className="font-display text-sm font-bold text-slate-200">{t('youAreSpy')}</p>
           <p className="mt-0.5 text-[10px] text-white/40">{t('spyHint')}</p>
         </div>
       )}
@@ -358,7 +363,7 @@ export function EspionOnline() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-2 rounded-2xl border border-red-400/40 bg-red-500/10 p-3 text-center"
+            className="space-y-2 rounded-2xl border border-suit-red/40 bg-suit-red/10 p-3 text-center"
           >
             <p className="text-sm font-black">
               {t('accusation.title', { accuser: nameOf(view.activeAccusation.accuserId), target: nameOf(view.activeAccusation.targetId) })}
@@ -378,7 +383,7 @@ export function EspionOnline() {
               <Button
                 onClick={() => void sendAction({ action: 'support' })}
                 disabled={busy}
-                className="w-full rounded-xl bg-gradient-to-r from-red-600 to-orange-500 py-3 text-sm font-bold"
+                className="w-full rounded-xl bg-gradient-to-r from-suit-red to-red-700 py-3 text-sm font-bold"
               >
                 {t('accusation.supportButton')}
               </Button>
@@ -395,12 +400,12 @@ export function EspionOnline() {
           {!showAccuseGrid ? (
             <Button
               onClick={() => setShowAccuseGrid(true)}
-              className="w-full rounded-2xl bg-gradient-to-r from-slate-700 to-cyan-600 py-4 text-sm font-bold"
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-bold hover:from-amber-400 hover:to-amber-500"
             >
               {t('accuseButton')}
             </Button>
           ) : (
-            <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="space-y-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
               <p className="text-center text-xs font-semibold text-white/60">{t('accuseWho')}</p>
               <div className="grid grid-cols-2 gap-2">
                 {activePlayers
@@ -410,12 +415,13 @@ export function EspionOnline() {
                       key={p.id}
                       onClick={() => void sendAction({ action: 'accuse', targetId: p.id })}
                       disabled={busy}
-                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition-colors hover:bg-white/10 active:scale-95"
+                      className={cn(
+                        'flex items-center gap-2 rounded-xl border border-[#D8CCAE] bg-cream px-3 py-2 text-left text-[#24201A] transition-all',
+                        'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)] hover:-translate-y-0.5 active:scale-95'
+                      )}
                     >
                       <span className="text-lg" aria-hidden>{iconOf(p)}</span>
-                      <span className="min-w-0 flex-1 truncate text-xs font-bold">
-                        <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                      </span>
+                      <span className="min-w-0 flex-1 truncate text-xs font-bold">{p.name}</span>
                     </button>
                   ))}
               </div>
@@ -438,7 +444,7 @@ export function EspionOnline() {
             </Button>
           )}
           {!view.location && showGuessGrid && (
-            <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="space-y-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
               <p className="text-center text-xs font-semibold text-white/60">{t('guessWhich')}</p>
               <div className="grid max-h-64 grid-cols-2 gap-1.5 overflow-y-auto">
                 {locations.map((loc) => (
@@ -446,7 +452,7 @@ export function EspionOnline() {
                     key={loc}
                     onClick={() => void sendAction({ action: 'guess-location', location: loc })}
                     disabled={busy}
-                    className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] font-semibold transition-colors hover:bg-white/10 active:scale-95"
+                    className="rounded-lg border border-[#D8CCAE] bg-cream px-2 py-1.5 text-[11px] font-semibold text-[#24201A] shadow-[0_4px_10px_-6px_rgba(0,0,0,0.5)] transition-all hover:-translate-y-0.5 active:scale-95"
                   >
                     {loc}
                   </button>
@@ -469,7 +475,7 @@ export function EspionOnline() {
           <span
             key={p.id}
             className={cn(
-              'flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/70',
+              'flex items-center gap-1.5 rounded-full border border-gold/15 bg-felt-deep/60 px-3 py-1 text-xs font-bold text-cream/80',
               p.leftAt && 'opacity-40'
             )}
           >
