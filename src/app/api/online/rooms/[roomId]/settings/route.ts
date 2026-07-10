@@ -52,6 +52,9 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.lgDebateMin === 'number' && [1, 2, 3, 4, 5].includes(body.lgDebateMin)) {
     next.lgDebateMin = body.lgDebateMin
   }
+  if (typeof body.lgExtraWolf === 'boolean') {
+    next.lgExtraWolf = body.lgExtraWolf
+  }
   if (
     typeof body.botsCount === 'number' &&
     Number.isInteger(body.botsCount) &&

@@ -2667,6 +2667,8 @@
       },
       "lobby": {
         "debate": "Durée du débat",
+        "extraWolf": "Loup en plus",
+        "extraWolfHint": "Table de 5 : 2 loups au lieu de 1",
         "minutes": "min"
       },
       "game": {
@@ -2784,7 +2786,7 @@
         "legend": {
           "title": "Légende des rôles",
           "close": "Fermer",
-          "hint": "La composition change à chaque village : Sorcière, Chasseur, Salvateur, Corbeau et Ancien tournent d’une partie à l’autre. Le nombre de loups dépend de la taille de la table (1 à 4-6, 2 à 7-10, 3 à 11-12)."
+          "hint": "La composition change à chaque village : Sorcière, Chasseur, Salvateur, Corbeau et Ancien tournent d’une partie à l’autre. Le nombre de loups dépend de la taille de la table (1 à 4-5, 2 à 6-10, 3 à 11-12)."
         },
         "guardPrompt": "Qui protèges-tu des loups cette nuit ?",
         "guardDone": "Tu veilles sur {name} cette nuit. 🛡️",

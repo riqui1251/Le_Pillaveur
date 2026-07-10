@@ -22,7 +22,13 @@ export async function launchLoupGarouRoom(roomId: string, room: LaunchRoom) {
   )
     ? (settings.lgDebateMin as number) * 60_000
     : LG_DEBATE_DEFAULT_MS
-  const state = buildLGState(room.members, debateMs, settings.botsCount ?? 0)
+  const state = buildLGState(
+    room.members,
+    debateMs,
+    settings.botsCount ?? 0,
+    undefined,
+    settings.lgExtraWolf === true
+  )
 
   await prisma.onlineRoom.update({
     where: { id: roomId },

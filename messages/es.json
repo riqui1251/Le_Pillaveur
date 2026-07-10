@@ -2657,6 +2657,8 @@
       },
       "lobby": {
         "debate": "Duración del debate",
+        "extraWolf": "Lobo extra",
+        "extraWolfHint": "Mesa de 5: 2 lobos en vez de 1",
         "minutes": "min"
       },
       "game": {
@@ -2774,7 +2776,7 @@
         "legend": {
           "title": "Leyenda de roles",
           "close": "Cerrar",
-          "hint": "La composición cambia en cada aldea: Bruja, Cazador, Salvador, Cuervo y Anciano rotan de partida en partida. El número de lobos depende del tamaño de la mesa (1 con 4-6, 2 con 7-10, 3 con 11-12)."
+          "hint": "La composición cambia en cada aldea: Bruja, Cazador, Salvador, Cuervo y Anciano rotan de partida en partida. El número de lobos depende del tamaño de la mesa (1 con 4-5, 2 con 6-10, 3 con 11-12)."
         },
         "guardPrompt": "¿A quién proteges de los lobos esta noche?",
         "guardDone": "Esta noche velas por {name}. 🛡️",

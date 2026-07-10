@@ -13,6 +13,9 @@ export type RoomSettings = {
   /** Loup-Garou : durée du débat en minutes (1-5). */
   lgDebateMin?: number
 
+  /** Loup-Garou : loup supplémentaire sur les petites tables (appliqué à 5 joueurs). */
+  lgExtraWolf?: boolean
+
   /** Nombre de bots ajoutés par l'hôte (0 = aucun ; permet de lancer sous le minimum d'humains). */
   botsCount?: number
 

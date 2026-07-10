@@ -103,7 +103,7 @@ describe('création et rôles', () => {
       for (const count of [4, 5, 7, 9, 11, 12]) {
         const roles = lgRolesFor(count, createRng(`rot-${seed}`))
         expect(roles).toHaveLength(count)
-        const wolves = count >= 11 ? 3 : count >= 5 ? 2 : 1
+        const wolves = count >= 11 ? 3 : count >= 6 ? 2 : 1
         expect(roles.filter((r) => r === 'loup')).toHaveLength(wolves)
         expect(roles.filter((r) => r === 'voyante')).toHaveLength(1)
         expect(roles.filter((r) => r === 'sorciere').length).toBeLessThanOrEqual(1)
@@ -137,6 +137,19 @@ describe('création et rôles', () => {
       )
     )
     expect(compositions.size).toBeGreaterThan(1)
+  })
+
+  it('loup en plus (option hôte) : appliqué à 5 joueurs, ignoré à 4 (2v2 = fin immédiate)', () => {
+    for (let seed = 0; seed < 10; seed += 1) {
+      const withExtra = lgRolesFor(5, createRng(`xw-${seed}`), true)
+      expect(withExtra.filter((r) => r === 'loup')).toHaveLength(2)
+      // Toujours une voyante et au moins un non-loup de plus que de loups.
+      expect(withExtra.filter((r) => r === 'voyante')).toHaveLength(1)
+      // À 4 joueurs, l'option est ignorée : 1 seul loup.
+      expect(lgRolesFor(4, createRng(`xw-${seed}`), true).filter((r) => r === 'loup')).toHaveLength(1)
+      // À 6+, la règle de base s'applique déjà (2 loups), l'option ne change rien.
+      expect(lgRolesFor(6, createRng(`xw-${seed}`), true).filter((r) => r === 'loup')).toHaveLength(2)
+    }
   })
 
   it('création : bornes 4-12, reproductible, phase reveal-role chronométrée', () => {

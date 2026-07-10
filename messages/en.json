@@ -2667,6 +2667,8 @@
       },
       "lobby": {
         "debate": "Debate length",
+        "extraWolf": "Extra wolf",
+        "extraWolfHint": "Table of 5: 2 wolves instead of 1",
         "minutes": "min"
       },
       "game": {
@@ -2784,7 +2786,7 @@
         "legend": {
           "title": "Role legend",
           "close": "Close",
-          "hint": "The line-up changes every village: Witch, Hunter, Bodyguard, Raven and Elder rotate from game to game. The number of wolves depends on the table size (1 at 4-6, 2 at 7-10, 3 at 11-12)."
+          "hint": "The line-up changes every village: Witch, Hunter, Bodyguard, Raven and Elder rotate from game to game. The number of wolves depends on the table size (1 at 4-5, 2 at 6-10, 3 at 11-12)."
         },
         "guardPrompt": "Who do you shield from the wolves tonight?",
         "guardDone": "You are watching over {name} tonight. 🛡️",

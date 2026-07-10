@@ -894,6 +894,32 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               )
             })}
           </div>
+          {/* Loup supplémentaire : proposé uniquement aux tables de 5 (à 4,
+              2 loups gagneraient d'entrée — le moteur l'ignore de toute façon). */}
+          {room.members.length + (room.settings.botsCount ?? 0) === 5 && (
+            <button
+              type="button"
+              disabled={!isHost}
+              onClick={() => updateSettings({ lgExtraWolf: !room.settings.lgExtraWolf })}
+              className={cn(
+                'mt-2 w-full rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed',
+                room.settings.lgExtraWolf
+                  ? 'border-transparent bg-gradient-to-r from-slate-600 to-amber-500 text-white shadow-lg'
+                  : 'border-white/10 bg-white/5 text-white/60',
+                isHost && !room.settings.lgExtraWolf && 'hover:bg-white/10 hover:text-white'
+              )}
+            >
+              <span className="block text-sm font-black">{tLg('extraWolf')}</span>
+              <span
+                className={cn(
+                  'mt-0.5 block text-[10px]',
+                  room.settings.lgExtraWolf ? 'text-white/80' : 'text-white/35'
+                )}
+              >
+                {tLg('extraWolfHint')}
+              </span>
+            </button>
+          )}
         </div>
       )}
 

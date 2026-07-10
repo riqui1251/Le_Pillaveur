@@ -2657,6 +2657,8 @@
       },
       "lobby": {
         "debate": "Durata del dibattito",
+        "extraWolf": "Lupo extra",
+        "extraWolfHint": "Tavolo da 5: 2 lupi invece di 1",
         "minutes": "min"
       },
       "game": {
@@ -2774,7 +2776,7 @@
         "legend": {
           "title": "Legenda dei ruoli",
           "close": "Chiudi",
-          "hint": "La composizione cambia a ogni villaggio: Strega, Cacciatore, Guardiano, Corvo e Anziano ruotano da una partita all’altra. Il numero di lupi dipende dalla taglia del tavolo (1 con 4-6, 2 con 7-10, 3 con 11-12)."
+          "hint": "La composizione cambia a ogni villaggio: Strega, Cacciatore, Guardiano, Corvo e Anziano ruotano da una partita all’altra. Il numero di lupi dipende dalla taglia del tavolo (1 con 4-5, 2 con 6-10, 3 con 11-12)."
         },
         "guardPrompt": "Chi proteggi dai lupi questa notte?",
         "guardDone": "Questa notte vegli su {name}. 🛡️",

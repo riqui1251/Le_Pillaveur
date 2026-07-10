@@ -280,6 +280,7 @@ export function useOnlineRoomState() {
       tcPowerups?: boolean
       quizCount?: number
       lgDebateMin?: number
+      lgExtraWolf?: boolean
       botsCount?: number
       menteurPalifico?: boolean
       menteurCalza?: boolean

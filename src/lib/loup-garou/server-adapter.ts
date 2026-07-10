@@ -52,7 +52,8 @@ export function buildLGState(
   members: LGRoomMember[],
   debateMs: number = LG_DEBATE_DEFAULT_MS,
   botsCount: number = 0,
-  seed?: string | number
+  seed?: string | number,
+  extraWolf: boolean = false
 ): LGState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
@@ -67,7 +68,7 @@ export function buildLGState(
   const wanted = Math.max(0, Math.min(botsCount, LG_MAX_PLAYERS - players.length))
   for (let i = 0; i < wanted; i += 1) addBot()
   while (players.length < LG_MIN_PLAYERS) addBot()
-  return createLGState(players, seed ?? randomSeed(), debateMs)
+  return createLGState(players, seed ?? randomSeed(), debateMs, Date.now(), extraWolf)
 }
 
 export function serializeLGState(state: LGState): string {

@@ -229,79 +229,86 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
         )}
       </div>
 
-      {/* La table : cartes crème en arc, morts retournés côté feutre */}
+      {/* La table : cartes crème sur deux rangées propres (une seule si ≤ 5),
+          morts retournés côté feutre. */}
       <div className="space-y-3">
         <p className="text-center text-lg font-semibold uppercase tracking-widest text-gold/60">
           {t('village', { alive: alive.length, total: state.players.length })}
         </p>
-        <div className="flex flex-wrap items-end justify-center gap-3 pb-2">
-          {state.players.map((p, i) => {
-            const n = state.players.length
-            const offset = i - (n - 1) / 2
-            const arc = {
-              transform: `rotate(${offset * 2.5}deg) translateY(${Math.abs(offset) * 7}px)`,
-            }
-            const voted =
-              (state.phase === 'day-vote' || state.phase === 'day-revote') &&
-              p.alive &&
-              state.hasVoted[p.id]
-            const RoleIcon = p.role ? ROLE_META[p.role].Icon : null
-            return p.alive ? (
-              <span
-                key={p.id}
-                style={arc}
-                className={cn(
-                  'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xl font-bold text-[#24201A]',
-                  'border-[#D8CCAE] bg-cream shadow-[0_10px_24px_-12px_rgba(0,0,0,0.7)]',
-                  voted && 'ring-4 ring-emerald-400/70'
-                )}
-              >
-                <span aria-hidden>{iconOf(p)}</span>
-                {p.name}
-                {state.mayorId === p.id && (
-                  <Medal className="h-5 w-5 text-amber-700" aria-label={t('mayorBadge')} />
-                )}
-                {p.role && RoleIcon && (
-                  <RoleIcon
-                    aria-label={roleName(p.role)}
-                    className={cn('h-5 w-5', ROLE_META[p.role].ink)}
-                  />
-                )}
-                {voted && <span className="text-emerald-700">✓</span>}
-                {p.sips > 0 && (
-                  <span className="flex items-center gap-1 text-base font-semibold text-amber-700">
-                    <Beer aria-hidden className="h-4 w-4" />
-                    {p.sips}
-                  </span>
-                )}
-              </span>
-            ) : (
-              <span
-                key={p.id}
-                style={arc}
-                className="flex items-center gap-2 rounded-xl border border-gold/30 bg-felt-deep px-4 py-2.5 text-xl font-bold text-cream/60 opacity-80"
-              >
-                <Skull aria-hidden className="h-5 w-5 text-cream/50" />
-                {p.name}
-                {state.mayorId === p.id && (
-                  <Medal className="h-5 w-5 text-gold/70" aria-label={t('mayorBadge')} />
-                )}
-                {p.role && RoleIcon && (
-                  <RoleIcon
-                    aria-label={roleName(p.role)}
-                    className={cn('h-5 w-5', ROLE_META[p.role].color)}
-                  />
-                )}
-                {p.sips > 0 && (
-                  <span className="flex items-center gap-1 text-base font-semibold text-amber-200/80">
-                    <Beer aria-hidden className="h-4 w-4" />
-                    {p.sips}
-                  </span>
-                )}
-              </span>
-            )
-          })}
-        </div>
+        {(() => {
+          const n = state.players.length
+          const rows =
+            n <= 5
+              ? [state.players]
+              : [state.players.slice(0, Math.ceil(n / 2)), state.players.slice(Math.ceil(n / 2))]
+          return (
+            <div className="flex flex-col items-center gap-3 pb-2">
+              {rows.map((row, rowIdx) => (
+                <div key={rowIdx} className="flex flex-wrap justify-center gap-3">
+                  {row.map((p) => {
+                    const voted =
+                      (state.phase === 'day-vote' || state.phase === 'day-revote') &&
+                      p.alive &&
+                      state.hasVoted[p.id]
+                    const RoleIcon = p.role ? ROLE_META[p.role].Icon : null
+                    return p.alive ? (
+                      <span
+                        key={p.id}
+                        className={cn(
+                          'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xl font-bold text-[#24201A]',
+                          'border-[#D8CCAE] bg-cream shadow-[0_10px_24px_-12px_rgba(0,0,0,0.7)]',
+                          voted && 'ring-4 ring-emerald-400/70'
+                        )}
+                      >
+                        <span aria-hidden>{iconOf(p)}</span>
+                        {p.name}
+                        {state.mayorId === p.id && (
+                          <Medal className="h-5 w-5 text-amber-700" aria-label={t('mayorBadge')} />
+                        )}
+                        {p.role && RoleIcon && (
+                          <RoleIcon
+                            aria-label={roleName(p.role)}
+                            className={cn('h-5 w-5', ROLE_META[p.role].ink)}
+                          />
+                        )}
+                        {voted && <span className="text-emerald-700">✓</span>}
+                        {p.sips > 0 && (
+                          <span className="flex items-center gap-1 text-base font-semibold text-amber-700">
+                            <Beer aria-hidden className="h-4 w-4" />
+                            {p.sips}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span
+                        key={p.id}
+                        className="flex items-center gap-2 rounded-xl border border-gold/30 bg-felt-deep px-4 py-2.5 text-xl font-bold text-cream/60 opacity-80"
+                      >
+                        <Skull aria-hidden className="h-5 w-5 text-cream/50" />
+                        {p.name}
+                        {state.mayorId === p.id && (
+                          <Medal className="h-5 w-5 text-gold/70" aria-label={t('mayorBadge')} />
+                        )}
+                        {p.role && RoleIcon && (
+                          <RoleIcon
+                            aria-label={roleName(p.role)}
+                            className={cn('h-5 w-5', ROLE_META[p.role].color)}
+                          />
+                        )}
+                        {p.sips > 0 && (
+                          <span className="flex items-center gap-1 text-base font-semibold text-amber-200/80">
+                            <Beer aria-hidden className="h-4 w-4" />
+                            {p.sips}
+                          </span>
+                        )}
+                      </span>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          )
+        })()}
       </div>
     </div>
   )

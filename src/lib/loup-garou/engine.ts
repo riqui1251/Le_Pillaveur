@@ -212,10 +212,21 @@ export const LG_SPECIAL_ROLES = [
  * tournent d'une partie à l'autre (tirage seedé) — même à 4 joueurs, on ne
  * retombe pas toujours sur la même table. Leur nombre est plafonné selon
  * l'effectif pour garder des villageois « simples ».
+ *
+ * Loups : 1 en dessous de 6 joueurs, 2 de 6 à 10, 3 à 11-12. `extraWolf`
+ * (réglage de l'hôte) ajoute un loup aux petites tables — appliqué à 5
+ * joueurs uniquement : à 4, deux loups feraient gagner la meute d'entrée
+ * (2 loups ≥ 2 villageois).
  */
-export function lgRolesFor(count: number, rng: SeededRng): LGRole[] {
+export function lgWolvesFor(count: number, extraWolf: boolean = false): number {
+  const base = count >= 11 ? 3 : count >= 6 ? 2 : 1
+  if (extraWolf && count === 5) return base + 1
+  return base
+}
+
+export function lgRolesFor(count: number, rng: SeededRng, extraWolf: boolean = false): LGRole[] {
   const roles: LGRole[] = []
-  const wolves = count >= 11 ? 3 : count >= 5 ? 2 : 1
+  const wolves = lgWolvesFor(count, extraWolf)
   for (let i = 0; i < wolves; i += 1) roles.push('loup')
   roles.push('voyante')
   // À 4-5 joueurs, plafonner à 1 spécial garantit au moins un villageois
@@ -270,13 +281,14 @@ export function createLGState(
   players: LGInitialPlayer[],
   seed: string | number,
   debateMs: number = LG_DEBATE_DEFAULT_MS,
-  now: number = Date.now()
+  now: number = Date.now(),
+  extraWolf: boolean = false
 ): LGState {
   if (players.length < LG_MIN_PLAYERS) throw new LGEngineError('NOT_ENOUGH_PLAYERS')
   if (players.length > LG_MAX_PLAYERS) throw new LGEngineError('TOO_MANY_PLAYERS')
 
   const rng = createRng(seed)
-  const roles = rng.shuffle(lgRolesFor(players.length, rng))
+  const roles = rng.shuffle(lgRolesFor(players.length, rng, extraWolf))
 
   return {
     version: 1,
