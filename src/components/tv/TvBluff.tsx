@@ -1,5 +1,6 @@
 "use client"
 
+import { Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
@@ -39,7 +40,7 @@ export function TvBluff({ room, state }: { room: TvRoomDto; state: BluffClientVi
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-5xl font-black text-white">
-          🏆 {state.winnerId ? t('victory.winnerIs', { name: nameOf(state.winnerId) }) : t('victory.tie')}
+          <Trophy aria-hidden className="inline h-[0.85em] w-[0.85em] text-gold" /> {state.winnerId ? t('victory.winnerIs', { name: nameOf(state.winnerId) }) : t('victory.tie')}
         </p>
         <div className="flex flex-col gap-2">
           {sorted.map((p, i) => (

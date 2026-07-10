@@ -1,5 +1,6 @@
 "use client"
 
+import { Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
@@ -47,7 +48,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-5xl font-black text-white">
-          🏆 {tQ('victoryTitle', { name: ranking[0]?.name ?? '—' })}
+          <Trophy aria-hidden className="inline h-[0.85em] w-[0.85em] text-gold" /> {tQ('victoryTitle', { name: ranking[0]?.name ?? '—' })}
         </p>
         {last && <p className="text-2xl text-amber-200">{tQ('lastDrinks', { name: last.name })}</p>}
         <div className="flex flex-wrap justify-center gap-3">

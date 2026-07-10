@@ -1,5 +1,6 @@
 "use client"
 
+import { Skull, Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { MenteurClientView } from '@/lib/menteur/engine'
@@ -32,7 +33,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-5xl font-black text-white">
-          🏆 {t('victoryTitle', { name: nameOf(state.winnerId) })}
+          <Trophy aria-hidden className="inline h-[0.85em] w-[0.85em] text-gold" /> {t('victoryTitle', { name: nameOf(state.winnerId) })}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           {ranking.map((p, idx) => (
@@ -161,7 +162,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
             >
               <span aria-hidden>{iconOf(p)}</span>
               {p.name}
-              <span className="text-white/50">{dead ? '💀' : `🎲 ${p.diceCount}`}</span>
+              <span className="text-white/50">{dead ? <Skull aria-hidden className="inline h-4 w-4" /> : `🎲 ${p.diceCount}`}</span>
               {p.lostCount > 0 && <span className="text-amber-200/80">🍺{p.lostCount}</span>}
             </span>
           )

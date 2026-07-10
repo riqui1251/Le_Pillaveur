@@ -1,5 +1,6 @@
 "use client"
 
+import { Pencil, Skull, Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
@@ -40,7 +41,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-5xl font-black text-white">
-          🏆 {civilWon ? t('victory.civilWin') : t('victory.imposteurWin')}
+          <Trophy aria-hidden className="inline h-[0.85em] w-[0.85em] text-gold" /> {civilWon ? t('victory.civilWin') : t('victory.imposteurWin')}
         </p>
         <p className="text-2xl font-semibold uppercase tracking-widest text-white/50">
           {t('victory.fullReveal')}
@@ -59,7 +60,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
             >
               <span aria-hidden>{iconOf(p)}</span>
               {p.name}
-              {p.eliminated && ' 💀'}
+              {p.eliminated && <Skull aria-hidden className="ml-1 inline h-5 w-5 text-white/50" />}
               <span className="text-white/50">« {p.word} »</span>
               <span
                 className={cn(
@@ -170,7 +171,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
                     {p.name}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-2xl font-black text-white">
-                    {clue ? `« ${clue.text} »` : pid === activeId ? '✏️ …' : ''}
+                    {clue ? `« ${clue.text} »` : pid === activeId ? <Pencil aria-hidden className="inline h-5 w-5 animate-pulse text-gold/70" /> : ''}
                   </span>
                 </div>
               )
@@ -192,7 +193,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
               p.eliminated && 'opacity-40'
             )}
           >
-            <span aria-hidden>{p.eliminated ? '💀' : iconOf(p)}</span>
+            <span aria-hidden>{p.eliminated ? <Skull aria-hidden className="inline h-5 w-5" /> : iconOf(p)}</span>
             {p.name}
             {state.phase === 'vote' && !p.eliminated && p.hasVoted && ' ✓'}
           </span>

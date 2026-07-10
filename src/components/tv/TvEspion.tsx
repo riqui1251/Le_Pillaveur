@@ -1,5 +1,6 @@
 "use client"
 
+import { Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
@@ -36,7 +37,7 @@ export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClient
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-5xl font-black text-white">
-          🏆 {crewWon ? t('victory.crewWin') : t('victory.spyWin')}
+          <Trophy aria-hidden className="inline h-[0.85em] w-[0.85em] text-gold" /> {crewWon ? t('victory.crewWin') : t('victory.spyWin')}
         </p>
         <p className="text-2xl text-white/60">
           {t('victory.score', { spy: state.roundWins.spy, crew: state.roundWins.crew })}

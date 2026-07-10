@@ -711,7 +711,7 @@ export function PetitBuveurOnline() {
                       </span>
                     )}
                     {isFinish && onCase.length === 0 && (
-                      <span className="pb-board-finish-icon text-3xl sm:text-4xl" aria-hidden>🏆</span>
+                      <Trophy aria-hidden className="pb-board-finish-icon h-8 w-8 text-gold sm:h-10 sm:w-10" />
                     )}
                     <div
                       className={cn(
@@ -880,7 +880,7 @@ export function PetitBuveurOnline() {
                     transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
                     className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-4xl shadow-xl shadow-amber-500/40"
                   >
-                    🏆
+                    <Trophy aria-hidden className="h-12 w-12 text-gold" />
                   </motion.div>
                   <div className="text-center">
                     <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/70">

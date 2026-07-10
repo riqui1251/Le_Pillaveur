@@ -1,5 +1,6 @@
 "use client"
 
+import { Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { PmuCastState, PmuCastFrame } from '@/lib/cast-types'
 import { cn } from '@/lib/utils'
@@ -27,7 +28,7 @@ export function TvPmu({ state, frame }: { state: PmuCastState; frame: PmuCastFra
       <div className="text-center">
         {finished && winner ? (
           <>
-            <p className="text-4xl" aria-hidden>🏆</p>
+            <Trophy aria-hidden className="mx-auto h-10 w-10 text-gold" />
             <p className="mt-1 text-sm font-semibold uppercase tracking-[0.3em] text-amber-300/70">{t('winner')}</p>
             <p className="mt-1 text-5xl font-black sm:text-6xl" style={{ color: winner.colorFrom }}>
               {winner.emoji} {winner.name}

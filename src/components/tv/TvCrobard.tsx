@@ -1,5 +1,6 @@
 "use client"
 
+import { Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
@@ -34,7 +35,7 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
   if (finished) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
-        <p className="text-5xl font-black text-white">🏆 {t('victory.title', { name: nameOf(state.winnerId) })}</p>
+        <p className="text-5xl font-black text-white"><Trophy aria-hidden className="inline h-[0.85em] w-[0.85em] text-gold" /> {t('victory.title', { name: nameOf(state.winnerId) })}</p>
         <div className="flex w-full max-w-md flex-col gap-2">
           {ranking.map((p, i) => (
             <div key={p.id} className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-2 text-xl">

@@ -869,7 +869,7 @@ export function ToucherCouleOnline() {
                             {iconOf(p) ? `${iconOf(p)} ` : ''}
                             <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                           </span>
-                          {p.team === winner && <span aria-hidden>🏆</span>}
+                          {p.team === winner && <Trophy aria-hidden className="inline h-4 w-4 text-gold" />}
                         </div>
                         {!isSoft && <span className="shrink-0 text-xs text-white/50">{p.drinks}🍺</span>}
                       </div>

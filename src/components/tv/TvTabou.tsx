@@ -1,5 +1,6 @@
 "use client"
 
+import { Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
@@ -33,7 +34,7 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-5xl font-black text-white">
-          🏆 {state.winnerTeam === 'A' ? t('victory.teamAWin') : t('victory.teamBWin')}
+          <Trophy aria-hidden className="inline h-[0.85em] w-[0.85em] text-gold" /> {state.winnerTeam === 'A' ? t('victory.teamAWin') : t('victory.teamBWin')}
         </p>
         <p className="text-2xl text-white/60">{t('score', { a: state.scores.A, b: state.scores.B })}</p>
       </div>

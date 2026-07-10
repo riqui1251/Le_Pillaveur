@@ -1,5 +1,6 @@
 "use client"
 
+import { Trophy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
@@ -109,7 +110,7 @@ export function TvPetitBuveur({ room, state }: { room: TvRoomDto; state: EngineS
                 )}
               >
                 <span className="absolute left-1 top-1 text-[10px] font-semibold text-white/30">{i + 1}</span>
-                {isFinish && <span className="absolute text-2xl opacity-25" aria-hidden>🏆</span>}
+                {isFinish && <Trophy aria-hidden className="absolute h-6 w-6 opacity-25" />}
                 <div className="flex flex-wrap items-center justify-center gap-0.5">
                   {here.map(({ p, idx }) => (
                     <motion.div
