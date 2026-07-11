@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils'
 import { lgTeamOf } from '@/lib/loup-garou/engine'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
@@ -315,8 +315,6 @@ export function LoupGarouOnline() {
   const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.loup-garou.game')
-  const tTutorial = useTranslations('games.loup-garou.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [hideRole, setHideRole] = useState(false)
   const reducedMotion = useReducedMotion()
@@ -1244,7 +1242,7 @@ export function LoupGarouOnline() {
       </div>
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="loup-garou" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )

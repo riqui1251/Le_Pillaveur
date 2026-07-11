@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import type { TabouClientView, TabouTeam } from '@/lib/tabou/engine'
 import { TABOU_ROUND_MS } from '@/lib/tabou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
@@ -43,8 +43,6 @@ export function TabouOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.tabou.game')
-  const tTutorial = useTranslations('games.tabou.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
@@ -379,7 +377,7 @@ export function TabouOnline() {
       </div>
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="tabou" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )

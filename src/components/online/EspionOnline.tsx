@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import type { EspionClientView } from '@/lib/espion/engine'
 import { getEspionLocations } from '@/lib/espion/data'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
@@ -39,8 +39,6 @@ export function EspionOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.espion.game')
-  const tTutorial = useTranslations('games.espion.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [showAccuseGrid, setShowAccuseGrid] = useState(false)
   const [showGuessGrid, setShowGuessGrid] = useState(false)
@@ -487,7 +485,7 @@ export function EspionOnline() {
       </div>
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="espion" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )

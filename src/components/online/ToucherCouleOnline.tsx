@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
@@ -51,8 +51,6 @@ export function ToucherCouleOnline() {
   const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.toucher-coule.game')
-  const tTutorial = useTranslations('games.toucher-coule.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
@@ -901,7 +899,7 @@ export function ToucherCouleOnline() {
       </AnimatePresence>
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="toucher-coule" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )

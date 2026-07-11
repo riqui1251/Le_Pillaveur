@@ -20,7 +20,7 @@ import { useGameSounds } from '@/hooks/useGameSounds'
 import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
 import { getCaseMeta } from '@/lib/petit-buveur/case-families'
 import { InteractionSpectacle } from '@/components/petit-buveur/InteractionSpectacle'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import type { EngineState } from '@/lib/petit-buveur/engine'
@@ -81,8 +81,6 @@ export function PetitBuveurOnline() {
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.petit-buveur.online')
   const tPB = useTranslations('games.petit-buveur')
-  const tTutorial = useTranslations('games.petit-buveur.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const tCase = useTranslations('games.petit-buveur.caseTypes')
   const tGame = useTranslations('games.petit-buveur.game')
   const tDiff = useTranslations('games.petit-buveur.difficultyLabels')
@@ -1325,7 +1323,7 @@ export function PetitBuveurOnline() {
       </AnimatePresence>
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="petit-buveur" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )

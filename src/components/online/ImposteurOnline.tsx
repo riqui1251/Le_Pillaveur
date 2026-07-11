@@ -17,7 +17,7 @@ import {
   type ImposteurClientView,
 } from '@/lib/imposteur/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
@@ -46,8 +46,6 @@ export function ImposteurOnline() {
   const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.imposteur.game')
-  const tTutorial = useTranslations('games.imposteur.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [hideWord, setHideWord] = useState(false)
   const reducedMotion = useReducedMotion()
@@ -663,7 +661,7 @@ export function ImposteurOnline() {
       )}
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="imposteur" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )

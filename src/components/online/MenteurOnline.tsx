@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import { isLegalRaise, type MenteurBid, type MenteurClientView } from '@/lib/menteur/engine'
 import { CssDie } from '@/components/games/CssDie'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
@@ -63,8 +63,6 @@ export function MenteurOnline() {
   const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.menteur.game')
-  const tTutorial = useTranslations('games.menteur.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [hideDice, setHideDice] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
@@ -627,7 +625,7 @@ export function MenteurOnline() {
       </div>
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="menteur" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )

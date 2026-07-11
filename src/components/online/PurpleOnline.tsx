@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { parsePurpleState, type PurpleSyncedState, type SerializedCard } from '@/lib/online-game-state'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 
 /** Purple en ligne : jeu tour par tour, cagnotte « patate chaude ». Aucune
@@ -67,6 +68,7 @@ export function PurpleOnline() {
   const [busy, setBusy] = useState(false)
 
   const inGame = room?.gameId === 'purple' && room.status === 'playing'
+  const tutorial = useGameTutorial('purple', inGame)
   const cosmetics = useMemberCosmetics(room)
   const view = useMemo<PurpleSyncedState | null>(
     () => (inGame ? parsePurpleState(room?.gameStateJson) : null),
@@ -220,6 +222,11 @@ export function PurpleOnline() {
   // ── Phase play ────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
+      <div className="flex justify-end">
+        <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
+      </div>
+      {tutorial.open && <GameTutorialModal gameId="purple" onClose={tutorial.close} />}
+
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {t('online.waitingReturn', {

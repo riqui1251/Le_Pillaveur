@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { BLUFF_FAKE_MAX_LEN, type BluffClientView } from '@/lib/bluff/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
@@ -38,8 +38,6 @@ export function BluffOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.bluff.game')
-  const tTutorial = useTranslations('games.bluff.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [fakeInput, setFakeInput] = useState('')
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
@@ -445,7 +443,7 @@ export function BluffOnline() {
       )}
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="bluff" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )

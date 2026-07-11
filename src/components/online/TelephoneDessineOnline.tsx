@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 
 /**
@@ -37,8 +37,6 @@ export function TelephoneDessineOnline() {
   const { user } = useAuth()
   const { room, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.telephone-dessine.game')
-  const tTutorial = useTranslations('games.telephone-dessine.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [text, setText] = useState('')
   const [myStrokes, setMyStrokes] = useState<Stroke[]>([])
@@ -401,7 +399,7 @@ export function TelephoneDessineOnline() {
       </div>
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="telephone-dessine" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )

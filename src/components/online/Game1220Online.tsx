@@ -15,6 +15,7 @@ import { TOTAL_MAX, TOTAL_MIN } from '@/lib/game-1220'
 import type { Game1220SyncedState } from '@/lib/online-game-state'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 
 /** 1220 en ligne : jeu simultané (pas de tour). Chaque joueur règle ses
  * paris en phase setup, puis n'importe qui déclenche un lancer partagé
@@ -39,6 +40,7 @@ export function Game1220Online() {
   const [busy, setBusy] = useState(false)
 
   const inGame = room?.gameId === '1220' && room.status === 'playing'
+  const tutorial = useGameTutorial('1220', inGame)
   const cosmetics = useMemberCosmetics(room)
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
 
@@ -175,6 +177,11 @@ export function Game1220Online() {
     const iAmReady = view.setupReady.includes(user.id)
     return (
       <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
+        <div className="flex justify-end">
+          <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
+        </div>
+        {tutorial.open && <GameTutorialModal gameId="1220" onClose={tutorial.close} />}
+
         <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/55">
           {t('online.waitingSetup')}
         </div>
@@ -303,6 +310,11 @@ export function Game1220Online() {
   const lastRoll = view.lastRoll
   return (
     <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
+      <div className="flex justify-end">
+        <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
+      </div>
+      {tutorial.open && <GameTutorialModal gameId="1220" onClose={tutorial.close} />}
+
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {t('online.waitingReturn', {

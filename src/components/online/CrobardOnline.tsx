@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 import type { CrobardClientView } from '@/lib/crobard/engine'
 import { CROBARD_CHOOSING_MS, CROBARD_DRAWING_MS } from '@/lib/crobard/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
+import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 
@@ -40,8 +40,6 @@ export function CrobardOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.crobard.game')
-  const tTutorial = useTranslations('games.crobard.tutorial')
-  const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [guessText, setGuessText] = useState('')
   const [guessFeedback, setGuessFeedback] = useState<'wrong' | 'close' | null>(null)
@@ -329,7 +327,7 @@ export function CrobardOnline() {
         )}
       </div>
       <AnimatePresence>
-        {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+        {tutorial.open && <GameTutorialModal gameId="crobard" onClose={tutorial.close} />}
       </AnimatePresence>
       </>
     )
@@ -461,7 +459,7 @@ export function CrobardOnline() {
       </div>
     </div>
     <AnimatePresence>
-      {tutorial.open && <GameTutorialModal steps={tutorialSteps} onClose={tutorial.close} />}
+      {tutorial.open && <GameTutorialModal gameId="crobard" onClose={tutorial.close} />}
     </AnimatePresence>
     </>
   )
