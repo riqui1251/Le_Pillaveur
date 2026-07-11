@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Globe, ChevronDown } from 'lucide-react'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Globe, ChevronDown, ChevronRight, FileText, Trophy } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { PlayingCard } from '@/components/ui/PlayingCard'
 import { usePlayers } from '@/hooks/usePlayers'
@@ -25,6 +25,11 @@ import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { getSafeStorage } from '@/lib/storage'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { cn } from '@/lib/utils'
+
+/* Ligne de compte uniforme (Direction B) : icône + libellé + chevron,
+   ≥48px de haut — la même qu'elle déplie une section ou qu'elle navigue. */
+const ACCOUNT_ROW_CLASS =
+  'flex w-full min-h-12 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06]'
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
@@ -49,6 +54,7 @@ export function AccountInfo() {
   const { progression, refresh: refreshProgression } = useOnlineProgression()
   const { players, loading, removePlayer, updatePlayer, updatePlayerPreferences } = usePlayers()
   const tFriends = useTranslations('account.friends')
+  const tNav = useTranslations('nav')
   const [totalGames, setTotalGames] = useState(0)
   const [totalDrinks, setTotalDrinks] = useState(0)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -64,6 +70,8 @@ export function AccountInfo() {
   const [customizingOnline, setCustomizingOnline] = useState(false)
   // Liste des joueurs locaux repliée par défaut (elle peut être très longue).
   const [showLocalPlayers, setShowLocalPlayers] = useState(false)
+  const [showOnlineSection, setShowOnlineSection] = useState(false)
+  const [showFriends, setShowFriends] = useState(false)
 
   const onlineDisplayName = user?.onlineDisplayName ?? user?.displayName ?? 'Joueur'
   const onlineMemberCosmetics = useMemo(
@@ -283,18 +291,25 @@ export function AccountInfo() {
         </div>
       )}
 
-      {/* ── COMPTE EN LIGNE — mis en avant ──────────────────────────────── */}
-      <section className="rounded-3xl border border-amber-500/25 bg-gradient-to-b from-amber-500/[0.07] via-amber-500/[0.03] to-transparent p-4 sm:p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15">
-            <Globe className="h-4 w-4 text-amber-300" />
+      {/* ── COMPTE EN LIGNE — accordéon avec résumé (niveau + pseudo) ───── */}
+      <section>
+        <button
+          type="button"
+          onClick={() => setShowOnlineSection((v) => !v)}
+          aria-expanded={showOnlineSection}
+          className={ACCOUNT_ROW_CLASS}
+        >
+          <Globe className="h-4 w-4 shrink-0 text-amber-300" />
+          <span className="shrink-0">{t('onlineSection.title')}</span>
+          <span className="min-w-0 flex-1 truncate text-left text-xs font-normal text-white/40">
+            {progression && `· ${t('progression.level', { level: progression.level })}`} · {onlineDisplayName}
           </span>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-amber-200">
-            {t('onlineSection.title')}
-          </h2>
-        </div>
+          <ChevronDown
+            className={cn('h-4 w-4 shrink-0 text-white/40 transition-transform', showOnlineSection && 'rotate-180')}
+          />
+        </button>
 
-        <div className="space-y-4">
+        <div className={cn('mt-3 space-y-4', !showOnlineSection && 'hidden')}>
           {progression && (
             <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
               <div className="flex items-center justify-between gap-3">
@@ -576,13 +591,36 @@ export function AccountInfo() {
       />
 
       <section>
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
-          <Users className="h-4 w-4 text-amber-300" />
+        <button
+          type="button"
+          onClick={() => setShowFriends((v) => !v)}
+          aria-expanded={showFriends}
+          className={ACCOUNT_ROW_CLASS}
+        >
+          <Users className="h-4 w-4 shrink-0 text-amber-300" />
           {tFriends('title')}
-        </div>
-        <div className="rounded-2xl border border-gold/20 bg-gold/10 p-4">
+          <ChevronDown
+            className={cn('ml-auto h-4 w-4 shrink-0 text-white/40 transition-transform', showFriends && 'rotate-180')}
+          />
+        </button>
+        <div className={cn('mt-3 rounded-2xl border border-gold/20 bg-gold/10 p-4', !showFriends && 'hidden')}>
           <FriendsManager />
         </div>
+      </section>
+
+      {/* Lignes de navigation : mêmes gabarits que les accordéons — la
+          flèche › dit « ça ouvre un autre écran ». */}
+      <section className="space-y-2">
+        <Link href="/achievements" className={ACCOUNT_ROW_CLASS}>
+          <Trophy className="h-4 w-4 shrink-0 text-amber-300" />
+          {tNav('pages.achievements.title')}
+          <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-white/40" />
+        </Link>
+        <Link href="/legal/cgu" className={ACCOUNT_ROW_CLASS}>
+          <FileText className="h-4 w-4 shrink-0 text-amber-300" />
+          {tNav('legal.cgu')} &amp; {tNav('legal.confidentialite')}
+          <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-white/40" />
+        </Link>
       </section>
 
       <section>
