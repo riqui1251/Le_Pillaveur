@@ -134,6 +134,14 @@
       "title": "Elige tu juego",
       "subtitle": "De clásicos a novedades — encuentra el ambiente perfecto para tu fiesta.",
       "searchPlaceholder": "Busca un juego...",
+      "families": {
+        "label": "Familias de juegos",
+        "all": "Todos",
+        "spade": "Roles ocultos",
+        "heart": "Cultura",
+        "diamond": "Azar y dados",
+        "club": "Creatividad"
+      },
       "emptyTitle": "No se encontraron juegos",
       "emptyHint": "Pruebe con otra palabra clave."
     },

@@ -134,6 +134,14 @@
       "title": "Scegli il tuo gioco",
       "subtitle": "Dai classici alle novità — trova l'atmosfera perfetta per la tua serata.",
       "searchPlaceholder": "Cerca un gioco...",
+      "families": {
+        "label": "Famiglie di giochi",
+        "all": "Tutti",
+        "spade": "Ruoli nascosti",
+        "heart": "Cultura",
+        "diamond": "Fortuna e dadi",
+        "club": "Creatività"
+      },
       "emptyTitle": "Nessun gioco trovato",
       "emptyHint": "Prova un'altra parola chiave."
     },

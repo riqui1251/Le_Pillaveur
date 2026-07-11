@@ -134,6 +134,14 @@
       "title": "Choisissez votre jeu",
       "subtitle": "Des classiques aux nouveautés — trouvez l'ambiance parfaite pour votre soirée.",
       "searchPlaceholder": "Rechercher un jeu…",
+      "families": {
+        "label": "Familles de jeux",
+        "all": "Tous",
+        "spade": "Rôles cachés",
+        "heart": "Culture",
+        "diamond": "Hasard & dés",
+        "club": "Créa"
+      },
       "emptyTitle": "Aucun jeu trouvé",
       "emptyHint": "Essayez un autre mot-clé."
     },

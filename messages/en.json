@@ -134,6 +134,14 @@
       "title": "Choose your game",
       "subtitle": "From classics to new releases — find the perfect ambiance for your evening.",
       "searchPlaceholder": "Search for a game…",
+      "families": {
+        "label": "Game families",
+        "all": "All",
+        "spade": "Hidden roles",
+        "heart": "Trivia",
+        "diamond": "Luck & dice",
+        "club": "Creative"
+      },
       "emptyTitle": "No games found",
       "emptyHint": "Try another keyword."
     },

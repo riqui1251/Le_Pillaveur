@@ -13,7 +13,9 @@ interface HubShellProps {
 export function HubShell({ title, subtitle, children, headerExtra }: HubShellProps) {
   const t = useTranslations('hub')
   return (
-    <main className="relative min-h-screen overflow-hidden text-white">
+    // overflow-x-clip (pas hidden) : hidden créerait un scroll-container
+    // qui casserait le position:sticky des enfants (recherche du hub).
+    <main className="relative min-h-screen overflow-x-clip text-white">
       {/* Lueurs sur le feutre (le fond radial vient du layout .app-felt). */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-gold/10 blur-[100px]" />

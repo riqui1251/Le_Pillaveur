@@ -79,7 +79,10 @@ export default async function LocaleLayout({
                 <div className="relative flex min-h-screen flex-col app-felt fullscreen-container">
                   <Navbar />
                   <LocaleSync />
-                  <div className="content-container flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+                  {/* overflow-x-clip et non hidden : hidden ferait de ce div le
+                      scroll-container des position:sticky descendants (recherche
+                      du hub), qui ne colleraient plus jamais. */}
+                  <div className="content-container flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip">
                     {children}
                   </div>
                 </div>
