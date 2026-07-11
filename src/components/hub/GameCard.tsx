@@ -22,9 +22,10 @@ function playersLabel(min?: number, max?: number): string | null {
 }
 
 /**
- * Tuile de jeu « Cartes sur Table » : chaque jeu est une carte à jouer crème
- * posée sur le feutre — coin rang+enseigne, icône teintée par la famille
- * (♥♦ rouge carreau, ♠♣ encre), titre en Playfair.
+ * Tuile de jeu « Vitrine » : mini-carte à jouer verticale — coin rang+enseigne,
+ * icône en vedette teintée par la famille (♥♦ rouge carreau, ♠♣ encre), titre
+ * Playfair centré. La description vit dans le briefing du lobby, pas ici :
+ * les 13 jeux tiennent sur un seul écran.
  */
 export function GameCard({ game, icon }: GameCardProps) {
   const router = useRouter()
@@ -44,7 +45,7 @@ export function GameCard({ game, icon }: GameCardProps) {
   }
 
   return (
-    <Link href={game.path} onClick={handleClick} className="group block">
+    <Link href={game.path} onClick={handleClick} className="group block h-full" title={game.description}>
       <PlayingCard
         suit={game.suit}
         rank={game.rank}
@@ -54,32 +55,13 @@ export function GameCard({ game, icon }: GameCardProps) {
           "group-active:scale-[0.98]"
         )}
       >
-        <article className="flex items-center gap-2.5 py-2.5 pl-6 pr-2.5 sm:gap-3 sm:py-3 sm:pr-3">
-          <div
-            className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border sm:h-10 sm:w-10",
-              red
-                ? "border-suit-red/30 bg-suit-red/10 text-suit-red"
-                : "border-[#24201A]/20 bg-[#24201A]/5 text-[#24201A]"
-            )}
-          >
-            {icon}
-          </div>
-          <div className="min-w-0 flex-1">
-            {/* 2 lignes plutôt que truncate : le nom du jeu est l'info n°1
-                de la carte — à 375px, la moitié des titres se coupaient. */}
-            <h3 className="line-clamp-2 font-display text-sm font-bold leading-tight text-[#24201A] sm:text-[0.95rem]">
-              {game.title}
-            </h3>
-            <p className="mt-0.5 line-clamp-2 pr-4 text-[11px] leading-snug text-[#6B6455] sm:text-xs">
-              {game.description}
-            </p>
-          </div>
+        <article className="flex h-full min-h-[5.5rem] flex-col items-center px-1.5 pb-1.5 pt-3 text-center sm:min-h-[6rem]">
+          <div className={cn(red ? "text-suit-red" : "text-[#24201A]")}>{icon}</div>
+          <h3 className="mt-1 line-clamp-2 font-display text-[11px] font-bold leading-tight text-[#24201A] sm:text-xs">
+            {game.title}
+          </h3>
           {players && (
-            <span
-              className="absolute right-1.5 top-1 rounded-full border border-[#24201A]/15 bg-[#24201A]/5 px-1.5 py-0.5 text-[9px] font-bold text-[#4A443A]"
-              aria-label={`${players} joueurs`}
-            >
+            <span className="mt-auto pt-0.5 text-[9px] font-bold text-[#6B6455]" aria-label={`${players} joueurs`}>
               {players} j.
             </span>
           )}

@@ -12,7 +12,7 @@ const MODES: { id: AmbianceMode; icon: typeof Beer }[] = [
   { id: 'soft', icon: Leaf },
 ]
 
-export function AmbianceModeToggle({ className }: { className?: string }) {
+export function AmbianceModeToggle({ className, dense = false }: { className?: string; dense?: boolean }) {
   const t = useTranslations('hub.ambianceMode')
   const { user, setAmbianceMode, loading } = useAuth()
 
@@ -38,6 +38,8 @@ export function AmbianceModeToggle({ className }: { className?: string }) {
             onClick={() => {
               if (!active) void setAmbianceMode(id)
             }}
+            aria-label={t(id)}
+            title={t(id)}
             className={cn(
               'flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-all',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#07060b]',
@@ -49,7 +51,9 @@ export function AmbianceModeToggle({ className }: { className?: string }) {
             )}
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
-            <span>{t(id)}</span>
+            {/* En mode dense (ligne partagée avec Local/En ligne), l'icône
+                suffit — le libellé reste en title/aria. */}
+            {!dense && <span>{t(id)}</span>}
           </button>
         )
       })}

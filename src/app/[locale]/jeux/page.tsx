@@ -60,24 +60,27 @@ export default function GamesHubPage() {
 
   return (
     <HubShell
+      compact
       title={isOnline ? tOnline('title') : t('title')}
       subtitle={isOnline ? tOnline('subtitle') : t('subtitle')}
       headerExtra={
-        <div className="flex flex-col items-center gap-4">
-          <PlayModeToggle />
-          {isOnline && <AmbianceModeToggle />}
+        <div className="space-y-2">
+          {/* Chrome condensé (Vitrine) : les deux bascules sur UNE ligne —
+              l'ambiance en icônes seules, le libellé reste en title/aria. */}
+          <div className="flex items-center gap-2">
+            <PlayModeToggle className="max-w-none flex-[1.4]" />
+            {isOnline && <AmbianceModeToggle dense className="max-w-none flex-1" />}
+          </div>
           {!isOnline && <SelectedPlayersBar />}
+          {user?.displayName && (
+            <p className="flex items-center justify-end gap-1.5 px-1 text-[11px] text-white/45">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {isOnline ? (user.onlineDisplayName ?? user.displayName) : user.displayName}
+            </p>
+          )}
         </div>
       }
     >
-      {user?.displayName && (
-        <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-white/80">
-          {tOnline('connectedAs')}{' '}
-          <span className="font-semibold text-amber-200">
-            {isOnline ? (user.onlineDisplayName ?? user.displayName) : user.displayName}
-          </span>
-        </div>
-      )}
 
       {isOnline && <RejoinBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <FriendInviteBanner onJoin={handleJoinInvite} joining={joining} />}

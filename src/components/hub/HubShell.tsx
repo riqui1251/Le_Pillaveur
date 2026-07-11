@@ -2,15 +2,19 @@
 
 import { ReactNode } from "react"
 import { useTranslations } from "next-intl"
+import { cn } from "@/lib/utils"
 
 interface HubShellProps {
   title: string
   subtitle: string
   children: ReactNode
   headerExtra?: ReactNode
+  /** Sans héros (kicker + H1 + sous-titre) : le titre vit dans la navbar —
+      pour les pages denses comme le hub des jeux. */
+  compact?: boolean
 }
 
-export function HubShell({ title, subtitle, children, headerExtra }: HubShellProps) {
+export function HubShell({ title, subtitle, children, headerExtra, compact = false }: HubShellProps) {
   const t = useTranslations('hub')
   return (
     // overflow-x-clip (pas hidden) : hidden créerait un scroll-container
@@ -23,19 +27,22 @@ export function HubShell({ title, subtitle, children, headerExtra }: HubShellPro
         <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-suit-red/[0.06] blur-[90px]" />
       </div>
 
-      <div className="relative container mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
-        <header className="mb-8 space-y-3 text-center sm:mb-10">
-          <p className="font-display text-xs font-semibold uppercase tracking-[0.3em] text-gold/80">
-            {t('brand')}
-          </p>
-          <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            <span className="bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text text-transparent">
-              {title}
-            </span>
-          </h1>
-          <p className="mx-auto max-w-xl text-sm text-white/65 sm:text-base">{subtitle}</p>
-          {headerExtra && <div className="pt-2">{headerExtra}</div>}
-        </header>
+      <div className={cn('relative container mx-auto max-w-6xl px-4 pb-16 sm:px-6', compact ? 'pt-3 sm:pt-4' : 'pt-6 sm:pt-8')}>
+        {!compact && (
+          <header className="mb-8 space-y-3 text-center sm:mb-10">
+            <p className="font-display text-xs font-semibold uppercase tracking-[0.3em] text-gold/80">
+              {t('brand')}
+            </p>
+            <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+              <span className="bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text text-transparent">
+                {title}
+              </span>
+            </h1>
+            <p className="mx-auto max-w-xl text-sm text-white/65 sm:text-base">{subtitle}</p>
+            {headerExtra && <div className="pt-2">{headerExtra}</div>}
+          </header>
+        )}
+        {compact && headerExtra && <div className="mb-3">{headerExtra}</div>}
 
         {children}
       </div>

@@ -39,7 +39,7 @@ export function PlayModeToggle({ className }: { className?: string }) {
               if (!active) void setPlayMode(id)
             }}
             className={cn(
-              'flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-all',
+              'flex min-h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 py-2 text-sm font-semibold transition-all',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#07060b]',
               active
                 ? id === 'online'
