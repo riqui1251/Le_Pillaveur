@@ -129,7 +129,9 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
             <h2 className="font-display text-lg font-bold md:text-xl">{t('addTitle')}</h2>
           </div>
           <form onSubmit={handleAddPlayer} className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {/* Une seule ligne même à 375px : champ + bouton côte à côte,
+                le clavier reste ouvert entre deux ajouts. */}
+            <div className="flex items-center gap-2">
               <Input
                 type="text"
                 placeholder={t('namePlaceholder')}
@@ -138,10 +140,10 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
                   setNewPlayerName(e.target.value);
                   if (nameError) setNameError(null);
                 }}
-                className="flex-grow"
+                className="min-w-0 flex-1"
                 aria-invalid={nameError ? true : undefined}
               />
-              <Button type="submit" disabled={!newPlayerName.trim()} className="w-full sm:w-auto">
+              <Button type="submit" disabled={!newPlayerName.trim()} className="shrink-0">
                 {t('addButton')}
               </Button>
             </div>
@@ -151,81 +153,85 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
               </p>
             )}
           </form>
-          {onStartOnline && (
-            <div className="mt-4 rounded-xl border border-gold/25 bg-gold/10 p-3">
-              {!user ? (
-                <p className="text-sm text-amber-100/90">Connexion requise pour jouer en ligne.</p>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={() => { void handleStartOnline(); }}
-                  className="bg-gradient-to-r from-amber-400 to-amber-500 text-black hover:from-amber-300 hover:to-amber-400"
-                  disabled={onlineLoading}
-                >
-                  Aller aux jeux en ligne
-                </Button>
-              )}
-            </div>
-          )}
         </Card>
 
         <div className="space-y-4">
           <h2 className="font-display text-lg font-bold md:text-xl">{t('selectTitle')}</h2>
           {/* Chaque convive est une carte crème qu'on abat pour le sélectionner
-              (ring d'or) — encre pure sur crème, comme partout. */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              (ring d'or) — encre pure sur crème, comme partout. 2 colonnes dès
+              le mobile : avatar + actions en tête, nom en dessous. */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {players.map((player) => (
               <Card
                 key={player.id}
                 onClick={() => togglePlayerSelection(player.id)}
-                className={`cursor-pointer border-[#D8CCAE] bg-cream p-3 text-[#24201A] transition-all duration-200 ${
+                className={`cursor-pointer border-[#D8CCAE] bg-cream p-2.5 text-[#24201A] transition-all duration-200 sm:p-3 ${
                   selectedPlayerIds.includes(player.id)
                     ? '-translate-y-0.5 shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)] ring-2 ring-gold'
                     : 'opacity-75 shadow-[0_6px_14px_-8px_rgba(0,0,0,0.5)] hover:-translate-y-0.5 hover:opacity-100'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <PlayerIcon player={player} size="md" className="h-10 w-10 text-xl" />
-                  <div className="flex-grow">
-                    {/* Encre pure sur crème : les couleurs cosmétiques des
-                        pseudos (souvent claires) sont illisibles ici — elles
-                        restent visibles sur les surfaces feutre. */}
-                    <div className="font-semibold text-[#24201A]">{player.name}</div>
-                    <div className="flex items-center gap-1 text-xs opacity-70">
-                      <Trophy className="h-3 w-3" /> {t('wins', { count: player.stats.wins })}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 rounded-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCustomizingPlayer(player);
-                    }}
-                    title={t('customize')}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {!hideRemoveButtons && (
+                <div className="flex items-start justify-between gap-1">
+                  <PlayerIcon player={player} size="md" className="h-9 w-9 text-lg" />
+                  <div className="flex shrink-0 items-center">
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 rounded-full"
                       onClick={(e) => {
                         e.stopPropagation();
-                        removePlayer(player.id);
-                        setSelectedPlayerIds((prev) => prev.filter((id) => id !== player.id));
+                        setCustomizingPlayer(player);
                       }}
+                      title={t('customize')}
                     >
-                      <X className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                  )}
+                    {!hideRemoveButtons && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removePlayer(player.id);
+                          setSelectedPlayerIds((prev) => prev.filter((id) => id !== player.id));
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-1.5 min-w-0">
+                  {/* Encre pure sur crème : les couleurs cosmétiques des
+                      pseudos (souvent claires) sont illisibles ici — elles
+                      restent visibles sur les surfaces feutre. */}
+                  <div className="truncate text-sm font-semibold text-[#24201A]">{player.name}</div>
+                  <div className="flex items-center gap-1 text-xs opacity-70">
+                    <Trophy className="h-3 w-3 shrink-0" /> {t('wins', { count: player.stats.wins })}
+                  </div>
                 </div>
               </Card>
             ))}
           </div>
         </div>
+
+        {onStartOnline && (
+          <div className="rounded-xl border border-gold/25 bg-gold/10 p-3">
+            {!user ? (
+              <p className="text-sm text-amber-100/90">Connexion requise pour jouer en ligne.</p>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => { void handleStartOnline(); }}
+                className="bg-gradient-to-r from-amber-400 to-amber-500 text-black hover:from-amber-300 hover:to-amber-400"
+                disabled={onlineLoading}
+              >
+                Aller aux jeux en ligne
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <PlayerCustomizer
