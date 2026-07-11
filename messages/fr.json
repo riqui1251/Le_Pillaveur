@@ -2900,6 +2900,7 @@
       "myEmpty": "Aucune partie en ligne classée pour l’instant. Les parties à 2 comptes ou plus comptent pour le classement.",
       "subtitle": "Classement des parties en ligne — victoires, défaites et % (les gorgées ne comptent pas).",
       "generalTitle": "Classement général",
+      "filterAll": "Tous",
       "emptyGame": "Aucune partie classée pour l’instant.",
       "legend": "Colonnes : victoires · défaites · parties · % de victoires",
       "showFull": "Voir le classement complet",

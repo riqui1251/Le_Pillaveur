@@ -191,7 +191,11 @@ function BoardCard({
             {me && !meInTop && (
               <>
                 <p className="text-center text-[10px] leading-none text-white/30">⋯</p>
-                <RowCard row={me} isMe youLabel={youLabel} minGames={minGames} />
+                {/* En liste complète, « toi » reste épinglé au bas du panneau
+                    pendant le scroll — fond opaque pour couvrir les lignes. */}
+                <div className={cn(expanded && 'sticky bottom-0 rounded-xl bg-[#0F332A] shadow-[0_-6px_12px_-6px_rgba(0,0,0,0.6)]')}>
+                  <RowCard row={me} isMe youLabel={youLabel} minGames={minGames} />
+                </div>
               </>
             )}
           </div>
@@ -224,6 +228,7 @@ export function OnlineRankingBoard() {
   const [data, setData] = useState<OverviewResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [needsLogin, setNeedsLogin] = useState(false)
+  const [filter, setFilter] = useState<'all' | (typeof RANKED_GAME_IDS)[number]>('all')
 
   useEffect(() => {
     let cancelled = false
@@ -279,24 +284,68 @@ export function OnlineRankingBoard() {
   const boardFor = (gameId: string): RankingBoard | null =>
     data.perGame.find((b) => b.gameId === gameId) ?? null
 
+  const shownIds = filter === 'all' ? RANKED_GAME_IDS : RANKED_GAME_IDS.filter((id) => id === filter)
+
   return (
     <div className="space-y-4">
-      {/* Classement général — tous jeux confondus */}
-      <BoardCard
-        icon={<Trophy className="h-4 w-4" />}
-        title={t('generalTitle')}
-        board={data.general}
-        fullGameId="all"
-        emptyLabel={t('emptyGame')}
-        youLabel={t('you')}
-        minGames={minGames}
-        viewerId={user?.id}
-        highlight
-      />
+      {/* Chips de filtre : accès direct au classement d'un jeu précis. */}
+      <div className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <button
+          type="button"
+          aria-pressed={filter === 'all'}
+          onClick={() => setFilter('all')}
+          className={cn(
+            'shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
+            filter === 'all'
+              ? 'border-gold bg-gold/15 text-amber-200'
+              : 'border-gold/25 text-cream/70 hover:border-gold/50 hover:text-cream'
+          )}
+        >
+          {t('filterAll')}
+        </button>
+        {RANKED_GAME_IDS.map((id) => {
+          const game = games.find((g) => g.id === id)
+          const active = filter === id
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setFilter(active ? 'all' : id)}
+              className={cn(
+                'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
+                active
+                  ? 'border-gold bg-gold/15 text-amber-200'
+                  : 'border-gold/25 text-cream/70 hover:border-gold/50 hover:text-cream'
+              )}
+            >
+              <GameIconById id={id} className="h-3.5 w-3.5" />
+              {game?.title ?? id}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Classement général — tous jeux confondus (masqué quand on filtre). */}
+      {filter === 'all' && (
+        <BoardCard
+          icon={<Trophy className="h-4 w-4" />}
+          title={t('generalTitle')}
+          board={data.general}
+          fullGameId="all"
+          emptyLabel={t('emptyGame')}
+          youLabel={t('you')}
+          minGames={minGames}
+          viewerId={user?.id}
+          highlight
+        />
+      )}
 
       {/* Top 5 par jeu */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {RANKED_GAME_IDS.map((id) => {
+        {shownIds.map((id) => {
           const game = games.find((g) => g.id === id)
           return (
             <BoardCard

@@ -2890,6 +2890,7 @@
       "myEmpty": "Aún no hay partidas en línea clasificadas. Las partidas con 2+ cuentas cuentan para la clasificación.",
       "subtitle": "Clasificación de partidas en línea — victorias, derrotas y % (los tragos no cuentan).",
       "generalTitle": "Clasificación general",
+      "filterAll": "Todos",
       "emptyGame": "Aún no hay partidas clasificadas.",
       "legend": "Columnas: victorias · derrotas · partidas · % de victorias",
       "showFull": "Ver la clasificación completa",

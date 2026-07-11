@@ -2900,6 +2900,7 @@
       "myEmpty": "No ranked online games yet. Games with 2+ accounts count towards the leaderboard.",
       "subtitle": "Online games leaderboard — wins, losses and win rate (sips don’t count).",
       "generalTitle": "Overall ranking",
+      "filterAll": "All",
       "emptyGame": "No ranked games yet.",
       "legend": "Columns: wins · losses · games · win rate",
       "showFull": "View full leaderboard",
