@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Play } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { Button } from '@/components/ui/button'
+import { GameIconById } from '@/components/hub/GameIconById'
 
 const POLL_MS = 5000
 
@@ -55,8 +56,8 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/35 bg-emerald-500/10 px-4 py-3 backdrop-blur-md">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 animate-pulse items-center justify-center rounded-full bg-emerald-500/20 text-base">
-          🚢
+        <span className="flex h-9 w-9 shrink-0 animate-pulse items-center justify-center rounded-full bg-emerald-500/20">
+          <GameIconById id={rejoinable.gameId} className="h-4 w-4 text-emerald-200" />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-emerald-100">{t('title')}</p>

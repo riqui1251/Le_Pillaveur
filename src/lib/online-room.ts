@@ -6,6 +6,7 @@ import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { parseOnlinePreferences, type OnlinePreferences } from '@/lib/online-preferences'
 import { levelForXp } from '@/lib/online/cosmetics'
 import { parseBriefing, type RoomBriefing } from '@/lib/online/briefing'
+import { publishRoomChanged } from '@/lib/online/room-bus'
 
 const ROOM_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 const ROOM_CODE_LENGTH = 6
@@ -245,7 +246,37 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
   }
 }
 
+/**
+ * Une table « waiting » abandonnée (personne à l'intérieur, ou aucune
+ * activité — réglage/prêt — depuis 5 min) se ferme d'elle-même : sinon les
+ * codes s'accumulent indéfiniment quand un onglet se ferme sans passer par
+ * /leave (crash, mise en veille, connexion coupée). N'affecte jamais les
+ * parties déjà lancées ('playing') : celles-ci ont leur propre mécanisme de
+ * remplacement par bot (voir online/replacement.ts).
+ */
+const STALE_WAITING_ROOM_MS = 5 * 60 * 1000
+
+export async function cleanupStaleWaitingRooms(): Promise<void> {
+  const cutoff = new Date(Date.now() - STALE_WAITING_ROOM_MS)
+  const stale = await prisma.onlineRoom.findMany({
+    where: {
+      status: 'waiting',
+      OR: [{ members: { none: {} } }, { updatedAt: { lt: cutoff } }],
+    },
+    select: { id: true },
+  })
+  if (stale.length === 0) return
+
+  const ids = stale.map((r) => r.id)
+  await prisma.onlineRoom.deleteMany({ where: { id: { in: ids } } })
+  // Notifie tout client encore branché en SSE sur une de ces salles (l'hôte
+  // resté dans son lobby, par ex.) : il retombera aussitôt sur le Guichet.
+  for (const id of ids) publishRoomChanged(id, { type: 'lobby' })
+}
+
 export async function buildLobbyList(): Promise<LobbyListItem[]> {
+  await cleanupStaleWaitingRooms()
+
   const rooms = await prisma.onlineRoom.findMany({
     where: { status: 'waiting', gameId: { not: null }, visibility: 'public' },
     include: {
