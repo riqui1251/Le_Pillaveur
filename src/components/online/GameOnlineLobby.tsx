@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { ArrowLeft, ChevronDown, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Settings, Users, UserPlus, Tv, Trophy } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Plus, Settings, Users, UserPlus, Tv, Trophy, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -15,7 +15,7 @@ import { GameIconById } from '@/components/hub/GameIconById'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { GameBriefing } from '@/components/online/GameBriefing'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
-import { OnlinePlayerIcon, OnlinePlayerName, OnlineLevelBadge, RankCrest } from '@/components/online/OnlinePlayerTag'
+import { OnlinePlayerIcon } from '@/components/online/OnlinePlayerTag'
 import { JoinQR } from '@/components/tv/JoinQR'
 import { cn } from '@/lib/utils'
 import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
@@ -41,6 +41,15 @@ function LobbyShell({ children }: { children: React.ReactNode }) {
       <div className="relative z-10 mx-auto w-full max-w-lg px-4 py-8 pb-12">{children}</div>
     </div>
   )
+}
+
+/** Position d'un siège autour de la table ovale (siège 0 en haut, sens horaire). */
+function seatPos(index: number, count: number) {
+  const angle = -Math.PI / 2 + (index * 2 * Math.PI) / count
+  return {
+    left: `${50 + 42 * Math.cos(angle)}%`,
+    top: `${50 + 40 * Math.sin(angle)}%`,
+  }
 }
 
 /** Formats d'équipes Toucher-Coulé. */
@@ -72,6 +81,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [showTv, setShowTv] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
+  const [seatSel, setSeatSel] = useState<string | null>(null)
   const [top5, setTop5] = useState<Map<string, number>>(new Map())
   const tTv = useTranslations('tv')
   const locale = useLocale()
@@ -183,12 +194,19 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </span>
         </div>
 
-        <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-center shadow-2xl backdrop-blur-md">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30">
-            <GameIconById id={gameId} className="h-9 w-9 text-white" />
+        {/* Guichet : la carte du jeu tient sur une ligne — l'écran sert à
+            REJOINDRE (code, tables ouvertes) ; créer attend en zone pouce. */}
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[#D8CCAE] bg-cream px-3 py-2.5 text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#24201A]/15 bg-[#24201A]/5">
+            <GameIconById id={gameId} className="h-6 w-6" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display text-base font-bold leading-tight">{game?.title}</h1>
+            <p className="text-[11px] text-[#6B6455]">
+              {game?.minPlayers ?? 2}
+              {game?.maxPlayers && game.maxPlayers < 13 ? `-${game.maxPlayers}` : '+'} joueurs
+            </p>
           </div>
-          <h1 className="mb-2 text-2xl font-bold tracking-tight text-white">{game?.title}</h1>
-          <p className="text-sm text-white/50">Créez un lobby ou rejoignez une partie en attente.</p>
         </div>
 
         {wrongRoom && (
@@ -202,58 +220,72 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
         {!wrongRoom && (
           <>
-            <Button
-              onClick={() => createRoom(gameId)}
-              disabled={loading}
-              className="mb-4 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-700 py-6 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-amber-600 disabled:opacity-50"
-            >
-              {loading ? 'Création…' : 'Créer un lobby'}
-            </Button>
+            <RejoinBanner onJoin={(roomId) => joinRoom({ roomId })} joining={loading} />
+            <FriendInviteBanner onJoin={(roomId) => joinRoom({ roomId })} joining={loading} />
 
-            <div className="mb-6">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-white/40">
+            <div className="mb-5">
+              <p className="mb-2 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/75">
                 {tOnline('joinByCode.label')}
+                <span aria-hidden className="h-px flex-1 bg-gold/15" />
               </p>
               <div className="flex gap-2">
-                <input
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleJoinByCode()
-                  }}
-                  placeholder={tOnline('joinByCode.placeholder')}
-                  maxLength={6}
-                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center font-mono text-lg font-bold tracking-[0.2em] text-white placeholder:text-white/25 placeholder:tracking-normal focus:border-amber-400/50 focus:outline-none"
-                />
+                {/* Cases façon OTP : un input invisible par-dessus, les cases
+                    ne font qu'afficher — gros caractères, saisie directe. */}
+                <div className="relative flex min-w-0 flex-1 gap-1.5">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <span
+                      key={i}
+                      aria-hidden
+                      className={cn(
+                        'flex h-12 flex-1 items-center justify-center rounded-xl border font-display text-xl font-black',
+                        joinCode[i]
+                          ? 'border-gold/40 bg-felt-deep/70 text-white'
+                          : 'border-gold/20 bg-felt-deep/50 text-white/20'
+                      )}
+                    >
+                      {joinCode[i] ?? '•'}
+                    </span>
+                  ))}
+                  <input
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleJoinByCode()
+                    }}
+                    aria-label={tOnline('joinByCode.label')}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    maxLength={6}
+                    className="absolute inset-0 h-full w-full cursor-text opacity-0"
+                  />
+                </div>
                 <Button
                   onClick={handleJoinByCode}
                   disabled={loading || joinCode.trim().length !== 6}
-                  className="shrink-0 rounded-2xl border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white hover:bg-white/20"
+                  className="h-12 shrink-0 rounded-xl border border-white/15 bg-white/10 px-4 text-sm font-semibold text-white hover:bg-white/20"
                 >
                   {tOnline('joinByCode.submit')}
                 </Button>
               </div>
             </div>
-
-            <RejoinBanner onJoin={(roomId) => joinRoom({ roomId })} joining={loading} />
-            <FriendInviteBanner onJoin={(roomId) => joinRoom({ roomId })} joining={loading} />
           </>
         )}
 
         {gameLobbies.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
-              Lobbies ouverts pour ce jeu
+          <div className="mb-4">
+            <p className="mb-2 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/75">
+              Tables ouvertes · {gameLobbies.length}
+              <span aria-hidden className="h-px flex-1 bg-gold/15" />
             </p>
             <ul className="space-y-2">
               {gameLobbies.map((lobby) => (
                 <li
                   key={lobby.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-gold/10 bg-felt-deep/60 px-4 py-3 transition-colors hover:border-amber-400/30"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-gold/10 bg-felt-deep/60 px-3 py-2.5 transition-colors hover:border-amber-400/30"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm">
-                      👑
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold/20 bg-gold/10">
+                      <Crown className="h-4 w-4 text-amber-300" aria-hidden />
                     </span>
                     <div className="min-w-0">
                       <span className="font-mono text-sm font-bold tracking-wider text-white">{lobby.code}</span>
@@ -266,7 +298,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     size="sm"
                     disabled={loading || wrongRoom}
                     onClick={() => joinRoom({ roomId: lobby.id })}
-                    className="shrink-0 rounded-xl bg-amber-600 text-white hover:bg-amber-500"
+                    className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
                   >
                     Rejoindre
                   </Button>
@@ -277,6 +309,25 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         )}
 
         {error && <p className="mt-4 text-center text-sm text-red-300">{error}</p>}
+
+        {/* « Ouvrir une table » : l'action de création attend en zone pouce. */}
+        {!wrongRoom && (
+          <>
+            <div aria-hidden className="h-16" />
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+              <div className="mx-auto w-full max-w-lg">
+                <Button
+                  onClick={() => createRoom(gameId)}
+                  disabled={loading}
+                  className="h-12 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
+                >
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  {loading ? 'Création…' : 'Ouvrir une table'}
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </LobbyShell>
     )
   }
@@ -297,43 +348,150 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </span>
       </div>
 
-      {/* Plaque de table : le code — l'info qu'on se crie à voix haute — est
-          l'élément géant sur carte crème ; toucher la plaque le copie. */}
-      <div className="mb-4 overflow-hidden rounded-2xl border border-[#D8CCAE] bg-cream text-[#24201A] shadow-[0_14px_30px_-14px_rgba(0,0,0,0.6)]">
-        <button type="button" onClick={copyCode} className="block w-full px-6 pb-4 pt-5 text-center">
-          <span className="block font-display text-[10px] font-bold uppercase tracking-[0.28em] text-[#6B6455]">
-            Table · {game?.title}
-          </span>
-          <span className="mt-1 block font-display text-4xl font-black tracking-[0.22em]">
-            {room.code}
-          </span>
-          <span className="mt-1.5 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#6B6455]">
-            {copied ? <Check className="h-3.5 w-3.5 text-emerald-700" /> : <Copy className="h-3.5 w-3.5" />}
-            {copied ? 'Code copié !' : 'Toucher pour copier'}
+      {/* La Table Ronde : les joueurs sont assis autour du feutre (même
+          langage que le mode TV), le code trône au centre — le toucher le
+          copie. Toucher un siège ouvre les actions d'amitié du joueur. */}
+      <div className="relative mx-auto mb-1 h-64 w-full max-w-sm flex-none">
+        <div
+          className="absolute inset-x-3 inset-y-5 rounded-[50%] border-[3px] border-gold/40 shadow-[inset_0_10px_30px_rgba(0,0,0,0.45),0_10px_24px_-10px_rgba(0,0,0,0.6)]"
+          style={{ background: 'radial-gradient(ellipse at 50% 38%, #17594A 0%, #0F4034 62%, #0C352B 100%)' }}
+        >
+          <div aria-hidden className="absolute inset-2 rounded-[50%] border border-gold/20" />
+        </div>
+        {room.members.map((m, i) => {
+          const memberCosmetics = { preferences: m.preferences, level: m.level, role: m.role }
+          return (
+            <button
+              key={m.userId}
+              type="button"
+              disabled={m.isSelf}
+              onClick={() => setSeatSel((v) => (v === m.userId ? null : m.userId))}
+              className="absolute flex w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
+              style={seatPos(i, room.members.length)}
+            >
+              <span className="relative">
+                <OnlinePlayerIcon
+                  icon={m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
+                  cosmetics={memberCosmetics}
+                  className="h-9 w-9 border border-[#D8CCAE] bg-cream text-base text-[#24201A] shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]"
+                />
+                <span
+                  aria-label={m.isReady ? 'Prêt' : 'Pas encore prêt'}
+                  title={m.isReady ? 'Prêt' : 'Pas encore prêt'}
+                  className={cn(
+                    'absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-felt-deep',
+                    m.isReady ? 'bg-emerald-400' : 'bg-white/25'
+                  )}
+                />
+                {m.isHost && <Crown className="absolute -left-1.5 -top-1.5 h-3.5 w-3.5 text-amber-400" />}
+              </span>
+              <span className="flex max-w-16 items-center gap-0.5 text-[10px] leading-tight text-white/85">
+                <span className="truncate">{m.isSelf ? 'Toi' : m.displayName}</span>
+                {top5.has(m.userId) && (
+                  <span className="shrink-0 font-bold text-amber-300" title={tOnline('top5Badge', { rank: top5.get(m.userId) ?? 0 })}>
+                    #{top5.get(m.userId)}
+                  </span>
+                )}
+              </span>
+            </button>
+          )
+        })}
+        <button
+          type="button"
+          onClick={copyCode}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[#D8CCAE] bg-cream px-4 py-1.5 text-center text-[#24201A] shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]"
+        >
+          <span className="block text-[8px] font-bold uppercase tracking-[0.24em] text-[#6B6455]">Table</span>
+          <span className="block font-display text-xl font-black tracking-[0.16em]">{room.code}</span>
+          <span className="flex items-center justify-center gap-1 text-[9px] font-semibold text-[#6B6455]">
+            {copied ? <Check className="h-2.5 w-2.5 text-emerald-700" /> : <Copy className="h-2.5 w-2.5" />}
+            {copied ? 'copié !' : 'toucher = copier'}
           </span>
         </button>
+      </div>
+
+      {/* Actions d'amitié du siège sélectionné. */}
+      {seatSel && (() => {
+        const m = room.members.find((x) => x.userId === seatSel)
+        if (!m || m.isSelf) return null
+        const isFriend = friends.some((f) => f.userId === m.userId)
+        const incomingReq = incoming.find((r) => r.userId === m.userId)
+        const outgoingPending = outgoing.some((r) => r.userId === m.userId)
+        return (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-gold/15 bg-felt-deep/70 px-3 py-2">
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-white">{m.displayName}</span>
+            {isFriend ? (
+              <span className="flex shrink-0 items-center gap-1 text-xs text-emerald-300">
+                <Users className="h-3.5 w-3.5" />
+                {tFriends('alreadyFriend')}
+              </span>
+            ) : incomingReq ? (
+              <button
+                type="button"
+                onClick={() => acceptRequest(incomingReq.id)}
+                className="shrink-0 rounded-lg bg-emerald-500/20 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/30"
+              >
+                {tFriends('accept')}
+              </button>
+            ) : outgoingPending ? (
+              <span className="shrink-0 text-xs text-white/40">{tFriends('requestSent')}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => sendRequestToUser(m.userId)}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-500"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                {tFriends('sendRequest')}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSeatSel(null)}
+              aria-label="Fermer"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white/40 hover:text-white"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )
+      })()}
+
+      <div className="mb-3 flex gap-2">
         <button
           type="button"
           onClick={() => setShowTv((v) => !v)}
           aria-expanded={showTv}
-          className="flex w-full items-center justify-center gap-2 border-t border-[#24201A]/10 bg-[#24201A]/5 py-2.5 text-xs font-bold text-[#4A443A] transition-colors hover:bg-[#24201A]/10"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
         >
-          <Tv className="h-3.5 w-3.5" />
+          <Tv className="h-3.5 w-3.5 text-amber-300" />
           {tTv('modeTv')}
         </button>
-        {showTv && (
-          <div className="flex flex-col items-center gap-3 border-t border-[#24201A]/10 px-4 py-4 text-center">
-            <p className="text-xs leading-relaxed text-[#6B6455]">{tTv('modeTvHint')}</p>
-            <JoinQR
-              url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/jeux?join=${room.code}`}
-              size={128}
-            />
-            <p className="text-[11px] text-[#6B6455]/80">{tTv('scanToJoin')}</p>
-          </div>
+        {isHost && visibility !== 'public' && (
+          <button
+            type="button"
+            onClick={() => setShowInvite((v) => !v)}
+            aria-expanded={showInvite}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
+          >
+            <Mail className="h-3.5 w-3.5 text-amber-300" />
+            {tOnline('invites.inviteFriend')}
+          </button>
         )}
       </div>
 
-      {isHost && visibility !== 'public' && (
+      {showTv && (
+        <div className="mb-3 flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-center">
+          <p className="text-xs leading-relaxed text-white/60">{tTv('modeTvHint')}</p>
+          <JoinQR
+            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/jeux?join=${room.code}`}
+            size={128}
+          />
+          <p className="text-[11px] text-white/40">{tTv('scanToJoin')}</p>
+        </div>
+      )}
+
+      {showInvite && isHost && visibility !== 'public' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
             {tOnline('invites.inviteFriend')}
@@ -1020,99 +1178,6 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       })()}
 
         </div>
-      </div>
-
-      <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-        <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-white/45">
-          <Users className="h-3.5 w-3.5 text-amber-300" />
-          Joueurs ({room.members.length})
-        </div>
-        {/* Jetons 2 colonnes : le statut prêt devient une pastille (vert =
-            prêt) — deux fois plus de joueurs visibles sans scroller. */}
-        <ul className="grid grid-cols-2 gap-2">
-          {room.members.map((m) => {
-            const isFriend = friends.some((f) => f.userId === m.userId)
-            const incomingReq = incoming.find((r) => r.userId === m.userId)
-            const outgoingPending = outgoing.some((r) => r.userId === m.userId)
-            const memberCosmetics = { preferences: m.preferences, level: m.level, role: m.role }
-            return (
-              <li
-                key={m.userId}
-                className={cn(
-                  'flex items-center gap-2 rounded-xl border px-2.5 py-2 transition-colors',
-                  m.isReady ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-gold/10 bg-felt-deep/60'
-                )}
-              >
-                <RankCrest role={m.role} />
-                <OnlinePlayerIcon
-                  icon={m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
-                  cosmetics={memberCosmetics}
-                  className="h-8 w-8 shrink-0 border border-white/10 bg-white/5 text-sm"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1 truncate text-sm font-medium text-white">
-                    <OnlinePlayerName
-                      name={m.displayName}
-                      cosmetics={memberCosmetics}
-                      className="truncate"
-                    />
-                    <OnlineLevelBadge cosmetics={memberCosmetics} />
-                  </p>
-                  <p className="truncate text-[10px] text-white/40">
-                    {m.isSelf ? '(vous)' : ' '}
-                  </p>
-                </div>
-                <span
-                  aria-label={m.isReady ? 'Prêt' : 'Pas encore prêt'}
-                  title={m.isReady ? 'Prêt' : 'Pas encore prêt'}
-                  className={cn('h-2.5 w-2.5 shrink-0 rounded-full', m.isReady ? 'bg-emerald-400' : 'bg-white/20')}
-                />
-                {top5.has(m.userId) && (
-                  <span
-                    className="flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-amber-300"
-                    title={tOnline('top5Badge', { rank: top5.get(m.userId) ?? 0 })}
-                  >
-                    <Trophy className="h-3 w-3" />#{top5.get(m.userId)}
-                  </span>
-                )}
-                {/* Statuts d'amitié en icônes : les libellés textuels ne
-                    tiennent pas sur des jetons 2 colonnes (title + aria). */}
-                {!m.isSelf && (
-                  isFriend ? (
-                    <span title={tFriends('alreadyFriend')} aria-label={tFriends('alreadyFriend')} className="shrink-0">
-                      <Users className="h-3.5 w-3.5 text-emerald-400/80" />
-                    </span>
-                  ) : incomingReq ? (
-                    <button
-                      type="button"
-                      onClick={() => acceptRequest(incomingReq.id)}
-                      aria-label={tFriends('accept')}
-                      title={tFriends('accept')}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
-                    >
-                      <Check className="h-4 w-4" />
-                    </button>
-                  ) : outgoingPending ? (
-                    <span title={tFriends('requestSent')} aria-label={tFriends('requestSent')} className="shrink-0">
-                      <Mail className="h-3.5 w-3.5 text-white/30" />
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => sendRequestToUser(m.userId)}
-                      aria-label={tFriends('sendRequest')}
-                      title={tFriends('sendRequest')}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                    </button>
-                  )
-                )}
-                {m.isHost && <Crown className="h-3.5 w-3.5 shrink-0 text-amber-400" />}
-              </li>
-            )
-          })}
-        </ul>
       </div>
 
       {error && <p className="mt-4 text-center text-sm text-red-300">{error}</p>}
