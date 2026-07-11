@@ -23,7 +23,7 @@ interface PlayerManagerProps {
   variant?: 'default' | 'hub';
 }
 
-const HUB_CARD = 'bg-white/[0.04] border-white/10 backdrop-blur-md shadow-lg';
+const HUB_CARD = 'bg-felt-deep/60 border-gold/15 backdrop-blur-md shadow-lg';
 
 export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2, hideRemoveButtons = false, variant = 'default' }: PlayerManagerProps) {
   const t = useTranslations('players');
@@ -127,7 +127,7 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
       <div className="space-y-6 pb-28">
         <Card className={`p-4 ${cardClass}`}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold md:text-xl">{t('addTitle')}</h2>
+            <h2 className="font-display text-lg font-bold md:text-xl">{t('addTitle')}</h2>
           </div>
           <form onSubmit={handleAddPlayer} className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -171,18 +171,18 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
         </Card>
 
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold md:text-xl">{t('selectTitle')}</h2>
+          <h2 className="font-display text-lg font-bold md:text-xl">{t('selectTitle')}</h2>
+          {/* Chaque convive est une carte crème qu'on abat pour le sélectionner
+              (ring d'or) — encre pure sur crème, comme partout. */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {players.map((player) => (
               <Card
                 key={player.id}
                 onClick={() => togglePlayerSelection(player.id)}
-                className={`cursor-pointer p-3 transition-all duration-200 hover:shadow-lg ${cardClass} ${
+                className={`cursor-pointer border-[#D8CCAE] bg-cream p-3 text-[#24201A] transition-all duration-200 ${
                   selectedPlayerIds.includes(player.id)
-                    ? 'bg-amber-500/15 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-2 ring-amber-400/80'
-                    : isHub
-                      ? 'opacity-90 hover:border-white/20 hover:opacity-100'
-                      : 'opacity-80 hover:opacity-100'
+                    ? '-translate-y-0.5 shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)] ring-2 ring-gold'
+                    : 'opacity-75 shadow-[0_6px_14px_-8px_rgba(0,0,0,0.5)] hover:-translate-y-0.5 hover:opacity-100'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -235,13 +235,14 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
         onSave={updatePlayerPreferences}
       />
 
+      {/* Barre d'action : posée AU-DESSUS de la barre d'onglets mobile
+          (elle-même en bottom-0), et en bottom-0 dès sm (la tabbar disparaît). */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 py-3 backdrop-blur-xl ${
+        className={`fixed inset-x-0 bottom-[calc(3.25rem+env(safe-area-inset-bottom))] z-40 border-t px-4 py-3 backdrop-blur-xl sm:bottom-0 sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
           isHub
-            ? 'border-white/10 bg-[#07060b]/90'
+            ? 'border-gold/15 bg-felt-deep/90'
             : 'border-border bg-background/95'
         }`}
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
         <div className="mx-auto flex max-w-6xl items-center gap-3 sm:gap-4">
           <p className={`min-w-0 flex-1 text-sm ${canStart ? 'text-white/70' : 'text-orange-400'}`}>

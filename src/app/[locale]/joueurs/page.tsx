@@ -28,7 +28,9 @@ export default function JoueursPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-sm sm:p-6">
+      {/* Pas de backdrop-blur ici : il créerait un containing block et
+          détacherait la barre d'action fixe du viewport. */}
+      <div className="rounded-2xl border border-gold/15 bg-felt-deep/40 p-4 sm:p-6">
         <PlayerManager
           variant="hub"
           onPlayersSelected={(ids) => {
