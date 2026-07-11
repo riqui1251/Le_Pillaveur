@@ -62,7 +62,8 @@
       },
       "compte": {
         "title": "Compte",
-        "subtitle": "Connexion et profil"
+        "subtitle": "Connexion et profil",
+        "subtitleConnected": "Profil et personnalisation"
       },
       "supervision": {
         "title": "Supervision",
@@ -2823,6 +2824,7 @@
   },
   "stats": {
     "title": "Statistiques",
+    "subtitle": "Ce que la table a vu passer",
     "noStats": "Aucune statistique disponible",
     "gamesPlayed": "Parties jouées",
     "uniquePlayers": "Joueurs uniques",
@@ -2858,6 +2860,7 @@
   },
   "achievements": {
     "title": "Succès",
+    "subtitle": "Trophées débloqués",
     "unlockedOn": "Débloqué le {date}",
     "locked": "Non débloqué",
     "items": {

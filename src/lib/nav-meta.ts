@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { useMemo } from 'react'
 import { stripLocalePrefix } from '@/i18n/routing'
 import { useLocalizedGames } from '@/lib/games-i18n'
+import { useAuth } from '@/hooks/useAuth'
 
 export type PageMeta = {
   title: string
@@ -34,15 +35,19 @@ export function usePageMeta(pathname: string): PageMeta {
   const t = useTranslations('nav')
   const tPages = useTranslations('nav.pages')
   const games = useLocalizedGames()
+  const { user } = useAuth()
 
   return useMemo(() => {
     const path = stripLocalePrefix(pathname)
     const pageKey = STATIC_PAGE_KEYS[path]
 
     if (pageKey) {
+      // « Connexion et profil » n'a de sens que déconnecté.
+      const subtitleKey =
+        pageKey === 'compte' && user ? 'compte.subtitleConnected' : `${pageKey}.subtitle`
       return {
         title: tPages(`${pageKey}.title`),
-        subtitle: tPages(`${pageKey}.subtitle`),
+        subtitle: tPages(subtitleKey),
       }
     }
 
@@ -58,5 +63,5 @@ export function usePageMeta(pathname: string): PageMeta {
       title: t('brand'),
       subtitle: tPages('default.subtitle'),
     }
-  }, [pathname, games, t, tPages])
+  }, [pathname, games, t, tPages, user])
 }

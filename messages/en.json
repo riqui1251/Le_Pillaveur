@@ -62,7 +62,8 @@
       },
       "compte": {
         "title": "Account",
-        "subtitle": "Login and profile"
+        "subtitle": "Login and profile",
+        "subtitleConnected": "Profile and customization"
       },
       "supervision": {
         "title": "Supervision",
@@ -2823,6 +2824,7 @@
   },
   "stats": {
     "title": "Statistics",
+    "subtitle": "What the table has seen",
     "noStats": "No statistics available",
     "gamesPlayed": "Games played",
     "uniquePlayers": "Unique players",
@@ -2858,6 +2860,7 @@
   },
   "achievements": {
     "title": "Achievements",
+    "subtitle": "Unlocked trophies",
     "unlockedOn": "Unlocked on {date}",
     "locked": "Not unlocked",
     "items": {

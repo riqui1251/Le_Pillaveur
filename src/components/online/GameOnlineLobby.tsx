@@ -248,7 +248,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               {gameLobbies.map((lobby) => (
                 <li
                   key={lobby.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition-colors hover:border-amber-400/30"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-gold/10 bg-felt-deep/60 px-4 py-3 transition-colors hover:border-amber-400/30"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm">
@@ -305,7 +305,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </div>
         <button
           onClick={copyCode}
-          className="flex w-full items-center justify-center gap-2 border-t border-white/10 bg-black/20 py-3 text-sm font-semibold text-white/80 transition-all hover:bg-black/30 hover:text-white"
+          className="flex w-full items-center justify-center gap-2 border-t border-gold/10 bg-felt-deep/60 py-3 text-sm font-semibold text-white/80 transition-all hover:bg-felt-deep/80 hover:text-white"
         >
           {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
           {copied ? 'Code copié !' : 'Copier le code'}
@@ -382,7 +382,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   return (
                     <li
                       key={f.userId}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                      className="flex items-center justify-between gap-3 rounded-xl border border-gold/10 bg-felt-deep/60 px-3 py-2"
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         <span className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-white/20')} />
@@ -1016,7 +1016,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 key={m.userId}
                 className={cn(
                   'flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
-                  m.isReady ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-white/10 bg-black/20'
+                  m.isReady ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-gold/10 bg-felt-deep/60'
                 )}
               >
                 <RankCrest role={m.role} />

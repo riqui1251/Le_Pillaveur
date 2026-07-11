@@ -62,7 +62,8 @@
       },
       "compte": {
         "title": "Cuenta",
-        "subtitle": "Iniciar sesión y perfil"
+        "subtitle": "Iniciar sesión y perfil",
+        "subtitleConnected": "Perfil y personalización"
       },
       "supervision": {
         "title": "Supervisión",
@@ -2812,7 +2813,8 @@
     }
   },
   "stats": {
-    "title": "Estadística",
+    "title": "Estadísticas",
+    "subtitle": "Lo que ha visto la mesa",
     "noStats": "No hay estadísticas disponibles",
     "gamesPlayed": "Juegos jugados",
     "uniquePlayers": "Jugadores únicos",
@@ -2848,6 +2850,7 @@
   },
   "achievements": {
     "title": "Logros",
+    "subtitle": "Trofeos desbloqueados",
     "unlockedOn": "Desbloqueado el {date}",
     "locked": "No desbloqueado",
     "items": {

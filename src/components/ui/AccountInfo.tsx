@@ -28,8 +28,8 @@ import { cn } from '@/lib/utils'
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center">
-      <span className={cn('text-3xl font-bold tabular-nums', color)}>{value}</span>
+    <div className="flex flex-col items-center rounded-2xl border border-gold/10 bg-felt-deep/60 p-4 text-center">
+      <span className={cn('font-display text-3xl font-bold tabular-nums', color)}>{value}</span>
       <span className="mt-1 text-xs text-white/50">{label}</span>
     </div>
   )
@@ -347,11 +347,14 @@ export function AccountInfo() {
               <button
                 type="button"
                 onClick={() => setCustomizingOnline(true)}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-cyan-500/25 px-2.5 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/35"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/25 px-2.5 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/35"
                 title={t('playersList.customize')}
+                aria-label={t('playersList.customize')}
               >
                 <Pencil className="h-3.5 w-3.5" />
-                {t('playersList.customize')}
+                {/* Icône seule en mobile : le pseudo garde la place (il se
+                    tronquait à 3 caractères à 375px). */}
+                <span className="hidden sm:inline">{t('playersList.customize')}</span>
               </button>
             </div>
 
@@ -391,7 +394,8 @@ export function AccountInfo() {
         <div className="grid grid-cols-3 gap-3">
           <StatCard label={t('stats.players')} value={players.length} color="text-amber-300" />
           <StatCard label={t('stats.games')} value={totalGames} color="text-sky-300" />
-          <StatCard label={t('stats.sips')} value={totalDrinks} color="text-rose-300" />
+          {/* Rouge « enseigne » éclairci : le suit-red pur manque de contraste sur feutre. */}
+          <StatCard label={t('stats.sips')} value={totalDrinks} color="text-red-300" />
         </div>
       </section>
 

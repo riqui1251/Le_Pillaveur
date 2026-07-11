@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface StatsData {
   totalGames: number
@@ -16,6 +15,20 @@ interface StatsData {
     winner: string
     playedAt: string
   }[]
+}
+
+/* Panneau de table : même grammaire que les KPI de supervision —
+   cadre or discret sur feutre, gros chiffre en Playfair. */
+function KpiPanel({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
+  return (
+    <div className="rounded-2xl border border-gold/15 bg-felt-deep/60 p-4">
+      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/70">
+        {label}
+      </p>
+      <p className="mt-1 truncate font-display text-3xl font-bold text-cream">{value}</p>
+      {detail && <p className="mt-0.5 text-xs text-white/55">{detail}</p>}
+    </div>
+  )
 }
 
 export default function GlobalStats() {
@@ -49,81 +62,51 @@ export default function GlobalStats() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[200px]" aria-label={tCommon('loading')}>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
       </div>
     )
   }
 
   if (!stats) {
     return (
-      <Card>
-        <CardContent className="py-6">
-          <p className="text-center text-muted-foreground">{t('noStats')}</p>
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border border-gold/15 bg-felt-deep/60 py-6">
+        <p className="text-center text-white/60">{t('noStats')}</p>
+      </div>
     )
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{t('gamesPlayed')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.totalGames}</div>
-        </CardContent>
-      </Card>
+    <div className="grid gap-4 md:grid-cols-3">
+      <KpiPanel label={t('gamesPlayed')} value={stats.totalGames} />
+      <KpiPanel label={t('uniquePlayers')} value={stats.totalPlayers} />
+      <KpiPanel
+        label={t('bestPlayer')}
+        value={stats.bestPlayer?.name || '-'}
+        detail={stats.bestPlayer ? t('winsCount', { count: stats.bestPlayer.wins }) : t('noPlayer')}
+      />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{t('uniquePlayers')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.totalPlayers}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{t('bestPlayer')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.bestPlayer?.name || '-'}</div>
-          <p className="text-xs text-muted-foreground">
-            {stats.bestPlayer
-              ? t('winsCount', { count: stats.bestPlayer.wins })
-              : t('noPlayer')}
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="col-span-full">
-        <CardHeader>
-          <CardTitle>{t('recentGames')}</CardTitle>
-          <CardDescription>{t('recentGamesDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {stats.recentGames.map((game, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between border-b py-2 last:border-0"
-              >
-                <div>
-                  <p className="font-medium">{game.gameType}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t('winner', { name: game.winner })}
-                  </p>
-                </div>
-                <time className="text-sm text-muted-foreground">
-                  {dateFormatter.format(new Date(game.playedAt))}
-                </time>
+      <section className="col-span-full rounded-2xl border border-gold/15 bg-felt-deep/60 p-4 sm:p-5">
+        <h2 className="font-display text-lg font-bold text-cream">{t('recentGames')}</h2>
+        <p className="text-xs text-white/55">{t('recentGamesDesc')}</p>
+        <div className="mt-3 space-y-2">
+          {stats.recentGames.map((game, index) => (
+            <div
+              key={index}
+              className="flex items-center justify-between border-b border-gold/10 py-2 last:border-0"
+            >
+              <div className="min-w-0">
+                <p className="font-medium text-white/90">{game.gameType}</p>
+                <p className="truncate text-sm text-white/55">
+                  {t('winner', { name: game.winner })}
+                </p>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <time className="shrink-0 pl-3 text-sm text-white/55">
+                {dateFormatter.format(new Date(game.playedAt))}
+              </time>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }

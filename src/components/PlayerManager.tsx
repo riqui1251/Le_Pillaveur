@@ -152,14 +152,14 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
             )}
           </form>
           {onStartOnline && (
-            <div className="mt-4 rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3">
+            <div className="mt-4 rounded-xl border border-gold/25 bg-gold/10 p-3">
               {!user ? (
-                <p className="text-sm text-cyan-100/90">Connexion requise pour jouer en ligne.</p>
+                <p className="text-sm text-amber-100/90">Connexion requise pour jouer en ligne.</p>
               ) : (
                 <Button
                   type="button"
                   onClick={() => { void handleStartOnline(); }}
-                  className="bg-cyan-500 text-black hover:bg-cyan-400"
+                  className="bg-gradient-to-r from-amber-400 to-amber-500 text-black hover:from-amber-300 hover:to-amber-400"
                   disabled={onlineLoading}
                 >
                   Aller aux jeux en ligne

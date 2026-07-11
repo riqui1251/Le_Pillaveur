@@ -62,7 +62,8 @@
       },
       "compte": {
         "title": "Account",
-        "subtitle": "Accesso e profilo"
+        "subtitle": "Accesso e profilo",
+        "subtitleConnected": "Profilo e personalizzazione"
       },
       "supervision": {
         "title": "Supervisione",
@@ -2813,6 +2814,7 @@
   },
   "stats": {
     "title": "Statistiche",
+    "subtitle": "Quello che il tavolo ha visto",
     "noStats": "Nessuna statistica disponibile",
     "gamesPlayed": "Partite giocate",
     "uniquePlayers": "Giocatori unici",
@@ -2848,6 +2850,7 @@
   },
   "achievements": {
     "title": "Obiettivi",
+    "subtitle": "Trofei sbloccati",
     "unlockedOn": "Sbloccato il {date}",
     "locked": "Non sbloccato",
     "items": {
