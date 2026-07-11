@@ -235,24 +235,30 @@ export function QuizOnline() {
           ))}
         </div>
 
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          <Button
-            onClick={() => void voteRematch()}
-            disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 py-5 text-base font-bold"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {iVotedRematch && humanCount > 1
-              ? t('rematchWaiting', { count: rematchVotes.length, total: humanCount })
-              : t('replay')}
-          </Button>
-          <Button
-            onClick={() => void leaveRoom()}
-            variant="outline"
-            className="w-full rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
-          >
-            <Home className="mr-2 h-4 w-4" /> {t('backToMenu')}
-          </Button>
+        {/* Espace pour la barre fixe. */}
+        <div aria-hidden className="h-16" />
+
+        {/* Rejouer / Quitter : fixes en zone pouce (emprunt direction C). */}
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+          <div className="mx-auto flex w-full max-w-sm items-center gap-3">
+            <Button
+              onClick={() => void leaveRoom()}
+              variant="outline"
+              className="h-12 flex-[0.8] rounded-2xl border-white/15 bg-white/5 text-sm font-semibold text-white/80 hover:bg-white/10"
+            >
+              <Home className="mr-1.5 h-4 w-4" /> {t('backToMenu')}
+            </Button>
+            <Button
+              onClick={() => void voteRematch()}
+              disabled={iVotedRematch && humanCount > 1}
+              className="h-12 flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500"
+            >
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+              {iVotedRematch && humanCount > 1
+                ? t('rematchWaiting', { count: rematchVotes.length, total: humanCount })
+                : t('replay')}
+            </Button>
+          </div>
         </div>
       </div>
     )

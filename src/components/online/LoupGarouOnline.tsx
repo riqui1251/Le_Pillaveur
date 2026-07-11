@@ -1142,6 +1142,7 @@ export function LoupGarouOnline() {
                         className={cn(
                           'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[#24201A] transition-all',
                           'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)]',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep',
                           chosen
                             ? '-translate-y-0.5 border-suit-red bg-cream ring-2 ring-suit-red'
                             : 'border-[#D8CCAE] bg-cream',
