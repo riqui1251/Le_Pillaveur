@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { ArrowLeft, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Users, UserPlus, Tv, Trophy } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Settings, Users, UserPlus, Tv, Trophy } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -71,6 +71,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const [joinCode, setJoinCode] = useState('')
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [showTv, setShowTv] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [top5, setTop5] = useState<Map<string, number>>(new Map())
   const tTv = useTranslations('tv')
   const locale = useLocale()
@@ -296,74 +297,40 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </span>
       </div>
 
-      <div className="mb-4 overflow-hidden rounded-3xl border border-amber-500/25 bg-gradient-to-br from-amber-600/20 via-white/5 to-transparent text-center shadow-2xl backdrop-blur-md">
-        <div className="px-6 pb-5 pt-6">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-amber-300/80">
-            Lobby {game?.title}
-          </p>
-          <p className="font-mono text-4xl font-bold tracking-[0.3em] text-white">{room.code}</p>
-        </div>
-        <button
-          onClick={copyCode}
-          className="flex w-full items-center justify-center gap-2 border-t border-gold/10 bg-felt-deep/60 py-3 text-sm font-semibold text-white/80 transition-all hover:bg-felt-deep/80 hover:text-white"
-        >
-          {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-          {copied ? 'Code copié !' : 'Copier le code'}
+      {/* Plaque de table : le code — l'info qu'on se crie à voix haute — est
+          l'élément géant sur carte crème ; toucher la plaque le copie. */}
+      <div className="mb-4 overflow-hidden rounded-2xl border border-[#D8CCAE] bg-cream text-[#24201A] shadow-[0_14px_30px_-14px_rgba(0,0,0,0.6)]">
+        <button type="button" onClick={copyCode} className="block w-full px-6 pb-4 pt-5 text-center">
+          <span className="block font-display text-[10px] font-bold uppercase tracking-[0.28em] text-[#6B6455]">
+            Table · {game?.title}
+          </span>
+          <span className="mt-1 block font-display text-4xl font-black tracking-[0.22em]">
+            {room.code}
+          </span>
+          <span className="mt-1.5 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#6B6455]">
+            {copied ? <Check className="h-3.5 w-3.5 text-emerald-700" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? 'Code copié !' : 'Toucher pour copier'}
+          </span>
         </button>
-      </div>
-
-      {/* Mode TV : afficher la partie sur une télé */}
-      <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md">
         <button
           type="button"
           onClick={() => setShowTv((v) => !v)}
           aria-expanded={showTv}
-          className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:text-white"
+          className="flex w-full items-center justify-center gap-2 border-t border-[#24201A]/10 bg-[#24201A]/5 py-2.5 text-xs font-bold text-[#4A443A] transition-colors hover:bg-[#24201A]/10"
         >
-          <Tv className="h-4 w-4 text-amber-300" />
+          <Tv className="h-3.5 w-3.5" />
           {tTv('modeTv')}
         </button>
         {showTv && (
-          <div className="flex flex-col items-center gap-3 border-t border-white/10 px-4 py-4 text-center">
-            <p className="text-xs leading-relaxed text-white/60">{tTv('modeTvHint')}</p>
+          <div className="flex flex-col items-center gap-3 border-t border-[#24201A]/10 px-4 py-4 text-center">
+            <p className="text-xs leading-relaxed text-[#6B6455]">{tTv('modeTvHint')}</p>
             <JoinQR
               url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/jeux?join=${room.code}`}
               size={128}
             />
-            <p className="text-[11px] text-white/40">{tTv('scanToJoin')}</p>
+            <p className="text-[11px] text-[#6B6455]/80">{tTv('scanToJoin')}</p>
           </div>
         )}
-      </div>
-
-      <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
-          {tOnline('visibility.title')}
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          {VISIBILITY_OPTIONS.map((value) => {
-            const active = visibility === value
-            const Icon = VISIBILITY_ICON[value]
-            return (
-              <button
-                key={value}
-                type="button"
-                disabled={!isHost}
-                onClick={() => updateSettings({ visibility: value })}
-                title={tOnline(`visibility.${value}Desc`)}
-                className={cn(
-                  'flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
-                  active
-                    ? 'border-transparent bg-gradient-to-r from-amber-500 to-amber-700 text-white shadow-lg'
-                    : 'border-white/10 bg-white/5 text-white/60',
-                  isHost && !active && 'hover:bg-white/10 hover:text-white'
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="text-xs font-bold">{tOnline(`visibility.${value}`)}</span>
-              </button>
-            )
-          })}
-        </div>
       </div>
 
       {isHost && visibility !== 'public' && (
@@ -537,6 +504,58 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </>
         )
       })()}
+
+      {/* Réglages de table repliés : le résumé suffit tant qu'on ne touche
+          à rien — visibilité, bots et options du jeu vivent dedans.
+          (Les équipes Toucher-Coulé restent au-dessus : c'est un choix de
+          JOUEUR, pas un réglage d'hôte.) */}
+      <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md">
+        <button
+          type="button"
+          onClick={() => setShowSettings((v) => !v)}
+          aria-expanded={showSettings}
+          className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:text-white"
+        >
+          <Settings className="h-4 w-4 shrink-0 text-amber-300" />
+          <span className="shrink-0">Réglages</span>
+          <span className="min-w-0 flex-1 truncate text-left text-xs font-normal text-white/40">
+            · {tOnline(`visibility.${visibility}`)}
+            {(room.settings.botsCount ?? 0) > 0 && ` · ${room.settings.botsCount} bot${(room.settings.botsCount ?? 0) > 1 ? 's' : ''}`}
+          </span>
+          <ChevronDown className={cn('h-4 w-4 shrink-0 text-white/40 transition-transform', showSettings && 'rotate-180')} />
+        </button>
+        <div className={cn('border-t border-white/10 p-4 pb-0', !showSettings && 'hidden')}>
+
+      <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
+          {tOnline('visibility.title')}
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {VISIBILITY_OPTIONS.map((value) => {
+            const active = visibility === value
+            const Icon = VISIBILITY_ICON[value]
+            return (
+              <button
+                key={value}
+                type="button"
+                disabled={!isHost}
+                onClick={() => updateSettings({ visibility: value })}
+                title={tOnline(`visibility.${value}Desc`)}
+                className={cn(
+                  'flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
+                  active
+                    ? 'border-transparent bg-gradient-to-r from-amber-500 to-amber-700 text-white shadow-lg'
+                    : 'border-white/10 bg-white/5 text-white/60',
+                  isHost && !active && 'hover:bg-white/10 hover:text-white'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-xs font-bold">{tOnline(`visibility.${value}`)}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {gameId === 'petit-buveur' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
@@ -1000,12 +1019,17 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         )
       })()}
 
+        </div>
+      </div>
+
       <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
         <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-white/45">
           <Users className="h-3.5 w-3.5 text-amber-300" />
           Joueurs ({room.members.length})
         </div>
-        <ul className="space-y-2">
+        {/* Jetons 2 colonnes : le statut prêt devient une pastille (vert =
+            prêt) — deux fois plus de joueurs visibles sans scroller. */}
+        <ul className="grid grid-cols-2 gap-2">
           {room.members.map((m) => {
             const isFriend = friends.some((f) => f.userId === m.userId)
             const incomingReq = incoming.find((r) => r.userId === m.userId)
@@ -1015,7 +1039,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               <li
                 key={m.userId}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
+                  'flex items-center gap-2 rounded-xl border px-2.5 py-2 transition-colors',
                   m.isReady ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-gold/10 bg-felt-deep/60'
                 )}
               >
@@ -1023,106 +1047,125 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 <OnlinePlayerIcon
                   icon={m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
                   cosmetics={memberCosmetics}
-                  className="h-9 w-9 border border-white/10 bg-white/5 text-base"
+                  className="h-8 w-8 shrink-0 border border-white/10 bg-white/5 text-sm"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1.5 truncate font-medium text-white">
+                  <p className="flex items-center gap-1 truncate text-sm font-medium text-white">
                     <OnlinePlayerName
                       name={m.displayName}
                       cosmetics={memberCosmetics}
                       className="truncate"
                     />
                     <OnlineLevelBadge cosmetics={memberCosmetics} />
-                    {m.isSelf && <span className="ml-1 text-xs text-white/40">(vous)</span>}
                   </p>
-                  <p className={cn('text-xs', m.isReady ? 'text-emerald-300/80' : 'text-white/45')}>
-                    {m.isReady ? '✓ Prêt' : 'Pas encore prêt'}
+                  <p className="truncate text-[10px] text-white/40">
+                    {m.isSelf ? '(vous)' : ' '}
                   </p>
                 </div>
+                <span
+                  aria-label={m.isReady ? 'Prêt' : 'Pas encore prêt'}
+                  title={m.isReady ? 'Prêt' : 'Pas encore prêt'}
+                  className={cn('h-2.5 w-2.5 shrink-0 rounded-full', m.isReady ? 'bg-emerald-400' : 'bg-white/20')}
+                />
                 {top5.has(m.userId) && (
                   <span
-                    className="flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-300"
+                    className="flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-amber-300"
                     title={tOnline('top5Badge', { rank: top5.get(m.userId) ?? 0 })}
                   >
                     <Trophy className="h-3 w-3" />#{top5.get(m.userId)}
                   </span>
                 )}
+                {/* Statuts d'amitié en icônes : les libellés textuels ne
+                    tiennent pas sur des jetons 2 colonnes (title + aria). */}
                 {!m.isSelf && (
                   isFriend ? (
-                    <span className="shrink-0 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-                      {tFriends('alreadyFriend')}
+                    <span title={tFriends('alreadyFriend')} aria-label={tFriends('alreadyFriend')} className="shrink-0">
+                      <Users className="h-3.5 w-3.5 text-emerald-400/80" />
                     </span>
                   ) : incomingReq ? (
                     <button
                       type="button"
                       onClick={() => acceptRequest(incomingReq.id)}
-                      className="shrink-0 rounded-lg bg-emerald-500/20 px-2.5 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/30"
+                      aria-label={tFriends('accept')}
+                      title={tFriends('accept')}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
                     >
-                      {tFriends('accept')}
+                      <Check className="h-4 w-4" />
                     </button>
                   ) : outgoingPending ? (
-                    <span className="shrink-0 text-[10px] text-white/35">{tFriends('requestSent')}</span>
+                    <span title={tFriends('requestSent')} aria-label={tFriends('requestSent')} className="shrink-0">
+                      <Mail className="h-3.5 w-3.5 text-white/30" />
+                    </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => sendRequestToUser(m.userId)}
                       aria-label={tFriends('sendRequest')}
                       title={tFriends('sendRequest')}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
                     >
                       <UserPlus className="h-4 w-4" />
                     </button>
                   )
                 )}
-                {m.isHost && <Crown className="h-4 w-4 shrink-0 text-amber-400" />}
+                {m.isHost && <Crown className="h-3.5 w-3.5 shrink-0 text-amber-400" />}
               </li>
             )
           })}
         </ul>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <Button
-          onClick={() => setReady(!selfMember?.isReady)}
-          className={cn(
-            'w-full rounded-2xl border py-5 text-base font-semibold transition-all',
-            selfMember?.isReady
-              ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20'
-              : 'border-white/15 bg-white/5 text-white hover:bg-white/10'
-          )}
-        >
-          {selfMember?.isReady ? '✓ Je suis prêt — annuler' : 'Me déclarer prêt'}
-        </Button>
-
-        {isHost ? (
-          <Button
-            onClick={() => launchGame()}
-            disabled={!room.canLaunch || loading}
-            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-5 text-lg font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Play className="mr-2 h-5 w-5" />
-            {(() => {
-              // Minimum PAR JEU (affichage — la vérité serveur est dans le
-              // registre game-adapters, synchronisée par test avec GAMES).
-              // Les bots ajoutés comptent dans le total.
-              const meta = GAMES.find((g) => g.id === gameId)
-              const bots = meta?.botsFillable ? Math.max(0, room.settings.botsCount ?? 0) : 0
-              const minPlayers = Math.max(1, (meta?.minPlayers ?? 2) - bots)
-              return room.canLaunch
-                ? 'Lancer la partie'
-                : room.members.length < minPlayers
-                  ? `En attente de joueurs (min. ${minPlayers})`
-                  : `En attente (${room.members.filter((m) => m.isReady).length}/${room.members.length} prêts)`
-            })()}
-          </Button>
-        ) : (
-          <p className="text-center text-sm text-white/50">
-            En attente que {room.members.find((m) => m.isHost)?.displayName} lance la partie…
-          </p>
-        )}
-      </div>
-
       {error && <p className="mt-4 text-center text-sm text-red-300">{error}</p>}
+
+      {!isHost && (
+        <p className="mt-2 text-center text-sm text-white/50">
+          En attente que {room.members.find((m) => m.isHost)?.displayName} lance la partie…
+        </p>
+      )}
+
+      {/* Espace réservé pour que la barre fixe ne masque pas le contenu. */}
+      <div aria-hidden className="h-20" />
+
+      {/* Prêt + Lancer : fixes en zone pouce, safe-area comprise. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-lg items-center gap-3">
+          <Button
+            onClick={() => setReady(!selfMember?.isReady)}
+            className={cn(
+              'h-12 rounded-2xl border text-sm font-semibold transition-all',
+              isHost ? 'flex-[0.8]' : 'flex-1',
+              selfMember?.isReady
+                ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20'
+                : 'border-white/15 bg-white/5 text-white hover:bg-white/10'
+            )}
+          >
+            {selfMember?.isReady ? '✓ Prêt' : 'Me déclarer prêt'}
+          </Button>
+
+          {isHost && (
+            <Button
+              onClick={() => launchGame()}
+              disabled={!room.canLaunch || loading}
+              className="h-12 flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Play className="mr-1.5 h-4 w-4" />
+              {(() => {
+                // Minimum PAR JEU (affichage — la vérité serveur est dans le
+                // registre game-adapters, synchronisée par test avec GAMES).
+                // Les bots ajoutés comptent dans le total.
+                const meta = GAMES.find((g) => g.id === gameId)
+                const bots = meta?.botsFillable ? Math.max(0, room.settings.botsCount ?? 0) : 0
+                const minPlayers = Math.max(1, (meta?.minPlayers ?? 2) - bots)
+                return room.canLaunch
+                  ? 'Lancer la partie'
+                  : room.members.length < minPlayers
+                    ? `Min. ${minPlayers} joueurs`
+                    : `${room.members.filter((m) => m.isReady).length}/${room.members.length} prêts`
+              })()}
+            </Button>
+          )}
+        </div>
+      </div>
     </LobbyShell>
   )
 }
