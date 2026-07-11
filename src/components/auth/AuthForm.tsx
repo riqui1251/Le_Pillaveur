@@ -278,7 +278,7 @@ export function AuthForm() {
       </div>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
-        <DialogContent className="border-white/10 bg-[#0c0b12] text-white">
+        <DialogContent className="border-white/10 bg-felt-deep text-white">
           <DialogHeader>
             <DialogTitle>{t('forgot.title')}</DialogTitle>
             <DialogDescription className="text-white/50">

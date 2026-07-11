@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Globe, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { PlayingCard } from '@/components/ui/PlayingCard'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineProgression } from '@/hooks/useOnlineProgression'
@@ -210,38 +211,41 @@ export function AccountInfo() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/70">
-            {t('brand')}
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">
-            {user?.displayName ?? t('title')}
-          </h1>
-          {user?.accountCode && (
-            <button
-              type="button"
-              onClick={copyAccountCode}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 font-mono text-xs text-amber-200 transition-colors hover:bg-amber-500/20"
-              title={t('copyAccountCode')}
-            >
-              <Hash className="h-3 w-3" />
-              {user.accountCode}
-              {codeCopied ? (
-                <Check className="h-3 w-3 text-green-400" />
-              ) : (
-                <Copy className="h-3 w-3 opacity-60" />
-              )}
-            </button>
-          )}
-          {user?.email && (
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-white/45">
-              <Mail className="h-3 w-3" />
-              {user.email}
+      <div className="flex items-start justify-between gap-3">
+        {/* Le profil est une carte à jouer — pseudo en Playfair, encre sur crème. */}
+        <PlayingCard suit="spade" rank="A" className="min-w-0 flex-1">
+          <div className="px-7 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6B6455]">
+              {t('brand')}
             </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
+            <h1 className="mt-0.5 truncate font-display text-2xl font-bold text-[#24201A] sm:text-3xl">
+              {user?.displayName ?? t('title')}
+            </h1>
+            {user?.accountCode && (
+              <button
+                type="button"
+                onClick={copyAccountCode}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#24201A]/15 bg-[#24201A]/5 px-2.5 py-1 font-mono text-xs text-[#4A443A] transition-colors hover:bg-[#24201A]/10"
+                title={t('copyAccountCode')}
+              >
+                <Hash className="h-3 w-3" />
+                {user.accountCode}
+                {codeCopied ? (
+                  <Check className="h-3 w-3 text-emerald-700" />
+                ) : (
+                  <Copy className="h-3 w-3 opacity-60" />
+                )}
+              </button>
+            )}
+            {user?.email && (
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-[#6B6455]">
+                <Mail className="h-3 w-3" />
+                {user.email}
+              </p>
+            )}
+          </div>
+        </PlayingCard>
+        <div className="flex shrink-0 items-center gap-2">
           {user && canAccessSupervision(user.role) && (
             <Link
               href="/supervision"
@@ -386,7 +390,7 @@ export function AccountInfo() {
         </div>
         <div className="grid grid-cols-3 gap-3">
           <StatCard label={t('stats.players')} value={players.length} color="text-amber-300" />
-          <StatCard label={t('stats.games')} value={totalGames} color="text-violet-300" />
+          <StatCard label={t('stats.games')} value={totalGames} color="text-sky-300" />
           <StatCard label={t('stats.sips')} value={totalDrinks} color="text-rose-300" />
         </div>
       </section>
@@ -523,7 +527,7 @@ export function AccountInfo() {
                     <div className="flex shrink-0 items-center gap-1">
                       <button
                         onClick={() => startRename(player)}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-violet-500/15 hover:text-violet-300"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
                         title={t('playersList.rename')}
                       >
                         <TextCursorInput className="h-4 w-4" />
@@ -569,10 +573,10 @@ export function AccountInfo() {
 
       <section>
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
-          <Users className="h-4 w-4 text-violet-300" />
+          <Users className="h-4 w-4 text-amber-300" />
           {tFriends('title')}
         </div>
-        <div className="rounded-2xl border border-violet-500/20 bg-violet-500/10 p-4">
+        <div className="rounded-2xl border border-gold/20 bg-gold/10 p-4">
           <FriendsManager />
         </div>
       </section>

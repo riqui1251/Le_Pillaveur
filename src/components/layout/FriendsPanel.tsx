@@ -37,9 +37,9 @@ export function FriendsPanel({ open, onClose }: FriendsPanelProps) {
             aria-label={tFriends('title')}
             className="fixed left-3 right-3 top-16 z-[61] mx-auto max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#0c0b12]/98 shadow-2xl backdrop-blur-xl sm:left-16 sm:right-auto sm:top-[4.25rem]"
           >
-            <div className="flex items-center justify-between border-b border-white/10 bg-gradient-to-br from-violet-600/15 to-transparent px-4 py-3">
+            <div className="flex items-center justify-between border-b border-white/10 bg-gradient-to-br from-amber-600/15 to-transparent px-4 py-3">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-violet-300" />
+                <Users className="h-4 w-4 text-amber-300" />
                 <h2 className="text-sm font-bold text-white">{tFriends('title')}</h2>
               </div>
               <button
