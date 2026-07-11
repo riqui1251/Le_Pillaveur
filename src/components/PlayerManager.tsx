@@ -8,7 +8,6 @@ import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { X, Trophy, Pencil } from 'lucide-react';
 import { PlayerIcon } from '@/components/ui/PlayerIcon';
-import { PlayerName } from '@/components/ui/PlayerName';
 import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer';
 import { Player, getPlayerNameValidationError } from '@/lib/players';
 import { nameValidationI18nKey } from '@/lib/name-moderation';
@@ -188,9 +187,10 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
                 <div className="flex items-center gap-3">
                   <PlayerIcon player={player} size="md" className="h-10 w-10 text-xl" />
                   <div className="flex-grow">
-                    <div className="font-semibold">
-                      <PlayerName player={player} />
-                    </div>
+                    {/* Encre pure sur crème : les couleurs cosmétiques des
+                        pseudos (souvent claires) sont illisibles ici — elles
+                        restent visibles sur les surfaces feutre. */}
+                    <div className="font-semibold text-[#24201A]">{player.name}</div>
                     <div className="flex items-center gap-1 text-xs opacity-70">
                       <Trophy className="h-3 w-3" /> {t('wins', { count: player.stats.wins })}
                     </div>

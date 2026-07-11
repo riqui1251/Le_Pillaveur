@@ -66,10 +66,12 @@ export function GameCard({ game, icon }: GameCardProps) {
             {icon}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="truncate font-display text-sm font-bold leading-tight text-[#24201A] sm:text-[0.95rem]">
+            {/* 2 lignes plutôt que truncate : le nom du jeu est l'info n°1
+                de la carte — à 375px, la moitié des titres se coupaient. */}
+            <h3 className="line-clamp-2 font-display text-sm font-bold leading-tight text-[#24201A] sm:text-[0.95rem]">
               {game.title}
             </h3>
-            <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[#6B6455] sm:text-xs">
+            <p className="mt-0.5 line-clamp-2 pr-4 text-[11px] leading-snug text-[#6B6455] sm:text-xs">
               {game.description}
             </p>
           </div>

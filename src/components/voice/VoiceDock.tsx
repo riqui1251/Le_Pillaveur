@@ -332,7 +332,7 @@ export function VoiceDock() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 340, damping: 24 }}
-            className="w-64 rounded-2xl border border-emerald-400/30 bg-gray-900/95 p-3 shadow-2xl backdrop-blur-md"
+            className="fixed inset-x-3 bottom-3 z-[95] rounded-2xl border border-emerald-400/30 bg-felt-deep/95 p-3 shadow-2xl backdrop-blur-md sm:static sm:inset-x-auto sm:bottom-auto sm:z-auto sm:w-64"
             role="dialog"
             aria-label={t('prompt.title')}
           >
