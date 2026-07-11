@@ -4,6 +4,13 @@
     "description": "Jeux à boire entre amis"
   },
   "nav": {
+    "tabs": {
+      "label": "Navigation principale",
+      "tables": "Tables",
+      "friends": "Amis",
+      "ranking": "Palmarès",
+      "account": "Compte"
+    },
     "brand": "Le Pillaveur",
     "loading": "Chargement…",
     "navigation": "Navigation",

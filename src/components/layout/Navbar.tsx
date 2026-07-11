@@ -94,6 +94,14 @@ export default function Navbar() {
     setChatOpen(false)
   }, [pathname])
 
+  // La barre d'onglets mobile ouvre le panneau des amis via cet évènement
+  // (l'état du panneau vit ici, avec le bouton du header).
+  useEffect(() => {
+    const openFriends = () => setFriendsOpen(true)
+    window.addEventListener('lp:open-friends', openFriends)
+    return () => window.removeEventListener('lp:open-friends', openFriends)
+  }, [])
+
   const toggleDrawer = () => setDrawerOpen((open) => !open)
 
   // Écran TV : plein écran sans chrome (la barre de nav n'a pas de sens sur une télé).
@@ -133,8 +141,8 @@ export default function Navbar() {
               className={cn(
                 'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
                 friendsOpen
-                  ? 'border-violet-400/40 bg-violet-500/20 text-violet-200 shadow-[0_0_16px_rgba(139,92,246,0.15)]'
-                  : 'border-white/10 bg-white/[0.04] text-violet-300 hover:border-violet-400/35 hover:bg-violet-500/10'
+                  ? 'border-amber-400/40 bg-amber-500/20 text-amber-200 shadow-[0_0_16px_rgba(217,164,65,0.15)]'
+                  : 'border-white/10 bg-white/[0.04] text-amber-300 hover:border-amber-400/35 hover:bg-amber-500/10'
               )}
             >
               <Users className="h-5 w-5" />

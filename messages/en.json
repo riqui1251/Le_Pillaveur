@@ -4,6 +4,13 @@
     "description": "Drinking games with friends"
   },
   "nav": {
+    "tabs": {
+      "label": "Main navigation",
+      "tables": "Tables",
+      "friends": "Friends",
+      "ranking": "Rankings",
+      "account": "Account"
+    },
     "brand": "Le Pillaveur",
     "loading": "Loading…",
     "navigation": "Navigation",

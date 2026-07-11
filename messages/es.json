@@ -4,6 +4,13 @@
     "description": "Juegos de beber con amigos"
   },
   "nav": {
+    "tabs": {
+      "label": "Navegación principal",
+      "tables": "Mesas",
+      "friends": "Amigos",
+      "ranking": "Palmarés",
+      "account": "Cuenta"
+    },
     "brand": "Le Pillaveur",
     "loading": "Cargando…",
     "navigation": "Navegación",
