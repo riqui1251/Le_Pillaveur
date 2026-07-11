@@ -137,6 +137,10 @@ export type LGState = TimedPhaseState & {
   ravenTargetId: string | null
   /** L'Ancien a déjà encaissé (et survécu à) une attaque des loups. */
   elderLifeUsed: boolean
+  /** Round où l'Ancien a encaissé une attaque — lui permet d'être averti
+   *  (sans détail) qu'il a été pris pour cible, sans quoi son bouclier
+   *  passe totalement inaperçu du joueur. */
+  elderAttackedRound: number | null
   // ── Maire (élu une fois, avant la première nuit) ───────────────────────
   /** Maire élu — PUBLIC une fois connu ; son vote compte double au lynchage. */
   mayorId: string | null
@@ -317,6 +321,7 @@ export function createLGState(
     guardLastProtectedId: null,
     ravenTargetId: null,
     elderLifeUsed: false,
+    elderAttackedRound: null,
     mayorId: null,
     mayorVotes: {},
     dayVotes: {},
@@ -487,6 +492,7 @@ function resolveNight(state: LGState, now: number): LGState {
   const deaths: LGDeath[] = []
   const deadIds = new Set<string>()
   let elderLifeUsed = state.elderLifeUsed
+  let elderAttackedRound = state.elderAttackedRound
 
   if (
     state.nightVictimId &&
@@ -496,8 +502,10 @@ function resolveNight(state: LGState, now: number): LGState {
     const victim = playerOf(state, state.nightVictimId)
     if (victim?.alive) {
       if (victim.role === 'ancien' && !elderLifeUsed) {
-        // L'Ancien encaisse la première morsure : personne ne meurt cette nuit.
+        // L'Ancien encaisse la première morsure : personne ne meurt cette nuit,
+        // mais on lui signale (à lui seul, sans détail) qu'il a été visé.
         elderLifeUsed = true
+        elderAttackedRound = state.round
       } else {
         deaths.push({ playerId: victim.id, role: victim.role, cause: 'loups', round: state.round })
         deadIds.add(victim.id)
@@ -520,6 +528,7 @@ function resolveNight(state: LGState, now: number): LGState {
     ...state,
     players,
     elderLifeUsed,
+    elderAttackedRound,
     lastNightDeaths: deaths,
     deaths: [...state.deaths, ...deaths],
     pendingHunterId: hunter?.playerId ?? null,
@@ -965,6 +974,7 @@ export type LGClientView = Omit<
   | 'guardLastProtectedId'
   | 'ravenTargetId'
   | 'elderLifeUsed'
+  | 'elderAttackedRound'
 > & {
   /** Protégé du Salvateur cette nuit — lui seul (+ fantômes). */
   guardProtectedId: string | null
@@ -974,6 +984,9 @@ export type LGClientView = Omit<
   ravenTargetId: string | null
   /** L'Ancien a déjà servi de bouclier — fantômes/fin de partie uniquement. */
   elderLifeUsed: boolean | null
+  /** Round où l'Ancien a été pris pour cible — lui seul (+ fantômes/fin) ;
+   *  aucun autre détail (ni auteur, ni mécanique) ne lui est communiqué. */
+  elderAttackedRound: number | null
   /** La Sorcière a déjà agi cette nuit — elle seule (+ fantômes). */
   witchActed: boolean | null
   players: LGPlayerView[]
@@ -1016,6 +1029,7 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
     guardLastProtectedId,
     ravenTargetId,
     elderLifeUsed,
+    elderAttackedRound,
     ...rest
   } = state
   void _rng
@@ -1040,6 +1054,7 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
   const iAmWitch = Boolean(me?.alive && me.role === 'sorciere')
   const iAmGuard = Boolean(me?.alive && me.role === 'salvateur')
   const iAmRaven = Boolean(me?.alive && me.role === 'corbeau')
+  const iAmElder = Boolean(me?.alive && me.role === 'ancien')
   /** La marque du Corbeau devient publique au lever du jour. */
   const dayPhases: LGPhase[] = ['dawn', 'hunter-shot', 'day-debate', 'day-vote', 'day-revote']
   const ravenPublic = dayPhases.includes(state.phase)
@@ -1087,6 +1102,7 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
     guardLastProtectedId: iAmGuard || ghost || finished ? guardLastProtectedId : null,
     ravenTargetId: iAmRaven || ravenPublic || ghost || finished ? ravenTargetId : null,
     elderLifeUsed: ghost || finished ? elderLifeUsed : null,
+    elderAttackedRound: iAmElder || ghost || finished ? elderAttackedRound : null,
     hasVoted,
     myVote: dayVotes[viewerId] ?? null,
     hasVotedMayor,

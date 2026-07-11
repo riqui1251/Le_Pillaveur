@@ -2803,7 +2803,8 @@
         "ravenPrompt": "Qui marques-tu de ta plume noire ?",
         "ravenDone": "Ta marque pèse sur {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ {name} porte la marque du Corbeau : +2 voix contre lui au vote !",
-        "ravenMarkBadge": "Marqué par le Corbeau (+2 voix)"
+        "ravenMarkBadge": "Marqué par le Corbeau (+2 voix)",
+        "elderAttackedBanner": "⏳ Vous avez été pris pour cible par les loups cette nuit."
       },
       "tutorial": {
         "steps": [

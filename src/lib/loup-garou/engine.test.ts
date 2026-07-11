@@ -66,6 +66,7 @@ function craft(
     guardLastProtectedId: null,
     ravenTargetId: null,
     elderLifeUsed: false,
+    elderAttackedRound: null,
     mayorId: null,
     mayorVotes: {},
     dayVotes: {},
@@ -715,6 +716,10 @@ describe('nouveaux rôles : Salvateur, Corbeau, Ancien', () => {
     expect(dawn.lastNightDeaths).toEqual([]) // il a encaissé
     expect(dawn.elderLifeUsed).toBe(true)
     expect(dawn.players.find((p) => p.id === 'anc')?.alive).toBe(true)
+    // Il est averti (sans détail) qu'il a été pris pour cible — lui seul.
+    expect(dawn.elderAttackedRound).toBe(dawn.round)
+    expect(toLGClientView(dawn, 'anc').elderAttackedRound).toBe(dawn.round)
+    expect(toLGClientView(dawn, 'vil1').elderAttackedRound).toBeNull()
     // Seconde attaque : plus de bouclier.
     const night2 = craft(SEVEN, 'night-wolves', {
       wolfVotes: { loup1: 'anc' },

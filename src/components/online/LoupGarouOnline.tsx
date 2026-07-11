@@ -1050,6 +1050,11 @@ export function LoupGarouOnline() {
                   {t('ravenMarkBanner', { name: nameOf(view.ravenTargetId) })}
                 </p>
               )}
+              {view.elderAttackedRound === view.round && (
+                <p className="mt-2 rounded-xl border border-orange-400/25 bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-orange-200">
+                  {t('elderAttackedBanner')}
+                </p>
+              )}
             </div>
           )}
 

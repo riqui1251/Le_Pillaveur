@@ -95,6 +95,7 @@ export function parseLGState(json: string | null): LGState | null {
       guardLastProtectedId: raw.guardLastProtectedId ?? null,
       ravenTargetId: raw.ravenTargetId ?? null,
       elderLifeUsed: raw.elderLifeUsed ?? false,
+      elderAttackedRound: raw.elderAttackedRound ?? null,
     }
   } catch {
     return null

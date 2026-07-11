@@ -2793,7 +2793,8 @@
         "ravenPrompt": "Chi marchi con la tua piuma nera?",
         "ravenDone": "Il tuo marchio pesa su {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ {name} porta il marchio del Corvo: +2 voti contro di lui oggi!",
-        "ravenMarkBadge": "Marchiato dal Corvo (+2 voti)"
+        "ravenMarkBadge": "Marchiato dal Corvo (+2 voti)",
+        "elderAttackedBanner": "⏳ Sei stato preso di mira dai lupi questa notte."
       },
       "tutorial": {
         "steps": [

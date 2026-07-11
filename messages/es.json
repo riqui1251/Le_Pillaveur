@@ -2793,7 +2793,8 @@
         "ravenPrompt": "¿A quién marcas con tu pluma negra?",
         "ravenDone": "Tu marca pesa sobre {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ ¡{name} lleva la marca del Cuervo: +2 votos en su contra hoy!",
-        "ravenMarkBadge": "Marcado por el Cuervo (+2 votos)"
+        "ravenMarkBadge": "Marcado por el Cuervo (+2 votos)",
+        "elderAttackedBanner": "⏳ Los lobos te atacaron esta noche."
       },
       "tutorial": {
         "steps": [
