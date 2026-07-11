@@ -4,10 +4,10 @@ import type { ComponentType, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * Ossature visuelle de la supervision — direction artistique sobre et nette :
- * fond très sombre (#07060b), un unique halo ambre discret, trame de points
- * légère, contours francs, accent ambre réservé à l'essentiel. Aucun gradient
- * agressif ni glow. Tous ces composants sont purement présentationnels.
+ * Ossature visuelle de la supervision — « Cartes sur Table » côté console :
+ * le feutre du layout, un unique halo d'or discret, contours francs, accent
+ * or réservé à l'essentiel. Aucun gradient agressif ni glow. Tous ces
+ * composants sont purement présentationnels.
  */
 
 type IconType = ComponentType<{ className?: string }>
@@ -15,17 +15,9 @@ type IconType = ComponentType<{ className?: string }>
 /** Fond immersif contenu + conteneur centré. */
 export function SupervisionShell({ children }: { children: ReactNode }) {
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#07060b] text-white">
+    <main className="relative min-h-screen overflow-x-hidden text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-amber-500/10 blur-[130px]" />
-        <div
-          className="absolute inset-0 opacity-[0.35]"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)',
-            backgroundSize: '30px 30px',
-          }}
-        />
+        <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-gold/10 blur-[130px]" />
       </div>
       <div className="relative mx-auto max-w-6xl space-y-5 px-3 pb-24 pt-4 sm:px-6 sm:pb-16 sm:pt-6">
         {children}
@@ -53,13 +45,13 @@ export function SupervisionHeader({
   refreshing?: boolean
 }) {
   return (
-    <header className="flex flex-wrap items-center gap-3 border-b border-white/10 pb-4">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-500/10 text-amber-300">
+    <header className="flex flex-wrap items-center gap-3 border-b border-gold/15 pb-4">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-gold/10 text-gold">
         <ShieldGlyph />
       </span>
       <div className="mr-auto min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">{kicker}</p>
-        <h1 className="truncate text-lg font-bold text-white sm:text-xl">{title}</h1>
+        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-gold/60">{kicker}</p>
+        <h1 className="truncate font-display text-lg font-bold text-white sm:text-xl">{title}</h1>
       </div>
       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -210,20 +202,20 @@ export function KpiBento({
   const HeroIcon = hero.icon
   return (
     <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-      <div className="col-span-2 rounded-2xl border border-amber-400/25 bg-amber-500/[0.07] p-4 sm:p-5">
+      <div className="col-span-2 rounded-2xl border border-gold/25 bg-gold/[0.07] p-4 sm:p-5">
         <div className="flex items-center gap-1.5 text-xs font-medium text-amber-200/80">
           <HeroIcon className="h-4 w-4 shrink-0" />
           {hero.label}
         </div>
-        <div className="mt-1 text-3xl font-bold tabular-nums text-white sm:text-4xl">
+        <div className="mt-1 font-display text-3xl font-bold tabular-nums text-gold sm:text-4xl">
           {hero.value.toLocaleString('fr-FR')}
         </div>
         {hero.hint && <p className="mt-0.5 text-xs text-white/45">{hero.hint}</p>}
       </div>
       {metrics.map((m) => (
-        <div key={m.label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div key={m.label} className="rounded-2xl border border-gold/10 bg-felt-deep/50 p-4">
           <div className="text-xs font-medium text-white/55">{m.label}</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums text-white">
+          <div className="mt-1 font-display text-2xl font-bold tabular-nums text-cream">
             {m.value.toLocaleString('fr-FR')}
           </div>
           {m.hint && <p className="mt-0.5 text-[11px] text-white/40">{m.hint}</p>}

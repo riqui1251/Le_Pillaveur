@@ -442,7 +442,7 @@ function FeedbackListSection({
                     ? 'border-red-500/30 bg-red-500/15 text-red-200'
                     : item.type === 'improvement'
                       ? 'border-amber-500/30 bg-amber-500/15 text-amber-200'
-                      : 'border-violet-500/30 bg-violet-500/15 text-violet-200'
+                      : 'border-chip-blue/50 bg-chip-blue/20 text-sky-200'
                 }
               >
                 {item.typeLabel}
@@ -535,7 +535,7 @@ function RoleBadge({ role, compact }: { role: string; compact?: boolean }) {
   }
   if (role === 'moderator') {
     return (
-      <Badge className={cn('border-violet-500/30 bg-violet-500/15 text-violet-200', badgeClass)}>
+      <Badge className={cn('border-chip-blue/50 bg-chip-blue/20 text-sky-200', badgeClass)}>
         <ShieldCheck className={iconClass} />
         {t('roles.moderator')}
       </Badge>
@@ -1515,7 +1515,7 @@ export default function SupervisionPage() {
           <p><strong className="text-yellow-200">{t('roles.fondateur')}</strong> — {ROLE_DESCRIPTIONS.fondateur}</p>
           <p><strong className="text-rose-200">{t('roles.superadmin')}</strong> — {ROLE_DESCRIPTIONS.superadmin}</p>
           <p><strong className="text-amber-200">{t('roles.admin')}</strong> — {ROLE_DESCRIPTIONS.admin}</p>
-          <p><strong className="text-violet-200">{t('roles.moderator')}</strong> — {ROLE_DESCRIPTIONS.moderator}</p>
+          <p><strong className="text-teal-200">{t('roles.moderator')}</strong> — {ROLE_DESCRIPTIONS.moderator}</p>
           <p><strong className="text-white/80">{t('roles.user')}</strong> — {ROLE_DESCRIPTIONS.user}</p>
           <p className="text-xs text-white/40">{t('rolesHierarchy')}</p>
         </div>
@@ -1565,8 +1565,8 @@ export default function SupervisionPage() {
                 <p className="text-xl font-bold text-white sm:text-2xl">{stats?.accounts.total ?? 0}</p>
                 <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.total')}</p>
               </div>
-              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-2.5 sm:p-3">
-                <p className="text-xl font-bold text-violet-200 sm:text-2xl">{stats?.accounts.byRole.moderator ?? 0}</p>
+              <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-2.5 sm:p-3">
+                <p className="text-xl font-bold text-teal-200 sm:text-2xl">{stats?.accounts.byRole.moderator ?? 0}</p>
                 <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.moderators')}</p>
               </div>
               <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 sm:p-3">
@@ -2251,7 +2251,7 @@ export default function SupervisionPage() {
       </Tabs>
 
       <Dialog open={!!deleteDialog} onOpenChange={(open) => !open && setDeleteDialog(null)}>
-        <DialogContent className="border-red-500/30 bg-[#0c0b12] text-white">
+        <DialogContent className="border-red-500/30 bg-felt-deep text-white">
           <DialogHeader>
             <DialogTitle>{t('dialogs.deleteTitle')}</DialogTitle>
             <DialogDescription className="text-white/50">
@@ -2273,7 +2273,7 @@ export default function SupervisionPage() {
       </Dialog>
 
       <Dialog open={!!unbanDialog} onOpenChange={(open) => !open && setUnbanDialog(null)}>
-        <DialogContent className="border-white/10 bg-[#0c0b12] text-white">
+        <DialogContent className="border-white/10 bg-felt-deep text-white">
           <DialogHeader>
             <DialogTitle>{t('dialogs.unbanTitle')}</DialogTitle>
             <DialogDescription className="text-white/50">
@@ -2304,7 +2304,7 @@ export default function SupervisionPage() {
       </Dialog>
 
       <Dialog open={!!banDialog} onOpenChange={(open) => !open && setBanDialog(null)}>
-        <DialogContent className="border-white/10 bg-[#0c0b12] text-white">
+        <DialogContent className="border-white/10 bg-felt-deep text-white">
           <DialogHeader>
             <DialogTitle>
               {banDialog?.type === 'permanent' ? t('dialogs.banPermanentTitle') : t('dialogs.banTemporaryTitle')}
@@ -2357,7 +2357,7 @@ export default function SupervisionPage() {
       </Dialog>
 
       <Dialog open={!!featureBanDialog} onOpenChange={(open) => !open && setFeatureBanDialog(null)}>
-        <DialogContent className="border-white/10 bg-[#0c0b12] text-white">
+        <DialogContent className="border-white/10 bg-felt-deep text-white">
           <DialogHeader>
             <DialogTitle>
               {featureBanDialog?.feature === 'voice'
@@ -2430,7 +2430,7 @@ export default function SupervisionPage() {
           }
         }}
       >
-        <DialogContent className="max-h-[85vh] overflow-y-auto border-white/10 bg-[#0c0b12] text-white sm:max-w-lg">
+        <DialogContent className="max-h-[85vh] overflow-y-auto border-white/10 bg-felt-deep text-white sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t('history.title')}</DialogTitle>
             <DialogDescription asChild className="text-white/50">
@@ -2595,7 +2595,7 @@ export default function SupervisionPage() {
         open={!!selectedFeedback}
         onOpenChange={(open) => !open && setSelectedFeedback(null)}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#0c0b12] text-white sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-felt-deep text-white sm:max-w-lg">
           {selectedFeedback && (
             <>
               <DialogHeader>
@@ -2677,7 +2677,7 @@ export default function SupervisionPage() {
           }
         }}
       >
-        <DialogContent className="max-h-[85vh] overflow-y-auto border-white/10 bg-[#0c0b12] text-white sm:max-w-lg">
+        <DialogContent className="max-h-[85vh] overflow-y-auto border-white/10 bg-felt-deep text-white sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5 text-amber-400" />
