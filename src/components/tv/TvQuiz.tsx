@@ -7,6 +7,7 @@ import type { TvRoomDto } from '@/lib/online-room'
 import type { QuizClientView } from '@/lib/quiz/engine'
 import { QUIZ_QUESTION_MS, QUIZ_REVEAL_MS } from '@/lib/quiz/engine'
 import { cn } from '@/lib/utils'
+import { MedalDot } from '@/components/online/MedalDot'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
@@ -62,7 +63,11 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
                   : 'border-white/10 bg-white/5 text-white/75'
               )}
             >
-              <span>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`}</span>
+              {idx < 3 ? (
+                <MedalDot position={idx + 1} className="h-9 w-9 text-lg" />
+              ) : (
+                <span className="tabular-nums text-white/50">{idx + 1}.</span>
+              )}
               <span aria-hidden>{iconOf(p.id, p.isBot)}</span>
               {p.name}
               <span className="tabular-nums text-cyan-200">{p.score}</span>

@@ -31,7 +31,7 @@ export async function LegalPage({ docId }: LegalPageProps) {
         {t('back')}
       </Link>
 
-      <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-10">
+      <article className="rounded-2xl border border-gold/10 bg-felt-deep/60 p-6 sm:p-10">
         {renderMarkdown(content)}
       </article>
 

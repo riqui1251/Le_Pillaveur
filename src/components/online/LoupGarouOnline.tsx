@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
 import {
   Beer,
@@ -150,6 +150,7 @@ function TargetGrid({
             className={cn(
               'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[#24201A] transition-all',
               'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep',
               chosen
                 ? '-translate-y-0.5 border-gold bg-cream ring-2 ring-gold'
                 : 'border-[#D8CCAE] bg-cream',
@@ -318,6 +319,7 @@ export function LoupGarouOnline() {
   const tutorialSteps = tTutorial.raw('steps') as TutorialStep[]
   const [busy, setBusy] = useState(false)
   const [hideRole, setHideRole] = useState(false)
+  const reducedMotion = useReducedMotion()
   const [showLegend, setShowLegend] = useState(false)
   const [showWolfChat, setShowWolfChat] = useState(false)
   const [witchKillMode, setWitchKillMode] = useState(false)
@@ -732,10 +734,10 @@ export function LoupGarouOnline() {
           {hideRole ? (
             <motion.div
               key="role-back"
-              initial={{ rotateY: 90, opacity: 0 }}
+              initial={{ rotateY: reducedMotion ? 0 : 90, opacity: 0 }}
               animate={{ rotateY: 0, opacity: 1 }}
-              exit={{ rotateY: 90, opacity: 0 }}
-              transition={{ duration: 0.16 }}
+              exit={{ rotateY: reducedMotion ? 0 : 90, opacity: 0 }}
+              transition={{ duration: reducedMotion ? 0 : 0.16 }}
               className="relative"
             >
               <PlayingCardBack className="h-[5.75rem]" />
@@ -750,10 +752,10 @@ export function LoupGarouOnline() {
           ) : (
             <motion.div
               key="role-face"
-              initial={{ rotateY: 90, opacity: 0 }}
+              initial={{ rotateY: reducedMotion ? 0 : 90, opacity: 0 }}
               animate={{ rotateY: 0, opacity: 1 }}
-              exit={{ rotateY: 90, opacity: 0 }}
-              transition={{ duration: 0.16 }}
+              exit={{ rotateY: reducedMotion ? 0 : 90, opacity: 0 }}
+              transition={{ duration: reducedMotion ? 0 : 0.16 }}
               className="relative"
             >
               <PlayingCard

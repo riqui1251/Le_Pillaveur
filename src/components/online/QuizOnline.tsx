@@ -19,6 +19,7 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial, type TutorialStep } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
+import { MedalDot } from './MedalDot'
 
 /**
  * LE GRAND PILLAVEUR en ligne — le téléphone devient un BUZZER : 4 gros
@@ -214,8 +215,12 @@ export function QuizOnline() {
                 idx === 0 ? 'border-amber-400/40 bg-amber-500/10' : 'border-white/10 bg-white/5'
               )}
             >
-              <span className="w-7 text-center text-lg font-black text-white/50">
-                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
+              <span className="flex w-7 items-center justify-center">
+                {idx < 3 ? (
+                  <MedalDot position={idx + 1} />
+                ) : (
+                  <span className="text-sm font-black tabular-nums text-white/50">{idx + 1}</span>
+                )}
               </span>
               <RankCrest role={cosmetics.get(p.id)?.role} />
               <span className="text-xl" aria-hidden>{iconOf(p)}</span>

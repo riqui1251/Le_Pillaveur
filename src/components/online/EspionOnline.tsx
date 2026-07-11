@@ -417,7 +417,8 @@ export function EspionOnline() {
                       disabled={busy}
                       className={cn(
                         'flex items-center gap-2 rounded-xl border border-[#D8CCAE] bg-cream px-3 py-2 text-left text-[#24201A] transition-all',
-                        'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)] hover:-translate-y-0.5 active:scale-95'
+                        'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)] hover:-translate-y-0.5 active:scale-95',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep'
                       )}
                     >
                       <span className="text-lg" aria-hidden>{iconOf(p)}</span>
@@ -452,7 +453,7 @@ export function EspionOnline() {
                     key={loc}
                     onClick={() => void sendAction({ action: 'guess-location', location: loc })}
                     disabled={busy}
-                    className="rounded-lg border border-[#D8CCAE] bg-cream px-2 py-1.5 text-[11px] font-semibold text-[#24201A] shadow-[0_4px_10px_-6px_rgba(0,0,0,0.5)] transition-all hover:-translate-y-0.5 active:scale-95"
+                    className="rounded-lg border border-[#D8CCAE] bg-cream px-2 py-1.5 text-[11px] font-semibold text-[#24201A] shadow-[0_4px_10px_-6px_rgba(0,0,0,0.5)] transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep active:scale-95"
                   >
                     {loc}
                   </button>

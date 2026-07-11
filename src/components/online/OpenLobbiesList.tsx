@@ -34,21 +34,20 @@ export function OpenLobbiesList() {
 
   if (loading && lobbies.length === 0) {
     return (
-      <div className="mb-6 flex items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/5 py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
+      <div className="mb-4 flex items-center justify-center rounded-xl border border-gold/15 py-2.5">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
       </div>
     )
   }
 
   if (lobbies.length === 0) {
+    // Une ligne discrète suffit : l'absence de lobby n'est pas un événement,
+    // les cartes de jeux en dessous sont la vraie invitation à l'action.
     return (
-      <div className="mb-6 rounded-2xl border border-dashed border-amber-500/25 bg-amber-500/5 p-5 text-center">
-        <Globe className="mx-auto mb-2 h-7 w-7 text-amber-300/60" />
-        <p className="text-sm font-medium text-white/75">Aucun lobby ouvert pour l&apos;instant</p>
-        <p className="mt-1 text-xs text-white/45">
-          Choisissez un jeu ci-dessous pour en créer un.
-        </p>
-      </div>
+      <p className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-dashed border-gold/20 px-4 py-2.5 text-xs text-white/55">
+        <Globe className="h-3.5 w-3.5 shrink-0 text-gold/60" aria-hidden />
+        Aucun lobby ouvert — choisissez un jeu ci-dessous pour en créer un.
+      </p>
     )
   }
 
@@ -77,11 +76,11 @@ export function OpenLobbiesList() {
                 return (
                   <li
                     key={lobby.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition-colors hover:border-amber-400/30"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/10 bg-felt-deep/60 px-4 py-3 transition-colors hover:border-amber-400/30"
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm">
-                        👑
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold/20 bg-gold/10">
+                        <Crown className="h-4 w-4 text-amber-300" aria-hidden />
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
