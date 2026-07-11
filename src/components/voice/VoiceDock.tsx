@@ -124,10 +124,49 @@ export function VoiceDock() {
     members.find((m) => m.userId === userId)?.preferences?.icon ?? '👤'
 
   return (
-    <div
-      className="fixed bottom-24 right-3 z-[90] flex flex-col items-end gap-2 sm:bottom-28 sm:right-4"
-      style={{ transform: `translate(${dockPos.dx}px, ${dockPos.dy}px)` }}
-    >
+    <>
+      {/* Prompt « Activer le micro ? » à l'entrée d'une partie — rendu HORS
+          du conteneur transformé du dock : une transform CSS sur un ancêtre
+          fait de lui le containing block des descendants position:fixed, ce
+          qui rétrécissait ce panneau à la largeur (étroite) du dock au lieu
+          du viewport entier. */}
+      <AnimatePresence>
+        {showMicPrompt && (
+          <motion.div
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 24 }}
+            className="fixed inset-x-3 bottom-24 z-[95] rounded-2xl border border-emerald-400/30 bg-felt-deep/95 p-3 shadow-2xl backdrop-blur-md sm:inset-x-auto sm:bottom-28 sm:right-4 sm:w-64"
+            role="dialog"
+            aria-label={t('prompt.title')}
+          >
+            <p className="flex items-center gap-2 text-sm font-bold text-white">
+              <Mic className="h-4 w-4 text-emerald-300" /> {t('prompt.title')}
+            </p>
+            <p className="mt-1 text-xs text-white/50">{t('prompt.hint')}</p>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={acceptPrompt}
+                className="flex-1 rounded-xl bg-emerald-600 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-500"
+              >
+                {t('prompt.enable')}
+              </button>
+              <button
+                onClick={dismissPrompt}
+                className="flex-1 rounded-xl border border-white/15 bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
+              >
+                {t('prompt.later')}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div
+        className="fixed bottom-24 right-3 z-[90] flex flex-col items-end gap-2 sm:bottom-28 sm:right-4"
+        style={{ transform: `translate(${dockPos.dx}px, ${dockPos.dy}px)` }}
+      >
       <AnimatePresence>
         {open && (
           <motion.div
@@ -324,40 +363,6 @@ export function VoiceDock() {
         )}
       </AnimatePresence>
 
-      {/* Prompt « Activer le micro ? » à l'entrée d'une partie */}
-      <AnimatePresence>
-        {showMicPrompt && (
-          <motion.div
-            initial={{ opacity: 0, y: 12, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 340, damping: 24 }}
-            className="fixed inset-x-3 bottom-3 z-[95] rounded-2xl border border-emerald-400/30 bg-felt-deep/95 p-3 shadow-2xl backdrop-blur-md sm:static sm:inset-x-auto sm:bottom-auto sm:z-auto sm:w-64"
-            role="dialog"
-            aria-label={t('prompt.title')}
-          >
-            <p className="flex items-center gap-2 text-sm font-bold text-white">
-              <Mic className="h-4 w-4 text-emerald-300" /> {t('prompt.title')}
-            </p>
-            <p className="mt-1 text-xs text-white/50">{t('prompt.hint')}</p>
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={acceptPrompt}
-                className="flex-1 rounded-xl bg-emerald-600 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-500"
-              >
-                {t('prompt.enable')}
-              </button>
-              <button
-                onClick={dismissPrompt}
-                className="flex-1 rounded-xl border border-white/15 bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
-              >
-                {t('prompt.later')}
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Bouton flottant — glisser pour déplacer, tap pour ouvrir */}
       <button
         onPointerDown={onDockPointerDown}
@@ -383,6 +388,7 @@ export function VoiceDock() {
           </span>
         )}
       </button>
-    </div>
+      </div>
+    </>
   )
 }
