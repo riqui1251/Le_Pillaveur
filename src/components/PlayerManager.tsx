@@ -235,10 +235,8 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
         onSave={updatePlayerPreferences}
       />
 
-      {/* Barre d'action : posée AU-DESSUS de la barre d'onglets mobile
-          (elle-même en bottom-0), et en bottom-0 dès sm (la tabbar disparaît). */}
       <div
-        className={`fixed inset-x-0 bottom-[calc(3.25rem+env(safe-area-inset-bottom))] z-40 border-t px-4 py-3 backdrop-blur-xl sm:bottom-0 sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
+        className={`fixed inset-x-0 bottom-0 z-40 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl ${
           isHub
             ? 'border-gold/15 bg-felt-deep/90'
             : 'border-border bg-background/95'

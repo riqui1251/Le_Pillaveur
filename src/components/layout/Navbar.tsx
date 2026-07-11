@@ -94,14 +94,6 @@ export default function Navbar() {
     setChatOpen(false)
   }, [pathname])
 
-  // La barre d'onglets mobile ouvre le panneau des amis via cet évènement
-  // (l'état du panneau vit ici, avec le bouton du header).
-  useEffect(() => {
-    const openFriends = () => setFriendsOpen(true)
-    window.addEventListener('lp:open-friends', openFriends)
-    return () => window.removeEventListener('lp:open-friends', openFriends)
-  }, [])
-
   const toggleDrawer = () => setDrawerOpen((open) => !open)
 
   // Écran TV : plein écran sans chrome (la barre de nav n'a pas de sens sur une télé).

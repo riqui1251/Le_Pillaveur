@@ -4,13 +4,6 @@
     "description": "Giochi di bevute con gli amici"
   },
   "nav": {
-    "tabs": {
-      "label": "Navigazione principale",
-      "tables": "Tavoli",
-      "friends": "Amici",
-      "ranking": "Classifica",
-      "account": "Account"
-    },
     "brand": "Le Pillaveur",
     "loading": "Caricamento…",
     "navigation": "Navigazione",

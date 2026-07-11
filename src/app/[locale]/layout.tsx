@@ -8,7 +8,6 @@ import '../fullscreen.css'
 import '../../styles/player-effects.css'
 import { Providers } from '../providers'
 import Navbar from '@/components/layout/Navbar'
-import { MobileTabBar } from '@/components/layout/MobileTabBar'
 import { LocaleSync } from '@/components/layout/LocaleSync'
 import { FullscreenLayoutProvider } from '@/components/providers/FullscreenLayoutProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -83,7 +82,6 @@ export default async function LocaleLayout({
                   <div className="content-container flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
                     {children}
                   </div>
-                  <MobileTabBar />
                 </div>
               </FullscreenLayoutProvider>
             </Providers>
