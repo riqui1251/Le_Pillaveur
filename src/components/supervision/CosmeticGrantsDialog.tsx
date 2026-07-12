@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { COSMETICS, cosmeticKey, type CosmeticKind } from '@/lib/online/cosmetics'
+import { COSMETICS, VIP_FRAME_LABELS, cosmeticKey, type CosmeticKind } from '@/lib/online/cosmetics'
 import { PLAYER_EFFECTS, PLAYER_FRAMES } from '@/lib/players'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +29,7 @@ type Progression = {
 }
 
 function labelFor(kind: CosmeticKind, id: string): string {
+  if (kind === 'frame' && id in VIP_FRAME_LABELS) return VIP_FRAME_LABELS[id]
   const list = kind === 'effect' ? PLAYER_EFFECTS : PLAYER_FRAMES
   return list.find((e) => e.id === id)?.label ?? id
 }

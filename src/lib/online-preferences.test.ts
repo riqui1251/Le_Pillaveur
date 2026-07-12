@@ -4,12 +4,12 @@ import { DEFAULT_ONLINE_PREFERENCES, parseOnlinePreferences, sanitizeOnlinePrefe
 
 describe('sanitizeOnlinePreferences', () => {
   it('icône connue du catalogue online → conservée', () => {
-    const out = sanitizeOnlinePreferences({ icon: '🦊' })
-    expect(out.icon).toBe('🦊')
+    const out = sanitizeOnlinePreferences({ icon: 'renard' })
+    expect(out.icon).toBe('renard')
   })
 
-  it('icône inconnue ou absente → défaut 🍺 (jamais undefined)', () => {
-    expect(sanitizeOnlinePreferences({ icon: '🍕' }).icon).toBe(DEFAULT_ONLINE_ICON)
+  it('icône inconnue ou absente → défaut chope (jamais undefined)', () => {
+    expect(sanitizeOnlinePreferences({ icon: 'pizza' }).icon).toBe(DEFAULT_ONLINE_ICON)
     expect(sanitizeOnlinePreferences({}).icon).toBe(DEFAULT_ONLINE_ICON)
   })
 
@@ -54,18 +54,18 @@ describe('parseOnlinePreferences', () => {
   })
 
   it('json valide → préférences sanitizées', () => {
-    const json = JSON.stringify({ icon: '🦊', specialEffect: 'fire', iconFrame: 'gold' })
+    const json = JSON.stringify({ icon: 'renard', specialEffect: 'fire', iconFrame: 'gold' })
     expect(parseOnlinePreferences(json)).toEqual({
       color: DEFAULT_ONLINE_PREFERENCES.color,
-      icon: '🦊',
+      icon: 'renard',
       specialEffect: 'fire',
       iconFrame: 'gold',
     })
   })
 
-  it('icône V1 (catalogue local pré-migration) retombe silencieusement sur le défaut', () => {
-    // Simule une préférence stockée avant la V2 avec une icône hors séries online.
-    const json = JSON.stringify({ icon: '🚀', specialEffect: null, iconFrame: null })
+  it('icône emoji V1/V2 (pré-migration SVG) retombe silencieusement sur le défaut', () => {
+    // Simule une préférence stockée avant le passage aux ids SVG stables.
+    const json = JSON.stringify({ icon: '🦊', specialEffect: null, iconFrame: null })
     expect(parseOnlinePreferences(json).icon).toBe(DEFAULT_ONLINE_ICON)
   })
 })

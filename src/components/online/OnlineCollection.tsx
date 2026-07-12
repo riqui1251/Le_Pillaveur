@@ -5,8 +5,10 @@ import { useTranslations } from 'next-intl'
 import { Lock } from 'lucide-react'
 import {
   COSMETICS,
+  GRANT_ONLY_FRAME_LEVEL,
   ICON_SERIES,
   ROLE_FRAME_MIN_RANK,
+  VIP_FRAME_IDS,
   cosmeticKey,
   effectRarity,
   type CosmeticRarity,
@@ -14,6 +16,7 @@ import {
 import type { OnlinePreferences } from '@/lib/online-preferences'
 import type { PlayerIconFrame, PlayerSpecialEffect } from '@/lib/players'
 import { OnlinePlayerIcon, OnlinePlayerName, RankCrest, type MemberCosmetics } from './OnlinePlayerTag'
+import { PlayerIconById, playerIconLabel } from '@/components/icons/PlayerIcons'
 import {
   Dialog,
   DialogContent,
@@ -34,7 +37,7 @@ import { cn } from '@/lib/utils'
 
 const RARITIES: CosmeticRarity[] = ['commun', 'rare', 'epique', 'legendaire']
 const ROLE_FRAME_IDS = Object.keys(ROLE_FRAME_MIN_RANK)
-const LEVEL_FRAMES = COSMETICS.filter((c) => c.kind === 'frame')
+const LEVEL_FRAMES = COSMETICS.filter((c) => c.kind === 'frame' && c.unlockLevel < GRANT_ONLY_FRAME_LEVEL)
 
 export function OnlineCollection({
   open,
@@ -88,6 +91,7 @@ export function OnlineCollection({
   }, [])
 
   const visibleRoleFrames = ROLE_FRAME_IDS.filter((id) => isUnlocked('frame', id))
+  const visibleVipFrames = VIP_FRAME_IDS.filter((id) => isUnlocked('frame', id))
 
   const handleSave = () => {
     onSave({ icon, specialEffect: effect, iconFrame: frame })
@@ -146,13 +150,15 @@ export function OnlineCollection({
                           type="button"
                           disabled={locked}
                           onClick={() => setIcon(i)}
+                          title={playerIconLabel(i)}
+                          aria-label={playerIconLabel(i)}
                           className={cn(
-                            'flex h-9 w-9 items-center justify-center rounded-lg text-lg transition-colors hover:bg-white/10',
+                            'flex h-9 w-9 items-center justify-center rounded-lg p-1.5 transition-colors hover:bg-white/10',
                             icon === i && 'bg-amber-500/25 ring-2 ring-amber-400/70',
                             locked && 'opacity-30 grayscale hover:bg-transparent'
                           )}
                         >
-                          {i}
+                          <PlayerIconById id={i} className="h-full w-full" />
                         </button>
                       )
                     })}
@@ -266,6 +272,30 @@ export function OnlineCollection({
             <p className="mb-2 text-xs text-emerald-300/70">{t('roleFramesHint')}</p>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {visibleRoleFrames.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setFrame(id as PlayerIconFrame)}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-2.5 transition-colors hover:bg-white/[0.06]',
+                    frame === id && 'border-amber-400/50 bg-amber-500/10 ring-1 ring-amber-400/50'
+                  )}
+                >
+                  {frameSwatch(id as PlayerIconFrame)}
+                  <span className="text-[10px] text-white/60">{tFrames(id)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Cadres VIP — grant-only (Fondateur), visibles seulement une fois accordés */}
+        {visibleVipFrames.length > 0 && (
+          <div>
+            <p className="mb-1 text-sm font-medium text-white/70">{t('vipFrames')}</p>
+            <p className="mb-2 text-xs text-amber-300/70">{t('vipFramesHint')}</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {visibleVipFrames.map((id) => (
                 <button
                   key={id}
                   type="button"

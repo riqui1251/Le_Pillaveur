@@ -16,6 +16,7 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /**
  * LE MENTEUR en ligne (serveur-autoritaire). La vue reçue est déjà filtrée :
@@ -281,7 +282,7 @@ export function MenteurOnline() {
               )}
             >
               <span className="w-6 text-center text-lg font-black text-white/50">{idx + 1}</span>
-              <span className="text-xl" aria-hidden>{iconOf(p)}</span>
+              <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
               <span className="flex items-center gap-1 text-sm text-white/60">
                 <Beer className="h-4 w-4 text-amber-300" /> {p.lostCount}
@@ -380,7 +381,7 @@ export function MenteurOnline() {
               )}
             >
               <RankCrest role={cosmetics.get(p.id)?.role} />
-              <span className="text-lg" aria-hidden>{iconOf(p)}</span>
+              <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-bold">
                   <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />

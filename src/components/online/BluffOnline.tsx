@@ -15,6 +15,7 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /**
  * LE GRAND BLUFF en ligne (serveur-autoritaire). Vue déjà filtrée : les
@@ -212,7 +213,7 @@ export function BluffOnline() {
               )}
             >
               <span className="w-5 shrink-0 text-center text-xs font-black text-white/40">{i + 1}</span>
-              <span className="text-xl" aria-hidden>{iconOf(p)}</span>
+              <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <span className="min-w-0 flex-1 truncate text-sm font-bold">
                 <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
               </span>
@@ -344,8 +345,13 @@ export function BluffOnline() {
                     <span className="shrink-0 text-[10px] text-white/40">{nameOf(c.authorId)}</span>
                   )}
                   {c.votes.length > 0 && (
-                    <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
-                      {c.votes.map((id) => iconOf({ id, isBot: view.players.find((p) => p.id === id)?.isBot ?? false })).join(' ')}
+                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
+                      {c.votes.map((id) => (
+                        <PlayerAvatarGlyph
+                          key={id}
+                          value={iconOf({ id, isBot: view.players.find((p) => p.id === id)?.isBot ?? false })}
+                        />
+                      ))}
                     </span>
                   )}
                 </div>

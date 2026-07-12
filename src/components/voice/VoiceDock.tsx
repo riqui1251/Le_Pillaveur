@@ -7,6 +7,7 @@ import { Mic, MicOff, Headphones, PhoneCall, PhoneOff, Volume2, VolumeX, Speaker
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useVoiceChat } from '@/hooks/useVoiceChat'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { cn } from '@/lib/utils'
 
 /**
@@ -317,7 +318,7 @@ export function VoiceDock() {
                         )}
                         aria-hidden
                       >
-                        {iconOf(m.userId)}
+                        <PlayerAvatarGlyph value={iconOf(m.userId)} />
                       </span>
                       <span className="min-w-0 flex-1 truncate text-xs font-semibold text-white/90">
                         {m.displayName}

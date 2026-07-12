@@ -8,6 +8,7 @@ import type { QuizClientView } from '@/lib/quiz/engine'
 import { QUIZ_QUESTION_MS, QUIZ_REVEAL_MS } from '@/lib/quiz/engine'
 import { cn } from '@/lib/utils'
 import { MedalDot } from '@/components/online/MedalDot'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
@@ -68,7 +69,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
               ) : (
                 <span className="tabular-nums text-white/50">{idx + 1}.</span>
               )}
-              <span aria-hidden>{iconOf(p.id, p.isBot)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p.id, p.isBot)} /></span>
               {p.name}
               <span className="tabular-nums text-cyan-200">{p.score}</span>
               <span className="text-lg text-white/50">🍺{p.sips}</span>
@@ -158,7 +159,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
                       : 'border-white/10 bg-white/5 text-white/60'
               )}
             >
-              <span aria-hidden>{iconOf(p.id, p.isBot)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p.id, p.isBot)} /></span>
               {p.name}
               {state.phase === 'question' && p.hasAnswered && ' ⚡'}
               {r?.correct && ` +${r.points}`}

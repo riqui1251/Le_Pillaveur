@@ -172,6 +172,8 @@
     "frames": "Marcos",
     "roleFrames": "Marcos de rango",
     "roleFramesHint": "Reservados a tu rango — no se ganan por nivel.",
+    "vipFrames": "Marcos VIP",
+    "vipFramesHint": "Concedidos a mano por un Fundador — nunca se desbloquean por nivel.",
     "unlockAt": "Nv. {level}",
     "grantOnly": "Solo por concesión",
     "rarity": {
@@ -182,9 +184,11 @@
     },
     "seriesNames": {
       "apero": "Aperitivo",
+      "trognes": "Caras",
       "fetard": "Fiesta",
       "bestiaire": "Bestiario",
       "nuit": "Noche",
+      "casino": "Casino",
       "legende": "Leyenda",
       "fondateur": "Fundador"
     }
@@ -425,7 +429,20 @@
       "sentinel": "Centinela",
       "blade": "Hoja",
       "eagle": "Águila",
-      "prestige": "Prestigio"
+      "prestige": "Prestigio",
+      "vip-jeton": "Ficha VIP",
+      "vip-constellation": "Constelación",
+      "vip-ruban": "Cinta de Honor",
+      "vip-cle": "Llave Maestra",
+      "vip-trefle": "Trébol Dorado",
+      "vip-halo": "Halo Nocturno",
+      "vip-carte": "Carta Maestra",
+      "vip-ambre": "Anillo Ámbar",
+      "vip-oeil": "Ojo de la Casa",
+      "vip-flamme": "Llama Eterna",
+      "vip-marqueterie": "Marquetería",
+      "vip-ganse": "Doble Anillo",
+      "vip-aura": "Aura Púrpura"
     },
     "customizer": {
       "title": "Personalizar {name}",

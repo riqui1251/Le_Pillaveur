@@ -13,6 +13,7 @@ import { parsePurpleState, type PurpleSyncedState, type SerializedCard } from '@
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /** Purple en ligne : jeu tour par tour, cagnotte « patate chaude ». Aucune
  * info cachée (tirage public dès qu'il a lieu). */
@@ -180,7 +181,7 @@ export function PurpleOnline() {
           {view.players.map((p) => (
             <div key={p.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
               <RankCrest role={cosmetics.get(p.id)?.role} size="sm" />
-              <span className="text-sm" aria-hidden>{iconOf(p)}</span>
+              <span className="text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate text-xs font-semibold" />
               <span className="text-xs font-bold text-amber-300">{view.gameResults[p.id] ?? 0} 🍺</span>
             </div>
@@ -240,7 +241,7 @@ export function PurpleOnline() {
       {currentActor && (
         <div className="flex items-center gap-3 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
           <RankCrest role={cosmetics.get(currentActor.id)?.role} />
-          <span className="text-2xl" aria-hidden>{iconOf(currentActor)}</span>
+          <span className="text-2xl" aria-hidden><PlayerAvatarGlyph value={iconOf(currentActor)} /></span>
           <div className="min-w-0 flex-1">
             <p className="text-xs text-white/40">{isMyTurn ? t('online.yourTurn') : t('yourTurn')}</p>
             <OnlinePlayerName

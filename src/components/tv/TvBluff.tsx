@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { BluffClientView } from '@/lib/bluff/engine'
 import { cn } from '@/lib/utils'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
@@ -54,7 +55,7 @@ export function TvBluff({ room, state }: { room: TvRoomDto; state: BluffClientVi
               )}
             >
               <span className="w-8 text-center text-white/40">{i + 1}</span>
-              <span aria-hidden>{iconOf(p)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               <span className="ml-auto tabular-nums text-amber-200">{p.score}</span>
             </div>
@@ -150,7 +151,7 @@ export function TvBluff({ room, state }: { room: TvRoomDto; state: BluffClientVi
                   : 'border-white/10 bg-white/5 text-white/60'
               )}
             >
-              <span aria-hidden>{iconOf(p)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               {done && ' ✓'}
             </span>

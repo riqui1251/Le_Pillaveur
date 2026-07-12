@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   COSMETICS,
   DEFAULT_ONLINE_ICON,
+  GRANT_ONLY_FRAME_LEVEL,
   ICON_SERIES,
   KNOWN_EFFECT_IDS,
   KNOWN_FRAME_IDS,
@@ -9,6 +10,7 @@ import {
   ONLINE_FRAME_IDS,
   ONLINE_ICON_IDS,
   ROLE_FRAME_MIN_RANK,
+  VIP_FRAME_IDS,
   XP_LOSS,
   XP_WIN,
   cosmeticKey,
@@ -97,8 +99,9 @@ describe('catalogue cosmétiques', () => {
     }
   })
 
-  it('chaque cadre de niveau du catalogue existe dans PLAYER_FRAMES', () => {
+  it('chaque cadre de niveau du catalogue (hors cadres VIP grant-only) existe dans PLAYER_FRAMES', () => {
     for (const c of COSMETICS.filter((c) => c.kind === 'frame')) {
+      if (VIP_FRAME_IDS.includes(c.id)) continue
       expect(KNOWN_FRAME_IDS).toContain(c.id)
     }
   })
@@ -123,6 +126,35 @@ describe('catalogue cosmétiques', () => {
     for (const id of Object.keys(ROLE_FRAME_MIN_RANK)) {
       expect(catalogFrames.has(id)).toBe(false)
     }
+  })
+})
+
+describe('cadres VIP (grant-only, Fondateur)', () => {
+  it('13 cadres VIP, tous hors de portée du niveau', () => {
+    expect(VIP_FRAME_IDS.length).toBe(13)
+    for (const id of VIP_FRAME_IDS) {
+      const c = COSMETICS.find((c) => c.kind === 'frame' && c.id === id)!
+      expect(c.unlockLevel).toBeGreaterThanOrEqual(GRANT_ONLY_FRAME_LEVEL)
+    }
+  })
+
+  it('aucun cadre VIP dupliqué avec les cadres de niveau ou de rôle', () => {
+    const levelFrameIds = new Set(
+      COSMETICS.filter((c) => c.kind === 'frame' && !VIP_FRAME_IDS.includes(c.id)).map((c) => c.id)
+    )
+    for (const id of VIP_FRAME_IDS) {
+      expect(levelFrameIds.has(id)).toBe(false)
+      expect(id in ROLE_FRAME_MIN_RANK).toBe(false)
+    }
+  })
+
+  it('un cadre VIP n’est débloqué que par grant, jamais par le niveau', () => {
+    const [first] = VIP_FRAME_IDS
+    const maxedOut = { xp: xpForLevel(60), role: 'user', grantedKeys: new Set<string>() }
+    expect(isCosmeticUnlocked(maxedOut, 'frame', first)).toBe(false)
+
+    const granted = { xp: 0, role: 'user', grantedKeys: new Set([cosmeticKey('frame', first)]) }
+    expect(isCosmeticUnlocked(granted, 'frame', first)).toBe(true)
   })
 })
 
@@ -185,8 +217,8 @@ describe('déblocage', () => {
     expect(isCosmeticUnlocked(ctx, 'effect', 'red')).toBe(true)
     expect(isCosmeticUnlocked(ctx, 'effect', 'blue')).toBe(true)
     expect(isCosmeticUnlocked(ctx, 'effect', 'galaxy')).toBe(false)
-    expect(isCosmeticUnlocked(ctx, 'icon', '🍺')).toBe(true)
-    expect(isCosmeticUnlocked(ctx, 'icon', '🦊')).toBe(false)
+    expect(isCosmeticUnlocked(ctx, 'icon', 'chope')).toBe(true)
+    expect(isCosmeticUnlocked(ctx, 'icon', 'renard')).toBe(false)
     expect(isCosmeticUnlocked(ctx, 'frame', 'silver')).toBe(false)
     expect(isCosmeticUnlocked(ctx, 'frame', 'staff')).toBe(false)
   })
@@ -196,20 +228,20 @@ describe('déblocage', () => {
     expect(isCosmeticUnlocked(ctx, 'effect', 'neon')).toBe(true)
     expect(isCosmeticUnlocked(ctx, 'frame', 'gold')).toBe(true)
     expect(isCosmeticUnlocked(ctx, 'frame', 'diamond')).toBe(false)
-    expect(isCosmeticUnlocked(ctx, 'icon', '🦊')).toBe(true) // Bestiaire Nv 8
-    expect(isCosmeticUnlocked(ctx, 'icon', '👑')).toBe(false) // Légende Nv 25
+    expect(isCosmeticUnlocked(ctx, 'icon', 'renard')).toBe(true) // Bestiaire Nv 8
+    expect(isCosmeticUnlocked(ctx, 'icon', 'couronne')).toBe(false) // Légende Nv 25
   })
 
   it('un grant manuel débloque sans le niveau (effet, cadre ou icône)', () => {
     const ctx = {
       xp: 0,
       role: 'user',
-      grantedKeys: new Set([cosmeticKey('frame', 'diamond'), cosmeticKey('icon', '🌟')]),
+      grantedKeys: new Set([cosmeticKey('frame', 'diamond'), cosmeticKey('icon', 'filante')]),
     }
     expect(isCosmeticUnlocked(ctx, 'frame', 'diamond')).toBe(true)
     expect(isCosmeticUnlocked(ctx, 'frame', 'royal')).toBe(false)
-    expect(isCosmeticUnlocked(ctx, 'icon', '🌟')).toBe(true)
-    expect(isCosmeticUnlocked(ctx, 'icon', '🦄')).toBe(false)
+    expect(isCosmeticUnlocked(ctx, 'icon', 'filante')).toBe(true)
+    expect(isCosmeticUnlocked(ctx, 'icon', 'sceau')).toBe(false)
   })
 
   it('les cadres de rôle sont réservés au grade, jamais au niveau ni au grant', () => {
@@ -241,7 +273,7 @@ describe('déblocage', () => {
       expect(isCosmeticUnlocked(ctx, 'frame', 'crown')).toBe(true)
       expect(isCosmeticUnlocked(ctx, 'frame', 'staff')).toBe(true)
       expect(isCosmeticUnlocked(ctx, 'frame', 'prestige')).toBe(true)
-      expect(isCosmeticUnlocked(ctx, 'icon', '🌟')).toBe(true)
+      expect(isCosmeticUnlocked(ctx, 'icon', 'filante')).toBe(true)
     }
   })
 
@@ -256,7 +288,7 @@ describe('déblocage', () => {
   it('cosmétique inconnu → jamais débloqué', () => {
     const ctx = { xp: xpForLevel(50), role: 'user', grantedKeys: none }
     expect(isCosmeticUnlocked(ctx, 'effect', 'inexistant')).toBe(false)
-    expect(isCosmeticUnlocked(ctx, 'icon', '🙈')).toBe(false)
+    expect(isCosmeticUnlocked(ctx, 'icon', 'inexistant')).toBe(false)
   })
 
   it('unlockedCosmeticKeys : cohérent avec isCosmeticUnlocked, inclut les cadres de rôle', () => {

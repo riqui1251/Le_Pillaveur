@@ -1,5 +1,6 @@
 import { PLAYER_EFFECTS, PLAYER_FRAMES } from '@/lib/players'
 import { roleRank } from '@/lib/roles'
+import { PLAYER_ICON_SERIES } from '@/lib/online/player-icon-defs'
 
 /**
  * Progression EN LIGNE : XP, niveaux et cosmétiques débloquables.
@@ -74,7 +75,9 @@ export function effectRarity(unlockLevel: number): CosmeticRarity {
  * Séries d'icônes EN LIGNE — collections thématiques exclusives, débloquées
  * en bloc à un niveau donné. Totalement indépendantes de PLAYER_ICONS
  * (grille libre du local) : un joueur online ne peut équiper qu'une icône
- * d'une série qu'il a débloquée.
+ * d'une série qu'il a débloquée. Les ids et le rendu SVG viennent de
+ * player-icon-defs.ts (source unique) ; ce module n'en dérive que ce dont
+ * la progression a besoin (id + niveau de déblocage).
  */
 export type IconSeries = {
   id: string
@@ -82,19 +85,14 @@ export type IconSeries = {
   unlockLevel: number
 }
 
-export const ICON_SERIES: IconSeries[] = [
-  { id: 'apero', icons: ['🍺', '🍷', '🥂', '🍹', '🥃', '🍾', '🍻', '🧊'], unlockLevel: 1 },
-  { id: 'fetard', icons: ['🪩', '🎉', '🎭', '🃏', '🎲', '🎯', '🎤', '🕺'], unlockLevel: 4 },
-  { id: 'bestiaire', icons: ['🦊', '🐺', '🦉', '🐍', '🦈', '🐉', '🦁', '🐙'], unlockLevel: 8 },
-  { id: 'nuit', icons: ['🌙', '⭐', '☄️', '🌌', '🔮', '🧿', '👻', '🧛'], unlockLevel: 14 },
-  { id: 'legende', icons: ['👑', '⚡', '🔱', '💎', '🏆', '🗡️', '🛡️', '🔥'], unlockLevel: 25 },
-  // Hors progression normale : accordable via grant fondateur (ou déjà
-  // débloqué d'office pour superadmin/fondateur par la règle générale).
-  { id: 'fondateur', icons: ['🌟', '🦄'], unlockLevel: 999 },
-]
+export const ICON_SERIES: IconSeries[] = PLAYER_ICON_SERIES.map((series) => ({
+  id: series.id,
+  unlockLevel: series.unlockLevel,
+  icons: series.icons.map((icon) => icon.id),
+}))
 
 /** Icône par défaut : toujours débloquée (série Apéro, niveau 1). */
-export const DEFAULT_ONLINE_ICON = '🍺'
+export const DEFAULT_ONLINE_ICON = 'chope'
 
 /**
  * Catalogue : chaque effet de pseudo et cadre d'icône existant, associé à un
@@ -129,6 +127,22 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'royal', kind: 'frame', unlockLevel: 25 },
   { id: 'diamond', kind: 'frame', unlockLevel: 30 },
   { id: 'crown', kind: 'frame', unlockLevel: 40 },
+  // Cadres VIP — hors progression, jamais débloqués par le niveau : accordés
+  // à la main par un Fondateur uniquement (voir VIP_FRAME_IDS + CSS
+  // .on-frame-vip-* dans online-cosmetics.css).
+  { id: 'vip-jeton', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-constellation', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-ruban', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-cle', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-trefle', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-halo', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-carte', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-ambre', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-oeil', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-flamme', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-marqueterie', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-ganse', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-aura', kind: 'frame', unlockLevel: 999 },
   // Icônes (dérivées des séries)
   ...ICON_SERIES.flatMap((series) =>
     series.icons.map((icon) => ({ id: icon, kind: 'icon' as const, unlockLevel: series.unlockLevel }))
@@ -221,3 +235,32 @@ export const ONLINE_FRAME_IDS = [
   STAFF_FRAME_ID,
   ...Object.keys(ROLE_FRAME_MIN_RANK),
 ]
+
+/** Niveau à partir duquel un cadre n'est plus accessible que par grant Fondateur. */
+export const GRANT_ONLY_FRAME_LEVEL = 900
+
+/** Ids des cadres VIP (grant-only) — pour l'affichage dédié en Collection. */
+export const VIP_FRAME_IDS = COSMETICS.filter(
+  (c) => c.kind === 'frame' && c.unlockLevel >= GRANT_ONLY_FRAME_LEVEL
+).map((c) => c.id)
+
+/**
+ * Libellés FR des cadres VIP — pas de traduction 4 langues ici : ce n'est
+ * consommé que par le dialogue d'octroi en Supervision (staff, FR).
+ * L'équivalent joueur (`players.frames.vip-*`) est traduit dans messages/*.json.
+ */
+export const VIP_FRAME_LABELS: Record<string, string> = {
+  'vip-jeton': 'Jeton VIP',
+  'vip-constellation': 'Constellation',
+  'vip-ruban': "Ruban d'Honneur",
+  'vip-cle': 'Clé Maîtresse',
+  'vip-trefle': 'Trèfle Doré',
+  'vip-halo': 'Halo Nocturne',
+  'vip-carte': 'Carte Maîtresse',
+  'vip-ambre': 'Anneau Ambré',
+  'vip-oeil': 'Œil de la Maison',
+  'vip-flamme': 'Flamme Éternelle',
+  'vip-marqueterie': 'Marqueterie',
+  'vip-ganse': 'Double Ganse',
+  'vip-aura': 'Aura Pourpre',
+}

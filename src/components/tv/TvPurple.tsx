@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { PurpleSyncedState, SerializedCard } from '@/lib/online-game-state'
 import { cn } from '@/lib/utils'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvAvatar } from './tv-shared'
 
 /**
@@ -55,7 +56,7 @@ export function TvPurple({ room, state }: { room: TvRoomDto; state: PurpleSynced
       {currentActor && (
         <div className="flex items-center justify-center gap-4 rounded-3xl border border-violet-400/30 bg-violet-500/10 px-6 py-4">
           <TvAvatar name={currentActor.name} index={currentIdx} size={56} active />
-          <span className="text-lg" aria-hidden>{iconOf(currentActor.id)}</span>
+          <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(currentActor.id)} /></span>
           <span className="text-3xl font-black text-white">{currentActor.name}</span>
           <span className="text-2xl text-white/30">·</span>
           <span className="text-3xl font-black text-violet-300">{state.drinkCounter} 🍺</span>

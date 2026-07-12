@@ -7,6 +7,7 @@ import type { TvRoomDto } from '@/lib/online-room'
 import type { TabouClientView } from '@/lib/tabou/engine'
 import { TABOU_ROUND_MS } from '@/lib/tabou/engine'
 import { cn } from '@/lib/utils'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
@@ -96,7 +97,7 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
                     p.leftAt && 'opacity-40'
                   )}
                 >
-                  <span aria-hidden>{iconOf(p)}</span>
+                  <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                   {p.name}
                 </span>
               ))}

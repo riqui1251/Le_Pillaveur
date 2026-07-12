@@ -18,6 +18,7 @@ import {
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { MedalDot } from './MedalDot'
 
@@ -221,7 +222,7 @@ export function QuizOnline() {
                 )}
               </span>
               <RankCrest role={cosmetics.get(p.id)?.role} />
-              <span className="text-xl" aria-hidden>{iconOf(p)}</span>
+              <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
               <span className="text-sm font-black tabular-nums text-cyan-200">{p.score}</span>
               {!isSoft && (
@@ -400,7 +401,7 @@ export function QuizOnline() {
                 const r = result.perPlayer[p.id]
                 return (
                   <div key={p.id} className="flex items-center gap-2 text-xs">
-                    <span aria-hidden>{iconOf(p)}</span>
+                    <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                     <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-semibold text-white/75" />
                     {r && (
                       <span className={cn('font-bold', r.correct ? 'text-emerald-300' : 'text-red-300/80')}>
@@ -437,7 +438,7 @@ export function QuizOnline() {
                   : 'border-white/10 bg-white/5 text-white/40'
               )}
             >
-              <span aria-hidden>{iconOf(p)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
               {p.hasAnswered && ' ✓'}
             </span>

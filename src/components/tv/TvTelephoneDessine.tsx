@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
 import { PartyCanvas } from '@/components/online/PartyCanvas'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown } from './tv-shared'
 
 /**
@@ -88,7 +89,7 @@ export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: Te
             key={p.id}
             className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-lg font-bold text-white/70"
           >
-            <span aria-hidden>{iconOf(p)}</span>
+            <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
             {p.name}
           </span>
         ))}

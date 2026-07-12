@@ -17,6 +17,7 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /**
  * QUI EST L'ESPION ? en ligne (serveur-autoritaire). `location` est null
@@ -419,7 +420,7 @@ export function EspionOnline() {
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep'
                       )}
                     >
-                      <span className="text-lg" aria-hidden>{iconOf(p)}</span>
+                      <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                       <span className="min-w-0 flex-1 truncate text-xs font-bold">{p.name}</span>
                     </button>
                   ))}
@@ -478,7 +479,7 @@ export function EspionOnline() {
               p.leftAt && 'opacity-40'
             )}
           >
-            <span aria-hidden>{iconOf(p)}</span>
+            <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
             <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
           </span>
         ))}

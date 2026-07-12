@@ -149,6 +149,137 @@
   filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.9));
 }
 
+/* ── Cadres VIP — grant-only (Fondateur), jamais débloqués par le niveau.
+   Contrairement aux cadres ci-dessus, tracés en CSS pur (pas d'emoji) pour
+   rester dans le langage visuel des icônes joueur (player-icon-defs.ts). ── */
+
+.on-frame-vip-jeton {
+  box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--suit-red), 0 0 14px rgba(179, 56, 46, 0.5);
+  background-image: repeating-conic-gradient(var(--gold) 0deg 14deg, transparent 14deg 26deg);
+  background-origin: border-box;
+}
+.on-frame-vip-jeton::after {
+  content: 'V'; position: absolute; right: -6px; bottom: -6px; width: 17px; height: 17px; border-radius: 50%;
+  background: var(--suit-red); color: var(--cream); font-family: 'Playfair Display', Georgia, serif; font-weight: 800;
+  font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--gold);
+}
+
+.on-frame-vip-constellation {
+  box-shadow: 0 0 0 3px var(--gold), 0 0 20px rgba(103, 140, 232, 0.45);
+  background-image: conic-gradient(from 0deg, var(--gold), #6b8fe0 35%, var(--gold) 70%, #6b8fe0 100%);
+  background-origin: border-box; border: 2.5px solid transparent; background-clip: padding-box, border-box;
+  animation: on-frame-vip-constellation-spin 7s linear infinite;
+}
+@keyframes on-frame-vip-constellation-spin { to { filter: hue-rotate(14deg); } }
+
+.on-frame-vip-ruban {
+  box-shadow: 0 0 0 3px #c9a227, 0 0 0 5px #6b4a1e, 0 0 12px rgba(201, 162, 39, 0.45);
+  background-image: linear-gradient(180deg, #e8c55a, var(--gold-strong));
+  background-origin: border-box; border: 2px solid transparent; background-clip: padding-box, border-box;
+}
+.on-frame-vip-ruban::after {
+  content: ''; position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%);
+  width: 13px; height: 17px;
+  background: linear-gradient(180deg, var(--suit-red), #7a231c);
+  clip-path: polygon(0% 0%, 100% 0%, 100% 72%, 50% 100%, 0% 72%);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+
+.on-frame-vip-cle { box-shadow: 0 0 0 3px #b08d57, 0 0 0 5px #5c4322, 0 0 10px rgba(176, 141, 87, 0.4); }
+.on-frame-vip-cle::before {
+  content: ''; position: absolute; left: -9px; bottom: 1px; width: 10px; height: 10px; border-radius: 50%;
+  border: 2.2px solid var(--gold); background: transparent;
+}
+.on-frame-vip-cle::after {
+  content: ''; position: absolute; left: -3px; bottom: -7px; width: 3px; height: 11px; border-radius: 1px;
+  background: var(--gold); transform: rotate(28deg); box-shadow: 3px 6px 0 -1.3px var(--gold);
+}
+
+.on-frame-vip-trefle { box-shadow: 0 0 0 3px var(--gold), 0 0 12px rgba(217, 164, 65, 0.4); }
+.on-frame-vip-trefle::after {
+  content: ''; position: absolute; right: -6px; bottom: 1px; width: 11px; height: 11px; border-radius: 2px;
+  background: var(--suit-red); transform: rotate(45deg); box-shadow: 0 0 0 1.6px var(--cream);
+}
+
+.on-frame-vip-halo {
+  box-shadow: 0 0 0 2px rgba(217, 164, 65, 0.55), 0 0 22px 6px rgba(108, 140, 232, 0.4);
+  animation: on-frame-vip-halo-breathe 3.4s ease-in-out infinite;
+}
+@keyframes on-frame-vip-halo-breathe {
+  50% { box-shadow: 0 0 0 2px rgba(217, 164, 65, 0.8), 0 0 30px 9px rgba(108, 140, 232, 0.6); }
+}
+.on-frame-vip-halo::after {
+  content: ''; position: absolute; top: -1px; right: 8px; width: 4px; height: 4px; border-radius: 50%;
+  background: #eaf1ff; box-shadow: 0 0 5px 1.5px #eaf1ff;
+}
+
+.on-frame-vip-carte { box-shadow: 0 0 0 3px var(--gold), 0 0 10px rgba(217, 164, 65, 0.35); }
+.on-frame-vip-carte::after {
+  content: ''; position: absolute; left: -8px; top: -6px; width: 16px; height: 20px; border-radius: 2px;
+  background: var(--cream); border: 1.3px solid #24201a; transform: rotate(-18deg);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+}
+.on-frame-vip-carte::before {
+  content: ''; position: absolute; left: -3.5px; top: -1px; width: 6px; height: 6px; z-index: 2;
+  background: #24201a; transform: rotate(-18deg);
+  clip-path: polygon(50% 0%, 90% 60%, 70% 60%, 70% 85%, 30% 85%, 30% 60%, 10% 60%);
+}
+
+.on-frame-vip-ambre {
+  box-shadow: 0 0 14px rgba(217, 164, 65, 0.4);
+  background-image: repeating-conic-gradient(from 0deg, #f0c878 0deg 8deg, var(--gold-strong) 8deg 16deg, #c98a2e 16deg 24deg);
+  background-origin: border-box; border: 3px solid transparent; background-clip: padding-box, border-box;
+}
+
+.on-frame-vip-oeil { box-shadow: 0 0 0 2.5px #6b5fa8, 0 0 12px rgba(107, 95, 168, 0.4); }
+.on-frame-vip-oeil::after {
+  content: ''; position: absolute; left: 50%; top: -8px; transform: translateX(-50%);
+  width: 16px; height: 8px; background: var(--cream); border-radius: 50%; border: 1.3px solid #24201a;
+}
+.on-frame-vip-oeil::before {
+  content: ''; position: absolute; left: 50%; top: -6px; transform: translateX(-50%); z-index: 2;
+  width: 5px; height: 5px; background: var(--gold-strong); border-radius: 50%;
+}
+
+.on-frame-vip-flamme { box-shadow: 0 0 0 2.5px #c9622b, 0 0 14px rgba(201, 98, 43, 0.45); }
+.on-frame-vip-flamme::after {
+  content: ''; position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%);
+  width: 9px; height: 13px; background: linear-gradient(180deg, #ffd37a, #e8792e 55%, #b3382e);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  animation: on-frame-vip-flamme-flicker 1.6s ease-in-out infinite;
+}
+@keyframes on-frame-vip-flamme-flicker {
+  0%, 100% { transform: translateX(-50%) scaleY(1) rotate(-2deg); }
+  50% { transform: translateX(-50%) scaleY(1.12) rotate(2deg); }
+}
+
+.on-frame-vip-marqueterie {
+  box-shadow: 0 0 10px rgba(139, 94, 42, 0.4);
+  background-image: repeating-conic-gradient(from 0deg, #8b5e2a 0deg 10deg, #6b4520 10deg 20deg);
+  background-origin: border-box; border: 3px solid transparent; background-clip: padding-box, border-box;
+}
+.on-frame-vip-marqueterie::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 1px solid var(--gold); }
+
+.on-frame-vip-ganse { box-shadow: 0 0 0 1.6px var(--gold), 0 0 8px rgba(217, 164, 65, 0.3); }
+.on-frame-vip-ganse::before {
+  content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 1.4px solid var(--gold-strong); opacity: 0.7;
+}
+.on-frame-vip-ganse::after {
+  content: ''; position: absolute; top: -2px; right: 2px; width: 3px; height: 3px; border-radius: 50%;
+  background: #eaf1ff; box-shadow: 0 0 4px 1px #eaf1ff;
+}
+
+.on-frame-vip-aura {
+  box-shadow: 0 0 0 2.5px #8b5fbf, 0 0 18px rgba(139, 95, 191, 0.5);
+  animation: on-frame-vip-aura-pulse 2.6s ease-in-out infinite;
+}
+@keyframes on-frame-vip-aura-pulse { 50% { box-shadow: 0 0 0 2.5px #a87fd9, 0 0 26px rgba(168, 127, 217, 0.7); } }
+.on-frame-vip-aura::after {
+  content: ''; position: absolute; left: 50%; top: -7px; transform: translateX(-50%) rotate(45deg);
+  width: 9px; height: 9px; background: linear-gradient(135deg, #c9a8f0, #8b5fbf); border-radius: 2px;
+  box-shadow: 0 0 4px rgba(139, 95, 191, 0.6);
+}
+
 /* ── Cadres de rôle (staff) — réservés au grade, mêmes mécaniques CSS. ── */
 
 .on-frame-sentinel { box-shadow: 0 0 0 3px #34d399, 0 0 12px rgba(52, 211, 153, 0.5); }
@@ -228,7 +359,8 @@
   .on-fx, .on-fx-ice, .on-fx-fire, .on-fx-purple, .on-fx-sunset, .on-fx-lightning, .on-fx-neon,
   .on-fx-gold, .on-fx-galaxy, .on-fx-matrix, .on-fx-rainbow, .on-fx-cyber, .on-fx-toast, .on-fx-toast::after,
   .on-frame-ember, .on-frame-neon, .on-frame-crown, .on-frame-diamond::after,
-  .on-frame-eagle, .on-frame-prestige, .on-crest-fondateur .on-crest-disc {
+  .on-frame-eagle, .on-frame-prestige, .on-crest-fondateur .on-crest-disc,
+  .on-frame-vip-constellation, .on-frame-vip-halo, .on-frame-vip-flamme::after, .on-frame-vip-aura {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }

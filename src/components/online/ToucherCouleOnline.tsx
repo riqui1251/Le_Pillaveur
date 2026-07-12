@@ -15,6 +15,7 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /**
  * Écran de jeu Toucher-Coulé EN LIGNE (serveur-autoritaire).
@@ -743,7 +744,7 @@ export function ToucherCouleOnline() {
                         )}
                       >
                         <span className="truncate">
-                          {iconOf(p) ? `${iconOf(p)} ` : ''}
+                          <PlayerAvatarGlyph value={iconOf(p)} />{iconOf(p) ? ' ' : ''}
                           <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                           {p.id === user.id && ' (vous)'}
                         </span>
@@ -864,7 +865,7 @@ export function ToucherCouleOnline() {
                             {TEAM_LABEL[p.team]}
                           </span>
                           <span className="truncate text-sm font-semibold text-white">
-                            {iconOf(p) ? `${iconOf(p)} ` : ''}
+                            <PlayerAvatarGlyph value={iconOf(p)} />{iconOf(p) ? ' ' : ''}
                             <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                           </span>
                           {p.team === winner && <Trophy aria-hidden className="inline h-4 w-4 text-gold" />}

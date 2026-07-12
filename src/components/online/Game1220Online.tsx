@@ -16,6 +16,7 @@ import type { Game1220SyncedState } from '@/lib/online-game-state'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /** 1220 en ligne : jeu simultané (pas de tour). Chaque joueur règle ses
  * paris en phase setup, puis n'importe qui déclenche un lancer partagé
@@ -198,7 +199,7 @@ export function Game1220Online() {
                 )}
               >
                 <RankCrest role={cosmetics.get(p.id)?.role} />
-                <span className="text-lg" aria-hidden>{iconOf(p)}</span>
+                <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                 <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate text-xs font-bold" />
                 <span className={cn('text-xs', ready ? 'text-teal-300' : 'text-white/35')}>{ready ? '✓' : '⏳'}</span>
               </div>
@@ -333,7 +334,7 @@ export function Game1220Online() {
               <div key={cfg.playerId} className="space-y-1 rounded-xl border border-white/[0.06] bg-white/[0.03] px-2.5 py-2">
                 <div className="flex items-center gap-1.5">
                   <RankCrest role={cosmetics.get(cfg.playerId)?.role} size="sm" />
-                  {p && <span className="text-xs" aria-hidden>{iconOf(p)}</span>}
+                  {p && <span className="text-xs" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>}
                   <OnlinePlayerName name={cfg.name} cosmetics={cosmetics.get(cfg.playerId)} className="truncate text-xs font-semibold" />
                 </div>
                 <div className="flex flex-wrap gap-1 text-[10px]">
@@ -396,7 +397,7 @@ export function Game1220Online() {
                     )}
                   >
                     <div className="mb-1.5 flex items-center gap-2">
-                      {p && <span className="text-sm" aria-hidden>{iconOf(p)}</span>}
+                      {p && <span className="text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>}
                       <OnlinePlayerName name={r.name} cosmetics={cosmetics.get(r.playerId)} className="text-sm font-semibold text-white/90" />
                     </div>
                     <ul className="space-y-0.5 pl-6">

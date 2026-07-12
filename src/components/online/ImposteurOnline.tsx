@@ -19,6 +19,7 @@ import {
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 
 /**
@@ -260,7 +261,7 @@ export function ImposteurOnline() {
               )}
             >
               <RankCrest role={cosmetics.get(p.id)?.role} />
-              <span className="text-xl" aria-hidden>{iconOf(p)}</span>
+              <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1 truncate text-sm font-bold">
                   <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
@@ -553,7 +554,7 @@ export function ImposteurOnline() {
                       isMe && 'opacity-40'
                     )}
                   >
-                    <span className="text-lg" aria-hidden>{iconOf(p)}</span>
+                    <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                     <span className="min-w-0 flex-1 truncate text-xs font-bold">
                       {p.name}
                       {isMe && <span className="text-[#6B6455]"> {t('you')}</span>}
@@ -595,7 +596,7 @@ export function ImposteurOnline() {
                   p.eliminated && 'opacity-45'
                 )}
               >
-                <span className="text-base" aria-hidden>{iconOf(p)}</span>
+                <span className="text-base" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                 <span className="w-24 shrink-0 truncate text-xs font-semibold text-white/70">
                   <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                   {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}

@@ -7,6 +7,7 @@ import type { TvRoomDto } from '@/lib/online-room'
 import type { ImposteurClientView } from '@/lib/imposteur/engine'
 import { IMPOSTEUR_CLUE_MS, IMPOSTEUR_VOTE_MS } from '@/lib/imposteur/engine'
 import { cn } from '@/lib/utils'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
@@ -58,7 +59,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
                 p.eliminated && 'opacity-50'
               )}
             >
-              <span aria-hidden>{iconOf(p)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               {p.eliminated && <Skull aria-hidden className="ml-1 inline h-5 w-5 text-white/50" />}
               <span className="text-white/50">« {p.word} »</span>
@@ -166,7 +167,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
                     p.eliminated && 'opacity-40'
                   )}
                 >
-                  <span className="text-2xl" aria-hidden>{iconOf(p)}</span>
+                  <span className="text-2xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                   <span className="w-52 shrink-0 truncate text-xl font-bold text-white/80">
                     {p.name}
                   </span>
@@ -193,7 +194,7 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
               p.eliminated && 'opacity-40'
             )}
           >
-            <span aria-hidden>{p.eliminated ? <Skull aria-hidden className="inline h-5 w-5" /> : iconOf(p)}</span>
+            <span aria-hidden>{p.eliminated ? <Skull aria-hidden className="inline h-5 w-5" /> : <PlayerAvatarGlyph value={iconOf(p)} />}</span>
             {p.name}
             {state.phase === 'vote' && !p.eliminated && p.hasVoted && ' ✓'}
           </span>

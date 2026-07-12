@@ -41,6 +41,7 @@ import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 
 /**
@@ -158,7 +159,7 @@ function TargetGrid({
               excluded && 'opacity-35'
             )}
           >
-            <span className="text-lg" aria-hidden>{iconOf(p)}</span>
+            <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
             <span className="min-w-0 flex-1 truncate text-xs font-bold">
               {p.name}
               {p.id === selfId && <span className="text-[#6B6455]"> {youLabel}</span>}
@@ -526,7 +527,7 @@ export function LoupGarouOnline() {
               )}
             >
               <RankCrest role={cosmetics.get(p.id)?.role} />
-              <span className="text-xl" aria-hidden>{iconOf(p)}</span>
+              <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1 truncate text-sm font-bold">
                   <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
@@ -851,7 +852,7 @@ export function LoupGarouOnline() {
                         !disabled && 'hover:-translate-y-0.5 active:scale-95'
                       )}
                     >
-                      <span className="text-lg" aria-hidden>{iconOf(p)}</span>
+                      <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                       <span className="min-w-0 flex-1 truncate text-xs font-bold">
                         {p.name}
                         {p.id === user.id && <span className="text-[#6B6455]"> {t('you')}</span>}
@@ -1153,7 +1154,7 @@ export function LoupGarouOnline() {
                           isMe && 'opacity-40'
                         )}
                       >
-                        <span className="text-lg" aria-hidden>{iconOf(p)}</span>
+                        <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                         <span className="min-w-0 flex-1 truncate text-xs font-bold">
                           {p.name}
                           {isMe && <span className="text-[#6B6455]"> {t('you')}</span>}
@@ -1194,7 +1195,7 @@ export function LoupGarouOnline() {
                 key={p.id}
                 className="flex items-center gap-1.5 rounded-lg border border-[#D8CCAE] bg-cream px-2 py-1.5 text-[#24201A] shadow-[0_4px_10px_-6px_rgba(0,0,0,0.5)]"
               >
-                <span className="text-sm" aria-hidden>{iconOf(p)}</span>
+                <span className="text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                 <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
                   {p.name}
                   {p.id === user.id && <span className="text-[#6B6455]"> {t('you')}</span>}

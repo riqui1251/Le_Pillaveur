@@ -15,6 +15,7 @@ import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /**
  * TÉLÉPHONE DESSINÉ en ligne (serveur-autoritaire). Chaque joueur ne voit
@@ -392,7 +393,7 @@ export function TelephoneDessineOnline() {
               p.leftAt && 'opacity-40'
             )}
           >
-            <span aria-hidden>{iconOf(p)}</span>
+            <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
             <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
           </span>
         ))}

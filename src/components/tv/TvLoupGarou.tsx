@@ -6,6 +6,7 @@ import { Beer, Bird, FlaskConical, Hourglass, Medal, Moon, Shield, Skull, Sparkl
 import type { TvRoomDto } from '@/lib/online-room'
 import type { LGClientView, LGRole } from '@/lib/loup-garou/engine'
 import { WolfIcon } from '@/components/icons/GameIcons'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { cn } from '@/lib/utils'
 
 /**
@@ -97,7 +98,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
                   !p.alive && 'opacity-60'
                 )}
               >
-                <span aria-hidden>{iconOf(p)}</span>
+                <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                 {p.name}
                 {!p.alive && <Skull aria-hidden className="h-6 w-6 text-[#6B6455]" />}
                 {state.mayorId === p.id && (
@@ -260,7 +261,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
                           voted && 'ring-4 ring-emerald-400/70'
                         )}
                       >
-                        <span aria-hidden>{iconOf(p)}</span>
+                        <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                         {p.name}
                         {state.mayorId === p.id && (
                           <Medal className="h-5 w-5 text-amber-700" aria-label={t('mayorBadge')} />

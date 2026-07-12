@@ -16,6 +16,7 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /**
  * TABOU VOCAL en ligne (serveur-autoritaire). `currentWord` n'est envoyé
@@ -367,7 +368,7 @@ export function TabouOnline() {
                     p.leftAt && 'opacity-40'
                   )}
                 >
-                  <span aria-hidden>{iconOf(p)}</span>
+                  <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                   <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
                 </span>
               ))}

@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { Game1220SyncedState } from '@/lib/online-game-state'
 import { cn } from '@/lib/utils'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvAvatar } from './tv-shared'
 
 /**
@@ -84,7 +85,7 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Sy
               <div className="flex items-center gap-2">
                 <TvAvatar name={cfg.name} index={idx} size={32} />
                 <span className="truncate text-lg font-bold text-white">{cfg.name}</span>
-                <span className="text-lg" aria-hidden>{iconOf(cfg.playerId)}</span>
+                <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(cfg.playerId)} /></span>
               </div>
               <div className="flex flex-wrap gap-1.5 text-xs">
                 <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-white/50">

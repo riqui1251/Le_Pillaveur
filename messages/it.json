@@ -172,6 +172,8 @@
     "frames": "Cornici",
     "roleFrames": "Cornici di grado",
     "roleFramesHint": "Riservate al tuo grado — non ottenibili per livello.",
+    "vipFrames": "Cornici VIP",
+    "vipFramesHint": "Assegnate a mano da un Fondatore — mai sbloccate per livello.",
     "unlockAt": "Lv. {level}",
     "grantOnly": "Solo su assegnazione",
     "rarity": {
@@ -182,9 +184,11 @@
     },
     "seriesNames": {
       "apero": "Aperitivo",
+      "trognes": "Facce",
       "fetard": "Festa",
       "bestiaire": "Bestiario",
       "nuit": "Notte",
+      "casino": "Casinò",
       "legende": "Leggenda",
       "fondateur": "Fondatore"
     }
@@ -425,7 +429,20 @@
       "sentinel": "Sentinella",
       "blade": "Lama",
       "eagle": "Aquila",
-      "prestige": "Prestigio"
+      "prestige": "Prestigio",
+      "vip-jeton": "Fiche VIP",
+      "vip-constellation": "Costellazione",
+      "vip-ruban": "Nastro d'Onore",
+      "vip-cle": "Chiave Maestra",
+      "vip-trefle": "Fiore Dorato",
+      "vip-halo": "Alone Notturno",
+      "vip-carte": "Carta Maestra",
+      "vip-ambre": "Anello Ambra",
+      "vip-oeil": "Occhio della Casa",
+      "vip-flamme": "Fiamma Eterna",
+      "vip-marqueterie": "Intarsio",
+      "vip-ganse": "Doppio Anello",
+      "vip-aura": "Aura Viola"
     },
     "customizer": {
       "title": "Personalizza {name}",

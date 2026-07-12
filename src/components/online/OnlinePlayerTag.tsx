@@ -5,6 +5,7 @@ import type { RoomDto } from '@/lib/online-room'
 import type { OnlinePreferences } from '@/lib/online-preferences'
 import { crestTierForRole, roleLabel, type CrestTier } from '@/lib/roles'
 import { DEFAULT_ONLINE_ICON } from '@/lib/online/cosmetics'
+import { PlayerIconById } from '@/components/icons/PlayerIcons'
 import { cn } from '@/lib/utils'
 
 /**
@@ -54,7 +55,7 @@ export function OnlinePlayerIcon({
   cosmetics,
   className,
 }: {
-  /** Emoji à afficher (icône du moteur ou des préférences). */
+  /** Id d'icône à afficher (moteur ou préférences) — voir player-icon-defs.ts. */
   icon?: string | null
   cosmetics?: MemberCosmetics | null
   className?: string
@@ -69,7 +70,10 @@ export function OnlinePlayerIcon({
         className
       )}
     >
-      {icon ?? cosmetics?.preferences.icon ?? DEFAULT_ONLINE_ICON}
+      <PlayerIconById
+        id={icon ?? cosmetics?.preferences.icon ?? DEFAULT_ONLINE_ICON}
+        className="h-[72%] w-[72%]"
+      />
     </span>
   )
 }

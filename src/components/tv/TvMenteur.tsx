@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { MenteurClientView } from '@/lib/menteur/engine'
 import { CssDie } from '@/components/games/CssDie'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { cn } from '@/lib/utils'
 
 /**
@@ -47,7 +48,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
               )}
             >
               <span>{idx + 1}.</span>
-              <span aria-hidden>{iconOf(p)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               <span className="text-amber-200">🍺 {p.lostCount}</span>
             </div>
@@ -160,7 +161,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
                 dead && 'opacity-40'
               )}
             >
-              <span aria-hidden>{iconOf(p)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               <span className="text-white/50">{dead ? <Skull aria-hidden className="inline h-4 w-4" /> : `🎲 ${p.diceCount}`}</span>
               {p.lostCount > 0 && <span className="text-amber-200/80">🍺{p.lostCount}</span>}

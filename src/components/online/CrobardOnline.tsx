@@ -18,6 +18,7 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /**
  * CROBARD en ligne (serveur-autoritaire). `word`/`wordChoices` ne sont
@@ -208,7 +209,7 @@ export function CrobardOnline() {
               )}
             >
               <span className="w-5 text-center text-xs font-black text-white/50">{i + 1}</span>
-              <span aria-hidden>{iconOf(p)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <span className="min-w-0 flex-1 truncate text-sm font-bold">
                 <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
               </span>
@@ -277,7 +278,7 @@ export function CrobardOnline() {
           {ranking.slice(0, 5).map((p, i) => (
             <div key={p.id} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-1.5 text-left text-sm">
               <span className="w-4 text-xs font-black text-white/40">{i + 1}</span>
-              <span aria-hidden>{iconOf(p)}</span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <span className="min-w-0 flex-1 truncate font-semibold">
                 <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
               </span>
@@ -451,7 +452,7 @@ export function CrobardOnline() {
               p.leftAt && 'opacity-40'
             )}
           >
-            <span aria-hidden>{iconOf(p)}</span>
+            <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
             <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
             <span className="text-white/50">· {p.score}</span>
           </span>
