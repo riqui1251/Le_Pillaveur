@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { canViewUserFeedback } from '@/lib/roles'
-import { isFeedbackStatus } from '@/lib/feedback'
+import { feedbackTypeLabel, isFeedbackStatus, isFeedbackType } from '@/lib/feedback'
+import { logAccountEvent } from '@/lib/ban-server'
 
 export async function PATCH(
   request: Request,
@@ -31,6 +32,16 @@ export async function PATCH(
       where: { id },
       data: { status },
     })
+
+    if (status === 'resolved' && existing.userId) {
+      const typeLabel = isFeedbackType(existing.type) ? feedbackTypeLabel(existing.type) : existing.type
+      await logAccountEvent({
+        userId: existing.userId,
+        actorId: actor.id,
+        action: 'feedback-ack',
+        comment: `${typeLabel} — ${existing.message.slice(0, 140)}`,
+      })
+    }
 
     return NextResponse.json({
       feedback: {

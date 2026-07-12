@@ -203,6 +203,7 @@ type JournalEntry = {
 type QueueItem = {
   id: string
   kind: 'feedback' | 'name-flag'
+  targetId: string
   title: string
   subtitle: string
   href: 'feedback' | 'accounts'
@@ -654,6 +655,10 @@ function useActionLabel() {
       return t('actions.banTemporary')
     case 'unban':
       return t('actions.unban')
+    case 'feedback-ack':
+      return t('actions.feedbackAck')
+    case 'name-flag-ack':
+      return t('actions.nameFlagAck')
     default:
       return action
   }
@@ -973,6 +978,7 @@ export default function SupervisionPage() {
   const router = useRouter()
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [overview, setOverview] = useState<SupervisionOverview | null>(null)
+  const [queueBusyId, setQueueBusyId] = useState<string | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [bans, setBans] = useState<ActiveBan[]>([])
   const [busy, setBusy] = useState(false)
@@ -1580,6 +1586,31 @@ export default function SupervisionPage() {
     setActiveTab(item.href)
   }
 
+  const handleQueueAcknowledge = async (id: string) => {
+    const item = overview?.queue.find((q) => q.id === id)
+    if (!item || queueBusyId) return
+    setQueueBusyId(id)
+    try {
+      if (item.kind === 'feedback') {
+        await fetch(`/api/admin/feedback/${item.targetId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status: 'resolved' }),
+        })
+      } else {
+        await fetch(`/api/admin/users/${item.targetId}/ack-name-flag`, {
+          method: 'POST',
+          credentials: 'include',
+        })
+      }
+      setOverview((prev) => (prev ? { ...prev, queue: prev.queue.filter((q) => q.id !== id) } : prev))
+      void loadAll(true)
+    } finally {
+      setQueueBusyId(null)
+    }
+  }
+
   return (
     <SupervisionShell>
       <SupervisionHeader
@@ -1716,8 +1747,11 @@ export default function SupervisionPage() {
                     title: q.title,
                     subtitle: q.subtitle,
                   }))}
-                  actionLabel={t('room.queueAction')}
-                  onAction={handleQueueAction}
+                  viewLabel={t('room.queueViewAction')}
+                  acknowledgeLabel={t('room.queueAckAction')}
+                  onView={handleQueueAction}
+                  onAcknowledge={(id) => void handleQueueAcknowledge(id)}
+                  busyId={queueBusyId}
                 />
               )}
             </SectionCard>

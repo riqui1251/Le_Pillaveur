@@ -1,6 +1,7 @@
 "use client"
 
 import type { ComponentType, ReactNode } from 'react'
+import { Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -92,9 +93,11 @@ export type SupervisionNavGroup = {
 }
 
 /**
- * Navigation groupée à icônes. Desktop : barre unique avec libellés de groupe
- * en séparateurs ; mobile : même barre en défilement horizontal (pas un menu
- * déroulant réducteur). Les compteurs colorés signalent l'urgence.
+ * Navigation à icônes. Une seule rangée, groupes séparés par de l'espace
+ * (pas d'étiquette de groupe ni de trait vertical — plus rien à lire pour
+ * distinguer les familles, juste à voir). Défile horizontalement quand ça ne
+ * tient pas, avec un fondu aux bords en indice discret (masque CSS, aucun
+ * état JS à maintenir).
  */
 export function SupervisionNav({
   groups,
@@ -110,14 +113,10 @@ export function SupervisionNav({
   return (
     <nav
       aria-label={groupAria}
-      className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex items-center gap-3 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 [-ms-overflow-style:none] [-webkit-mask-image:linear-gradient(to_right,transparent,black_14px,black_calc(100%-14px),transparent)] [mask-image:linear-gradient(to_right,transparent,black_14px,black_calc(100%-14px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {groups.map((group, gi) => (
-        <div key={group.label} className="flex shrink-0 items-center gap-1">
-          {gi > 0 && <span className="mx-1 h-5 w-px shrink-0 bg-white/10" aria-hidden />}
-          <span className="hidden shrink-0 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 lg:inline">
-            {group.label}
-          </span>
+      {groups.map((group) => (
+        <div key={group.label} role="group" aria-label={group.label} className="flex shrink-0 items-center gap-1">
           {group.items.map((item) => {
             const isActive = item.value === active
             const Icon = item.icon
@@ -141,7 +140,7 @@ export function SupervisionNav({
                     className={cn(
                       'ml-0.5 rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums',
                       item.tone === 'danger'
-                        ? 'bg-rose-500/20 text-rose-200'
+                        ? 'bg-suit-red/20 text-red-200'
                         : item.tone === 'warning'
                           ? 'bg-amber-500/20 text-amber-200'
                           : 'bg-white/10 text-white/60'
@@ -375,19 +374,32 @@ export function JournalList({
 }
 
 /** File « À traiter » unifiée — inbox zéro, une action par entrée. */
+/**
+ * File « à traiter » : deux actions distinctes par entrée — Voir (inspecter
+ * avant de juger, navigue vers l'onglet concerné) et Acquitter (clore
+ * directement, sans quitter la Salle). L'acquittement journalise toujours
+ * une trace sur le compte cible (voir supervision-overview-server.ts).
+ */
 export function QueueList({
   items,
-  actionLabel,
-  onAction,
+  viewLabel,
+  acknowledgeLabel,
+  onView,
+  onAcknowledge,
+  busyId,
 }: {
   items: Array<{ id: string; icon: IconType; danger?: boolean; title: ReactNode; subtitle: string }>
-  actionLabel: string
-  onAction: (id: string) => void
+  viewLabel: string
+  acknowledgeLabel: string
+  onView: (id: string) => void
+  onAcknowledge: (id: string) => void
+  busyId?: string | null
 }) {
   return (
     <ul className="space-y-1.5">
       {items.map((it) => {
         const Icon = it.icon
+        const busy = busyId === it.id
         return (
           <li key={it.id} className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5">
             <span
@@ -402,13 +414,25 @@ export function QueueList({
               <p className="truncate text-sm font-bold text-white">{it.title}</p>
               <p className="truncate text-xs text-white/45">{it.subtitle}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => onAction(it.id)}
-              className="shrink-0 rounded-lg border border-gold/35 bg-gold/10 px-2.5 py-1 text-xs font-bold text-amber-200 transition-colors hover:bg-gold/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-            >
-              {actionLabel}
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onView(it.id)}
+                disabled={busy}
+                className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+              >
+                {viewLabel}
+              </button>
+              <button
+                type="button"
+                onClick={() => onAcknowledge(it.id)}
+                disabled={busy}
+                className="flex items-center gap-1 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+              >
+                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                {acknowledgeLabel}
+              </button>
+            </div>
           </li>
         )
       })}

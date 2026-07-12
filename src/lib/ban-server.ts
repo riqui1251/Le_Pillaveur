@@ -171,6 +171,27 @@ export async function removeBan(params: {
   ])
 }
 
+/**
+ * Journal générique d'action staff sur un compte (AccountBanEvent réutilisé
+ * au-delà des bans : `action` est un simple string, et l'historique du
+ * compte affiche déjà n'importe quelle entrée de cette table).
+ */
+export async function logAccountEvent(params: {
+  userId: string
+  actorId: string
+  action: string
+  comment?: string | null
+}): Promise<void> {
+  await prisma.accountBanEvent.create({
+    data: {
+      userId: params.userId,
+      actorId: params.actorId,
+      action: params.action,
+      comment: params.comment?.trim() || null,
+    },
+  })
+}
+
 export async function getActiveBans() {
   const now = new Date()
   const users = await prisma.user.findMany({

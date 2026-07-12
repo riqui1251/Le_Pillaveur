@@ -193,6 +193,13 @@ export async function listNameModerationAttemptsForAdmin(options?: {
   }))
 }
 
+/**
+ * Comptes signalés (≥ seuil de tentatives) — masque ceux acquittés par le
+ * staff (`nameModerationWarningDismissedAt`) tant qu'aucune nouvelle
+ * tentative n'est survenue depuis, même logique que le bandeau joueur
+ * (`dismissed` dans getNameModerationStatusForUser). Ré-apparaît dès la
+ * tentative suivante — l'acquittement n'est pas une désactivation permanente.
+ */
 export async function listFlaggedNameModerationUsers(limit = 50) {
   const grouped = await prisma.nameModerationAttempt.groupBy({
     by: ['userId'],
@@ -201,6 +208,7 @@ export async function listFlaggedNameModerationUsers(limit = 50) {
       reason: 'profanity',
     },
     _count: { _all: true },
+    _max: { createdAt: true },
   })
 
   const flagged = grouped
@@ -222,6 +230,7 @@ export async function listFlaggedNameModerationUsers(limit = 50) {
       email: true,
       accountCode: true,
       nameModerationWarnedAt: true,
+      nameModerationWarningDismissedAt: true,
     },
   })
 
@@ -229,6 +238,12 @@ export async function listFlaggedNameModerationUsers(limit = 50) {
 
   return flagged
     .filter((g) => g.userId && userMap[g.userId])
+    .filter((g) => {
+      const user = userMap[g.userId!]
+      if (!user.nameModerationWarningDismissedAt) return true
+      const lastAttempt = g._max.createdAt
+      return Boolean(lastAttempt && lastAttempt > user.nameModerationWarningDismissedAt)
+    })
     .map((g) => ({
       user: userMap[g.userId!],
       profanityAttemptCount: g._count._all,

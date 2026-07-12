@@ -34,6 +34,8 @@ export type JournalEntry = {
 export type QueueItem = {
   id: string
   kind: 'feedback' | 'name-flag'
+  /** Id brut de la cible pour agir dessus (id du feedback, ou id du compte). */
+  targetId: string
   title: string
   subtitle: string
   href: 'feedback' | 'accounts'
@@ -205,6 +207,7 @@ async function getQueue(actorRole: string): Promise<QueueItem[]> {
       items.push({
         id: `feedback-${f.id}`,
         kind: 'feedback',
+        targetId: f.id,
         title: isFeedbackType(f.type) ? feedbackTypeLabel(f.type) : f.type,
         subtitle: `${f.user?.displayName ?? 'Anonyme'} — ${f.message.length > 80 ? `${f.message.slice(0, 80)}…` : f.message}`,
         href: 'feedback',
@@ -219,6 +222,7 @@ async function getQueue(actorRole: string): Promise<QueueItem[]> {
       items.push({
         id: `flag-${f.user.id}`,
         kind: 'name-flag',
+        targetId: f.user.id,
         title: f.user.displayName,
         subtitle: `${f.profanityAttemptCount} tentative(s) de pseudo bloquées`,
         href: 'accounts',

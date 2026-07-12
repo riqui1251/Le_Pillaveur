@@ -3108,7 +3108,8 @@
       "queueDesc": "Reportes y nombres sospechosos pendientes",
       "queueEmpty": "Cola despejada — nada por atender.",
       "queueEmptyHint": "Ningún reporte ni nombre sospechoso pendiente.",
-      "queueAction": "Ver",
+      "queueViewAction": "Ver",
+      "queueAckAction": "Reconocer",
       "journalTitle": "Registro de acciones",
       "journalDesc": "Trazabilidad del equipo de moderación",
       "journalEmpty": "Ninguna acción reciente.",
@@ -3212,7 +3213,9 @@
     "actions": {
       "banPermanent": "Baneo permanente",
       "banTemporary": "Baneo temporal",
-      "unban": "Desbaneo"
+      "unban": "Desbaneo",
+      "feedbackAck": "Reporte gestionado",
+      "nameFlagAck": "Alerta de nombre reconocida"
     },
     "dialogs": {
       "deleteTitle": "¿Eliminar permanentemente esta cuenta?",

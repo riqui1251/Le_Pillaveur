@@ -3118,7 +3118,8 @@
       "queueDesc": "Signalements et pseudos suspects en attente",
       "queueEmpty": "File nette — rien à traiter.",
       "queueEmptyHint": "Aucun signalement ni pseudo suspect en attente.",
-      "queueAction": "Voir",
+      "queueViewAction": "Voir",
+      "queueAckAction": "Acquitter",
       "journalTitle": "Journal des actions",
       "journalDesc": "Traçabilité de l'équipe de modération",
       "journalEmpty": "Aucune action récente.",
@@ -3222,7 +3223,9 @@
     "actions": {
       "banPermanent": "Bannissement permanent",
       "banTemporary": "Bannissement temporaire",
-      "unban": "Débannissement"
+      "unban": "Débannissement",
+      "feedbackAck": "Signalement traité",
+      "nameFlagAck": "Alerte pseudo acquittée"
     },
     "dialogs": {
       "deleteTitle": "Supprimer définitivement ce compte ?",

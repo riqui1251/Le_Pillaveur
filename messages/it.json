@@ -3108,7 +3108,8 @@
       "queueDesc": "Segnalazioni e nomi sospetti in attesa",
       "queueEmpty": "Coda pulita — niente da gestire.",
       "queueEmptyHint": "Nessuna segnalazione né nome sospetto in attesa.",
-      "queueAction": "Vedi",
+      "queueViewAction": "Vedi",
+      "queueAckAction": "Riconosci",
       "journalTitle": "Registro delle azioni",
       "journalDesc": "Tracciabilità del team di moderazione",
       "journalEmpty": "Nessuna azione recente.",
@@ -3212,7 +3213,9 @@
     "actions": {
       "banPermanent": "Ban permanente",
       "banTemporary": "Ban temporaneo",
-      "unban": "Sbannamento"
+      "unban": "Sbannamento",
+      "feedbackAck": "Segnalazione gestita",
+      "nameFlagAck": "Alert nome riconosciuto"
     },
     "dialogs": {
       "deleteTitle": "Eliminare definitivamente questo account?",

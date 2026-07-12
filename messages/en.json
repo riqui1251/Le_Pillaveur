@@ -3118,7 +3118,8 @@
       "queueDesc": "Pending reports and suspicious names",
       "queueEmpty": "Queue clear — nothing to handle.",
       "queueEmptyHint": "No pending report or suspicious name.",
-      "queueAction": "View",
+      "queueViewAction": "View",
+      "queueAckAction": "Acknowledge",
       "journalTitle": "Action log",
       "journalDesc": "Moderation team traceability",
       "journalEmpty": "No recent action.",
@@ -3222,7 +3223,9 @@
     "actions": {
       "banPermanent": "Permanent ban",
       "banTemporary": "Temporary ban",
-      "unban": "Unban"
+      "unban": "Unban",
+      "feedbackAck": "Report handled",
+      "nameFlagAck": "Name alert acknowledged"
     },
     "dialogs": {
       "deleteTitle": "Permanently delete this account?",
