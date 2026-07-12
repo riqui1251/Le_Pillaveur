@@ -29,7 +29,7 @@ export function hasSeenGameTutorial(gameId: string): boolean {
   }
 }
 
-function markGameTutorialSeen(gameId: string) {
+export function markGameTutorialSeen(gameId: string) {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.setItem(SEEN_KEY_PREFIX + gameId, '1')

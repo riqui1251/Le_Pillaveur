@@ -11,7 +11,7 @@ import { GameIconById } from '@/components/hub/GameIconById'
 import { BRIEFING_TIMEOUT_MS } from '@/lib/online/briefing'
 import { TUTORIAL_VISUALS } from '@/lib/online/tutorial-visuals'
 import type { RoomDto } from '@/lib/online-room'
-import type { TutorialStep } from './GameTutorialModal'
+import { markGameTutorialSeen, type TutorialStep } from './GameTutorialModal'
 import { cn } from '@/lib/utils'
 
 /**
@@ -51,6 +51,10 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
     async (timeout: boolean) => {
       if (sending) return
       setSending(true)
+      // Lu manuellement (pas le filet anti-AFK) : inutile de rejouer la même
+      // modale 💡 juste après l'entrée en partie (GameTutorialModal, même
+      // contenu) — un seul passage du tuto par joueur et par appareil.
+      if (!timeout) markGameTutorialSeen(gameId)
       try {
         await fetch(`/api/online/rooms/${room.id}/briefing-ack`, {
           method: 'POST',
@@ -63,7 +67,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
         setSending(false)
       }
     },
-    [room.id, refreshRoom, sending]
+    [room.id, refreshRoom, sending, gameId]
   )
 
   // Barre de temps + tick timeout (tous les clients l'envoient, le serveur
