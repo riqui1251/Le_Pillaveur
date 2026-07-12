@@ -35,11 +35,32 @@ function aggregateCloudGameStats(localPlayersJson: string | null): Map<string, n
   return map
 }
 
+/**
+ * Parties EN LIGNE terminées, par jeu — dédupliquées par salle (une ligne
+ * OnlineMatchResult par COMPTE humain, donc une salle à 4 joueurs produit
+ * 4 lignes pour UNE seule partie).
+ */
+async function aggregateOnlineGameStats(): Promise<Map<string, number>> {
+  const rows = await prisma.onlineMatchResult.findMany({
+    select: { gameId: true, roomId: true },
+  })
+  const roomsByGame = new Map<string, Set<string>>()
+  for (const r of rows) {
+    let rooms = roomsByGame.get(r.gameId)
+    if (!rooms) {
+      rooms = new Set()
+      roomsByGame.set(r.gameId, rooms)
+    }
+    rooms.add(r.roomId)
+  }
+  return new Map([...roomsByGame.entries()].map(([gameId, rooms]) => [gameId, rooms.size]))
+}
+
 export async function getGlobalGamePlayStats(): Promise<{
   games: GamePlayStat[]
   totalParties: number
 }> {
-  const [dbCounts, users] = await Promise.all([
+  const [dbCounts, users, onlineMap] = await Promise.all([
     prisma.stats.groupBy({
       by: ['gameType'],
       _count: { _all: true },
@@ -48,6 +69,7 @@ export async function getGlobalGamePlayStats(): Promise<{
       where: { localPlayersJson: { not: null } },
       select: { localPlayersJson: true },
     }),
+    aggregateOnlineGameStats(),
   ])
 
   const dbMap = new Map(dbCounts.map((row) => [row.gameType, row._count._all]))
@@ -64,12 +86,14 @@ export async function getGlobalGamePlayStats(): Promise<{
     ...GAMES.map((g) => g.id),
     ...dbMap.keys(),
     ...cloudMap.keys(),
+    ...onlineMap.keys(),
   ])
 
   const games = [...allIds]
     .map((gameId) => {
       const meta = GAMES.find((g) => g.id === gameId)
-      const partiesPlayed = (cloudMap.get(gameId) ?? 0) + (dbMap.get(gameId) ?? 0)
+      const partiesPlayed =
+        (cloudMap.get(gameId) ?? 0) + (dbMap.get(gameId) ?? 0) + (onlineMap.get(gameId) ?? 0)
       return {
         gameId,
         title: meta?.title ?? gameId,
