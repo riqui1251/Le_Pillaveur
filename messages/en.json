@@ -2987,7 +2987,7 @@
     },
     "tabs": {
       "section": "Section",
-      "overview": "Overview",
+      "overview": "The Room",
       "geo": "Country / IP",
       "accounts": "Accounts ({count})",
       "bans": "Banned ({count})",
@@ -3098,6 +3098,37 @@
       "recentTitle": "Recently connected accounts",
       "recentDesc": "Identified players with IP and country",
       "noneRecent": "No recently connected account."
+    },
+    "room": {
+      "todayLabel": "Today",
+      "weekLabel": "7 days",
+      "vsYesterday": "vs yesterday",
+      "vsPrevWeek": "vs prev. 7 d.",
+      "trendTitle": "Trend — last 14 days",
+      "trendVisitors": "Visitors",
+      "trendParties": "Games",
+      "liveTablesTitle": "Tables in progress",
+      "liveTablesDesc": "Rooms active right now",
+      "liveTablesEmpty": "No table in progress.",
+      "liveTablesEmptyHint": "The room is quiet for now.",
+      "statusWaiting": "Waiting",
+      "statusBriefing": "Briefing",
+      "statusPlaying": "Playing",
+      "queueTitle": "To handle",
+      "queueDesc": "Pending reports and suspicious names",
+      "queueEmpty": "Queue clear — nothing to handle.",
+      "queueEmptyHint": "No pending report or suspicious name.",
+      "queueAction": "View",
+      "journalTitle": "Action log",
+      "journalDesc": "Moderation team traceability",
+      "journalEmpty": "No recent action.",
+      "journalBan": "{actor} banned {target}",
+      "journalBanReason": "{actor} banned {target} — “{detail}”",
+      "journalUnban": "{actor} unbanned {target}",
+      "journalFeatureBan": "{actor} disabled {feature} for {target}",
+      "journalGrant": "{actor} granted a cosmetic to {target}",
+      "journalTerm": "Moderated term added: “{detail}”",
+      "journalTermByActor": "{actor} added the term “{detail}”"
     },
     "games": {
       "playedTitle": "Games played",
@@ -3263,7 +3294,7 @@
       "revoke": "Remove",
       "close": "Close"
     },
-    "kicker": "Supervision",
+    "kicker": "Le Pillaveur",
     "header": {
       "onlineCount": "{count} online",
       "refresh": "Refresh"

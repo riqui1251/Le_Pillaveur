@@ -2977,7 +2977,7 @@
     },
     "tabs": {
       "section": "Sección",
-      "overview": "Resumen",
+      "overview": "La Sala",
       "geo": "País / IP",
       "accounts": "Cuentas ({count})",
       "bans": "Baneados ({count})",
@@ -3088,6 +3088,37 @@
       "recentTitle": "Cuentas conectadas recientemente",
       "recentDesc": "Jugadores identificados con IP y país",
       "noneRecent": "Ninguna cuenta conectada recientemente."
+    },
+    "room": {
+      "todayLabel": "Hoy",
+      "weekLabel": "7 días",
+      "vsYesterday": "vs ayer",
+      "vsPrevWeek": "vs 7 d. ant.",
+      "trendTitle": "Tendencia — últimos 14 días",
+      "trendVisitors": "Visitantes",
+      "trendParties": "Partidas",
+      "liveTablesTitle": "Mesas en curso",
+      "liveTablesDesc": "Salas activas ahora mismo",
+      "liveTablesEmpty": "Ninguna mesa en curso.",
+      "liveTablesEmptyHint": "La sala está tranquila por ahora.",
+      "statusWaiting": "Espera",
+      "statusBriefing": "Instrucciones",
+      "statusPlaying": "En juego",
+      "queueTitle": "Por atender",
+      "queueDesc": "Reportes y nombres sospechosos pendientes",
+      "queueEmpty": "Cola despejada — nada por atender.",
+      "queueEmptyHint": "Ningún reporte ni nombre sospechoso pendiente.",
+      "queueAction": "Ver",
+      "journalTitle": "Registro de acciones",
+      "journalDesc": "Trazabilidad del equipo de moderación",
+      "journalEmpty": "Ninguna acción reciente.",
+      "journalBan": "{actor} baneó a {target}",
+      "journalBanReason": "{actor} baneó a {target} — «{detail}»",
+      "journalUnban": "{actor} desbaneó a {target}",
+      "journalFeatureBan": "{actor} desactivó el {feature} de {target}",
+      "journalGrant": "{actor} regaló un cosmético a {target}",
+      "journalTerm": "Término moderado añadido: «{detail}»",
+      "journalTermByActor": "{actor} añadió el término «{detail}»"
     },
     "games": {
       "playedTitle": "Partidas por juego",
@@ -3253,7 +3284,7 @@
       "revoke": "Quitar",
       "close": "Cerrar"
     },
-    "kicker": "Supervisión",
+    "kicker": "Le Pillaveur",
     "header": {
       "onlineCount": "{count} en línea",
       "refresh": "Actualizar"

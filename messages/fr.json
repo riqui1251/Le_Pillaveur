@@ -2987,7 +2987,7 @@
     },
     "tabs": {
       "section": "Section",
-      "overview": "Vue d'ensemble",
+      "overview": "La Salle",
       "geo": "Pays / IP",
       "accounts": "Comptes ({count})",
       "bans": "Bannis ({count})",
@@ -3098,6 +3098,37 @@
       "recentTitle": "Comptes connectés récemment",
       "recentDesc": "Joueurs identifiés avec leur IP et pays",
       "noneRecent": "Aucun compte connecté récemment."
+    },
+    "room": {
+      "todayLabel": "Aujourd'hui",
+      "weekLabel": "7 jours",
+      "vsYesterday": "vs hier",
+      "vsPrevWeek": "vs 7 j. préc.",
+      "trendTitle": "Tendance — 14 derniers jours",
+      "trendVisitors": "Visiteurs",
+      "trendParties": "Parties",
+      "liveTablesTitle": "Tables en cours",
+      "liveTablesDesc": "Salons actifs en ce moment",
+      "liveTablesEmpty": "Aucune table en cours.",
+      "liveTablesEmptyHint": "La salle est calme pour l'instant.",
+      "statusWaiting": "Attente",
+      "statusBriefing": "Briefing",
+      "statusPlaying": "En jeu",
+      "queueTitle": "À traiter",
+      "queueDesc": "Signalements et pseudos suspects en attente",
+      "queueEmpty": "File nette — rien à traiter.",
+      "queueEmptyHint": "Aucun signalement ni pseudo suspect en attente.",
+      "queueAction": "Voir",
+      "journalTitle": "Journal des actions",
+      "journalDesc": "Traçabilité de l'équipe de modération",
+      "journalEmpty": "Aucune action récente.",
+      "journalBan": "{actor} a banni {target}",
+      "journalBanReason": "{actor} a banni {target} — « {detail} »",
+      "journalUnban": "{actor} a débanni {target}",
+      "journalFeatureBan": "{actor} a coupé le {feature} de {target}",
+      "journalGrant": "{actor} a offert un cosmétique à {target}",
+      "journalTerm": "Terme modéré ajouté : « {detail} »",
+      "journalTermByActor": "{actor} a ajouté le terme « {detail} »"
     },
     "games": {
       "playedTitle": "Parties jouées par jeu",
@@ -3263,7 +3294,7 @@
       "revoke": "Retirer",
       "close": "Fermer"
     },
-    "kicker": "Supervision",
+    "kicker": "Le Pillaveur",
     "header": {
       "onlineCount": "{count} en ligne",
       "refresh": "Actualiser"

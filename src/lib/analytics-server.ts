@@ -12,7 +12,7 @@ import {
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000
 
-function todayParis(): string {
+export function todayParis(): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Paris',
     year: 'numeric',
@@ -21,7 +21,7 @@ function todayParis(): string {
   }).format(new Date())
 }
 
-function daysAgoParis(days: number): string {
+export function daysAgoParis(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() - days)
   return new Intl.DateTimeFormat('en-CA', {

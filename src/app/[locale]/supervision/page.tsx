@@ -88,12 +88,17 @@ import {
   SupervisionHeader,
   SupervisionNav,
   SectionCard,
-  KpiBento,
+  KpiPlaque,
+  TrendChart,
+  LiveTableCard,
+  JournalList,
+  QueueList,
   SkeletonRows,
   EmptyState,
   ErrorState,
   type SupervisionNavGroup,
 } from '@/components/supervision/SupervisionLayout'
+import { GameIconById } from '@/components/hub/GameIconById'
 import { cn } from '@/lib/utils'
 
 type CountryRow = { country: string | null; count: number }
@@ -169,6 +174,46 @@ type StatsResponse = {
     games: Array<{ gameId: string; title: string; emoji: string; partiesPlayed: number }>
     totalParties: number
   }
+}
+
+type DailyPoint = { date: string; visitors: number; parties: number }
+
+type LiveTable = {
+  id: string
+  code: string
+  gameId: string | null
+  gameTitle: string
+  status: 'waiting' | 'briefing' | 'playing'
+  visibility: string
+  memberCount: number
+  memberNames: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+type JournalEntry = {
+  id: string
+  kind: 'ban' | 'unban' | 'feature-ban' | 'cosmetic-grant' | 'moderation-term'
+  actorName: string | null
+  targetName: string | null
+  detail: string | null
+  createdAt: string
+}
+
+type QueueItem = {
+  id: string
+  kind: 'feedback' | 'name-flag'
+  title: string
+  subtitle: string
+  href: 'feedback' | 'accounts'
+  createdAt: string
+}
+
+type SupervisionOverview = {
+  dailySeries: DailyPoint[]
+  liveTables: LiveTable[]
+  journal: JournalEntry[]
+  queue: QueueItem[]
 }
 
 type AdminUser = {
@@ -309,6 +354,32 @@ function matchesAccountSearch(
   if (user.lastIp?.toLowerCase().includes(q)) return true
   if (user.ips?.some((entry) => entry.ip.toLowerCase().includes(q))) return true
   return false
+}
+
+/** Phrase du journal — un texte par nature d'action, acteur/cible en gras côté rendu. */
+function journalText(t: ReturnType<typeof useTranslations<'supervision'>>, e: JournalEntry): string {
+  const actor = e.actorName ?? '—'
+  const target = e.targetName ?? '—'
+  switch (e.kind) {
+    case 'ban':
+      return e.detail
+        ? t('room.journalBanReason', { actor, target, detail: e.detail })
+        : t('room.journalBan', { actor, target })
+    case 'unban':
+      return t('room.journalUnban', { actor, target })
+    case 'feature-ban':
+      return t('room.journalFeatureBan', {
+        actor,
+        target,
+        feature: e.detail === 'voice' ? t('featureBans.voice') : t('featureBans.chat'),
+      })
+    case 'cosmetic-grant':
+      return t('room.journalGrant', { actor, target })
+    case 'moderation-term':
+      return e.actorName
+        ? t('room.journalTermByActor', { actor, detail: e.detail ?? '' })
+        : t('room.journalTerm', { detail: e.detail ?? '' })
+  }
 }
 
 function DeviceBadge({ device, compact }: { device?: string | null; compact?: boolean }) {
@@ -901,6 +972,7 @@ export default function SupervisionPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState<StatsResponse | null>(null)
+  const [overview, setOverview] = useState<SupervisionOverview | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [bans, setBans] = useState<ActiveBan[]>([])
   const [busy, setBusy] = useState(false)
@@ -1138,14 +1210,15 @@ export default function SupervisionPage() {
       }
 
       if (analytics) {
-        const statsRes = await fetch('/api/admin/stats', { credentials: 'include' })
-        if (statsRes.ok) {
-          setStats(await statsRes.json())
-        } else {
-          setStats(null)
-        }
+        const [statsRes, overviewRes] = await Promise.all([
+          fetch('/api/admin/stats', { credentials: 'include' }),
+          fetch('/api/admin/supervision-overview', { credentials: 'include' }),
+        ])
+        setStats(statsRes.ok ? await statsRes.json() : null)
+        setOverview(overviewRes.ok ? await overviewRes.json() : null)
       } else {
         setStats(null)
+        setOverview(null)
       }
 
       if (bansAllowed) {
@@ -1484,6 +1557,29 @@ export default function SupervisionPage() {
     )
   }
 
+  // La Salle — tendance dérivée de la même série 14 j (pas d'appel dédié) :
+  // delta jour = dernier point vs veille ; delta semaine = 7 derniers points
+  // vs les 7 précédents.
+  const trendPoints = overview?.dailySeries ?? []
+  const lastPoint = trendPoints[trendPoints.length - 1]
+  const prevPoint = trendPoints[trendPoints.length - 2]
+  const last7 = trendPoints.slice(-7)
+  const prev7 = trendPoints.slice(-14, -7)
+  const sumBy = (arr: DailyPoint[], key: 'visitors' | 'parties') => arr.reduce((s, p) => s + p[key], 0)
+  const prevWeekVisitors = sumBy(prev7, 'visitors')
+  const weekVisitorsDelta =
+    prev7.length > 0 && prevWeekVisitors > 0
+      ? Math.round(((sumBy(last7, 'visitors') - prevWeekVisitors) / prevWeekVisitors) * 100)
+      : null
+  const todayVisitorsDelta = lastPoint && prevPoint ? lastPoint.visitors - prevPoint.visitors : null
+
+  const handleQueueAction = (id: string) => {
+    const item = overview?.queue.find((q) => q.id === id)
+    if (!item) return
+    if (item.href === 'accounts') setAccountSearch(item.title)
+    setActiveTab(item.href)
+  }
+
   return (
     <SupervisionShell>
       <SupervisionHeader
@@ -1544,20 +1640,140 @@ export default function SupervisionPage() {
           {!dataLoaded ? (
             <SkeletonRows rows={4} />
           ) : (
-          <KpiBento
-            hero={{
-              label: t('stats.week'),
-              value: stats?.visitors.week ?? 0,
-              hint: t('stats.weekHint'),
-              icon: CalendarDays,
-            }}
-            metrics={[
-              { label: t('stats.onlineNow'), value: stats?.visitors.onlineNow ?? 0, hint: t('stats.onlineNowHint') },
-              { label: t('stats.today'), value: stats?.visitors.today ?? 0, hint: t('stats.todayHint') },
-              { label: t('stats.month'), value: stats?.visitors.month ?? 0, hint: t('stats.monthHint') },
-            ]}
-          />
-          )}
+          <>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            <KpiPlaque
+              label={t('room.todayLabel')}
+              value={stats?.visitors.today ?? 0}
+              hint={t('stats.todayHint')}
+              delta={
+                todayVisitorsDelta != null
+                  ? {
+                      direction: todayVisitorsDelta >= 0 ? 'up' : 'down',
+                      label: `${todayVisitorsDelta >= 0 ? '+' : ''}${todayVisitorsDelta} ${t('room.vsYesterday')}`,
+                    }
+                  : undefined
+              }
+            />
+            <KpiPlaque
+              label={t('room.weekLabel')}
+              value={stats?.visitors.week ?? 0}
+              hint={t('stats.weekHint')}
+              delta={
+                weekVisitorsDelta != null
+                  ? {
+                      direction: weekVisitorsDelta >= 0 ? 'up' : 'down',
+                      label: `${weekVisitorsDelta >= 0 ? '+' : ''}${weekVisitorsDelta}% ${t('room.vsPrevWeek')}`,
+                    }
+                  : undefined
+              }
+            />
+            <KpiPlaque label={t('stats.onlineNow')} value={stats?.visitors.onlineNow ?? 0} hint={t('stats.onlineNowHint')} />
+            <KpiPlaque
+              label={t('room.queueTitle')}
+              value={overview?.queue.length ?? 0}
+              tone={overview && overview.queue.length > 0 ? 'alert' : 'default'}
+            />
+          </div>
+
+          <SectionCard icon={CalendarDays} title={t('room.trendTitle')}>
+            <TrendChart points={trendPoints} primaryLabel={t('room.trendVisitors')} secondaryLabel={t('room.trendParties')} />
+          </SectionCard>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SectionCard icon={Gamepad2} title={t('room.liveTablesTitle')} description={t('room.liveTablesDesc')}>
+              {(overview?.liveTables ?? []).length === 0 ? (
+                <EmptyState icon={Gamepad2} title={t('room.liveTablesEmpty')} hint={t('room.liveTablesEmptyHint')} />
+              ) : (
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {overview?.liveTables.map((tbl) => (
+                    <LiveTableCard
+                      key={tbl.id}
+                      icon={tbl.gameId ? <GameIconById id={tbl.gameId} className="h-4 w-4 shrink-0 text-gold" /> : undefined}
+                      gameTitle={tbl.gameTitle}
+                      code={tbl.code}
+                      status={tbl.status}
+                      statusLabel={t(
+                        tbl.status === 'waiting' ? 'room.statusWaiting' : tbl.status === 'briefing' ? 'room.statusBriefing' : 'room.statusPlaying'
+                      )}
+                      memberCount={tbl.memberCount}
+                      memberNames={tbl.memberNames}
+                      elapsed={formatPresenceDuration((Date.now() - new Date(tbl.createdAt).getTime()) / 1000)}
+                    />
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+
+            <SectionCard icon={MessageSquareWarning} title={t('room.queueTitle')} description={t('room.queueDesc')}>
+              {(overview?.queue ?? []).length === 0 ? (
+                <EmptyState icon={CheckCheck} title={t('room.queueEmpty')} hint={t('room.queueEmptyHint')} />
+              ) : (
+                <QueueList
+                  items={(overview?.queue ?? []).map((q) => ({
+                    id: q.id,
+                    icon: q.kind === 'feedback' ? MessageSquareWarning : UserX,
+                    title: q.title,
+                    subtitle: q.subtitle,
+                  }))}
+                  actionLabel={t('room.queueAction')}
+                  onAction={handleQueueAction}
+                />
+              )}
+            </SectionCard>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SectionCard icon={ScrollText} title={t('room.journalTitle')} description={t('room.journalDesc')}>
+              {(overview?.journal ?? []).length === 0 ? (
+                <EmptyState icon={ScrollText} title={t('room.journalEmpty')} />
+              ) : (
+                <JournalList
+                  entries={(overview?.journal ?? []).map((e) => ({
+                    id: e.id,
+                    kind: e.kind,
+                    time: format.dateTime(new Date(e.createdAt), { timeStyle: 'short' }),
+                    text: journalText(t, e),
+                  }))}
+                />
+              )}
+            </SectionCard>
+
+            <SectionCard
+              icon={Gamepad2}
+              title={t('games.playedTitle')}
+              description={
+                stats?.games?.totalParties != null
+                  ? t('games.totalParties', {
+                      count: stats.games.totalParties,
+                      plural: stats.games.totalParties > 1 ? 's' : '',
+                    })
+                  : undefined
+              }
+            >
+              {(stats?.games?.games ?? []).length === 0 ? (
+                <EmptyState icon={Gamepad2} title={t('games.noneRecorded')} />
+              ) : (
+                <ul className="space-y-2">
+                  {stats?.games?.games.map((game) => (
+                    <li
+                      key={game.gameId}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5"
+                    >
+                      <span className="flex items-center gap-2.5 text-sm text-white">
+                        <GameIconById id={game.gameId} className="h-4 w-4 text-gold" />
+                        <span className="font-medium">{game.title}</span>
+                      </span>
+                      <Badge variant="secondary" className="tabular-nums">
+                        {game.partiesPlayed}{' '}
+                        {game.partiesPlayed > 1 ? t('games.parties') : t('games.party')}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionCard>
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <SectionCard icon={Users} title={t('accounts.registered')} bodyClassName="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 lg:grid-cols-5">
@@ -1565,8 +1781,8 @@ export default function SupervisionPage() {
                 <p className="text-xl font-bold text-white sm:text-2xl">{stats?.accounts.total ?? 0}</p>
                 <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.total')}</p>
               </div>
-              <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-2.5 sm:p-3">
-                <p className="text-xl font-bold text-teal-200 sm:text-2xl">{stats?.accounts.byRole.moderator ?? 0}</p>
+              <div className="rounded-xl border border-chip-blue/25 bg-chip-blue/10 p-2.5 sm:p-3">
+                <p className="text-xl font-bold text-sky-200 sm:text-2xl">{stats?.accounts.byRole.moderator ?? 0}</p>
                 <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.moderators')}</p>
               </div>
               <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 sm:p-3">
@@ -1655,46 +1871,8 @@ export default function SupervisionPage() {
                 </ul>
               )}
           </SectionCard>
-
-          <SectionCard
-            icon={Gamepad2}
-            title={t('games.playedTitle')}
-            description={
-              <>
-                {t('games.playedDesc')}
-                {stats?.games?.totalParties != null && (
-                  <>
-                    {t('games.totalParties', {
-                      count: stats.games.totalParties,
-                      plural: stats.games.totalParties > 1 ? 's' : '',
-                    })}
-                  </>
-                )}
-              </>
-            }
-          >
-              {(stats?.games?.games ?? []).length === 0 ? (
-                <EmptyState icon={Gamepad2} title={t('games.noneRecorded')} />
-              ) : (
-                <ul className="space-y-2">
-                  {stats?.games?.games.map((game) => (
-                    <li
-                      key={game.gameId}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5"
-                    >
-                      <span className="flex items-center gap-2.5 text-sm text-white">
-                        <span className="text-lg">{game.emoji}</span>
-                        <span className="font-medium">{game.title}</span>
-                      </span>
-                      <Badge variant="secondary" className="tabular-nums">
-                        {game.partiesPlayed}{' '}
-                        {game.partiesPlayed > 1 ? t('games.parties') : t('games.party')}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
-              )}
-          </SectionCard>
+          </>
+          )}
         </TabsContent>
 
         <TabsContent value="geo" className="grid gap-4 md:grid-cols-2">
@@ -1716,31 +1894,6 @@ export default function SupervisionPage() {
         )}
 
         <TabsContent value="accounts" className="space-y-4">
-          {user && canManageSiteSettings(user.role) && (
-            <SectionCard icon={Radio} title={t('siteSettings.title')} description={t('siteSettings.desc')}>
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white">{t('siteSettings.voiceLabel')}</p>
-                  <p className="text-xs text-white/50">
-                    {voiceEnabled === null
-                      ? '…'
-                      : voiceEnabled
-                        ? t('siteSettings.voiceOn')
-                        : t('siteSettings.voiceOff')}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant={voiceEnabled ? 'destructive' : 'default'}
-                  disabled={busy || voiceEnabled === null}
-                  onClick={() => void toggleGlobalVoice(!voiceEnabled)}
-                >
-                  {voiceEnabled ? t('siteSettings.disable') : t('siteSettings.enable')}
-                </Button>
-              </div>
-            </SectionCard>
-          )}
-
           <SectionCard title={t('accounts.adminTitle')} description={t('accounts.adminDesc')} bodyClassName="space-y-3">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
@@ -2198,6 +2351,30 @@ export default function SupervisionPage() {
 
         {canEditAccounts && (
         <TabsContent value="moderation" className="space-y-4">
+          {user && canManageSiteSettings(user.role) && (
+            <SectionCard icon={Radio} title={t('siteSettings.title')} description={t('siteSettings.desc')}>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">{t('siteSettings.voiceLabel')}</p>
+                  <p className="text-xs text-white/50">
+                    {voiceEnabled === null
+                      ? '…'
+                      : voiceEnabled
+                        ? t('siteSettings.voiceOn')
+                        : t('siteSettings.voiceOff')}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={voiceEnabled ? 'destructive' : 'default'}
+                  disabled={busy || voiceEnabled === null}
+                  onClick={() => void toggleGlobalVoice(!voiceEnabled)}
+                >
+                  {voiceEnabled ? t('siteSettings.disable') : t('siteSettings.enable')}
+                </Button>
+              </div>
+            </SectionCard>
+          )}
           <ModerationTermsPanel />
           <NameModerationAttemptsPanel />
         </TabsContent>
