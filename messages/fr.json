@@ -371,6 +371,17 @@
       "submit": "Réinitialiser le mot de passe",
       "passwordRules": "8 caractères minimum, avec au moins une lettre et un chiffre.",
       "passwordMismatch": "Les mots de passe ne correspondent pas."
+    },
+    "deleteAccount": {
+      "title": "Supprimer mon compte",
+      "warning": "La suppression est définitive : compte, statistiques, succès, amis et progression en ligne seront effacés. Cette action est irréversible.",
+      "passwordPlaceholder": "Mot de passe",
+      "button": "Supprimer définitivement mon compte",
+      "confirm": "Confirmer la suppression définitive ?",
+      "deleting": "Suppression…",
+      "wrongPassword": "Mot de passe incorrect.",
+      "founderProtected": "Le compte fondateur ne peut pas être supprimé depuis l'interface.",
+      "genericError": "Impossible de supprimer le compte pour le moment. Réessaie plus tard."
     }
   },
   "legal": {
@@ -385,7 +396,9 @@
       "checkbox": "Je certifie avoir 18 ans révolus et j'accepte les CGU et la politique de confidentialité.",
       "enter": "Entrer sur le site",
       "validating": "Validation…",
-      "minorWarning": "Si vous avez moins de 18 ans, vous devez quitter ce site."
+      "minorWarning": "Si vous avez moins de 18 ans, vous devez quitter ce site.",
+      "analyticsLabel": "J'accepte les statistiques de visite (cookie de mesure d'audience).",
+      "analyticsHint": "Optionnel — sert uniquement à compter les visites et à lutter contre les abus. Aucun partage avec des tiers."
     },
     "pages": {
       "back": "Retour",
@@ -469,9 +482,18 @@
       "title": "1220",
       "tutorial": {
         "steps": [
-          { "title": "Deux dés : 12 et 20", "body": "Avant de jouer, chacun règle ses paris : parité de la somme, plage (2-10, 11-20, 21-30), un chiffre « fait boire » et un chiffre « donne à boire »." },
-          { "title": "On lance, on compare", "body": "N'importe qui lance les dés. Somme égale à ton « fait boire » : tu bois. Égale à ton « donne à boire » : tu distribues." },
-          { "title": "Parité, plage et combos", "body": "Bonne parité ou bonne plage : tu distribues aussi. Un chiffre présent sur UN seul dé compte à moitié — cumule les combos pour arroser la table !" }
+          {
+            "title": "Deux dés : 12 et 20",
+            "body": "Avant de jouer, chacun règle ses paris : parité de la somme, plage (2-10, 11-20, 21-30), un chiffre « fait boire » et un chiffre « donne à boire »."
+          },
+          {
+            "title": "On lance, on compare",
+            "body": "N'importe qui lance les dés. Somme égale à ton « fait boire » : tu bois. Égale à ton « donne à boire » : tu distribues."
+          },
+          {
+            "title": "Parité, plage et combos",
+            "body": "Bonne parité ou bonne plage : tu distribues aussi. Un chiffre présent sur UN seul dé compte à moitié — cumule les combos pour arroser la table !"
+          }
         ]
       },
       "titleBets": "1220 — Paris",
@@ -643,9 +665,18 @@
       "title": "Purple",
       "tutorial": {
         "steps": [
-          { "title": "Rouge, Noir… ou Purple", "body": "À ton tour, parie sur la couleur des deux prochaines cartes : Rouge, Noir, ou Purple (une rouge + une noire)." },
-          { "title": "Le compteur grimpe", "body": "Chaque pari réussi ajoute des gorgées au compteur. Les paris doubles (double rouge, double noir, double Purple) en ajoutent plus." },
-          { "title": "Perdu ? On trinque", "body": "Mauvaise combinaison : tu bois tout le compteur et il repart à zéro. Jusqu'où oseras-tu laisser grimper la cagnotte ?" }
+          {
+            "title": "Rouge, Noir… ou Purple",
+            "body": "À ton tour, parie sur la couleur des deux prochaines cartes : Rouge, Noir, ou Purple (une rouge + une noire)."
+          },
+          {
+            "title": "Le compteur grimpe",
+            "body": "Chaque pari réussi ajoute des gorgées au compteur. Les paris doubles (double rouge, double noir, double Purple) en ajoutent plus."
+          },
+          {
+            "title": "Perdu ? On trinque",
+            "body": "Mauvaise combinaison : tu bois tout le compteur et il repart à zéro. Jusqu'où oseras-tu laisser grimper la cagnotte ?"
+          }
         ]
       },
       "minPlayers": "Au moins 2 joueurs requis.",

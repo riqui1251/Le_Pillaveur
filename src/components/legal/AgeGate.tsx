@@ -6,11 +6,11 @@ import { Link } from '@/i18n/navigation'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AGE_VERIFIED_COOKIE } from '@/lib/auth-cookies'
+import { AGE_VERIFIED_COOKIE, ANALYTICS_CONSENT_COOKIE } from '@/lib/auth-cookies'
 
-function hasAgeCookie(): boolean {
+function hasCookie(name: string): boolean {
   if (typeof document === 'undefined') return false
-  return document.cookie.split(';').some((c) => c.trim().startsWith(`${AGE_VERIFIED_COOKIE}=`))
+  return document.cookie.split(';').some((c) => c.trim().startsWith(`${name}=`))
 }
 
 export function AgeGate() {
@@ -18,24 +18,32 @@ export function AgeGate() {
   const tNav = useTranslations('nav.legal')
   const [visible, setVisible] = useState(false)
   const [checked, setChecked] = useState(false)
+  const [analyticsChecked, setAnalyticsChecked] = useState(false)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setVisible(!hasAgeCookie())
+    // Se réaffiche aussi pour les visiteurs d'avant le consentement analytics :
+    // tant qu'aucun choix ('1' ou '0') n'est enregistré, la question se pose.
+    setVisible(!hasCookie(AGE_VERIFIED_COOKIE) || !hasCookie(ANALYTICS_CONSENT_COOKIE))
   }, [])
 
   const handleAccept = useCallback(async () => {
     if (!checked) return
     setLoading(true)
     try {
-      const res = await fetch('/api/legal/accept-age', { method: 'POST', credentials: 'include' })
+      const res = await fetch('/api/legal/accept-age', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analytics: analyticsChecked }),
+      })
       if (res.ok) {
         setVisible(false)
       }
     } finally {
       setLoading(false)
     }
-  }, [checked])
+  }, [checked, analyticsChecked])
 
   if (!visible) return null
 
@@ -79,6 +87,18 @@ export function AgeGate() {
               {tNav('confidentialite')}
             </Link>
             {t('checkboxSuffix')}
+          </span>
+        </label>
+
+        <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <Checkbox
+            checked={analyticsChecked}
+            onCheckedChange={(v) => setAnalyticsChecked(v === true)}
+            className="mt-0.5 border-white/30 data-[state=checked]:bg-amber-500 data-[state=checked]:text-black"
+          />
+          <span className="text-sm text-white/70">
+            {t('analyticsLabel')}{' '}
+            <span className="text-white/40">{t('analyticsHint')}</span>
           </span>
         </label>
 

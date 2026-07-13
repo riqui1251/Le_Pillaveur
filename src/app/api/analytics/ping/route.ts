@@ -6,7 +6,9 @@ import {
   getCurrentUser,
   visitorCookieOptions,
 } from '@/lib/auth-server'
-import { recordVisitorPing } from '@/lib/analytics-server'
+import { ANALYTICS_CONSENT_COOKIE } from '@/lib/auth-cookies'
+import { recordAccountPresence, recordVisitorPing } from '@/lib/analytics-server'
+import { runRetentionSweep } from '@/lib/retention-sweep'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
@@ -17,9 +19,24 @@ export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
     let visitorId = cookieStore.get(VISITOR_COOKIE)?.value
+    const hasConsent = cookieStore.get(ANALYTICS_CONSENT_COOKIE)?.value === '1'
     const { country, ip } = resolveGeoFromRequest(request)
     const device = deviceKindFromHeader(request)
     const currentUser = await getCurrentUser()
+
+    // Ménage RGPD au passage (throttlé) : purge des données au-delà des
+    // durées annoncées dans la politique de confidentialité.
+    void runRetentionSweep()
+
+    // Sans consentement analytics (art. 82 loi I&L) : aucun suivi visiteur.
+    // Pour un compte connecté, seule la présence côté compte est mise à jour
+    // (sécurité/modération — intérêt légitime, déclaré dans la politique).
+    if (!hasConsent) {
+      if (currentUser) {
+        await recordAccountPresence(currentUser.id, { country, ip, device })
+      }
+      return NextResponse.json({ ok: true })
+    }
 
     let localPlayerNames: string[] | undefined
     let forceLocalPlayerSync = false

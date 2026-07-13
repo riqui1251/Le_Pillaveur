@@ -361,6 +361,17 @@
       "submit": "Reimposta password",
       "passwordRules": "Almeno 8 caratteri con una lettera e un numero.",
       "passwordMismatch": "Le password non corrispondono."
+    },
+    "deleteAccount": {
+      "title": "Eliminare il mio account",
+      "warning": "L'eliminazione è definitiva: account, statistiche, obiettivi, amici e progressione online verranno cancellati. Questa azione è irreversibile.",
+      "passwordPlaceholder": "Password",
+      "button": "Elimina definitivamente il mio account",
+      "confirm": "Confermare l'eliminazione definitiva?",
+      "deleting": "Eliminazione…",
+      "wrongPassword": "Password errata.",
+      "founderProtected": "L'account del fondatore non può essere eliminato dall'interfaccia.",
+      "genericError": "Impossibile eliminare l'account al momento. Riprova più tardi."
     }
   },
   "legal": {
@@ -375,7 +386,9 @@
       "checkbox": "Dichiaro di avere più di 18 anni e accetto il CGU e la politica di riservatezza.",
       "enter": "Entra nel sito",
       "validating": "Convalida…",
-      "minorWarning": "Se hai meno di 18 anni devi abbandonare questo sito."
+      "minorWarning": "Se hai meno di 18 anni devi abbandonare questo sito.",
+      "analyticsLabel": "Accetto le statistiche di visita (cookie di misurazione dell'audience).",
+      "analyticsHint": "Facoltativo — serve solo a contare le visite e a contrastare gli abusi. Nessuna condivisione con terzi."
     },
     "pages": {
       "back": "Indietro",
@@ -459,9 +472,18 @@
       "title": "1220",
       "tutorial": {
         "steps": [
-          { "title": "Due dadi: 12 e 20", "body": "Prima di giocare, ognuno imposta le sue scommesse: parità della somma, una fascia (2-10, 11-20, 21-30), un numero «bevi» e un numero «fai bere»." },
-          { "title": "Si lancia e si confronta", "body": "Chiunque lancia i dadi. La somma è il tuo numero «bevi»? Bevi. È il tuo «fai bere»? Distribuisci sorsi." },
-          { "title": "Parità, fascia e combo", "body": "Parità o fascia giusta: distribuisci anche tu. Un numero presente su UN solo dado vale la metà — accumula combo per annaffiare il tavolo!" }
+          {
+            "title": "Due dadi: 12 e 20",
+            "body": "Prima di giocare, ognuno imposta le sue scommesse: parità della somma, una fascia (2-10, 11-20, 21-30), un numero «bevi» e un numero «fai bere»."
+          },
+          {
+            "title": "Si lancia e si confronta",
+            "body": "Chiunque lancia i dadi. La somma è il tuo numero «bevi»? Bevi. È il tuo «fai bere»? Distribuisci sorsi."
+          },
+          {
+            "title": "Parità, fascia e combo",
+            "body": "Parità o fascia giusta: distribuisci anche tu. Un numero presente su UN solo dado vale la metà — accumula combo per annaffiare il tavolo!"
+          }
         ]
       },
       "titleBets": "1220 — Scommesse",
@@ -633,9 +655,18 @@
       "title": "Purple",
       "tutorial": {
         "steps": [
-          { "title": "Rosso, Nero… o Purple", "body": "Al tuo turno, scommetti sul colore delle prossime due carte: Rosso, Nero o Purple (una rossa + una nera)." },
-          { "title": "Il contatore sale", "body": "Ogni scommessa vinta aggiunge sorsi al contatore. Le scommesse doppie (doppio rosso, doppio nero, doppio Purple) ne aggiungono di più." },
-          { "title": "Sbagliato? Si beve", "body": "Combinazione sbagliata: bevi tutto il contatore e si riparte da zero. Fin dove oserai far crescere il piatto?" }
+          {
+            "title": "Rosso, Nero… o Purple",
+            "body": "Al tuo turno, scommetti sul colore delle prossime due carte: Rosso, Nero o Purple (una rossa + una nera)."
+          },
+          {
+            "title": "Il contatore sale",
+            "body": "Ogni scommessa vinta aggiunge sorsi al contatore. Le scommesse doppie (doppio rosso, doppio nero, doppio Purple) ne aggiungono di più."
+          },
+          {
+            "title": "Sbagliato? Si beve",
+            "body": "Combinazione sbagliata: bevi tutto il contatore e si riparte da zero. Fin dove oserai far crescere il piatto?"
+          }
         ]
       },
       "minPlayers": "Sono richiesti almeno 2 giocatori.",

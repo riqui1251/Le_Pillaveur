@@ -2,7 +2,7 @@
 
 Conformemente alle disposizioni degli articoli 6-III e 19 della Legge n. 2004-575 del 21 giugno 2004 per la Fiducia nell'Economia Digitale (LCEN).
 
-**Ultimo aggiornamento:** 14 giugno 2025
+**Ultimo aggiornamento:** 13 luglio 2026
 
 ## 1. Editore del sito
 
@@ -40,7 +40,7 @@ Per qualsiasi richiesta relativa ai tuoi dati: lepillaveur@outlook.fr
 
 ## 6. Cookie
 
-Il sito utilizza cookie necessari al funzionamento (sessione, modalità locale, verifica dell'età) e cookie analytics. Consulta l'[Informativa sulla privacy](/legal/confidentialite) per i dettagli.
+Il sito utilizza cookie necessari al funzionamento (sessione, modalità locale, verifica dell'età, lingua) e, **solo con il tuo consenso**, un cookie di statistiche di visita. Consulta l'[Informativa sulla privacy](/legal/confidentialite) per i dettagli.
 
 ## 7. Limitazione di responsabilità
 

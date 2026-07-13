@@ -1,12 +1,12 @@
 # Terms and Conditions of Use
 
-**Last updated:** 14 June 2025
+**Last updated:** 13 July 2026
 
 ## 1. Purpose
 
-These Terms and Conditions of Use (hereinafter the "Terms") govern access to and use of the **Le Pillaveur** website and application (hereinafter the "Service"), accessible via the website and the "Jeux à Boire" progressive web application (PWA).
+These Terms and Conditions of Use (hereinafter the "Terms") govern access to and use of the **Le Pillaveur** website and application (hereinafter the "Service"), accessible via the website and the progressive web application (PWA) of the same name.
 
-The Service is a **digital entertainment tool** designed to liven up gatherings among friends, accessible under the name **Le Pillaveur** and the "Jeux à Boire" application (same service, distinct names for presentation purposes). It offers virtual party games in which playful penalties may be tracked in the form of "sips" ("gorgées").
+The Service is a **digital entertainment tool** designed to liven up gatherings among friends. It offers virtual party games in which playful penalties may be tracked in the form of "sips" ("gorgées").
 
 **The Service does not sell, distribute, supply, or make available alcohol or beverages of any kind.** The publisher does not organise beverage consumption and does not intervene in the physical conduct of games.
 
@@ -35,7 +35,7 @@ Each user and each group of players remains **free to choose** what a "sip" repr
 
 The sip counters displayed in the application are **fictional game data** for entertainment purposes.
 
-The commercial name "Jeux à Boire" reflects the festive nature of the Service and **does not constitute an instruction** to consume alcohol or any other beverage.
+The historical name "Jeux à Boire", which may still appear in older content or links, reflected the festive nature of the Service and **does not constitute an instruction** to consume alcohol or any other beverage.
 
 The vocabulary used in the games ("drink", "drinker", festive emojis, etc.) is part of the **playful and fictional language** of entertainment. It does not reflect any real obligation to consume and must be interpreted in accordance with this definition of sips.
 
@@ -133,7 +133,7 @@ In the event of a material amendment, users will be informed by any appropriate 
 
 ## 13. Termination
 
-You may stop using the Service at any time. You may request deletion of your account by contacting the publisher.
+You may stop using the Service at any time. You may delete your account directly from the Account page ("Delete my account" button) or by contacting the publisher.
 
 The publisher may suspend or terminate access to the Service, without notice or compensation, in the event of a breach of these Terms.
 

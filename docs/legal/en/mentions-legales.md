@@ -2,7 +2,7 @@
 
 In accordance with Articles 6-III and 19 of Law No. 2004-575 of 21 June 2004 on Confidence in the Digital Economy (LCEN).
 
-**Last updated:** 14 June 2025
+**Last updated:** 13 July 2026
 
 ## 1. Website publisher
 
@@ -40,7 +40,7 @@ For any request relating to your data: lepillaveur@outlook.fr
 
 ## 6. Cookies
 
-The website uses cookies necessary for operation (session, local mode, age verification) and analytics cookies. See the [Privacy Policy](/legal/confidentialite) for details.
+The website uses cookies necessary for operation (session, local mode, age verification, language) and, **only with your consent**, a visit-statistics cookie. See the [Privacy Policy](/legal/confidentialite) for details.
 
 ## 7. Limitation of liability
 

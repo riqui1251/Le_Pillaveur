@@ -72,6 +72,44 @@ export function AccountInfo() {
   const [showLocalPlayers, setShowLocalPlayers] = useState(false)
   const [showOnlineSection, setShowOnlineSection] = useState(false)
   const [showFriends, setShowFriends] = useState(false)
+  const [showDangerZone, setShowDangerZone] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteArmed, setDeleteArmed] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deletingAccount, setDeletingAccount] = useState(false)
+
+  const handleDeleteAccount = async () => {
+    if (!deleteArmed) {
+      setDeleteArmed(true)
+      return
+    }
+    setDeletingAccount(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch('/api/auth/delete-account', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: deletePassword }),
+      })
+      if (res.ok) {
+        // Compte supprimé, session invalidée côté serveur : repartir de zéro.
+        window.location.href = '/'
+        return
+      }
+      const data = await res.json().catch(() => ({}))
+      setDeleteError(
+        data?.code === 'wrong_password'
+          ? t('deleteAccount.wrongPassword')
+          : data?.code === 'founder_protected'
+            ? t('deleteAccount.founderProtected')
+            : t('deleteAccount.genericError')
+      )
+      setDeleteArmed(false)
+    } finally {
+      setDeletingAccount(false)
+    }
+  }
 
   const onlineDisplayName = user?.onlineDisplayName ?? user?.displayName ?? 'Joueur'
   const onlineMemberCosmetics = useMemo(
@@ -627,6 +665,61 @@ export function AccountInfo() {
         <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100/80">
           <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
           <p>{t('sync')}</p>
+        </div>
+      </section>
+
+      {/* Zone de danger : suppression du compte (droit à l'effacement). */}
+      <section>
+        <button
+          type="button"
+          onClick={() => setShowDangerZone((v) => !v)}
+          aria-expanded={showDangerZone}
+          className={cn(ACCOUNT_ROW_CLASS, 'border-red-500/20 text-red-200/80 hover:bg-red-500/10')}
+        >
+          <Trash2 className="h-4 w-4 shrink-0 text-red-400" />
+          {t('deleteAccount.title')}
+          <ChevronDown
+            className={cn('ml-auto h-4 w-4 shrink-0 text-red-300/40 transition-transform', showDangerZone && 'rotate-180')}
+          />
+        </button>
+        <div className={cn('mt-3 space-y-3 rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-4', !showDangerZone && 'hidden')}>
+          <p className="text-sm text-red-100/70">{t('deleteAccount.warning')}</p>
+          <Input
+            type="password"
+            value={deletePassword}
+            onChange={(e) => {
+              setDeletePassword(e.target.value)
+              setDeleteArmed(false)
+              setDeleteError(null)
+            }}
+            placeholder={t('deleteAccount.passwordPlaceholder')}
+            autoComplete="current-password"
+            className="border-red-500/20 bg-black/20 text-white placeholder:text-white/30"
+          />
+          {deleteError && (
+            <p className="flex items-center gap-2 text-sm text-red-300">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {deleteError}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleDeleteAccount()}
+            disabled={!deletePassword || deletingAccount}
+            className={cn(
+              'flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-colors disabled:opacity-40',
+              deleteArmed
+                ? 'bg-red-600 text-white hover:bg-red-500'
+                : 'border border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10'
+            )}
+          >
+            <Trash2 className="h-4 w-4 shrink-0" />
+            {deletingAccount
+              ? t('deleteAccount.deleting')
+              : deleteArmed
+                ? t('deleteAccount.confirm')
+                : t('deleteAccount.button')}
+          </button>
         </div>
       </section>
     </div>

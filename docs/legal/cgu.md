@@ -1,12 +1,12 @@
 # Conditions Générales d'Utilisation
 
-**Dernière mise à jour :** 14 juin 2025
+**Dernière mise à jour :** 13 juillet 2026
 
 ## 1. Objet
 
-Les présentes Conditions Générales d'Utilisation (ci-après « CGU ») régissent l'accès et l'utilisation du site et de l'application **Le Pillaveur** (ci-après « le Service »), accessible via le site web et l'application web progressive (PWA) « Jeux à Boire ».
+Les présentes Conditions Générales d'Utilisation (ci-après « CGU ») régissent l'accès et l'utilisation du site et de l'application **Le Pillaveur** (ci-après « le Service »), accessible via le site web et l'application web progressive (PWA) du même nom.
 
-Le Service est un **outil de divertissement numérique** destiné à animer des parties entre amis, accessible sous le nom **Le Pillaveur** et l'application « Jeux à Boire » (même service, noms distincts à des fins de présentation). Il propose des jeux de société virtuels dans lesquels des pénalités ludiques peuvent être comptabilisées sous forme de « gorgées ».
+Le Service est un **outil de divertissement numérique** destiné à animer des parties entre amis. Il propose des jeux de société virtuels dans lesquels des pénalités ludiques peuvent être comptabilisées sous forme de « gorgées ».
 
 **Le Service ne vend pas, ne distribue pas, ne fournit pas et ne met pas à disposition d'alcool ou de boissons de quelque nature que ce soit.** L'éditeur n'organise pas de consommation de boissons et n'intervient pas dans le déroulement physique des parties.
 
@@ -35,7 +35,7 @@ Chaque utilisateur et chaque groupe de joueurs reste **libre de choisir** ce qu'
 
 Les compteurs de gorgées affichés dans l'application sont des **données de jeu fictives** à des fins de divertissement.
 
-Le nom commercial « Jeux à Boire » désigne le caractère festif du Service et **ne constitue pas une instruction** de consommer de l'alcool ou toute autre boisson.
+L'appellation historique « Jeux à Boire », qui peut encore apparaître dans d'anciens contenus ou liens, désignait le caractère festif du Service et **ne constitue pas une instruction** de consommer de l'alcool ou toute autre boisson.
 
 Le vocabulaire utilisé dans les jeux (« boire », « buveur », emoji festifs, etc.) relève du **langage ludique et fictionnel** du divertissement. Il ne traduit aucune obligation réelle de consommation et doit être interprété conformément à la présente définition des gorgées.
 
@@ -133,7 +133,7 @@ En cas de modification substantielle, les utilisateurs seront informés par tout
 
 ## 13. Résiliation
 
-Vous pouvez cesser d'utiliser le Service à tout moment. Vous pouvez demander la suppression de votre compte en contactant l'éditeur.
+Vous pouvez cesser d'utiliser le Service à tout moment. Vous pouvez supprimer votre compte directement depuis la page Compte (bouton « Supprimer mon compte ») ou en contactant l'éditeur.
 
 L'éditeur peut suspendre ou résilier l'accès au Service, sans préavis ni indemnité, en cas de violation des présentes CGU.
 

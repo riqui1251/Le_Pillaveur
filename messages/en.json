@@ -371,6 +371,17 @@
       "submit": "Reset password",
       "passwordRules": "At least 8 characters with one letter and one number.",
       "passwordMismatch": "Passwords do not match."
+    },
+    "deleteAccount": {
+      "title": "Delete my account",
+      "warning": "Deletion is permanent: account, stats, achievements, friends and online progression will be erased. This action cannot be undone.",
+      "passwordPlaceholder": "Password",
+      "button": "Permanently delete my account",
+      "confirm": "Confirm permanent deletion?",
+      "deleting": "Deleting…",
+      "wrongPassword": "Incorrect password.",
+      "founderProtected": "The founder account cannot be deleted from the interface.",
+      "genericError": "Unable to delete the account right now. Please try again later."
     }
   },
   "legal": {
@@ -385,7 +396,9 @@
       "checkbox": "I certify that I am over 18 years old and I accept the CGU and the confidentiality policy.",
       "enter": "Enter the site",
       "validating": "Validation…",
-      "minorWarning": "If you are under 18 years old, you must leave this site."
+      "minorWarning": "If you are under 18 years old, you must leave this site.",
+      "analyticsLabel": "I accept visit statistics (audience measurement cookie).",
+      "analyticsHint": "Optional — only used to count visits and fight abuse. Never shared with third parties."
     },
     "pages": {
       "back": "Back",
@@ -469,9 +482,18 @@
       "title": "1220",
       "tutorial": {
         "steps": [
-          { "title": "Two dice: 12 and 20", "body": "Before playing, everyone sets their bets: parity of the sum, a range (2-10, 11-20, 21-30), a \"you drink\" number and a \"you give\" number." },
-          { "title": "Roll and compare", "body": "Anyone rolls the dice. Sum equals your \"you drink\" number: you drink. Equals your \"you give\" number: you hand out sips." },
-          { "title": "Parity, range and combos", "body": "Right parity or right range: you hand out sips too. A number showing on ONE die counts for half — stack combos to soak the table!" }
+          {
+            "title": "Two dice: 12 and 20",
+            "body": "Before playing, everyone sets their bets: parity of the sum, a range (2-10, 11-20, 21-30), a \"you drink\" number and a \"you give\" number."
+          },
+          {
+            "title": "Roll and compare",
+            "body": "Anyone rolls the dice. Sum equals your \"you drink\" number: you drink. Equals your \"you give\" number: you hand out sips."
+          },
+          {
+            "title": "Parity, range and combos",
+            "body": "Right parity or right range: you hand out sips too. A number showing on ONE die counts for half — stack combos to soak the table!"
+          }
         ]
       },
       "titleBets": "1220 — Paris",
@@ -643,9 +665,18 @@
       "title": "Purple",
       "tutorial": {
         "steps": [
-          { "title": "Red, Black… or Purple", "body": "On your turn, bet on the colour of the next two cards: Red, Black, or Purple (one red + one black)." },
-          { "title": "The counter climbs", "body": "Every winning bet adds sips to the counter. Double bets (double red, double black, double Purple) add even more." },
-          { "title": "Wrong? Drink up", "body": "Wrong combination: you drink the whole counter and it resets to zero. How high will you dare to let the pot grow?" }
+          {
+            "title": "Red, Black… or Purple",
+            "body": "On your turn, bet on the colour of the next two cards: Red, Black, or Purple (one red + one black)."
+          },
+          {
+            "title": "The counter climbs",
+            "body": "Every winning bet adds sips to the counter. Double bets (double red, double black, double Purple) add even more."
+          },
+          {
+            "title": "Wrong? Drink up",
+            "body": "Wrong combination: you drink the whole counter and it resets to zero. How high will you dare to let the pot grow?"
+          }
         ]
       },
       "minPlayers": "At least 2 players required.",

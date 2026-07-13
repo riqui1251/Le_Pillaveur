@@ -109,6 +109,39 @@ export async function recordVisitorPing(
   await recordIpSeen(userId, visitorId, ip, country)
 }
 
+/**
+ * Présence côté compte UNIQUEMENT — pour les utilisateurs connectés qui ont
+ * refusé les statistiques de visite. Base : intérêt légitime (sécurité et
+ * modération des comptes, déclaré dans la politique de confidentialité).
+ * Aucune écriture SitePresence/DailyVisitor, aucun pseudo local stocké.
+ */
+export async function recordAccountPresence(
+  userId: string,
+  options?: {
+    country?: string | null
+    ip?: string | null
+    device?: DeviceKind | null
+  }
+): Promise<void> {
+  const country = options?.country ?? null
+  const ip = options?.ip ?? null
+  const device = options?.device && options.device !== 'unknown' ? options.device : null
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      lastSeenAt: new Date(),
+      totalPresenceSeconds: { increment: PRESENCE_PING_SECONDS },
+      ...(country ? { lastCountry: country } : {}),
+      ...(ip ? { lastIp: ip } : {}),
+      ...(device ? { lastDevice: device } : {}),
+    },
+  })
+
+  // subjectKey = `user:<id>` dès que userId est fourni : le visitorId est ignoré.
+  await recordIpSeen(userId, '', ip, country)
+}
+
 export async function getVisitorStats() {
   const now = new Date()
   const onlineSince = new Date(now.getTime() - ONLINE_WINDOW_MS)

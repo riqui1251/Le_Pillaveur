@@ -361,6 +361,17 @@
       "submit": "Restablecer contraseña",
       "passwordRules": "Mínimo 8 caracteres con al menos una letra y un número.",
       "passwordMismatch": "Las contraseñas no coinciden."
+    },
+    "deleteAccount": {
+      "title": "Eliminar mi cuenta",
+      "warning": "La eliminación es definitiva: cuenta, estadísticas, logros, amigos y progresión en línea serán borrados. Esta acción es irreversible.",
+      "passwordPlaceholder": "Contraseña",
+      "button": "Eliminar definitivamente mi cuenta",
+      "confirm": "¿Confirmar la eliminación definitiva?",
+      "deleting": "Eliminando…",
+      "wrongPassword": "Contraseña incorrecta.",
+      "founderProtected": "La cuenta del fundador no puede eliminarse desde la interfaz.",
+      "genericError": "No se puede eliminar la cuenta en este momento. Inténtalo más tarde."
     }
   },
   "legal": {
@@ -375,7 +386,9 @@
       "checkbox": "Certifico que soy mayor de 18 años y acepto el CGU y la política de confidencialidad.",
       "enter": "Ingrese al sitio",
       "validating": "Validación…",
-      "minorWarning": "Si eres menor de 18 años deberás abandonar este sitio."
+      "minorWarning": "Si eres menor de 18 años deberás abandonar este sitio.",
+      "analyticsLabel": "Acepto las estadísticas de visita (cookie de medición de audiencia).",
+      "analyticsHint": "Opcional — solo sirve para contar visitas y luchar contra los abusos. Sin compartir con terceros."
     },
     "pages": {
       "back": "Atrás",
@@ -459,9 +472,18 @@
       "title": "1220",
       "tutorial": {
         "steps": [
-          { "title": "Dos dados: 12 y 20", "body": "Antes de jugar, cada uno fija sus apuestas: paridad de la suma, un rango (2-10, 11-20, 21-30), un número «bebes» y un número «repartes»." },
-          { "title": "Se lanza y se compara", "body": "Cualquiera lanza los dados. ¿La suma es tu número «bebes»? Bebes. ¿Es tu «repartes»? Repartes tragos." },
-          { "title": "Paridad, rango y combos", "body": "Paridad o rango acertado: también repartes. Un número presente en UN solo dado cuenta la mitad — ¡acumula combos para regar la mesa!" }
+          {
+            "title": "Dos dados: 12 y 20",
+            "body": "Antes de jugar, cada uno fija sus apuestas: paridad de la suma, un rango (2-10, 11-20, 21-30), un número «bebes» y un número «repartes»."
+          },
+          {
+            "title": "Se lanza y se compara",
+            "body": "Cualquiera lanza los dados. ¿La suma es tu número «bebes»? Bebes. ¿Es tu «repartes»? Repartes tragos."
+          },
+          {
+            "title": "Paridad, rango y combos",
+            "body": "Paridad o rango acertado: también repartes. Un número presente en UN solo dado cuenta la mitad — ¡acumula combos para regar la mesa!"
+          }
         ]
       },
       "titleBets": "1220 — Apuestas",
@@ -633,9 +655,18 @@
       "title": "Purple",
       "tutorial": {
         "steps": [
-          { "title": "Rojo, Negro… o Purple", "body": "En tu turno, apuesta por el color de las dos próximas cartas: Rojo, Negro o Purple (una roja + una negra)." },
-          { "title": "El contador sube", "body": "Cada apuesta acertada añade tragos al contador. Las apuestas dobles (doble rojo, doble negro, doble Purple) añaden aún más." },
-          { "title": "¿Fallaste? A beber", "body": "Combinación equivocada: bebes todo el contador y vuelve a cero. ¿Hasta dónde te atreverás a dejar crecer el bote?" }
+          {
+            "title": "Rojo, Negro… o Purple",
+            "body": "En tu turno, apuesta por el color de las dos próximas cartas: Rojo, Negro o Purple (una roja + una negra)."
+          },
+          {
+            "title": "El contador sube",
+            "body": "Cada apuesta acertada añade tragos al contador. Las apuestas dobles (doble rojo, doble negro, doble Purple) añaden aún más."
+          },
+          {
+            "title": "¿Fallaste? A beber",
+            "body": "Combinación equivocada: bebes todo el contador y vuelve a cero. ¿Hasta dónde te atreverás a dejar crecer el bote?"
+          }
         ]
       },
       "minPlayers": "Se requieren al menos 2 jugadores.",

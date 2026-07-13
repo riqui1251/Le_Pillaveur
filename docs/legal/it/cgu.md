@@ -1,12 +1,12 @@
 # Condizioni Generali di Utilizzo
 
-**Ultimo aggiornamento:** 14 giugno 2025
+**Ultimo aggiornamento:** 13 luglio 2026
 
 ## 1. Oggetto
 
-Le presenti Condizioni Generali di Utilizzo (di seguito le «CGU») regolano l'accesso e l'utilizzo del sito e dell'applicazione **Le Pillaveur** (di seguito il «Servizio»), accessibile tramite il sito web e l'applicazione web progressiva (PWA) «Jeux à Boire».
+Le presenti Condizioni Generali di Utilizzo (di seguito le «CGU») regolano l'accesso e l'utilizzo del sito e dell'applicazione **Le Pillaveur** (di seguito il «Servizio»), accessibile tramite il sito web e l'applicazione web progressiva (PWA) omonima.
 
-Il Servizio è uno **strumento di intrattenimento digitale** destinato ad animare partite tra amici, accessibile con il nome **Le Pillaveur** e l'applicazione «Jeux à Boire» (stesso servizio, nomi distinti a fini di presentazione). Propone giochi da tavolo virtuali in cui le penalità ludiche possono essere contabilizzate sotto forma di «gorgées» (sorso).
+Il Servizio è uno **strumento di intrattenimento digitale** destinato ad animare partite tra amici. Propone giochi da tavolo virtuali in cui le penalità ludiche possono essere contabilizzate sotto forma di «gorgées» (sorso).
 
 **Il Servizio non vende, non distribuisce, non fornisce e non mette a disposizione alcol o bevande di qualsiasi natura.** L'editore non organizza il consumo di bevande e non interviene nello svolgimento fisico delle partite.
 
@@ -35,7 +35,7 @@ Ogni utente e ogni gruppo di giocatori resta **libero di scegliere** ciò che un
 
 I contatori di gorgées visualizzati nell'applicazione sono **dati di gioco fittizi** a fini di intrattenimento.
 
-Il nome commerciale «Jeux à Boire» designa il carattere festivo del Servizio e **non costituisce un'istruzione** di consumare alcol o qualsiasi altra bevanda.
+La denominazione storica «Jeux à Boire», che può ancora apparire in vecchi contenuti o link, designava il carattere festivo del Servizio e **non costituisce un'istruzione** di consumare alcol o qualsiasi altra bevanda.
 
 Il vocabolario utilizzato nei giochi («bere», «bevitore», emoji festive, ecc.) rientra nel **linguaggio ludico e fittizio** dell'intrattenimento. Non traduce alcun obbligo reale di consumo e deve essere interpretato conformemente alla presente definizione delle gorgées.
 
@@ -133,7 +133,7 @@ In caso di modifica sostanziale, gli utenti saranno informati con ogni mezzo app
 
 ## 13. Risoluzione
 
-Puoi cessare di utilizzare il Servizio in qualsiasi momento. Puoi richiedere l'eliminazione del tuo account contattando l'editore.
+Puoi cessare di utilizzare il Servizio in qualsiasi momento. Puoi eliminare il tuo account direttamente dalla pagina Account (pulsante «Elimina il mio account») o contattando l'editore.
 
 L'editore può sospendere o risolvere l'accesso al Servizio, senza preavviso né indennizzo, in caso di violazione delle presenti CGU.
 
