@@ -4,6 +4,7 @@ import { canViewUserFeedback, canManageUsers } from '@/lib/roles'
 import { feedbackTypeLabel, isFeedbackType } from '@/lib/feedback'
 import { listFlaggedNameModerationUsers } from '@/lib/name-moderation-attempts-server'
 import { daysAgoParis, todayParis } from '@/lib/analytics-server'
+import { cleanupAbandonedRooms } from '@/lib/online-room'
 
 const LIVE_STATUSES = ['waiting', 'briefing', 'playing']
 
@@ -85,6 +86,11 @@ async function getDailySeries(days: number): Promise<DailyPoint[]> {
 }
 
 async function getLiveTables(): Promise<LiveTable[]> {
+  // Purge les salles abandonnées (plus aucun tick client depuis 1h) avant de
+  // lister : sinon les fantômes qui n'intéressent plus personne restent
+  // affichés « en jeu » indéfiniment dans Supervision.
+  await cleanupAbandonedRooms()
+
   const rooms = await prisma.onlineRoom.findMany({
     where: { status: { in: LIVE_STATUSES } },
     orderBy: { updatedAt: 'desc' },

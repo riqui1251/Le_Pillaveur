@@ -250,9 +250,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
  * Une table « waiting » abandonnée (personne à l'intérieur, ou aucune
  * activité — réglage/prêt — depuis 5 min) se ferme d'elle-même : sinon les
  * codes s'accumulent indéfiniment quand un onglet se ferme sans passer par
- * /leave (crash, mise en veille, connexion coupée). N'affecte jamais les
- * parties déjà lancées ('playing') : celles-ci ont leur propre mécanisme de
- * remplacement par bot (voir online/replacement.ts).
+ * /leave (crash, mise en veille, connexion coupée).
  */
 const STALE_WAITING_ROOM_MS = 5 * 60 * 1000
 
@@ -272,6 +270,36 @@ export async function cleanupStaleWaitingRooms(): Promise<void> {
   // Notifie tout client encore branché en SSE sur une de ces salles (l'hôte
   // resté dans son lobby, par ex.) : il retombera aussitôt sur le Guichet.
   for (const id of ids) publishRoomChanged(id, { type: 'lobby' })
+}
+
+/**
+ * Une salle 'playing'/'briefing' vit entièrement par les ticks envoyés par
+ * les clients connectés (bots, horloge de phase, remplacement AFK — voir
+ * online/replacement.ts) : dès que le dernier humain part sans passer par
+ * /leave (crash, onglet fermé, connexion coupée), plus personne n'envoie
+ * jamais rien et `updatedAt` se fige pour de bon. Sans ce ménage, la salle
+ * reste « en jeu » indéfiniment (visible en Supervision des jours après).
+ * Le seuil est volontairement large : une partie active reçoit des ticks en
+ * continu, ce délai n'est atteint qu'après un abandon réel.
+ */
+const STALE_ACTIVE_ROOM_MS = 60 * 60 * 1000
+
+export async function cleanupStaleActiveRooms(): Promise<void> {
+  const cutoff = new Date(Date.now() - STALE_ACTIVE_ROOM_MS)
+  const stale = await prisma.onlineRoom.findMany({
+    where: { status: { in: ['playing', 'briefing'] }, updatedAt: { lt: cutoff } },
+    select: { id: true },
+  })
+  if (stale.length === 0) return
+
+  const ids = stale.map((r) => r.id)
+  await prisma.onlineRoom.deleteMany({ where: { id: { in: ids } } })
+  for (const id of ids) publishRoomChanged(id, { type: 'lobby' })
+}
+
+/** Les deux ménages ensemble — pour les points d'entrée qui veulent tout couvrir. */
+export async function cleanupAbandonedRooms(): Promise<void> {
+  await Promise.all([cleanupStaleWaitingRooms(), cleanupStaleActiveRooms()])
 }
 
 export async function buildLobbyList(): Promise<LobbyListItem[]> {
