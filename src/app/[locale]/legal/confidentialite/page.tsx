@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { LegalPage } from '@/components/legal/LegalPage'
 
 export const metadata: Metadata = {
-  title: 'Confidentialité — Le Pillaveur',
+  title: 'Confidentialité',
   description: 'Politique de confidentialité du service Le Pillaveur.',
 }
 

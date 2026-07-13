@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { LegalPage } from '@/components/legal/LegalPage'
 
 export const metadata: Metadata = {
-  title: 'CGU — Le Pillaveur',
+  title: 'CGU',
   description: 'Conditions Générales d\'Utilisation du service Le Pillaveur.',
 }
 

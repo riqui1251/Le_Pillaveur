@@ -23,7 +23,7 @@ export default function GamesHubPage() {
   const { user } = useAuth()
   const { joinRoom, loading: joining } = useOnlineRoom()
   const isOnline = user?.playMode === 'online'
-  const { ready } = useRequireSelectedPlayers('/joueurs', { skipWhenOnline: true })
+  const { ready, browsing } = useRequireSelectedPlayers('/joueurs', { skipWhenOnline: true })
   const searchParams = useSearchParams()
   const joinAttemptedRef = useRef(false)
 
@@ -54,7 +54,8 @@ export default function GamesHubPage() {
     }
   }
 
-  if (!isOnline && !ready) return null
+  // Visiteur sans mode choisi (browsing) : on montre quand même la vitrine.
+  if (!isOnline && !ready && !browsing) return null
 
   return (
     <HubShell
