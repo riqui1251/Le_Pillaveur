@@ -6,5 +6,8 @@ export default async function Home({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  redirect({ href: '/compte', locale })
+  // Atterrissage sur le hub public des jeux : la racine du domaine doit mener
+  // à une page indexable par les moteurs (le compte est noindex), et c'est la
+  // meilleure vitrine pour un nouveau visiteur.
+  redirect({ href: '/jeux', locale })
 }

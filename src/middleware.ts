@@ -18,6 +18,12 @@ const PUBLIC_PREFIXES = [
   '/legal',
   // Écran TV : afficheur public d'une salle par code (aucun login requis).
   '/tv',
+  // Vitrines publiques : indispensables au référencement (Googlebot n'a ni
+  // session ni cookie mode local). Jouer reste derrière le choix de mode —
+  // ces pages n'exposent que le catalogue et les règles.
+  '/jeux',
+  '/games',
+  '/classement',
   '/api/',
   '/_next',
   '/favicon.ico',
@@ -28,6 +34,8 @@ const PUBLIC_PREFIXES = [
 
 function isPublicPath(pathname: string): boolean {
   const pathWithoutLocale = stripLocalePrefix(pathname)
+  // Racine : la page d'accueil redirige elle-même vers /jeux (public).
+  if (pathWithoutLocale === '/') return true
   return PUBLIC_PREFIXES.some(
     (prefix) =>
       pathWithoutLocale === prefix || pathWithoutLocale.startsWith(prefix)
@@ -72,8 +80,9 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // icon/apple-icon/opengraph-image : routes de métadonnées générées
-    // (favicon PWA…) — jamais localisées, hors middleware i18n.
-    '/((?!api|_next/static|_next/image|icon|apple-icon|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    // icon/apple-icon/opengraph-image/robots.txt/sitemap.xml : routes de
+    // métadonnées générées (favicon PWA, SEO…) — jamais localisées, hors
+    // middleware i18n.
+    '/((?!api|_next/static|_next/image|icon|apple-icon|opengraph-image|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

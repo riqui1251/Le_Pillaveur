@@ -12,6 +12,7 @@ import { LocaleSync } from '@/components/layout/LocaleSync'
 import { FullscreenLayoutProvider } from '@/components/providers/FullscreenLayoutProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { routing } from '@/i18n/routing'
+import { SITE_URL } from '@/lib/site'
 
 // Identité « Cartes sur Table » : Source Sans 3 (texte) + Playfair Display (voix du croupier).
 const sourceSans = Source_Sans_3({ subsets: ['latin'], variable: '--font-sans' })
@@ -37,8 +38,25 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: 'metadata' })
 
   return {
-    title: t('title'),
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: t('titleFull'),
+      template: `%s — ${t('title')}`,
+    },
     description: t('description'),
+    openGraph: {
+      type: 'website',
+      siteName: t('title'),
+      locale,
+      title: t('titleFull'),
+      description: t('description'),
+      url: `/${locale}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('titleFull'),
+      description: t('description'),
+    },
     appleWebApp: {
       capable: true,
       statusBarStyle: 'default',
@@ -67,11 +85,32 @@ export default async function LocaleLayout({
 
   setRequestLocale(locale)
   const messages = await getMessages()
+  const tMeta = await getTranslations({ locale, namespace: 'metadata' })
+
+  // Données structurées schema.org : aide les moteurs à comprendre le site
+  // (nom, langues, éditeur) — un seul bloc WebSite, minimal et exact.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: tMeta('title'),
+    url: SITE_URL,
+    description: tMeta('description'),
+    inLanguage: [...routing.locales],
+    publisher: {
+      '@type': 'Organization',
+      name: tMeta('title'),
+      url: SITE_URL,
+    },
+  }
 
   return (
     <html lang={locale} suppressHydrationWarning className={`${sourceSans.variable} ${playfair.variable}`}>
       <head />
       <body className="font-sans antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ErrorBoundary>
             <Providers>
