@@ -12,6 +12,7 @@ import { BRIEFING_TIMEOUT_MS } from '@/lib/online/briefing'
 import { TUTORIAL_VISUALS } from '@/lib/online/tutorial-visuals'
 import type { RoomDto } from '@/lib/online-room'
 import { markGameTutorialSeen, type TutorialStep } from './GameTutorialModal'
+import { OnlinePlayerIcon } from './OnlinePlayerTag'
 import { cn } from '@/lib/utils'
 
 /**
@@ -224,7 +225,10 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                   ready ? 'border-emerald-400/25 bg-emerald-500/10' : 'border-white/8 bg-white/4'
                 )}
               >
-                <span aria-hidden>{m.preferences?.icon ?? '👤'}</span>
+                <OnlinePlayerIcon
+                  icon={m.preferences?.icon}
+                  className="h-6 w-6 shrink-0 bg-white/10 text-white/80"
+                />
                 <span className="min-w-0 flex-1 truncate text-xs font-bold text-white/85">
                   {m.displayName}
                   {m.isSelf && <span className="text-white/40"> {t('you')}</span>}

@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils'
 import { lgTeamOf } from '@/lib/loup-garou/engine'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { playGameSound } from '@/lib/sound/game-sounds'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -171,9 +172,9 @@ function TargetGrid({
   )
 }
 
-const WOLF_CHAT_POLL_MS = 3000
+const GAME_CHAT_POLL_MS = 3000
 
-type WolfChatMessage = {
+type GameChatMessage = {
   id: string
   senderId: string
   senderName: string
@@ -184,14 +185,29 @@ type WolfChatMessage = {
 }
 
 /**
- * Chat privé des loups. Canal `wolves:<roomId>`, gardé côté serveur (le
- * viewer doit avoir role==='loup' dans l'état RÉEL) — ce composant se fie au
- * serveur (404/403 = rien ne s'affiche), il ne fait qu'ouvrir/fermer.
+ * Chat de partie repliable — deux usages :
+ *  - `scope="wolves"` (ton rouge) : canal privé des loups, gardé côté
+ *    serveur (le viewer doit avoir role==='loup' dans l'état RÉEL) ;
+ *  - `scope="room"` (ton or) : chat du village pendant les phases de jour —
+ *    même canal que le chat de salle du header. `canWrite=false` pour les
+ *    fantômes (vue omnisciente : lecture seule, pas de spoil).
+ * Le composant se fie au serveur (404/403 = rien ne s'affiche).
  */
-function WolfChatPanel({ open }: { open: boolean }) {
-  const t = useTranslations('games.loup-garou.game')
+function GameChatPanel({
+  open,
+  scope,
+  title,
+  tone,
+  canWrite = true,
+}: {
+  open: boolean
+  scope: 'wolves' | 'room'
+  title: string
+  tone: 'red' | 'gold'
+  canWrite?: boolean
+}) {
   const tChat = useTranslations('chat')
-  const [messages, setMessages] = useState<WolfChatMessage[]>([])
+  const [messages, setMessages] = useState<GameChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
@@ -202,10 +218,10 @@ function WolfChatPanel({ open }: { open: boolean }) {
     if (inFlightRef.current) return
     inFlightRef.current = true
     try {
-      const res = await fetch('/api/chat/messages?scope=wolves', { credentials: 'include' })
+      const res = await fetch(`/api/chat/messages?scope=${scope}`, { credentials: 'include' })
       if (!res.ok) return
       const data = await res.json()
-      const next: WolfChatMessage[] = Array.isArray(data?.messages) ? data.messages : []
+      const next: GameChatMessage[] = Array.isArray(data?.messages) ? data.messages : []
       const nextLastId = next[next.length - 1]?.id ?? null
       if (nextLastId !== lastIdRef.current) {
         lastIdRef.current = nextLastId
@@ -214,12 +230,12 @@ function WolfChatPanel({ open }: { open: boolean }) {
     } finally {
       inFlightRef.current = false
     }
-  }, [])
+  }, [scope])
 
   useEffect(() => {
     if (!open) return
     void fetchMessages()
-    const timer = setInterval(fetchMessages, WOLF_CHAT_POLL_MS)
+    const timer = setInterval(fetchMessages, GAME_CHAT_POLL_MS)
     return () => clearInterval(timer)
   }, [open, fetchMessages])
 
@@ -237,7 +253,7 @@ function WolfChatPanel({ open }: { open: boolean }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ scope: 'wolves', body }),
+        body: JSON.stringify({ scope, body }),
       })
       if (res.ok) {
         setDraft('')
@@ -250,10 +266,22 @@ function WolfChatPanel({ open }: { open: boolean }) {
 
   if (!open) return null
 
+  const red = tone === 'red'
+
   return (
-    <div className="space-y-2 rounded-2xl border border-suit-red/40 bg-felt-deep/90 p-3">
-      <p className="flex items-center justify-center gap-1.5 text-center text-xs font-bold uppercase tracking-wide text-red-200">
-        <WolfIcon className="h-4 w-4" /> {t('wolfChatTitle')}
+    <div
+      className={cn(
+        'space-y-2 rounded-2xl bg-felt-deep/90 p-3',
+        red ? 'border border-suit-red/40' : 'border border-gold/30'
+      )}
+    >
+      <p
+        className={cn(
+          'flex items-center justify-center gap-1.5 text-center text-xs font-bold uppercase tracking-wide',
+          red ? 'text-red-200' : 'text-gold'
+        )}
+      >
+        {red ? <WolfIcon className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />} {title}
       </p>
       <div ref={listRef} className="max-h-40 min-h-[3rem] space-y-1.5 overflow-y-auto">
         {messages.length === 0 ? (
@@ -265,13 +293,24 @@ function WolfChatPanel({ open }: { open: boolean }) {
                 className={cn(
                   'max-w-[80%] rounded-xl px-2.5 py-1.5',
                   m.self
-                    ? 'rounded-br-sm bg-suit-red/25 text-red-50'
+                    ? red
+                      ? 'rounded-br-sm bg-suit-red/25 text-red-50'
+                      : 'rounded-br-sm bg-gold/20 text-cream'
                     : 'rounded-bl-sm bg-white/[0.07] text-white/90'
                 )}
               >
                 {!m.self && (
-                  <p className="mb-0.5 text-[9px] font-semibold text-red-300">
-                    {m.senderIcon ? `${m.senderIcon} ` : ''}
+                  <p
+                    className={cn(
+                      'mb-0.5 flex items-center gap-1 text-[9px] font-semibold',
+                      red ? 'text-red-300' : 'text-gold'
+                    )}
+                  >
+                    {m.senderIcon && (
+                      <span aria-hidden>
+                        <PlayerAvatarGlyph value={m.senderIcon} />
+                      </span>
+                    )}
                     {m.senderName}
                   </p>
                 )}
@@ -281,32 +320,42 @@ function WolfChatPanel({ open }: { open: boolean }) {
           ))
         )}
       </div>
-      <div className="flex items-center gap-1.5">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
+      {canWrite && (
+        <div className="flex items-center gap-1.5">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                void send()
+              }
+            }}
+            maxLength={500}
+            placeholder={tChat('placeholder')}
+            className={cn(
+              'min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none',
+              red ? 'focus:border-suit-red/60' : 'focus:border-gold/60'
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => {
               void send()
-            }
-          }}
-          maxLength={500}
-          placeholder={tChat('placeholder')}
-          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:border-suit-red/60 focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={() => {
-            void send()
-          }}
-          disabled={!draft.trim() || sending}
-          aria-label={tChat('send')}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-suit-red text-white transition-colors hover:bg-red-600 disabled:opacity-40"
-        >
-          <Send className="h-3.5 w-3.5" />
-        </button>
-      </div>
+            }}
+            disabled={!draft.trim() || sending}
+            aria-label={tChat('send')}
+            className={cn(
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-40',
+              red
+                ? 'bg-suit-red text-white hover:bg-red-600'
+                : 'bg-gold text-black hover:bg-amber-400'
+            )}
+          >
+            <Send className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -321,6 +370,7 @@ export function LoupGarouOnline() {
   const reducedMotion = useReducedMotion()
   const [showLegend, setShowLegend] = useState(false)
   const [showWolfChat, setShowWolfChat] = useState(false)
+  const [showDayChat, setShowDayChat] = useState(false)
   const [witchKillMode, setWitchKillMode] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
@@ -347,6 +397,21 @@ export function LoupGarouOnline() {
   useEffect(() => {
     setWitchKillMode(false)
   }, [stateVersion])
+
+  // Sting du Chasseur : son dramatique + vibration à l'ENTRÉE de la phase
+  // (une seule fois par phase, pour tous les joueurs — c'est LE highlight).
+  const hunterStingRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!view || view.phase !== 'hunter-shot') return
+    if (hunterStingRef.current === view.phaseKey) return
+    hunterStingRef.current = view.phaseKey
+    playGameSound('hunter')
+    try {
+      navigator.vibrate?.([90, 60, 90, 60, 200])
+    } catch {
+      // vibration indisponible — tant pis
+    }
+  }, [view])
 
   // ÉCHÉANCE DE PHASE : TOUS les clients envoient le tick « advance »
   // (idempotent — 409 PHASE_CHANGED pour les retardataires, jitter pour
@@ -423,6 +488,9 @@ export function LoupGarouOnline() {
   const myRole = view.myRole
   const finished = view.phase === 'finished'
   const isNight = NIGHT_PHASES.has(view.phase)
+  // Chat du village : ouvert pendant les phases de jour (débat + votes).
+  const isDayChatPhase =
+    view.phase === 'day-debate' || view.phase === 'day-vote' || view.phase === 'day-revote'
   const alive = view.players.filter((p) => p.alive)
   const rematchVotes = view.rematchVotes ?? []
   const iVotedRematch = rematchVotes.includes(user.id)
@@ -624,6 +692,21 @@ export function LoupGarouOnline() {
                 aria-label={t('wolfChatTitle')}
                 aria-expanded={showWolfChat}
               >
+                <WolfIcon className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {isDayChatPhase && (
+              <button
+                onClick={() => setShowDayChat((v) => !v)}
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center rounded-lg border transition-colors',
+                  showDayChat
+                    ? 'border-gold/60 bg-gold/15 text-gold'
+                    : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
+                )}
+                aria-label={t('dayChatTitle')}
+                aria-expanded={showDayChat}
+              >
                 <MessageCircle className="h-3.5 w-3.5" />
               </button>
             )}
@@ -704,7 +787,35 @@ export function LoupGarouOnline() {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <WolfChatPanel open={showWolfChat} />
+              <GameChatPanel
+                open={showWolfChat}
+                scope="wolves"
+                title={t('wolfChatTitle')}
+                tone="red"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+
+      {/* Chat du village (phases de jour, repliable) — fantômes en lecture
+          seule : leur vue omnisciente ne doit pas fuiter dans le débat. */}
+      {isDayChatPhase && (
+        <AnimatePresence>
+          {showDayChat && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <GameChatPanel
+                open={showDayChat}
+                scope="room"
+                title={t('dayChatTitle')}
+                tone="gold"
+                canWrite={!view.ghost}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -1059,10 +1170,48 @@ export function LoupGarouOnline() {
             </div>
           )}
 
-          {view.phase === 'hunter-shot' &&
-            (iAmHunter ? (
-              <div className="space-y-2 rounded-2xl border border-amber-400/30 bg-felt-deep/80 p-4">
-                <p className="text-center text-sm font-bold text-amber-200">{t('hunterPrompt')}</p>
+          {/* LE moment dramatique de la partie : cadre rouge qui pulse,
+              cible animée, sting sonore + vibration (effet plus haut). */}
+          {view.phase === 'hunter-shot' && (
+            <motion.div
+              initial={reducedMotion ? false : { scale: 0.94, opacity: 0 }}
+              animate={
+                reducedMotion
+                  ? { opacity: 1 }
+                  : {
+                      scale: 1,
+                      opacity: 1,
+                      boxShadow: [
+                        '0 0 22px -8px rgba(179,56,46,0.45)',
+                        '0 0 38px -6px rgba(179,56,46,0.8)',
+                        '0 0 22px -8px rgba(179,56,46,0.45)',
+                      ],
+                    }
+              }
+              transition={
+                reducedMotion
+                  ? undefined
+                  : { boxShadow: { repeat: Infinity, duration: 1.4 }, default: { duration: 0.25 } }
+              }
+              className="space-y-3 rounded-2xl border-2 border-suit-red/60 bg-gradient-to-b from-suit-red/25 to-felt-deep/90 p-4"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <motion.span
+                  aria-hidden
+                  className="inline-flex"
+                  animate={reducedMotion ? undefined : { scale: [1, 1.25, 1] }}
+                  transition={reducedMotion ? undefined : { repeat: Infinity, duration: 1.1 }}
+                >
+                  <Target className="h-6 w-6 text-red-300" />
+                </motion.span>
+                <p className="text-center font-display text-lg font-bold uppercase tracking-wide text-red-200">
+                  {t('hunterMoment')}
+                </p>
+              </div>
+              <p className="text-center text-sm font-bold text-amber-200">
+                {iAmHunter ? t('hunterPrompt') : t('hunterWaiting', { name: nameOf(view.pendingHunterId) })}
+              </p>
+              {iAmHunter && (
                 <TargetGrid
                   players={alive}
                   iconOf={iconOf}
@@ -1071,14 +1220,9 @@ export function LoupGarouOnline() {
                   youLabel={t('you')}
                   selfId={user.id}
                 />
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-amber-400/25 bg-felt-deep/80 p-5 text-center">
-                <p className="font-display text-lg font-bold text-gold">
-                  {t('hunterWaiting', { name: nameOf(view.pendingHunterId) })}
-                </p>
-              </div>
-            ))}
+              )}
+            </motion.div>
+          )}
 
           {view.phase === 'day-debate' && (
             <div className="space-y-2.5 rounded-2xl border border-gold/15 bg-felt-deep/70 p-4">
@@ -1131,6 +1275,14 @@ export function LoupGarouOnline() {
                       ? t('revotePrompt')
                       : t('votePrompt')}
               </p>
+              {/* Le +2 du Corbeau ne vaut que pour le PREMIER vote du jour :
+                  au revote, le dire noir sur blanc évite la confusion. */}
+              {view.phase === 'day-revote' && view.ravenTargetId && (
+                <p className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-500/15 px-3 py-1.5 text-center text-xs font-bold text-slate-200">
+                  <Bird aria-hidden className="h-3.5 w-3.5 shrink-0" />
+                  {t('ravenRevoteNotice')}
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 {alive
                   .filter((p) => !view.revoteCandidates || view.revoteCandidates.includes(p.id))

@@ -2843,7 +2843,10 @@
         "ravenDone": "Il tuo marchio pesa su {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ {name} porta il marchio del Corvo: +2 voti contro di lui oggi!",
         "ravenMarkBadge": "Marchiato dal Corvo (+2 voti)",
-        "elderAttackedBanner": "⏳ Sei stato preso di mira dai lupi questa notte."
+        "elderAttackedBanner": "⏳ Sei stato preso di mira dai lupi questa notte.",
+        "dayChatTitle": "Chat del villaggio",
+        "ravenRevoteNotice": "Il segno del Corvo (+2 voti) non conta più nella rivotazione.",
+        "hunterMoment": "Il Cacciatore imbraccia il fucile!"
       },
       "tutorial": {
         "steps": [

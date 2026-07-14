@@ -2843,7 +2843,10 @@
         "ravenDone": "Tu marca pesa sobre {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ ¡{name} lleva la marca del Cuervo: +2 votos en su contra hoy!",
         "ravenMarkBadge": "Marcado por el Cuervo (+2 votos)",
-        "elderAttackedBanner": "⏳ Los lobos te atacaron esta noche."
+        "elderAttackedBanner": "⏳ Los lobos te atacaron esta noche.",
+        "dayChatTitle": "Chat del pueblo",
+        "ravenRevoteNotice": "La marca del Cuervo (+2 votos) ya no cuenta en la segunda votación.",
+        "hunterMoment": "¡El Cazador desenfunda su rifle!"
       },
       "tutorial": {
         "steps": [

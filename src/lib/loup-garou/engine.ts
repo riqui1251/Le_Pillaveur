@@ -17,10 +17,13 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  * JAMAIS désigner un vivant pendant la nuit (le champ `currentTurnUserId` de
  * la salle est public et trahirait la Voyante/Sorcière).
  *
- * ANTI-LEAK DE TIMING : les sous-phases de nuit durent leur temps PLEIN même
- * si l'acteur a déjà joué (les actions sont bufferisées, résolues à
- * l'échéance) — sinon la vitesse d'enchaînement trahit les rôles. Seules les
- * phases dont l'acteur est PUBLIQUEMENT mort sont sautées.
+ * ANTI-LEAK DE TIMING : les actions de nuit sont bufferisées et résolues à
+ * l'échéance de la phase. Quand l'acteur attendu a joué, l'échéance est
+ * RACCOURCIE à LG_EARLY_FINISH_MS (rythme de jeu) — un plancher de 10 s qui
+ * masque la vitesse réelle de l'action, sans révéler qui a agi. EXCEPTION :
+ * la phase des loups garde sa durée pleine (leur vote reste modifiable
+ * jusqu'au bout, ils se coordonnent au chat). Seules les phases dont
+ * l'acteur est PUBLIQUEMENT mort sont sautées.
  */
 
 export const LG_MIN_PLAYERS = 4
@@ -38,6 +41,8 @@ export const LG_DEBATE_DEFAULT_MS = 180_000
 export const LG_DEBATE_CHOICES_MIN = [1, 2, 3, 4, 5] as const
 export const LG_VOTE_MS = 60_000
 export const LG_REVOTE_MS = 45_000
+/** Échéance raccourcie quand tous les acteurs attendus d'une phase ont agi. */
+export const LG_EARLY_FINISH_MS = 10_000
 /** Gorgées : mourir / lyncher un innocent (tous les vivants) / loup lynché (chaque loup) / potion. */
 export const LG_SIPS_DEATH = 3
 export const LG_SIPS_BAD_LYNCH = 2
@@ -171,11 +176,17 @@ export type LGState = TimedPhaseState & {
 
 export type LGAction =
   | { type: 'MAYOR_VOTE'; playerId: string; targetId: string; now: number }
-  | { type: 'GUARD_PROTECT'; playerId: string; targetId: string }
-  | { type: 'RAVEN_MARK'; playerId: string; targetId: string }
-  | { type: 'SEER_PEEK'; playerId: string; targetId: string }
+  | { type: 'GUARD_PROTECT'; playerId: string; targetId: string; now?: number }
+  | { type: 'RAVEN_MARK'; playerId: string; targetId: string; now?: number }
+  | { type: 'SEER_PEEK'; playerId: string; targetId: string; now?: number }
   | { type: 'WOLF_VOTE'; playerId: string; targetId: string }
-  | { type: 'WITCH_ACTION'; playerId: string; action: 'save' | 'kill' | 'none'; targetId?: string }
+  | {
+      type: 'WITCH_ACTION'
+      playerId: string
+      action: 'save' | 'kill' | 'none'
+      targetId?: string
+      now?: number
+    }
   | { type: 'HUNTER_SHOT'; playerId: string; targetId: string; now: number }
   | { type: 'DEBATE_SKIP'; playerId: string; now: number }
   | {
@@ -340,6 +351,19 @@ export function createLGState(
 }
 
 // ─── Transitions ─────────────────────────────────────────────────────────────
+
+/**
+ * Raccourcit l'échéance de la phase COURANTE à LG_EARLY_FINISH_MS sans en
+ * changer la clé (phaseSeq intact : les ticks `advance` des clients restent
+ * valides, seul le compte à rebours affiché se resserre). Appelé quand tous
+ * les acteurs attendus ont agi — jamais pendant la phase des loups.
+ * N'allonge jamais une échéance déjà plus courte.
+ */
+function shortenPhase(state: LGState, now: number | undefined): LGState {
+  const at = now ?? Date.now()
+  if (state.phaseEndsAt !== null && state.phaseEndsAt - at <= LG_EARLY_FINISH_MS) return state
+  return { ...state, phaseEndsAt: at + LG_EARLY_FINISH_MS }
+}
 
 function toPhase(state: LGState, phase: LGPhase, durationMs: number | null, now: number): LGState {
   return { ...state, ...enterPhase(state.phaseSeq, phase, durationMs, now), phase }
@@ -677,8 +701,11 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       if (target.id === state.guardLastProtectedId) {
         throw new LGEngineError('SAME_TARGET_TWICE')
       }
-      // Bufferisé : la phase garde sa durée pleine (anti-leak de timing).
-      return { ...state, guardProtectedId: target.id, version: state.version + 1 }
+      // Bufferisé (résolu à l'échéance) — mais l'échéance se resserre à 10 s.
+      return shortenPhase(
+        { ...state, guardProtectedId: target.id, version: state.version + 1 },
+        action.now
+      )
     }
 
     case 'RAVEN_MARK': {
@@ -688,8 +715,12 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       if (state.ravenTargetId) throw new LGEngineError('ALREADY_MARKED')
       const target = playerOf(state, action.targetId)
       if (!target?.alive || target.id === actor.id) throw new LGEngineError('INVALID_TARGET')
-      // Bufferisé : la marque ne devient publique qu'au lever du jour.
-      return { ...state, ravenTargetId: target.id, version: state.version + 1 }
+      // Bufferisée : la marque ne devient publique qu'au lever du jour —
+      // mais l'échéance de la phase se resserre à 10 s.
+      return shortenPhase(
+        { ...state, ravenTargetId: target.id, version: state.version + 1 },
+        action.now
+      )
     }
 
     case 'SEER_PEEK': {
@@ -701,15 +732,18 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       }
       const target = playerOf(state, action.targetId)
       if (!target?.alive || target.id === actor.id) throw new LGEngineError('INVALID_TARGET')
-      // Bufferisé : la phase garde sa durée pleine (anti-leak de timing).
-      return {
-        ...state,
-        seerPeeks: [
-          ...state.seerPeeks,
-          { round: state.round, targetId: target.id, team: lgTeamOf(target.role) },
-        ],
-        version: state.version + 1,
-      }
+      // Bufferisé (résolu à l'échéance) — mais l'échéance se resserre à 10 s.
+      return shortenPhase(
+        {
+          ...state,
+          seerPeeks: [
+            ...state.seerPeeks,
+            { round: state.round, targetId: target.id, team: lgTeamOf(target.role) },
+          ],
+          version: state.version + 1,
+        },
+        action.now
+      )
     }
 
     case 'WOLF_VOTE': {
@@ -732,32 +766,38 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       if (!actor?.alive || actor.role !== 'sorciere') throw new LGEngineError('NOT_WITCH')
       if (state.witchActed) throw new LGEngineError('ALREADY_ACTED')
       if (action.action === 'none') {
-        return { ...state, witchActed: true, version: state.version + 1 }
+        return shortenPhase({ ...state, witchActed: true, version: state.version + 1 }, action.now)
       }
       if (action.action === 'save') {
         if (state.witchSaveUsed) throw new LGEngineError('POTION_USED')
         if (!state.nightVictimId) throw new LGEngineError('NO_VICTIM')
-        return {
-          ...state,
-          witchActed: true,
-          witchSaveUsed: true,
-          witchSavedId: state.nightVictimId,
-          players: bumpSips(state.players, new Set([actor.id]), LG_SIPS_POTION),
-          version: state.version + 1,
-        }
+        return shortenPhase(
+          {
+            ...state,
+            witchActed: true,
+            witchSaveUsed: true,
+            witchSavedId: state.nightVictimId,
+            players: bumpSips(state.players, new Set([actor.id]), LG_SIPS_POTION),
+            version: state.version + 1,
+          },
+          action.now
+        )
       }
       // kill
       if (state.witchKillUsed) throw new LGEngineError('POTION_USED')
       const target = action.targetId ? playerOf(state, action.targetId) : undefined
       if (!target?.alive || target.id === actor.id) throw new LGEngineError('INVALID_TARGET')
-      return {
-        ...state,
-        witchActed: true,
-        witchKillUsed: true,
-        witchKillId: target.id,
-        players: bumpSips(state.players, new Set([actor.id]), LG_SIPS_POTION),
-        version: state.version + 1,
-      }
+      return shortenPhase(
+        {
+          ...state,
+          witchActed: true,
+          witchKillUsed: true,
+          witchKillId: target.id,
+          players: bumpSips(state.players, new Set([actor.id]), LG_SIPS_POTION),
+          version: state.version + 1,
+        },
+        action.now
+      )
     }
 
     case 'HUNTER_SHOT': {

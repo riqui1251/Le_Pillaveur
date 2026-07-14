@@ -16,6 +16,7 @@ export type GameSound =
   | 'turn'
   | 'victory'
   | 'wheel'
+  | 'hunter'
 
 const MUTE_KEY = 'lp-sound-muted'
 
@@ -130,6 +131,14 @@ const PLAYERS: Record<GameSound, (ac: AudioContext) => void> = {
       tone(ac, { freq: 1100, at, dur: 0.03, type: 'square', gain: 0.05 })
       at += 0.04 + i * 0.012
     }
+  },
+  // Le Chasseur arme son fusil (Loup-Garou) : détonation sourde + deux notes
+  // de tension en tierce mineure — LE moment dramatique de la partie.
+  hunter: (ac) => {
+    noiseBurst(ac, { dur: 0.22, gain: 0.16, freq: 420 })
+    tone(ac, { freq: 95, dur: 0.5, type: 'sawtooth', gain: 0.2, slideTo: 42 })
+    tone(ac, { freq: 220, at: 0.45, dur: 0.28, type: 'triangle', gain: 0.09 })
+    tone(ac, { freq: 261.63, at: 0.78, dur: 0.45, type: 'triangle', gain: 0.12 })
   },
 }
 

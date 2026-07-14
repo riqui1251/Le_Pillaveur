@@ -2853,7 +2853,10 @@
         "ravenDone": "Your mark weighs on {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ {name} bears the Raven’s mark: +2 votes against them today!",
         "ravenMarkBadge": "Marked by the Raven (+2 votes)",
-        "elderAttackedBanner": "⏳ You were targeted by the wolves tonight."
+        "elderAttackedBanner": "⏳ You were targeted by the wolves tonight.",
+        "dayChatTitle": "Village chat",
+        "ravenRevoteNotice": "The Raven's mark (+2 votes) no longer counts in the revote.",
+        "hunterMoment": "The Hunter draws his rifle!"
       },
       "tutorial": {
         "steps": [

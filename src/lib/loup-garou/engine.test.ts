@@ -10,6 +10,7 @@ import {
   LGEngineError,
   LG_DAWN_MS,
   LG_DEBATE_DEFAULT_MS,
+  LG_EARLY_FINISH_MS,
   LG_MAYOR_MS,
   LG_REVEAL_MS,
   LG_SEER_MS,
@@ -772,5 +773,33 @@ describe('contrat remplacement', () => {
     ).toBeNull()
     const bot = reduceLG(s, { type: 'REPLACE_LEFT', now: T0 + 60_000, graceMs: 30_000 })
     expect(bot.players.find((p) => p.id === 'vil1')?.isBot).toBe(true)
+  })
+})
+
+describe('échéance raccourcie quand l\'acteur a agi (LG_EARLY_FINISH_MS)', () => {
+  it('voyante : la phase se resserre à 10 s après le peek, sans changer de clé', () => {
+    const s = craft(SIX, 'night-seer', { phaseEndsAt: T0 + LG_SEER_MS })
+    const next = reduceLG(s, { type: 'SEER_PEEK', playerId: 'voy', targetId: 'loup1', now: T0 })
+    expect(next.phaseEndsAt).toBe(T0 + LG_EARLY_FINISH_MS)
+    // Même clé de phase : les ticks `advance` déjà en vol restent valides.
+    expect(phaseKey(next)).toBe(phaseKey(s))
+  })
+
+  it('n\'allonge jamais une échéance déjà plus courte que 10 s', () => {
+    const s = craft(SIX, 'night-seer', { phaseEndsAt: T0 + 4_000 })
+    const next = reduceLG(s, { type: 'SEER_PEEK', playerId: 'voy', targetId: 'loup1', now: T0 })
+    expect(next.phaseEndsAt).toBe(T0 + 4_000)
+  })
+
+  it('sorcière : se resserre aussi quand elle choisit de ne rien faire', () => {
+    const s = craft(SIX, 'night-witch', { phaseEndsAt: T0 + LG_WITCH_MS })
+    const next = reduceLG(s, { type: 'WITCH_ACTION', playerId: 'sor', action: 'none', now: T0 })
+    expect(next.phaseEndsAt).toBe(T0 + LG_EARLY_FINISH_MS)
+  })
+
+  it('loups : la phase garde sa durée PLEINE même quand tous ont voté (exception)', () => {
+    const s = craft(SIX, 'night-wolves', { phaseEndsAt: T0 + LG_WOLVES_MS })
+    const next = reduceLG(s, { type: 'WOLF_VOTE', playerId: 'loup1', targetId: 'vil1' })
+    expect(next.phaseEndsAt).toBe(T0 + LG_WOLVES_MS)
   })
 })

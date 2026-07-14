@@ -142,6 +142,7 @@ export function applyLGRoomAction(
             type: 'GUARD_PROTECT',
             playerId: userId,
             targetId: input.targetId,
+            now: Date.now(),
           }),
         }
       case 'raven-mark':
@@ -151,12 +152,18 @@ export function applyLGRoomAction(
             type: 'RAVEN_MARK',
             playerId: userId,
             targetId: input.targetId,
+            now: Date.now(),
           }),
         }
       case 'seer-peek':
         return {
           ok: true,
-          state: reduceLG(state, { type: 'SEER_PEEK', playerId: userId, targetId: input.targetId }),
+          state: reduceLG(state, {
+            type: 'SEER_PEEK',
+            playerId: userId,
+            targetId: input.targetId,
+            now: Date.now(),
+          }),
         }
       case 'wolf-vote':
         return {
@@ -171,6 +178,7 @@ export function applyLGRoomAction(
             playerId: userId,
             action: input.witchAction,
             targetId: input.targetId,
+            now: Date.now(),
           }),
         }
       case 'hunter-shot':
@@ -294,6 +302,7 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
             type: 'GUARD_PROTECT',
             playerId: guard.id,
             targetId: pickRandom(targets).id,
+            now: Date.now(),
           })
           acted = true
         }
@@ -307,6 +316,7 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
             type: 'RAVEN_MARK',
             playerId: raven.id,
             targetId: pickRandom(targets).id,
+            now: Date.now(),
           })
           acted = true
         }
@@ -319,6 +329,7 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
           type: 'SEER_PEEK',
           playerId: seer.id,
           targetId: pickRandom(targets).id,
+          now: Date.now(),
         })
         acted = true
       }
@@ -337,7 +348,12 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
     } else if (next.phase === 'night-witch') {
       const witch = alive().find((p) => p.isBot && p.role === 'sorciere')
       if (witch && !next.witchActed) {
-        next = reduceLG(next, { type: 'WITCH_ACTION', playerId: witch.id, action: 'none' })
+        next = reduceLG(next, {
+          type: 'WITCH_ACTION',
+          playerId: witch.id,
+          action: 'none',
+          now: Date.now(),
+        })
         acted = true
       }
     } else if (next.phase === 'hunter-shot') {

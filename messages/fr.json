@@ -2853,7 +2853,10 @@
         "ravenDone": "Ta marque pèse sur {name}. 🐦‍⬛",
         "ravenMarkBanner": "🐦‍⬛ {name} porte la marque du Corbeau : +2 voix contre lui au vote !",
         "ravenMarkBadge": "Marqué par le Corbeau (+2 voix)",
-        "elderAttackedBanner": "⏳ Vous avez été pris pour cible par les loups cette nuit."
+        "elderAttackedBanner": "⏳ Vous avez été pris pour cible par les loups cette nuit.",
+        "dayChatTitle": "Chat du village",
+        "ravenRevoteNotice": "La marque du Corbeau (+2 voix) ne compte plus au revote.",
+        "hunterMoment": "Le Chasseur arme son fusil !"
       },
       "tutorial": {
         "steps": [
