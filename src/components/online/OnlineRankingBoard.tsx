@@ -7,6 +7,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { MedalDot } from '@/components/online/MedalDot'
+import { OnlinePlayerIcon } from '@/components/online/OnlinePlayerTag'
 import { cn } from '@/lib/utils'
 
 /**
@@ -81,9 +82,10 @@ function RowCard({
           <span className="text-sm font-medium text-white/40">{row.position}</span>
         )}
       </span>
-      <span className="shrink-0 text-lg" aria-hidden>
-        {row.preferences.icon ?? '👤'}
-      </span>
+      <OnlinePlayerIcon
+        icon={row.preferences.icon}
+        className="h-6 w-6 shrink-0 bg-white/10 text-white/80"
+      />
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
         {row.displayName}
         {isMe && <span className="ml-1.5 text-xs text-amber-300/80">({youLabel})</span>}

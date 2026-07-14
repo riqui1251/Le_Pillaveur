@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Gamepad2, MessageCircle, Send, Users, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { useFriends } from '@/hooks/useFriends'
 import type { ChatUnread } from '@/hooks/useChatUnread'
 import { cn } from '@/lib/utils'
@@ -128,8 +129,12 @@ function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () =
                 )}
               >
                 {!m.self && (
-                  <p className="mb-0.5 text-[10px] font-semibold text-violet-300">
-                    {m.senderIcon ? `${m.senderIcon} ` : ''}
+                  <p className="mb-0.5 flex items-center gap-1 text-[10px] font-semibold text-violet-300">
+                    {m.senderIcon && (
+                      <span aria-hidden>
+                        <PlayerAvatarGlyph value={m.senderIcon} />
+                      </span>
+                    )}
                     {m.senderName}
                   </p>
                 )}

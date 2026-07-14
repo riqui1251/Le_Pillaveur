@@ -16,6 +16,7 @@ import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { GameBriefing } from '@/components/online/GameBriefing'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { OnlinePlayerIcon } from '@/components/online/OnlinePlayerTag'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { JoinQR } from '@/components/tv/JoinQR'
 import { cn } from '@/lib/utils'
 import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
@@ -606,9 +607,18 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                                 member ? 'bg-black/25 font-medium text-white' : 'bg-white/5 text-white/35'
                               )}
                             >
-                              {member
-                                ? `${member.preferences?.icon ? `${member.preferences.icon} ` : ''}${member.displayName}`
-                                : tTc('botSlot')}
+                              {member ? (
+                                <>
+                                  {member.preferences?.icon && (
+                                    <span aria-hidden className="mr-1">
+                                      <PlayerAvatarGlyph value={member.preferences.icon} />
+                                    </span>
+                                  )}
+                                  {member.displayName}
+                                </>
+                              ) : (
+                                tTc('botSlot')
+                              )}
                             </li>
                           )
                         })}
@@ -951,7 +961,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         )}
                         {inTeam.map((member) => (
                           <li key={member.userId} className="truncate rounded-lg bg-black/25 px-2 py-1 text-xs font-medium text-white">
-                            {member.preferences?.icon ? `${member.preferences.icon} ` : ''}{member.displayName}
+                            {member.preferences?.icon && (
+                              <span aria-hidden className="mr-1">
+                                <PlayerAvatarGlyph value={member.preferences.icon} />
+                              </span>
+                            )}
+                            {member.displayName}
                           </li>
                         ))}
                       </ul>
