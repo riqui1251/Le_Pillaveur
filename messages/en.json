@@ -644,6 +644,10 @@
         "title": "Werewolf",
         "description": "The party classic, drinking edition: wolves, seer, debates and lynchings that drink!",
         "softDescription": "The party classic: wolves, seer, debates and lynchings!"
+      },
+      "sans-filtre": {
+        "title": "Sans Filtre",
+        "description": "A fill-in-the-blank card and shameless answers: the round judge crowns the funniest. Content in French."
       }
     },
     "ballon-surprise": {
@@ -2876,6 +2880,73 @@
             "body": "The village wins by eliminating every wolf; the wolves win once they equal (or outnumber) the rest of the village. The dead become ghosts 👻 and watch the rest of the game."
           }
         ]
+      }
+    },
+    "sans-filtre": {
+      "page": {
+        "onlineOnly": "Sans Filtre is online-only: everyone keeps a secret hand and plays cards anonymously — impossible in pass-and-play.",
+        "switchOnline": "Switch to online mode"
+      },
+      "game": {
+        "countdown": {
+          "title": "Game starting",
+          "hint": "Warm up your bad faith…"
+        },
+        "round": "Round {n}/{total}",
+        "phaseSubmit": "Play your cards",
+        "phaseJudging": "The judge deliberates",
+        "phaseReveal": "Crowning",
+        "youAreJudge": "You are this round’s judge — you don’t play a card.",
+        "judgeIs": "Round judge: {name}",
+        "blackLabel": "Black card",
+        "playPrompt": "Pick the funniest answer from your hand:",
+        "played": "Card played! {count}/{total} have played…",
+        "judgeWaits": "Players are laying down cards… {count}/{total}",
+        "judgePickPrompt": "Read each answer aloud, then crown the best one:",
+        "judgeReading": "{name} is reading the answers…",
+        "judgeReadAloud": "Tip: read them out loud on voice chat — that’s where the fun is.",
+        "crowned": {
+          "title": "Crowned card!",
+          "by": "By {name} — +1 crown",
+          "nobody": "Nobody played this round… the crown stays on the table."
+        },
+        "reveal": {
+          "continue": "Next round",
+          "seeResult": "See the podium"
+        },
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "victory": {
+          "winnerIs": "{name} wins the night!",
+          "tie": "Tie — the crown is shared",
+          "finalScore": "Final crowns",
+          "replay": "Play again",
+          "rematchWaiting": "Rematch {count}/{total}…",
+          "backToMenu": "Back to menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "A fill-in-the-blank card",
+            "body": "Each round, a black card with a blank is shown to the whole table."
+          },
+          {
+            "title": "Play your answer",
+            "body": "Pick the funniest (or most shameful) card from your hand. Answers stay anonymous."
+          },
+          {
+            "title": "The judge crowns",
+            "body": "The round judge reads everything aloud and crowns their favorite: +1 crown for its author. The judge role rotates."
+          },
+          {
+            "title": "Most crowns wins",
+            "body": "After all rounds, the most crowned player wins. Pro tip: aim for the judge’s sense of humor."
+          }
+        ]
+      },
+      "lobby": {
+        "roundsCount": "Number of rounds",
+        "rounds": "rounds"
       }
     }
   },

@@ -95,6 +95,9 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.crobardRounds === 'number' && [6, 8, 10].includes(body.crobardRounds)) {
     next.crobardRounds = body.crobardRounds
   }
+  if (typeof body.sfRounds === 'number' && [5, 8, 12].includes(body.sfRounds)) {
+    next.sfRounds = body.sfRounds
+  }
 
   const visibilityUpdate =
     typeof body.visibility === 'string' && VALID_VISIBILITIES.has(body.visibility)

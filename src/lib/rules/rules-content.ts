@@ -79,6 +79,11 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Le 1220 en ligne : un dé 12 et un dé 20, des paris sur la parité, la plage et deux chiffres clés. Règles complètes du jeu d’apéro du Pillaveur.',
   },
+  'sans-filtre': {
+    title: 'Règles de Sans Filtre — cartes à trous et mauvaise foi',
+    description:
+      'Sans Filtre en ligne : une carte noire à compléter, des réponses anonymes, un juge qui couronne la plus drôle. Règles complètes, 4 à 16 joueurs, gratuit avec chat vocal.',
+  },
 }
 
 const RULES_ROOT = path.join(process.cwd(), 'docs', 'rules', 'fr')

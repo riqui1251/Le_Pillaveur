@@ -293,6 +293,7 @@ export function useOnlineRoomState() {
       espionRoundsToWin?: number
       tabouTargetScore?: number
       crobardRounds?: number
+      sfRounds?: number
     }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {

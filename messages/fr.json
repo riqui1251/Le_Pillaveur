@@ -644,6 +644,10 @@
         "title": "Loup-Garou",
         "description": "Le classique des soirées, version apéro : loups, voyante, débats et lynchages qui trinquent !",
         "softDescription": "Le classique des soirées : loups, voyante, débats et lynchages !"
+      },
+      "sans-filtre": {
+        "title": "Sans Filtre",
+        "description": "Une carte à trou, des réponses de mauvaise foi : le juge du tour couronne la plus drôle. À lire à voix haute !"
       }
     },
     "ballon-surprise": {
@@ -2876,6 +2880,73 @@
             "body": "Le village gagne en éliminant tous les loups ; les loups gagnent s’ils sont aussi nombreux (ou plus) que le reste du village. Les morts deviennent fantômes 👻 et regardent la suite."
           }
         ]
+      }
+    },
+    "sans-filtre": {
+      "page": {
+        "onlineOnly": "Sans Filtre se joue en ligne : chacun garde sa main secrète et abat sa carte anonymement — impossible en passe-et-joue.",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "game": {
+        "countdown": {
+          "title": "La partie commence",
+          "hint": "Prépare ta mauvaise foi…"
+        },
+        "round": "Manche {n}/{total}",
+        "phaseSubmit": "Abattez vos cartes",
+        "phaseJudging": "Le juge délibère",
+        "phaseReveal": "Couronnement",
+        "youAreJudge": "Tu es le juge de cette manche — tu ne joues pas de carte.",
+        "judgeIs": "Juge de la manche : {name}",
+        "blackLabel": "Carte noire",
+        "playPrompt": "Choisis la réponse la plus drôle de ta main :",
+        "played": "Carte abattue ! {count}/{total} ont joué…",
+        "judgeWaits": "Les joueurs abattent leurs cartes… {count}/{total}",
+        "judgePickPrompt": "Lis chaque réponse à voix haute, puis couronne la meilleure :",
+        "judgeReading": "{name} lit les réponses et délibère…",
+        "judgeReadAloud": "Astuce : lis-les à voix haute au vocal, c’est là que ça devient drôle.",
+        "crowned": {
+          "title": "Carte couronnée !",
+          "by": "Signée {name} — +1 couronne",
+          "nobody": "Personne n’a joué cette manche… la couronne reste sur la table."
+        },
+        "reveal": {
+          "continue": "Manche suivante",
+          "seeResult": "Voir le podium"
+        },
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "victory": {
+          "winnerIs": "{name} gagne la soirée !",
+          "tie": "Égalité — la couronne est partagée",
+          "finalScore": "Couronnes finales",
+          "replay": "Rejouer",
+          "rematchWaiting": "Revanche {count}/{total}…",
+          "backToMenu": "Retour au menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Une carte à trou",
+            "body": "À chaque manche, une carte noire à compléter s’affiche pour toute la table."
+          },
+          {
+            "title": "Abats ta réponse",
+            "body": "Choisis dans ta main la carte la plus drôle (ou la plus gênante). Les réponses restent anonymes."
+          },
+          {
+            "title": "Le juge couronne",
+            "body": "Le juge du tour lit tout à voix haute et couronne sa préférée : +1 couronne pour son auteur. Le rôle de juge tourne."
+          },
+          {
+            "title": "Le plus couronné gagne",
+            "body": "Après toutes les manches, le joueur le plus couronné remporte la partie. Un conseil : visez le sens de l’humour du juge."
+          }
+        ]
+      },
+      "lobby": {
+        "roundsCount": "Nombre de manches",
+        "rounds": "manches"
       }
     }
   },

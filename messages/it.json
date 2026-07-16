@@ -634,6 +634,10 @@
         "title": "Lupo Mannaro",
         "description": "Il classico delle feste, versione alcolica: lupi, veggente, dibattiti e linciaggi che brindano!",
         "softDescription": "Il classico delle feste: lupi, veggente, dibattiti e linciaggi!"
+      },
+      "sans-filtre": {
+        "title": "Sans Filtre",
+        "description": "Una carta da completare e risposte spudorate: il giudice incorona la più divertente. Contenuto in francese."
       }
     },
     "ballon-surprise": {
@@ -2866,6 +2870,73 @@
             "body": "Il villaggio vince eliminando tutti i lupi; i lupi vincono se eguagliano (o superano) il resto del villaggio. I morti diventano fantasmi 👻 e osservano il resto della partita."
           }
         ]
+      }
+    },
+    "sans-filtre": {
+      "page": {
+        "onlineOnly": "Sans Filtre si gioca online: ognuno tiene la propria mano segreta e gioca le carte in modo anonimo — impossibile in locale.",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "game": {
+        "countdown": {
+          "title": "La partita inizia",
+          "hint": "Prepara la tua malafede…"
+        },
+        "round": "Round {n}/{total}",
+        "phaseSubmit": "Giocate le vostre carte",
+        "phaseJudging": "Il giudice delibera",
+        "phaseReveal": "Incoronazione",
+        "youAreJudge": "Sei il giudice di questo round — non giochi carte.",
+        "judgeIs": "Giudice del round: {name}",
+        "blackLabel": "Carta nera",
+        "playPrompt": "Scegli la risposta più divertente della tua mano:",
+        "played": "Carta giocata! {count}/{total} hanno giocato…",
+        "judgeWaits": "I giocatori stanno giocando le carte… {count}/{total}",
+        "judgePickPrompt": "Leggi ogni risposta ad alta voce, poi incorona la migliore:",
+        "judgeReading": "{name} sta leggendo le risposte…",
+        "judgeReadAloud": "Consiglio: leggile ad alta voce in chat vocale — è lì che diventa divertente.",
+        "crowned": {
+          "title": "Carta incoronata!",
+          "by": "Di {name} — +1 corona",
+          "nobody": "Nessuno ha giocato questo round… la corona resta sul tavolo."
+        },
+        "reveal": {
+          "continue": "Round successivo",
+          "seeResult": "Vedi il podio"
+        },
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "victory": {
+          "winnerIs": "{name} vince la serata!",
+          "tie": "Pareggio — la corona è condivisa",
+          "finalScore": "Corone finali",
+          "replay": "Gioca ancora",
+          "rematchWaiting": "Rivincita {count}/{total}…",
+          "backToMenu": "Torna al menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Una carta da completare",
+            "body": "A ogni round, una carta nera con uno spazio vuoto appare per tutto il tavolo."
+          },
+          {
+            "title": "Gioca la tua risposta",
+            "body": "Scegli dalla tua mano la carta più divertente (o più imbarazzante). Le risposte restano anonime."
+          },
+          {
+            "title": "Il giudice incorona",
+            "body": "Il giudice del turno legge tutto ad alta voce e incorona la sua preferita: +1 corona per il suo autore. Il ruolo di giudice ruota."
+          },
+          {
+            "title": "Vince il più incoronato",
+            "body": "Dopo tutti i round, vince chi ha più corone. Consiglio: punta al senso dell’umorismo del giudice."
+          }
+        ]
+      },
+      "lobby": {
+        "roundsCount": "Numero di round",
+        "rounds": "round"
       }
     }
   },

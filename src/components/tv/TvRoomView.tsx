@@ -35,6 +35,8 @@ import { TvCrobard } from './TvCrobard'
 import type { CrobardClientView } from '@/lib/crobard/engine'
 import { TvTelephoneDessine } from './TvTelephoneDessine'
 import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
+import { TvSansFiltre } from './TvSansFiltre'
+import type { SFClientView } from '@/lib/sans-filtre/engine'
 
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
@@ -50,6 +52,7 @@ const GAME_TITLES: Record<string, string> = {
   tabou: 'Tabou Vocal',
   crobard: 'Crobard',
   'telephone-dessine': 'Téléphone Dessiné',
+  'sans-filtre': 'Sans Filtre',
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
@@ -173,6 +176,8 @@ export function TvRoomView({ code }: { code: string }) {
     content = <TvCrobard room={room} state={state as unknown as CrobardClientView} />
   } else if (room.gameId === 'telephone-dessine') {
     content = <TvTelephoneDessine room={room} state={state as unknown as TelephoneClientView} />
+  } else if (room.gameId === 'sans-filtre') {
+    content = <TvSansFiltre room={room} state={state as unknown as SFClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

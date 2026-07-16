@@ -634,6 +634,10 @@
         "title": "Hombre Lobo",
         "description": "¡El clásico de las fiestas, versión bebida: lobos, vidente, debates y linchamientos que brindan!",
         "softDescription": "¡El clásico de las fiestas: lobos, vidente, debates y linchamientos!"
+      },
+      "sans-filtre": {
+        "title": "Sans Filtre",
+        "description": "Una carta con hueco y respuestas descaradas: el juez corona la más divertida. Contenido en francés."
       }
     },
     "ballon-surprise": {
@@ -2866,6 +2870,73 @@
             "body": "La aldea gana eliminando a todos los lobos; los lobos ganan si igualan (o superan) al resto de la aldea. Los muertos se convierten en fantasmas 👻 y observan el resto de la partida."
           }
         ]
+      }
+    },
+    "sans-filtre": {
+      "page": {
+        "onlineOnly": "Sans Filtre se juega en línea: cada uno guarda su mano en secreto y juega sus cartas de forma anónima — imposible en modo local.",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "game": {
+        "countdown": {
+          "title": "La partida empieza",
+          "hint": "Prepara tu mala fe…"
+        },
+        "round": "Ronda {n}/{total}",
+        "phaseSubmit": "Jugad vuestras cartas",
+        "phaseJudging": "El juez delibera",
+        "phaseReveal": "Coronación",
+        "youAreJudge": "Eres el juez de esta ronda — no juegas carta.",
+        "judgeIs": "Juez de la ronda: {name}",
+        "blackLabel": "Carta negra",
+        "playPrompt": "Elige la respuesta más divertida de tu mano:",
+        "played": "¡Carta jugada! {count}/{total} han jugado…",
+        "judgeWaits": "Los jugadores están jugando sus cartas… {count}/{total}",
+        "judgePickPrompt": "Lee cada respuesta en voz alta y corona la mejor:",
+        "judgeReading": "{name} está leyendo las respuestas…",
+        "judgeReadAloud": "Consejo: léelas en voz alta por el chat de voz — ahí está la gracia.",
+        "crowned": {
+          "title": "¡Carta coronada!",
+          "by": "De {name} — +1 corona",
+          "nobody": "Nadie jugó esta ronda… la corona se queda en la mesa."
+        },
+        "reveal": {
+          "continue": "Siguiente ronda",
+          "seeResult": "Ver el podio"
+        },
+        "waitingReturn": "Esperando a que vuelva {name} — bot en {seconds}s",
+        "victory": {
+          "winnerIs": "¡{name} gana la noche!",
+          "tie": "Empate — la corona se comparte",
+          "finalScore": "Coronas finales",
+          "replay": "Jugar otra vez",
+          "rematchWaiting": "Revancha {count}/{total}…",
+          "backToMenu": "Volver al menú"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Una carta con hueco",
+            "body": "En cada ronda se muestra una carta negra para completar a toda la mesa."
+          },
+          {
+            "title": "Juega tu respuesta",
+            "body": "Elige de tu mano la carta más divertida (o más vergonzosa). Las respuestas son anónimas."
+          },
+          {
+            "title": "El juez corona",
+            "body": "El juez del turno lo lee todo en voz alta y corona su favorita: +1 corona para su autor. El rol de juez rota."
+          },
+          {
+            "title": "Gana el más coronado",
+            "body": "Tras todas las rondas, gana quien tenga más coronas. Consejo: apunta al humor del juez."
+          }
+        ]
+      },
+      "lobby": {
+        "roundsCount": "Número de rondas",
+        "rounds": "rondas"
       }
     }
   },

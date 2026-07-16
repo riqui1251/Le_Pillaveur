@@ -89,6 +89,20 @@ describe('début de manche', () => {
     const bot = s.players.find((p) => p.id === 'p3')
     expect(bot?.hand).toHaveLength(SF_HAND_SIZE - 1)
   })
+
+  it('table de bots (seul humain = juge) : la manche saute directement au jugement', () => {
+    const players = [
+      { id: 'p0', name: 'P0' },
+      { id: 'b1', name: 'B1', isBot: true },
+      { id: 'b2', name: 'B2', isBot: true },
+      { id: 'b3', name: 'B3', isBot: true },
+    ]
+    const raw = createSFState(players, BLACKS, WHITES, 'seed', T0 - SF_COUNTDOWN_MS)
+    const s = reduceSF(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+    expect(s.phase).toBe('judging')
+    expect(s.submissions).toHaveLength(3)
+    expect(s.judgeId).toBe('p0')
+  })
 })
 
 describe('PLAY_CARD', () => {

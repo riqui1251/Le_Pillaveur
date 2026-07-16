@@ -183,7 +183,7 @@ function startRound(state: SFState, now: number): SFState {
     return { ...p, hand: p.hand.filter((_, i) => i !== idx) }
   })
 
-  return {
+  const next: SFState = {
     ...base,
     players,
     submissions,
@@ -192,6 +192,13 @@ function startRound(state: SFState, now: number): SFState {
     rngState: rng.getState(),
     version: state.version + 1,
   }
+  // Table de bots (seul humain = juge) : personne n'est attendu — on passe
+  // directement au jugement au lieu de laisser courir le chrono pour rien.
+  const waiting = roundPlayers(next).filter(
+    (p) => !submissions.some((s) => s.playerId === p.id)
+  )
+  if (waiting.length === 0) return enterJudging(next, now)
+  return next
 }
 
 function enterJudging(state: SFState, now: number): SFState {
