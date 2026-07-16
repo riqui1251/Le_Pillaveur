@@ -36,15 +36,18 @@ export async function POST(request: Request) {
     const cookieLang = (await cookies()).get(LOCALE_COOKIE)?.value
     const lang = cookieLang && ROOM_LANGS.has(cookieLang) ? cookieLang : 'fr'
 
+    // Visibilité choisie à la création (l'hôte peut la changer ensuite dans
+    // les réglages du lobby) : 'public' = visible dans la liste des lobbies,
+    // 'private' (défaut) = accessible par code/QR/invitation seulement.
+    const visibility = body.visibility === 'public' ? 'public' : 'private'
+
     const code = await createUniqueRoomCode()
     const room = await prisma.onlineRoom.create({
       data: {
         code,
         gameId,
         hostUserId: user.id,
-        // Privé par défaut : la salle ne s'affiche pas dans la liste publique
-        // (on la rejoint par code/QR/invitation) ; l'hôte peut l'ouvrir.
-        visibility: 'private',
+        visibility,
         settingsJson: JSON.stringify(
           gameId === 'plinko'
             ? { plinkoDifficulty: 'medium', lang }

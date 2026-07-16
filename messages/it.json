@@ -289,7 +289,8 @@
       "serviceUnavailable": "Servizio momentaneamente non disponibile. Riprova tra qualche istante.",
       "network": "Impossibile connettersi. Controlla la tua connessione internet e riprova.",
       "generic": "Si è verificato un errore. Riprova."
-    }
+    },
+    "orDivider": "oppure"
   },
   "account": {
     "brand": "Le Pillaveur",
@@ -389,7 +390,9 @@
       "validating": "Convalida…",
       "minorWarning": "Se hai meno di 18 anni devi abbandonare questo sito.",
       "analyticsLabel": "Accetto le statistiche di visita (cookie di misurazione dell'audience).",
-      "analyticsHint": "Facoltativo — serve solo a contare le visite e a contrastare gli abusi. Nessuna condivisione con terzi."
+      "analyticsHint": "Facoltativo — serve solo a contare le visite e a contrastare gli abusi. Nessuna condivisione con terzi.",
+      "tagline": "La casa dei giochi di società",
+      "promise": "13 giochi gratis da giocare tra amici — su un solo telefono o online con chat vocale e modalità TV."
     },
     "pages": {
       "back": "Indietro",
@@ -3447,5 +3450,54 @@
   "partyCanvas": {
     "clear": "Cancella",
     "eraser": "Gomma"
+  },
+  "landing": {
+    "hero": {
+      "title": "Giochi di società gratis, tra amici",
+      "subtitle": "Lupus con chat vocale, quiz, disegno, bluff e giochi da aperitivo: su un telefono che gira intorno al tavolo, o online fino a 12 giocatori — senza installare nulla.",
+      "ctaPlay": "Scegli un gioco",
+      "ctaExplore": "Scopri i giochi",
+      "trust": "100% gratis · zero installazioni · français, english, español, italiano"
+    },
+    "how": {
+      "title": "Come funziona",
+      "step1Title": "Scegli un gioco",
+      "step1Body": "18 giochi pronti: ruoli nascosti, quiz, disegno, dadi e scommesse.",
+      "step2Title": "Apri un tavolo",
+      "step2Body": "Online con i tuoi amici — o in locale, passando il telefono.",
+      "step3Title": "Invita la banda",
+      "step3Body": "Un codice, un QR o un link. Mancano giocatori? I bot completano."
+    },
+    "features": {
+      "title": "Cosa offre la casa",
+      "voice": "Chat vocale integrata",
+      "voiceDesc": "Parlatevi in diretta durante la partita, senza Discord.",
+      "tv": "Modalità TV",
+      "tvDesc": "La partita in grande su uno schermo; si entra scansionando il QR.",
+      "bots": "Bot al tavolo",
+      "botsDesc": "Mai bloccati: i bot occupano i posti vuoti.",
+      "soft": "Modalità soft",
+      "softDesc": "Gli stessi giochi, senza una goccia — ogni tavolo il suo mood.",
+      "languages": "4 lingue",
+      "languagesDesc": "Francese, inglese, spagnolo, italiano.",
+      "free": "Gratis, zero install",
+      "freeDesc": "Tutto gira nel browser, su mobile e PC."
+    },
+    "catalog": {
+      "title": "I giochi della casa",
+      "subtitle": "♠ ruoli nascosti · ♥ cultura · ♦ fortuna e dadi · ♣ crea",
+      "online": "Online",
+      "local": "Locale",
+      "players": "{min}-{max} giocatori"
+    },
+    "rules": {
+      "title": "Imparare le regole",
+      "subtitle": "Le regole complete di ogni gioco, spiegate in due minuti.",
+      "linkLabel": "Regole di {game}"
+    },
+    "finalCta": {
+      "title": "Il tavolo è aperto.",
+      "cta": "Gioca ora"
+    }
   }
 }

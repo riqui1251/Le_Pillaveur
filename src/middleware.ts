@@ -24,6 +24,7 @@ const PUBLIC_PREFIXES = [
   '/jeux',
   '/games',
   '/classement',
+  '/regles',
   '/api/',
   '/_next',
   '/favicon.ico',

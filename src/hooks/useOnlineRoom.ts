@@ -146,31 +146,34 @@ export function useOnlineRoomState() {
     }, delay)
   }, [getPollDelay, pollTick])
 
-  const createRoom = useCallback(async (gameId: string) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/online/rooms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ gameId }),
-      })
-      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
-      if (!res.ok) {
-        setError(data.error ?? 'Impossible de créer le lobby')
+  const createRoom = useCallback(
+    async (gameId: string, options?: { visibility?: 'public' | 'private' }) => {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch('/api/online/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ gameId, visibility: options?.visibility ?? 'private' }),
+        })
+        const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+        if (!res.ok) {
+          setError(data.error ?? 'Impossible de créer le lobby')
+          return null
+        }
+        setRoom(data.room ?? null)
+        return data.room as RoomDto
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Erreur réseau'
+        setError(msg)
         return null
+      } finally {
+        setLoading(false)
       }
-      setRoom(data.room ?? null)
-      return data.room as RoomDto
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Erreur réseau'
-      setError(msg)
-      return null
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    },
+    []
+  )
 
   const joinRoom = useCallback(async (opts: { code?: string; roomId?: string }) => {
     setLoading(true)

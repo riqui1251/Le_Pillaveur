@@ -299,7 +299,8 @@
       "serviceUnavailable": "The service is temporarily unavailable. Please try again in a moment.",
       "network": "Could not connect. Check your internet connection and try again.",
       "generic": "Something went wrong. Please try again."
-    }
+    },
+    "orDivider": "or"
   },
   "account": {
     "brand": "Le Pillaveur",
@@ -399,7 +400,9 @@
       "validating": "Validation…",
       "minorWarning": "If you are under 18 years old, you must leave this site.",
       "analyticsLabel": "I accept visit statistics (audience measurement cookie).",
-      "analyticsHint": "Optional — only used to count visits and fight abuse. Never shared with third parties."
+      "analyticsHint": "Optional — only used to count visits and fight abuse. Never shared with third parties.",
+      "tagline": "The house of party games",
+      "promise": "13 free games to play with friends — pass one phone around, or play online with voice chat and TV mode."
     },
     "pages": {
       "back": "Back",
@@ -3457,5 +3460,54 @@
   "partyCanvas": {
     "clear": "Clear",
     "eraser": "Eraser"
+  },
+  "landing": {
+    "hero": {
+      "title": "Free party games to play with friends",
+      "subtitle": "Werewolf with voice chat, quizzes, drawing, bluffing and drinking games: pass one phone around the table, or play online with up to 12 players — nothing to install.",
+      "ctaPlay": "Pick a game",
+      "ctaExplore": "Browse the games",
+      "trust": "100% free · no install · français, english, español, italiano"
+    },
+    "how": {
+      "title": "How it works",
+      "step1Title": "Pick a game",
+      "step1Body": "18 ready-to-play games: hidden roles, quiz, drawing, dice and bets.",
+      "step2Title": "Open a table",
+      "step2Body": "Online with your friends — or locally, passing the phone around.",
+      "step3Title": "Invite the crew",
+      "step3Body": "A code, a QR or a share link. Short on players? Bots fill the seats."
+    },
+    "features": {
+      "title": "What the house offers",
+      "voice": "Built-in voice chat",
+      "voiceDesc": "Talk live during the game, no Discord needed.",
+      "tv": "TV mode",
+      "tvDesc": "The game shows big on a screen; scan the QR to join.",
+      "bots": "Table bots",
+      "botsDesc": "Never stuck: bots take the empty seats.",
+      "soft": "Soft mode",
+      "softDesc": "Same games, not a single drop — your table, your vibe.",
+      "languages": "4 languages",
+      "languagesDesc": "French, English, Spanish, Italian.",
+      "free": "Free, zero install",
+      "freeDesc": "Everything runs in the browser, on mobile and desktop."
+    },
+    "catalog": {
+      "title": "The house games",
+      "subtitle": "♠ hidden roles · ♥ trivia · ♦ luck & dice · ♣ creative",
+      "online": "Online",
+      "local": "Local",
+      "players": "{min}-{max} players"
+    },
+    "rules": {
+      "title": "Learn the rules",
+      "subtitle": "Full rules for every game, explained in two minutes.",
+      "linkLabel": "{game} rules"
+    },
+    "finalCta": {
+      "title": "The table is open.",
+      "cta": "Play now"
+    }
   }
 }

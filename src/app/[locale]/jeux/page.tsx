@@ -27,16 +27,38 @@ export default function GamesHubPage() {
   const searchParams = useSearchParams()
   const joinAttemptedRef = useRef(false)
 
-  // Deep-link « scanner le QR de la TV » : ?join=CODE → rejoint la salle et
-  // ouvre le jeu. Uniquement en mode online (sinon on ne toucherait pas à
-  // l'état local du joueur) ; le middleware assure déjà que l'utilisateur est
-  // connecté avant d'arriver ici.
+  // Deep-link « rejoins ma table » (QR TV ou lien partagé) : ?join=CODE →
+  // rejoint la salle et ouvre le jeu. Un visiteur pas encore connecté (ou
+  // pas en mode online) garde le code sous le coude en localStorage — il est
+  // consommé automatiquement dès qu'il arrive ici connecté en ligne, même
+  // après le détour par l'inscription.
   useEffect(() => {
-    const raw = searchParams.get('join')
-    if (!raw || joinAttemptedRef.current || !isOnline || !user) return
-    const code = raw.trim().toUpperCase()
-    if (!/^[A-Z0-9]{6}$/.test(code)) return
+    const raw = searchParams.get('join')?.trim().toUpperCase()
+    if (raw && /^[A-Z0-9]{6}$/.test(raw) && (!user || !isOnline)) {
+      try {
+        window.localStorage.setItem('lp-pending-join', raw)
+      } catch {
+        // stockage indisponible — le lien ne survivra pas à l'inscription
+      }
+    }
+  }, [searchParams, user, isOnline])
+  useEffect(() => {
+    if (joinAttemptedRef.current || !isOnline || !user) return
+    let code = searchParams.get('join')?.trim().toUpperCase() ?? null
+    if (!code) {
+      try {
+        code = window.localStorage.getItem('lp-pending-join')
+      } catch {
+        code = null
+      }
+    }
+    if (!code || !/^[A-Z0-9]{6}$/.test(code)) return
     joinAttemptedRef.current = true
+    try {
+      window.localStorage.removeItem('lp-pending-join')
+    } catch {
+      // rien à nettoyer
+    }
     void (async () => {
       const joined = await joinRoom({ code })
       if (joined?.gameId) {

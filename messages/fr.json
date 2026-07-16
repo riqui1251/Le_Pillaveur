@@ -299,7 +299,8 @@
       "serviceUnavailable": "Service momentanément indisponible. Réessaie dans quelques instants.",
       "network": "Connexion impossible. Vérifie ta connexion internet et réessaie.",
       "generic": "Une erreur est survenue. Réessaie."
-    }
+    },
+    "orDivider": "ou"
   },
   "account": {
     "brand": "Le Pillaveur",
@@ -399,7 +400,9 @@
       "validating": "Validation…",
       "minorWarning": "Si vous avez moins de 18 ans, vous devez quitter ce site.",
       "analyticsLabel": "J'accepte les statistiques de visite (cookie de mesure d'audience).",
-      "analyticsHint": "Optionnel — sert uniquement à compter les visites et à lutter contre les abus. Aucun partage avec des tiers."
+      "analyticsHint": "Optionnel — sert uniquement à compter les visites et à lutter contre les abus. Aucun partage avec des tiers.",
+      "tagline": "La maison des jeux de soirée",
+      "promise": "13 jeux gratuits à jouer entre amis — sur un téléphone qui tourne, ou en ligne avec chat vocal et mode TV."
     },
     "pages": {
       "back": "Retour",
@@ -3457,5 +3460,54 @@
   "partyCanvas": {
     "clear": "Effacer",
     "eraser": "Gomme"
+  },
+  "landing": {
+    "hero": {
+      "title": "Des jeux de soirée gratuits, entre amis",
+      "subtitle": "Loup-Garou au chat vocal, quiz, dessin, bluff et jeux d'apéro : sur un téléphone qui tourne autour de la table, ou en ligne jusqu'à 12 joueurs — sans rien installer.",
+      "ctaPlay": "Choisir un jeu",
+      "ctaExplore": "Découvrir les jeux",
+      "trust": "100 % gratuit · sans installation · français, english, español, italiano"
+    },
+    "how": {
+      "title": "Comment ça marche",
+      "step1Title": "Choisis un jeu",
+      "step1Body": "18 jeux prêts à lancer : rôles cachés, quiz, dessin, dés et paris.",
+      "step2Title": "Ouvre une table",
+      "step2Body": "En ligne avec tes amis — ou en local, le téléphone passe de main en main.",
+      "step3Title": "Invite la bande",
+      "step3Body": "Un code, un QR ou un lien à partager. Pas assez de monde ? Les bots complètent."
+    },
+    "features": {
+      "title": "Ce que la maison offre",
+      "voice": "Chat vocal intégré",
+      "voiceDesc": "Parlez-vous en direct pendant la partie, sans Discord.",
+      "tv": "Mode TV",
+      "tvDesc": "La partie s'affiche en grand sur un écran, on rejoint en scannant le QR.",
+      "bots": "Bots de table",
+      "botsDesc": "Jamais bloqué : les bots prennent les places vides.",
+      "soft": "Mode soft",
+      "softDesc": "Les mêmes jeux, sans la moindre goutte — chacun son ambiance.",
+      "languages": "4 langues",
+      "languagesDesc": "Français, anglais, espagnol, italien.",
+      "free": "Gratuit, zéro install",
+      "freeDesc": "Tout tourne dans le navigateur, sur mobile comme sur PC."
+    },
+    "catalog": {
+      "title": "Les jeux de la maison",
+      "subtitle": "♠ rôles cachés · ♥ culture · ♦ hasard & dés · ♣ créa",
+      "online": "En ligne",
+      "local": "Local",
+      "players": "{min}-{max} joueurs"
+    },
+    "rules": {
+      "title": "Apprendre les règles",
+      "subtitle": "Les règles complètes de chaque jeu, expliquées en deux minutes.",
+      "linkLabel": "Règles de {game}"
+    },
+    "finalCta": {
+      "title": "La table est ouverte.",
+      "cta": "Jouer maintenant"
+    }
   }
 }

@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { ArrowLeft, ChevronDown, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Plus, Settings, Users, UserPlus, Tv, Trophy, X } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Plus, Settings, Share2, Users, UserPlus, Tv, Trophy, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -82,6 +82,40 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [showTv, setShowTv] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  // Choix ouvert/privé proposé au clic « Ouvrir une table » (modifiable
+  // ensuite dans les réglages du lobby).
+  const [choosingVisibility, setChoosingVisibility] = useState(false)
+  useEffect(() => {
+    setChoosingVisibility(false)
+  }, [room?.id])
+
+  // Partage du lien de la table (boucle virale n°1) : partage natif si
+  // disponible (mobile), sinon copie dans le presse-papier. Le lien
+  // /jeux?join=CODE fonctionne même pour un ami SANS compte : le code est
+  // mémorisé et consommé après son inscription (voir jeux/page.tsx).
+  const [linkShared, setLinkShared] = useState(false)
+  const shareTableLink = async () => {
+    if (!room) return
+    const url = `${window.location.origin}/${locale}/jeux?join=${room.code}`
+    const gameTitle = game?.title ?? 'Le Pillaveur'
+    const text = `Rejoins ma table ${gameTitle} sur Le Pillaveur ! Code : ${room.code}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Le Pillaveur', text, url })
+        return
+      }
+    } catch {
+      // Partage annulé par l'utilisateur : ne pas basculer sur la copie.
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`)
+      setLinkShared(true)
+      setTimeout(() => setLinkShared(false), 2000)
+    } catch {
+      // Presse-papier indisponible — tant pis.
+    }
+  }
   const [showInvite, setShowInvite] = useState(false)
   const [seatSel, setSeatSel] = useState<string | null>(null)
   const [top5, setTop5] = useState<Map<string, number>>(new Map())
@@ -311,20 +345,66 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
         {error && <p className="mt-4 text-center text-sm text-red-300">{error}</p>}
 
-        {/* « Ouvrir une table » : l'action de création attend en zone pouce. */}
+        {/* « Ouvrir une table » : l'action de création attend en zone pouce.
+            Le clic propose d'abord le choix ouvert/privé (modifiable ensuite
+            dans les réglages du lobby). */}
         {!wrongRoom && (
           <>
             <div aria-hidden className="h-16" />
             <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
               <div className="mx-auto w-full max-w-lg">
-                <Button
-                  onClick={() => createRoom(gameId)}
-                  disabled={loading}
-                  className="h-12 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
-                >
-                  <Plus className="mr-1.5 h-4 w-4" />
-                  {loading ? 'Création…' : 'Ouvrir une table'}
-                </Button>
+                {!choosingVisibility ? (
+                  <Button
+                    onClick={() => setChoosingVisibility(true)}
+                    disabled={loading}
+                    className="h-12 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    {loading ? 'Création…' : 'Ouvrir une table'}
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-center text-xs font-semibold uppercase tracking-wide text-white/50">
+                      Qui peut rejoindre ta table ?
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void createRoom(gameId, { visibility: 'public' })}
+                        disabled={loading}
+                        className="flex flex-col items-center gap-1 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+                      >
+                        <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-200">
+                          <Globe className="h-4 w-4" /> Ouverte
+                        </span>
+                        <span className="text-[10px] leading-tight text-white/45">
+                          Visible dans la liste des lobbies
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void createRoom(gameId, { visibility: 'private' })}
+                        disabled={loading}
+                        className="flex flex-col items-center gap-1 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+                      >
+                        <span className="flex items-center gap-1.5 text-sm font-bold text-amber-200">
+                          <Lock className="h-4 w-4" /> Privée
+                        </span>
+                        <span className="text-[10px] leading-tight text-white/45">
+                          Sur code, QR ou invitation
+                        </span>
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setChoosingVisibility(false)}
+                      disabled={loading}
+                      className="w-full py-1 text-center text-xs text-white/40 transition-colors hover:text-white/70"
+                    >
+                      {loading ? 'Création…' : 'Annuler'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -459,6 +539,14 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       })()}
 
       <div className="mb-3 flex gap-2">
+        <button
+          type="button"
+          onClick={() => void shareTableLink()}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20"
+        >
+          {linkShared ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+          {linkShared ? 'Lien copié !' : 'Partager'}
+        </button>
         <button
           type="button"
           onClick={() => setShowTv((v) => !v)}
