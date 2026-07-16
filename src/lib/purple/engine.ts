@@ -62,7 +62,7 @@ export type PurpleAction =
 export class PurpleEngineError extends Error {}
 
 export const PURPLE_MIN_PLAYERS = 2
-export const PURPLE_MAX_PLAYERS = 10
+export const PURPLE_MAX_PLAYERS = 16
 const CARD_VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R', 'A']
 const CARD_SUITS = ['♠', '♥', '♦', '♣']
 const HISTORY_LIMIT = 6

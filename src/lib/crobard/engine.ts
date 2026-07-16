@@ -13,7 +13,7 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  */
 
 export const CROBARD_MIN_PLAYERS = 3
-export const CROBARD_MAX_PLAYERS = 12
+export const CROBARD_MAX_PLAYERS = 16
 /** Compte à rebours d'échauffement au lancement. */
 export const CROBARD_COUNTDOWN_MS = 5_000
 /** Fenêtre pour choisir un mot parmi les 3 proposés. */

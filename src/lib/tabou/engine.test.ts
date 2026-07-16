@@ -35,19 +35,19 @@ function make(n = 4, seed: string | number = 'seed', targetScore = 20): TabouSta
 }
 
 describe('createTabouState', () => {
-  it('borne 4-12 joueurs, countdown au lancement puis description chronométrée', () => {
+  it('borne 4-16 joueurs, countdown au lancement puis description chronométrée', () => {
     const three = [
       { id: 'p0', name: 'P0', team: 'A' as const },
       { id: 'p1', name: 'P1', team: 'B' as const },
       { id: 'p2', name: 'P2', team: 'A' as const },
     ]
     expect(() => createTabouState(three, WORDS, 1, T0)).toThrow(TabouEngineError)
-    const thirteen = Array.from({ length: 13 }, (_, i) => ({
+    const seventeen = Array.from({ length: 17 }, (_, i) => ({
       id: `p${i}`,
       name: `P${i}`,
       team: (i % 2 === 0 ? 'A' : 'B') as 'A' | 'B',
     }))
-    expect(() => createTabouState(thirteen, WORDS, 1, T0)).toThrow(TabouEngineError)
+    expect(() => createTabouState(seventeen, WORDS, 1, T0)).toThrow(TabouEngineError)
     const four = Array.from({ length: 4 }, (_, i) => ({
       id: `p${i}`,
       name: `P${i}`,

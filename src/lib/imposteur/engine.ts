@@ -17,7 +17,7 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  */
 
 export const IMPOSTEUR_MIN_PLAYERS = 3
-export const IMPOSTEUR_MAX_PLAYERS = 10
+export const IMPOSTEUR_MAX_PLAYERS = 16
 /** Compte à rebours d'échauffement au lancement (5… 4… 3… 2… 1…). */
 export const IMPOSTEUR_COUNTDOWN_MS = 5_000
 /** Temps pour donner SON indice. */

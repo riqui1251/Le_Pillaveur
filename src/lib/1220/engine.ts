@@ -60,7 +60,7 @@ export type Game1220Action =
 export class Game1220EngineError extends Error {}
 
 export const GAME_1220_MIN_PLAYERS = 2
-export const GAME_1220_MAX_PLAYERS = 12
+export const GAME_1220_MAX_PLAYERS = 16
 const HISTORY_LIMIT = 15
 
 export function defaultChoices1220(): Choices1220 {

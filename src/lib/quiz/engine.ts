@@ -25,7 +25,7 @@ export const QUIZ_SIPS_WRONG = 2
 export const QUIZ_COUNTS = [10, 15, 20] as const
 export const QUIZ_DEFAULT_COUNT = 10
 export const QUIZ_MIN_PLAYERS = 2
-export const QUIZ_MAX_PLAYERS = 12
+export const QUIZ_MAX_PLAYERS = 16
 
 export type QuizCategory = 'culture' | 'bouffe' | 'musique' | 'sport' | 'ecrans' | 'fete'
 

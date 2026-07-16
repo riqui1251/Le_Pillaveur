@@ -29,14 +29,14 @@ function make(n = 4, seed: string | number = 'seed', totalRounds = 8): CrobardSt
 }
 
 describe('createCrobardState', () => {
-  it('borne 3-12 joueurs, countdown au lancement', () => {
+  it('borne 3-16 joueurs, countdown au lancement', () => {
     const two = [
       { id: 'p0', name: 'P0' },
       { id: 'p1', name: 'P1' },
     ]
     expect(() => createCrobardState(two, WORDS, 1, T0)).toThrow(CrobardEngineError)
-    const thirteen = Array.from({ length: 13 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
-    expect(() => createCrobardState(thirteen, WORDS, 1, T0)).toThrow(CrobardEngineError)
+    const seventeen = Array.from({ length: 17 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    expect(() => createCrobardState(seventeen, WORDS, 1, T0)).toThrow(CrobardEngineError)
     const four = Array.from({ length: 4 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
     const raw = createCrobardState(four, WORDS, 1, T0)
     expect(raw.phase).toBe('countdown')

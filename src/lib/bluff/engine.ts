@@ -17,7 +17,7 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  */
 
 export const BLUFF_MIN_PLAYERS = 3
-export const BLUFF_MAX_PLAYERS = 10
+export const BLUFF_MAX_PLAYERS = 16
 /** Compte à rebours d'échauffement au lancement. */
 export const BLUFF_COUNTDOWN_MS = 5_000
 /** Temps pour soumettre SON bluff. */

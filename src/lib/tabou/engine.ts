@@ -14,7 +14,7 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  */
 
 export const TABOU_MIN_PLAYERS = 4
-export const TABOU_MAX_PLAYERS = 12
+export const TABOU_MAX_PLAYERS = 16
 /** Compte à rebours d'échauffement au lancement. */
 export const TABOU_COUNTDOWN_MS = 5_000
 /** Durée d'une manche de description. */

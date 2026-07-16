@@ -74,13 +74,13 @@ describe('createImposteurState', () => {
     expect(seven.players.filter((p) => p.team === 'imposteur')).toHaveLength(2)
   })
 
-  it('borne 3-10 joueurs, countdown au lancement puis phase indice chronométrée', () => {
+  it('borne 3-16 joueurs, countdown au lancement puis phase indice chronométrée', () => {
     expect(() => createImposteurState(FOUR.slice(0, 2), PAIRS, 1, T0)).toThrow(
       ImposteurEngineError
     )
     expect(createImposteurState(FOUR.slice(0, 3), PAIRS, 1, T0).players).toHaveLength(3)
-    const eleven = Array.from({ length: 11 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
-    expect(() => createImposteurState(eleven, PAIRS, 1, T0)).toThrow(ImposteurEngineError)
+    const seventeen = Array.from({ length: 17 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    expect(() => createImposteurState(seventeen, PAIRS, 1, T0)).toThrow(ImposteurEngineError)
     // La partie s'ouvre sur le compte à rebours, pas directement sur l'indice.
     const raw = createImposteurState(FOUR, PAIRS, 1, T0)
     expect(raw.phase).toBe('countdown')

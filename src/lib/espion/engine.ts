@@ -17,7 +17,7 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  */
 
 export const ESPION_MIN_PLAYERS = 3
-export const ESPION_MAX_PLAYERS = 8
+export const ESPION_MAX_PLAYERS = 16
 /** Compte à rebours d'échauffement au lancement. */
 export const ESPION_COUNTDOWN_MS = 5_000
 /** Fenêtre de soutien à une accusation. */

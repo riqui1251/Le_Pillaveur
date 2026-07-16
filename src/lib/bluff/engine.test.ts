@@ -43,10 +43,10 @@ function submitAll(state: BluffState, now = T0): BluffState {
 }
 
 describe('createBluffState', () => {
-  it('borne 3-10 joueurs, countdown au lancement puis phase submit chronométrée', () => {
+  it('borne 3-16 joueurs, countdown au lancement puis phase submit chronométrée', () => {
     expect(() => createBluffState(FOUR.slice(0, 2), PROMPTS, 1, T0)).toThrow(BluffEngineError)
-    const eleven = Array.from({ length: 11 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
-    expect(() => createBluffState(eleven, PROMPTS, 1, T0)).toThrow(BluffEngineError)
+    const seventeen = Array.from({ length: 17 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    expect(() => createBluffState(seventeen, PROMPTS, 1, T0)).toThrow(BluffEngineError)
     const raw = createBluffState(FOUR, PROMPTS, 1, T0)
     expect(raw.phase).toBe('countdown')
     expect(raw.phaseEndsAt).toBe(T0 + BLUFF_COUNTDOWN_MS)

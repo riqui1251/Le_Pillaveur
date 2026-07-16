@@ -32,11 +32,11 @@ function crewOf(state: EspionState): string[] {
 }
 
 describe('createEspionState', () => {
-  it('borne 3-8 joueurs, countdown au lancement puis discussion chronométrée', () => {
+  it('borne 3-16 joueurs, countdown au lancement puis discussion chronométrée', () => {
     const three = Array.from({ length: 3 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
     expect(() => createEspionState(three.slice(0, 2), LOCATIONS, 1, T0)).toThrow(EspionEngineError)
-    const nine = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
-    expect(() => createEspionState(nine, LOCATIONS, 1, T0)).toThrow(EspionEngineError)
+    const seventeen = Array.from({ length: 17 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    expect(() => createEspionState(seventeen, LOCATIONS, 1, T0)).toThrow(EspionEngineError)
     const raw = createEspionState(three, LOCATIONS, 1, T0)
     expect(raw.phase).toBe('countdown')
     expect(raw.phaseEndsAt).toBe(T0 + ESPION_COUNTDOWN_MS)

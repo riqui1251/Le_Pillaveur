@@ -16,7 +16,7 @@ interface GameCardProps {
 /** Badge « nombre de joueurs » : 3-12, ou 2+ quand il n'y a pas de vrai plafond. */
 function playersLabel(min?: number, max?: number): string | null {
   if (!min) return null
-  if (!max || max >= 13) return `${min}+`
+  if (!max || max >= 20) return `${min}+`
   if (max === min) return `${min}`
   return `${min}-${max}`
 }
