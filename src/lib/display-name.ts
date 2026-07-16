@@ -38,7 +38,13 @@ export function displayNameValidationMessage(
   return reason ? getModerationErrorMessage(reason, locale, 'account') : null
 }
 
-/** Comptes avec email + mot de passe (pseudo public unique, casse ignorée). */
+/**
+ * Un pseudo est « pris » s'il correspond (casse/espaces ignorés) au pseudo de
+ * compte OU au pseudo en ligne de n'importe quel compte actif : mot de passe,
+ * Google (email sans mot de passe) ou invité. Sans ça, un homonyme exact
+ * permet d'usurper l'identité visuelle d'un joueur à la table (effets,
+ * cadres) — seuls les enregistrements fantômes legacy sont ignorés.
+ */
 export async function isDisplayNameTaken(
   displayName: string,
   excludeUserId?: string
@@ -49,16 +55,14 @@ export async function isDisplayNameTaken(
   const rows = excludeUserId
     ? await prisma.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM "User"
-        WHERE LOWER(TRIM("displayName")) = ${key}
-          AND "passwordHash" != ''
-          AND "email" IS NOT NULL
+        WHERE (LOWER(TRIM("displayName")) = ${key} OR LOWER(TRIM(COALESCE("name", ''))) = ${key})
+          AND ("passwordHash" != '' OR "email" IS NOT NULL OR "isGuest" = 1)
           AND id != ${excludeUserId}
         LIMIT 1`
     : await prisma.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM "User"
-        WHERE LOWER(TRIM("displayName")) = ${key}
-          AND "passwordHash" != ''
-          AND "email" IS NOT NULL
+        WHERE (LOWER(TRIM("displayName")) = ${key} OR LOWER(TRIM(COALESCE("name", ''))) = ${key})
+          AND ("passwordHash" != '' OR "email" IS NOT NULL OR "isGuest" = 1)
         LIMIT 1`
 
   return rows.length > 0
