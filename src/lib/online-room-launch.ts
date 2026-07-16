@@ -18,6 +18,7 @@ import { launchCrobardRoom } from '@/lib/online-crobard'
 import { launchTelephoneDessineRoom } from '@/lib/online-telephone-dessine'
 import { launchSansFiltreRoom } from '@/lib/online-sans-filtre'
 import { launchMotsCodesRoom } from '@/lib/online-mots-codes'
+import { launchDilemmesRoom } from '@/lib/online-dilemmes'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 
 export type RoomWithMembers = {
@@ -106,6 +107,9 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
       break
     case 'mots-codes':
       await launchMotsCodesRoom(roomId, room)
+      break
+    case 'dilemmes':
+      await launchDilemmesRoom(roomId, room)
       break
     default: {
       const memberUserIds = room.members.map((m) => m.userId)

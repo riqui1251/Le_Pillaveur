@@ -41,6 +41,9 @@ export type RoomSettings = {
   /** Mots Codés : choix d'équipe par membre (A = Or, B = Rouge). */
   mcTeams?: Record<string, 'A' | 'B'>
 
+  /** Dilemmes : nombre de cartes de la partie (10/15/20). */
+  dilRounds?: number
+
   /** Le Menteur : variante Palifico (1 dé → les 1 perdent leur statut de joker, face verrouillée). */
   menteurPalifico?: boolean
 

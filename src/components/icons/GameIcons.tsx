@@ -426,6 +426,19 @@ export function CodeKeyIcon({ className = 'w-6 h-6' }: IconProps) {
   )
 }
 
+// Dilemmes : balance à deux plateaux (le choix impossible)
+export function DilemmaScaleIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 4v15" />
+      <path d="M5 7h14" />
+      <path d="M9 19h6" />
+      <path d="M5 7l-2.4 5a2.6 2.6 0 0 0 4.8 0z" />
+      <path d="M19 7l-2.4 5a2.6 2.6 0 0 0 4.8 0z" />
+    </svg>
+  )
+}
+
 // Fallback générique : carte au dos orné
 export function GenericGameIcon({ className = 'w-6 h-6' }: IconProps) {
   return (

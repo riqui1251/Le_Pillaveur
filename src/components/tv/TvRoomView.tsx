@@ -39,6 +39,8 @@ import { TvSansFiltre } from './TvSansFiltre'
 import type { SFClientView } from '@/lib/sans-filtre/engine'
 import { TvMotsCodes } from './TvMotsCodes'
 import type { MCClientView } from '@/lib/mots-codes/engine'
+import { TvDilemmes } from './TvDilemmes'
+import type { DilClientView } from '@/lib/dilemmes/engine'
 
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
@@ -56,6 +58,7 @@ const GAME_TITLES: Record<string, string> = {
   'telephone-dessine': 'Téléphone Dessiné',
   'sans-filtre': 'Sans Filtre',
   'mots-codes': 'Mots Codés',
+  dilemmes: 'Dilemmes',
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
@@ -183,6 +186,8 @@ export function TvRoomView({ code }: { code: string }) {
     content = <TvSansFiltre room={room} state={state as unknown as SFClientView} />
   } else if (room.gameId === 'mots-codes') {
     content = <TvMotsCodes room={room} state={state as unknown as MCClientView} />
+  } else if (room.gameId === 'dilemmes') {
+    content = <TvDilemmes room={room} state={state as unknown as DilClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

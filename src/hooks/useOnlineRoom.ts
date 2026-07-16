@@ -294,6 +294,7 @@ export function useOnlineRoomState() {
       tabouTargetScore?: number
       crobardRounds?: number
       sfRounds?: number
+      dilRounds?: number
     }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {

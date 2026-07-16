@@ -98,6 +98,9 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.sfRounds === 'number' && [5, 8, 12].includes(body.sfRounds)) {
     next.sfRounds = body.sfRounds
   }
+  if (typeof body.dilRounds === 'number' && [10, 15, 20].includes(body.dilRounds)) {
+    next.dilRounds = body.dilRounds
+  }
 
   const visibilityUpdate =
     typeof body.visibility === 'string' && VALID_VISIBILITIES.has(body.visibility)

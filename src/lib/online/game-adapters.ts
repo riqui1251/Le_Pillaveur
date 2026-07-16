@@ -255,6 +255,24 @@ import {
   MC_MAX_PLAYERS,
   type MCState,
 } from '@/lib/mots-codes/engine'
+import {
+  parseDilState,
+  serializeDilState,
+  applyDilRoomAction,
+  convertDilPlayerToBot,
+  markDilPlayerLeft,
+  rejoinDilPlayer,
+  dilClientViewJson,
+  dilSpectatorViewJson,
+  type DilRoomActionInput,
+} from '@/lib/dilemmes/server-adapter'
+import {
+  currentDilActorId,
+  toDilClientView,
+  DIL_MIN_PLAYERS,
+  DIL_MAX_PLAYERS,
+  type DilState,
+} from '@/lib/dilemmes/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -1109,6 +1127,54 @@ const motsCodesAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinMCPlayer(state as MCState, userId),
 }
 
+// ─── Dilemmes ────────────────────────────────────────────────────────────────
+
+const dilemmesAdapter: GameAdapter = {
+  // 3 humains par défaut ; avec l'option bots du lobby, un joueur seul peut
+  // lancer (buildDilState comble jusqu'à 3). Pas de classement (aucun skill).
+  minPlayers: DIL_MIN_PLAYERS,
+  maxPlayers: DIL_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parseDilState(json),
+  serialize: (state) => serializeDilState(state as DilState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as DilState
+    let input: DilRoomActionInput
+    if (body.action === 'vote' && typeof body.choice === 'string') {
+      input = { type: 'vote', choice: body.choice }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyDilRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertDilPlayerToBot(state as DilState, userId),
+  isFinished: (state) => (state as DilState).phase === 'finished',
+  currentActorId: (state) => currentDilActorId(state as DilState),
+  clientViewJson: (state, viewerId) => dilClientViewJson(state as DilState, viewerId),
+  spectatorViewJson: (state) => dilSpectatorViewJson(state as DilState),
+  actionResponse: (state, viewerId) => ({
+    view: toDilClientView(state as DilState, viewerId),
+    viewJson: dilClientViewJson(state as DilState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markDilPlayerLeft(state as DilState, userId, at),
+  rejoin: (state, userId) => rejoinDilPlayer(state as DilState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -1127,6 +1193,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   'telephone-dessine': telephoneAdapter,
   'sans-filtre': sansFiltreAdapter,
   'mots-codes': motsCodesAdapter,
+  dilemmes: dilemmesAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

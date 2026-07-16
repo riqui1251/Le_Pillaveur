@@ -652,6 +652,10 @@
       "mots-codes": {
         "title": "Mots Codés",
         "description": "Two teams, 25 words, one Spymaster per side: one clue, one number, and beware the assassin!"
+      },
+      "dilemmes": {
+        "title": "Dilemmes",
+        "description": "Would you rather, Never have I ever, Who at the table: secret votes revealed at once — the minority drinks! Content in French."
       }
     },
     "ballon-surprise": {
@@ -3015,6 +3019,65 @@
           {
             "title": "Beware the assassin",
             "body": "One tile hides the assassin (card back): tapping it loses instantly. First team to reveal all their words wins!"
+          }
+        ]
+      }
+    },
+    "dilemmes": {
+      "page": {
+        "onlineOnly": "Dilemmes is online-only: votes stay secret until the simultaneous reveal.",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "roundsCount": "Number of cards",
+        "rounds": "cards"
+      },
+      "game": {
+        "countdown": {
+          "title": "Game starting",
+          "hint": "Secret votes, brutal reveal."
+        },
+        "round": "Card {n}/{total}",
+        "kinds": {
+          "prefer": "Would you rather",
+          "never": "Never have I ever",
+          "who": "Who at the table"
+        },
+        "phaseReveal": "Reveal",
+        "preferPrompt": "Would you rather…",
+        "or": "or",
+        "neverPrompt": "Never have I ever…",
+        "neverDid": "I’ve done it 😏",
+        "neverNever": "Never ever",
+        "whoPrompt": "Who at the table…",
+        "votePrompt": "Vote in secret!",
+        "voted": "Voted! {count}/{total}…",
+        "minorityDrinks": "The minority drinks 🍺",
+        "nextCard": "Next card",
+        "seeEnd": "Finish",
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "finished": {
+          "title": "Dilemmas over!",
+          "subtitle": "No winner here — just revelations. The table is warmed up: start a real game!",
+          "replay": "Play again",
+          "rematchWaiting": "Rematch {count}/{total}…",
+          "backToMenu": "Back to menu"
+        },
+        "whoDrinks": "The most-voted player drinks 🍺"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "One card, one secret vote",
+            "body": "Would you rather, Never have I ever, Who at the table: everyone votes blind."
+          },
+          {
+            "title": "Simultaneous reveal",
+            "body": "Once everyone voted, everything shows at once: sides, percentages, culprits."
+          },
+          {
+            "title": "The minority drinks",
+            "body": "In Apéro mode, the minority side drinks. Then next card — the debates are the game."
           }
         ]
       }

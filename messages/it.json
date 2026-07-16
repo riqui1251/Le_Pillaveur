@@ -642,6 +642,10 @@
       "mots-codes": {
         "title": "Mots Codés",
         "description": "Due squadre, 25 parole, un Capospia per parte: un indizio, un numero, e attenti all’assassino!"
+      },
+      "dilemmes": {
+        "title": "Dilemmes",
+        "description": "Preferiresti, Non ho mai, Chi del tavolo: voti segreti rivelati insieme — la minoranza beve! Contenuto in francese."
       }
     },
     "ballon-surprise": {
@@ -3005,6 +3009,65 @@
           {
             "title": "Attenti all’assassino",
             "body": "Una tessera nasconde l’assassino (dorso di carta): toccarla fa perdere subito. La prima squadra a rivelare tutte le sue parole vince!"
+          }
+        ]
+      }
+    },
+    "dilemmes": {
+      "page": {
+        "onlineOnly": "Dilemmes si gioca online: i voti restano segreti fino alla rivelazione simultanea.",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "roundsCount": "Numero di carte",
+        "rounds": "carte"
+      },
+      "game": {
+        "countdown": {
+          "title": "La partita inizia",
+          "hint": "Voti segreti, rivelazione brutale."
+        },
+        "round": "Carta {n}/{total}",
+        "kinds": {
+          "prefer": "Preferiresti",
+          "never": "Non ho mai",
+          "who": "Chi del tavolo"
+        },
+        "phaseReveal": "Rivelazione",
+        "preferPrompt": "Preferiresti…",
+        "or": "oppure",
+        "neverPrompt": "Non ho mai…",
+        "neverDid": "L’ho fatto 😏",
+        "neverNever": "Mai nella vita",
+        "whoPrompt": "Chi del tavolo…",
+        "votePrompt": "Vota in segreto!",
+        "voted": "Votato! {count}/{total}…",
+        "minorityDrinks": "La minoranza beve 🍺",
+        "nextCard": "Carta successiva",
+        "seeEnd": "Termina",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "finished": {
+          "title": "Fine dei dilemmi!",
+          "subtitle": "Nessun vincitore — solo rivelazioni. Il tavolo è caldo: lanciate un vero gioco!",
+          "replay": "Gioca ancora",
+          "rematchWaiting": "Rivincita {count}/{total}…",
+          "backToMenu": "Torna al menu"
+        },
+        "whoDrinks": "Il più votato beve 🍺"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Una carta, un voto segreto",
+            "body": "Preferiresti, Non ho mai, Chi del tavolo: tutti votano alla cieca."
+          },
+          {
+            "title": "Rivelazione simultanea",
+            "body": "Quando tutti hanno votato, appare tutto insieme: schieramenti, percentuali, colpevoli."
+          },
+          {
+            "title": "La minoranza beve",
+            "body": "In modalità Apéro, la parte in minoranza beve. Poi carta successiva — i dibattiti sono il gioco."
           }
         ]
       }

@@ -427,6 +427,26 @@ export const GAMES: GameMeta[] = [
     softModeReady: true,
   },
   {
+    id: 'dilemmes',
+    title: 'Dilemmes',
+    description:
+      'Tu préfères, Je n’ai jamais, Qui de la table : votes secrets révélés d’un coup — la minorité trinque !',
+    path: '/games/dilemmes',
+    emoji: '⚖️',
+    suit: 'heart',
+    rank: '9',
+    gradient: 'from-rose-700 to-amber-600',
+    colorFrom: '#be123c',
+    colorTo: '#d97706',
+    fallbackColor: '#be123c',
+    onlineReady: true,
+    minPlayers: 3,
+    maxPlayers: 16,
+    onlineOnly: true,
+    botsFillable: true,
+    softModeReady: true,
+  },
+  {
     id: 'telephone-dessine',
     title: 'Téléphone Dessiné',
     description:

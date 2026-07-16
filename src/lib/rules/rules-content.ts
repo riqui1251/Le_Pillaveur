@@ -89,6 +89,11 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Mots Codés en ligne : 25 mots, deux équipes, un Maître-mot par camp qui relie plusieurs mots d’un seul indice. Règles complètes, 4 à 16 joueurs, gratuit avec chat vocal.',
   },
+  dilemmes: {
+    title: 'Règles de Dilemmes — votes secrets et révélations',
+    description:
+      'Dilemmes en ligne : Tu préfères, Je n’ai jamais et Qui de la table en votes secrets révélés d’un coup — la minorité trinque. Règles complètes, 3 à 16 joueurs, gratuit.',
+  },
 }
 
 const RULES_ROOT = path.join(process.cwd(), 'docs', 'rules', 'fr')

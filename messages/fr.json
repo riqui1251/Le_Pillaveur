@@ -652,6 +652,10 @@
       "mots-codes": {
         "title": "Mots Codés",
         "description": "Deux équipes, 25 mots, un Maître-mot par camp : un indice, un nombre, et gare à l’assassin !"
+      },
+      "dilemmes": {
+        "title": "Dilemmes",
+        "description": "Tu préfères, Je n’ai jamais, Qui de la table : votes secrets révélés d’un coup — la minorité trinque !"
       }
     },
     "ballon-surprise": {
@@ -3015,6 +3019,65 @@
           {
             "title": "Gare à l’assassin",
             "body": "Une tuile cache l’assassin (dos de carte) : la toucher fait perdre immédiatement. Première équipe à tout révéler : victoire !"
+          }
+        ]
+      }
+    },
+    "dilemmes": {
+      "page": {
+        "onlineOnly": "Dilemmes se joue en ligne : les votes restent secrets jusqu’à la révélation simultanée — impossible en passe-et-joue.",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "roundsCount": "Nombre de cartes",
+        "rounds": "cartes"
+      },
+      "game": {
+        "countdown": {
+          "title": "La partie commence",
+          "hint": "Votes secrets, révélation brutale."
+        },
+        "round": "Carte {n}/{total}",
+        "kinds": {
+          "prefer": "Tu préfères",
+          "never": "Je n’ai jamais",
+          "who": "Qui de la table"
+        },
+        "phaseReveal": "Révélation",
+        "preferPrompt": "Tu préfères…",
+        "or": "ou",
+        "neverPrompt": "Je n’ai jamais…",
+        "neverDid": "Je l’ai fait 😏",
+        "neverNever": "Jamais de la vie",
+        "whoPrompt": "Qui de la table…",
+        "votePrompt": "Vote en secret !",
+        "voted": "Voté ! {count}/{total}…",
+        "minorityDrinks": "La minorité boit 🍺",
+        "nextCard": "Carte suivante",
+        "seeEnd": "Terminer",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "finished": {
+          "title": "Fin des dilemmes !",
+          "subtitle": "Pas de gagnant ici — juste des révélations. La table est chaude : lancez un vrai jeu !",
+          "replay": "Rejouer",
+          "rematchWaiting": "Revanche {count}/{total}…",
+          "backToMenu": "Retour au menu"
+        },
+        "whoDrinks": "Le plus désigné boit 🍺"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Une carte, un vote secret",
+            "body": "Tu préfères, Je n’ai jamais, Qui de la table : chacun vote sans voir les autres."
+          },
+          {
+            "title": "Révélation simultanée",
+            "body": "Quand tout le monde a voté, tout s’affiche d’un coup : les camps, les pourcentages, les coupables."
+          },
+          {
+            "title": "La minorité boit",
+            "body": "En mode Apéro, le camp minoritaire trinque. Puis carte suivante — les débats font le jeu."
           }
         ]
       }
