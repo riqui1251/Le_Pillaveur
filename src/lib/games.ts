@@ -388,6 +388,26 @@ export const GAMES: GameMeta[] = [
     softModeReady: true,
   },
   {
+    id: 'sans-filtre',
+    title: 'Sans Filtre',
+    description:
+      'Une carte à trou, des réponses de mauvaise foi : le juge du tour couronne la plus drôle. À lire à voix haute !',
+    path: '/games/sans-filtre',
+    emoji: '🃏',
+    suit: 'club',
+    rank: 'J',
+    gradient: 'from-zinc-800 to-amber-600',
+    colorFrom: '#27272a',
+    colorTo: '#d97706',
+    fallbackColor: '#b45309',
+    onlineReady: true,
+    minPlayers: 4,
+    maxPlayers: 16,
+    onlineOnly: true,
+    botsFillable: true,
+    softModeReady: true,
+  },
+  {
     id: 'telephone-dessine',
     title: 'Téléphone Dessiné',
     description:

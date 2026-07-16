@@ -402,6 +402,18 @@ export function PhoneSketchIcon({ className = 'w-6 h-6' }: IconProps) {
   )
 }
 
+// Sans Filtre : bulle de parole + astérisque de censure
+export function UncensoredIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 11.2c0 3.7-3.6 6.8-8 6.8-.9 0-1.8-.1-2.6-.4L5 19.5l1-3.1C4.7 15.1 4 13.2 4 11.2 4 7.5 7.6 4.5 12 4.5s8 3 8 6.7z" />
+      <path d="M12 8.6v4.4" strokeWidth="1.4" />
+      <path d="M10.1 9.7l3.8 2.2" strokeWidth="1.4" />
+      <path d="M13.9 9.7l-3.8 2.2" strokeWidth="1.4" />
+    </svg>
+  )
+}
+
 // Fallback générique : carte au dos orné
 export function GenericGameIcon({ className = 'w-6 h-6' }: IconProps) {
   return (

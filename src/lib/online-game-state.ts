@@ -35,6 +35,9 @@ export type RoomSettings = {
   /** L'Imposteur : nombre d'imposteurs choisi par l'hôte (défaut : dérivé du nombre de joueurs). */
   imposteurCount?: number
 
+  /** Sans Filtre : nombre de manches de la partie (5/8/12). */
+  sfRounds?: number
+
   /** Le Menteur : variante Palifico (1 dé → les 1 perdent leur statut de joker, face verrouillée). */
   menteurPalifico?: boolean
 

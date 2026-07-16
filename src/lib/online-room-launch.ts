@@ -16,6 +16,7 @@ import { launchEspionRoom } from '@/lib/online-espion'
 import { launchTabouRoom } from '@/lib/online-tabou'
 import { launchCrobardRoom } from '@/lib/online-crobard'
 import { launchTelephoneDessineRoom } from '@/lib/online-telephone-dessine'
+import { launchSansFiltreRoom } from '@/lib/online-sans-filtre'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 
 export type RoomWithMembers = {
@@ -98,6 +99,9 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
       break
     case 'telephone-dessine':
       await launchTelephoneDessineRoom(roomId, room)
+      break
+    case 'sans-filtre':
+      await launchSansFiltreRoom(roomId, room)
       break
     default: {
       const memberUserIds = room.members.map((m) => m.userId)

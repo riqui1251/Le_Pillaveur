@@ -219,6 +219,24 @@ import {
   TELEPHONE_MAX_PLAYERS,
   type TelephoneState,
 } from '@/lib/telephone-dessine/engine'
+import {
+  parseSFState,
+  serializeSFState,
+  applySFRoomAction,
+  convertSFPlayerToBot,
+  markSFPlayerLeft,
+  rejoinSFPlayer,
+  sfClientViewJson,
+  sfSpectatorViewJson,
+  type SFRoomActionInput,
+} from '@/lib/sans-filtre/server-adapter'
+import {
+  currentSFActorId,
+  toSFClientView,
+  SF_MIN_PLAYERS,
+  SF_MAX_PLAYERS,
+  type SFState,
+} from '@/lib/sans-filtre/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -974,6 +992,56 @@ const telephoneAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinTelephonePlayer(state as TelephoneState, userId),
 }
 
+// ─── Sans Filtre ─────────────────────────────────────────────────────────────
+
+const sansFiltreAdapter: GameAdapter = {
+  // 4 joueurs minimum (le juge + trois cartes à départager) ; avec l'option
+  // bots du lobby, un joueur seul peut lancer (buildSFState comble jusqu'à 4).
+  minPlayers: SF_MIN_PLAYERS,
+  maxPlayers: SF_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parseSFState(json),
+  serialize: (state) => serializeSFState(state as SFState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as SFState
+    let input: SFRoomActionInput
+    if (body.action === 'play-card' && typeof body.card === 'number') {
+      input = { type: 'play-card', card: body.card }
+    } else if (body.action === 'judge-pick' && typeof body.card === 'number') {
+      input = { type: 'judge-pick', card: body.card }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applySFRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertSFPlayerToBot(state as SFState, userId),
+  isFinished: (state) => (state as SFState).phase === 'finished',
+  currentActorId: (state) => currentSFActorId(state as SFState),
+  clientViewJson: (state, viewerId) => sfClientViewJson(state as SFState, viewerId),
+  spectatorViewJson: (state) => sfSpectatorViewJson(state as SFState),
+  actionResponse: (state, viewerId) => ({
+    view: toSFClientView(state as SFState, viewerId),
+    viewJson: sfClientViewJson(state as SFState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markSFPlayerLeft(state as SFState, userId, at),
+  rejoin: (state, userId) => rejoinSFPlayer(state as SFState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -990,6 +1058,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   tabou: tabouAdapter,
   crobard: crobardAdapter,
   'telephone-dessine': telephoneAdapter,
+  'sans-filtre': sansFiltreAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {
