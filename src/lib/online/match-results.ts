@@ -7,6 +7,7 @@ import type { MenteurState } from '@/lib/menteur/engine'
 import type { ImposteurState } from '@/lib/imposteur/engine'
 import type { QuizState } from '@/lib/quiz/engine'
 import type { SFState } from '@/lib/sans-filtre/engine'
+import type { MCState } from '@/lib/mots-codes/engine'
 
 /**
  * Résultats de partie EN LIGNE pour le classement (victoires/défaites —
@@ -136,6 +137,14 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
         isBot: p.isBot,
         won: p.crowns > 0 && rankOf.get(p.id) === 1,
         rank: rankOf.get(p.id),
+      }))
+    }
+    case 'mots-codes': {
+      const s = state as MCState
+      return s.players.map((p) => ({
+        playerId: p.id,
+        isBot: p.isBot,
+        won: s.winnerTeam !== null && p.team === s.winnerTeam,
       }))
     }
     default:

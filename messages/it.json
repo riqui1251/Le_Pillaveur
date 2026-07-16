@@ -638,6 +638,10 @@
       "sans-filtre": {
         "title": "Sans Filtre",
         "description": "Una carta da completare e risposte spudorate: il giudice incorona la più divertente. Contenuto in francese."
+      },
+      "mots-codes": {
+        "title": "Mots Codés",
+        "description": "Due squadre, 25 parole, un Capospia per parte: un indizio, un numero, e attenti all’assassino!"
       }
     },
     "ballon-surprise": {
@@ -2937,6 +2941,72 @@
       "lobby": {
         "roundsCount": "Numero di round",
         "rounds": "round"
+      }
+    },
+    "mots-codes": {
+      "page": {
+        "onlineOnly": "Mots Codés si gioca online: solo i Capispia ricevono la soluzione.",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "teams": "Squadre",
+        "teamGold": "Squadra Oro",
+        "teamRed": "Squadra Rossa",
+        "joinTeam": "Unisciti",
+        "autoSlot": "assegnato automaticamente",
+        "teamsHint": "Il primo giocatore di ogni squadra diventa Capospia. Minimo 2 per squadra."
+      },
+      "game": {
+        "countdown": {
+          "title": "La partita inizia",
+          "hintMaster": "Sei Capospia: vedrai la soluzione. Nemmeno una parola!",
+          "hintGuesser": "Ascolta il tuo Capospia e tocca le tessere giuste."
+        },
+        "teamGold": "Oro",
+        "teamRed": "Rossa",
+        "phaseClue": "Indizio della squadra {team}",
+        "phaseGuess": "La squadra {team} indovina",
+        "youAreMaster": "Sei il Capospia — vedi la soluzione, non tocchi la griglia.",
+        "masterIs": "Capospia della tua squadra: {name}",
+        "cluePrompt": "Dai il tuo indizio: UNA parola + un numero",
+        "cluePlaceholder": "La tua parola-indizio",
+        "clueCountAria": "Numero di parole mirate",
+        "clueSend": "Dai l’indizio",
+        "clueHint": "Dilla anche ad alta voce in chat vocale — il campo la fissa per il tavolo.",
+        "waitingClue": "{name} ({team}) sta pensando all’indizio…",
+        "waitingGuess": "La squadra {team} discute e tocca le tessere…",
+        "guessesLeft": "{count} tentativo(i) rimasto(i)",
+        "pass": "Passa il turno",
+        "solutionHint": "Vedi la soluzione: oro = le parole della tua squadra, dorso di carta = assassino.",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "victory": {
+          "teamWins": "Vince la squadra {team}!",
+          "tie": "Nessun vincitore",
+          "assassin": "È stato toccato l’assassino — sconfitta immediata.",
+          "replay": "Gioca ancora",
+          "rematchWaiting": "Rivincita {count}/{total}…",
+          "backToMenu": "Torna al menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Due squadre, 25 parole",
+            "body": "Ogni squadra deve trovare le SUE parole. Solo i Capispia vedono i colori."
+          },
+          {
+            "title": "Un indizio, un numero",
+            "body": "Il Capospia dà UNA parola e un numero («VIGNETO · 3») che collega più parole. Vietata una parola della griglia."
+          },
+          {
+            "title": "Toccate le tessere",
+            "body": "La squadra discute in chat vocale e tocca le tessere. Colore giusto: si continua. Neutra o avversaria: il turno passa."
+          },
+          {
+            "title": "Attenti all’assassino",
+            "body": "Una tessera nasconde l’assassino (dorso di carta): toccarla fa perdere subito. La prima squadra a rivelare tutte le sue parole vince!"
+          }
+        ]
       }
     }
   },

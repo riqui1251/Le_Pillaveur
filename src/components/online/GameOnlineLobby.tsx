@@ -129,6 +129,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tImposteur = useTranslations('games.imposteur.lobby')
   const tBluff = useTranslations('games.bluff.lobby')
   const tSf = useTranslations('games.sans-filtre.lobby')
+  const tMc = useTranslations('games.mots-codes.lobby')
   const tEspion = useTranslations('games.espion.lobby')
   const tTabou = useTranslations('games.tabou.lobby')
   const tCrobard = useTranslations('games.crobard.lobby')
@@ -1054,6 +1055,66 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </div>
         </>
       )}
+
+      {gameId === 'mots-codes' && (() => {
+        const teams = room.settings.mcTeams ?? {}
+        const teamMembers = (team: 'A' | 'B') => room.members.filter((m) => teams[m.userId] === team)
+        const myTeam = user ? teams[user.id] : undefined
+        return (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
+              {tMc('teams')}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {(['A', 'B'] as const).map((team) => {
+                const inTeam = teamMembers(team)
+                const isMine = myTeam === team
+                return (
+                  <div
+                    key={team}
+                    className={cn(
+                      'rounded-xl border p-2.5',
+                      team === 'A' ? 'border-amber-400/25 bg-amber-500/10' : 'border-red-400/25 bg-red-500/10'
+                    )}
+                  >
+                    <p className={cn('mb-2 text-xs font-bold', team === 'A' ? 'text-amber-300' : 'text-red-300')}>
+                      {team === 'A' ? tMc('teamGold') : tMc('teamRed')}
+                    </p>
+                    <ul className="mb-2 min-h-[1.75rem] space-y-1">
+                      {inTeam.length === 0 && (
+                        <li className="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/35">{tMc('autoSlot')}</li>
+                      )}
+                      {inTeam.map((member) => (
+                        <li key={member.userId} className="truncate rounded-lg bg-black/25 px-2 py-1 text-xs font-medium text-white">
+                          {member.preferences?.icon && (
+                            <span aria-hidden className="mr-1">
+                              <PlayerAvatarGlyph value={member.preferences.icon} />
+                            </span>
+                          )}
+                          {member.displayName}
+                        </li>
+                      ))}
+                    </ul>
+                    {!isMine && (
+                      <button
+                        type="button"
+                        onClick={() => setTeam(team)}
+                        className={cn(
+                          'w-full rounded-lg py-1.5 text-xs font-semibold transition-colors',
+                          team === 'A' ? 'bg-amber-600 text-black hover:bg-amber-500' : 'bg-red-700 text-white hover:bg-red-600'
+                        )}
+                      >
+                        {tMc('joinTeam')}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <p className="mt-2 text-[11px] text-white/40">{tMc('teamsHint')}</p>
+          </div>
+        )
+      })()}
 
       {gameId === 'tabou' && (() => {
         const teams = room.settings.tabouTeams ?? {}

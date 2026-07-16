@@ -37,6 +37,8 @@ import { TvTelephoneDessine } from './TvTelephoneDessine'
 import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
 import { TvSansFiltre } from './TvSansFiltre'
 import type { SFClientView } from '@/lib/sans-filtre/engine'
+import { TvMotsCodes } from './TvMotsCodes'
+import type { MCClientView } from '@/lib/mots-codes/engine'
 
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
@@ -53,6 +55,7 @@ const GAME_TITLES: Record<string, string> = {
   crobard: 'Crobard',
   'telephone-dessine': 'Téléphone Dessiné',
   'sans-filtre': 'Sans Filtre',
+  'mots-codes': 'Mots Codés',
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
@@ -178,6 +181,8 @@ export function TvRoomView({ code }: { code: string }) {
     content = <TvTelephoneDessine room={room} state={state as unknown as TelephoneClientView} />
   } else if (room.gameId === 'sans-filtre') {
     content = <TvSansFiltre room={room} state={state as unknown as SFClientView} />
+  } else if (room.gameId === 'mots-codes') {
+    content = <TvMotsCodes room={room} state={state as unknown as MCClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

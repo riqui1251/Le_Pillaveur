@@ -23,6 +23,7 @@ import {
   CrayonIcon,
   PhoneSketchIcon,
   UncensoredIcon,
+  CodeKeyIcon,
   GenericGameIcon,
 } from '@/components/icons/GameIcons'
 
@@ -56,5 +57,6 @@ export function GameIconById({ id, className }: { id: string; className?: string
   if (id === 'crobard') return <CrayonIcon className={className} />
   if (id === 'telephone-dessine') return <PhoneSketchIcon className={className} />
   if (id === 'sans-filtre') return <UncensoredIcon className={className} />
+  if (id === 'mots-codes') return <CodeKeyIcon className={className} />
   return <GenericGameIcon className={className} />
 }

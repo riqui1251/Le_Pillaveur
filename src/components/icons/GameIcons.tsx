@@ -414,6 +414,18 @@ export function UncensoredIcon({ className = 'w-6 h-6' }: IconProps) {
   )
 }
 
+// Mots Codés : clé ancienne (le mot qui ouvre les autres)
+export function CodeKeyIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="9" r="3.5" />
+      <path d="M10.6 11.6 19 20" />
+      <path d="M15.5 16.5l2.4-2.4" />
+      <path d="M12.8 13.8l2-2" strokeWidth="1.2" opacity=".6" />
+    </svg>
+  )
+}
+
 // Fallback générique : carte au dos orné
 export function GenericGameIcon({ className = 'w-6 h-6' }: IconProps) {
   return (

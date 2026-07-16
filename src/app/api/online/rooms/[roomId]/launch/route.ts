@@ -11,6 +11,7 @@ import { serializeBriefing } from '@/lib/online/briefing'
 import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { getGameAdapter } from '@/lib/online/game-adapters'
+import { mcTeamCounts } from '@/lib/mots-codes/server-adapter'
 
 
 
@@ -100,6 +101,22 @@ export async function POST(_request: Request, { params }: Params) {
     if (room.members.length > max || total > max) {
       return NextResponse.json(
         { error: `Trop de joueurs pour ce jeu (max ${max})` },
+        { status: 400 }
+      )
+    }
+  }
+
+  // Mots Codés : 2 joueurs minimum PAR ÉQUIPE après répartition automatique.
+  if (room.gameId === 'mots-codes') {
+    const settings = parseRoomSettings(room.settingsJson)
+    const choices: Record<string, 'gold' | 'red'> = {}
+    for (const [userId, team] of Object.entries(settings.mcTeams ?? {})) {
+      choices[userId] = team === 'A' ? 'gold' : 'red'
+    }
+    const counts = mcTeamCounts(room.members.map((m) => m.userId), choices)
+    if (counts.gold < 2 || counts.red < 2) {
+      return NextResponse.json(
+        { error: 'Chaque équipe doit avoir au moins 2 joueurs' },
         { status: 400 }
       )
     }

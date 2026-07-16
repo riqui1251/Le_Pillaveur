@@ -648,6 +648,10 @@
       "sans-filtre": {
         "title": "Sans Filtre",
         "description": "Une carte à trou, des réponses de mauvaise foi : le juge du tour couronne la plus drôle. À lire à voix haute !"
+      },
+      "mots-codes": {
+        "title": "Mots Codés",
+        "description": "Deux équipes, 25 mots, un Maître-mot par camp : un indice, un nombre, et gare à l’assassin !"
       }
     },
     "ballon-surprise": {
@@ -2947,6 +2951,72 @@
       "lobby": {
         "roundsCount": "Nombre de manches",
         "rounds": "manches"
+      }
+    },
+    "mots-codes": {
+      "page": {
+        "onlineOnly": "Mots Codés se joue en ligne : seuls les Maîtres-mots reçoivent la solution de la grille — impossible en passe-et-joue.",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "teams": "Équipes",
+        "teamGold": "Équipe Or",
+        "teamRed": "Équipe Rouge",
+        "joinTeam": "Rejoindre",
+        "autoSlot": "réparti automatiquement",
+        "teamsHint": "Le premier joueur de chaque équipe devient Maître-mot. 2 joueurs minimum par équipe."
+      },
+      "game": {
+        "countdown": {
+          "title": "La partie commence",
+          "hintMaster": "Tu es Maître-mot : tu vas voir la solution. Pas un mot !",
+          "hintGuesser": "Écoute ton Maître-mot et touche les bonnes tuiles."
+        },
+        "teamGold": "Or",
+        "teamRed": "Rouge",
+        "phaseClue": "Indice de l’équipe {team}",
+        "phaseGuess": "L’équipe {team} devine",
+        "youAreMaster": "Tu es Maître-mot — tu vois la solution, tu ne touches pas la grille.",
+        "masterIs": "Maître-mot de ton équipe : {name}",
+        "cluePrompt": "Donne ton indice : UN mot + un nombre",
+        "cluePlaceholder": "Ton mot-indice",
+        "clueCountAria": "Nombre de mots visés",
+        "clueSend": "Donner l’indice",
+        "clueHint": "Dis-le aussi à voix haute au vocal — le champ le fige pour la table.",
+        "waitingClue": "{name} ({team}) prépare son indice…",
+        "waitingGuess": "L’équipe {team} débat et touche les tuiles…",
+        "guessesLeft": "{count} essai(s) restant(s)",
+        "pass": "Passer la main",
+        "solutionHint": "Tu vois la solution : or = ton équipe voit ses mots, dos de carte = assassin.",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "victory": {
+          "teamWins": "L’équipe {team} gagne !",
+          "tie": "Partie sans vainqueur",
+          "assassin": "L’assassin a été touché — défaite immédiate.",
+          "replay": "Rejouer",
+          "rematchWaiting": "Revanche {count}/{total}…",
+          "backToMenu": "Retour au menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Deux équipes, 25 mots",
+            "body": "Chaque équipe doit retrouver SES mots sur la grille. Seuls les Maîtres-mots voient les couleurs."
+          },
+          {
+            "title": "Un indice, un nombre",
+            "body": "Le Maître-mot donne UN mot et un nombre (« VIGNOBLE · 3 ») qui relie plusieurs de ses mots. Interdit : un mot de la grille."
+          },
+          {
+            "title": "Touchez les tuiles",
+            "body": "Son équipe débat au vocal et touche les tuiles. Bonne couleur : on continue. Neutre ou adverse : la main passe."
+          },
+          {
+            "title": "Gare à l’assassin",
+            "body": "Une tuile cache l’assassin (dos de carte) : la toucher fait perdre immédiatement. Première équipe à tout révéler : victoire !"
+          }
+        ]
       }
     }
   },

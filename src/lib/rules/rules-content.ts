@@ -84,6 +84,11 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Sans Filtre en ligne : une carte noire à compléter, des réponses anonymes, un juge qui couronne la plus drôle. Règles complètes, 4 à 16 joueurs, gratuit avec chat vocal.',
   },
+  'mots-codes': {
+    title: 'Règles de Mots Codés — indices, équipes et assassin',
+    description:
+      'Mots Codés en ligne : 25 mots, deux équipes, un Maître-mot par camp qui relie plusieurs mots d’un seul indice. Règles complètes, 4 à 16 joueurs, gratuit avec chat vocal.',
+  },
 }
 
 const RULES_ROOT = path.join(process.cwd(), 'docs', 'rules', 'fr')

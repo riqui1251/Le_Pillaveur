@@ -5,6 +5,7 @@ import { buildRoomDto } from '@/lib/online-room'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { TABOU_MAX_PLAYERS } from '@/lib/tabou/engine'
+import { MC_MAX_PLAYERS } from '@/lib/mots-codes/engine'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 
 type Params = { params: Promise<{ roomId: string }> }
@@ -33,7 +34,7 @@ export async function PUT(request: Request, { params }: Params) {
   if (room.status !== 'waiting') {
     return NextResponse.json({ error: 'La partie est déjà lancée' }, { status: 409 })
   }
-  if (room.gameId !== 'toucher-coule' && room.gameId !== 'tabou') {
+  if (room.gameId !== 'toucher-coule' && room.gameId !== 'tabou' && room.gameId !== 'mots-codes') {
     return NextResponse.json({ error: 'Ce jeu ne gère pas les équipes' }, { status: 400 })
   }
   if (!room.members.some((m) => m.userId === user.id)) {
@@ -48,9 +49,14 @@ export async function PUT(request: Request, { params }: Params) {
 
   const settings = parseRoomSettings(room.settingsJson)
   const isTabou = room.gameId === 'tabou'
-  const teamsKey = isTabou ? 'tabouTeams' : 'tcTeams'
+  const isMotsCodes = room.gameId === 'mots-codes'
+  const teamsKey = isTabou ? 'tabouTeams' : isMotsCodes ? 'mcTeams' : 'tcTeams'
   const teams = { ...(settings[teamsKey] ?? {}) }
-  const perTeam = isTabou ? TABOU_MAX_PER_TEAM : TC_MODES[settings.tcMode ?? '1v1'].playersPerTeam
+  const perTeam = isTabou
+    ? TABOU_MAX_PER_TEAM
+    : isMotsCodes
+      ? MC_MAX_PLAYERS / 2
+      : TC_MODES[settings.tcMode ?? '1v1'].playersPerTeam
   const humansInTeam = room.members.filter(
     (m) => m.userId !== user.id && teams[m.userId] === team
   ).length

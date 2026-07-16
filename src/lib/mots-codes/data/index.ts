@@ -1,0 +1,131 @@
+/**
+ * MOTS CODÉS — banques de mots par langue. Des noms COMMUNS, concrets et
+ * volontairement polysémiques (bons supports d'indices à double sens).
+ * Chaque partie en tire 25 au hasard.
+ */
+
+export const MC_WORDS_FR = [
+  'verre', 'table', 'carte', 'jeton', 'roi', 'dame', 'valet', 'as', 'trèfle', 'pique',
+  'cœur', 'carreau', 'bouchon', 'cave', 'tonneau', 'mousse', 'glace', 'citron', 'menthe', 'olive',
+  'pont', 'tour', 'château', 'clé', 'porte', 'fenêtre', 'toit', 'mur', 'escalier', 'jardin',
+  'loup', 'renard', 'ours', 'aigle', 'requin', 'baleine', 'chat', 'chien', 'cheval', 'canard',
+  'pomme', 'poire', 'raisin', 'cerise', 'fraise', 'noix', 'miel', 'pain', 'beurre', 'fromage',
+  'lune', 'soleil', 'étoile', 'nuage', 'pluie', 'neige', 'vent', 'orage', 'éclair', 'arc',
+  'mer', 'plage', 'vague', 'île', 'phare', 'ancre', 'voile', 'pirate', 'trésor', 'perle',
+  'roue', 'moteur', 'train', 'gare', 'quai', 'billet', 'valise', 'voyage', 'carte', 'boussole',
+  'feu', 'bois', 'pierre', 'fer', 'or', 'argent', 'cuivre', 'verrou', 'chaîne', 'cloche',
+  'piano', 'violon', 'tambour', 'flûte', 'note', 'chanson', 'danse', 'bal', 'masque', 'scène',
+  'docteur', 'avocat', 'juge', 'pilote', 'chef', 'garde', 'facteur', 'berger', 'forgeron', 'peintre',
+  'école', 'craie', 'cahier', 'plume', 'encre', 'lettre', 'timbre', 'journal', 'livre', 'page',
+  'banc', 'parc', 'fontaine', 'statue', 'marché', 'place', 'rue', 'pavé', 'lampadaire', 'trottoir',
+  'montagne', 'sommet', 'vallée', 'rivière', 'source', 'forêt', 'champ', 'blé', 'moulin', 'ferme',
+  'nuit', 'rêve', 'ombre', 'miroir', 'fantôme', 'sorcière', 'magie', 'baguette', 'potion', 'dragon',
+  'couronne', 'trône', 'épée', 'bouclier', 'armure', 'flèche', 'lance', 'tour', 'fossé', 'drapeau',
+  'poche', 'bouton', 'fil', 'aiguille', 'ciseaux', 'ruban', 'nœud', 'chapeau', 'gant', 'botte',
+  'four', 'poêle', 'sel', 'poivre', 'sucre', 'farine', 'œuf', 'lait', 'crème', 'gâteau',
+  'match', 'but', 'ballon', 'filet', 'raquette', 'course', 'saut', 'piscine', 'plongeon', 'médaille',
+  'banque', 'pièce', 'billet', 'coffre', 'dette', 'marchand', 'balance', 'poids', 'mesure', 'règle',
+  'photo', 'cadre', 'pinceau', 'toile', 'couleur', 'crayon', 'gomme', 'papier', 'colle', 'pli',
+  'grotte', 'écho', 'tunnel', 'puits', 'corde', 'échelle', 'lampe', 'bougie', 'allumette', 'cendre',
+  'guitare', 'micro', 'radio', 'antenne', 'écran', 'bouton', 'câble', 'pile', 'ressort', 'aimant',
+  'docteur', 'fièvre', 'remède', 'pansement', 'béquille', 'squelette', 'crâne', 'dent', 'langue', 'poing',
+  'zoo', 'cage', 'plume', 'aile', 'nid', 'ruche', 'toile', 'fourmi', 'papillon', 'escargot',
+]
+
+export const MC_WORDS_EN = [
+  'glass', 'table', 'card', 'chip', 'king', 'queen', 'jack', 'ace', 'club', 'spade',
+  'heart', 'diamond', 'cork', 'cellar', 'barrel', 'foam', 'ice', 'lemon', 'mint', 'olive',
+  'bridge', 'tower', 'castle', 'key', 'door', 'window', 'roof', 'wall', 'stairs', 'garden',
+  'wolf', 'fox', 'bear', 'eagle', 'shark', 'whale', 'cat', 'dog', 'horse', 'duck',
+  'apple', 'pear', 'grape', 'cherry', 'berry', 'nut', 'honey', 'bread', 'butter', 'cheese',
+  'moon', 'sun', 'star', 'cloud', 'rain', 'snow', 'wind', 'storm', 'lightning', 'rainbow',
+  'sea', 'beach', 'wave', 'island', 'lighthouse', 'anchor', 'sail', 'pirate', 'treasure', 'pearl',
+  'wheel', 'engine', 'train', 'station', 'platform', 'ticket', 'suitcase', 'journey', 'map', 'compass',
+  'fire', 'wood', 'stone', 'iron', 'gold', 'silver', 'copper', 'lock', 'chain', 'bell',
+  'piano', 'violin', 'drum', 'flute', 'note', 'song', 'dance', 'ball', 'mask', 'stage',
+  'doctor', 'lawyer', 'judge', 'pilot', 'chef', 'guard', 'postman', 'shepherd', 'smith', 'painter',
+  'school', 'chalk', 'notebook', 'pen', 'ink', 'letter', 'stamp', 'paper', 'book', 'page',
+  'bench', 'park', 'fountain', 'statue', 'market', 'square', 'street', 'lane', 'lamp', 'pavement',
+  'mountain', 'peak', 'valley', 'river', 'spring', 'forest', 'field', 'wheat', 'mill', 'farm',
+  'night', 'dream', 'shadow', 'mirror', 'ghost', 'witch', 'magic', 'wand', 'potion', 'dragon',
+  'crown', 'throne', 'sword', 'shield', 'armor', 'arrow', 'spear', 'moat', 'flag', 'knight',
+  'pocket', 'button', 'thread', 'needle', 'scissors', 'ribbon', 'knot', 'hat', 'glove', 'boot',
+  'oven', 'pan', 'salt', 'pepper', 'sugar', 'flour', 'egg', 'milk', 'cream', 'cake',
+  'match', 'goal', 'net', 'racket', 'race', 'jump', 'pool', 'dive', 'medal', 'coach',
+  'bank', 'coin', 'bill', 'safe', 'debt', 'merchant', 'scale', 'weight', 'measure', 'ruler',
+  'photo', 'frame', 'brush', 'canvas', 'color', 'pencil', 'eraser', 'glue', 'fold', 'sketch',
+  'cave', 'echo', 'tunnel', 'well', 'rope', 'ladder', 'lantern', 'candle', 'ash', 'spark',
+  'guitar', 'radio', 'antenna', 'screen', 'cable', 'battery', 'spring', 'magnet', 'wire', 'switch',
+  'fever', 'cure', 'bandage', 'crutch', 'skeleton', 'skull', 'tooth', 'tongue', 'fist', 'bone',
+  'zoo', 'cage', 'feather', 'wing', 'nest', 'hive', 'web', 'ant', 'butterfly', 'snail',
+]
+
+export const MC_WORDS_ES = [
+  'vaso', 'mesa', 'carta', 'ficha', 'rey', 'reina', 'sota', 'as', 'trébol', 'pica',
+  'corazón', 'diamante', 'corcho', 'bodega', 'barril', 'espuma', 'hielo', 'limón', 'menta', 'aceituna',
+  'puente', 'torre', 'castillo', 'llave', 'puerta', 'ventana', 'techo', 'muro', 'escalera', 'jardín',
+  'lobo', 'zorro', 'oso', 'águila', 'tiburón', 'ballena', 'gato', 'perro', 'caballo', 'pato',
+  'manzana', 'pera', 'uva', 'cereza', 'fresa', 'nuez', 'miel', 'pan', 'mantequilla', 'queso',
+  'luna', 'sol', 'estrella', 'nube', 'lluvia', 'nieve', 'viento', 'tormenta', 'rayo', 'arcoíris',
+  'mar', 'playa', 'ola', 'isla', 'faro', 'ancla', 'vela', 'pirata', 'tesoro', 'perla',
+  'rueda', 'motor', 'tren', 'estación', 'andén', 'billete', 'maleta', 'viaje', 'mapa', 'brújula',
+  'fuego', 'madera', 'piedra', 'hierro', 'oro', 'plata', 'cobre', 'candado', 'cadena', 'campana',
+  'piano', 'violín', 'tambor', 'flauta', 'nota', 'canción', 'baile', 'fiesta', 'máscara', 'escenario',
+  'médico', 'abogado', 'juez', 'piloto', 'cocinero', 'guardia', 'cartero', 'pastor', 'herrero', 'pintor',
+  'escuela', 'tiza', 'cuaderno', 'pluma', 'tinta', 'carta', 'sello', 'papel', 'libro', 'página',
+  'banco', 'parque', 'fuente', 'estatua', 'mercado', 'plaza', 'calle', 'farol', 'acera', 'esquina',
+  'montaña', 'cima', 'valle', 'río', 'manantial', 'bosque', 'campo', 'trigo', 'molino', 'granja',
+  'noche', 'sueño', 'sombra', 'espejo', 'fantasma', 'bruja', 'magia', 'varita', 'poción', 'dragón',
+  'corona', 'trono', 'espada', 'escudo', 'armadura', 'flecha', 'lanza', 'foso', 'bandera', 'caballero',
+  'bolsillo', 'botón', 'hilo', 'aguja', 'tijeras', 'cinta', 'nudo', 'sombrero', 'guante', 'bota',
+  'horno', 'sartén', 'sal', 'pimienta', 'azúcar', 'harina', 'huevo', 'leche', 'nata', 'pastel',
+  'partido', 'gol', 'balón', 'red', 'raqueta', 'carrera', 'salto', 'piscina', 'medalla', 'equipo',
+  'banco', 'moneda', 'caja', 'deuda', 'mercader', 'balanza', 'peso', 'medida', 'regla', 'cuenta',
+  'foto', 'marco', 'pincel', 'lienzo', 'color', 'lápiz', 'goma', 'pegamento', 'pliegue', 'dibujo',
+  'cueva', 'eco', 'túnel', 'pozo', 'cuerda', 'escala', 'linterna', 'vela', 'ceniza', 'chispa',
+  'guitarra', 'radio', 'antena', 'pantalla', 'cable', 'pila', 'muelle', 'imán', 'alambre', 'botella',
+  'fiebre', 'remedio', 'venda', 'muleta', 'esqueleto', 'cráneo', 'diente', 'lengua', 'puño', 'hueso',
+  'zoo', 'jaula', 'pluma', 'ala', 'nido', 'colmena', 'telaraña', 'hormiga', 'mariposa', 'caracol',
+]
+
+export const MC_WORDS_IT = [
+  'bicchiere', 'tavolo', 'carta', 'gettone', 're', 'regina', 'fante', 'asso', 'fiori', 'picche',
+  'cuori', 'quadri', 'tappo', 'cantina', 'botte', 'schiuma', 'ghiaccio', 'limone', 'menta', 'oliva',
+  'ponte', 'torre', 'castello', 'chiave', 'porta', 'finestra', 'tetto', 'muro', 'scala', 'giardino',
+  'lupo', 'volpe', 'orso', 'aquila', 'squalo', 'balena', 'gatto', 'cane', 'cavallo', 'anatra',
+  'mela', 'pera', 'uva', 'ciliegia', 'fragola', 'noce', 'miele', 'pane', 'burro', 'formaggio',
+  'luna', 'sole', 'stella', 'nuvola', 'pioggia', 'neve', 'vento', 'tempesta', 'fulmine', 'arcobaleno',
+  'mare', 'spiaggia', 'onda', 'isola', 'faro', 'ancora', 'vela', 'pirata', 'tesoro', 'perla',
+  'ruota', 'motore', 'treno', 'stazione', 'binario', 'biglietto', 'valigia', 'viaggio', 'mappa', 'bussola',
+  'fuoco', 'legno', 'pietra', 'ferro', 'oro', 'argento', 'rame', 'lucchetto', 'catena', 'campana',
+  'pianoforte', 'violino', 'tamburo', 'flauto', 'nota', 'canzone', 'danza', 'festa', 'maschera', 'palco',
+  'medico', 'avvocato', 'giudice', 'pilota', 'cuoco', 'guardia', 'postino', 'pastore', 'fabbro', 'pittore',
+  'scuola', 'gesso', 'quaderno', 'penna', 'inchiostro', 'lettera', 'francobollo', 'carta', 'libro', 'pagina',
+  'panchina', 'parco', 'fontana', 'statua', 'mercato', 'piazza', 'strada', 'lampione', 'marciapiede', 'angolo',
+  'montagna', 'vetta', 'valle', 'fiume', 'sorgente', 'foresta', 'campo', 'grano', 'mulino', 'fattoria',
+  'notte', 'sogno', 'ombra', 'specchio', 'fantasma', 'strega', 'magia', 'bacchetta', 'pozione', 'drago',
+  'corona', 'trono', 'spada', 'scudo', 'armatura', 'freccia', 'lancia', 'fossato', 'bandiera', 'cavaliere',
+  'tasca', 'bottone', 'filo', 'ago', 'forbici', 'nastro', 'nodo', 'cappello', 'guanto', 'stivale',
+  'forno', 'padella', 'sale', 'pepe', 'zucchero', 'farina', 'uovo', 'latte', 'panna', 'torta',
+  'partita', 'gol', 'pallone', 'rete', 'racchetta', 'corsa', 'salto', 'piscina', 'medaglia', 'squadra',
+  'banca', 'moneta', 'cassaforte', 'debito', 'mercante', 'bilancia', 'peso', 'misura', 'righello', 'conto',
+  'foto', 'cornice', 'pennello', 'tela', 'colore', 'matita', 'gomma', 'colla', 'piega', 'schizzo',
+  'grotta', 'eco', 'tunnel', 'pozzo', 'corda', 'lanterna', 'candela', 'cenere', 'scintilla', 'fiammifero',
+  'chitarra', 'radio', 'antenna', 'schermo', 'cavo', 'pila', 'molla', 'magnete', 'interruttore', 'bottiglia',
+  'febbre', 'rimedio', 'benda', 'stampella', 'scheletro', 'teschio', 'dente', 'lingua', 'pugno', 'osso',
+  'zoo', 'gabbia', 'piuma', 'ala', 'nido', 'alveare', 'ragnatela', 'formica', 'farfalla', 'lumaca',
+]
+
+const BY_LANG: Record<string, string[]> = {
+  fr: MC_WORDS_FR,
+  en: MC_WORDS_EN,
+  es: MC_WORDS_ES,
+  it: MC_WORDS_IT,
+}
+
+/** Mots UNIQUES de la langue demandée (fr par défaut) — les doublons du
+ * fichier (polysémie assumée à l'écriture) sont dédupliqués ici. */
+export function getMCWords(lang: string | null | undefined): string[] {
+  const raw = BY_LANG[lang ?? 'fr'] ?? MC_WORDS_FR
+  return [...new Set(raw)]
+}

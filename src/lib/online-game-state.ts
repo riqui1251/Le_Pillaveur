@@ -38,6 +38,9 @@ export type RoomSettings = {
   /** Sans Filtre : nombre de manches de la partie (5/8/12). */
   sfRounds?: number
 
+  /** Mots Codés : choix d'équipe par membre (A = Or, B = Rouge). */
+  mcTeams?: Record<string, 'A' | 'B'>
+
   /** Le Menteur : variante Palifico (1 dé → les 1 perdent leur statut de joker, face verrouillée). */
   menteurPalifico?: boolean
 

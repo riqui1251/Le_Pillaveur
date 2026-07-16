@@ -408,6 +408,25 @@ export const GAMES: GameMeta[] = [
     softModeReady: true,
   },
   {
+    id: 'mots-codes',
+    title: 'Mots Codés',
+    description:
+      'Deux équipes, 25 mots, un Maître-mot par camp : un indice, un nombre, et gare à l’assassin !',
+    path: '/games/mots-codes',
+    emoji: '🗝️',
+    suit: 'heart',
+    rank: 'J',
+    gradient: 'from-amber-600 to-red-700',
+    colorFrom: '#d97706',
+    colorTo: '#b91c1c',
+    fallbackColor: '#b45309',
+    onlineReady: true,
+    minPlayers: 4,
+    maxPlayers: 16,
+    onlineOnly: true,
+    softModeReady: true,
+  },
+  {
     id: 'telephone-dessine',
     title: 'Téléphone Dessiné',
     description:

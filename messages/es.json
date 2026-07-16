@@ -638,6 +638,10 @@
       "sans-filtre": {
         "title": "Sans Filtre",
         "description": "Una carta con hueco y respuestas descaradas: el juez corona la más divertida. Contenido en francés."
+      },
+      "mots-codes": {
+        "title": "Mots Codés",
+        "description": "Dos equipos, 25 palabras, un Jefe de espías por bando: una pista, un número, ¡y cuidado con el asesino!"
       }
     },
     "ballon-surprise": {
@@ -2937,6 +2941,72 @@
       "lobby": {
         "roundsCount": "Número de rondas",
         "rounds": "rondas"
+      }
+    },
+    "mots-codes": {
+      "page": {
+        "onlineOnly": "Mots Codés se juega en línea: solo los Jefes de espías reciben la solución.",
+        "switchOnline": "Cambiar al modo en línea"
+      },
+      "lobby": {
+        "teams": "Equipos",
+        "teamGold": "Equipo Oro",
+        "teamRed": "Equipo Rojo",
+        "joinTeam": "Unirse",
+        "autoSlot": "asignado automáticamente",
+        "teamsHint": "El primer jugador de cada equipo es el Jefe de espías. Mínimo 2 por equipo."
+      },
+      "game": {
+        "countdown": {
+          "title": "La partida empieza",
+          "hintMaster": "Eres Jefe de espías: verás la solución. ¡Ni una palabra!",
+          "hintGuesser": "Escucha a tu Jefe de espías y toca las casillas correctas."
+        },
+        "teamGold": "Oro",
+        "teamRed": "Rojo",
+        "phaseClue": "Pista del equipo {team}",
+        "phaseGuess": "El equipo {team} adivina",
+        "youAreMaster": "Eres el Jefe de espías — ves la solución, no tocas la cuadrícula.",
+        "masterIs": "Jefe de espías de tu equipo: {name}",
+        "cluePrompt": "Da tu pista: UNA palabra + un número",
+        "cluePlaceholder": "Tu palabra-pista",
+        "clueCountAria": "Número de palabras objetivo",
+        "clueSend": "Dar la pista",
+        "clueHint": "Dila también en voz alta por el chat de voz — el campo la fija para la mesa.",
+        "waitingClue": "{name} ({team}) está pensando su pista…",
+        "waitingGuess": "El equipo {team} debate y toca casillas…",
+        "guessesLeft": "{count} intento(s) restante(s)",
+        "pass": "Pasar el turno",
+        "solutionHint": "Ves la solución: oro = las palabras de tu equipo, dorso de carta = asesino.",
+        "waitingReturn": "Esperando a que vuelva {name} — bot en {seconds}s",
+        "victory": {
+          "teamWins": "¡Gana el equipo {team}!",
+          "tie": "Sin ganador",
+          "assassin": "Se tocó al asesino — derrota inmediata.",
+          "replay": "Jugar otra vez",
+          "rematchWaiting": "Revancha {count}/{total}…",
+          "backToMenu": "Volver al menú"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Dos equipos, 25 palabras",
+            "body": "Cada equipo debe encontrar SUS palabras. Solo los Jefes de espías ven los colores."
+          },
+          {
+            "title": "Una pista, un número",
+            "body": "El Jefe de espías da UNA palabra y un número («VIÑEDO · 3») que une varias de sus palabras. Prohibido: una palabra de la cuadrícula."
+          },
+          {
+            "title": "Tocad las casillas",
+            "body": "Su equipo debate por voz y toca casillas. Color correcto: seguís. Neutra o rival: pasa el turno."
+          },
+          {
+            "title": "Cuidado con el asesino",
+            "body": "Una casilla esconde al asesino (dorso de carta): tocarla pierde al instante. ¡El primer equipo en revelar todas sus palabras gana!"
+          }
+        ]
       }
     }
   },

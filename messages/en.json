@@ -648,6 +648,10 @@
       "sans-filtre": {
         "title": "Sans Filtre",
         "description": "A fill-in-the-blank card and shameless answers: the round judge crowns the funniest. Content in French."
+      },
+      "mots-codes": {
+        "title": "Mots Codés",
+        "description": "Two teams, 25 words, one Spymaster per side: one clue, one number, and beware the assassin!"
       }
     },
     "ballon-surprise": {
@@ -2947,6 +2951,72 @@
       "lobby": {
         "roundsCount": "Number of rounds",
         "rounds": "rounds"
+      }
+    },
+    "mots-codes": {
+      "page": {
+        "onlineOnly": "Mots Codés is online-only: only Spymasters receive the grid solution.",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "teams": "Teams",
+        "teamGold": "Gold Team",
+        "teamRed": "Red Team",
+        "joinTeam": "Join",
+        "autoSlot": "assigned automatically",
+        "teamsHint": "The first player of each team becomes Spymaster. Minimum 2 players per team."
+      },
+      "game": {
+        "countdown": {
+          "title": "Game starting",
+          "hintMaster": "You are a Spymaster: you will see the solution. Not a word!",
+          "hintGuesser": "Listen to your Spymaster and tap the right tiles."
+        },
+        "teamGold": "Gold",
+        "teamRed": "Red",
+        "phaseClue": "{team} team’s clue",
+        "phaseGuess": "{team} team is guessing",
+        "youAreMaster": "You are the Spymaster — you see the solution, you don’t touch the grid.",
+        "masterIs": "Your team’s Spymaster: {name}",
+        "cluePrompt": "Give your clue: ONE word + a number",
+        "cluePlaceholder": "Your clue word",
+        "clueCountAria": "Number of targeted words",
+        "clueSend": "Give the clue",
+        "clueHint": "Say it out loud on voice chat too — the field locks it in for the table.",
+        "waitingClue": "{name} ({team}) is thinking of a clue…",
+        "waitingGuess": "The {team} team is debating and tapping tiles…",
+        "guessesLeft": "{count} guess(es) left",
+        "pass": "Pass the turn",
+        "solutionHint": "You see the solution: gold = your team’s words, card back = assassin.",
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "victory": {
+          "teamWins": "The {team} team wins!",
+          "tie": "No winner",
+          "assassin": "The assassin was hit — instant defeat.",
+          "replay": "Play again",
+          "rematchWaiting": "Rematch {count}/{total}…",
+          "backToMenu": "Back to menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Two teams, 25 words",
+            "body": "Each team must find ITS words on the grid. Only Spymasters see the colors."
+          },
+          {
+            "title": "One clue, one number",
+            "body": "The Spymaster gives ONE word and a number (“VINEYARD · 3”) linking several of their words. A grid word is forbidden."
+          },
+          {
+            "title": "Tap the tiles",
+            "body": "Their team debates on voice chat and taps tiles. Right color: keep going. Neutral or enemy: turn passes."
+          },
+          {
+            "title": "Beware the assassin",
+            "body": "One tile hides the assassin (card back): tapping it loses instantly. First team to reveal all their words wins!"
+          }
+        ]
       }
     }
   },

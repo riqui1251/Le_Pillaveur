@@ -237,6 +237,24 @@ import {
   SF_MAX_PLAYERS,
   type SFState,
 } from '@/lib/sans-filtre/engine'
+import {
+  parseMCState,
+  serializeMCState,
+  applyMCRoomAction,
+  convertMCPlayerToBot,
+  markMCPlayerLeft,
+  rejoinMCPlayer,
+  mcClientViewJson,
+  mcSpectatorViewJson,
+  type MCRoomActionInput,
+} from '@/lib/mots-codes/server-adapter'
+import {
+  currentMCActorId,
+  toMCClientView,
+  MC_MIN_PLAYERS,
+  MC_MAX_PLAYERS,
+  type MCState,
+} from '@/lib/mots-codes/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -1042,6 +1060,55 @@ const sansFiltreAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinSFPlayer(state as SFState, userId),
 }
 
+// ─── Mots Codés ──────────────────────────────────────────────────────────────
+
+const motsCodesAdapter: GameAdapter = {
+  // 2 humains minimum PAR ÉQUIPE (un maître-mot + un devineur) — pas de bots
+  // au lancement : un bot ne peut ni donner d'indice ni deviner utilement.
+  minPlayers: MC_MIN_PLAYERS,
+  maxPlayers: MC_MAX_PLAYERS,
+  parse: (json) => parseMCState(json),
+  serialize: (state) => serializeMCState(state as MCState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as MCState
+    let input: MCRoomActionInput
+    if (body.action === 'clue' && typeof body.word === 'string' && typeof body.count === 'number') {
+      input = { type: 'clue', word: body.word, count: body.count }
+    } else if (body.action === 'guess' && typeof body.tile === 'number') {
+      input = { type: 'guess', tile: body.tile }
+    } else if (body.action === 'pass') {
+      input = { type: 'pass' }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyMCRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertMCPlayerToBot(state as MCState, userId),
+  isFinished: (state) => (state as MCState).phase === 'finished',
+  currentActorId: (state) => currentMCActorId(state as MCState),
+  clientViewJson: (state, viewerId) => mcClientViewJson(state as MCState, viewerId),
+  spectatorViewJson: (state) => mcSpectatorViewJson(state as MCState),
+  actionResponse: (state, viewerId) => ({
+    view: toMCClientView(state as MCState, viewerId),
+    viewJson: mcClientViewJson(state as MCState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markMCPlayerLeft(state as MCState, userId, at),
+  rejoin: (state, userId) => rejoinMCPlayer(state as MCState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -1059,6 +1126,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   crobard: crobardAdapter,
   'telephone-dessine': telephoneAdapter,
   'sans-filtre': sansFiltreAdapter,
+  'mots-codes': motsCodesAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {
