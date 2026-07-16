@@ -2,15 +2,17 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 // Politique de sécurité du contenu : restreint les sources autorisées tout en
 // restant compatible avec le runtime Next.js, Tailwind (styles inline),
-// canvas/confetti (blob/data) et le HMR en développement (ws/wss).
+// canvas/confetti (blob/data), le HMR en développement (ws/wss) et
+// Google Identity Services (script + iframe + XHR vers accounts.google.com).
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' ws: wss:",
+  "connect-src 'self' ws: wss: https://accounts.google.com",
   "media-src 'self' data: blob:",
+  "frame-src 'self' https://accounts.google.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

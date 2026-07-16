@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
 import { LogIn, UserPlus, Gamepad2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
@@ -31,7 +32,7 @@ export function AuthForm() {
   const tCommon = useTranslations('common')
   const locale = useLocale()
   const tNav = useTranslations('nav.legal')
-  const { login, register } = useAuth()
+  const { login, register, refresh } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = safeRedirect(searchParams?.get('redirect') ?? null)
@@ -80,6 +81,82 @@ export function AuthForm() {
       setLoading(false)
     }
   }
+
+  // ── Connexion Google (Google Identity Services, flux ID token) ──
+  // Le bouton officiel est rendu par le script GIS dans ce conteneur ; le
+  // callback est stocké dans une ref pour éviter les fermetures périmées
+  // (initialize n'est appelé qu'une fois par montage).
+  const googleButtonRef = useRef<HTMLDivElement>(null)
+  const googleCallbackRef = useRef<(credential: string) => void>(() => {})
+
+  useEffect(() => {
+    googleCallbackRef.current = async (credential: string) => {
+      setError(null)
+      setLoading(true)
+      try {
+        const res = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ credential, locale }),
+        })
+        const data = await res.json().catch(() => null)
+        if (!res.ok) {
+          setError(data?.error ?? t('errors.generic'))
+          return
+        }
+        await refresh()
+        router.push(redirectTo)
+      } catch {
+        setError(t('errors.generic'))
+      } finally {
+        setLoading(false)
+      }
+    }
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    const render = () => {
+      if (cancelled) return
+      const gis = getGoogleAccountsId()
+      const parent = googleButtonRef.current
+      if (!gis || !parent) return
+      gis.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => {
+          if (response.credential) googleCallbackRef.current(response.credential)
+        },
+      })
+      parent.innerHTML = ''
+      gis.renderButton(parent, {
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'pill',
+        width: 300,
+        locale,
+      })
+    }
+    if (getGoogleAccountsId()) {
+      render()
+      return
+    }
+    const src = 'https://accounts.google.com/gsi/client'
+    let script = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
+    if (!script) {
+      script = document.createElement('script')
+      script.src = src
+      script.async = true
+      script.defer = true
+      document.head.appendChild(script)
+    }
+    script.addEventListener('load', render)
+    return () => {
+      cancelled = true
+      script?.removeEventListener('load', render)
+    }
+  }, [locale])
 
   const handleLocalPlay = async () => {
     setLocalLoading(true)
@@ -251,6 +328,15 @@ export function AuthForm() {
               : t('register.submit')}
         </Button>
       </form>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-3" aria-hidden>
+          <span className="h-px flex-1 bg-white/10" />
+          <span className="text-xs uppercase tracking-wide text-white/35">{t('orDivider')}</span>
+          <span className="h-px flex-1 bg-white/10" />
+        </div>
+        <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+      </div>
 
       <div className="space-y-3 text-center">
         <p className="text-xs text-white/35">{t('localPlay.hint')}</p>
