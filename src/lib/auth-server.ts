@@ -33,6 +33,8 @@ export type AuthUser = {
   ambianceMode: 'alcool' | 'soft'
   /** XP de progression en ligne (niveau dérivé via levelForXp). */
   onlineXp: number
+  /** Compte invité temporaire (scan de QR) — email vide, purgé après 48 h. */
+  isGuest?: boolean
 }
 
 function sessionExpiry(): Date {
@@ -84,7 +86,10 @@ export async function getUserFromSessionToken(token: string | undefined): Promis
   }
 
   const user = session.user
-  if (!user.email || !user.passwordHash) return null
+  // Sessions valables : comptes invités (isGuest, ni email ni mot de passe)
+  // et tout compte avec email — mot de passe OU Google (passwordHash vide).
+  // Seuls les enregistrements legacy sans email ni statut invité sont rejetés.
+  if (!user.isGuest && !user.email) return null
 
   await clearExpiredBanIfNeeded(user.id)
   const ban = getBanState(user)
@@ -102,7 +107,7 @@ export async function getUserFromSessionToken(token: string | undefined): Promis
 
   return {
     id: user.id,
-    email: user.email,
+    email: user.email ?? '',
     displayName: user.displayName,
     onlineDisplayName: normalizedOnlineName,
     onlinePreferences: parseOnlinePreferences(user.onlinePreferencesJson),
@@ -112,6 +117,7 @@ export async function getUserFromSessionToken(token: string | undefined): Promis
     playMode: user.playMode === 'online' ? 'online' : 'local',
     ambianceMode: user.ambianceMode === 'soft' ? 'soft' : 'alcool',
     onlineXp: user.onlineXp,
+    isGuest: user.isGuest,
   }
 }
 

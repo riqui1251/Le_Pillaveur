@@ -239,7 +239,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <h1 className="truncate font-display text-base font-bold leading-tight">{game?.title}</h1>
             <p className="text-[11px] text-[#6B6455]">
               {game?.minPlayers ?? 2}
-              {game?.maxPlayers && game.maxPlayers < 13 ? `-${game.maxPlayers}` : '+'} joueurs
+              {game?.maxPlayers && game.maxPlayers < 20 ? `-${game.maxPlayers}` : '+'} joueurs
             </p>
           </div>
         </div>
@@ -572,6 +572,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       {showTv && (
         <div className="mb-3 flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-center">
           <p className="text-xs leading-relaxed text-white/60">{tTv('modeTvHint')}</p>
+          <p className="rounded-xl border border-[#D8CCAE] bg-cream px-5 py-2 font-mono text-3xl font-black tracking-[0.3em] text-[#24201A]">
+            {room.code}
+          </p>
           <JoinQR
             url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/jeux?join=${room.code}`}
             size={128}

@@ -6,6 +6,7 @@ export const MAX_STORED_ATTEMPTED_NAME_LENGTH = 80
 
 export type NameModerationAttemptContext =
   | 'register'
+  | 'guest'
   | 'display_name'
   | 'local_player_add'
   | 'local_player_rename'

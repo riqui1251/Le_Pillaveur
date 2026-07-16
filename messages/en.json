@@ -3509,5 +3509,16 @@
       "title": "The table is open.",
       "cta": "Play now"
     }
+  },
+  "joinGate": {
+    "title": "Join the table",
+    "subtitle": "You scanned a table code. Pick a name to play right away, or sign in to your account.",
+    "pseudoPlaceholder": "Your name for tonight",
+    "guestCta": "Play as guest",
+    "guestHint": "No account: temporary name, automatically removed after the party.",
+    "or": "or",
+    "loginCta": "Sign in or create an account",
+    "dismiss": "No thanks, just browsing",
+    "error": "Can’t join right now. Try again."
   }
 }

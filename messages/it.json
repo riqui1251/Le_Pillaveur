@@ -3499,5 +3499,16 @@
       "title": "Il tavolo è aperto.",
       "cta": "Gioca ora"
     }
+  },
+  "joinGate": {
+    "title": "Unisciti al tavolo",
+    "subtitle": "Hai scansionato il codice di un tavolo. Scegli un nome per giocare subito, oppure accedi al tuo account.",
+    "pseudoPlaceholder": "Il tuo nome per stasera",
+    "guestCta": "Gioca come ospite",
+    "guestHint": "Senza account: nome temporaneo, rimosso automaticamente dopo la serata.",
+    "or": "oppure",
+    "loginCta": "Accedi o crea un account",
+    "dismiss": "No grazie, sto solo guardando",
+    "error": "Impossibile unirsi al momento. Riprova."
   }
 }

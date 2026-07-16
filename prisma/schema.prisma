@@ -16,6 +16,9 @@ model User {
   onlinePreferencesJson String?
   accountCode      String?   @unique
   role             String    @default("user")
+  // Compte invité (QR scanné) : pseudo temporaire sans email ni mot de passe,
+  // purgé automatiquement après inactivité (retention-sweep).
+  isGuest          Boolean   @default(false)
   playMode         String    @default("local")
   ambianceMode     String    @default("alcool")
   locale           String    @default("fr")

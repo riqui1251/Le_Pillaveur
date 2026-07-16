@@ -30,6 +30,8 @@ export type AuthUser = {
   locale: string
   playMode: 'local' | 'online'
   ambianceMode: 'alcool' | 'soft'
+  /** Compte invité temporaire (scan de QR) — email vide, purgé après 48 h. */
+  isGuest?: boolean
 }
 
 type AuthContextValue = {

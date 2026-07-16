@@ -3509,5 +3509,16 @@
       "title": "La table est ouverte.",
       "cta": "Jouer maintenant"
     }
+  },
+  "joinGate": {
+    "title": "Rejoindre la table",
+    "subtitle": "Tu as scanné le code d’une table. Choisis un pseudo pour jouer tout de suite, ou connecte-toi à ton compte.",
+    "pseudoPlaceholder": "Ton pseudo pour la soirée",
+    "guestCta": "Jouer en invité",
+    "guestHint": "Sans compte : pseudo temporaire, supprimé automatiquement après la soirée.",
+    "or": "ou",
+    "loginCta": "Se connecter ou créer un compte",
+    "dismiss": "Non merci, je visite d’abord",
+    "error": "Impossible de rejoindre pour l’instant. Réessaie."
   }
 }

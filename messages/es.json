@@ -3499,5 +3499,16 @@
       "title": "La mesa está abierta.",
       "cta": "Jugar ahora"
     }
+  },
+  "joinGate": {
+    "title": "Unirse a la mesa",
+    "subtitle": "Has escaneado el código de una mesa. Elige un apodo para jugar ya, o inicia sesión con tu cuenta.",
+    "pseudoPlaceholder": "Tu apodo para esta noche",
+    "guestCta": "Jugar como invitado",
+    "guestHint": "Sin cuenta: apodo temporal, se elimina automáticamente después de la fiesta.",
+    "or": "o",
+    "loginCta": "Iniciar sesión o crear una cuenta",
+    "dismiss": "No gracias, solo estoy mirando",
+    "error": "No se puede unir ahora mismo. Inténtalo de nuevo."
   }
 }
