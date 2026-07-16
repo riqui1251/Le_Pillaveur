@@ -43,6 +43,8 @@ import { TvDilemmes } from './TvDilemmes'
 import type { DilClientView } from '@/lib/dilemmes/engine'
 import { TvPetitBac } from './TvPetitBac'
 import type { PbcClientView } from '@/lib/petit-bac/engine'
+import { TvPresident } from './TvPresident'
+import type { PreClientView } from '@/lib/president/engine'
 
 const GAME_TITLES: Record<string, string> = {
   'petit-buveur': 'Le Petit Buveur',
@@ -62,6 +64,7 @@ const GAME_TITLES: Record<string, string> = {
   'mots-codes': 'Mots Codés',
   dilemmes: 'Dilemmes',
   'petit-bac': 'Petit Bac',
+  president: 'Président',
 }
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
@@ -193,6 +196,8 @@ export function TvRoomView({ code }: { code: string }) {
     content = <TvDilemmes room={room} state={state as unknown as DilClientView} />
   } else if (room.gameId === 'petit-bac') {
     content = <TvPetitBac room={room} state={state as unknown as PbcClientView} />
+  } else if (room.gameId === 'president') {
+    content = <TvPresident room={room} state={state as unknown as PreClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

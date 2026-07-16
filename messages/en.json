@@ -660,6 +660,10 @@
       "petit-bac": {
         "title": "Petit Bac",
         "description": "One letter, five categories: first to fill everything yells STOP. Unique answers 2 pts, duplicates 1 pt — contest at the reveal!"
+      },
+      "president": {
+        "title": "Président",
+        "description": "Empty your hand, cut with the 2, make someone else the Trou. Automatic exchange between rounds — 4 to 8 players."
       }
     },
     "ballon-surprise": {
@@ -3145,6 +3149,65 @@
           {
             "title": "Scoring and contesting",
             "body": "Unique answer: 2 pts. Duplicate: 1 pt. Empty or wrong letter: 0. Dubious answer? Contest it — majority rules."
+          }
+        ]
+      }
+    },
+    "president": {
+      "page": {
+        "onlineOnly": "Président is online-only: every hand must stay secret, everyone plays from their own phone.",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "manchesCount": "Number of rounds",
+        "manches": "rounds"
+      },
+      "game": {
+        "countdown": {
+          "title": "Game starting",
+          "hint": "Empty your hand. Last one is the Trou."
+        },
+        "manche": "Round {n}/{total}",
+        "yourTurn": "Your turn!",
+        "turnOf": "{name}'s turn",
+        "freeTrick": "Free trick — play anything",
+        "lastPlayBy": "played by {name}",
+        "play": "Play ({count})",
+        "pass": "Pass",
+        "leadHint": "You lead: single, pair, triple or quad — your choice.",
+        "out": "You are out! Position {rank} — watch the others sweat.",
+        "roles": {
+          "president": "President",
+          "trou": "Trou"
+        },
+        "exchangeInfo": "Automatic exchange: the Trou gives their 2 best cards to the President, who returns their 2 worst.",
+        "exchangeAsTrou": "You gave your 2 best cards… and received: {cards}",
+        "exchangeAsPresident": "The Trou gave you: {cards}",
+        "mancheEnd": "End of round {n}",
+        "nextManche": "Next round",
+        "trouDrinks": "The Trou drinks 🍺",
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "finished": {
+          "title": "Game over!",
+          "subtitle": "{name} is President — bow down.",
+          "replay": "Play again",
+          "rematchWaiting": "Rematch {count}/{total}…",
+          "backToMenu": "Back to menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Empty your hand",
+            "body": "Play combos: single, pair, triple or quad. The next player must play the same size, strictly higher — or pass."
+          },
+          {
+            "title": "The 2 cuts",
+            "body": "The 2 is the supreme card: it wins the trick immediately. The trick winner leads whatever they want."
+          },
+          {
+            "title": "President and Trou",
+            "body": "First out = President, last = Trou. Between rounds, the Trou automatically gives their 2 best cards to the President."
           }
         ]
       }

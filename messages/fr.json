@@ -660,6 +660,10 @@
       "petit-bac": {
         "title": "Petit Bac",
         "description": "Une lettre, cinq catégories : le premier qui remplit tout crie STOP. Uniques 2 pts, doublons 1 pt — contestez à la révélation !"
+      },
+      "president": {
+        "title": "Président",
+        "description": "Videz votre main, coupez au 2, faites porter le Trou. Échange automatique entre les manches — 4 à 8 joueurs."
       }
     },
     "ballon-surprise": {
@@ -3145,6 +3149,65 @@
           {
             "title": "Comptage et contestation",
             "body": "Réponse unique : 2 pts. En doublon : 1 pt. Vide ou mauvaise lettre : 0. Une réponse douteuse ? Contestez — la majorité tranche."
+          }
+        ]
+      }
+    },
+    "president": {
+      "page": {
+        "onlineOnly": "Le Président se joue en ligne : chaque main doit rester secrète, chacun joue depuis son téléphone.",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "manchesCount": "Nombre de manches",
+        "manches": "manches"
+      },
+      "game": {
+        "countdown": {
+          "title": "La partie commence",
+          "hint": "Videz votre main. Le dernier porte le Trou."
+        },
+        "manche": "Manche {n}/{total}",
+        "yourTurn": "À toi de jouer !",
+        "turnOf": "Au tour de {name}",
+        "freeTrick": "Pli libre — pose ce que tu veux",
+        "lastPlayBy": "posé par {name}",
+        "play": "Poser ({count})",
+        "pass": "Passer",
+        "leadHint": "Tu mènes : simple, paire, brelan ou carré — au choix.",
+        "out": "Tu as fini ! Position {rank} — regarde les autres transpirer.",
+        "roles": {
+          "president": "Président",
+          "trou": "Trou"
+        },
+        "exchangeInfo": "Échange automatique : le Trou donne ses 2 meilleures cartes au Président, qui rend ses 2 pires.",
+        "exchangeAsTrou": "Tu as donné tes 2 meilleures cartes… et reçu : {cards}",
+        "exchangeAsPresident": "Le Trou t’a donné : {cards}",
+        "mancheEnd": "Fin de la manche {n}",
+        "nextManche": "Manche suivante",
+        "trouDrinks": "Le Trou boit 🍺",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "finished": {
+          "title": "Fin de partie !",
+          "subtitle": "{name} est Président — inclinez-vous.",
+          "replay": "Rejouer",
+          "rematchWaiting": "Revanche {count}/{total}…",
+          "backToMenu": "Retour au menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Videz votre main",
+            "body": "Posez des combos : simple, paire, brelan ou carré. Le suivant doit poser la même taille, strictement plus fort — ou passer."
+          },
+          {
+            "title": "Le 2 coupe",
+            "body": "Le 2 est la carte suprême : il remporte le pli immédiatement. Le gagnant du pli relance ce qu’il veut."
+          },
+          {
+            "title": "Président et Trou",
+            "body": "Premier sorti = Président, dernier = Trou. Entre les manches, le Trou donne automatiquement ses 2 meilleures cartes au Président."
           }
         ]
       }

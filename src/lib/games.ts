@@ -466,6 +466,26 @@ export const GAMES: GameMeta[] = [
     softModeReady: true,
   },
   {
+    id: 'president',
+    title: 'Président',
+    description:
+      'Le jeu de cartes des cours de récré : videz votre main, coupez au 2, et faites porter le Trou. L’échange des cartes est automatique entre les manches !',
+    path: '/games/president',
+    emoji: '👑',
+    suit: 'spade',
+    rank: '10',
+    gradient: 'from-emerald-800 to-amber-600',
+    colorFrom: '#065f46',
+    colorTo: '#d97706',
+    fallbackColor: '#065f46',
+    onlineReady: true,
+    minPlayers: 4,
+    maxPlayers: 8,
+    onlineOnly: true,
+    botsFillable: true,
+    softModeReady: true,
+  },
+  {
     id: 'telephone-dessine',
     title: 'Téléphone Dessiné',
     description:

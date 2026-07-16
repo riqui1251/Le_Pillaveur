@@ -20,6 +20,7 @@ import { launchSansFiltreRoom } from '@/lib/online-sans-filtre'
 import { launchMotsCodesRoom } from '@/lib/online-mots-codes'
 import { launchDilemmesRoom } from '@/lib/online-dilemmes'
 import { launchPetitBacRoom } from '@/lib/online-petit-bac'
+import { launchPresidentRoom } from '@/lib/online-president'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 
 export type RoomWithMembers = {
@@ -114,6 +115,9 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
       break
     case 'petit-bac':
       await launchPetitBacRoom(roomId, room)
+      break
+    case 'president':
+      await launchPresidentRoom(roomId, room)
       break
     default: {
       const memberUserIds = room.members.map((m) => m.userId)

@@ -104,6 +104,9 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.pbcRounds === 'number' && [3, 5, 8].includes(body.pbcRounds)) {
     next.pbcRounds = body.pbcRounds
   }
+  if (typeof body.preManches === 'number' && [1, 3, 5].includes(body.preManches)) {
+    next.preManches = body.preManches
+  }
 
   const visibilityUpdate =
     typeof body.visibility === 'string' && VALID_VISIBILITIES.has(body.visibility)

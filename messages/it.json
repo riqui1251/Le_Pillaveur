@@ -650,6 +650,10 @@
       "petit-bac": {
         "title": "Petit Bac",
         "description": "Una lettera, cinque categorie: il primo che riempie tutto grida STOP. Uniche 2 punti, doppioni 1 — contesta alla rivelazione!"
+      },
+      "president": {
+        "title": "Président",
+        "description": "Svuota la mano, taglia con il 2, fai portare il Trou a un altro. Scambio automatico tra le manche — da 4 a 8 giocatori."
       }
     },
     "ballon-surprise": {
@@ -3135,6 +3139,65 @@
           {
             "title": "Conteggio e contestazione",
             "body": "Risposta unica: 2 punti. Doppione: 1 punto. Vuota o lettera sbagliata: 0. Risposta dubbia? Contestala — decide la maggioranza."
+          }
+        ]
+      }
+    },
+    "president": {
+      "page": {
+        "onlineOnly": "Il Président si gioca online: ogni mano deve restare segreta, ognuno gioca dal proprio telefono.",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "manchesCount": "Numero di manche",
+        "manches": "manche"
+      },
+      "game": {
+        "countdown": {
+          "title": "La partita inizia",
+          "hint": "Svuota la tua mano. L’ultimo è il Trou."
+        },
+        "manche": "Manche {n}/{total}",
+        "yourTurn": "Tocca a te!",
+        "turnOf": "Turno di {name}",
+        "freeTrick": "Presa libera — gioca quello che vuoi",
+        "lastPlayBy": "giocato da {name}",
+        "play": "Gioca ({count})",
+        "pass": "Passa",
+        "leadHint": "Apri tu: singola, coppia, tris o poker — a scelta.",
+        "out": "Hai finito! Posizione {rank} — guarda gli altri sudare.",
+        "roles": {
+          "president": "Presidente",
+          "trou": "Trou"
+        },
+        "exchangeInfo": "Scambio automatico: il Trou dà le sue 2 carte migliori al Presidente, che restituisce le sue 2 peggiori.",
+        "exchangeAsTrou": "Hai dato le tue 2 carte migliori… e ricevuto: {cards}",
+        "exchangeAsPresident": "Il Trou ti ha dato: {cards}",
+        "mancheEnd": "Fine della manche {n}",
+        "nextManche": "Manche successiva",
+        "trouDrinks": "Il Trou beve 🍺",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "finished": {
+          "title": "Fine della partita!",
+          "subtitle": "{name} è Presidente — inchinatevi.",
+          "replay": "Gioca ancora",
+          "rematchWaiting": "Rivincita {count}/{total}…",
+          "backToMenu": "Torna al menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Svuota la tua mano",
+            "body": "Gioca combo: singola, coppia, tris o poker. Il successivo deve giocare la stessa quantità, strettamente più alta — o passare."
+          },
+          {
+            "title": "Il 2 taglia",
+            "body": "Il 2 è la carta suprema: vince la presa immediatamente. Il vincitore della presa apre con quello che vuole."
+          },
+          {
+            "title": "Presidente e Trou",
+            "body": "Primo a uscire = Presidente, ultimo = Trou. Tra le manche, il Trou dà automaticamente le sue 2 carte migliori al Presidente."
           }
         ]
       }

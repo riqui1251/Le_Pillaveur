@@ -26,6 +26,7 @@ import {
   CodeKeyIcon,
   DilemmaScaleIcon,
   AbcSheetIcon,
+  CrownCardIcon,
   GenericGameIcon,
 } from '@/components/icons/GameIcons'
 
@@ -62,5 +63,6 @@ export function GameIconById({ id, className }: { id: string; className?: string
   if (id === 'mots-codes') return <CodeKeyIcon className={className} />
   if (id === 'dilemmes') return <DilemmaScaleIcon className={className} />
   if (id === 'petit-bac') return <AbcSheetIcon className={className} />
+  if (id === 'president') return <CrownCardIcon className={className} />
   return <GenericGameIcon className={className} />
 }

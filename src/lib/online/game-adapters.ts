@@ -291,6 +291,24 @@ import {
   PBC_MAX_PLAYERS,
   type PbcState,
 } from '@/lib/petit-bac/engine'
+import {
+  parsePreState,
+  serializePreState,
+  applyPreRoomAction,
+  convertPrePlayerToBot,
+  markPrePlayerLeft,
+  rejoinPrePlayer,
+  preClientViewJson,
+  preSpectatorViewJson,
+  type PreRoomActionInput,
+} from '@/lib/president/server-adapter'
+import {
+  currentPreActorId,
+  toPreClientView,
+  PRE_MIN_PLAYERS,
+  PRE_MAX_PLAYERS,
+  type PreState,
+} from '@/lib/president/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -1248,6 +1266,55 @@ const petitBacAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinPbcPlayer(state as PbcState, userId),
 }
 
+// ─── Président ───────────────────────────────────────────────────────────────
+
+const presidentAdapter: GameAdapter = {
+  // 4 joueurs minimum ; les bots (plus petit combo valide) complètent la table.
+  minPlayers: PRE_MIN_PLAYERS,
+  maxPlayers: PRE_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parsePreState(json),
+  serialize: (state) => serializePreState(state as PreState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as PreState
+    let input: PreRoomActionInput
+    if (body.action === 'play' && Array.isArray(body.cards)) {
+      input = { type: 'play', cards: body.cards as number[] }
+    } else if (body.action === 'pass') {
+      input = { type: 'pass' }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyPreRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertPrePlayerToBot(state as PreState, userId),
+  isFinished: (state) => (state as PreState).phase === 'finished',
+  currentActorId: (state) => currentPreActorId(state as PreState),
+  clientViewJson: (state, viewerId) => preClientViewJson(state as PreState, viewerId),
+  spectatorViewJson: (state) => preSpectatorViewJson(state as PreState),
+  actionResponse: (state, viewerId) => ({
+    view: toPreClientView(state as PreState, viewerId),
+    viewJson: preClientViewJson(state as PreState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markPrePlayerLeft(state as PreState, userId, at),
+  rejoin: (state, userId) => rejoinPrePlayer(state as PreState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -1268,6 +1335,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   'mots-codes': motsCodesAdapter,
   dilemmes: dilemmesAdapter,
   'petit-bac': petitBacAdapter,
+  president: presidentAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

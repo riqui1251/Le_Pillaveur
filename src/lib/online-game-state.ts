@@ -47,6 +47,9 @@ export type RoomSettings = {
   /** Petit Bac : nombre de manches/lettres (3/5/8). */
   pbcRounds?: number
 
+  /** Président : nombre de manches (1/3/5). */
+  preManches?: number
+
   /** Le Menteur : variante Palifico (1 dé → les 1 perdent leur statut de joker, face verrouillée). */
   menteurPalifico?: boolean
 

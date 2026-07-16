@@ -452,6 +452,17 @@ export function AbcSheetIcon({ className = 'w-6 h-6' }: IconProps) {
   )
 }
 
+// Président : couronne sur carte (le trône de la table)
+export function CrownCardIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="3.5" width="14" height="17" rx="2" />
+      <path d="M8 14.5l.8-5 2.4 2.2L12 8l.8 3.7 2.4-2.2.8 5z" />
+      <path d="M8.5 16.5h7" />
+    </svg>
+  )
+}
+
 // Fallback générique : carte au dos orné
 export function GenericGameIcon({ className = 'w-6 h-6' }: IconProps) {
   return (

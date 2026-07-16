@@ -9,6 +9,7 @@ import type { QuizState } from '@/lib/quiz/engine'
 import type { SFState } from '@/lib/sans-filtre/engine'
 import type { MCState } from '@/lib/mots-codes/engine'
 import type { PbcState } from '@/lib/petit-bac/engine'
+import type { PreState } from '@/lib/president/engine'
 
 /**
  * Résultats de partie EN LIGNE pour le classement (victoires/défaites —
@@ -157,6 +158,20 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
         won: p.total > 0 && rankOf.get(p.id) === 1,
         rank: rankOf.get(p.id),
       }))
+    }
+    case 'president': {
+      const s = state as PreState
+      // Classement de la DERNIÈRE manche : Président = rang 1 = victoire.
+      const ranking = s.lastRanking ?? []
+      return s.players.map((p) => {
+        const idx = ranking.indexOf(p.id)
+        return {
+          playerId: p.id,
+          isBot: p.isBot,
+          won: idx === 0,
+          rank: idx === -1 ? undefined : idx + 1,
+        }
+      })
     }
     case 'mots-codes': {
       const s = state as MCState
