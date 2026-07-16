@@ -295,6 +295,7 @@ export function useOnlineRoomState() {
       crobardRounds?: number
       sfRounds?: number
       dilRounds?: number
+      pbcRounds?: number
     }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {

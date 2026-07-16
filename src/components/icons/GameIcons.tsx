@@ -439,6 +439,19 @@ export function DilemmaScaleIcon({ className = 'w-6 h-6' }: IconProps) {
   )
 }
 
+// Petit Bac : feuille lignée + grande lettre (la copie du bac)
+export function AbcSheetIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="3.5" width="14" height="17" rx="2" />
+      <path d="M8.5 7.5h7" />
+      <path d="M8.5 10.5h7" />
+      <path d="M9.5 17.5l2.5-6.5 2.5 6.5" />
+      <path d="M10.4 15.4h3.2" />
+    </svg>
+  )
+}
+
 // Fallback générique : carte au dos orné
 export function GenericGameIcon({ className = 'w-6 h-6' }: IconProps) {
   return (

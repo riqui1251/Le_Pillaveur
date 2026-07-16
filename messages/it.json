@@ -646,6 +646,10 @@
       "dilemmes": {
         "title": "Dilemmes",
         "description": "Preferiresti, Non ho mai, Chi del tavolo: voti segreti rivelati insieme — la minoranza beve! Contenuto in francese."
+      },
+      "petit-bac": {
+        "title": "Petit Bac",
+        "description": "Una lettera, cinque categorie: il primo che riempie tutto grida STOP. Uniche 2 punti, doppioni 1 — contesta alla rivelazione!"
       }
     },
     "ballon-surprise": {
@@ -3068,6 +3072,69 @@
           {
             "title": "La minoranza beve",
             "body": "In modalità Apéro, la parte in minoranza beve. Poi carta successiva — i dibattiti sono il gioco."
+          }
+        ]
+      }
+    },
+    "petit-bac": {
+      "page": {
+        "onlineOnly": "Il Petit Bac si gioca online: ognuno scrive le risposte in segreto sul proprio telefono.",
+        "switchOnline": "Passa alla modalità online"
+      },
+      "lobby": {
+        "roundsCount": "Numero di manche",
+        "rounds": "manche"
+      },
+      "game": {
+        "countdown": {
+          "title": "La partita inizia",
+          "hint": "Una lettera, cinque categorie. Il primo che finisce grida STOP!"
+        },
+        "round": "Manche {n}/{total}",
+        "categories": {
+          "prenom": "Nome",
+          "animal": "Animale",
+          "ville": "Città",
+          "pays": "Paese",
+          "metier": "Mestiere",
+          "objet": "Oggetto",
+          "fruit-legume": "Frutta o verdura",
+          "celebrite": "Celebrità",
+          "marque": "Marca",
+          "sport": "Sport",
+          "film-serie": "Film o serie",
+          "plat": "Piatto"
+        },
+        "stop": "STOP!",
+        "stopBy": "STOP di {name}! Fogli raccolti…",
+        "flushHint": "Tempo scaduto! Fogli raccolti…",
+        "submitted": "Foglio consegnato! {count}/{total}…",
+        "empty": "(vuoto)",
+        "contest": "Contesta questa risposta",
+        "nextRound": "Manche successiva",
+        "seeEnd": "Vedi i punteggi",
+        "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
+        "finished": {
+          "title": "Fine del Petit Bac!",
+          "subtitle": "Le risposte uniche hanno pagato. Rivincita?",
+          "replay": "Gioca ancora",
+          "rematchWaiting": "Rivincita {count}/{total}…",
+          "backToMenu": "Torna al menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Una lettera, cinque caselle",
+            "body": "Ogni manche estrae una lettera. Riempi le cinque categorie con parole che iniziano con quella lettera."
+          },
+          {
+            "title": "STOP!",
+            "body": "Il primo che riempie tutto grida STOP e congela il tavolo — gli altri consegnano il foglio così com’è."
+          },
+          {
+            "title": "Conteggio e contestazione",
+            "body": "Risposta unica: 2 punti. Doppione: 1 punto. Vuota o lettera sbagliata: 0. Risposta dubbia? Contestala — decide la maggioranza."
           }
         ]
       }

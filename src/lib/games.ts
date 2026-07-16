@@ -447,6 +447,25 @@ export const GAMES: GameMeta[] = [
     softModeReady: true,
   },
   {
+    id: 'petit-bac',
+    title: 'Petit Bac',
+    description:
+      'Une lettre, cinq catégories : le premier qui remplit tout crie STOP. Réponses uniques 2 pts, doublons 1 pt — contestez à la révélation !',
+    path: '/games/petit-bac',
+    emoji: '📝',
+    suit: 'heart',
+    rank: '10',
+    gradient: 'from-sky-700 to-amber-600',
+    colorFrom: '#0369a1',
+    colorTo: '#d97706',
+    fallbackColor: '#0369a1',
+    onlineReady: true,
+    minPlayers: 2,
+    maxPlayers: 16,
+    onlineOnly: true,
+    softModeReady: true,
+  },
+  {
     id: 'telephone-dessine',
     title: 'Téléphone Dessiné',
     description:

@@ -44,6 +44,9 @@ export type RoomSettings = {
   /** Dilemmes : nombre de cartes de la partie (10/15/20). */
   dilRounds?: number
 
+  /** Petit Bac : nombre de manches/lettres (3/5/8). */
+  pbcRounds?: number
+
   /** Le Menteur : variante Palifico (1 dé → les 1 perdent leur statut de joker, face verrouillée). */
   menteurPalifico?: boolean
 

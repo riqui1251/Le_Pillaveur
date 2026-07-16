@@ -8,6 +8,7 @@ import type { ImposteurState } from '@/lib/imposteur/engine'
 import type { QuizState } from '@/lib/quiz/engine'
 import type { SFState } from '@/lib/sans-filtre/engine'
 import type { MCState } from '@/lib/mots-codes/engine'
+import type { PbcState } from '@/lib/petit-bac/engine'
 
 /**
  * Résultats de partie EN LIGNE pour le classement (victoires/défaites —
@@ -136,6 +137,24 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
         playerId: p.id,
         isBot: p.isBot,
         won: p.crowns > 0 && rankOf.get(p.id) === 1,
+        rank: rankOf.get(p.id),
+      }))
+    }
+    case 'petit-bac': {
+      const s = state as PbcState
+      // Rang « compétition » par score cumulé (comme le Quiz) ; victoire = rang 1
+      // avec au moins un point (une partie à 0 partout ne sacre personne).
+      const sorted = [...s.players].sort((a, b) => b.total - a.total)
+      const rankOf = new Map<string, number>()
+      sorted.forEach((p, i) => {
+        const prev = sorted[i - 1]
+        const rank = prev && prev.total === p.total ? rankOf.get(prev.id)! : i + 1
+        rankOf.set(p.id, rank)
+      })
+      return s.players.map((p) => ({
+        playerId: p.id,
+        isBot: p.isBot,
+        won: p.total > 0 && rankOf.get(p.id) === 1,
         rank: rankOf.get(p.id),
       }))
     }

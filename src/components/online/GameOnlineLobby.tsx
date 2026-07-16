@@ -131,6 +131,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tSf = useTranslations('games.sans-filtre.lobby')
   const tMc = useTranslations('games.mots-codes.lobby')
   const tDil = useTranslations('games.dilemmes.lobby')
+  const tPbc = useTranslations('games.petit-bac.lobby')
   const tEspion = useTranslations('games.espion.lobby')
   const tTabou = useTranslations('games.tabou.lobby')
   const tCrobard = useTranslations('games.crobard.lobby')
@@ -1017,6 +1018,39 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   <span className="block text-lg font-black">{value}</span>
                   <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
                     {tDil('rounds')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {gameId === 'petit-bac' && (
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-sky-400/70">
+            {tPbc('roundsCount')}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[3, 5, 8].map((value) => {
+              const active = (room.settings.pbcRounds ?? 3) === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={!isHost}
+                  onClick={() => updateSettings({ pbcRounds: value })}
+                  className={cn(
+                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
+                    active
+                      ? 'border-transparent bg-gradient-to-r from-sky-700 to-amber-600 text-white shadow-lg'
+                      : 'border-white/10 bg-white/5 text-white/60',
+                    isHost && !active && 'hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  <span className="block text-lg font-black">{value}</span>
+                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                    {tPbc('rounds')}
                   </span>
                 </button>
               )

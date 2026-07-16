@@ -273,6 +273,24 @@ import {
   DIL_MAX_PLAYERS,
   type DilState,
 } from '@/lib/dilemmes/engine'
+import {
+  parsePbcState,
+  serializePbcState,
+  applyPbcRoomAction,
+  convertPbcPlayerToBot,
+  markPbcPlayerLeft,
+  rejoinPbcPlayer,
+  pbcClientViewJson,
+  pbcSpectatorViewJson,
+  type PbcRoomActionInput,
+} from '@/lib/petit-bac/server-adapter'
+import {
+  currentPbcActorId,
+  toPbcClientView,
+  PBC_MIN_PLAYERS,
+  PBC_MAX_PLAYERS,
+  type PbcState,
+} from '@/lib/petit-bac/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
@@ -1175,6 +1193,61 @@ const dilemmesAdapter: GameAdapter = {
   rejoin: (state, userId) => rejoinDilPlayer(state as DilState, userId),
 }
 
+// ─── Petit Bac ───────────────────────────────────────────────────────────────
+
+const petitBacAdapter: GameAdapter = {
+  // PAS de bots de complément : les réponses sont tapées par des humains
+  // (les bots n'existent qu'en remplacement de déserteurs, copie blanche).
+  minPlayers: PBC_MIN_PLAYERS,
+  maxPlayers: PBC_MAX_PLAYERS,
+  parse: (json) => parsePbcState(json),
+  serialize: (state) => serializePbcState(state as PbcState),
+  applyAction(rawState, userId, body) {
+    const state = rawState as PbcState
+    let input: PbcRoomActionInput
+    if (body.action === 'stop' && Array.isArray(body.answers)) {
+      input = { type: 'stop', answers: body.answers as string[] }
+    } else if (body.action === 'submit' && Array.isArray(body.answers)) {
+      input = { type: 'submit', answers: body.answers as string[] }
+    } else if (
+      body.action === 'contest' &&
+      typeof body.targetId === 'string' &&
+      typeof body.category === 'number'
+    ) {
+      input = { type: 'contest', targetId: body.targetId, category: body.category }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
+    } else if (body.action === 'continue') {
+      input = { type: 'continue' }
+    } else if (body.action === 'bot') {
+      input = { type: 'bot' }
+    } else if (body.action === 'replace-left') {
+      input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
+    } else {
+      return { ok: false, error: 'Action invalide', status: 400 }
+    }
+    const result = applyPbcRoomAction(state, userId, input)
+    if (!result.ok) {
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+        result.error
+      )
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertPbcPlayerToBot(state as PbcState, userId),
+  isFinished: (state) => (state as PbcState).phase === 'finished',
+  currentActorId: (state) => currentPbcActorId(state as PbcState),
+  clientViewJson: (state, viewerId) => pbcClientViewJson(state as PbcState, viewerId),
+  spectatorViewJson: (state) => pbcSpectatorViewJson(state as PbcState),
+  actionResponse: (state, viewerId) => ({
+    view: toPbcClientView(state as PbcState, viewerId),
+    viewJson: pbcClientViewJson(state as PbcState, viewerId),
+  }),
+  markLeft: (state, userId, at) => markPbcPlayerLeft(state as PbcState, userId, at),
+  rejoin: (state, userId) => rejoinPbcPlayer(state as PbcState, userId),
+}
+
 // ─── Registre ────────────────────────────────────────────────────────────────
 
 export const GAME_ADAPTERS: Record<string, GameAdapter> = {
@@ -1194,6 +1267,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   'sans-filtre': sansFiltreAdapter,
   'mots-codes': motsCodesAdapter,
   dilemmes: dilemmesAdapter,
+  'petit-bac': petitBacAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

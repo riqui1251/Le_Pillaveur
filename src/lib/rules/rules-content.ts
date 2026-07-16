@@ -94,6 +94,11 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Dilemmes en ligne : Tu préfères, Je n’ai jamais et Qui de la table en votes secrets révélés d’un coup — la minorité trinque. Règles complètes, 3 à 16 joueurs, gratuit.',
   },
+  'petit-bac': {
+    title: 'Règles du Petit Bac en ligne — lettre, STOP et comptage',
+    description:
+      'Le Petit Bac du Pillaveur : une lettre, cinq catégories, le premier qui finit crie STOP. Comptage automatique, contestations à la majorité. Règles complètes, 2 à 16 joueurs, gratuit.',
+  },
 }
 
 const RULES_ROOT = path.join(process.cwd(), 'docs', 'rules', 'fr')

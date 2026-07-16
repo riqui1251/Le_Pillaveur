@@ -656,6 +656,10 @@
       "dilemmes": {
         "title": "Dilemmes",
         "description": "Would you rather, Never have I ever, Who at the table: secret votes revealed at once — the minority drinks! Content in French."
+      },
+      "petit-bac": {
+        "title": "Petit Bac",
+        "description": "One letter, five categories: first to fill everything yells STOP. Unique answers 2 pts, duplicates 1 pt — contest at the reveal!"
       }
     },
     "ballon-surprise": {
@@ -3078,6 +3082,69 @@
           {
             "title": "The minority drinks",
             "body": "In Apéro mode, the minority side drinks. Then next card — the debates are the game."
+          }
+        ]
+      }
+    },
+    "petit-bac": {
+      "page": {
+        "onlineOnly": "Petit Bac is online-only: everyone types their answers secretly on their own phone.",
+        "switchOnline": "Switch to online mode"
+      },
+      "lobby": {
+        "roundsCount": "Number of rounds",
+        "rounds": "rounds"
+      },
+      "game": {
+        "countdown": {
+          "title": "Game starting",
+          "hint": "One letter, five categories. First to finish yells STOP!"
+        },
+        "round": "Round {n}/{total}",
+        "categories": {
+          "prenom": "First name",
+          "animal": "Animal",
+          "ville": "City",
+          "pays": "Country",
+          "metier": "Job",
+          "objet": "Object",
+          "fruit-legume": "Fruit or vegetable",
+          "celebrite": "Celebrity",
+          "marque": "Brand",
+          "sport": "Sport",
+          "film-serie": "Movie or series",
+          "plat": "Dish"
+        },
+        "stop": "STOP!",
+        "stopBy": "STOP by {name}! Papers collected…",
+        "flushHint": "Time is up! Papers collected…",
+        "submitted": "Paper handed in! {count}/{total}…",
+        "empty": "(empty)",
+        "contest": "Contest this answer",
+        "nextRound": "Next round",
+        "seeEnd": "See scores",
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "finished": {
+          "title": "Petit Bac over!",
+          "subtitle": "Unique answers paid off. Rematch?",
+          "replay": "Play again",
+          "rematchWaiting": "Rematch {count}/{total}…",
+          "backToMenu": "Back to menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "One letter, five boxes",
+            "body": "Each round draws a letter. Fill the five categories with words starting with that letter."
+          },
+          {
+            "title": "STOP!",
+            "body": "The first player to fill everything yells STOP and freezes the table — everyone else hands in their paper as is."
+          },
+          {
+            "title": "Scoring and contesting",
+            "body": "Unique answer: 2 pts. Duplicate: 1 pt. Empty or wrong letter: 0. Dubious answer? Contest it — majority rules."
           }
         ]
       }

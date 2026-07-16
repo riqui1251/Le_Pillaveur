@@ -656,6 +656,10 @@
       "dilemmes": {
         "title": "Dilemmes",
         "description": "Tu préfères, Je n’ai jamais, Qui de la table : votes secrets révélés d’un coup — la minorité trinque !"
+      },
+      "petit-bac": {
+        "title": "Petit Bac",
+        "description": "Une lettre, cinq catégories : le premier qui remplit tout crie STOP. Uniques 2 pts, doublons 1 pt — contestez à la révélation !"
       }
     },
     "ballon-surprise": {
@@ -3078,6 +3082,69 @@
           {
             "title": "La minorité boit",
             "body": "En mode Apéro, le camp minoritaire trinque. Puis carte suivante — les débats font le jeu."
+          }
+        ]
+      }
+    },
+    "petit-bac": {
+      "page": {
+        "onlineOnly": "Le Petit Bac se joue en ligne : chacun tape ses réponses en secret sur son téléphone — impossible en passe-et-joue.",
+        "switchOnline": "Passer en mode en ligne"
+      },
+      "lobby": {
+        "roundsCount": "Nombre de manches",
+        "rounds": "manches"
+      },
+      "game": {
+        "countdown": {
+          "title": "La partie commence",
+          "hint": "Une lettre, cinq catégories. Le premier qui finit crie STOP !"
+        },
+        "round": "Manche {n}/{total}",
+        "categories": {
+          "prenom": "Prénom",
+          "animal": "Animal",
+          "ville": "Ville",
+          "pays": "Pays",
+          "metier": "Métier",
+          "objet": "Objet",
+          "fruit-legume": "Fruit ou légume",
+          "celebrite": "Célébrité",
+          "marque": "Marque",
+          "sport": "Sport",
+          "film-serie": "Film ou série",
+          "plat": "Plat"
+        },
+        "stop": "STOP !",
+        "stopBy": "STOP de {name} ! Copies ramassées…",
+        "flushHint": "Temps écoulé ! Copies ramassées…",
+        "submitted": "Copie rendue ! {count}/{total}…",
+        "empty": "(vide)",
+        "contest": "Contester cette réponse",
+        "nextRound": "Manche suivante",
+        "seeEnd": "Voir les scores",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
+        "finished": {
+          "title": "Fin du Petit Bac !",
+          "subtitle": "Les réponses uniques ont payé. Revanche ?",
+          "replay": "Rejouer",
+          "rematchWaiting": "Revanche {count}/{total}…",
+          "backToMenu": "Retour au menu"
+        }
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Une lettre, cinq cases",
+            "body": "Chaque manche tire une lettre. Remplis les cinq catégories avec des mots qui commencent par cette lettre."
+          },
+          {
+            "title": "STOP !",
+            "body": "Le premier qui a tout rempli crie STOP et gèle la table — les autres rendent leur copie telle quelle."
+          },
+          {
+            "title": "Comptage et contestation",
+            "body": "Réponse unique : 2 pts. En doublon : 1 pt. Vide ou mauvaise lettre : 0. Une réponse douteuse ? Contestez — la majorité tranche."
           }
         ]
       }
