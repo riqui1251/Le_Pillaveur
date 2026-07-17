@@ -30,6 +30,19 @@ export const MC_WORDS_FR = [
   'guitare', 'micro', 'radio', 'antenne', 'écran', 'bouton', 'câble', 'pile', 'ressort', 'aimant',
   'docteur', 'fièvre', 'remède', 'pansement', 'béquille', 'squelette', 'crâne', 'dent', 'langue', 'poing',
   'zoo', 'cage', 'plume', 'aile', 'nid', 'ruche', 'toile', 'fourmi', 'papillon', 'escargot',
+  'lit', 'tapis', 'coussin', 'horloge', 'balai', 'seau', 'savon', 'serviette', 'peigne', 'rasoir',
+  'parfum', 'collier', 'bague', 'montre', 'ceinture', 'écharpe', 'manteau', 'sac', 'panier', 'parapluie',
+  'tigre', 'lion', 'singe', 'serpent', 'tortue', 'grenouille', 'hibou', 'corbeau', 'cygne', 'abeille',
+  'banane', 'orange', 'ananas', 'melon', 'citrouille', 'carotte', 'chou', 'oignon', 'champignon', 'salade',
+  'fusée', 'planète', 'comète', 'satellite', 'robot', 'machine', 'usine', 'atelier', 'outil', 'marteau',
+  'scie', 'clou', 'vis', 'pelle', 'râteau', 'brouette', 'arrosoir', 'graine', 'racine', 'branche',
+  'clown', 'jongleur', 'acrobate', 'chevalier', 'soldat', 'espion', 'voleur', 'témoin', 'prince', 'géant',
+  'plombier', 'boulanger', 'boucher', 'coiffeur', 'pompier', 'jardinier', 'serveur', 'caissier', 'maçon', 'notaire',
+  'foire', 'carnaval', 'défilé', 'fanfare', 'trompette', 'accordéon', 'guirlande', 'cadeau', 'bonbon', 'sifflet',
+  'port', 'douane', 'cargo', 'radeau', 'bouée', 'hameçon', 'crabe', 'méduse', 'dauphin', 'phoque',
+  'désert', 'oasis', 'dune', 'chameau', 'palmier', 'jungle', 'liane', 'volcan', 'lave', 'glacier',
+  'igloo', 'traîneau', 'patin', 'ski', 'luge', 'casque', 'moufle', 'bonnet', 'cheminée', 'flocon',
+  'théâtre', 'rideau', 'coulisse', 'décor', 'costume', 'marionnette', 'conte', 'fable', 'poème', 'roman',
 ]
 
 export const MC_WORDS_EN = [
@@ -58,6 +71,19 @@ export const MC_WORDS_EN = [
   'guitar', 'radio', 'antenna', 'screen', 'cable', 'battery', 'spring', 'magnet', 'wire', 'switch',
   'fever', 'cure', 'bandage', 'crutch', 'skeleton', 'skull', 'tooth', 'tongue', 'fist', 'bone',
   'zoo', 'cage', 'feather', 'wing', 'nest', 'hive', 'web', 'ant', 'butterfly', 'snail',
+  'bed', 'carpet', 'cushion', 'clock', 'broom', 'bucket', 'soap', 'towel', 'comb', 'razor',
+  'perfume', 'necklace', 'ring', 'watch', 'belt', 'scarf', 'coat', 'bag', 'basket', 'umbrella',
+  'tiger', 'lion', 'monkey', 'snake', 'turtle', 'frog', 'owl', 'crow', 'swan', 'bee',
+  'banana', 'orange', 'pineapple', 'melon', 'pumpkin', 'carrot', 'cabbage', 'onion', 'mushroom', 'salad',
+  'rocket', 'planet', 'comet', 'satellite', 'robot', 'machine', 'factory', 'workshop', 'tool', 'hammer',
+  'saw', 'nail', 'screw', 'shovel', 'rake', 'wheelbarrow', 'seed', 'root', 'branch', 'fence',
+  'clown', 'juggler', 'acrobat', 'soldier', 'spy', 'thief', 'witness', 'prince', 'giant', 'dwarf',
+  'plumber', 'baker', 'butcher', 'barber', 'fireman', 'gardener', 'waiter', 'cashier', 'mason', 'tailor',
+  'fair', 'carnival', 'parade', 'band', 'trumpet', 'accordion', 'garland', 'gift', 'candy', 'whistle',
+  'harbor', 'cargo', 'raft', 'buoy', 'hook', 'crab', 'jellyfish', 'dolphin', 'seal', 'shell',
+  'desert', 'oasis', 'dune', 'camel', 'palm', 'jungle', 'vine', 'volcano', 'lava', 'glacier',
+  'igloo', 'sled', 'skate', 'ski', 'helmet', 'mitten', 'cap', 'chimney', 'snowflake', 'blizzard',
+  'theater', 'curtain', 'costume', 'puppet', 'tale', 'fable', 'poem', 'novel', 'actor', 'script',
 ]
 
 export const MC_WORDS_ES = [
@@ -86,6 +112,19 @@ export const MC_WORDS_ES = [
   'guitarra', 'radio', 'antena', 'pantalla', 'cable', 'pila', 'muelle', 'imán', 'alambre', 'botella',
   'fiebre', 'remedio', 'venda', 'muleta', 'esqueleto', 'cráneo', 'diente', 'lengua', 'puño', 'hueso',
   'zoo', 'jaula', 'pluma', 'ala', 'nido', 'colmena', 'telaraña', 'hormiga', 'mariposa', 'caracol',
+  'cama', 'alfombra', 'cojín', 'reloj', 'escoba', 'cubo', 'jabón', 'toalla', 'peine', 'navaja',
+  'perfume', 'collar', 'anillo', 'pulsera', 'cinturón', 'bufanda', 'abrigo', 'bolso', 'cesta', 'paraguas',
+  'tigre', 'león', 'mono', 'serpiente', 'tortuga', 'rana', 'búho', 'cuervo', 'cisne', 'abeja',
+  'plátano', 'naranja', 'piña', 'melón', 'calabaza', 'zanahoria', 'col', 'cebolla', 'seta', 'ensalada',
+  'cohete', 'planeta', 'cometa', 'satélite', 'robot', 'máquina', 'fábrica', 'taller', 'herramienta', 'martillo',
+  'sierra', 'clavo', 'tornillo', 'pala', 'rastrillo', 'carretilla', 'semilla', 'raíz', 'rama', 'valla',
+  'payaso', 'malabarista', 'acróbata', 'soldado', 'espía', 'ladrón', 'testigo', 'príncipe', 'gigante', 'enano',
+  'fontanero', 'panadero', 'carnicero', 'peluquero', 'bombero', 'jardinero', 'camarero', 'cajero', 'albañil', 'sastre',
+  'feria', 'carnaval', 'desfile', 'banda', 'trompeta', 'acordeón', 'guirnalda', 'regalo', 'caramelo', 'silbato',
+  'puerto', 'carga', 'balsa', 'boya', 'anzuelo', 'cangrejo', 'medusa', 'delfín', 'foca', 'concha',
+  'desierto', 'oasis', 'duna', 'camello', 'palmera', 'selva', 'liana', 'volcán', 'lava', 'glaciar',
+  'iglú', 'trineo', 'patín', 'esquí', 'casco', 'manopla', 'gorro', 'chimenea', 'copo', 'ventisca',
+  'teatro', 'telón', 'disfraz', 'títere', 'cuento', 'fábula', 'poema', 'novela', 'actor', 'guion',
 ]
 
 export const MC_WORDS_IT = [
@@ -114,6 +153,19 @@ export const MC_WORDS_IT = [
   'chitarra', 'radio', 'antenna', 'schermo', 'cavo', 'pila', 'molla', 'magnete', 'interruttore', 'bottiglia',
   'febbre', 'rimedio', 'benda', 'stampella', 'scheletro', 'teschio', 'dente', 'lingua', 'pugno', 'osso',
   'zoo', 'gabbia', 'piuma', 'ala', 'nido', 'alveare', 'ragnatela', 'formica', 'farfalla', 'lumaca',
+  'letto', 'tappeto', 'cuscino', 'orologio', 'scopa', 'secchio', 'sapone', 'asciugamano', 'pettine', 'rasoio',
+  'profumo', 'collana', 'anello', 'bracciale', 'cintura', 'sciarpa', 'cappotto', 'borsa', 'cesto', 'ombrello',
+  'tigre', 'leone', 'scimmia', 'serpente', 'tartaruga', 'rana', 'gufo', 'corvo', 'cigno', 'ape',
+  'banana', 'arancia', 'ananas', 'melone', 'zucca', 'carota', 'cavolo', 'cipolla', 'fungo', 'insalata',
+  'razzo', 'pianeta', 'cometa', 'satellite', 'robot', 'macchina', 'fabbrica', 'officina', 'attrezzo', 'martello',
+  'sega', 'chiodo', 'vite', 'pala', 'rastrello', 'carriola', 'seme', 'radice', 'ramo', 'recinto',
+  'pagliaccio', 'giocoliere', 'acrobata', 'soldato', 'spia', 'ladro', 'testimone', 'principe', 'gigante', 'nano',
+  'idraulico', 'fornaio', 'macellaio', 'barbiere', 'pompiere', 'giardiniere', 'cameriere', 'cassiere', 'muratore', 'sarto',
+  'fiera', 'carnevale', 'sfilata', 'banda', 'tromba', 'fisarmonica', 'ghirlanda', 'regalo', 'caramella', 'fischietto',
+  'porto', 'carico', 'zattera', 'boa', 'amo', 'granchio', 'medusa', 'delfino', 'foca', 'conchiglia',
+  'deserto', 'oasi', 'duna', 'cammello', 'palma', 'giungla', 'liana', 'vulcano', 'lava', 'ghiacciaio',
+  'iglù', 'slitta', 'pattino', 'sci', 'casco', 'muffola', 'berretto', 'camino', 'fiocco', 'bufera',
+  'teatro', 'sipario', 'costume', 'burattino', 'fiaba', 'favola', 'poesia', 'romanzo', 'attore', 'copione',
 ]
 
 const BY_LANG: Record<string, string[]> = {

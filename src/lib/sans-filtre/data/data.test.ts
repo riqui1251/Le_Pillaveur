@@ -4,8 +4,8 @@ import { SF_HAND_SIZE, SF_MAX_PLAYERS } from '../engine'
 
 describe('contenu Sans Filtre (fr)', () => {
   it('volumes minimaux pour tenir des soirées entières', () => {
-    expect(SF_BLACKS_FR.length).toBeGreaterThanOrEqual(80)
-    expect(SF_WHITES_FR.length).toBeGreaterThanOrEqual(200)
+    expect(SF_BLACKS_FR.length).toBeGreaterThanOrEqual(200)
+    expect(SF_WHITES_FR.length).toBeGreaterThanOrEqual(350)
   })
 
   it('cartes noires : exactement un trou ___, format court, uniques', () => {
@@ -32,7 +32,7 @@ describe('contenu Sans Filtre (fr)', () => {
 
   it('le pool Soft reste jouable à table pleine (mains complètes au départ)', () => {
     const soft = sfContentFor('soft')
-    expect(soft.blacks.length).toBeGreaterThanOrEqual(40)
+    expect(soft.blacks.length).toBeGreaterThanOrEqual(100)
     expect(soft.whites.length).toBeGreaterThanOrEqual(SF_MAX_PLAYERS * SF_HAND_SIZE)
     expect(soft.whites.every((w) => !/\b(bière|vin|shot|rhum|apéro|verre)s?\b/i.test(w))).toBe(true)
   })
