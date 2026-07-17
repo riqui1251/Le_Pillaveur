@@ -99,11 +99,12 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Le Petit Bac du Pillaveur : une lettre, cinq catégories, le premier qui finit crie STOP. Comptage automatique, contestations à la majorité. Règles complètes, 2 à 16 joueurs, gratuit.',
   },
-  president: {
-    title: 'Règles du Président en ligne — combos, coupe au 2 et Trou',
-    description:
-      'Le Président en ligne : combos strictement plus forts, le 2 coupe le pli, premier sorti = Président, dernier = Trou. Échange automatique entre manches. Règles complètes, 4 à 8 joueurs, gratuit.',
-  },
+  // Président masqué pour l'instant — réactiver cette entrée avec l'id dans rules-ids.ts.
+  // president: {
+  //   title: 'Règles du Président en ligne — combos, coupe au 2 et Trou',
+  //   description:
+  //     'Le Président en ligne : combos strictement plus forts, le 2 coupe le pli, premier sorti = Président, dernier = Trou. Échange automatique entre manches. Règles complètes, 4 à 8 joueurs, gratuit.',
+  // },
 }
 
 const RULES_ROOT = path.join(process.cwd(), 'docs', 'rules', 'fr')
