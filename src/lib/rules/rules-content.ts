@@ -54,11 +54,12 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       "Qui est l'Espion ? en ligne : tout le monde connaît le lieu sauf l'espion. Questions, soupçons, accusation publique. Règles complètes, 3 à 8 joueurs.",
   },
-  tabou: {
-    title: 'Règles du Tabou Vocal — faire deviner sans les mots interdits',
-    description:
-      'Le Tabou du Pillaveur : faites deviner un mot au chat vocal sans prononcer les mots interdits, en équipes. Règles complètes, 4 à 12 joueurs.',
-  },
+  // Tabou masqué pour l'instant — réactiver cette entrée avec l'id dans rules-ids.ts.
+  // tabou: {
+  //   title: 'Règles du Tabou Vocal — faire deviner sans les mots interdits',
+  //   description:
+  //     'Le Tabou du Pillaveur : faites deviner un mot au chat vocal sans prononcer les mots interdits, en équipes. Règles complètes, 4 à 12 joueurs.',
+  // },
   crobard: {
     title: 'Règles du Crobard — dessinez, devinez, marquez',
     description:

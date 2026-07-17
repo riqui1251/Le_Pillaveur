@@ -349,6 +349,8 @@ export const GAMES: GameMeta[] = [
   },
   {
     id: 'tabou',
+    // Masqué le temps de fiabiliser le jeu — retirer pour le publier.
+    hidden: true,
     title: 'Tabou Vocal',
     description:
       'Décris un mot à voix haute sans prononcer les 4 mots tabous : ton équipe devine, les adversaires guettent la faute !',
