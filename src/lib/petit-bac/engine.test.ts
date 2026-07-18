@@ -32,13 +32,20 @@ function validAnswers(state: PbcState, suffix: string): string[] {
 }
 
 describe('petit-bac — création', () => {
-  it('tire 5 catégories et une lettre par manche, sans doublon', () => {
+  it('tire 5 catégories PAR MANCHE et une lettre par manche, sans doublon', () => {
     const state = createPbcState(makePlayers(4), 'x', NOW, 8)
     expect(state.phase).toBe('countdown')
     expect(state.categories).toHaveLength(5)
     expect(new Set(state.categories).size).toBe(5)
     expect(state.letters).toHaveLength(8)
     expect(new Set(state.letters).size).toBe(8)
+    // Roulement : un jeu de 5 par manche, chaque jeu sans doublon interne.
+    expect(state.categoryRounds).toHaveLength(8)
+    expect(state.categories).toEqual(state.categoryRounds[0])
+    for (const set of state.categoryRounds) expect(new Set(set).size).toBe(5)
+    // Pool de 24 → les 4 premières manches (20 catégories) sont toutes distinctes.
+    const firstFour = state.categoryRounds.slice(0, 4).flat()
+    expect(new Set(firstFour).size).toBe(20)
   })
 
   it('refuse moins de 2 joueurs', () => {
@@ -264,6 +271,9 @@ describe('petit-bac — continue et fin', () => {
     expect(state.round).toBe(1)
     expect(state.players.map((p) => p.total)).toEqual([10, 10])
     expect(state.answers).toEqual({})
+    // Les catégories ont tourné (tranches disjointes du pool).
+    expect(state.categories).toEqual(state.categoryRounds[1])
+    expect(state.categories.some((c) => state.categoryRounds[0].includes(c))).toBe(false)
 
     state = reducePbc(state, {
       type: 'STOP',

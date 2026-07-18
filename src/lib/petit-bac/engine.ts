@@ -38,6 +38,18 @@ export const PBC_CATEGORY_IDS = [
   'sport',
   'film-serie',
   'plat',
+  'musique',
+  'personnage-fiction',
+  'vetement',
+  'boisson',
+  'dessert',
+  'instrument',
+  'transport',
+  'jeu-jouet',
+  'corps',
+  'fleur-plante',
+  'adjectif',
+  'monument-lieu',
 ] as const
 
 export type PbcCategoryId = (typeof PBC_CATEGORY_IDS)[number]
@@ -57,8 +69,10 @@ export type PbcState = TimedPhaseState & {
   version: number
   phase: PbcPhase
   players: PbcPlayer[]
-  /** 5 catégories tirées pour la partie (constantes d'une manche à l'autre). */
+  /** Les 5 catégories de la MANCHE COURANTE (roulement à chaque manche). */
   categories: string[]
+  /** Jeux de 5 catégories pré-tirés, un par manche (tranches disjointes du pool). */
+  categoryRounds: string[][]
   /** Une lettre par manche, tirées sans doublon à la création. */
   letters: string[]
   round: number
@@ -145,8 +159,16 @@ export function createPbcState(
   }
 
   const rng: SeededRng = createRng(seed)
-  const categories = rng.shuffle([...PBC_CATEGORY_IDS]).slice(0, PBC_CATEGORY_COUNT)
   const letters = rng.shuffle([...PBC_LETTERS]).slice(0, roundsCount)
+  // Un jeu de 5 catégories PAR MANCHE : on découpe le pool mélangé en
+  // tranches disjointes (variété maximale), remélangé quand il est épuisé.
+  const categoryRounds: string[][] = []
+  let pool: string[] = []
+  for (let r = 0; r < roundsCount; r += 1) {
+    if (pool.length < PBC_CATEGORY_COUNT) pool = rng.shuffle([...PBC_CATEGORY_IDS])
+    categoryRounds.push(pool.slice(0, PBC_CATEGORY_COUNT))
+    pool = pool.slice(PBC_CATEGORY_COUNT)
+  }
 
   return {
     version: 1,
@@ -159,7 +181,8 @@ export function createPbcState(
       leftAt: null,
       total: 0,
     })),
-    categories,
+    categories: categoryRounds[0],
+    categoryRounds,
     letters,
     round: 0,
     answers: {},
@@ -177,6 +200,8 @@ export function createPbcState(
 function enterWrite(state: PbcState, now: number): PbcState {
   return {
     ...state,
+    // Roulement : les 5 catégories de la manche courante (filet = celles en cours).
+    categories: state.categoryRounds[state.round] ?? state.categories,
     answers: {},
     stopperId: null,
     roundPoints: null,
@@ -433,7 +458,7 @@ export type PbcRevealCell = {
   rejected: boolean
 }
 
-export type PbcClientView = Omit<PbcState, 'rngState' | 'players' | 'letters' | 'answers' | 'contests' | 'roundPoints'> & {
+export type PbcClientView = Omit<PbcState, 'rngState' | 'players' | 'letters' | 'categoryRounds' | 'answers' | 'contests' | 'roundPoints'> & {
   phaseKey: string
   totalRounds: number
   letter: string
@@ -448,9 +473,10 @@ export type PbcClientView = Omit<PbcState, 'rngState' | 'players' | 'letters' | 
 
 /** Vue PAR JOUEUR : réponses secrètes pendant write/flush, publiques au reveal. */
 export function toPbcClientView(state: PbcState, viewerId: string): PbcClientView {
-  const { rngState: _rng, players, letters, answers, contests, roundPoints, ...rest } = state
+  const { rngState: _rng, players, letters, categoryRounds, answers, contests, roundPoints, ...rest } = state
   void _rng
   void letters
+  void categoryRounds
   const showReveal = state.phase === 'reveal'
   let revealGrid: PbcRevealCell[][] | null = null
   let roundTotals: Record<string, number> | null = null

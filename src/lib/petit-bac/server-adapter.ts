@@ -44,6 +44,9 @@ export function parsePbcState(json: string | null): PbcState | null {
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
     return {
       ...raw,
+      // Rétro-compat : les parties d'avant le roulement gardent leurs 5
+      // catégories fixes pour toutes les manches restantes.
+      categoryRounds: raw.categoryRounds ?? (raw.letters ?? []).map(() => raw.categories),
       answers: raw.answers ?? {},
       contests: raw.contests ?? {},
       rejected: raw.rejected ?? [],

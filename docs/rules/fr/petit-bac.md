@@ -8,8 +8,9 @@ voisin.
 ## Le principe
 
 1. Chaque manche tire une **lettre** (les lettres impossibles comme K, W ou X
-   sont écartées) et affiche les **cinq catégories** de la partie — Prénom,
-   Animal, Ville, Métier, Objet… tirées parmi douze.
+   sont écartées) et **cinq nouvelles catégories** — Prénom, Animal, Boisson,
+   Personnage de fiction, Monument… tirées parmi vingt-quatre, différentes à
+   chaque manche.
 2. Tout le monde écrit **en même temps**, en secret, sur son téléphone.
 3. Le premier joueur qui a rempli ses cinq cases crie **STOP** : la table est
    gelée, les autres rendent leur copie telle quelle.
