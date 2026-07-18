@@ -77,23 +77,26 @@ export function PetitBacOnline() {
   }, [view, room])
 
   // Flush : quelqu'un a crié STOP (ou chrono) → j'envoie mon brouillon tel quel.
+  // PAS de verrou de version : tous les clients déposent en même temps, le
+  // premier bump de version rendrait les autres périmés (409) et leurs réponses
+  // seraient perdues. Le moteur valide la phase ; on retente à chaque nouvelle
+  // version serveur tant que `hasSubmitted` n'est pas confirmé.
   const flushSentRef = useRef<string | null>(null)
   useEffect(() => {
     if (!view || !room || !user || view.phase !== 'flush') return
     const me = view.players.find((p) => p.id === user.id)
     if (!me || me.leftAt || me.hasSubmitted) return
-    const key = `${view.round}:${view.phaseSeq}`
+    const key = `${view.round}:${view.phaseSeq}:${room.stateVersion}`
     if (flushSentRef.current === key) return
     flushSentRef.current = key
     void fetch(`/api/online/rooms/${room.id}/action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        action: 'submit',
-        answers: draftRef.current,
-        expectedVersion: room.stateVersion,
-      }),
+      body: JSON.stringify({ action: 'submit', answers: draftRef.current }),
+    }).catch(() => {
+      // Réseau en échec → réautorise une tentative au prochain rafraîchissement.
+      flushSentRef.current = null
     })
   }, [view, room, user])
 
@@ -161,11 +164,13 @@ export function PetitBacOnline() {
     if (!room || busy) return
     setBusy(true)
     try {
+      // Intention joueur : pas de verrou de version (le moteur valide la
+      // phase) — un verrou ferait perdre l'action sur écritures simultanées.
       await fetch(`/api/online/rooms/${room.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
+        body: JSON.stringify(body),
       })
     } finally {
       setBusy(false)

@@ -131,11 +131,13 @@ export function DilemmesOnline() {
     if (!room || busy) return
     setBusy(true)
     try {
+      // Intention joueur : pas de verrou de version (le moteur valide la
+      // phase) — un verrou ferait perdre les votes simultanés.
       await fetch(`/api/online/rooms/${room.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
+        body: JSON.stringify(body),
       })
     } finally {
       setBusy(false)

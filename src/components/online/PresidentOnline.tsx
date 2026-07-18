@@ -172,7 +172,9 @@ export function PresidentOnline() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
+        // Intention joueur : pas de verrou de version (le moteur valide le
+        // tour et la légalité du combo).
+        body: JSON.stringify(body),
       })
     } finally {
       setBusy(false)

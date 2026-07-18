@@ -156,7 +156,9 @@ export function SansFiltreOnline() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
+        // Intention joueur : pas de verrou de version (le moteur valide la
+        // phase) — un verrou ferait perdre les cartes abattues simultanément.
+        body: JSON.stringify(body),
       })
     } finally {
       setBusy(false)

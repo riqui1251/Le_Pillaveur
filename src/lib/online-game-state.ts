@@ -850,9 +850,32 @@ export function parseTelephoneSyncedState(json: string | null | undefined): Tele
   }
 }
 
+// ─── Sans Filtre / Mots Codés / Dilemmes / Petit Bac / Président ─────────────
+
+/** État minimal partagé par les 5 jeux du lot 2026-07 (moteurs à phases). */
+export type SimplePhaseSyncedState = {
+  version: number
+  phase: string
+  rematchVotes?: string[]
+}
+
+export function parseSimplePhaseSyncedState(
+  json: string | null | undefined
+): SimplePhaseSyncedState | null {
+  if (!json) return null
+  try {
+    const raw = JSON.parse(json) as SimplePhaseSyncedState
+    if (!raw || typeof raw.phase !== 'string') return null
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+  } catch {
+    return null
+  }
+}
+
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────
 
 export type AnyOnlineGameState =
+  | SimplePhaseSyncedState
   | PetitBuveurSyncedState
   | PurpleSyncedState
   | Game1220SyncedState
@@ -910,6 +933,12 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parseCrobardSyncedState(json) as T | null
     case 'telephone-dessine':
       return parseTelephoneSyncedState(json) as T | null
+    case 'sans-filtre':
+    case 'mots-codes':
+    case 'dilemmes':
+    case 'petit-bac':
+    case 'president':
+      return parseSimplePhaseSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
     // les bundles). Nouveau jeu → ajouter un mini-parseur minimal ci-dessus.
@@ -954,6 +983,12 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return (state as CrobardSyncedState).phase === 'finished'
     case 'telephone-dessine':
       return (state as TelephoneSyncedState).phase === 'finished'
+    case 'sans-filtre':
+    case 'mots-codes':
+    case 'dilemmes':
+    case 'petit-bac':
+    case 'president':
+      return (state as SimplePhaseSyncedState).phase === 'finished'
     default:
       return false
   }

@@ -164,7 +164,9 @@ export function MotsCodesOnline() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
+        // Intention joueur : pas de verrou de version (le moteur valide la
+        // phase et le camp au trait).
+        body: JSON.stringify(body),
       })
     } finally {
       setBusy(false)
