@@ -43,6 +43,42 @@ export type Stroke = {
   width: number
 }
 
+/** Plafonds anti-abus d'un dessin (partagés Crobard / Téléphone Dessiné). */
+export const CANVAS_MAX_STROKES = 400
+export const CANVAS_MAX_POINTS_PER_STROKE = 2_000
+
+/** Valide/normalise UN trait venu du client — null si inexploitable. */
+export function sanitizeStroke(raw: unknown): Stroke | null {
+  const s = raw as Partial<Stroke> | null
+  if (!s || !Array.isArray(s.points)) return null
+  const points: number[] = []
+  const max = Math.min(s.points.length, CANVAS_MAX_POINTS_PER_STROKE)
+  for (let i = 0; i + 1 < max; i += 2) {
+    const x = Number(s.points[i])
+    const y = Number(s.points[i + 1])
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+    points.push(Math.min(1, Math.max(0, x)), Math.min(1, Math.max(0, y)))
+  }
+  if (points.length < 4) return null
+  const width = Number(s.width)
+  return {
+    points,
+    color: typeof s.color === 'string' ? s.color.slice(0, 24) : '#020617',
+    width: Number.isFinite(width) ? Math.min(24, Math.max(1, width)) : 6,
+  }
+}
+
+/** Valide/normalise un dessin complet (traits invalides écartés, plafonné). */
+export function sanitizeStrokes(raw: unknown): Stroke[] {
+  if (!Array.isArray(raw)) return []
+  const out: Stroke[] = []
+  for (const item of raw.slice(0, CANVAS_MAX_STROKES)) {
+    const stroke = sanitizeStroke(item)
+    if (stroke) out.push(stroke)
+  }
+  return out
+}
+
 export type CrobardPlayer = {
   id: string
   name: string
@@ -250,9 +286,12 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
     case 'DRAW_STROKE': {
       if (state.phase !== 'drawing') throw new CrobardEngineError('NOT_DRAWING_PHASE')
       if (action.playerId !== state.drawerId) throw new CrobardEngineError('NOT_DRAWER')
+      const stroke = sanitizeStroke(action.stroke)
+      if (!stroke) throw new CrobardEngineError('INVALID_STROKE')
+      if (state.strokes.length >= CANVAS_MAX_STROKES) throw new CrobardEngineError('TOO_MANY_STROKES')
       return {
         ...state,
-        strokes: [...state.strokes, action.stroke],
+        strokes: [...state.strokes, stroke],
         version: state.version + 1,
       }
     }

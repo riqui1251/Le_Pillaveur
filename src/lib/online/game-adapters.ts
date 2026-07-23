@@ -1028,7 +1028,11 @@ const telephoneAdapter: GameAdapter = {
     } else if (body.action === 'clear') {
       input = { type: 'clear' }
     } else if (body.action === 'submit') {
-      input = { type: 'submit' }
+      // Le dessin COMPLET voyage avec le submit (sanitisé par le moteur).
+      input = {
+        type: 'submit',
+        strokes: Array.isArray(body.strokes) ? (body.strokes as Stroke[]) : undefined,
+      }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
       input = { type: 'advance', phaseKey: body.phaseKey }
     } else if (body.action === 'continue') {

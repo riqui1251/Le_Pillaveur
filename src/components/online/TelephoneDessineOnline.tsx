@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Home, Send, Sparkles } from 'lucide-react'
@@ -41,6 +41,15 @@ export function TelephoneDessineOnline() {
   const [busy, setBusy] = useState(false)
   const [text, setText] = useState('')
   const [myStrokes, setMyStrokes] = useState<Stroke[]>([])
+  // Brouillons accessibles depuis les effets (dépôt auto au chrono).
+  const textRef = useRef('')
+  const strokesRef = useRef<Stroke[]>([])
+  useEffect(() => {
+    textRef.current = text
+  }, [text])
+  useEffect(() => {
+    strokesRef.current = myStrokes
+  }, [myStrokes])
 
   const inGame = room?.gameId === 'telephone-dessine' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
@@ -73,6 +82,34 @@ export function TelephoneDessineOnline() {
     }, delay)
     return () => clearTimeout(timer)
   }, [view, room])
+
+  // Dépôt AUTOMATIQUE du brouillon 2 s avant l'échéance (phrase OU dessin) :
+  // sans lui, un maillon non « Envoyé » partait blanc au timeout. Sans verrou
+  // de version, retenté à chaque version serveur tant que le dépôt n'est pas
+  // confirmé (même filet que le flush du Petit Bac).
+  const autoSubmitRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!view || !room || !user) return
+    if (view.phase !== 'contributing' || view.haveISubmitted) return
+    const me = view.players.find((p) => p.id === user.id)
+    if (!me || me.leftAt) return
+    if (view.phaseEndsAt === null || clock < view.phaseEndsAt - 2_000) return
+    const key = `${view.round}:${view.phaseSeq}:${room.stateVersion}`
+    if (autoSubmitRef.current === key) return
+    autoSubmitRef.current = key
+    const body =
+      view.actionType === 'draw'
+        ? { action: 'submit', strokes: strokesRef.current }
+        : { action: 'write', text: textRef.current.trim() }
+    void fetch(`/api/online/rooms/${room.id}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    }).catch(() => {
+      autoSubmitRef.current = null
+    })
+  }, [view, room, user, clock])
 
   useEffect(() => {
     if (!view || !user || !room || view.phase === 'finished') return
@@ -136,11 +173,13 @@ export function TelephoneDessineOnline() {
     if (!room || busy) return
     setBusy(true)
     try {
+      // Intention joueur : pas de verrou de version (le moteur valide la
+      // phase) — un verrou ferait perdre les envois simultanés.
       await fetch(`/api/online/rooms/${room.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
+        body: JSON.stringify(body),
       })
     } finally {
       setBusy(false)
@@ -360,20 +399,18 @@ export function TelephoneDessineOnline() {
           <p className="text-center text-xs font-semibold uppercase tracking-wide text-white/40">
             {t('drawInstruction')}
           </p>
+          {/* Dessin 100 % LOCAL : personne ne le regarde en direct (maillon
+              secret) — le dessin complet part en UNE action au SUBMIT. Le
+              streaming trait par trait perdait des traits (verrou busy +
+              conflits de version) → dessins amputés à l'étape suivante. */}
           <PartyCanvas
             strokes={myStrokes}
             readOnly={false}
-            onStrokeComplete={(stroke: Stroke) => {
-              setMyStrokes((prev) => [...prev, stroke])
-              void sendAction({ action: 'draw-stroke', stroke })
-            }}
-            onClear={() => {
-              setMyStrokes([])
-              void sendAction({ action: 'clear' })
-            }}
+            onStrokeComplete={(stroke: Stroke) => setMyStrokes((prev) => [...prev, stroke])}
+            onClear={() => setMyStrokes([])}
           />
           <Button
-            onClick={() => void sendAction({ action: 'submit' })}
+            onClick={() => void sendAction({ action: 'submit', strokes: myStrokes })}
             disabled={busy}
             className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-bold"
           >

@@ -61,7 +61,7 @@ export type TelephoneRoomActionInput =
   | { type: 'write'; text: string }
   | { type: 'draw-stroke'; stroke: Stroke }
   | { type: 'clear' }
-  | { type: 'submit' }
+  | { type: 'submit'; strokes?: Stroke[] }
   | { type: 'advance'; phaseKey: string }
   | { type: 'continue' }
   | { type: 'previous' }
@@ -99,7 +99,12 @@ export function applyTelephoneRoomAction(
       case 'submit':
         return {
           ok: true,
-          state: reduceTelephone(state, { type: 'SUBMIT', playerId: userId, now: Date.now() }),
+          state: reduceTelephone(state, {
+            type: 'SUBMIT',
+            playerId: userId,
+            strokes: input.strokes,
+            now: Date.now(),
+          }),
         }
       case 'advance':
         return {

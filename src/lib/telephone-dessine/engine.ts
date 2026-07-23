@@ -1,6 +1,6 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
-import type { Stroke } from '@/lib/crobard/engine'
+import { sanitizeStrokes, type Stroke } from '@/lib/crobard/engine'
 
 /**
  * TÉLÉPHONE DESSINÉ (cadavre exquis phrase/dessin) — moteur PUR,
@@ -68,7 +68,7 @@ export type TelephoneAction =
   | { type: 'WRITE'; playerId: string; text: string; now: number }
   | { type: 'DRAW_STROKE'; playerId: string; stroke: Stroke }
   | { type: 'CLEAR'; playerId: string }
-  | { type: 'SUBMIT'; playerId: string; now: number }
+  | { type: 'SUBMIT'; playerId: string; strokes?: Stroke[]; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
   | { type: 'PREVIOUS'; playerId: string }
@@ -261,9 +261,16 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.leftAt) throw new TelephoneEngineError('UNKNOWN_PLAYER')
       if (state.submittedIds.includes(player.id)) throw new TelephoneEngineError('ALREADY_SUBMITTED')
+      // Le dessin COMPLET arrive avec le SUBMIT (dessin local, une seule
+      // requête — le streaming trait par trait perdait des traits sous
+      // concurrence). Filet : sans `strokes`, on garde l'accumulé serveur
+      // (compat parties en cours / vieux clients).
       const current = state.pendingSubmissions[player.id]
-      const contribution: TelephoneContribution =
-        current?.type === 'draw' ? current : { type: 'draw', strokes: [] }
+      const contribution: TelephoneContribution = Array.isArray(action.strokes)
+        ? { type: 'draw', strokes: sanitizeStrokes(action.strokes) }
+        : current?.type === 'draw'
+          ? current
+          : { type: 'draw', strokes: [] }
       const pendingSubmissions = { ...state.pendingSubmissions, [player.id]: contribution }
       const submittedIds = [...state.submittedIds, player.id]
       return maybeResolveRound(

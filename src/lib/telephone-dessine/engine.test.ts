@@ -129,6 +129,40 @@ describe('manche de dessin (DRAW_STROKE / CLEAR / SUBMIT)', () => {
       'NOT_WRITE_ROUND'
     )
   })
+
+  it('SUBMIT avec `strokes` porte le dessin COMPLET (remplace l’accumulé) et sanitise', () => {
+    let s = makeAtDrawRound()
+    // Un vieux trait streamé traîne côté serveur — le SUBMIT complet le remplace.
+    s = reduceTelephone(s, {
+      type: 'DRAW_STROKE',
+      playerId: 'p0',
+      stroke: { points: [0, 0, 0.1, 0.1], color: '#000', width: 3 },
+    })
+    s = reduceTelephone(s, {
+      type: 'SUBMIT',
+      playerId: 'p0',
+      strokes: [
+        { points: [0.1, 0.1, 0.9, 0.9], color: '#ef4444', width: 6 },
+        { points: [5, -2, 0.5, 0.5], color: '#3b82f6', width: 999 }, // hors bornes → clampé
+        { points: [0.3, 0.3], color: '#000', width: 3 }, // trop court → écarté
+        { points: 'nimp' as unknown as number[], color: '#000', width: 3 }, // invalide → écarté
+      ],
+      now: T0,
+    })
+    s = reduceTelephone(s, { type: 'SUBMIT', playerId: 'p1', strokes: [], now: T0 })
+    s = reduceTelephone(s, { type: 'SUBMIT', playerId: 'p2', strokes: [], now: T0 })
+    // Manche résolue : le maillon de p0 est dans la chaîne qui lui était assignée.
+    const chainWithDrawing = Object.values(s.chains).find(
+      (links) => links[1]?.type === 'draw' && links[1].strokes.length > 0
+    )
+    expect(chainWithDrawing).toBeDefined()
+    const link = chainWithDrawing![1] as { type: 'draw'; strokes: { points: number[]; width: number }[] }
+    expect(link.strokes).toHaveLength(2)
+    expect(link.strokes[0].points).toEqual([0.1, 0.1, 0.9, 0.9])
+    // Clamps : coordonnées ramenées dans [0,1], épaisseur bornée.
+    expect(link.strokes[1].points).toEqual([1, 0, 0.5, 0.5])
+    expect(link.strokes[1].width).toBeLessThanOrEqual(24)
+  })
 })
 
 describe('ADVANCE : timeout de manche', () => {

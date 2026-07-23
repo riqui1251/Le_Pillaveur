@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactConfetti from 'react-confetti'
@@ -45,6 +45,12 @@ export function CrobardOnline() {
   const [guessText, setGuessText] = useState('')
   const [guessFeedback, setGuessFeedback] = useState<'wrong' | 'close' | null>(null)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
+  // File d'envoi des traits, SÉRIALISÉE (ordre garanti) et sans verrou busy ni
+  // version : un trait dessiné pendant l'envoi du précédent était silencieusement
+  // perdu (verrou busy), et les devinettes simultanées faisaient churner la
+  // version → 409 → traits manquants chez les devineurs.
+  const strokeQueueRef = useRef<Array<{ action: 'draw-stroke'; stroke: Stroke } | { action: 'clear' }>>([])
+  const strokePumpingRef = useRef(false)
 
   useEffect(() => {
     const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
@@ -151,15 +157,47 @@ export function CrobardOnline() {
     if (!room || busy) return null
     setBusy(true)
     try {
+      // Intention joueur : pas de verrou de version (le moteur valide la
+      // phase et l'acteur) — un verrou ferait perdre l'action sur écritures
+      // simultanées (devinettes + traits).
       const res = await fetch(`/api/online/rooms/${room.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
+        body: JSON.stringify(body),
       })
       return (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null
     } finally {
       setBusy(false)
+    }
+  }
+
+  /** Vide la file de traits, un envoi à la fois (retente sur 409/5xx/réseau). */
+  const pumpStrokeQueue = async () => {
+    if (strokePumpingRef.current || !room) return
+    strokePumpingRef.current = true
+    try {
+      while (strokeQueueRef.current.length > 0) {
+        const item = strokeQueueRef.current[0]
+        let done = false
+        for (let attempt = 0; attempt < 3 && !done; attempt += 1) {
+          try {
+            const res = await fetch(`/api/online/rooms/${room.id}/action`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(item),
+            })
+            // Refus définitif (mauvaise phase, plafond…) : on jette le trait.
+            done = res.ok || (res.status !== 409 && res.status < 500)
+          } catch {
+            await new Promise((r) => setTimeout(r, 300))
+          }
+        }
+        strokeQueueRef.current.shift()
+      }
+    } finally {
+      strokePumpingRef.current = false
     }
   }
 
@@ -386,8 +424,14 @@ export function CrobardOnline() {
       <PartyCanvas
         strokes={view.strokes}
         readOnly={!view.isDrawer}
-        onStrokeComplete={(stroke: Stroke) => void sendAction({ action: 'draw-stroke', stroke })}
-        onClear={() => void sendAction({ action: 'clear' })}
+        onStrokeComplete={(stroke: Stroke) => {
+          strokeQueueRef.current.push({ action: 'draw-stroke', stroke })
+          void pumpStrokeQueue()
+        }}
+        onClear={() => {
+          strokeQueueRef.current = [{ action: 'clear' }]
+          void pumpStrokeQueue()
+        }}
       />
 
       {!view.isDrawer && (
