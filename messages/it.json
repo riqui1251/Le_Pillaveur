@@ -3475,7 +3475,8 @@
       "liftBan": "Rimuovi ban",
       "permanentBan": "Ban permanente",
       "temporaryBan": "Ban temporaneo",
-      "deleteAccount": "Elimina account"
+      "deleteAccount": "Elimina account",
+      "googleAccount": "Account Google"
     },
     "bans": {
       "activeTitle": "Ban attivi",

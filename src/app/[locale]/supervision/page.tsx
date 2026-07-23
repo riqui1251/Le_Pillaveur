@@ -222,6 +222,8 @@ type AdminUser = {
   email: string | null
   displayName: string
   accountCode: string | null
+  /** Moyen de connexion : 'google' = compte sans mot de passe (GIS). */
+  authProvider?: 'google' | 'password'
   role: string
   createdAt: string
   lastCountry: string | null
@@ -2072,6 +2074,11 @@ export default function SupervisionPage() {
                         )}
                         <AccountCodeBadge code={u.accountCode} />
                         <RoleBadge role={u.role} compact />
+                        {u.authProvider === 'google' && (
+                          <Badge className="border-sky-500/30 bg-sky-500/15 text-sky-200">
+                            {t('accounts.googleAccount')}
+                          </Badge>
+                        )}
                         {u.ban.banned && (
                           <Badge className="border-red-500/30 bg-red-500/15 text-red-200">
                             <Ban className="mr-1 h-3 w-3" />

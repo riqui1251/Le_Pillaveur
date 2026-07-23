@@ -26,6 +26,7 @@ function serializeUser(user: {
   email: string | null
   displayName: string
   accountCode: string | null
+  passwordHash?: string
   role: string
   createdAt: Date
   updatedAt: Date
@@ -46,6 +47,9 @@ function serializeUser(user: {
     email: user.email,
     displayName: user.displayName,
     accountCode: user.accountCode,
+    // Jamais le hash lui-même : juste le MOYEN de connexion (un compte sans
+    // mot de passe mais avec email = connexion Google).
+    authProvider: user.passwordHash === '' ? ('google' as const) : ('password' as const),
     role: user.role,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
@@ -69,13 +73,16 @@ export async function GET() {
     await requireSupervisionUser()
 
     const users = await prisma.user.findMany({
-      where: { passwordHash: { not: '' }, email: { not: null } },
+      // Tout compte ENREGISTRÉ : email + mot de passe OU connexion Google
+      // (passwordHash vide). Seuls les invités (email null) restent exclus.
+      where: { email: { not: null } },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         email: true,
         displayName: true,
         accountCode: true,
+        passwordHash: true,
         role: true,
         createdAt: true,
         updatedAt: true,
