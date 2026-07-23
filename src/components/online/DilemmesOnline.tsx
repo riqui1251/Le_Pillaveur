@@ -247,10 +247,14 @@ export function DilemmesOnline() {
             <span className={cn('font-display text-xl font-black', choice === 'A' ? 'text-suit-red' : 'text-chip-blue')}>
               {Math.round((count / total) * 100)} %
             </span>
-            <span className="flex flex-wrap gap-0.5">
+            {/* Les PSEUDOS des votants, directement lisibles (pas d'icônes). */}
+            <span className="flex flex-wrap gap-1">
               {revealVoters(choice).map((r) => (
-                <span key={r.voterId} title={nameOf(r.voterId)} aria-hidden>
-                  <PlayerAvatarGlyph value={iconOf({ id: r.voterId, isBot: view.players.find((p) => p.id === r.voterId)?.isBot ?? false })} />
+                <span
+                  key={r.voterId}
+                  className="rounded-full border border-[#24201A]/15 bg-[#24201A]/5 px-1.5 py-0.5 text-[10px] font-semibold text-[#4A443A]"
+                >
+                  {nameOf(r.voterId)}
                 </span>
               ))}
             </span>

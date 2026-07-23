@@ -7,14 +7,13 @@ import type { TvRoomDto } from '@/lib/online-room'
 import type { DilClientView } from '@/lib/dilemmes/engine'
 import { DIL_VOTE_MS } from '@/lib/dilemmes/engine'
 import { cn } from '@/lib/utils'
-import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
  * DILEMMES sur grand écran : la carte en géant, la progression des votes
  * (jamais leur contenu avant la révélation), puis les camps révélés.
  */
-export function TvDilemmes({ room, state }: { room: TvRoomDto; state: DilClientView }) {
+export function TvDilemmes({ state }: { room: TvRoomDto; state: DilClientView }) {
   const t = useTranslations('games.dilemmes.game')
   const [clock, setClock] = useState(() => Date.now())
 
@@ -28,8 +27,6 @@ export function TvDilemmes({ room, state }: { room: TvRoomDto; state: DilClientV
   const card = state.card
   const reveal = state.lastReveal
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const votedCount = state.players.filter((p) => p.hasVoted && !p.leftAt).length
   const activeCount = state.players.filter((p) => !p.leftAt).length
 
@@ -65,10 +62,14 @@ export function TvDilemmes({ room, state }: { room: TvRoomDto; state: DilClientV
             <span className={cn('font-display text-3xl font-black', choice === 'A' ? 'text-suit-red' : 'text-chip-blue')}>
               {Math.round((voters.length / total) * 100)} %
             </span>
-            <span className="flex flex-wrap justify-center gap-1 text-xl">
+            {/* Les PSEUDOS des votants, directement lisibles (pas d'icônes). */}
+            <span className="flex flex-wrap justify-center gap-1.5">
               {voters.map((r) => (
-                <span key={r.voterId} title={nameOf(r.voterId)} aria-hidden>
-                  <PlayerAvatarGlyph value={iconOf({ id: r.voterId, isBot: state.players.find((p) => p.id === r.voterId)?.isBot ?? false })} />
+                <span
+                  key={r.voterId}
+                  className="rounded-full border border-[#24201A]/15 bg-[#24201A]/5 px-2.5 py-0.5 text-base font-bold text-[#4A443A]"
+                >
+                  {nameOf(r.voterId)}
                 </span>
               ))}
             </span>
@@ -121,7 +122,6 @@ export function TvDilemmes({ room, state }: { room: TvRoomDto; state: DilClientV
                   .sort((a, b) => b.votes - a.votes)
                   .map(({ p, votes }) => (
                     <span key={p.id} className="flex items-center gap-2 rounded-2xl border border-[#D8CCAE] bg-cream px-5 py-2.5 text-2xl font-black text-[#24201A]">
-                      <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                       {p.name}
                       <span className="font-display text-suit-red">{votes}</span>
                     </span>
