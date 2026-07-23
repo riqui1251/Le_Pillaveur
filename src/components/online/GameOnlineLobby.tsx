@@ -1024,6 +1024,39 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               )
             })}
           </div>
+          {/* Mode coquin 🌶️ : cartes grivoises par sous-entendu, opt-in de l'hôte. */}
+          <button
+            type="button"
+            disabled={!isHost}
+            onClick={() => updateSettings({ dilCoquin: !room.settings.dilCoquin })}
+            className={cn(
+              'mt-3 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-all disabled:cursor-not-allowed',
+              room.settings.dilCoquin
+                ? 'border-transparent bg-gradient-to-r from-rose-700 to-pink-600 text-white shadow-lg'
+                : 'border-white/10 bg-white/5 text-white/60',
+              isHost && !room.settings.dilCoquin && 'hover:bg-white/10 hover:text-white'
+            )}
+          >
+            <span>
+              <span className="block text-sm font-black">{tDil('coquin')} 🌶️</span>
+              <span
+                className={cn(
+                  'mt-0.5 block text-[10px]',
+                  room.settings.dilCoquin ? 'text-white/80' : 'text-white/35'
+                )}
+              >
+                {tDil('coquinHint')}
+              </span>
+            </span>
+            <span
+              className={cn(
+                'text-xs font-bold uppercase tracking-wide',
+                room.settings.dilCoquin ? 'text-white' : 'text-white/30'
+              )}
+            >
+              {room.settings.dilCoquin ? tDil('coquinOn') : tDil('coquinOff')}
+            </span>
+          </button>
         </div>
       )}
 

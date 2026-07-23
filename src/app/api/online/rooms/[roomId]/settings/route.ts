@@ -101,6 +101,9 @@ export async function PUT(request: Request, { params }: Params) {
   if (typeof body.dilRounds === 'number' && [10, 15, 20].includes(body.dilRounds)) {
     next.dilRounds = body.dilRounds
   }
+  if (typeof body.dilCoquin === 'boolean') {
+    next.dilCoquin = body.dilCoquin
+  }
   if (typeof body.pbcRounds === 'number' && [3, 5, 8].includes(body.pbcRounds)) {
     next.pbcRounds = body.pbcRounds
   }

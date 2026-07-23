@@ -3038,7 +3038,11 @@
       },
       "lobby": {
         "roundsCount": "Numero di carte",
-        "rounds": "carte"
+        "rounds": "carte",
+        "coquin": "Modalità piccante",
+        "coquinHint": "Aggiunge carte più audaci — allusioni e figuracce da appuntamento. Contenuto in francese.",
+        "coquinOn": "Attivo",
+        "coquinOff": "Disattivo"
       },
       "game": {
         "countdown": {

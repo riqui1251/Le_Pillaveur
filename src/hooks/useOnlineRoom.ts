@@ -295,6 +295,7 @@ export function useOnlineRoomState() {
       crobardRounds?: number
       sfRounds?: number
       dilRounds?: number
+      dilCoquin?: boolean
       pbcRounds?: number
       preManches?: number
     }) => {

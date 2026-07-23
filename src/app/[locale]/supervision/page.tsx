@@ -989,6 +989,9 @@ export default function SupervisionPage() {
   const [dataLoaded, setDataLoaded] = useState(false)
   const [editingNames, setEditingNames] = useState<Record<string, string>>({})
   const [accountSearch, setAccountSearch] = useState('')
+  // Accordéon de la liste des comptes : seuls les comptes DÉPLIÉS montrent
+  // le détail (email, IP, actions) — la liste reste compacte.
+  const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState('overview')
   const [accountFilterRole, setAccountFilterRole] = useState('all')
   const [accountFilterStatus, setAccountFilterStatus] = useState('all')
@@ -2039,11 +2042,23 @@ export default function SupervisionPage() {
                 return (
                 <div
                   key={u.id}
-                  className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3.5 transition-colors hover:border-white/[0.16]"
+                  className="rounded-xl border border-white/10 bg-white/[0.02] transition-colors hover:border-white/[0.16]"
                 >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
+                  {/* En-tête compact (accordéon) : pastille + pseudo + badges.
+                      Le détail et les actions se déplient au clic. */}
+                  <button
+                    type="button"
+                    aria-expanded={expandedAccounts.has(u.id)}
+                    onClick={() =>
+                      setExpandedAccounts((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(u.id)) next.delete(u.id)
+                        else next.add(u.id)
+                        return next
+                      })
+                    }
+                    className="flex w-full flex-wrap items-center gap-2 p-3.5 text-left"
+                  >
                         <span
                           className={cn(
                             'h-2 w-2 shrink-0 rounded-full',
@@ -2052,26 +2067,7 @@ export default function SupervisionPage() {
                           title={isOnline ? t('accounts.online') : undefined}
                           aria-hidden
                         />
-                        {canEditAccounts && canModifyTarget(user!.role, u.role) ? (
-                          <Input
-                            className="w-full max-w-full bg-black/30 sm:max-w-[200px]"
-                            value={editingNames[u.id] ?? u.displayName}
-                            onChange={(e) =>
-                              setEditingNames((prev) => ({
-                                ...prev,
-                                [u.id]: e.target.value,
-                              }))
-                            }
-                            onBlur={() => {
-                              const next = (editingNames[u.id] ?? '').trim()
-                              if (next && next !== u.displayName) {
-                                updateUser(u.id, { displayName: next })
-                              }
-                            }}
-                          />
-                        ) : (
-                          <span className="font-medium text-white">{u.displayName}</span>
-                        )}
+                        <span className="font-medium text-white">{u.displayName}</span>
                         <AccountCodeBadge code={u.accountCode} />
                         <RoleBadge role={u.role} compact />
                         {u.authProvider === 'google' && (
@@ -2090,7 +2086,37 @@ export default function SupervisionPage() {
                             {t('accounts.you')}
                           </Badge>
                         )}
-                      </div>
+                        <ChevronDown
+                          className={cn(
+                            'ml-auto h-4 w-4 shrink-0 text-white/40 transition-transform',
+                            expandedAccounts.has(u.id) && 'rotate-180'
+                          )}
+                          aria-hidden
+                        />
+                  </button>
+
+                  {expandedAccounts.has(u.id) && (
+                  <div className="flex flex-col gap-3 border-t border-white/10 p-3.5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {canEditAccounts && canModifyTarget(user!.role, u.role) && (
+                        <Input
+                          className="w-full max-w-full bg-black/30 sm:max-w-[240px]"
+                          value={editingNames[u.id] ?? u.displayName}
+                          onChange={(e) =>
+                            setEditingNames((prev) => ({
+                              ...prev,
+                              [u.id]: e.target.value,
+                            }))
+                          }
+                          onBlur={() => {
+                            const next = (editingNames[u.id] ?? '').trim()
+                            if (next && next !== u.displayName) {
+                              updateUser(u.id, { displayName: next })
+                            }
+                          }}
+                        />
+                      )}
                       <p className="truncate text-xs text-white/45">{u.email}</p>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/30">
                         <span>
@@ -2327,6 +2353,8 @@ export default function SupervisionPage() {
                         {t('cosmetics.manage')}
                       </Button>
                     </div>
+                  )}
+                  </div>
                   )}
                 </div>
                 )

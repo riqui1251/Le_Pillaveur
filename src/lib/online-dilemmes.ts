@@ -28,7 +28,8 @@ export async function launchDilemmesRoom(roomId: string, room: LaunchRoom) {
     ambiance,
     settings.botsCount ?? 0,
     undefined,
-    settings.dilRounds
+    settings.dilRounds,
+    Boolean(settings.dilCoquin)
   )
 
   await prisma.onlineRoom.update({

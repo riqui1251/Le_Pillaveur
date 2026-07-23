@@ -3048,7 +3048,11 @@
       },
       "lobby": {
         "roundsCount": "Number of cards",
-        "rounds": "cards"
+        "rounds": "cards",
+        "coquin": "Spicy mode",
+        "coquinHint": "Adds more daring cards — innuendo and dating shames. Content in French.",
+        "coquinOn": "On",
+        "coquinOff": "Off"
       },
       "game": {
         "countdown": {

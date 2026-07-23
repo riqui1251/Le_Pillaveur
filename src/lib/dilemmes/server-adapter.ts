@@ -36,7 +36,8 @@ export function buildDilState(
   ambiance: 'soft' | 'alcool',
   botsCount: number = 0,
   seed?: string | number,
-  roundsCount?: number
+  roundsCount?: number,
+  coquin: boolean = false
 ): DilState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
@@ -54,7 +55,7 @@ export function buildDilState(
 
   return createDilState(
     players,
-    dilContentFor(ambiance),
+    dilContentFor(ambiance, coquin),
     seed ?? randomSeed(),
     Date.now(),
     roundsCount ?? DIL_DEFAULT_ROUNDS

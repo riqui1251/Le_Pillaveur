@@ -3048,7 +3048,11 @@
       },
       "lobby": {
         "roundsCount": "Nombre de cartes",
-        "rounds": "cartes"
+        "rounds": "cartes",
+        "coquin": "Mode coquin",
+        "coquinHint": "Ajoute des cartes plus osées — sous-entendus et hontes de rencard. Contenu en français.",
+        "coquinOn": "Activé",
+        "coquinOff": "Désactivé"
       },
       "game": {
         "countdown": {

@@ -7,7 +7,7 @@ import type { DilCard } from '../engine'
  * table » (vote joueur). tone 'soft' = jouable en mode Soft.
  */
 
-export type DilTone = 'soft' | 'apero'
+export type DilTone = 'soft' | 'apero' | 'coquin'
 export type DilContentCard = DilCard & { tone: DilTone }
 
 export const DIL_CARDS_FR: DilContentCard[] = [
@@ -222,14 +222,83 @@ export const DIL_CARDS_FR: DilContentCard[] = [
   { kind: 'who', text: 'applaudirait seul à l’atterrissage ?', tone: 'soft' },
   { kind: 'who', text: 'aurait déjà son discours de Palme d’or prêt ?', tone: 'soft' },
   { kind: 'who', text: 'transformerait « une bière et je rentre » en épopée ?', tone: 'apero' },
+
+  // ── MODE COQUIN 🌶️ (opt-in au lobby) ── même charte que Sans Filtre :
+  // grivois par SOUS-ENTENDU, séduction et hontes de rencard — jamais
+  // frontal, jamais graphique, jamais dégradant.
+  { kind: 'prefer', a: 'Un massage qui commence dans le dos', b: 'Un slow qui n’en finit pas', tone: 'coquin' },
+  { kind: 'prefer', a: 'Que la table voie ton historique de likes', b: 'Que la table entende tes pensées pendant une minute', tone: 'coquin' },
+  { kind: 'prefer', a: 'Un date dans un jacuzzi', b: 'Un date sous les étoiles avec une seule couverture', tone: 'coquin' },
+  { kind: 'prefer', a: 'Recevoir un compliment torride en public', b: 'Qu’on te le chuchote à l’oreille devant tout le monde', tone: 'coquin' },
+  { kind: 'prefer', a: 'Un action ou vérité sans passe-droit', b: 'Un gage mystère choisi par la table', tone: 'coquin' },
+  { kind: 'prefer', a: 'Que ton ex décrive tes talents cachés à la table', b: 'Que ton crush lise tes dix derniers messages', tone: 'coquin' },
+  { kind: 'prefer', a: 'Une nuit en cuillère avec ton crush', b: 'Un petit-déj au lit préparé par ton crush', tone: 'coquin' },
+  { kind: 'prefer', a: 'Un strip-poker entre gens de confiance', b: 'Un jeu de la bouteille version adulte', tone: 'coquin' },
+  { kind: 'prefer', a: 'Avouer ton fantasme le plus avouable', b: 'Mimer ton pire rencard', tone: 'coquin' },
+  { kind: 'prefer', a: 'Une semaine sans embrasser', b: 'Une semaine sans téléphone', tone: 'coquin' },
+  { kind: 'prefer', a: 'Que la table devine ton « type »', b: 'Révéler ton crush de jeunesse le plus honteux', tone: 'coquin' },
+  { kind: 'prefer', a: 'Un rencard organisé par ta mère', b: 'Un rencard organisé par ton ex', tone: 'coquin' },
+  { kind: 'prefer', a: 'Toujours dire la vérité sur tes nuits', b: 'Ne plus jamais raconter tes soirées', tone: 'coquin' },
+  { kind: 'prefer', a: 'Un bain moussant à deux', b: 'Une sieste crapuleuse un dimanche pluvieux', tone: 'coquin' },
+  { kind: 'prefer', a: 'Embrasser mal mais aimer fort', b: 'Embrasser divinement mais oublier les anniversaires', tone: 'coquin' },
+  { kind: 'prefer', a: 'Un(e) partenaire très bavard(e) sur l’oreiller', b: 'Un(e) partenaire muet(te) comme une tombe', tone: 'coquin' },
+  { kind: 'prefer', a: 'Lire le journal intime de ton crush', b: 'Qu’il ou elle lise le tien', tone: 'coquin' },
+  { kind: 'prefer', a: 'Un slow avec ton patron', b: 'Un limbo avec ta belle-famille', tone: 'coquin' },
+  { kind: 'prefer', a: 'Rejouer ta première fois en mieux', b: 'Effacer ton pire rencard de ta mémoire', tone: 'coquin' },
+  { kind: 'prefer', a: 'Que tes parents connaissent ton nombre exact', b: 'Que la table le connaisse', tone: 'coquin' },
+  { kind: 'prefer', a: 'Flirter uniquement en langue étrangère', b: 'Flirter uniquement par regards', tone: 'coquin' },
+  { kind: 'prefer', a: 'Un week-end sans wifi avec ton crush', b: 'Une semaine tous frais payés avec ton ex', tone: 'coquin' },
+
+  { kind: 'never', text: 'envoyé un message coquin au mauvais destinataire', tone: 'coquin' },
+  { kind: 'never', text: 'embrassé quelqu’un dont j’ignorais le prénom', tone: 'coquin' },
+  { kind: 'never', text: 'fait semblant d’être célibataire en soirée', tone: 'coquin' },
+  { kind: 'never', text: 'gardé un vêtement qui ne m’appartient pas après une nuit', tone: 'coquin' },
+  { kind: 'never', text: 'fait un rêve troublant sur quelqu’un de cette table', tone: 'coquin' },
+  { kind: 'never', text: 'quitté une soirée discrètement, accompagné(e)', tone: 'coquin' },
+  { kind: 'never', text: 'relu mes messages de la veille en grimaçant de honte', tone: 'coquin' },
+  { kind: 'never', text: 'flirté pour obtenir un verre gratuit', tone: 'coquin' },
+  { kind: 'never', text: 'menti sur mon nombre', tone: 'coquin' },
+  { kind: 'never', text: 'écrit une déclaration à 3 h du matin jamais envoyée', tone: 'coquin' },
+  { kind: 'never', text: 'utilisé une réplique de film pour draguer', tone: 'coquin' },
+  { kind: 'never', text: 'embrassé deux personnes différentes la même soirée', tone: 'coquin' },
+  { kind: 'never', text: 'simulé un appel urgent pour fuir un rencard', tone: 'coquin' },
+  { kind: 'never', text: 'regardé le téléphone de mon ou ma partenaire en douce', tone: 'coquin' },
+  { kind: 'never', text: 'eu un crush secret sur un(e) ami(e) présent(e) ce soir', tone: 'coquin' },
+  { kind: 'never', text: 'pris une douche à deux « pour économiser l’eau »', tone: 'coquin' },
+  { kind: 'never', text: 'dansé un peu trop collé-serré avec la mauvaise personne', tone: 'coquin' },
+  { kind: 'never', text: 'laissé croire que c’était ma première fois', tone: 'coquin' },
+  { kind: 'never', text: 'reçu un vocal impossible à écouter en public', tone: 'coquin' },
+  { kind: 'never', text: 'camouflé un suçon avant un repas de famille', tone: 'coquin' },
+  { kind: 'never', text: 'accepté un rencard juste pour le restaurant', tone: 'coquin' },
+  { kind: 'never', text: 'noté mes rencards quelque part comme un championnat', tone: 'coquin' },
+
+  { kind: 'who', text: 'a le plus de chances de finir la soirée accompagné(e) ?', tone: 'coquin' },
+  { kind: 'who', text: 'enverrait un message à son crush après deux verres ?', tone: 'coquin' },
+  { kind: 'who', text: 'a déjà un plan pour après la soirée ?', tone: 'coquin' },
+  { kind: 'who', text: 'assumerait un suçon en réunion du lundi ?', tone: 'coquin' },
+  { kind: 'who', text: 'connaît sa phrase de drague par cœur ?', tone: 'coquin' },
+  { kind: 'who', text: 'rougit le plus facilement à ce jeu ?', tone: 'coquin' },
+  { kind: 'who', text: 'a le journal intime le plus explosif ?', tone: 'coquin' },
+  { kind: 'who', text: 'transformerait un covoiturage en rencard ?', tone: 'coquin' },
+  { kind: 'who', text: 'a le « type » le plus surprenant ?', tone: 'coquin' },
+  { kind: 'who', text: 'ferait chavirer toute une belle-famille ?', tone: 'coquin' },
+  { kind: 'who', text: 'garde des photos qu’il ou elle ne devrait pas ?', tone: 'coquin' },
+  { kind: 'who', text: 'a déjà flirté avec quelqu’un présent ce soir ?', tone: 'coquin' },
+  { kind: 'who', text: 'finirait dans le jacuzzi en premier ?', tone: 'coquin' },
+  { kind: 'who', text: 'raconterait sa nuit avec le plus de détails ?', tone: 'coquin' },
 ]
 
-/** Pool selon l'ambiance de la table (Soft = cartes sages uniquement). */
-export function dilContentFor(ambiance: 'soft' | 'alcool'): DilCard[] {
-  return DIL_CARDS_FR.filter((c) => ambiance === 'alcool' || c.tone === 'soft').map(
-    ({ tone: _tone, ...card }) => {
-      void _tone
-      return card as DilCard
-    }
-  )
+/**
+ * Pool selon l'ambiance de la table (Soft = cartes sages uniquement).
+ * Le mode COQUIN (opt-in de l'hôte au lobby) ajoute les cartes 🌶️ —
+ * indépendant de l'ambiance : c'est adulte, pas alcoolisé.
+ */
+export function dilContentFor(ambiance: 'soft' | 'alcool', coquin: boolean = false): DilCard[] {
+  return DIL_CARDS_FR.filter((c) => {
+    if (c.tone === 'coquin') return coquin
+    return ambiance === 'alcool' || c.tone === 'soft'
+  }).map(({ tone: _tone, ...card }) => {
+    void _tone
+    return card as DilCard
+  })
 }

@@ -3038,7 +3038,11 @@
       },
       "lobby": {
         "roundsCount": "Número de cartas",
-        "rounds": "cartas"
+        "rounds": "cartas",
+        "coquin": "Modo picante",
+        "coquinHint": "Añade cartas más atrevidas — insinuaciones y vergüenzas de citas. Contenido en francés.",
+        "coquinOn": "Activado",
+        "coquinOff": "Desactivado"
       },
       "game": {
         "countdown": {

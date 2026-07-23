@@ -44,6 +44,9 @@ export type RoomSettings = {
   /** Dilemmes : nombre de cartes de la partie (10/15/20). */
   dilRounds?: number
 
+  /** Dilemmes : mode coquin — ajoute les cartes 🌶️ (sous-entendu, jamais frontal). */
+  dilCoquin?: boolean
+
   /** Petit Bac : nombre de manches/lettres (3/5/8). */
   pbcRounds?: number
 
