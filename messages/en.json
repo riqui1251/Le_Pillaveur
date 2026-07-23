@@ -384,6 +384,16 @@
       "wrongPassword": "Incorrect password.",
       "founderProtected": "The founder account cannot be deleted from the interface.",
       "genericError": "Unable to delete the account right now. Please try again later."
+    },
+    "guestUpgrade": {
+      "title": "Guest account — remember to save it!",
+      "intro": "Your account is temporary: it will be deleted after 48 h of inactivity (nickname, XP and cosmetics included). Add an email and password, or link it to Google, to keep it forever.",
+      "emailPlaceholder": "you@email.com",
+      "passwordPlaceholder": "Password",
+      "submit": "Save my account",
+      "orDivider": "or",
+      "success": "Account saved! It is now permanent — nickname, XP and cosmetics kept.",
+      "genericError": "Could not save the account. Try again in a moment."
     }
   },
   "legal": {
@@ -3696,7 +3706,9 @@
       "stateLocked": "locked",
       "grant": "Gift",
       "revoke": "Remove",
-      "close": "Close"
+      "close": "Close",
+      "grantAll": "Unlock everything",
+      "revokeAll": "Remove all grants"
     },
     "kicker": "Le Pillaveur",
     "header": {

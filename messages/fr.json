@@ -384,6 +384,16 @@
       "wrongPassword": "Mot de passe incorrect.",
       "founderProtected": "Le compte fondateur ne peut pas être supprimé depuis l'interface.",
       "genericError": "Impossible de supprimer le compte pour le moment. Réessaie plus tard."
+    },
+    "guestUpgrade": {
+      "title": "Compte invité — pense à le sauvegarder !",
+      "intro": "Ton compte est temporaire : il sera supprimé après 48 h d’inactivité (pseudo, XP et cosmétiques compris). Ajoute un email et un mot de passe, ou lie-le à Google, pour le garder pour toujours.",
+      "emailPlaceholder": "ton@email.fr",
+      "passwordPlaceholder": "Mot de passe",
+      "submit": "Sauvegarder mon compte",
+      "orDivider": "ou",
+      "success": "Compte sauvegardé ! Il est maintenant permanent — pseudo, XP et cosmétiques conservés.",
+      "genericError": "Impossible de sauvegarder le compte. Réessaie dans quelques instants."
     }
   },
   "legal": {
@@ -3696,7 +3706,9 @@
       "stateLocked": "verrouillé",
       "grant": "Offrir",
       "revoke": "Retirer",
-      "close": "Fermer"
+      "close": "Fermer",
+      "grantAll": "Tout débloquer",
+      "revokeAll": "Tout retirer"
     },
     "kicker": "Le Pillaveur",
     "header": {

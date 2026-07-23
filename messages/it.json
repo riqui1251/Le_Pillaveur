@@ -374,6 +374,16 @@
       "wrongPassword": "Password errata.",
       "founderProtected": "L'account del fondatore non può essere eliminato dall'interfaccia.",
       "genericError": "Impossibile eliminare l'account al momento. Riprova più tardi."
+    },
+    "guestUpgrade": {
+      "title": "Account ospite — ricordati di salvarlo!",
+      "intro": "Il tuo account è temporaneo: verrà eliminato dopo 48 h di inattività (nickname, XP e cosmetici compresi). Aggiungi un’email e una password, o collegalo a Google, per conservarlo per sempre.",
+      "emailPlaceholder": "tua@email.it",
+      "passwordPlaceholder": "Password",
+      "submit": "Salva il mio account",
+      "orDivider": "oppure",
+      "success": "Account salvato! Ora è permanente — nickname, XP e cosmetici conservati.",
+      "genericError": "Impossibile salvare l’account. Riprova tra qualche istante."
     }
   },
   "legal": {
@@ -3686,7 +3696,9 @@
       "stateLocked": "bloccato",
       "grant": "Regala",
       "revoke": "Rimuovi",
-      "close": "Chiudi"
+      "close": "Chiudi",
+      "grantAll": "Sblocca tutto",
+      "revokeAll": "Rimuovi tutto"
     },
     "kicker": "Le Pillaveur",
     "header": {

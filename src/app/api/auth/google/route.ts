@@ -6,7 +6,7 @@ import {
   clearLocalPlayCookieOptions,
   sessionCookieOptions,
 } from '@/lib/auth-server'
-import { GOOGLE_CLIENT_ID } from '@/lib/google-auth'
+import { verifyGoogleIdToken } from '@/lib/google-auth-server'
 import { createUniqueAccountCode, ensureUserAccountCode } from '@/lib/account-code'
 import { normalizeRole } from '@/lib/roles'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
@@ -22,43 +22,6 @@ import { VISITOR_COOKIE } from '@/lib/auth-cookies'
 
 const GOOGLE_LIMIT = 15
 const GOOGLE_WINDOW_MS = 15 * 60 * 1000
-
-/**
- * Vérifie l'ID token Google côté serveur via l'endpoint tokeninfo (signature,
- * expiration et intégrité contrôlées par Google — pas besoin de valider le
- * JWT nous-mêmes). On re-vérifie ensuite l'audience et l'émetteur.
- */
-type GoogleTokenClaims = {
-  aud?: string
-  iss?: string
-  sub?: string
-  email?: string
-  email_verified?: string
-  name?: string
-  given_name?: string
-}
-
-async function verifyGoogleIdToken(credential: string): Promise<GoogleTokenClaims | null> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 8_000)
-  try {
-    const res = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
-      { signal: controller.signal, cache: 'no-store' }
-    )
-    if (!res.ok) return null
-    const claims = (await res.json()) as GoogleTokenClaims
-    if (claims.aud !== GOOGLE_CLIENT_ID) return null
-    if (claims.iss !== 'accounts.google.com' && claims.iss !== 'https://accounts.google.com') return null
-    if (claims.email_verified !== 'true') return null
-    if (!claims.email || !claims.sub) return null
-    return claims
-  } catch {
-    return null
-  } finally {
-    clearTimeout(timeout)
-  }
-}
 
 /**
  * Fabrique un pseudo disponible à partir du prénom Google : on tente le nom

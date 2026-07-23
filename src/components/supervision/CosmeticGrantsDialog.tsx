@@ -94,6 +94,26 @@ export function CosmeticGrantsDialog({
     }
   }
 
+  /** Débloque (ou retire) TOUT le catalogue d'un coup — effets, cadres, icônes. */
+  const bulk = async (action: 'grant-all' | 'revoke-all') => {
+    if (!target) return
+    setBusyKey(action)
+    try {
+      const res = await fetch('/api/admin/users/cosmetics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId: target.userId, action }),
+      })
+      if (res.ok) {
+        const json = (await res.json()) as { progression: Progression }
+        setProgression(json.progression)
+      }
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
   const sections: { kind: CosmeticKind; title: string }[] = [
     { kind: 'effect', title: t('effects') },
     { kind: 'frame', title: t('frames') },
@@ -114,6 +134,27 @@ export function CosmeticGrantsDialog({
 
         {progression && (
           <div className="space-y-4">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={busyKey !== null}
+                className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-xs font-bold"
+                onClick={() => void bulk('grant-all')}
+              >
+                <Gift className="mr-1 h-3 w-3" />
+                {t('grantAll')}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busyKey !== null}
+                className="flex-1 text-xs"
+                onClick={() => void bulk('revoke-all')}
+              >
+                <Square className="mr-1 h-3 w-3" />
+                {t('revokeAll')}
+              </Button>
+            </div>
             {sections.map(({ kind, title }) => (
               <div key={kind}>
                 <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-white/40">

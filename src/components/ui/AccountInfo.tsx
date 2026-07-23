@@ -11,6 +11,7 @@ import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { FriendsManager } from '@/components/friends/FriendsManager'
+import { GuestUpgradeCard } from '@/components/auth/GuestUpgradeCard'
 import { MyOnlineStats } from '@/components/online/MyOnlineStats'
 import { canAccessSupervision } from '@/lib/roles'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
@@ -310,6 +311,8 @@ export function AccountInfo() {
           </button>
         </div>
       </div>
+
+      <GuestUpgradeCard />
 
       {nameModerationWarning && (
         <div
