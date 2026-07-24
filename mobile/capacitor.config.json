@@ -1,0 +1,12 @@
+﻿{
+  "appId": "fr.lepillaveur.app",
+  "appName": "Le Pillaveur",
+  "webDir": "www",
+  "server": {
+    "url": "https://lepillaveur.fr",
+    "allowNavigation": ["lepillaveur.fr", "*.lepillaveur.fr"]
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

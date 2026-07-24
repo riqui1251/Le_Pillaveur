@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Le Pillaveur</title>
+    <style>
+      /* Écran de secours hors-ligne — l'app charge normalement lepillaveur.fr. */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background: radial-gradient(120% 120% at 50% 0%, #0e3b2e, #0a2c22);
+        color: #f3ead3;
+        font-family: Georgia, 'Times New Roman', serif;
+      }
+      main {
+        padding: 24px;
+      }
+      h1 {
+        color: #d9a441;
+        font-size: 28px;
+        margin: 0 0 8px;
+        letter-spacing: 0.04em;
+      }
+      p {
+        margin: 0 0 20px;
+        opacity: 0.75;
+        font-size: 15px;
+      }
+      button {
+        border: 1px solid #d9a441;
+        background: transparent;
+        color: #d9a441;
+        font-size: 15px;
+        padding: 10px 22px;
+        border-radius: 999px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>LE PILLAVEUR</h1>
+      <p>Impossible de joindre la table.<br />Vérifie ta connexion internet.</p>
+      <button onclick="window.location.href='https://lepillaveur.fr'">Réessayer</button>
+    </main>
+  </body>
+</html>

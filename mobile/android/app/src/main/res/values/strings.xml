@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Le Pillaveur</string>
+    <string name="title_activity_main">Le Pillaveur</string>
+    <string name="package_name">fr.lepillaveur.app</string>
+    <string name="custom_url_scheme">fr.lepillaveur.app</string>
+</resources>
