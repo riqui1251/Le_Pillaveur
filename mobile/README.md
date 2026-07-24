@@ -40,9 +40,14 @@ APK de test : `android/app/build/outputs/apk/debug/app-debug.apk`
 ## Pièges connus
 
 - **Connexion Google** : Google bloque OAuth dans les webviews embarquées
-  (`disallowed_useragent`). Invités + email/mot de passe fonctionnent ;
-  la connexion Google dans l'app nécessitera plus tard un plugin natif ou
-  des Custom Tabs.
+  (`disallowed_useragent`). L'app embarque donc le plugin
+  `@capgo/capacitor-social-login` : le site détecte la coquille
+  (`src/lib/native-google-login.ts`) et remplace le bouton GIS par la
+  fenêtre Google **native**, dont l'ID token part vers `/api/auth/google`
+  comme sur le web. Prérequis Google Cloud Console : un client OAuth
+  **Android** (package `fr.lepillaveur.app` + SHA-1 de chaque clé de
+  signature — debug, release, Play App Signing) dans le MÊME projet que le
+  client web ; sans lui, la fenêtre native échoue (erreur développeur).
 - **Vocal WebRTC** : permissions `RECORD_AUDIO`/`MODIFY_AUDIO_SETTINGS`
   déclarées dans le manifest — à tester sur appareil réel.
 - **Apple (plus tard)** : la règle 4.2 refuse les apps « simple site

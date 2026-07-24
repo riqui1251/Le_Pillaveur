@@ -290,7 +290,11 @@
       "network": "No se pudo conectar. Comprueba tu conexión a internet e inténtalo de nuevo.",
       "generic": "Se produjo un error. Inténtalo de nuevo."
     },
-    "orDivider": "o"
+    "orDivider": "o",
+    "googleNative": {
+      "button": "Continuar con Google",
+      "error": "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+    }
   },
   "account": {
     "brand": "Le Pillaveur",

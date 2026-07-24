@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
+import { isNativeGoogleAvailable } from '@/lib/native-google-login'
+import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
 import { LogIn, UserPlus, Gamepad2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
@@ -89,6 +91,13 @@ export function AuthForm() {
   const googleButtonRef = useRef<HTMLDivElement>(null)
   const googleCallbackRef = useRef<(credential: string) => void>(() => {})
 
+  // Dans l'app mobile, Google bloque le bouton GIS (webview) : on bascule
+  // sur la fenêtre Google native. Détection après montage (SSR-safe).
+  const [nativeGoogle, setNativeGoogle] = useState(false)
+  useEffect(() => {
+    setNativeGoogle(isNativeGoogleAvailable())
+  }, [])
+
   useEffect(() => {
     googleCallbackRef.current = async (credential: string) => {
       setError(null)
@@ -116,6 +125,7 @@ export function AuthForm() {
   })
 
   useEffect(() => {
+    if (nativeGoogle) return
     let cancelled = false
     const render = () => {
       if (cancelled) return
@@ -156,7 +166,7 @@ export function AuthForm() {
       cancelled = true
       script?.removeEventListener('load', render)
     }
-  }, [locale])
+  }, [locale, nativeGoogle])
 
   const handleLocalPlay = async () => {
     setLocalLoading(true)
@@ -335,7 +345,14 @@ export function AuthForm() {
           <span className="text-xs uppercase tracking-wide text-white/35">{t('orDivider')}</span>
           <span className="h-px flex-1 bg-white/10" />
         </div>
-        <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+        {nativeGoogle ? (
+          <NativeGoogleButton
+            disabled={loading}
+            onCredential={(credential) => googleCallbackRef.current(credential)}
+          />
+        ) : (
+          <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+        )}
       </div>
 
       <div className="space-y-3 text-center">

@@ -300,7 +300,11 @@
       "network": "Connexion impossible. Vérifie ta connexion internet et réessaie.",
       "generic": "Une erreur est survenue. Réessaie."
     },
-    "orDivider": "ou"
+    "orDivider": "ou",
+    "googleNative": {
+      "button": "Continuer avec Google",
+      "error": "Connexion Google impossible. Réessaie."
+    }
   },
   "account": {
     "brand": "Le Pillaveur",

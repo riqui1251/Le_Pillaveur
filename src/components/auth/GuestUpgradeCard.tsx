@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
+import { isNativeGoogleAvailable } from '@/lib/native-google-login'
+import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
 
 /**
  * Pérennisation d'un compte INVITÉ depuis la page Compte : le joueur garde
@@ -49,6 +51,11 @@ export function GuestUpgradeCard() {
   }
 
   // ── Bouton Google (GIS, flux ID token) — même montage que AuthForm. ──
+  // Dans l'app mobile (webview), GIS est bloqué : fenêtre Google native.
+  const [nativeGoogle, setNativeGoogle] = useState(false)
+  useEffect(() => {
+    setNativeGoogle(isNativeGoogleAvailable())
+  }, [])
   const googleButtonRef = useRef<HTMLDivElement>(null)
   const googleCallbackRef = useRef<(credential: string) => void>(() => {})
   useEffect(() => {
@@ -59,6 +66,7 @@ export function GuestUpgradeCard() {
   }, [])
 
   useEffect(() => {
+    if (nativeGoogle) return
     let cancelled = false
     const render = () => {
       if (cancelled) return
@@ -98,7 +106,7 @@ export function GuestUpgradeCard() {
       cancelled = true
       script?.removeEventListener('load', render)
     }
-  }, [locale])
+  }, [locale, nativeGoogle])
 
   // La carte se gère seule : visible pour les invités, bannière de succès
   // conservée après le refresh (qui fait passer isGuest à false), invisible
@@ -163,7 +171,14 @@ export function GuestUpgradeCard() {
         <span className="text-xs uppercase tracking-wide text-white/35">{t('orDivider')}</span>
         <span className="h-px flex-1 bg-white/10" />
       </div>
-      <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+      {nativeGoogle ? (
+        <NativeGoogleButton
+          disabled={busy}
+          onCredential={(credential) => googleCallbackRef.current(credential)}
+        />
+      ) : (
+        <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+      )}
     </div>
   )
 }

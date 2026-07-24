@@ -290,7 +290,11 @@
       "network": "Impossibile connettersi. Controlla la tua connessione internet e riprova.",
       "generic": "Si è verificato un errore. Riprova."
     },
-    "orDivider": "oppure"
+    "orDivider": "oppure",
+    "googleNative": {
+      "button": "Continua con Google",
+      "error": "Accesso con Google non riuscito. Riprova."
+    }
   },
   "account": {
     "brand": "Le Pillaveur",
