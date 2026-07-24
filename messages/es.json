@@ -1,4 +1,14 @@
 {
+  "mobileApp": {
+    "title": "La app móvil",
+    "subtitle": "Le Pillaveur en tu bolsillo, muy pronto en las tiendas.",
+    "pitch": "La misma casa, las mismas mesas: la app abre el sitio a pantalla completa, se actualiza sola y los enlaces de invitación se abren directamente en ella.",
+    "googlePlay": "Google Play",
+    "appStore": "App Store",
+    "soon": "Pronto",
+    "note": "Las apps están en camino — vuelve pronto. Mientras tanto, todo funciona ya aquí, en tu navegador.",
+    "alreadyInApp": "Ya estás en la app — nada que instalar aquí. Esta página sirve para que los visitantes del sitio descarguen la app."
+  },
   "metadata": {
     "title": "Le Pillaveur",
     "titleFull": "Le Pillaveur — Juegos de fiesta gratis online con amigos",
@@ -31,6 +41,10 @@
         "label": "Cuenta",
         "description": "Ajustes"
       },
+      "application": {
+        "label": "App móvil",
+        "description": "Le Pillaveur en las tiendas"
+      },
       "supervision": {
         "label": "Supervisión",
         "description": "Dashboard admin"
@@ -58,6 +72,10 @@
         "title": "Cuenta",
         "subtitle": "Iniciar sesión y perfil",
         "subtitleConnected": "Perfil y personalización"
+      },
+      "application": {
+        "title": "App móvil",
+        "subtitle": "Muy pronto en las tiendas"
       },
       "supervision": {
         "title": "Supervisión",

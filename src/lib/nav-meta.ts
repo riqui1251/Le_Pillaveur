@@ -19,6 +19,7 @@ type StaticPageKey =
   | 'supervision'
   | 'achievements'
   | 'stats'
+  | 'application'
 
 const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
   '/joueurs': 'joueurs',
@@ -28,6 +29,7 @@ const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
   '/supervision': 'supervision',
   '/achievements': 'achievements',
   '/stats': 'stats',
+  '/application': 'application',
 }
 
 /** Resolve page title/subtitle for the navbar from a pathname (with or without locale prefix). */

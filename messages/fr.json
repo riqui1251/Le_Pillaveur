@@ -1,4 +1,14 @@
 {
+  "mobileApp": {
+    "title": "L'application mobile",
+    "subtitle": "Le Pillaveur dans ta poche, bientôt sur les stores.",
+    "pitch": "La même maison, les mêmes tables : l'application ouvre le site en plein écran, se met à jour toute seule et les liens d'invitation s'ouvrent directement dedans.",
+    "googlePlay": "Google Play",
+    "appStore": "App Store",
+    "soon": "Bientôt",
+    "note": "Les applications sont en préparation — reviens vite. En attendant, tout fonctionne déjà ici, dans ton navigateur.",
+    "alreadyInApp": "Tu es déjà dans l'application — rien à installer ici. Cette page sert aux visiteurs du site à télécharger l'app."
+  },
   "metadata": {
     "title": "Le Pillaveur",
     "titleFull": "Le Pillaveur — Jeux de soirée entre amis, en ligne et gratuits",
@@ -31,6 +41,10 @@
         "label": "Compte",
         "description": "Paramètres"
       },
+      "application": {
+        "label": "Application mobile",
+        "description": "Le Pillaveur sur les stores"
+      },
       "supervision": {
         "label": "Supervision",
         "description": "Dashboard admin"
@@ -58,6 +72,10 @@
         "title": "Compte",
         "subtitle": "Connexion et profil",
         "subtitleConnected": "Profil et personnalisation"
+      },
+      "application": {
+        "title": "Application mobile",
+        "subtitle": "Bientôt sur les stores"
       },
       "supervision": {
         "title": "Supervision",

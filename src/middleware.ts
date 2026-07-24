@@ -25,6 +25,8 @@ const PUBLIC_PREFIXES = [
   '/games',
   '/classement',
   '/regles',
+  // Page de téléchargement de l'app mobile (liens stores) : publique.
+  '/application',
   '/api/',
   '/_next',
   '/favicon.ico',

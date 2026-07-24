@@ -1,10 +1,11 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy } from 'lucide-react'
+import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
+import { isCapacitorApp } from '@/lib/native-app'
 import { useFriends } from '@/hooks/useFriends'
 import { useChatUnread } from '@/hooks/useChatUnread'
 import { canAccessSupervision } from '@/lib/roles'
@@ -22,6 +23,9 @@ const NAV_LINK_KEYS = [
   { href: '/jeux', key: 'jeux', icon: Gamepad2 },
   { href: '/classement', key: 'classement', icon: Trophy },
   { href: '/compte', key: 'compte', icon: Home },
+  // Masquée dans la coquille Capacitor (on n'envoie pas vers les stores
+  // quelqu'un qui est déjà dans l'app).
+  { href: '/application', key: 'application', icon: Smartphone },
 ] as const
 
 type NavLinkKey = (typeof NAV_LINK_KEYS)[number]['key'] | 'supervision'
@@ -48,8 +52,15 @@ export default function Navbar() {
   const pathname = usePathname()
   const pageMeta = usePageMeta(pathname)
 
+  const [inApp, setInApp] = useState(false)
+  useEffect(() => {
+    setInApp(isCapacitorApp())
+  }, [])
+
   const links = useMemo((): NavLinkItem[] => {
-    const base: NavLinkItem[] = NAV_LINK_KEYS.map(({ href, key, icon }) => ({
+    const base: NavLinkItem[] = NAV_LINK_KEYS.filter(
+      ({ key }) => !(inApp && key === 'application')
+    ).map(({ href, key, icon }) => ({
       href,
       key,
       icon,
@@ -66,7 +77,7 @@ export default function Navbar() {
       })
     }
     return base
-  }, [user, t])
+  }, [user, t, inApp])
 
   const activeHref =
     links.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`))?.href ?? null
