@@ -41,16 +41,19 @@ export function NativeGoogleButton({
 }) {
   const t = useTranslations('auth.googleNative')
   const [busy, setBusy] = useState(false)
-  const [failed, setFailed] = useState(false)
+  // Message technique remonté par la couche native : indispensable pour
+  // diagnostiquer à distance (pas de console accessible dans la webview).
+  const [failure, setFailure] = useState<string | null>(null)
 
   const handleClick = async () => {
     setBusy(true)
-    setFailed(false)
+    setFailure(null)
     try {
       const credential = await nativeGoogleSignIn()
       if (credential) onCredential(credential)
-    } catch {
-      setFailed(true)
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err)
+      setFailure(detail.slice(0, 180))
     } finally {
       setBusy(false)
     }
@@ -67,7 +70,12 @@ export function NativeGoogleButton({
         <GoogleG />
         {t('button')}
       </button>
-      {failed && <p className="text-xs font-semibold text-red-300">{t('error')}</p>}
+      {failure && (
+        <div className="max-w-[300px] text-center">
+          <p className="text-xs font-semibold text-red-300">{t('error')}</p>
+          <p className="mt-0.5 break-words font-mono text-[10px] text-red-300/70">{failure}</p>
+        </div>
+      )}
     </div>
   )
 }
