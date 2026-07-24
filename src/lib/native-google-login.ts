@@ -15,7 +15,7 @@ type SocialLoginPlugin = {
   initialize: (options: { google: { webClientId: string } }) => Promise<void>
   login: (options: {
     provider: 'google'
-    options: { scopes?: string[] }
+    options: Record<string, never>
   }) => Promise<{ result?: { idToken?: string | null } }>
 }
 
@@ -63,9 +63,11 @@ export async function nativeGoogleSignIn(): Promise<string | null> {
     throw err
   }
   try {
+    // Pas de `scopes` : l'ID token embarque déjà email + profil, et le
+    // plugin exige une MainActivity modifiée dès qu'on demande des scopes.
     const res = await plugin.login({
       provider: 'google',
-      options: { scopes: ['email', 'profile'] },
+      options: {},
     })
     const idToken = res?.result?.idToken
     if (!idToken) throw new Error('native_google_no_token')
