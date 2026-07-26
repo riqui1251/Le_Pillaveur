@@ -130,8 +130,8 @@ describe('catalogue cosmétiques', () => {
 })
 
 describe('cadres VIP (grant-only, Fondateur)', () => {
-  it('13 cadres VIP, tous hors de portée du niveau', () => {
-    expect(VIP_FRAME_IDS.length).toBe(13)
+  it('14 cadres VIP, tous hors de portée du niveau', () => {
+    expect(VIP_FRAME_IDS.length).toBe(14)
     for (const id of VIP_FRAME_IDS) {
       const c = COSMETICS.find((c) => c.kind === 'frame' && c.id === id)!
       expect(c.unlockLevel).toBeGreaterThanOrEqual(GRANT_ONLY_FRAME_LEVEL)

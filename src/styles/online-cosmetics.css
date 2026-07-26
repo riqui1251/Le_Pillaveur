@@ -280,6 +280,21 @@
   box-shadow: 0 0 4px rgba(139, 95, 191, 0.6);
 }
 
+.on-frame-vip-flamant {
+  box-shadow: 0 0 0 2.5px #f27ba6, 0 0 16px rgba(242, 123, 166, 0.5);
+  animation: on-frame-vip-flamant-pulse 2.2s ease-in-out infinite;
+}
+@keyframes on-frame-vip-flamant-pulse {
+  50% { box-shadow: 0 0 0 3px #ff9fc0, 0 0 26px 6px rgba(255, 159, 192, 0.75); }
+}
+/* Plume rose à l'épaule du cadre. */
+.on-frame-vip-flamant::after {
+  content: ''; position: absolute; top: -9px; right: -2px; transform: rotate(24deg);
+  width: 5px; height: 11px; background: linear-gradient(180deg, #ffc2d6, #f27ba6);
+  border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%;
+  box-shadow: 0 0 4px rgba(242, 123, 166, 0.6);
+}
+
 /* ── Cadres de rôle (staff) — réservés au grade, mêmes mécaniques CSS. ── */
 
 .on-frame-sentinel { box-shadow: 0 0 0 3px #34d399, 0 0 12px rgba(52, 211, 153, 0.5); }
@@ -360,7 +375,8 @@
   .on-fx-gold, .on-fx-galaxy, .on-fx-matrix, .on-fx-rainbow, .on-fx-cyber, .on-fx-toast, .on-fx-toast::after,
   .on-frame-ember, .on-frame-neon, .on-frame-crown, .on-frame-diamond::after,
   .on-frame-eagle, .on-frame-prestige, .on-crest-fondateur .on-crest-disc,
-  .on-frame-vip-constellation, .on-frame-vip-halo, .on-frame-vip-flamme::after, .on-frame-vip-aura {
+  .on-frame-vip-constellation, .on-frame-vip-halo, .on-frame-vip-flamme::after, .on-frame-vip-aura,
+  .on-frame-vip-flamant {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }

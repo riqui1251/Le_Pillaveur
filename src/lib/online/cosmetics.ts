@@ -143,6 +143,7 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'vip-marqueterie', kind: 'frame', unlockLevel: 999 },
   { id: 'vip-ganse', kind: 'frame', unlockLevel: 999 },
   { id: 'vip-aura', kind: 'frame', unlockLevel: 999 },
+  { id: 'vip-flamant', kind: 'frame', unlockLevel: 999 },
   // Icônes (dérivées des séries)
   ...ICON_SERIES.flatMap((series) =>
     series.icons.map((icon) => ({ id: icon, kind: 'icon' as const, unlockLevel: series.unlockLevel }))
@@ -263,4 +264,5 @@ export const VIP_FRAME_LABELS: Record<string, string> = {
   'vip-marqueterie': 'Marqueterie',
   'vip-ganse': 'Double Ganse',
   'vip-aura': 'Aura Pourpre',
+  'vip-flamant': 'Flamant Rose',
 }
