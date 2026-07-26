@@ -218,6 +218,7 @@
       "bestiaire": "Bestiary",
       "nuit": "Night",
       "casino": "Casino",
+      "aliens": "Aliens",
       "legende": "Legend",
       "fondateur": "Founder"
     }
@@ -502,7 +503,17 @@
       "vip-marqueterie": "Marquetry",
       "vip-ganse": "Double Band",
       "vip-aura": "Purple Aura",
-      "vip-flamant": "Pink Flamingo"
+      "vip-flamant": "Pink Flamingo",
+      "alien": "Blue Orbit",
+      "alien-triclope": "Green Orbit",
+      "alien-cyclope": "Purple Orbit",
+      "alien-tentacule": "Pink Orbit",
+      "alien-bulle": "Glass Orbit",
+      "alien-costaud": "Orange Orbit",
+      "alien-reveur": "Night Orbit",
+      "alien-volt": "Electric Orbit",
+      "alien-gris": "Grey Orbit",
+      "alien-farceur": "Red Orbit"
     },
     "customizer": {
       "title": "Customize {name}",

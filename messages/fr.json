@@ -218,6 +218,7 @@
       "bestiaire": "Bestiaire",
       "nuit": "Nuit",
       "casino": "Casino",
+      "aliens": "Aliens",
       "legende": "Légende",
       "fondateur": "Fondateur"
     }
@@ -502,7 +503,17 @@
       "vip-marqueterie": "Marqueterie",
       "vip-ganse": "Double Ganse",
       "vip-aura": "Aura Pourpre",
-      "vip-flamant": "Flamant Rose"
+      "vip-flamant": "Flamant Rose",
+      "alien": "Orbite Bleue",
+      "alien-triclope": "Orbite Verte",
+      "alien-cyclope": "Orbite Violette",
+      "alien-tentacule": "Orbite Rose",
+      "alien-bulle": "Orbite de Verre",
+      "alien-costaud": "Orbite Orange",
+      "alien-reveur": "Orbite Nocturne",
+      "alien-volt": "Orbite Électrique",
+      "alien-gris": "Orbite Grise",
+      "alien-farceur": "Orbite Rouge"
     },
     "customizer": {
       "title": "Personnaliser {name}",

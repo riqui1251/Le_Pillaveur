@@ -127,6 +127,20 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'royal', kind: 'frame', unlockLevel: 25 },
   { id: 'diamond', kind: 'frame', unlockLevel: 30 },
   { id: 'crown', kind: 'frame', unlockLevel: 40 },
+  // Cadres « Orbite » — ONLINE-EXCLUSIFS (absents de PLAYER_FRAMES, comme
+  // l'effet `toast`) : un par alien de la série Aliens, même niveau que la
+  // série, halo pulsant + satellite en orbite dans la couleur de l'alien
+  // (CSS .on-frame-alien-* dans online-cosmetics.css).
+  { id: 'alien', kind: 'frame', unlockLevel: 22 },
+  { id: 'alien-triclope', kind: 'frame', unlockLevel: 22 },
+  { id: 'alien-cyclope', kind: 'frame', unlockLevel: 22 },
+  { id: 'alien-tentacule', kind: 'frame', unlockLevel: 22 },
+  { id: 'alien-bulle', kind: 'frame', unlockLevel: 22 },
+  { id: 'alien-costaud', kind: 'frame', unlockLevel: 22 },
+  { id: 'alien-reveur', kind: 'frame', unlockLevel: 22 },
+  { id: 'alien-volt', kind: 'frame', unlockLevel: 22 },
+  { id: 'alien-gris', kind: 'frame', unlockLevel: 22 },
+  { id: 'alien-farceur', kind: 'frame', unlockLevel: 22 },
   // Cadres VIP — hors progression, jamais débloqués par le niveau : accordés
   // à la main par un Fondateur uniquement (voir VIP_FRAME_IDS + CSS
   // .on-frame-vip-* dans online-cosmetics.css).
@@ -217,6 +231,15 @@ export function unlockedCosmeticKeys(ctx: UnlockContext): Set<string> {
   }
   return keys
 }
+
+/**
+ * Cadres ONLINE-EXCLUSIFS : dans le catalogue de niveaux mais volontairement
+ * absents de PLAYER_FRAMES (catalogue local) — même statut que l'effet
+ * `toast`. Utilisé par les tests d'alignement.
+ */
+export const ONLINE_EXCLUSIVE_FRAME_IDS = COSMETICS.filter(
+  (c) => c.kind === 'frame' && c.id.startsWith('alien')
+).map((c) => c.id)
 
 /** Garde-fous d'alignement avec players.ts (utilisés par les tests). */
 export const KNOWN_EFFECT_IDS = PLAYER_EFFECTS.filter((e) => e.id !== null).map((e) => e.id as string)

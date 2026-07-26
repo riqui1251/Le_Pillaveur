@@ -208,6 +208,7 @@
       "bestiaire": "Bestiario",
       "nuit": "Notte",
       "casino": "Casinò",
+      "aliens": "Alieni",
       "legende": "Leggenda",
       "fondateur": "Fondatore"
     }
@@ -492,7 +493,17 @@
       "vip-marqueterie": "Intarsio",
       "vip-ganse": "Doppio Anello",
       "vip-aura": "Aura Viola",
-      "vip-flamant": "Fenicottero Rosa"
+      "vip-flamant": "Fenicottero Rosa",
+      "alien": "Orbita Blu",
+      "alien-triclope": "Orbita Verde",
+      "alien-cyclope": "Orbita Viola",
+      "alien-tentacule": "Orbita Rosa",
+      "alien-bulle": "Orbita di Vetro",
+      "alien-costaud": "Orbita Arancione",
+      "alien-reveur": "Orbita Notturna",
+      "alien-volt": "Orbita Elettrica",
+      "alien-gris": "Orbita Grigia",
+      "alien-farceur": "Orbita Rossa"
     },
     "customizer": {
       "title": "Personalizza {name}",

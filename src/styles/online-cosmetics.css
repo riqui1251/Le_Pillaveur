@@ -295,6 +295,41 @@
   box-shadow: 0 0 4px rgba(242, 123, 166, 0.6);
 }
 
+/* ── Cadres « Orbite » (série Aliens, Nv 22) — anneau + halo pulsant +
+   satellite en orbite, la couleur suit le code couleur de chaque alien. ── */
+.on-frame-alien { --al-ring: #5f86d9; --al-glow: 95, 134, 217; }
+.on-frame-alien-triclope { --al-ring: #4fb57a; --al-glow: 79, 181, 122; }
+.on-frame-alien-cyclope { --al-ring: #8b5fbf; --al-glow: 139, 95, 191; }
+.on-frame-alien-tentacule { --al-ring: #f08cad; --al-glow: 240, 140, 173; }
+.on-frame-alien-bulle { --al-ring: #c9dce8; --al-glow: 201, 220, 232; }
+.on-frame-alien-costaud { --al-ring: #d07a3a; --al-glow: 208, 122, 58; }
+.on-frame-alien-reveur { --al-ring: #3d6bb3; --al-glow: 61, 107, 179; }
+.on-frame-alien-volt { --al-ring: #e8c25a; --al-glow: 232, 194, 90; }
+.on-frame-alien-gris { --al-ring: #c9cfd6; --al-glow: 201, 207, 214; }
+.on-frame-alien-farceur { --al-ring: #d24a3e; --al-glow: 210, 74, 62; }
+.on-frame-alien, .on-frame-alien-triclope, .on-frame-alien-cyclope, .on-frame-alien-tentacule,
+.on-frame-alien-bulle, .on-frame-alien-costaud, .on-frame-alien-reveur, .on-frame-alien-volt,
+.on-frame-alien-gris, .on-frame-alien-farceur {
+  box-shadow: 0 0 0 2.5px var(--al-ring), 0 0 14px rgba(var(--al-glow), 0.45);
+  animation: on-frame-alien-pulse 2.6s ease-in-out infinite;
+}
+@keyframes on-frame-alien-pulse {
+  50% { box-shadow: 0 0 0 3px var(--al-ring), 0 0 24px 5px rgba(var(--al-glow), 0.7); }
+}
+/* Satellite : un point peint en haut d'un calque rond qui tourne. */
+.on-frame-alien::after, .on-frame-alien-triclope::after, .on-frame-alien-cyclope::after,
+.on-frame-alien-tentacule::after, .on-frame-alien-bulle::after, .on-frame-alien-costaud::after,
+.on-frame-alien-reveur::after, .on-frame-alien-volt::after, .on-frame-alien-gris::after,
+.on-frame-alien-farceur::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 50%;
+  background: radial-gradient(circle 2.6px at 50% 3px, var(--al-ring) 97%, transparent);
+  filter: drop-shadow(0 0 3px rgba(var(--al-glow), 0.8));
+  animation: on-frame-alien-orbit 5s linear infinite;
+}
+@keyframes on-frame-alien-orbit {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Cadres de rôle (staff) — réservés au grade, mêmes mécaniques CSS. ── */
 
 .on-frame-sentinel { box-shadow: 0 0 0 3px #34d399, 0 0 12px rgba(52, 211, 153, 0.5); }
@@ -376,7 +411,8 @@
   .on-frame-ember, .on-frame-neon, .on-frame-crown, .on-frame-diamond::after,
   .on-frame-eagle, .on-frame-prestige, .on-crest-fondateur .on-crest-disc,
   .on-frame-vip-constellation, .on-frame-vip-halo, .on-frame-vip-flamme::after, .on-frame-vip-aura,
-  .on-frame-vip-flamant {
+  .on-frame-vip-flamant,
+  [class*='on-frame-alien'], [class*='on-frame-alien']::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }

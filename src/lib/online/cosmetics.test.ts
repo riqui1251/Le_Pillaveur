@@ -7,6 +7,7 @@ import {
   KNOWN_EFFECT_IDS,
   KNOWN_FRAME_IDS,
   ONLINE_EFFECT_IDS,
+  ONLINE_EXCLUSIVE_FRAME_IDS,
   ONLINE_FRAME_IDS,
   ONLINE_ICON_IDS,
   ROLE_FRAME_MIN_RANK,
@@ -99,10 +100,20 @@ describe('catalogue cosmétiques', () => {
     }
   })
 
-  it('chaque cadre de niveau du catalogue (hors cadres VIP grant-only) existe dans PLAYER_FRAMES', () => {
+  it('chaque cadre de niveau du catalogue (hors VIP et online-exclusifs) existe dans PLAYER_FRAMES', () => {
     for (const c of COSMETICS.filter((c) => c.kind === 'frame')) {
       if (VIP_FRAME_IDS.includes(c.id)) continue
+      if (ONLINE_EXCLUSIVE_FRAME_IDS.includes(c.id)) continue
       expect(KNOWN_FRAME_IDS).toContain(c.id)
+    }
+  })
+
+  it('les 10 cadres Orbite (aliens) sont online-exclusifs, au niveau de la série Aliens', () => {
+    expect(ONLINE_EXCLUSIVE_FRAME_IDS.length).toBe(10)
+    const aliens = ICON_SERIES.find((s) => s.id === 'aliens')!
+    for (const id of ONLINE_EXCLUSIVE_FRAME_IDS) {
+      const c = COSMETICS.find((c) => c.kind === 'frame' && c.id === id)!
+      expect(c.unlockLevel).toBe(aliens.unlockLevel)
     }
   })
 
