@@ -1,7 +1,7 @@
 "use client"
 
-import { Suspense } from 'react'
-import { useTranslations } from 'next-intl'
+import { Suspense, useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
 import { AuthForm } from '@/components/auth/AuthForm'
 import { AccountInfo } from '@/components/ui/AccountInfo'
@@ -17,6 +17,22 @@ function LoadingSpinner() {
 
 export default function AccountPage() {
   const { user, loading } = useAuth()
+  const locale = useLocale()
+
+  // Un utilisateur DÉJÀ connecté qui arrive avec ?redirect= (posé par le
+  // middleware quand la session n'était pas encore visible) est reconduit
+  // vers sa destination — sans ça, chaque rechargement le laissait bloqué
+  // sur son profil. Mêmes règles de validation que safeRedirect (AuthForm).
+  const [forwarding, setForwarding] = useState(false)
+  useEffect(() => {
+    if (loading || !user) return
+    const target = new URLSearchParams(window.location.search).get('redirect')
+    if (!target || !target.startsWith('/') || target.startsWith('//') || target.startsWith('/compte')) {
+      return
+    }
+    setForwarding(true)
+    window.location.replace(`/${locale}${target}`)
+  }, [loading, user, locale])
 
   return (
     <main className="relative min-h-screen overflow-hidden text-white">
@@ -27,7 +43,7 @@ export default function AccountPage() {
       </div>
 
       <div className="relative container mx-auto max-w-2xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
-        {loading ? (
+        {loading || forwarding ? (
           <LoadingSpinner />
         ) : !user ? (
           <Suspense fallback={<LoadingSpinner />}>

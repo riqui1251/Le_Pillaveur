@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
-import { Link, useRouter } from '@/i18n/navigation'
+import { Link } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -35,9 +35,18 @@ export function AuthForm() {
   const locale = useLocale()
   const tNav = useTranslations('nav.legal')
   const { login, register, refresh } = useAuth()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = safeRedirect(searchParams?.get('redirect') ?? null)
+
+  // Navigation DOCUMENT (pas SPA) après établissement de session : le cache
+  // de préchargement du routeur peut contenir la redirection « pas de
+  // session » mémorisée AVANT l'auth (préchargée depuis /jeux, invisible en
+  // dev où le prefetch est coupé) — un router.push consommerait cette entrée
+  // et rebondirait sur /compte malgré le cookie. Le rechargement complet
+  // repart d'un routeur vierge et le middleware voit la session fraîche.
+  const goToApp = () => {
+    window.location.assign(`/${locale}${redirectTo}`)
+  }
 
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
@@ -77,7 +86,7 @@ export function AuthForm() {
       if (err) {
         setError(err)
       } else {
-        router.push(redirectTo)
+        goToApp()
       }
     } finally {
       setLoading(false)
@@ -115,7 +124,7 @@ export function AuthForm() {
           return
         }
         await refresh()
-        router.push(redirectTo)
+        goToApp()
       } catch {
         setError(t('errors.generic'))
       } finally {
@@ -174,7 +183,7 @@ export function AuthForm() {
     try {
       const res = await fetch('/api/auth/local-play', { method: 'POST', credentials: 'include' })
       if (!res.ok) throw new Error(t('localPlay.errorActivate'))
-      router.push(redirectTo)
+      goToApp()
     } catch {
       setError(t('localPlay.errorRetry'))
     } finally {
