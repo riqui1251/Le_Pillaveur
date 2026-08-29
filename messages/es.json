@@ -248,7 +248,78 @@
       "on": "Activado",
       "off": "Desactivado"
     },
-    "top5Badge": "Top {rank} de este juego"
+    "top5Badge": "Top {rank} de este juego",
+    "back": "Volver",
+    "quit": "Salir",
+    "onlineBadge": "En línea",
+    "join": "Unirse",
+    "close": "Cerrar",
+    "playersCount": "{count, plural, one {# jugador} other {# jugadores}}",
+    "readyCount": "{ready, plural, one {#/{total} listo} other {#/{total} listos}}",
+    "playersRange": {
+      "bounded": "{min}-{max} jugadores",
+      "open": "{min}+ jugadores"
+    },
+    "signIn": {
+      "prompt": "Inicia sesión para jugar en línea.",
+      "cta": "Iniciar sesión"
+    },
+    "share": {
+      "text": "¡Únete a mi mesa de {game} en Le Pillaveur! Código: {code}",
+      "cta": "Compartir",
+      "linkCopied": "¡Enlace copiado!"
+    },
+    "openTables": {
+      "title": "Mesas abiertas · {count}"
+    },
+    "create": {
+      "cta": "Abrir una mesa",
+      "creating": "Creando…",
+      "whoCanJoin": "¿Quién puede unirse a tu mesa?",
+      "openLabel": "Abierta",
+      "openDesc": "Visible en la lista de salas abiertas",
+      "privateLabel": "Privada",
+      "privateDesc": "Con código, QR o invitación",
+      "cancel": "Cancelar"
+    },
+    "table": {
+      "label": "Mesa",
+      "copied": "¡copiado!",
+      "tapToCopy": "toca para copiar"
+    },
+    "seat": {
+      "you": "Tú",
+      "ready": "Listo",
+      "notReady": "Aún no está listo"
+    },
+    "settings": {
+      "title": "Ajustes",
+      "botsSummary": "{count, plural, one {# bot} other {# bots}}"
+    },
+    "readyButton": {
+      "on": "✓ Listo",
+      "off": "Estoy listo"
+    },
+    "launch": {
+      "cta": "Empezar la partida",
+      "minPlayers": "{count, plural, one {Mín. # jugador} other {Mín. # jugadores}}",
+      "waitingForHost": "Esperando a que {name} empiece la partida…"
+    },
+    "list": {
+      "empty": "Ninguna sala abierta — elige un juego abajo para crear una.",
+      "title": "Salas abiertas ({count})"
+    },
+    "errors": {
+      "generic": "Error",
+      "network": "Error de red",
+      "createFailed": "No se pudo crear la sala",
+      "joinFailed": "No se pudo unir a la sala",
+      "launchFailed": "No se pudo empezar la partida",
+      "rematchFailed": "No se pudo votar la revancha",
+      "inviteFailed": "No se pudo invitar a este amigo",
+      "wrongGameRoom": "Estás en una sala de otro juego. Sal de ella para continuar.",
+      "inOtherLobby": "Estás en la sala «{game}»."
+    }
   },
   "chat": {
     "title": "Chat",

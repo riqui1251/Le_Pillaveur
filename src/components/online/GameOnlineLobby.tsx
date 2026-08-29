@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { useTranslations, useLocale } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { ArrowLeft, ChevronDown, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Plus, Settings, Share2, Users, UserPlus, Tv, Trophy, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -82,6 +82,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [showTv, setShowTv] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const tOnline = useTranslations('onlineLobby')
   // Choix ouvert/privé proposé au clic « Ouvrir une table » (modifiable
   // ensuite dans les réglages du lobby).
   const [choosingVisibility, setChoosingVisibility] = useState(false)
@@ -96,9 +97,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const [linkShared, setLinkShared] = useState(false)
   const shareTableLink = async () => {
     if (!room) return
-    const url = `${window.location.origin}/${locale}/jeux?join=${room.code}`
+    // URL SANS préfixe de langue : le rejoignant est redirigé vers SA locale
+    // (cookie/navigateur) par next-intl — le lien n'impose pas celle de l'hôte.
+    const url = `${window.location.origin}/jeux?join=${room.code}`
     const gameTitle = game?.title ?? 'Le Pillaveur'
-    const text = `Rejoins ma table ${gameTitle} sur Le Pillaveur ! Code : ${room.code}`
+    const text = tOnline('share.text', { game: gameTitle, code: room.code })
     try {
       if (navigator.share) {
         await navigator.share({ title: 'Le Pillaveur', text, url })
@@ -120,7 +123,6 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const [seatSel, setSeatSel] = useState<string | null>(null)
   const [top5, setTop5] = useState<Map<string, number>>(new Map())
   const tTv = useTranslations('tv')
-  const locale = useLocale()
   const tPb = useTranslations('games.petit-buveur.page')
   const tTc = useTranslations('games.toucher-coule.lobby')
   const tQuiz = useTranslations('games.quiz.lobby')
@@ -136,7 +138,6 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tEspion = useTranslations('games.espion.lobby')
   const tTabou = useTranslations('games.tabou.lobby')
   const tCrobard = useTranslations('games.crobard.lobby')
-  const tOnline = useTranslations('onlineLobby')
   const tFriends = useTranslations('account.friends')
 
   const gameLobbies = lobbies.filter((l) => l.gameId === gameId)
@@ -147,9 +148,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
   useEffect(() => {
     if (room && room.gameId !== gameId && room.status === 'waiting') {
-      setError('Vous êtes dans un lobby pour un autre jeu. Quittez-le pour continuer.')
+      setError(tOnline('errors.wrongGameRoom'))
     }
-  }, [room, gameId, setError])
+  }, [room, gameId, setError, tOnline])
 
   // Badge « top 5 » : classement de CE jeu, pour repérer d'un coup d'œil les
   // meilleurs joueurs de la table avant de lancer.
@@ -197,9 +198,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30">
             <GameIconById id={gameId} className="h-8 w-8 text-white" />
           </div>
-          <p className="text-sm text-white/70">Connectez-vous pour jouer en ligne.</p>
+          <p className="text-sm text-white/70">{tOnline('signIn.prompt')}</p>
           <Button asChild className="mt-4 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-5 text-base font-bold text-white shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500">
-            <Link href="/compte">Se connecter</Link>
+            <Link href="/compte">{tOnline('signIn.cta')}</Link>
           </Button>
         </div>
       </LobbyShell>
@@ -227,10 +228,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
-            Retour
+            {tOnline('back')}
           </Link>
           <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
-            <Globe className="h-3 w-3" /> En ligne
+            <Globe className="h-3 w-3" /> {tOnline('onlineBadge')}
           </span>
         </div>
 
@@ -243,17 +244,18 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-base font-bold leading-tight">{game?.title}</h1>
             <p className="text-[11px] text-[#6B6455]">
-              {game?.minPlayers ?? 2}
-              {game?.maxPlayers && game.maxPlayers < 20 ? `-${game.maxPlayers}` : '+'} joueurs
+              {game?.maxPlayers && game.maxPlayers < 20
+                ? tOnline('playersRange.bounded', { min: game?.minPlayers ?? 2, max: game.maxPlayers })
+                : tOnline('playersRange.open', { min: game?.minPlayers ?? 2 })}
             </p>
           </div>
         </div>
 
         {wrongRoom && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            <span>Vous êtes dans le lobby « {GAMES.find((g) => g.id === room?.gameId)?.title} ».</span>
+            <span>{tOnline('errors.inOtherLobby', { game: GAMES.find((g) => g.id === room?.gameId)?.title ?? '' })}</span>
             <Button variant="ghost" size="sm" className="text-amber-200 hover:bg-amber-500/15 hover:text-amber-100" onClick={() => leaveRoom()}>
-              Quitter
+              {tOnline('quit')}
             </Button>
           </div>
         )}
@@ -314,7 +316,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         {gameLobbies.length > 0 && (
           <div className="mb-4">
             <p className="mb-2 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/75">
-              Tables ouvertes · {gameLobbies.length}
+              {tOnline('openTables.title', { count: gameLobbies.length })}
               <span aria-hidden className="h-px flex-1 bg-gold/15" />
             </p>
             <ul className="space-y-2">
@@ -330,7 +332,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     <div className="min-w-0">
                       <span className="font-mono text-sm font-bold tracking-wider text-white">{lobby.code}</span>
                       <p className="truncate text-xs text-white/45">
-                        {lobby.hostName} · {lobby.memberCount} joueur{lobby.memberCount > 1 ? 's' : ''}
+                        {lobby.hostName} · {tOnline('playersCount', { count: lobby.memberCount })}
                       </p>
                     </div>
                   </div>
@@ -340,7 +342,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     onClick={() => joinRoom({ roomId: lobby.id })}
                     className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
                   >
-                    Rejoindre
+                    {tOnline('join')}
                   </Button>
                 </li>
               ))}
@@ -365,12 +367,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     className="h-12 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
                   >
                     <Plus className="mr-1.5 h-4 w-4" />
-                    {loading ? 'Création…' : 'Ouvrir une table'}
+                    {loading ? tOnline('create.creating') : tOnline('create.cta')}
                   </Button>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-center text-xs font-semibold uppercase tracking-wide text-white/50">
-                      Qui peut rejoindre ta table ?
+                      {tOnline('create.whoCanJoin')}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -380,10 +382,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         className="flex flex-col items-center gap-1 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
                       >
                         <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-200">
-                          <Globe className="h-4 w-4" /> Ouverte
+                          <Globe className="h-4 w-4" /> {tOnline('create.openLabel')}
                         </span>
                         <span className="text-[10px] leading-tight text-white/45">
-                          Visible dans la liste des lobbies
+                          {tOnline('create.openDesc')}
                         </span>
                       </button>
                       <button
@@ -393,10 +395,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         className="flex flex-col items-center gap-1 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
                       >
                         <span className="flex items-center gap-1.5 text-sm font-bold text-amber-200">
-                          <Lock className="h-4 w-4" /> Privée
+                          <Lock className="h-4 w-4" /> {tOnline('create.privateLabel')}
                         </span>
                         <span className="text-[10px] leading-tight text-white/45">
-                          Sur code, QR ou invitation
+                          {tOnline('create.privateDesc')}
                         </span>
                       </button>
                     </div>
@@ -406,7 +408,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       disabled={loading}
                       className="w-full py-1 text-center text-xs text-white/40 transition-colors hover:text-white/70"
                     >
-                      {loading ? 'Création…' : 'Annuler'}
+                      {loading ? tOnline('create.creating') : tOnline('create.cancel')}
                     </button>
                   </div>
                 )}
@@ -427,10 +429,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-red-300"
         >
           <LogOut className="h-4 w-4" />
-          Quitter
+          {tOnline('quit')}
         </button>
         <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
-          <Globe className="h-3 w-3" /> En ligne
+          <Globe className="h-3 w-3" /> {tOnline('onlineBadge')}
         </span>
       </div>
 
@@ -462,8 +464,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   className="h-9 w-9 border border-[#D8CCAE] bg-cream text-base text-[#24201A] shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]"
                 />
                 <span
-                  aria-label={m.isReady ? 'Prêt' : 'Pas encore prêt'}
-                  title={m.isReady ? 'Prêt' : 'Pas encore prêt'}
+                  aria-label={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
+                  title={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
                   className={cn(
                     'absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-felt-deep',
                     m.isReady ? 'bg-emerald-400' : 'bg-white/25'
@@ -472,7 +474,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 {m.isHost && <Crown className="absolute -left-1.5 -top-1.5 h-3.5 w-3.5 text-amber-400" />}
               </span>
               <span className="flex max-w-16 items-center gap-0.5 text-[10px] leading-tight text-white/85">
-                <span className="truncate">{m.isSelf ? 'Toi' : m.displayName}</span>
+                <span className="truncate">{m.isSelf ? tOnline('seat.you') : m.displayName}</span>
                 {top5.has(m.userId) && (
                   <span className="shrink-0 font-bold text-amber-300" title={tOnline('top5Badge', { rank: top5.get(m.userId) ?? 0 })}>
                     #{top5.get(m.userId)}
@@ -487,11 +489,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           onClick={copyCode}
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[#D8CCAE] bg-cream px-4 py-1.5 text-center text-[#24201A] shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]"
         >
-          <span className="block text-[8px] font-bold uppercase tracking-[0.24em] text-[#6B6455]">Table</span>
+          <span className="block text-[8px] font-bold uppercase tracking-[0.24em] text-[#6B6455]">{tOnline('table.label')}</span>
           <span className="block font-display text-xl font-black tracking-[0.16em]">{room.code}</span>
           <span className="flex items-center justify-center gap-1 text-[9px] font-semibold text-[#6B6455]">
             {copied ? <Check className="h-2.5 w-2.5 text-emerald-700" /> : <Copy className="h-2.5 w-2.5" />}
-            {copied ? 'copié !' : 'toucher = copier'}
+            {copied ? tOnline('table.copied') : tOnline('table.tapToCopy')}
           </span>
         </button>
       </div>
@@ -534,7 +536,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <button
               type="button"
               onClick={() => setSeatSel(null)}
-              aria-label="Fermer"
+              aria-label={tOnline('close')}
               className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white/40 hover:text-white"
             >
               <X className="h-3.5 w-3.5" />
@@ -550,7 +552,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20"
         >
           {linkShared ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-          {linkShared ? 'Lien copié !' : 'Partager'}
+          {linkShared ? tOnline('share.linkCopied') : tOnline('share.cta')}
         </button>
         <button
           type="button"
@@ -581,7 +583,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             {room.code}
           </p>
           <JoinQR
-            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/jeux?join=${room.code}`}
+            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/jeux?join=${room.code}`}
             size={128}
           />
           <p className="text-[11px] text-white/40">{tTv('scanToJoin')}</p>
@@ -781,10 +783,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:text-white"
         >
           <Settings className="h-4 w-4 shrink-0 text-amber-300" />
-          <span className="shrink-0">Réglages</span>
+          <span className="shrink-0">{tOnline('settings.title')}</span>
           <span className="min-w-0 flex-1 truncate text-left text-xs font-normal text-white/40">
             · {tOnline(`visibility.${visibility}`)}
-            {(room.settings.botsCount ?? 0) > 0 && ` · ${room.settings.botsCount} bot${(room.settings.botsCount ?? 0) > 1 ? 's' : ''}`}
+            {(room.settings.botsCount ?? 0) > 0 && ` · ${tOnline('settings.botsSummary', { count: room.settings.botsCount ?? 0 })}`}
           </span>
           <ChevronDown className={cn('h-4 w-4 shrink-0 text-white/40 transition-transform', showSettings && 'rotate-180')} />
         </button>
@@ -1520,7 +1522,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {!isHost && (
         <p className="mt-2 text-center text-sm text-white/50">
-          En attente que {room.members.find((m) => m.isHost)?.displayName} lance la partie…
+          {tOnline('launch.waitingForHost', { name: room.members.find((m) => m.isHost)?.displayName ?? '' })}
         </p>
       )}
 
@@ -1540,7 +1542,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 : 'border-white/15 bg-white/5 text-white hover:bg-white/10'
             )}
           >
-            {selfMember?.isReady ? '✓ Prêt' : 'Me déclarer prêt'}
+            {selfMember?.isReady ? tOnline('readyButton.on') : tOnline('readyButton.off')}
           </Button>
 
           {isHost && (
@@ -1558,10 +1560,13 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 const bots = meta?.botsFillable ? Math.max(0, room.settings.botsCount ?? 0) : 0
                 const minPlayers = Math.max(1, (meta?.minPlayers ?? 2) - bots)
                 return room.canLaunch
-                  ? 'Lancer la partie'
+                  ? tOnline('launch.cta')
                   : room.members.length < minPlayers
-                    ? `Min. ${minPlayers} joueurs`
-                    : `${room.members.filter((m) => m.isReady).length}/${room.members.length} prêts`
+                    ? tOnline('launch.minPlayers', { count: minPlayers })
+                    : tOnline('readyCount', {
+                        ready: room.members.filter((m) => m.isReady).length,
+                        total: room.members.length,
+                      })
               })()}
             </Button>
           )}

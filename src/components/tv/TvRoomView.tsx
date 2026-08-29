@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { useTvRoom } from '@/hooks/useTvRoom'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import type { TCClientView } from '@/lib/toucher-coule/engine'
@@ -86,7 +86,6 @@ function isFinished(state: ParsedState): boolean {
 /** Orchestrateur TV : lit la salle par code et affiche l'écran adapté (lobby / jeu / victoire). */
 export function TvRoomView({ code }: { code: string }) {
   const t = useTranslations('tv')
-  const locale = useLocale()
   const normalized = code.toUpperCase()
   const { room, notFound, frame } = useTvRoom(normalized)
 
@@ -145,7 +144,8 @@ export function TvRoomView({ code }: { code: string }) {
 
   const title = (room.gameId && GAME_TITLES[room.gameId]) || t('brand')
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const joinUrl = `${origin}/${locale}/jeux?join=${room.code}`
+  // QR/lien SANS préfixe de langue : chaque scanneur atterrit dans SA locale.
+  const joinUrl = `${origin}/jeux?join=${room.code}`
   const state = parseState(room.gameStateJson)
   const finished = isFinished(state)
 

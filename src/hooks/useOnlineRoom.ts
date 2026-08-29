@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { RoomDto } from '@/lib/online-room'
 import { parseApiJson } from '@/lib/api-response'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
@@ -22,6 +23,7 @@ const POLL_PLAYING_ACTIVE_MS = 1500
  */
 export function useOnlineRoomState() {
   const { user } = useAuth()
+  const t = useTranslations('onlineLobby.errors')
   const [room, setRoom] = useState<RoomDto | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -159,20 +161,20 @@ export function useOnlineRoomState() {
         })
         const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
         if (!res.ok) {
-          setError(data.error ?? 'Impossible de créer le lobby')
+          setError(data.error ?? t('createFailed'))
           return null
         }
         setRoom(data.room ?? null)
         return data.room as RoomDto
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Erreur réseau'
+        const msg = e instanceof Error ? e.message : t('network')
         setError(msg)
         return null
       } finally {
         setLoading(false)
       }
     },
-    []
+    [t]
   )
 
   const joinRoom = useCallback(async (opts: { code?: string; roomId?: string }) => {
@@ -187,19 +189,19 @@ export function useOnlineRoomState() {
       })
       const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
       if (!res.ok) {
-        setError(data.error ?? 'Impossible de rejoindre le lobby')
+        setError(data.error ?? t('joinFailed'))
         return null
       }
       setRoom(data.room ?? null)
       return data.room as RoomDto
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Erreur réseau'
+      const msg = e instanceof Error ? e.message : t('network')
       setError(msg)
       return null
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   const leaveRoom = useCallback(async () => {
     if (!room) return
@@ -221,19 +223,19 @@ export function useOnlineRoomState() {
       })
       const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
       if (!res.ok) {
-        setError(data.error ?? 'Impossible de voter pour rejouer')
+        setError(data.error ?? t('rematchFailed'))
         return null
       }
       setRoom(data.room ?? null)
       return data.room as RoomDto
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Erreur réseau'
+      const msg = e instanceof Error ? e.message : t('network')
       setError(msg)
       return null
     } finally {
       setLoading(false)
     }
-  }, [room])
+  }, [room, t])
 
   const setReady = useCallback(async (isReady: boolean) => {
     if (!room) return
@@ -245,8 +247,8 @@ export function useOnlineRoomState() {
     })
     const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
     if (res.ok) setRoom(data.room ?? null)
-    else setError(data.error ?? 'Erreur')
-  }, [room])
+    else setError(data.error ?? t('generic'))
+  }, [room, t])
 
   const launchGame = useCallback(async () => {
     if (!room) return null
@@ -259,19 +261,19 @@ export function useOnlineRoomState() {
       })
       const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
       if (!res.ok) {
-        setError(data.error ?? 'Impossible de lancer la partie')
+        setError(data.error ?? t('launchFailed'))
         return null
       }
       setRoom(data.room ?? null)
       return data.room as RoomDto
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Erreur réseau'
+      const msg = e instanceof Error ? e.message : t('network')
       setError(msg)
       return null
     } finally {
       setLoading(false)
     }
-  }, [room])
+  }, [room, t])
 
   const updateSettings = useCallback(
     async (settings: {
@@ -311,10 +313,10 @@ export function useOnlineRoomState() {
         setRoom(data.room ?? null)
         return data.room as RoomDto
       }
-      setError(data.error ?? 'Erreur')
+      setError(data.error ?? t('generic'))
       return null
     },
-    [room]
+    [room, t]
   )
 
   const setTeam = useCallback(
@@ -331,10 +333,10 @@ export function useOnlineRoomState() {
         setRoom(data.room ?? null)
         return data.room as RoomDto
       }
-      setError(data.error ?? 'Erreur')
+      setError(data.error ?? t('generic'))
       return null
     },
-    [room]
+    [room, t]
   )
 
   const inviteFriend = useCallback(
@@ -349,12 +351,12 @@ export function useOnlineRoomState() {
       })
       const data = await parseApiJson<{ error?: string }>(res)
       if (!res.ok) {
-        setError(data.error ?? "Impossible d'inviter cet ami")
+        setError(data.error ?? t('inviteFailed'))
         return false
       }
       return true
     },
-    [room]
+    [room, t]
   )
 
   const pushGameState = useCallback(
@@ -457,7 +459,7 @@ export const OnlineRoomContext = createContext<OnlineRoomApi | null>(null)
 export function useOnlineRoom(): OnlineRoomApi {
   const ctx = useContext(OnlineRoomContext)
   if (!ctx) {
-    throw new Error('useOnlineRoom doit être utilisé sous <OnlineRoomProvider>')
+    throw new Error('useOnlineRoom must be used within <OnlineRoomProvider>')
   }
   return ctx
 }

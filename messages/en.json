@@ -258,7 +258,78 @@
       "on": "On",
       "off": "Off"
     },
-    "top5Badge": "Top {rank} in this game"
+    "top5Badge": "Top {rank} in this game",
+    "back": "Back",
+    "quit": "Leave",
+    "onlineBadge": "Online",
+    "join": "Join",
+    "close": "Close",
+    "playersCount": "{count, plural, one {# player} other {# players}}",
+    "readyCount": "{ready}/{total} ready",
+    "playersRange": {
+      "bounded": "{min}-{max} players",
+      "open": "{min}+ players"
+    },
+    "signIn": {
+      "prompt": "Sign in to play online.",
+      "cta": "Sign in"
+    },
+    "share": {
+      "text": "Join my {game} table on Le Pillaveur! Code: {code}",
+      "cta": "Share",
+      "linkCopied": "Link copied!"
+    },
+    "openTables": {
+      "title": "Open tables · {count}"
+    },
+    "create": {
+      "cta": "Open a table",
+      "creating": "Creating…",
+      "whoCanJoin": "Who can join your table?",
+      "openLabel": "Open",
+      "openDesc": "Visible in the open lobbies list",
+      "privateLabel": "Private",
+      "privateDesc": "By code, QR or invite",
+      "cancel": "Cancel"
+    },
+    "table": {
+      "label": "Table",
+      "copied": "copied!",
+      "tapToCopy": "tap to copy"
+    },
+    "seat": {
+      "you": "You",
+      "ready": "Ready",
+      "notReady": "Not ready yet"
+    },
+    "settings": {
+      "title": "Settings",
+      "botsSummary": "{count, plural, one {# bot} other {# bots}}"
+    },
+    "readyButton": {
+      "on": "✓ Ready",
+      "off": "I'm ready"
+    },
+    "launch": {
+      "cta": "Start the game",
+      "minPlayers": "{count, plural, one {Min. # player} other {Min. # players}}",
+      "waitingForHost": "Waiting for {name} to start the game…"
+    },
+    "list": {
+      "empty": "No open lobby — pick a game below to create one.",
+      "title": "Open lobbies ({count})"
+    },
+    "errors": {
+      "generic": "Error",
+      "network": "Network error",
+      "createFailed": "Could not create the lobby",
+      "joinFailed": "Could not join the lobby",
+      "launchFailed": "Could not start the game",
+      "rematchFailed": "Could not vote for a rematch",
+      "inviteFailed": "Could not invite this friend",
+      "wrongGameRoom": "You're in a lobby for another game. Leave it to continue.",
+      "inOtherLobby": "You're in the “{game}” lobby."
+    }
   },
   "chat": {
     "title": "Chat",

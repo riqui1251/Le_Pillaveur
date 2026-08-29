@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Crown, Globe, Users } from 'lucide-react'
 import { GAMES } from '@/lib/games'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
@@ -11,6 +12,7 @@ import { GameIconById } from '@/components/hub/GameIconById'
 
 export function OpenLobbiesList() {
   const router = useRouter()
+  const t = useTranslations('onlineLobby')
   const { lobbies, loading } = useOpenLobbies()
   const { joinRoom, loading: joining } = useOnlineRoom()
 
@@ -46,7 +48,7 @@ export function OpenLobbiesList() {
     return (
       <p className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-dashed border-gold/20 px-4 py-2.5 text-xs text-white/55">
         <Globe className="h-3.5 w-3.5 shrink-0 text-gold/60" aria-hidden />
-        Aucun lobby ouvert — choisissez un jeu ci-dessous pour en créer un.
+        {t('list.empty')}
       </p>
     )
   }
@@ -55,7 +57,7 @@ export function OpenLobbiesList() {
     <div className="mb-6 space-y-4">
       <div className="flex items-center gap-2 text-sm font-semibold text-amber-200">
         <Globe className="h-4 w-4" />
-        Lobbies ouverts ({lobbies.length})
+        {t('list.title', { count: lobbies.length })}
       </div>
 
       {Array.from(byGame.entries()).map(([gameId, gameLobbies]) => {
@@ -94,9 +96,9 @@ export function OpenLobbiesList() {
                         </div>
                         <p className="mt-1 flex items-center gap-2 text-xs text-white/50">
                           <Users className="h-3 w-3" />
-                          {lobby.memberCount} joueur{lobby.memberCount > 1 ? 's' : ''}
+                          {t('playersCount', { count: lobby.memberCount })}
                           <span>·</span>
-                          {readyCount}/{lobby.memberCount} prêt{readyCount > 1 ? 's' : ''}
+                          {t('readyCount', { ready: readyCount, total: lobby.memberCount })}
                         </p>
                       </div>
                     </div>
@@ -106,7 +108,7 @@ export function OpenLobbiesList() {
                       onClick={() => handleJoin(lobby.id, lobby.gameId)}
                       className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
                     >
-                      Rejoindre
+                      {t('join')}
                     </Button>
                   </li>
                 )

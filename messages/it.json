@@ -248,7 +248,78 @@
       "on": "Attivo",
       "off": "Disattivo"
     },
-    "top5Badge": "Top {rank} di questo gioco"
+    "top5Badge": "Top {rank} di questo gioco",
+    "back": "Indietro",
+    "quit": "Esci",
+    "onlineBadge": "Online",
+    "join": "Unisciti",
+    "close": "Chiudi",
+    "playersCount": "{count, plural, one {# giocatore} other {# giocatori}}",
+    "readyCount": "{ready, plural, one {#/{total} pronto} other {#/{total} pronti}}",
+    "playersRange": {
+      "bounded": "{min}-{max} giocatori",
+      "open": "{min}+ giocatori"
+    },
+    "signIn": {
+      "prompt": "Accedi per giocare online.",
+      "cta": "Accedi"
+    },
+    "share": {
+      "text": "Unisciti al mio tavolo di {game} su Le Pillaveur! Codice: {code}",
+      "cta": "Condividi",
+      "linkCopied": "Link copiato!"
+    },
+    "openTables": {
+      "title": "Tavoli aperti · {count}"
+    },
+    "create": {
+      "cta": "Apri un tavolo",
+      "creating": "Creazione…",
+      "whoCanJoin": "Chi può unirsi al tuo tavolo?",
+      "openLabel": "Aperto",
+      "openDesc": "Visibile nell'elenco delle lobby",
+      "privateLabel": "Privato",
+      "privateDesc": "Con codice, QR o invito",
+      "cancel": "Annulla"
+    },
+    "table": {
+      "label": "Tavolo",
+      "copied": "copiato!",
+      "tapToCopy": "tocca per copiare"
+    },
+    "seat": {
+      "you": "Tu",
+      "ready": "Pronto",
+      "notReady": "Non ancora pronto"
+    },
+    "settings": {
+      "title": "Impostazioni",
+      "botsSummary": "{count, plural, one {# bot} other {# bot}}"
+    },
+    "readyButton": {
+      "on": "✓ Pronto",
+      "off": "Sono pronto"
+    },
+    "launch": {
+      "cta": "Avvia la partita",
+      "minPlayers": "{count, plural, one {Min. # giocatore} other {Min. # giocatori}}",
+      "waitingForHost": "In attesa che {name} avvii la partita…"
+    },
+    "list": {
+      "empty": "Nessuna lobby aperta — scegli un gioco qui sotto per crearne una.",
+      "title": "Lobby aperte ({count})"
+    },
+    "errors": {
+      "generic": "Errore",
+      "network": "Errore di rete",
+      "createFailed": "Impossibile creare la lobby",
+      "joinFailed": "Impossibile unirsi alla lobby",
+      "launchFailed": "Impossibile avviare la partita",
+      "rematchFailed": "Impossibile votare per la rivincita",
+      "inviteFailed": "Impossibile invitare questo amico",
+      "wrongGameRoom": "Sei in una lobby di un altro gioco. Esci per continuare.",
+      "inOtherLobby": "Sei nella lobby «{game}»."
+    }
   },
   "chat": {
     "title": "Chat",
