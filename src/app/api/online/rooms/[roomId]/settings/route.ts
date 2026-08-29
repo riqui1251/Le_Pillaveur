@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -15,19 +16,19 @@ const VALID_TC_MODES = new Set(['1v1', '2v2', '3v3', '4v4'])
 export async function PUT(request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params
   const room = await prisma.onlineRoom.findUnique({ where: { id: roomId } })
   if (!room) {
-    return NextResponse.json({ error: 'Lobby introuvable' }, { status: 404 })
+    return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   }
   if (room.status !== 'waiting') {
-    return NextResponse.json({ error: 'La partie est déjà lancée' }, { status: 409 })
+    return NextResponse.json(onlineErrorBody('game_already_started'), { status: 409 })
   }
   if (room.hostUserId !== user.id) {
-    return NextResponse.json({ error: 'Seul le créateur peut modifier les paramètres' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('host_only_settings'), { status: 403 })
   }
 
   const body = await request.json()

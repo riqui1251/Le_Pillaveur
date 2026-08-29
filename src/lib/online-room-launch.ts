@@ -142,7 +142,7 @@ export async function processRematchVote(
   const gameId = room.gameId ?? ''
   const state = parseOnlineGameState(gameId, room.gameStateJson)
   if (!state || !gameId || !isOnlineGameFinished(gameId, state)) {
-    throw new Error('La partie n\'est pas terminée')
+    throw new Error('game_not_finished')
   }
 
   const memberUserIds = room.members.map((m) => m.userId)

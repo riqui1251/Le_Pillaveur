@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 import { processRematchVote } from '@/lib/online-room-launch'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { onlineErrorBody, resolveOnlineErrorCode } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -11,7 +12,7 @@ type Params = { params: Promise<{ roomId: string }> }
 export async function POST(_request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params
@@ -26,19 +27,19 @@ export async function POST(_request: Request, { params }: Params) {
   })
 
   if (!room) {
-    return NextResponse.json({ error: 'Lobby introuvable' }, { status: 404 })
+    return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   }
 
   const isMember = room.members.some((m) => m.userId === user.id)
   if (!isMember) {
-    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
   }
 
   try {
     await processRematchVote(roomId, room, user.id)
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Rejouer impossible'
-    return NextResponse.json({ error: msg }, { status: 400 })
+    const code = resolveOnlineErrorCode(e instanceof Error ? e.message : null) ?? 'action_failed'
+    return NextResponse.json(onlineErrorBody(code), { status: 400 })
   }
 
   publishRoomChanged(roomId, { type: 'changed' })

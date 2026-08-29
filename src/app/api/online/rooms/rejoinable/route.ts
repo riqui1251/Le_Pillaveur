@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { findLeftHumanPlayer, ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { SERVER_AUTHORITATIVE_GAMES } from '@/lib/online/game-adapters'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 const REPLACEABLE_GAMES = SERVER_AUTHORITATIVE_GAMES
 
@@ -14,7 +15,7 @@ const REPLACEABLE_GAMES = SERVER_AUTHORITATIVE_GAMES
 export async function GET() {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const rooms = await prisma.onlineRoom.findMany({

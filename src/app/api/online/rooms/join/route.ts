@@ -7,11 +7,12 @@ import { canJoinInviteRoom } from '@/lib/online/room-invites'
 import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { getGameAdapter } from '@/lib/online/game-adapters'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Connectez-vous pour rejoindre un lobby' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const body = await request.json()
@@ -24,11 +25,11 @@ export async function POST(request: Request) {
   } else if (code.length === 6) {
     room = await prisma.onlineRoom.findUnique({ where: { code } })
   } else {
-    return NextResponse.json({ error: 'Code ou identifiant de lobby requis' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('code_required'), { status: 400 })
   }
 
   if (!room) {
-    return NextResponse.json({ error: 'Lobby introuvable' }, { status: 404 })
+    return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   }
   if (room.status !== 'waiting') {
     // Retour en partie : un joueur marqué « parti » peut reprendre sa place
@@ -62,11 +63,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ room: dto })
       }
     }
-    return NextResponse.json({ error: 'Ce lobby a déjà démarré' }, { status: 409 })
+    return NextResponse.json(onlineErrorBody('game_already_started'), { status: 409 })
   }
 
   if (room.visibility === 'invite' && !(await canJoinInviteRoom(room.id, user.id))) {
-    return NextResponse.json({ error: 'Ce lobby est sur invitation uniquement' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('invite_only'), { status: 403 })
   }
 
   if (room.gameId === 'toucher-coule') {
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
       where: { roomId: room.id, userId: { not: user.id } },
     })
     if (others >= capacity) {
-      return NextResponse.json({ error: 'Ce lobby est complet pour ce format' }, { status: 409 })
+      return NextResponse.json(onlineErrorBody('room_full'), { status: 409 })
     }
   }
 

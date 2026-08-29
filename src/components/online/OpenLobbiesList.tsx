@@ -14,7 +14,7 @@ export function OpenLobbiesList() {
   const router = useRouter()
   const t = useTranslations('onlineLobby')
   const { lobbies, loading } = useOpenLobbies()
-  const { joinRoom, loading: joining } = useOnlineRoom()
+  const { joinRoom, loading: joining, error } = useOnlineRoom()
 
   const byGame = useMemo(() => {
     const map = new Map<string, typeof lobbies>()
@@ -46,10 +46,13 @@ export function OpenLobbiesList() {
     // Une ligne discrète suffit : l'absence de lobby n'est pas un événement,
     // les cartes de jeux en dessous sont la vraie invitation à l'action.
     return (
-      <p className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-dashed border-gold/20 px-4 py-2.5 text-xs text-white/55">
-        <Globe className="h-3.5 w-3.5 shrink-0 text-gold/60" aria-hidden />
-        {t('list.empty')}
-      </p>
+      <div className="mb-4">
+        <p className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-gold/20 px-4 py-2.5 text-xs text-white/55">
+          <Globe className="h-3.5 w-3.5 shrink-0 text-gold/60" aria-hidden />
+          {t('list.empty')}
+        </p>
+        {error && <p className="mt-2 text-center text-sm text-red-300">{error}</p>}
+      </div>
     )
   }
 
@@ -59,6 +62,8 @@ export function OpenLobbiesList() {
         <Globe className="h-4 w-4" />
         {t('list.title', { count: lobbies.length })}
       </div>
+
+      {error && <p className="text-sm text-red-300">{error}</p>}
 
       {Array.from(byGame.entries()).map(([gameId, gameLobbies]) => {
         const game = GAMES.find((g) => g.id === gameId)
