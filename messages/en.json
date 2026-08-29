@@ -245,7 +245,14 @@
       "inviteFriend": "Invite a friend",
       "invited": "Invited",
       "pending": "Invite sent",
-      "noFriendsToInvite": "Add friends to invite them"
+      "noFriendsToInvite": "Add friends to invite them",
+      "qrHint": "Have them scan this QR code: your guest joins the table directly, in their own language.",
+      "friendsTitle": "Or invite your friends"
+    },
+    "botsCallout": {
+      "title": "{count, plural, one {1 more player needed to start} other {# more players needed to start}}",
+      "hint": "Fill the seats with bots — you can even play solo!",
+      "fill": "Fill with bots"
     },
     "rejoin": {
       "title": "You have a game in progress!",

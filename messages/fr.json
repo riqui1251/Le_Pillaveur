@@ -245,7 +245,14 @@
       "inviteFriend": "Inviter un ami",
       "invited": "Invité",
       "pending": "Invitation envoyée",
-      "noFriendsToInvite": "Ajoutez des amis pour les inviter"
+      "noFriendsToInvite": "Ajoute des amis pour les inviter",
+      "qrHint": "Fais scanner ce QR code : ton invité rejoint la table directement, dans sa langue.",
+      "friendsTitle": "Ou invite tes amis"
+    },
+    "botsCallout": {
+      "title": "{count, plural, one {Il manque 1 joueur pour lancer} other {Il manque # joueurs pour lancer}}",
+      "hint": "Complète avec des bots — tu peux même jouer seul !",
+      "fill": "Compléter avec des bots"
     },
     "rejoin": {
       "title": "Tu as une partie en cours !",

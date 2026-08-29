@@ -235,7 +235,14 @@
       "inviteFriend": "Invitar a un amigo",
       "invited": "Invitado",
       "pending": "Invitación enviada",
-      "noFriendsToInvite": "Añade amigos para invitarlos"
+      "noFriendsToInvite": "Añade amigos para invitarlos",
+      "qrHint": "Haz que escaneen este código QR: tu invitado se une a la mesa directamente, en su idioma.",
+      "friendsTitle": "O invita a tus amigos"
+    },
+    "botsCallout": {
+      "title": "{count, plural, one {Falta 1 jugador para empezar} other {Faltan # jugadores para empezar}}",
+      "hint": "Completa con bots — ¡puedes incluso jugar solo!",
+      "fill": "Completar con bots"
     },
     "rejoin": {
       "title": "¡Tienes una partida en curso!",

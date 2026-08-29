@@ -545,6 +545,36 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         )
       })()}
 
+      {/* Mise en avant des bots : dès qu'il manque du monde pour lancer,
+          l'hôte complète en un geste — jouer seul est possible. Le réglage
+          fin (+/-) reste dans « Réglages ». */}
+      {isHost && game?.botsFillable && (() => {
+        const botsCount = Math.max(0, room.settings.botsCount ?? 0)
+        const minPlayers = game.minPlayers ?? 2
+        const maxBots = Math.max(0, (game.maxPlayers ?? 12) - room.members.length)
+        const missing = Math.min(
+          Math.max(0, minPlayers - room.members.length - botsCount),
+          Math.max(0, maxBots - botsCount)
+        )
+        if (missing <= 0) return null
+        return (
+          <div className="mb-3 flex items-center gap-3 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3.5 py-3">
+            <span className="text-xl" aria-hidden>🤖</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-white">{tOnline('botsCallout.title', { count: missing })}</p>
+              <p className="text-[11px] leading-snug text-white/50">{tOnline('botsCallout.hint')}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => updateSettings({ botsCount: botsCount + missing })}
+              className="shrink-0 rounded-xl bg-violet-500/25 px-3 py-2 text-xs font-bold text-violet-100 transition-colors hover:bg-violet-500/40"
+            >
+              {tOnline('botsCallout.fill')}
+            </button>
+          </div>
+        )
+      })()}
+
       <div className="mb-3 flex gap-2">
         <button
           type="button"
@@ -563,17 +593,15 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           <Tv className="h-3.5 w-3.5 text-amber-300" />
           {tTv('modeTv')}
         </button>
-        {isHost && visibility !== 'public' && (
-          <button
-            type="button"
-            onClick={() => setShowInvite((v) => !v)}
-            aria-expanded={showInvite}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
-          >
-            <Mail className="h-3.5 w-3.5 text-amber-300" />
-            {tOnline('invites.inviteFriend')}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setShowInvite((v) => !v)}
+          aria-expanded={showInvite}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
+        >
+          <Mail className="h-3.5 w-3.5 text-amber-300" />
+          {tOnline('invites.inviteFriend')}
+        </button>
       </div>
 
       {showTv && (
@@ -590,12 +618,27 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </div>
       )}
 
-      {showInvite && isHost && visibility !== 'public' && (
+      {showInvite && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
             {tOnline('invites.inviteFriend')}
           </p>
-          {friends.length === 0 ? (
+          {/* Le QR d'abord : le moyen le plus direct de faire entrer quelqu'un
+              (lien sans préfixe de langue — l'invité arrive dans SA langue). */}
+          <div className="mb-3 flex flex-col items-center gap-2 rounded-xl border border-gold/10 bg-felt-deep/60 px-3 py-4 text-center">
+            <JoinQR
+              url={`${typeof window !== 'undefined' ? window.location.origin : ''}/jeux?join=${room.code}`}
+              size={132}
+            />
+            <p className="font-mono text-lg font-black tracking-[0.25em] text-cream">{room.code}</p>
+            <p className="max-w-64 text-[11px] leading-relaxed text-white/45">{tOnline('invites.qrHint')}</p>
+          </div>
+          {isHost && visibility !== 'public' && (
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-white/30">
+              {tOnline('invites.friendsTitle')}
+            </p>
+          )}
+          {isHost && visibility !== 'public' && (friends.length === 0 ? (
             <p className="text-sm text-white/40">{tOnline('invites.noFriendsToInvite')}</p>
           ) : (
             <ul className="space-y-2">
@@ -629,7 +672,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )
                 })}
             </ul>
-          )}
+          ))}
         </div>
       )}
 
