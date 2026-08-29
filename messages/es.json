@@ -12,7 +12,7 @@
   "metadata": {
     "title": "Le Pillaveur",
     "titleFull": "Le Pillaveur — Juegos de fiesta gratis online con amigos",
-    "description": "La casa de los juegos de fiesta: Hombre Lobo, quiz, dibujo, faroleo y juegos para beber. Gratis y sin instalación — en un solo móvil o en línea con amigos, con chat de voz y modo TV."
+    "description": "21 juegos de fiesta gratis, sin instalación: Hombre Lobo, quiz, dibujo, faroleo. Con amigos, chat de voz y modo TV — o en solitario con bots."
   },
   "nav": {
     "brand": "Le Pillaveur",
@@ -655,6 +655,96 @@
         "rematchWaiting": "Esperando ({count}/{total})",
         "backToMenu": "Volver al menú",
         "waitingReturn": "{name} se fue — será reemplazado en {seconds}s si no vuelve"
+      }
+    },
+    "meta": {
+      "hub": {
+        "title": "Juega a 21 juegos de fiesta gratis — con amigos o con bots",
+        "description": "Hombre Lobo, quiz, dibujo, faroleo: abre una mesa gratis e invita a tus amigos con un enlace o QR — o juega solo, los bots completan la mesa."
+      },
+      "purple": {
+        "title": "Juega a Purple online gratis — ¿rojo, negro o purple?",
+        "description": "La apuesta de cartas más traicionera del bar: de 2 a 16 jugadores, chat de voz, sin instalación. Con amigos — o solo, los bots completan la mesa."
+      },
+      "monsieur-3": {
+        "title": "Juega a Monsieur 3 gratis — esquiva el 3 o bebe",
+        "description": "El juego de dados del aperitivo: esquiva los 3 y los combos trampa, o bebe. Gratis, sin instalación, en un móvil que gira alrededor de la mesa."
+      },
+      "pmu": {
+        "title": "Juega a la Carrera PMU gratis — apuestas hípicas de fiesta",
+        "description": "Apuesta por tu caballo y sigue la carrera en directo: los perdedores reparten los tragos. Gratis, sin instalación, en un móvil en el centro de la mesa."
+      },
+      "petit-buveur": {
+        "title": "Juega a El Pequeño Bebedor online gratis — tablero festivo",
+        "description": "Un tablero, un dado, casillas trampa y retos que hacen brindar. De 2 a 99 jugadores, chat de voz, gratis y sin instalación."
+      },
+      "toucher-coule": {
+        "title": "Juega a Tocado y Hundido online gratis — batalla naval",
+        "description": "La batalla naval en equipos: tocado bebes, hundido brindas. De 1 a 8 jugadores, chat de voz, gratis y sin instalación."
+      },
+      "menteur": {
+        "title": "Juega a El Mentiroso online gratis — dados ocultos y farol",
+        "description": "Dados ocultos, apuestas y mucho morro: grita «¡Mentiroso!» en el momento justo. De 2 a 6 jugadores, chat de voz, gratis, sin instalación — o solo con bots."
+      },
+      "imposteur": {
+        "title": "Juega a El Impostor online gratis — una palabra, un intruso",
+        "description": "Una palabra secreta para todos… menos uno: pistas, votos y faroleo. De 3 a 16 jugadores, chat de voz, gratis, sin instalación — o solo con bots."
+      },
+      "quiz": {
+        "title": "Juega a El Gran Pillaveur — el quiz de fiesta online gratis",
+        "description": "Cientos de preguntas, tu móvil como pulsador y un podio final. De 2 a 16 jugadores, chat de voz, gratis, sin instalación — o solo contra los bots."
+      },
+      "loup-garou": {
+        "title": "Juega al Hombre Lobo online gratis — sin cartas ni narrador",
+        "description": "Lobos, vidente, debates y votos: el clásico de las fiestas en versión aperitivo. De 4 a 12 jugadores, chat de voz, gratis — o solo con bots."
+      },
+      "hi-lo": {
+        "title": "Juega al Hi/Lo gratis — ¿más alta o más baja?",
+        "description": "Adivina si la próxima carta será más alta o más baja y reparte los tragos. Gratis, sin instalación, en un móvil que da la vuelta a la mesa."
+      },
+      "pyramide": {
+        "title": "Juega a la Pirámide gratis — el juego de cartas de fiesta",
+        "description": "Da la vuelta a las cartas, sube la pirámide y reparte tragos en cada piso. Gratis, sin instalación, en un móvil en el centro de la mesa."
+      },
+      "plinko": {
+        "title": "Juega al Plinko gratis — la bola que reparte tragos",
+        "description": "Suelta la bola, mírala rebotar y reza por la casilla buena. Gratis, sin instalación, en un móvil que gira alrededor de la mesa."
+      },
+      "1220": {
+        "title": "Juega al 1220 online gratis — dos dados, cuatro apuestas",
+        "description": "Un dado de 12, un dado de 20 y apuestas para beber o hacer beber. De 2 a 16 jugadores, chat de voz, gratis, sin instalación — o solo con bots."
+      },
+      "bluff": {
+        "title": "Juega a El Gran Farol online gratis — engaña a tus amigos",
+        "description": "Inventa una respuesta falsa creíble, haz votar a la mesa y roba los puntos. De 3 a 16 jugadores, chat de voz, gratis, sin instalación — o solo con bots."
+      },
+      "espion": {
+        "title": "Juega a ¿Quién es el Espía? online gratis — desenmascáralo",
+        "description": "Todos conocen el lugar, menos el espía: pregunta, acusa, desenmascara. De 3 a 16 jugadores, chat de voz, gratis, sin instalación — o solo con bots."
+      },
+      "crobard": {
+        "title": "Juega al Crobard online gratis — dibuja y hazlo adivinar",
+        "description": "Una palabra, un rotulador, un crono: dibuja en directo, el más rápido puntúa. De 3 a 16 jugadores, chat de voz, gratis, sin instalación — o solo con bots."
+      },
+      "sans-filtre": {
+        "title": "Juega a Sans Filtre online gratis — humor sin límites",
+        "description": "Completa la carta con tu peor mala fe: el juez corona la respuesta más graciosa. De 4 a 16 jugadores, chat de voz, gratis — o solo con bots."
+      },
+      "mots-codes": {
+        "title": "Juega a Mots Codés online gratis — una pista, 25 palabras",
+        "description": "Dos equipos, 25 palabras, un Jefe de espías por bando: une palabras con una sola pista y evita al asesino. De 4 a 16 jugadores, chat de voz, gratis."
+      },
+      "dilemmes": {
+        "title": "Juega a Dilemmes online gratis — la minoría bebe",
+        "description": "¿Qué prefieres?, Yo nunca, ¿Quién de la mesa?: votos secretos revelados de golpe. De 3 a 16 jugadores, chat de voz, gratis — o solo con bots."
+      },
+      "petit-bac": {
+        "title": "Juega al Petit Bac online gratis — una letra y ¡STOP!",
+        "description": "Una letra, cinco categorías: el primero en acabar grita STOP, recuento automático. De 2 a 16 jugadores, chat de voz, gratis y sin instalación."
+      },
+      "telephone-dessine": {
+        "title": "Juega al Teléfono Dibujado online gratis — risas seguras",
+        "description": "Escribe una frase, el siguiente la dibuja, el tercero la adivina… y todo descarrila. De 3 a 8 jugadores, chat de voz, gratis y sin instalación."
       }
     },
     "catalog": {

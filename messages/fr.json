@@ -12,7 +12,7 @@
   "metadata": {
     "title": "Le Pillaveur",
     "titleFull": "Le Pillaveur — Jeux de soirée entre amis, en ligne et gratuits",
-    "description": "La maison des jeux de soirée : Loup-Garou, quiz, dessin, bluff et jeux d'apéro. Gratuit, sans installation — en local sur un téléphone ou en ligne entre amis, avec chat vocal et mode TV."
+    "description": "21 jeux de soirée gratuits, sans installation : Loup-Garou, quiz, dessin, bluff. Entre amis avec chat vocal et mode TV — ou en solo avec des bots."
   },
   "nav": {
     "brand": "Le Pillaveur",
@@ -665,6 +665,96 @@
         "rematchWaiting": "En attente ({count}/{total})",
         "backToMenu": "Retour au menu",
         "waitingReturn": "{name} est parti — remplacement dans {seconds}s si pas de retour"
+      }
+    },
+    "meta": {
+      "hub": {
+        "title": "21 jeux de soirée gratuits en ligne — entre amis ou avec des bots",
+        "description": "Loup-Garou, quiz, dessin, bluff, jeux d'apéro : ouvre une table gratuite, invite tes amis par lien ou QR — ou joue seul, les bots complètent."
+      },
+      "purple": {
+        "title": "Jouer au Purple en ligne gratuit — rouge, noir ou purple ?",
+        "description": "Le pari de cartes le plus traître du comptoir : 2 à 16 joueurs, chat vocal, sans installation. Entre amis — ou seul, les bots complètent la table."
+      },
+      "monsieur-3": {
+        "title": "Jouer à Monsieur 3 gratuit — évite le 3 ou trinque",
+        "description": "Le jeu de dés d'apéro : évite les 3 et les combos piégés, ou bois. Gratuit, sans installation, sur un téléphone qui tourne autour de la table."
+      },
+      "pmu": {
+        "title": "Jouer à la Course PMU gratuit — paris hippiques d'apéro",
+        "description": "Parie sur ton canasson et suis la course en direct : les perdants distribuent les gorgées. Gratuit, sans installation, sur un téléphone au centre de la table."
+      },
+      "petit-buveur": {
+        "title": "Jouer au Petit Buveur en ligne gratuit — plateau d'apéro",
+        "description": "Un plateau, un dé, des cases pièges et des défis qui font trinquer. 2 à 99 joueurs, chat vocal, gratuit et sans installation."
+      },
+      "toucher-coule": {
+        "title": "Jouer au Toucher-Coulé en ligne gratuit — bataille navale",
+        "description": "La bataille navale apéro en équipes : touché tu bois, coulé tu trinques ! 1 à 8 joueurs, chat vocal, gratuit et sans installation."
+      },
+      "menteur": {
+        "title": "Jouer au Menteur en ligne gratuit — dés cachés et culot",
+        "description": "Dés cachés, enchères et gros culot : crie « Menteur ! » au bon moment. 2 à 6 joueurs, chat vocal, gratuit, sans installation — ou seul avec des bots."
+      },
+      "imposteur": {
+        "title": "Jouer à L'Imposteur en ligne gratuit — un mot, un intrus",
+        "description": "Un mot secret pour tous… sauf un : indices, votes et bluff au sommet. 3 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul, les bots complètent."
+      },
+      "quiz": {
+        "title": "Jouer au Grand Pillaveur — le quiz apéro en ligne gratuit",
+        "description": "Des centaines de questions, ton téléphone en buzzer, un podium final. 2 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul, les bots te défient."
+      },
+      "loup-garou": {
+        "title": "Jouer au Loup-Garou en ligne gratuit — sans cartes ni MJ",
+        "description": "Loups, voyante, débats et votes : le classique des soirées, version apéro. 4 à 12 joueurs, chat vocal, gratuit, sans installation — ou seul avec des bots."
+      },
+      "hi-lo": {
+        "title": "Jouer au Hi/Lo gratuit — plus haut ou plus bas ?",
+        "description": "Devine si la prochaine carte sera plus haute ou plus basse, et distribue les gorgées. Gratuit, sans installation, sur un téléphone qui fait le tour."
+      },
+      "pyramide": {
+        "title": "Jouer à la Pyramide gratuit — le jeu de cartes d'apéro",
+        "description": "Retourne les cartes, grimpe la pyramide et distribue les gorgées à chaque étage. Gratuit, sans installation, sur un téléphone au centre de la table."
+      },
+      "plinko": {
+        "title": "Jouer au Plinko gratuit — la bille qui fait trinquer",
+        "description": "Lâche la bille, regarde-la rebondir et prie pour la bonne case. Gratuit, sans installation, sur un téléphone qui tourne autour de la table."
+      },
+      "1220": {
+        "title": "Jouer au 1220 en ligne gratuit — deux dés, quatre paris",
+        "description": "Un dé 12, un dé 20 et des paris qui font boire ou faire boire. 2 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul, les bots complètent."
+      },
+      "bluff": {
+        "title": "Jouer au Grand Bluff en ligne gratuit — piège tes amis",
+        "description": "Invente une fausse réponse crédible, fais voter la table et rafle les points. 3 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul avec des bots."
+      },
+      "espion": {
+        "title": "Jouer à Qui est l'Espion ? en ligne gratuit — démasque-le",
+        "description": "Tout le monde connaît le lieu, sauf l'espion : questionne, accuse, démasque. 3 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul avec des bots."
+      },
+      "crobard": {
+        "title": "Jouer au Crobard en ligne gratuit — dessine, fais deviner",
+        "description": "Un mot, un feutre, un chrono : dessine en direct, le plus rapide marque gros. 3 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul avec des bots."
+      },
+      "sans-filtre": {
+        "title": "Jouer à Sans Filtre en ligne gratuit — humour sans limite",
+        "description": "Complète la carte à trou avec ta pire mauvaise foi : le juge couronne la plus drôle. 4 à 16 joueurs, chat vocal, gratuit — ou seul, les bots complètent."
+      },
+      "mots-codes": {
+        "title": "Jouer à Mots Codés en ligne gratuit — un indice, 25 mots",
+        "description": "Deux équipes, 25 mots, un Maître-mot par camp : relie les bons mots d'un seul indice, évite l'assassin. 4 à 16 joueurs, chat vocal, gratuit, sans installation."
+      },
+      "dilemmes": {
+        "title": "Jouer à Dilemmes en ligne gratuit — la minorité trinque",
+        "description": "Tu préfères, Je n'ai jamais, Qui de la table : votes secrets révélés d'un coup. 3 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul avec des bots."
+      },
+      "petit-bac": {
+        "title": "Jouer au Petit Bac en ligne gratuit — une lettre et STOP",
+        "description": "Une lettre, cinq catégories : le premier qui finit crie STOP, comptage automatique. 2 à 16 joueurs, chat vocal, gratuit et sans installation."
+      },
+      "telephone-dessine": {
+        "title": "Jouer au Téléphone Dessiné en ligne gratuit — fous rires",
+        "description": "Écris une phrase, le suivant la dessine, le troisième la devine… et tout dérape. 3 à 8 joueurs, chat vocal, gratuit et sans installation."
       }
     },
     "catalog": {

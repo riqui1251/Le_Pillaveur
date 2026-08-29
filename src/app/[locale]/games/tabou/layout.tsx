@@ -3,7 +3,7 @@ import { buildGameMetadata, GameSeo } from '@/lib/seo/game-seo'
 
 /** SEO de la page (client) du jeu — voir src/lib/seo/game-seo.tsx. */
 
-const GAME_ID = 'monsieur-3'
+const GAME_ID = 'tabou'
 
 export async function generateMetadata({
   params,
@@ -24,7 +24,7 @@ export default async function GameSeoLayout({
   const { locale } = await params
   return (
     <GameSeo locale={locale} gameId={GAME_ID}>
-      <div className="container mx-auto py-4">{children}</div>
+      {children}
     </GameSeo>
   )
 }

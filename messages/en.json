@@ -12,7 +12,7 @@
   "metadata": {
     "title": "Le Pillaveur",
     "titleFull": "Le Pillaveur — Free online party games with friends",
-    "description": "The house of party games: Werewolf, quiz, drawing, bluffing and drinking games. Free, no install — pass-and-play on one phone or online with friends, with voice chat and TV mode."
+    "description": "21 free party games, no install: Werewolf, quiz, drawing, bluffing. With friends via voice chat and TV mode — or solo with bots."
   },
   "nav": {
     "brand": "Le Pillaveur",
@@ -665,6 +665,96 @@
         "rematchWaiting": "Waiting ({count}/{total})",
         "backToMenu": "Back to menu",
         "waitingReturn": "{name} left — replaced in {seconds}s if they don't return"
+      }
+    },
+    "meta": {
+      "hub": {
+        "title": "Play 21 free online party games — with friends or bots",
+        "description": "Werewolf, quizzes, drawing, bluffing and party games: open a free table, invite friends with a link or QR — or play solo, bots fill the seats."
+      },
+      "purple": {
+        "title": "Play Purple online for free — red, black or purple?",
+        "description": "The sneakiest card-colour bet around: 2–16 players, voice chat, free, no install. Play with friends — or solo, bots fill the table."
+      },
+      "monsieur-3": {
+        "title": "Play Monsieur 3 for free — dodge the 3s or drink",
+        "description": "The dice game where 3s spell trouble: dodge the cursed combos or drink. Free, no install, on one phone passed around the table."
+      },
+      "pmu": {
+        "title": "Play PMU Race for free — horse-race betting for parties",
+        "description": "Bet on your horse and watch the race live: losers hand out the sips. Free, no install, on one phone in the middle of the table."
+      },
+      "petit-buveur": {
+        "title": "Play The Little Drinker online free — party board game",
+        "description": "A board, a die, trap squares and dares that make you drink. 2–99 players, voice chat, free and no install."
+      },
+      "toucher-coule": {
+        "title": "Play Hit & Sunk online for free — team battleship",
+        "description": "Battleship for parties, in teams: a hit means you sip, a sink means you drink. 1–8 players, voice chat, free and no install."
+      },
+      "menteur": {
+        "title": "Play Liar's Dice online for free — hidden dice, big nerve",
+        "description": "Hidden dice, rising bids and pure nerve: call \"Liar!\" at the right moment. 2–6 players, voice chat, free, no install — or solo, bots fill the table."
+      },
+      "imposteur": {
+        "title": "Play The Impostor online free — one word, one intruder",
+        "description": "A secret word for everyone… except one: clues, votes and bluffing. 3–16 players, voice chat, free, no install — or solo, bots fill the seats."
+      },
+      "quiz": {
+        "title": "Play The Big Pillaveur Quiz online free — buzz first",
+        "description": "Hundreds of questions, your phone as the buzzer, a final podium. 2–16 players, voice chat, free, no install — or solo against the bots."
+      },
+      "loup-garou": {
+        "title": "Play Werewolf online for free — no cards, no narrator",
+        "description": "Wolves, seer, debates and votes: the party classic, aperitif style. 4–12 players, voice chat, free, no install — or solo, bots fill the village."
+      },
+      "hi-lo": {
+        "title": "Play Hi/Lo for free — higher or lower?",
+        "description": "Guess whether the next card is higher or lower and hand out the sips. Free, no install, on one phone passed around the table."
+      },
+      "pyramide": {
+        "title": "Play Pyramid for free — the party card game",
+        "description": "Flip the cards, climb the pyramid and hand out sips on every row. Free, no install, on one phone in the middle of the table."
+      },
+      "plinko": {
+        "title": "Play Plinko for free — drop the ball, deal the sips",
+        "description": "Drop the ball, watch it bounce and pray for the right slot. Free, no install, on one phone passed around the table."
+      },
+      "1220": {
+        "title": "Play 1220 online for free — two dice, four bets",
+        "description": "A d12, a d20 and bets that make you drink or deal drinks. 2–16 players, voice chat, free, no install — or solo, bots fill the table."
+      },
+      "bluff": {
+        "title": "Play The Big Bluff online for free — fool your friends",
+        "description": "Invent a believable fake answer, make the table vote and grab the points. 3–16 players, voice chat, free, no install — or solo with bots."
+      },
+      "espion": {
+        "title": "Play Who's the Spy? online for free — unmask the fraud",
+        "description": "Everyone knows the location except the spy: question, accuse, unmask. 3–16 players, voice chat, free, no install — or solo with bots."
+      },
+      "crobard": {
+        "title": "Play Crobard online for free — draw it, make them guess",
+        "description": "One word, one pen, one timer: draw live, the fastest guesser scores big. 3–16 players, voice chat, free, no install — or solo with bots."
+      },
+      "sans-filtre": {
+        "title": "Play Sans Filtre online for free — no-limits party humour",
+        "description": "Fill the blank card with your worst bad faith: the judge crowns the funniest. 4–16 players, voice chat, free — or solo, bots fill the seats."
+      },
+      "mots-codes": {
+        "title": "Play Mots Codés online for free — one clue, 25 words",
+        "description": "Two teams, 25 words, one Spymaster per side: link the right words with a single clue, dodge the assassin. 4–16 players, voice chat, free and no install."
+      },
+      "dilemmes": {
+        "title": "Play Dilemmes online for free — the minority drinks",
+        "description": "Would You Rather, Never Have I Ever, Who's Most Likely: secret votes revealed at once. 3–16 players, voice chat, free — or solo with bots."
+      },
+      "petit-bac": {
+        "title": "Play Petit Bac online for free — one letter, then STOP",
+        "description": "One letter, five categories: first to finish yells STOP, scoring is automatic. 2–16 players, voice chat, free and no install."
+      },
+      "telephone-dessine": {
+        "title": "Play Drawn Telephone online free — giggles guaranteed",
+        "description": "Write a sentence, the next player draws it, the third one guesses… chaos ensues. 3–8 players, voice chat, free and no install."
       }
     },
     "catalog": {

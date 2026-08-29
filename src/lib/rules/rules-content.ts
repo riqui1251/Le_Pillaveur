@@ -15,44 +15,44 @@ export { RULES_GAME_IDS, isRulesGameId, type RulesGameId }
 /** Métadonnées SEO par page (titre + description, français). */
 export const RULES_META: Record<RulesGameId, { title: string; description: string }> = {
   'loup-garou': {
-    title: 'Règles du Loup-Garou en ligne — rôles, nuits et votes',
+    title: 'Règles du Loup-Garou — apprendre et jouer en ligne gratuit',
     description:
-      'Toutes les règles du Loup-Garou en ligne : rôles (Voyante, Sorcière, Chasseur, Salvateur, Corbeau, Ancien), déroulé des nuits, votes, maire et conditions de victoire. Jouez gratuitement à 4-12 avec chat vocal.',
+      'Rôles (Voyante, Sorcière, Chasseur…), nuits, votes et maire expliqués. Puis joues-y gratuitement : 4 à 12 joueurs, chat vocal — ou seul avec des bots.',
   },
   imposteur: {
-    title: "Règles de L'Imposteur — le jeu du mot secret",
+    title: "Règles de L'Imposteur — apprendre et jouer en ligne gratuit",
     description:
-      "Les règles complètes de L'Imposteur : un mot secret pour le village, un imposteur qui bluffe, des indices et un vote. Jouable gratuitement en ligne de 3 à 10 joueurs.",
+      'Un mot secret, un imposteur, des indices et un vote : les règles en 2 minutes. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
   quiz: {
-    title: 'Règles du Grand Pillaveur — quiz de rapidité entre amis',
+    title: 'Règles du Grand Pillaveur — comprendre le quiz puis jouer',
     description:
-      'Le quiz en ligne du Pillaveur : des centaines de questions, un buzzer, des points à la vitesse. Règles, score et astuces pour jouer gratuitement entre amis.',
+      'Buzzer, rapidité, points et podium : le quiz expliqué en un clin d’œil. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal — ou seul contre les bots.',
   },
   menteur: {
-    title: 'Règles du Menteur (dés) — enchères et bluff au gobelet',
+    title: 'Règles du Menteur — apprendre le jeu de dés puis jouer',
     description:
-      'Les règles du Menteur en ligne : dés cachés sous le gobelet, enchères sur les dés de la table, et « MENTEUR ! » pour démasquer. Gratuit, de 2 à 6 joueurs.',
+      'Dés cachés, enchères et quand crier « Menteur ! » : les règles en 2 minutes. Puis joues-y gratuitement : 2 à 6 joueurs, chat vocal — ou seul avec des bots.',
   },
   'petit-buveur': {
-    title: 'Règles du Petit Buveur — le jeu de plateau des soirées',
+    title: 'Règles du Petit Buveur — apprendre et jouer en ligne gratuit',
     description:
-      'Le Petit Buveur en ligne : un plateau, un dé, des cases à effets et des défis. Règles complètes, mode soft sans alcool, jouable gratuitement entre amis.',
+      'Plateau, cases à effets, défis et gorgées : les règles en un clin d’œil. Puis joues-y gratuitement en ligne : 2 à 99 joueurs, chat vocal, sans installation.',
   },
   'toucher-coule': {
-    title: 'Règles du Toucher-Coulé — bataille navale en équipes',
+    title: 'Règles du Toucher-Coulé — apprendre puis jouer gratuit',
     description:
-      'La bataille navale du Pillaveur : placement des navires, tirs en équipes, bots de remplacement. Règles complètes pour jouer gratuitement en ligne.',
+      'Placement des navires, tirs en équipes, touché ou coulé : règles simples. Puis joues-y gratuitement en ligne : 1 à 8 joueurs, chat vocal, sans installation.',
   },
   bluff: {
-    title: 'Règles du Grand Bluff — inventez la meilleure fausse réponse',
+    title: 'Règles du Grand Bluff — apprendre et jouer en ligne gratuit',
     description:
-      'Le Grand Bluff en ligne : chacun invente une fausse réponse crédible, puis on vote pour la vraie. Règles, points et astuces, de 3 à 10 joueurs.',
+      'Inventer une fausse réponse, voter pour la vraie, marquer : règles et astuces. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
   espion: {
-    title: "Règles de Qui est l'Espion ? — trouvez qui ignore le lieu",
+    title: "Règles de Qui est l'Espion ? — apprendre et jouer gratuit",
     description:
-      "Qui est l'Espion ? en ligne : tout le monde connaît le lieu sauf l'espion. Questions, soupçons, accusation publique. Règles complètes, 3 à 8 joueurs.",
+      'Un lieu secret, des questions, une accusation : les règles en 2 minutes. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
   // Tabou masqué pour l'instant — réactiver cette entrée avec l'id dans rules-ids.ts.
   // tabou: {
@@ -61,44 +61,44 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
   //     'Le Tabou du Pillaveur : faites deviner un mot au chat vocal sans prononcer les mots interdits, en équipes. Règles complètes, 4 à 12 joueurs.',
   // },
   crobard: {
-    title: 'Règles du Crobard — dessinez, devinez, marquez',
+    title: 'Règles du Crobard — apprendre et jouer en ligne gratuit',
     description:
-      'Le Crobard en ligne : un joueur dessine, les autres devinent au plus vite. Règles, points et astuces pour jouer gratuitement de 3 à 12 joueurs.',
+      'Dessin en direct, devinettes chronométrées, comptage des points : tout y est. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
   'telephone-dessine': {
-    title: 'Règles du Téléphone Dessiné — le téléphone arabe en dessins',
+    title: 'Règles du Téléphone Dessiné — apprendre et jouer gratuit',
     description:
-      'Le Téléphone Dessiné en ligne : une phrase devient un dessin, qui redevient une phrase… et tout dérape. Règles complètes, 3 à 8 joueurs.',
+      'Une phrase, un dessin, une devinette : le téléphone arabe en dessins expliqué. Puis joues-y gratuitement : 3 à 8 joueurs, chat vocal, sans installation.',
   },
   purple: {
-    title: 'Règles du Purple — rouge, noir ou purple ?',
+    title: 'Règles du Purple — apprendre et jouer en ligne gratuit',
     description:
-      'Le Purple en ligne : pariez sur la couleur de la prochaine carte — rouge, noir, ou l’alternance purple. Règles complètes et jouable gratuitement.',
+      'Rouge, noir ou purple : les paris, les gorgées et l’alternance expliqués. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
   '1220': {
-    title: 'Règles du 1220 — deux dés, quatre paris',
+    title: 'Règles du 1220 — apprendre les paris puis jouer gratuit',
     description:
-      'Le 1220 en ligne : un dé 12 et un dé 20, des paris sur la parité, la plage et deux chiffres clés. Règles complètes du jeu d’apéro du Pillaveur.',
+      'Un dé 12, un dé 20, parité, plage de somme et chiffres clés : règles complètes. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
   'sans-filtre': {
-    title: 'Règles de Sans Filtre — cartes à trous et mauvaise foi',
+    title: 'Règles de Sans Filtre — apprendre et jouer en ligne gratuit',
     description:
-      'Sans Filtre en ligne : une carte noire à compléter, des réponses anonymes, un juge qui couronne la plus drôle. Règles complètes, 4 à 16 joueurs, gratuit avec chat vocal.',
+      'Carte à trou, réponses anonymes, juge du tour : les règles en 2 minutes. Puis joues-y gratuitement : 4 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
   'mots-codes': {
-    title: 'Règles de Mots Codés — indices, équipes et assassin',
+    title: 'Règles de Mots Codés — apprendre et jouer en ligne gratuit',
     description:
-      'Mots Codés en ligne : 25 mots, deux équipes, un Maître-mot par camp qui relie plusieurs mots d’un seul indice. Règles complètes, 4 à 16 joueurs, gratuit avec chat vocal.',
+      '25 mots, deux équipes, un indice chiffré, gare à l’assassin : tout est expliqué. Puis joues-y gratuitement : 4 à 16 joueurs, chat vocal, sans installation.',
   },
   dilemmes: {
-    title: 'Règles de Dilemmes — votes secrets et révélations',
+    title: 'Règles de Dilemmes — apprendre et jouer en ligne gratuit',
     description:
-      'Dilemmes en ligne : Tu préfères, Je n’ai jamais et Qui de la table en votes secrets révélés d’un coup — la minorité trinque. Règles complètes, 3 à 16 joueurs, gratuit.',
+      'Tu préfères, Je n’ai jamais, Qui de la table, votes secrets : règles éclair. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
   'petit-bac': {
-    title: 'Règles du Petit Bac en ligne — lettre, STOP et comptage',
+    title: 'Règles du Petit Bac — apprendre et jouer en ligne gratuit',
     description:
-      'Le Petit Bac du Pillaveur : une lettre, cinq catégories, le premier qui finit crie STOP. Comptage automatique, contestations à la majorité. Règles complètes, 2 à 16 joueurs, gratuit.',
+      'Lettre, catégories, STOP, comptage et contestations : les règles complètes. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal, sans installation.',
   },
   // Président masqué pour l'instant — réactiver cette entrée avec l'id dans rules-ids.ts.
   // president: {
