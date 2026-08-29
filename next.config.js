@@ -54,6 +54,18 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        // Les règles n'existent qu'en français : redirection PERMANENTE des
+        // URLs nues (indexées par Google à côté des /fr/ — signal divisé).
+        // Les autres pages nues restent sur la détection de langue next-intl.
+        source: '/regles/:gameId',
+        destination: '/fr/regles/:gameId',
+        permanent: true,
+      },
+    ];
+  },
   ...(basePath ? { basePath, assetPrefix: basePath } : {}),
   reactStrictMode: true,
   eslint: {

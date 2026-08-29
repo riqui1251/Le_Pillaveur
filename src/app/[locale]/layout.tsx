@@ -44,13 +44,15 @@ export async function generateMetadata({
       template: `%s — ${t('title')}`,
     },
     description: t('description'),
+    // Pas de `url` ici : hérité par TOUTES les pages, il déclarait og:url =
+    // racine de la langue partout (pseudo-canonical parasite). Chaque page
+    // qui a sa propre metadata pose son og:url exact.
     openGraph: {
       type: 'website',
       siteName: t('title'),
       locale,
       title: t('titleFull'),
       description: t('description'),
-      url: `/${locale}`,
     },
     twitter: {
       card: 'summary_large_image',

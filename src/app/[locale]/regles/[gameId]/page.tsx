@@ -29,9 +29,21 @@ export async function generateMetadata({
   const { gameId } = await params
   if (!isRulesGameId(gameId)) return {}
   const meta = RULES_META[gameId]
+  const canonical = `/fr/regles/${gameId}`
   return {
-    title: meta.title,
+    // Titre SANS le suffixe « — Le Pillaveur » du layout : les titres RULES_META
+    // dépassaient 60 caractères et étaient tronqués dans Google.
+    title: { absolute: meta.title },
     description: meta.description,
+    // Contenu 100 % français servi sous les 4 locales : une seule version
+    // canonique (/fr) pour consolider le signal (ex. /it/regles/purple :
+    // 106 impressions avec un extrait français, 0 clic).
+    alternates: { canonical },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      url: canonical,
+    },
   }
 }
 

@@ -11,6 +11,11 @@ const intlMiddleware = createIntlMiddleware({
     name: LOCALE_COOKIE,
     maxAge: LOCALE_MAX_AGE,
   },
+  // Pas de header « Link: …hreflang » automatique : son x-default pointait
+  // vers l'URL SANS préfixe de langue et faisait indexer les doublons nus
+  // (/regles/purple à côté de /fr/regles/purple). Les hreflang officiels
+  // vivent dans le sitemap + les canonicals par page.
+  alternateLinks: false,
 })
 
 const PUBLIC_PREFIXES = [

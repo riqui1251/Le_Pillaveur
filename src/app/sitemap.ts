@@ -34,6 +34,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     entry('', 1, 'weekly'),
     entry('/jeux', 1, 'weekly'),
     entry('/classement', 0.6, 'daily'),
+    // Page de téléchargement de l'app mobile (liens stores à venir).
+    entry('/application', 0.5, 'monthly'),
     ...GAMES.filter((game) => !game.hidden).map((game) =>
       entry(`/games/${game.id}`, 0.7, 'monthly')
     ),
