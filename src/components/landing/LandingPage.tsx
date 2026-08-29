@@ -40,7 +40,7 @@ export async function LandingPage({ locale }: { locale: string }) {
   ]
 
   const steps = [
-    { n: '1', title: t('how.step1Title'), body: t('how.step1Body') },
+    { n: '1', title: t('how.step1Title'), body: t('how.step1Body', { count: games.length }) },
     { n: '2', title: t('how.step2Title'), body: t('how.step2Body') },
     { n: '3', title: t('how.step3Title'), body: t('how.step3Body') },
   ]
@@ -63,12 +63,13 @@ export async function LandingPage({ locale }: { locale: string }) {
           >
             {t('hero.ctaPlay')}
           </Link>
-          <a
-            href="#catalogue"
-            className="inline-flex h-12 items-center justify-center rounded-2xl border border-gold/40 px-8 text-base font-semibold text-cream/90 transition-colors hover:bg-gold/10"
+          <Link
+            href="/jeux"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-violet-400/40 bg-violet-500/15 px-8 text-base font-semibold text-violet-100 transition-colors hover:bg-violet-500/25"
           >
-            {t('hero.ctaExplore')}
-          </a>
+            <Bot aria-hidden className="h-4 w-4" />
+            {t('hero.ctaSolo')}
+          </Link>
         </div>
         <p className="mt-4 text-xs text-white/40">{t('hero.trust')}</p>
       </section>
@@ -105,6 +106,25 @@ export async function LandingPage({ locale }: { locale: string }) {
               <p className="mt-0.5 text-xs leading-snug text-white/50">{desc}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── Joue même seul — persona « je m'ennuie maintenant » ── */}
+      <section className="py-8">
+        <div className="rounded-3xl border border-violet-400/25 bg-violet-500/[0.08] p-6 text-center sm:p-8">
+          <span aria-hidden className="text-3xl">🤖</span>
+          <h2 className="mt-2 font-display text-xl font-bold text-cream sm:text-2xl">
+            {t('solo.title')}
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-white/65">
+            {t('solo.body')}
+          </p>
+          <Link
+            href="/jeux"
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl border border-violet-400/40 bg-violet-500/20 px-6 text-sm font-bold text-violet-100 transition-colors hover:bg-violet-500/30"
+          >
+            {t('solo.cta')}
+          </Link>
         </div>
       </section>
 

@@ -4017,16 +4017,21 @@
   },
   "landing": {
     "hero": {
-      "title": "Giochi di società gratis, tra amici",
-      "subtitle": "Lupus con chat vocale, quiz, disegno, bluff e giochi da aperitivo: su un telefono che gira intorno al tavolo, o online fino a 12 giocatori — senza installare nulla.",
-      "ctaPlay": "Scegli un gioco",
-      "ctaExplore": "Scopri i giochi",
-      "trust": "100% gratis · zero installazioni · français, english, español, italiano"
+      "title": "La casa dei giochi di società — entra, è aperto",
+      "subtitle": "Lupus con chat vocale, quiz, disegno, bluff e giochi da festa: fino a 16 giocatori online, o un telefono che gira intorno al tavolo — con i tuoi amici, o da solo contro i nostri bot.",
+      "ctaPlay": "Apri un tavolo con gli amici",
+      "ctaSolo": "Gioca da solo con i bot",
+      "trust": "100% gratis · zero installazioni · zero registrazione — un nickname e il tavolo è tuo"
+    },
+    "solo": {
+      "title": "Nessuno disponibile stasera? Gioca lo stesso.",
+      "body": "I nostri bot non danno mai buca: lancia un Bugiardo, un quiz del Gran Pillaveur o un Purple in solitaria — completano il tavolo in un clic. E se un amico arriva a partita in corso, scansiona il QR e prende posto.",
+      "cta": "Inizia una partita con i bot"
     },
     "how": {
       "title": "Come funziona",
       "step1Title": "Scegli un gioco",
-      "step1Body": "18 giochi pronti: ruoli nascosti, quiz, disegno, dadi e scommesse.",
+      "step1Body": "{count} giochi pronti: ruoli nascosti, quiz, disegno, dadi e scommesse.",
       "step2Title": "Apri un tavolo",
       "step2Body": "Online con i tuoi amici — o in locale, passando il telefono.",
       "step3Title": "Invita la banda",
@@ -4039,7 +4044,7 @@
       "tv": "Modalità TV",
       "tvDesc": "La partita in grande su uno schermo; si entra scansionando il QR.",
       "bots": "Bot al tavolo",
-      "botsDesc": "Mai bloccati: i bot occupano i posti vuoti.",
+      "botsDesc": "Completano il tavolo — o lo riempiono tutto: puoi giocare da solo.",
       "soft": "Modalità soft",
       "softDesc": "Gli stessi giochi, senza una goccia — ogni tavolo il suo mood.",
       "languages": "4 lingue",

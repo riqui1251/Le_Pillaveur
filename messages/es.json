@@ -4017,16 +4017,21 @@
   },
   "landing": {
     "hero": {
-      "title": "Juegos de fiesta gratis, entre amigos",
-      "subtitle": "Hombre Lobo con chat de voz, quiz, dibujo, faroleo y juegos para beber: en un móvil que pasa de mano en mano, o en línea hasta 12 jugadores — sin instalar nada.",
-      "ctaPlay": "Elegir un juego",
-      "ctaExplore": "Descubrir los juegos",
-      "trust": "100 % gratis · sin instalación · français, english, español, italiano"
+      "title": "La casa de los juegos de fiesta — entra, está abierto",
+      "subtitle": "Hombre Lobo con chat de voz, quiz, dibujo, faroleo y juegos de fiesta: hasta 16 jugadores en línea, o un móvil que pasa de mano en mano — con tus amigos, o solo contra nuestros bots.",
+      "ctaPlay": "Abrir una mesa con amigos",
+      "ctaSolo": "Jugar solo con bots",
+      "trust": "100 % gratis · sin instalación · sin registro — un apodo y la mesa es tuya"
+    },
+    "solo": {
+      "title": "¿Nadie disponible esta noche? Juega igual.",
+      "body": "Nuestros bots nunca fallan: lanza un Mentiroso, un quiz del Gran Pillaveur o un Purple en solitario — completan la mesa en un clic. Y si un amigo aparece a mitad de partida, escanea el QR y ocupa un asiento.",
+      "cta": "Empezar una partida con bots"
     },
     "how": {
       "title": "Cómo funciona",
       "step1Title": "Elige un juego",
-      "step1Body": "18 juegos listos: roles ocultos, quiz, dibujo, dados y apuestas.",
+      "step1Body": "{count} juegos listos: roles ocultos, quiz, dibujo, dados y apuestas.",
       "step2Title": "Abre una mesa",
       "step2Body": "En línea con tus amigos — o en local, pasando el móvil.",
       "step3Title": "Invita a la banda",
@@ -4039,7 +4044,7 @@
       "tv": "Modo TV",
       "tvDesc": "La partida se ve en grande en una pantalla; se entra escaneando el QR.",
       "bots": "Bots de mesa",
-      "botsDesc": "Nunca bloqueado: los bots ocupan los asientos vacíos.",
+      "botsDesc": "Completan la mesa — o la llenan entera: puedes jugar solo.",
       "soft": "Modo soft",
       "softDesc": "Los mismos juegos, sin una gota — cada mesa su ambiente.",
       "languages": "4 idiomas",

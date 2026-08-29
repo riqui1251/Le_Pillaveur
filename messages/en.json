@@ -4027,16 +4027,21 @@
   },
   "landing": {
     "hero": {
-      "title": "Free party games to play with friends",
-      "subtitle": "Werewolf with voice chat, quizzes, drawing, bluffing and drinking games: pass one phone around the table, or play online with up to 12 players — nothing to install.",
-      "ctaPlay": "Pick a game",
-      "ctaExplore": "Browse the games",
-      "trust": "100% free · no install · français, english, español, italiano"
+      "title": "The house of party games — come in, we're open",
+      "subtitle": "Werewolf with voice chat, quizzes, drawing, bluffing and party games: up to 16 players online, or one phone passed around the table — with your friends, or solo against our bots.",
+      "ctaPlay": "Open a table with friends",
+      "ctaSolo": "Play solo with bots",
+      "trust": "100% free · nothing to install · no sign-up — pick a nickname and the table is yours"
+    },
+    "solo": {
+      "title": "Nobody free tonight? Play anyway.",
+      "body": "Our bots never bail: start a Liar's game, a Grand Pillaveur quiz or a Purple run solo — they fill the table in one click. And if a friend shows up mid-game, they scan the QR and grab a seat.",
+      "cta": "Start a game with bots"
     },
     "how": {
       "title": "How it works",
       "step1Title": "Pick a game",
-      "step1Body": "18 ready-to-play games: hidden roles, quiz, drawing, dice and bets.",
+      "step1Body": "{count} ready-to-play games: hidden roles, quiz, drawing, dice and bets.",
       "step2Title": "Open a table",
       "step2Body": "Online with your friends — or locally, passing the phone around.",
       "step3Title": "Invite the crew",
@@ -4049,7 +4054,7 @@
       "tv": "TV mode",
       "tvDesc": "The game shows big on a screen; scan the QR to join.",
       "bots": "Table bots",
-      "botsDesc": "Never stuck: bots take the empty seats.",
+      "botsDesc": "They fill the empty seats — or all of them: you can play solo.",
       "soft": "Soft mode",
       "softDesc": "Same games, not a single drop — your table, your vibe.",
       "languages": "4 languages",

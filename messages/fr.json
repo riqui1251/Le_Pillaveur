@@ -4027,16 +4027,21 @@
   },
   "landing": {
     "hero": {
-      "title": "Des jeux de soirée gratuits, entre amis",
-      "subtitle": "Loup-Garou au chat vocal, quiz, dessin, bluff et jeux d'apéro : sur un téléphone qui tourne autour de la table, ou en ligne jusqu'à 12 joueurs — sans rien installer.",
-      "ctaPlay": "Choisir un jeu",
-      "ctaExplore": "Découvrir les jeux",
-      "trust": "100 % gratuit · sans installation · français, english, español, italiano"
+      "title": "La maison des jeux de soirée — entre, c'est ouvert",
+      "subtitle": "Loup-Garou au chat vocal, quiz, dessin, bluff et jeux d'apéro : jusqu'à 16 joueurs en ligne, ou sur un téléphone qui tourne autour de la table — avec tes potes, ou seul contre nos bots.",
+      "ctaPlay": "Ouvrir une table entre potes",
+      "ctaSolo": "Jouer seul avec les bots",
+      "trust": "100 % gratuit · zéro installation · zéro inscription — un pseudo et la table est à toi"
+    },
+    "solo": {
+      "title": "Personne dispo ce soir ? Joue quand même.",
+      "body": "Nos bots ne se défilent jamais : lance un Menteur, un quiz du Grand Pillaveur ou un Purple en solo — ils complètent la table en un clic. Et si un pote débarque en cours de route, il scanne le QR et prend un siège.",
+      "cta": "Lancer une partie avec les bots"
     },
     "how": {
       "title": "Comment ça marche",
       "step1Title": "Choisis un jeu",
-      "step1Body": "18 jeux prêts à lancer : rôles cachés, quiz, dessin, dés et paris.",
+      "step1Body": "{count} jeux prêts à lancer : rôles cachés, quiz, dessin, dés et paris.",
       "step2Title": "Ouvre une table",
       "step2Body": "En ligne avec tes amis — ou en local, le téléphone passe de main en main.",
       "step3Title": "Invite la bande",
@@ -4049,7 +4054,7 @@
       "tv": "Mode TV",
       "tvDesc": "La partie s'affiche en grand sur un écran, on rejoint en scannant le QR.",
       "bots": "Bots de table",
-      "botsDesc": "Jamais bloqué : les bots prennent les places vides.",
+      "botsDesc": "Ils complètent la table — ou la remplissent : tu peux jouer seul.",
       "soft": "Mode soft",
       "softDesc": "Les mêmes jeux, sans la moindre goutte — chacun son ambiance.",
       "languages": "4 langues",
