@@ -54,7 +54,7 @@ Il posizionamento festivo del Servizio non deve essere interpretato come una rac
 
 L'utilizzo del Servizio è **strettamente riservato alle persone di età pari o superiore a 18 anni**.
 
-Accedendo al Servizio, dichiari sotto la tua responsabilità di avere **almeno 18 anni compiuti**. Questa verifica si basa sulla tua **dichiarazione** (casella di spunta e cookie `lp_age_verified`); l'editore non effettua un controllo d'identità.
+Accedendo al Servizio, dichiari sotto la tua responsabilità di avere **almeno 18 anni compiuti**. Questa verifica si basa sulla tua **dichiarazione** (pulsante di conferma «Ho 18 anni o più» e cookie `lp_age_verified`); l'editore non effettua un controllo d'identità.
 
 Se sei minorenne, devi abbandonare immediatamente il Servizio.
 

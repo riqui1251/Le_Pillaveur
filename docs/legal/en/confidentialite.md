@@ -38,7 +38,7 @@ In **local mode** (without an account), your local players are stored on your de
 
 ### 3.3 Technical and usage data
 
-**With your consent** (the "visit statistics" checkbox shown when entering the site), we collect for audience statistics and abuse prevention:
+**With your consent** (the "visit statistics" choice offered when entering the site), we collect for audience statistics and abuse prevention:
 
 - visitor identifier (`lp_vid` cookie);
 - IP address;

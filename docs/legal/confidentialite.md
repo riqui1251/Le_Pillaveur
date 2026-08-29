@@ -38,7 +38,7 @@ En **mode local** (sans compte), vos joueurs locaux sont stockés sur votre appa
 
 ### 3.3 Données techniques et d'usage
 
-**Avec votre consentement** (case « statistiques de visite » à l'entrée du site), nous collectons pour des statistiques de fréquentation et la lutte anti-abus :
+**Avec votre consentement** (choix « statistiques de visite » proposé à l'entrée du site), nous collectons pour des statistiques de fréquentation et la lutte anti-abus :
 
 - identifiant de visiteur (cookie `lp_vid`) ;
 - adresse IP ;

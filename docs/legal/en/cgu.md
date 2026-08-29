@@ -54,7 +54,7 @@ The festive positioning of the Service must not be interpreted as a recommendati
 
 Use of the Service is **strictly reserved for persons aged 18 or over**.
 
-By accessing the Service, you declare on your honour that you are **at least 18 years of age**. This verification relies on your **declaration** (checkbox and `lp_age_verified` cookie); the publisher does not perform identity verification.
+By accessing the Service, you declare on your honour that you are **at least 18 years of age**. This verification relies on your **declaration** (confirmation button "I am 18 or older" and `lp_age_verified` cookie); the publisher does not perform identity verification.
 
 If you are a minor, you must leave the Service immediately.
 

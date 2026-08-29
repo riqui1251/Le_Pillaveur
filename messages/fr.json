@@ -422,20 +422,18 @@
   "legal": {
     "ageGate": {
       "title": "Accès réservé aux majeurs",
-      "body1": "Le Pillaveur est un outil de divertissement festif. Les « gorgées » sont des unités ludiques abstraites — elles ne constituent pas une obligation de consommer de l'alcool. Ce service ne vend ni ne distribue de boissons.",
       "healthWarning": "L'abus d'alcool est dangereux pour la santé.",
       "moderation": "À consommer avec modération.",
-      "checkboxPrefix": "Je certifie avoir 18 ans révolus et j'accepte les",
-      "checkboxAnd": "et la",
-      "checkboxSuffix": ".",
-      "checkbox": "Je certifie avoir 18 ans révolus et j'accepte les CGU et la politique de confidentialité.",
-      "enter": "Entrer sur le site",
+      "analyticsLabel": "J'accepte les statistiques de visite anonymes (mesure d'audience).",
+      "enterAdult": "J'ai 18 ans ou plus — Entrer",
       "validating": "Validation…",
+      "termsPrefix": "En entrant, vous acceptez les",
+      "termsAnd": "et la",
+      "termsSuffix": ".",
       "minorWarning": "Si vous avez moins de 18 ans, vous devez quitter ce site.",
-      "analyticsLabel": "J'accepte les statistiques de visite (cookie de mesure d'audience).",
-      "analyticsHint": "Optionnel — sert uniquement à compter les visites et à lutter contre les abus. Aucun partage avec des tiers.",
-      "tagline": "La maison des jeux de soirée",
-      "promise": "13 jeux gratuits à jouer entre amis — sur un téléphone qui tourne, ou en ligne avec chat vocal et mode TV."
+      "cookiesBanner": "Autoriser les statistiques de visite anonymes ? Elles servent uniquement à compter les visites, sans partage avec des tiers.",
+      "accept": "Accepter",
+      "refuse": "Refuser"
     },
     "pages": {
       "back": "Retour",

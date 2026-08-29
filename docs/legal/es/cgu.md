@@ -54,7 +54,7 @@ El posicionamiento festivo del Servicio no debe interpretarse como una recomenda
 
 La utilización del Servicio está **estrictamente reservada a personas mayores de 18 años**.
 
-Al acceder al Servicio, declara bajo su responsabilidad tener **al menos 18 años cumplidos**. Esta verificación se basa en su **declaración** (casilla de verificación y cookie `lp_age_verified`); el editor no realiza un control de identidad.
+Al acceder al Servicio, declara bajo su responsabilidad tener **al menos 18 años cumplidos**. Esta verificación se basa en su **declaración** (botón de confirmación «Tengo 18 años o más» y cookie `lp_age_verified`); el editor no realiza un control de identidad.
 
 Si es menor de edad, debe abandonar el Servicio de inmediato.
 

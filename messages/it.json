@@ -412,20 +412,18 @@
   "legal": {
     "ageGate": {
       "title": "Accesso riservato agli adulti",
-      "body1": "Le Pillaveur è uno strumento di intrattenimento festivo. I “sorsi” sono unità di gioco astratte e non costituiscono un obbligo al consumo di alcol. Questo servizio non vende né distribuisce bevande.",
       "healthWarning": "L’abuso di alcol è pericoloso per la salute.",
       "moderation": "Consumare con moderazione.",
-      "checkboxPrefix": "Dichiaro di avere più di 18 anni e accetto le",
-      "checkboxAnd": "e l'",
-      "checkboxSuffix": ".",
-      "checkbox": "Dichiaro di avere più di 18 anni e accetto il CGU e la politica di riservatezza.",
-      "enter": "Entra nel sito",
+      "analyticsLabel": "Accetto le statistiche di visita anonime (misurazione dell'audience).",
+      "enterAdult": "Ho 18 anni o più — Entra",
       "validating": "Convalida…",
+      "termsPrefix": "Entrando, accetti le",
+      "termsAnd": "e l'",
+      "termsSuffix": ".",
       "minorWarning": "Se hai meno di 18 anni devi abbandonare questo sito.",
-      "analyticsLabel": "Accetto le statistiche di visita (cookie di misurazione dell'audience).",
-      "analyticsHint": "Facoltativo — serve solo a contare le visite e a contrastare gli abusi. Nessuna condivisione con terzi.",
-      "tagline": "La casa dei giochi di società",
-      "promise": "13 giochi gratis da giocare tra amici — su un solo telefono o online con chat vocale e modalità TV."
+      "cookiesBanner": "Consentire le statistiche di visita anonime? Servono solo a contare le visite, senza condivisione con terzi.",
+      "accept": "Accetta",
+      "refuse": "Rifiuta"
     },
     "pages": {
       "back": "Indietro",

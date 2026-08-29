@@ -54,7 +54,7 @@ Le positionnement festif du Service ne doit pas être interprété comme une rec
 
 L'utilisation du Service est **strictement réservée aux personnes âgées de 18 ans révolus**.
 
-En accédant au Service, vous déclarez sur l'honneur avoir **au moins 18 ans révolus**. Cette vérification repose sur votre **déclaration** (case à cocher et cookie `lp_age_verified`) ; l'éditeur ne procède pas à un contrôle d'identité.
+En accédant au Service, vous déclarez sur l'honneur avoir **au moins 18 ans révolus**. Cette vérification repose sur votre **déclaration** (bouton de confirmation « J'ai 18 ans ou plus » et cookie `lp_age_verified`) ; l'éditeur ne procède pas à un contrôle d'identité.
 
 Si vous êtes mineur, vous devez quitter le Service immédiatement.
 

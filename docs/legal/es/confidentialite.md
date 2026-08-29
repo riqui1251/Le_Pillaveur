@@ -38,7 +38,7 @@ En **modo local** (sin cuenta), sus jugadores locales se almacenan en su disposi
 
 ### 3.3 Datos técnicos y de uso
 
-**Con su consentimiento** (casilla «estadísticas de visita» al entrar en el sitio), recogemos para estadísticas de audiencia y lucha contra los abusos:
+**Con su consentimiento** (opción «estadísticas de visita» al entrar en el sitio), recogemos para estadísticas de audiencia y lucha contra los abusos:
 
 - identificador de visitante (cookie `lp_vid`);
 - dirección IP;

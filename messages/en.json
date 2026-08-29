@@ -422,20 +422,18 @@
   "legal": {
     "ageGate": {
       "title": "Access reserved for adults",
-      "body1": "Le Pillaveur is a festive entertainment tool. “Sips” are abstract play units — they do not constitute an obligation to consume alcohol. This service does not sell or distribute drinks.",
       "healthWarning": "Alcohol abuse is dangerous for your health.",
       "moderation": "Consume in moderation.",
-      "checkboxPrefix": "I certify that I am over 18 years old and I accept the",
-      "checkboxAnd": "and the",
-      "checkboxSuffix": ".",
-      "checkbox": "I certify that I am over 18 years old and I accept the CGU and the confidentiality policy.",
-      "enter": "Enter the site",
+      "analyticsLabel": "I accept anonymous visit statistics (audience measurement).",
+      "enterAdult": "I am 18 or older — Enter",
       "validating": "Validation…",
+      "termsPrefix": "By entering, you accept the",
+      "termsAnd": "and the",
+      "termsSuffix": ".",
       "minorWarning": "If you are under 18 years old, you must leave this site.",
-      "analyticsLabel": "I accept visit statistics (audience measurement cookie).",
-      "analyticsHint": "Optional — only used to count visits and fight abuse. Never shared with third parties.",
-      "tagline": "The house of party games",
-      "promise": "13 free games to play with friends — pass one phone around, or play online with voice chat and TV mode."
+      "cookiesBanner": "Allow anonymous visit statistics? They are only used to count visits, never shared with third parties.",
+      "accept": "Accept",
+      "refuse": "Decline"
     },
     "pages": {
       "back": "Back",

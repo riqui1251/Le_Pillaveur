@@ -38,7 +38,7 @@ In **modalità locale** (senza account), i tuoi giocatori locali sono memorizzat
 
 ### 3.3 Dati tecnici e di utilizzo
 
-**Con il tuo consenso** (casella «statistiche di visita» all'ingresso del sito), raccogliamo per statistiche di frequenza e lotta contro gli abusi:
+**Con il tuo consenso** (scelta «statistiche di visita» all'ingresso del sito), raccogliamo per statistiche di frequenza e lotta contro gli abusi:
 
 - identificativo visitatore (cookie `lp_vid`);
 - indirizzo IP;

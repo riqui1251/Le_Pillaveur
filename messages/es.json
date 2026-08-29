@@ -412,20 +412,18 @@
   "legal": {
     "ageGate": {
       "title": "Acceso reservado para adultos",
-      "body1": "Le Pillaveur es una herramienta de entretenimiento festivo. Los “sorbos” son unidades de juego abstractas: no constituyen una obligación de consumir alcohol. Este servicio no vende ni distribuye bebidas.",
       "healthWarning": "El abuso de alcohol es peligroso para su salud.",
       "moderation": "Consumir con moderación.",
-      "checkboxPrefix": "Certifico que soy mayor de 18 años y acepto las",
-      "checkboxAnd": "y la",
-      "checkboxSuffix": ".",
-      "checkbox": "Certifico que soy mayor de 18 años y acepto el CGU y la política de confidencialidad.",
-      "enter": "Ingrese al sitio",
+      "analyticsLabel": "Acepto las estadísticas de visita anónimas (medición de audiencia).",
+      "enterAdult": "Tengo 18 años o más — Entrar",
       "validating": "Validación…",
+      "termsPrefix": "Al entrar, aceptas las",
+      "termsAnd": "y la",
+      "termsSuffix": ".",
       "minorWarning": "Si eres menor de 18 años deberás abandonar este sitio.",
-      "analyticsLabel": "Acepto las estadísticas de visita (cookie de medición de audiencia).",
-      "analyticsHint": "Opcional — solo sirve para contar visitas y luchar contra los abusos. Sin compartir con terceros.",
-      "tagline": "La casa de los juegos de fiesta",
-      "promise": "13 juegos gratis para jugar entre amigos: en un solo móvil o en línea con chat de voz y modo TV."
+      "cookiesBanner": "¿Permitir estadísticas de visita anónimas? Solo sirven para contar las visitas, sin compartir con terceros.",
+      "accept": "Aceptar",
+      "refuse": "Rechazar"
     },
     "pages": {
       "back": "Atrás",
