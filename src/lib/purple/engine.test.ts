@@ -149,6 +149,40 @@ describe('continuer / passer / cagnotte', () => {
   })
 })
 
+describe('épuisement du paquet — la partie reboucle, elle ne s’arrête jamais', () => {
+  it('paquet trop court : le pari re-mélange un paquet neuf ajouté aux restantes', () => {
+    const base = freshState()
+    const s: PurpleState = { ...base, deck: base.deck.slice(0, 2) }
+    const drawn = reducePurple(s, { type: 'BET', playerId: actor(s), bet: 'double-purple' })
+    expect(drawn.drawnCards).toHaveLength(4)
+    expect(drawn.deck).toHaveLength(2 + 52 - 4)
+    expect(drawn.totalCardsDrawn).toBe(4)
+  })
+
+  it('paquet vide : le tirage fonctionne quand même', () => {
+    const base = freshState()
+    const s: PurpleState = { ...base, deck: [] }
+    const drawn = reducePurple(s, { type: 'BET', playerId: actor(s), bet: 'rouge' })
+    expect(drawn.drawnCards).toHaveLength(1)
+    expect(drawn.deck).toHaveLength(51)
+  })
+
+  it('le re-mélange est déterministe (même seed → mêmes cartes) et préserve cagnotte/résultats', () => {
+    const make = () => {
+      const base = createPurpleState(PLAYERS, 'seed-purple')
+      const s: PurpleState = { ...base, deck: [], drinkCounter: 7, gameResults: { p2: 3 } }
+      return reducePurple(s, { type: 'BET', playerId: actor(s), bet: 'purple' })
+    }
+    const a = make()
+    const b = make()
+    expect(a.drawnCards).toEqual(b.drawnCards)
+    expect(a.deck).toEqual(b.deck)
+    // Le re-mélange ne touche ni à la cagnotte ni aux résultats accumulés
+    // (le pari, lui, peut ensuite les modifier selon isCorrect).
+    expect(a.gameResults.p2).toBeGreaterThanOrEqual(3)
+  })
+})
+
 describe('fin de partie', () => {
   it('END termine la partie et bloque tout nouveau pari', () => {
     const s = freshState()

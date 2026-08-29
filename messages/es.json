@@ -742,6 +742,7 @@
       "yourTurn": "es el turno de",
       "counter": "Encimera",
       "cardsLeft": "{count} restante",
+      "newDeck": "¡Nuevo mazo barajado!",
       "chooseBet": "Elige tu apuesta",
       "correct": "✓ ¡Correcto! +{count} sorbo(s) en el mostrador",
       "revealing": "Revelación…",

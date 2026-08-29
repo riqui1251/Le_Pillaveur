@@ -752,6 +752,7 @@
       "yourTurn": "It's the turn of",
       "counter": "Counter",
       "cardsLeft": "{count} remaining",
+      "newDeck": "New deck shuffled!",
       "chooseBet": "Choose your bet",
       "correct": "✓ Correct! +{count} sip(s) on the counter",
       "revealing": "Revelation…",

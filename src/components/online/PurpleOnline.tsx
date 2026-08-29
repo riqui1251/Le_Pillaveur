@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Home, RefreshCw, X } from 'lucide-react'
@@ -75,6 +75,22 @@ export function PurpleOnline() {
     () => (inGame ? parsePurpleState(room?.gameStateJson) : null),
     [inGame, room?.gameStateJson]
   )
+
+  // Flash « nouveau paquet mélangé » : le serveur reboucle le paquet quand il
+  // est épuisé — détecté ici quand le nombre de cartes restantes REMONTE.
+  const prevDeckLenRef = useRef<number | null>(null)
+  const [newDeckFlash, setNewDeckFlash] = useState(false)
+  const deckLen = view?.deck.length ?? null
+  useEffect(() => {
+    if (deckLen === null) return
+    const prev = prevDeckLenRef.current
+    prevDeckLenRef.current = deckLen
+    if (prev !== null && deckLen > prev) {
+      setNewDeckFlash(true)
+      const timer = setTimeout(() => setNewDeckFlash(false), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [deckLen])
 
   // Ticks « arbitre » (premier humain présent) : tour d'un bot → un coup ;
   // joueur parti depuis 3 min → remplacement. expectedVersion rend les ticks
@@ -259,6 +275,9 @@ export function PurpleOnline() {
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-center">
               <p className="text-sm font-bold text-white/60">{t('cardsLeft', { count: view.deck.length })}</p>
+              {newDeckFlash && (
+                <p className="text-[10px] font-semibold text-violet-300">{t('newDeck')}</p>
+              )}
             </div>
           </div>
         </div>
@@ -314,7 +333,7 @@ export function PurpleOnline() {
                 <button
                   key={bet}
                   onClick={() => void sendAction({ action: 'bet', bet })}
-                  disabled={busy || !isMyTurn || view.deck.length < cfg.cards}
+                  disabled={busy || !isMyTurn}
                   className={cn(
                     'relative overflow-hidden rounded-2xl border py-4 text-center font-semibold text-white transition-all active:scale-95 disabled:opacity-40',
                     s.border,

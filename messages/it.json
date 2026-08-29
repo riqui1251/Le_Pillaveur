@@ -742,6 +742,7 @@
       "yourTurn": "È il turno di",
       "counter": "Contatore",
       "cardsLeft": "{count} rimanente",
+      "newDeck": "Nuovo mazzo mischiato!",
       "chooseBet": "Scegli la tua scommessa",
       "correct": "✓ Esatto! +{count} sorso/i sul bancone",
       "revealing": "Rivelazione…",

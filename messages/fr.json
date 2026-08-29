@@ -752,6 +752,7 @@
       "yourTurn": "Au tour de",
       "counter": "Compteur",
       "cardsLeft": "{count} restantes",
+      "newDeck": "Nouveau paquet mélangé !",
       "chooseBet": "Choisis ton pari",
       "correct": "✓ Correct ! +{count} gorgée(s) au compteur",
       "revealing": "Révélation…",

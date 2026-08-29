@@ -121,6 +121,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   const [canContinue, setCanContinue] = useState(false)
   const [cardHistory, setCardHistory] = useState<PlayingCard[]>([])
   const [totalCardsDrawn, setTotalCardsDrawn] = useState(0)
+  // Flash « nouveau paquet mélangé » quand le paquet épuisé est rebouclé.
+  const [newDeckFlash, setNewDeckFlash] = useState(false)
 
   useEffect(() => { setIsMounted(true) }, [])
   useEffect(() => {
@@ -162,10 +164,13 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   const handleBet = (bet: BetType) => {
     if (isRevealing) return
     const config = betConfig[bet]
-    // Si pas assez de cartes, on mélange un nouveau paquet et on l'ajoute aux restantes
+    // Si pas assez de cartes, on mélange un nouveau paquet et on l'ajoute aux
+    // restantes — la partie ne s'arrête jamais faute de cartes.
     let currentDeck = [...deck]
     if (currentDeck.length < config.cards) {
       currentDeck = [...currentDeck, ...shuffleDeck(createDeck())]
+      setNewDeckFlash(true)
+      setTimeout(() => setNewDeckFlash(false), 4000)
     }
     const drawn = currentDeck.slice(0, config.cards)
     const counter = drinkCounter
@@ -251,6 +256,9 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-center">
               <p className="text-sm font-bold text-white/60">{t('cardsLeft', { count: deck.length })}</p>
+              {newDeckFlash && (
+                <p className="text-[10px] font-semibold text-violet-300">{t('newDeck')}</p>
+              )}
             </div>
           </div>
         </div>
@@ -294,7 +302,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
                   <button
                     key={bet}
                     onClick={() => handleBet(bet)}
-                    disabled={isRevealing || deck.length < cfg.cards}
+                    disabled={isRevealing}
                     className={cn(
                       'relative overflow-hidden rounded-2xl border py-4 text-center font-semibold text-white transition-all active:scale-95 disabled:opacity-40',
                       s.border,
