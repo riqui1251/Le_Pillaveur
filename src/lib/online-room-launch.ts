@@ -50,8 +50,33 @@ export async function resetRoomToWaitingLobby(roomId: string) {
   })
 }
 
+/**
+ * Horodate « partie jouée » pour chaque membre humain de la salle — alimente
+ * la rangée « Rejouer » de /jeux. Fire-and-forget : l'historique ne doit
+ * jamais empêcher un lancement.
+ */
+async function recordGameHistory(room: RoomWithMembers) {
+  const gameId = room.gameId
+  if (!gameId) return
+  try {
+    const now = new Date()
+    await Promise.all(
+      room.members.map((m) =>
+        prisma.onlineGameHistory.upsert({
+          where: { userId_gameId: { userId: m.userId, gameId } },
+          create: { userId: m.userId, gameId, lastPlayedAt: now },
+          update: { lastPlayedAt: now, playCount: { increment: 1 } },
+        })
+      )
+    )
+  } catch (error) {
+    console.error('recordGameHistory failed:', error)
+  }
+}
+
 /** Lance (ou relance) une partie avec état initial synchronisé selon le jeu */
 export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
+  await recordGameHistory(room)
   switch (room.gameId ?? '') {
     case 'petit-buveur':
       await launchPetitBuveurRoom(roomId, room)

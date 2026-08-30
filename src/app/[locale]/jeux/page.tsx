@@ -10,6 +10,7 @@ import { OpenLobbiesList } from '@/components/online/OpenLobbiesList'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { JoinGate } from '@/components/online/JoinGate'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
+import { RecentGamesRow } from '@/components/online/RecentGamesRow'
 import { PlayModeToggle } from '@/components/auth/PlayModeToggle'
 import { AmbianceModeToggle } from '@/components/auth/AmbianceModeToggle'
 import { useRequireSelectedPlayers } from '@/hooks/useRequireSelectedPlayers'
@@ -160,6 +161,7 @@ export default function GamesHubPage() {
 
       {isOnline && <RejoinBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <FriendInviteBanner onJoin={handleJoinInvite} joining={joining} />}
+      {isOnline && <RecentGamesRow />}
       {isOnline && <OpenLobbiesList />}
 
       <GamesGrid />

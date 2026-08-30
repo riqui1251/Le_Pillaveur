@@ -61,6 +61,7 @@ model User {
   featureBans           FeatureBan[]       @relation("FeatureBanTarget")
   featureBansIssued     FeatureBan[]       @relation("FeatureBanActor")
   onlineMatchResults    OnlineMatchResult[]
+  onlineGameHistory     OnlineGameHistory[]
   cosmeticGrants        CosmeticGrant[]    @relation("CosmeticGrantTarget")
   cosmeticGrantsIssued  CosmeticGrant[]    @relation("CosmeticGrantActor")
 }
@@ -174,6 +175,22 @@ model OnlineMatchResult {
 
   @@index([gameId, userId])
   @@index([userId, finishedAt])
+}
+
+// Derniers jeux joués en ligne : une ligne par couple (user, jeu), horodatée
+// à chaque lancement de partie (launchOnlineRoom) — couvre aussi les parties
+// contre bots et les rematchs, contrairement à OnlineMatchResult. Purgée avec
+// le compte (cascade), donc avec les invités via le retention-sweep.
+model OnlineGameHistory {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId       String
+  lastPlayedAt DateTime @default(now())
+  playCount    Int      @default(1)
+
+  @@unique([userId, gameId])
+  @@index([userId, lastPlayedAt])
 }
 
 // Déblocage MANUEL d'un cosmétique (effet de pseudo / cadre) par un fondateur.

@@ -166,6 +166,16 @@
       "emptyTitle": "Nessun gioco trovato",
       "emptyHint": "Prova un'altra parola chiave."
     },
+    "jeuxOnline": {
+      "title": "Giochi online",
+      "subtitle": "Unisciti a una lobby aperta o scegli un gioco per crearne una nuova.",
+      "connectedAs": "Giocatore connesso:",
+      "recent": {
+        "title": "I tuoi ultimi tavoli",
+        "replay": "Rigioca",
+        "replaying": "Creazione del tavolo…"
+      }
+    },
     "ambianceMode": {
       "label": "Atmosfera",
       "alcool": "Alcol",

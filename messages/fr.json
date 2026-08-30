@@ -169,7 +169,12 @@
     "jeuxOnline": {
       "title": "Jeux en ligne",
       "subtitle": "Rejoins un lobby ouvert ou choisis un jeu pour en créer un nouveau.",
-      "connectedAs": "Joueur connecté :"
+      "connectedAs": "Joueur connecté :",
+      "recent": {
+        "title": "Vos dernières tables",
+        "replay": "Rejouer",
+        "replaying": "Table en cours de création…"
+      }
     },
     "playMode": {
       "label": "Mode de jeu",

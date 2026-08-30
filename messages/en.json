@@ -169,7 +169,12 @@
     "jeuxOnline": {
       "title": "Online games",
       "subtitle": "Join an open lobby or pick a game to create a new one.",
-      "connectedAs": "Signed in as:"
+      "connectedAs": "Signed in as:",
+      "recent": {
+        "title": "Your latest tables",
+        "replay": "Play again",
+        "replaying": "Setting up your table…"
+      }
     },
     "playMode": {
       "label": "Play mode",
