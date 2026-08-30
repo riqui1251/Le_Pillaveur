@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone } from 'lucide-react'
+import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2 } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
@@ -10,7 +10,7 @@ import { useFriends } from '@/hooks/useFriends'
 import { useChatUnread } from '@/hooks/useChatUnread'
 import { canAccessSupervision } from '@/lib/roles'
 import { usePageMeta } from '@/lib/nav-meta'
-import { FullscreenButton } from '@/components/ui/fullscreen-button'
+import { useFullscreen } from '@/hooks/useFullscreen'
 import { FeedbackDialog, FeedbackMenuButton } from '@/components/feedback/FeedbackDialog'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { FriendsPanel } from '@/components/layout/FriendsPanel'
@@ -51,6 +51,7 @@ export default function Navbar() {
   const onlineFriendsCount = friends.filter((f) => f.isOnline).length
   const pathname = usePathname()
   const pageMeta = usePageMeta(pathname)
+  const { isFullscreen, isSupported: fsSupported, toggleFullscreen } = useFullscreen()
 
   const [inApp, setInApp] = useState(false)
   useEffect(() => {
@@ -192,6 +193,18 @@ export default function Navbar() {
             </div>
           </div>
 
+          {mounted && !inApp && fsSupported && (
+            <button
+              type="button"
+              aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
+              title={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
+              onClick={() => void toggleFullscreen()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-amber-300 transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:w-11"
+            >
+              {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </button>
+          )}
+
           <LanguageSwitcher className="hidden h-9 w-[7.5rem] shrink-0 border-white/10 bg-white/[0.04] text-white sm:flex" />
 
           {activeHref && (
@@ -301,7 +314,6 @@ export default function Navbar() {
               setFeedbackOpen(true)
             }}
           />
-          <FullscreenButton className="w-full justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-sm text-white/60 hover:bg-white/[0.08] hover:text-white" />
           <LanguageSwitcher className="h-10 w-full border-white/10 bg-white/[0.04] text-white" />
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-1 pt-1 text-[11px] text-white/30">
             <Link href="/legal/cgu" onClick={() => setDrawerOpen(false)} className="hover:text-amber-400/80">

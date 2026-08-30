@@ -21,6 +21,8 @@
     "menuLabel": "Menú de navegación",
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
+    "fullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa",
     "manageFriends": "Gestionar mis amigos",
     "chat": "Chat",
     "languageSwitcher": "Cambiar idioma",

@@ -1,8 +1,9 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Maximize2, Minimize2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useFullscreen } from "@/hooks/useFullscreen";
-import { useToast } from "@/components/ui/toast";
+import { isCapacitorApp } from "@/lib/native-app";
 
 export interface FullscreenButtonProps {
   className?: string;
@@ -11,36 +12,30 @@ export interface FullscreenButtonProps {
 export const FullscreenButton: React.FC<FullscreenButtonProps> = ({
   className,
 }) => {
-  const { isFullscreen, toggleFullscreen } = useFullscreen();
-  const { showToast } = useToast();
+  const t = useTranslations("nav");
+  const { isFullscreen, isSupported, toggleFullscreen } = useFullscreen();
+  const [inApp, setInApp] = React.useState(false);
 
-  const handleToggleFullscreen = async () => {
-    try {
-      await toggleFullscreen();
-      
-      // Le toast est déjà géré dans le hook useFullscreen, mais on peut ajouter un message spécifique ici
-      if (!isFullscreen) {
-        showToast({
-          message: 'Le contenu est maintenant centré en plein écran',
-          type: 'info',
-          duration: 2500
-        });
-      }
-    } catch (error) {
-      console.error("Erreur lors du basculement en plein écran:", error);
-    }
-  };
+  React.useEffect(() => {
+    setInApp(isCapacitorApp());
+  }, []);
+
+  // Rien sur iPhone Safari (API absente) ni dans la coquille Capacitor
+  // (l'app occupe déjà tout l'écran).
+  if (!isSupported || inApp) return null;
+
+  const label = isFullscreen ? t("exitFullscreen") : t("fullscreen");
 
   return (
     <Button
       variant="ghost"
       size="icon"
       className={className}
-      onClick={handleToggleFullscreen}
-      title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
-      aria-label={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
+      onClick={() => void toggleFullscreen()}
+      title={label}
+      aria-label={label}
     >
       {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
     </Button>
   );
-}; 
+};

@@ -38,6 +38,10 @@ export function GameCard({ game, icon }: GameCardProps) {
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (isOnline) return
+    // Visiteur sans session : laisser passer vers la page du jeu, qui propose
+    // « Essayer avec des bots » (online) ou la vitrine locale — surtout pas
+    // le détour par la gestion de joueurs locaux.
+    if (!user) return
     if (selectedIds.length === 0) {
       e.preventDefault()
       router.push("/joueurs")

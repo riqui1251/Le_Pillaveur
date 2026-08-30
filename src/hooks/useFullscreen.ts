@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/components/ui/toast';
 
 // Types pour les API de plein écran spécifiques aux navigateurs
 interface FullscreenDocument extends Document {
   webkitFullscreenElement?: Element | null;
   mozFullScreenElement?: Element | null;
   msFullscreenElement?: Element | null;
+  webkitFullscreenEnabled?: boolean;
   webkitExitFullscreen?: () => Promise<void>;
   mozCancelFullScreen?: () => Promise<void>;
   msExitFullscreen?: () => Promise<void>;
@@ -19,35 +19,31 @@ interface FullscreenElement extends HTMLElement {
 
 export const useFullscreen = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const { showToast } = useToast();
+  // false au premier rendu (SSR compris) : le bouton n'apparaît qu'après montage,
+  // et jamais sur iPhone Safari où aucune API requestFullscreen n'existe.
+  const [isSupported, setIsSupported] = useState(false);
 
   const handleFullscreenChange = useCallback(() => {
     const doc = document as FullscreenDocument;
-    const newFullscreenState = !!(
+    setIsFullscreen(!!(
       document.fullscreenElement ||
       doc.webkitFullscreenElement ||
       doc.mozFullScreenElement ||
       doc.msFullscreenElement
-    );
-    
-    setIsFullscreen(newFullscreenState);
-    
-    if (newFullscreenState) {
-      showToast({
-        message: 'Mode plein écran activé',
-        type: 'success',
-        duration: 2000
-      });
-    } else {
-      showToast({
-        message: 'Mode plein écran désactivé',
-        type: 'info',
-        duration: 2000
-      });
-    }
-  }, [showToast]);
+    ));
+  }, []);
 
   useEffect(() => {
+    const doc = document as FullscreenDocument;
+    const docEl = document.documentElement as FullscreenElement;
+    setIsSupported(Boolean(
+      document.fullscreenEnabled ||
+      doc.webkitFullscreenEnabled ||
+      docEl.requestFullscreen ||
+      docEl.webkitRequestFullscreen
+    ));
+    handleFullscreenChange();
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
@@ -65,36 +61,31 @@ export const useFullscreen = () => {
     try {
       if (!isFullscreen) {
         const docEl = document.documentElement as FullscreenElement;
-        const requestFullscreen = 
-          docEl.requestFullscreen || 
-          docEl.webkitRequestFullscreen || 
-          docEl.mozRequestFullScreen || 
+        const requestFullscreen =
+          docEl.requestFullscreen ||
+          docEl.webkitRequestFullscreen ||
+          docEl.mozRequestFullScreen ||
           docEl.msRequestFullscreen;
-        
+
         if (requestFullscreen) {
           await requestFullscreen.call(docEl);
         }
       } else {
         const doc = document as FullscreenDocument;
-        const exitFullscreen = 
-          document.exitFullscreen || 
-          doc.webkitExitFullscreen || 
-          doc.mozCancelFullScreen || 
+        const exitFullscreen =
+          document.exitFullscreen ||
+          doc.webkitExitFullscreen ||
+          doc.mozCancelFullScreen ||
           doc.msExitFullscreen;
-        
+
         if (exitFullscreen) {
           await exitFullscreen.call(document);
         }
       }
     } catch (error) {
       console.error('Erreur lors du basculement en plein écran:', error);
-      showToast({
-        message: 'Impossible de basculer en plein écran',
-        type: 'error',
-        duration: 3000
-      });
     }
   };
 
-  return { isFullscreen, toggleFullscreen };
-}; 
+  return { isFullscreen, isSupported, toggleFullscreen };
+};

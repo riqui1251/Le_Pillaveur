@@ -33,7 +33,9 @@ export function GameShell({
   actionBar,
   maxWidth = 900,
   center = false,
-  showFullscreen = true,
+  // Le bouton plein écran vit désormais dans le bandeau du site (Navbar) :
+  // celui du header de jeu ne s'affiche plus que sur demande explicite.
+  showFullscreen = false,
   fill = false,
   className,
   contentClassName,
