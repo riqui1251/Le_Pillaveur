@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { publishRtcSignal, type RtcSignal } from '@/lib/online/room-bus'
 import { isVoiceEnabled } from '@/lib/site-settings'
 import { isFeatureBanned } from '@/lib/feature-bans'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -20,7 +21,7 @@ const MAX_PAYLOAD_BYTES = 32_000
 export async function POST(request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params
@@ -29,10 +30,10 @@ export async function POST(request: Request, { params }: Params) {
   const kind = body?.kind as RtcSignal['kind']
 
   if (!to || !SIGNAL_KINDS.has(kind)) {
-    return NextResponse.json({ error: 'Signal invalide' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('invalid_signal'), { status: 400 })
   }
   if (to === user.id) {
-    return NextResponse.json({ error: 'Signal invalide' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('invalid_signal'), { status: 400 })
   }
 
   // Défense en profondeur : même si un client contourne l'absence
@@ -43,10 +44,10 @@ export async function POST(request: Request, { params }: Params) {
     isFeatureBanned(user.id, 'voice'),
   ])
   if (!enabled || banned) {
-    return NextResponse.json({ error: 'Vocal indisponible' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('voice_unavailable'), { status: 403 })
   }
   if (JSON.stringify(body?.payload ?? null).length > MAX_PAYLOAD_BYTES) {
-    return NextResponse.json({ error: 'Signal trop volumineux' }, { status: 413 })
+    return NextResponse.json(onlineErrorBody('signal_too_large'), { status: 413 })
   }
 
   // Expéditeur ET destinataire doivent être membres de la salle.
@@ -56,10 +57,10 @@ export async function POST(request: Request, { params }: Params) {
   })
   const memberIds = new Set(members.map((m) => m.userId))
   if (!memberIds.has(user.id)) {
-    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
   }
   if (!memberIds.has(to)) {
-    return NextResponse.json({ error: 'Destinataire hors salle' }, { status: 404 })
+    return NextResponse.json(onlineErrorBody('recipient_not_in_room'), { status: 404 })
   }
 
   publishRtcSignal(roomId, to, {

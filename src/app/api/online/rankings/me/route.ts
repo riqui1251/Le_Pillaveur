@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildMyGameStats } from '@/lib/online/rankings'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const stats = await buildMyGameStats(prisma, user.id)

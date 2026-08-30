@@ -7,6 +7,7 @@ import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { TABOU_MAX_PLAYERS } from '@/lib/tabou/engine'
 import { MC_MAX_PLAYERS } from '@/lib/mots-codes/engine'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -20,7 +21,7 @@ const TABOU_MAX_PER_TEAM = TABOU_MAX_PLAYERS / 2
 export async function PUT(request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params
@@ -29,22 +30,22 @@ export async function PUT(request: Request, { params }: Params) {
     include: { members: { select: { userId: true } } },
   })
   if (!room) {
-    return NextResponse.json({ error: 'Lobby introuvable' }, { status: 404 })
+    return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   }
   if (room.status !== 'waiting') {
-    return NextResponse.json({ error: 'La partie est déjà lancée' }, { status: 409 })
+    return NextResponse.json(onlineErrorBody('game_already_started'), { status: 409 })
   }
   if (room.gameId !== 'toucher-coule' && room.gameId !== 'tabou' && room.gameId !== 'mots-codes') {
-    return NextResponse.json({ error: 'Ce jeu ne gère pas les équipes' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('teams_not_supported'), { status: 400 })
   }
   if (!room.members.some((m) => m.userId === user.id)) {
-    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
   }
 
   const body = await request.json().catch(() => ({}))
   const team = body.team === 'A' || body.team === 'B' ? body.team : null
   if (!team) {
-    return NextResponse.json({ error: 'Équipe invalide' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('invalid_team'), { status: 400 })
   }
 
   const settings = parseRoomSettings(room.settingsJson)
@@ -61,7 +62,7 @@ export async function PUT(request: Request, { params }: Params) {
     (m) => m.userId !== user.id && teams[m.userId] === team
   ).length
   if (humansInTeam >= perTeam) {
-    return NextResponse.json({ error: 'Cette équipe est complète' }, { status: 409 })
+    return NextResponse.json(onlineErrorBody('team_full'), { status: 409 })
   }
 
   teams[user.id] = team

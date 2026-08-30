@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto, cleanupAbandonedRooms, createUniqueRoomCode, deleteRoomIfEmpty } from '@/lib/online-room'
 import { GAMES } from '@/lib/games'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 const ROOM_LANGS = new Set(['fr', 'en', 'es', 'it'])
 
@@ -13,14 +14,14 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
     if (!user) {
-      return NextResponse.json({ error: 'Connectez-vous pour jouer en ligne' }, { status: 401 })
+      return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
     }
 
     const body = await request.json()
     const gameId = typeof body.gameId === 'string' ? body.gameId.trim() : ''
     const game = GAMES.find((g) => g.id === gameId && !g.hidden)
     if (!game) {
-      return NextResponse.json({ error: 'Jeu invalide' }, { status: 400 })
+      return NextResponse.json(onlineErrorBody('invalid_game'), { status: 400 })
     }
 
     const previousMemberships = await prisma.onlineRoomMember.findMany({
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error('[POST /api/online/rooms]', err)
     return NextResponse.json(
-      { error: 'Erreur serveur lors de la création du lobby' },
+      onlineErrorBody('server_error'),
       { status: 500 }
     )
   }

@@ -6,13 +6,14 @@ import { resetRoomToWaitingLobby } from '@/lib/online-petit-buveur'
 import { parsePetitBuveurState } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { getGameAdapter } from '@/lib/online/game-adapters'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
 
 export async function GET(_request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params
@@ -20,13 +21,13 @@ export async function GET(_request: Request, { params }: Params) {
     where: { roomId_userId: { roomId, userId: user.id } },
   })
   if (!member) {
-    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
   }
 
   await touchMemberPresence(roomId, user.id)
   const dto = await buildRoomDto(roomId, user.id)
   if (!dto) {
-    return NextResponse.json({ error: 'Salle introuvable' }, { status: 404 })
+    return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   }
 
   return NextResponse.json({ room: dto })
@@ -36,7 +37,7 @@ export async function GET(_request: Request, { params }: Params) {
 export async function DELETE(_request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params

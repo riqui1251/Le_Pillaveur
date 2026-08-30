@@ -5,6 +5,7 @@ import { buildRoomDto } from '@/lib/online-room'
 import { launchOnlineRoom } from '@/lib/online-room-launch'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { BRIEFING_TIMEOUT_MS, parseBriefing, serializeBriefing } from '@/lib/online/briefing'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -17,16 +18,16 @@ type Params = { params: Promise<{ roomId: string }> }
  */
 export async function POST(request: Request, { params }: Params) {
   const user = await getCurrentUser()
-  if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+  if (!user) return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
 
   const { roomId } = await params
   const room = await prisma.onlineRoom.findUnique({
     where: { id: roomId },
     include: { members: { include: { user: true }, orderBy: { joinedAt: 'asc' } } },
   })
-  if (!room) return NextResponse.json({ error: 'Salon introuvable' }, { status: 404 })
+  if (!room) return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   if (!room.members.some((m) => m.userId === user.id)) {
-    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
   }
   // Partie déjà lancée (dernier ack ou timeout concurrent) : no-op tranquille.
   if (room.status !== 'briefing') {

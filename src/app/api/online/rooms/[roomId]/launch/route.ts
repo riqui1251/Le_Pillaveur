@@ -12,6 +12,7 @@ import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { mcTeamCounts } from '@/lib/mots-codes/server-adapter'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 
 
@@ -27,7 +28,7 @@ export async function POST(_request: Request, { params }: Params) {
 
   if (!user) {
 
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
 
   }
 
@@ -57,19 +58,19 @@ export async function POST(_request: Request, { params }: Params) {
 
   if (!room) {
 
-    return NextResponse.json({ error: 'Lobby introuvable' }, { status: 404 })
+    return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
 
   }
 
   if (room.hostUserId !== user.id) {
 
-    return NextResponse.json({ error: 'Seul le créateur peut lancer la partie' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('host_only_launch'), { status: 403 })
 
   }
 
   if (room.status !== 'waiting') {
 
-    return NextResponse.json({ error: 'La partie est déjà lancée' }, { status: 409 })
+    return NextResponse.json(onlineErrorBody('game_already_started'), { status: 409 })
 
   }
 
@@ -116,7 +117,7 @@ export async function POST(_request: Request, { params }: Params) {
     const counts = mcTeamCounts(room.members.map((m) => m.userId), choices)
     if (counts.gold < 2 || counts.red < 2) {
       return NextResponse.json(
-        { error: 'Chaque équipe doit avoir au moins 2 joueurs' },
+        onlineErrorBody('team_min_players'),
         { status: 400 }
       )
     }
@@ -124,7 +125,7 @@ export async function POST(_request: Request, { params }: Params) {
 
   if (!room.members.every((m) => m.isReady)) {
 
-    return NextResponse.json({ error: 'Tous les joueurs doivent être prêts' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('players_not_ready'), { status: 400 })
 
   }
 

@@ -5,6 +5,7 @@ import { publishRoomChanged } from '@/lib/online/room-bus'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { recordMatchResults } from '@/lib/online/match-results'
+import { onlineErrorBody, resolveOnlineErrorCode } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -59,7 +60,7 @@ async function kickMember(roomId: string, hostUserId: string, kickedUserId: stri
 export async function POST(request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params
@@ -69,14 +70,14 @@ export async function POST(request: Request, { params }: Params) {
   })
 
   if (!room || room.status !== 'playing') {
-    return NextResponse.json({ error: 'Partie non active' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('game_not_active'), { status: 400 })
   }
   const adapter = getGameAdapter(room.gameId)
   if (!adapter) {
-    return NextResponse.json({ error: 'Jeu non supporté par ce mode' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('unsupported_game'), { status: 400 })
   }
   if (!room.members.some((m) => m.userId === user.id)) {
-    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
   }
 
   const body = await request.json().catch(() => ({}))
@@ -86,14 +87,14 @@ export async function POST(request: Request, { params }: Params) {
     typeof body.expectedVersion === 'number' ? body.expectedVersion : room.stateVersion
   if (expectedVersion !== room.stateVersion) {
     return NextResponse.json(
-      { error: 'Conflit de version', stateVersion: room.stateVersion },
+      { ...onlineErrorBody('version_conflict'), stateVersion: room.stateVersion },
       { status: 409 }
     )
   }
 
   const state = adapter.parse(room.gameStateJson)
   if (!state) {
-    return NextResponse.json({ error: 'État de partie invalide' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('invalid_state'), { status: 400 })
   }
 
   let next: unknown
@@ -102,11 +103,12 @@ export async function POST(request: Request, { params }: Params) {
   if (body.action === 'replace-afk') {
     const candidate = afkCandidate(room, user.id)
     if ('error' in candidate) {
-      return NextResponse.json({ error: candidate.error }, { status: 409 })
+      const code = resolveOnlineErrorCode(candidate.error) ?? 'action_failed'
+      return NextResponse.json(onlineErrorBody(code), { status: 409 })
     }
     const converted = adapter.convertToBot(state, candidate.userId)
     if (!converted) {
-      return NextResponse.json({ error: 'NOTHING_TO_REPLACE' }, { status: 409 })
+      return NextResponse.json(onlineErrorBody('nothing_to_replace'), { status: 409 })
     }
     next = converted
     kickedUserId = candidate.userId
@@ -136,7 +138,7 @@ export async function POST(request: Request, { params }: Params) {
     },
   })
   if (updated.count === 0) {
-    return NextResponse.json({ error: 'Conflit de version' }, { status: 409 })
+    return NextResponse.json(onlineErrorBody('version_conflict'), { status: 409 })
   }
   if (kickedUserId) await kickMember(roomId, room.hostUserId, kickedUserId)
 

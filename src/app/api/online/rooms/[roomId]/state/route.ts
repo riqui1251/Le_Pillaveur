@@ -3,13 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto, stripEngineSecretForUser } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { onlineErrorBody } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
 
 export async function GET(_request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params
@@ -17,12 +18,12 @@ export async function GET(_request: Request, { params }: Params) {
     where: { roomId_userId: { roomId, userId: user.id } },
   })
   if (!member) {
-    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
   }
 
   const room = await prisma.onlineRoom.findUnique({ where: { id: roomId } })
   if (!room) {
-    return NextResponse.json({ error: 'Lobby introuvable' }, { status: 404 })
+    return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   }
 
   return NextResponse.json(
@@ -39,7 +40,7 @@ export async function GET(_request: Request, { params }: Params) {
 export async function PUT(request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+    return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params
@@ -49,30 +50,30 @@ export async function PUT(request: Request, { params }: Params) {
   })
 
   if (!room || room.status !== 'playing') {
-    return NextResponse.json({ error: 'Partie non active' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('game_not_active'), { status: 400 })
   }
 
   const isMember = room.members.some((m) => m.userId === user.id)
   if (!isMember) {
-    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
   }
 
   // Jeux serveur-autoritaires : l'état ne peut JAMAIS être poussé par un client
   // (un état forgé permettrait de tricher) — tout passe par /action.
   if (room.gameId === 'petit-buveur' || room.gameId === 'toucher-coule') {
-    return NextResponse.json({ error: 'Ce jeu est géré par le serveur' }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('server_managed_game'), { status: 403 })
   }
 
   const body = await request.json()
   if (typeof body.gameStateJson !== 'string') {
-    return NextResponse.json({ error: 'État invalide' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('invalid_state'), { status: 400 })
   }
 
   let parsed: { memberUserIds?: string[]; currentPlayer?: number; pushedByUserId?: string; phase?: string }
   try {
     parsed = JSON.parse(body.gameStateJson)
   } catch {
-    return NextResponse.json({ error: 'JSON invalide' }, { status: 400 })
+    return NextResponse.json(onlineErrorBody('invalid_json'), { status: 400 })
   }
 
   const memberUserIds = parsed.memberUserIds ?? room.members.map((m) => m.userId)
@@ -91,13 +92,13 @@ export async function PUT(request: Request, { params }: Params) {
       pushedBy === memberUserIds[(currentPlayer - 1 + memberUserIds.length) % memberUserIds.length])
 
   if (!canPush) {
-    return NextResponse.json({ error: "Ce n'est pas votre tour" }, { status: 403 })
+    return NextResponse.json(onlineErrorBody('not_your_turn'), { status: 403 })
   }
 
   const clientVersion = typeof body.expectedVersion === 'number' ? body.expectedVersion : room.stateVersion
   if (clientVersion !== room.stateVersion && room.stateVersion > 0) {
     return NextResponse.json(
-      { error: 'Conflit de version', stateVersion: room.stateVersion },
+      { ...onlineErrorBody('version_conflict'), stateVersion: room.stateVersion },
       { status: 409 }
     )
   }
