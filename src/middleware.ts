@@ -32,6 +32,8 @@ const PUBLIC_PREFIXES = [
   '/regles',
   // Page de téléchargement de l'app mobile (liens stores) : publique.
   '/application',
+  // Liens d'invitation partagés (aperçu OG + redirection vers /jeux?join=).
+  '/invite',
   '/api/',
   '/_next',
   '/favicon.ico',

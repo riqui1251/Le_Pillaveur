@@ -145,7 +145,8 @@ export function TvRoomView({ code }: { code: string }) {
   const title = (room.gameId && GAME_TITLES[room.gameId]) || t('brand')
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   // QR/lien SANS préfixe de langue : chaque scanneur atterrit dans SA locale.
-  const joinUrl = `${origin}/jeux?join=${room.code}`
+  // Via /invite/CODE pour que le lien partagé porte l'aperçu OG de la table.
+  const joinUrl = `${origin}/invite/${room.code}`
   const state = parseState(room.gameStateJson)
   const finished = isFinished(state)
 
