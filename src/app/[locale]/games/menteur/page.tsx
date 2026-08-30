@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { MenteurOnline } from '@/components/online/MenteurOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Le Menteur — jeu EN LIGNE uniquement : chaque joueur cache ses dés sous
@@ -52,9 +52,10 @@ export default function MenteurPage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-orange-600 to-red-500 py-5 text-base font-bold text-white shadow-lg shadow-orange-500/25 hover:from-orange-500 hover:to-red-400">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="menteur"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-orange-600 to-red-500 py-5 text-base font-bold text-white shadow-lg shadow-orange-500/25 hover:from-orange-500 hover:to-red-400"
+            />
           )}
         </div>
       </div>

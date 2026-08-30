@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { TabouOnline } from '@/components/online/TabouOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Tabou Vocal — jeu EN LIGNE uniquement : le mot secret et les tabous
@@ -52,9 +52,10 @@ export default function TabouPage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-600 py-5 text-base font-bold text-white shadow-lg shadow-teal-500/25 hover:from-emerald-600 hover:to-teal-500">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="tabou"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-600 py-5 text-base font-bold text-white shadow-lg shadow-teal-500/25 hover:from-emerald-600 hover:to-teal-500"
+            />
           )}
         </div>
       </div>

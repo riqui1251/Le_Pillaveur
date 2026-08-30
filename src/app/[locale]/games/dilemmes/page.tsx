@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { DilemmesOnline } from '@/components/online/DilemmesOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Dilemmes — jeu EN LIGNE uniquement : les votes restent secrets jusqu'à la
@@ -52,9 +52,10 @@ export default function DilemmesPage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-rose-700 to-amber-600 py-5 text-base font-bold text-white shadow-lg shadow-rose-500/25 hover:from-rose-600 hover:to-amber-500">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="dilemmes"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-rose-700 to-amber-600 py-5 text-base font-bold text-white shadow-lg shadow-rose-500/25 hover:from-rose-600 hover:to-amber-500"
+            />
           )}
         </div>
       </div>

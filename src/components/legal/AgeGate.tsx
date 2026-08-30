@@ -56,7 +56,14 @@ export function AgeGate() {
     }
   }, [])
 
-  if (!mode || pathname.startsWith('/legal')) return null
+  // Le portail bloquant ne s'affiche PAS sur les pages de LECTURE (landing,
+  // règles, légal) : un visiteur SEO peut lire librement, la certification
+  // 18+ arrive au moment de JOUER (hub, pages jeux). Le bandeau cookies
+  // discret, lui, reste possible partout.
+  const readingPage =
+    pathname === '/' || pathname.startsWith('/legal') || pathname.startsWith('/regles')
+  if (!mode || (mode === 'gate' && readingPage)) return null
+  if (mode === 'cookies-only' && pathname.startsWith('/legal')) return null
 
   if (mode === 'cookies-only') {
     return (

@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { PetitBacOnline } from '@/components/online/PetitBacOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Petit Bac — jeu EN LIGNE uniquement : les réponses restent secrètes
@@ -52,9 +52,10 @@ export default function PetitBacPage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-sky-700 to-amber-600 py-5 text-base font-bold text-white shadow-lg shadow-sky-500/25 hover:from-sky-600 hover:to-amber-500">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="petit-bac"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-sky-700 to-amber-600 py-5 text-base font-bold text-white shadow-lg shadow-sky-500/25 hover:from-sky-600 hover:to-amber-500"
+            />
           )}
         </div>
       </div>

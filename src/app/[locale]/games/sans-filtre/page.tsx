@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { SansFiltreOnline } from '@/components/online/SansFiltreOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Sans Filtre — jeu EN LIGNE uniquement : mains secrètes, abattage anonyme et
@@ -52,9 +52,10 @@ export default function SansFiltrePage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-zinc-700 to-amber-600 py-5 text-base font-bold text-white shadow-lg shadow-amber-500/25 hover:from-zinc-600 hover:to-amber-500">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="sans-filtre"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-zinc-700 to-amber-600 py-5 text-base font-bold text-white shadow-lg shadow-amber-500/25 hover:from-zinc-600 hover:to-amber-500"
+            />
           )}
         </div>
       </div>

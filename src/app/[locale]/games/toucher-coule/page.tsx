@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { ToucherCouleOnline } from '@/components/online/ToucherCouleOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Toucher-Coulé — jeu EN LIGNE uniquement : chaque équipe cache sa flotte,
@@ -53,9 +53,10 @@ export default function ToucherCoulePage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 py-5 text-base font-bold text-white shadow-lg shadow-sky-500/25 hover:from-sky-500 hover:to-cyan-400">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="toucher-coule"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 py-5 text-base font-bold text-white shadow-lg shadow-sky-500/25 hover:from-sky-500 hover:to-cyan-400"
+            />
           )}
         </div>
       </div>

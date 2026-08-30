@@ -764,15 +764,15 @@
       },
       "monsieur-3": {
         "title": "Monsieur 3",
-        "description": "A friendly dice game where you have to avoid 3s and other combinations"
+        "description": "Dodge the 3 like the plague: every roll can make you drink."
       },
       "pmu": {
         "title": "PMU Race",
-        "description": "A friendly horse-racing betting game"
+        "description": "Bet on your horse and scream at the finish line — the loser buys the round."
       },
       "petit-buveur": {
         "title": "The Little Drinker",
-        "description": "A festive board game with challenges and sips"
+        "description": "The party board game: move, draw dares, hand out sips."
       },
       "toucher-coule": {
         "title": "Hit & Sunk",
@@ -810,19 +810,19 @@
       },
       "hi-lo": {
         "title": "Hi/Lo",
-        "description": "Guess if the next card will be higher or lower"
+        "description": "Higher or lower? The dumbest bet in the house — and the sips add up fast."
       },
       "purple": {
         "title": "Purple",
-        "description": "Bet on the color of the cards: Red, Black or Purple (alternate)"
+        "description": "Red, black… or Purple? The most treacherous bet at the bar."
       },
       "pyramide": {
         "title": "Pyramid",
-        "description": "Flip the cards and progress through the pyramid"
+        "description": "Climb the pyramid: the sips double on every floor."
       },
       "plinko": {
         "title": "Plinko",
-        "description": "Drop a ball through obstacles to earn sips"
+        "description": "Drop the ball, hold your breath: wherever it lands, someone drinks."
       },
       "roue-des-gorgees": {
         "title": "Wheel of Sips",
@@ -830,19 +830,19 @@
       },
       "ballon-surprise": {
         "title": "Surprise Balloon",
-        "description": "Pick a ball and pray it wins the race!"
+        "description": "Pick your balloon and pray it wins the race!"
       },
       "petits-points": {
         "title": "Little Dots",
-        "description": "A game of precision and speed where every point counts!"
+        "description": "Aim true, aim fast: every point counts, every miss costs you."
       },
       "pendu": {
         "title": "The Hanged Man",
-        "description": "Guess the mystery word before you get hanged! Letters, sips and suspense guaranteed."
+        "description": "Guess the word before you hang: every missed letter is a sip."
       },
       "trial-poursuite": {
         "title": "Trial Poursuite",
-        "description": "Take on crazy challenges under pressure again! Coordination, creativity and speed on the program."
+        "description": "Take on wild dares under pressure: coordination, creativity, speed."
       },
       "quiz": {
         "title": "The Big Pillaveur Quiz",
@@ -4078,6 +4078,16 @@
       "title": "The table is open.",
       "cta": "Play now"
     }
+  },
+  "tryBots": {
+    "play": "Play now",
+    "cta": "Try it with bots",
+    "go": "Let's go!",
+    "hint": "No account needed: a nickname, a private table, bots fill the seats — friends can join mid-game.",
+    "guestHint": "Temporary nickname, automatically deleted after the night.",
+    "loginCta": "Sign in or create an account",
+    "pseudoPlaceholder": "Your nickname for tonight",
+    "error": "Can't start right now. Try again."
   },
   "joinGate": {
     "title": "Join the table",

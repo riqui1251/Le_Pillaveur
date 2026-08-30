@@ -754,15 +754,15 @@
       },
       "monsieur-3": {
         "title": "Monsieur 3",
-        "description": "Un amichevole gioco di dadi in cui devi evitare i 3 e altre combinazioni"
+        "description": "Evita il 3 come la peste: ogni dado può farti bere."
       },
       "pmu": {
         "title": "Corsa PMU",
-        "description": "Un gioco di scommesse sulle corse di cavalli con gli amici"
+        "description": "Punta sul tuo cavallo e urla al traguardo — chi perde offre il giro."
       },
       "petit-buveur": {
         "title": "Il Piccolo Bevitore",
-        "description": "Un gioco da tavolo festoso con sfide e sorsi"
+        "description": "Il tabellone dell’aperitivo: avanza, pesca sfide, distribuisci sorsi."
       },
       "toucher-coule": {
         "title": "Colpito e Affondato",
@@ -800,19 +800,19 @@
       },
       "hi-lo": {
         "title": "Hi/Lo",
-        "description": "Indovina se la carta successiva sarà più alta o più bassa"
+        "description": "Più alta o più bassa? La scommessa più scema del banco — e i sorsi arrivano in fretta."
       },
       "purple": {
         "title": "Purple",
-        "description": "Scommetti sul colore delle carte: Rosso, Nero o Purple (alternativo)"
+        "description": "Rosso, nero… o Purple? La scommessa più infida del bancone."
       },
       "pyramide": {
         "title": "Piramide",
-        "description": "Gira le carte e avanza attraverso la piramide"
+        "description": "Scala la piramide: i sorsi raddoppiano a ogni piano."
       },
       "plinko": {
         "title": "Plinko",
-        "description": "Lancia una pallina attraverso gli ostacoli per guadagnare sorsi"
+        "description": "Lascia cadere la pallina e trattieni il fiato: dove atterra, qualcuno beve."
       },
       "roue-des-gorgees": {
         "title": "Ruota dei Sorsi",
@@ -820,19 +820,19 @@
       },
       "ballon-surprise": {
         "title": "Palloncino a sorpresa",
-        "description": "Scegli una palla e prega che vinca la gara!"
+        "description": "Scegli il tuo palloncino e prega che vinca la corsa!"
       },
       "petits-points": {
         "title": "Piccoli punti",
-        "description": "Un gioco di precisione e velocità in cui ogni punto conta!"
+        "description": "Mira bene e in fretta: ogni punto conta, ogni errore si paga."
       },
       "pendu": {
         "title": "L'Impiccato",
-        "description": "Indovina la parola misteriosa prima di essere impiccato! Lettere, sorsi e suspense assicurati."
+        "description": "Indovina la parola prima della forca: ogni lettera sbagliata si beve."
       },
       "trial-poursuite": {
         "title": "Trial Poursuite",
-        "description": "Affronta di nuovo sfide folli sotto pressione! Coordinazione, creatività e velocità nel programma."
+        "description": "Affronta sfide folli sotto pressione: coordinazione, creatività, rapidità."
       },
       "quiz": {
         "title": "Il Gran Pillaveur",
@@ -4068,6 +4068,16 @@
       "title": "Il tavolo è aperto.",
       "cta": "Gioca ora"
     }
+  },
+  "tryBots": {
+    "play": "Gioca ora",
+    "cta": "Provalo con i bot",
+    "go": "Si parte!",
+    "hint": "Senza account: un nickname, un tavolo privato, i bot completano — gli amici possono unirsi a partita in corso.",
+    "guestHint": "Nickname temporaneo, eliminato automaticamente dopo la serata.",
+    "loginCta": "Accedi o crea un account",
+    "pseudoPlaceholder": "Il tuo nickname per la serata",
+    "error": "Impossibile iniziare ora. Riprova."
   },
   "joinGate": {
     "title": "Unisciti al tavolo",

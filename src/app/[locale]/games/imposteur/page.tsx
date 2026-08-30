@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { ImposteurOnline } from '@/components/online/ImposteurOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * L'Imposteur — jeu EN LIGNE uniquement : chacun reçoit un mot secret sur
@@ -52,9 +52,10 @@ export default function ImposteurPage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-5 text-base font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-500 hover:to-fuchsia-400">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="imposteur"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-5 text-base font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-500 hover:to-fuchsia-400"
+            />
           )}
         </div>
       </div>

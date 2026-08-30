@@ -10,6 +10,7 @@ import {
   loadRulesDoc,
 } from '@/lib/rules/rules-content'
 import { GAMES } from '@/lib/games'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Pages « règles » SEO — un article par jeu en ligne (contenu français,
@@ -67,6 +68,24 @@ export default async function RulesPage({
         <ArrowLeft className="h-4 w-4" />
         Le Pillaveur
       </Link>
+
+      {/* Le jeu se vend AVANT l'article : faits + « Essayer avec des bots »
+          (le CTA n'apparaissait qu'après ~50 lignes de règles). Textes FR
+          assumés : ces pages sont canoniques /fr. */}
+      {game && (
+        <div className="mb-6 rounded-2xl border border-gold/20 bg-felt-deep/80 p-5 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-gold/70">
+            {game.minPlayers && game.maxPlayers
+              ? `${game.minPlayers}–${game.maxPlayers} joueurs · `
+              : ''}
+            gratuit · sans installation
+            {game.onlineReady ? ' · chat vocal' : ''}
+          </p>
+          <div className="mx-auto mt-3 max-w-sm">
+            <TryBotsGate gameId={game.id} />
+          </div>
+        </div>
+      )}
 
       <article className="rounded-2xl border border-gold/10 bg-felt-deep/60 p-6 sm:p-10">
         {renderMarkdown(content)}

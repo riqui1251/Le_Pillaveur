@@ -754,15 +754,15 @@
       },
       "monsieur-3": {
         "title": "Monsieur 3",
-        "description": "Un simpático juego de dados donde tendrás que evitar 3 y otras combinaciones"
+        "description": "Esquiva el 3 como la peste: cada dado puede hacerte beber."
       },
       "pmu": {
         "title": "Carrera PMU",
-        "description": "Un juego de apuestas de carreras de caballos con amigos."
+        "description": "Apuesta por tu caballo y grita en la meta — el perdedor invita."
       },
       "petit-buveur": {
         "title": "El Pequeño Bebedor",
-        "description": "Un juego de mesa festivo con desafíos y sorbos."
+        "description": "El tablero del aperitivo: avanza, roba retos, reparte sorbos."
       },
       "toucher-coule": {
         "title": "Tocado y Hundido",
@@ -800,19 +800,19 @@
       },
       "hi-lo": {
         "title": "Hi/Lo",
-        "description": "Adivina si la próxima carta será mayor o menor"
+        "description": "¿Más alta o más baja? La apuesta más tonta del bar — y los sorbos caen rapidísimo."
       },
       "purple": {
         "title": "Purple",
-        "description": "Apuesta al color de las cartas: Rojo, Negro o Purple (alternativo)"
+        "description": "¿Rojo, negro… o Purple? La apuesta más traicionera de la barra."
       },
       "pyramide": {
         "title": "Pirámide",
-        "description": "Gira las cartas y avanza por la pirámide."
+        "description": "Escala la pirámide: los sorbos se doblan en cada piso."
       },
       "plinko": {
         "title": "Plinko",
-        "description": "Lanza una pelota a través de obstáculos para ganar sorbos."
+        "description": "Suelta la bola y aguanta la respiración: donde caiga, alguien bebe."
       },
       "roue-des-gorgees": {
         "title": "Rueda de sorbos",
@@ -820,19 +820,19 @@
       },
       "ballon-surprise": {
         "title": "Globo Sorpresa",
-        "description": "¡Elige una pelota y reza para que gane la carrera!"
+        "description": "Elige tu globo y reza para que gane la carrera."
       },
       "petits-points": {
         "title": "Pequeños puntos",
-        "description": "¡Un juego de precisión y velocidad donde cada punto cuenta!"
+        "description": "Apunta bien y rápido: cada punto cuenta, cada fallo se paga."
       },
       "pendu": {
         "title": "El hombre ahorcado",
-        "description": "¡Adivina la palabra misteriosa antes de que te ahorquen! Letras, sorbos y suspense asegurados."
+        "description": "Adivina la palabra antes de la horca: cada letra fallada se bebe."
       },
       "trial-poursuite": {
         "title": "Trial Poursuite",
-        "description": "¡Acepta desafíos locos bajo presión nuevamente! Coordinación, creatividad y rapidez en el programa."
+        "description": "Supera retos locos bajo presión: coordinación, creatividad, rapidez."
       },
       "quiz": {
         "title": "El Gran Pillaveur",
@@ -4068,6 +4068,16 @@
       "title": "La mesa está abierta.",
       "cta": "Jugar ahora"
     }
+  },
+  "tryBots": {
+    "play": "Jugar ahora",
+    "cta": "Pruébalo con bots",
+    "go": "¡Vamos!",
+    "hint": "Sin cuenta: un apodo, una mesa privada, los bots completan — tus amigos pueden unirse en plena partida.",
+    "guestHint": "Apodo temporal, eliminado automáticamente tras la noche.",
+    "loginCta": "Iniciar sesión o crear una cuenta",
+    "pseudoPlaceholder": "Tu apodo para esta noche",
+    "error": "No se puede empezar ahora. Inténtalo de nuevo."
   },
   "joinGate": {
     "title": "Unirse a la mesa",

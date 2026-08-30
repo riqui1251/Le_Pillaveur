@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { PresidentOnline } from '@/components/online/PresidentOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Président — jeu EN LIGNE uniquement : chaque main doit rester secrète,
@@ -52,9 +52,10 @@ export default function PresidentPage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-emerald-800 to-amber-600 py-5 text-base font-bold text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-700 hover:to-amber-500">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="president"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-emerald-800 to-amber-600 py-5 text-base font-bold text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-700 hover:to-amber-500"
+            />
           )}
         </div>
       </div>

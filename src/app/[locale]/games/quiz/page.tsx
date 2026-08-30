@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { QuizOnline } from '@/components/online/QuizOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Le Grand Pillaveur — jeu EN LIGNE uniquement : chacun répond en secret sur
@@ -52,9 +52,10 @@ export default function QuizPage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 py-5 text-base font-bold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-cyan-400">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="quiz"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 py-5 text-base font-bold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-cyan-400"
+            />
           )}
         </div>
       </div>

@@ -44,12 +44,19 @@ export function GamesGrid() {
   const isSoft = isOnline && user?.ambianceMode === 'soft'
   const [query, setQuery] = useState('')
 
+  // Visiteur sans session : la vitrine montre TOUT (comme la landing) —
+  // Loup-Garou et les autres jeux online-only étaient introuvables ici alors
+  // que ce sont les premières portes d'entrée SEO. Leur page propose ensuite
+  // « Essayer avec des bots » ou la connexion.
+  const visitor = !user
   const visible = useMemo(
     () =>
       games.filter(
-        (g) => !g.hidden && (isOnline ? g.onlineReady && (!isSoft || g.softModeReady) : !g.onlineOnly)
+        (g) =>
+          !g.hidden &&
+          (visitor ? true : isOnline ? g.onlineReady && (!isSoft || g.softModeReady) : !g.onlineOnly)
       ),
-    [games, isOnline, isSoft]
+    [games, visitor, isOnline, isSoft]
   )
 
   const filtered = useMemo(() => {

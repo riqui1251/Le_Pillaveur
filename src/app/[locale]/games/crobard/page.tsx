@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { CrobardOnline } from '@/components/online/CrobardOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Crobard — jeu EN LIGNE uniquement : le mot secret transite par le
@@ -52,9 +52,10 @@ export default function CrobardPage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-fuchsia-700 to-orange-600 py-5 text-base font-bold text-white shadow-lg shadow-orange-500/25 hover:from-fuchsia-600 hover:to-orange-500">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="crobard"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-fuchsia-700 to-orange-600 py-5 text-base font-bold text-white shadow-lg shadow-orange-500/25 hover:from-fuchsia-600 hover:to-orange-500"
+            />
           )}
         </div>
       </div>

@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { BluffOnline } from '@/components/online/BluffOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Le Grand Bluff — jeu EN LIGNE uniquement : chaque question, chaque bluff et
@@ -52,9 +52,10 @@ export default function BluffPage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-rose-600 to-amber-500 py-5 text-base font-bold text-white shadow-lg shadow-rose-500/25 hover:from-rose-500 hover:to-amber-400">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="bluff"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-rose-600 to-amber-500 py-5 text-base font-bold text-white shadow-lg shadow-rose-500/25 hover:from-rose-500 hover:to-amber-400"
+            />
           )}
         </div>
       </div>

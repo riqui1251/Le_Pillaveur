@@ -764,15 +764,15 @@
       },
       "monsieur-3": {
         "title": "Monsieur 3",
-        "description": "Un jeu de dés convivial où vous devez éviter les 3 et autres combinaisons"
+        "description": "Évite le 3 comme la peste : chaque dé peut te faire trinquer."
       },
       "pmu": {
         "title": "Course PMU",
-        "description": "Un jeu de paris hippiques entre amis"
+        "description": "Mise sur ton canasson et hurle sur la ligne d’arrivée — le perdant régale."
       },
       "petit-buveur": {
         "title": "Le Petit Buveur",
-        "description": "Un jeu de plateau festif avec des défis et des gorgées"
+        "description": "Le plateau de l’apéro : avance, pioche des défis, distribue des gorgées."
       },
       "toucher-coule": {
         "title": "Toucher-Coulé",
@@ -810,19 +810,19 @@
       },
       "hi-lo": {
         "title": "Hi/Lo",
-        "description": "Devinez si la prochaine carte sera plus haute ou plus basse"
+        "description": "Plus haute ou plus basse ? Un pari tout bête, des gorgées qui tombent très vite."
       },
       "purple": {
         "title": "Purple",
-        "description": "Pariez sur la couleur des cartes : Rouge, Noir ou Purple (alterné)"
+        "description": "Rouge, noir… ou Purple ? Le pari le plus traître du comptoir."
       },
       "pyramide": {
         "title": "Pyramide",
-        "description": "Retournez les cartes et progressez dans la pyramide"
+        "description": "Grimpe la pyramide : les gorgées doublent à chaque étage."
       },
       "plinko": {
         "title": "Plinko",
-        "description": "Faites tomber une balle à travers des obstacles pour gagner des gorgées"
+        "description": "Lâche la bille, retiens ton souffle : là où elle tombe, quelqu’un trinque."
       },
       "roue-des-gorgees": {
         "title": "Roue des Gorgées",
@@ -830,19 +830,19 @@
       },
       "ballon-surprise": {
         "title": "Ballon Surprise",
-        "description": "Choisissez un ballon et priez pour qu'il gagne la course !"
+        "description": "Choisis ton ballon et prie pour qu’il gagne la course !"
       },
       "petits-points": {
         "title": "Petits Points",
-        "description": "Un jeu de précision et de rapidité où chaque point compte !"
+        "description": "Vise juste, vise vite : chaque point compte, chaque raté se paie."
       },
       "pendu": {
         "title": "Le Pendu des Gorgées",
-        "description": "Devinez le mot mystère avant d'être pendu ! Lettres, gorgées et suspense garantis."
+        "description": "Devine le mot avant d’être pendu : chaque lettre ratée se boit."
       },
       "trial-poursuite": {
         "title": "Trial Poursuite",
-        "description": "Redez des défis fous sous pression ! Coordination, créativité et rapidité au programme."
+        "description": "Relève des défis fous sous pression : coordination, créativité, rapidité."
       },
       "quiz": {
         "title": "Le Grand Pillaveur",
@@ -4078,6 +4078,16 @@
       "title": "La table est ouverte.",
       "cta": "Jouer maintenant"
     }
+  },
+  "tryBots": {
+    "play": "Jouer maintenant",
+    "cta": "Essayer avec des bots",
+    "go": "C'est parti !",
+    "hint": "Sans compte : un pseudo, une table privée, les bots complètent — tes potes peuvent rejoindre en cours de route.",
+    "guestHint": "Pseudo temporaire, supprimé automatiquement après la soirée.",
+    "loginCta": "Se connecter ou créer un compte",
+    "pseudoPlaceholder": "Ton pseudo pour la soirée",
+    "error": "Impossible de lancer pour l'instant. Réessaie."
   },
   "joinGate": {
     "title": "Rejoindre la table",

@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { TelephoneDessineOnline } from '@/components/online/TelephoneDessineOnline'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { TryBotsGate } from '@/components/online/TryBotsGate'
 
 /**
  * Téléphone Dessiné — jeu EN LIGNE uniquement : les chaînes phrase/dessin
@@ -52,9 +52,10 @@ export default function TelephoneDessinePage() {
               {t('switchOnline')}
             </Button>
           ) : (
-            <Button asChild className="w-full rounded-2xl bg-gradient-to-r from-teal-700 to-indigo-600 py-5 text-base font-bold text-white shadow-lg shadow-indigo-500/25 hover:from-teal-600 hover:to-indigo-500">
-              <Link href="/compte">Se connecter</Link>
-            </Button>
+            <TryBotsGate
+              gameId="telephone-dessine"
+              accentClassName="w-full rounded-2xl bg-gradient-to-r from-teal-700 to-indigo-600 py-5 text-base font-bold text-white shadow-lg shadow-indigo-500/25 hover:from-teal-600 hover:to-indigo-500"
+            />
           )}
         </div>
       </div>
