@@ -4,6 +4,7 @@ import { Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { TabouClientView } from '@/lib/tabou/engine'
 import { TABOU_ROUND_MS } from '@/lib/tabou/engine'
 import { cn } from '@/lib/utils'
@@ -28,8 +29,8 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
   const finished = state.phase === 'finished'
   const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const describer = state.players.find((p) => p.id === state.describerId)
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   if (finished) {
     return (

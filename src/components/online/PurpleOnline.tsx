@@ -10,6 +10,7 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { parsePurpleState, type PurpleSyncedState, type SerializedCard } from '@/lib/online-game-state'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -112,7 +113,10 @@ export function PurpleOnline() {
     let botTimer: ReturnType<typeof setTimeout> | undefined
     const active = view.players[view.currentPlayer]
     if (active?.isBot) {
-      botTimer = setTimeout(() => send('bot'), view.pendingReveal || view.canContinue ? 1600 : 1300)
+      botTimer = setTimeout(
+        () => send('bot'),
+        view.pendingReveal || view.canContinue ? 1600 : botTickDelayMs(active.name)
+      )
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -168,8 +172,8 @@ export function PurpleOnline() {
     }
   }
 
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const finished = view.phase === 'finished'
   const rematchVotes = view.rematchVotes ?? []

@@ -80,28 +80,45 @@ describe('createSFState', () => {
   })
 })
 
+/** Table solo (1 humain + 3 bots), countdown consommé : manche 1 à T0. */
+function makeSolo(seed: string | number = 'seed'): SFState {
+  const players = [
+    { id: 'p0', name: 'P0' },
+    { id: 'b1', name: 'B1', isBot: true },
+    { id: 'b2', name: 'B2', isBot: true },
+    { id: 'b3', name: 'B3', isBot: true },
+  ]
+  const raw = createSFState(players, BLACKS, WHITES, seed, T0 - SF_COUNTDOWN_MS)
+  return reduceSF(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+}
+
 describe('début de manche', () => {
-  it('le juge est le premier humain et ne joue pas ; les bots ont déjà abattu', () => {
+  it('le juge est le premier humain et ne joue pas ; les bots entrent main pleine', () => {
     const s = make(true) // p3 est un bot
     expect(s.judgeId).toBe('p0')
-    expect(s.submissions).toHaveLength(1)
-    expect(s.submissions[0].playerId).toBe('p3')
+    expect(s.submissions).toHaveLength(0)
     const bot = s.players.find((p) => p.id === 'p3')
-    expect(bot?.hand).toHaveLength(SF_HAND_SIZE - 1)
+    expect(bot?.hand).toHaveLength(SF_HAND_SIZE)
   })
 
-  it('table de bots (seul humain = juge) : la manche saute directement au jugement', () => {
-    const players = [
-      { id: 'p0', name: 'P0' },
-      { id: 'b1', name: 'B1', isBot: true },
-      { id: 'b2', name: 'B2', isBot: true },
-      { id: 'b3', name: 'B3', isBot: true },
-    ]
-    const raw = createSFState(players, BLACKS, WHITES, 'seed', T0 - SF_COUNTDOWN_MS)
-    const s = reduceSF(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+  it('table solo : la manche attend les bots (ils soumettent via les ticks)', () => {
+    const s = makeSolo()
+    expect(s.phase).toBe('submit')
+    expect(s.judgeId).toBe('p0')
+    expect(s.submissions).toHaveLength(0)
+  })
+
+  it('un tick par bot : le dernier abattage déclenche le jugement (raccourci)', () => {
+    let s = makeSolo()
+    for (const id of ['b1', 'b2']) {
+      const hand = s.players.find((p) => p.id === id)!.hand
+      s = reduceSF(s, { type: 'PLAY_CARD', playerId: id, card: hand[0], now: T0 })
+      expect(s.phase).toBe('submit')
+    }
+    const hand = s.players.find((p) => p.id === 'b3')!.hand
+    s = reduceSF(s, { type: 'PLAY_CARD', playerId: 'b3', card: hand[0], now: T0 })
     expect(s.phase).toBe('judging')
     expect(s.submissions).toHaveLength(3)
-    expect(s.judgeId).toBe('p0')
   })
 })
 
@@ -179,6 +196,32 @@ describe('CONTINUE : rotation et fin de partie', () => {
     expect(s.phase).toBe('submit')
     expect(s.round).toBe(1)
     expect(s.judgeId).toBe('p1')
+  })
+
+  it('solo : la rotation du juge inclut les bots — le joueur seul joue ses cartes', () => {
+    let s = makeSolo()
+    for (const id of ['b1', 'b2', 'b3']) {
+      const hand = s.players.find((p) => p.id === id)!.hand
+      s = reduceSF(s, { type: 'PLAY_CARD', playerId: id, card: hand[0], now: T0 })
+    }
+    s = reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p0', card: s.submissions[0].card, now: T0 })
+    s = reduceSF(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    // Manche 2 : le juge est un bot, le joueur solo abat enfin une carte.
+    expect(s.judgeId).toBe('b1')
+    expect(s.players.find((p) => p.id === s.judgeId)?.isBot).toBe(true)
+    const me = s.players.find((p) => p.id === 'p0')!
+    s = reduceSF(s, { type: 'PLAY_CARD', playerId: 'p0', card: me.hand[0], now: T0 })
+    expect(s.submissions.some((sub) => sub.playerId === 'p0')).toBe(true)
+  })
+
+  it('à 2+ humains actifs, la rotation saute toujours les bots', () => {
+    let s = make(true) // p0-p2 humains, p3 bot — juge initial p0
+    s = playAll(s)
+    const bot = s.players.find((p) => p.id === 'p3')!
+    s = reduceSF(s, { type: 'PLAY_CARD', playerId: 'p3', card: bot.hand[0], now: T0 })
+    s = reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p0', card: s.submissions[0].card, now: T0 })
+    s = reduceSF(s, { type: 'CONTINUE', playerId: 'p1', now: T0 })
+    expect(s.judgeId).toBe('p1') // pas p3, jamais un bot ici
   })
 
   it('après la dernière manche → finished, vainqueur = le plus couronné (unique)', () => {

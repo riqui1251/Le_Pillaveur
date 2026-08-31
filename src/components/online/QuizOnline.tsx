@@ -15,6 +15,7 @@ import {
   QUIZ_REVEAL_MS,
   type QuizClientView,
 } from '@/lib/quiz/engine'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -155,8 +156,8 @@ export function QuizOnline() {
   const humanCount = view.players.filter((p) => !p.isBot).length
   const ranking = [...view.players].sort((a, b) => b.score - a.score)
 
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return

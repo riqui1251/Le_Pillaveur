@@ -4,6 +4,7 @@ import { Pencil, Skull, Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { ImposteurClientView } from '@/lib/imposteur/engine'
 import { IMPOSTEUR_CLUE_MS, IMPOSTEUR_VOTE_MS } from '@/lib/imposteur/engine'
 import { cn } from '@/lib/utils'
@@ -33,8 +34,8 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
   const totalPhaseMs = state.phase === 'clue' ? IMPOSTEUR_CLUE_MS : IMPOSTEUR_VOTE_MS
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   // ── Fin de partie : révélation complète ──────────────────────────────────
   if (finished) {

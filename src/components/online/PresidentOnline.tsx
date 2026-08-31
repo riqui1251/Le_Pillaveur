@@ -17,6 +17,7 @@ import {
   PRE_TURN_MS,
   type PreClientView,
 } from '@/lib/president/engine'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -121,9 +122,12 @@ export function PresidentOnline() {
     }
 
     let botTimer: ReturnType<typeof setTimeout> | undefined
-    const actorIsBot = view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (actorIsBot && (view.phase === 'playing' || view.phase === 'interlude')) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), view.phase === 'interlude' ? 5000 : 1600)
+    const actor = view.players.find((p) => p.id === room.currentTurnUserId)
+    if (actor?.isBot && (view.phase === 'playing' || view.phase === 'interlude')) {
+      botTimer = setTimeout(
+        () => send({ action: 'bot' }),
+        view.phase === 'interlude' ? 5000 : botTickDelayMs(actor.name)
+      )
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -161,8 +165,8 @@ export function PresidentOnline() {
   const iVotedRematch = rematchVotes.includes(user.id)
   const humanCount = view.players.filter((p) => !p.isBot).length
   const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return

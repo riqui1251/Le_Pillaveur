@@ -16,6 +16,7 @@ import {
   IMPOSTEUR_CLUE_MAX_LEN,
   type ImposteurClientView,
 } from '@/lib/imposteur/engine'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -111,11 +112,17 @@ export function ImposteurOnline() {
     // Bot au tour (indice / continuer) ou bots retardataires au vote.
     let botTimer: ReturnType<typeof setTimeout> | undefined
     const actor = view.players.find((p) => p.id === room.currentTurnUserId)
-    const botsPendingVote =
-      view.phase === 'vote' &&
-      view.players.some((p) => p.isBot && !p.eliminated && !p.hasVoted)
-    if (actor?.isBot || botsPendingVote) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), view.phase === 'reveal' ? 3200 : 1500)
+    const pendingVoteBot =
+      view.phase === 'vote'
+        ? view.players.find((p) => p.isBot && !p.eliminated && !p.hasVoted)
+        : undefined
+    if (actor?.isBot || pendingVoteBot) {
+      botTimer = setTimeout(
+        () => send({ action: 'bot' }),
+        view.phase === 'reveal'
+          ? 3200
+          : botTickDelayMs(actor?.isBot ? actor.name : pendingVoteBot?.name)
+      )
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -188,8 +195,8 @@ export function ImposteurOnline() {
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return

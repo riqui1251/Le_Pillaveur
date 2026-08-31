@@ -11,6 +11,7 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { SF_JUDGE_MS, SF_SUBMIT_MS, type SFClientView } from '@/lib/sans-filtre/engine'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -78,8 +79,9 @@ export function SansFiltreOnline() {
     return () => clearTimeout(timer)
   }, [view, room])
 
-  // Ticks « arbitre » (bots convertis en cours de manche + remplacement) :
-  // premier humain restant.
+  // Ticks « arbitre » (jeu des bots + remplacement) : premier humain restant.
+  // L'effet se réarme à chaque changement d'état, donc chaque bot en attente
+  // « réfléchit » selon le tempo de SON persona (botTickDelayMs).
   useEffect(() => {
     if (!view || !user || !room || view.phase === 'finished') return
     const referee = view.players.find((p) => !p.isBot && !p.leftAt)
@@ -95,15 +97,20 @@ export function SansFiltreOnline() {
     }
 
     let botTimer: ReturnType<typeof setTimeout> | undefined
-    const botsPendingPlay =
-      view.phase === 'submit' &&
-      view.players.some((p) => p.isBot && !p.isJudge && !p.hasPlayed && p.handCount > 0 && !p.leftAt)
-    const judgeIsBot =
-      view.phase === 'judging' && view.players.find((p) => p.isJudge)?.isBot
-    const actorIsBot =
-      view.phase === 'reveal' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (botsPendingPlay || judgeIsBot || actorIsBot) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), view.phase === 'submit' ? 1500 : 2500)
+    // Prochain bot à agir — en submit, le PREMIER en attente (même ordre que
+    // le server-adapter, qui n'en fait soumettre qu'un par tick).
+    const pendingBot =
+      view.phase === 'submit'
+        ? view.players.find(
+            (p) => p.isBot && !p.isJudge && !p.hasPlayed && p.handCount > 0 && !p.leftAt
+          )
+        : view.phase === 'judging'
+          ? view.players.find((p) => p.isJudge && p.isBot)
+          : view.phase === 'reveal'
+            ? view.players.find((p) => p.id === room.currentTurnUserId && p.isBot)
+            : undefined
+    if (pendingBot) {
+      botTimer = setTimeout(() => send({ action: 'bot' }), botTickDelayMs(pendingBot.name))
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -145,8 +152,10 @@ export function SansFiltreOnline() {
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot
+      ? botEmojiFromName(p.name)
+      : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return

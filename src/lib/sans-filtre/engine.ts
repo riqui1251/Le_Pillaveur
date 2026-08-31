@@ -8,8 +8,9 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  * une carte réponse de sa main en secret. Le juge découvre les réponses
  * anonymisées, les lit à voix haute (vocal) et couronne la plus drôle :
  * +1 couronne pour son auteur, révélé à la table. Le rôle de juge tourne
- * entre les HUMAINS. Après le nombre de manches choisi au lobby, le plus
- * couronné gagne.
+ * entre les HUMAINS — sauf à moins de 2 humains actifs (table solo), où les
+ * bots entrent dans la rotation pour que le joueur seul joue aussi ses
+ * cartes. Après le nombre de manches choisi au lobby, le plus couronné gagne.
  *
  * Le contenu (cartes noires/réponses) est injecté par le server-adapter
  * depuis src/lib/sans-filtre/data/ — le moteur ne connaît que des textes.
@@ -22,7 +23,7 @@ export const SF_MIN_PLAYERS = 4
 export const SF_MAX_PLAYERS = 16
 /** Compte à rebours d'échauffement au lancement. */
 export const SF_COUNTDOWN_MS = 5_000
-/** Temps pour abattre sa carte (les bots jouent dès l'entrée de manche). */
+/** Temps pour abattre sa carte (les bots abattent au fil des ticks client). */
 export const SF_SUBMIT_MS = 60_000
 /** Temps pour que le juge couronne (timeout → couronnement aléatoire). */
 export const SF_JUDGE_MS = 90_000
@@ -56,7 +57,7 @@ export type SFState = TimedPhaseState & {
   whiteDeck: number[]
   /** Manche courante (0-based, index dans `blacks`). */
   round: number
-  /** Juge du tour — toujours un humain tant qu'il en reste. */
+  /** Juge du tour — humain à 2+ humains actifs, bot possible en solo. */
   judgeId: string | null
   /** SECRET pendant `submit` — auteurs anonymes jusqu'au reveal. */
   submissions: Array<{ playerId: string; card: number }>
@@ -96,16 +97,24 @@ function humans(state: SFState): SFPlayer[] {
   return sfActive(state).filter((p) => !p.isBot)
 }
 
-/** Prochain juge : humain actif suivant `fromId` dans l'ordre de la table. */
+/**
+ * Prochain juge : actif suivant `fromId` dans l'ordre de la table. À 2+
+ * humains actifs, seuls les humains jugent ; en dessous (table solo), les
+ * bots entrent dans la rotation — sinon le joueur seul serait juge à chaque
+ * manche et ne jouerait jamais ses cartes.
+ */
 function nextJudgeId(state: SFState, fromId: string | null): string | null {
-  const pool = humans(state)
+  const includeBots = humans(state).length < 2
+  const pool = includeBots ? sfActive(state) : humans(state)
   if (pool.length === 0) return null
   if (!fromId) return pool[0].id
   const order = state.players.map((p) => p.id)
   const start = order.indexOf(fromId)
   for (let step = 1; step <= order.length; step++) {
     const candidate = state.players[(start + step) % order.length]
-    if (!candidate.isBot && !candidate.leftAt) return candidate.id
+    if (candidate.leftAt) continue
+    if (candidate.isBot && !includeBots) continue
+    return candidate.id
   }
   return pool[0].id
 }
@@ -169,35 +178,26 @@ export function createSFState(
 
 // ─── Transitions internes ────────────────────────────────────────────────────
 
-/** Entre en manche : nouveau juge, les bots abattent immédiatement leur carte. */
+/**
+ * Entre en manche : nouveau juge, mains pleines pour tout le monde — les
+ * bots abattent ensuite UN PAR UN via les ticks client (server-adapter),
+ * jamais tous d'un coup. Le raccourci « tous ont soumis → jugement » vit
+ * dans PLAY_CARD, atteint par le dernier tick.
+ */
 function startRound(state: SFState, now: number): SFState {
-  const rng = rngFromState(state.rngState)
   const judgeId = nextJudgeId(state, state.judgeId)
-  const base: SFState = { ...state, judgeId, submissions: [], crowned: null }
-
-  const submissions: Array<{ playerId: string; card: number }> = []
-  const players = base.players.map((p) => {
-    if (!p.isBot || p.leftAt || p.id === judgeId || p.hand.length === 0) return p
-    const idx = rng.pickIndex(p.hand.length)
-    submissions.push({ playerId: p.id, card: p.hand[idx] })
-    return { ...p, hand: p.hand.filter((_, i) => i !== idx) }
-  })
-
   const next: SFState = {
-    ...base,
-    players,
-    submissions,
+    ...state,
+    judgeId,
+    submissions: [],
+    crowned: null,
     ...enterPhase(state.phaseSeq, 'submit', SF_SUBMIT_MS, now),
     phase: 'submit',
-    rngState: rng.getState(),
     version: state.version + 1,
   }
-  // Table de bots (seul humain = juge) : personne n'est attendu — on passe
-  // directement au jugement au lieu de laisser courir le chrono pour rien.
-  const waiting = roundPlayers(next).filter(
-    (p) => !submissions.some((s) => s.playerId === p.id)
-  )
-  if (waiting.length === 0) return enterJudging(next, now)
+  // Table dégénérée (le juge est seul actif) : personne n'est attendu — on
+  // passe directement au jugement au lieu de laisser courir le chrono.
+  if (roundPlayers(next).length === 0) return enterJudging(next, now)
   return next
 }
 
@@ -354,8 +354,8 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
         ),
         version: state.version + 1,
       }
-      // Le juge devenu bot ne couronnera jamais : on passe la main tout de
-      // suite au prochain humain pour ne pas geler la table jusqu'au timeout.
+      // Le juge devenu bot passe la main au prochain de la rotation (humain
+      // s'il en reste 2+) pour ne pas geler la table jusqu'au timeout.
       if (next.judgeId && ids.has(next.judgeId) && next.phase === 'judging') {
         const replacement = nextJudgeId(next, next.judgeId)
         if (replacement) next = { ...next, judgeId: replacement }

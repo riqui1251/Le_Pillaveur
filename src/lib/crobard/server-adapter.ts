@@ -12,6 +12,7 @@ import {
   type Stroke,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
+import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getCrobardWords } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
@@ -26,17 +27,6 @@ export interface CrobardRoomMember {
   user: { displayName: string }
 }
 
-const CROBARD_BOT_NAMES = [
-  'Croquis 🤖',
-  'Griffonne 🤖',
-  'Pinceau 🤖',
-  'Esquisse 🤖',
-  'Doodle 🤖',
-  'Fusain 🤖',
-  'Aquarelle 🤖',
-  'Pastel 🤖',
-]
-
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par
  * l'hôte. Filet : on complète quand même jusqu'au minimum du moteur.
@@ -50,10 +40,11 @@ export function buildCrobardState(
 ): CrobardState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
+  const botPersonas = pickBotPersonas(CROBARD_MAX_PLAYERS)
   const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
-      name: CROBARD_BOT_NAMES[botIndex % CROBARD_BOT_NAMES.length],
+      name: botDisplayName(botPersonas[botIndex % botPersonas.length]),
       isBot: true,
     })
     botIndex += 1

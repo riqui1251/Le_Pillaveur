@@ -4,6 +4,7 @@ import { Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { QuizClientView } from '@/lib/quiz/engine'
 import { QUIZ_QUESTION_MS, QUIZ_REVEAL_MS } from '@/lib/quiz/engine'
 import { cn } from '@/lib/utils'
@@ -41,8 +42,8 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
   const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const totalPhaseMs = state.phase === 'question' ? QUIZ_QUESTION_MS : QUIZ_REVEAL_MS
   const ranking = [...state.players].sort((a, b) => b.score - a.score)
-  const iconOf = (id: string, isBot: boolean) =>
-    isBot ? '🤖' : room.members.find((m) => m.userId === id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   // ── Podium final ─────────────────────────────────────────────────────────
   if (state.phase === 'finished') {
@@ -69,7 +70,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
               ) : (
                 <span className="tabular-nums text-white/50">{idx + 1}.</span>
               )}
-              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p.id, p.isBot)} /></span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               <span className="tabular-nums text-cyan-200">{p.score}</span>
               <span className="text-lg text-white/50">🍺{p.sips}</span>
@@ -159,7 +160,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
                       : 'border-white/10 bg-white/5 text-white/60'
               )}
             >
-              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p.id, p.isBot)} /></span>
+              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               {state.phase === 'question' && p.hasAnswered && ' ⚡'}
               {r?.correct && ` +${r.points}`}

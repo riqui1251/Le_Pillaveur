@@ -3,6 +3,7 @@
 import { Skull, Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { MenteurClientView } from '@/lib/menteur/engine'
 import { CssDie } from '@/components/games/CssDie'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -21,8 +22,8 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
   const finished = state.phase === 'finished'
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   // ── Podium final ─────────────────────────────────────────────────────────
   if (finished) {

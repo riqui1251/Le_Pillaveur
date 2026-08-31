@@ -44,7 +44,7 @@ function voteAll(state: DilState, choice = 'A'): DilState {
 }
 
 describe('createDilState / début', () => {
-  it('bornes 3-16, cartes tirées sans doublon, reproductible, bots votent dès l’entrée', () => {
+  it('bornes 3-16, cartes tirées sans doublon, reproductible, personne n’a voté à l’entrée', () => {
     expect(() => createDilState(fourPlayers().slice(0, 2), CARDS, 1, T0)).toThrow(DilEngineError)
     const seventeen = Array.from({ length: 17 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
     expect(() => createDilState(seventeen, CARDS, 1, T0)).toThrow(DilEngineError)
@@ -53,7 +53,7 @@ describe('createDilState / début', () => {
     const s = make(true)
     expect(s.phase).toBe('vote')
     expect(s.phaseEndsAt).toBe(T0 + DIL_VOTE_MS)
-    expect(Object.keys(s.votes)).toEqual(['p3']) // le bot a déjà voté
+    expect(s.votes).toEqual({}) // les bots votent via les ticks, plus à l'entrée
   })
 })
 

@@ -12,6 +12,7 @@ import {
   type TabouInitialPlayer,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
+import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getTabouWords } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
@@ -25,17 +26,6 @@ export interface TabouRoomMember {
   userId: string
   displayName: string
 }
-
-const TABOU_BOT_NAMES = [
-  'Bricole 🤖',
-  'Mimi 🤖',
-  'Charade 🤖',
-  'Loulou 🤖',
-  'Pantomime 🤖',
-  'Rébus 🤖',
-  'Devinette 🤖',
-  'Fifi 🤖',
-]
 
 const TABOU_MAX_PER_TEAM = TABOU_MAX_PLAYERS / 2
 
@@ -69,10 +59,11 @@ export function buildTabouPlayers(
   }
 
   let botIndex = 0
+  const botPersonas = pickBotPersonas(TABOU_MAX_PLAYERS)
   const addBot = (team: TabouTeam) => {
     players.push({
       id: `bot-${botIndex + 1}`,
-      name: TABOU_BOT_NAMES[botIndex % TABOU_BOT_NAMES.length],
+      name: botDisplayName(botPersonas[botIndex % botPersonas.length]),
       team,
       isBot: true,
     })

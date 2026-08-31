@@ -4,6 +4,7 @@ import { Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { EspionClientView } from '@/lib/espion/engine'
 import { cn } from '@/lib/utils'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -29,8 +30,8 @@ export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClient
   const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   // ── Fin de partie ─────────────────────────────────────────────────────────
   if (finished) {

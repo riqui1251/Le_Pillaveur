@@ -8,6 +8,7 @@ import {
   type PurpleState,
   type PurpleBet,
 } from './engine'
+import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
 /**
@@ -21,19 +22,6 @@ export interface PurpleRoomMember {
   user: { displayName: string }
 }
 
-const PURPLE_BOT_NAMES = [
-  'Barnabé 🤖',
-  'Gépéto 🤖',
-  'Raoul 🤖',
-  'Suzette 🤖',
-  'Marcel 🤖',
-  'Gaston 🤖',
-  'Bernadette 🤖',
-  'Norbert 🤖',
-  'Ginette 🤖',
-  'Roger 🤖',
-]
-
 export function buildPurpleState(
   members: PurpleRoomMember[],
   botsCount: number = 0,
@@ -41,10 +29,11 @@ export function buildPurpleState(
 ): PurpleState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
+  const botPersonas = pickBotPersonas(PURPLE_MAX_PLAYERS)
   const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
-      name: PURPLE_BOT_NAMES[botIndex % PURPLE_BOT_NAMES.length],
+      name: botDisplayName(botPersonas[botIndex % botPersonas.length]),
       isBot: true,
     })
     botIndex += 1

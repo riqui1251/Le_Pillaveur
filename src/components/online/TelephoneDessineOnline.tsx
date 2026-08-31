@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -126,12 +127,17 @@ export function TelephoneDessineOnline() {
     }
 
     let botTimer: ReturnType<typeof setTimeout> | undefined
-    const pendingBots =
-      view.phase === 'contributing' && view.players.some((p) => p.isBot && !view.haveISubmitted)
+    const pendingBot =
+      view.phase === 'contributing' && !view.haveISubmitted
+        ? view.players.find((p) => p.isBot)
+        : undefined
     const actorIsBot =
       view.phase === 'reveal' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (pendingBots || actorIsBot) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), view.phase === 'reveal' ? 2500 : 3000)
+    if (pendingBot || actorIsBot) {
+      botTimer = setTimeout(
+        () => send({ action: 'bot' }),
+        view.phase === 'reveal' ? 2500 : botTickDelayMs(pendingBot?.name)
+      )
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -166,8 +172,8 @@ export function TelephoneDessineOnline() {
 
   const finished = view.phase === 'finished'
   const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return

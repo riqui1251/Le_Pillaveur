@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -123,29 +123,18 @@ export function createDilState(
 
 // ─── Transitions internes ────────────────────────────────────────────────────
 
-/** Entre en phase vote : les bots votent immédiatement (reproductible). */
+/**
+ * Entre en phase vote : personne n'a encore voté. Les bots votent UN PAR UN
+ * au fil des ticks (applyDilBotAction), selon leur persona — la fin anticipée
+ * « tout le monde a voté » arrive donc via les ticks, comme pour les humains.
+ */
 function enterVote(state: DilState, now: number): DilState {
-  const rng = rngFromState(state.rngState)
-  const card = dilCurrentCard(state)
-  const votes: Record<string, string> = {}
-  if (card) {
-    for (const p of dilActive(state)) {
-      if (!p.isBot) continue
-      if (card.kind === 'who') {
-        const targets = dilActive(state).filter((t) => t.id !== p.id)
-        if (targets.length > 0) votes[p.id] = rng.pick(targets).id
-      } else {
-        votes[p.id] = rng.chance(0.5) ? 'A' : 'B'
-      }
-    }
-  }
   return {
     ...state,
-    votes,
+    votes: {},
     lastReveal: null,
     ...enterPhase(state.phaseSeq, 'vote', DIL_VOTE_MS, now),
     phase: 'vote',
-    rngState: rng.getState(),
     version: state.version + 1,
   }
 }

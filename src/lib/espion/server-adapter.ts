@@ -13,6 +13,7 @@ import {
   type EspionState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
+import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getEspionLocations } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
@@ -26,17 +27,6 @@ export interface EspionRoomMember {
   userId: string
   user: { displayName: string }
 }
-
-const ESPION_BOT_NAMES = [
-  'Barnabé 🤖',
-  'Gépéto 🤖',
-  'Raoul 🤖',
-  'Suzette 🤖',
-  'Marcel 🤖',
-  'Gaston 🤖',
-  'Bernadette 🤖',
-  'Norbert 🤖',
-]
 
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par
@@ -52,10 +42,11 @@ export function buildEspionState(
 ): EspionState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
+  const botPersonas = pickBotPersonas(ESPION_MAX_PLAYERS)
   const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
-      name: ESPION_BOT_NAMES[botIndex % ESPION_BOT_NAMES.length],
+      name: botDisplayName(botPersonas[botIndex % botPersonas.length]),
       isBot: true,
     })
     botIndex += 1

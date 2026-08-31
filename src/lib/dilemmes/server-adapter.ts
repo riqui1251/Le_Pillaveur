@@ -10,11 +10,14 @@ import {
   DIL_DEFAULT_ROUNDS,
   DIL_MIN_PLAYERS,
   DIL_MAX_PLAYERS,
+  type DilCard,
+  type DilPlayer,
   type DilState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { dilContentFor } from './data'
-import { randomSeed } from '@/lib/petit-buveur/rng'
+import { createRng, randomSeed } from '@/lib/petit-buveur/rng'
+import { botDisplayName, personaForBotName, pickBotPersonas } from '@/lib/online/bot-personas'
 
 /**
  * Adaptateur serveur de Dilemmes : sérialisation, mapping HTTP → actions
@@ -26,11 +29,6 @@ export interface DilRoomMember {
   user: { displayName: string }
 }
 
-const DIL_BOT_NAMES = [
-  'Barnabé 🤖', 'Gépéto 🤖', 'Raoul 🤖', 'Suzette 🤖', 'Marcel 🤖',
-  'Gaston 🤖', 'Bernadette 🤖', 'Norbert 🤖', 'Ginette 🤖', 'Roger 🤖',
-]
-
 export function buildDilState(
   members: DilRoomMember[],
   ambiance: 'soft' | 'alcool',
@@ -40,23 +38,20 @@ export function buildDilState(
   coquin: boolean = false
 ): DilState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
-  let botIndex = 0
-  const addBot = () => {
-    players.push({
-      id: `bot-${botIndex + 1}`,
-      name: DIL_BOT_NAMES[botIndex % DIL_BOT_NAMES.length],
-      isBot: true,
-    })
-    botIndex += 1
-  }
   const wanted = Math.max(0, Math.min(botsCount, DIL_MAX_PLAYERS - players.length))
-  for (let i = 0; i < wanted; i += 1) addBot()
-  while (players.length < DIL_MIN_PLAYERS) addBot()
+  // Complète jusqu'au minimum jouable — personas sans doublon, reproductibles
+  // à graine égale (suffixe pour ne pas corréler avec le mélange des cartes).
+  const totalBots = Math.max(wanted, DIL_MIN_PLAYERS - players.length)
+  const resolvedSeed = seed ?? randomSeed()
+  const personas = pickBotPersonas(totalBots, createRng(`${resolvedSeed}#bots`).next)
+  personas.forEach((persona, i) => {
+    players.push({ id: `bot-${i + 1}`, name: botDisplayName(persona), isBot: true })
+  })
 
   return createDilState(
     players,
     dilContentFor(ambiance, coquin),
-    seed ?? randomSeed(),
+    resolvedSeed,
     Date.now(),
     roundsCount ?? DIL_DEFAULT_ROUNDS
   )
@@ -161,25 +156,101 @@ export function dilSpectatorViewJson(state: DilState): string {
 
 // ─── Bots ────────────────────────────────────────────────────────────────────
 
-/** Bots convertis en cours de manche : votent au hasard ; au reveal, le bot meneur continue. */
-export function applyDilBotAction(state: DilState): DilRoomActionResult {
+/** Mots qui trahissent l'option manifestement la plus « osée » d'un « Tu préfères ». */
+const DIL_OSE_RX =
+  /\b(ex|hontes?|torride|fantasmes?|strip|crush|jacuzzi|embrasser|ivre|dignité|nuit|coquins?)\b/gi
+
+function dilOseScore(text: string): number {
+  return text.match(DIL_OSE_RX)?.length ?? 0
+}
+
+/**
+ * Choix d'un bot pour la carte courante, piloté par son persona (retrouvé par
+ * le NOM — un déserteur converti sans persona joue « moyen » : audace 0.5,
+ * aucun trait).
+ * - « Je n'ai jamais » : P(A = « je l'ai fait ») = audace — Bernadette reste
+ *   sage toute la partie, Dédé assume tout.
+ * - « Tu préfères » : le suiveur colle à la majorité déjà posée, l'agressif
+ *   prend l'opposé du premier vote humain ; sinon l'audace penche vers
+ *   l'option la plus osée quand il y en a une, sinon 50/50.
+ * - « Qui de la table » : un HUMAIN visé 3 fois sur 4 (drôle d'être désigné,
+ *   pas de voir Gépéto voter Marcel) ; le suiveur copie la cible du premier
+ *   vote humain.
+ */
+export function dilBotChoice(
+  state: DilState,
+  bot: DilPlayer,
+  card: DilCard,
+  rand: () => number = Math.random
+): string | null {
+  const persona = personaForBotName(bot.name)
+  const audace = persona?.audace ?? 0.5
+  const trait = persona?.trait ?? null
+  // Votes humains déjà posés, dans l'ordre d'arrivée (ordre d'insertion des clés).
+  const humanChoices = Object.entries(state.votes)
+    .filter(([voterId]) => state.players.some((p) => p.id === voterId && !p.isBot))
+    .map(([, choice]) => choice)
+
+  if (card.kind === 'who') {
+    const targets = dilActive(state).filter((t) => t.id !== bot.id)
+    if (targets.length === 0) return null
+    if (trait === 'suiveur') {
+      const copied = humanChoices.find((c) => targets.some((t) => t.id === c))
+      if (copied) return copied
+    }
+    const humans = targets.filter((t) => !t.isBot)
+    const bots = targets.filter((t) => t.isBot)
+    let pool = humans
+    if (humans.length === 0) pool = bots
+    else if (bots.length > 0 && rand() >= 0.75) pool = bots
+    return pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))].id
+  }
+
+  if (card.kind === 'never') {
+    return rand() < audace ? 'A' : 'B'
+  }
+
+  // « Tu préfères » (A/B)
+  const abVotes = Object.values(state.votes).filter((c) => c === 'A' || c === 'B')
+  if (trait === 'suiveur' && abVotes.length > 0) {
+    const countA = abVotes.filter((c) => c === 'A').length
+    const countB = abVotes.length - countA
+    if (countA !== countB) return countA > countB ? 'A' : 'B'
+  }
+  if (trait === 'agressif') {
+    const first = humanChoices.find((c) => c === 'A' || c === 'B')
+    if (first) return first === 'A' ? 'B' : 'A'
+  }
+  const oseA = dilOseScore(card.a)
+  const oseB = dilOseScore(card.b)
+  if (oseA !== oseB) {
+    const osee = oseA > oseB ? 'A' : 'B'
+    const sage = osee === 'A' ? 'B' : 'A'
+    return rand() < audace ? osee : sage
+  }
+  return rand() < 0.5 ? 'A' : 'B'
+}
+
+/**
+ * Tick bot : fait voter UN SEUL bot en attente (les votes s'étalent dans la
+ * manche au tempo des personas) ; au reveal, le bot meneur continue. La fin
+ * anticipée « tout le monde a voté » arrive naturellement au dernier tick.
+ */
+export function applyDilBotAction(
+  state: DilState,
+  rand: () => number = Math.random
+): DilRoomActionResult {
   try {
     if (state.phase === 'vote') {
-      const pending = dilActive(state).filter((p) => p.isBot && !state.votes[p.id])
-      if (pending.length === 0) return { ok: false, error: 'NOT_BOT_TURN' }
+      const bot = dilActive(state).find((p) => p.isBot && !state.votes[p.id])
       const card = dilCurrentCard(state)
-      let next = state
-      for (const bot of pending) {
-        if (next.phase !== 'vote' || !card) break
-        let choice = Math.random() < 0.5 ? 'A' : 'B'
-        if (card.kind === 'who') {
-          const targets = dilActive(next).filter((t) => t.id !== bot.id)
-          if (targets.length === 0) continue
-          choice = targets[Math.floor(Math.random() * targets.length)].id
-        }
-        next = reduceDil(next, { type: 'VOTE', playerId: bot.id, choice, now: Date.now() })
+      if (!bot || !card) return { ok: false, error: 'NOT_BOT_TURN' }
+      const choice = dilBotChoice(state, bot, card, rand)
+      if (choice === null) return { ok: false, error: 'NOT_BOT_TURN' }
+      return {
+        ok: true,
+        state: reduceDil(state, { type: 'VOTE', playerId: bot.id, choice, now: Date.now() }),
       }
-      return { ok: true, state: next }
     }
     if (state.phase === 'reveal') {
       const actor = state.players.find((p) => p.id === currentDilActorId(state))

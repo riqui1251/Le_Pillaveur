@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { CrobardClientView } from '@/lib/crobard/engine'
 import { CROBARD_CHOOSING_MS, CROBARD_DRAWING_MS } from '@/lib/crobard/engine'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -101,10 +102,10 @@ export function CrobardOnline() {
     }
 
     let botTimer: ReturnType<typeof setTimeout> | undefined
-    const actorIsBot =
-      view.phase === 'roundEnd' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (actorIsBot) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), 2000)
+    const actor =
+      view.phase === 'roundEnd' ? view.players.find((p) => p.id === room.currentTurnUserId) : undefined
+    if (actor?.isBot) {
+      botTimer = setTimeout(() => send({ action: 'bot' }), botTickDelayMs(actor.name))
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -149,8 +150,8 @@ export function CrobardOnline() {
   const won = finished && view.winnerId === user.id
   const ranking = [...view.players].sort((a, b) => b.score - a.score)
 
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const nameOf = (id: string | null | undefined) => view.players.find((p) => p.id === id)?.name ?? '—'
 
   const sendAction = async (body: Record<string, unknown>) => {

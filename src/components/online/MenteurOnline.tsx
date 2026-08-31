@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { isLegalRaise, type MenteurBid, type MenteurClientView } from '@/lib/menteur/engine'
 import { CssDie } from '@/components/games/CssDie'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -124,7 +125,10 @@ export function MenteurOnline() {
     let botTimer: ReturnType<typeof setTimeout> | undefined
     const active = view.players.find((p) => p.id === room.currentTurnUserId)
     if (active?.isBot) {
-      botTimer = setTimeout(() => send('bot'), view.phase === 'reveal' ? 2600 : 1300)
+      botTimer = setTimeout(
+        () => send('bot'),
+        view.phase === 'reveal' ? 2600 : botTickDelayMs(active.name)
+      )
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -219,8 +223,8 @@ export function MenteurOnline() {
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return

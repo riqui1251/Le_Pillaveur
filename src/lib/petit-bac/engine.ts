@@ -306,6 +306,9 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
       if (state.phase !== 'reveal') throw new PbcEngineError('NOT_REVEAL')
       const voter = state.players.find((p) => p.id === action.playerId)
       if (!voter || voter.leftAt) throw new PbcEngineError('UNKNOWN_PLAYER')
+      // Un bot (déserteur converti) ne vote jamais : il ne compte ni au
+      // numérateur ni au dénominateur de la majorité (symétrie ci-dessous).
+      if (voter.isBot) throw new PbcEngineError('BOT_CANNOT_CONTEST')
       if (voter.id === action.targetId) throw new PbcEngineError('CANNOT_CONTEST_SELF')
       const target = state.players.find((p) => p.id === action.targetId)
       if (!target) throw new PbcEngineError('UNKNOWN_TARGET')
@@ -321,8 +324,11 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
       const voters = state.contests[key] ?? []
       if (voters.includes(voter.id)) throw new PbcEngineError('ALREADY_CONTESTED')
       const nextVoters = [...voters, voter.id]
-      // Majorité STRICTE des autres joueurs actifs (le propriétaire ne vote pas).
-      const others = pbcActive(state).filter((p) => p.id !== action.targetId).length
+      // Majorité STRICTE des autres joueurs actifs NON-bots (le propriétaire
+      // ne vote pas). Les bots — déserteurs convertis — ne contestent jamais :
+      // les compter au dénominateur rendrait la majorité inatteignable dès
+      // qu'ils remplacent la moitié des votants potentiels.
+      const others = pbcActive(state).filter((p) => !p.isBot && p.id !== action.targetId).length
       const threshold = Math.floor(others / 2) + 1
       if (nextVoters.length >= threshold) {
         const roundPoints = { ...(state.roundPoints ?? {}) }

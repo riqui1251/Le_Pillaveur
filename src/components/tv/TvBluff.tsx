@@ -4,6 +4,7 @@ import { Trophy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { BluffClientView } from '@/lib/bluff/engine'
 import { cn } from '@/lib/utils'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -30,8 +31,8 @@ export function TvBluff({ room, state }: { room: TvRoomDto; state: BluffClientVi
   const totalPhaseMs = state.phase === 'submit' ? 45_000 : 60_000
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const submittedCount = state.players.filter((p) => p.hasSubmitted).length
   const votedCount = state.players.filter((p) => p.hasVoted).length
 

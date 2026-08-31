@@ -4,6 +4,7 @@ import { useEffect, useState, type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
 import { Beer, Bird, FlaskConical, Hourglass, Medal, Moon, Shield, Skull, Sparkles, Sun, Target, Trophy, Wheat } from 'lucide-react'
 import type { TvRoomDto } from '@/lib/online-room'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { LGClientView, LGRole } from '@/lib/loup-garou/engine'
 import { WolfIcon } from '@/components/icons/GameIcons'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -68,8 +69,8 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
   const alive = state.players.filter((p) => p.alive)
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const roleName = (role: LGRole) => t(`roles.${role}.name`)
 
   // ── Fin de partie : révélation complète ──────────────────────────────────

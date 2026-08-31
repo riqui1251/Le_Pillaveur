@@ -11,6 +11,7 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { MC_CLUE_MAX_LEN, MC_CLUE_MS, MC_GUESS_MS, type MCClientView, type MCTeam } from '@/lib/mots-codes/engine'
+import { botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -100,16 +101,21 @@ export function MotsCodesOnline() {
     }
 
     let botTimer: ReturnType<typeof setTimeout> | undefined
-    const masterIsBot =
-      view.phase === 'clue' &&
-      view.players.find((p) => p.team === view.activeTeam && p.isSpymaster)?.isBot
-    const guessersAllBots =
-      view.phase === 'guess' &&
-      view.players
-        .filter((p) => p.team === view.activeTeam && !p.isSpymaster && !p.leftAt)
-        .every((p) => p.isBot)
+    const master =
+      view.phase === 'clue'
+        ? view.players.find((p) => p.team === view.activeTeam && p.isSpymaster)
+        : undefined
+    const activeGuessers =
+      view.phase === 'guess'
+        ? view.players.filter((p) => p.team === view.activeTeam && !p.isSpymaster && !p.leftAt)
+        : null
+    const masterIsBot = Boolean(master?.isBot)
+    const guessersAllBots = activeGuessers !== null && activeGuessers.every((p) => p.isBot)
     if (masterIsBot || guessersAllBots) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), 2000)
+      botTimer = setTimeout(
+        () => send({ action: 'bot' }),
+        botTickDelayMs(masterIsBot ? master?.name : activeGuessers?.[0]?.name)
+      )
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined

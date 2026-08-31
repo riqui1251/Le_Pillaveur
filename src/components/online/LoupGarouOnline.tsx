@@ -38,6 +38,7 @@ import { WolfIcon } from '@/components/icons/GameIcons'
 import { cn } from '@/lib/utils'
 import { lgTeamOf } from '@/lib/loup-garou/engine'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { playGameSound } from '@/lib/sound/game-sounds'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
@@ -131,7 +132,7 @@ function TargetGrid({
   selfId,
 }: {
   players: LGPlayerView[]
-  iconOf: (p: { id: string; isBot: boolean }) => string
+  iconOf: (p: { id: string; name: string; isBot: boolean }) => string
   onPick: (id: string) => void
   disabled: boolean
   chosenId?: string | null
@@ -498,8 +499,8 @@ export function LoupGarouOnline() {
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const roleName = (role: LGRole) => t(`roles.${role}.name`)
 
   const sendAction = async (body: Record<string, unknown>) => {
@@ -1243,7 +1244,7 @@ export function LoupGarouOnline() {
                         key={i}
                         className="rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-white/80"
                       >
-                        <span className="font-bold">🤖 {nameOf(sp.playerId)}</span>{' '}
+                        <span className="font-bold">{botEmojiFromName(nameOf(sp.playerId))} {nameOf(sp.playerId)}</span>{' '}
                         {t(`botSay.${sp.kind}`, { name: nameOf(sp.targetId) })}
                       </li>
                     ))}

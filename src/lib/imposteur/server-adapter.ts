@@ -13,6 +13,7 @@ import {
   type ImposteurState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
+import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getImposteurPairs } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
@@ -26,19 +27,6 @@ export interface ImposteurRoomMember {
   userId: string
   user: { displayName: string }
 }
-
-const IMPOSTEUR_BOT_NAMES = [
-  'Barnabé 🤖',
-  'Gépéto 🤖',
-  'Raoul 🤖',
-  'Suzette 🤖',
-  'Marcel 🤖',
-  'Gaston 🤖',
-  'Bernadette 🤖',
-  'Norbert 🤖',
-  'Ginette 🤖',
-  'Roger 🤖',
-]
 
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par
@@ -54,10 +42,11 @@ export function buildImposteurState(
 ): ImposteurState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
+  const botPersonas = pickBotPersonas(IMPOSTEUR_MAX_PLAYERS)
   const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
-      name: IMPOSTEUR_BOT_NAMES[botIndex % IMPOSTEUR_BOT_NAMES.length],
+      name: botDisplayName(botPersonas[botIndex % botPersonas.length]),
       isBot: true,
     })
     botIndex += 1

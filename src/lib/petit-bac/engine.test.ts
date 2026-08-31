@@ -246,6 +246,28 @@ describe('petit-bac — contestation', () => {
     state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW })
     expect(state.rejected).toContain('p1:0')
   })
+
+  it('2 humains + 2 bots : les bots sortent du dénominateur, une contestation suffit', () => {
+    let state = inReveal(4)
+    // p3 et p4 désertent puis sont convertis en bots (leftAt remis à null).
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 12_000 })
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p4', at: NOW + 12_000 })
+    state = reducePbc(state, { type: 'REPLACE_LEFT', now: NOW + 300_000, graceMs: 180_000 })
+    expect(state.players.filter((p) => p.isBot)).toHaveLength(2)
+    // Seul autre humain actif hors p1 : p2 → seuil 1, sa contestation invalide seule.
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 301_000 })
+    expect(state.rejected).toContain('p1:0')
+    expect(state.roundPoints?.p1[0]).toBe(0)
+  })
+
+  it('un bot ne vote pas de contestation (symétrie du dénominateur)', () => {
+    let state = inReveal(3)
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 12_000 })
+    state = reducePbc(state, { type: 'REPLACE_LEFT', now: NOW + 300_000, graceMs: 180_000 })
+    expect(() =>
+      reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 301_000 })
+    ).toThrow('BOT_CANNOT_CONTEST')
+  })
 })
 
 describe('petit-bac — continue et fin', () => {

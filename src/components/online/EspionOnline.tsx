@@ -13,6 +13,7 @@ import { PlayingCard } from '@/components/ui/PlayingCard'
 import { cn } from '@/lib/utils'
 import type { EspionClientView } from '@/lib/espion/engine'
 import { getEspionLocations } from '@/lib/espion/data'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -104,12 +105,17 @@ export function EspionOnline() {
     }
 
     let botTimer: ReturnType<typeof setTimeout> | undefined
-    const botsPendingSupport =
-      view.phase === 'discussion' && view.activeAccusation && view.players.some((p) => p.isBot)
+    const supportBot =
+      view.phase === 'discussion' && view.activeAccusation
+        ? view.players.find((p) => p.isBot)
+        : undefined
     const actorIsBot =
       view.phase === 'reveal' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (botsPendingSupport || actorIsBot) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), view.phase === 'reveal' ? 2500 : 3000)
+    if (supportBot || actorIsBot) {
+      botTimer = setTimeout(
+        () => send({ action: 'bot' }),
+        view.phase === 'reveal' ? 2500 : botTickDelayMs(supportBot?.name)
+      )
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -158,8 +164,8 @@ export function EspionOnline() {
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return

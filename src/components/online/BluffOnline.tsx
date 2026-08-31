@@ -11,6 +11,7 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { BLUFF_FAKE_MAX_LEN, type BluffClientView } from '@/lib/bluff/engine'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -98,12 +99,19 @@ export function BluffOnline() {
     }
 
     let botTimer: ReturnType<typeof setTimeout> | undefined
-    const botsPendingSubmit = view.phase === 'submit' && view.players.some((p) => p.isBot && !p.hasSubmitted)
-    const botsPendingVote = view.phase === 'vote' && view.players.some((p) => p.isBot && !p.hasVoted)
+    const pendingBot =
+      view.phase === 'submit'
+        ? view.players.find((p) => p.isBot && !p.hasSubmitted)
+        : view.phase === 'vote'
+          ? view.players.find((p) => p.isBot && !p.hasVoted)
+          : undefined
     const actorIsBot =
       view.phase === 'reveal' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (botsPendingSubmit || botsPendingVote || actorIsBot) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), view.phase === 'reveal' ? 2500 : 1500)
+    if (pendingBot || actorIsBot) {
+      botTimer = setTimeout(
+        () => send({ action: 'bot' }),
+        view.phase === 'reveal' ? 2500 : botTickDelayMs(pendingBot?.name)
+      )
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -150,8 +158,8 @@ export function BluffOnline() {
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return
@@ -346,12 +354,15 @@ export function BluffOnline() {
                   )}
                   {c.votes.length > 0 && (
                     <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
-                      {c.votes.map((id) => (
-                        <PlayerAvatarGlyph
-                          key={id}
-                          value={iconOf({ id, isBot: view.players.find((p) => p.id === id)?.isBot ?? false })}
-                        />
-                      ))}
+                      {c.votes.map((id) => {
+                        const voter = view.players.find((p) => p.id === id)
+                        return (
+                          <PlayerAvatarGlyph
+                            key={id}
+                            value={iconOf({ id, name: voter?.name ?? '', isBot: voter?.isBot ?? false })}
+                          />
+                        )
+                      })}
                     </span>
                   )}
                 </div>

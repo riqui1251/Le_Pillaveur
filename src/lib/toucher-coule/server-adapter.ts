@@ -9,7 +9,6 @@ import {
   toTCClientView,
   toTCSpectatorView,
   TCEngineError,
-  TC_BOT_NAMES,
   TC_MODES,
   type TCClientView,
   type TCInitialPlayer,
@@ -17,6 +16,7 @@ import {
   type TCState,
   type TeamId,
 } from './engine'
+import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { rngFromState } from '@/lib/petit-buveur/rng'
 
 /**
@@ -63,11 +63,12 @@ export function buildTCPlayers(
   }
 
   let botIndex = 0
+  const botPersonas = pickBotPersonas(Math.max(0, capacity - players.length))
   for (const team of ['A', 'B'] as TeamId[]) {
     while (counts[team] < perTeam) {
       players.push({
         id: `bot-${botIndex + 1}`,
-        name: TC_BOT_NAMES[botIndex % TC_BOT_NAMES.length],
+        name: botDisplayName(botPersonas[botIndex % botPersonas.length]),
         team,
         isBot: true,
       })

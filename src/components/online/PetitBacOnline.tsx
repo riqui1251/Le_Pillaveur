@@ -10,10 +10,12 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PBC_WRITE_MS, type PbcClientView } from '@/lib/petit-bac/engine'
+import { botEmojiFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { XpGainBanner } from './XpGainBanner'
 
 /**
  * PETIT BAC en ligne (serveur-autoritaire). Chacun tape ses cinq réponses en
@@ -157,8 +159,10 @@ export function PetitBacOnline() {
   const iVotedRematch = rematchVotes.includes(user.id)
   const humanCount = view.players.filter((p) => !p.isBot).length
   const nameOf = (id: string) => view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot
+      ? botEmojiFromName(p.name)
+      : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return
@@ -219,6 +223,14 @@ export function PetitBacOnline() {
             </div>
           ))}
         </div>
+
+        {/* L'XP était déjà créditée côté serveur — elle est enfin AFFICHÉE.
+            Même règle que le serveur : victoire = meilleur score (ex æquo inclus). */}
+        <XpGainBanner
+          won={best > 0 && (view.players.find((p) => p.id === user.id)?.total ?? 0) === best}
+          playerIds={view.players.map((p) => p.id)}
+          className="w-full max-w-sm"
+        />
 
         <div className="flex w-full max-w-sm flex-col gap-2">
           <Button
@@ -377,7 +389,7 @@ export function PetitBacOnline() {
                       className="flex items-center gap-2 rounded-xl border border-[#D8CCAE] bg-cream px-3 py-1.5"
                     >
                       <span aria-hidden className="shrink-0">
-                        <PlayerAvatarGlyph value={iconOf({ id: cell.playerId, isBot: cellPlayer?.isBot ?? false })} />
+                        <PlayerAvatarGlyph value={iconOf({ id: cell.playerId, name: cellPlayer?.name ?? '', isBot: cellPlayer?.isBot ?? false })} />
                       </span>
                       <span className="w-16 shrink-0 truncate text-[11px] font-bold text-[#8A7A55]">
                         {nameOf(cell.playerId)}

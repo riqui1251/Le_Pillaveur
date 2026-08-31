@@ -9,11 +9,13 @@ import {
   SF_DEFAULT_ROUNDS,
   SF_MIN_PLAYERS,
   SF_MAX_PLAYERS,
+  type SFPlayer,
   type SFState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { sfContentFor } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
+import { botDisplayName, personaForBotName, pickBotPersonas } from '@/lib/online/bot-personas'
 
 /**
  * Adaptateur serveur de Sans Filtre : sérialisation, mapping HTTP → actions
@@ -26,23 +28,12 @@ export interface SFRoomMember {
   user: { displayName: string }
 }
 
-const SF_BOT_NAMES = [
-  'Barnabé 🤖',
-  'Gépéto 🤖',
-  'Raoul 🤖',
-  'Suzette 🤖',
-  'Marcel 🤖',
-  'Gaston 🤖',
-  'Bernadette 🤖',
-  'Norbert 🤖',
-  'Ginette 🤖',
-  'Roger 🤖',
-]
-
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par
  * l'hôte (filet jusqu'au minimum moteur pour le rematch après départs).
- * Le contenu est filtré selon l'ambiance de l'HÔTE (Soft = cartes sages).
+ * Les bots sont des personas partagés (bot-personas) : nom + emoji stockés
+ * dans `name`, le trait est retrouvé par le nom. Le contenu est filtré selon
+ * l'ambiance de l'HÔTE (Soft = cartes sages).
  */
 export function buildSFState(
   members: SFRoomMember[],
@@ -52,11 +43,12 @@ export function buildSFState(
   roundsCount?: number
 ): SFState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
+  const botPersonas = pickBotPersonas(SF_MAX_PLAYERS)
   let botIndex = 0
   const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
-      name: SF_BOT_NAMES[botIndex % SF_BOT_NAMES.length],
+      name: botDisplayName(botPersonas[botIndex % botPersonas.length]),
       isBot: true,
     })
     botIndex += 1
@@ -207,38 +199,79 @@ export function sfSpectatorViewJson(state: SFState): string {
 // ─── Bots ────────────────────────────────────────────────────────────────────
 
 /**
- * Les bots de DÉPART abattent leur carte dès l'entrée de manche (moteur) ;
- * ce tick ne concerne que les conversions en cours de manche : abattre pour
- * les bots en retard, couronner si le juge est devenu bot, mener le
- * « continuer » du reveal. Assumé faible — les bots n'existent qu'en
- * remplacement d'un joueur parti.
+ * Choix de carte léger par trait : le farceur tire 3 cartes au hasard de sa
+ * main et garde la plus COURTE (la punchline sèche) ; les autres traits (et
+ * les déserteurs convertis, sans persona) abattent au hasard.
  */
-export function applySFBotAction(state: SFState): SFRoomActionResult {
+function sfBotCardChoice(state: SFState, bot: SFPlayer, rand: () => number): number {
+  const persona = personaForBotName(bot.name)
+  if (persona?.trait === 'farceur' && bot.hand.length > 1) {
+    const pool = [...bot.hand]
+    const picks: number[] = []
+    for (let i = 0; i < 3 && pool.length > 0; i += 1) {
+      picks.push(pool.splice(Math.floor(rand() * pool.length), 1)[0])
+    }
+    return picks.reduce((best, card) =>
+      (state.whites[card] ?? '').length < (state.whites[best] ?? '').length ? card : best
+    )
+  }
+  return bot.hand[Math.floor(rand() * bot.hand.length)]
+}
+
+/**
+ * Couronnement d'un juge-bot : pondéré 3:1 en faveur des soumissions
+ * HUMAINES (poids 3 par humain, 1 par bot) — le joueur solo gagne plus
+ * souvent que le hasard uniforme, sans être assuré de tout rafler.
+ */
+function sfWeightedCrownPick(
+  state: SFState,
+  rand: () => number
+): { playerId: string; card: number } {
+  const entries = state.submissions.map((s) => ({
+    submission: s,
+    weight: state.players.find((p) => p.id === s.playerId)?.isBot ? 1 : 3,
+  }))
+  const total = entries.reduce((sum, e) => sum + e.weight, 0)
+  let r = rand() * total
+  for (const entry of entries) {
+    r -= entry.weight
+    if (r <= 0) return entry.submission
+  }
+  return entries[entries.length - 1].submission
+}
+
+/**
+ * Tick bot (action `bot` envoyée par le client « arbitre ») : fait soumettre
+ * UN SEUL bot en attente par tick (le premier de la liste) — jamais tous
+ * d'un coup, pour que les pastilles « a joué » s'allument au rythme des
+ * personas —, couronne quand le juge est un bot (pondéré 3:1 pro-humains),
+ * mène le « continuer » du reveal. `rand` : stub de test, Math.random sinon.
+ */
+export function applySFBotAction(
+  state: SFState,
+  rand: () => number = Math.random
+): SFRoomActionResult {
   try {
     if (state.phase === 'submit') {
-      const pendingBots = sfActive(state).filter(
+      const bot = sfActive(state).find(
         (p) =>
           p.isBot &&
           p.id !== state.judgeId &&
           p.hand.length > 0 &&
           !state.submissions.some((s) => s.playerId === p.id)
       )
-      if (pendingBots.length === 0) return { ok: false, error: 'NOT_BOT_TURN' }
-      let next = state
-      for (const bot of pendingBots) {
-        if (next.phase !== 'submit') break
-        const hand = next.players.find((p) => p.id === bot.id)?.hand ?? []
-        if (hand.length === 0) continue
-        const card = hand[Math.floor(Math.random() * hand.length)]
-        next = reduceSF(next, { type: 'PLAY_CARD', playerId: bot.id, card, now: Date.now() })
+      if (!bot) return { ok: false, error: 'NOT_BOT_TURN' }
+      const card = sfBotCardChoice(state, bot, rand)
+      return {
+        ok: true,
+        state: reduceSF(state, { type: 'PLAY_CARD', playerId: bot.id, card, now: Date.now() }),
       }
-      return { ok: true, state: next }
     }
 
     if (state.phase === 'judging') {
       const judge = state.players.find((p) => p.id === state.judgeId)
       if (!judge?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
-      const pick = state.submissions[Math.floor(Math.random() * state.submissions.length)]
+      const pick = sfWeightedCrownPick(state, rand)
       return {
         ok: true,
         state: reduceSF(state, {

@@ -9,6 +9,7 @@ import {
   QUIZ_MAX_PLAYERS,
   type QuizState,
 } from './engine'
+import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getQuizQuestions } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
@@ -23,19 +24,6 @@ export interface QuizRoomMember {
   user: { displayName: string }
 }
 
-const QUIZ_BOT_NAMES = [
-  'Barnabé 🤖',
-  'Gépéto 🤖',
-  'Raoul 🤖',
-  'Suzette 🤖',
-  'Marcel 🤖',
-  'Gaston 🤖',
-  'Bernadette 🤖',
-  'Norbert 🤖',
-  'Ginette 🤖',
-  'Roger 🤖',
-]
-
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par
  * l'hôte. Filet : complète jusqu'au minimum du moteur (rematch résilient).
@@ -49,10 +37,11 @@ export function buildQuizState(
 ): QuizState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
+  const botPersonas = pickBotPersonas(QUIZ_MAX_PLAYERS)
   const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
-      name: QUIZ_BOT_NAMES[botIndex % QUIZ_BOT_NAMES.length],
+      name: botDisplayName(botPersonas[botIndex % botPersonas.length]),
       isBot: true,
     })
     botIndex += 1

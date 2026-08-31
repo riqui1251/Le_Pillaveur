@@ -10,10 +10,12 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { DIL_VOTE_MS, type DilClientView } from '@/lib/dilemmes/engine'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { XpGainBanner } from './XpGainBanner'
 
 /**
  * DILEMMES en ligne (serveur-autoritaire). Votes SECRETS pendant la manche
@@ -80,12 +82,23 @@ export function DilemmesOnline() {
     }
 
     let botTimer: ReturnType<typeof setTimeout> | undefined
-    const botsPendingVote =
-      view.phase === 'vote' && view.players.some((p) => p.isBot && !p.hasVoted && !p.leftAt)
-    const actorIsBot =
-      view.phase === 'reveal' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (botsPendingVote || actorIsBot) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), view.phase === 'reveal' ? 3500 : 1500)
+    const pendingBot =
+      view.phase === 'vote'
+        ? view.players.find((p) => p.isBot && !p.hasVoted && !p.leftAt)
+        : undefined
+    const revealActor =
+      view.phase === 'reveal'
+        ? view.players.find((p) => p.id === room.currentTurnUserId)
+        : undefined
+    if (pendingBot) {
+      // Tempo de « réflexion » du persona : les votes bots s'étalent dans la manche.
+      botTimer = setTimeout(() => send({ action: 'bot' }), botTickDelayMs(pendingBot.name))
+    } else if (revealActor?.isBot) {
+      // Le bot meneur enchaîne à son tempo, mais laisse le temps de lire la révélation.
+      botTimer = setTimeout(
+        () => send({ action: 'bot' }),
+        Math.max(3500, botTickDelayMs(revealActor.name))
+      )
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -124,8 +137,10 @@ export function DilemmesOnline() {
   const humanCount = view.players.filter((p) => !p.isBot).length
   const card = view.card
   const nameOf = (id: string) => view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot
+      ? botEmojiFromName(p.name)
+      : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return
@@ -171,6 +186,9 @@ export function DilemmesOnline() {
           <h2 className="font-display text-3xl font-bold text-gold">{t('finished.title')}</h2>
           <p className="max-w-xs text-sm text-white/60">{t('finished.subtitle')}</p>
         </motion.div>
+
+        {/* XP de participation (jeu sans gagnant) — won:false → +20. */}
+        <XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
 
         <div className="flex w-full max-w-sm flex-col gap-2">
           <Button

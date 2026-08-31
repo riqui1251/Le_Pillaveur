@@ -29,15 +29,6 @@ export const TC_MODES: Record<TCMode, TCModeConfig> = {
   '4v4': { playersPerTeam: 4, shipSizesPerPlayer: [4, 3], gridSize: 14 },
 }
 
-export const TC_BOT_NAMES = [
-  'Amiral Bot',
-  'Corsaire Bot',
-  'Matelot Bot',
-  'Capitaine Bot',
-  'Moussaillon Bot',
-  'Pirate Bot',
-] as const
-
 export type TCPlayer = {
   id: string
   name: string

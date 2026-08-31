@@ -11,6 +11,7 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
+import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -101,7 +102,7 @@ export function ToucherCouleOnline() {
     let botTimer: ReturnType<typeof setTimeout> | undefined
     if (view.phase === 'battle') {
       const active = view.players.find((p) => p.id === view.turnOrder[view.currentTurnIndex])
-      if (active?.isBot) botTimer = setTimeout(() => send('bot'), 1100)
+      if (active?.isBot) botTimer = setTimeout(() => send('bot'), botTickDelayMs(active.name))
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -209,9 +210,9 @@ export function ToucherCouleOnline() {
   const humanCount = view.players.filter((p) => !p.isBot).length
 
   const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '—'
-  /** Icône du joueur : 🤖 pour les bots, icône personnalisée du compte pour les humains. */
-  const iconOf = (p: { id: string; isBot: boolean }) =>
-    p.isBot ? '🤖' : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? null
+  /** Icône du joueur : emoji du persona pour les bots, icône personnalisée du compte pour les humains. */
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
+    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? null
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return

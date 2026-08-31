@@ -13,6 +13,7 @@ import {
   type MenteurRules,
   type MenteurState,
 } from './engine'
+import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
 /**
@@ -25,20 +26,6 @@ export interface MenteurRoomMember {
   userId: string
   user: { displayName: string }
 }
-
-/** Noms des bots de complément (clin d'œil apéro). */
-const MENTEUR_BOT_NAMES = [
-  'Barnabé 🤖',
-  'Gépéto 🤖',
-  'Raoul 🤖',
-  'Suzette 🤖',
-  'Marcel 🤖',
-  'Gaston 🤖',
-  'Bernadette 🤖',
-  'Norbert 🤖',
-  'Ginette 🤖',
-  'Roger 🤖',
-]
 
 /**
  * Construit l'état initial : les membres + le nombre de bots CHOISI par
@@ -53,10 +40,11 @@ export function buildMenteurState(
 ): MenteurState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
+  const botPersonas = pickBotPersonas(MENTEUR_MAX_PLAYERS)
   const addBot = () => {
     players.push({
       id: `bot-${botIndex + 1}`,
-      name: MENTEUR_BOT_NAMES[botIndex % MENTEUR_BOT_NAMES.length],
+      name: botDisplayName(botPersonas[botIndex % botPersonas.length]),
       isBot: true,
     })
     botIndex += 1
