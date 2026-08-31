@@ -1,13 +1,13 @@
 # Règles du Président en ligne — combos, coupe au 2 et Trou
 
 Le **Président** (ou Trou du c…, selon les cours de récré) sur Le Pillaveur :
-52 cartes, des combos de plus en plus forts, et une hiérarchie impitoyable.
+54 cartes (52 + 2 jokers), des combos de plus en plus forts, et une hiérarchie impitoyable.
 Gratuit, de 4 à 8 joueurs, chacun sur son téléphone — les mains restent
 vraiment secrètes.
 
 ## Le principe
 
-1. Les 52 cartes sont distribuées. L'ordre des cartes est celui du
+1. Les 54 cartes (2 jokers compris) sont distribuées. L'ordre des cartes est celui du
    Président : **3 le plus faible… As, puis 2 le plus fort**.
 2. Le premier joueur pose un **combo** : une carte seule, une paire, un
    brelan ou un carré (même rang).
@@ -27,6 +27,10 @@ vraiment secrètes.
   celui qui détient la 4e peut la claquer **même hors de son tour** : le pli
   est fermé et il remène. Pareil avec les paires — un double 5 posé, l'autre
   double 5 le fait fermer.
+- **2 jokers caméléons** : un joker remplace n'importe quelle carte. Il
+  complète un combo (un 7 + un joker = paire de 7), et joué seul il copie la
+  carte du dessus — ce qui déclenche la règle « ou rien ». Il peut aussi
+  servir à fermer un carré.
 - **Les positions survivent à la revanche** : au « Rejouer », le Président et
   le Trou de la partie précédente gardent leur rôle (échange de cartes dès la
   première manche). Si l'un d'eux a quitté la table, le joueur le plus proche

@@ -5,14 +5,15 @@ import { personaForBotName } from '@/lib/online/bot-personas'
 /**
  * PRÉSIDENT — moteur PUR, serveur-autoritaire.
  *
- * Le jeu de cartes des cours de récré : 52 cartes distribuées, on pose des
- * combos (simple, paire, brelan, carré) strictement plus forts, le 2 coupe
- * le pli. Premier à vider sa main = Président, dernier = Trou. Entre les
- * manches, l'échange est AUTOMATIQUE : le Trou donne ses 2 meilleures
- * cartes, le Président rend ses 2 pires.
+ * Le jeu de cartes des cours de récré : 54 cartes distribuées (52 + 2
+ * jokers), on pose des combos (simple, paire, brelan, carré) plus forts ou
+ * ÉGAUX (l'égal verrouille — « ou rien »), le 2 coupe le pli, le carré
+ * complété ferme. Premier à vider sa main = Président, dernier = Trou.
+ * Entre les manches, l'échange est AUTOMATIQUE : le Trou donne ses 2
+ * meilleures cartes, le Président rend ses 2 pires.
  *
- * Cartes : entier 0..51 — rang = floor(c/4) dans l'ordre Président
- * (0='3' … 11='A', 12='2'), couleur = c%4.
+ * Cartes : entier 0..53 — rang = floor(c/4) dans l'ordre Président
+ * (0='3' … 11='A', 12='2', 13=joker), couleur = c%4.
  */
 
 export const PRE_MIN_PLAYERS = 4
@@ -26,13 +27,35 @@ export const PRE_MANCHE_OPTIONS = [1, 3, 5] as const
 export const PRE_DEFAULT_MANCHES = 3
 
 /** Rangs dans l'ordre Président : le 3 est le plus faible, le 2 le plus fort. */
-export const PRE_RANKS = ['3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R', 'A', '2'] as const
+export const PRE_RANKS = ['3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R', 'A', '2', '🃏'] as const
 export const PRE_SUITS = ['♠', '♥', '♦', '♣'] as const
 /** Index de rang du 2 (la coupe). */
 export const PRE_TWO = 12
+/**
+ * JOKERS (cartes 52 et 53) : caméléons — ils REMPLACENT n'importe quelle
+ * carte. Dans un combo, ils prennent le rang des cartes naturelles ; seuls,
+ * ils COPIENT la pose précédente (égalisation → « ou rien ») et mènent au
+ * rang le plus faible sur pli libre. Rang de tri 13 : les meilleurs du
+ * paquet (l'échange du Trou les donne en priorité).
+ */
+export const PRE_JOKER_RANK = 13
+export const PRE_DECK_SIZE = 54
+
+export function preIsJoker(card: number): boolean {
+  return card >= 52
+}
 
 export function preRankOf(card: number): number {
   return Math.floor(card / 4)
+}
+
+/**
+ * Rang EFFECTIF d'une pose : celui mémorisé (jokers seuls qui copient),
+ * sinon celui des cartes — les naturelles d'abord (tri croissant, les
+ * jokers sortent en dernier).
+ */
+export function preLastPlayRank(lastPlay: PreLastPlay): number {
+  return lastPlay.rank ?? preRankOf(lastPlay.cards[0])
 }
 
 export function preSuitOf(card: number): number {
@@ -54,6 +77,8 @@ export type PrePhase = 'countdown' | 'playing' | 'interlude' | 'finished'
 export type PreLastPlay = {
   playerId: string
   cards: number[]
+  /** Rang EFFECTIF quand il diffère des cartes (jokers seuls) — voir preLastPlayRank. */
+  rank?: number
 }
 
 export type PreExchange = {
@@ -169,17 +194,24 @@ export function preCanPlay(state: PreState, playerId: string, cards: number[]): 
   if (!player) return 'UNKNOWN_PLAYER'
   if (cards.length < 1 || cards.length > 4) return 'INVALID_COMBO'
   if (new Set(cards).size !== cards.length) return 'INVALID_COMBO'
-  if (!cards.every((c) => Number.isInteger(c) && c >= 0 && c < 52)) return 'INVALID_COMBO'
+  if (!cards.every((c) => Number.isInteger(c) && c >= 0 && c < PRE_DECK_SIZE)) {
+    return 'INVALID_COMBO'
+  }
   if (!cards.every((c) => player.hand.includes(c))) return 'NOT_YOUR_CARDS'
-  const rank = preRankOf(cards[0])
-  if (!cards.every((c) => preRankOf(c) === rank)) return 'MIXED_RANKS'
+  // Les jokers remplacent n'importe quelle carte : le rang du combo vient
+  // des cartes NATURELLES ; jokers seuls = caméléon (copie la pose du
+  // dessus, ou mène au rang le plus faible).
+  const naturals = cards.filter((c) => !preIsJoker(c))
+  const rank = naturals.length > 0 ? preRankOf(naturals[0]) : null
+  if (rank !== null && !naturals.every((c) => preRankOf(c) === rank)) return 'MIXED_RANKS'
   if (state.lastPlay) {
     if (cards.length !== state.lastPlay.cards.length) return 'WRONG_SIZE'
+    if (rank === null) return null // jokers seuls : copient la pose — toujours légal
     const locked = preOuRien(state)
     if (locked !== null) {
-      // « Dame ou rien » : seul le rang verrouillé passe.
+      // « Ou rien » : seul le rang verrouillé passe (jokers en complément OK).
       if (rank !== locked) return 'MUST_MATCH_RANK'
-    } else if (rank < preRankOf(state.lastPlay.cards[0])) {
+    } else if (rank < preLastPlayRank(state.lastPlay)) {
       // L'ÉGAL est permis (il verrouille le pli pour le suivant).
       return 'TOO_LOW'
     }
@@ -194,7 +226,7 @@ function dealManche(
   now: number
 ): PreState {
   const rng = rngFromState(state.rngState)
-  const deck = rng.shuffle(Array.from({ length: 52 }, (_, i) => i))
+  const deck = rng.shuffle(Array.from({ length: PRE_DECK_SIZE }, (_, i) => i))
   const active = state.players.filter((p) => !p.leftAt)
   const hands = new Map<string, number[]>(state.players.map((p) => [p.id, []]))
   deck.forEach((card, i) => {
@@ -387,7 +419,8 @@ function advanceOuRien(state: PreState, ownerId: string, now: number): PreState 
     const cid = nextInRace(state, cursor)
     if (!cid || cid === ownerId) break
     const cand = playerById(state, cid)!
-    const matching = cand.hand.filter((c) => preRankOf(c) === rank).length
+    // Un joker remplace n'importe quelle carte : il permet d'égaler.
+    const matching = cand.hand.filter((c) => preRankOf(c) === rank || preIsJoker(c)).length
     if (matching >= size) {
       return nextTurn({ ...state, passedIds: [...state.passedIds, ...skipped] }, cid, now)
     }
@@ -403,17 +436,24 @@ function advanceOuRien(state: PreState, ownerId: string, now: number): PreState 
 
 /** Applique une pose valide (cartes déjà vérifiées). */
 function applyPlay(state: PreState, playerId: string, cards: number[], now: number): PreState {
-  const rank = preRankOf(cards[0])
+  // Rang EFFECTIF : celui des naturelles ; jokers seuls = caméléon (copie la
+  // pose précédente, mène au rang le plus faible sur pli libre).
+  const naturals = cards.filter((c) => !preIsJoker(c))
+  const rank =
+    naturals.length > 0
+      ? preRankOf(naturals[0])
+      : state.lastPlay
+        ? preLastPlayRank(state.lastPlay)
+        : 0
   const isCut = rank === PRE_TWO
   // Pose ÉGALE à la précédente ? (verrouille le pli — « ou rien »)
-  const equalized =
-    state.lastPlay !== null && preRankOf(state.lastPlay.cards[0]) === rank
+  const equalized = state.lastPlay !== null && preLastPlayRank(state.lastPlay) === rank
   // Run de cartes de même rang au sommet du pli (vieux états : reconstruit
   // depuis lastPlay, faute de mieux).
   const baseRun =
     state.trickRun ??
     (state.lastPlay
-      ? { rank: preRankOf(state.lastPlay.cards[0]), count: state.lastPlay.cards.length }
+      ? { rank: preLastPlayRank(state.lastPlay), count: state.lastPlay.cards.length }
       : null)
   const run =
     baseRun && baseRun.rank === rank
@@ -425,7 +465,7 @@ function applyPlay(state: PreState, playerId: string, cards: number[], now: numb
     players: state.players.map((p) =>
       p.id === playerId ? { ...p, hand: p.hand.filter((c) => !cards.includes(c)) } : p
     ),
-    lastPlay: { playerId, cards: preSortHand(cards) },
+    lastPlay: { playerId, cards: preSortHand(cards), rank },
     trickRun: run,
     passedIds: [],
     version: state.version + 1,
@@ -505,7 +545,9 @@ export function reducePre(state: PreState, action: PreAction): PreState {
       if (cards.length !== needed.count) throw new PreEngineError('CANNOT_CLOSE')
       if (new Set(cards).size !== cards.length) throw new PreEngineError('INVALID_COMBO')
       if (!cards.every((c) => player.hand.includes(c))) throw new PreEngineError('NOT_YOUR_CARDS')
-      if (!cards.every((c) => preRankOf(c) === needed.rank)) throw new PreEngineError('CANNOT_CLOSE')
+      if (!cards.every((c) => preRankOf(c) === needed.rank || preIsJoker(c))) {
+        throw new PreEngineError('CANNOT_CLOSE')
+      }
 
       let next: PreState = {
         ...state,
@@ -644,21 +686,38 @@ export function prePickBotPlay(
     const r = preRankOf(c)
     byRank.set(r, [...(byRank.get(r) ?? []), c])
   }
-  const ranks = [...byRank.keys()].sort((a, b) => a - b)
-  if (ranks.length === 0) return null
+  // Les jokers se gèrent à part : le bot les garde pour compléter le rang
+  // verrouillé, vider sa main ou finir la partie — jamais gaspillés tôt.
+  const jokers = byRank.get(PRE_JOKER_RANK) ?? []
+  const ranks = [...byRank.keys()].filter((r) => r !== PRE_JOKER_RANK).sort((a, b) => a - b)
 
-  // « Ou rien » actif : on égale le rang verrouillé, ou on passe (tour sauté).
+  // Plus que des jokers en main : on les pose (caméléons, toujours légaux).
+  if (ranks.length === 0) {
+    if (jokers.length === 0) return null
+    if (!state.lastPlay) return jokers
+    return jokers.length >= state.lastPlay.cards.length
+      ? jokers.slice(0, state.lastPlay.cards.length)
+      : null
+  }
+
+  // « Ou rien » actif : on égale le rang verrouillé (jokers en complément),
+  // ou on passe (tour sauté).
   const locked = preOuRien(state)
   if (locked !== null && state.lastPlay) {
-    const g = byRank.get(locked)
+    const g = byRank.get(locked) ?? []
     const size = state.lastPlay.cards.length
-    if (g && g.length >= size) return g.slice(0, size)
+    if (g.length >= size) return g.slice(0, size)
+    if (g.length + jokers.length >= size) return [...g, ...jokers].slice(0, size)
     return null
   }
 
   if (!state.lastPlay) {
-    // Sortie sèche : un seul rang en main → tout poser.
-    if (ranks.length === 1) return byRank.get(ranks[0])!
+    // Sortie sèche : un seul rang naturel en main → tout poser (jokers avec,
+    // s'ils tiennent dans le combo).
+    if (ranks.length === 1) {
+      const group = byRank.get(ranks[0])!
+      return [...group, ...jokers].slice(0, 4)
+    }
     // Jamais ouvrir avec la coupe tant qu'il reste autre chose.
     const openRanks = ranks.filter((r) => r !== PRE_TWO)
     // Farceur : parfois un simple médian plutôt que le groupe le plus bas.
@@ -670,7 +729,7 @@ export function prePickBotPlay(
   }
 
   const size = state.lastPlay.cards.length
-  const target = preRankOf(state.lastPlay.cards[0])
+  const target = preLastPlayRank(state.lastPlay)
 
   // ÉGALER (verrouille le pli — « ou rien ») : tentant pour les personnalités
   // joueuses, seulement avec un groupe de taille exacte (on ne casse rien).
@@ -682,7 +741,11 @@ export function prePickBotPlay(
   }
 
   const playable = ranks.filter((r) => r > target && byRank.get(r)!.length >= size)
-  if (playable.length === 0) return null
+  if (playable.length === 0) {
+    // Fin de main : les jokers caméléons se lâchent plutôt que de passer.
+    if (jokers.length >= size && player.hand.length <= size + 2) return jokers.slice(0, size)
+    return null
+  }
 
   // Sortie sèche : un candidat qui vide la main se joue sans réfléchir.
   const emptying = playable.find(
@@ -715,7 +778,13 @@ export function prePickBotPlay(
     const eager = trait === 'agressif' ? 0.8 : 0.35
     if (player.hand.length <= size + 2 || rand() < eager) pickRank = twos[0]
   }
-  if (pickRank === undefined) return null
+  if (pickRank === undefined) {
+    // Fin de main : les jokers caméléons se lâchent plutôt que de passer.
+    if (jokers.length >= size && player.hand.length <= size + 2) {
+      return jokers.slice(0, size)
+    }
+    return null
+  }
   return byRank.get(pickRank)!.slice(0, size)
 }
 

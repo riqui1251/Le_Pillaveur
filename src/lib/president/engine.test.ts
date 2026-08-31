@@ -42,15 +42,16 @@ function rigged(hands: Record<string, number[]>, turnId: string, overrides: Part
 const c = (rank: number, suit = 0) => rank * 4 + suit
 
 describe('président — distribution', () => {
-  it('distribue les 52 cartes aux joueurs actifs', () => {
+  it('distribue les 54 cartes (52 + 2 jokers) aux joueurs actifs', () => {
     const state = inPlay(4)
     expect(state.phase).toBe('playing')
     const total = state.players.reduce((sum, p) => sum + p.hand.length, 0)
-    expect(total).toBe(52)
-    expect(state.players.every((p) => p.hand.length === 13)).toBe(true)
+    expect(total).toBe(54)
+    // 54 / 4 : deux joueurs reçoivent 14 cartes, deux en reçoivent 13.
+    expect(state.players.every((p) => p.hand.length === 13 || p.hand.length === 14)).toBe(true)
     expect(state.currentTurnId).not.toBeNull()
     const all = state.players.flatMap((p) => p.hand).sort((a, b) => a - b)
-    expect(all).toEqual(Array.from({ length: 52 }, (_, i) => i))
+    expect(all).toEqual(Array.from({ length: 54 }, (_, i) => i))
   })
 
   it('refuse moins de 4 joueurs', () => {
@@ -282,7 +283,7 @@ describe('président — fin de manche et rôles', () => {
     const given = next.lastExchange!.fromTrou.map(preRankOf)
     const returned = next.lastExchange!.fromPresident.map(preRankOf)
     expect(Math.min(...given)).toBeGreaterThanOrEqual(Math.max(...returned) - 12)
-    expect(next.players.reduce((s, p) => s + p.hand.length, 0)).toBe(52)
+    expect(next.players.reduce((s, p) => s + p.hand.length, 0)).toBe(54)
   })
 })
 
@@ -407,6 +408,84 @@ describe('président — timeout et bots', () => {
   })
 })
 
+describe('président — jokers', () => {
+  const JOKER_A = 52
+  const JOKER_B = 53
+
+  it('un joker complète un combo au rang des cartes naturelles', () => {
+    const state = rigged(
+      { p1: [c(7), JOKER_A, c(3)], p2: [c(10)], p3: [c(11)], p4: [c(4)] },
+      'p1',
+      { lastPlay: { playerId: 'p4', cards: [c(5), c(5, 1)] }, trickRun: { rank: 5, count: 2 } }
+    )
+    expect(preCanPlay(state, 'p1', [c(7), JOKER_A])).toBeNull()
+    const next = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(7), JOKER_A], now: NOW })
+    // Le rang effectif est celui du 7 — le joker suit.
+    expect(next.lastPlay?.rank).toBe(7)
+  })
+
+  it('un joker seul COPIE la pose précédente (égalisation → « ou rien »)', () => {
+    let state = rigged(
+      { p1: [c(9), c(3)], p2: [JOKER_A, c(4)], p3: [c(6), c(7)], p4: [c(9, 1), c(5)] },
+      'p1'
+    )
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(9)], now: NOW })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [JOKER_A], now: NOW })
+    // Le joker a copié la dame : verrou « D ou rien », p3 sans dame saute.
+    expect(state.lastPlay?.rank).toBe(9)
+    expect(state.currentTurnId).toBe('p4')
+    expect(state.passedIds).toContain('p3')
+    expect(preCanPlay(state, 'p4', [c(9, 1)])).toBeNull()
+  })
+
+  it('pendant un verrou, un joker permet d’égaler (pas de saut automatique)', () => {
+    let state = rigged(
+      { p1: [c(9), c(3)], p2: [c(9, 1), c(4)], p3: [JOKER_B, c(7)], p4: [c(5), c(6)] },
+      'p1'
+    )
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(9)], now: NOW })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(9, 1)], now: NOW })
+    // p3 n'a pas de dame naturelle mais un joker : il N'EST PAS sauté.
+    expect(state.currentTurnId).toBe('p3')
+    expect(preCanPlay(state, 'p3', [JOKER_B])).toBeNull()
+    expect(preCanPlay(state, 'p3', [c(7)])).toBe('MUST_MATCH_RANK')
+  })
+
+  it('un joker peut fermer un carré en complément', () => {
+    const state = rigged(
+      { p1: [c(3)], p2: [c(10)], p3: [c(5, 2), JOKER_A, c(9)], p4: [c(11)] },
+      'p2',
+      {
+        lastPlay: { playerId: 'p1', cards: [c(5), c(5, 1)] },
+        trickRun: { rank: 5, count: 2 },
+      }
+    )
+    const closed = reducePre(state, {
+      type: 'CLOSE',
+      playerId: 'p3',
+      cards: [c(5, 2), JOKER_A],
+      now: NOW,
+    })
+    expect(closed.lastPlay).toBeNull()
+    expect(closed.currentTurnId).toBe('p3')
+  })
+
+  it('bot : plus que des jokers en main → il les pose', () => {
+    const lead = rigged(
+      { p1: [JOKER_A, JOKER_B], p2: [c(10)], p3: [c(11)], p4: [c(4)] },
+      'p1'
+    )
+    expect(prePickBotPlay(lead, 'p1', () => 0.99)).toEqual([JOKER_A, JOKER_B])
+    const follow = rigged(
+      { p1: [JOKER_A, c(3)], p2: [c(10)], p3: [c(11)], p4: [c(4)] },
+      'p1',
+      { lastPlay: { playerId: 'p4', cards: [c(11, 1)] }, trickRun: { rank: 11, count: 1 } }
+    )
+    // Fin de main (2 cartes) : le joker caméléon se lâche plutôt que passer.
+    expect(prePickBotPlay(follow, 'p1', () => 0.99)).toEqual([JOKER_A])
+  })
+})
+
 describe('président — rematch et positions héritées', () => {
   it('le classement précédent désigne Président et Trou ; les absents sont remplacés par le plus proche', () => {
     // 'x' (parti entre les deux parties) était Président : p2, le plus
@@ -441,7 +520,7 @@ describe('président — vues anti-triche', () => {
       },
     }
     const viewP2 = toPreClientView(state, 'p2')
-    expect(viewP2.myHand.length).toBe(13)
+    expect([13, 14]).toContain(viewP2.myHand.length)
     expect(viewP2.players.every((p) => typeof p.handCount === 'number')).toBe(true)
     expect((viewP2.players[0] as unknown as { hand?: unknown }).hand).toBeUndefined()
     expect(viewP2.lastExchange?.fromTrou).toEqual([])

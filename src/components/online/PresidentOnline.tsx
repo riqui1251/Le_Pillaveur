@@ -10,6 +10,7 @@ import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
+  preIsJoker,
   preRankOf,
   preSuitOf,
   PRE_RANKS,
@@ -39,10 +40,16 @@ function parseView(json: string | null | undefined): PreClientView | null {
   }
 }
 
+/** Libellé court d'une carte (échange, bouton fermer) — joker inclus. */
+function cardLabel(card: number): string {
+  return preIsJoker(card) ? '🃏' : `${PRE_RANKS[preRankOf(card)]}${PRE_SUITS[preSuitOf(card)]}`
+}
+
 function CardFace({ card, raised, onClick }: { card: number; raised?: boolean; onClick?: () => void }) {
+  const joker = preIsJoker(card)
   const rank = PRE_RANKS[preRankOf(card)]
   const suit = PRE_SUITS[preSuitOf(card)]
-  const red = suit === '♥' || suit === '♦'
+  const red = !joker && (suit === '♥' || suit === '♦')
   return (
     <button
       type="button"
@@ -50,16 +57,26 @@ function CardFace({ card, raised, onClick }: { card: number; raised?: boolean; o
       disabled={!onClick}
       className={cn(
         'flex h-16 w-11 shrink-0 flex-col items-center justify-center rounded-lg border border-[#D8CCAE] bg-cream shadow-[0_6px_12px_-6px_rgba(0,0,0,0.7)] transition-transform',
+        joker && 'border-violet-400/70 bg-gradient-to-b from-cream to-violet-100',
         raised && '-translate-y-3 ring-2 ring-gold',
         onClick && 'active:scale-95'
       )}
     >
-      <span className={cn('font-display text-base font-black leading-none', red ? 'text-suit-red' : 'text-[#24201A]')}>
-        {rank}
-      </span>
-      <span className={cn('text-lg leading-none', red ? 'text-suit-red' : 'text-[#24201A]')} aria-hidden>
-        {suit}
-      </span>
+      {joker ? (
+        // Joker caméléon : il remplace n'importe quelle carte.
+        <span className="text-2xl leading-none" aria-label="Joker">
+          🃏
+        </span>
+      ) : (
+        <>
+          <span className={cn('font-display text-base font-black leading-none', red ? 'text-suit-red' : 'text-[#24201A]')}>
+            {rank}
+          </span>
+          <span className={cn('text-lg leading-none', red ? 'text-suit-red' : 'text-[#24201A]')} aria-hidden>
+            {suit}
+          </span>
+        </>
+      )}
     </button>
   )
 }
@@ -208,8 +225,16 @@ export function PresidentOnline() {
     if (!myTurn || busy) return
     setSelected((prev) => {
       if (prev.includes(card)) return prev.filter((c) => c !== card)
-      // Sélection homogène : un rang différent redémarre la sélection.
-      if (prev.length > 0 && preRankOf(prev[0]) !== preRankOf(card)) return [card]
+      // Sélection homogène sur les NATURELLES : un rang différent redémarre la
+      // sélection — les jokers, caméléons, se combinent avec tout.
+      const prevNaturals = prev.filter((c) => !preIsJoker(c))
+      if (
+        !preIsJoker(card) &&
+        prevNaturals.length > 0 &&
+        preRankOf(prevNaturals[0]) !== preRankOf(card)
+      ) {
+        return [card, ...prev.filter((c) => preIsJoker(c))]
+      }
       return [...prev, card]
     })
   }
@@ -220,26 +245,38 @@ export function PresidentOnline() {
       ? view.trickRun.rank
       : null
 
+  // Rang de la sélection : celui des naturelles — les jokers suivent (et
+  // seuls, ils copient la pose du dessus : toujours légaux à taille égale).
+  const selectedNaturals = selected.filter((c) => !preIsJoker(c))
+  const selectedRank = selectedNaturals.length > 0 ? preRankOf(selectedNaturals[0]) : null
+  const lastPlayRank = view.lastPlay
+    ? (view.lastPlay.rank ?? preRankOf(view.lastPlay.cards[0]))
+    : null
+
   const canPlaySelection =
     myTurn &&
     selected.length > 0 &&
     (!view.lastPlay ||
       (selected.length === view.lastPlay.cards.length &&
-        (lockedRank !== null
-          ? preRankOf(selected[0]) === lockedRank
-          : // L'ÉGAL est permis : il verrouille le pli pour le suivant.
-            preRankOf(selected[0]) >= preRankOf(view.lastPlay.cards[0]))))
+        (selectedRank === null ||
+          (lockedRank !== null
+            ? selectedRank === lockedRank
+            : // L'ÉGAL est permis : il verrouille le pli pour le suivant.
+              selectedRank >= (lastPlayRank ?? 0)))))
 
-  // Fermeture de carré : je détiens TOUTES les cartes manquantes du rang au
-  // sommet du pli (3 simples à la suite → la 4e ; une paire → l'autre paire).
+  // Fermeture de carré : je détiens les cartes manquantes du rang au sommet
+  // du pli (3 simples à la suite → la 4e ; une paire → l'autre paire) — les
+  // jokers complètent.
   const closeNeeded =
     view.phase === 'playing' && view.lastPlay && view.trickRun && view.trickRun.count >= 2
       ? 4 - view.trickRun.count
       : 0
-  const myCloseCards =
+  const myJokers = view.myHand.filter((c) => preIsJoker(c))
+  const myRankCards =
     closeNeeded > 0 && view.trickRun
       ? view.myHand.filter((c) => preRankOf(c) === view.trickRun!.rank)
       : []
+  const myCloseCards = [...myRankCards, ...myJokers].slice(0, closeNeeded)
   const canClose = !iAmOut && closeNeeded > 0 && myCloseCards.length === closeNeeded
 
   // ── Fin de partie ────────────────────────────────────────────────────────
@@ -429,8 +466,8 @@ export function PresidentOnline() {
       {iSeeExchange && exchange && (
         <div className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {user.id === exchange.trouId
-            ? t('exchangeAsTrou', { cards: exchange.fromPresident.map((card) => `${PRE_RANKS[preRankOf(card)]}${PRE_SUITS[preSuitOf(card)]}`).join(' ') })
-            : t('exchangeAsPresident', { cards: exchange.fromTrou.map((card) => `${PRE_RANKS[preRankOf(card)]}${PRE_SUITS[preSuitOf(card)]}`).join(' ') })}
+            ? t('exchangeAsTrou', { cards: exchange.fromPresident.map(cardLabel).join(' ') })
+            : t('exchangeAsPresident', { cards: exchange.fromTrou.map(cardLabel).join(' ') })}
         </div>
       )}
 
@@ -498,9 +535,7 @@ export function PresidentOnline() {
             className="w-full rounded-2xl bg-gradient-to-r from-amber-600 to-red-600 py-5 text-base font-black shadow-lg shadow-amber-500/25"
           >
             ⚡ {t('closeTrick', {
-              cards: myCloseCards
-                .map((card) => `${PRE_RANKS[preRankOf(card)]}${PRE_SUITS[preSuitOf(card)]}`)
-                .join(' '),
+              cards: myCloseCards.map(cardLabel).join(' '),
             })}
           </Button>
         </motion.div>
