@@ -82,6 +82,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [showTv, setShowTv] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  // Anti double-tap du bouton fusionné « Lancer avec les bots » (l'appel
+  // setReady préalable ne passe pas par `loading`).
+  const [soloLaunching, setSoloLaunching] = useState(false)
   const tOnline = useTranslations('onlineLobby')
   // Choix ouvert/privÃ© proposÃ© au clic Â« Ouvrir une table Â» (modifiable
   // ensuite dans les rÃ©glages du lobby).
@@ -421,6 +424,31 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     )
   }
 
+  // Sièges bots visibles : la Table Ronde montre aussi les bots réglés par
+  // l'hôte (settings.botsCount) — sinon le funnel « Essayer avec des bots »
+  // débouche sur une table déserte où seul l'hôte est assis.
+  const botSeatCount = game?.botsFillable ? Math.max(0, room.settings.botsCount ?? 0) : 0
+  const totalSeatCount = room.members.length + botSeatCount
+
+  // Hôte seul avec assez de bots pour atteindre le minimum : UN SEUL bouton
+  // qui enchaîne « prêt » puis « lancer » (le serveur exige tous prêts au
+  // moment du launch — l'appel setReady préalable suffit).
+  const canLaunchSoloWithBots =
+    isHost &&
+    room.members.length === 1 &&
+    botSeatCount > 0 &&
+    1 + botSeatCount >= (game?.minPlayers ?? 2)
+  const launchSoloWithBots = async () => {
+    if (soloLaunching || loading) return
+    setSoloLaunching(true)
+    try {
+      if (!selfMember?.isReady) await setReady(true)
+      await launchGame()
+    } finally {
+      setSoloLaunching(false)
+    }
+  }
+
   // Dans le lobby en attente
   return (
     <LobbyShell>
@@ -456,7 +484,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               disabled={m.isSelf}
               onClick={() => setSeatSel((v) => (v === m.userId ? null : m.userId))}
               className="absolute flex w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
-              style={seatPos(i, room.members.length)}
+              style={seatPos(i, totalSeatCount)}
             >
               <span className="relative">
                 <OnlinePlayerIcon
@@ -485,6 +513,25 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             </button>
           )
         })}
+        {/* Sièges bots : avatars discrets après les vrais joueurs, pour que
+            la table paraisse pleine avant le lancement. */}
+        {Array.from({ length: botSeatCount }).map((_, b) => (
+          <span
+            key={`bot-${b}`}
+            className="absolute flex w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 opacity-70"
+            style={seatPos(room.members.length + b, totalSeatCount)}
+          >
+            <span
+              aria-hidden
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/10 text-base grayscale shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]"
+            >
+              🤖
+            </span>
+            <span className="max-w-16 truncate text-[10px] leading-tight text-white/45">
+              {tOnline('seat.bot')}
+            </span>
+          </span>
+        ))}
         <button
           type="button"
           onClick={copyCode}
@@ -1576,43 +1623,58 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       {/* PrÃªt + Lancer : fixes en zone pouce, safe-area comprise. */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-lg items-center gap-3">
-          <Button
-            onClick={() => setReady(!selfMember?.isReady)}
-            className={cn(
-              'h-12 rounded-2xl border text-sm font-semibold transition-all',
-              isHost ? 'flex-[0.8]' : 'flex-1',
-              selfMember?.isReady
-                ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20'
-                : 'border-white/15 bg-white/5 text-white hover:bg-white/10'
-            )}
-          >
-            {selfMember?.isReady ? tOnline('readyButton.on') : tOnline('readyButton.off')}
-          </Button>
-
-          {isHost && (
+          {canLaunchSoloWithBots ? (
+            /* Hôte seul + bots suffisants : un seul geste au lieu de deux
+               (« prêt » puis « lancer » sont enchaînés par le handler). */
             <Button
-              onClick={() => launchGame()}
-              disabled={!room.canLaunch || loading}
+              onClick={() => void launchSoloWithBots()}
+              disabled={soloLaunching || loading}
               className="h-12 flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Play className="mr-1.5 h-4 w-4" />
-              {(() => {
-                // Minimum PAR JEU (affichage â€” la vÃ©ritÃ© serveur est dans le
-                // registre game-adapters, synchronisÃ©e par test avec GAMES).
-                // Les bots ajoutÃ©s comptent dans le total.
-                const meta = GAMES.find((g) => g.id === gameId)
-                const bots = meta?.botsFillable ? Math.max(0, room.settings.botsCount ?? 0) : 0
-                const minPlayers = Math.max(1, (meta?.minPlayers ?? 2) - bots)
-                return room.canLaunch
-                  ? tOnline('launch.cta')
-                  : room.members.length < minPlayers
-                    ? tOnline('launch.minPlayers', { count: minPlayers })
-                    : tOnline('readyCount', {
-                        ready: room.members.filter((m) => m.isReady).length,
-                        total: room.members.length,
-                      })
-              })()}
+              {tOnline('launch.withBots')}
             </Button>
+          ) : (
+            <>
+              <Button
+                onClick={() => setReady(!selfMember?.isReady)}
+                className={cn(
+                  'h-12 rounded-2xl border text-sm font-semibold transition-all',
+                  isHost ? 'flex-[0.8]' : 'flex-1',
+                  selfMember?.isReady
+                    ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20'
+                    : 'border-white/15 bg-white/5 text-white hover:bg-white/10'
+                )}
+              >
+                {selfMember?.isReady ? tOnline('readyButton.on') : tOnline('readyButton.off')}
+              </Button>
+
+              {isHost && (
+                <Button
+                  onClick={() => launchGame()}
+                  disabled={!room.canLaunch || loading}
+                  className="h-12 flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Play className="mr-1.5 h-4 w-4" />
+                  {(() => {
+                    // Minimum PAR JEU (affichage — la vérité serveur est dans le
+                    // registre game-adapters, synchronisée par test avec GAMES).
+                    // Les bots ajoutés comptent dans le total.
+                    const meta = GAMES.find((g) => g.id === gameId)
+                    const bots = meta?.botsFillable ? Math.max(0, room.settings.botsCount ?? 0) : 0
+                    const minPlayers = Math.max(1, (meta?.minPlayers ?? 2) - bots)
+                    return room.canLaunch
+                      ? tOnline('launch.cta')
+                      : room.members.length < minPlayers
+                        ? tOnline('launch.minPlayers', { count: minPlayers })
+                        : tOnline('readyCount', {
+                            ready: room.members.filter((m) => m.isReady).length,
+                            total: room.members.length,
+                          })
+                  })()}
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>

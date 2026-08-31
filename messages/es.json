@@ -97,7 +97,9 @@
       "default": {
         "subtitle": "Juegos de beber con amigos"
       }
-    }
+    },
+    "levelBadge": "Nv. {level}",
+    "guestBadge": "Invitado — guardar"
   },
   "common": {
     "back": "Atrás",
@@ -164,7 +166,8 @@
         "club": "Creatividad"
       },
       "emptyTitle": "No se encontraron juegos",
-      "emptyHint": "Pruebe con otra palabra clave."
+      "emptyHint": "Pruebe con otra palabra clave.",
+      "botsBadge": "Se puede jugar con bots"
     },
     "jeuxOnline": {
       "title": "Juegos en línea",
@@ -198,7 +201,9 @@
     "soloHint": "Invita a un amigo para la XP completa — las partidas solo contra bots pagan hasta el nivel 5.",
     "soloCapped": "Las partidas solo contra bots ya no dan XP — ¡invita a un amigo para que cuente!",
     "streak": "¡Racha de {days} días!",
-    "nextUnlock": "Próximo desbloqueo: nivel {level} — {name}"
+    "nextUnlock": "Próximo desbloqueo: nivel {level} — {name}",
+    "guestKeep": "Cuenta de invitado: se elimina tras 48 h de inactividad.",
+    "guestKeepCta": "Guarda tu apodo y tu XP"
   },
   "onlineCollection": {
     "title": "Colección de {name}",
@@ -314,7 +319,8 @@
     "seat": {
       "you": "Tú",
       "ready": "Listo",
-      "notReady": "Aún no está listo"
+      "notReady": "Aún no está listo",
+      "bot": "Bot"
     },
     "settings": {
       "title": "Ajustes",
@@ -327,7 +333,8 @@
     "launch": {
       "cta": "Empezar la partida",
       "minPlayers": "{count, plural, one {Mín. # jugador} other {Mín. # jugadores}}",
-      "waitingForHost": "Esperando a que {name} empiece la partida…"
+      "waitingForHost": "Esperando a que {name} empiece la partida…",
+      "withBots": "Lanzar con bots"
     },
     "list": {
       "empty": "Ninguna sala abierta — elige un juego abajo para crear una.",
@@ -542,7 +549,9 @@
       "submit": "Guardar mi cuenta",
       "orDivider": "o",
       "success": "¡Cuenta guardada! Ahora es permanente — apodo, XP y cosméticos conservados.",
-      "genericError": "No se pudo guardar la cuenta. Inténtalo de nuevo en un momento."
+      "genericError": "No se pudo guardar la cuenta. Inténtalo de nuevo en un momento.",
+      "capital": "Nivel {level} · {xp} XP · {count, plural, one {# cosmético desbloqueado} other {# cosméticos desbloqueados}}",
+      "capitalRule": "Todo se eliminará tras 48 h de inactividad. Añade un email y una contraseña, o vincula tu cuenta a Google, para conservarlo todo."
     }
   },
   "legal": {
@@ -3582,7 +3591,9 @@
       "legend": "Columnas: victorias · derrotas · partidas · % de victorias",
       "showFull": "Ver la clasificación completa",
       "showLess": "Mostrar menos",
-      "loadingMore": "Cargando…"
+      "loadingMore": "Cargando…",
+      "periodAll": "General",
+      "periodWeek": "Esta semana"
     }
   },
   "feedback": {
@@ -4144,7 +4155,7 @@
     "cta": "Pruébalo con bots",
     "go": "¡Vamos!",
     "hint": "Sin cuenta: un apodo, una mesa privada, los bots completan — tus amigos pueden unirse en plena partida.",
-    "guestHint": "Apodo temporal, eliminado automáticamente tras la noche.",
+    "guestHint": "Apodo de invitado — se elimina tras 48 h de inactividad. Podrás guardarlo después.",
     "loginCta": "Iniciar sesión o crear una cuenta",
     "pseudoPlaceholder": "Tu apodo para esta noche",
     "error": "No se puede empezar ahora. Inténtalo de nuevo."
@@ -4154,7 +4165,7 @@
     "subtitle": "Has escaneado el código de una mesa. Elige un apodo para jugar ya, o inicia sesión con tu cuenta.",
     "pseudoPlaceholder": "Tu apodo para esta noche",
     "guestCta": "Jugar como invitado",
-    "guestHint": "Sin cuenta: apodo temporal, se elimina automáticamente después de la fiesta.",
+    "guestHint": "Apodo de invitado — se elimina tras 48 h de inactividad. Podrás guardarlo después.",
     "or": "o",
     "loginCta": "Iniciar sesión o crear una cuenta",
     "dismiss": "No gracias, solo estoy mirando",

@@ -1,6 +1,7 @@
 "use client"
 
 import { Link, useRouter } from "@/i18n/navigation"
+import { useTranslations } from "next-intl"
 import { LocalizedGameMeta } from "@/lib/games-i18n"
 import { PlayingCard, suitIsRed } from "@/components/ui/PlayingCard"
 import { cn } from "@/lib/utils"
@@ -28,6 +29,7 @@ function playersLabel(min?: number, max?: number): string | null {
  * les 13 jeux tiennent sur un seul écran.
  */
 export function GameCard({ game, icon }: GameCardProps) {
+  const t = useTranslations("hub.jeux")
   const router = useRouter()
   const { user } = useAuth()
   const { selectedIds } = useSelectedPlayers()
@@ -59,6 +61,18 @@ export function GameCard({ game, icon }: GameCardProps) {
           "group-active:scale-[0.98]"
         )}
       >
+        {/* Badge 🤖 « jouable avec des bots » — coin haut-droit, libre sur la
+            mini-carte (le rang+enseigne occupe haut-gauche et bas-droite). */}
+        {game.botsFillable && (
+          <span
+            role="img"
+            aria-label={t("botsBadge")}
+            title={t("botsBadge")}
+            className="absolute right-1 top-0.5 select-none text-[10px] opacity-60 transition-opacity group-hover:opacity-90"
+          >
+            🤖
+          </span>
+        )}
         <article className="flex h-full min-h-[5.5rem] flex-col items-center px-1.5 pb-1.5 pt-3 text-center sm:min-h-[6rem]">
           <div className={cn(red ? "text-suit-red" : "text-[#24201A]")}>{icon}</div>
           <h3 className="mt-1 line-clamp-2 font-display text-[11px] font-bold leading-tight text-[#24201A] sm:text-xs">

@@ -64,7 +64,7 @@ export async function LandingPage({ locale }: { locale: string }) {
             {t('hero.ctaPlay')}
           </Link>
           <Link
-            href="/jeux"
+            href={{ pathname: '/jeux', query: { solo: '1' } }}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-violet-400/40 bg-violet-500/15 px-8 text-base font-semibold text-violet-100 transition-colors hover:bg-violet-500/25"
           >
             <Bot aria-hidden className="h-4 w-4" />
@@ -120,7 +120,7 @@ export async function LandingPage({ locale }: { locale: string }) {
             {t('solo.body')}
           </p>
           <Link
-            href="/jeux"
+            href={{ pathname: '/jeux', query: { solo: '1' } }}
             className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl border border-violet-400/40 bg-violet-500/20 px-6 text-sm font-bold text-violet-100 transition-colors hover:bg-violet-500/30"
           >
             {t('solo.cta')}

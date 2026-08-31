@@ -97,7 +97,9 @@
       "default": {
         "subtitle": "Drinking games with friends"
       }
-    }
+    },
+    "levelBadge": "Lv. {level}",
+    "guestBadge": "Guest — save it"
   },
   "common": {
     "back": "Back",
@@ -164,7 +166,8 @@
         "club": "Creative"
       },
       "emptyTitle": "No games found",
-      "emptyHint": "Try another keyword."
+      "emptyHint": "Try another keyword.",
+      "botsBadge": "Playable with bots"
     },
     "jeuxOnline": {
       "title": "Online games",
@@ -203,7 +206,9 @@
     "soloHint": "Invite a friend for full XP — bot-only games pay out until level 5.",
     "soloCapped": "Bot-only games no longer earn XP — invite a friend to make it count!",
     "streak": "{days}-day streak!",
-    "nextUnlock": "Next unlock: level {level} — {name}"
+    "nextUnlock": "Next unlock: level {level} — {name}",
+    "guestKeep": "Guest account: deleted after 48 h of inactivity.",
+    "guestKeepCta": "Save your nickname and XP"
   },
   "onlineCollection": {
     "title": "{name}'s collection",
@@ -319,7 +324,8 @@
     "seat": {
       "you": "You",
       "ready": "Ready",
-      "notReady": "Not ready yet"
+      "notReady": "Not ready yet",
+      "bot": "Bot"
     },
     "settings": {
       "title": "Settings",
@@ -332,7 +338,8 @@
     "launch": {
       "cta": "Start the game",
       "minPlayers": "{count, plural, one {Min. # player} other {Min. # players}}",
-      "waitingForHost": "Waiting for {name} to start the game…"
+      "waitingForHost": "Waiting for {name} to start the game…",
+      "withBots": "Start with bots"
     },
     "list": {
       "empty": "No open lobby — pick a game below to create one.",
@@ -547,7 +554,9 @@
       "submit": "Save my account",
       "orDivider": "or",
       "success": "Account saved! It is now permanent — nickname, XP and cosmetics kept.",
-      "genericError": "Could not save the account. Try again in a moment."
+      "genericError": "Could not save the account. Try again in a moment.",
+      "capital": "Level {level} · {xp} XP · {count, plural, one {# cosmetic unlocked} other {# cosmetics unlocked}}",
+      "capitalRule": "Everything will be deleted after 48 h of inactivity. Add an email and password, or link your account to Google, to keep it all."
     }
   },
   "legal": {
@@ -3587,7 +3596,9 @@
       "legend": "Columns: wins · losses · games · win rate",
       "showFull": "View full leaderboard",
       "showLess": "Show less",
-      "loadingMore": "Loading…"
+      "loadingMore": "Loading…",
+      "periodAll": "All-time",
+      "periodWeek": "This week"
     }
   },
   "feedback": {
@@ -4149,7 +4160,7 @@
     "cta": "Try it with bots",
     "go": "Let's go!",
     "hint": "No account needed: a nickname, a private table, bots fill the seats — friends can join mid-game.",
-    "guestHint": "Temporary nickname, automatically deleted after the night.",
+    "guestHint": "Guest nickname — deleted after 48 h of inactivity. You can save it afterwards.",
     "loginCta": "Sign in or create an account",
     "pseudoPlaceholder": "Your nickname for tonight",
     "error": "Can't start right now. Try again."
@@ -4159,7 +4170,7 @@
     "subtitle": "You scanned a table code. Pick a name to play right away, or sign in to your account.",
     "pseudoPlaceholder": "Your name for tonight",
     "guestCta": "Play as guest",
-    "guestHint": "No account: temporary name, automatically removed after the party.",
+    "guestHint": "Guest nickname — deleted after 48 h of inactivity. You can save it afterwards.",
     "or": "or",
     "loginCta": "Sign in or create an account",
     "dismiss": "No thanks, just browsing",

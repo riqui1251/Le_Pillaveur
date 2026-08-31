@@ -35,7 +35,7 @@ function GamesCardGrid({ games }: { games: LocalizedGameMeta[] }) {
   )
 }
 
-export function GamesGrid() {
+export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const t = useTranslations('hub.jeux')
   const tCommon = useTranslations('common')
   const games = useLocalizedGames()
@@ -49,14 +49,18 @@ export function GamesGrid() {
   // que ce sont les premières portes d'entrée SEO. Leur page propose ensuite
   // « Essayer avec des bots » ou la connexion.
   const visitor = !user
+  // Funnel « Jouer seul avec les bots » (?solo=1) : on ne montre que les jeux
+  // effectivement jouables avec des bots. Sans objet en mode local (les bots
+  // sont un concept online) — le flag y est ignoré.
+  const soloBots = solo && (visitor || isOnline)
   const visible = useMemo(
     () =>
-      games.filter(
-        (g) =>
-          !g.hidden &&
-          (visitor ? true : isOnline ? g.onlineReady && (!isSoft || g.softModeReady) : !g.onlineOnly)
-      ),
-    [games, visitor, isOnline, isSoft]
+      games.filter((g) => {
+        if (g.hidden) return false
+        if (soloBots) return Boolean(g.botsFillable) && g.onlineReady && (!isSoft || g.softModeReady)
+        return visitor ? true : isOnline ? g.onlineReady && (!isSoft || g.softModeReady) : !g.onlineOnly
+      }),
+    [games, visitor, isOnline, isSoft, soloBots]
   )
 
   const filtered = useMemo(() => {

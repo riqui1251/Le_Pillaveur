@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion } from 'framer-motion'
-import { ChevronsUp, Flame, Star, Users } from 'lucide-react'
+import { ChevronsUp, Flame, ShieldAlert, Star, Users } from 'lucide-react'
+import { Link } from '@/i18n/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import {
   SOLO_BOTS_LEVEL_CAP,
   XP_LOSS,
@@ -60,6 +62,7 @@ export function XpGainBanner({
   const tSeries = useTranslations('onlineCollection.seriesNames')
   const tFrames = useTranslations('players.frames')
   const tEffects = useTranslations('players.effects')
+  const { user } = useAuth()
   const [info, setInfo] = useState<ProgressionInfo | null>(null)
 
   const counted = playerIds.filter((id) => !FILLER_BOT_RE.test(id)).length >= 2
@@ -92,6 +95,24 @@ export function XpGainBanner({
   if (info === null) return null
   const { xp } = info
 
+  // Invité : rappel de la purge (48 h d'inactivité) juste sous la carte d'XP —
+  // c'est le moment où le joueur voit ce qu'il perdrait (pseudo, XP), donc le
+  // meilleur pour l'inciter à sauvegarder son compte depuis la page Compte.
+  const guestCard = user?.isGuest ? (
+    <Link
+      href="/compte"
+      className="mt-2 block rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2.5 transition-colors hover:border-amber-400/50 hover:bg-amber-500/15"
+    >
+      <span className="flex items-center justify-center gap-2 text-[11px] leading-snug text-amber-100/85">
+        <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-amber-300" />
+        {t('guestKeep')}
+      </span>
+      <span className="mt-1 block text-center text-[11px] font-bold text-amber-200 underline underline-offset-2">
+        {t('guestKeepCta')}
+      </span>
+    </Link>
+  ) : null
+
   // Solo contre bots au plafond : plus d'XP — un rappel honnête plutôt que
   // le silence (et la raison d'inviter un pote).
   const soloCapped = !counted && levelForXp(xp) >= SOLO_BOTS_LEVEL_CAP
@@ -109,6 +130,7 @@ export function XpGainBanner({
             <span className="text-xs text-white/60">{t('soloCapped')}</span>
           </div>
         </div>
+        {guestCard}
       </motion.div>
     )
   }
@@ -195,6 +217,7 @@ export function XpGainBanner({
           <p className="mt-1 text-center text-[10px] text-white/45">{t('soloHint')}</p>
         )}
       </div>
+      {guestCard}
     </motion.div>
   )
 }

@@ -97,7 +97,9 @@
       "default": {
         "subtitle": "Jeux à boire entre amis"
       }
-    }
+    },
+    "levelBadge": "Nv. {level}",
+    "guestBadge": "Invité — sauvegarder"
   },
   "common": {
     "back": "Retour",
@@ -164,7 +166,8 @@
         "club": "Créa"
       },
       "emptyTitle": "Aucun jeu trouvé",
-      "emptyHint": "Essayez un autre mot-clé."
+      "emptyHint": "Essayez un autre mot-clé.",
+      "botsBadge": "Jouable avec des bots"
     },
     "jeuxOnline": {
       "title": "Jeux en ligne",
@@ -203,7 +206,9 @@
     "soloHint": "Invite un pote pour l'XP complète — les parties contre les bots seuls paient jusqu'au niveau 5.",
     "soloCapped": "Les parties contre les bots seuls ne rapportent plus d'XP — invite un pote pour que ça compte !",
     "streak": "Série de {days} jours !",
-    "nextUnlock": "Prochain déblocage : niveau {level} — {name}"
+    "nextUnlock": "Prochain déblocage : niveau {level} — {name}",
+    "guestKeep": "Compte invité : supprimé après 48 h d’inactivité.",
+    "guestKeepCta": "Sauvegarde ton pseudo et ton XP"
   },
   "onlineCollection": {
     "title": "Collection de {name}",
@@ -319,7 +324,8 @@
     "seat": {
       "you": "Toi",
       "ready": "Prêt",
-      "notReady": "Pas encore prêt"
+      "notReady": "Pas encore prêt",
+      "bot": "Bot"
     },
     "settings": {
       "title": "Réglages",
@@ -332,7 +338,8 @@
     "launch": {
       "cta": "Lancer la partie",
       "minPlayers": "{count, plural, one {Min. # joueur} other {Min. # joueurs}}",
-      "waitingForHost": "En attente que {name} lance la partie…"
+      "waitingForHost": "En attente que {name} lance la partie…",
+      "withBots": "Lancer avec les bots"
     },
     "list": {
       "empty": "Aucun lobby ouvert — choisis un jeu ci-dessous pour en créer un.",
@@ -547,7 +554,9 @@
       "submit": "Sauvegarder mon compte",
       "orDivider": "ou",
       "success": "Compte sauvegardé ! Il est maintenant permanent — pseudo, XP et cosmétiques conservés.",
-      "genericError": "Impossible de sauvegarder le compte. Réessaie dans quelques instants."
+      "genericError": "Impossible de sauvegarder le compte. Réessaie dans quelques instants.",
+      "capital": "Niveau {level} · {xp} XP · {count, plural, one {# cosmétique débloqué} other {# cosmétiques débloqués}}",
+      "capitalRule": "Tout sera supprimé après 48 h d’inactivité. Ajoute un email et un mot de passe, ou lie ton compte à Google, pour tout garder."
     }
   },
   "legal": {
@@ -3587,7 +3596,9 @@
       "legend": "Colonnes : victoires · défaites · parties · % de victoires",
       "showFull": "Voir le classement complet",
       "showLess": "Réduire",
-      "loadingMore": "Chargement…"
+      "loadingMore": "Chargement…",
+      "periodAll": "Général",
+      "periodWeek": "Cette semaine"
     }
   },
   "feedback": {
@@ -4149,7 +4160,7 @@
     "cta": "Essayer avec des bots",
     "go": "C'est parti !",
     "hint": "Sans compte : un pseudo, une table privée, les bots complètent — tes potes peuvent rejoindre en cours de route.",
-    "guestHint": "Pseudo temporaire, supprimé automatiquement après la soirée.",
+    "guestHint": "Pseudo invité — supprimé après 48 h d’inactivité. Tu pourras le sauvegarder ensuite.",
     "loginCta": "Se connecter ou créer un compte",
     "pseudoPlaceholder": "Ton pseudo pour la soirée",
     "error": "Impossible de lancer pour l'instant. Réessaie."
@@ -4159,7 +4170,7 @@
     "subtitle": "Tu as scanné le code d’une table. Choisis un pseudo pour jouer tout de suite, ou connecte-toi à ton compte.",
     "pseudoPlaceholder": "Ton pseudo pour la soirée",
     "guestCta": "Jouer en invité",
-    "guestHint": "Sans compte : pseudo temporaire, supprimé automatiquement après la soirée.",
+    "guestHint": "Pseudo invité — supprimé après 48 h d’inactivité. Tu pourras le sauvegarder ensuite.",
     "or": "ou",
     "loginCta": "Se connecter ou créer un compte",
     "dismiss": "Non merci, je visite d’abord",

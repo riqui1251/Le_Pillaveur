@@ -27,6 +27,9 @@ export default function GamesHubPage() {
   const isOnline = user?.playMode === 'online'
   const { ready, browsing } = useRequireSelectedPlayers('/joueurs', { skipWhenOnline: true })
   const searchParams = useSearchParams()
+  // Funnel landing « Jouer seul avec les bots » : ?solo=1 filtre la grille
+  // sur les jeux jouables avec des bots (voir GamesGrid).
+  const soloBots = searchParams.get('solo') === '1'
   const joinAttemptedRef = useRef(false)
   const modeSwitchedRef = useRef(false)
   const [gateCode, setGateCode] = useState<string | null>(null)
@@ -164,7 +167,7 @@ export default function GamesHubPage() {
       {isOnline && <RecentGamesRow />}
       {isOnline && <OpenLobbiesList />}
 
-      <GamesGrid />
+      <GamesGrid solo={soloBots} />
     </HubShell>
     </>
   )

@@ -57,6 +57,9 @@ type OverviewResponse = {
   minGamesForRate: number
 }
 
+/** Période du classement — 'week' repart de zéro chaque lundi (00:00 Paris). */
+type RankingPeriod = 'all' | 'week'
+
 function RowCard({
   row,
   isMe,
@@ -111,6 +114,7 @@ function BoardCard({
   board,
   /** Valeur du `?gameId=` à interroger pour le classement complet ('all' pour le général). */
   fullGameId,
+  period,
   emptyLabel,
   youLabel,
   minGames,
@@ -121,6 +125,7 @@ function BoardCard({
   title: string
   board: RankingBoard | null
   fullGameId: string
+  period: RankingPeriod
   emptyLabel: string
   youLabel: string
   minGames: number
@@ -141,7 +146,7 @@ function BoardCard({
     if (!expanded && !full) {
       setLoadingFull(true)
       try {
-        const res = await fetch(`/api/online/rankings?gameId=${fullGameId}`, {
+        const res = await fetch(`/api/online/rankings?gameId=${fullGameId}&period=${period}`, {
           credentials: 'include',
         })
         if (res.ok) {
@@ -231,12 +236,16 @@ export function OnlineRankingBoard() {
   const [loading, setLoading] = useState(true)
   const [needsLogin, setNeedsLogin] = useState(false)
   const [filter, setFilter] = useState<'all' | (typeof RANKED_GAME_IDS)[number]>('all')
+  const [period, setPeriod] = useState<RankingPeriod>('all')
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
     void (async () => {
       try {
-        const res = await fetch('/api/online/rankings/overview', { credentials: 'include' })
+        const res = await fetch(`/api/online/rankings/overview?period=${period}`, {
+          credentials: 'include',
+        })
         if (cancelled) return
         if (res.status === 401) {
           setNeedsLogin(true)
@@ -253,7 +262,7 @@ export function OnlineRankingBoard() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [period])
 
   if (needsLogin) {
     return (
@@ -263,22 +272,52 @@ export function OnlineRankingBoard() {
     )
   }
 
+  const minGames = data?.minGamesForRate ?? 5
+  const noneRecorded = !data || data.general.totalPlayers === 0
+
+  // Onglets de période — toujours visibles (même sur un hebdo vide, pour
+  // pouvoir revenir au général).
+  const periodTabs = (
+    <div className="inline-flex rounded-full border border-gold/25 bg-white/[0.03] p-0.5">
+      {(['all', 'week'] as const).map((p) => (
+        <button
+          key={p}
+          type="button"
+          aria-pressed={period === p}
+          onClick={() => setPeriod(p)}
+          className={cn(
+            'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
+            period === p
+              ? 'bg-gold/15 text-amber-200'
+              : 'text-cream/60 hover:text-cream'
+          )}
+        >
+          {p === 'all' ? t('periodAll') : t('periodWeek')}
+        </button>
+      ))}
+    </div>
+  )
+
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="h-7 w-7 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
+      <div className="space-y-4">
+        {periodTabs}
+        <div className="flex justify-center py-12">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
+        </div>
       </div>
     )
   }
 
-  const minGames = data?.minGamesForRate ?? 5
-  const noneRecorded = !data || data.general.totalPlayers === 0
-
   if (noneRecorded) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-10 text-center">
-        <Beer className="mx-auto mb-2 h-7 w-7 text-amber-300/60" />
-        <p className="text-sm text-white/50">{t('empty')}</p>
+      <div className="space-y-4">
+        {periodTabs}
+        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-10 text-center">
+          <Beer className="mx-auto mb-2 h-7 w-7 text-amber-300/60" />
+          <p className="text-sm text-white/50">{t('empty')}</p>
+        </div>
       </div>
     )
   }
@@ -290,6 +329,9 @@ export function OnlineRankingBoard() {
 
   return (
     <div className="space-y-4">
+      {/* Onglets Général / Cette semaine (le hebdo repart chaque lundi). */}
+      {periodTabs}
+
       {/* Chips de filtre : accès direct au classement d'un jeu précis. */}
       <div className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
@@ -333,10 +375,13 @@ export function OnlineRankingBoard() {
       {/* Classement général — tous jeux confondus (masqué quand on filtre). */}
       {filter === 'all' && (
         <BoardCard
+          // Remonté à chaque changement de période : purge le cache « complet ».
+          key={`general-${period}`}
           icon={<Trophy className="h-4 w-4" />}
           title={t('generalTitle')}
           board={data.general}
           fullGameId="all"
+          period={period}
           emptyLabel={t('emptyGame')}
           youLabel={t('you')}
           minGames={minGames}
@@ -351,11 +396,12 @@ export function OnlineRankingBoard() {
           const game = games.find((g) => g.id === id)
           return (
             <BoardCard
-              key={id}
+              key={`${id}-${period}`}
               icon={<GameIconById id={id} className="h-4 w-4" />}
               title={game?.title ?? id}
               board={boardFor(id)}
               fullGameId={id}
+              period={period}
               emptyLabel={t('emptyGame')}
               youLabel={t('you')}
               minGames={minGames}

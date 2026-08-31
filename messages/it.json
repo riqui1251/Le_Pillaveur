@@ -97,7 +97,9 @@
       "default": {
         "subtitle": "Giochi di bevute con gli amici"
       }
-    }
+    },
+    "levelBadge": "Lv. {level}",
+    "guestBadge": "Ospite — salva"
   },
   "common": {
     "back": "Indietro",
@@ -164,7 +166,8 @@
         "club": "Creatività"
       },
       "emptyTitle": "Nessun gioco trovato",
-      "emptyHint": "Prova un'altra parola chiave."
+      "emptyHint": "Prova un'altra parola chiave.",
+      "botsBadge": "Giocabile con i bot"
     },
     "jeuxOnline": {
       "title": "Giochi online",
@@ -198,7 +201,9 @@
     "soloHint": "Invita un amico per gli XP completi — le partite solo contro i bot pagano fino al livello 5.",
     "soloCapped": "Le partite solo contro i bot non danno più XP — invita un amico perché conti!",
     "streak": "Serie di {days} giorni!",
-    "nextUnlock": "Prossimo sblocco: livello {level} — {name}"
+    "nextUnlock": "Prossimo sblocco: livello {level} — {name}",
+    "guestKeep": "Account ospite: eliminato dopo 48 h di inattività.",
+    "guestKeepCta": "Salva il tuo nickname e i tuoi XP"
   },
   "onlineCollection": {
     "title": "Collezione di {name}",
@@ -314,7 +319,8 @@
     "seat": {
       "you": "Tu",
       "ready": "Pronto",
-      "notReady": "Non ancora pronto"
+      "notReady": "Non ancora pronto",
+      "bot": "Bot"
     },
     "settings": {
       "title": "Impostazioni",
@@ -327,7 +333,8 @@
     "launch": {
       "cta": "Avvia la partita",
       "minPlayers": "{count, plural, one {Min. # giocatore} other {Min. # giocatori}}",
-      "waitingForHost": "In attesa che {name} avvii la partita…"
+      "waitingForHost": "In attesa che {name} avvii la partita…",
+      "withBots": "Avvia con i bot"
     },
     "list": {
       "empty": "Nessuna lobby aperta — scegli un gioco qui sotto per crearne una.",
@@ -542,7 +549,9 @@
       "submit": "Salva il mio account",
       "orDivider": "oppure",
       "success": "Account salvato! Ora è permanente — nickname, XP e cosmetici conservati.",
-      "genericError": "Impossibile salvare l’account. Riprova tra qualche istante."
+      "genericError": "Impossibile salvare l’account. Riprova tra qualche istante.",
+      "capital": "Livello {level} · {xp} XP · {count, plural, one {# cosmetico sbloccato} other {# cosmetici sbloccati}}",
+      "capitalRule": "Tutto verrà eliminato dopo 48 h di inattività. Aggiungi un’email e una password, o collega il tuo account a Google, per conservare tutto."
     }
   },
   "legal": {
@@ -3582,7 +3591,9 @@
       "legend": "Colonne: vittorie · sconfitte · partite · % di vittorie",
       "showFull": "Vedi la classifica completa",
       "showLess": "Riduci",
-      "loadingMore": "Caricamento…"
+      "loadingMore": "Caricamento…",
+      "periodAll": "Generale",
+      "periodWeek": "Questa settimana"
     }
   },
   "feedback": {
@@ -4144,7 +4155,7 @@
     "cta": "Provalo con i bot",
     "go": "Si parte!",
     "hint": "Senza account: un nickname, un tavolo privato, i bot completano — gli amici possono unirsi a partita in corso.",
-    "guestHint": "Nickname temporaneo, eliminato automaticamente dopo la serata.",
+    "guestHint": "Nickname ospite — eliminato dopo 48 h di inattività. Potrai salvarlo in seguito.",
     "loginCta": "Accedi o crea un account",
     "pseudoPlaceholder": "Il tuo nickname per la serata",
     "error": "Impossibile iniziare ora. Riprova."
@@ -4154,7 +4165,7 @@
     "subtitle": "Hai scansionato il codice di un tavolo. Scegli un nome per giocare subito, oppure accedi al tuo account.",
     "pseudoPlaceholder": "Il tuo nome per stasera",
     "guestCta": "Gioca come ospite",
-    "guestHint": "Senza account: nome temporaneo, rimosso automaticamente dopo la serata.",
+    "guestHint": "Nickname ospite — eliminato dopo 48 h di inattività. Potrai salvarlo in seguito.",
     "or": "oppure",
     "loginCta": "Accedi o crea un account",
     "dismiss": "No grazie, sto solo guardando",

@@ -15,6 +15,75 @@ export const RANKING_TOP_LIMIT = 50
 /** Taille des podiums de la page classement (général + par jeu). */
 export const RANKING_OVERVIEW_TOP = 5
 
+/**
+ * Période du classement : 'all' = depuis toujours (historique), 'week' =
+ * semaine en cours (lundi 00:00 heure de Paris → maintenant). Le hebdo
+ * remet les compteurs à zéro chaque lundi — un nouveau joueur peut donc
+ * apparaître dans le top sans rattraper des mois d'ancienneté.
+ */
+export type RankingPeriod = 'all' | 'week'
+
+export function isRankingPeriod(value: string | null): value is RankingPeriod {
+  return value === 'all' || value === 'week'
+}
+
+/** Décalage (ms) entre l'heure de Paris et l'UTC à l'instant donné (+1h ou +2h). */
+function parisOffsetMs(at: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris',
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(at)
+  const num = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0')
+  // « L'heure de Paris relue comme si c'était de l'UTC » moins l'instant réel
+  // (tronqué à la seconde, formatToParts ne rend pas les millisecondes).
+  const asUtc = Date.UTC(num('year'), num('month') - 1, num('day'), num('hour'), num('minute'), num('second'))
+  return asUtc - Math.floor(at.getTime() / 1000) * 1000
+}
+
+/**
+ * Instant UTC du lundi 00:00 heure de Paris de la semaine en cours.
+ * Méthode 100 % JS (aucune lib de fuseau) :
+ * 1. on lit la date calendaire « vue de Paris » de l'instant courant via
+ *    `Intl.DateTimeFormat` (année/mois/jour + jour de semaine) ;
+ * 2. on recule jusqu'au lundi via l'arithmétique de `Date.UTC` (qui absorbe
+ *    proprement les bords de mois/année) ;
+ * 3. minuit UTC de cette date n'est PAS minuit Paris : on soustrait l'offset
+ *    Paris observé à cet instant, itéré 2 fois pour converger si un
+ *    changement d'heure (été/hiver) tombe justement cette nuit-là.
+ */
+export function startOfCurrentParisWeek(now: Date = new Date()): Date {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+  }).formatToParts(now)
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  const daysSinceMonday: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 }
+  const back = daysSinceMonday[get('weekday')] ?? 0
+  const monday = new Date(Date.UTC(Number(get('year')), Number(get('month')) - 1, Number(get('day')) - back))
+  const y = monday.getUTCFullYear()
+  const m = monday.getUTCMonth()
+  const d = monday.getUTCDate()
+  let ts = Date.UTC(y, m, d) // candidat : minuit UTC du lundi
+  for (let i = 0; i < 2; i++) {
+    ts = Date.UTC(y, m, d) - parisOffsetMs(new Date(ts))
+  }
+  return new Date(ts)
+}
+
+/** Clause `where` Prisma correspondant à la période demandée. */
+function periodWhere(period: RankingPeriod): { finishedAt?: { gte: Date } } {
+  return period === 'week' ? { finishedAt: { gte: startOfCurrentParisWeek() } } : {}
+}
+
 export type RankingRow = {
   userId: string
   displayName: string
@@ -57,9 +126,12 @@ function toSorted(tallies: Map<string, Tally>): Array<{ userId: string } & Tally
 /** Classement complet d'un jeu (ou de tous), top N + la ligne du demandeur. */
 export async function buildRankings(
   client: PrismaClient,
-  args: { gameId: string | null; viewerId: string | null }
+  args: { gameId: string | null; viewerId: string | null; period?: RankingPeriod }
 ): Promise<{ rows: RankingRow[]; me: RankingRow | null; totalPlayers: number }> {
-  const where = args.gameId ? { gameId: args.gameId } : {}
+  const where = {
+    ...(args.gameId ? { gameId: args.gameId } : {}),
+    ...periodWhere(args.period ?? 'all'),
+  }
   const grouped = await client.onlineMatchResult.groupBy({
     by: ['userId', 'outcome'],
     where,
@@ -129,10 +201,12 @@ export type RankingBoard = {
  */
 export async function buildRankingsOverview(
   client: PrismaClient,
-  viewerId: string | null
+  viewerId: string | null,
+  period: RankingPeriod = 'all'
 ): Promise<{ general: RankingBoard; perGame: RankingBoard[] }> {
   const grouped = await client.onlineMatchResult.groupBy({
     by: ['gameId', 'userId', 'outcome'],
+    where: periodWhere(period),
     _count: { _all: true },
   })
 

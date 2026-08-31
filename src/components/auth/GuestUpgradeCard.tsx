@@ -6,6 +6,7 @@ import { Check, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
 import { isNativeGoogleAvailable } from '@/lib/native-google-login'
 import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
@@ -20,6 +21,9 @@ export function GuestUpgradeCard() {
   const t = useTranslations('account.guestUpgrade')
   const locale = useLocale()
   const { user, refresh } = useAuth()
+  // Le capital concret de l'invité (niveau, XP, cosmétiques) : montrer ce
+  // qu'il perdrait à la purge vaut mieux qu'une intro générique.
+  const { progression } = useOnlineProgression()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -127,7 +131,20 @@ export function GuestUpgradeCard() {
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-amber-100">{t('title')}</p>
-          <p className="mt-0.5 text-xs text-amber-100/70">{t('intro')}</p>
+          {progression ? (
+            <>
+              <p className="mt-1 text-xs font-bold tabular-nums text-amber-200">
+                {t('capital', {
+                  level: progression.level,
+                  xp: progression.xp,
+                  count: progression.unlockedKeys.length,
+                })}
+              </p>
+              <p className="mt-1 text-xs text-amber-100/70">{t('capitalRule')}</p>
+            </>
+          ) : (
+            <p className="mt-0.5 text-xs text-amber-100/70">{t('intro')}</p>
+          )}
         </div>
       </div>
 

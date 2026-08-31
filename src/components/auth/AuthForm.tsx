@@ -50,6 +50,27 @@ export function AuthForm() {
 
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
+
+  // Premier passage sur cet appareil (flag « lp-has-logged-in » jamais posé) :
+  // le visiteur du funnel est un NOUVEAU — on ouvre sur l'inscription plutôt
+  // que la connexion (bascule toujours possible d'un clic). En useEffect pour
+  // rester SSR-safe ; le flag est posé à chaque auth réussie ci-dessous.
+  useEffect(() => {
+    try {
+      if (!window.localStorage.getItem('lp-has-logged-in')) setMode('register')
+    } catch {
+      // stockage indisponible — on garde la connexion par défaut
+    }
+  }, [])
+
+  // Mémorise qu'une session a déjà existé sur cet appareil (voir ci-dessus).
+  const rememberHasLoggedIn = () => {
+    try {
+      window.localStorage.setItem('lp-has-logged-in', '1')
+    } catch {
+      // stockage indisponible — au pire, le prochain passage rouvrira l'inscription
+    }
+  }
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -86,6 +107,7 @@ export function AuthForm() {
       if (err) {
         setError(err)
       } else {
+        rememberHasLoggedIn()
         goToApp()
       }
     } finally {
@@ -124,6 +146,7 @@ export function AuthForm() {
           return
         }
         await refresh()
+        rememberHasLoggedIn()
         goToApp()
       } catch {
         setError(t('errors.generic'))
@@ -256,6 +279,24 @@ export function AuthForm() {
         </button>
       </div>
 
+      {/* Google D'ABORD : c'est le chemin sans friction (zéro champ) — le
+          formulaire email reste dessous pour qui n'a pas de compte Google. */}
+      <div className="space-y-3">
+        {nativeGoogle ? (
+          <NativeGoogleButton
+            disabled={loading}
+            onCredential={(credential) => googleCallbackRef.current(credential)}
+          />
+        ) : (
+          <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+        )}
+        <div className="flex items-center gap-3" aria-hidden>
+          <span className="h-px flex-1 bg-white/10" />
+          <span className="text-xs uppercase tracking-wide text-white/35">{t('orDivider')}</span>
+          <span className="h-px flex-1 bg-white/10" />
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-md">
         {mode === 'register' && (
           <div>
@@ -347,22 +388,6 @@ export function AuthForm() {
               : t('register.submit')}
         </Button>
       </form>
-
-      <div className="space-y-3">
-        <div className="flex items-center gap-3" aria-hidden>
-          <span className="h-px flex-1 bg-white/10" />
-          <span className="text-xs uppercase tracking-wide text-white/35">{t('orDivider')}</span>
-          <span className="h-px flex-1 bg-white/10" />
-        </div>
-        {nativeGoogle ? (
-          <NativeGoogleButton
-            disabled={loading}
-            onCredential={(credential) => googleCallbackRef.current(credential)}
-          />
-        ) : (
-          <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
-        )}
-      </div>
 
       <div className="space-y-3 text-center">
         <p className="text-xs text-white/35">{t('localPlay.hint')}</p>

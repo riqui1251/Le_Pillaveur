@@ -180,6 +180,8 @@ model OnlineMatchResult {
 
   @@index([gameId, userId])
   @@index([userId, finishedAt])
+  // Classement hebdo : filtre `finishedAt >= lundi` sans scan complet.
+  @@index([finishedAt])
 }
 
 // Derniers jeux joués en ligne : une ligne par couple (user, jeu), horodatée

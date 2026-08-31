@@ -1,10 +1,11 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2 } from 'lucide-react'
+import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, ShieldAlert, Star } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
+import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { isCapacitorApp } from '@/lib/native-app'
 import { useFriends } from '@/hooks/useFriends'
 import { useChatUnread } from '@/hooks/useChatUnread'
@@ -46,6 +47,9 @@ export default function Navbar() {
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const { user } = useAuth()
+  // Progression visible en navigation : un fetch léger au montage (silencieux
+  // en erreur — la pastille ne s'affiche alors pas), rien pour les visiteurs.
+  const { progression } = useOnlineProgression()
   const { friends, refresh: refreshFriendsBadge } = useFriends()
   const { unread, refresh: refreshUnread } = useChatUnread()
   const onlineFriendsCount = friends.filter((f) => f.isOnline).length
@@ -192,6 +196,26 @@ export default function Navbar() {
               </p>
             </div>
           </div>
+
+          {/* Progression visible : niveau pour un compte enregistré, rappel
+              « sauvegarder » pour un invité — les deux mènent à la page Compte. */}
+          {user && (user.isGuest ? (
+            <Link
+              href="/compte"
+              className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-amber-400/40 bg-amber-500/15 px-2.5 text-[11px] font-bold text-amber-200 transition-all duration-200 hover:border-amber-400/60 hover:bg-amber-500/25 active:scale-95 sm:h-11 sm:px-3 sm:text-xs"
+            >
+              <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+              {t('guestBadge')}
+            </Link>
+          ) : progression ? (
+            <Link
+              href="/compte"
+              className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-bold tabular-nums text-amber-200 transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:px-3 sm:text-xs"
+            >
+              <Star className="h-3.5 w-3.5 shrink-0 text-amber-300" />
+              {t('levelBadge', { level: progression.level })}
+            </Link>
+          ) : null)}
 
           {mounted && !inApp && fsSupported && (
             <button
