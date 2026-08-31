@@ -99,7 +99,8 @@
       }
     },
     "levelBadge": "Nv. {level}",
-    "guestBadge": "Invité — sauvegarder"
+    "guestBadge": "Invité — sauvegarder",
+    "activePlayers": "{count, plural, one {# joueur en ligne} other {# joueurs en ligne}}"
   },
   "common": {
     "back": "Retour",
@@ -3487,7 +3488,9 @@
           "replay": "Rejouer",
           "rematchWaiting": "Revanche {count}/{total}…",
           "backToMenu": "Retour au menu"
-        }
+        },
+        "ouRien": "{rank} ou rien !",
+        "closeTrick": "Fermer le pli ({cards})"
       },
       "tutorial": {
         "steps": [

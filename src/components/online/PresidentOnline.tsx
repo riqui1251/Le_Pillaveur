@@ -123,11 +123,23 @@ export function PresidentOnline() {
 
     let botTimer: ReturnType<typeof setTimeout> | undefined
     const actor = view.players.find((p) => p.id === room.currentTurnUserId)
+    // Tick spéculatif « fermeture de carré » : quand un run ≥ 2 traîne au
+    // sommet du pli, un bot détenant le complément peut fermer HORS TOUR — le
+    // serveur tranche (NOT_BOT_TURN sinon, inoffensif).
+    const closeChance =
+      view.phase === 'playing' &&
+      view.lastPlay !== null &&
+      view.trickRun !== null &&
+      view.trickRun.count >= 2 &&
+      view.trickRun.count < 4 &&
+      view.players.some((p) => p.isBot && !p.leftAt)
     if (actor?.isBot && (view.phase === 'playing' || view.phase === 'interlude')) {
       botTimer = setTimeout(
         () => send({ action: 'bot' }),
         view.phase === 'interlude' ? 5000 : botTickDelayMs(actor.name)
       )
+    } else if (closeChance) {
+      botTimer = setTimeout(() => send({ action: 'bot' }), 900 + Math.random() * 1200)
     }
 
     let replaceTimer: ReturnType<typeof setInterval> | undefined
@@ -202,12 +214,33 @@ export function PresidentOnline() {
     })
   }
 
+  // « Ou rien » : la dernière pose a égalé la précédente → rang verrouillé.
+  const lockedRank =
+    view.lastPlay && view.trickRun && view.trickRun.count > view.lastPlay.cards.length
+      ? view.trickRun.rank
+      : null
+
   const canPlaySelection =
     myTurn &&
     selected.length > 0 &&
     (!view.lastPlay ||
       (selected.length === view.lastPlay.cards.length &&
-        preRankOf(selected[0]) > preRankOf(view.lastPlay.cards[0])))
+        (lockedRank !== null
+          ? preRankOf(selected[0]) === lockedRank
+          : // L'ÉGAL est permis : il verrouille le pli pour le suivant.
+            preRankOf(selected[0]) >= preRankOf(view.lastPlay.cards[0]))))
+
+  // Fermeture de carré : je détiens TOUTES les cartes manquantes du rang au
+  // sommet du pli (3 simples à la suite → la 4e ; une paire → l'autre paire).
+  const closeNeeded =
+    view.phase === 'playing' && view.lastPlay && view.trickRun && view.trickRun.count >= 2
+      ? 4 - view.trickRun.count
+      : 0
+  const myCloseCards =
+    closeNeeded > 0 && view.trickRun
+      ? view.myHand.filter((c) => preRankOf(c) === view.trickRun!.rank)
+      : []
+  const canClose = !iAmOut && closeNeeded > 0 && myCloseCards.length === closeNeeded
 
   // ── Fin de partie ────────────────────────────────────────────────────────
   if (finished) {
@@ -441,11 +474,37 @@ export function PresidentOnline() {
             <p className="text-[11px] font-semibold text-white/50">
               {t('lastPlayBy', { name: nameOf(view.lastPlay.playerId) })}
             </p>
+            {lockedRank !== null && (
+              <motion.p
+                initial={{ scale: 0.7, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="rounded-full border border-amber-400/50 bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-200"
+              >
+                {t('ouRien', { rank: PRE_RANKS[lockedRank] })}
+              </motion.p>
+            )}
           </>
         ) : (
           <p className="text-sm font-bold text-white/50">{t('freeTrick')}</p>
         )}
       </div>
+
+      {/* Fermeture de carré : je détiens les cartes manquantes — hors tour ! */}
+      {canClose && (
+        <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+          <Button
+            onClick={() => void sendAction({ action: 'close', cards: myCloseCards })}
+            disabled={busy}
+            className="w-full rounded-2xl bg-gradient-to-r from-amber-600 to-red-600 py-5 text-base font-black shadow-lg shadow-amber-500/25"
+          >
+            ⚡ {t('closeTrick', {
+              cards: myCloseCards
+                .map((card) => `${PRE_RANKS[preRankOf(card)]}${PRE_SUITS[preSuitOf(card)]}`)
+                .join(' '),
+            })}
+          </Button>
+        </motion.div>
+      )}
 
       {/* Ma main */}
       {iAmOut ? (

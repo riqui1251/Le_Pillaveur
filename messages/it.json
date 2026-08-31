@@ -99,7 +99,8 @@
       }
     },
     "levelBadge": "Lv. {level}",
-    "guestBadge": "Ospite — salva"
+    "guestBadge": "Ospite — salva",
+    "activePlayers": "{count, plural, one {# giocatore online} other {# giocatori online}}"
   },
   "common": {
     "back": "Indietro",
@@ -3482,7 +3483,9 @@
           "replay": "Gioca ancora",
           "rematchWaiting": "Rivincita {count}/{total}…",
           "backToMenu": "Torna al menu"
-        }
+        },
+        "ouRien": "{rank} o niente!",
+        "closeTrick": "Chiudi la presa ({cards})"
       },
       "tutorial": {
         "steps": [

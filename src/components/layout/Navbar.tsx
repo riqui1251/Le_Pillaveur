@@ -62,6 +62,29 @@ export default function Navbar() {
     setInApp(isCapacitorApp())
   }, [])
 
+  // Joueurs actifs sur le site (fenêtre 2 min, cache serveur 15 s) : un fetch
+  // au montage puis toutes les 60 s, silencieux en erreur.
+  const [activeCount, setActiveCount] = useState<number | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch('/api/presence/count', { credentials: 'include' })
+        if (!res.ok) return
+        const json = (await res.json()) as { count?: number }
+        if (!cancelled && typeof json.count === 'number') setActiveCount(json.count)
+      } catch {
+        // réseau : on garde la dernière valeur
+      }
+    }
+    void load()
+    const timer = setInterval(load, 60_000)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [])
+
   const links = useMemo((): NavLinkItem[] => {
     const base: NavLinkItem[] = NAV_LINK_KEYS.filter(
       ({ key }) => !(inApp && key === 'application')
@@ -196,6 +219,21 @@ export default function Navbar() {
               </p>
             </div>
           </div>
+
+          {/* Joueurs actifs sur le site — pastille verte discrète. */}
+          {activeCount !== null && activeCount > 0 && (
+            <span
+              title={t('activePlayers', { count: activeCount })}
+              aria-label={t('activePlayers', { count: activeCount })}
+              className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-bold tabular-nums text-emerald-200 sm:h-11 sm:px-3 sm:text-xs"
+            >
+              <span aria-hidden className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              {activeCount}
+            </span>
+          )}
 
           {/* Progression visible : niveau pour un compte enregistré, rappel
               « sauvegarder » pour un invité — les deux mènent à la page Compte. */}

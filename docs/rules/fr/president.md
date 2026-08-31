@@ -16,6 +16,22 @@ vraiment secrètes.
 4. Quand tout le monde passe, le dernier poseur **remporte le pli** et
    relance ce qu'il veut.
 
+## Les variantes de la maison (actives en ligne)
+
+- **L'égal est permis** : tu peux poser une carte (ou un combo) de la MÊME
+  valeur que celle du dessus. Mais attention…
+- **« Dame ou rien »** : après une pose égale, le rang du pli est verrouillé —
+  le joueur suivant égale à son tour ou **son tour saute**. Tant que ça égale,
+  la règle continue.
+- **Fermeture de carré** : si 3 cartes de même valeur sortent à la suite,
+  celui qui détient la 4e peut la claquer **même hors de son tour** : le pli
+  est fermé et il remène. Pareil avec les paires — un double 5 posé, l'autre
+  double 5 le fait fermer.
+- **Les positions survivent à la revanche** : au « Rejouer », le Président et
+  le Trou de la partie précédente gardent leur rôle (échange de cartes dès la
+  première manche). Si l'un d'eux a quitté la table, le joueur le plus proche
+  au classement récupère la position.
+
 ## Le 2 coupe
 
 Le 2 est la carte suprême : il **remporte le pli immédiatement**. Celui qui

@@ -75,6 +75,12 @@ export type PreState = TimedPhaseState & {
   currentTurnId: string | null
   /** Dernier combo posé du pli courant (null = pli libre, on mène). */
   lastPlay: PreLastPlay | null
+  /**
+   * Cartes de même rang posées CONSÉCUTIVEMENT au sommet du pli — sert aux
+   * règles « ou rien » (pose égale) et fermeture de carré. Null hors pli.
+   * Absent des vieux états sérialisés (défaut null au parse).
+   */
+  trickRun: { rank: number; count: number } | null
   /** Joueurs ayant passé depuis la dernière pose. */
   passedIds: string[]
   /** Ordre de sortie de la manche courante (premier = Président). */
@@ -89,6 +95,7 @@ export type PreState = TimedPhaseState & {
 
 export type PreAction =
   | { type: 'PLAY'; playerId: string; cards: number[]; now: number }
+  | { type: 'CLOSE'; playerId: string; cards: number[]; now: number }
   | { type: 'PASS'; playerId: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
@@ -137,7 +144,26 @@ export function preSortHand(hand: number[]): number[] {
   return [...hand].sort((a, b) => preRankOf(a) - preRankOf(b) || a - b)
 }
 
-/** Le combo est-il posable sur le pli courant ? */
+/**
+ * « Ou rien » : la dernière pose a ÉGALÉ la précédente → le rang du pli est
+ * verrouillé (on égale encore, ou son tour saute). Null hors verrou.
+ */
+export function preOuRien(state: PreState): number | null {
+  if (!state.lastPlay || !state.trickRun) return null
+  return state.trickRun.count > state.lastPlay.cards.length ? state.trickRun.rank : null
+}
+
+/** Cartes qu'il faudrait pour FERMER le pli (compléter le carré du rang courant). */
+export function preCloseNeeded(state: PreState): { rank: number; count: number } | null {
+  if (state.phase !== 'playing' || !state.lastPlay || !state.trickRun) return null
+  // Fermeture réservée aux runs d'au moins 2 cartes (3 simples à la suite,
+  // ou une paire posée) — une carte seule ne s'écrase pas au brelan.
+  if (state.trickRun.count < 2) return null
+  const missing = 4 - state.trickRun.count
+  if (missing < 1) return null
+  return { rank: state.trickRun.rank, count: missing }
+}
+
 export function preCanPlay(state: PreState, playerId: string, cards: number[]): string | null {
   const player = playerById(state, playerId)
   if (!player) return 'UNKNOWN_PLAYER'
@@ -149,7 +175,14 @@ export function preCanPlay(state: PreState, playerId: string, cards: number[]): 
   if (!cards.every((c) => preRankOf(c) === rank)) return 'MIXED_RANKS'
   if (state.lastPlay) {
     if (cards.length !== state.lastPlay.cards.length) return 'WRONG_SIZE'
-    if (rank <= preRankOf(state.lastPlay.cards[0])) return 'TOO_LOW'
+    const locked = preOuRien(state)
+    if (locked !== null) {
+      // « Dame ou rien » : seul le rang verrouillé passe.
+      if (rank !== locked) return 'MUST_MATCH_RANK'
+    } else if (rank < preRankOf(state.lastPlay.cards[0])) {
+      // L'ÉGAL est permis (il verrouille le pli pour le suivant).
+      return 'TOO_LOW'
+    }
   }
   return null
 }
@@ -173,10 +206,22 @@ function dealManche(
     hand: preSortHand(hands.get(p.id) ?? []),
   }))
 
-  // Échange automatique : les 2 meilleures du Trou contre les 2 pires du Président.
+  // Échange automatique : les 2 meilleures du Trou contre les 2 pires du
+  // Président. Si un porteur de rôle est parti, le joueur LE PLUS PROCHE au
+  // classement de la manche close récupère la position.
   let lastExchange: PreExchange | null = null
-  const trou = players.find((p) => p.role === 'trou' && !p.leftAt)
-  const president = players.find((p) => p.role === 'president' && !p.leftAt)
+  const activeIds = new Set(active.map((p) => p.id))
+  const activeRanking = (state.lastRanking ?? []).filter((id) => activeIds.has(id))
+  let trou = players.find((p) => p.role === 'trou' && !p.leftAt) ?? null
+  let president = players.find((p) => p.role === 'president' && !p.leftAt) ?? null
+  if (activeRanking.length >= 2) {
+    if (!president) president = players.find((p) => p.id === activeRanking[0]) ?? null
+    if (!trou) trou = players.find((p) => p.id === activeRanking[activeRanking.length - 1]) ?? null
+  }
+  if (president && trou && president.id === trou.id) {
+    president = null
+    trou = null
+  }
   if (trou && president) {
     const trouSorted = preSortHand(trou.hand)
     const presSorted = preSortHand(president.hand)
@@ -205,6 +250,7 @@ function dealManche(
     players,
     currentTurnId: starter,
     lastPlay: null,
+    trickRun: null,
     passedIds: [],
     outOrder: [],
     lastExchange,
@@ -219,13 +265,22 @@ export function createPreState(
   players: PreInitialPlayer[],
   seed: string | number,
   now: number = Date.now(),
-  manchesCount: number = PRE_DEFAULT_MANCHES
+  manchesCount: number = PRE_DEFAULT_MANCHES,
+  previousRanking: string[] | null = null
 ): PreState {
   if (players.length < PRE_MIN_PLAYERS) throw new PreEngineError('NOT_ENOUGH_PLAYERS')
   if (players.length > PRE_MAX_PLAYERS) throw new PreEngineError('TOO_MANY_PLAYERS')
   if (!Number.isInteger(manchesCount) || manchesCount < 1) {
     throw new PreEngineError('INVALID_MANCHES_COUNT')
   }
+
+  // Positions héritées de la partie précédente (rematch) : si un porteur est
+  // parti entre-temps, le joueur LE PLUS PROCHE au classement récupère la
+  // position — Président = premier présent, Trou = dernier présent.
+  const present = new Set(players.map((p) => p.id))
+  const inherited = (previousRanking ?? []).filter((id) => present.has(id))
+  const presidentId = inherited.length >= 2 ? inherited[0] : null
+  const trouId = inherited.length >= 2 ? inherited[inherited.length - 1] : null
 
   const rng: SeededRng = createRng(seed)
   return {
@@ -238,12 +293,17 @@ export function createPreState(
       isBot: Boolean(p.isBot),
       leftAt: null,
       hand: [],
-      role: null,
+      role: (p.id === presidentId
+        ? 'president'
+        : p.id === trouId
+          ? 'trou'
+          : null) as PrePlayer['role'],
     })),
     manche: 0,
     totalManches: manchesCount,
     currentTurnId: null,
     lastPlay: null,
+    trickRun: null,
     passedIds: [],
     outOrder: [],
     lastRanking: null,
@@ -287,6 +347,7 @@ function endManche(state: PreState, now: number): PreState {
       lastRanking: ranking,
       currentTurnId: null,
       lastPlay: null,
+      trickRun: null,
       phase: 'finished',
       phaseSeq: state.phaseSeq + 1,
       phaseEndsAt: null,
@@ -299,6 +360,7 @@ function endManche(state: PreState, now: number): PreState {
     lastRanking: ranking,
     currentTurnId: null,
     lastPlay: null,
+    trickRun: null,
     passedIds: [],
     ...enterPhase(state.phaseSeq, 'interlude', PRE_INTERLUDE_MS, now),
     phase: 'interlude',
@@ -310,15 +372,61 @@ function startNextManche(state: PreState, now: number): PreState {
   return dealManche({ ...state, manche: state.manche + 1 }, now)
 }
 
+/**
+ * « Ou rien » vient d'être déclenché : fait tourner le tour en SAUTANT
+ * d'office les joueurs incapables d'égaler le rang verrouillé (leur tour
+ * saute, ils comptent comme ayant passé). Si personne ne peut égaler, le pli
+ * revient au poseur qui remène.
+ */
+function advanceOuRien(state: PreState, ownerId: string, now: number): PreState {
+  const size = state.lastPlay!.cards.length
+  const rank = state.trickRun!.rank
+  const skipped: string[] = []
+  let cursor = ownerId
+  for (let step = 0; step < state.players.length; step += 1) {
+    const cid = nextInRace(state, cursor)
+    if (!cid || cid === ownerId) break
+    const cand = playerById(state, cid)!
+    const matching = cand.hand.filter((c) => preRankOf(c) === rank).length
+    if (matching >= size) {
+      return nextTurn({ ...state, passedIds: [...state.passedIds, ...skipped] }, cid, now)
+    }
+    skipped.push(cid)
+    cursor = cid
+  }
+  // Personne ne peut égaler → pli gagné par le poseur (ou le suivant s'il est sorti).
+  const owner = playerById(state, ownerId)
+  const leader =
+    owner && !owner.leftAt && owner.hand.length > 0 ? ownerId : nextInRace(state, ownerId)
+  return nextTurn({ ...state, lastPlay: null, trickRun: null, passedIds: [] }, leader, now)
+}
+
 /** Applique une pose valide (cartes déjà vérifiées). */
 function applyPlay(state: PreState, playerId: string, cards: number[], now: number): PreState {
-  const isCut = preRankOf(cards[0]) === PRE_TWO
+  const rank = preRankOf(cards[0])
+  const isCut = rank === PRE_TWO
+  // Pose ÉGALE à la précédente ? (verrouille le pli — « ou rien »)
+  const equalized =
+    state.lastPlay !== null && preRankOf(state.lastPlay.cards[0]) === rank
+  // Run de cartes de même rang au sommet du pli (vieux états : reconstruit
+  // depuis lastPlay, faute de mieux).
+  const baseRun =
+    state.trickRun ??
+    (state.lastPlay
+      ? { rank: preRankOf(state.lastPlay.cards[0]), count: state.lastPlay.cards.length }
+      : null)
+  const run =
+    baseRun && baseRun.rank === rank
+      ? { rank, count: baseRun.count + cards.length }
+      : { rank, count: cards.length }
+
   let next: PreState = {
     ...state,
     players: state.players.map((p) =>
       p.id === playerId ? { ...p, hand: p.hand.filter((c) => !cards.includes(c)) } : p
     ),
     lastPlay: { playerId, cards: preSortHand(cards) },
+    trickRun: run,
     passedIds: [],
     version: state.version + 1,
   }
@@ -331,11 +439,15 @@ function applyPlay(state: PreState, playerId: string, cards: number[], now: numb
   // Fin de manche : plus qu'un joueur en course.
   if (inRace(next).length <= 1) return endManche(next, now)
 
-  // Le 2 coupe : pli terminé, celui qui a coupé remène (ou le suivant s'il est sorti).
-  if (isCut) {
+  // Le 2 coupe, et le CARRÉ COMPLÉTÉ ferme : pli terminé, le poseur remène
+  // (ou le suivant s'il est sorti).
+  if (isCut || run.count >= 4) {
     const leader = player.hand.length > 0 ? playerId : nextInRace(next, playerId)
-    return nextTurn({ ...next, lastPlay: null }, leader, now)
+    return nextTurn({ ...next, lastPlay: null, trickRun: null }, leader, now)
   }
+
+  // Pose égale → « ou rien » : les suivants incapables d'égaler sautent.
+  if (equalized) return advanceOuRien(next, playerId, now)
 
   return nextTurn(next, nextInRace(next, playerId), now)
 }
@@ -359,7 +471,7 @@ function applyPass(state: PreState, playerId: string, now: number): PreState {
       ownerPlayer && !ownerPlayer.leftAt && ownerPlayer.hand.length > 0
         ? owner
         : nextInRace(next, owner ?? playerId)
-    return nextTurn({ ...next, lastPlay: null, passedIds: [] }, leader, now)
+    return nextTurn({ ...next, lastPlay: null, trickRun: null, passedIds: [] }, leader, now)
   }
 
   return nextTurn(next, nextInRace(next, playerId), now)
@@ -375,6 +487,41 @@ export function reducePre(state: PreState, action: PreAction): PreState {
       const error = preCanPlay(state, action.playerId, action.cards)
       if (error) throw new PreEngineError(error)
       return applyPlay(state, action.playerId, action.cards, action.now)
+    }
+
+    case 'CLOSE': {
+      // Fermeture de carré, HORS TOUR : celui qui possède les cartes
+      // manquantes du rang au sommet du pli les claque, ferme le pli et
+      // remène (3 simples à la suite → la 4e ferme ; une paire posée → la
+      // paire restante ferme).
+      if (state.phase !== 'playing') throw new PreEngineError('NOT_PLAYING')
+      const needed = preCloseNeeded(state)
+      if (!needed) throw new PreEngineError('NOTHING_TO_CLOSE')
+      const player = playerById(state, action.playerId)
+      if (!player || player.leftAt || player.hand.length === 0) {
+        throw new PreEngineError('UNKNOWN_PLAYER')
+      }
+      const cards = action.cards
+      if (cards.length !== needed.count) throw new PreEngineError('CANNOT_CLOSE')
+      if (new Set(cards).size !== cards.length) throw new PreEngineError('INVALID_COMBO')
+      if (!cards.every((c) => player.hand.includes(c))) throw new PreEngineError('NOT_YOUR_CARDS')
+      if (!cards.every((c) => preRankOf(c) === needed.rank)) throw new PreEngineError('CANNOT_CLOSE')
+
+      let next: PreState = {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === action.playerId ? { ...p, hand: p.hand.filter((c) => !cards.includes(c)) } : p
+        ),
+        version: state.version + 1,
+      }
+      const closer = playerById(next, action.playerId)!
+      if (closer.hand.length === 0) {
+        next = { ...next, outOrder: [...next.outOrder, action.playerId] }
+      }
+      if (inRace(next).length <= 1) return endManche(next, action.now)
+      const leader =
+        closer.hand.length > 0 ? action.playerId : nextInRace(next, action.playerId)
+      return nextTurn({ ...next, lastPlay: null, trickRun: null, passedIds: [] }, leader, action.now)
     }
 
     case 'PASS': {
@@ -500,6 +647,15 @@ export function prePickBotPlay(
   const ranks = [...byRank.keys()].sort((a, b) => a - b)
   if (ranks.length === 0) return null
 
+  // « Ou rien » actif : on égale le rang verrouillé, ou on passe (tour sauté).
+  const locked = preOuRien(state)
+  if (locked !== null && state.lastPlay) {
+    const g = byRank.get(locked)
+    const size = state.lastPlay.cards.length
+    if (g && g.length >= size) return g.slice(0, size)
+    return null
+  }
+
   if (!state.lastPlay) {
     // Sortie sèche : un seul rang en main → tout poser.
     if (ranks.length === 1) return byRank.get(ranks[0])!
@@ -515,6 +671,16 @@ export function prePickBotPlay(
 
   const size = state.lastPlay.cards.length
   const target = preRankOf(state.lastPlay.cards[0])
+
+  // ÉGALER (verrouille le pli — « ou rien ») : tentant pour les personnalités
+  // joueuses, seulement avec un groupe de taille exacte (on ne casse rien).
+  const equalGroup = byRank.get(target)
+  if (equalGroup && equalGroup.length === size && target !== PRE_TWO) {
+    const eagerness =
+      trait === 'farceur' || trait === 'agressif' ? 0.5 : trait === 'suiveur' ? 0.25 : 0.1
+    if (rand() < eagerness) return equalGroup.slice(0, size)
+  }
+
   const playable = ranks.filter((r) => r > target && byRank.get(r)!.length >= size)
   if (playable.length === 0) return null
 

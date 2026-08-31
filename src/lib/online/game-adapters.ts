@@ -1284,6 +1284,9 @@ const presidentAdapter: GameAdapter = {
     let input: PreRoomActionInput
     if (body.action === 'play' && Array.isArray(body.cards)) {
       input = { type: 'play', cards: body.cards as number[] }
+    } else if (body.action === 'close' && Array.isArray(body.cards)) {
+      // Fermeture de carré (hors tour) — ne pas oublier de transmettre cards.
+      input = { type: 'close', cards: body.cards as number[] }
     } else if (body.action === 'pass') {
       input = { type: 'pass' }
     } else if (body.action === 'continue') {

@@ -1,6 +1,8 @@
 import {
   createPreState,
   currentPreActorId,
+  preCloseNeeded,
+  preRankOf,
   prePickBotPlay,
   reducePre,
   toPreClientView,
@@ -29,7 +31,8 @@ export function buildPreState(
   members: PreRoomMember[],
   botsCount: number = 0,
   seed?: string | number,
-  manchesCount?: number
+  manchesCount?: number,
+  previousRanking: string[] | null = null
 ): PreState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   let botIndex = 0
@@ -46,7 +49,13 @@ export function buildPreState(
   for (let i = 0; i < wanted; i += 1) addBot()
   while (players.length < PRE_MIN_PLAYERS) addBot()
 
-  return createPreState(players, seed ?? randomSeed(), Date.now(), manchesCount ?? PRE_DEFAULT_MANCHES)
+  return createPreState(
+    players,
+    seed ?? randomSeed(),
+    Date.now(),
+    manchesCount ?? PRE_DEFAULT_MANCHES,
+    previousRanking
+  )
 }
 
 export function serializePreState(state: PreState): string {
@@ -60,6 +69,7 @@ export function parsePreState(json: string | null): PreState | null {
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
     return {
       ...raw,
+      trickRun: raw.trickRun ?? null,
       passedIds: raw.passedIds ?? [],
       outOrder: raw.outOrder ?? [],
       rematchVotes: raw.rematchVotes ?? [],
@@ -71,6 +81,7 @@ export function parsePreState(json: string | null): PreState | null {
 
 export type PreRoomActionInput =
   | { type: 'play'; cards: number[] }
+  | { type: 'close'; cards: number[] }
   | { type: 'pass' }
   | { type: 'continue' }
   | { type: 'advance'; phaseKey: string }
@@ -91,6 +102,16 @@ export function applyPreRoomAction(
           ok: true,
           state: reducePre(state, {
             type: 'PLAY',
+            playerId: userId,
+            cards: input.cards,
+            now: Date.now(),
+          }),
+        }
+      case 'close':
+        return {
+          ok: true,
+          state: reducePre(state, {
+            type: 'CLOSE',
             playerId: userId,
             cards: input.cards,
             now: Date.now(),
@@ -162,6 +183,28 @@ export function preSpectatorViewJson(state: PreState): string {
 /** Le bot au tour pose le plus petit combo valide, sinon passe ; en interlude, il continue. */
 export function applyPreBotAction(state: PreState): PreRoomActionResult {
   try {
+    // FERMETURE hors tour : un bot qui possède les cartes manquantes du rang
+    // au sommet du pli les claque — prioritaire sur le tour courant.
+    if (state.phase === 'playing') {
+      const needed = preCloseNeeded(state)
+      if (needed) {
+        const closer = state.players.find(
+          (p) =>
+            p.isBot &&
+            !p.leftAt &&
+            p.hand.length > 0 &&
+            p.hand.filter((c) => preRankOf(c) === needed.rank).length === needed.count
+        )
+        if (closer) {
+          const cards = closer.hand.filter((c) => preRankOf(c) === needed.rank)
+          return {
+            ok: true,
+            state: reducePre(state, { type: 'CLOSE', playerId: closer.id, cards, now: Date.now() }),
+          }
+        }
+      }
+    }
+
     const actorId = currentPreActorId(state)
     const actor = state.players.find((p) => p.id === actorId)
     if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }

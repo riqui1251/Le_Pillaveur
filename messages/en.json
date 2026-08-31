@@ -99,7 +99,8 @@
       }
     },
     "levelBadge": "Lv. {level}",
-    "guestBadge": "Guest — save it"
+    "guestBadge": "Guest — save it",
+    "activePlayers": "{count, plural, one {# player online} other {# players online}}"
   },
   "common": {
     "back": "Back",
@@ -3487,7 +3488,9 @@
           "replay": "Play again",
           "rematchWaiting": "Rematch {count}/{total}…",
           "backToMenu": "Back to menu"
-        }
+        },
+        "ouRien": "{rank} or nothing!",
+        "closeTrick": "Slam the trick ({cards})"
       },
       "tutorial": {
         "steps": [
