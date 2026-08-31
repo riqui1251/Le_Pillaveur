@@ -193,7 +193,12 @@
     "gained": "+{xp} XP",
     "levelUp": "Livello {level}!",
     "level": "Livello {level}",
-    "progress": "{current} / {required} XP"
+    "progress": "{current} / {required} XP",
+    "soloGained": "+{xp} XP di allenamento",
+    "soloHint": "Invita un amico per gli XP completi — le partite solo contro i bot pagano fino al livello 5.",
+    "soloCapped": "Le partite solo contro i bot non danno più XP — invita un amico perché conti!",
+    "streak": "Serie di {days} giorni!",
+    "nextUnlock": "Prossimo sblocco: livello {level} — {name}"
   },
   "onlineCollection": {
     "title": "Collezione di {name}",
@@ -3527,15 +3532,15 @@
     "items": {
       "first_win": {
         "title": "Prima vittoria",
-        "description": "Vinci la tua prima partita"
+        "description": "Vinci la tua prima partita online"
       },
       "perfect_game": {
         "title": "Senza fallo",
-        "description": "Vinci una partita senza commettere errori"
+        "description": "Vinci 3 partite nello stesso giorno"
       },
       "speed_demon": {
         "title": "Luminoso come un fulmine",
-        "description": "Reagisci in meno di 500 ms"
+        "description": "Vinci una partita di Quiz"
       },
       "social_butterfly": {
         "title": "Farfalla sociale",
@@ -3543,7 +3548,19 @@
       },
       "night_owl": {
         "title": "Uccello notturno",
-        "description": "Gioca dopo mezzanotte"
+        "description": "Concludi una partita tra mezzanotte e le 6"
+      },
+      "first_game": {
+        "title": "Primo Tavolo",
+        "description": "Concludi la tua prima partita online — contano anche i bot"
+      },
+      "first_room": {
+        "title": "Capotavola",
+        "description": "Apri il tuo primo tavolo online"
+      },
+      "first_friend": {
+        "title": "Primo Amico",
+        "description": "Aggiungi il tuo primo amico"
       }
     }
   },

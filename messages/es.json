@@ -193,7 +193,12 @@
     "gained": "+{xp} XP",
     "levelUp": "¡Nivel {level}!",
     "level": "Nivel {level}",
-    "progress": "{current} / {required} XP"
+    "progress": "{current} / {required} XP",
+    "soloGained": "+{xp} XP de entrenamiento",
+    "soloHint": "Invita a un amigo para la XP completa — las partidas solo contra bots pagan hasta el nivel 5.",
+    "soloCapped": "Las partidas solo contra bots ya no dan XP — ¡invita a un amigo para que cuente!",
+    "streak": "¡Racha de {days} días!",
+    "nextUnlock": "Próximo desbloqueo: nivel {level} — {name}"
   },
   "onlineCollection": {
     "title": "Colección de {name}",
@@ -3527,15 +3532,15 @@
     "items": {
       "first_win": {
         "title": "Primera victoria",
-        "description": "Gana tu primer juego"
+        "description": "Gana tu primera partida en línea"
       },
       "perfect_game": {
         "title": "Sin falta",
-        "description": "Gana un juego sin cometer un error"
+        "description": "Gana 3 partidas el mismo día"
       },
       "speed_demon": {
         "title": "Brillante como un rayo",
-        "description": "Reacciona en menos de 500 ms"
+        "description": "Gana una partida de Quiz"
       },
       "social_butterfly": {
         "title": "Mariposa social",
@@ -3543,7 +3548,19 @@
       },
       "night_owl": {
         "title": "pájaro nocturno",
-        "description": "Juega un juego después de medianoche."
+        "description": "Termina una partida entre medianoche y las 6"
+      },
+      "first_game": {
+        "title": "Primera Mesa",
+        "description": "Termina tu primera partida en línea — los bots también cuentan"
+      },
+      "first_room": {
+        "title": "Jefe de Mesa",
+        "description": "Abre tu primera mesa en línea"
+      },
+      "first_friend": {
+        "title": "Primer Colega",
+        "description": "Añade a tu primer amigo"
       }
     }
   },

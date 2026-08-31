@@ -21,6 +21,9 @@ export type ProgressionDto = {
   unlockedKeys: string[]
   /** Clés accordées MANUELLEMENT (sous-ensemble de unlockedKeys). */
   grantedKeys: string[]
+  /** Série quotidienne : jours consécutifs et dernier jour crédité (Paris). */
+  streakCount: number
+  streakLastDay: string | null
 }
 
 export async function loadGrantedKeys(userId: string): Promise<Set<string>> {
@@ -36,7 +39,13 @@ export async function buildProgression(user: {
   role: string
   onlineXp: number
 }): Promise<ProgressionDto> {
-  const grantedKeys = await loadGrantedKeys(user.id)
+  const [grantedKeys, streak] = await Promise.all([
+    loadGrantedKeys(user.id),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { streakCount: true, streakLastDay: true },
+    }),
+  ])
   const ctx: UnlockContext = { xp: user.onlineXp, role: user.role, grantedKeys }
   const progress = progressForXp(user.onlineXp)
   return {
@@ -46,5 +55,7 @@ export async function buildProgression(user: {
     required: progress.required,
     unlockedKeys: [...unlockedCosmeticKeys(ctx)].sort(),
     grantedKeys: [...grantedKeys].sort(),
+    streakCount: streak?.streakCount ?? 0,
+    streakLastDay: streak?.streakLastDay ?? null,
   }
 }

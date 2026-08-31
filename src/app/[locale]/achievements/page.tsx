@@ -2,15 +2,18 @@
 
 import { useEffect, useState, type ComponentType } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
-import { Moon, Sparkles, Trophy, Users, Zap } from 'lucide-react'
+import { Crown, Gamepad2, Moon, Sparkles, Trophy, UserPlus, Users, Zap } from 'lucide-react'
 import { HubShell } from '@/components/hub/HubShell'
 import { PlayingCardBack } from '@/components/ui/PlayingCard'
 import { cn } from '@/lib/utils'
 
 const ACHIEVEMENT_IDS = [
+  'first_game',
   'first_win',
-  'perfect_game',
+  'first_room',
+  'first_friend',
   'speed_demon',
+  'perfect_game',
   'social_butterfly',
   'night_owl',
 ] as const
@@ -18,7 +21,10 @@ const ACHIEVEMENT_IDS = [
 type AchievementId = (typeof ACHIEVEMENT_IDS)[number]
 
 const ACHIEVEMENT_ICONS: Record<AchievementId, ComponentType<{ className?: string }>> = {
+  first_game: Gamepad2,
   first_win: Trophy,
+  first_room: Crown,
+  first_friend: UserPlus,
   perfect_game: Sparkles,
   speed_demon: Zap,
   social_butterfly: Users,

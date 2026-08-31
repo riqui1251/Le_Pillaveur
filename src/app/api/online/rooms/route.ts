@@ -6,6 +6,7 @@ import { buildRoomDto, cleanupAbandonedRooms, createUniqueRoomCode, deleteRoomIf
 import { GAMES } from '@/lib/games'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { onlineErrorBody } from '@/lib/online-errors'
+import { awardAchievement } from '@/lib/online/achievements'
 
 const ROOM_LANGS = new Set(['fr', 'en', 'es', 'it'])
 
@@ -59,6 +60,9 @@ export async function POST(request: Request) {
         },
       },
     })
+
+    // Succès « première table créée » — jamais bloquant.
+    await awardAchievement(prisma, user.id, 'first_room')
 
     const dto = await buildRoomDto(room.id, user.id)
     return NextResponse.json({ room: dto })

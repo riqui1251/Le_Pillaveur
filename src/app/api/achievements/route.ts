@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth-server'
 
+/** Succès du compte CONNECTÉ uniquement. */
 export async function GET() {
-  try {
-    // Pour l'instant, nous retournons les succès d'un utilisateur fictif
-    // Dans une vraie application, nous utiliserions l'authentification pour identifier l'utilisateur
-    const achievements = await prisma.achievement.findMany({
-      orderBy: {
-        unlockedAt: 'desc'
-      }
-    })
+  const user = await getCurrentUser()
+  if (!user) {
+    return NextResponse.json([], { status: 200 })
+  }
 
+  try {
+    const achievements = await prisma.achievement.findMany({
+      where: { userId: user.id },
+      orderBy: { unlockedAt: 'desc' },
+    })
     return NextResponse.json(achievements)
   } catch (error) {
     console.error('Erreur lors de la récupération des succès:', error)
@@ -19,4 +22,4 @@ export async function GET() {
       { status: 500 }
     )
   }
-} 
+}

@@ -198,7 +198,12 @@
     "gained": "+{xp} XP",
     "levelUp": "Level {level}!",
     "level": "Level {level}",
-    "progress": "{current} / {required} XP"
+    "progress": "{current} / {required} XP",
+    "soloGained": "+{xp} practice XP",
+    "soloHint": "Invite a friend for full XP — bot-only games pay out until level 5.",
+    "soloCapped": "Bot-only games no longer earn XP — invite a friend to make it count!",
+    "streak": "{days}-day streak!",
+    "nextUnlock": "Next unlock: level {level} — {name}"
   },
   "onlineCollection": {
     "title": "{name}'s collection",
@@ -3532,15 +3537,15 @@
     "items": {
       "first_win": {
         "title": "First Victory",
-        "description": "Win your first game"
+        "description": "Win your first online game"
       },
       "perfect_game": {
         "title": "Without fail",
-        "description": "Win a game without making a mistake"
+        "description": "Win 3 games in a single day"
       },
       "speed_demon": {
         "title": "Bright as lightning",
-        "description": "React in less than 500ms"
+        "description": "Win a Quiz game"
       },
       "social_butterfly": {
         "title": "Social Butterfly",
@@ -3548,7 +3553,19 @@
       },
       "night_owl": {
         "title": "Night Bird",
-        "description": "Play a game after midnight"
+        "description": "Finish a game between midnight and 6 am"
+      },
+      "first_game": {
+        "title": "First Table",
+        "description": "Finish your first online game — bots count too"
+      },
+      "first_room": {
+        "title": "Table Boss",
+        "description": "Open your first online table"
+      },
+      "first_friend": {
+        "title": "First Buddy",
+        "description": "Add your first friend"
       }
     }
   },

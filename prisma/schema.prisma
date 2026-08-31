@@ -38,6 +38,11 @@ model User {
   lastLoginAt      DateTime?
   totalPresenceSeconds Int   @default(0)
   onlineXp         Int       @default(0)
+  // Série quotidienne : nombre de jours consécutifs avec au moins une partie
+  // comptée, et dernier jour crédité (date Paris 'YYYY-MM-DD') — mis à jour
+  // au trafic dans recordMatchResults, aucun cron.
+  streakCount      Int       @default(0)
+  streakLastDay    String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   stats            Stats[]
@@ -281,9 +286,11 @@ model Stats {
 model Achievement {
   id         String   @id @default(cuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type       String
   unlockedAt DateTime @default(now())
+
+  @@unique([userId, type])
 }
 
 model PasswordResetToken {

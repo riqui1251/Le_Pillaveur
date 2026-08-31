@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
+import { awardAchievement } from '@/lib/online/achievements'
 
 type Params = { params: Promise<{ requestId: string }> }
 
@@ -26,6 +27,10 @@ export async function POST(_request: Request, { params }: Params) {
     where: { id: requestId },
     data: { status: 'accepted', respondedAt: new Date() },
   })
+
+  // Succès « Premier Pote » pour les deux joueurs — jamais bloquant.
+  await awardAchievement(prisma, friendship.requesterId, 'first_friend')
+  await awardAchievement(prisma, friendship.addresseeId, 'first_friend')
 
   return NextResponse.json({ friendship: updated })
 }

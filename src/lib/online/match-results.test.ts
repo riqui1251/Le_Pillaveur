@@ -167,15 +167,34 @@ describe('bout en bout : extraction + règles', () => {
 })
 
 describe('recordMatchResults (enregistrement + XP)', () => {
-  /** Faux client Prisma : capture createMany + updateMany. */
-  function fakeClient() {
+  /**
+   * Faux client Prisma : capture createMany + updateMany + updates unitaires
+   * (streak / XP solo). `users` simule la base pour findUnique/findMany.
+   */
+  function fakeClient(
+    users: Record<string, { onlineXp?: number; streakCount?: number; streakLastDay?: string | null }> = {}
+  ) {
     const created: unknown[] = []
     const xpUpdates: { ids: string[]; increment: number }[] = []
+    const userUpdates: { id: string; data: Record<string, unknown> }[] = []
+    const achievements: { userId: string; type: string }[] = []
     const client = {
       onlineMatchResult: {
         createMany: async ({ data }: { data: unknown[] }) => {
           created.push(...data)
           return { count: data.length }
+        },
+        // Requêtes des succès (victoires du jour, co-joueurs) : base vide.
+        findMany: async () => [],
+      },
+      achievement: {
+        findMany: async () => achievements.map((a) => ({ ...a })),
+        create: async ({ data }: { data: { userId: string; type: string } }) => {
+          if (achievements.some((a) => a.userId === data.userId && a.type === data.type)) {
+            throw new Error('unique constraint')
+          }
+          achievements.push({ userId: data.userId, type: data.type })
+          return data
         },
       },
       user: {
@@ -186,13 +205,29 @@ describe('recordMatchResults (enregistrement + XP)', () => {
           xpUpdates.push({ ids: args.where.id.in, increment: args.data.onlineXp.increment })
           return { count: args.where.id.in.length }
         },
+        findUnique: async ({ where }: { where: { id: string } }) => {
+          const u = users[where.id]
+          return u ? { onlineXp: u.onlineXp ?? 0 } : null
+        },
+        findMany: async ({ where }: { where: { id: { in: string[] } } }) =>
+          where.id.in
+            .filter((id) => users[id])
+            .map((id) => ({
+              id,
+              streakCount: users[id].streakCount ?? 0,
+              streakLastDay: users[id].streakLastDay ?? null,
+            })),
+        update: async (args: { where: { id: string }; data: Record<string, unknown> }) => {
+          userUpdates.push({ id: args.where.id, data: args.data })
+          return {}
+        },
       },
     }
-    return { client: client as unknown as PrismaClient, created, xpUpdates }
+    return { client: client as unknown as PrismaClient, created, xpUpdates, userUpdates, achievements }
   }
 
-  it('crédite XP_WIN aux gagnants et XP_LOSS aux perdants', async () => {
-    const { client, created, xpUpdates } = fakeClient()
+  it('crédite XP_WIN aux gagnants et XP_LOSS aux perdants, et démarre la série du jour', async () => {
+    const { client, created, xpUpdates, userUpdates } = fakeClient({ u1: {}, u2: {} })
     const state = { players: [
       { id: 'u1', isBot: false },
       { id: 'u2', isBot: false },
@@ -205,10 +240,16 @@ describe('recordMatchResults (enregistrement + XP)', () => {
       { ids: ['u1'], increment: XP_WIN },
       { ids: ['u2'], increment: XP_LOSS },
     ])
+    // Première partie du jour : série à 1, bonus +10 pour chacun.
+    expect(userUpdates.map((u) => u.id).sort()).toEqual(['u1', 'u2'])
+    for (const u of userUpdates) {
+      expect(u.data.streakCount).toBe(1)
+      expect(u.data.onlineXp).toEqual({ increment: 10 })
+    }
   })
 
-  it('partie non comptée (1 seul compte) : ni ligne ni XP', async () => {
-    const { client, created, xpUpdates } = fakeClient()
+  it('solo contre bots sous le plafond : XP d’entraînement, aucune ligne de classement', async () => {
+    const { client, created, xpUpdates, userUpdates } = fakeClient({ u1: { onlineXp: 0 } })
     const state = { players: [
       { id: 'u1', isBot: false },
       { id: 'bot-1', isBot: true },
@@ -217,5 +258,93 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     expect(n).toBe(0)
     expect(created).toHaveLength(0)
     expect(xpUpdates).toHaveLength(0)
+    // +10 d'entraînement puis la série du jour.
+    expect(userUpdates[0]).toEqual({ id: 'u1', data: { onlineXp: { increment: 10 } } })
+    expect(userUpdates[1].data.streakCount).toBe(1)
+  })
+
+  it('solo contre bots AU plafond (niveau 5) : plus rien', async () => {
+    // 1000 XP = niveau 5 pile (50·4·5).
+    const { client, created, xpUpdates, userUpdates } = fakeClient({ u1: { onlineXp: 1000 } })
+    const state = { players: [
+      { id: 'u1', isBot: false },
+      { id: 'bot-1', isBot: true },
+    ], winner: 'u1' }
+    const n = await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
+    expect(n).toBe(0)
+    expect(created).toHaveLength(0)
+    expect(xpUpdates).toHaveLength(0)
+    expect(userUpdates).toHaveLength(0)
+  })
+
+  it('déserteur solo (converti en bot) : aucune XP d’entraînement', async () => {
+    const { client, userUpdates } = fakeClient({ u1: { onlineXp: 0 } })
+    const state = { players: [
+      { id: 'u1', isBot: true },
+      { id: 'bot-1', isBot: true },
+    ], winner: 'bot-1' }
+    await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
+    expect(userUpdates).toHaveLength(0)
+  })
+
+  it('dilemmes (sans gagnant) : XP de participation pour tous, zéro ligne de classement', async () => {
+    const { client, created, xpUpdates } = fakeClient({ u1: {}, u2: {} })
+    const state = { players: [
+      { id: 'u1', name: 'A', isBot: false, leftAt: null },
+      { id: 'u2', name: 'B', isBot: false, leftAt: null },
+      { id: 'bot-1', name: 'Bot', isBot: true, leftAt: null },
+    ] }
+    const n = await recordMatchResults(client, { roomId: 'r1', gameId: 'dilemmes', state })
+    expect(n).toBe(0)
+    expect(created).toHaveLength(0)
+    expect(xpUpdates).toEqual([{ ids: ['u1', 'u2'], increment: XP_LOSS }])
+  })
+
+  it('succès : first_game pour tous, first_win pour le gagnant, speed_demon sur le Quiz', async () => {
+    const { client, achievements } = fakeClient({ u1: {}, u2: {} })
+    const state = { players: [
+      { id: 'u1', isBot: false, score: 5 },
+      { id: 'u2', isBot: false, score: 2 },
+    ] }
+    await recordMatchResults(client, { roomId: 'r1', gameId: 'quiz', state })
+    // night_owl dépend de l'heure réelle (Paris) : exclu pour un test stable.
+    const of = (u: string) =>
+      achievements.filter((a) => a.userId === u && a.type !== 'night_owl').map((a) => a.type).sort()
+    expect(of('u1')).toEqual(['first_game', 'first_win', 'speed_demon'])
+    expect(of('u2')).toEqual(['first_game'])
+  })
+
+  it('succès : le solo au plafond d’XP garde first_game', async () => {
+    const { client, achievements } = fakeClient({ u1: { onlineXp: 5000 } })
+    const state = { players: [
+      { id: 'u1', isBot: false },
+      { id: 'bot-1', isBot: true },
+    ], winner: 'u1' }
+    await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
+    expect(achievements.map((a) => a.type)).toContain('first_game')
+    expect(achievements.map((a) => a.type)).not.toContain('first_win')
+  })
+
+  it('série : hier → +1 avec bonus croissant ; déjà créditée aujourd’hui → rien', async () => {
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date())
+    const yesterday = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date(Date.now() - 24 * 60 * 60 * 1000))
+    const { client, userUpdates } = fakeClient({
+      u1: { streakCount: 3, streakLastDay: yesterday },
+      u2: { streakCount: 9, streakLastDay: today },
+    })
+    const state = { players: [
+      { id: 'u1', isBot: false },
+      { id: 'u2', isBot: false },
+    ], winner: 'u1' }
+    await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
+    // u1 : 3 → 4 jours, bonus 40. u2 : déjà créditée aujourd'hui.
+    expect(userUpdates).toHaveLength(1)
+    expect(userUpdates[0].id).toBe('u1')
+    expect(userUpdates[0].data.streakCount).toBe(4)
+    expect(userUpdates[0].data.onlineXp).toEqual({ increment: 40 })
   })
 })

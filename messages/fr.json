@@ -198,7 +198,12 @@
     "gained": "+{xp} XP",
     "levelUp": "Niveau {level} !",
     "level": "Niveau {level}",
-    "progress": "{current} / {required} XP"
+    "progress": "{current} / {required} XP",
+    "soloGained": "+{xp} XP d'entraînement",
+    "soloHint": "Invite un pote pour l'XP complète — les parties contre les bots seuls paient jusqu'au niveau 5.",
+    "soloCapped": "Les parties contre les bots seuls ne rapportent plus d'XP — invite un pote pour que ça compte !",
+    "streak": "Série de {days} jours !",
+    "nextUnlock": "Prochain déblocage : niveau {level} — {name}"
   },
   "onlineCollection": {
     "title": "Collection de {name}",
@@ -3532,23 +3537,35 @@
     "items": {
       "first_win": {
         "title": "Première Victoire",
-        "description": "Gagnez votre première partie"
+        "description": "Gagne ta première partie en ligne"
       },
       "perfect_game": {
         "title": "Sans Faute",
-        "description": "Gagnez une partie sans faire d'erreur"
+        "description": "Gagne 3 parties dans la même journée"
       },
       "speed_demon": {
         "title": "Vif comme l'éclair",
-        "description": "Réagissez en moins de 500ms"
+        "description": "Gagne une partie de Quiz"
       },
       "social_butterfly": {
         "title": "Papillon Social",
-        "description": "Jouez avec 8 joueurs différents"
+        "description": "Joue avec 8 joueurs différents"
       },
       "night_owl": {
         "title": "Oiseau de Nuit",
-        "description": "Jouez une partie après minuit"
+        "description": "Termine une partie entre minuit et 6 h"
+      },
+      "first_game": {
+        "title": "Première Tablée",
+        "description": "Termine ta première partie en ligne — même avec des bots"
+      },
+      "first_room": {
+        "title": "Patron de Table",
+        "description": "Ouvre ta première table en ligne"
+      },
+      "first_friend": {
+        "title": "Premier Pote",
+        "description": "Ajoute ton premier ami"
       }
     }
   },

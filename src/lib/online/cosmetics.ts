@@ -25,6 +25,28 @@ import { PLAYER_ICON_SERIES } from '@/lib/online/player-icon-defs'
 export const XP_WIN = 50
 export const XP_LOSS = 20
 
+/**
+ * XP d'ENTRAÎNEMENT : partie avec un seul compte humain (solo contre bots).
+ * Créditée uniquement sous le niveau SOLO_BOTS_LEVEL_CAP — le nouveau du
+ * funnel « Essayer avec des bots » découvre la boucle de progression dès sa
+ * première partie, mais le farm reste sans intérêt (100 parties pour
+ * plafonner) et le classement n'en voit jamais la couleur (aucune ligne
+ * OnlineMatchResult).
+ */
+export const XP_SOLO_BOTS = 10
+export const SOLO_BOTS_LEVEL_CAP = 5
+
+/**
+ * Série quotidienne : bonus d'XP à la PREMIÈRE partie comptée du jour,
+ * +10 XP par jour de série consécutif, plafonné à +50 (5 jours et plus).
+ */
+export const XP_STREAK_STEP = 10
+export const STREAK_BONUS_CAP_DAYS = 5
+
+export function streakBonusXp(streakDays: number): number {
+  return XP_STREAK_STEP * Math.max(1, Math.min(streakDays, STREAK_BONUS_CAP_DAYS))
+}
+
 /** XP TOTALE requise pour atteindre `level` (niveau 1 = 0 XP). */
 export function xpForLevel(level: number): number {
   if (level <= 1) return 0
@@ -163,6 +185,34 @@ export const COSMETICS: Cosmetic[] = [
     series.icons.map((icon) => ({ id: icon, kind: 'icon' as const, unlockLevel: series.unlockLevel }))
   ),
 ]
+
+/**
+ * Prochain déblocage au-dessus du niveau courant : le niveau et ce qui s'y
+ * gagne (séries d'icônes en bloc, cadres, effets). Sert à rendre l'objectif
+ * concret (« Plus que 60 XP → série Trognes »). Null quand tout le catalogue
+ * de niveaux est débloqué. Les grant-only (VIP) sont exclus.
+ */
+export function nextUnlockForXp(xp: number): {
+  level: number
+  seriesIds: string[]
+  frameIds: string[]
+  effectIds: string[]
+} | null {
+  const level = levelForXp(xp)
+  const candidates = COSMETICS.filter(
+    (c) => c.unlockLevel > level && c.unlockLevel < GRANT_ONLY_FRAME_LEVEL
+  )
+  if (candidates.length === 0) return null
+  const nextLevel = Math.min(...candidates.map((c) => c.unlockLevel))
+  const at = candidates.filter((c) => c.unlockLevel === nextLevel)
+  const seriesIds = ICON_SERIES.filter((s) => s.unlockLevel === nextLevel).map((s) => s.id)
+  return {
+    level: nextLevel,
+    seriesIds,
+    frameIds: at.filter((c) => c.kind === 'frame').map((c) => c.id),
+    effectIds: at.filter((c) => c.kind === 'effect').map((c) => c.id),
+  }
+}
 
 /** Clé unique d'un cosmétique (les ids se recoupent entre effets/cadres/icônes). */
 export function cosmeticKey(kind: CosmeticKind, id: string): string {
