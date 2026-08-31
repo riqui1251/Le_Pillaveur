@@ -30,7 +30,7 @@ interface GameOnlineLobbyProps {
   game?: GameMeta
 }
 
-/** Fond dÃ©gradÃ© + conteneur centrÃ© partagÃ© par tous les Ã©crans du lobby (paritÃ© visuelle avec le prÃ©-jeu local). */
+/** Fond dégradé + conteneur centré partagé par tous les écrans du lobby (parité visuelle avec le pré-jeu local). */
 function LobbyShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-full">
@@ -44,7 +44,7 @@ function LobbyShell({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** Position d'un siÃ¨ge autour de la table ovale (siÃ¨ge 0 en haut, sens horaire). */
+/** Position d'un siège autour de la table ovale (siège 0 en haut, sens horaire). */
 function seatPos(index: number, count: number) {
   const angle = -Math.PI / 2 + (index * 2 * Math.PI) / count
   return {
@@ -53,7 +53,7 @@ function seatPos(index: number, count: number) {
   }
 }
 
-/** Formats d'Ã©quipes Toucher-CoulÃ©. */
+/** Formats d'équipes Toucher-Coulé. */
 const TC_MODE_OPTIONS = ['1v1', '2v2', '3v3', '4v4'] as const
 const TC_PLAYERS_PER_TEAM: Record<(typeof TC_MODE_OPTIONS)[number], number> = {
   '1v1': 1,
@@ -62,7 +62,7 @@ const TC_PLAYERS_PER_TEAM: Record<(typeof TC_MODE_OPTIONS)[number], number> = {
   '4v4': 4,
 }
 
-/** DifficultÃ©s Petit Buveur (mÃªmes clÃ©s/couleurs que la sÃ©lection en local). */
+/** Difficultés Petit Buveur (mêmes clés/couleurs que la sélection en local). */
 const PB_DIFFICULTIES = ['facile', 'normal', 'difficile', 'extreme'] as const
 const PB_DIFFICULTY_GRADIENT: Record<(typeof PB_DIFFICULTIES)[number], string> = {
   facile: 'from-emerald-500 to-green-600 shadow-emerald-500/30',
@@ -86,22 +86,22 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   // setReady préalable ne passe pas par `loading`).
   const [soloLaunching, setSoloLaunching] = useState(false)
   const tOnline = useTranslations('onlineLobby')
-  // Choix ouvert/privÃ© proposÃ© au clic Â« Ouvrir une table Â» (modifiable
-  // ensuite dans les rÃ©glages du lobby).
+  // Choix ouvert/privé proposé au clic « Ouvrir une table » (modifiable
+  // ensuite dans les réglages du lobby).
   const [choosingVisibility, setChoosingVisibility] = useState(false)
   useEffect(() => {
     setChoosingVisibility(false)
   }, [room?.id])
 
-  // Partage du lien de la table (boucle virale nÂ°1) : partage natif si
+  // Partage du lien de la table (boucle virale n°1) : partage natif si
   // disponible (mobile), sinon copie dans le presse-papier. Le lien
-  // /jeux?join=CODE fonctionne mÃªme pour un ami SANS compte : le code est
-  // mÃ©morisÃ© et consommÃ© aprÃ¨s son inscription (voir jeux/page.tsx).
+  // /jeux?join=CODE fonctionne même pour un ami SANS compte : le code est
+  // mémorisé et consommé après son inscription (voir jeux/page.tsx).
   const [linkShared, setLinkShared] = useState(false)
   const shareTableLink = async () => {
     if (!room) return
-    // URL SANS prÃ©fixe de langue (le rejoignant garde SA locale) via
-    // /invite/CODE : la page sert un aperÃ§u OpenGraph qui montre LA table
+    // URL SANS préfixe de langue (le rejoignant garde SA locale) via
+    // /invite/CODE : la page sert un aperçu OpenGraph qui montre LA table
     // (jeu + code) sur WhatsApp/Discord, puis redirige vers /jeux?join=.
     const url = `${window.location.origin}/invite/${room.code}`
     const gameTitle = game?.title ?? 'Le Pillaveur'
@@ -112,7 +112,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         return
       }
     } catch {
-      // Partage annulÃ© par l'utilisateur : ne pas basculer sur la copie.
+      // Partage annulé par l'utilisateur : ne pas basculer sur la copie.
       return
     }
     try {
@@ -120,7 +120,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       setLinkShared(true)
       setTimeout(() => setLinkShared(false), 2000)
     } catch {
-      // Presse-papier indisponible â€” tant pis.
+      // Presse-papier indisponible — tant pis.
     }
   }
   const [showInvite, setShowInvite] = useState(false)
@@ -156,7 +156,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     }
   }, [room, gameId, setError, tOnline])
 
-  // Badge Â« top 5 Â» : classement de CE jeu, pour repÃ©rer d'un coup d'Å“il les
+  // Badge « top 5 » : classement de CE jeu, pour repérer d'un coup d'œil les
   // meilleurs joueurs de la table avant de lancer.
   useEffect(() => {
     let cancelled = false
@@ -168,7 +168,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         if (cancelled) return
         setTop5(new Map(data.rows.slice(0, 5).map((r) => [r.userId, r.position])))
       } catch {
-        // Badge purement dÃ©coratif : un Ã©chec rÃ©seau ne doit rien casser.
+        // Badge purement décoratif : un échec réseau ne doit rien casser.
       }
     })()
     return () => {
@@ -211,7 +211,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     )
   }
 
-  // Briefing tuto synchronisÃ© : tout le monde lit les rÃ¨gles avant le dÃ©but.
+  // Briefing tuto synchronisé : tout le monde lit les règles avant le début.
   if (inThisGameRoom && room && room.status === 'briefing') {
     return (
       <LobbyShell>
@@ -239,8 +239,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </span>
         </div>
 
-        {/* Guichet : la carte du jeu tient sur une ligne â€” l'Ã©cran sert Ã 
-            REJOINDRE (code, tables ouvertes) ; crÃ©er attend en zone pouce. */}
+        {/* Guichet : la carte du jeu tient sur une ligne — l'écran sert à
+            REJOINDRE (code, tables ouvertes) ; créer attend en zone pouce. */}
         <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[#D8CCAE] bg-cream px-3 py-2.5 text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#24201A]/15 bg-[#24201A]/5">
             <GameIconById id={gameId} className="h-6 w-6" />
@@ -275,8 +275,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 <span aria-hidden className="h-px flex-1 bg-gold/15" />
               </p>
               <div className="flex gap-2">
-                {/* Cases faÃ§on OTP : un input invisible par-dessus, les cases
-                    ne font qu'afficher â€” gros caractÃ¨res, saisie directe. */}
+                {/* Cases façon OTP : un input invisible par-dessus, les cases
+                    ne font qu'afficher — gros caractères, saisie directe. */}
                 <div className="relative flex min-w-0 flex-1 gap-1.5">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <span
@@ -289,7 +289,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                           : 'border-gold/20 bg-felt-deep/50 text-white/20'
                       )}
                     >
-                      {joinCode[i] ?? 'â€¢'}
+                      {joinCode[i] ?? '•'}
                     </span>
                   ))}
                   <input
@@ -336,7 +336,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     <div className="min-w-0">
                       <span className="font-mono text-sm font-bold tracking-wider text-white">{lobby.code}</span>
                       <p className="truncate text-xs text-white/45">
-                        {lobby.hostName} Â· {tOnline('playersCount', { count: lobby.memberCount })}
+                        {lobby.hostName} · {tOnline('playersCount', { count: lobby.memberCount })}
                       </p>
                     </div>
                   </div>
@@ -356,9 +356,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
         {error && <p className="mt-4 text-center text-sm text-red-300">{error}</p>}
 
-        {/* Â« Ouvrir une table Â» : l'action de crÃ©ation attend en zone pouce.
-            Le clic propose d'abord le choix ouvert/privÃ© (modifiable ensuite
-            dans les rÃ©glages du lobby). */}
+        {/* « Ouvrir une table » : l'action de création attend en zone pouce.
+            Le clic propose d'abord le choix ouvert/privé (modifiable ensuite
+            dans les réglages du lobby). */}
         {!wrongRoom && (
           <>
             <div aria-hidden className="h-16" />
@@ -465,9 +465,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </span>
       </div>
 
-      {/* La Table Ronde : les joueurs sont assis autour du feutre (mÃªme
-          langage que le mode TV), le code trÃ´ne au centre â€” le toucher le
-          copie. Toucher un siÃ¨ge ouvre les actions d'amitiÃ© du joueur. */}
+      {/* La Table Ronde : les joueurs sont assis autour du feutre (même
+          langage que le mode TV), le code trône au centre — le toucher le
+          copie. Toucher un siège ouvre les actions d'amitié du joueur. */}
       <div className="relative mx-auto mb-1 h-64 w-full max-w-sm flex-none">
         <div
           className="absolute inset-x-3 inset-y-5 rounded-[50%] border-[3px] border-gold/40 shadow-[inset_0_10px_30px_rgba(0,0,0,0.45),0_10px_24px_-10px_rgba(0,0,0,0.6)]"
@@ -488,7 +488,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             >
               <span className="relative">
                 <OnlinePlayerIcon
-                  icon={m.preferences?.icon ?? (m.isHost ? 'ðŸ‘‘' : 'ðŸŒ')}
+                  icon={m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
                   cosmetics={memberCosmetics}
                   className="h-9 w-9 border border-[#D8CCAE] bg-cream text-base text-[#24201A] shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]"
                 />
@@ -546,7 +546,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </button>
       </div>
 
-      {/* Actions d'amitiÃ© du siÃ¨ge sÃ©lectionnÃ©. */}
+      {/* Actions d'amitié du siège sélectionné. */}
       {seatSel && (() => {
         const m = room.members.find((x) => x.userId === seatSel)
         if (!m || m.isSelf) return null
@@ -593,9 +593,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         )
       })()}
 
-      {/* Mise en avant des bots : dÃ¨s qu'il manque du monde pour lancer,
-          l'hÃ´te complÃ¨te en un geste â€” jouer seul est possible. Le rÃ©glage
-          fin (+/-) reste dans Â« RÃ©glages Â». */}
+      {/* Mise en avant des bots : dès qu'il manque du monde pour lancer,
+          l'hôte complète en un geste — jouer seul est possible. Le réglage
+          fin (+/-) reste dans « Réglages ». */}
       {isHost && game?.botsFillable && (() => {
         const botsCount = Math.max(0, room.settings.botsCount ?? 0)
         const minPlayers = game.minPlayers ?? 2
@@ -607,7 +607,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         if (missing <= 0) return null
         return (
           <div className="mb-3 flex items-center gap-3 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3.5 py-3">
-            <span className="text-xl" aria-hidden>ðŸ¤–</span>
+            <span className="text-xl" aria-hidden>🤖</span>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-white">{tOnline('botsCallout.title', { count: missing })}</p>
               <p className="text-[11px] leading-snug text-white/50">{tOnline('botsCallout.hint')}</p>
@@ -672,7 +672,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             {tOnline('invites.inviteFriend')}
           </p>
           {/* Le QR d'abord : le moyen le plus direct de faire entrer quelqu'un
-              (lien sans prÃ©fixe de langue â€” l'invitÃ© arrive dans SA langue). */}
+              (lien sans préfixe de langue — l'invité arrive dans SA langue). */}
           <div className="mb-3 flex flex-col items-center gap-2 rounded-xl border border-gold/10 bg-felt-deep/60 px-3 py-4 text-center">
             <JoinQR
               url={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${room.code}`}
@@ -850,7 +850,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       isHost && !active && 'hover:bg-white/10 hover:text-white'
                     )}
                   >
-                    <span className="block text-sm font-black">ðŸ’£ {tTc('powerups')}</span>
+                    <span className="block text-sm font-black">💣 {tTc('powerups')}</span>
                     <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
                       {tTc('powerupsHint')}
                     </span>
@@ -862,10 +862,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         )
       })()}
 
-      {/* RÃ©glages de table repliÃ©s : le rÃ©sumÃ© suffit tant qu'on ne touche
-          Ã  rien â€” visibilitÃ©, bots et options du jeu vivent dedans.
-          (Les Ã©quipes Toucher-CoulÃ© restent au-dessus : c'est un choix de
-          JOUEUR, pas un rÃ©glage d'hÃ´te.) */}
+      {/* Réglages de table repliés : le résumé suffit tant qu'on ne touche
+          à rien — visibilité, bots et options du jeu vivent dedans.
+          (Les équipes Toucher-Coulé restent au-dessus : c'est un choix de
+          JOUEUR, pas un réglage d'hôte.) */}
       <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md">
         <button
           type="button"
@@ -876,8 +876,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           <Settings className="h-4 w-4 shrink-0 text-amber-300" />
           <span className="shrink-0">{tOnline('settings.title')}</span>
           <span className="min-w-0 flex-1 truncate text-left text-xs font-normal text-white/40">
-            Â· {tOnline(`visibility.${visibility}`)}
-            {(room.settings.botsCount ?? 0) > 0 && ` Â· ${tOnline('settings.botsSummary', { count: room.settings.botsCount ?? 0 })}`}
+            · {tOnline(`visibility.${visibility}`)}
+            {(room.settings.botsCount ?? 0) > 0 && ` · ${tOnline('settings.botsSummary', { count: room.settings.botsCount ?? 0 })}`}
           </span>
           <ChevronDown className={cn('h-4 w-4 shrink-0 text-white/40 transition-transform', showSettings && 'rotate-180')} />
         </button>
@@ -947,7 +947,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </div>
       )}
 
-      {/* Nombre de bots ajoutÃ©s (hÃ´te) : permet de lancer sous le minimum d'humains. */}
+      {/* Nombre de bots ajoutés (hôte) : permet de lancer sous le minimum d'humains. */}
       {game?.botsFillable && (() => {
         const botsCount = Math.max(0, room.settings.botsCount ?? 0)
         const maxBots = Math.max(0, (game.maxPlayers ?? 12) - room.members.length)
@@ -955,7 +955,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white">ðŸ¤– {tOnline('botsFill.title')}</p>
+                <p className="text-sm font-bold text-white">🤖 {tOnline('botsFill.title')}</p>
                 <p className="mt-0.5 text-[11px] text-white/45">
                   {tOnline('botsFill.hint', { min: game.minPlayers ?? 2 })}
                 </p>
@@ -968,7 +968,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   className="game-grid-cell flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-lg font-black text-white transition-colors hover:bg-white/15 disabled:opacity-30"
                   aria-label="-1 bot"
                 >
-                  âˆ’
+                  −
                 </button>
                 <span className="w-6 text-center text-lg font-black tabular-nums text-white">
                   {botsCount}
@@ -1117,7 +1117,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               )
             })}
           </div>
-          {/* Mode coquin ðŸŒ¶ï¸ : cartes grivoises par sous-entendu, opt-in de l'hÃ´te. */}
+          {/* Mode coquin 🌶️ : cartes grivoises par sous-entendu, opt-in de l'hôte. */}
           <button
             type="button"
             disabled={!isHost}
@@ -1131,7 +1131,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             )}
           >
             <span>
-              <span className="block text-sm font-black">{tDil('coquin')} ðŸŒ¶ï¸</span>
+              <span className="block text-sm font-black">{tDil('coquin')} 🌶️</span>
               <span
                 className={cn(
                   'mt-0.5 block text-[10px]',
@@ -1500,8 +1500,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               )
             })}
           </div>
-          {/* Loup supplÃ©mentaire : proposÃ© uniquement aux tables de 5 (Ã  4,
-              2 loups gagneraient d'entrÃ©e â€” le moteur l'ignore de toute faÃ§on). */}
+          {/* Loup supplémentaire : proposé uniquement aux tables de 5 (à 4,
+              2 loups gagneraient d'entrée — le moteur l'ignore de toute façon). */}
           {room.members.length + (room.settings.botsCount ?? 0) === 5 && (
             <button
               type="button"
@@ -1617,10 +1617,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </p>
       )}
 
-      {/* Espace rÃ©servÃ© pour que la barre fixe ne masque pas le contenu. */}
+      {/* Espace réservé pour que la barre fixe ne masque pas le contenu. */}
       <div aria-hidden className="h-20" />
 
-      {/* PrÃªt + Lancer : fixes en zone pouce, safe-area comprise. */}
+      {/* Prêt + Lancer : fixes en zone pouce, safe-area comprise. */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-lg items-center gap-3">
           {canLaunchSoloWithBots ? (
