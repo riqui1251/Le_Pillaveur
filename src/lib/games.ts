@@ -469,8 +469,6 @@ export const GAMES: GameMeta[] = [
   },
   {
     id: 'president',
-    // Masqué le temps de fiabiliser le jeu — retirer pour le publier.
-    hidden: true,
     title: 'Président',
     description:
       'Le jeu de cartes des cours de récré : videz votre main, coupez au 2, et faites porter le Trou. L’échange des cartes est automatique entre les manches !',

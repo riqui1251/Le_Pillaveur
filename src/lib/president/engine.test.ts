@@ -214,6 +214,90 @@ describe('président — timeout et bots', () => {
     const lead = { ...state, lastPlay: null }
     expect(prePickBotPlay(lead, 'p1')).toEqual([c(5), c(5, 1)])
   })
+
+  /** Renomme p1 pour lui donner un persona (le trait se retrouve par le nom). */
+  function named(state: PreState, name: string): PreState {
+    return {
+      ...state,
+      players: state.players.map((p) => (p.id === 'p1' ? { ...p, name } : p)),
+    }
+  }
+
+  it('préfère un groupe de taille EXACTE plutôt que casser un brelan', () => {
+    const state = rigged(
+      { p1: [c(5), c(5, 1), c(5, 2), c(9), c(9, 1)], p2: [c(3)], p3: [c(4)], p4: [c(6)] },
+      'p1',
+      { lastPlay: { playerId: 'p4', cards: [c(4, 2), c(4, 3)] } }
+    )
+    // Paire demandée : la paire de 9 (exacte) plutôt que d'amputer le brelan de 5.
+    expect(prePickBotPlay(state, 'p1', () => 0.99)).toEqual([c(9), c(9, 1)])
+  })
+
+  it('sortie sèche : un combo qui vide la main se joue toujours', () => {
+    const state = rigged(
+      { p1: [c(8), c(8, 1)], p2: [c(3)], p3: [c(4)], p4: [c(6)] },
+      'p1',
+      { lastPlay: { playerId: 'p4', cards: [c(6, 2), c(6, 3)] } }
+    )
+    expect(prePickBotPlay(state, 'p1', () => 0.99)).toEqual([c(8), c(8, 1)])
+  })
+
+  it('garde la coupe : vise le rang isolé plutôt que le 2, mais coupe faute de mieux', () => {
+    const withNine = rigged(
+      { p1: [c(9), c(PRE_TWO)], p2: [c(3)], p3: [c(4)], p4: [c(6)] },
+      'p1',
+      { lastPlay: { playerId: 'p4', cards: [c(8)] } }
+    )
+    expect(prePickBotPlay(withNine, 'p1', () => 0.99)).toEqual([c(9)])
+    const onlyTwo = rigged(
+      { p1: [c(PRE_TWO)], p2: [c(3)], p3: [c(4)], p4: [c(6)] },
+      'p1',
+      { lastPlay: { playerId: 'p4', cards: [c(8)] } }
+    )
+    expect(prePickBotPlay(onlyTwo, 'p1', () => 0.99)).toEqual([c(PRE_TWO)])
+  })
+
+  it('n’ouvre jamais avec les 2 tant qu’il reste autre chose', () => {
+    const state = named(
+      rigged({ p1: [c(PRE_TWO), c(PRE_TWO, 1), c(7)], p2: [c(3)], p3: [c(4)], p4: [c(6)] }, 'p1'),
+      'Joueur 1'
+    )
+    expect(prePickBotPlay(state, 'p1', () => 0.99)).toEqual([c(7)])
+  })
+
+  it('prudent (Bernadette) : lâche un pli déjà haut quand il a de la marge', () => {
+    const state = named(
+      rigged(
+        { p1: [c(10), c(11), c(3), c(4)], p2: [c(3, 1)], p3: [c(4, 1)], p4: [c(6)] },
+        'p1',
+        { lastPlay: { playerId: 'p4', cards: [c(9, 2)] } }
+      ),
+      'Bernadette 🧶'
+    )
+    expect(prePickBotPlay(state, 'p1', () => 0)).toBeNull()
+  })
+
+  it('agressif (Dédé) : surenchérit parfois d’un cran au-dessus du minimum', () => {
+    const state = named(
+      rigged(
+        { p1: [c(5), c(8), c(3, 1)], p2: [c(3)], p3: [c(4)], p4: [c(6)] },
+        'p1',
+        { lastPlay: { playerId: 'p4', cards: [c(4, 2)] } }
+      ),
+      'Dédé 🎲'
+    )
+    expect(prePickBotPlay(state, 'p1', () => 0)).toEqual([c(8)])
+    expect(prePickBotPlay(state, 'p1', () => 0.99)).toEqual([c(5)])
+  })
+
+  it('farceur (Gépéto) : ouvre parfois d’un simple médian', () => {
+    const state = named(
+      rigged({ p1: [c(3), c(7), c(9)], p2: [c(3, 1)], p3: [c(4)], p4: [c(6)] }, 'p1'),
+      'Gépéto 🤠'
+    )
+    expect(prePickBotPlay(state, 'p1', () => 0)).toEqual([c(7)])
+    expect(prePickBotPlay(state, 'p1', () => 0.99)).toEqual([c(3)])
+  })
 })
 
 describe('président — vues anti-triche', () => {

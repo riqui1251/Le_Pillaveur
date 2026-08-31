@@ -124,21 +124,12 @@ export function PetitBacOnline() {
       botTimer = setTimeout(() => send({ action: 'bot' }), 5000)
     }
 
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send({ action: 'replace-left' })
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
+    // Pas de tick replace-left au Petit Bac : un déserteur n'est PAS converti
+    // en bot « copie blanche » — il reste écarté (le moteur l'exclut de tous
+    // les décomptes) et peut revenir à tout moment.
 
     return () => {
       if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
     }
   }, [view, user, room])
 
@@ -309,12 +300,11 @@ export function PetitBacOnline() {
         )}
       </div>
 
-      {leftPlayer?.leftAt && (
+      {/* Bandeau limité à la fenêtre de retour probable — un parti reste
+          simplement écarté (jamais converti en bot au Petit Bac). */}
+      {leftPlayer?.leftAt && clock - leftPlayer.leftAt < ONLINE_REPLACE_GRACE_MS && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          {t('waitingReturn', {
-            name: leftPlayer.name,
-            seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-          })}
+          {t('leftTable', { name: leftPlayer.name })}
         </div>
       )}
 

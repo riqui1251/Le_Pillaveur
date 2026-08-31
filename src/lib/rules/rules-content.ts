@@ -100,12 +100,11 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Lettre, catégories, STOP, comptage et contestations : les règles complètes. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal, sans installation.',
   },
-  // Président masqué pour l'instant — réactiver cette entrée avec l'id dans rules-ids.ts.
-  // president: {
-  //   title: 'Règles du Président en ligne — combos, coupe au 2 et Trou',
-  //   description:
-  //     'Le Président en ligne : combos strictement plus forts, le 2 coupe le pli, premier sorti = Président, dernier = Trou. Échange automatique entre manches. Règles complètes, 4 à 8 joueurs, gratuit.',
-  // },
+  president: {
+    title: 'Règles du Président en ligne — combos, coupe au 2 et Trou',
+    description:
+      'Le Président en ligne : combos strictement plus forts, le 2 coupe le pli, premier sorti = Président, dernier = Trou. Échange automatique entre manches. Règles complètes, 4 à 8 joueurs, gratuit.',
+  },
 }
 
 const RULES_ROOT = path.join(process.cwd(), 'docs', 'rules', 'fr')

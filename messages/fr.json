@@ -814,6 +814,10 @@
         "title": "Jouer au Petit Bac en ligne gratuit — une lettre et STOP",
         "description": "Une lettre, cinq catégories : le premier qui finit crie STOP, comptage automatique. 2 à 16 joueurs, chat vocal, gratuit et sans installation."
       },
+      "president": {
+        "title": "Jouer au Président en ligne gratuit — combos et coupe au 2",
+        "description": "Le jeu des cours de récré : combos plus forts, le 2 coupe, le Trou rend ses meilleures cartes. 4 à 8 joueurs, bots pour compléter, chat vocal, gratuit."
+      },
       "telephone-dessine": {
         "title": "Jouer au Téléphone Dessiné en ligne gratuit — fous rires",
         "description": "Écris une phrase, le suivant la dessine, le troisième la devine… et tout dérape. 3 à 8 joueurs, chat vocal, gratuit et sans installation."
@@ -3423,7 +3427,8 @@
           "replay": "Rejouer",
           "rematchWaiting": "Revanche {count}/{total}…",
           "backToMenu": "Retour au menu"
-        }
+        },
+        "leftTable": "{name} a quitté la table — il peut revenir à tout moment."
       },
       "tutorial": {
         "steps": [

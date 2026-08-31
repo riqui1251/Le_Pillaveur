@@ -247,26 +247,45 @@ describe('petit-bac — contestation', () => {
     expect(state.rejected).toContain('p1:0')
   })
 
-  it('2 humains + 2 bots : les bots sortent du dénominateur, une contestation suffit', () => {
+  it('2 humains + 2 partis : les partis sortent du dénominateur, une contestation suffit', () => {
     let state = inReveal(4)
-    // p3 et p4 désertent puis sont convertis en bots (leftAt remis à null).
     state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 12_000 })
     state = reducePbc(state, { type: 'LEAVE', playerId: 'p4', at: NOW + 12_000 })
-    state = reducePbc(state, { type: 'REPLACE_LEFT', now: NOW + 300_000, graceMs: 180_000 })
-    expect(state.players.filter((p) => p.isBot)).toHaveLength(2)
     // Seul autre humain actif hors p1 : p2 → seuil 1, sa contestation invalide seule.
-    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 301_000 })
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 13_000 })
     expect(state.rejected).toContain('p1:0')
     expect(state.roundPoints?.p1[0]).toBe(0)
   })
 
-  it('un bot ne vote pas de contestation (symétrie du dénominateur)', () => {
-    let state = inReveal(3)
-    state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 12_000 })
-    state = reducePbc(state, { type: 'REPLACE_LEFT', now: NOW + 300_000, graceMs: 180_000 })
+  it('bot legacy (état sérialisé) : hors dénominateur et sans droit de vote', () => {
+    // Plus aucune conversion ne crée de bots, mais un état en vol peut en
+    // porter : le fix du dénominateur doit tenir, et le bot ne vote pas.
+    let state = createPbcState(
+      [...makePlayers(2), { id: 'p3', name: 'Bot', isBot: true }],
+      'seed',
+      NOW,
+      3
+    )
+    state = reducePbc(state, { type: 'ADVANCE', claimedKey: phaseKey(state), now: NOW + 5_000 })
+    state = reducePbc(state, {
+      type: 'STOP',
+      playerId: 'p1',
+      answers: validAnswers(state, 'a'),
+      now: NOW + 10_000,
+    })
+    state = reducePbc(state, {
+      type: 'SUBMIT',
+      playerId: 'p2',
+      answers: validAnswers(state, 'b'),
+      now: NOW + 11_000,
+    })
+    expect(state.phase).toBe('reveal')
     expect(() =>
-      reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 301_000 })
+      reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 12_000 })
     ).toThrow('BOT_CANNOT_CONTEST')
+    // Dénominateur sans le bot : la contestation de p2 suffit.
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 13_000 })
+    expect(state.rejected).toContain('p1:0')
   })
 })
 
@@ -316,7 +335,7 @@ describe('petit-bac — continue et fin', () => {
 })
 
 describe('petit-bac — départs', () => {
-  it('un déserteur devient bot et dépose copie blanche en plein flush', () => {
+  it('un déserteur n’est JAMAIS converti en bot : écarté, il peut revenir', () => {
     let state = inWrite(3)
     state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 6_000 })
     state = reducePbc(state, {
@@ -332,11 +351,38 @@ describe('petit-bac — départs', () => {
       answers: validAnswers(state, 'b'),
       now: NOW + 201_000,
     })
-    // p3 est parti (inactif) → le flush s'est déjà résolu sans lui.
+    // p3 est parti (inactif) → le flush s'est résolu sans lui.
     expect(state.phase).toBe('reveal')
+    // Sa colonne n'apparaît pas dans la grille publique du reveal.
+    const view = toPbcClientView(state, 'p1')
+    expect(view.revealGrid?.[0]?.map((c) => c.playerId)).toEqual(['p1', 'p2'])
 
-    // Grâce écoulée → conversion en bot (copie blanche déjà sans effet ici).
-    const replaced = reducePbc(state, { type: 'REPLACE_LEFT', now: NOW + 400_000, graceMs: 180_000 })
-    expect(replaced.players.find((p) => p.id === 'p3')?.isBot).toBe(true)
+    // Grâce écoulée : PAS de conversion — no-op, et le retour reste possible.
+    expect(() =>
+      reducePbc(state, { type: 'REPLACE_LEFT', now: NOW + 400_000, graceMs: 180_000 })
+    ).toThrow('NOTHING_TO_REPLACE')
+    const back = reducePbc(state, { type: 'REJOIN', playerId: 'p3' })
+    expect(back.players.find((p) => p.id === 'p3')?.leftAt).toBeNull()
+    expect(back.players.find((p) => p.id === 'p3')?.isBot).toBe(false)
+  })
+
+  it('un départ en plein flush débloque la manche si tous les autres ont déposé', () => {
+    let state = inWrite(3)
+    state = reducePbc(state, {
+      type: 'STOP',
+      playerId: 'p1',
+      answers: validAnswers(state, 'a'),
+      now: NOW + 10_000,
+    })
+    state = reducePbc(state, {
+      type: 'SUBMIT',
+      playerId: 'p2',
+      answers: validAnswers(state, 'b'),
+      now: NOW + 11_000,
+    })
+    // p3 n'a pas déposé : la manche attend encore lui seul.
+    expect(state.phase).toBe('flush')
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 12_000 })
+    expect(state.phase).toBe('reveal')
   })
 })

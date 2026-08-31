@@ -1,5 +1,6 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import { personaForBotName } from '@/lib/online/bot-personas'
 
 /**
  * PRÉSIDENT — moteur PUR, serveur-autoritaire.
@@ -467,33 +468,89 @@ export function currentPreActorId(state: PreState): string | null {
   return null
 }
 
+/** Rang « haut » (dame et plus) : seuil des passes volontaires du prudent. */
+const PRE_HIGH_RANK = 9
+
 /**
- * Stratégie bot : le plus petit combo valide.
- * Mène avec TOUTES les cartes de son plus petit rang ; suit avec exactement
- * la taille demandée au plus petit rang supérieur ; passe sinon.
+ * Stratégie bot, teintée par le persona (retrouvé par le nom — un converti
+ * sans persona joue en suiveur) :
+ *  - ne casse un brelan/carré qu'en dernier recours (préférence aux groupes
+ *    de taille EXACTE, les simples visent d'abord les rangs isolés) ;
+ *  - n'ouvre jamais avec les 2 (la coupe se garde) et ne coupe que faute de
+ *    mieux — l'agressif coupe plus volontiers ;
+ *  - sortie sèche : un combo qui vide la main se joue toujours ;
+ *  - farceur : ouvre parfois d'un simple médian pour brouiller les pistes ;
+ *  - agressif : surenchérit parfois d'un cran au-dessus du minimum ;
+ *  - prudent : lâche les plis trop hauts quand il a de la marge.
+ * `rand` injectable pour des tests déterministes ; null = passe.
  */
-export function prePickBotPlay(state: PreState, playerId: string): number[] | null {
+export function prePickBotPlay(
+  state: PreState,
+  playerId: string,
+  rand: () => number = Math.random
+): number[] | null {
   const player = playerById(state, playerId)
   if (!player) return null
+  const trait = personaForBotName(player.name)?.trait ?? 'suiveur'
   const byRank = new Map<number, number[]>()
   for (const c of player.hand) {
     const r = preRankOf(c)
     byRank.set(r, [...(byRank.get(r) ?? []), c])
   }
   const ranks = [...byRank.keys()].sort((a, b) => a - b)
+  if (ranks.length === 0) return null
+
   if (!state.lastPlay) {
-    const lowest = ranks[0]
-    if (lowest === undefined) return null
-    return byRank.get(lowest)!.slice(0, 4)
+    // Sortie sèche : un seul rang en main → tout poser.
+    if (ranks.length === 1) return byRank.get(ranks[0])!
+    // Jamais ouvrir avec la coupe tant qu'il reste autre chose.
+    const openRanks = ranks.filter((r) => r !== PRE_TWO)
+    // Farceur : parfois un simple médian plutôt que le groupe le plus bas.
+    if (trait === 'farceur' && openRanks.length >= 3 && rand() < 0.3) {
+      const mid = openRanks[Math.floor(openRanks.length / 2)]
+      return [byRank.get(mid)![0]]
+    }
+    return byRank.get(openRanks[0] ?? ranks[0])!
   }
+
   const size = state.lastPlay.cards.length
   const target = preRankOf(state.lastPlay.cards[0])
-  for (const r of ranks) {
-    if (r > target && byRank.get(r)!.length >= size) {
-      return byRank.get(r)!.slice(0, size)
-    }
+  const playable = ranks.filter((r) => r > target && byRank.get(r)!.length >= size)
+  if (playable.length === 0) return null
+
+  // Sortie sèche : un candidat qui vide la main se joue sans réfléchir.
+  const emptying = playable.find(
+    (r) => byRank.get(r)!.length === size && player.hand.length === size
+  )
+  if (emptying !== undefined) return byRank.get(emptying)!
+
+  // Prudent : lâche un pli déjà haut quand il lui reste de la marge.
+  if (trait === 'prudent' && target >= PRE_HIGH_RANK && player.hand.length > size + 2 && rand() < 0.6) {
+    return null
   }
-  return null
+
+  const exact = playable.filter((r) => r !== PRE_TWO && byRank.get(r)!.length === size)
+  const breaking = playable.filter((r) => r !== PRE_TWO && byRank.get(r)!.length > size)
+  const twos = playable.filter((r) => r === PRE_TWO)
+
+  let pickRank: number | undefined
+  if (exact.length > 0) {
+    pickRank = exact[0]
+    // Agressif : surenchérit d'un cran au-dessus du minimum.
+    if (trait === 'agressif' && exact.length > 1 && rand() < 0.4) pickRank = exact[1]
+  } else if (breaking.length > 0) {
+    // Dernier recours : entamer le plus petit groupe au-dessus — le prudent
+    // préfère passer que démonter un brelan tôt dans la manche.
+    if (trait === 'prudent' && player.hand.length > 6 && rand() < 0.5) return null
+    pickRank = breaking[0]
+  } else if (twos.length > 0) {
+    // Couper au 2 : l'agressif volontiers, les autres gardent la coupe tant
+    // que la main est encore longue.
+    const eager = trait === 'agressif' ? 0.8 : 0.35
+    if (player.hand.length <= size + 2 || rand() < eager) pickRank = twos[0]
+  }
+  if (pickRank === undefined) return null
+  return byRank.get(pickRank)!.slice(0, size)
 }
 
 // ─── Vues ────────────────────────────────────────────────────────────────────

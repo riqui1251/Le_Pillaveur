@@ -386,13 +386,19 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new PbcEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const next: PbcState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Sa feuille n'est plus attendue : si tous les actifs restants ont
+      // déposé, la manche se dépouille tout de suite.
+      if (next.phase === 'flush' && pbcActive(next).every((p) => next.answers[p.id])) {
+        return enterReveal(next, action.at)
+      }
+      return next
     }
 
     case 'REJOIN': {
@@ -408,32 +414,11 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
     }
 
     case 'REPLACE_LEFT': {
-      const expired = state.players.filter(
-        (p) => !p.isBot && p.leftAt && action.now - p.leftAt >= action.graceMs
-      )
-      if (expired.length === 0) throw new PbcEngineError('NOTHING_TO_REPLACE')
-      const ids = new Set(expired.map((p) => p.id))
-      let next: PbcState = {
-        ...state,
-        players: state.players.map((p) =>
-          ids.has(p.id) ? { ...p, isBot: true, leftAt: null } : p
-        ),
-        version: state.version + 1,
-      }
-      // Les nouveaux bots déposent copie blanche pour ne pas geler le flush.
-      if (next.phase === 'flush') {
-        const answers = { ...next.answers }
-        for (const id of ids) {
-          if (!answers[id]) {
-            answers[id] = Array.from({ length: next.categories.length }, () => '')
-          }
-        }
-        next = { ...next, answers }
-        if (pbcActive(next).every((p) => next.answers[p.id])) {
-          return enterReveal(next, action.now)
-        }
-      }
-      return next
+      // PAS de conversion en bot au Petit Bac : un bot « copie blanche » ne
+      // fait que polluer le reveal (colonnes vides) et fausser la table. Un
+      // déserteur reste simplement écarté (inactif — exclu du flush, du score
+      // et des contestations) et peut revenir à tout moment via REJOIN.
+      throw new PbcEngineError('NOTHING_TO_REPLACE')
     }
 
     default: {

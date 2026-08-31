@@ -814,6 +814,10 @@
         "title": "Play Petit Bac online for free — one letter, then STOP",
         "description": "One letter, five categories: first to finish yells STOP, scoring is automatic. 2–16 players, voice chat, free and no install."
       },
+      "president": {
+        "title": "Play President online for free — combos and the 2 cuts",
+        "description": "The classic card game: stronger combos, the 2 cuts the trick, the Scum gives up their best cards. 4–8 players, bots to fill seats, voice chat, free."
+      },
       "telephone-dessine": {
         "title": "Play Drawn Telephone online free — giggles guaranteed",
         "description": "Write a sentence, the next player draws it, the third one guesses… chaos ensues. 3–8 players, voice chat, free and no install."
@@ -3423,7 +3427,8 @@
           "replay": "Play again",
           "rematchWaiting": "Rematch {count}/{total}…",
           "backToMenu": "Back to menu"
-        }
+        },
+        "leftTable": "{name} left the table — they can come back at any time."
       },
       "tutorial": {
         "steps": [

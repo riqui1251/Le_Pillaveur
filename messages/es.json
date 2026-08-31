@@ -809,6 +809,10 @@
         "title": "Juega al Petit Bac online gratis — una letra y ¡STOP!",
         "description": "Una letra, cinco categorías: el primero en acabar grita STOP, recuento automático. De 2 a 16 jugadores, chat de voz, gratis y sin instalación."
       },
+      "president": {
+        "title": "Jugar al Presidente online gratis — combos y el 2 corta",
+        "description": "El clásico juego de cartas: combos más fuertes, el 2 corta la baza, el Culo entrega sus mejores cartas. 4 a 8 jugadores, bots para completar, chat de voz, gratis."
+      },
       "telephone-dessine": {
         "title": "Juega al Teléfono Dibujado online gratis — risas seguras",
         "description": "Escribe una frase, el siguiente la dibuja, el tercero la adivina… y todo descarrila. De 3 a 8 jugadores, chat de voz, gratis y sin instalación."
@@ -3418,7 +3422,8 @@
           "replay": "Jugar otra vez",
           "rematchWaiting": "Revancha {count}/{total}…",
           "backToMenu": "Volver al menú"
-        }
+        },
+        "leftTable": "{name} dejó la mesa — puede volver en cualquier momento."
       },
       "tutorial": {
         "steps": [

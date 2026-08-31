@@ -177,7 +177,9 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
       })
       return s.players.map((p) => ({
         playerId: p.id,
-        isBot: p.isBot,
+        // Au Petit Bac, un déserteur n'est PAS converti en bot (il reste
+        // leftAt) : on le traite comme tel ici — défaite anti rage-quit.
+        isBot: p.isBot || Boolean(p.leftAt),
         won: p.total > 0 && rankOf.get(p.id) === 1,
         rank: rankOf.get(p.id),
       }))

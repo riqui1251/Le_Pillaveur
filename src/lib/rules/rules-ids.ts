@@ -20,7 +20,7 @@ export const RULES_GAME_IDS = [
   'mots-codes',
   'dilemmes',
   'petit-bac',
-  // 'president' — jeu masqué du catalogue pour l'instant, page règles retirée avec lui.
+  'president',
 ] as const
 
 export type RulesGameId = (typeof RULES_GAME_IDS)[number]
