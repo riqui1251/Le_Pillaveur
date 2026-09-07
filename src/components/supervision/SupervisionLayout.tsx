@@ -1,7 +1,7 @@
 "use client"
 
 import type { ComponentType, ReactNode } from 'react'
-import { Check, Loader2 } from 'lucide-react'
+import { Check, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -307,6 +307,9 @@ export function LiveTableCard({
   memberCount,
   memberNames,
   elapsed,
+  closeLabel,
+  onClose,
+  closing,
 }: {
   icon?: ReactNode
   gameTitle: string
@@ -316,6 +319,10 @@ export function LiveTableCard({
   memberCount: number
   memberNames: string[]
   elapsed: string
+  /** Fermeture forcée (admin) : bouton rendu seulement si `onClose` est fourni. */
+  closeLabel?: string
+  onClose?: () => void
+  closing?: boolean
 }) {
   const extra = memberCount - memberNames.length
   return (
@@ -338,7 +345,20 @@ export function LiveTableCard({
           {memberNames.length > 0 ? memberNames.join(', ') : '—'}
           {extra > 0 ? ` +${extra}` : ''}
         </span>
-        <span className="shrink-0">{elapsed}</span>
+        <span className="flex shrink-0 items-center gap-2">
+          <span>{elapsed}</span>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={closing}
+              className="inline-flex items-center gap-1 rounded-full border border-suit-red/40 bg-suit-red/10 px-2 py-0.5 text-[10px] font-bold text-red-200 transition hover:bg-suit-red/25 disabled:opacity-50"
+            >
+              {closing ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
+              {closeLabel}
+            </button>
+          )}
+        </span>
       </div>
     </div>
   )

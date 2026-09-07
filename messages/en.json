@@ -3473,9 +3473,11 @@
         "out": "You are out! Position {rank} — watch the others sweat.",
         "roles": {
           "president": "President",
-          "trou": "Trou"
+          "trou": "Trou",
+          "vicePresident": "Vice-President",
+          "viceTrou": "Vice-Trou"
         },
-        "exchangeInfo": "Automatic exchange: the Trou gives their 2 best cards to the President, who returns their 2 worst.",
+        "exchangeInfo": "Automatic exchanges: the Trou gives their 2 best cards to the President (who returns their 2 worst), the Vice-Trou gives their best card to the Vice-President (who returns their worst).",
         "exchangeAsTrou": "You gave your 2 best cards… and received: {cards}",
         "exchangeAsPresident": "The Trou gave you: {cards}",
         "mancheEnd": "End of round {n}",
@@ -3490,7 +3492,12 @@
           "backToMenu": "Back to menu"
         },
         "ouRien": "{rank} or nothing!",
-        "closeTrick": "Slam the trick ({cards})"
+        "closeTrick": "Slam the trick ({cards})",
+        "exchangeAsViceTrou": "You gave your best card… and received: {cards}",
+        "exchangeAsVicePresident": "The Vice-Trou gave you: {cards}",
+        "history": {
+          "title": "Previous tricks ({count})"
+        }
       },
       "tutorial": {
         "steps": [
@@ -3504,7 +3511,7 @@
           },
           {
             "title": "President and Trou",
-            "body": "First out = President, last = Trou. Between rounds, the Trou automatically gives their 2 best cards to the President."
+            "body": "First out = President, last = Trou. Between rounds, the Trou gives their 2 best cards to the President, and the Vice-Trou their best card to the Vice-President."
           }
         ]
       }
@@ -3830,7 +3837,8 @@
       "journalFeatureBan": "{actor} disabled {feature} for {target}",
       "journalGrant": "{actor} granted a cosmetic to {target}",
       "journalTerm": "Moderated term added: “{detail}”",
-      "journalTermByActor": "{actor} added the term “{detail}”"
+      "journalTermByActor": "{actor} added the term “{detail}”",
+      "closeTable": "Close"
     },
     "games": {
       "playedTitle": "Games played",
@@ -3948,7 +3956,11 @@
       "days": "{count} days",
       "banCommentLabel": "Comment / reason (internal)",
       "banCommentPlaceholder": "E.g. spam, toxic behavior…",
-      "banConfirm": "Confirm ban"
+      "banConfirm": "Confirm ban",
+      "closeTableTitle": "Force-close this table?",
+      "closeTableLabel": "Table:",
+      "closeTableWarning": "{count, plural, =0 {The table will be deleted immediately.} one {The player at the table will be sent back to the lobby.} other {The # players at the table will be sent back to the lobby.}} No match result will be recorded.",
+      "closeTableConfirm": "Close the table"
     },
     "device": {
       "accountCodeTitle": "Unique account code",
@@ -3961,7 +3973,8 @@
       "deleteDenied": "Deletion denied",
       "unbanDenied": "Unban denied",
       "loadAccounts": "Unable to load accounts",
-      "historyUnavailable": "History unavailable"
+      "historyUnavailable": "History unavailable",
+      "closeTableDenied": "Close refused"
     },
     "siteSettings": {
       "title": "Site settings",

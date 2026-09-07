@@ -1042,6 +1042,15 @@ export default function SupervisionPage() {
     displayName: string
   } | null>(null)
 
+  // Fermeture forcée d'une table en ligne (admin+).
+  const [closeTableDialog, setCloseTableDialog] = useState<{
+    roomId: string
+    code: string
+    gameTitle: string
+    memberCount: number
+  } | null>(null)
+  const [closingRoomId, setClosingRoomId] = useState<string | null>(null)
+
   // Réglage global du vocal (super admin) + sanctions ciblées vocal/chat.
   const [voiceEnabled, setVoiceEnabled] = useState<boolean | null>(null)
   const [featureBanDialog, setFeatureBanDialog] = useState<{
@@ -1426,6 +1435,26 @@ export default function SupervisionPage() {
     }
   }
 
+  const closeTable = async () => {
+    if (!closeTableDialog) return
+    setClosingRoomId(closeTableDialog.roomId)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/rooms/${closeTableDialog.roomId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? t('apiErrors.closeTableDenied'))
+      setCloseTableDialog(null)
+      await loadAll()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tErrors('generic'))
+    } finally {
+      setClosingRoomId(null)
+    }
+  }
+
   const submitUnban = async () => {
     if (!unbanDialog) return
     setBusy(true)
@@ -1735,6 +1764,19 @@ export default function SupervisionPage() {
                       memberCount={tbl.memberCount}
                       memberNames={tbl.memberNames}
                       elapsed={formatPresenceDuration((Date.now() - new Date(tbl.createdAt).getTime()) / 1000)}
+                      closeLabel={canEditAccounts ? t('room.closeTable') : undefined}
+                      onClose={
+                        canEditAccounts
+                          ? () =>
+                              setCloseTableDialog({
+                                roomId: tbl.id,
+                                code: tbl.code,
+                                gameTitle: tbl.gameTitle,
+                                memberCount: tbl.memberCount,
+                              })
+                          : undefined
+                      }
+                      closing={closingRoomId === tbl.id}
                     />
                   ))}
                 </div>
@@ -2495,6 +2537,30 @@ export default function SupervisionPage() {
         </TabsContent>
         )}
       </Tabs>
+
+      <Dialog open={!!closeTableDialog} onOpenChange={(open) => !open && setCloseTableDialog(null)}>
+        <DialogContent className="border-red-500/30 bg-felt-deep text-white">
+          <DialogHeader>
+            <DialogTitle>{t('dialogs.closeTableTitle')}</DialogTitle>
+            <DialogDescription className="text-white/50">
+              {t('dialogs.closeTableLabel')}{' '}
+              <strong className="text-white">
+                {closeTableDialog?.gameTitle} — {closeTableDialog?.code}
+              </strong>
+              <br />
+              {t('dialogs.closeTableWarning', { count: closeTableDialog?.memberCount ?? 0 })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloseTableDialog(null)}>
+              {t('dialogs.cancel')}
+            </Button>
+            <Button variant="destructive" disabled={closingRoomId !== null} onClick={closeTable}>
+              {t('dialogs.closeTableConfirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!deleteDialog} onOpenChange={(open) => !open && setDeleteDialog(null)}>
         <DialogContent className="border-red-500/30 bg-felt-deep text-white">

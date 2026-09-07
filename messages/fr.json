@@ -3473,9 +3473,11 @@
         "out": "Tu as fini ! Position {rank} — regarde les autres transpirer.",
         "roles": {
           "president": "Président",
-          "trou": "Trou"
+          "trou": "Trou",
+          "vicePresident": "Vice-Président",
+          "viceTrou": "Vice-Trou"
         },
-        "exchangeInfo": "Échange automatique : le Trou donne ses 2 meilleures cartes au Président, qui rend ses 2 pires.",
+        "exchangeInfo": "Échanges automatiques : le Trou donne ses 2 meilleures cartes au Président (qui rend ses 2 pires), le Vice-Trou donne sa meilleure au Vice-Président (qui rend sa pire).",
         "exchangeAsTrou": "Tu as donné tes 2 meilleures cartes… et reçu : {cards}",
         "exchangeAsPresident": "Le Trou t’a donné : {cards}",
         "mancheEnd": "Fin de la manche {n}",
@@ -3490,7 +3492,12 @@
           "backToMenu": "Retour au menu"
         },
         "ouRien": "{rank} ou rien !",
-        "closeTrick": "Fermer le pli ({cards})"
+        "closeTrick": "Fermer le pli ({cards})",
+        "exchangeAsViceTrou": "Tu as donné ta meilleure carte… et reçu : {cards}",
+        "exchangeAsVicePresident": "Le Vice-Trou t’a donné : {cards}",
+        "history": {
+          "title": "Plis précédents ({count})"
+        }
       },
       "tutorial": {
         "steps": [
@@ -3504,7 +3511,7 @@
           },
           {
             "title": "Président et Trou",
-            "body": "Premier sorti = Président, dernier = Trou. Entre les manches, le Trou donne automatiquement ses 2 meilleures cartes au Président."
+            "body": "Premier sorti = Président, dernier = Trou. Entre les manches, le Trou donne ses 2 meilleures cartes au Président, et le Vice-Trou sa meilleure au Vice-Président."
           }
         ]
       }
@@ -3830,7 +3837,8 @@
       "journalFeatureBan": "{actor} a coupé le {feature} de {target}",
       "journalGrant": "{actor} a offert un cosmétique à {target}",
       "journalTerm": "Terme modéré ajouté : « {detail} »",
-      "journalTermByActor": "{actor} a ajouté le terme « {detail} »"
+      "journalTermByActor": "{actor} a ajouté le terme « {detail} »",
+      "closeTable": "Fermer"
     },
     "games": {
       "playedTitle": "Parties jouées par jeu",
@@ -3948,7 +3956,11 @@
       "days": "{count} jours",
       "banCommentLabel": "Commentaire / motif (visible en interne)",
       "banCommentPlaceholder": "Ex. : spam, comportement toxique…",
-      "banConfirm": "Confirmer le ban"
+      "banConfirm": "Confirmer le ban",
+      "closeTableTitle": "Fermer cette table de force ?",
+      "closeTableLabel": "Table :",
+      "closeTableWarning": "{count, plural, =0 {La table sera supprimée immédiatement.} one {Le joueur présent sera renvoyé au Guichet.} other {Les # joueurs présents seront renvoyés au Guichet.}} Aucun résultat de partie ne sera enregistré.",
+      "closeTableConfirm": "Fermer la table"
     },
     "device": {
       "accountCodeTitle": "Code compte unique",
@@ -3961,7 +3973,8 @@
       "deleteDenied": "Suppression refusée",
       "unbanDenied": "Débannissement refusé",
       "loadAccounts": "Impossible de charger les comptes",
-      "historyUnavailable": "Historique indisponible"
+      "historyUnavailable": "Historique indisponible",
+      "closeTableDenied": "Fermeture refusée"
     },
     "siteSettings": {
       "title": "Réglages du site",

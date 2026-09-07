@@ -40,9 +40,17 @@ function parseView(json: string | null | undefined): PreClientView | null {
   }
 }
 
-/** Libellé court d'une carte (échange, bouton fermer) — joker inclus. */
+/** Libellé court d'une carte (échange, bouton fermer, historique) — joker inclus. */
 function cardLabel(card: number): string {
   return preIsJoker(card) ? '🃏' : `${PRE_RANKS[preRankOf(card)]}${PRE_SUITS[preSuitOf(card)]}`
+}
+
+/** Insignes des rôles hérités de la manche précédente. */
+const ROLE_BADGES: Record<string, string> = {
+  president: '👑',
+  vicePresident: '🎖️',
+  viceTrou: '🪠',
+  trou: '🕳️',
 }
 
 function CardFace({ card, raised, onClick }: { card: number; raised?: boolean; onClick?: () => void }) {
@@ -149,6 +157,9 @@ export function PresidentOnline() {
       view.trickRun !== null &&
       view.trickRun.count >= 2 &&
       view.trickRun.count < 4 &&
+      // La fermeture complète le carré d'une pose de même taille (un brelan
+      // posé d'un coup ne se ferme pas d'une carte seule).
+      4 - view.trickRun.count === view.lastPlay.cards.length &&
       view.players.some((p) => p.isBot && !p.leftAt)
     if (actor?.isBot && (view.phase === 'playing' || view.phase === 'interlude')) {
       botTimer = setTimeout(
@@ -196,6 +207,23 @@ export function PresidentOnline() {
   const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const roleLabel = (role: string) =>
+    role === 'president'
+      ? t('roles.president')
+      : role === 'trou'
+        ? t('roles.trou')
+        : role === 'vicePresident'
+          ? t('roles.vicePresident')
+          : t('roles.viceTrou')
+  // Étiquette de rôle d'une ligne de classement (👑 / 🎖️ / 🪠 / 🕳️).
+  const rankRoleLabel = (i: number, len: number): string => {
+    if (i === 0) return `👑 ${t('roles.president')}`
+    if (i === len - 1) return `🕳️ ${t('roles.trou')}`
+    if (len >= 4 && i === 1) return `🎖️ ${t('roles.vicePresident')}`
+    if (len >= 4 && i === len - 2) return `🪠 ${t('roles.viceTrou')}`
+    return ''
+  }
+  const trickHistory = view.trickHistory ?? []
 
   const sendAction = async (body: Record<string, unknown>) => {
     if (!room || busy) return
@@ -266,9 +294,14 @@ export function PresidentOnline() {
 
   // Fermeture de carré : je détiens les cartes manquantes du rang au sommet
   // du pli (3 simples à la suite → la 4e ; une paire → l'autre paire) — les
-  // jokers complètent.
+  // jokers complètent. On ne ferme qu'avec une pose de MÊME TAILLE que celles
+  // du pli : un brelan posé d'un coup ne se ferme pas d'une carte seule.
   const closeNeeded =
-    view.phase === 'playing' && view.lastPlay && view.trickRun && view.trickRun.count >= 2
+    view.phase === 'playing' &&
+    view.lastPlay &&
+    view.trickRun &&
+    view.trickRun.count >= 2 &&
+    4 - view.trickRun.count === view.lastPlay.cards.length
       ? 4 - view.trickRun.count
       : 0
   const myJokers = view.myHand.filter((c) => preIsJoker(c))
@@ -316,7 +349,7 @@ export function PresidentOnline() {
                   {p.name}
                 </span>
                 <span className="text-xs font-bold uppercase tracking-wide text-white/50">
-                  {i === 0 ? t('roles.president') : isTrou ? t('roles.trou') : ''}
+                  {rankRoleLabel(i, ranking.length)}
                 </span>
               </div>
             )
@@ -399,7 +432,7 @@ export function PresidentOnline() {
                   {p.name}
                 </span>
                 <span className="text-xs font-bold uppercase tracking-wide text-white/50">
-                  {i === 0 ? t('roles.president') : isTrou ? t('roles.trou') : ''}
+                  {rankRoleLabel(i, ranking.length)}
                 </span>
               </div>
             )
@@ -424,8 +457,20 @@ export function PresidentOnline() {
   }
 
   // ── Manche en cours ──────────────────────────────────────────────────────
+  // Bannière d'échange : chaque paire (Président/Trou, vices) ne voit que le
+  // sien — le serveur masque déjà les cartes des autres.
   const exchange = view.lastExchange
-  const iSeeExchange = exchange && (exchange.fromTrou.length > 0 || exchange.fromPresident.length > 0)
+  const myExchangeMsg = exchange
+    ? user.id === exchange.trouId && exchange.fromPresident.length > 0
+      ? t('exchangeAsTrou', { cards: exchange.fromPresident.map(cardLabel).join(' ') })
+      : user.id === exchange.presidentId && exchange.fromTrou.length > 0
+        ? t('exchangeAsPresident', { cards: exchange.fromTrou.map(cardLabel).join(' ') })
+        : user.id === exchange.viceTrouId && (exchange.fromVicePresident?.length ?? 0) > 0
+          ? t('exchangeAsViceTrou', { cards: (exchange.fromVicePresident ?? []).map(cardLabel).join(' ') })
+          : user.id === exchange.vicePresidentId && (exchange.fromViceTrou?.length ?? 0) > 0
+            ? t('exchangeAsVicePresident', { cards: (exchange.fromViceTrou ?? []).map(cardLabel).join(' ') })
+            : null
+    : null
 
   return (
     <>
@@ -462,12 +507,10 @@ export function PresidentOnline() {
         </div>
       )}
 
-      {/* Échange (visible seulement du Président et du Trou) */}
-      {iSeeExchange && exchange && (
+      {/* Échange (visible seulement de la paire concernée) */}
+      {myExchangeMsg && (
         <div className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          {user.id === exchange.trouId
-            ? t('exchangeAsTrou', { cards: exchange.fromPresident.map(cardLabel).join(' ') })
-            : t('exchangeAsPresident', { cards: exchange.fromTrou.map(cardLabel).join(' ') })}
+          {myExchangeMsg}
         </div>
       )}
 
@@ -489,8 +532,11 @@ export function PresidentOnline() {
             >
               <PlayerAvatarGlyph value={iconOf(p)} />
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-              {p.role === 'president' && <span aria-hidden>👑</span>}
-              {p.role === 'trou' && <span aria-hidden>🕳️</span>}
+              {p.role && (
+                <span aria-hidden title={roleLabel(p.role)}>
+                  {ROLE_BADGES[p.role]}
+                </span>
+              )}
               <span className="tabular-nums text-white/50">
                 {outIdx !== -1 ? `#${outIdx + 1}` : p.handCount}
               </span>
@@ -525,6 +571,42 @@ export function PresidentOnline() {
           <p className="text-sm font-bold text-white/50">{t('freeTrick')}</p>
         )}
       </div>
+
+      {/* Historique des plis de la manche (le plus récent en premier) */}
+      {trickHistory.length > 0 && (
+        <details className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2">
+          <summary className="cursor-pointer select-none text-xs font-bold text-white/60">
+            {t('history.title', { count: trickHistory.length })}
+          </summary>
+          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
+            {[...trickHistory].reverse().map((entry, i) => {
+              const n = trickHistory.length - i
+              return (
+                <div
+                  key={n}
+                  className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold text-white/60"
+                >
+                  <span className="w-4 shrink-0 text-right tabular-nums text-white/30">{n}</span>
+                  {entry.plays.map((pl, j) => {
+                    const p = view.players.find((x) => x.id === pl.playerId)
+                    return (
+                      <span key={j} className="inline-flex items-center gap-0.5" title={p?.name}>
+                        {p && <PlayerAvatarGlyph value={iconOf(p)} />}
+                        <span className={cn(pl.playerId === entry.winnerId && 'text-gold')}>
+                          {pl.cards.map(cardLabel).join(' ')}
+                        </span>
+                      </span>
+                    )
+                  })}
+                  {entry.winnerId && (
+                    <span className="text-gold/80">→ {nameOf(entry.winnerId)}</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </details>
+      )}
 
       {/* Fermeture de carré : je détiens les cartes manquantes — hors tour ! */}
       {canClose && (

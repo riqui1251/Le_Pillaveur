@@ -141,6 +141,8 @@ export function TvPresident({ room, state }: { room: TvRoomDto; state: PreClient
               <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               {p.role === 'president' && <span aria-hidden>👑</span>}
+              {p.role === 'vicePresident' && <span aria-hidden>🎖️</span>}
+              {p.role === 'viceTrou' && <span aria-hidden>🪠</span>}
               {p.role === 'trou' && <span aria-hidden>🕳️</span>}
               <span className="tabular-nums text-white/50">
                 {outIdx !== -1 ? `#${outIdx + 1}` : `🂠 ${p.handCount}`}

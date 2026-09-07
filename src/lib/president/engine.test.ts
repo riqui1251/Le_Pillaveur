@@ -166,6 +166,56 @@ describe('président — règles de pose', () => {
     ).toThrow('NOTHING_TO_CLOSE')
   })
 
+  it('fermeture interdite quand le brelan est posé d’un coup (la 4e carte ne ferme pas)', () => {
+    const state = rigged(
+      { p1: [c(3)], p2: [c(10)], p3: [c(5, 3), c(9)], p4: [c(11)] },
+      'p2',
+      {
+        lastPlay: { playerId: 'p1', cards: [c(5), c(5, 1), c(5, 2)] },
+        trickRun: { rank: 5, count: 3 },
+      }
+    )
+    expect(() =>
+      reducePre(state, { type: 'CLOSE', playerId: 'p3', cards: [c(5, 3)], now: NOW })
+    ).toThrow('NOTHING_TO_CLOSE')
+  })
+
+  it('personne ne joue après le Président : sa sortie brûle le pli', () => {
+    let state = rigged(
+      { p1: [c(9)], p2: [c(10), c(3)], p3: [c(11), c(4)], p4: [c(5), c(6)] },
+      'p1'
+    )
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(9)], now: NOW })
+    // p2 avait de quoi monter (un roi) — mais le pli est brûlé : il MÈNE.
+    expect(state.outOrder).toEqual(['p1'])
+    expect(state.lastPlay).toBeNull()
+    expect(state.trickRun).toBeNull()
+    expect(state.currentTurnId).toBe('p2')
+  })
+
+  it('historique : chaque pli terminé est archivé avec sa séquence et son vainqueur', () => {
+    let state = rigged(
+      { p1: [c(6), c(3)], p2: [c(7), c(4), c(3, 1)], p3: [c(5), c(5, 1)], p4: [c(8), c(9)] },
+      'p1'
+    )
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(6)], now: NOW })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(7)], now: NOW })
+    state = reducePre(state, { type: 'PASS', playerId: 'p3', now: NOW })
+    state = reducePre(state, { type: 'PASS', playerId: 'p4', now: NOW })
+    state = reducePre(state, { type: 'PASS', playerId: 'p1', now: NOW })
+    // Pli gagné par p2 : archivé avec les deux poses, dans l'ordre.
+    expect(state.trickHistory).toHaveLength(1)
+    expect(state.trickHistory[0].winnerId).toBe('p2')
+    expect(state.trickHistory[0].plays).toEqual([
+      { playerId: 'p1', cards: [c(6)] },
+      { playerId: 'p2', cards: [c(7)] },
+    ])
+    // Le pli suivant repart de zéro et s'accumule dans trickPlays.
+    expect(state.trickPlays).toEqual([])
+    state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(4)], now: NOW })
+    expect(state.trickPlays).toEqual([{ playerId: 'p2', cards: [c(4)] }])
+  })
+
   it('le carré complété PAR UNE POSE ferme aussi le pli', () => {
     let state = rigged(
       { p1: [c(3)], p2: [c(6, 3), c(9)], p3: [c(10)], p4: [c(11)] },
@@ -223,18 +273,16 @@ describe('président — règles de pose', () => {
 })
 
 describe('président — fin de manche et rôles', () => {
-  it('premier sorti = Président, dernier = Trou ; une seule manche = finished', () => {
+  it('premier sorti = Président, dernier = Trou (vices entre les deux) ; une seule manche = finished', () => {
     let state = rigged(
       { p1: [c(9)], p2: [c(3), c(4)], p3: [c(5), c(6)], p4: [c(7), c(8)] },
       'p1'
     )
-    // p1 pose sa dernière carte (fort) — tous passent, p2 mène le pli suivant.
+    // p1 pose sa dernière carte : Président — le pli est brûlé, p2 mène.
     state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(9)], now: NOW })
     expect(state.outOrder).toEqual(['p1'])
     expect(state.phase).toBe('playing')
-    state = reducePre(state, { type: 'PASS', playerId: 'p2', now: NOW })
-    state = reducePre(state, { type: 'PASS', playerId: 'p3', now: NOW })
-    state = reducePre(state, { type: 'PASS', playerId: 'p4', now: NOW })
+    expect(state.lastPlay).toBeNull()
     expect(state.currentTurnId).toBe('p2')
     // p2 vide sa main en deux plis gagnés.
     state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(3)], now: NOW })
@@ -242,6 +290,8 @@ describe('président — fin de manche et rôles', () => {
     state = reducePre(state, { type: 'PASS', playerId: 'p4', now: NOW })
     state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(4)], now: NOW })
     expect(state.outOrder).toEqual(['p1', 'p2'])
+    // Un sortant NON-Président ne brûle pas le pli : sa pose reste à battre.
+    expect(state.lastPlay?.cards).toEqual([c(4)])
     state = reducePre(state, { type: 'PASS', playerId: 'p3', now: NOW })
     state = reducePre(state, { type: 'PASS', playerId: 'p4', now: NOW })
     // p3 mène puis sort ; il ne reste que p4 → fin de manche.
@@ -251,19 +301,20 @@ describe('président — fin de manche et rôles', () => {
     expect(state.phase).toBe('finished')
     expect(state.lastRanking).toEqual(['p1', 'p2', 'p3', 'p4'])
     expect(state.players.find((p) => p.id === 'p1')?.role).toBe('president')
+    expect(state.players.find((p) => p.id === 'p2')?.role).toBe('vicePresident')
+    expect(state.players.find((p) => p.id === 'p3')?.role).toBe('viceTrou')
     expect(state.players.find((p) => p.id === 'p4')?.role).toBe('trou')
   })
 
-  it('avec plusieurs manches : interlude, puis échange automatique à la redistribution', () => {
+  it('avec plusieurs manches : interlude, puis échanges automatiques à la redistribution', () => {
     let state = rigged(
       { p1: [c(9)], p2: [c(3)], p3: [c(5)], p4: [c(7), c(8)] },
       'p1',
       { totalManches: 3 }
     )
+    // p1 sort Président → pli brûlé, p2 mène directement.
     state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(9)], now: NOW })
-    state = reducePre(state, { type: 'PASS', playerId: 'p2', now: NOW })
-    state = reducePre(state, { type: 'PASS', playerId: 'p3', now: NOW })
-    state = reducePre(state, { type: 'PASS', playerId: 'p4', now: NOW })
+    expect(state.currentTurnId).toBe('p2')
     state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(3)], now: NOW })
     state = reducePre(state, { type: 'PASS', playerId: 'p3', now: NOW })
     state = reducePre(state, { type: 'PASS', playerId: 'p4', now: NOW })
@@ -277,8 +328,15 @@ describe('président — fin de manche et rôles', () => {
     expect(next.lastExchange).not.toBeNull()
     expect(next.lastExchange?.presidentId).toBe('p1')
     expect(next.lastExchange?.trouId).toBe('p4')
-    // Le Trou mène la manche suivante.
+    // Les vices échangent 1 carte : la meilleure du Vice-Trou (p3) contre la
+    // pire du Vice-Président (p2).
+    expect(next.lastExchange?.vicePresidentId).toBe('p2')
+    expect(next.lastExchange?.viceTrouId).toBe('p3')
+    expect(next.lastExchange?.fromViceTrou).toHaveLength(1)
+    expect(next.lastExchange?.fromVicePresident).toHaveLength(1)
+    // Le Trou mène la manche suivante et l'historique repart à zéro.
     expect(next.currentTurnId).toBe('p4')
+    expect(next.trickHistory).toEqual([])
     // Les 2 données par le Trou sont plus fortes que les 2 rendues par le Président.
     const given = next.lastExchange!.fromTrou.map(preRankOf)
     const returned = next.lastExchange!.fromPresident.map(preRankOf)
@@ -493,6 +551,9 @@ describe('président — rematch et positions héritées', () => {
     const state = createPreState(makePlayers(4), 'seed', NOW, 1, ['x', 'p2', 'p3', 'p4', 'p1'])
     expect(state.players.find((p) => p.id === 'p2')?.role).toBe('president')
     expect(state.players.find((p) => p.id === 'p1')?.role).toBe('trou')
+    // Les vices aussi sont hérités (classement filtré aux présents).
+    expect(state.players.find((p) => p.id === 'p3')?.role).toBe('vicePresident')
+    expect(state.players.find((p) => p.id === 'p4')?.role).toBe('viceTrou')
     // La première manche applique l'échange hérité et le Trou mène.
     const dealt = reducePre(state, { type: 'ADVANCE', claimedKey: phaseKey(state), now: NOW + 5_000 })
     expect(dealt.lastExchange?.presidentId).toBe('p2')
@@ -507,9 +568,9 @@ describe('président — rematch et positions héritées', () => {
 })
 
 describe('président — vues anti-triche', () => {
-  it('cache les mains adverses et le contenu de l’échange aux non-concernés', () => {
+  it('cache les mains adverses et le contenu des échanges aux non-concernés', () => {
     let state = inPlay(4, 2)
-    // Simule un échange en cours de partie.
+    // Simule les deux échanges en cours de partie.
     state = {
       ...state,
       lastExchange: {
@@ -517,16 +578,23 @@ describe('président — vues anti-triche', () => {
         fromPresident: [c(0), c(1)],
         trouId: 'p4',
         presidentId: 'p1',
+        fromViceTrou: [c(10)],
+        fromVicePresident: [c(2)],
+        viceTrouId: 'p3',
+        vicePresidentId: 'p2',
       },
     }
     const viewP2 = toPreClientView(state, 'p2')
     expect([13, 14]).toContain(viewP2.myHand.length)
     expect(viewP2.players.every((p) => typeof p.handCount === 'number')).toBe(true)
     expect((viewP2.players[0] as unknown as { hand?: unknown }).hand).toBeUndefined()
+    // p2 (Vice-Président) voit l'échange des vices, pas celui de la paire principale.
     expect(viewP2.lastExchange?.fromTrou).toEqual([])
+    expect(viewP2.lastExchange?.fromViceTrou).toEqual([c(10)])
 
     const viewP1 = toPreClientView(state, 'p1')
     expect(viewP1.lastExchange?.fromTrou).toEqual([c(11), c(PRE_TWO)])
+    expect(viewP1.lastExchange?.fromViceTrou).toEqual([])
     expect(currentPreActorId(state)).toBe(state.currentTurnId)
   })
 })

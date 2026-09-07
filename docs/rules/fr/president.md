@@ -26,28 +26,38 @@ vraiment secrètes.
 - **Fermeture de carré** : si 3 cartes de même valeur sortent à la suite,
   celui qui détient la 4e peut la claquer **même hors de son tour** : le pli
   est fermé et il remène. Pareil avec les paires — un double 5 posé, l'autre
-  double 5 le fait fermer.
+  double 5 le fait fermer. En revanche, un **brelan posé d'un coup** ne se
+  ferme pas d'une carte seule : on ne ferme qu'avec une pose de même taille
+  que celles du pli.
+- **Personne ne joue après le Président** : dès que le premier sortant pose
+  sa dernière carte, le pli est brûlé — le joueur suivant relance ce qu'il
+  veut.
 - **2 jokers caméléons** : un joker remplace n'importe quelle carte. Il
   complète un combo (un 7 + un joker = paire de 7), et joué seul il copie la
   carte du dessus — ce qui déclenche la règle « ou rien ». Il peut aussi
   servir à fermer un carré.
-- **Les positions survivent à la revanche** : au « Rejouer », le Président et
-  le Trou de la partie précédente gardent leur rôle (échange de cartes dès la
-  première manche). Si l'un d'eux a quitté la table, le joueur le plus proche
-  au classement récupère la position.
+- **Les positions survivent à la revanche** : au « Rejouer », le Président,
+  le Trou et les vices de la partie précédente gardent leur rôle (échanges de
+  cartes dès la première manche). Si l'un d'eux a quitté la table, le joueur
+  le plus proche au classement récupère la position.
+- **Historique des plis** : pendant la manche, un panneau replie/déplie la
+  liste des plis précédents — qui a posé quoi, et qui a remporté chaque pli.
 
 ## Le 2 coupe
 
 Le 2 est la carte suprême : il **remporte le pli immédiatement**. Celui qui
 coupe relance aussitôt — arme redoutable, à ne pas gaspiller.
 
-## Président et Trou
+## Président, Trou… et leurs vices
 
-- Le premier à vider sa main est **Président** 👑.
-- Le dernier avec des cartes est le **Trou** 🕳️.
-- Entre les manches, l'échange est **automatique** : le Trou donne ses
-  **2 meilleures cartes** au Président, qui rend ses **2 pires**. Pas de
-  négociation, pas de triche — le serveur s'en charge.
+- Le premier à vider sa main est **Président** 👑, le deuxième
+  **Vice-Président** 🎖️.
+- Le dernier avec des cartes est le **Trou** 🕳️, l'avant-dernier
+  **Vice-Trou** 🪠.
+- Entre les manches, les échanges sont **automatiques** : le Trou donne ses
+  **2 meilleures cartes** au Président (qui rend ses 2 pires), et le
+  Vice-Trou donne sa **meilleure carte** au Vice-Président (qui rend sa
+  pire). Pas de négociation, pas de triche — le serveur s'en charge.
 - Le Trou mène la manche suivante (maigre consolation).
 
 ## Déroulé d'une partie

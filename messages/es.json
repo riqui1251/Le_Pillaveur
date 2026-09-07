@@ -3468,9 +3468,11 @@
         "out": "¡Has terminado! Posición {rank} — mira a los demás sudar.",
         "roles": {
           "president": "Presidente",
-          "trou": "Trou"
+          "trou": "Trou",
+          "vicePresident": "Vicepresidente",
+          "viceTrou": "Vice-Trou"
         },
-        "exchangeInfo": "Intercambio automático: el Trou da sus 2 mejores cartas al Presidente, que devuelve sus 2 peores.",
+        "exchangeInfo": "Intercambios automáticos: el Trou da sus 2 mejores cartas al Presidente (que devuelve sus 2 peores), el Vice-Trou da su mejor carta al Vicepresidente (que devuelve su peor).",
         "exchangeAsTrou": "Diste tus 2 mejores cartas… y recibiste: {cards}",
         "exchangeAsPresident": "El Trou te dio: {cards}",
         "mancheEnd": "Fin de la ronda {n}",
@@ -3485,7 +3487,12 @@
           "backToMenu": "Volver al menú"
         },
         "ouRien": "¡{rank} o nada!",
-        "closeTrick": "Cerrar la baza ({cards})"
+        "closeTrick": "Cerrar la baza ({cards})",
+        "exchangeAsViceTrou": "Diste tu mejor carta… y recibiste: {cards}",
+        "exchangeAsVicePresident": "El Vice-Trou te dio: {cards}",
+        "history": {
+          "title": "Bazas anteriores ({count})"
+        }
       },
       "tutorial": {
         "steps": [
@@ -3499,7 +3506,7 @@
           },
           {
             "title": "Presidente y Trou",
-            "body": "Primero en salir = Presidente, último = Trou. Entre rondas, el Trou da automáticamente sus 2 mejores cartas al Presidente."
+            "body": "Primero en salir = Presidente, último = Trou. Entre rondas, el Trou da sus 2 mejores cartas al Presidente, y el Vice-Trou su mejor carta al Vicepresidente."
           }
         ]
       }
@@ -3825,7 +3832,8 @@
       "journalFeatureBan": "{actor} desactivó el {feature} de {target}",
       "journalGrant": "{actor} regaló un cosmético a {target}",
       "journalTerm": "Término moderado añadido: «{detail}»",
-      "journalTermByActor": "{actor} añadió el término «{detail}»"
+      "journalTermByActor": "{actor} añadió el término «{detail}»",
+      "closeTable": "Cerrar"
     },
     "games": {
       "playedTitle": "Partidas por juego",
@@ -3943,7 +3951,11 @@
       "days": "{count} días",
       "banCommentLabel": "Comentario / motivo (interno)",
       "banCommentPlaceholder": "Ej.: spam, comportamiento tóxico…",
-      "banConfirm": "Confirmar baneo"
+      "banConfirm": "Confirmar baneo",
+      "closeTableTitle": "¿Cerrar esta mesa a la fuerza?",
+      "closeTableLabel": "Mesa:",
+      "closeTableWarning": "{count, plural, =0 {La mesa se eliminará inmediatamente.} one {El jugador presente volverá a la taquilla.} other {Los # jugadores presentes volverán a la taquilla.}} No se registrará ningún resultado.",
+      "closeTableConfirm": "Cerrar la mesa"
     },
     "device": {
       "accountCodeTitle": "Código de cuenta único",
@@ -3956,7 +3968,8 @@
       "deleteDenied": "Eliminación denegada",
       "unbanDenied": "Desbaneo denegado",
       "loadAccounts": "No se pueden cargar las cuentas",
-      "historyUnavailable": "Historial no disponible"
+      "historyUnavailable": "Historial no disponible",
+      "closeTableDenied": "Cierre rechazado"
     },
     "siteSettings": {
       "title": "Ajustes del sitio",
