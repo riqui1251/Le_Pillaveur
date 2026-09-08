@@ -722,13 +722,30 @@ export function reducePre(state: PreState, action: PreAction): PreState {
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new PreEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const next: PreState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Le partant garde ses cartes (il peut revenir, ou finir en bot), mais
+      // s'il tenait le tour il bloquerait la table jusqu'au bout du minuteur
+      // (PRE_TURN_MS) — on fait donc tourner le tour SUR-LE-CHAMP.
+      if (state.phase !== 'playing' || state.currentTurnId !== action.playerId) return next
+      // Un départ ne CLÔT JAMAIS la manche ni la partie : il arrive par la
+      // route DELETE de la salle, qui ne sait pas enregistrer les résultats
+      // (recordMatchResults ne vit que sur /action) — une partie terminée ici
+      // disparaîtrait du classement. Dès que la manche est logiquement finie
+      // (invariant du moteur : ≤ 1 joueur encore en course), on laisse donc
+      // l'état EXACTEMENT tel quel : le tick `advance` (timeout de tour) ou le
+      // remplacement par un bot reprendra la main, lui, via /action.
+      if (inRace(next).length <= 1) return next
+      // Pli libre : le partant MENAIT — un passe serait illégal (MUST_LEAD),
+      // on donne simplement la main au suivant, qui remène.
+      if (!next.lastPlay) return nextTurn(next, nextInRace(next, action.playerId), action.at)
+      // Pli en cours : son départ vaut un passe (le pli peut se clore ici).
+      return applyPass(next, action.playerId, action.at)
     }
 
     case 'REJOIN': {

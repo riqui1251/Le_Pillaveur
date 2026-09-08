@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { GAMES } from '@/lib/games'
+import { subjectKeyFor } from '@/lib/ip-history-server'
 
 export const PRESENCE_PING_SECONDS = 60
 
@@ -70,6 +71,13 @@ export async function getUserGamePlayStats(userId: string): Promise<UserGamePlay
     .sort((a, b) => b.partiesPlayed - a.partiesPlayed)
 }
 
+/**
+ * Effacement RGPD d'un compte. Les tables sans clé étrangère vers User
+ * (IpSeenLog, indexée par `subjectKey`) et les champs conservés par une
+ * relation SetNull (UserFeedback.contactEmail, alimenté automatiquement avec
+ * l'email du compte) survivraient au `user.delete` : ils sont traités ici,
+ * dans la même transaction et AVANT la suppression du compte.
+ */
 export async function deleteUserAccount(userId: string): Promise<void> {
   await prisma.$transaction([
     prisma.stats.deleteMany({ where: { userId } }),
@@ -77,6 +85,14 @@ export async function deleteUserAccount(userId: string): Promise<void> {
     prisma.session.deleteMany({ where: { userId } }),
     prisma.accountBanEvent.deleteMany({
       where: { OR: [{ userId }, { actorId: userId }] },
+    }),
+    // $executeRaw : IpSeenLog est manipulé en SQL brut partout (ip-history-server).
+    // Seules les lignes `user:<id>` sont rattachables au compte ; celles d'un
+    // visiteur non connecté (`visitor:<vid>`) partent avec la purge à 6 mois.
+    prisma.$executeRaw`DELETE FROM "IpSeenLog" WHERE "subjectKey" = ${subjectKeyFor(userId, '')}`,
+    prisma.userFeedback.updateMany({
+      where: { userId },
+      data: { contactEmail: null },
     }),
     prisma.sitePresence.updateMany({
       where: { userId },

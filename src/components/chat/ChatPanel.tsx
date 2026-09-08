@@ -31,6 +31,9 @@ function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () =
   const [noRoom, setNoRoom] = useState(false)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  // Envoi refusé (quota, ban, erreur réseau) : sans retour visible, le message
+  // reste dans la zone de saisie sans explication.
+  const [sendError, setSendError] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
   const inFlightRef = useRef(false)
   const lastIdRef = useRef<string | null>(null)
@@ -69,6 +72,7 @@ function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () =
     lastIdRef.current = null
     setMessages([])
     setNoRoom(false)
+    setSendError(null)
     void fetchMessages()
     const timer = setInterval(fetchMessages, POLL_MS)
     return () => clearInterval(timer)
@@ -84,6 +88,7 @@ function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () =
     const body = draft.trim()
     if (!body || sending) return
     setSending(true)
+    setSendError(null)
     try {
       const res = await fetch('/api/chat/messages', {
         method: 'POST',
@@ -98,7 +103,13 @@ function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () =
       if (res.ok) {
         setDraft('')
         await fetchMessages()
+        return
       }
+      // 429 = anti-flood du serveur ; le reste (403 ban, 400, 5xx) partage un
+      // message générique, le brouillon est conservé pour un nouvel essai.
+      setSendError(res.status === 429 ? t('tooFast') : t('sendFailed'))
+    } catch {
+      setSendError(t('sendFailed'))
     } finally {
       setSending(false)
     }
@@ -147,10 +158,18 @@ function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () =
           ))
         )}
       </div>
+      {sendError && (
+        <p role="status" className="border-t border-white/10 px-3 py-1.5 text-center text-[11px] text-red-300">
+          {sendError}
+        </p>
+      )}
       <div className="flex items-center gap-2 border-t border-white/10 p-2.5">
         <input
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            if (sendError) setSendError(null)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()

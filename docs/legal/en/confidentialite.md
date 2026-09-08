@@ -82,7 +82,7 @@ The Service uses the following cookies:
 | `lp_age_verified` | Remembering your age declaration (18+) | 1 year |
 | `lp_analytics_consent` | Remembering your choice about visit statistics | 1 year |
 | `lp_locale` | Remembering your interface language | 1 year |
-| `lp_vid` | Visitor identifier for statistics and anti-abuse — **set only if you have accepted visit statistics** (or, strictly as necessary, upon a rejected nickname attempt, for abuse prevention) | Persistent |
+| `lp_vid` | Visitor identifier for statistics and anti-abuse — **set only if you have accepted visit statistics** | Persistent |
 
 You can change your choice about visit statistics by deleting the site's cookies in your browser: the question will be asked again on your next visit.
 
@@ -127,11 +127,11 @@ The publisher remains the data controller. No other transfer to third parties ta
 
 - **Active account**: data kept as long as the account exists.
 - **Deleted account**: deletion or anonymisation within a maximum of **12 months** after the request, unless a longer retention is legally required.
-- **Technical logs (IP addresses, presence)**: **6 months**.
+- **Technical logs (IP addresses, presence)**: **6 months**. The IP address and country of last connection attached to an account are erased after **6 months** without activity; an account's IP address history is deleted immediately together with the account.
 - **Chat messages**: **12 months**.
 - **Nickname moderation traces**: **12 months**.
 - **Audience measurement data**: **13 months**.
-- **Feedback**: kept up to **24 months** or deleted on request.
+- **Feedback**: kept up to **24 months** or deleted on request; the associated contact email is erased if you delete your account.
 - **Age and consent cookies**: 1 year, renewed on each validation.
 
 These durations are enforced automatically by regular purges.

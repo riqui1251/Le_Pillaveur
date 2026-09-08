@@ -69,11 +69,18 @@ export async function POST(request: Request) {
     }
 
     // L'email ne doit appartenir à AUCUN autre compte (pas de fusion de
-    // comptes : le joueur garde celui-ci, l'autre resterait orphelin).
+    // comptes : le joueur garde celui-ci, l'autre resterait orphelin) — et
+    // surtout, sans ce garde-fou on s'emparerait d'un compte existant (dont un
+    // compte Google au passwordHash vide) en le « pérennisant » depuis un
+    // invité. Message neutre : il ne dit pas si l'adresse est déjà prise.
     const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } })
     if (existing && existing.id !== user.id) {
       return NextResponse.json(
-        { error: 'Cet email est déjà utilisé par un autre compte', code: 'email_taken' },
+        {
+          error:
+            "Impossible de pérenniser ce compte avec ces informations. Si tu as déjà un compte, connecte-toi dessus.",
+          code: 'email_taken',
+        },
         { status: 409 }
       )
     }
@@ -82,7 +89,9 @@ export async function POST(request: Request) {
       where: { id: user.id },
       data: {
         email,
-        passwordHash,
+        // Liaison Google : aucun mot de passe à enregistrer — on n'écrit donc
+        // pas de hash vide (il se définira via « mot de passe oublié »).
+        ...(passwordHash ? { passwordHash } : {}),
         isGuest: false,
         lastLoginAt: new Date(),
         lastSeenAt: new Date(),

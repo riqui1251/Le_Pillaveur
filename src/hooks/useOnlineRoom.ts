@@ -31,6 +31,15 @@ export function useOnlineRoomState() {
   const roomRef = useRef<RoomDto | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const userIdRef = useRef<string | undefined>(undefined)
+  /**
+   * Salle que le joueur quitte VOLONTAIREMENT. Le polling l'ignore : sinon un
+   * tick parti avant le DELETE la fait réapparaître juste après le départ, ou
+   * annonce sa disparition alors que le joueur a lui-même cliqué « Quitter ».
+   * Le verrou tombe dès qu'on y entre à nouveau (createRoom/joinRoom, ou
+   * /rooms/me qui nous y remet) — sans quoi cette salle ne serait plus jamais
+   * rafraîchie de la session.
+   */
+  const leavingRoomIdRef = useRef<string | null>(null)
 
   roomRef.current = room
   userIdRef.current = user?.id
@@ -55,6 +64,13 @@ export function useOnlineRoomState() {
       const res = await fetch('/api/online/rooms/me', { credentials: 'include' })
       if (!res.ok) return null
       const data = await parseApiJson<{ room?: RoomDto }>(res)
+      // Le serveur nous remet dans la salle qu'on venait de quitter (retour
+      // depuis un autre appareil, invitation acceptée) : le verrou de départ
+      // doit tomber, sinon le polling de CETTE salle resterait figé pour de
+      // bon — plus aucune mise à jour jusqu'au rechargement de la page.
+      if (data.room && leavingRoomIdRef.current === data.room.id) {
+        leavingRoomIdRef.current = null
+      }
       setRoom(data.room ?? null)
       return data.room as RoomDto | null
     } catch {
@@ -63,13 +79,30 @@ export function useOnlineRoomState() {
     }
   }, [user])
 
+  /**
+   * 403/404 sur la salle courante : on purge l'état, sinon le polling boucle
+   * sur l'ancien id jusqu'au rechargement de la page. Et on DIT pourquoi — la
+   * table disparaissait sans un mot et le joueur croyait à un bug. Les deux
+   * codes ne racontent PAS la même histoire : 404 = la salle n'existe plus
+   * (hôte parti, ménage des salles abandonnées), 403 = elle existe mais on n'en
+   * est plus membre (exclusion, départ depuis un autre appareil) — annoncer
+   * « table fermée » dans ce cas-là serait faux.
+   */
+  const handleRoomGone = useCallback(
+    (status: number) => {
+      setRoom(null)
+      setError(status === 404 ? t('roomClosed') : t('roomLeft'))
+    },
+    [t]
+  )
+
   const refreshRoom = useCallback(async (roomId: string) => {
+    if (leavingRoomIdRef.current === roomId) return null
     try {
       const res = await fetch(`/api/online/rooms/${roomId}`, { credentials: 'include' })
+      if (leavingRoomIdRef.current === roomId) return null
       if (!res.ok) {
-        // Salon quitté/supprimé : on purge l'état, sinon le polling boucle
-        // en 403/404 sur l'ancien id jusqu'au rechargement de la page.
-        if (res.status === 403 || res.status === 404) setRoom(null)
+        if (res.status === 403 || res.status === 404) handleRoomGone(res.status)
         return null
       }
       const data = await parseApiJson<{ room?: RoomDto }>(res)
@@ -78,14 +111,16 @@ export function useOnlineRoomState() {
     } catch {
       return null
     }
-  }, [])
+  }, [handleRoomGone])
 
   /** Polling léger — uniquement l'état de partie (plus rapide qu'un refresh complet) */
   const refreshGameState = useCallback(async (roomId: string) => {
+    if (leavingRoomIdRef.current === roomId) return null
     try {
       const res = await fetch(`/api/online/rooms/${roomId}/state`, { credentials: 'include' })
+      if (leavingRoomIdRef.current === roomId) return null
       if (!res.ok) {
-        if (res.status === 403 || res.status === 404) setRoom(null)
+        if (res.status === 403 || res.status === 404) handleRoomGone(res.status)
         return null
       }
       const data = await parseApiJson<{
@@ -113,7 +148,7 @@ export function useOnlineRoomState() {
     } catch {
       return null
     }
-  }, [])
+  }, [handleRoomGone])
 
   const getPollDelay = useCallback((r: RoomDto | null) => {
     if (!r || r.status !== 'playing') return POLL_LOBBY_MS
@@ -162,6 +197,9 @@ export function useOnlineRoomState() {
 
   const createRoom = useCallback(
     async (gameId: string, options?: { visibility?: 'public' | 'private' }) => {
+      // Nouvelle table : le verrou de départ n'a plus lieu d'être (sinon un
+      // retour dans une salle de même id resterait figé, jamais rafraîchi).
+      leavingRoomIdRef.current = null
       setLoading(true)
       setError(null)
       try {
@@ -189,6 +227,7 @@ export function useOnlineRoomState() {
   )
 
   const joinRoom = useCallback(async (opts: { code?: string; roomId?: string }) => {
+    leavingRoomIdRef.current = null
     setLoading(true)
     setError(null)
     try {
@@ -215,12 +254,33 @@ export function useOnlineRoomState() {
 
   const leaveRoom = useCallback(async () => {
     if (!room) return
-    await fetch(`/api/online/rooms/${room.id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    })
-    setRoom(null)
-  }, [room])
+    const roomId = room.id
+    leavingRoomIdRef.current = roomId
+    setError(null)
+    try {
+      const res = await fetch(`/api/online/rooms/${roomId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        // On ne vide l'état QUE si le serveur a bien enregistré le départ :
+        // avant, un échec réseau vidait quand même la salle, puis le poll
+        // (2 s) la faisait revenir — le joueur croyait ne pas pouvoir partir.
+        leavingRoomIdRef.current = null
+        const data = await parseApiJson<{ error?: string }>(res)
+        setError(apiError(data.error, 'generic'))
+        return
+      }
+      setRoom(null)
+      // Le verrou n'est PAS levé ici : une requête de polling partie avant le
+      // DELETE peut encore répondre 200 (salle vue avant le départ) et la
+      // ressusciter. Il tombe quand le serveur nous rend cette salle dans
+      // /rooms/me — c.-à-d. quand on y est vraiment de nouveau (cf. fetchRoom).
+    } catch {
+      leavingRoomIdRef.current = null
+      setError(t('network'))
+    }
+  }, [room, apiError, t])
 
   const voteRematch = useCallback(async () => {
     if (!room) return null
@@ -248,16 +308,22 @@ export function useOnlineRoomState() {
 
   const setReady = useCallback(async (isReady: boolean) => {
     if (!room) return
-    const res = await fetch(`/api/online/rooms/${room.id}/ready`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ isReady }),
-    })
-    const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
-    if (res.ok) setRoom(data.room ?? null)
-    else setError(apiError(data.error, 'generic'))
-  }, [room, apiError])
+    try {
+      const res = await fetch(`/api/online/rooms/${room.id}/ready`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ isReady }),
+      })
+      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+      if (res.ok) setRoom(data.room ?? null)
+      else setError(apiError(data.error, 'generic'))
+    } catch {
+      // Sans ce filet, une coupure réseau remontait en rejet non capturé
+      // (le clic « Prêt » ne dit rien et la case reste dans l'état d'avant).
+      setError(t('network'))
+    }
+  }, [room, apiError, t])
 
   const launchGame = useCallback(async () => {
     if (!room) return null

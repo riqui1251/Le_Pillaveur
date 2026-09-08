@@ -56,11 +56,17 @@ export function createSessionToken(): string {
   return randomBytes(32).toString('hex')
 }
 
+/**
+ * Le cookie porte le jeton BRUT, la base ne stocke que son empreinte SHA-256
+ * (même colonne Session.token, contenu haché) — comme les jetons de
+ * réinitialisation. Une lecture de la base (dump, sauvegarde égarée) ne donne
+ * donc plus de sessions utilisables. Tout accès à Session.token passe par ici.
+ */
 export async function createSession(userId: string): Promise<string> {
   const token = createSessionToken()
   await prisma.session.create({
     data: {
-      token,
+      token: hashToken(token),
       userId,
       expiresAt: sessionExpiry(),
     },
@@ -69,14 +75,14 @@ export async function createSession(userId: string): Promise<string> {
 }
 
 export async function deleteSession(token: string): Promise<void> {
-  await prisma.session.deleteMany({ where: { token } })
+  await prisma.session.deleteMany({ where: { token: hashToken(token) } })
 }
 
 export async function getUserFromSessionToken(token: string | undefined): Promise<AuthUser | null> {
   if (!token) return null
 
   const session = await prisma.session.findUnique({
-    where: { token },
+    where: { token: hashToken(token) },
     include: { user: true },
   })
 

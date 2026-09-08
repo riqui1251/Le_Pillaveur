@@ -77,12 +77,25 @@ export async function POST(request: Request) {
       )
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } })
-    if (existing?.passwordHash) {
-      return NextResponse.json({ error: 'Cet email est déjà utilisé' }, { status: 409 })
+    // Un email déjà connu bloque l'inscription QUEL QUE SOIT son passwordHash :
+    // un compte Google a un hash vide, et le reprendre ici reviendrait à en
+    // prendre le contrôle avec la seule connaissance de l'adresse. Le chemin
+    // légitime pour lui donner un mot de passe est « mot de passe oublié ».
+    // Message volontairement neutre : il ne distingue pas un email pris d'un
+    // email libre (pas d'énumération d'adresses).
+    const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } })
+    if (existing) {
+      return NextResponse.json(
+        {
+          error:
+            "Inscription impossible avec ces informations. Si tu as déjà un compte, connecte-toi ou utilise « Mot de passe oublié ».",
+          code: 'registration_refused',
+        },
+        { status: 409 }
+      )
     }
 
-    if (await isDisplayNameTaken(displayName, existing?.id)) {
+    if (await isDisplayNameTaken(displayName)) {
       return NextResponse.json(
         { error: displayNameTakenMessage(requestLocale), code: 'display_name_taken' },
         { status: 409 }
@@ -90,35 +103,22 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await hashPassword(password)
-    const accountCode = existing?.accountCode ?? (await createUniqueAccountCode())
+    const accountCode = await createUniqueAccountCode()
 
-    const user = existing
-      ? await prisma.user.update({
-          where: { id: existing.id },
-          data: {
-            email,
-            passwordHash,
-            displayName,
-            name: displayName,
-            accountCode,
-            locale: initialLocale,
-            lastLoginAt: new Date(),
-            lastSeenAt: new Date(),
-          },
-        })
-      : await prisma.user.create({
-          data: {
-            email,
-            passwordHash,
-            displayName,
-            name: displayName,
-            accountCode,
-            playMode: 'local',
-            locale: initialLocale,
-            lastLoginAt: new Date(),
-            lastSeenAt: new Date(),
-          },
-        })
+    // Uniquement une CRÉATION : plus aucun écrasement d'un compte existant.
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        displayName,
+        name: displayName,
+        accountCode,
+        playMode: 'local',
+        locale: initialLocale,
+        lastLoginAt: new Date(),
+        lastSeenAt: new Date(),
+      },
+    })
 
     const visitorId = cookieStore.get(VISITOR_COOKIE)?.value
     if (visitorId) {

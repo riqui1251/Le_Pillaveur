@@ -567,6 +567,70 @@ describe('président — rematch et positions héritées', () => {
   })
 })
 
+describe('président — départ en cours de partie', () => {
+  it('le partant qui MÈNE rend la main tout de suite au suivant', () => {
+    const state = rigged(
+      { p1: [c(3), c(7)], p2: [c(4), c(8)], p3: [c(5), c(9)], p4: [c(6), c(10)] },
+      'p1'
+    )
+    const left = reducePre(state, { type: 'LEAVE', playerId: 'p1', at: NOW + 1_000 })
+    expect(left.players.find((p) => p.id === 'p1')?.leftAt).toBe(NOW + 1_000)
+    // Pli libre : pas de passe (illégal quand on mène), le suivant remène.
+    expect(left.currentTurnId).toBe('p2')
+    expect(left.lastPlay).toBeNull()
+    expect(left.passedIds).toEqual([])
+    // Le partant garde ses cartes (retour ou conversion en bot possibles).
+    expect(left.players.find((p) => p.id === 'p1')?.hand).toEqual([c(3), c(7)])
+    // Deux départs successifs : le tour continue de tourner.
+    const left2 = reducePre(left, { type: 'LEAVE', playerId: 'p2', at: NOW + 2_000 })
+    expect(left2.currentTurnId).toBe('p3')
+  })
+
+  it('le partant qui doit SUIVRE vaut un passe (le pli peut se clore)', () => {
+    let state = rigged(
+      { p1: [c(6), c(7)], p2: [c(3), c(4)], p3: [c(3, 1), c(4, 1)], p4: [c(3, 2), c(4, 2)] },
+      'p1'
+    )
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(6)], now: NOW })
+    const left = reducePre(state, { type: 'LEAVE', playerId: 'p2', at: NOW + 1_000 })
+    expect(left.passedIds).toContain('p2')
+    expect(left.currentTurnId).toBe('p3')
+    // p3 et p4 passent : le pli revient à p1, qui remène.
+    let after = reducePre(left, { type: 'PASS', playerId: 'p3', now: NOW })
+    after = reducePre(after, { type: 'PASS', playerId: 'p4', now: NOW })
+    expect(after.lastPlay).toBeNull()
+    expect(after.currentTurnId).toBe('p1')
+  })
+
+  it('un départ ne clôt JAMAIS la manche (le classement passe par /action)', () => {
+    // p1 et p2 sont sortis : p3 et p4 restent en course, p4 mène le pli.
+    const state = rigged(
+      { p1: [], p2: [], p3: [c(5)], p4: [c(6)] },
+      'p4',
+      { outOrder: ['p1', 'p2'], totalManches: 1 }
+    )
+    // Départ de p4 → il ne resterait qu'un joueur en course (manche finie au
+    // sens du moteur) : on ne touche à RIEN d'autre que `leftAt`.
+    const solo = reducePre(state, { type: 'LEAVE', playerId: 'p4', at: NOW + 1_000 })
+    expect(solo.phase).toBe('playing')
+    expect(solo.currentTurnId).toBe('p4')
+    expect(solo.lastRanking).toBeNull()
+    expect(solo.players.find((p) => p.id === 'p4')?.hand).toEqual([c(6)])
+    // Même chose quand plus personne n'est en course : jamais de 'finished'.
+    const empty = reducePre(solo, { type: 'LEAVE', playerId: 'p3', at: NOW + 2_000 })
+    expect(empty.phase).toBe('playing')
+    expect(empty.currentTurnId).toBe('p4')
+  })
+
+  it('hors phase de jeu, le départ ne touche pas au tour', () => {
+    const state = createPreState(makePlayers(4), 'seed', NOW, 1)
+    const left = reducePre(state, { type: 'LEAVE', playerId: 'p1', at: NOW + 1_000 })
+    expect(left.phase).toBe('countdown')
+    expect(left.currentTurnId).toBeNull()
+    expect(left.players.find((p) => p.id === 'p1')?.leftAt).toBe(NOW + 1_000)
+  })
+})
+
 describe('président — vues anti-triche', () => {
   it('cache les mains adverses et le contenu des échanges aux non-concernés', () => {
     let state = inPlay(4, 2)

@@ -82,7 +82,7 @@ Il Servizio utilizza i seguenti cookie:
 | `lp_age_verified` | Memorizzazione della tua dichiarazione di età (18+) | 1 anno |
 | `lp_analytics_consent` | Memorizzazione della tua scelta sulle statistiche di visita | 1 anno |
 | `lp_locale` | Memorizzazione della lingua dell'interfaccia | 1 anno |
-| `lp_vid` | Identificativo visitatore per statistiche e anti-abuso — **installato solo se hai accettato le statistiche di visita** (o, nella misura strettamente necessaria, in caso di tentativo di nickname rifiutato, per la prevenzione degli abusi) | Persistente |
+| `lp_vid` | Identificativo visitatore per statistiche e anti-abuso — **installato solo se hai accettato le statistiche di visita** | Persistente |
 
 Puoi modificare la tua scelta sulle statistiche di visita eliminando i cookie del sito nel tuo browser: la domanda ti verrà riproposta alla prossima visita.
 
@@ -127,11 +127,11 @@ L'editore resta il titolare del trattamento. Nessun altro trasferimento a terzi 
 
 - **Account attivo**: dati conservati finché l'account esiste.
 - **Account eliminato**: cancellazione o anonimizzazione entro un massimo di **12 mesi** dalla richiesta, salvo obbligo legale di conservazione più lunga.
-- **Log tecnici (indirizzi IP, presenza)**: **6 mesi**.
+- **Log tecnici (indirizzi IP, presenza)**: **6 mesi**. L'indirizzo IP e il paese dell'ultima connessione associati a un account vengono cancellati dopo **6 mesi** di inattività; lo storico degli indirizzi IP di un account viene eliminato immediatamente insieme all'account.
 - **Messaggi di chat**: **12 mesi**.
 - **Tracce di moderazione dei nickname**: **12 mesi**.
 - **Dati di misurazione dell'audience**: **13 mesi**.
-- **Feedback**: conservazione fino a **24 mesi** o cancellazione su richiesta.
+- **Feedback**: conservazione fino a **24 mesi** o cancellazione su richiesta; l'email di contatto associata viene cancellata se elimini il tuo account.
 - **Cookie di età e consenso**: 1 anno, rinnovabili a ogni convalida.
 
 Queste durate sono applicate automaticamente tramite purghe regolari.

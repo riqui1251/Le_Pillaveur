@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto, stripEngineSecretForUser } from '@/lib/online-room'
+import { getGameAdapter } from '@/lib/online/game-adapters'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { onlineErrorBody } from '@/lib/online-errors'
 
@@ -59,8 +60,12 @@ export async function PUT(request: Request, { params }: Params) {
   }
 
   // Jeux serveur-autoritaires : l'état ne peut JAMAIS être poussé par un client
-  // (un état forgé permettrait de tricher) — tout passe par /action.
-  if (room.gameId === 'petit-buveur' || room.gameId === 'toucher-coule') {
+  // (un état forgé permettrait de se déclarer vainqueur et d'alimenter le
+  // classement) — tout passe par /action. Le registre GAME_ADAPTERS fait foi :
+  // la liste en dur ne protégeait que 2 des 18 jeux qu'il contient, et elle
+  // repartait à la traîne à chaque nouveau jeu. Seuls les jeux lançables SANS
+  // adaptateur (hi-lo, monsieur-3, pmu, plinko) restent client-autoritaires.
+  if (getGameAdapter(room.gameId)) {
     return NextResponse.json(onlineErrorBody('server_managed_game'), { status: 403 })
   }
 

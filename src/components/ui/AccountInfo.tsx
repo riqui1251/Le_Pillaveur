@@ -1,7 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Globe, ChevronDown, ChevronRight, FileText, Trophy } from 'lucide-react'
@@ -12,6 +12,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { FriendsManager } from '@/components/friends/FriendsManager'
 import { GuestUpgradeCard } from '@/components/auth/GuestUpgradeCard'
+import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
+import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
+import { isNativeGoogleAvailable } from '@/lib/native-google-login'
 import { MyOnlineStats } from '@/components/online/MyOnlineStats'
 import { canAccessSupervision } from '@/lib/roles'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
@@ -78,12 +81,33 @@ export function AccountInfo() {
   const [deleteArmed, setDeleteArmed] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  // Moyen de confirmation exigé par la route de suppression : mot de passe,
+  // Google (compte lié à Google, sans mot de passe) ou la seule session
+  // (invité). Le profil /api/auth/me ne dit pas si le compte a un mot de
+  // passe : c'est la route elle-même qui répond (sonde GET), déclenchée à
+  // l'ouverture de la zone de danger.
+  const [deleteMethod, setDeleteMethod] = useState<'password' | 'google' | 'session' | null>(null)
 
-  const handleDeleteAccount = async () => {
-    if (!deleteArmed) {
-      setDeleteArmed(true)
-      return
+  useEffect(() => {
+    if (!showDangerZone || !user || deleteMethod) return
+    let cancelled = false
+    fetch('/api/auth/delete-account', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return
+        // Repli prudent sur le mot de passe : c'est le cas le plus courant,
+        // et le serveur reste seul juge de la preuve exigée.
+        setDeleteMethod(data?.method === 'google' || data?.method === 'session' ? data.method : 'password')
+      })
+      .catch(() => {
+        if (!cancelled) setDeleteMethod('password')
+      })
+    return () => {
+      cancelled = true
     }
+  }, [showDangerZone, user?.id, deleteMethod])
+
+  const handleDeleteAccount = async (credential?: string) => {
     setDeletingAccount(true)
     setDeleteError(null)
     try {
@@ -91,7 +115,7 @@ export function AccountInfo() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: deletePassword }),
+        body: JSON.stringify(credential ? { credential } : { password: deletePassword }),
       })
       if (res.ok) {
         // Compte supprimé, session invalidée côté serveur : repartir de zéro.
@@ -102,15 +126,78 @@ export function AccountInfo() {
       setDeleteError(
         data?.code === 'wrong_password'
           ? t('deleteAccount.wrongPassword')
-          : data?.code === 'founder_protected'
-            ? t('deleteAccount.founderProtected')
-            : t('deleteAccount.genericError')
+          : data?.code === 'google_confirmation_required'
+            ? t('deleteAccount.googleRequired')
+            : data?.code === 'founder_protected'
+              ? t('deleteAccount.founderProtected')
+              : t('deleteAccount.genericError')
       )
       setDeleteArmed(false)
     } finally {
       setDeletingAccount(false)
     }
   }
+
+  // ── Confirmation Google (GIS, flux ID token) — même montage que AuthForm
+  // et la carte de pérennisation. Dans l'app mobile (webview), GIS est
+  // bloqué : fenêtre Google native. Le bouton n'est monté qu'une fois la
+  // suppression armée, donc jamais en même temps que celui de
+  // GuestUpgradeCard (réservé aux invités, qui n'ont pas de compte Google).
+  const [nativeGoogle, setNativeGoogle] = useState(false)
+  useEffect(() => {
+    setNativeGoogle(isNativeGoogleAvailable())
+  }, [])
+  const googleButtonRef = useRef<HTMLDivElement>(null)
+  const googleCallbackRef = useRef<(credential: string) => void>(() => {})
+  useEffect(() => {
+    googleCallbackRef.current = (credential: string) => {
+      void handleDeleteAccount(credential)
+    }
+  })
+
+  const googleConfirmVisible = deleteMethod === 'google' && deleteArmed
+  useEffect(() => {
+    if (!googleConfirmVisible || nativeGoogle) return
+    let cancelled = false
+    const render = () => {
+      if (cancelled) return
+      const gis = getGoogleAccountsId()
+      const parent = googleButtonRef.current
+      if (!gis || !parent) return
+      gis.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => {
+          if (response.credential) googleCallbackRef.current(response.credential)
+        },
+      })
+      parent.innerHTML = ''
+      gis.renderButton(parent, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'pill',
+        locale,
+      })
+    }
+    if (getGoogleAccountsId()) {
+      render()
+      return
+    }
+    const src = 'https://accounts.google.com/gsi/client'
+    let script = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
+    if (!script) {
+      script = document.createElement('script')
+      script.src = src
+      script.async = true
+      document.head.appendChild(script)
+    }
+    script.addEventListener('load', render)
+    return () => {
+      cancelled = true
+      script?.removeEventListener('load', render)
+    }
+  }, [locale, googleConfirmVisible, nativeGoogle])
 
   const onlineDisplayName = user?.onlineDisplayName ?? user?.displayName ?? 'Joueur'
   const onlineMemberCosmetics = useMemo(
@@ -687,42 +774,77 @@ export function AccountInfo() {
         </button>
         <div className={cn('mt-3 space-y-3 rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-4', !showDangerZone && 'hidden')}>
           <p className="text-sm text-red-100/70">{t('deleteAccount.warning')}</p>
-          <Input
-            type="password"
-            value={deletePassword}
-            onChange={(e) => {
-              setDeletePassword(e.target.value)
-              setDeleteArmed(false)
-              setDeleteError(null)
-            }}
-            placeholder={t('deleteAccount.passwordPlaceholder')}
-            autoComplete="current-password"
-            className="border-red-500/20 bg-black/20 text-white placeholder:text-white/30"
-          />
+          {/* Champ mot de passe UNIQUEMENT pour un compte qui en a un : sur un
+              compte Google (ou invité) il resterait vide et bloquerait tout. */}
+          {deleteMethod === 'password' && (
+            <Input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => {
+                setDeletePassword(e.target.value)
+                setDeleteArmed(false)
+                setDeleteError(null)
+              }}
+              placeholder={t('deleteAccount.passwordPlaceholder')}
+              autoComplete="current-password"
+              className="border-red-500/20 bg-black/20 text-white placeholder:text-white/30"
+            />
+          )}
           {deleteError && (
             <p className="flex items-center gap-2 text-sm text-red-300">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               {deleteError}
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => void handleDeleteAccount()}
-            disabled={!deletePassword || deletingAccount}
-            className={cn(
-              'flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-colors disabled:opacity-40',
-              deleteArmed
-                ? 'bg-red-600 text-white hover:bg-red-500'
-                : 'border border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10'
-            )}
-          >
-            <Trash2 className="h-4 w-4 shrink-0" />
-            {deletingAccount
-              ? t('deleteAccount.deleting')
-              : deleteArmed
-                ? t('deleteAccount.confirm')
-                : t('deleteAccount.button')}
-          </button>
+          {googleConfirmVisible ? (
+            /* Compte Google armé : la confirmation EST la connexion Google
+               (le jeton obtenu est posté à la place du mot de passe). */
+            <div className="space-y-2">
+              <p className="text-sm text-red-100/70">{t('deleteAccount.googleConfirmHint')}</p>
+              {nativeGoogle ? (
+                <NativeGoogleButton
+                  disabled={deletingAccount}
+                  onCredential={(credential) => googleCallbackRef.current(credential)}
+                />
+              ) : (
+                <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+              )}
+              <button
+                type="button"
+                onClick={() => setDeleteArmed(false)}
+                className="min-h-11 w-full rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/[0.06]"
+              >
+                {tCommon('cancel')}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (!deleteArmed) {
+                  setDeleteArmed(true)
+                  return
+                }
+                void handleDeleteAccount()
+              }}
+              disabled={
+                !deleteMethod || deletingAccount || (deleteMethod === 'password' && !deletePassword)
+              }
+              className={cn(
+                'flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-colors disabled:opacity-40',
+                deleteArmed
+                  ? 'bg-red-600 text-white hover:bg-red-500'
+                  : 'border border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10'
+              )}
+            >
+              <Trash2 className="h-4 w-4 shrink-0" />
+              {deletingAccount
+                ? t('deleteAccount.deleting')
+                : deleteArmed
+                  ? t('deleteAccount.confirm')
+                  : t('deleteAccount.button')}
+            </button>
+          )}
         </div>
       </section>
     </div>

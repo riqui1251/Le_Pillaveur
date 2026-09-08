@@ -301,6 +301,59 @@ describe('contrat remplacement (LEAVE / REJOIN / REPLACE_LEFT)', () => {
       reduceMenteur(left, { type: 'REPLACE_LEFT', now: 1000, graceMs: 30_000 })
     ).toThrow('NOTHING_TO_REPLACE')
   })
+
+  it('le partant qui tenait les enchères rend la main immédiatement', () => {
+    const s = craft([P('a', [2, 3]), P('b', [4, 5]), P('c', [6, 1])], {
+      turnIdx: 0,
+      currentBid: { qty: 2, face: 4, by: 'c' },
+    })
+    const left = reduceMenteur(s, { type: 'LEAVE', playerId: 'a', at: 1000 })
+    expect(left.turnIdx).toBe(1)
+    expect(currentMenteurActorId(left)).toBe('b')
+    // Rien d'autre ne bouge : dés gardés, enchère en cours intacte.
+    expect(left.players[0].dice).toEqual([2, 3])
+    expect(left.currentBid).toEqual(s.currentBid)
+    expect(left.phase).toBe('bidding')
+    // Départ en chaîne : le tour saute les partants pour atteindre 'c'.
+    const left2 = reduceMenteur(left, { type: 'LEAVE', playerId: 'b', at: 1100 })
+    expect(left2.turnIdx).toBe(2)
+  })
+
+  it('le revenant a perdu son tour : REJOIN ne ramène pas la main en arrière', () => {
+    const s = craft([P('a', [2, 3]), P('b', [4, 5]), P('c', [6, 1])], { turnIdx: 0 })
+    const left = reduceMenteur(s, { type: 'LEAVE', playerId: 'a', at: 1000 })
+    // Entre-temps la table a joué : 'b' a enchéri, c'est au tour de 'c'.
+    const played = reduceMenteur(left, { type: 'BID', playerId: 'b', qty: 2, face: 4 })
+    const back = reduceMenteur(played, { type: 'REJOIN', playerId: 'a' })
+    expect(back.players.find((p) => p.id === 'a')?.leftAt).toBeNull()
+    // Le tour NE revient PAS au revenant, et rien d'autre n'a bougé.
+    expect(back.turnIdx).toBe(played.turnIdx)
+    expect(currentMenteurActorId(back)).toBe('c')
+    expect(back.currentBid).toEqual(played.currentBid)
+    // Ses dés ne l'ont jamais quitté : il reprend sa place telle qu'il l'a laissée.
+    expect(back.players.find((p) => p.id === 'a')?.dice).toEqual([2, 3])
+    expect(menteurTotalDice(back)).toBe(menteurTotalDice(s))
+  })
+
+  it('un départ hors tour (ou hors enchères) ne déplace pas le tour', () => {
+    const s = craft([P('a', [2, 3]), P('b', [4, 5]), P('c', [6, 1])], { turnIdx: 1 })
+    expect(reduceMenteur(s, { type: 'LEAVE', playerId: 'a', at: 1000 }).turnIdx).toBe(1)
+    const revealing = craft([P('a', [2, 3]), P('b', [4, 5])], {
+      phase: 'reveal',
+      turnIdx: 0,
+      lastReveal: {
+        bid: { qty: 2, face: 4, by: 'b' },
+        challengerId: 'a',
+        allDice: [],
+        matchCount: 2,
+        bidHeld: true,
+        loserId: 'a',
+        sips: 3,
+        eliminatedId: null,
+      },
+    })
+    expect(reduceMenteur(revealing, { type: 'LEAVE', playerId: 'a', at: 1000 }).turnIdx).toBe(0)
+  })
 })
 
 describe('vues anti-triche', () => {

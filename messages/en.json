@@ -396,7 +396,10 @@
       "cannot_afk_self": "You can't replace yourself.",
       "not_afk_yet": "This player can still come back, hang on.",
       "nothing_to_replace": "No player to replace.",
-      "action_failed": "Action failed."
+      "action_failed": "Action failed.",
+      "rematch_conflict": "Vote not recorded, try again.",
+      "roomClosed": "The table has been closed.",
+      "roomLeft": "You're no longer in this room."
     }
   },
   "chat": {
@@ -408,7 +411,9 @@
     "noRoom": "No game in progress — join a lobby to chat with the players.",
     "noFriends": "Add friends to chat with them.",
     "back": "Back",
-    "empty": "No messages yet — start the conversation!"
+    "empty": "No messages yet — start the conversation!",
+    "tooFast": "Slow down! Wait a few seconds before sending again.",
+    "sendFailed": "Message not sent. Try again."
   },
   "auth": {
     "brand": "Le Pillaveur",
@@ -545,7 +550,9 @@
       "deleting": "Deleting…",
       "wrongPassword": "Incorrect password.",
       "founderProtected": "The founder account cannot be deleted from the interface.",
-      "genericError": "Unable to delete the account right now. Please try again later."
+      "genericError": "Unable to delete the account right now. Please try again later.",
+      "googleConfirmHint": "This account signs in with Google: confirm deletion with your Google account.",
+      "googleRequired": "Google confirmation required: use the Google button with the account linked to this address."
     },
     "guestUpgrade": {
       "title": "Guest account — remember to save it!",

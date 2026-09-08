@@ -191,6 +191,11 @@
       "choose": "Scegli i giocatori",
       "modify": "Per modificare",
       "tapToChoose": "Tocca qui per scegliere i tuoi giocatori (minimo 2)."
+    },
+    "playMode": {
+      "label": "Modalità di gioco",
+      "local": "Locale",
+      "online": "Online"
     }
   },
   "onlineXp": {
@@ -391,7 +396,10 @@
       "cannot_afk_self": "Non puoi sostituire te stesso.",
       "not_afk_yet": "Questo giocatore può ancora tornare, aspetta un attimo.",
       "nothing_to_replace": "Nessun giocatore da sostituire.",
-      "action_failed": "Azione non riuscita."
+      "action_failed": "Azione non riuscita.",
+      "rematch_conflict": "Voto non registrato, riprova.",
+      "roomClosed": "Il tavolo è stato chiuso.",
+      "roomLeft": "Non sei più a questo tavolo."
     }
   },
   "chat": {
@@ -403,7 +411,9 @@
     "noRoom": "Nessuna partita in corso — unisciti a una lobby per chattare con i giocatori.",
     "noFriends": "Aggiungi amici per chattare con loro.",
     "back": "Indietro",
-    "empty": "Ancora nessun messaggio — inizia la conversazione!"
+    "empty": "Ancora nessun messaggio — inizia la conversazione!",
+    "tooFast": "Piano! Aspetta qualche secondo prima di inviare di nuovo.",
+    "sendFailed": "Messaggio non inviato. Riprova."
   },
   "auth": {
     "brand": "Le Pillaveur",
@@ -540,7 +550,9 @@
       "deleting": "Eliminazione…",
       "wrongPassword": "Password errata.",
       "founderProtected": "L'account del fondatore non può essere eliminato dall'interfaccia.",
-      "genericError": "Impossibile eliminare l'account al momento. Riprova più tardi."
+      "genericError": "Impossibile eliminare l'account al momento. Riprova più tardi.",
+      "googleConfirmHint": "Questo account accede con Google: conferma l'eliminazione con il tuo account Google.",
+      "googleRequired": "Serve la conferma di Google: usa il pulsante Google con l'account collegato a questo indirizzo."
     },
     "guestUpgrade": {
       "title": "Account ospite — ricordati di salvarlo!",

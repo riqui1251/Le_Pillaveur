@@ -7,6 +7,12 @@ import { censorChatMessage } from '@/lib/chat-moderation'
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 import { isFeatureBanned } from '@/lib/feature-bans'
 import { parseLGState } from '@/lib/loup-garou/server-adapter'
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  readJsonBodyLimited,
+  userRateLimitKey,
+} from '@/lib/rate-limit'
 
 /**
  * Chat léger par canal :
@@ -20,6 +26,25 @@ import { parseLGState } from '@/lib/loup-garou/server-adapter'
 
 const MAX_BODY_LENGTH = 500
 const PAGE_SIZE = 50
+
+/**
+ * Anti-flood : 10 envois par tranche de 10 s et par compte. Large pour une
+ * conversation normale (le client n'a pas de saisie automatique), assez serré
+ * pour qu'un script ne remplisse pas ChatMessage. Le corps est plafonné bien
+ * au-delà de MAX_BODY_LENGTH pour laisser passer les émojis multi-octets.
+ */
+const CHAT_LIMIT = 10
+const CHAT_WINDOW_MS = 10 * 1000
+const MAX_CHAT_BODY_BYTES = 8 * 1024
+
+/**
+ * La lecture écrit aussi (upsert ChatRead à chaque appel) : elle a donc besoin
+ * de son propre plafond, dans la même fenêtre que l'envoi. Le client poll une
+ * conversation toutes les 3 s (≈ 4 requêtes / 10 s), plus un refetch après
+ * chaque envoi : 30 laisse tourner plusieurs onglets ouverts en parallèle tout
+ * en coupant un script qui martèlerait la route.
+ */
+const CHAT_READ_LIMIT = 30
 
 type ChannelResolution =
   | { ok: true; channel: string }
@@ -93,6 +118,13 @@ export async function GET(request: Request) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
 
+  const rate = checkRateLimit(
+    userRateLimitKey('chat-read', user.id),
+    CHAT_READ_LIMIT,
+    CHAT_WINDOW_MS
+  )
+  if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
+
   const url = new URL(request.url)
   const resolved = await resolveChannel(user, url.searchParams.get('scope'), url.searchParams.get('friend'))
   if (!resolved.ok) {
@@ -123,7 +155,17 @@ export async function POST(request: Request) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
 
-  const payload = await request.json().catch(() => ({}))
+  const rate = checkRateLimit(userRateLimitKey('chat', user.id), CHAT_LIMIT, CHAT_WINDOW_MS)
+  if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
+
+  const parsed = await readJsonBodyLimited<Record<string, unknown>>(request, MAX_CHAT_BODY_BYTES)
+  if (!parsed.ok) {
+    return NextResponse.json(
+      { error: 'Message invalide' },
+      { status: parsed.reason === 'too_large' ? 413 : 400 }
+    )
+  }
+  const payload = parsed.body
   const scope = typeof payload.scope === 'string' ? payload.scope : null
   const friendUserId = typeof payload.friendUserId === 'string' ? payload.friendUserId : null
   const body = typeof payload.body === 'string' ? payload.body.trim() : ''

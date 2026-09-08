@@ -82,7 +82,7 @@ El Servicio utiliza las siguientes cookies:
 | `lp_age_verified` | Recordar su declaración de edad (18+) | 1 año |
 | `lp_analytics_consent` | Recordar su elección sobre las estadísticas de visita | 1 año |
 | `lp_locale` | Recordar su idioma de interfaz | 1 año |
-| `lp_vid` | Identificador de visitante para estadísticas y anti-abuso — **instalada únicamente si ha aceptado las estadísticas de visita** (o, en la medida estrictamente necesaria, tras un intento de apodo rechazado, para la prevención de abusos) | Persistente |
+| `lp_vid` | Identificador de visitante para estadísticas y anti-abuso — **instalada únicamente si ha aceptado las estadísticas de visita** | Persistente |
 
 Puede cambiar su elección sobre las estadísticas de visita eliminando las cookies del sitio en su navegador: la pregunta se le planteará de nuevo en la próxima visita.
 
@@ -127,11 +127,11 @@ El editor sigue siendo el responsable del tratamiento. No se realiza ninguna otr
 
 - **Cuenta activa**: datos conservados mientras exista la cuenta.
 - **Cuenta eliminada**: supresión o anonimización en un plazo máximo de **12 meses** tras la solicitud, salvo obligación legal de conservación más larga.
-- **Registros técnicos (direcciones IP, presencia)**: **6 meses**.
+- **Registros técnicos (direcciones IP, presencia)**: **6 meses**. La dirección IP y el país de la última conexión asociados a una cuenta se borran tras **6 meses** sin actividad; el historial de direcciones IP de una cuenta se elimina inmediatamente junto con la cuenta.
 - **Mensajes de chat**: **12 meses**.
 - **Trazas de moderación de apodos**: **12 meses**.
 - **Datos de medición de audiencia**: **13 meses**.
-- **Comentarios**: conservación hasta **24 meses** o supresión previa solicitud.
+- **Comentarios**: conservación hasta **24 meses** o supresión previa solicitud; el correo electrónico de contacto asociado se borra si elimina su cuenta.
 - **Cookies de edad y consentimiento**: 1 año, renovables en cada validación.
 
 Estos plazos se aplican automáticamente mediante purgas regulares.

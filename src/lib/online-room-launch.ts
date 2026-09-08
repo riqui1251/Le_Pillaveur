@@ -158,6 +158,32 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
   }
 }
 
+/**
+ * Nombre de tours de compare-and-swap avant d'abandonner : chaque tour ne
+ * laisse passer QU'UN vote, donc sur une table de 8 à 10 joueurs qui cliquent
+ * « Rejouer » ensemble, 3 tours renvoyaient une erreur à des votes pourtant
+ * légitimes. Au-delà de 10 on préfère quand même l'erreur explicite à une
+ * boucle qui s'éternise.
+ */
+const REMATCH_VOTE_ATTEMPTS = 10
+
+/**
+ * Attente de base (ms) entre deux tours : sans elle les votes perdants
+ * relisent la base dans la foulée et se percutent à nouveau sur la même
+ * version. Le facteur croissant et le grain aléatoire les désynchronisent.
+ */
+const REMATCH_RETRY_BASE_MS = 12
+
+/**
+ * Version sentinelle posée par la réclamation de relance. Aucune partie ne la
+ * produit (0 = lobby, ≥ 1 = partie), donc un vote concurrent qui la relit sait
+ * que la relance lui a échappé et s'arrête — au lieu de redistribuer les
+ * cartes une seconde fois.
+ */
+const REMATCH_CLAIMED_VERSION = -1
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 /** Vote rematch : relance si tous ont voté, sinon enregistre le vote */
 export async function processRematchVote(
   roomId: string,
@@ -165,30 +191,99 @@ export async function processRematchVote(
   userId: string
 ) {
   const gameId = room.gameId ?? ''
-  const state = parseOnlineGameState(gameId, room.gameStateJson)
-  if (!state || !gameId || !isOnlineGameFinished(gameId, state)) {
+  // La sentinelle vaut AUSSI pour un vote qui lit la salle pendant la fenêtre de
+  // relance : l'état terminé y est momentanément remis en base (le Président y
+  // relit son classement), donc seul le numéro de version dit la vérité. Sans
+  // cette garde d'entrée, un tel vote repartait pour une seconde distribution.
+  if (room.stateVersion === REMATCH_CLAIMED_VERSION) return
+  const initialState = parseOnlineGameState(gameId, room.gameStateJson)
+  if (!initialState || !gameId || !isOnlineGameFinished(gameId, initialState)) {
     throw new Error('game_not_finished')
   }
 
   const memberUserIds = room.members.map((m) => m.userId)
-  const votes = new Set(state.rematchVotes ?? [])
-  votes.add(userId)
-  const rematchVotes = [...votes]
+  let state = initialState
+  /**
+   * JSON EXACT de la partie terminée : la réclamation ci-dessous l'efface, or
+   * certains lancements le relisent en base (Président : le classement final
+   * donne les positions héritées) — on le garde donc sous la main pour le
+   * remettre avant de relancer.
+   */
+  let stateJson = room.gameStateJson
+  let stateVersion = room.stateVersion
 
-  if (rematchVotes.length >= memberUserIds.length && memberUserIds.every((id) => votes.has(id))) {
-    await launchOnlineRoom(roomId, room)
-  } else {
-    const updatedState = {
-      ...state,
-      rematchVotes,
-      version: state.version + 1,
+  for (let attempt = 0; attempt < REMATCH_VOTE_ATTEMPTS; attempt++) {
+    const votes = new Set(state.rematchVotes ?? [])
+    votes.add(userId)
+    const everyoneVoted = memberUserIds.length > 0 && memberUserIds.every((id) => votes.has(id))
+
+    if (everyoneVoted) {
+      // Réclamation atomique anti-double-relance : la MÊME écriture fait perdre
+      // à la salle son caractère « partie terminée » (état vidé + version
+      // sentinelle). Incrémenter la version ne suffisait pas : le vote
+      // concurrent relisait l'état terminé intact, se croyait légitime et
+      // lançait une DEUXIÈME partie (deux distributions de cartes).
+      const claimed = await prisma.onlineRoom.updateMany({
+        where: { id: roomId, stateVersion },
+        data: { gameStateJson: null, stateVersion: REMATCH_CLAIMED_VERSION },
+      })
+      if (claimed.count === 1) {
+        try {
+          // L'état terminé revient en base AVANT la relance (le Président y
+          // relit son classement) ; la sentinelle, elle, reste posée : c'est
+          // elle qui continue d'écarter les votes concurrents pendant ce temps.
+          await prisma.onlineRoom.update({
+            where: { id: roomId },
+            data: { gameStateJson: stateJson },
+          })
+          await launchOnlineRoom(roomId, room)
+        } catch (error) {
+          // Relance ratée : sans ce retour en arrière la sentinelle figerait la
+          // salle pour de bon (plus aucun vote « Rejouer » n'aboutirait).
+          await prisma.onlineRoom.update({
+            where: { id: roomId },
+            data: { gameStateJson: stateJson, stateVersion },
+          })
+          throw error
+        }
+        return
+      }
+    } else {
+      // Compare-and-swap : l'écriture inconditionnelle d'avant écrasait le
+      // vote concurrent (lecture puis update sans garde), et le joueur dont
+      // le vote sautait croyait pourtant avoir voté.
+      const written = await prisma.onlineRoom.updateMany({
+        where: { id: roomId, stateVersion },
+        data: {
+          gameStateJson: JSON.stringify({
+            ...state,
+            rematchVotes: [...votes],
+            version: state.version + 1,
+          }),
+          stateVersion: stateVersion + 1,
+        },
+      })
+      if (written.count === 1) return
     }
-    await prisma.onlineRoom.update({
+
+    // Course perdue : on laisse le vote gagnant finir d'écrire, puis on relit
+    // l'état frais pour rejouer le vote dessus.
+    await sleep(REMATCH_RETRY_BASE_MS * (attempt + 1) + Math.random() * REMATCH_RETRY_BASE_MS)
+    const fresh = await prisma.onlineRoom.findUnique({
       where: { id: roomId },
-      data: {
-        gameStateJson: JSON.stringify(updatedState),
-        stateVersion: room.stateVersion + 1,
-      },
+      select: { gameStateJson: true, stateVersion: true },
     })
+    if (!fresh) throw new Error('room_not_found')
+    // Relance déjà réclamée par un autre vote (sentinelle, ou état déjà
+    // remplacé par la nouvelle partie) : ce vote-ci est devenu sans objet, mais
+    // il a bien produit l'effet attendu — pas d'erreur.
+    if (fresh.stateVersion === REMATCH_CLAIMED_VERSION) return
+    const freshState = parseOnlineGameState(gameId, fresh.gameStateJson)
+    if (!freshState || !isOnlineGameFinished(gameId, freshState)) return
+    state = freshState
+    stateJson = fresh.gameStateJson
+    stateVersion = fresh.stateVersion
   }
+
+  throw new Error('rematch_conflict')
 }

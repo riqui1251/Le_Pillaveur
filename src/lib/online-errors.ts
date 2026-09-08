@@ -50,6 +50,8 @@ export const ONLINE_ERROR_CODES = [
   'cannot_afk_self',
   'not_afk_yet',
   'nothing_to_replace',
+  // Revanche : le vote a perdu la course d'écriture (compare-and-swap épuisé)
+  'rematch_conflict',
   'action_failed',
 ] as const
 
@@ -123,6 +125,7 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   cannot_afk_self: 'Impossible de se remplacer soi-même',
   not_afk_yet: 'Ce joueur est encore dans le délai de grâce',
   nothing_to_replace: 'Aucun joueur à remplacer',
+  rematch_conflict: 'Vote non enregistré, réessayez',
   action_failed: 'Action impossible',
 }
 

@@ -247,10 +247,10 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
 }
 
 /**
- * Une table « waiting » abandonnée (personne à l'intérieur, ou aucune
- * activité — réglage/prêt — depuis 5 min) se ferme d'elle-même : sinon les
- * codes s'accumulent indéfiniment quand un onglet se ferme sans passer par
- * /leave (crash, mise en veille, connexion coupée).
+ * Une table « waiting » abandonnée (plus personne de vivant à l'intérieur
+ * depuis 5 min) se ferme d'elle-même : sinon les codes s'accumulent
+ * indéfiniment quand un onglet se ferme sans passer par /leave (crash, mise
+ * en veille, connexion coupée).
  */
 const STALE_WAITING_ROOM_MS = 5 * 60 * 1000
 
@@ -259,7 +259,17 @@ export async function cleanupStaleWaitingRooms(): Promise<void> {
   const stale = await prisma.onlineRoom.findMany({
     where: {
       status: 'waiting',
-      OR: [{ members: { none: {} } }, { updatedAt: { lt: cutoff } }],
+      // L'obsolescence se mesure sur la PRÉSENCE des membres, jamais sur
+      // `updatedAt` de la salle : ce champ ne bouge que si la LIGNE room est
+      // réécrite, or rejoindre (/join), se mettre prêt (/ready) et le
+      // rafraîchissement de présence n'écrivent QUE sur OnlineRoomMember.
+      // Un groupe qui met 6-8 min à se rassembler voyait donc sa table purgée
+      // sous ses yeux dès qu'un visiteur ouvrait le hub (buildLobbyList).
+      // `lastSeenAt` est réécrit à chaque GET /rooms/[roomId] (poll ~2 s en
+      // lobby), /join et /ready : un seul onglet ouvert suffit à garder la
+      // table en vie. `none` couvre aussi le cas « aucun membre du tout »
+      // (salle vide → supprimée immédiatement, comme avant).
+      members: { none: { lastSeenAt: { gte: cutoff } } },
     },
     select: { id: true },
   })
@@ -287,7 +297,16 @@ const STALE_ACTIVE_ROOM_MS = 60 * 60 * 1000
 export async function cleanupStaleActiveRooms(): Promise<void> {
   const cutoff = new Date(Date.now() - STALE_ACTIVE_ROOM_MS)
   const stale = await prisma.onlineRoom.findMany({
-    where: { status: { in: ['playing', 'briefing'] }, updatedAt: { lt: cutoff } },
+    where: {
+      status: { in: ['playing', 'briefing'] },
+      updatedAt: { lt: cutoff },
+      // Même garde de présence qu'en lobby, mais en ET et non en remplacement :
+      // pendant une partie le poll client interroge GET /state, qui ne
+      // rafraîchit PAS `lastSeenAt` — la présence seule sous-estimerait la vie
+      // de la salle. `updatedAt`, lui, bouge à chaque coup joué. On exige donc
+      // les deux : aucune écriture d'état ET plus personne vu depuis 60 min.
+      members: { none: { lastSeenAt: { gte: cutoff } } },
+    },
     select: { id: true },
   })
   if (stale.length === 0) return

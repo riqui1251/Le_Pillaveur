@@ -396,16 +396,40 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new MenteurEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
-        ...state,
-        players: state.players.map((p) =>
-          p.id === action.playerId ? { ...p, leftAt: action.at } : p
-        ),
-        version: state.version + 1,
+      const players = state.players.map((p) =>
+        p.id === action.playerId ? { ...p, leftAt: action.at } : p
+      )
+      const next: MenteurState = { ...state, players, version: state.version + 1 }
+      // Le partant garde ses dés (il peut revenir, ou finir en bot). Mais
+      // l'état du Menteur n'a AUCUNE horloge de phase : s'il tenait les
+      // enchères, la table resterait figée jusqu'au remplacement automatique
+      // (plusieurs minutes). On rend donc la main tout de suite au suivant
+      // encore en lice, en sautant au passage les autres partants.
+      // (`isMenteurAlive` garantit au passage qu'un suivant existe : au pire
+      // nextAliveIdx revient sur le partant lui-même, jamais NO_ALIVE_PLAYER.)
+      if (
+        state.phase !== 'bidding' ||
+        players[state.turnIdx]?.id !== action.playerId ||
+        !isMenteurAlive(player)
+      ) {
+        return next
       }
+      let turnIdx = nextAliveIdx(next, state.turnIdx)
+      for (let step = 0; step < players.length && players[turnIdx].leftAt; step += 1) {
+        const after = nextAliveIdx(next, turnIdx)
+        if (after === turnIdx) break // plus qu'un seul vivant : on lui laisse la main
+        turnIdx = after
+      }
+      return { ...next, turnIdx }
     }
 
     case 'REJOIN': {
+      // Le revenant a PERDU son tour, et c'est volontaire : LEAVE a rendu la
+      // main au suivant, la table a continué de jouer (une enchère a pu
+      // tomber). Ramener le tour en arrière écraserait ce qui s'est passé
+      // entre-temps et permettrait de « rejouer » un tour en partant/revenant.
+      // On ne restaure donc QUE sa présence : ses dés, eux, ne l'ont jamais
+      // quitté (LEAVE ne touche pas aux gobelets), l'état reste cohérent.
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot || !player.leftAt) throw new MenteurEngineError('CANNOT_REJOIN')
       return {

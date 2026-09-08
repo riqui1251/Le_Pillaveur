@@ -82,7 +82,7 @@ Le Service utilise les cookies suivants :
 | `lp_age_verified` | Mémorisation de votre déclaration d'âge (18+) | 1 an |
 | `lp_analytics_consent` | Mémorisation de votre choix sur les statistiques de visite | 1 an |
 | `lp_locale` | Mémorisation de votre langue d'interface | 1 an |
-| `lp_vid` | Identifiant visiteur pour statistiques et anti-abus — **déposé uniquement si vous avez accepté les statistiques de visite** (ou, à titre strictement nécessaire, lors d'une tentative de pseudo refusée, pour la prévention des abus) | Persistant |
+| `lp_vid` | Identifiant visiteur pour statistiques et anti-abus — **déposé uniquement si vous avez accepté les statistiques de visite** | Persistant |
 
 Vous pouvez modifier votre choix sur les statistiques de visite en supprimant les cookies du site dans votre navigateur : la question vous sera reposée à la prochaine visite.
 
@@ -127,11 +127,11 @@ L'éditeur reste responsable du traitement. Aucun autre transfert à des tiers n
 
 - **Compte actif** : données conservées tant que le compte existe.
 - **Compte supprimé** : suppression ou anonymisation dans un délai de **12 mois** maximum après la demande, sauf obligation légale de conservation plus longue.
-- **Logs techniques (adresses IP, présence)** : **6 mois**.
+- **Logs techniques (adresses IP, présence)** : **6 mois**. L'adresse IP et le pays de dernière connexion attachés à un compte sont effacés après **6 mois** sans activité ; l'historique d'adresses IP d'un compte est supprimé immédiatement avec le compte.
 - **Messages de chat** : **12 mois**.
 - **Traces de modération de pseudo** : **12 mois**.
 - **Données de mesure d'audience** : **13 mois**.
-- **Feedback** : conservation jusqu'à **24 mois** ou suppression sur demande.
+- **Feedback** : conservation jusqu'à **24 mois** ou suppression sur demande ; l'email de contact associé est effacé si vous supprimez votre compte.
 - **Cookies âge et consentement** : 1 an, renouvelables à chaque validation.
 
 Ces durées sont appliquées automatiquement par des purges régulières.

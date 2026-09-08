@@ -191,6 +191,11 @@
       "choose": "Elige los jugadores",
       "modify": "para modificar",
       "tapToChoose": "Toca aquí para elegir tus jugadores (mínimo 2)."
+    },
+    "playMode": {
+      "label": "Modo de juego",
+      "local": "Local",
+      "online": "En línea"
     }
   },
   "onlineXp": {
@@ -391,7 +396,10 @@
       "cannot_afk_self": "No puedes reemplazarte a ti mismo.",
       "not_afk_yet": "Este jugador aún puede volver, espera un poco.",
       "nothing_to_replace": "No hay jugador que reemplazar.",
-      "action_failed": "La acción ha fallado."
+      "action_failed": "La acción ha fallado.",
+      "rematch_conflict": "Voto no registrado, inténtalo de nuevo.",
+      "roomClosed": "La mesa ha sido cerrada.",
+      "roomLeft": "Ya no estás en esta mesa."
     }
   },
   "chat": {
@@ -403,7 +411,9 @@
     "noRoom": "No hay partida en curso — únete a una sala para chatear con los jugadores.",
     "noFriends": "Añade amigos para chatear con ellos.",
     "back": "Atrás",
-    "empty": "¡Todavía no hay mensajes — inicia la conversación!"
+    "empty": "¡Todavía no hay mensajes — inicia la conversación!",
+    "tooFast": "¡Más despacio! Espera unos segundos antes de volver a enviar.",
+    "sendFailed": "Mensaje no enviado. Inténtalo de nuevo."
   },
   "auth": {
     "brand": "Le Pillaveur",
@@ -540,7 +550,9 @@
       "deleting": "Eliminando…",
       "wrongPassword": "Contraseña incorrecta.",
       "founderProtected": "La cuenta del fundador no puede eliminarse desde la interfaz.",
-      "genericError": "No se puede eliminar la cuenta en este momento. Inténtalo más tarde."
+      "genericError": "No se puede eliminar la cuenta en este momento. Inténtalo más tarde.",
+      "googleConfirmHint": "Esta cuenta inicia sesión con Google: confirma la eliminación con tu cuenta de Google.",
+      "googleRequired": "Se necesita confirmación de Google: usa el botón de Google con la cuenta vinculada a esta dirección."
     },
     "guestUpgrade": {
       "title": "Cuenta de invitado — ¡recuerda guardarla!",

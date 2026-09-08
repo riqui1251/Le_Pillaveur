@@ -9,6 +9,8 @@ import { deleteUserAccount } from '@/lib/user-activity-server'
  *
  * Durées (doivent rester alignées avec docs/legal/x/confidentialite.md §7) :
  * - IpSeenLog / SitePresence : 6 mois après la dernière activité ;
+ * - User.lastIp / User.lastCountry : effacés après 6 mois d'inactivité du
+ *   compte (le compte lui-même est conservé — seule la trace technique part) ;
  * - ChatMessage / NameModerationAttempt : 12 mois ;
  * - DailyVisitor (mesure d'audience) : 13 mois ;
  * - comptes INVITÉS (isGuest, scan de QR) : 48 h après la dernière activité —
@@ -51,6 +53,24 @@ export async function runRetentionSweep(): Promise<void> {
       prisma.chatMessage.deleteMany({ where: { createdAt: { lt: twelveMonthsAgo } } }),
       prisma.nameModerationAttempt.deleteMany({ where: { createdAt: { lt: twelveMonthsAgo } } }),
       prisma.dailyVisitor.deleteMany({ where: { date: { lt: dailyVisitorCutoff } } }),
+      // La dernière IP/pays connus d'un compte sont des logs techniques : ils
+      // tombent sous les 6 mois annoncés, au même titre qu'IpSeenLog. On ne
+      // touche qu'aux comptes silencieux depuis 6 mois (lastSeenAt jamais
+      // renseigné : on retient la date de création).
+      prisma.user.updateMany({
+        where: {
+          AND: [
+            { OR: [{ lastIp: { not: null } }, { lastCountry: { not: null } }] },
+            {
+              OR: [
+                { lastSeenAt: { lt: sixMonthsAgo } },
+                { lastSeenAt: null, createdAt: { lt: sixMonthsAgo } },
+              ],
+            },
+          ],
+        },
+        data: { lastIp: null, lastCountry: null },
+      }),
     ])
 
     // Invités inactifs : suppression via la routine complète (mêmes garanties

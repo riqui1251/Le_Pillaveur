@@ -396,7 +396,10 @@
       "cannot_afk_self": "Tu ne peux pas te remplacer toi-même.",
       "not_afk_yet": "Ce joueur peut encore revenir, patiente un peu.",
       "nothing_to_replace": "Aucun joueur à remplacer.",
-      "action_failed": "Action impossible."
+      "action_failed": "Action impossible.",
+      "rematch_conflict": "Vote non enregistré, réessaie.",
+      "roomClosed": "La table a été fermée.",
+      "roomLeft": "Tu n'es plus dans cette table."
     }
   },
   "chat": {
@@ -408,7 +411,9 @@
     "noRoom": "Aucune partie en cours — rejoins un lobby pour discuter avec les joueurs.",
     "noFriends": "Ajoute des amis pour discuter avec eux.",
     "back": "Retour",
-    "empty": "Aucun message pour l’instant — lance la conversation !"
+    "empty": "Aucun message pour l’instant — lance la conversation !",
+    "tooFast": "Doucement ! Attends quelques secondes avant de renvoyer.",
+    "sendFailed": "Message non envoyé. Réessaie."
   },
   "auth": {
     "brand": "Le Pillaveur",
@@ -545,7 +550,9 @@
       "deleting": "Suppression…",
       "wrongPassword": "Mot de passe incorrect.",
       "founderProtected": "Le compte fondateur ne peut pas être supprimé depuis l'interface.",
-      "genericError": "Impossible de supprimer le compte pour le moment. Réessaie plus tard."
+      "genericError": "Impossible de supprimer le compte pour le moment. Réessaie plus tard.",
+      "googleConfirmHint": "Ce compte se connecte avec Google : confirme la suppression avec ton compte Google.",
+      "googleRequired": "Confirmation Google nécessaire : utilise le bouton Google avec le compte lié à cette adresse."
     },
     "guestUpgrade": {
       "title": "Compte invité — pense à le sauvegarder !",

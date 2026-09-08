@@ -81,18 +81,34 @@ export async function DELETE(_request: Request, { params }: Params) {
   // marqué « parti » dans l'état — il peut revenir (bouton Rejoindre) pendant
   // 3 min avant d'être remplacé par un bot. Voir src/lib/online/replacement.ts.
   const adapter = getGameAdapter(room.gameId)
+  let stateVersion: number | null = null
   if (adapter && room.status === 'playing') {
     const state = adapter.parse(room.gameStateJson)
     const next = state ? adapter.markLeft(state, user.id, Date.now()) : null
     if (next) {
+      stateVersion = room.stateVersion + 1
       await prisma.onlineRoom.update({
         where: { id: roomId },
-        data: { gameStateJson: adapter.serialize(next), stateVersion: room.stateVersion + 1 },
+        data: {
+          gameStateJson: adapter.serialize(next),
+          stateVersion,
+          // Un départ peut faire TOURNER le tour (les moteurs rendent la main
+          // au suivant plutôt que de figer la table). `currentTurnUserId` est
+          // la colonne que lisent les composants et les ticks d'arbitre (bots,
+          // AFK) : sans cette écriture, la table resterait bloquée sur le
+          // partant jusqu'au remplacement automatique. Même règle que /action.
+          currentTurnUserId: adapter.isFinished(next) ? null : adapter.currentActorId(next),
+        },
       })
     }
   }
 
-  publishRoomChanged(roomId, { type: 'lobby' })
+  // Un SEUL événement temps réel : `changed` (avec la version) quand la partie
+  // a bougé — c'est ce que les clients en jeu attendent —, `lobby` sinon.
+  publishRoomChanged(
+    roomId,
+    stateVersion === null ? { type: 'lobby' } : { type: 'changed', stateVersion }
+  )
 
   return NextResponse.json({ ok: true })
 }

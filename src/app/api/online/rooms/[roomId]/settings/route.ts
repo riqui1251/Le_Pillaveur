@@ -5,11 +5,28 @@ import { buildRoomDto } from '@/lib/online-room'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { onlineErrorBody } from '@/lib/online-errors'
+import { readJsonBodyLimited } from '@/lib/rate-limit'
 
 type Params = { params: Promise<{ roomId: string }> }
 
-const VALID_DIFFICULTIES = new Set(['facile', 'normal', 'difficile', 'extreme'])
+/** Les réglages sont une poignée de champs courts : 64 Ko est déjà très large. */
+const MAX_SETTINGS_BODY_BYTES = 64 * 1024
+
+// `satisfies` adosse chaque liste blanche à l'union du type : une valeur qui
+// n'existe pas dans RoomSettings devient une erreur de compilation, ce qui rend
+// honnêtes les `as` posés à l'affectation (Set.has ne sait pas narrower).
+// Les Set restent `Set<string>` pour pouvoir tester une chaîne quelconque.
+const VALID_DIFFICULTIES = new Set<string>(
+  ['facile', 'normal', 'difficile', 'extreme'] satisfies NonNullable<
+    RoomSettings['difficulty']
+  >[]
+)
+const VALID_PLINKO_DIFFICULTIES = new Set<string>(
+  ['easy', 'medium', 'hard'] satisfies NonNullable<RoomSettings['plinkoDifficulty']>[]
+)
 const VALID_VISIBILITIES = new Set(['public', 'private', 'invite'])
+// Non typée sur RoomSettings['tcMode'] : l'union du type a pris du retard sur
+// le jeu, qui gère bien le 4v4 (TC_MODES dans toucher-coule/engine.ts).
 const VALID_TC_MODES = new Set(['1v1', '2v2', '3v3', '4v4'])
 
 /** L'hôte met à jour les paramètres (difficulté, etc.) pendant le lobby */
@@ -31,15 +48,37 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json(onlineErrorBody('host_only_settings'), { status: 403 })
   }
 
-  const body = await request.json()
+  // ONLINE_ERROR_CODES n'a aucun code générique « corps trop gros » :
+  // `signal_too_large` (vocabulaire du vocal WebRTC) est le seul déjà traduit
+  // dans onlineLobby.errors, donc réutilisé ici par défaut. À remplacer par un
+  // code dédié (ex. `body_too_large`) le jour où online-errors.ts en gagne un.
+  const parsed = await readJsonBodyLimited<Record<string, unknown>>(
+    request,
+    MAX_SETTINGS_BODY_BYTES
+  )
+  if (!parsed.ok) {
+    return parsed.reason === 'too_large'
+      ? NextResponse.json(onlineErrorBody('signal_too_large'), { status: 413 })
+      : NextResponse.json(onlineErrorBody('invalid_json'), { status: 400 })
+  }
+  // Forme libre comme avant : chaque réglage est validé un à un ci-dessous.
+  const body = parsed.body
+
   const current = parseRoomSettings(room.settingsJson)
   const next: RoomSettings = { ...current }
 
   if (typeof body.difficulty === 'string' && VALID_DIFFICULTIES.has(body.difficulty)) {
-    next.difficulty = body.difficulty
+    next.difficulty = body.difficulty as NonNullable<RoomSettings['difficulty']>
   }
-  if (typeof body.plinkoDifficulty === 'string') {
-    next.plinkoDifficulty = body.plinkoDifficulty
+  // Valeur rediffusée à tous les membres du lobby : liste blanche obligatoire,
+  // comme les autres réglages (une chaîne libre était persistée telle quelle).
+  if (
+    typeof body.plinkoDifficulty === 'string' &&
+    VALID_PLINKO_DIFFICULTIES.has(body.plinkoDifficulty)
+  ) {
+    next.plinkoDifficulty = body.plinkoDifficulty as NonNullable<
+      RoomSettings['plinkoDifficulty']
+    >
   }
   if (body.hiLoMode === 'standard' || body.hiLoMode === 'traversee') {
     next.hiLoMode = body.hiLoMode

@@ -6,11 +6,28 @@ import {
   visitorCookieOptions,
   VISITOR_COOKIE,
 } from '@/lib/auth-server'
+import { ANALYTICS_CONSENT_COOKIE } from '@/lib/auth-cookies'
 import {
   recordNameModerationAttempt,
   type NameModerationAttemptContext,
 } from '@/lib/name-moderation-attempts-server'
 import type { NameModerationReason } from '@/lib/name-moderation'
+import {
+  checkRateLimit,
+  rateLimitKey,
+  rateLimitResponse,
+  readJsonBodyLimited,
+} from '@/lib/rate-limit'
+
+/**
+ * Route ouverte (une tentative de pseudo a lieu avant toute connexion) qui
+ * écrit une ligne en base à chaque appel : 20 tentatives par heure et par IP,
+ * très au-dessus d'un usage réel (le client n'appelle qu'après un refus de
+ * validation) mais suffisant pour couper un script.
+ */
+const ATTEMPT_LIMIT = 20
+const ATTEMPT_WINDOW_MS = 60 * 60 * 1000
+const MAX_ATTEMPT_BODY_BYTES = 4 * 1024
 
 const VALID_REASONS = new Set<NameModerationReason>([
   'empty',
@@ -28,7 +45,23 @@ const VALID_CONTEXTS = new Set<NameModerationAttemptContext>([
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
+    const rate = checkRateLimit(
+      rateLimitKey(request, 'name-moderation-attempt'),
+      ATTEMPT_LIMIT,
+      ATTEMPT_WINDOW_MS
+    )
+    if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
+
+    const parsed = await readJsonBodyLimited<Record<string, unknown>>(
+      request,
+      MAX_ATTEMPT_BODY_BYTES
+    )
+    if (!parsed.ok) {
+      return parsed.reason === 'too_large'
+        ? NextResponse.json({ error: 'Requête trop volumineuse' }, { status: 413 })
+        : NextResponse.json({ error: 'Requête invalide' }, { status: 400 })
+    }
+    const body = parsed.body
     const attemptedName =
       typeof body.attemptedName === 'string' ? body.attemptedName : ''
     const reason = typeof body.reason === 'string' ? body.reason : ''
@@ -46,10 +79,22 @@ export async function POST(request: Request) {
 
     const user = await getCurrentUser()
     const cookieStore = await cookies()
-    let visitorId = cookieStore.get(VISITOR_COOKIE)?.value
+    let visitorId = cookieStore.get(VISITOR_COOKIE)?.value ?? null
     let setVisitorCookie = false
 
-    if (!visitorId) {
+    // lp_vid est un identifiant de suivi : il n'est créé qu'avec le
+    // consentement statistiques (art. 82 loi I&L), même règle que
+    // /api/analytics/ping. Sans consentement, la tentative est enregistrée
+    // sans identifiant visiteur (modération = intérêt légitime).
+    //
+    // ARBITRAGE ASSUMÉ : une tentative anonyme sans consentement est donc
+    // écrite avec visitorId ET userId à null. Conséquence : elle ne sera jamais
+    // rattachée au compte créé ensuite (linkVisitorNameModerationAttempts, dans
+    // /api/auth/register, recoud les lignes via lp_vid) et n'alimentera pas le
+    // compteur d'avertissements (showWarning) du futur inscrit. Ces lignes
+    // restent visibles côté modération, mais orphelines. On préfère cette perte
+    // de corrélation au dépôt d'un cookie de suivi sans consentement.
+    if (!visitorId && cookieStore.get(ANALYTICS_CONSENT_COOKIE)?.value === '1') {
       visitorId = createVisitorId()
       setVisitorCookie = true
     }

@@ -26,7 +26,10 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({ where: { email } })
 
-    if (user?.passwordHash) {
+    // Tout compte trouvé reçoit le lien, mot de passe défini ou non : c'est le
+    // SEUL chemin pour qu'un compte Google (passwordHash vide) se donne un mot
+    // de passe. La réponse reste neutre dans tous les cas.
+    if (user) {
       const token = createSessionToken()
       const tokenHash = hashToken(token)
       const expiresAt = new Date()
