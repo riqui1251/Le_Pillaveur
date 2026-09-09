@@ -150,10 +150,14 @@ export default function GamesHubPage() {
               La hauteur de la ligne est RÉSERVÉE tant que l'auth n'a pas
               répondu : sans ça, l'arrivée des bascules pousserait la grille
               déjà affichée vers le bas. Une fois l'auth connue sans compte,
-              la ligne se referme au lieu de laisser une bande vide. */}
+              la ligne se referme au lieu de laisser une bande vide.
+              L'ambiance n'était proposée qu'en ligne : le groupe local qui
+              joue sans alcool ne trouvait le réglage nulle part au moment où
+              il en a besoin. Elle est là dans les deux modes — discrète, à
+              côté de Local/En ligne (le composant se tait sans compte). */}
           <div className={cn('flex items-center gap-2', (authLoading || Boolean(user)) && 'min-h-[3.375rem]')}>
             <PlayModeToggle className="max-w-none flex-[1.4]" />
-            {isOnline && <AmbianceModeToggle dense className="max-w-none flex-1" />}
+            <AmbianceModeToggle dense className="max-w-none flex-1" />
           </div>
           {/* Bandeau de session : tant que l'auth n'a pas répondu, `isOnline`
               vaut false pour TOUT LE MONDE — l'afficher tout de suite le

@@ -7,14 +7,14 @@ import { deleteUserAccount } from '@/lib/user-activity-server'
  * durées de conservation annoncées dans la politique de confidentialité sont
  * appliquées ici, au plus une fois par SWEEP_INTERVAL_MS par processus.
  *
- * Durées (doivent rester alignées avec docs/legal/x/confidentialite.md §7) :
+ * Durées (doivent rester alignées avec docs/legal/<langue>/confidentialite.md §7) :
  * - IpSeenLog / SitePresence : 6 mois après la dernière activité ;
  * - User.lastIp / User.lastCountry : effacés après 6 mois d'inactivité du
  *   compte (le compte lui-même est conservé — seule la trace technique part) ;
  * - ChatMessage / NameModerationAttempt : 12 mois ;
  * - DailyVisitor (mesure d'audience) : 13 mois ;
- * - comptes INVITÉS (isGuest, scan de QR) : 48 h après la dernière activité —
- *   ils sont pensés pour une soirée, et la purge libère leurs pseudos.
+ * - comptes INVITÉS (isGuest, scan de QR) : 90 jours après la dernière
+ *   activité (voir GUEST_INACTIVITY_DAYS ci-dessous).
  */
 const SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000
 
@@ -22,7 +22,26 @@ const MONTH_MS = 30 * 24 * 60 * 60 * 1000
 const SIX_MONTHS_MS = 6 * MONTH_MS
 const TWELVE_MONTHS_MS = 12 * MONTH_MS
 const THIRTEEN_MONTHS_MS = 13 * MONTH_MS
-const GUEST_TTL_MS = 48 * 60 * 60 * 1000
+/**
+ * Durée de vie d'un compte INVITÉ sans activité.
+ *
+ * C'était 48 h — pensé « pour une soirée ». Mais l'usage réel du site, c'est
+ * « le samedi, puis le samedi suivant » : à J+7 le joueur retrouvait un pseudo
+ * libre, un niveau 1 et zéro succès, et ses amis avaient perdu le contact.
+ * 90 jours (≈ un trimestre) laisse passer une pause d'été, des examens ou un
+ * déménagement sans rien perdre, tout en restant une durée courte et
+ * défendable : un compte invité ne porte ni email ni mot de passe, seulement
+ * un pseudo et une progression de jeu, et il suffit d'une partie pour
+ * repousser l'échéance. Le joueur est prévenu sur sa carte de compte
+ * (AccountInfo) et peut pérenniser son compte d'un clic.
+ *
+ * ⚠️ Doit rester aligné avec :
+ * - GUEST_INACTIVITY_DAYS dans src/components/ui/AccountInfo.tsx (client :
+ *   ce module importe Prisma, il ne peut pas y être importé) ;
+ * - docs/legal/<langue>/confidentialite.md §7.
+ */
+export const GUEST_INACTIVITY_DAYS = 90
+const GUEST_TTL_MS = GUEST_INACTIVITY_DAYS * 24 * 60 * 60 * 1000
 
 let lastSweepAt = 0
 

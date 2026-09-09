@@ -17,6 +17,7 @@ import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { XpGainBanner } from './XpGainBanner'
 
 /** Purple en ligne : jeu tour par tour, cagnotte « patate chaude ». Aucune
  * info cachée (tirage public dès qu'il a lieu). */
@@ -206,6 +207,9 @@ export function PurpleOnline() {
             </div>
           ))}
         </div>
+
+        {/* Aucune progression n'existait sur ce jeu : XP de participation. */}
+        <XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
 
         <div className="flex w-full max-w-sm flex-col gap-2">
           {humanCount > 1 ? (

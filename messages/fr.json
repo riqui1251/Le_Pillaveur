@@ -153,6 +153,12 @@
       "invalidCharacters": "Caractères non autorisés (lettres, chiffres et espaces uniquement)",
       "invalidCharactersPlayer": "Caractères non autorisés",
       "profanity": "Ce nom contient un langage inapproprié"
+    },
+    "resumeGame": {
+      "title": "Reprendre la partie en cours ?",
+      "body": "Une partie a été interrompue. Tu peux la reprendre là où elle s'est arrêtée, ou en lancer une nouvelle.",
+      "resume": "Reprendre",
+      "newGame": "Nouvelle partie"
     }
   },
   "hub": {
@@ -185,6 +191,10 @@
         "title": "Jouer seul avec les bots.",
         "text": "Seuls les jeux où des bots peuvent compléter la table sont affichés.",
         "showAll": "Voir tout le catalogue"
+      },
+      "onlineOnly": {
+        "title": "En ligne uniquement",
+        "hint": "Ces jeux demandent un téléphone par joueur : ouvrez une table en ligne avec un compte gratuit, ou essayez-les seul contre des bots."
       }
     },
     "jeuxOnline": {
@@ -194,7 +204,12 @@
       "recent": {
         "title": "Vos dernières tables",
         "replay": "Rejouer",
-        "replaying": "Table en cours de création…"
+        "replaying": "Table en cours de création…",
+        "inviteTitle": "Rejouer à {game} avec eux ?",
+        "inviteHint": "Ils recevront une invitation à votre nouvelle table. Touchez un nom pour le retirer.",
+        "inviteConfirm": "Créer et inviter ({count})",
+        "createAlone": "Créer une table vide",
+        "cancel": "Annuler"
       }
     },
     "playMode": {
@@ -213,7 +228,35 @@
       "none": "Aucun joueur sélectionné",
       "choose": "Choisir les joueurs",
       "modify": "Modifier",
-      "tapToChoose": "Touchez ici pour choisir vos joueurs (minimum 2)."
+      "tapToChoose": "Touchez ici pour choisir vos joueurs (minimum 2).",
+      "bridge": {
+        "guestText": "Un compte gratuit garde vos joueurs et leurs stats d'une soirée à l'autre.",
+        "guestCta": "Créer un compte",
+        "memberText": "Il manque du monde autour de la table ?",
+        "memberCta": "Ouvrir une table en ligne",
+        "dismiss": "Ne plus proposer"
+      }
+    },
+    "nightAwards": {
+      "toggle": "Records de la table",
+      "headline": "{games, plural, one {# partie} other {# parties}} · {drinks, plural, one {# gorgée} other {# gorgées}} au total",
+      "topGame": "Jeu fétiche : {game}",
+      "champion": {
+        "title": "Le champion",
+        "detail": "{names} — {count, plural, one {# manche gagnée} other {# manches gagnées}}"
+      },
+      "thirsty": {
+        "title": "Le gosier",
+        "detail": "{names} — {count, plural, one {# gorgée bue} other {# gorgées bues}}"
+      },
+      "unlucky": {
+        "title": "La lanterne rouge",
+        "detail": "{names} — {count, plural, one {# partie, aucune victoire} other {# parties, aucune victoire}}"
+      },
+      "sober": {
+        "title": "Le plus sage",
+        "detail": "{names} — {count, plural, =0 {pas une seule gorgée} one {# gorgée seulement} other {# gorgées seulement}}"
+      }
     }
   },
   "onlineXp": {
@@ -226,8 +269,11 @@
     "soloCapped": "Les parties contre les bots seuls ne rapportent plus d'XP — invite un pote pour que ça compte !",
     "streak": "Série de {days} jours !",
     "nextUnlock": "Prochain déblocage : niveau {level} — {name}",
-    "guestKeep": "Compte invité : supprimé après 48 h d’inactivité.",
-    "guestKeepCta": "Sauvegarde ton pseudo et ton XP"
+    "guestKeep": "Compte invité : supprimé après 90 jours d’inactivité.",
+    "guestKeepCta": "Sauvegarde ton pseudo et ton XP",
+    "streakStart": "Série lancée !",
+    "streakBonus": "dont +{xp} XP de série",
+    "achievementUnlocked": "Succès débloqué : {name}"
   },
   "onlineCollection": {
     "title": "Collection de {name}",
@@ -578,7 +624,7 @@
     },
     "guestUpgrade": {
       "title": "Compte invité — pense à le sauvegarder !",
-      "intro": "Ton compte est temporaire : il sera supprimé après 48 h d’inactivité (pseudo, XP et cosmétiques compris). Ajoute un email et un mot de passe, ou lie-le à Google, pour le garder pour toujours.",
+      "intro": "Ton compte est temporaire : il sera supprimé après 90 jours d’inactivité (pseudo, XP et cosmétiques compris). Ajoute un email et un mot de passe, ou lie-le à Google, pour le garder pour toujours.",
       "emailPlaceholder": "ton@email.fr",
       "passwordPlaceholder": "Mot de passe",
       "submit": "Sauvegarder mon compte",
@@ -586,7 +632,11 @@
       "success": "Compte sauvegardé ! Il est maintenant permanent — pseudo, XP et cosmétiques conservés.",
       "genericError": "Impossible de sauvegarder le compte. Réessaie dans quelques instants.",
       "capital": "Niveau {level} · {xp} XP · {count, plural, one {# cosmétique débloqué} other {# cosmétiques débloqués}}",
-      "capitalRule": "Tout sera supprimé après 48 h d’inactivité. Ajoute un email et un mot de passe, ou lie ton compte à Google, pour tout garder."
+      "capitalRule": "Tout sera supprimé après 90 jours d’inactivité. Ajoute un email et un mot de passe, ou lie ton compte à Google, pour tout garder."
+    },
+    "guestExpiry": {
+      "what": "Compte invité : il est supprimé après {days} jours sans connexion — pseudo, niveau, XP, cosmétiques et amis compris.",
+      "when": "Au rythme actuel, ce serait le {date}. Chaque passage repousse la date."
     }
   },
   "legal": {
@@ -2413,7 +2463,27 @@
         ],
         "needPlayers": "Sélectionne au moins 2 joueurs pour commencer.",
         "start": "Commencer la partie",
-        "resume": "Reprendre la partie en cours"
+        "resume": "Reprendre la partie en cours",
+        "soft": {
+          "rules": [
+            "🎲 Lance le dé à ton tour et avance du nombre de cases.",
+            "🌿 Selon la case, prends des gages ou relève un défi.",
+            "⚡ Les cases spéciales déclenchent des effets : échanges, malédictions, protections…",
+            "🏆 Le premier arrivé sur la case 30 gagne la partie !",
+            "🌿 Mode soft : mêmes jeux, sans une goutte."
+          ],
+          "difficulties": {
+            "facile": {
+              "desc": "Moins de gages, idéal pour débuter"
+            },
+            "difficile": {
+              "desc": "Plus de défis et de gages"
+            },
+            "extreme": {
+              "desc": "Gage géant possible — réservé aux experts"
+            }
+          }
+        }
       },
       "difficultyLabels": {
         "facile": "Facile",
@@ -3000,6 +3070,113 @@
             "body": "Certaines cases te font boire, d’autres t’en épargnent — tout le monde y passe, gorgée après gorgée, jusqu’à la fin de la partie."
           }
         ]
+      },
+      "soft": {
+        "caseTypes": {
+          "gorgée": "Gages",
+          "roue": "Roue des gages"
+        },
+        "caseDescriptions": {
+          "gorgée": "Prends {count} gage(s) !",
+          "gorgéeCulSec": "Gage géant ! 🌿",
+          "defi": "Défi : {challenge} ou prends {count} gage(s) !",
+          "tous": "Tout le monde prend {count} gage(s) sauf la personne ciblée ! 🌿",
+          "roue": "🎯 Case spéciale : roue des gages !",
+          "bombe": "💣 Bombe ! Tout le monde prend un gage, la cible en prend le double !",
+          "malediction": "👻 Malédiction ! 1 gage par tour pendant 3 tours !",
+          "piege": "🕳️ Piège ! Prends autant de gages que ta position !",
+          "double-peine": "💥 Double peine ! La cible prend {count} gages × 2 !",
+          "solo": "🎯 Solo ! Tout le monde est safe, toi tu prends 1 gage.",
+          "roulette-russe": "🔫 Roulette russe ! 1 chance sur 3 : 6 gages ou safe.",
+          "question": "❓ Question ! Réponds à voix haute ou prends {count} gages.",
+          "vote": "🗳️ Vote ! Désignez qui prend {count} gages.",
+          "miroir-inverse": "🪞 Miroir inversé ! Quand tu prends un gage, la cible aussi (1 tour).",
+          "loterie": "🎰 Loterie ! 2 joueurs tirés : l'un prend un gage, l'autre avance.",
+          "inversion": "🔃 Inversion ! Le dernier du classement prend {count} gages à la place."
+        },
+        "resolveCase": {
+          "solo": "🎯 {actor} prend 1 gage, les autres sont safe !",
+          "loterieResult": "🎰 Loterie ! {drinker} prend 2 gages, {mover} avance d'une case."
+        },
+        "shameDice": {
+          "twoSips": "2 gages",
+          "outcomeDrink": "🎲 Dé de la honte ({roll}) : {player} prend 2 gages !"
+        },
+        "coinFlip": {
+          "lost": "Tirage : {result} — la cible perd et prend un gage."
+        },
+        "wheel": {
+          "sips": "{count} gages"
+        },
+        "defiWheelChallenge": "Tu prends 2 gages",
+        "defis": [
+          {
+            "text": "Tiens un verre en équilibre sur ta tête 3 tours",
+            "drinks": 2
+          },
+          {
+            "text": "Cite 5 marques de soda en 10 secondes",
+            "drinks": 2
+          }
+        ],
+        "game": {
+          "drinksShort": "{count} gage(s)",
+          "challengeDrink": "A pris {count} gage(s)",
+          "wheel": {
+            "drinks": "Roue des gages"
+          },
+          "dialogs": {
+            "votePrompt": "Main levée — qui prend {count} gages ?",
+            "shameDiceRules": "1–2 safe · 3–4 gages · 5 avance · 6 recul",
+            "drinksToTake": "{count} gage(s) à faire"
+          },
+          "effects": {
+            "curseDesc": "Prend 1 gage supplémentaire à chaque tour",
+            "chainDesc": "Lié à un partenaire : subissent les mêmes effets (gages)",
+            "mirrorDesc": "Quand l'un prend un gage, l'autre aussi ({a} ↔ {b})",
+            "mirrorDescShort": "Quand l'un prend un gage, l'autre aussi"
+          },
+          "outcomes": {
+            "pileFaceLose": "🪙 Pile ou face : tirage {result}, {player} prend {count} gage(s) !",
+            "challengeDrink": "🌿 {player} a pris {count} gage(s) !",
+            "trap": "🕳️ Piège ! {player} prend {count} gage(s) (position {position}) !",
+            "drinks": "{player} prend {count} gage(s) !",
+            "bombe": "💣 {player} a déclenché une bombe ! Tout le monde prend {count} gage(s), mais {name} en prend le double !",
+            "trapProtected": "🕳️ Piège ! {player} aurait dû prendre {count} gage(s) (position {position}) mais {protected}",
+            "doublePeine": "💥 {player} prend {count} gages (double peine) !",
+            "rouletteMiss": "🔫 Raté ! {player} prend {count} gages !",
+            "inversion": "🔃 Inversion ! {last} (dernier) prend {count} gage(s) à la place de {player} !",
+            "mirrorLink": "🪞 {actor} est lié à {target} : quand l'un prend un gage, l'autre aussi ({count} tour(s) de {actor}) !",
+            "everyoneDrinksHonor": "Tout le monde prend {count} gage(s) pour honorer « {compliment} »",
+            "everyoneDrinksExcept": "Tout le monde prend {count} gage(s) sauf",
+            "wheelDefiOrDrink": "{player} — relève le défi ou prends 2 gages !",
+            "wheelDrink": "{player} prend un gage (joueur au tour)."
+          },
+          "messages": {
+            "drinking": [
+              "Santé et bonne humeur !",
+              "Un petit gage pour toi, un grand pas vers la victoire !",
+              "Hydrate-toi bien, champion !",
+              "Un gage de plus, une légende de plus !",
+              "Tu te souviendras de ce gage demain matin !",
+              "Prends ton temps, savoure ton gage !"
+            ],
+            "deb": [
+              "Fait des vrais gages",
+              "Des gages, pas des demi-gages",
+              "Pas de triche",
+              "Fait vraiment le gage cette fois"
+            ],
+            "cheers": [
+              "Courage !",
+              "Santé !",
+              "À la tienne !",
+              "Tchin-tchin !",
+              "Gage géant !",
+              "Allez, on y va !"
+            ]
+          }
+        }
       }
     },
     "quiz": {
@@ -3648,7 +3825,8 @@
       "showLess": "Réduire",
       "loadingMore": "Chargement…",
       "periodAll": "Général",
-      "periodWeek": "Cette semaine"
+      "periodWeek": "Cette semaine",
+      "periodWeekHint": "Compte les parties terminées depuis lundi 00 h (heure de Paris). Remis à zéro chaque lundi — pour l'honneur, aucune récompense à la clé."
     }
   },
   "feedback": {
@@ -4246,7 +4424,7 @@
     "cta": "Essayer avec des bots",
     "go": "C'est parti !",
     "hint": "Sans compte : un pseudo, une table privée, les bots complètent — tes potes peuvent rejoindre en cours de route.",
-    "guestHint": "Pseudo invité — supprimé après 48 h d’inactivité. Tu pourras le sauvegarder ensuite.",
+    "guestHint": "Pseudo invité — supprimé après 90 jours d’inactivité. Tu pourras le sauvegarder ensuite.",
     "loginCta": "Se connecter ou créer un compte",
     "pseudoPlaceholder": "Ton pseudo pour la soirée",
     "error": "Impossible de lancer pour l'instant. Réessaie."
@@ -4256,10 +4434,19 @@
     "subtitle": "Tu as scanné le code d’une table. Choisis un pseudo pour jouer tout de suite, ou connecte-toi à ton compte.",
     "pseudoPlaceholder": "Ton pseudo pour la soirée",
     "guestCta": "Jouer en invité",
-    "guestHint": "Pseudo invité — supprimé après 48 h d’inactivité. Tu pourras le sauvegarder ensuite.",
+    "guestHint": "Pseudo invité — supprimé après 90 jours d’inactivité. Tu pourras le sauvegarder ensuite.",
     "or": "ou",
     "loginCta": "Se connecter ou créer un compte",
     "dismiss": "Non merci, je visite d’abord",
     "error": "Impossible de rejoindre pour l’instant. Réessaie."
+  },
+  "og": {
+    "siteTagline": "La maison des jeux de soirée",
+    "gameSubtitle": "Gratuit, sans installation — entre amis ou avec des bots",
+    "inviteTitle": "{host} t'invite à une partie de {game}",
+    "inviteTitleAnon": "Une table de {game} t'attend",
+    "inviteTitleBare": "Une table t'attend",
+    "inviteFooter": "Un pseudo suffit — gratuit, sans installation",
+    "inviteDescription": "Rejoins la table {code} : un pseudo suffit. Gratuit, sans installation."
   }
 }

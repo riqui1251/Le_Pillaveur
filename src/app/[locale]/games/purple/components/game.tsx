@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Player } from '@/lib/players'
 import { RotateCcw, X } from 'lucide-react'
@@ -10,6 +10,7 @@ import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { cn } from '@/lib/utils'
+import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,26 @@ interface GameProps {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const cardSuits: CardSuit[] = ['♠', '♥', '♦', '♣']
+
+// Reprise de partie : le paquet et les compteurs suffisent à rejouer la suite.
+// Les états d'animation (révélation en cours, modale de résultat) ne sont pas
+// sauvegardés : on repart proprement sur le choix du pari suivant.
+const SAVE_ID = 'purple'
+// Version 2 : la sauvegarde ne porte plus que des identifiants de joueurs
+// (plus aucun profil recopié), les anciennes entrées sont donc jetées.
+const SAVE_VERSION = 2
+
+type PurpleSave = {
+  /** Table de la sauvegarde : reprendre avec d'autres joueurs donnerait un
+   *  index de joueur hors bornes et créditerait les gorgées aux mauvais. */
+  playerIds: string[]
+  deck: PlayingCard[]
+  currentPlayerIndex: number
+  drinkCounter: number
+  gameResults: Record<string, number>
+  cardHistory: PlayingCard[]
+  totalCardsDrawn: number
+}
 
 const BET_META: Record<BetType, { cards: number; gulps: number; labelKey: string; emoji: string }> = {
   'rouge':         { cards: 1, gulps: 1, labelKey: 'rouge',         emoji: '🔴' },
@@ -123,11 +144,61 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   const [totalCardsDrawn, setTotalCardsDrawn] = useState(0)
   // Flash « nouveau paquet mélangé » quand le paquet épuisé est rebouclé.
   const [newDeckFlash, setNewDeckFlash] = useState(false)
+  const [started, setStarted] = useState(false)
+  const session = useResumableLocalGame<PurpleSave>(SAVE_ID, SAVE_VERSION, (s) =>
+    isSameLocalTable(s.playerIds, players)
+  )
+  /** Une partie ne doit être créditée qu'une seule fois, même si on quitte deux fois. */
+  const gameCountedRef = useRef(false)
 
   useEffect(() => { setIsMounted(true) }, [])
+  // Tant qu'une reprise est proposée, on ne distribue rien : c'est le joueur qui
+  // tranche entre reprendre et repartir de zéro.
   useEffect(() => {
-    if (isMounted && players.length >= 2) initializeGame()
-  }, [isMounted, players.length])
+    if (!isMounted || !session.ready || session.pending || started) return
+    if (players.length < 2) return
+    initializeGame()
+    setStarted(true)
+  }, [isMounted, session.ready, session.pending, started, players.length])
+
+  // Sauvegarde à chaque changement significatif : un swipe retour ne doit plus
+  // coûter la partie.
+  useEffect(() => {
+    if (!started) return
+    session.save({
+      playerIds: players.map(p => p.id),
+      deck,
+      currentPlayerIndex,
+      drinkCounter,
+      gameResults,
+      cardHistory,
+      totalCardsDrawn,
+    })
+  }, [started, deck, currentPlayerIndex, drinkCounter, gameResults, cardHistory, totalCardsDrawn])
+
+  const resumeSavedGame = () => {
+    const saved = session.accept()
+    if (!saved) return
+    // Table différente : la sauvegarde ne correspond plus à ce qui vient d'être
+    // demandé, on la jette et on démarre une partie neuve.
+    if (!isSameLocalTable(saved.playerIds, players)) {
+      session.discard()
+      return
+    }
+    setDeck(saved.deck)
+    setCurrentPlayerIndex(saved.currentPlayerIndex)
+    setDrinkCounter(saved.drinkCounter)
+    setGameResults(saved.gameResults)
+    setCardHistory(saved.cardHistory)
+    setTotalCardsDrawn(saved.totalCardsDrawn)
+    setShowResult(false)
+    setDrawnCards([])
+    setLastBet(null)
+    setIsCorrect(null)
+    setIsRevealing(false)
+    setCanContinue(false)
+    setStarted(true)
+  }
 
   const createDeck = (): PlayingCard[] => {
     const values: CardValue[] = ['2','3','4','5','6','7','8','9','10','V','D','R','A']
@@ -147,6 +218,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
 
   const initializeGame = () => {
     if (!players.length) return
+    // Nouvelle partie : elle a le droit d'être comptée à son tour.
+    gameCountedRef.current = false
     setDeck(shuffleDeck(createDeck()))
     setCurrentPlayerIndex(Math.floor(Math.random() * players.length))
     setDrinkCounter(0)
@@ -216,14 +289,46 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   }
 
   const quitGame = () => {
-    players.forEach(p => updatePlayerStats(p.id, 'purple', { gamesPlayed: 1, totalDrinks: gameResults[p.id] || 0 }))
+    // Garde de réentrance : le bouton retour peut être tapé deux fois avant que
+    // la navigation ne démonte l'écran — la partie ne doit compter qu'une fois.
+    if (!gameCountedRef.current) {
+      gameCountedRef.current = true
+      players.forEach(p => updatePlayerStats(p.id, 'purple', { gamesPlayed: 1, totalDrinks: gameResults[p.id] || 0 }))
+    }
+    // Une partie terminée ne doit rien laisser derrière elle.
+    session.clear()
     onGameEnd()
   }
 
   const currentPlayer = players[currentPlayerIndex]
 
-  if (!isMounted) return null
+  if (!isMounted || !session.ready) return null
   if (!players || players.length < 2) return <div className="p-6 text-center text-red-400">{t('minPlayers')}</div>
+
+  if (session.pending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#07060b] p-4 text-white">
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-violet-500/20 bg-violet-950/30 p-6 text-center">
+          <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
+          <p className="text-sm text-white/55">{tCommon('resumeGame.body')}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={resumeSavedGame}
+              className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3 text-sm font-bold text-white hover:from-violet-500 hover:to-purple-600"
+            >
+              {tCommon('resumeGame.resume')}
+            </button>
+            <button
+              onClick={session.discard}
+              className="w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+            >
+              {tCommon('resumeGame.newGame')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const betButtons: BetType[] = ['rouge', 'double-rouge', 'noir', 'double-noir', 'purple', 'double-purple']
 

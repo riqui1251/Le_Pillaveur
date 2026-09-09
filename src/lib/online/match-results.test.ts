@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import type { PrismaClient } from '@prisma/client'
 import { XP_LOSS, XP_WIN } from '@/lib/online/cosmetics'
+import { clearXpGains, recallXpGain } from '@/lib/online/xp'
 import {
   computeMatchResults,
   matchOutcomesFor,
@@ -167,6 +168,11 @@ describe('bout en bout : extraction + règles', () => {
 })
 
 describe('recordMatchResults (enregistrement + XP)', () => {
+  // La mémoire du dernier gain est un module partagé : on repart à zéro.
+  beforeEach(() => {
+    clearXpGains()
+  })
+
   /**
    * Faux client Prisma : capture createMany + updateMany + updates unitaires
    * (streak / XP solo). `users` simule la base pour findUnique/findMany.
@@ -188,7 +194,8 @@ describe('recordMatchResults (enregistrement + XP)', () => {
         findMany: async () => [],
       },
       achievement: {
-        findMany: async () => achievements.map((a) => ({ ...a })),
+        findMany: async () =>
+          achievements.map((a) => ({ ...a, unlockedAt: new Date() })),
         create: async ({ data }: { data: { userId: string; type: string } }) => {
           if (achievements.some((a) => a.userId === data.userId && a.type === data.type)) {
             throw new Error('unique constraint')
@@ -216,6 +223,7 @@ describe('recordMatchResults (enregistrement + XP)', () => {
               id,
               streakCount: users[id].streakCount ?? 0,
               streakLastDay: users[id].streakLastDay ?? null,
+              onlineXp: users[id].onlineXp ?? 0,
             })),
         update: async (args: { where: { id: string }; data: Record<string, unknown> }) => {
           userUpdates.push({ id: args.where.id, data: args.data })
@@ -258,9 +266,10 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     expect(n).toBe(0)
     expect(created).toHaveLength(0)
     expect(xpUpdates).toHaveLength(0)
-    // +10 d'entraînement puis la série du jour.
-    expect(userUpdates[0]).toEqual({ id: 'u1', data: { onlineXp: { increment: 10 } } })
-    expect(userUpdates[1].data.streakCount).toBe(1)
+    // La série d'abord (sa lecture sert de photo de l'XP d'avant-partie),
+    // puis les +10 d'entraînement.
+    expect(userUpdates[0].data.streakCount).toBe(1)
+    expect(userUpdates[1]).toEqual({ id: 'u1', data: { onlineXp: { increment: 10 } } })
   })
 
   it('solo contre bots AU plafond (niveau 5) : plus rien', async () => {
@@ -323,6 +332,77 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
     expect(achievements.map((a) => a.type)).toContain('first_game')
     expect(achievements.map((a) => a.type)).not.toContain('first_win')
+  })
+
+  it('détail du gain : le total annoncé = base + bonus de série (F13)', async () => {
+    const { client } = fakeClient({ u1: { onlineXp: 60 }, u2: { onlineXp: 0 } })
+    const state = { players: [
+      { id: 'u1', isBot: false },
+      { id: 'u2', isBot: false },
+    ], winner: 'u1' }
+    await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
+    const gain = recallXpGain('u1')
+    expect(gain).not.toBeNull()
+    // Victoire (50) + première série du jour (10) = 60, et non « +50 ».
+    expect(gain!.base).toBe(XP_WIN)
+    expect(gain!.streakBonus).toBe(10)
+    expect(gain!.total).toBe(60)
+    expect(gain!.streakCount).toBe(1)
+    // 60 → 120 XP : le passage au niveau 2 (100 XP) tient AU bonus de série.
+    expect(gain!.levelBefore).toBe(1)
+    expect(gain!.levelAfter).toBe(2)
+    expect(recallXpGain('u2')?.reason).toBe('loss')
+  })
+
+  it('détail du gain : jeu de participation et solo au plafond disent la vérité', async () => {
+    const parti = fakeClient({ u1: {}, u2: {} })
+    await recordMatchResults(parti.client, { roomId: 'r1', gameId: 'telephone-dessine', state: {
+      players: [
+        { id: 'u1', name: 'A', isBot: false, leftAt: null },
+        { id: 'u2', name: 'B', isBot: false, leftAt: null },
+      ],
+    } })
+    expect(parti.xpUpdates).toEqual([{ ids: ['u1', 'u2'], increment: XP_LOSS }])
+    expect(recallXpGain('u1')).toMatchObject({ reason: 'participation', base: XP_LOSS, total: 30 })
+
+    clearXpGains()
+    const capped = fakeClient({ u3: { onlineXp: 5000 } })
+    await recordMatchResults(capped.client, { roomId: 'r2', gameId: 'petit-buveur', state: {
+      players: [{ id: 'u3', isBot: false }, { id: 'bot-1', isBot: true }],
+      winner: 'u3',
+    } })
+    // Rien n'a été crédité : le détail l'annonce à 0 plutôt que d'inventer.
+    expect(capped.userUpdates).toHaveLength(0)
+    expect(recallXpGain('u3')).toMatchObject({ reason: 'solo', total: 0 })
+  })
+
+  it('détail du gain : les succès débloqués sont annoncés une seule fois (F14)', async () => {
+    const { client } = fakeClient({ u1: {}, u2: {} })
+    const state = { players: [
+      { id: 'u1', isBot: false, score: 5 },
+      { id: 'u2', isBot: false, score: 2 },
+    ] }
+    await recordMatchResults(client, { roomId: 'r1', gameId: 'quiz', state })
+    expect(recallXpGain('u1')?.achievements).toEqual(
+      expect.arrayContaining(['first_game', 'first_win', 'speed_demon'])
+    )
+    // Deuxième partie : plus rien à annoncer (aucun nouveau succès).
+    await recordMatchResults(client, { roomId: 'r2', gameId: 'quiz', state })
+    expect(recallXpGain('u1')?.achievements).toEqual([])
+  })
+
+  it('détail du gain : un succès hors partie (première table) est rattrapé', async () => {
+    const { client, achievements } = fakeClient({ u1: {}, u2: {} })
+    // Débloqué par la route de création de salle, sans écran pour le dire.
+    achievements.push({ userId: 'u1', type: 'first_room' })
+    const state = { players: [
+      { id: 'u1', isBot: false },
+      { id: 'u2', isBot: false },
+    ], winner: 'u1' }
+    await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
+    expect(recallXpGain('u1')?.achievements).toContain('first_room')
+    // Mais pas chez le voisin, qui ne l'a pas.
+    expect(recallXpGain('u2')?.achievements).not.toContain('first_room')
   })
 
   it('série : hier → +1 avec bonus croissant ; déjà créditée aujourd’hui → rien', async () => {

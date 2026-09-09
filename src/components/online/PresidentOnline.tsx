@@ -25,6 +25,7 @@ import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { XpGainBanner } from './XpGainBanner'
 
 /**
  * PRÉSIDENT en ligne (serveur-autoritaire). Main triée en éventail
@@ -323,6 +324,14 @@ export function PresidentOnline() {
         </div>
 
         {!isSoft && <p className="text-sm font-bold text-amber-200">{t('trouDrinks')}</p>}
+
+        {/* La progression était bien créditée au Président, mais aucun écran
+            ne la montrait — le joueur gagnait de l'XP en aveugle. */}
+        <XpGainBanner
+          won={ranking[0] === user.id}
+          playerIds={view.players.map((p) => p.id)}
+          className="w-full max-w-sm"
+        />
 
         <div className="flex w-full max-w-sm flex-col gap-2">
           <Button

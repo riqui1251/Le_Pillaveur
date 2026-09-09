@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { ArrowLeft, ChevronDown, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Plus, Settings, Share2, Users, UserPlus, Tv, Trophy, X } from 'lucide-react'
 import { useState } from 'react'
@@ -73,6 +74,7 @@ const PB_DIFFICULTY_GRADIENT: Record<(typeof PB_DIFFICULTIES)[number], string> =
 
 export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps) {
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
+  const pathname = usePathname()
   const { user } = useAuth()
   const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend } = useOnlineRoom()
   const { lobbies } = useOpenLobbies()
@@ -196,6 +198,14 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   }
 
   if (!user) {
+    // Le visiteur est venu ouvrir une table EN LIGNE : sans destination, le
+    // formulaire de compte retombait sur /joueurs (sa valeur par défaut) et le
+    // renvoyait à la sélection de joueurs LOCAUX, à l'opposé de son intention.
+    // On lui passe la page courante — `?redirect=` est le seul indice dont
+    // dispose AuthForm, et un chemin en /games/… lui fait aussi poser le mode
+    // en ligne à l'inscription. `usePathname` (i18n) rend le chemin SANS
+    // préfixe de langue, exactement ce que safeRedirect attend.
+    const signInHref = `/compte?redirect=${encodeURIComponent(pathname || `/games/${gameId}`)}`
     return (
       <LobbyShell>
         <div className="rounded-3xl border border-amber-500/20 bg-white/5 p-6 text-center shadow-2xl backdrop-blur-md">
@@ -204,7 +214,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </div>
           <p className="text-sm text-white/70">{tOnline('signIn.prompt')}</p>
           <Button asChild className="mt-4 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-5 text-base font-bold text-white shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500">
-            <Link href="/compte">{tOnline('signIn.cta')}</Link>
+            <Link href={signInHref}>{tOnline('signIn.cta')}</Link>
           </Button>
         </div>
       </LobbyShell>

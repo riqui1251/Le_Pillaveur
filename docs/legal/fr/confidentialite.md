@@ -126,6 +126,7 @@ L'éditeur reste responsable du traitement. Aucun autre transfert à des tiers n
 ## 7. Durée de conservation
 
 - **Compte actif** : données conservées tant que le compte existe.
+- **Compte invité** (créé sans email ni mot de passe, par exemple en scannant un QR code) : supprimé automatiquement après **90 jours** sans activité, avec tout ce qu'il contient (pseudo, progression, cosmétiques, amis). Chaque connexion repousse ce délai ; ajouter un email et un mot de passe, ou lier le compte à Google, le rend permanent.
 - **Compte supprimé** : suppression ou anonymisation dans un délai de **12 mois** maximum après la demande, sauf obligation légale de conservation plus longue.
 - **Logs techniques (adresses IP, présence)** : **6 mois**. L'adresse IP et le pays de dernière connexion attachés à un compte sont effacés après **6 mois** sans activité ; l'historique d'adresses IP d'un compte est supprimé immédiatement avec le compte.
 - **Messages de chat** : **12 mois**.

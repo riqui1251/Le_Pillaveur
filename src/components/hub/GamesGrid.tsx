@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search, Sparkles } from 'lucide-react'
+import { Globe, Search, Sparkles } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
 import { GameCard } from '@/components/hub/GameCard'
@@ -54,14 +54,22 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   // effectivement jouables avec des bots. Sans objet en mode local (les bots
   // sont un concept online) — le flag y est ignoré.
   const soloBots = solo && (visitor || isOnline)
+  // Regard « local » : le joueur en mode local ET le visiteur (qui joue local
+  // par défaut). Plus d'un jeu sur deux du catalogue est online-only : le
+  // visiteur les voyait mélangés aux autres et tombait après le clic sur
+  // « jeu en ligne uniquement », et le mode local les masquait purement.
+  // On les GARDE visibles (ils font envie, ils mènent au compte) mais rangés
+  // à part, sous une phrase qui dit ce qu'il faut pour y jouer.
+  const localCatalog = !soloBots && !isOnline
   const visible = useMemo(
     () =>
       games.filter((g) => {
         if (g.hidden) return false
         if (soloBots) return Boolean(g.botsFillable) && g.onlineReady && (!isSoft || g.softModeReady)
-        return visitor ? true : isOnline ? g.onlineReady && (!isSoft || g.softModeReady) : !g.onlineOnly
+        if (isOnline) return Boolean(g.onlineReady) && (!isSoft || Boolean(g.softModeReady))
+        return true
       }),
-    [games, visitor, isOnline, isSoft, soloBots]
+    [games, isOnline, isSoft, soloBots]
   )
 
   const filtered = useMemo(() => {
@@ -75,13 +83,25 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
     )
   }, [visible, query])
 
+  // Séparation « jouable ce soir sur ce téléphone » / « en ligne uniquement ».
+  // Elle s'applique aussi pendant une recherche : c'est justement là que le
+  // clic se fait sans lire la section.
+  const localGames = useMemo(
+    () => (localCatalog ? filtered.filter((g) => !g.onlineOnly) : filtered),
+    [filtered, localCatalog]
+  )
+  const onlineOnlyGames = useMemo(
+    () => (localCatalog ? filtered.filter((g) => g.onlineOnly) : []),
+    [filtered, localCatalog]
+  )
+
   // Rangée « les incontournables » : les jeux qui montrent le mieux le produit,
   // en tête du hub. Ils restent aussi dans leur famille plus bas — c'est une
   // mise en avant, pas un déplacement. Rien à mettre en avant en mode local
   // (les phares sont online) : la rangée disparaît alors d'elle-même.
   const featured = useMemo(
-    () => (query.trim() ? [] : visible.filter((g) => g.featured)),
-    [visible, query]
+    () => (query.trim() ? [] : localGames.filter((g) => g.featured)),
+    [localGames, query]
   )
 
   // Sections par enseigne hors recherche — grille plate quand on cherche.
@@ -89,9 +109,9 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
     if (query.trim()) return null
     return FAMILIES.map((f) => ({
       ...f,
-      games: visible.filter((g) => g.suit === f.suit),
+      games: localGames.filter((g) => g.suit === f.suit),
     })).filter((s) => s.games.length > 0)
-  }, [visible, query])
+  }, [localGames, query])
 
   return (
     <>
@@ -140,31 +160,51 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
           <p className="font-medium text-white/80">{t('emptyTitle')}</p>
           <p className="mt-1 text-sm text-white/50">{t('emptyHint')}</p>
         </div>
-      ) : sections ? (
+      ) : (
         <div className="space-y-4">
-          {featured.length > 0 && (
+          {sections ? (
+            <>
+              {featured.length > 0 && (
+                <section>
+                  <h2 className="mb-1.5 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
+                    <span className="shrink-0">
+                      <span aria-hidden>★</span> {t('featured')}
+                    </span>
+                    <span aria-hidden className="h-px flex-1 bg-gold/15" />
+                  </h2>
+                  <GamesCardGrid games={featured} />
+                </section>
+              )}
+              {sections.map((section) => (
+                <section key={section.suit}>
+                  <h2 className="mb-1.5 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
+                    <span className="shrink-0"><span aria-hidden>{section.glyph}</span> {t(`families.${section.suit}`)}</span>
+                    <span aria-hidden className="h-px flex-1 bg-gold/15" />
+                  </h2>
+                  <GamesCardGrid games={section.games} />
+                </section>
+              ))}
+            </>
+          ) : (
+            localGames.length > 0 && <GamesCardGrid games={localGames} />
+          )}
+
+          {/* Promesse honnête AVANT le clic : ces jeux réclament un téléphone
+              par joueur, ils ne se jouent pas sur l'appareil qui tourne autour
+              de la table. On ne les cache pas — c'est la porte vers le compte. */}
+          {onlineOnlyGames.length > 0 && (
             <section>
               <h2 className="mb-1.5 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
-                <span className="shrink-0">
-                  <span aria-hidden>★</span> {t('featured')}
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <Globe className="h-3 w-3" aria-hidden /> {t('onlineOnly.title')}
                 </span>
                 <span aria-hidden className="h-px flex-1 bg-gold/15" />
               </h2>
-              <GamesCardGrid games={featured} />
+              <p className="mb-2 text-[11px] leading-snug text-white/45">{t('onlineOnly.hint')}</p>
+              <GamesCardGrid games={onlineOnlyGames} />
             </section>
           )}
-          {sections.map((section) => (
-            <section key={section.suit}>
-              <h2 className="mb-1.5 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
-                <span className="shrink-0"><span aria-hidden>{section.glyph}</span> {t(`families.${section.suit}`)}</span>
-                <span aria-hidden className="h-px flex-1 bg-gold/15" />
-              </h2>
-              <GamesCardGrid games={section.games} />
-            </section>
-          ))}
         </div>
-      ) : (
-        <GamesCardGrid games={filtered} />
       )}
     </>
   )

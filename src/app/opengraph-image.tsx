@@ -2,12 +2,19 @@ import { ImageResponse } from 'next/og'
 
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
-export const alt = 'Le Pillaveur — La maison des jeux de soirée'
+export const alt = 'Le Pillaveur — lepillaveur.fr'
 
 /**
- * Image de partage « Cartes sur Table » : wordmark encadré d'un double filet
- * or sur le feutre, cartes en éventail — même langage que le favicon.
- * (Police par défaut de next/og : pas de fetch réseau au rendu, robuste en prod.)
+ * Image de partage par DÉFAUT « Cartes sur Table » : wordmark encadré d'un
+ * double filet or sur le feutre, cartes en éventail — même langage que le
+ * favicon. (Police par défaut de next/og : pas de fetch réseau au rendu,
+ * robuste en prod.)
+ *
+ * Ce fichier n'a AUCUNE locale (il vit hors de app/[locale]) : il ne doit donc
+ * porter que du texte neutre — l'ancienne accroche française s'affichait aussi
+ * aux visiteurs anglais, espagnols et italiens. La phrase traduite, les cartes
+ * par jeu et les cartes d'invitation sont générées à la volée par
+ * /api/og?type=site|game|invite&locale=…
  */
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -85,6 +92,8 @@ export default function OpengraphImage() {
           >
             LE PILLAVEUR
           </div>
+          {/* Nom de domaine plutôt qu'une accroche : lisible dans les quatre
+              langues, et il rappelle où retrouver le site. */}
           <div
             style={{
               display: 'flex',
@@ -97,7 +106,7 @@ export default function OpengraphImage() {
             }}
           >
             <div style={{ display: 'flex', width: 54, height: 2, background: 'rgba(217,164,65,0.6)' }} />
-            La maison des jeux de soirée
+            lepillaveur.fr
             <div style={{ display: 'flex', width: 54, height: 2, background: 'rgba(217,164,65,0.6)' }} />
           </div>
         </div>

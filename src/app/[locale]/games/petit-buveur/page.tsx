@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { usePlayers } from '@/hooks/usePlayers'
 import Game from './components/game'
@@ -12,10 +12,13 @@ import { getSafeStorage } from '@/lib/storage'
 import type { Difficulty } from './case-config'
 import {
   clearGameSession,
+  LOCAL_GAME_SAVE_TTL_MS,
   markGameSessionActive,
   readGameSession,
   shouldResumeFromSave,
 } from '@/lib/game-session'
+import { resolveAmbianceMode, withAmbiance } from './ambiance'
+import type { PetitBuveurT } from './case-config'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { PetitBuveurOnline } from '@/components/online/PetitBuveurOnline'
 
@@ -23,6 +26,36 @@ const GAME_ID = 'petit-buveur'
 const SAVE_KEY = 'petit-buveur-save'
 
 const difficultyKeys: Difficulty[] = ['facile', 'normal', 'difficile', 'extreme']
+
+/**
+ * La sauvegarde locale garde son propre horodatage : on ne propose de reprendre
+ * que si la partie est récente, et on purge l'entrée périmée au passage.
+ * Une partie d'il y a trois jours n'a plus d'intérêt.
+ */
+function hasFreshSave(): boolean {
+  const storage = getSafeStorage()
+  if (!storage) return false
+  let raw: string | null = null
+  try {
+    raw = storage.getItem(SAVE_KEY)
+  } catch {
+    return false
+  }
+  if (!raw) return false
+  try {
+    const parsed = JSON.parse(raw) as { timestamp?: number; gameStarted?: boolean }
+    const savedAt = typeof parsed?.timestamp === 'number' ? parsed.timestamp : 0
+    if (Date.now() - savedAt <= LOCAL_GAME_SAVE_TTL_MS) return true
+  } catch {
+    // sauvegarde illisible : même traitement qu'une sauvegarde périmée
+  }
+  try {
+    storage.removeItem(SAVE_KEY)
+  } catch {
+    // ignore
+  }
+  return false
+}
 
 const difficultyActive: Record<Difficulty, string> = {
   facile: 'from-emerald-500 to-green-600 shadow-emerald-500/30',
@@ -32,7 +65,7 @@ const difficultyActive: Record<Difficulty, string> = {
 }
 
 export default function PetitBuveurPage() {
-  const t = useTranslations('games.petit-buveur.page')
+  const baseT = useTranslations('games.petit-buveur.page') as unknown as PetitBuveurT
   const [gameStarted, setGameStarted] = useState(false)
   const [initialMode, setInitialMode] = useState<'new' | 'resume'>('new')
   const [sessionChecked, setSessionChecked] = useState(false)
@@ -40,14 +73,18 @@ export default function PetitBuveurPage() {
   const [showRules, setShowRules] = useState(false)
   const [hasActiveSave, setHasActiveSave] = useState(false)
   const { user } = useAuth()
+  // Même règle que dans la partie : en Soft, règles et niveaux se lisent en gages.
+  const t = useMemo(
+    () => withAmbiance(baseT, resolveAmbianceMode(user?.ambianceMode)),
+    [baseT, user?.ambianceMode]
+  )
   const { players } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
   const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
   const rules = t.raw('rules') as string[]
 
   useEffect(() => {
-    const storage = getSafeStorage()
-    setHasActiveSave(!!storage?.getItem(SAVE_KEY))
+    setHasActiveSave(hasFreshSave())
   }, [gameStarted])
 
   // Restaurer la partie après changement de langue (router.replace remonte la page)

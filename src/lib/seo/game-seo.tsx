@@ -14,6 +14,8 @@ import { SITE_URL } from '@/lib/site'
  *   chat vocal) — les pages partageaient l'extrait générique de la home ;
  * - canonical auto-référent + hreflang alignés sur le sitemap ;
  * - jeux masqués (hidden) : noindex, pas de texte requis ;
+ * - aperçu de partage DÉDIÉ au jeu (/api/og) : WhatsApp et Discord montraient
+ *   la carte générique du site pour n'importe quel lien de jeu ;
  * - JSON-LD VideoGame + BreadcrumbList (bornes de joueurs depuis games.ts,
  *   la source de vérité testée — celles de RULES_META ont dérivé).
  */
@@ -34,11 +36,15 @@ export async function buildGameMetadata(locale: string, gameId: string): Promise
   for (const l of locales) {
     languages[l] = `/${l}${path}`
   }
+  // Carte de partage peinte pour CE jeu, dans la langue du lien.
+  const ogImage = `/api/og?type=game&game=${encodeURIComponent(gameId)}&locale=${locale}`
+  const images = [{ url: ogImage, width: 1200, height: 630, alt: title }]
   return {
     title: { absolute: title },
     description,
     alternates: { canonical: `/${locale}${path}`, languages },
-    openGraph: { title, description, url: `/${locale}${path}` },
+    openGraph: { title, description, url: `/${locale}${path}`, images },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
   }
 }
 

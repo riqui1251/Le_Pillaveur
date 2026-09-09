@@ -16,6 +16,8 @@ import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { detectBrowserCapabilities } from '@/lib/browser-support'
 import { getSafeStorage } from '@/lib/storage'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { resolveAmbianceMode, withAmbiance } from '../ambiance'
 import { PlayerName, isSpecialPlayer } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { formatPlayerNameHtml } from '@/lib/playerUtils'
@@ -194,7 +196,12 @@ interface GameProps {
 }
 
 export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal', initialMode = 'new' }: GameProps) {
-  const t = useTranslations('games.petit-buveur') as PetitBuveurT
+  const baseT = useTranslations('games.petit-buveur') as PetitBuveurT
+  const { user } = useAuth()
+  // Mode d'ambiance du compte : en Soft, les formulations alcoolisées du jeu
+  // basculent sur leurs équivalents en gages (mêmes cases, mêmes effets).
+  const ambiance = resolveAmbianceMode(user?.ambianceMode)
+  const t = useMemo(() => withAmbiance(baseT, ambiance), [baseT, ambiance])
   const tCommon = useTranslations('common')
   const { updatePlayerStats } = usePlayers();
   const defaultColor = 'bg-primary';
@@ -680,6 +687,31 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   useEffect(() => {
   }, [gameStarted, players.length, currentPlayer]);
 
+  /** Évite de compter deux fois la même partie (re-render, retour sur l'écran de victoire). */
+  const gameCountedRef = useRef(false);
+
+  // Fin de partie : c'est le seul moment où le compteur de parties du mode local
+  // doit bouger. On en profite pour effacer la sauvegarde — une partie terminée
+  // ne doit rien laisser derrière elle, sinon « Reprendre » repropose un podium.
+  useEffect(() => {
+    if (!winner) {
+      gameCountedRef.current = false;
+      return;
+    }
+    if (gameCountedRef.current) return;
+    gameCountedRef.current = true;
+
+    players.forEach(p => {
+      try {
+        updatePlayerStats(p.id, 'petit-buveur', { gamesPlayed: 1 });
+      } catch (error) {
+        console.error('Erreur lors du comptage de la partie:', error);
+      }
+    });
+    deleteSave();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [winner]);
+
 
 
   const addPlayer = () => {
@@ -757,7 +789,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
     player.drinks += drinks
     try {
-      updatePlayerStats(player.id, 'petit-buveur', { totalDrinks: player.drinks })
+      // updatePlayerStats CUMULE ce qu'on lui passe : il faut lui donner le
+      // delta du tour, pas le total déjà cumulé du joueur — sinon le compteur
+      // de gorgées enfle de façon quadratique (1, 3, 6, 10…).
+      updatePlayerStats(player.id, 'petit-buveur', { totalDrinks: drinks })
     } catch (error) {
       console.error('Erreur lors de la mise à jour des statistiques:', error)
     }
@@ -2746,7 +2781,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           </div>
         </div>
         <div className="text-sm font-medium">
-          {player.drinks} gorgée{player.drinks !== 1 ? 's' : ''}
+          {t('game.drinksShort', { count: player.drinks })}
         </div>
       </div>
     )

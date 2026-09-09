@@ -3,9 +3,8 @@
 import { Beer, Leaf } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { useAmbianceMode, type AmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { cn } from '@/lib/utils'
-
-type AmbianceMode = 'alcool' | 'soft'
 
 const MODES: { id: AmbianceMode; icon: typeof Beer }[] = [
   { id: 'alcool', icon: Beer },
@@ -14,9 +13,14 @@ const MODES: { id: AmbianceMode; icon: typeof Beer }[] = [
 
 export function AmbianceModeToggle({ className, dense = false }: { className?: string; dense?: boolean }) {
   const t = useTranslations('hub.ambianceMode')
-  const { user, setAmbianceMode, loading } = useAuth()
+  const { loading } = useAuth()
+  // Le réglage vise d'abord la table SANS compte (un téléphone posé au milieu) :
+  // la bascule n'est plus réservée aux connectés, l'appareil se souvient pour
+  // eux (cf. useAmbianceMode). On attend quand même la réponse de l'auth pour
+  // ne pas afficher « Alcool » à un connecté qui a choisi Soft.
+  const { mode, setMode } = useAmbianceMode()
 
-  if (loading || !user) return null
+  if (loading) return null
 
   return (
     <div
@@ -28,7 +32,7 @@ export function AmbianceModeToggle({ className, dense = false }: { className?: s
       )}
     >
       {MODES.map(({ id, icon: Icon }) => {
-        const active = user.ambianceMode === id
+        const active = mode === id
         return (
           <button
             key={id}
@@ -36,7 +40,7 @@ export function AmbianceModeToggle({ className, dense = false }: { className?: s
             role="radio"
             aria-checked={active}
             onClick={() => {
-              if (!active) void setAmbianceMode(id)
+              if (!active) setMode(id)
             }}
             aria-label={t(id)}
             title={t(id)}

@@ -11,6 +11,8 @@ import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
 import { GameFixedActionBar, gameActionBarPadding } from '@/components/game/GameFixedActionBar'
+import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
+import { usePlayers } from '@/hooks/usePlayers'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,29 @@ interface Player {
 }
 
 interface DiceRoll { dice1: number; dice2: number }
+
+// Reprise de partie : désignation de Monsieur 3, scores et historique sont de
+// simples données — seuls les enchainements de setTimeout ne sont pas rejoués,
+// on rend donc la main au joueur courant (canRoll) à la reprise.
+const SAVE_ID = 'monsieur-3'
+// Version 2 : la sauvegarde ne porte plus que des identifiants de joueurs
+// (plus aucun profil recopié), les anciennes entrées sont donc jetées.
+const SAVE_VERSION = 2
+
+type Monsieur3Save = {
+  /** Uniquement l'état DE PARTIE de chaque joueur, jamais son profil : le nom
+   *  et les préférences sont réhydratés depuis la table passée en propriété.
+   *  L'ordre est significatif (currentPlayerIndex, monsieur3Index y renvoient). */
+  playerStates: { id: string; score: number; isMonsieur3: boolean }[]
+  currentPlayerIndex: number
+  gamePhase: 'setup' | 'play' | 'end'
+  message: string
+  rollHistory: { player: string; dice: DiceRoll; message: string }[]
+  setupRolls: { playerName: string; roll: number }[]
+  monsieur3Found: boolean
+  monsieur3Index: number
+  dice: DiceRoll
+}
 
 // ── Composant Dé ─────────────────────────────────────────────────────────────
 
@@ -93,6 +118,13 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
   const [victoryScreen, setVictoryScreen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
 
+  const [started, setStarted] = useState(false)
+  const session = useResumableLocalGame<Monsieur3Save>(SAVE_ID, SAVE_VERSION, (s) =>
+    isSameLocalTable(s.playerStates.map((st) => st.id), initialBasePlayers)
+  )
+  const tCommon = useTranslations('common')
+  const { updatePlayerStats } = usePlayers()
+
   const confettiRef = useRef<HTMLDivElement>(null)
 
   const launchConfetti = () => {
@@ -109,8 +141,11 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
 
   const rollDie = () => Math.floor(Math.random() * 6) + 1
 
+  // Pas de nouvelle partie tant que la reprise n'a pas été proposée et tranchée.
   useEffect(() => {
+    if (!session.ready || session.pending || started) return
     if (!initialBasePlayers?.length) { setPlayers([]); return }
+    setStarted(true)
     setPlayers(initialBasePlayers.map(p => ({
       name: p?.name || 'Joueur',
       isMonsieur3: false,
@@ -128,7 +163,86 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
     setRollHistory([])
     setMonsieur3Found(false)
     setGameEnded(false)
-  }, [initialBasePlayers])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialBasePlayers, session.ready, session.pending, started])
+
+  // Sauvegarde continue tant que la partie n'est pas finie.
+  useEffect(() => {
+    if (!started || gameEnded || players.length === 0) return
+    session.save({
+      playerStates: players.map(p => ({ id: p.id, score: p.score, isMonsieur3: p.isMonsieur3 })),
+      currentPlayerIndex,
+      gamePhase,
+      message,
+      rollHistory,
+      setupRolls,
+      monsieur3Found,
+      monsieur3Index,
+      dice,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, gameEnded, players, currentPlayerIndex, gamePhase, message, rollHistory, setupRolls, monsieur3Found, monsieur3Index, dice])
+
+  /** Évite de compter deux fois la même partie. */
+  const gameCountedRef = useRef(false)
+
+  // Fin de partie : c'est ici que le compteur de parties du mode local bouge,
+  // et que la sauvegarde disparaît.
+  useEffect(() => {
+    if (!victoryScreen) {
+      gameCountedRef.current = false
+      return
+    }
+    if (gameCountedRef.current) return
+    gameCountedRef.current = true
+    players.forEach(p => {
+      try {
+        updatePlayerStats(p.id, 'monsieur-3', { gamesPlayed: 1, totalDrinks: p.score })
+      } catch (error) {
+        console.error('Erreur lors du comptage de la partie:', error)
+      }
+    })
+    session.clear()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [victoryScreen])
+
+  const resumeSavedGame = () => {
+    const saved = session.accept()
+    if (!saved) return
+    // Table différente : reprendre écraserait la table choisie sur le hub par
+    // celle de la sauvegarde. On jette la sauvegarde et on repart à neuf.
+    const savedIds = saved.playerStates.map(st => st.id)
+    if (!isSameLocalTable(savedIds, initialBasePlayers)) {
+      session.discard()
+      return
+    }
+    // Réhydratation : la sauvegarde ne porte que des identifiants et des
+    // scores, le profil (nom, préférences) vient de la table courante.
+    setPlayers(saved.playerStates.map(st => {
+      const base = initialBasePlayers.find(p => p.id === st.id)
+      return {
+        name: base?.name || 'Joueur',
+        isMonsieur3: st.isMonsieur3,
+        score: st.score,
+        preferences: base?.preferences,
+        id: st.id,
+      }
+    }))
+    setCurrentPlayerIndex(saved.currentPlayerIndex)
+    setGamePhase(saved.gamePhase)
+    setMessage(saved.message)
+    setRollHistory(saved.rollHistory)
+    setSetupRolls(saved.setupRolls)
+    setMonsieur3Found(saved.monsieur3Found)
+    setMonsieur3Index(saved.monsieur3Index)
+    setDice(saved.dice)
+    setSpecialMessage(null)
+    setRolling(false)
+    setGameEnded(false)
+    setVictoryScreen(false)
+    setCanRoll(true)
+    setStarted(true)
+  }
 
   const rollDice = () => {
     if (!canRoll) return
@@ -249,6 +363,8 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
 
   const restartGame = () => {
     if (!initialBasePlayers?.length) return
+    session.clear()
+    setStarted(true)
     setPlayers(initialBasePlayers.map(p => ({
       name: p?.name || 'Joueur', isMonsieur3: false, score: 0,
       preferences: p?.preferences || {}, id: p?.id || crypto.randomUUID(),
@@ -270,6 +386,31 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
 
   const currentPlayer = players[currentPlayerIndex]
   const monsieur3Player = players.find(p => p.isMonsieur3)
+
+  if (session.pending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#07060b] p-4 text-white">
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-red-500/20 bg-red-950/20 p-6 text-center">
+          <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
+          <p className="text-sm text-white/55">{tCommon('resumeGame.body')}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={resumeSavedGame}
+              className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 py-3 text-sm font-bold text-white hover:from-red-500 hover:to-orange-500"
+            >
+              {tCommon('resumeGame.resume')}
+            </button>
+            <button
+              onClick={session.discard}
+              className="w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+            >
+              {tCommon('resumeGame.newGame')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full min-h-screen relative text-white">

@@ -33,7 +33,7 @@ export type AuthUser = {
   ambianceMode: 'alcool' | 'soft'
   /** XP de progression en ligne (niveau dérivé via levelForXp). */
   onlineXp: number
-  /** Compte invité temporaire (scan de QR) — email vide, purgé après 48 h. */
+  /** Compte invité temporaire (scan de QR) — email vide, purgé après 90 jours. */
   isGuest?: boolean
 }
 

@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Player } from '@/lib/players'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { ArrowUp, ArrowDown, RotateCcw, Trophy } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { motion } from 'framer-motion'
 import useScreenSize from '@/hooks/useScreenSize'
+import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
 
@@ -73,6 +74,32 @@ const isSpecialPlayer = (player: any): boolean => {
   return name === 'sim' || name === 'riqui';
 }
 
+// Reprise de partie : paquet, carte visible et compteurs suffisent à reprendre
+// la main là où la table s'est arrêtée. Les états d'animation (retournement,
+// dialogues) repartent à zéro.
+const SAVE_ID = 'hi-lo'
+// Version 2 : la sauvegarde ne porte plus que des identifiants de joueurs
+// (plus aucun profil recopié), les anciennes entrées sont donc jetées.
+const SAVE_VERSION = 2
+
+type HiLoSave = {
+  gameMode: GameMode
+  /** Table de la sauvegarde : sans ce contrôle, on reprendrait la soirée d'hier. */
+  playerIds: string[]
+  deck: PlayingCard[]
+  currentCard: PlayingCard | null
+  currentPlayerIndex: number
+  drinkCounter: number
+  gameResults: Record<string, number>
+  sameCardCount: Record<string, number>
+  /** Uniquement des identifiants : une sauvegarde de partie n'a pas à recopier
+   *  les profils (nom, préférences, statistiques à vie) dans une seconde clé
+   *  de stockage. Les joueurs sont réhydratés depuis la prop `players`. */
+  activePlayerIds: string[]
+  correctGuessesInRow: number
+  targetGuesses: number
+}
+
 export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }: GameProps) {
   const t = useTranslations('games.hi-lo')
   const tc = useTranslations('common')
@@ -111,6 +138,15 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   const [targetGuesses, setTargetGuesses] = useState(5) // Par défaut pour 2 joueurs
   
   const { isMobile } = useScreenSize();
+  const [started, setStarted] = useState(false)
+  const session = useResumableLocalGame<HiLoSave>(SAVE_ID, SAVE_VERSION, (s) =>
+    isSameLocalTable(s.playerIds, players)
+  )
+  /** Une partie ne doit être créditée qu'une fois : plusieurs chemins de fin
+   *  (5 cartes identiques, objectif atteint, table vidée) peuvent appeler
+   *  endGame dans le même cycle de rendu, avant que `gameOver` ne soit à jour. */
+  const gameCountedRef = useRef(false)
+
 
   // Vérifier si le composant est monté (côté client)
   useEffect(() => {
@@ -121,12 +157,67 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     setDebMessageIndex(Math.floor(Math.random() * debMessages.length));
   }, []);
 
-  // Initialisation du jeu
+  // Initialisation du jeu — on ne distribue rien tant qu'une reprise est
+  // proposée : c'est le joueur qui tranche.
   useEffect(() => {
-    if (isMounted) {
-      initializeGame();
+    if (!isMounted || !session.ready || session.pending || started) return
+    initializeGame();
+    setStarted(true)
+  }, [isMounted, session.ready, session.pending, started]);
+
+  // Sauvegarde continue : un onglet recyclé par le navigateur ne coûte plus la partie.
+  useEffect(() => {
+    if (!started || gameOver) return
+    session.save({
+      gameMode,
+      playerIds: players.map(p => p.id),
+      deck,
+      currentCard,
+      currentPlayerIndex,
+      drinkCounter,
+      gameResults,
+      sameCardCount,
+      activePlayerIds: activePlayers.map(p => p.id),
+      correctGuessesInRow,
+      targetGuesses,
+    })
+  }, [started, gameOver, deck, currentCard, currentPlayerIndex, drinkCounter, gameResults, sameCardCount, activePlayers, correctGuessesInRow, targetGuesses]);
+
+  const resumeSavedGame = () => {
+    const saved = session.accept()
+    if (!saved) return
+    // Une sauvegarde d'un autre mode de jeu OU d'une autre table n'est pas
+    // rejouable ici : reprendre donnerait un index de joueur hors bornes et
+    // créditerait des gorgées à des gens qui n'ont pas joué.
+    if (saved.gameMode !== gameMode || !isSameLocalTable(saved.playerIds, players)) {
+      session.discard()
+      return
     }
-  }, [isMounted]);
+    // Réhydratation : les profils viennent de la prop, la sauvegarde ne
+    // connaît que des identifiants.
+    const savedActivePlayers = saved.activePlayerIds
+      .map(id => players.find(p => p.id === id))
+      .filter((p): p is Player => Boolean(p))
+    setDeck(saved.deck)
+    setCurrentCard(saved.currentCard)
+    setCurrentPlayerIndex(saved.currentPlayerIndex)
+    setDrinkCounter(saved.drinkCounter)
+    setGameResults(saved.gameResults)
+    setSameCardCount(saved.sameCardCount)
+    setActivePlayers(savedActivePlayers)
+    setCorrectGuessesInRow(saved.correctGuessesInRow)
+    setTargetGuesses(saved.targetGuesses)
+    setNextCard(null)
+    setGameOver(false)
+    setShowResult(false)
+    setShowGameOver(false)
+    setShowIncorrectDialog(false)
+    setLastGuess(null)
+    setIsCorrect(null)
+    setIsFlipping(false)
+    setIsProcessing(false)
+    setStarted(true)
+  }
 
   // Effet pour passer automatiquement au tour suivant après un délai en cas de bonne réponse
   useEffect(() => {
@@ -145,6 +236,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
 
   // Initialiser le jeu
   const initializeGame = () => {
+    // Nouvelle partie : elle a le droit d'être comptée à son tour.
+    gameCountedRef.current = false
     const newDeck = createDeck()
     const shuffledDeck = shuffleDeck(newDeck)
     setDeck(shuffledDeck)
@@ -456,6 +549,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   const endGame = (due5Cards = false) => {
     setGameOver(true)
     setShowGameOver(true)
+    if (gameCountedRef.current) return
+    gameCountedRef.current = true
 
     // Déterminer le gagnant selon le mode de jeu
     let winnerId = null;
@@ -508,6 +603,9 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
         totalDrinks: drinks
       })
     })
+
+    // Une partie terminée ne doit rien laisser derrière elle.
+    session.clear()
   }
 
   // Redémarrer le jeu
@@ -563,8 +661,23 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   }
 
   // Si le composant n'est pas encore monté (côté client), afficher un état de chargement ou rien
-  if (!isMounted) {
+  if (!isMounted || !session.ready) {
     return <div className="p-6 text-center">{t('loading')}</div>;
+  }
+
+  if (session.pending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-center">
+          <h2 className="text-xl font-extrabold">{tc('resumeGame.title')}</h2>
+          <p className="text-sm opacity-60">{tc('resumeGame.body')}</p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={resumeSavedGame} className="w-full">{tc('resumeGame.resume')}</Button>
+            <Button onClick={session.discard} variant="outline" className="w-full">{tc('resumeGame.newGame')}</Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Obtenir le joueur actuel

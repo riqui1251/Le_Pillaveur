@@ -23,6 +23,28 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
+/**
+ * Le paramètre ?redirect= est le SEUL indice de ce qui a fait venir le
+ * visiteur : la bascule « en ligne » de la vitrine y met /jeux, la porte de
+ * code de table /jeux?join=XXXXXX, l'essai contre des bots /games/<jeu>, et le
+ * middleware y recopie la page protégée qu'on a tenté d'ouvrir.
+ *
+ * Un compte fraîchement créé naît en mode LOCAL côté serveur : sans ça, le
+ * visiteur venu pour jouer EN LIGNE s'inscrivait puis atterrissait sur la
+ * sélection de joueurs locaux, et devait deviner une bascule pour retrouver ce
+ * qui l'avait fait venir. On pose donc le mode en ligne dès l'inscription
+ * quand la destination est celle du jeu en ligne.
+ *
+ * Le cas local reste intact : /joueurs (la valeur par défaut, et la
+ * destination du joueur qu'on renvoie vers sa table de salon) ne déclenche
+ * rien, et la bascule reste disponible dans les deux sens.
+ */
+function impliesOnlineMode(redirect: string): boolean {
+  const [path, query = ''] = redirect.split('?')
+  if (query.includes('join=')) return true
+  return path === '/jeux' || path.startsWith('/jeux/') || path.startsWith('/games/')
+}
+
 function safeRedirect(path: string | null): string {
   if (!path || !path.startsWith('/') || path.startsWith('//')) return '/joueurs'
   if (path.startsWith('/compte')) return '/joueurs'
@@ -34,7 +56,7 @@ export function AuthForm() {
   const tCommon = useTranslations('common')
   const locale = useLocale()
   const tNav = useTranslations('nav.legal')
-  const { login, register, refresh } = useAuth()
+  const { login, register, refresh, setPlayMode } = useAuth()
   const searchParams = useSearchParams()
   const redirectTo = safeRedirect(searchParams?.get('redirect') ?? null)
 
@@ -46,6 +68,18 @@ export function AuthForm() {
   // repart d'un routeur vierge et le middleware voit la session fraîche.
   const goToApp = () => {
     window.location.assign(`/${locale}${redirectTo}`)
+  }
+
+  // Appelée UNIQUEMENT à la création d'un compte (jamais sur une connexion :
+  // le mode choisi par un joueur qui revient lui appartient). Un échec réseau
+  // est sans gravité — la bascule de la vitrine reste là.
+  const applyIntendedPlayMode = async () => {
+    if (!impliesOnlineMode(redirectTo)) return
+    try {
+      await setPlayMode('online')
+    } catch {
+      // mode non posé : le joueur bascule lui-même, le parcours reste praticable
+    }
   }
 
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -107,6 +141,7 @@ export function AuthForm() {
       if (err) {
         setError(err)
       } else {
+        if (mode === 'register') await applyIntendedPlayMode()
         rememberHasLoggedIn()
         goToApp()
       }
@@ -145,6 +180,9 @@ export function AuthForm() {
           setError(data?.error ?? t('errors.generic'))
           return
         }
+        // `created` distingue l'inscription de la reconnexion : on ne
+        // repose le mode de jeu que pour un compte tout neuf.
+        if (data?.created) await applyIntendedPlayMode()
         await refresh()
         rememberHasLoggedIn()
         goToApp()

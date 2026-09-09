@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from 'next-intl'
 import {
   Select,
@@ -26,6 +26,8 @@ import { cn } from "@/lib/utils"
 import { RotateCcw, ArrowLeft } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { GameFixedActionBar, gameActionBarPadding } from "@/components/game/GameFixedActionBar"
+import { isSameLocalTable, useResumableLocalGame } from "@/lib/game-session"
+import { usePlayers } from "@/hooks/usePlayers"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +45,22 @@ const BAND_KEYS: Band1220[] = ["2-10", "11-20", "21-30"]
 
 function defaultChoices(): Choices1220 {
   return { parity: "pair", band: "11-20", drinkNumber: 7, giveNumber: 13 }
+}
+
+// Reprise de partie : paris, dés et historique sont du JSON pur. Le 12-20 se
+// joue longtemps sur les mêmes paris — les reperdre à cause d'un onglet rechargé
+// obligeait toute la table à refaire sa mise.
+const SAVE_ID = "1220"
+const SAVE_VERSION = 1
+
+type Save1220 = {
+  playerIds: string[]
+  phase: Phase
+  draft: Record<string, Choices1220>
+  configs: Player1220Config[] | null
+  d12: number
+  d20: number
+  history: { d12: number; d20: number; results: { playerId: string; name: string; text: string[] }[] }[]
 }
 
 // ── Sous-composants : dés polygonaux SVG ──────────────────────────────────────
@@ -183,6 +201,68 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
     { d12: number; d20: number; results: { playerId: string; name: string; text: string[] }[] }[]
   >([])
 
+  const session = useResumableLocalGame<Save1220>(SAVE_ID, SAVE_VERSION, (s) =>
+    isSameLocalTable(s.playerIds, players)
+  )
+  const tCommon = useTranslations('common')
+  const { updatePlayerStats } = usePlayers()
+
+  // Sauvegarde continue : dès que la table a misé, la partie survit à un retour
+  // involontaire.
+  useEffect(() => {
+    // Rien à reprendre tant que la table n'a pas validé ses paris : on ne
+    // proposerait qu'un écran de réglages vierge.
+    if (!session.ready || session.pending || phase !== "play") return
+    session.save({
+      playerIds: players.map(p => p.id),
+      phase,
+      draft,
+      configs,
+      d12,
+      d20,
+      history,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.ready, session.pending, phase, draft, configs, d12, d20, history])
+
+  const resumeSavedGame = () => {
+    const saved = session.accept()
+    if (!saved) return
+    // Table différente : les paris enregistrés ne veulent plus rien dire.
+    if (!isSameLocalTable(saved.playerIds, players)) {
+      session.discard()
+      return
+    }
+    setDraft(saved.draft)
+    setConfigs(saved.configs)
+    setD12(saved.d12)
+    setD20(saved.d20)
+    setHistory(saved.history)
+    setRolling(false)
+    setPhase(saved.phase)
+  }
+
+  /** Une partie ne doit être créditée qu'une fois : `finishGame` est câblé sur
+   *  les deux boutons retour et la navigation peut le rejouer avant que l'écran
+   *  ne soit démonté. */
+  const gameCountedRef = useRef(false)
+
+  /** Fin de partie : le retour au menu clôt la partie, on la compte une fois. */
+  const finishGame = () => {
+    if (phase === "play" && !gameCountedRef.current) {
+      gameCountedRef.current = true
+      players.forEach(p => {
+        try {
+          updatePlayerStats(p.id, '1220', { gamesPlayed: 1 })
+        } catch (error) {
+          console.error('Erreur lors du comptage de la partie:', error)
+        }
+      })
+    }
+    session.clear()
+    onGameEnd()
+  }
+
   const updateDraft = useCallback((id: string, patch: Partial<Choices1220>) => {
     setDraft(d => ({ ...d, [id]: { ...d[id], ...patch } }))
   }, [])
@@ -236,6 +316,9 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
   }
 
   const resetSetup = () => {
+    session.clear()
+    // Nouveaux paris = nouvelle partie : elle a le droit d'être comptée.
+    gameCountedRef.current = false
     setPhase("setup")
     setHistory([])
     setConfigs(null)
@@ -244,6 +327,33 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
   }
 
   const getPlayerObj = (id: string) => players.find(p => p.id === id)
+
+  // ── REPRISE PROPOSÉE ───────────────────────────────────────────────────────
+
+  if (session.pending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#07060b] p-4 text-white">
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-teal-500/20 bg-teal-950/20 p-6 text-center">
+          <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
+          <p className="text-sm text-white/55">{tCommon('resumeGame.body')}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={resumeSavedGame}
+              className="w-full rounded-2xl bg-gradient-to-r from-teal-600 to-indigo-700 py-3 text-sm font-bold text-white hover:from-teal-500 hover:to-indigo-600"
+            >
+              {tCommon('resumeGame.resume')}
+            </button>
+            <button
+              onClick={session.discard}
+              className="w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+            >
+              {tCommon('resumeGame.newGame')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // ── PHASE SETUP ────────────────────────────────────────────────────────────
 
@@ -262,7 +372,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
             <h1 className="font-black tracking-tight text-lg bg-clip-text text-transparent bg-gradient-to-r from-teal-400 via-cyan-300 to-indigo-400">
               🎲 {t('titleBets')}
             </h1>
-            <button onClick={onGameEnd} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label={t('backToGames')}>
+            <button onClick={finishGame} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label={t('backToGames')}>
               <ArrowLeft className="h-4 w-4" />
             </button>
           </div>
@@ -405,7 +515,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
             <button onClick={resetSetup} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-teal-300/60 transition hover:bg-white/10 hover:text-teal-300" aria-label={t('reconfigure')}>
               <RotateCcw className="h-4 w-4" />
             </button>
-            <button onClick={onGameEnd} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label={t('backToGames')}>
+            <button onClick={finishGame} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label={t('backToGames')}>
               <ArrowLeft className="h-4 w-4" />
             </button>
           </div>

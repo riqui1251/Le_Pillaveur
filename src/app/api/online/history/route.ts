@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { GAMES } from '@/lib/games'
 import { onlineErrorBody } from '@/lib/online-errors'
+import { buildReplayMatesForUser } from '@/lib/online/room-invites'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,16 +56,27 @@ export async function GET() {
     GAMES.filter((g) => g.onlineReady && !g.hidden).map((g) => [g.id, g])
   )
 
-  const history = [...byGame.entries()]
+  const recent = [...byGame.entries()]
     .filter(([gameId]) => playable.has(gameId))
     .sort((a, b) => b[1].lastPlayedAt.getTime() - a[1].lastPlayedAt.getTime())
     .slice(0, HISTORY_LIMIT)
-    .map(([gameId, entry]) => ({
-      gameId,
-      lastPlayedAt: entry.lastPlayedAt.toISOString(),
-      playCount: entry.playCount,
-      softModeReady: playable.get(gameId)?.softModeReady === true,
-    }))
+
+  // `mates` = les partenaires humains de la dernière table de ce jeu, pour que
+  // « Rejouer » puisse PROPOSER de les reconvoquer au lieu d'ouvrir une table
+  // vide. Vide si la table n'était que des bots ou si plus personne n'est
+  // invitable — jamais bloquant pour la rangée.
+  const mates = await buildReplayMatesForUser(
+    user.id,
+    recent.map(([gameId]) => gameId)
+  )
+
+  const history = recent.map(([gameId, entry]) => ({
+    gameId,
+    lastPlayedAt: entry.lastPlayedAt.toISOString(),
+    playCount: entry.playCount,
+    softModeReady: playable.get(gameId)?.softModeReady === true,
+    mates: mates[gameId] ?? [],
+  }))
 
   return NextResponse.json({ history })
 }

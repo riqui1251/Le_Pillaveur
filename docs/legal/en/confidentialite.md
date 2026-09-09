@@ -126,6 +126,7 @@ The publisher remains the data controller. No other transfer to third parties ta
 ## 7. Retention periods
 
 - **Active account**: data kept as long as the account exists.
+- **Guest account** (created without an email or password, e.g. by scanning a QR code): automatically deleted after **90 days** of inactivity, along with everything it holds (nickname, progression, cosmetics, friends). Every sign-in resets this period; adding an email and password, or linking the account to Google, makes it permanent.
 - **Deleted account**: deletion or anonymisation within a maximum of **12 months** after the request, unless a longer retention is legally required.
 - **Technical logs (IP addresses, presence)**: **6 months**. The IP address and country of last connection attached to an account are erased after **6 months** without activity; an account's IP address history is deleted immediately together with the account.
 - **Chat messages**: **12 months**.

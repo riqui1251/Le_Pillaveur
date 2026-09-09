@@ -52,6 +52,8 @@ export interface Case {
 export type PetitBuveurT = {
   (key: string, values?: Record<string, string | number>): string
   raw: (key: string) => unknown
+  /** Fourni par next-intl : permet de retomber sur la clé alcoolisée quand la variante Soft manque. */
+  has?: (key: string) => boolean
 }
 
 const difficultyMultipliers: Record<Difficulty, number> = {

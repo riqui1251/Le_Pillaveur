@@ -19,6 +19,7 @@ import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { XpGainBanner } from './XpGainBanner'
 
 /**
  * TÉLÉPHONE DESSINÉ en ligne (serveur-autoritaire). Chaque joueur ne voit
@@ -168,6 +169,9 @@ export function TelephoneDessineOnline() {
         <Sparkles className="h-14 w-14 text-teal-300" />
         <h2 className="font-display text-3xl font-bold text-gold">{t('victory.title')}</h2>
         <p className="text-sm text-white/60">{t('victory.subtitle')}</p>
+        {/* Jeu vitrine par lequel arrivent les nouveaux : c'est le pire
+            endroit où laisser la boucle de progression muette. */}
+        <XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
         <Button
           onClick={() => void leaveRoom()}
           variant="outline"

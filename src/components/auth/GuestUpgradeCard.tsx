@@ -148,8 +148,28 @@ export function GuestUpgradeCard() {
         </div>
       </div>
 
+      {/* Le chemin le plus COURT d'abord : un seul geste, aucun mot de passe
+          à inventer sur un téléphone en soirée. Le formulaire email reste
+          juste en dessous pour qui n'a pas de compte Google. */}
+      <div className="mt-3">
+        {nativeGoogle ? (
+          <NativeGoogleButton
+            disabled={busy}
+            onCredential={(credential) => googleCallbackRef.current(credential)}
+          />
+        ) : (
+          <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+        )}
+      </div>
+
+      <div className="my-3 flex items-center gap-3" aria-hidden>
+        <span className="h-px flex-1 bg-white/10" />
+        <span className="text-xs uppercase tracking-wide text-white/35">{t('orDivider')}</span>
+        <span className="h-px flex-1 bg-white/10" />
+      </div>
+
       <form
-        className="mt-3 space-y-2"
+        className="space-y-2"
         onSubmit={(e) => {
           e.preventDefault()
           if (!busy && email.trim() && password) void upgrade({ email, password, locale })
@@ -182,20 +202,6 @@ export function GuestUpgradeCard() {
           {t('submit')}
         </Button>
       </form>
-
-      <div className="my-3 flex items-center gap-3" aria-hidden>
-        <span className="h-px flex-1 bg-white/10" />
-        <span className="text-xs uppercase tracking-wide text-white/35">{t('orDivider')}</span>
-        <span className="h-px flex-1 bg-white/10" />
-      </div>
-      {nativeGoogle ? (
-        <NativeGoogleButton
-          disabled={busy}
-          onCredential={(credential) => googleCallbackRef.current(credential)}
-        />
-      ) : (
-        <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
-      )}
     </div>
   )
 }

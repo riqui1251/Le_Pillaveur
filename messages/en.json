@@ -153,6 +153,12 @@
       "invalidCharacters": "Invalid characters (letters, numbers and spaces only)",
       "invalidCharactersPlayer": "Invalid characters",
       "profanity": "This name contains inappropriate language"
+    },
+    "resumeGame": {
+      "title": "Resume the game in progress?",
+      "body": "A game was interrupted. You can pick it up where it stopped, or start a new one.",
+      "resume": "Resume",
+      "newGame": "New game"
     }
   },
   "hub": {
@@ -185,6 +191,10 @@
         "title": "Playing solo with bots.",
         "text": "Only games where bots can fill the table are shown.",
         "showAll": "See all games"
+      },
+      "onlineOnly": {
+        "title": "Online only",
+        "hint": "These games need one phone per player: open an online table with a free account, or try them solo against bots."
       }
     },
     "jeuxOnline": {
@@ -194,7 +204,12 @@
       "recent": {
         "title": "Your latest tables",
         "replay": "Play again",
-        "replaying": "Setting up your table…"
+        "replaying": "Setting up your table…",
+        "inviteTitle": "Play {game} with them again?",
+        "inviteHint": "They'll get an invite to your new table. Tap a name to leave someone out.",
+        "inviteConfirm": "Create and invite ({count})",
+        "createAlone": "Create an empty table",
+        "cancel": "Cancel"
       }
     },
     "playMode": {
@@ -213,7 +228,35 @@
       "none": "No players selected",
       "choose": "Choose the players",
       "modify": "To modify",
-      "tapToChoose": "Tap here to choose your players (minimum 2)."
+      "tapToChoose": "Tap here to choose your players (minimum 2).",
+      "bridge": {
+        "guestText": "A free account keeps your players and their stats from one night to the next.",
+        "guestCta": "Create an account",
+        "memberText": "Someone missing from the table?",
+        "memberCta": "Open an online table",
+        "dismiss": "Don't show again"
+      }
+    },
+    "nightAwards": {
+      "toggle": "Table records",
+      "headline": "{games, plural, one {# game} other {# games}} · {drinks, plural, one {# sip} other {# sips}} all-time",
+      "topGame": "Go-to game: {game}",
+      "champion": {
+        "title": "The champion",
+        "detail": "{names} — {count, plural, one {# round won} other {# rounds won}}"
+      },
+      "thirsty": {
+        "title": "The thirsty one",
+        "detail": "{names} — {count, plural, one {# sip drunk} other {# sips drunk}}"
+      },
+      "unlucky": {
+        "title": "The wooden spoon",
+        "detail": "{names} — {count, plural, one {# game, not one win} other {# games, not one win}}"
+      },
+      "sober": {
+        "title": "The wise one",
+        "detail": "{names} — {count, plural, =0 {not a single sip} one {just # sip} other {just # sips}}"
+      }
     }
   },
   "onlineXp": {
@@ -226,8 +269,11 @@
     "soloCapped": "Bot-only games no longer earn XP — invite a friend to make it count!",
     "streak": "{days}-day streak!",
     "nextUnlock": "Next unlock: level {level} — {name}",
-    "guestKeep": "Guest account: deleted after 48 h of inactivity.",
-    "guestKeepCta": "Save your nickname and XP"
+    "guestKeep": "Guest account: deleted after 90 days of inactivity.",
+    "guestKeepCta": "Save your nickname and XP",
+    "streakStart": "Streak started!",
+    "streakBonus": "including +{xp} XP streak bonus",
+    "achievementUnlocked": "Achievement unlocked: {name}"
   },
   "onlineCollection": {
     "title": "{name}'s collection",
@@ -578,7 +624,7 @@
     },
     "guestUpgrade": {
       "title": "Guest account — remember to save it!",
-      "intro": "Your account is temporary: it will be deleted after 48 h of inactivity (nickname, XP and cosmetics included). Add an email and password, or link it to Google, to keep it forever.",
+      "intro": "Your account is temporary: it will be deleted after 90 days of inactivity (nickname, XP and cosmetics included). Add an email and password, or link it to Google, to keep it forever.",
       "emailPlaceholder": "you@email.com",
       "passwordPlaceholder": "Password",
       "submit": "Save my account",
@@ -586,7 +632,11 @@
       "success": "Account saved! It is now permanent — nickname, XP and cosmetics kept.",
       "genericError": "Could not save the account. Try again in a moment.",
       "capital": "Level {level} · {xp} XP · {count, plural, one {# cosmetic unlocked} other {# cosmetics unlocked}}",
-      "capitalRule": "Everything will be deleted after 48 h of inactivity. Add an email and password, or link your account to Google, to keep it all."
+      "capitalRule": "Everything will be deleted after 90 days of inactivity. Add an email and password, or link your account to Google, to keep it all."
+    },
+    "guestExpiry": {
+      "what": "Guest account: it is deleted after {days} days without signing in — nickname, level, XP, cosmetics and friends included.",
+      "when": "At this rate, that would be {date}. Every visit pushes the date back."
     }
   },
   "legal": {
@@ -2413,7 +2463,27 @@
         ],
         "needPlayers": "Select at least 2 players to start.",
         "start": "Start the game",
-        "resume": "Resume the current game"
+        "resume": "Resume the current game",
+        "soft": {
+          "rules": [
+            "🎲 Roll the dice on your turn and move forward that many squares.",
+            "🌿 Depending on the square, take forfeits or take on a challenge.",
+            "⚡ Special squares trigger effects: swaps, curses, protections…",
+            "🏆 The first to reach square 30 wins the game!",
+            "🌿 Soft mode: same games, not a single drop."
+          ],
+          "difficulties": {
+            "facile": {
+              "desc": "Fewer forfeits, ideal for getting started"
+            },
+            "difficile": {
+              "desc": "More challenges and forfeits"
+            },
+            "extreme": {
+              "desc": "Mega forfeit possible — for experts only"
+            }
+          }
+        }
       },
       "difficultyLabels": {
         "facile": "Easy",
@@ -3000,6 +3070,113 @@
             "body": "Some tiles make you drink, others spare you — everyone gets their turn, sip after sip, until the game ends."
           }
         ]
+      },
+      "soft": {
+        "caseTypes": {
+          "gorgée": "Forfeits",
+          "roue": "Forfeit wheel"
+        },
+        "caseDescriptions": {
+          "gorgée": "Take {count} forfeit(s)!",
+          "gorgéeCulSec": "Mega forfeit! 🌿",
+          "defi": "Challenge: {challenge} or take {count} forfeit(s)!",
+          "tous": "Everyone takes {count} forfeit(s) except the targeted person! 🌿",
+          "roue": "🎯 Special square: forfeit wheel!",
+          "bombe": "💣 Bomb! Everyone takes a forfeit, the target takes double!",
+          "malediction": "👻 Curse! 1 forfeit per round for 3 rounds!",
+          "piege": "🕳️ Trap! Take as many forfeits as your position!",
+          "double-peine": "💥 Double penalty! The target takes {count} forfeits × 2!",
+          "solo": "🎯 Solo! Everyone is safe, you take 1 forfeit.",
+          "roulette-russe": "🔫 Russian roulette! 1 chance in 3: 6 forfeits or safe.",
+          "question": "❓ Question! Answer out loud or take {count} forfeits.",
+          "vote": "🗳️ Vote! Decide who takes {count} forfeits.",
+          "miroir-inverse": "🪞 Reverse mirror! When you take a forfeit, the target does too (1 turn).",
+          "loterie": "🎰 Lottery! 2 players drawn: one takes a forfeit, the other advances.",
+          "inversion": "🔃 Inversion! The last in the ranking takes {count} forfeits instead."
+        },
+        "resolveCase": {
+          "solo": "🎯 {actor} takes 1 forfeit, the others are safe!",
+          "loterieResult": "🎰 Lottery! {drinker} takes 2 forfeits, {mover} moves forward one space."
+        },
+        "shameDice": {
+          "twoSips": "2 forfeits",
+          "outcomeDrink": "🎲 Dice of shame ({roll}): {player} takes 2 forfeits!"
+        },
+        "coinFlip": {
+          "lost": "Draw: {result} — the target loses and takes a forfeit."
+        },
+        "wheel": {
+          "sips": "{count} forfeits"
+        },
+        "defiWheelChallenge": "You take 2 forfeits",
+        "defis": [
+          {
+            "text": "Balance a glass on your head for 3 turns",
+            "drinks": 2
+          },
+          {
+            "text": "Name 5 soda brands in 10 seconds",
+            "drinks": 2
+          }
+        ],
+        "game": {
+          "drinksShort": "{count} forfeit(s)",
+          "challengeDrink": "Took {count} forfeit(s)",
+          "wheel": {
+            "drinks": "Forfeit wheel"
+          },
+          "dialogs": {
+            "votePrompt": "Hands up — who takes {count} forfeits?",
+            "shameDiceRules": "1–2 safe · 3–4 forfeits · 5 advance · 6 back",
+            "drinksToTake": "{count} forfeit(s) to do"
+          },
+          "effects": {
+            "curseDesc": "Takes 1 extra forfeit each round",
+            "chainDesc": "Linked to a partner: they suffer the same effects (forfeits)",
+            "mirrorDesc": "When one takes a forfeit, so does the other ({a} ↔ {b})",
+            "mirrorDescShort": "When one takes a forfeit, so does the other"
+          },
+          "outcomes": {
+            "pileFaceLose": "🪙 Heads or tails: draw {result}, {player} takes {count} forfeit(s)!",
+            "challengeDrink": "🌿 {player} took {count} forfeit(s)!",
+            "trap": "🕳️ Trap! {player} takes {count} forfeit(s) (position {position})!",
+            "drinks": "{player} takes {count} forfeit(s)!",
+            "bombe": "💣 {player} triggered a bomb! Everyone takes {count} forfeit(s), but {name} takes double!",
+            "trapProtected": "🕳️ Trap! {player} should have taken {count} forfeit(s) (position {position}) but {protected}",
+            "doublePeine": "💥 {player} takes {count} forfeits (double penalty)!",
+            "rouletteMiss": "🔫 Miss! {player} takes {count} forfeits!",
+            "inversion": "🔃 Inversion! {last} (last) takes {count} forfeit(s) instead of {player}!",
+            "mirrorLink": "🪞 {actor} is linked to {target}: when one takes a forfeit, so does the other ({count} turn(s) from {actor})!",
+            "everyoneDrinksHonor": "Everyone takes {count} forfeit(s) to honor \"{compliment}\"",
+            "everyoneDrinksExcept": "Everyone takes {count} forfeit(s) except",
+            "wheelDefiOrDrink": "{player} — take on the challenge or take 2 forfeits!",
+            "wheelDrink": "{player} takes a forfeit (player on turn)."
+          },
+          "messages": {
+            "drinking": [
+              "Cheers and good vibes!",
+              "One small forfeit for you, one giant leap towards victory!",
+              "Stay hydrated, champ!",
+              "One more forfeit, one more legend!",
+              "You'll remember this forfeit tomorrow morning!",
+              "Take your time, savour your forfeit!"
+            ],
+            "deb": [
+              "Does real forfeits",
+              "Full forfeits, not half ones",
+              "No cheating",
+              "Actually does the forfeit this time"
+            ],
+            "cheers": [
+              "Good luck!",
+              "Cheers!",
+              "Here's to you!",
+              "Clink clink!",
+              "Mega forfeit!",
+              "Come on, go for it!"
+            ]
+          }
+        }
       }
     },
     "quiz": {
@@ -3648,7 +3825,8 @@
       "showLess": "Show less",
       "loadingMore": "Loading…",
       "periodAll": "All-time",
-      "periodWeek": "This week"
+      "periodWeek": "This week",
+      "periodWeekHint": "Counts games finished since Monday 00:00 (Paris time). Resets every Monday — for bragging rights only, no prize."
     }
   },
   "feedback": {
@@ -4246,7 +4424,7 @@
     "cta": "Try it with bots",
     "go": "Let's go!",
     "hint": "No account needed: a nickname, a private table, bots fill the seats — friends can join mid-game.",
-    "guestHint": "Guest nickname — deleted after 48 h of inactivity. You can save it afterwards.",
+    "guestHint": "Guest nickname — deleted after 90 days of inactivity. You can save it afterwards.",
     "loginCta": "Sign in or create an account",
     "pseudoPlaceholder": "Your nickname for tonight",
     "error": "Can't start right now. Try again."
@@ -4256,10 +4434,19 @@
     "subtitle": "You scanned a table code. Pick a name to play right away, or sign in to your account.",
     "pseudoPlaceholder": "Your name for tonight",
     "guestCta": "Play as guest",
-    "guestHint": "Guest nickname — deleted after 48 h of inactivity. You can save it afterwards.",
+    "guestHint": "Guest nickname — deleted after 90 days of inactivity. You can save it afterwards.",
     "or": "or",
     "loginCta": "Sign in or create an account",
     "dismiss": "No thanks, just browsing",
     "error": "Can’t join right now. Try again."
+  },
+  "og": {
+    "siteTagline": "The home of party games",
+    "gameSubtitle": "Free, no install — with friends or with bots",
+    "inviteTitle": "{host} is inviting you to a game of {game}",
+    "inviteTitleAnon": "A {game} table is waiting for you",
+    "inviteTitleBare": "A table is waiting for you",
+    "inviteFooter": "Just pick a nickname — free, no install",
+    "inviteDescription": "Join table {code}: just pick a nickname. Free, no install."
   }
 }

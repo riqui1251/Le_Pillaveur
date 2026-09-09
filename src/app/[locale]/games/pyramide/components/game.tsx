@@ -1,7 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion } from 'framer-motion'
 import { RotateCcw, ArrowDown } from 'lucide-react'
@@ -27,6 +27,8 @@ import {
   computeScoreSummary,
   buildClassicPyramid,
 } from '@/lib/pyramide/engine'
+import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
+import { usePlayers } from '@/hooks/usePlayers'
 
 // ── Helpers partagés ─────────────────────────────────────────────────────────
 
@@ -45,6 +47,37 @@ interface GameProps {
   gameMode: 'fun' | 'classic'
   deckCount: 1 | 2
   cardsToSelect: 4 | 5
+}
+
+// Reprise de partie : c'est le jeu local le plus long (30 à 45 min), donc celui
+// qui souffrait le plus d'un swipe retour. Tout l'état est du JSON pur (cartes,
+// prédictions, compteurs) : rien à reconstruire, il suffit de le relire.
+const SAVE_ID = 'pyramide'
+const SAVE_VERSION = 1
+
+type PyramideSave = {
+  /** Une sauvegarde faite avec d'autres réglages n'est pas rejouable telle quelle. */
+  setup: { gameMode: 'fun' | 'classic'; pyramidHeight: number; deckCount: 1 | 2; cardsToSelect: 4 | 5 }
+  playerIds: string[]
+  pyramid: Card[][]
+  gameOver: boolean
+  nextCardToFlip: { row: number; col: number } | null
+  lastFlippedCard: { row: number; col: number } | null
+  totalCardsFlipped: number
+  totalCards: number
+  currentCard: Card | null
+  classicGamePhase: 'prelude' | 'preludeSummary' | 'selection' | 'play'
+  selectedCardsByPlayer: Record<string, Card[]>
+  currentSelectionPlayer: number
+  availableCardsForSelection: Card[]
+  readyToStart: boolean
+  preludeDeck: Card[]
+  preludeCurrentPlayer: number
+  preludeStep: PreludeStep
+  preludeResultsByPlayer: Record<string, PreludeResult[]>
+  preludeDrinksByPlayer: Record<string, number>
+  preludeRevealed: Card[]
+  preludeMessage: string
 }
 
 export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deckCount, cardsToSelect }: GameProps) {
@@ -75,6 +108,12 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   const [preludeResultsByPlayer, setPreludeResultsByPlayer] = useState<Record<string, PreludeResult[]>>({})
   const [preludeDrinksByPlayer, setPreludeDrinksByPlayer] = useState<Record<string, number>>({})
   const [preludeRevealed, setPreludeRevealed] = useState<Card[]>([])
+  const [started, setStarted] = useState(false)
+  const session = useResumableLocalGame<PyramideSave>(SAVE_ID, SAVE_VERSION, (s) =>
+    isSameLocalTable(s.playerIds, players)
+  )
+  const tCommon = useTranslations('common')
+  const { updatePlayerStats } = usePlayers()
 
   const computePreludeTotals = (): Record<string, number> =>
     computeTotalsByPlayer(players.map(p => p.id), preludeResultsByPlayer)
@@ -224,10 +263,107 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pyramidHeight, gameMode, deckCount, cardsToSelect, players]);
 
-  // Effect pour initialiser le jeu au montage du composant
+  // Effect pour initialiser le jeu au montage du composant — mais jamais tant
+  // qu'une reprise est proposée : le joueur doit pouvoir dire non.
   useEffect(() => {
+    if (!session.ready || session.pending || started) return
     initializeGame()
-  }, [initializeGame]);
+    setStarted(true)
+  }, [session.ready, session.pending, started, initializeGame]);
+
+  // Sauvegarde continue tant que la pyramide n'est pas retournée entièrement.
+  useEffect(() => {
+    if (!started || !gameStarted || gameOver) return
+    session.save({
+      setup: { gameMode, pyramidHeight, deckCount, cardsToSelect },
+      playerIds: players.map(p => p.id),
+      pyramid,
+      gameOver,
+      nextCardToFlip,
+      lastFlippedCard,
+      totalCardsFlipped,
+      totalCards,
+      currentCard,
+      classicGamePhase,
+      selectedCardsByPlayer,
+      currentSelectionPlayer,
+      availableCardsForSelection,
+      readyToStart,
+      preludeDeck,
+      preludeCurrentPlayer,
+      preludeStep,
+      preludeResultsByPlayer,
+      preludeDrinksByPlayer,
+      preludeRevealed,
+      preludeMessage,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, gameStarted, gameOver, pyramid, nextCardToFlip, lastFlippedCard, totalCardsFlipped,
+      totalCards, currentCard, classicGamePhase, selectedCardsByPlayer, currentSelectionPlayer,
+      availableCardsForSelection, readyToStart, preludeDeck, preludeCurrentPlayer, preludeStep,
+      preludeResultsByPlayer, preludeDrinksByPlayer, preludeRevealed, preludeMessage]);
+
+  /** Évite de compter deux fois la même partie. */
+  const gameCountedRef = useRef(false)
+
+  // Fin de partie : on crédite une partie jouée à chaque joueur et on efface la
+  // sauvegarde — une partie terminée ne doit rien laisser derrière elle.
+  useEffect(() => {
+    if (!gameOver) {
+      gameCountedRef.current = false
+      return
+    }
+    if (!gameStarted || gameCountedRef.current) return
+    gameCountedRef.current = true
+    players.forEach(p => {
+      try {
+        updatePlayerStats(p.id, 'pyramide', { gamesPlayed: 1 })
+      } catch (error) {
+        console.error('Erreur lors du comptage de la partie:', error)
+      }
+    })
+    session.clear()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameOver, gameStarted]);
+
+  const resumeSavedGame = () => {
+    const saved = session.accept()
+    if (!saved) return
+    // Réglages ou table différents : la sauvegarde ne correspond plus à ce qui
+    // vient d'être demandé, on repart sur une partie neuve.
+    const sameSetup =
+      saved.setup.gameMode === gameMode &&
+      saved.setup.pyramidHeight === pyramidHeight &&
+      saved.setup.deckCount === deckCount &&
+      saved.setup.cardsToSelect === cardsToSelect &&
+      isSameLocalTable(saved.playerIds, players)
+    if (!sameSetup) {
+      session.discard()
+      return
+    }
+    setPyramid(saved.pyramid)
+    setGameOver(saved.gameOver)
+    setNextCardToFlip(saved.nextCardToFlip)
+    setLastFlippedCard(saved.lastFlippedCard)
+    setTotalCardsFlipped(saved.totalCardsFlipped)
+    setTotalCards(saved.totalCards)
+    setCurrentCard(saved.currentCard)
+    setClassicGamePhase(saved.classicGamePhase)
+    setSelectedCardsByPlayer(saved.selectedCardsByPlayer)
+    setCurrentSelectionPlayer(saved.currentSelectionPlayer)
+    setAvailableCardsForSelection(saved.availableCardsForSelection)
+    setReadyToStart(saved.readyToStart)
+    setPreludeDeck(saved.preludeDeck)
+    setPreludeCurrentPlayer(saved.preludeCurrentPlayer)
+    setPreludeStep(saved.preludeStep)
+    setPreludeResultsByPlayer(saved.preludeResultsByPlayer)
+    setPreludeDrinksByPlayer(saved.preludeDrinksByPlayer)
+    setPreludeRevealed(saved.preludeRevealed)
+    setPreludeMessage(saved.preludeMessage)
+    setIsCardFlipping(false)
+    setGameStarted(true)
+    setStarted(true)
+  }
 
   // Retourner la prochaine carte
   const flipNextCard = () => {
@@ -297,6 +433,9 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
 
   // Réinitialiser le jeu
   const resetGame = () => {
+    session.clear()
+    gameCountedRef.current = false
+    setStarted(true)
     initializeGame()
   }
 
@@ -325,6 +464,31 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     // Définir la première carte à retourner (en bas à gauche)
     setNextCardToFlip({ row: pyramidHeight - 1, col: 0 });
   };
+
+  if (session.pending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#07060b] p-4 text-white">
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-amber-500/20 bg-amber-950/20 p-6 text-center">
+          <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
+          <p className="text-sm text-white/55">{tCommon('resumeGame.body')}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={resumeSavedGame}
+              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
+            >
+              {tCommon('resumeGame.resume')}
+            </button>
+            <button
+              onClick={session.discard}
+              className="w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+            >
+              {tCommon('resumeGame.newGame')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full min-h-screen relative text-white">

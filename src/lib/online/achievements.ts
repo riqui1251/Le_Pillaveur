@@ -32,6 +32,20 @@ export const ACHIEVEMENT_TYPES = [
 
 export type AchievementType = (typeof ACHIEVEMENT_TYPES)[number]
 
+/**
+ * Succès obtenus HORS partie : ils se débloquent dans une route API (table
+ * créée, demande d'ami acceptée) où AUCUN écran ne peut les annoncer. On les
+ * rattache donc à la première fin de partie qui suit, dans la fenêtre
+ * ci-dessous — au-delà, l'annonce n'aurait plus de sens. Les succès de fin de
+ * partie, eux, sont annoncés par la partie qui les débloque : les rattraper
+ * ici les ferait ressortir en double.
+ */
+export const OUT_OF_MATCH_ACHIEVEMENTS: ReadonlySet<string> = new Set([
+  'first_room',
+  'first_friend',
+])
+export const ACHIEVEMENT_ANNOUNCE_WINDOW_MS = 6 * 60 * 60 * 1000
+
 /** Écrit le succès s'il manque. Jamais bloquant (doublon → false). */
 export async function awardAchievement(
   client: Db,
@@ -75,22 +89,44 @@ function dayParisOf(date: Date): string {
 export async function checkMatchAchievements(
   client: Db,
   args: { gameId: string; userIds: string[]; winnerIds: string[] }
-): Promise<void> {
+): Promise<Map<string, AchievementType[]>> {
   const { gameId, userIds, winnerIds } = args
-  if (userIds.length === 0) return
+  // Ce que CETTE partie vient de débloquer, par joueur : sans ça, le succès
+  // tombait en silence (rien ne l'annonçait au joueur au moment où il arrive).
+  const unlocked = new Map<string, AchievementType[]>()
+  const note = (userId: string, type: AchievementType, won: boolean) => {
+    if (!won) return
+    const list = unlocked.get(userId) ?? []
+    list.push(type)
+    unlocked.set(userId, list)
+  }
+  if (userIds.length === 0) return unlocked
 
   const existing = await client.achievement.findMany({
     where: { userId: { in: userIds } },
-    select: { userId: true, type: true },
+    select: { userId: true, type: true, unlockedAt: true },
   })
   const has = new Set(existing.map((a) => `${a.userId}:${a.type}`))
   const missing = (userId: string, type: AchievementType) => !has.has(`${userId}:${type}`)
 
+  // Rattrapage des succès hors partie, tout frais. Le dédoublonnage des
+  // annonces vit dans xp.ts — une même soirée ne les répète pas.
+  const since = Date.now() - ACHIEVEMENT_ANNOUNCE_WINDOW_MS
+  for (const a of existing) {
+    if (!OUT_OF_MATCH_ACHIEVEMENTS.has(a.type)) continue
+    const at = a.unlockedAt instanceof Date ? a.unlockedAt.getTime() : 0
+    if (at >= since) note(a.userId, a.type as AchievementType, true)
+  }
+
   const nightly = hourParis() < 6
 
   for (const userId of userIds) {
-    if (missing(userId, 'first_game')) await awardAchievement(client, userId, 'first_game')
-    if (nightly && missing(userId, 'night_owl')) await awardAchievement(client, userId, 'night_owl')
+    if (missing(userId, 'first_game')) {
+      note(userId, 'first_game', await awardAchievement(client, userId, 'first_game'))
+    }
+    if (nightly && missing(userId, 'night_owl')) {
+      note(userId, 'night_owl', await awardAchievement(client, userId, 'night_owl'))
+    }
 
     if (missing(userId, 'social_butterfly')) {
       const myRooms = await client.onlineMatchResult.findMany({
@@ -107,15 +143,19 @@ export async function checkMatchAchievements(
           distinct: ['userId'],
           take: 8,
         })
-        if (others.length >= 8) await awardAchievement(client, userId, 'social_butterfly')
+        if (others.length >= 8) {
+          note(userId, 'social_butterfly', await awardAchievement(client, userId, 'social_butterfly'))
+        }
       }
     }
   }
 
   for (const userId of winnerIds) {
-    if (missing(userId, 'first_win')) await awardAchievement(client, userId, 'first_win')
+    if (missing(userId, 'first_win')) {
+      note(userId, 'first_win', await awardAchievement(client, userId, 'first_win'))
+    }
     if (gameId === 'quiz' && missing(userId, 'speed_demon')) {
-      await awardAchievement(client, userId, 'speed_demon')
+      note(userId, 'speed_demon', await awardAchievement(client, userId, 'speed_demon'))
     }
     if (missing(userId, 'perfect_game')) {
       // 3 victoires le même jour (Paris) — fenêtre large puis filtre précis.
@@ -129,7 +169,11 @@ export async function checkMatchAchievements(
       })
       const today = dayParisOf(new Date())
       const winsToday = recent.filter((r) => dayParisOf(r.finishedAt) === today).length
-      if (winsToday >= 3) await awardAchievement(client, userId, 'perfect_game')
+      if (winsToday >= 3) {
+        note(userId, 'perfect_game', await awardAchievement(client, userId, 'perfect_game'))
+      }
     }
   }
+
+  return unlocked
 }

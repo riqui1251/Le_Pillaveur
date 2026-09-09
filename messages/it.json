@@ -153,6 +153,12 @@
       "invalidCharacters": "Caratteri non consentiti (solo lettere, numeri e spazi)",
       "invalidCharactersPlayer": "Caratteri non consentiti",
       "profanity": "Questo nome contiene un linguaggio inappropriato"
+    },
+    "resumeGame": {
+      "title": "Riprendere la partita in corso?",
+      "body": "Una partita è stata interrotta. Puoi riprenderla da dove si è fermata o iniziarne una nuova.",
+      "resume": "Riprendi",
+      "newGame": "Nuova partita"
     }
   },
   "hub": {
@@ -185,6 +191,10 @@
         "title": "Giocare da solo con i bot.",
         "text": "Sono mostrati solo i giochi in cui i bot possono completare il tavolo.",
         "showAll": "Vedi tutto il catalogo"
+      },
+      "onlineOnly": {
+        "title": "Solo online",
+        "hint": "Questi giochi richiedono un telefono per giocatore: apri un tavolo online con un account gratuito, oppure provali da solo contro i bot."
       }
     },
     "jeuxOnline": {
@@ -194,7 +204,12 @@
       "recent": {
         "title": "I tuoi ultimi tavoli",
         "replay": "Rigioca",
-        "replaying": "Creazione del tavolo…"
+        "replaying": "Creazione del tavolo…",
+        "inviteTitle": "Rigiocare a {game} con loro?",
+        "inviteHint": "Riceveranno un invito al tuo nuovo tavolo. Tocca un nome per escluderlo.",
+        "inviteConfirm": "Crea e invita ({count})",
+        "createAlone": "Crea un tavolo vuoto",
+        "cancel": "Annulla"
       }
     },
     "ambianceMode": {
@@ -207,13 +222,41 @@
       "none": "Nessun giocatore selezionato",
       "choose": "Scegli i giocatori",
       "modify": "Per modificare",
-      "tapToChoose": "Tocca qui per scegliere i tuoi giocatori (minimo 2)."
+      "tapToChoose": "Tocca qui per scegliere i tuoi giocatori (minimo 2).",
+      "bridge": {
+        "guestText": "Un account gratuito conserva i tuoi giocatori e le loro statistiche da una serata all'altra.",
+        "guestCta": "Crea un account",
+        "memberText": "Manca qualcuno al tavolo?",
+        "memberCta": "Apri un tavolo online",
+        "dismiss": "Non mostrare più"
+      }
     },
     "playMode": {
       "label": "Modalità di gioco",
       "local": "Locale",
       "online": "Online",
       "onlineNeedsAccount": "Accedi per giocare online"
+    },
+    "nightAwards": {
+      "toggle": "Record del tavolo",
+      "headline": "{games, plural, one {# partita} other {# partite}} · {drinks, plural, one {# sorso} other {# sorsi}} in totale",
+      "topGame": "Gioco preferito: {game}",
+      "champion": {
+        "title": "Il campione",
+        "detail": "{names} — {count, plural, one {# round vinto} other {# round vinti}}"
+      },
+      "thirsty": {
+        "title": "L'assetato",
+        "detail": "{names} — {count, plural, one {# sorso bevuto} other {# sorsi bevuti}}"
+      },
+      "unlucky": {
+        "title": "La maglia nera",
+        "detail": "{names} — {count, plural, one {# partita, nessuna vittoria} other {# partite, nessuna vittoria}}"
+      },
+      "sober": {
+        "title": "Il più saggio",
+        "detail": "{names} — {count, plural, =0 {nemmeno un sorso} one {solo # sorso} other {solo # sorsi}}"
+      }
     }
   },
   "onlineXp": {
@@ -226,8 +269,11 @@
     "soloCapped": "Le partite solo contro i bot non danno più XP — invita un amico perché conti!",
     "streak": "Serie di {days} giorni!",
     "nextUnlock": "Prossimo sblocco: livello {level} — {name}",
-    "guestKeep": "Account ospite: eliminato dopo 48 h di inattività.",
-    "guestKeepCta": "Salva il tuo nickname e i tuoi XP"
+    "guestKeep": "Account ospite: eliminato dopo 90 giorni di inattività.",
+    "guestKeepCta": "Salva il tuo nickname e i tuoi XP",
+    "streakStart": "Serie avviata!",
+    "streakBonus": "di cui +{xp} XP di serie",
+    "achievementUnlocked": "Obiettivo sbloccato: {name}"
   },
   "onlineCollection": {
     "title": "Collezione di {name}",
@@ -578,7 +624,7 @@
     },
     "guestUpgrade": {
       "title": "Account ospite — ricordati di salvarlo!",
-      "intro": "Il tuo account è temporaneo: verrà eliminato dopo 48 h di inattività (nickname, XP e cosmetici compresi). Aggiungi un’email e una password, o collegalo a Google, per conservarlo per sempre.",
+      "intro": "Il tuo account è temporaneo: verrà eliminato dopo 90 giorni di inattività (nickname, XP e cosmetici compresi). Aggiungi un’email e una password, o collegalo a Google, per conservarlo per sempre.",
       "emailPlaceholder": "tua@email.it",
       "passwordPlaceholder": "Password",
       "submit": "Salva il mio account",
@@ -586,7 +632,11 @@
       "success": "Account salvato! Ora è permanente — nickname, XP e cosmetici conservati.",
       "genericError": "Impossibile salvare l’account. Riprova tra qualche istante.",
       "capital": "Livello {level} · {xp} XP · {count, plural, one {# cosmetico sbloccato} other {# cosmetici sbloccati}}",
-      "capitalRule": "Tutto verrà eliminato dopo 48 h di inattività. Aggiungi un’email e una password, o collega il tuo account a Google, per conservare tutto."
+      "capitalRule": "Tutto verrà eliminato dopo 90 giorni di inattività. Aggiungi un’email e una password, o collega il tuo account a Google, per conservare tutto."
+    },
+    "guestExpiry": {
+      "what": "Account ospite: viene eliminato dopo {days} giorni senza accessi — nickname, livello, XP, cosmetici e amici compresi.",
+      "when": "Di questo passo sarebbe il {date}. Ogni visita sposta in avanti la data."
     }
   },
   "legal": {
@@ -2413,7 +2463,27 @@
         ],
         "needPlayers": "Seleziona almeno 2 giocatori per iniziare.",
         "start": "Inizia il gioco",
-        "resume": "Riprendi la partita in corso"
+        "resume": "Riprendi la partita in corso",
+        "soft": {
+          "rules": [
+            "🎲 Lancia il dado al tuo turno e avanza di altrettante caselle.",
+            "🌿 A seconda della casella, prendi penitenze o accetta una sfida.",
+            "⚡ Le caselle speciali attivano effetti: scambi, maledizioni, protezioni…",
+            "🏆 Il primo che raggiunge la casella 30 vince la partita!",
+            "🌿 Modalità soft: stessi giochi, senza una goccia."
+          ],
+          "difficulties": {
+            "facile": {
+              "desc": "Meno penitenze, ideale per iniziare"
+            },
+            "difficile": {
+              "desc": "Più sfide e penitenze"
+            },
+            "extreme": {
+              "desc": "Penitenza gigante possibile — riservata agli esperti"
+            }
+          }
+        }
       },
       "difficultyLabels": {
         "facile": "Facile",
@@ -2897,7 +2967,7 @@
         "ranking": "Classifica",
         "caseLabel": "Casella {number}",
         "loading": "Caricamento partita…",
-        "drinksShort": "{count} sip(s)",
+        "drinksShort": "{count} sorso/i",
         "turnsRemaining": "{count} turn(s)",
         "next": "Avanti",
         "continue": "Continua",
@@ -3000,6 +3070,113 @@
             "body": "Alcune caselle ti fanno bere, altre ti risparmiano — tocca a tutti, sorso dopo sorso, fino alla fine della partita."
           }
         ]
+      },
+      "soft": {
+        "caseTypes": {
+          "gorgée": "Penitenze",
+          "roue": "Ruota delle penitenze"
+        },
+        "caseDescriptions": {
+          "gorgée": "Prendi {count} penitenza/e!",
+          "gorgéeCulSec": "Penitenza gigante! 🌿",
+          "defi": "Sfida: {challenge} o prendi {count} penitenza/e!",
+          "tous": "Tutti prendono {count} penitenza/e tranne la persona presa di mira! 🌿",
+          "roue": "🎯 Casella speciale: ruota delle penitenze!",
+          "bombe": "💣 Bomba! Tutti prendono una penitenza, il bersaglio il doppio!",
+          "malediction": "👻 Maledizione! 1 penitenza per giro per 3 giri!",
+          "piege": "🕳️ Trappola! Prendi tante penitenze quanto la tua posizione!",
+          "double-peine": "💥 Doppia penalità! Il bersaglio prende {count} penitenze × 2!",
+          "solo": "🎯 Solo! Tutti sono al sicuro, tu prendi 1 penitenza.",
+          "roulette-russe": "🔫 Roulette russa! 1 possibilità su 3: 6 penitenze o salvo.",
+          "question": "❓ Domanda! Rispondi ad alta voce o prendi {count} penitenze.",
+          "vote": "🗳️ Vota! Decidete chi prende {count} penitenze.",
+          "miroir-inverse": "🪞 Specchio invertito! Quando prendi una penitenza, anche il bersaglio (1 turno).",
+          "loterie": "🎰 Lotteria! 2 giocatori sorteggiati: uno prende una penitenza, l'altro avanza.",
+          "inversion": "🔃 Inversione! L'ultimo in classifica prende {count} penitenze al suo posto."
+        },
+        "resolveCase": {
+          "solo": "🎯 {actor} prende 1 penitenza, gli altri sono salvi!",
+          "loterieResult": "🎰 Lotteria! {drinker} prende 2 penitenze, {mover} avanza di una casella."
+        },
+        "shameDice": {
+          "twoSips": "2 penitenze",
+          "outcomeDrink": "🎲 Dado della vergogna ({roll}): {player} prende 2 penitenze!"
+        },
+        "coinFlip": {
+          "lost": "Sorteggio: {result} — il bersaglio perde e prende una penitenza."
+        },
+        "wheel": {
+          "sips": "{count} penitenze"
+        },
+        "defiWheelChallenge": "Prendi 2 penitenze",
+        "defis": [
+          {
+            "text": "Tieni un bicchiere in equilibrio sulla testa per 3 turni",
+            "drinks": 2
+          },
+          {
+            "text": "Cita 5 marche di bibite in 10 secondi",
+            "drinks": 2
+          }
+        ],
+        "game": {
+          "drinksShort": "{count} penitenza/e",
+          "challengeDrink": "Ha preso {count} penitenza/e",
+          "wheel": {
+            "drinks": "Ruota delle penitenze"
+          },
+          "dialogs": {
+            "votePrompt": "Mani alzate — chi prende {count} penitenze?",
+            "shameDiceRules": "1–2 salvo · 3–4 penitenze · 5 avanza · 6 indietro",
+            "drinksToTake": "{count} penitenza/e da fare"
+          },
+          "effects": {
+            "curseDesc": "Prende 1 penitenza in più ogni giro",
+            "chainDesc": "Legato a un partner: subiscono gli stessi effetti (penitenze)",
+            "mirrorDesc": "Quando uno prende una penitenza, anche l'altro ({a} ↔ {b})",
+            "mirrorDescShort": "Quando uno prende una penitenza, anche l'altro"
+          },
+          "outcomes": {
+            "pileFaceLose": "🪙 Testa o croce: sorteggio {result}, {player} prende {count} penitenza/e!",
+            "challengeDrink": "🌿 {player} ha preso {count} penitenza/e!",
+            "trap": "🕳️ Trappola! {player} prende {count} penitenza/e (posizione {position})!",
+            "drinks": "{player} prende {count} penitenza/e!",
+            "bombe": "💣 {player} ha innescato una bomba! Tutti prendono {count} penitenza/e, ma {name} il doppio!",
+            "trapProtected": "🕳️ Trappola! {player} avrebbe dovuto prendere {count} penitenza/e (posizione {position}) ma {protected}",
+            "doublePeine": "💥 {player} prende {count} penitenze (doppia penalità)!",
+            "rouletteMiss": "🔫 Mancato! {player} prende {count} penitenze!",
+            "inversion": "🔃 Inversione! {last} (ultimo) prende {count} penitenza/e al posto di {player}!",
+            "mirrorLink": "🪞 {actor} è legato a {target}: quando uno prende una penitenza, anche l'altro ({count} turno/i di {actor})!",
+            "everyoneDrinksHonor": "Tutti prendono {count} penitenza/e per onorare «{compliment}»",
+            "everyoneDrinksExcept": "Tutti prendono {count} penitenza/e tranne",
+            "wheelDefiOrDrink": "{player} — accetta la sfida o prendi 2 penitenze!",
+            "wheelDrink": "{player} prende una penitenza (giocatore di turno)."
+          },
+          "messages": {
+            "drinking": [
+              "Salute e buonumore!",
+              "Una piccola penitenza per te, un grande passo verso la vittoria!",
+              "Idratati bene, campione!",
+              "Una penitenza in più, una leggenda in più!",
+              "Ricorderai questa penitenza domani mattina!",
+              "Prenditi il tuo tempo, assapora la tua penitenza!"
+            ],
+            "deb": [
+              "Fa penitenze vere",
+              "Penitenze intere, non a metà",
+              "Niente imbrogli",
+              "Stavolta la penitenza la fa davvero"
+            ],
+            "cheers": [
+              "Coraggio!",
+              "Salute!",
+              "Alla tua!",
+              "Cin cin!",
+              "Penitenza gigante!",
+              "Forza, si va!"
+            ]
+          }
+        }
       }
     },
     "quiz": {
@@ -3648,7 +3825,8 @@
       "showLess": "Riduci",
       "loadingMore": "Caricamento…",
       "periodAll": "Generale",
-      "periodWeek": "Questa settimana"
+      "periodWeek": "Questa settimana",
+      "periodWeekHint": "Conta le partite finite da lunedì alle 00:00 (ora di Parigi). Si azzera ogni lunedì: solo per onore, nessun premio."
     }
   },
   "feedback": {
@@ -4246,7 +4424,7 @@
     "cta": "Provalo con i bot",
     "go": "Si parte!",
     "hint": "Senza account: un nickname, un tavolo privato, i bot completano — gli amici possono unirsi a partita in corso.",
-    "guestHint": "Nickname ospite — eliminato dopo 48 h di inattività. Potrai salvarlo in seguito.",
+    "guestHint": "Nickname ospite — eliminato dopo 90 giorni di inattività. Potrai salvarlo in seguito.",
     "loginCta": "Accedi o crea un account",
     "pseudoPlaceholder": "Il tuo nickname per la serata",
     "error": "Impossibile iniziare ora. Riprova."
@@ -4256,10 +4434,19 @@
     "subtitle": "Hai scansionato il codice di un tavolo. Scegli un nome per giocare subito, oppure accedi al tuo account.",
     "pseudoPlaceholder": "Il tuo nome per stasera",
     "guestCta": "Gioca come ospite",
-    "guestHint": "Nickname ospite — eliminato dopo 48 h di inattività. Potrai salvarlo in seguito.",
+    "guestHint": "Nickname ospite — eliminato dopo 90 giorni di inattività. Potrai salvarlo in seguito.",
     "or": "oppure",
     "loginCta": "Accedi o crea un account",
     "dismiss": "No grazie, sto solo guardando",
     "error": "Impossibile unirsi al momento. Riprova."
+  },
+  "og": {
+    "siteTagline": "La casa dei giochi da festa",
+    "gameSubtitle": "Gratis, senza installare — con gli amici o con i bot",
+    "inviteTitle": "{host} ti invita a una partita di {game}",
+    "inviteTitleAnon": "Un tavolo di {game} ti aspetta",
+    "inviteTitleBare": "Un tavolo ti aspetta",
+    "inviteFooter": "Basta un nickname — gratis, senza installare",
+    "inviteDescription": "Unisciti al tavolo {code}: basta un nickname. Gratis, senza installare."
   }
 }

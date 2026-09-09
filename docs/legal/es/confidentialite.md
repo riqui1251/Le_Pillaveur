@@ -126,6 +126,7 @@ El editor sigue siendo el responsable del tratamiento. No se realiza ninguna otr
 ## 7. Plazos de conservación
 
 - **Cuenta activa**: datos conservados mientras exista la cuenta.
+- **Cuenta de invitado** (creada sin email ni contraseña, por ejemplo escaneando un código QR): se elimina automáticamente tras **90 días** de inactividad, con todo lo que contiene (apodo, progresión, cosméticos, amigos). Cada conexión reinicia este plazo; añadir un email y una contraseña, o vincular la cuenta a Google, la hace permanente.
 - **Cuenta eliminada**: supresión o anonimización en un plazo máximo de **12 meses** tras la solicitud, salvo obligación legal de conservación más larga.
 - **Registros técnicos (direcciones IP, presencia)**: **6 meses**. La dirección IP y el país de la última conexión asociados a una cuenta se borran tras **6 meses** sin actividad; el historial de direcciones IP de una cuenta se elimina inmediatamente junto con la cuenta.
 - **Mensajes de chat**: **12 meses**.

@@ -16,7 +16,14 @@ import { cn } from '@/lib/utils'
  * position réelle sous le top. Les gorgées ne comptent pas.
  */
 
-/** Jeux classés (mêmes ids que le registre serveur — ordre d'affichage). */
+/**
+ * Jeux qui PRODUISENT des lignes de classement (mêmes ids que le registre
+ * serveur, dans l'ordre d'affichage). La liste s'arrêtait aux six premiers :
+ * sept jeux enregistraient leurs victoires en base sans jamais avoir de
+ * podium à l'écran. Les jeux « participation seulement » (dilemmes, espion,
+ * purple, 1220, téléphone dessiné) n'y ont pas leur place : ils n'écrivent
+ * aucun résultat, un podium vide leur serait promis à tort.
+ */
 const RANKED_GAME_IDS = [
   'petit-buveur',
   'toucher-coule',
@@ -24,6 +31,13 @@ const RANKED_GAME_IDS = [
   'imposteur',
   'quiz',
   'loup-garou',
+  'president',
+  'bluff',
+  'crobard',
+  'sans-filtre',
+  'mots-codes',
+  'petit-bac',
+  'tabou',
 ] as const
 
 /**
@@ -325,12 +339,22 @@ export function OnlineRankingBoard() {
   const boardFor = (gameId: string): RankingBoard | null =>
     data.perGame.find((b) => b.gameId === gameId) ?? null
 
-  const shownIds = filter === 'all' ? RANKED_GAME_IDS : RANKED_GAME_IDS.filter((id) => id === filter)
+  // Un jeu sans la moindre partie sur la période n'a pas de podium à montrer :
+  // treize cartes vides valent moins qu'aucune. Le jeu FILTRÉ reste visible
+  // (avec son message de vide) pour qu'on puisse toujours revenir en arrière.
+  const activeIds = RANKED_GAME_IDS.filter((id) => (boardFor(id)?.totalPlayers ?? 0) > 0)
+  const chipIds = RANKED_GAME_IDS.filter((id) => activeIds.includes(id) || id === filter)
+  const shownIds = filter === 'all' ? activeIds : [filter]
 
   return (
     <div className="space-y-4">
       {/* Onglets Général / Cette semaine (le hebdo repart chaque lundi). */}
       {periodTabs}
+
+      {/* Le hebdo ne récompense RIEN : il faut le dire, pas le laisser croire. */}
+      {period === 'week' && (
+        <p className="px-1 text-[11px] leading-snug text-white/40">{t('periodWeekHint')}</p>
+      )}
 
       {/* Chips de filtre : accès direct au classement d'un jeu précis. */}
       <div className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -348,7 +372,7 @@ export function OnlineRankingBoard() {
         >
           {t('filterAll')}
         </button>
-        {RANKED_GAME_IDS.map((id) => {
+        {chipIds.map((id) => {
           const game = games.find((g) => g.id === id)
           const active = filter === id
           return (

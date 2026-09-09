@@ -20,6 +20,7 @@ import { useGameAction } from '@/hooks/useGameAction'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { XpGainBanner } from './XpGainBanner'
 
 /** 1220 en ligne : jeu simultané (pas de tour). Chaque joueur règle ses
  * paris en phase setup, puis n'importe qui déclenche un lancer partagé
@@ -159,6 +160,9 @@ export function Game1220Online() {
           <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
           <p className="text-sm text-white/60">{t('online.totalRolls', { count: view.history.length })}</p>
         </motion.div>
+
+        {/* Aucune progression n'existait sur ce jeu : XP de participation. */}
+        <XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
 
         <div className="flex w-full max-w-sm flex-col gap-2">
           {humanCount > 1 ? (

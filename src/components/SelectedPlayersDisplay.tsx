@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl'
 import { Player } from '@/lib/players'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { PlayerName } from '@/components/ui/PlayerName'
 import { Link } from '@/i18n/navigation'
 
 interface SelectedPlayersDisplayProps {
@@ -60,7 +62,11 @@ export function SelectedPlayersDisplay({
 
   return (
     <Card className={`p-4 ${className}`}>
-      <h2 className="text-lg font-semibold mb-3">{title ?? t('selectedTitle')}</h2>
+      <h2 className="mb-3 font-display text-lg font-semibold">{title ?? t('selectedTitle')}</h2>
+      {/* Les lignes étaient des rectangles `bg-gray-100 / dark:bg-gray-800`
+          avec un compteur `text-gray-600` : un gris de maquette posé sur le
+          feutre, illisible et étranger à l'identité. On reprend la grammaire
+          des autres listes de convives (liseré or, avatar, pseudo coloré). */}
       <div className="space-y-2">
         {players.map((player, index) => {
           if (!player || !player.id || !player.name) {
@@ -68,11 +74,20 @@ export function SelectedPlayersDisplay({
           }
 
           return (
-            <div key={player.id} className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
-              <span className="player-name-default font-medium">{index + 1}. {player.name}</span>
+            <div
+              key={player.id}
+              className="flex items-center gap-2.5 rounded-lg border border-gold/15 bg-black/20 px-3 py-2"
+            >
+              <span className="w-4 shrink-0 text-center font-display text-sm font-bold text-gold/70">
+                {index + 1}
+              </span>
+              <PlayerIcon player={player} size="sm" className="h-7 w-7 shrink-0 text-base" />
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                <PlayerName player={player} />
+              </span>
               {player.stats && (
-                <span className="text-sm text-gray-600 ml-2">
-                  ({t('gamesPlayedCount', { count: player.stats.gamesPlayed || 0 })})
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {t('gamesPlayedCount', { count: player.stats.gamesPlayed || 0 })}
                 </span>
               )}
             </div>

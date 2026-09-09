@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePlayers } from '../hooks/usePlayers';
+import { useSelectedPlayers } from '@/hooks/useSelectedPlayers';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
@@ -34,15 +35,33 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
 
   const [newPlayerName, setNewPlayerName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  // La sélection SURVIT aux allers-retours (elle vit en localStorage, partagée
+  // avec le hub) : elle repartait de zéro à chaque visite, obligeant le groupe
+  // à re-cocher ses six convives plusieurs fois dans la soirée.
+  const { selectedIds: selectedPlayerIds, select: selectPlayerIds } = useSelectedPlayers();
   const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null);
   const [onlineName, setOnlineName] = useState('');
   const [onlineLoading, setOnlineLoading] = useState(false);
+  // Le clavier se refermait entre deux prénoms : après un ajout, le champ est
+  // vidé et le bouton « Ajouter » se désactive — le focus (donc le clavier)
+  // partait avec lui. On le rend au champ dans le geste de l'utilisateur.
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
     setOnlineName((prev) => prev || user.onlineDisplayName || user.displayName || '');
   }, [user?.id, user?.onlineDisplayName, user?.displayName]);
+
+  // Contrepartie de la persistance : un joueur supprimé (ici ou sur un autre
+  // appareil, la liste étant resynchronisée au retour) laisserait un id
+  // fantôme dans la sélection — donc un compteur « 6 joueurs prêts » pour 5
+  // cartes cochées. On élague dès que la liste est chargée. Un renommage ne
+  // change pas l'id : la sélection y survit sans rien faire.
+  useEffect(() => {
+    if (loading) return;
+    const alive = selectedPlayerIds.filter((id) => players.some((p) => p.id === id));
+    if (alive.length !== selectedPlayerIds.length) selectPlayerIds(alive);
+  }, [loading, players, selectedPlayerIds, selectPlayerIds]);
 
   const handleAddPlayer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,22 +75,22 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
       const messageKey =
         validationError === 'invalid_characters' ? 'invalidCharactersPlayer' : key;
       setNameError(tCommon(messageKey));
+      nameInputRef.current?.focus();
       return;
     }
 
     setNameError(null);
     addPlayer(trimmed);
     setNewPlayerName('');
+    nameInputRef.current?.focus();
   };
 
   const togglePlayerSelection = (playerId: string) => {
-    setSelectedPlayerIds((prev) => {
-      const isSelected = prev.includes(playerId);
-      if (isSelected) {
-        return prev.filter((id) => id !== playerId);
-      }
-      return [...prev, playerId];
-    });
+    selectPlayerIds(
+      selectedPlayerIds.includes(playerId)
+        ? selectedPlayerIds.filter((id) => id !== playerId)
+        : [...selectedPlayerIds, playerId]
+    );
   };
 
   const handleStartGame = () => {
@@ -130,9 +149,11 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
           </div>
           <form onSubmit={handleAddPlayer} className="space-y-3">
             {/* Une seule ligne même à 375px : champ + bouton côte à côte,
-                le clavier reste ouvert entre deux ajouts. */}
+                le clavier reste ouvert entre deux ajouts (le focus est rendu
+                au champ dans `handleAddPlayer`). */}
             <div className="flex items-center gap-2">
               <Input
+                ref={nameInputRef}
                 type="text"
                 placeholder={t('namePlaceholder')}
                 value={newPlayerName}
@@ -140,6 +161,8 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
                   setNewPlayerName(e.target.value);
                   if (nameError) setNameError(null);
                 }}
+                autoComplete="off"
+                enterKeyHint="done"
                 className="min-w-0 flex-1"
                 aria-invalid={nameError ? true : undefined}
               />
@@ -194,7 +217,7 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
                         onClick={(e) => {
                           e.stopPropagation();
                           removePlayer(player.id);
-                          setSelectedPlayerIds((prev) => prev.filter((id) => id !== player.id));
+                          selectPlayerIds(selectedPlayerIds.filter((id) => id !== player.id));
                         }}
                       >
                         <X className="h-4 w-4" />

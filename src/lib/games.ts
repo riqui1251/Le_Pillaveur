@@ -20,7 +20,12 @@ export type GameMeta = {
   rank?: string;
   hidden?: boolean;
   onlineReady?: boolean;
-  /** Jeu impossible en local (info cachée multi-écrans) : masqué du hub en mode local. */
+  /**
+   * Jeu impossible en local (info cachée multi-écrans). Il reste VISIBLE au
+   * hub en mode local — il fait envie et c'est la porte vers le compte — mais
+   * rangé dans une section « en ligne uniquement » qui dit ce qu'il faut pour
+   * y jouer, au lieu de laisser le groupe le découvrir après le clic.
+   */
   onlineOnly?: boolean;
   /**
    * Bornes de joueurs EN LIGNE — informatif UI (hub + lobby). La vérité côté

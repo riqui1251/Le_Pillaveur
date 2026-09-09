@@ -126,6 +126,7 @@ L'editore resta il titolare del trattamento. Nessun altro trasferimento a terzi 
 ## 7. Durata di conservazione
 
 - **Account attivo**: dati conservati finché l'account esiste.
+- **Account ospite** (creato senza email né password, per esempio scansionando un QR code): eliminato automaticamente dopo **90 giorni** di inattività, con tutto ciò che contiene (nickname, progressione, cosmetici, amici). Ogni accesso azzera questo termine; aggiungere un’email e una password, o collegare l’account a Google, lo rende permanente.
 - **Account eliminato**: cancellazione o anonimizzazione entro un massimo di **12 mesi** dalla richiesta, salvo obbligo legale di conservazione più lunga.
 - **Log tecnici (indirizzi IP, presenza)**: **6 mesi**. L'indirizzo IP e il paese dell'ultima connessione associati a un account vengono cancellati dopo **6 mesi** di inattività; lo storico degli indirizzi IP di un account viene eliminato immediatamente insieme all'account.
 - **Messaggi di chat**: **12 mesi**.

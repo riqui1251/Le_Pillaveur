@@ -44,6 +44,13 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   )
 }
 
+/**
+ * Compte INVITÉ : nombre de jours d'inactivité avant purge automatique.
+ * Doit rester aligné avec GUEST_INACTIVITY_DAYS de src/lib/retention-sweep.ts
+ * — ce module-là importe Prisma, il ne peut pas être importé côté client.
+ */
+const GUEST_INACTIVITY_DAYS = 90
+
 export function AccountInfo() {
   const t = useTranslations('account')
   const tCommon = useTranslations('common')
@@ -68,6 +75,22 @@ export function AccountInfo() {
   const [codeCopied, setCodeCopied] = useState(false)
   const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null)
   const [nameModerationWarning, setNameModerationWarning] = useState(false)
+
+  // Échéance d'un compte invité : la purge compte à partir de la DERNIÈRE
+  // activité, et le joueur est justement en train d'en avoir une — la date
+  // affichée est donc « aujourd'hui + délai », et elle recule à chaque visite.
+  // Calculée après montage : Date.now() diffère entre serveur et client.
+  const [guestDeadline, setGuestDeadline] = useState<string | null>(null)
+  useEffect(() => {
+    if (!user?.isGuest) {
+      setGuestDeadline(null)
+      return
+    }
+    const at = new Date(Date.now() + GUEST_INACTIVITY_DAYS * 24 * 60 * 60 * 1000)
+    setGuestDeadline(
+      new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(at)
+    )
+  }, [user?.isGuest, locale])
   const [onlineName, setOnlineName] = useState('')
   const [onlineNameError, setOnlineNameError] = useState<string | null>(null)
   const [onlineNameSaved, setOnlineNameSaved] = useState(false)
@@ -398,6 +421,22 @@ export function AccountInfo() {
           </button>
         </div>
       </div>
+
+      {/* Avertissement AVANT la perte : un invité découvrait le vide (pseudo
+          libre, niveau 1, succès effacés) en revenant le samedi suivant. On
+          annonce donc ce qui part et quand — sans dramatiser : la carte de
+          pérennisation juste en dessous règle le problème en un clic. */}
+      {user?.isGuest && (
+        <div className="flex gap-3 rounded-2xl border border-gold/20 bg-felt-deep/50 px-4 py-3 text-sm text-white/70">
+          <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+          <div className="min-w-0 flex-1">
+            <p>{t('guestExpiry.what', { days: GUEST_INACTIVITY_DAYS })}</p>
+            {guestDeadline && (
+              <p className="mt-1 text-white/50">{t('guestExpiry.when', { date: guestDeadline })}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <GuestUpgradeCard />
 
