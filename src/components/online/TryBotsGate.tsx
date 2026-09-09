@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { GAMES } from '@/lib/games'
+import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 
@@ -39,6 +40,18 @@ export function TryBotsGate({
   const [pseudo, setPseudo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const tErr = useTranslations('onlineLobby.errors')
+
+  /**
+   * Les routes online répondent par des CODES stables, pas par des phrases :
+   * les afficher bruts montrerait « room_full » au joueur. Les deux codes à
+   * trou ({count}) ne peuvent pas sortir d'ici (création de table et compte
+   * invité) — on retombe sur le message générique s'ils apparaissaient.
+   */
+  const showApiError = (raw: unknown) => {
+    const code = resolveOnlineErrorCode(typeof raw === 'string' ? raw : undefined)
+    setError(code && code !== 'min_players' && code !== 'max_players' ? tErr(code) : t('error'))
+  }
 
   if (!game) return null
   const canBots = Boolean(game.botsFillable && game.onlineReady && !game.hidden)
@@ -80,7 +93,7 @@ export function TryBotsGate({
       })
       const guestData = await guestRes.json().catch(() => null)
       if (!guestRes.ok) {
-        setError(guestData?.error ?? t('error'))
+        showApiError(guestData?.error)
         return
       }
       // 2. Table privée sur CE jeu.
@@ -92,7 +105,7 @@ export function TryBotsGate({
       })
       const roomData = await roomRes.json().catch(() => null)
       if (!roomRes.ok || !roomData?.room?.id) {
-        setError(roomData?.error ?? t('error'))
+        showApiError(roomData?.error)
         return
       }
       // 3. Les bots qui manquent pour pouvoir lancer seul (best-effort :

@@ -45,11 +45,12 @@ export function useOnlineRoomState() {
   userIdRef.current = user?.id
 
   /** Traduit le code d'erreur renvoyé par l'API (onlineLobby.errors) ;
-   *  texte brut si valeur inconnue, clé de secours si champ absent. */
+   *  texte brut si valeur inconnue, clé de secours si champ absent.
+   *  `count` accompagne les codes à trou (bornes de joueurs du lancement). */
   const apiError = useCallback(
-    (raw: string | undefined, fallbackKey: string) => {
+    (raw: string | undefined, fallbackKey: string, count?: number) => {
       const code = resolveOnlineErrorCode(raw)
-      if (code) return t(code)
+      if (code) return t(code, count === undefined ? undefined : { count })
       return raw ?? t(fallbackKey)
     },
     [t]
@@ -86,12 +87,23 @@ export function useOnlineRoomState() {
    * codes ne racontent PAS la même histoire : 404 = la salle n'existe plus
    * (hôte parti, ménage des salles abandonnées), 403 = elle existe mais on n'en
    * est plus membre (exclusion, départ depuis un autre appareil) — annoncer
-   * « table fermée » dans ce cas-là serait faux.
+   * « table fermée » dans ce cas-là serait faux. Un 403 EN PLEINE PARTIE vient
+   * presque toujours du remplacement pour inactivité : on le dit, sinon le
+   * joueur revient au guichet sans rien comprendre. Reste le cas rare d'un
+   * départ déclenché depuis un autre appareil, où le message est approximatif
+   * — le serveur ne distingue pas les deux aujourd'hui.
    */
   const handleRoomGone = useCallback(
     (status: number) => {
+      const replacedByBot = status === 403 && roomRef.current?.status === 'playing'
       setRoom(null)
-      setError(status === 404 ? t('roomClosed') : t('roomLeft'))
+      setError(
+        status === 404
+          ? t('roomClosed')
+          : replacedByBot
+            ? t('replaced_by_bot')
+            : t('roomLeft')
+      )
     },
     [t]
   )
@@ -334,9 +346,11 @@ export function useOnlineRoomState() {
         method: 'POST',
         credentials: 'include',
       })
-      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+      // `count` : borne de joueurs renvoyée par la route de lancement
+      // (min_players / max_players), traduite ici avec le bon nombre.
+      const data = await parseApiJson<{ room?: RoomDto; error?: string; count?: number }>(res)
       if (!res.ok) {
-        setError(apiError(data.error, 'launchFailed'))
+        setError(apiError(data.error, 'launchFailed', data.count))
         return null
       }
       setRoom(data.room ?? null)

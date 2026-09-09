@@ -398,6 +398,10 @@
       "nothing_to_replace": "Nessun giocatore da sostituire.",
       "action_failed": "Azione non riuscita.",
       "rematch_conflict": "Voto non registrato, riprova.",
+      "min_players": "Servono almeno {count} giocatori (bot inclusi).",
+      "max_players": "Troppi giocatori per questo formato (max {count}).",
+      "invalid_action": "Non puoi farlo adesso.",
+      "replaced_by_bot": "Sei stato sostituito da un bot.",
       "roomClosed": "Il tavolo è stato chiuso.",
       "roomLeft": "Non sei più a questo tavolo."
     }
@@ -734,7 +738,8 @@
         "replay": "Rigioca",
         "rematchWaiting": "In attesa ({count}/{total})",
         "backToMenu": "Torna al menu",
-        "waitingReturn": "{name} è uscito — sostituito tra {seconds}s se non torna"
+        "waitingReturn": "{name} è uscito — sostituito tra {seconds}s se non torna",
+        "setupDeadline": "Preparazione: {seconds}s — poi i ritardatari vengono dichiarati pronti"
       }
     },
     "meta": {
@@ -1017,7 +1022,9 @@
         "replay": "Rigioca",
         "rematchWaiting": "In attesa ({count}/{total})",
         "backToMenu": "Torna al menu",
-        "waitingReturn": "{name} se n'è andato — sostituito tra {seconds}s se non torna"
+        "waitingReturn": "{name} se n'è andato — sostituito tra {seconds}s se non torna",
+        "afkWarning": "{name} è inattivo — espulsione e sostituzione con un bot tra {seconds}s",
+        "afkWarningSelf": "⚠️ Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot"
       }
     },
     "roue-des-gorgees": {

@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 import { SF_JUDGE_MS, SF_SUBMIT_MS, type SFClientView } from '@/lib/sans-filtre/engine'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
@@ -39,7 +41,7 @@ export function SansFiltreOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.sans-filtre.game')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction } = useGameAction(room?.id)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
   useEffect(() => {
@@ -79,57 +81,32 @@ export function SansFiltreOnline() {
     return () => clearTimeout(timer)
   }, [view, room])
 
-  // Ticks « arbitre » (jeu des bots + remplacement) : premier humain restant.
-  // L'effet se réarme à chaque changement d'état, donc chaque bot en attente
+  // Ticks « arbitre » (jeu des bots + remplacement), avec secours par rang.
+  // Le tick se réarme à chaque changement d'état, donc chaque bot en attente
   // « réfléchit » selon le tempo de SON persona (botTickDelayMs).
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (body: Record<string, unknown>) => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    // Prochain bot à agir — en submit, le PREMIER en attente (même ordre que
-    // le server-adapter, qui n'en fait soumettre qu'un par tick).
-    const pendingBot =
-      view.phase === 'submit'
-        ? view.players.find(
-            (p) => p.isBot && !p.isJudge && !p.hasPlayed && p.handCount > 0 && !p.leftAt
-          )
-        : view.phase === 'judging'
-          ? view.players.find((p) => p.isJudge && p.isBot)
-          : view.phase === 'reveal'
-            ? view.players.find((p) => p.id === room.currentTurnUserId && p.isBot)
-            : undefined
-    if (pendingBot) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), botTickDelayMs(pendingBot.name))
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
+  // Prochain bot à agir — en submit, le PREMIER en attente (même ordre que
+  // le server-adapter, qui n'en fait soumettre qu'un par tick).
+  const pendingBot =
+    view?.phase === 'submit'
+      ? view.players.find(
+          (p) => p.isBot && !p.isJudge && !p.hasPlayed && p.handCount > 0 && !p.leftAt
         )
-        if (expired) send({ action: 'replace-left' })
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+      : view?.phase === 'judging'
+        ? view.players.find((p) => p.isJudge && p.isBot)
+        : view?.phase === 'reveal'
+          ? view.players.find((p) => p.id === room?.currentTurnUserId && p.isBot)
+          : undefined
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick: pendingBot
+      ? { body: { action: 'bot' }, delayMs: botTickDelayMs(pendingBot.name) }
+      : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
   if (!inGame) {
     return <GameOnlineLobby gameId="sans-filtre" />
@@ -156,23 +133,6 @@ export function SansFiltreOnline() {
     p.isBot
       ? botEmojiFromName(p.name)
       : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
-
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        // Intention joueur : pas de verrou de version (le moteur valide la
-        // phase) — un verrou ferait perdre les cartes abattues simultanément.
-        body: JSON.stringify(body),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const totalPhaseMs = view.phase === 'judging' ? SF_JUDGE_MS : SF_SUBMIT_MS
@@ -311,6 +271,12 @@ export function SansFiltreOnline() {
         )}
       </div>
 
+      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
       {/* Bannière retour */}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">

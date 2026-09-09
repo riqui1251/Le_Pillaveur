@@ -20,6 +20,8 @@ import {
 } from '@/lib/president/engine'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -93,7 +95,9 @@ export function PresidentOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.president.game')
-  const [busy, setBusy] = useState(false)
+  // Intention joueur : pas de verrou de version (le moteur valide le tour et la
+  // légalité du combo) — le hook lit la réponse et annonce les refus.
+  const { busy, actionError, sendAction } = useGameAction(room?.id)
   const [selected, setSelected] = useState<number[]>([])
 
   const inGame = room?.gameId === 'president' && room.status === 'playing'
@@ -131,27 +135,14 @@ export function PresidentOnline() {
     return () => clearTimeout(timer)
   }, [view, room])
 
-  // Arbitre humain : tours des bots + remplacement des partis.
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (body: Record<string, unknown>) => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const actor = view.players.find((p) => p.id === room.currentTurnUserId)
-    // Tick spéculatif « fermeture de carré » : quand un run ≥ 2 traîne au
-    // sommet du pli, un bot détenant le complément peut fermer HORS TOUR — le
-    // serveur tranche (NOT_BOT_TURN sinon, inoffensif).
-    const closeChance =
+  // Arbitre (avec secours par rang, cf. useBotReferee) : tours des bots +
+  // remplacement des partis.
+  const botActor = view?.players.find((p) => p.id === room?.currentTurnUserId)
+  // Tick spéculatif « fermeture de carré » : quand un run ≥ 2 traîne au
+  // sommet du pli, un bot détenant le complément peut fermer HORS TOUR — le
+  // serveur tranche (NOT_BOT_TURN sinon, inoffensif).
+  const closeChance = Boolean(
+    view &&
       view.phase === 'playing' &&
       view.lastPlay !== null &&
       view.trickRun !== null &&
@@ -161,32 +152,24 @@ export function PresidentOnline() {
       // posé d'un coup ne se ferme pas d'une carte seule).
       4 - view.trickRun.count === view.lastPlay.cards.length &&
       view.players.some((p) => p.isBot && !p.leftAt)
-    if (actor?.isBot && (view.phase === 'playing' || view.phase === 'interlude')) {
-      botTimer = setTimeout(
-        () => send({ action: 'bot' }),
-        view.phase === 'interlude' ? 5000 : botTickDelayMs(actor.name)
-      )
-    } else if (closeChance) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), 900 + Math.random() * 1200)
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send({ action: 'replace-left' })
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+  )
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick:
+      botActor?.isBot && (view?.phase === 'playing' || view?.phase === 'interlude')
+        ? {
+            body: { action: 'bot' },
+            delayMs: view?.phase === 'interlude' ? 5000 : botTickDelayMs(botActor.name),
+          }
+        : closeChance
+          ? { body: { action: 'bot' }, delayMs: 900 + Math.random() * 1200 }
+          : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
   if (!inGame) {
     return <GameOnlineLobby gameId="president" />
@@ -224,23 +207,6 @@ export function PresidentOnline() {
     return ''
   }
   const trickHistory = view.trickHistory ?? []
-
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        // Intention joueur : pas de verrou de version (le moteur valide le
-        // tour et la légalité du combo).
-        body: JSON.stringify(body),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const me = view.players.find((p) => p.id === user.id)
@@ -504,6 +470,13 @@ export function PresidentOnline() {
             name: leftPlayer.name,
             seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
           })}
+        </div>
+      )}
+
+      {/* Coup refusé (combo illégal, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
         </div>
       )}
 

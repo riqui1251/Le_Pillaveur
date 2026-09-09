@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 import { MC_CLUE_MAX_LEN, MC_CLUE_MS, MC_GUESS_MS, type MCClientView, type MCTeam } from '@/lib/mots-codes/engine'
 import { botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
@@ -44,7 +46,7 @@ export function MotsCodesOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.mots-codes.game')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction } = useGameAction(room?.id)
   const [clueWord, setClueWord] = useState('')
   const [clueCount, setClueCount] = useState(2)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
@@ -85,56 +87,33 @@ export function MotsCodesOnline() {
     return () => clearTimeout(timer)
   }, [view, room])
 
-  // Ticks bots (maître-mot devenu bot, équipe muette) + remplacement.
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (body: Record<string, unknown>) => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const master =
-      view.phase === 'clue'
-        ? view.players.find((p) => p.team === view.activeTeam && p.isSpymaster)
-        : undefined
-    const activeGuessers =
-      view.phase === 'guess'
-        ? view.players.filter((p) => p.team === view.activeTeam && !p.isSpymaster && !p.leftAt)
-        : null
-    const masterIsBot = Boolean(master?.isBot)
-    const guessersAllBots = activeGuessers !== null && activeGuessers.every((p) => p.isBot)
-    if (masterIsBot || guessersAllBots) {
-      botTimer = setTimeout(
-        () => send({ action: 'bot' }),
-        botTickDelayMs(masterIsBot ? master?.name : activeGuessers?.[0]?.name)
-      )
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send({ action: 'replace-left' })
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+  // Ticks bots (maître-mot devenu bot, équipe muette) + remplacement, avec
+  // secours par rang (cf. useBotReferee).
+  const clueMaster =
+    view?.phase === 'clue'
+      ? view.players.find((p) => p.team === view.activeTeam && p.isSpymaster)
+      : undefined
+  const activeGuessers =
+    view?.phase === 'guess'
+      ? view.players.filter((p) => p.team === view.activeTeam && !p.isSpymaster && !p.leftAt)
+      : null
+  const masterIsBot = Boolean(clueMaster?.isBot)
+  const guessersAllBots = activeGuessers !== null && activeGuessers.every((p) => p.isBot)
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick:
+      masterIsBot || guessersAllBots
+        ? {
+            body: { action: 'bot' },
+            delayMs: botTickDelayMs(masterIsBot ? clueMaster?.name : activeGuessers?.[0]?.name),
+          }
+        : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
   useEffect(() => {
     setClueWord('')
@@ -161,23 +140,6 @@ export function MotsCodesOnline() {
   const iAmActiveMaster = activeMaster?.id === user.id
   const iCanGuess =
     view.phase === 'guess' && me && me.team === view.activeTeam && !me.isSpymaster && !me.leftAt
-
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        // Intention joueur : pas de verrou de version (le moteur valide la
-        // phase et le camp au trait).
-        body: JSON.stringify(body),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const totalPhaseMs = view.phase === 'clue' ? MC_CLUE_MS : MC_GUESS_MS
@@ -331,6 +293,12 @@ export function MotsCodesOnline() {
         )}
       </div>
 
+      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {t('waitingReturn', {

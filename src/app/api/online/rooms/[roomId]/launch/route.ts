@@ -79,10 +79,9 @@ export async function POST(_request: Request, { params }: Params) {
     const settings = parseRoomSettings(room.settingsJson)
     const capacity = TC_MODES[settings.tcMode ?? '1v1'].playersPerTeam * 2
     if (room.members.length > capacity) {
-      return NextResponse.json(
-        { error: `Trop de joueurs pour ce format (max ${capacity})` },
-        { status: 400 }
-      )
+      // Code + `count` : le client traduit lui-même (avant, la phrase française
+      // partait telle quelle chez les joueurs EN/ES/IT).
+      return NextResponse.json(onlineErrorBody('max_players', { count: capacity }), { status: 400 })
     }
   } else {
     // Bornes du registre (jeux serveur-autoritaires) ; 2 joueurs par défaut.
@@ -94,16 +93,10 @@ export async function POST(_request: Request, { params }: Params) {
     const bots = adapter?.botsFillable ? Math.max(0, settings.botsCount ?? 0) : 0
     const total = room.members.length + bots
     if (total < min) {
-      return NextResponse.json(
-        { error: `Au moins ${min} joueur${min > 1 ? 's' : ''} requis pour lancer (bots inclus)` },
-        { status: 400 }
-      )
+      return NextResponse.json(onlineErrorBody('min_players', { count: min }), { status: 400 })
     }
     if (room.members.length > max || total > max) {
-      return NextResponse.json(
-        { error: `Trop de joueurs pour ce jeu (max ${max})` },
-        { status: 400 }
-      )
+      return NextResponse.json(onlineErrorBody('max_players', { count: max }), { status: 400 })
     }
   }
 

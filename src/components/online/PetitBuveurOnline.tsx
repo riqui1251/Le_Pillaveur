@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 import { PLAYER_ICONS } from '@/lib/players'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { DiceOverlay, type DiceOverlayState } from '@/components/petit-buveur/DiceOverlay'
 import { TurnOverlay } from '@/components/petit-buveur/TurnOverlay'
 import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositions'
@@ -86,7 +88,7 @@ export function PetitBuveurOnline() {
   const tCase = useTranslations('games.petit-buveur.caseTypes')
   const tGame = useTranslations('games.petit-buveur.game')
   const tDiff = useTranslations('games.petit-buveur.difficultyLabels')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
   const [rolling, setRolling] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -116,58 +118,29 @@ export function PetitBuveurOnline() {
   const tutorial = useGameTutorial('petit-buveur', inGame)
   const cosmetics = useMemberCosmetics(room)
 
-  // Début de tour côté client : remis à zéro à chaque écriture d'état serveur.
-  // Sert de base aux comptes à rebours AFK (l'horloge d'autorité reste le serveur).
   const stateVersion = room?.stateVersion ?? -1
-  const turnStartRef = useRef({ version: stateVersion, at: Date.now() })
-  if (turnStartRef.current.version !== stateVersion) {
-    turnStartRef.current = { version: stateVersion, at: Date.now() }
-  }
 
-  // Ticks « arbitre » (premier humain PRÉSENT de la partie) :
+  // Ticks « arbitre » (avec secours par rang, cf. useBotReferee) :
   // - tour d'un bot → demande au serveur de jouer UNE action (rythme visible) ;
   // - joueur parti depuis plus de 3 min → demande son remplacement par un bot.
   // La garde expectedVersion rend les ticks concurrents inoffensifs.
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (action: 'bot' | 'replace-left') => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const activeP = view.players[view.currentPlayer]
-    if (activeP?.isBot) botTimer = setTimeout(() => send('bot'), botTickDelayMs(activeP.name))
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send('replace-left')
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+  const activeActor = view?.players[view.currentPlayer]
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick: activeActor?.isBot
+      ? { body: { action: 'bot' }, delayMs: botTickDelayMs(activeActor.name) }
+      : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
   // Tick AFK : si le joueur au tour (humain, présent, pas moi) ne joue rien
   // pendant 3 min, n'importe quel autre client demande son remplacement —
   // le serveur revalide avec SA propre horloge avant d'expulser.
-  const afkTarget = view && view.phase !== 'finished' ? view.players[view.currentPlayer] : undefined
+  const afkTarget = view && view.phase !== 'finished' ? activeActor : undefined
   // Surveillé seulement s'il reste un AUTRE humain présent : sans lui, personne
   // ne peut déclencher l'expulsion (le dernier humain n'est jamais expulsable).
   const afkWatchable = Boolean(
@@ -176,23 +149,15 @@ export function PetitBuveurOnline() {
       !afkTarget.leftAt &&
       view?.players.some((p) => !p.isBot && !p.leftAt && p.id !== afkTarget.id)
   )
-  useEffect(() => {
-    if (!view || !user || !room || !afkWatchable) return
-    const activeP = view.players[view.currentPlayer]
-    if (!activeP || activeP.id === user.id) return
-    const expectedVersion = room.stateVersion
-    const check = () => {
-      if (Date.now() - turnStartRef.current.at < ONLINE_REPLACE_GRACE_MS) return
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'replace-afk', expectedVersion }),
-      })
-    }
-    const timer = setInterval(check, 5000)
-    return () => clearInterval(timer)
-  }, [view, user, room, afkWatchable])
+  // Début de tour côté client : remis à zéro à chaque écriture d'état serveur.
+  // Sert de base aux comptes à rebours AFK (l'horloge d'autorité reste le serveur).
+  const turnStartedAt = useAfkTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    targetId: afkTarget?.id,
+    enabled: afkWatchable,
+  })
 
   // Avertissement AFK affiché après 1 min sans action du joueur au tour.
   const [afkWatch, setAfkWatch] = useState(false)
@@ -342,20 +307,10 @@ export function PetitBuveurOnline() {
     action: 'roll' | 'resolve',
     choice?: { targetId?: string; side?: 'pile' | 'face'; option?: string }
   ): Promise<{ view?: { lastDice?: number | null } } | null> => {
-    if (!room || busy) return null
-    setBusy(true)
-    try {
-      const res = await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action, expectedVersion: room.stateVersion, choice }),
-      })
-      // Le serveur diffuse le nouvel état (SSE) → useOnlineRoom rafraîchit la vue.
-      return (await res.json().catch(() => null)) as { view?: { lastDice?: number | null } } | null
-    } finally {
-      setBusy(false)
-    }
+    // Le serveur diffuse le nouvel état (SSE) → useOnlineRoom rafraîchit la vue ;
+    // le hook, lui, annonce les refus (pas ton tour, expulsion…).
+    const res = await postAction({ action, expectedVersion: room.stateVersion, choice })
+    return (res?.data ?? null) as { view?: { lastDice?: number | null } } | null
   }
 
   const handleRoll = () => {
@@ -554,6 +509,13 @@ export function PetitBuveurOnline() {
             </div>
           )}
 
+          {/* Coup refusé (pas ton tour, expulsion…) — 3 s */}
+          {actionError && (
+            <div className="rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center text-xs font-semibold text-red-100">
+              {actionError}
+            </div>
+          )}
+
           {/* Avertissement AFK (60 dernières secondes avant expulsion) : message
               direct « joue ! » pour le joueur au tour, informatif pour les autres. */}
           {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
@@ -562,7 +524,7 @@ export function PetitBuveurOnline() {
                 {(() => {
                   const seconds = Math.max(
                     0,
-                    Math.ceil((turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
+                    Math.ceil((turnStartedAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
                   )
                   return afkTarget.id === user.id
                     ? t('afkWarningSelf', { seconds })

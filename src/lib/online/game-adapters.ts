@@ -323,6 +323,14 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
  * `players: [{ id, isBot?, leftAt? }]` + `phase` avec un état 'finished'.
  */
 
+/**
+ * `error` porte un CODE (jamais une phrase) : soit un code stable de
+ * src/lib/online-errors.ts, soit un code majuscule de moteur (NOT_YOUR_TURN,
+ * PHASE_CHANGED…). La route action le traduit avant de répondre — un joueur
+ * EN/ES/IT ne doit jamais lire de français codé en dur ni d'identifiant
+ * technique. Exception : les statuts < 400 (issue normale du jeu, ex.
+ * GUESS_WRONG au Crobard) passent bruts, le client les interprète lui-même.
+ */
 export type AdapterActionResult =
   | { ok: true; state: unknown }
   | { ok: false; error: string; status: number }
@@ -429,7 +437,7 @@ const toucherCouleAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left' }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyTCRoomAction(state, userId, input)
     if (!result.ok) return { ok: false, error: result.error, status: 403 }
@@ -486,7 +494,7 @@ const menteurAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyMenteurRoomAction(state, userId, input)
     if (!result.ok) {
@@ -537,7 +545,7 @@ const imposteurAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyImposteurRoomAction(state, userId, input)
     if (!result.ok) {
@@ -587,7 +595,7 @@ const quizAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyQuizRoomAction(state, userId, input)
     if (!result.ok) {
@@ -656,7 +664,7 @@ const loupGarouAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyLGRoomAction(state, userId, input)
     if (!result.ok) {
@@ -697,6 +705,8 @@ const game1220Adapter: GameAdapter = {
       input = { type: 'set-draft', choices: body.choices as Partial<Choices1220> }
     } else if (body.action === 'ready') {
       input = { type: 'ready' }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
     } else if (body.action === 'roll') {
       input = { type: 'roll' }
     } else if (body.action === 'end') {
@@ -706,15 +716,18 @@ const game1220Adapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyGame1220RoomAction(state, userId, input)
     if (!result.ok) {
-      return {
-        ok: false,
-        error: result.error,
-        status: result.error === 'NOTHING_TO_REPLACE' ? 409 : 403,
-      }
+      const conflict = [
+        'NOTHING_TO_REPLACE',
+        'NOT_EXPIRED',
+        'PHASE_CHANGED',
+        'NO_DEADLINE',
+        'NOTHING_TO_ADVANCE',
+      ].includes(result.error)
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
     }
     return { ok: true, state: result.state }
   },
@@ -759,7 +772,7 @@ const purpleAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyPurpleRoomAction(state, userId, input)
     if (!result.ok) {
@@ -810,7 +823,7 @@ const bluffAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyBluffRoomAction(state, userId, input)
     if (!result.ok) {
@@ -862,7 +875,7 @@ const espionAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyEspionRoomAction(state, userId, input)
     if (!result.ok) {
@@ -915,7 +928,7 @@ const tabouAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyTabouRoomAction(state, userId, input)
     if (!result.ok) {
@@ -974,7 +987,7 @@ const crobardAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyCrobardRoomAction(state, userId, input)
     if (!result.ok) {
@@ -1044,7 +1057,7 @@ const telephoneAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyTelephoneRoomAction(state, userId, input)
     if (!result.ok) {
@@ -1094,7 +1107,7 @@ const sansFiltreAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applySFRoomAction(state, userId, input)
     if (!result.ok) {
@@ -1143,7 +1156,7 @@ const motsCodesAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyMCRoomAction(state, userId, input)
     if (!result.ok) {
@@ -1191,7 +1204,7 @@ const dilemmesAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyDilRoomAction(state, userId, input)
     if (!result.ok) {
@@ -1246,7 +1259,7 @@ const petitBacAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyPbcRoomAction(state, userId, input)
     if (!result.ok) {
@@ -1298,7 +1311,7 @@ const presidentAdapter: GameAdapter = {
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left', graceMs: ONLINE_REPLACE_GRACE_MS }
     } else {
-      return { ok: false, error: 'Action invalide', status: 400 }
+      return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyPreRoomAction(state, userId, input)
     if (!result.ok) {

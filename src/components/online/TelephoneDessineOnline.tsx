@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils'
 import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -39,7 +41,7 @@ export function TelephoneDessineOnline() {
   const { user } = useAuth()
   const { room, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.telephone-dessine.game')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction } = useGameAction(room?.id)
   const [text, setText] = useState('')
   const [myStrokes, setMyStrokes] = useState<Stroke[]>([])
   // Brouillons accessibles depuis les effets (dépôt auto au chrono).
@@ -112,51 +114,29 @@ export function TelephoneDessineOnline() {
     })
   }, [view, room, user, clock])
 
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (body: Record<string, unknown>) => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const pendingBot =
-      view.phase === 'contributing' && !view.haveISubmitted
-        ? view.players.find((p) => p.isBot)
-        : undefined
-    const actorIsBot =
-      view.phase === 'reveal' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (pendingBot || actorIsBot) {
-      botTimer = setTimeout(
-        () => send({ action: 'bot' }),
-        view.phase === 'reveal' ? 2500 : botTickDelayMs(pendingBot?.name)
-      )
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send({ action: 'replace-left' })
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+  // Ticks « arbitre » (bots + remplacement), avec secours par rang.
+  const pendingBot =
+    view?.phase === 'contributing' && !view.haveISubmitted
+      ? view.players.find((p) => p.isBot)
+      : undefined
+  const revealActorIsBot = Boolean(
+    view?.phase === 'reveal' && view.players.find((p) => p.id === room?.currentTurnUserId)?.isBot
+  )
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick:
+      pendingBot || revealActorIsBot
+        ? {
+            body: { action: 'bot' },
+            delayMs: view?.phase === 'reveal' ? 2500 : botTickDelayMs(pendingBot?.name),
+          }
+        : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
   if (!inGame) {
     return <GameOnlineLobby gameId="telephone-dessine" />
@@ -174,23 +154,6 @@ export function TelephoneDessineOnline() {
   const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
-
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      // Intention joueur : pas de verrou de version (le moteur valide la
-      // phase) — un verrou ferait perdre les envois simultanés.
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const submitText = async () => {
     const trimmed = text.trim()
@@ -327,6 +290,12 @@ export function TelephoneDessineOnline() {
         )}
       </div>
 
+      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {t('waitingReturn', {

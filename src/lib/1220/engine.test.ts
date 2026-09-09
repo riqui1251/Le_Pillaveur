@@ -5,8 +5,10 @@ import {
   currentGame1220ActorId,
   Game1220EngineError,
   defaultChoices1220,
+  GAME_1220_SETUP_MS,
   type Game1220State,
 } from './engine'
+import { phaseKey } from '@/lib/online/phase-clock'
 
 const PLAYERS = [
   { id: 'p1', name: 'Alice' },
@@ -14,8 +16,11 @@ const PLAYERS = [
   { id: 'p3', name: 'Chris' },
 ]
 
+/** Horloge FIXE : les tests d'échéance doivent rester déterministes. */
+const T0 = 1_700_000_000_000
+
 function freshState(): Game1220State {
-  return createGame1220State(PLAYERS, 'seed-1220')
+  return createGame1220State(PLAYERS, 'seed-1220', T0)
 }
 
 function readyAll(state: Game1220State): Game1220State {
@@ -120,6 +125,76 @@ describe('play', () => {
   it('refuse ROLL une fois finished', () => {
     const s = reduceGame1220(readyAll(freshState()), { type: 'END', playerId: 'p1' })
     expect(() => reduceGame1220(s, { type: 'ROLL', playerId: 'p2' })).toThrow(Game1220EngineError)
+  })
+})
+
+describe('échéance de mise en place', () => {
+  const expired = T0 + GAME_1220_SETUP_MS + 1
+
+  it('pose une échéance sur la phase setup', () => {
+    const s = freshState()
+    expect(s.phaseEndsAt).toBe(T0 + GAME_1220_SETUP_MS)
+    expect(s.phaseSeq).toBe(1)
+  })
+
+  it('refuse d’avancer avant l’échéance', () => {
+    const s = freshState()
+    expect(() =>
+      reduceGame1220(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + 1000 })
+    ).toThrow(Game1220EngineError)
+  })
+
+  it('refuse une clé de phase périmée (tick concurrent déjà passé)', () => {
+    const s = freshState()
+    expect(() =>
+      reduceGame1220(s, { type: 'ADVANCE', claimedKey: 'setup#42', now: expired })
+    ).toThrow(Game1220EngineError)
+  })
+
+  it('à l’échéance, les retardataires sont déclarés prêts et la partie démarre', () => {
+    let s = freshState()
+    s = reduceGame1220(s, { type: 'READY', playerId: 'p1' })
+    expect(s.phase).toBe('setup')
+    s = reduceGame1220(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: expired })
+    expect(s.phase).toBe('play')
+    expect(s.setupReady.sort()).toEqual(['p1', 'p2', 'p3'])
+    expect(s.configs?.map((c) => c.playerId).sort()).toEqual(['p1', 'p2', 'p3'])
+    // Le retardataire part avec les choix affichés à son écran.
+    expect(s.configs?.find((c) => c.playerId === 'p2')).toMatchObject(defaultChoices1220())
+  })
+
+  it('conserve le brouillon d’un retardataire déclaré prêt d’office', () => {
+    let s = reduceGame1220(freshState(), {
+      type: 'SET_DRAFT',
+      playerId: 'p2',
+      choices: { drinkNumber: 4, giveNumber: 9 },
+    })
+    s = reduceGame1220(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: expired })
+    const cfg = s.configs?.find((c) => c.playerId === 'p2')
+    expect(cfg?.drinkNumber).toBe(4)
+    expect(cfg?.giveNumber).toBe(9)
+  })
+
+  it('retombe sur les choix par défaut si le brouillon est en conflit', () => {
+    let s = reduceGame1220(freshState(), {
+      type: 'SET_DRAFT',
+      playerId: 'p3',
+      choices: { giveNumber: defaultChoices1220().drinkNumber },
+    })
+    s = reduceGame1220(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: expired })
+    expect(s.configs?.find((c) => c.playerId === 'p3')).toMatchObject(defaultChoices1220())
+  })
+
+  it('ignore les joueurs partis et n’avance pas hors de la phase setup', () => {
+    let s = reduceGame1220(freshState(), { type: 'LEAVE', playerId: 'p3', at: T0 + 10 })
+    s = reduceGame1220(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: expired })
+    expect(s.phase).toBe('play')
+    expect(s.configs?.map((c) => c.playerId).sort()).toEqual(['p1', 'p2'])
+    // La phase play n'a plus d'échéance : le tick n'a plus rien à faire.
+    expect(s.phaseEndsAt).toBeNull()
+    expect(() =>
+      reduceGame1220(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: expired })
+    ).toThrow(Game1220EngineError)
   })
 })
 

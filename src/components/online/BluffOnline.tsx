@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 import { BLUFF_FAKE_MAX_LEN, type BluffClientView } from '@/lib/bluff/engine'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
@@ -40,7 +42,7 @@ export function BluffOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.bluff.game')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
   const [fakeInput, setFakeInput] = useState('')
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
@@ -82,55 +84,32 @@ export function BluffOnline() {
     return () => clearTimeout(timer)
   }, [view, room])
 
-  // Ticks « arbitre » (bots en attente + remplacement) : premier humain
-  // restant. submit/vote sont simultanés → pas d'acteur unique côté bots.
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (body: Record<string, unknown>) => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const pendingBot =
-      view.phase === 'submit'
-        ? view.players.find((p) => p.isBot && !p.hasSubmitted)
-        : view.phase === 'vote'
-          ? view.players.find((p) => p.isBot && !p.hasVoted)
-          : undefined
-    const actorIsBot =
-      view.phase === 'reveal' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (pendingBot || actorIsBot) {
-      botTimer = setTimeout(
-        () => send({ action: 'bot' }),
-        view.phase === 'reveal' ? 2500 : botTickDelayMs(pendingBot?.name)
-      )
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send({ action: 'replace-left' })
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+  // Ticks « arbitre » (bots en attente + remplacement), avec secours par rang
+  // (cf. useBotReferee). submit/vote sont simultanés → pas d'acteur unique.
+  const pendingBot =
+    view?.phase === 'submit'
+      ? view.players.find((p) => p.isBot && !p.hasSubmitted)
+      : view?.phase === 'vote'
+        ? view.players.find((p) => p.isBot && !p.hasVoted)
+        : undefined
+  const revealActorIsBot = Boolean(
+    view?.phase === 'reveal' && view.players.find((p) => p.id === room?.currentTurnUserId)?.isBot
+  )
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick:
+      pendingBot || revealActorIsBot
+        ? {
+            body: { action: 'bot' },
+            delayMs: view?.phase === 'reveal' ? 2500 : botTickDelayMs(pendingBot?.name),
+          }
+        : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
   // Vide le champ de bluff à chaque nouvel état.
   useEffect(() => {
@@ -161,20 +140,9 @@ export function BluffOnline() {
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
+  // Verrou de version conservé ; le hook lit la réponse et annonce les refus.
+  const sendAction = (body: Record<string, unknown>) =>
+    postAction({ ...body, expectedVersion: room.stateVersion })
 
   const fakeTrimmed = fakeInput.trim()
   const fakeOk = fakeTrimmed.length > 0 && fakeTrimmed.length <= BLUFF_FAKE_MAX_LEN
@@ -309,6 +277,12 @@ export function BluffOnline() {
         )}
       </div>
 
+      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
       {/* Bannière retour */}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">

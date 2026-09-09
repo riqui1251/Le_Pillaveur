@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils'
 import { PBC_WRITE_MS, type PbcClientView } from '@/lib/petit-bac/engine'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -38,7 +40,7 @@ export function PetitBacOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.petit-bac.game')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction } = useGameAction(room?.id)
 
   const inGame = room?.gameId === 'petit-bac' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
@@ -102,36 +104,21 @@ export function PetitBacOnline() {
     })
   }, [view, room, user])
 
-  // Arbitre humain : bots (meneur du reveal) + remplacement des partis.
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (body: Record<string, unknown>) => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const actorIsBot =
-      view.phase === 'reveal' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (actorIsBot) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), 5000)
-    }
-
-    // Pas de tick replace-left au Petit Bac : un déserteur n'est PAS converti
-    // en bot « copie blanche » — il reste écarté (le moteur l'exclut de tous
-    // les décomptes) et peut revenir à tout moment.
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-    }
-  }, [view, user, room])
+  // Arbitre (avec secours par rang) : bot meneur du reveal.
+  // Pas de tick replace-left au Petit Bac : un déserteur n'est PAS converti
+  // en bot « copie blanche » — il reste écarté (le moteur l'exclut de tous
+  // les décomptes) et peut revenir à tout moment.
+  const revealActorIsBot = Boolean(
+    view?.phase === 'reveal' && view.players.find((p) => p.id === room?.currentTurnUserId)?.isBot
+  )
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick: revealActorIsBot ? { body: { action: 'bot' }, delayMs: 5000 } : null,
+  })
 
   if (!inGame) {
     return <GameOnlineLobby gameId="petit-bac" />
@@ -154,23 +141,6 @@ export function PetitBacOnline() {
     p.isBot
       ? botEmojiFromName(p.name)
       : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
-
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      // Intention joueur : pas de verrou de version (le moteur valide la
-      // phase) — un verrou ferait perdre l'action sur écritures simultanées.
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const me = view.players.find((p) => p.id === user.id)
@@ -300,6 +270,12 @@ export function PetitBacOnline() {
         )}
       </div>
 
+      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
       {/* Bandeau limité à la fenêtre de retour probable — un parti reste
           simplement écarté (jamais converti en bot au Petit Bac). */}
       {leftPlayer?.leftAt && clock - leftPlayer.leftAt < ONLINE_REPLACE_GRACE_MS && (

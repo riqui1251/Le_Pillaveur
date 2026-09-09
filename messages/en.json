@@ -398,6 +398,10 @@
       "nothing_to_replace": "No player to replace.",
       "action_failed": "Action failed.",
       "rematch_conflict": "Vote not recorded, try again.",
+      "min_players": "At least {count} players required (bots included).",
+      "max_players": "Too many players for this format (max {count}).",
+      "invalid_action": "You can't do that right now.",
+      "replaced_by_bot": "You were replaced by a bot.",
       "roomClosed": "The table has been closed.",
       "roomLeft": "You're no longer in this room."
     }
@@ -734,7 +738,8 @@
         "replay": "Play again",
         "rematchWaiting": "Waiting ({count}/{total})",
         "backToMenu": "Back to menu",
-        "waitingReturn": "{name} left — replaced in {seconds}s if they don't return"
+        "waitingReturn": "{name} left — replaced in {seconds}s if they don't return",
+        "setupDeadline": "Setup: {seconds}s — after that, anyone not ready is marked ready"
       }
     },
     "meta": {
@@ -1017,7 +1022,9 @@
         "replay": "Play again",
         "rematchWaiting": "Waiting ({count}/{total})",
         "backToMenu": "Back to menu",
-        "waitingReturn": "{name} left — replaced in {seconds}s if not back"
+        "waitingReturn": "{name} left — replaced in {seconds}s if not back",
+        "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
+        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
       }
     },
     "roue-des-gorgees": {

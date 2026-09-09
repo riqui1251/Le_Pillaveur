@@ -59,7 +59,14 @@ export function parseGame1220State(json: string | null): Game1220State | null {
   try {
     const raw = JSON.parse(json) as Game1220State
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+    // Rétro-compat : les états sérialisés avant l'horloge de phase n'ont ni
+    // `phaseSeq` ni `phaseEndsAt` (mise en place sans échéance, comme avant).
+    return {
+      ...raw,
+      rematchVotes: raw.rematchVotes ?? [],
+      phaseSeq: raw.phaseSeq ?? 0,
+      phaseEndsAt: raw.phaseEndsAt ?? null,
+    }
   } catch {
     return null
   }
@@ -68,6 +75,7 @@ export function parseGame1220State(json: string | null): Game1220State | null {
 export type Game1220RoomActionInput =
   | { type: 'set-draft'; choices: Partial<Choices1220> }
   | { type: 'ready' }
+  | { type: 'advance'; phaseKey: string }
   | { type: 'roll' }
   | { type: 'end' }
   | { type: 'bot' }
@@ -88,6 +96,17 @@ export function applyGame1220RoomAction(
         return { ok: true, state: reduceGame1220(state, { type: 'SET_DRAFT', playerId: userId, choices: input.choices }) }
       case 'ready':
         return { ok: true, state: reduceGame1220(state, { type: 'READY', playerId: userId }) }
+      case 'advance':
+        // Échéance de mise en place : tous les clients ticquent, le moteur
+        // n'en laisse passer qu'un (PHASE_CHANGED pour les suivants).
+        return {
+          ok: true,
+          state: reduceGame1220(state, {
+            type: 'ADVANCE',
+            claimedKey: input.phaseKey,
+            now: Date.now(),
+          }),
+        }
       case 'roll':
         return { ok: true, state: reduceGame1220(state, { type: 'ROLL', playerId: userId }) }
       case 'end':

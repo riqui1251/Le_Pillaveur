@@ -1,5 +1,6 @@
 import { evaluatePlayerRoll1220, type Choices1220 } from '@/lib/game-1220'
 import { hashSeed, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
+import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
  * Moteur pur du 1220 en ligne — SERVEUR-AUTORITAIRE.
@@ -9,6 +10,12 @@ import { hashSeed, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
  * en phase `play` N'IMPORTE QUEL joueur peut déclencher un lancer partagé
  * (d12+d20) évalué contre les paris de TOUT LE MONDE. Zéro info cachée →
  * aucune vue anti-triche nécessaire, la même vue sert joueur et spectateur.
+ *
+ * La mise en place est SIMULTANÉE : aucun acteur unique, donc l'anti-AFK
+ * commun (`replace-afk`, qui vise le joueur au tour) ne s'y applique pas. Elle
+ * est bornée par une HORLOGE DE PHASE : à l'échéance, n'importe quel client
+ * envoie `advance` et les retardataires sont déclarés prêts — sans quoi un
+ * seul joueur parti boire fige la table indéfiniment.
  */
 
 export type Player1220 = {
@@ -35,7 +42,7 @@ export type RollEntry1220 = { d12: number; d20: number; results: RollResult1220[
 
 export type Config1220 = Choices1220 & { playerId: string; name: string }
 
-export interface Game1220State {
+export type Game1220State = TimedPhaseState & {
   version: number
   rngState: RngState
   players: Player1220[]
@@ -51,6 +58,7 @@ export interface Game1220State {
 export type Game1220Action =
   | { type: 'SET_DRAFT'; playerId: string; choices: Partial<Choices1220> }
   | { type: 'READY'; playerId: string }
+  | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'ROLL'; playerId: string }
   | { type: 'END'; playerId: string }
   | { type: 'LEAVE'; playerId: string; at: number }
@@ -61,6 +69,8 @@ export class Game1220EngineError extends Error {}
 
 export const GAME_1220_MIN_PLAYERS = 2
 export const GAME_1220_MAX_PLAYERS = 16
+/** Durée max de la mise en place — même délai de grâce que l'anti-AFK commun. */
+export const GAME_1220_SETUP_MS = 3 * 60 * 1000
 const HISTORY_LIMIT = 15
 
 export function defaultChoices1220(): Choices1220 {
@@ -69,7 +79,8 @@ export function defaultChoices1220(): Choices1220 {
 
 export function createGame1220State(
   players: { id: string; name: string; isBot?: boolean }[],
-  seed: string | number
+  seed: string | number,
+  now: number = Date.now()
 ): Game1220State {
   const draft: Record<string, Choices1220> = {}
   const setupReady: string[] = []
@@ -82,6 +93,7 @@ export function createGame1220State(
     version: 1,
     rngState: hashSeed(seed),
     players: players.map((p) => ({ id: p.id, name: p.name, isBot: Boolean(p.isBot), leftAt: null })),
+    ...enterPhase(0, 'setup', GAME_1220_SETUP_MS, now),
     phase: 'setup',
     draft,
     setupReady,
@@ -106,7 +118,15 @@ export function lockConfigsIfAllReady(state: Game1220State, setupReady: string[]
   const configs: Config1220[] = state.players
     .filter((p) => !p.leftAt)
     .map((p) => ({ playerId: p.id, name: p.name, ...(state.draft[p.id] ?? defaultChoices1220()) }))
-  return { ...state, version: state.version + 1, setupReady, phase: 'play', configs }
+  return {
+    ...state,
+    version: state.version + 1,
+    setupReady,
+    // La phase `play` n'a pas d'échéance : n'importe qui peut lancer les dés.
+    ...enterPhase(state.phaseSeq, 'play', null),
+    phase: 'play',
+    configs,
+  }
 }
 
 export function reduceGame1220(state: Game1220State, action: Game1220Action): Game1220State {
@@ -133,6 +153,29 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
       if (choices.drinkNumber === choices.giveNumber) throw new Game1220EngineError('CLASH')
       if (state.setupReady.includes(action.playerId)) return state
       return lockConfigsIfAllReady(state, [...state.setupReady, action.playerId])
+    }
+
+    case 'ADVANCE': {
+      const check = checkAdvance(state, action.claimedKey, action.now)
+      if (!check.ok) throw new Game1220EngineError(check.error)
+      if (state.phase !== 'setup') throw new Game1220EngineError('NOTHING_TO_ADVANCE')
+      // Échéance de mise en place : les retardataires partent avec les choix
+      // affichés à l'écran. Un brouillon en conflit (même chiffre boire/donner)
+      // n'aurait jamais passé le bouton « prêt » → retour aux choix par défaut
+      // plutôt que de verrouiller une config illégale.
+      const active = activePlayerIds(state)
+      // Table vide (tout le monde parti) : rien à verrouiller — sans ce garde,
+      // le tick resterait éligible et réécrirait l'état en boucle.
+      if (active.length === 0) throw new Game1220EngineError('NOTHING_TO_ADVANCE')
+      const draft = { ...state.draft }
+      for (const id of active) {
+        const choices = draft[id] ?? defaultChoices1220()
+        draft[id] = choices.drinkNumber === choices.giveNumber ? defaultChoices1220() : choices
+      }
+      return lockConfigsIfAllReady(
+        { ...state, draft },
+        Array.from(new Set([...state.setupReady, ...active]))
+      )
     }
 
     case 'ROLL': {
@@ -168,7 +211,12 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.leftAt) throw new Game1220EngineError('UNKNOWN_PLAYER')
       if (state.phase !== 'play') throw new Game1220EngineError('WRONG_PHASE')
-      return { ...state, version: state.version + 1, phase: 'finished' }
+      return {
+        ...state,
+        version: state.version + 1,
+        ...enterPhase(state.phaseSeq, 'finished', null),
+        phase: 'finished',
+      }
     }
 
     case 'LEAVE': {
@@ -223,7 +271,10 @@ export function currentGame1220ActorId(_state: Game1220State): string | null {
   return null
 }
 
-/** Aucune info cachée : la même vue sert joueur et spectateur TV. */
+/**
+ * Aucune info cachée : la même vue sert joueur et spectateur TV. `phaseKey`
+ * accompagne l'état pour que les clients renvoient l'échéance qu'ils ont vue.
+ */
 export function toGame1220ClientView(state: Game1220State) {
-  return state
+  return { ...state, phaseKey: phaseKey(state) }
 }

@@ -77,7 +77,10 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json(onlineErrorBody('unsupported_game'), { status: 400 })
   }
   if (!room.members.some((m) => m.userId === user.id)) {
-    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
+    // La partie tourne (statut vérifié ci-dessus) mais on n'est plus membre :
+    // c'est le remplacement pour inactivité qui nous a sorti de la salle.
+    // « Accès refusé » laissait le joueur croire à un bug.
+    return NextResponse.json(onlineErrorBody('replaced_by_bot'), { status: 403 })
   }
 
   const body = await request.json().catch(() => ({}))
@@ -115,7 +118,16 @@ export async function POST(request: Request, { params }: Params) {
   } else {
     const result = adapter.applyAction(state, user.id, body)
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status })
+      // Statut < 400 = issue NORMALE du jeu, pas un refus (GUESS_WRONG /
+      // GUESS_CLOSE au Crobard) : le client lit ce code brut pour son propre
+      // retour visuel — on n'y touche pas.
+      if (result.status < 400) {
+        return NextResponse.json({ error: result.error }, { status: result.status })
+      }
+      // Refus : on sort un CODE stable, jamais le texte du moteur. Les codes
+      // sans traduction dédiée retombent sur le générique traduit.
+      const code = resolveOnlineErrorCode(result.error) ?? 'action_failed'
+      return NextResponse.json(onlineErrorBody(code), { status: result.status })
     }
     next = result.state
   }

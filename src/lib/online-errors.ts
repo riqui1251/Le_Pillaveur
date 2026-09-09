@@ -52,6 +52,13 @@ export const ONLINE_ERROR_CODES = [
   'nothing_to_replace',
   // Revanche : le vote a perdu la course d'écriture (compare-and-swap épuisé)
   'rematch_conflict',
+  // Bornes de lancement — le nombre voyage dans `count` (i18n : « {count} »)
+  'min_players',
+  'max_players',
+  // Actions de jeu : intention mal formée, ou joueur retiré de la salle
+  'invalid_action',
+  'replaced_by_bot',
+  // Refus du moteur sans code dédié — filet générique, jamais de texte brut
   'action_failed',
 ] as const
 
@@ -126,12 +133,31 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   not_afk_yet: 'Ce joueur est encore dans le délai de grâce',
   nothing_to_replace: 'Aucun joueur à remplacer',
   rematch_conflict: 'Vote non enregistré, réessayez',
+  min_players: 'Au moins {count} joueurs requis (bots inclus)',
+  max_players: 'Trop de joueurs pour ce format (max {count})',
+  invalid_action: 'Action invalide',
+  replaced_by_bot: 'Tu as été remplacé par un bot',
   action_failed: 'Action impossible',
 }
 
-/** Corps JSON d'erreur des routes online : code stable + texte FR de compat */
+/** Paramètres d'un code à trou (bornes de joueurs) — repris tel quel côté i18n. */
+export type OnlineErrorParams = { count?: number }
+
+/**
+ * Corps JSON d'erreur des routes online : code stable + texte FR de compat.
+ * Les codes à trou (`min_players`, `max_players`) renvoient AUSSI `count` :
+ * le client traduit lui-même le message avec ce nombre, plutôt que de recevoir
+ * une phrase française toute faite.
+ */
 export function onlineErrorBody(
-  code: OnlineErrorCode
-): { error: OnlineErrorCode; message: string } {
-  return { error: code, message: ONLINE_ERROR_TEXT_FR[code] }
+  code: OnlineErrorCode,
+  params?: OnlineErrorParams
+): { error: OnlineErrorCode; message: string; count?: number } {
+  const text = ONLINE_ERROR_TEXT_FR[code]
+  if (params?.count === undefined) return { error: code, message: text }
+  return {
+    error: code,
+    message: text.replace('{count}', String(params.count)),
+    count: params.count,
+  }
 }

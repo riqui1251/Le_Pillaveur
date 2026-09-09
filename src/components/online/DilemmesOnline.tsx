@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils'
 import { DIL_VOTE_MS, type DilClientView } from '@/lib/dilemmes/engine'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -37,7 +39,7 @@ export function DilemmesOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.dilemmes.game')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction } = useGameAction(room?.id)
 
   const inGame = room?.gameId === 'dilemmes' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
@@ -67,57 +69,30 @@ export function DilemmesOnline() {
     return () => clearTimeout(timer)
   }, [view, room])
 
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (body: Record<string, unknown>) => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const pendingBot =
-      view.phase === 'vote'
-        ? view.players.find((p) => p.isBot && !p.hasVoted && !p.leftAt)
-        : undefined
-    const revealActor =
-      view.phase === 'reveal'
-        ? view.players.find((p) => p.id === room.currentTurnUserId)
-        : undefined
-    if (pendingBot) {
-      // Tempo de « réflexion » du persona : les votes bots s'étalent dans la manche.
-      botTimer = setTimeout(() => send({ action: 'bot' }), botTickDelayMs(pendingBot.name))
-    } else if (revealActor?.isBot) {
-      // Le bot meneur enchaîne à son tempo, mais laisse le temps de lire la révélation.
-      botTimer = setTimeout(
-        () => send({ action: 'bot' }),
-        Math.max(3500, botTickDelayMs(revealActor.name))
-      )
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send({ action: 'replace-left' })
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+  // Ticks « arbitre » (bots + remplacement), avec secours par rang.
+  const pendingBot =
+    view?.phase === 'vote'
+      ? view.players.find((p) => p.isBot && !p.hasVoted && !p.leftAt)
+      : undefined
+  const revealActor =
+    view?.phase === 'reveal'
+      ? view.players.find((p) => p.id === room?.currentTurnUserId)
+      : undefined
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick: pendingBot
+      ? // Tempo de « réflexion » du persona : les votes bots s'étalent dans la manche.
+        { body: { action: 'bot' }, delayMs: botTickDelayMs(pendingBot.name) }
+      : revealActor?.isBot
+        ? // Le bot meneur enchaîne à son tempo, mais laisse le temps de lire la révélation.
+          { body: { action: 'bot' }, delayMs: Math.max(3500, botTickDelayMs(revealActor.name)) }
+        : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
   if (!inGame) {
     return <GameOnlineLobby gameId="dilemmes" />
@@ -141,23 +116,6 @@ export function DilemmesOnline() {
     p.isBot
       ? botEmojiFromName(p.name)
       : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
-
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      // Intention joueur : pas de verrou de version (le moteur valide la
-      // phase) — un verrou ferait perdre les votes simultanés.
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const votedCount = view.players.filter((p) => p.hasVoted && !p.leftAt).length
@@ -306,6 +264,12 @@ export function DilemmesOnline() {
         )}
       </div>
 
+      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {t('waitingReturn', {

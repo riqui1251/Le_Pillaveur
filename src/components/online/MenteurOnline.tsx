@@ -14,6 +14,8 @@ import { isLegalRaise, type MenteurBid, type MenteurClientView } from '@/lib/men
 import { CssDie } from '@/components/games/CssDie'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
@@ -65,7 +67,7 @@ export function MenteurOnline() {
   const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.menteur.game')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
   const [hideDice, setHideDice] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
@@ -105,57 +107,26 @@ export function MenteurOnline() {
     setBidFace(suggestion.face)
   }, [view, stateVersion, totalDice])
 
-  // Ticks « arbitre » (premier humain présent) : tour d'un bot → un coup ;
-  // joueur parti depuis 3 min → remplacement. expectedVersion rend les ticks
-  // concurrents inoffensifs (le serveur revalide tout).
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (action: 'bot' | 'replace-left') => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action, expectedVersion }),
-      })
-    }
+  // Ticks « arbitre » (avec secours par rang, cf. useBotReferee) : tour d'un
+  // bot → un coup ; joueur parti depuis 3 min → remplacement. expectedVersion
+  // rend les ticks concurrents inoffensifs (le serveur revalide tout).
+  const activeActor = view?.players.find((p) => p.id === room?.currentTurnUserId)
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick: activeActor?.isBot
+      ? {
+          body: { action: 'bot' },
+          delayMs: view?.phase === 'reveal' ? 2600 : botTickDelayMs(activeActor.name),
+        }
+      : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const active = view.players.find((p) => p.id === room.currentTurnUserId)
-    if (active?.isBot) {
-      botTimer = setTimeout(
-        () => send('bot'),
-        view.phase === 'reveal' ? 2600 : botTickDelayMs(active.name)
-      )
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send('replace-left')
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
-
-  // Base locale des comptes à rebours AFK (l'autorité reste l'horloge serveur).
-  const turnStartRef = useRef({ version: stateVersion, at: Date.now() })
-  if (turnStartRef.current.version !== stateVersion) {
-    turnStartRef.current = { version: stateVersion, at: Date.now() }
-  }
-
-  const afkTarget = view?.players.find((p) => p.id === room?.currentTurnUserId)
+  const afkTarget = activeActor
   const afkWatchable = Boolean(
     view &&
       view.phase !== 'finished' &&
@@ -164,23 +135,14 @@ export function MenteurOnline() {
       !afkTarget.leftAt &&
       view.players.some((p) => !p.isBot && !p.leftAt && p.id !== afkTarget.id)
   )
-  useEffect(() => {
-    if (!view || !user || !room || !afkWatchable) return
-    if (!afkTarget || afkTarget.id === user.id) return
-    const expectedVersion = room.stateVersion
-    const check = () => {
-      if (Date.now() - turnStartRef.current.at < ONLINE_REPLACE_GRACE_MS) return
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'replace-afk', expectedVersion }),
-      })
-    }
-    const timer = setInterval(check, 5000)
-    return () => clearInterval(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, user, room, afkWatchable, afkTarget?.id])
+  // Base locale des comptes à rebours AFK (l'autorité reste l'horloge serveur).
+  const turnStartedAt = useAfkTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    targetId: afkTarget?.id,
+    enabled: afkWatchable,
+  })
 
   const [afkWatch, setAfkWatch] = useState(false)
   useEffect(() => {
@@ -226,21 +188,10 @@ export function MenteurOnline() {
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
-      })
-      // Le serveur diffuse le nouvel état (SSE) → useOnlineRoom rafraîchit.
-    } finally {
-      setBusy(false)
-    }
-  }
+  // Le serveur diffuse le nouvel état (SSE) → useOnlineRoom rafraîchit ; le
+  // hook, lui, annonce les refus (enchère illégale, tour perdu…).
+  const sendAction = (body: Record<string, unknown>) =>
+    postAction({ ...body, expectedVersion: room.stateVersion })
 
   const bidLegal = isLegalRaise(view.currentBid, bidQty, bidFace, totalDice, view.palifico)
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
@@ -346,6 +297,13 @@ export function MenteurOnline() {
         </div>
       )}
 
+      {/* Coup refusé (enchère illégale, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
+
       {/* Bannières retour / AFK */}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
@@ -359,11 +317,11 @@ export function MenteurOnline() {
         <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
           {afkTarget.id === user.id
             ? t('afkWarningSelf', {
-                seconds: Math.max(0, Math.ceil((turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
+                seconds: Math.max(0, Math.ceil((turnStartedAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
               })
             : t('afkWarning', {
                 name: afkTarget.name,
-                seconds: Math.max(0, Math.ceil((turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
+                seconds: Math.max(0, Math.ceil((turnStartedAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
               })}
         </div>
       )}

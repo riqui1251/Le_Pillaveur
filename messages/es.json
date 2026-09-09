@@ -398,6 +398,10 @@
       "nothing_to_replace": "No hay jugador que reemplazar.",
       "action_failed": "La acción ha fallado.",
       "rematch_conflict": "Voto no registrado, inténtalo de nuevo.",
+      "min_players": "Se necesitan al menos {count} jugadores (bots incluidos).",
+      "max_players": "Demasiados jugadores para este formato (máx. {count}).",
+      "invalid_action": "No puedes hacer eso ahora.",
+      "replaced_by_bot": "Un bot te ha reemplazado.",
       "roomClosed": "La mesa ha sido cerrada.",
       "roomLeft": "Ya no estás en esta mesa."
     }
@@ -734,7 +738,8 @@
         "replay": "Volver a jugar",
         "rematchWaiting": "Esperando ({count}/{total})",
         "backToMenu": "Volver al menú",
-        "waitingReturn": "{name} se fue — será reemplazado en {seconds}s si no vuelve"
+        "waitingReturn": "{name} se fue — será reemplazado en {seconds}s si no vuelve",
+        "setupDeadline": "Preparación: {seconds}s — después, los rezagados se marcan como listos"
       }
     },
     "meta": {
@@ -1017,7 +1022,9 @@
         "replay": "Jugar de nuevo",
         "rematchWaiting": "Esperando ({count}/{total})",
         "backToMenu": "Volver al menú",
-        "waitingReturn": "{name} se ha ido — reemplazo en {seconds}s si no vuelve"
+        "waitingReturn": "{name} se ha ido — reemplazo en {seconds}s si no vuelve",
+        "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
+        "afkWarningSelf": "⚠️ ¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot"
       }
     },
     "roue-des-gorgees": {

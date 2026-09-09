@@ -15,6 +15,8 @@ import type { EspionClientView } from '@/lib/espion/engine'
 import { getEspionLocations } from '@/lib/espion/data'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
@@ -41,7 +43,7 @@ export function EspionOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.espion.game')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
   const [showAccuseGrid, setShowAccuseGrid] = useState(false)
   const [showGuessGrid, setShowGuessGrid] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
@@ -89,52 +91,29 @@ export function EspionOnline() {
     return () => clearTimeout(timer)
   }, [view, room])
 
-  // Ticks « arbitre » (bots en attente + remplacement) : premier humain restant.
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (body: Record<string, unknown>) => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const supportBot =
-      view.phase === 'discussion' && view.activeAccusation
-        ? view.players.find((p) => p.isBot)
-        : undefined
-    const actorIsBot =
-      view.phase === 'reveal' && view.players.find((p) => p.id === room.currentTurnUserId)?.isBot
-    if (supportBot || actorIsBot) {
-      botTimer = setTimeout(
-        () => send({ action: 'bot' }),
-        view.phase === 'reveal' ? 2500 : botTickDelayMs(supportBot?.name)
-      )
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send({ action: 'replace-left' })
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+  // Ticks « arbitre » (bots en attente + remplacement), avec secours par rang.
+  const supportBot =
+    view?.phase === 'discussion' && view.activeAccusation
+      ? view.players.find((p) => p.isBot)
+      : undefined
+  const revealActorIsBot = Boolean(
+    view?.phase === 'reveal' && view.players.find((p) => p.id === room?.currentTurnUserId)?.isBot
+  )
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick:
+      supportBot || revealActorIsBot
+        ? {
+            body: { action: 'bot' },
+            delayMs: view?.phase === 'reveal' ? 2500 : botTickDelayMs(supportBot?.name),
+          }
+        : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
   useEffect(() => {
     setShowAccuseGrid(false)
@@ -167,20 +146,9 @@ export function EspionOnline() {
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
+  // Verrou de version conservé ; le hook lit la réponse et annonce les refus.
+  const sendAction = (body: Record<string, unknown>) =>
+    postAction({ ...body, expectedVersion: room.stateVersion })
 
   const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const totalPhaseMs = view.discussionMs
@@ -337,6 +305,12 @@ export function EspionOnline() {
         )}
       </div>
 
+      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {t('waitingReturn', {

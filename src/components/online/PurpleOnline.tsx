@@ -12,12 +12,17 @@ import { cn } from '@/lib/utils'
 import { parsePurpleState, type PurpleSyncedState, type SerializedCard } from '@/lib/online-game-state'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /** Purple en ligne : jeu tour par tour, cagnotte « patate chaude ». Aucune
  * info cachée (tirage public dès qu'il a lieu). */
+
+/** Avertissement AFK affiché 1 min avant l'expulsion (comme les autres jeux). */
+const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 
 type BetType = 'rouge' | 'double-rouge' | 'noir' | 'double-noir' | 'purple' | 'double-purple'
 
@@ -67,7 +72,7 @@ export function PurpleOnline() {
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.purple')
   const tCommon = useTranslations('common')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
 
   const inGame = room?.gameId === 'purple' && room.status === 'playing'
   const tutorial = useGameTutorial('purple', inGame)
@@ -93,57 +98,62 @@ export function PurpleOnline() {
     }
   }, [deckLen])
 
-  // Ticks « arbitre » (premier humain présent) : tour d'un bot → un coup ;
-  // joueur parti depuis 3 min → remplacement. expectedVersion rend les ticks
-  // concurrents inoffensifs (le serveur revalide tout).
+  // Ticks « arbitre » (avec secours par rang, cf. useBotReferee) : tour d'un
+  // bot → un coup ; joueur parti depuis 3 min → remplacement. expectedVersion
+  // rend les ticks concurrents inoffensifs (le serveur revalide tout).
+  const activeActor = view?.players[view.currentPlayer]
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick: activeActor?.isBot
+      ? {
+          body: { action: 'bot' },
+          delayMs:
+            view?.pendingReveal || view?.canContinue ? 1600 : botTickDelayMs(activeActor.name),
+        }
+      : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
+
+  // Tick AFK : le Purple est tour par tour, un joueur parti boire sans quitter
+  // bloquait la table sans limite. Surveillé seulement s'il reste un AUTRE
+  // humain présent (le dernier humain n'est jamais expulsable).
+  const afkTarget = view?.phase !== 'finished' ? activeActor : undefined
+  const afkWatchable = Boolean(
+    view &&
+      afkTarget &&
+      !afkTarget.isBot &&
+      !afkTarget.leftAt &&
+      view.players.some((p) => !p.isBot && !p.leftAt && p.id !== afkTarget.id)
+  )
+  const turnStartedAt = useAfkTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    targetId: afkTarget?.id,
+    enabled: afkWatchable,
+  })
+
+  // Avertissement AFK affiché après 2 min sans action du joueur au tour.
+  const stateVersion = room?.stateVersion ?? -1
+  const [afkWatch, setAfkWatch] = useState(false)
   useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (action: 'bot' | 'replace-left') => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action, expectedVersion }),
-      })
-    }
-
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    const active = view.players[view.currentPlayer]
-    if (active?.isBot) {
-      botTimer = setTimeout(
-        () => send('bot'),
-        view.pendingReveal || view.canContinue ? 1600 : botTickDelayMs(active.name)
-      )
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send('replace-left')
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+    setAfkWatch(false)
+    if (!afkWatchable) return
+    const timer = setTimeout(() => setAfkWatch(true), AFK_WARN_AFTER_MS)
+    return () => clearTimeout(timer)
+  }, [stateVersion, afkWatchable])
 
   const [clock, setClock] = useState(() => Date.now())
   const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
   useEffect(() => {
-    if (!someoneLeft) return
+    if (!someoneLeft && !afkWatch) return
     const timer = setInterval(() => setClock(Date.now()), 1000)
     return () => clearInterval(timer)
-  }, [someoneLeft])
+  }, [someoneLeft, afkWatch])
 
   if (!inGame) {
     return <GameOnlineLobby gameId="purple" />
@@ -157,20 +167,9 @@ export function PurpleOnline() {
     )
   }
 
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
+  // Verrou de version conservé ; le hook lit la réponse et annonce les refus.
+  const sendAction = (body: Record<string, unknown>) =>
+    postAction({ ...body, expectedVersion: room.stateVersion })
 
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
@@ -248,12 +247,31 @@ export function PurpleOnline() {
       </div>
       {tutorial.open && <GameTutorialModal gameId="purple" onClose={tutorial.close} />}
 
+      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {t('online.waitingReturn', {
             name: leftPlayer.name,
             seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
           })}
+        </div>
+      )}
+
+      {afkWatch && afkTarget && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {afkTarget.id === user.id
+            ? t('online.afkWarningSelf', {
+                seconds: Math.max(0, Math.ceil((turnStartedAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
+              })
+            : t('online.afkWarning', {
+                name: afkTarget.name,
+                seconds: Math.max(0, Math.ceil((turnStartedAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
+              })}
         </div>
       )}
 

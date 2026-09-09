@@ -15,6 +15,8 @@ import { TOTAL_MAX, TOTAL_MIN } from '@/lib/game-1220'
 import type { Game1220SyncedState } from '@/lib/online-game-state'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -23,10 +25,20 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
  * paris en phase setup, puis n'importe qui déclenche un lancer partagé
  * évalué contre les paris de tout le monde. Aucune info cachée. */
 
-function parseView(json: string | null | undefined): Game1220SyncedState | null {
+/**
+ * L'horloge de phase du moteur voyage avec la vue. Champs OPTIONNELS :
+ * les états sérialisés avant son ajout ne les portent pas (mise en place sans
+ * échéance, comportement d'origine).
+ */
+type Game1220View = Game1220SyncedState & {
+  phaseKey?: string
+  phaseEndsAt?: number | null
+}
+
+function parseView(json: string | null | undefined): Game1220View | null {
   if (!json) return null
   try {
-    const v = JSON.parse(json) as Game1220SyncedState
+    const v = JSON.parse(json) as Game1220View
     return Array.isArray(v.players) && typeof v.phase === 'string' ? v : null
   } catch {
     return null
@@ -39,7 +51,7 @@ export function Game1220Online() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.1220')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
 
   const inGame = room?.gameId === '1220' && room.status === 'playing'
   const tutorial = useGameTutorial('1220', inGame)
@@ -51,38 +63,56 @@ export function Game1220Online() {
     []
   )
 
-  // Référent (premier humain présent) : envoie les ticks « joueur parti → bot ».
+  // Arbitre (avec secours par rang, cf. useBotReferee) : ticks « joueur parti
+  // → bot ». Pas de tick bot : les bots sont prêts d'office et ne jouent pas.
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
+
+  // ÉCHÉANCE DE MISE EN PLACE : la phase setup est SIMULTANÉE (aucun acteur
+  // unique, donc pas d'anti-AFK possible). TOUS les clients envoient le tick
+  // « advance » (idempotent, jitter) — le moteur déclare alors prêts les
+  // retardataires plutôt que de laisser la table figée.
+  const phaseEndsAt = view?.phaseEndsAt ?? null
   useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    if (!view.players.some((p) => !p.isBot && p.leftAt)) return
+    if (!view || !room || view.phase === 'finished' || phaseEndsAt === null || !view.phaseKey) return
     const expectedVersion = room.stateVersion
-    const check = () => {
-      const expired = view.players.some(
-        (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-      )
-      if (expired) {
-        void fetch(`/api/online/rooms/${room.id}/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ action: 'replace-left', expectedVersion }),
-        })
-      }
+    const delay = Math.max(250, phaseEndsAt - Date.now() + 300 + Math.random() * 700)
+    const fire = () => {
+      void fetch(`/api/online/rooms/${room.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
+      })
     }
-    check()
-    const timer = setInterval(check, 5000)
-    return () => clearInterval(timer)
-  }, [view, user, room])
+    // Le tick se RÉARME après l'échéance : un coup unique perdu (requête en
+    // échec, onglet endormi au mauvais moment) figerait la mise en place pour
+    // de bon, puisque l'état ne bouge plus et que l'effet ne serait pas rejoué.
+    let retry: ReturnType<typeof setInterval> | undefined
+    const timer = setTimeout(() => {
+      fire()
+      retry = setInterval(fire, 5000 + Math.random() * 2000)
+    }, delay)
+    return () => {
+      clearTimeout(timer)
+      if (retry) clearInterval(retry)
+    }
+  }, [view, room, phaseEndsAt])
 
   const [clock, setClock] = useState(() => Date.now())
   const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
+  const setupCountdown = view?.phase === 'setup' && phaseEndsAt !== null
   useEffect(() => {
-    if (!someoneLeft) return
+    if (!someoneLeft && !setupCountdown) return
     const timer = setInterval(() => setClock(Date.now()), 1000)
     return () => clearInterval(timer)
-  }, [someoneLeft])
+  }, [someoneLeft, setupCountdown])
 
   if (!inGame) {
     return <GameOnlineLobby gameId="1220" />
@@ -96,20 +126,9 @@ export function Game1220Online() {
     )
   }
 
-  const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      await fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion: room.stateVersion }),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
+  // Verrou de version conservé ; le hook lit la réponse et annonce les refus.
+  const sendAction = (body: Record<string, unknown>) =>
+    postAction({ ...body, expectedVersion: room.stateVersion })
 
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
@@ -187,6 +206,14 @@ export function Game1220Online() {
         <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/55">
           {t('online.waitingSetup')}
         </div>
+
+        {phaseEndsAt !== null && (
+          <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
+            {t('online.setupDeadline', {
+              seconds: Math.max(0, Math.ceil((phaseEndsAt - clock) / 1000)),
+            })}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2">
           {view.players.map((p) => {
@@ -317,6 +344,12 @@ export function Game1220Online() {
       </div>
       {tutorial.open && <GameTutorialModal gameId="1220" onClose={tutorial.close} />}
 
+      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {t('online.waitingReturn', {

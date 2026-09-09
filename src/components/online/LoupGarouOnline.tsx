@@ -39,7 +39,8 @@ import { cn } from '@/lib/utils'
 import { lgTeamOf } from '@/lib/loup-garou/engine'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
-import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useBotReferee } from '@/hooks/useBotReferee'
+import { useGameAction } from '@/hooks/useGameAction'
 import { playGameSound } from '@/lib/sound/game-sounds'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -366,7 +367,7 @@ export function LoupGarouOnline() {
   const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.loup-garou.game')
-  const [busy, setBusy] = useState(false)
+  const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
   const [hideRole, setHideRole] = useState(false)
   const reducedMotion = useReducedMotion()
   const [showLegend, setShowLegend] = useState(false)
@@ -433,45 +434,20 @@ export function LoupGarouOnline() {
     return () => clearTimeout(timer)
   }, [view, room])
 
-  // Ticks « arbitre » (bots + remplacement) : premier humain RESTANT —
-  // vivant OU fantôme (un mort peut encore piloter les ticks).
-  useEffect(() => {
-    if (!view || !user || !room || view.phase === 'finished') return
-    const referee = view.players.find((p) => !p.isBot && !p.leftAt)
-    if (referee?.id !== user.id) return
-    const expectedVersion = room.stateVersion
-    const send = (body: Record<string, unknown>) => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...body, expectedVersion }),
-      })
-    }
-
-    // Tick bot « au cas où » : NOT_BOT_TURN (409) si aucun bot concerné.
-    let botTimer: ReturnType<typeof setTimeout> | undefined
-    if (view.players.some((p) => p.isBot)) {
-      botTimer = setTimeout(() => send({ action: 'bot' }), 2500 + Math.random() * 3000)
-    }
-
-    let replaceTimer: ReturnType<typeof setInterval> | undefined
-    if (view.players.some((p) => !p.isBot && p.leftAt)) {
-      const check = () => {
-        const expired = view.players.some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= ONLINE_REPLACE_GRACE_MS
-        )
-        if (expired) send({ action: 'replace-left' })
-      }
-      check()
-      replaceTimer = setInterval(check, 5000)
-    }
-
-    return () => {
-      if (botTimer) clearTimeout(botTimer)
-      if (replaceTimer) clearInterval(replaceTimer)
-    }
-  }, [view, user, room])
+  // Ticks « arbitre » (bots + remplacement), avec secours par rang : tout
+  // humain RESTANT arbitre — vivant OU fantôme (un mort pilote les ticks).
+  // Tick bot « au cas où » : NOT_BOT_TURN (409) si aucun bot concerné.
+  useBotReferee({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    botTick: view?.players.some((p) => p.isBot)
+      ? { body: { action: 'bot' }, delayMs: 2500 + Math.random() * 3000 }
+      : null,
+    replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
 
   if (!inGame) {
     return <GameOnlineLobby gameId="loup-garou" />
@@ -504,26 +480,14 @@ export function LoupGarouOnline() {
   const roleName = (role: LGRole) => t(`roles.${role}.name`)
 
   const sendAction = async (body: Record<string, unknown>) => {
-    if (!room || busy) return
-    setBusy(true)
-    try {
-      const post = (expectedVersion: number) =>
-        fetch(`/api/online/rooms/${room.id}/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ ...body, expectedVersion }),
-        })
-      const res = await post(room.stateVersion)
-      if (res.status === 409) {
-        // Version périmée (ex: un loup coéquipier ou un bot a agi entre-temps) —
-        // resynchronise puis retente une fois avec la version fraîche, sinon un
-        // changement de cible loup pouvait silencieusement ne rien faire.
-        const fresh = await fetchRoom()
-        if (fresh) await post(fresh.stateVersion)
-      }
-    } finally {
-      setBusy(false)
+    const res = await postAction({ ...body, expectedVersion: room.stateVersion })
+    if (res?.status === 409) {
+      // Version périmée (ex: un loup coéquipier ou un bot a agi entre-temps) —
+      // resynchronise puis retente une fois avec la version fraîche, sinon un
+      // changement de cible loup pouvait silencieusement ne rien faire. Le 409
+      // reste muet côté joueur : c'est la retentative qui parlera si elle échoue.
+      const fresh = await fetchRoom()
+      if (fresh) await postAction({ ...body, expectedVersion: fresh.stateVersion })
     }
   }
 
@@ -726,6 +690,13 @@ export function LoupGarouOnline() {
           </div>
         )}
       </div>
+
+      {/* Coup refusé (mauvaise phase, pas ton rôle, expulsion…) — 3 s */}
+      {actionError && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+          {actionError}
+        </div>
+      )}
 
       {/* Légende des rôles (repliable) */}
       <AnimatePresence>
