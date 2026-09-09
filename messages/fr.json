@@ -12,7 +12,16 @@
   "metadata": {
     "title": "Le Pillaveur",
     "titleFull": "Le Pillaveur — Jeux de soirée entre amis, en ligne et gratuits",
-    "description": "21 jeux de soirée gratuits, sans installation : Loup-Garou, quiz, dessin, bluff. Entre amis avec chat vocal et mode TV — ou en solo avec des bots."
+    "description": "Des jeux de soirée gratuits, sans installation : Loup-Garou, quiz, dessin, bluff. Entre amis avec chat vocal et mode TV — ou en solo avec des bots.",
+    "descriptionCount": "{count} jeux de soirée gratuits, sans installation : Loup-Garou, quiz, dessin, bluff. Entre amis avec chat vocal et mode TV — ou en solo avec des bots.",
+    "ranking": {
+      "title": "Classement des joueurs",
+      "description": "Le classement des parties en ligne du Pillaveur : victoires, défaites et pourcentage de réussite, au général et jeu par jeu."
+    },
+    "mobileApp": {
+      "title": "Application mobile",
+      "description": "Le Pillaveur sur téléphone : l'application Android et iOS arrive. En attendant, tous les jeux tournent déjà dans le navigateur, sans installation."
+    }
   },
   "nav": {
     "brand": "Le Pillaveur",
@@ -168,7 +177,15 @@
       },
       "emptyTitle": "Aucun jeu trouvé",
       "emptyHint": "Essayez un autre mot-clé.",
-      "botsBadge": "Jouable avec des bots"
+      "botsBadge": "Jouable avec des bots",
+      "h1": "Jeux de soirée gratuits, entre amis ou avec des bots",
+      "intro": "Choisissez un jeu et lancez la partie en quelques secondes : à plusieurs sur un seul téléphone qui tourne autour de la table, ou chacun le sien avec un code de table.",
+      "featured": "Les incontournables",
+      "soloBanner": {
+        "title": "Jouer seul avec les bots.",
+        "text": "Seuls les jeux où des bots peuvent compléter la table sont affichés.",
+        "showAll": "Voir tout le catalogue"
+      }
     },
     "jeuxOnline": {
       "title": "Jeux en ligne",
@@ -183,7 +200,8 @@
     "playMode": {
       "label": "Mode de jeu",
       "local": "Local",
-      "online": "En ligne"
+      "online": "En ligne",
+      "onlineNeedsAccount": "Connexion requise pour jouer en ligne"
     },
     "ambianceMode": {
       "label": "Ambiance",
@@ -673,7 +691,10 @@
       "frame": "Cadre d'icône",
       "frameStaffOnly": "Réservé aux membres staff (modérateur+)",
       "lockedLevel": "Nv. {level}"
-    }
+    },
+    "loadError": "Erreur de chargement des joueurs",
+    "selectedTitle": "Joueurs sélectionnés",
+    "gamesPlayedCount": "{count, plural, one {# partie} other {# parties}}"
   },
   "games": {
     "1220": {
@@ -744,7 +765,7 @@
     },
     "meta": {
       "hub": {
-        "title": "21 jeux de soirée gratuits en ligne — entre amis ou avec des bots",
+        "title": "Jeux de soirée gratuits en ligne — entre amis ou avec des bots",
         "description": "Loup-Garou, quiz, dessin, bluff, jeux d'apéro : ouvre une table gratuite, invite tes amis par lien ou QR — ou joue seul, les bots complètent."
       },
       "purple": {
@@ -3679,12 +3700,20 @@
       "tipRefresh": "Actualiser la page",
       "tipCache": "Vider le cache de votre navigateur",
       "tipConnection": "Vérifier votre connexion Internet",
-      "logPrefix": "Erreur d'application:"
+      "logPrefix": "Erreur d'application:",
+      "games": "Voir les jeux",
+      "digest": "Code : {digest}"
     },
     "boundary": {
       "title": "Une erreur s'est produite",
       "retry": "Réessayer",
       "backToGames": "Retour aux jeux"
+    },
+    "notFound": {
+      "title": "Cette carte n'est pas dans le jeu",
+      "description": "La page a changé de place, la table a été fermée, ou le lien s'est perdu en route.",
+      "home": "Retour à l'accueil",
+      "games": "Voir les jeux"
     }
   },
   "supervision": {
@@ -4107,7 +4136,13 @@
     "giveVerb": "Donne",
     "racing": "En course !",
     "castShort": "TV",
-    "answerOnPhone": "Répondez sur vos téléphones !"
+    "answerOnPhone": "Répondez sur vos téléphones !",
+    "openTvScreen": "Ouvrir l’écran TV",
+    "openTvScreenHint": "S’ouvre dans un nouvel onglet : à afficher sur la télé. Ton téléphone reste la manette.",
+    "castNeedsAccount": "Connecte-toi pour diffuser sur la télé (c’est gratuit).",
+    "castFailed": "Diffusion impossible pour le moment. Réessaie.",
+    "starting": "La partie démarre…",
+    "startingHint": "Chacun lit les règles sur son téléphone."
   },
   "gameTutorial": {
     "next": "Suivant",
@@ -4142,12 +4177,27 @@
       "subtitle": "Loup-Garou au chat vocal, quiz, dessin, bluff et jeux d'apéro : jusqu'à 16 joueurs en ligne, ou sur un téléphone qui tourne autour de la table — avec tes potes, ou seul contre nos bots.",
       "ctaPlay": "Ouvrir une table entre potes",
       "ctaSolo": "Jouer seul avec les bots",
-      "trust": "100 % gratuit · zéro installation · zéro inscription — un pseudo et la table est à toi"
+      "trust": "100 % gratuit · zéro installation · zéro inscription — un pseudo et la table est à toi",
+      "live": "{count, plural, one {# joueur en ligne en ce moment} other {# joueurs en ligne en ce moment}}"
+    },
+    "preview": {
+      "title": "À quoi ça ressemble",
+      "subtitle": "La table s'affiche en grand sur la télé ou sur un écran ; chacun garde son rôle et ses cartes sur son téléphone.",
+      "tvJoin": "Rejoins la table",
+      "seat1": "Léa",
+      "seat2": "Sam",
+      "seat3": "Théo",
+      "seat4": "Nina",
+      "seatBot": "Bot",
+      "phoneLabel": "Ton rôle",
+      "phoneHint": "Toi seul le vois.",
+      "caption": "Illustration — l'écran partagé et le téléphone d'un joueur pendant une partie de {game}."
     },
     "solo": {
       "title": "Personne dispo ce soir ? Joue quand même.",
       "body": "Nos bots ne se défilent jamais : lance un Menteur, un quiz du Grand Pillaveur ou un Purple en solo — ils complètent la table en un clic. Et si un pote débarque en cours de route, il scanne le QR et prend un siège.",
-      "cta": "Lancer une partie avec les bots"
+      "cta": "Lancer une partie avec les bots",
+      "hint": "Seuls les jeux où des bots peuvent compléter la table sont affichés."
     },
     "how": {
       "title": "Comment ça marche",
@@ -4178,7 +4228,8 @@
       "subtitle": "♠ rôles cachés · ♥ culture · ♦ hasard & dés · ♣ créa",
       "online": "En ligne",
       "local": "Local",
-      "players": "{min}-{max} joueurs"
+      "players": "{min}-{max} joueurs",
+      "featured": "Incontournable"
     },
     "rules": {
       "title": "Apprendre les règles",

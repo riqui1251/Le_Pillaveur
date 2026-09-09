@@ -12,7 +12,16 @@
   "metadata": {
     "title": "Le Pillaveur",
     "titleFull": "Le Pillaveur — Juegos de fiesta gratis online con amigos",
-    "description": "21 juegos de fiesta gratis, sin instalación: Hombre Lobo, quiz, dibujo, faroleo. Con amigos, chat de voz y modo TV — o en solitario con bots."
+    "description": "Juegos de fiesta gratis, sin instalación: Hombre Lobo, quiz, dibujo, faroleo. Con amigos, chat de voz y modo TV — o en solitario con bots.",
+    "descriptionCount": "{count} juegos de fiesta gratis, sin instalación: Hombre Lobo, quiz, dibujo, faroleo. Con amigos, chat de voz y modo TV — o en solitario con bots.",
+    "ranking": {
+      "title": "Clasificación de jugadores",
+      "description": "La clasificación de las partidas en línea de Le Pillaveur: victorias, derrotas y porcentaje de aciertos, en general y juego por juego."
+    },
+    "mobileApp": {
+      "title": "Aplicación móvil",
+      "description": "Le Pillaveur en el móvil: la aplicación para Android e iOS está en camino. Mientras tanto, todos los juegos ya funcionan en el navegador, sin instalar nada."
+    }
   },
   "nav": {
     "brand": "Le Pillaveur",
@@ -168,7 +177,15 @@
       },
       "emptyTitle": "No se encontraron juegos",
       "emptyHint": "Pruebe con otra palabra clave.",
-      "botsBadge": "Se puede jugar con bots"
+      "botsBadge": "Se puede jugar con bots",
+      "h1": "Juegos de fiesta gratis, con amigos o con bots",
+      "intro": "Elige un juego y empieza a jugar en segundos: todos en un solo móvil que gira por la mesa, o cada uno con el suyo usando un código de mesa.",
+      "featured": "Imprescindibles",
+      "soloBanner": {
+        "title": "Jugar solo con bots.",
+        "text": "Solo se muestran los juegos en los que los bots pueden completar la mesa.",
+        "showAll": "Ver todo el catálogo"
+      }
     },
     "jeuxOnline": {
       "title": "Juegos en línea",
@@ -195,7 +212,8 @@
     "playMode": {
       "label": "Modo de juego",
       "local": "Local",
-      "online": "En línea"
+      "online": "En línea",
+      "onlineNeedsAccount": "Inicia sesión para jugar en línea"
     }
   },
   "onlineXp": {
@@ -673,7 +691,10 @@
       "frame": "Marco de icono",
       "frameStaffOnly": "Reservado para miembros del personal (moderador+)",
       "lockedLevel": "Nv. {level}"
-    }
+    },
+    "loadError": "Error al cargar los jugadores",
+    "selectedTitle": "Jugadores seleccionados",
+    "gamesPlayedCount": "{count, plural, one {# partida} other {# partidas}}"
   },
   "games": {
     "1220": {
@@ -744,7 +765,7 @@
     },
     "meta": {
       "hub": {
-        "title": "Juega a 21 juegos de fiesta gratis — con amigos o con bots",
+        "title": "Juegos de fiesta gratis en línea — con amigos o con bots",
         "description": "Hombre Lobo, quiz, dibujo, faroleo: abre una mesa gratis e invita a tus amigos con un enlace o QR — o juega solo, los bots completan la mesa."
       },
       "purple": {
@@ -3679,12 +3700,20 @@
       "tipRefresh": "Actualizar la página",
       "tipCache": "Vaciar la caché del navegador",
       "tipConnection": "Comprobar tu conexión a Internet",
-      "logPrefix": "Error de aplicación:"
+      "logPrefix": "Error de aplicación:",
+      "games": "Ver los juegos",
+      "digest": "Código: {digest}"
     },
     "boundary": {
       "title": "Se produjo un error",
       "retry": "Reintentar",
       "backToGames": "Volver a los juegos"
+    },
+    "notFound": {
+      "title": "Esta carta no está en la baraja",
+      "description": "La página ha cambiado de sitio, la mesa se ha cerrado o el enlace se perdió por el camino.",
+      "home": "Volver al inicio",
+      "games": "Ver los juegos"
     }
   },
   "supervision": {
@@ -4107,7 +4136,13 @@
     "giveVerb": "Da",
     "racing": "¡En carrera!",
     "castShort": "TV",
-    "answerOnPhone": "¡Responded desde vuestros móviles!"
+    "answerOnPhone": "¡Responded desde vuestros móviles!",
+    "openTvScreen": "Abrir la pantalla TV",
+    "openTvScreenHint": "Se abre en una pestaña nueva: ponla en la tele. Tu móvil sigue siendo el mando.",
+    "castNeedsAccount": "Inicia sesión para emitir en la tele (es gratis).",
+    "castFailed": "No se puede emitir ahora mismo. Inténtalo de nuevo.",
+    "starting": "La partida empieza…",
+    "startingHint": "Cada uno lee las reglas en su móvil."
   },
   "gameTutorial": {
     "next": "Siguiente",
@@ -4142,12 +4177,27 @@
       "subtitle": "Hombre Lobo con chat de voz, quiz, dibujo, faroleo y juegos de fiesta: hasta 16 jugadores en línea, o un móvil que pasa de mano en mano — con tus amigos, o solo contra nuestros bots.",
       "ctaPlay": "Abrir una mesa con amigos",
       "ctaSolo": "Jugar solo con bots",
-      "trust": "100 % gratis · sin instalación · sin registro — un apodo y la mesa es tuya"
+      "trust": "100 % gratis · sin instalación · sin registro — un apodo y la mesa es tuya",
+      "live": "{count, plural, one {# jugador conectado ahora mismo} other {# jugadores conectados ahora mismo}}"
+    },
+    "preview": {
+      "title": "Así se ve",
+      "subtitle": "La mesa se ve en grande en la tele o en cualquier pantalla; cada uno guarda su rol y sus cartas en su móvil.",
+      "tvJoin": "Únete a la mesa",
+      "seat1": "Lea",
+      "seat2": "Sam",
+      "seat3": "Teo",
+      "seat4": "Nina",
+      "seatBot": "Bot",
+      "phoneLabel": "Tu rol",
+      "phoneHint": "Solo tú lo ves.",
+      "caption": "Ilustración: la pantalla compartida y el móvil de un jugador durante una partida de {game}."
     },
     "solo": {
       "title": "¿Nadie disponible esta noche? Juega igual.",
       "body": "Nuestros bots nunca fallan: lanza un Mentiroso, un quiz del Gran Pillaveur o un Purple en solitario — completan la mesa en un clic. Y si un amigo aparece a mitad de partida, escanea el QR y ocupa un asiento.",
-      "cta": "Empezar una partida con bots"
+      "cta": "Empezar una partida con bots",
+      "hint": "Solo se muestran los juegos en los que los bots pueden completar la mesa."
     },
     "how": {
       "title": "Cómo funciona",
@@ -4178,7 +4228,8 @@
       "subtitle": "♠ roles ocultos · ♥ cultura · ♦ azar y dados · ♣ crea",
       "online": "En línea",
       "local": "Local",
-      "players": "{min}-{max} jugadores"
+      "players": "{min}-{max} jugadores",
+      "featured": "Imprescindible"
     },
     "rules": {
       "title": "Aprender las reglas",

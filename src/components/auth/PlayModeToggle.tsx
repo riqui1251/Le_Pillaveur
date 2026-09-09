@@ -3,6 +3,7 @@
 import { Smartphone, Globe } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { useRouter } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
 
 type PlayMode = 'local' | 'online'
@@ -15,8 +16,37 @@ const MODES: { id: PlayMode; icon: typeof Smartphone }[] = [
 export function PlayModeToggle({ className }: { className?: string }) {
   const t = useTranslations('hub.playMode')
   const { user, setPlayMode, loading } = useAuth()
+  const router = useRouter()
 
-  if (loading || !user) return null
+  // Le visiteur sans compte ne voyait aucune bascule : il ignorait donc que le
+  // mode local existe. On l'affiche pour lui, positionnée sur « local » — c'est
+  // déjà l'état réel de la vitrine (isOnline se déduit de user.playMode).
+  const isVisitor = !user
+
+  if (loading) return null
+
+  const activeMode: PlayMode = user ? user.playMode : 'local'
+
+  // Le mode en ligne réclame une session (PUT /api/auth/mode répond 401 sans
+  // compte) : pour un visiteur, la bascule mène à la page compte au lieu de
+  // rater silencieusement. « Local » se pose, lui, via le cookie dédié — même
+  // porte d'entrée que le bouton « jouer en local » du formulaire de compte.
+  const selectMode = (mode: PlayMode) => {
+    if (!isVisitor) {
+      if (mode !== activeMode) void setPlayMode(mode)
+      return
+    }
+    if (mode === 'online') {
+      router.push('/compte?redirect=/jeux')
+      return
+    }
+    void fetch('/api/auth/local-play', { method: 'POST', credentials: 'include' })
+      .then(() => router.refresh())
+      .catch(() => {
+        // Cookie non posé : le visiteur passera par /compte au premier lien
+        // protégé, le parcours reste praticable.
+      })
+  }
 
   return (
     <div
@@ -28,16 +58,15 @@ export function PlayModeToggle({ className }: { className?: string }) {
       )}
     >
       {MODES.map(({ id, icon: Icon }) => {
-        const active = user.playMode === id
+        const active = activeMode === id
         return (
           <button
             key={id}
             type="button"
             role="radio"
             aria-checked={active}
-            onClick={() => {
-              if (!active) void setPlayMode(id)
-            }}
+            title={isVisitor && id === 'online' ? t('onlineNeedsAccount') : undefined}
+            onClick={() => selectMode(id)}
             className={cn(
               'flex min-h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 py-2 text-sm font-semibold transition-all',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#07060b]',

@@ -1,16 +1,49 @@
-"use client"
-
-import { useTranslations } from 'next-intl'
+import type { Metadata } from 'next'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { OnlineRankingBoard } from '@/components/online/OnlineRankingBoard'
+import { SITE_URL } from '@/lib/site'
 
 /**
  * Page Classement — EN LIGNE uniquement : classement général + top 5 par jeu
  * (victoires/défaites/parties/%). Le classement des joueurs locaux a été
  * retiré volontairement : seules les parties en ligne comptent.
+ *
+ * Composant SERVEUR (le tableau, lui, reste client) : c'est la seule façon
+ * d'exporter `generateMetadata`. Sans elle la page héritait du titre et de la
+ * description de l'accueil — un doublon exact pour Google, alors qu'elle est
+ * dans le sitemap.
  */
-export default function ClassementPage() {
-  const t = useTranslations('ranking')
-  const tNav = useTranslations('nav')
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'metadata.ranking' })
+  const canonical = `/${locale}/classement`
+
+  return {
+    title: t('title'),
+    description: t('description'),
+    alternates: { canonical },
+    openGraph: {
+      title: t('title'),
+      description: t('description'),
+      url: `${SITE_URL}${canonical}`,
+    },
+  }
+}
+
+export default async function ClassementPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
+  setRequestLocale(locale)
+  const t = await getTranslations('ranking')
+  const tNav = await getTranslations('nav')
 
   return (
     <main className="relative min-h-screen overflow-hidden text-white">

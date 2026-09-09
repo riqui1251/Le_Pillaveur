@@ -8,8 +8,12 @@ import type { CastFrame } from '@/lib/cast-types'
  * Abonnement LECTURE SEULE d'un écran TV à une salle, par CODE. Calqué sur le
  * chemin lecture de `useOnlineRoom` mais sans aucune action : fetch de l'état
  * public + SSE temps réel (`/api/tv/[code]/stream`) + polling de secours.
+ *
+ * Le sondage n'est qu'un FILET : le SSE porte le temps réel. Le garder serré
+ * ferait marteler le serveur par chaque télé allumée toute une soirée, pour
+ * ne couvrir qu'une perte de connexion au flux.
  */
-const POLL_MS = 1500
+const POLL_MS = 10_000
 
 export function useTvRoom(code: string) {
   const [room, setRoom] = useState<TvRoomDto | null>(null)

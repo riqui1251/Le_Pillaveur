@@ -142,7 +142,10 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-gold/15 bg-felt-deep/85 backdrop-blur-xl supports-[backdrop-filter]:bg-felt-deep/70">
+      {/* safe-x + inset haut : avec `viewportFit: 'cover'` (layout.tsx) la page
+          passe SOUS l'encoche — la barre doit se pousser elle-même, sinon le
+          titre disparaît derrière la barre d'état / la caméra. */}
+      <header className="sticky top-0 z-40 safe-x border-b border-gold/15 bg-felt-deep/85 backdrop-blur-xl supports-[backdrop-filter]:bg-felt-deep/70">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-3 sm:h-[3.75rem] sm:gap-4 sm:px-4">
           <button
             type="button"
@@ -150,7 +153,7 @@ export default function Navbar() {
             aria-expanded={drawerOpen}
             onClick={toggleDrawer}
             className={cn(
-              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
+              'touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
               drawerOpen
                 ? 'border-amber-400/40 bg-amber-500/20 text-amber-200 shadow-[0_0_16px_rgba(245,158,11,0.15)]'
                 : 'border-white/10 bg-white/[0.04] text-amber-300 hover:border-amber-400/35 hover:bg-amber-500/10'
@@ -159,6 +162,8 @@ export default function Navbar() {
             {drawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
+          {/* Amis et chat : masqués sous `sm` (la barre déborderait à 360px) —
+              ils sont repris dans le tiroir, badges compris. */}
           {user && (
             <button
               type="button"
@@ -170,7 +175,7 @@ export default function Navbar() {
                 })
               }}
               className={cn(
-                'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
+                'touch-target relative hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:flex sm:h-11 sm:w-11',
                 friendsOpen
                   ? 'border-amber-400/40 bg-amber-500/20 text-amber-200 shadow-[0_0_16px_rgba(217,164,65,0.15)]'
                   : 'border-white/10 bg-white/[0.04] text-amber-300 hover:border-amber-400/35 hover:bg-amber-500/10'
@@ -191,7 +196,7 @@ export default function Navbar() {
               aria-label={t('chat')}
               onClick={() => setChatOpen((v) => !v)}
               className={cn(
-                'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
+                'touch-target relative hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:flex sm:h-11 sm:w-11',
                 chatOpen
                   ? 'border-sky-400/40 bg-sky-500/20 text-sky-200 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
                   : 'border-white/10 bg-white/[0.04] text-sky-300 hover:border-sky-400/35 hover:bg-sky-500/10'
@@ -220,12 +225,13 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Joueurs actifs sur le site — pastille verte discrète. */}
+          {/* Joueurs actifs sur le site — pastille verte discrète, reprise
+              telle quelle dans le tiroir sous `sm`. */}
           {activeCount !== null && activeCount > 0 && (
             <span
               title={t('activePlayers', { count: activeCount })}
               aria-label={t('activePlayers', { count: activeCount })}
-              className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-bold tabular-nums text-emerald-200 sm:h-11 sm:px-3 sm:text-xs"
+              className="hidden h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-bold tabular-nums text-emerald-200 sm:flex sm:h-11 sm:px-3 sm:text-xs"
             >
               <span aria-hidden className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
@@ -238,17 +244,22 @@ export default function Navbar() {
           {/* Progression visible : niveau pour un compte enregistré, rappel
               « sauvegarder » pour un invité — les deux mènent à la page Compte. */}
           {user && (user.isGuest ? (
+            // Sous `sm`, le libellé est coupé faute de place : le badge devient
+            // une icône carrée (le libellé reste dans aria-label/title) — il ne
+            // disparaît JAMAIS, c'est le seul chemin vers la conversion.
             <Link
               href="/compte"
-              className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-amber-400/40 bg-amber-500/15 px-2.5 text-[11px] font-bold text-amber-200 transition-all duration-200 hover:border-amber-400/60 hover:bg-amber-500/25 active:scale-95 sm:h-11 sm:px-3 sm:text-xs"
+              aria-label={t('guestBadge')}
+              title={t('guestBadge')}
+              className="touch-target flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-amber-400/40 bg-amber-500/15 text-[11px] font-bold text-amber-200 transition-all duration-200 hover:border-amber-400/60 hover:bg-amber-500/25 active:scale-95 sm:h-11 sm:w-auto sm:px-3 sm:text-xs"
             >
-              <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
-              {t('guestBadge')}
+              <ShieldAlert className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden sm:inline">{t('guestBadge')}</span>
             </Link>
           ) : progression ? (
             <Link
               href="/compte"
-              className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-bold tabular-nums text-amber-200 transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:px-3 sm:text-xs"
+              className="touch-target flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-bold tabular-nums text-amber-200 transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:px-3 sm:text-xs"
             >
               <Star className="h-3.5 w-3.5 shrink-0 text-amber-300" />
               {t('levelBadge', { level: progression.level })}
@@ -261,7 +272,7 @@ export default function Navbar() {
               aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
               title={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
               onClick={() => void toggleFullscreen()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-amber-300 transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:w-11"
+              className="touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-amber-300 transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:w-11"
             >
               {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
             </button>
@@ -317,7 +328,7 @@ export default function Navbar() {
             type="button"
             aria-label={t('closeMenu')}
             onClick={() => setDrawerOpen(false)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+            className="touch-target flex h-9 w-9 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
@@ -367,6 +378,60 @@ export default function Navbar() {
               )
             })}
           </ul>
+
+          {/* Repli des éléments retirés de la barre sous `sm` : rien n'est
+              supprimé, tout redevient accessible ici. */}
+          <div className="mt-3 space-y-1 border-t border-white/[0.07] pt-3 sm:hidden">
+            {user && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawerOpen(false)
+                    setFriendsOpen(true)
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-amber-300">
+                    <Users className="h-4 w-4" />
+                  </span>
+                  <span className="flex-1 text-sm font-medium">{t('manageFriends')}</span>
+                  {onlineFriendsCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-black">
+                      {onlineFriendsCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawerOpen(false)
+                    setChatOpen(true)
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-sky-300">
+                    <MessageCircle className="h-4 w-4" />
+                  </span>
+                  <span className="flex-1 text-sm font-medium">{t('chat')}</span>
+                  {unread.total > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                      {unread.total > 9 ? '9+' : unread.total}
+                    </span>
+                  )}
+                </button>
+              </>
+            )}
+            {activeCount !== null && activeCount > 0 && (
+              <p className="flex items-center gap-2 px-3 pt-1 text-[11px] font-semibold text-emerald-200/80">
+                <span aria-hidden className="relative flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+                {t('activePlayers', { count: activeCount })}
+              </p>
+            )}
+          </div>
         </nav>
 
         <div className="relative space-y-2 border-t border-white/[0.07] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">

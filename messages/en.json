@@ -12,7 +12,16 @@
   "metadata": {
     "title": "Le Pillaveur",
     "titleFull": "Le Pillaveur — Free online party games with friends",
-    "description": "21 free party games, no install: Werewolf, quiz, drawing, bluffing. With friends via voice chat and TV mode — or solo with bots."
+    "description": "Free party games, no install: Werewolf, quiz, drawing, bluffing. With friends via voice chat and TV mode — or solo with bots.",
+    "descriptionCount": "{count} free party games, no install: Werewolf, quiz, drawing, bluffing. With friends via voice chat and TV mode — or solo with bots.",
+    "ranking": {
+      "title": "Player leaderboard",
+      "description": "Le Pillaveur's online leaderboard: wins, losses and win rate, overall and game by game."
+    },
+    "mobileApp": {
+      "title": "Mobile app",
+      "description": "Le Pillaveur on your phone: the Android and iOS app is coming. Meanwhile every game already runs in the browser, no install needed."
+    }
   },
   "nav": {
     "brand": "Le Pillaveur",
@@ -168,7 +177,15 @@
       },
       "emptyTitle": "No games found",
       "emptyHint": "Try another keyword.",
-      "botsBadge": "Playable with bots"
+      "botsBadge": "Playable with bots",
+      "h1": "Free party games, with friends or with bots",
+      "intro": "Pick a game and start playing in seconds: all on one phone passed around the table, or everyone on their own with a table code.",
+      "featured": "Must-plays",
+      "soloBanner": {
+        "title": "Playing solo with bots.",
+        "text": "Only games where bots can fill the table are shown.",
+        "showAll": "See all games"
+      }
     },
     "jeuxOnline": {
       "title": "Online games",
@@ -183,7 +200,8 @@
     "playMode": {
       "label": "Play mode",
       "local": "Local",
-      "online": "Online"
+      "online": "Online",
+      "onlineNeedsAccount": "Sign in required to play online"
     },
     "ambianceMode": {
       "label": "Ambiance",
@@ -673,7 +691,10 @@
       "frame": "Icon frame",
       "frameStaffOnly": "Reserved for staff members (moderator+)",
       "lockedLevel": "Lv. {level}"
-    }
+    },
+    "loadError": "Could not load the players",
+    "selectedTitle": "Selected players",
+    "gamesPlayedCount": "{count, plural, one {# game} other {# games}}"
   },
   "games": {
     "1220": {
@@ -744,7 +765,7 @@
     },
     "meta": {
       "hub": {
-        "title": "Play 21 free online party games — with friends or bots",
+        "title": "Play free online party games — with friends or bots",
         "description": "Werewolf, quizzes, drawing, bluffing and party games: open a free table, invite friends with a link or QR — or play solo, bots fill the seats."
       },
       "purple": {
@@ -3679,12 +3700,20 @@
       "tipRefresh": "Refresh the page",
       "tipCache": "Clear your browser cache",
       "tipConnection": "Check your internet connection",
-      "logPrefix": "Application error:"
+      "logPrefix": "Application error:",
+      "games": "See the games",
+      "digest": "Code: {digest}"
     },
     "boundary": {
       "title": "An error occurred",
       "retry": "Try again",
       "backToGames": "Back to games"
+    },
+    "notFound": {
+      "title": "This card isn't in the deck",
+      "description": "The page has moved, the table has closed, or the link got lost on the way.",
+      "home": "Back to home",
+      "games": "See the games"
     }
   },
   "supervision": {
@@ -4107,7 +4136,13 @@
     "giveVerb": "Gives",
     "racing": "Racing!",
     "castShort": "TV",
-    "answerOnPhone": "Answer on your phones!"
+    "answerOnPhone": "Answer on your phones!",
+    "openTvScreen": "Open the TV screen",
+    "openTvScreenHint": "Opens in a new tab — put it on the TV. Your phone stays the controller.",
+    "castNeedsAccount": "Sign in to cast to the TV (it’s free).",
+    "castFailed": "Casting isn’t working right now. Try again.",
+    "starting": "Game starting…",
+    "startingHint": "Everyone’s reading the rules on their phone."
   },
   "gameTutorial": {
     "next": "Next",
@@ -4142,12 +4177,27 @@
       "subtitle": "Werewolf with voice chat, quizzes, drawing, bluffing and party games: up to 16 players online, or one phone passed around the table — with your friends, or solo against our bots.",
       "ctaPlay": "Open a table with friends",
       "ctaSolo": "Play solo with bots",
-      "trust": "100% free · nothing to install · no sign-up — pick a nickname and the table is yours"
+      "trust": "100% free · nothing to install · no sign-up — pick a nickname and the table is yours",
+      "live": "{count, plural, one {# player online right now} other {# players online right now}}"
+    },
+    "preview": {
+      "title": "What it looks like",
+      "subtitle": "The table shows up big on the TV or any screen; everyone keeps their role and their cards on their own phone.",
+      "tvJoin": "Join the table",
+      "seat1": "Lea",
+      "seat2": "Sam",
+      "seat3": "Theo",
+      "seat4": "Nina",
+      "seatBot": "Bot",
+      "phoneLabel": "Your role",
+      "phoneHint": "Only you can see it.",
+      "caption": "Illustration — the shared screen and one player's phone during a game of {game}."
     },
     "solo": {
       "title": "Nobody free tonight? Play anyway.",
       "body": "Our bots never bail: start a Liar's game, a Grand Pillaveur quiz or a Purple run solo — they fill the table in one click. And if a friend shows up mid-game, they scan the QR and grab a seat.",
-      "cta": "Start a game with bots"
+      "cta": "Start a game with bots",
+      "hint": "Only games where bots can fill the table are shown."
     },
     "how": {
       "title": "How it works",
@@ -4178,7 +4228,8 @@
       "subtitle": "♠ hidden roles · ♥ trivia · ♦ luck & dice · ♣ creative",
       "online": "Online",
       "local": "Local",
-      "players": "{min}-{max} players"
+      "players": "{min}-{max} players",
+      "featured": "Must-play"
     },
     "rules": {
       "title": "Learn the rules",

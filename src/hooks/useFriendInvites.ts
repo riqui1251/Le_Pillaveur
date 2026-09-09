@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { usePagePresence } from '@/hooks/usePagePresence'
 
 const POLL_MS = 5000
 
@@ -17,6 +18,7 @@ export type PendingRoomInvite = {
 /** Invitations de lobby reçues d'amis — poll léger, même pattern que useOpenLobbies. */
 export function useFriendInvites() {
   const { user } = useAuth()
+  const visible = usePagePresence()
   const [invites, setInvites] = useState<PendingRoomInvite[]>([])
   const [loading, setLoading] = useState(true)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -54,12 +56,16 @@ export function useFriendInvites() {
       return
     }
 
+    // Onglet caché : sondage suspendu, repris avec un rafraîchissement
+    // immédiat au retour au premier plan (voir usePagePresence).
+    if (!visible) return
+
     void fetchInvites()
     pollRef.current = setInterval(fetchInvites, POLL_MS)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [user?.id, user?.playMode])
+  }, [user?.id, user?.playMode, visible])
 
   const declineInvite = async (inviteId: string) => {
     setInvites((prev) => prev.filter((i) => i.id !== inviteId))

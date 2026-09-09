@@ -33,6 +33,12 @@ export type GameMeta = {
   botsFillable?: boolean;
   /** Proposé en mode Soft (sans gorgées) — sous-ensemble des jeux onlineReady. */
   softModeReady?: boolean;
+  /**
+   * Jeu phare : remonté dans la rangée « les incontournables » en tête du hub.
+   * Réservé aux jeux les plus démonstratifs du produit — au-delà de 4 ou 5, la
+   * rangée ne met plus rien en avant. Un jeu `hidden` n'y a pas sa place.
+   */
+  featured?: boolean;
 };
 
 // Source unique de vérité pour les jeux
@@ -153,6 +159,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 16,
     onlineOnly: true,
     softModeReady: true,
+    featured: true,
   },
   {
     id: 'loup-garou',
@@ -172,6 +179,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 12,
     onlineOnly: true,
     softModeReady: true,
+    featured: true,
   },
   {
     id: 'hi-lo',
@@ -388,6 +396,7 @@ export const GAMES: GameMeta[] = [
     onlineOnly: true,
     botsFillable: true,
     softModeReady: true,
+    featured: true,
   },
   {
     id: 'sans-filtre',
@@ -408,6 +417,7 @@ export const GAMES: GameMeta[] = [
     onlineOnly: true,
     botsFillable: true,
     softModeReady: true,
+    featured: true,
   },
   {
     id: 'mots-codes',

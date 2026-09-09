@@ -68,7 +68,7 @@ export function TutorialReopenButton({
       onClick={onClick}
       aria-label={t('reopenAria')}
       className={cn(
-        'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white',
+        'touch-target flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white',
         className
       )}
     >
@@ -116,7 +116,7 @@ export function GameTutorialModal({
           <button
             onClick={onClose}
             aria-label={t('close')}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-[#6B6455] transition-colors hover:bg-[#24201A]/8 hover:text-[#24201A]"
+            className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-[#6B6455] transition-colors hover:bg-[#24201A]/8 hover:text-[#24201A]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -152,7 +152,7 @@ export function GameTutorialModal({
               <button
                 onClick={() => setIdx((v) => v - 1)}
                 aria-label={t('prev')}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#24201A]/12 bg-[#24201A]/5 text-[#6B6455] hover:bg-[#24201A]/10"
+                className="touch-target flex h-8 w-8 items-center justify-center rounded-lg border border-[#24201A]/12 bg-[#24201A]/5 text-[#6B6455] hover:bg-[#24201A]/10"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>

@@ -21,6 +21,12 @@ const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-displa
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // PAS de `viewport-fit=cover` ici, sciemment : il ferait passer la page sous
+  // l'encoche et la barre d'accueil, or les 19 surcouches de jeu sont en
+  // `position: fixed; bottom: 0` et ne réservent aucun inset — les boutons de
+  // la zone pouce passeraient sous la barre d'accueil. Le jour où on le veut,
+  // c'est un chantier à part entière : poser l'inset sur chaque surcouche fixe
+  // ET revérifier la hauteur de la barre du haut, appareil réel à l'appui.
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#F3EAD3' },
     { media: '(prefers-color-scheme: dark)', color: '#0E3B2E' },
@@ -123,7 +129,11 @@ export default async function LocaleLayout({
                   {/* overflow-x-clip et non hidden : hidden ferait de ce div le
                       scroll-container des position:sticky descendants (recherche
                       du hub), qui ne colleraient plus jamais. */}
-                  <div className="content-container flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip">
+                  {/* Insets latéraux + bas : conséquence directe de
+                      viewport-fit=cover — sans ça, en paysage sur un écran à
+                      encoche, une colonne de contenu passe sous la caméra, et
+                      les boutons collés en bas passent sous la barre d'accueil. */}
+                  <div className="content-container flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip safe-x">
                     {children}
                   </div>
                 </div>

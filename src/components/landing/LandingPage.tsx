@@ -4,6 +4,8 @@ import { Link } from '@/i18n/navigation'
 import { BrandLogo } from '@/components/brand/BrandLogo'
 import { GAMES, type GameSuit } from '@/lib/games'
 import { RULES_GAME_IDS } from '@/lib/rules/rules-ids'
+import { SITE_URL } from '@/lib/site'
+import { GET as getPresenceCount } from '@/app/api/presence/count/route'
 import { cn } from '@/lib/utils'
 
 /**
@@ -19,16 +21,61 @@ const SUIT_GLYPH: Record<GameSuit, string> = {
   club: '♣',
 }
 
+/**
+ * Code de table de la maquette d'aperçu. Ni traduit ni tiré d'une vraie
+ * partie : c'est un décor, au même titre que les enseignes ♠♥♦♣ ci-dessus.
+ */
+const PREVIEW_CODE = 'PLXK29'
+
+/** Le domaine tel qu'il s'affiche sur l'écran TV du produit, sans le protocole. */
+const SITE_HOST = SITE_URL.replace(/^https?:\/\//, '')
+
+/** Jeu servant de décor à l'aperçu : celui que le héros promet en premier. */
+const PREVIEW_GAME_ID = 'loup-garou'
+
 function suitIsRed(suit: GameSuit): boolean {
   return suit === 'heart' || suit === 'diamond'
+}
+
+/**
+ * Joueurs actifs en ce moment. On appelle le handler public déjà utilisé par
+ * la navbar plutôt que de refaire la requête : même définition (RGPD compris)
+ * et même cache de 15 s, sans aller-retour HTTP. Base indisponible ou table
+ * vide → 0, et la vitrine se tait : elle n'affiche jamais « 0 joueur ».
+ */
+async function readPlayersOnline(): Promise<number> {
+  try {
+    const res = await getPresenceCount()
+    const json = (await res.json()) as { count?: number }
+    return typeof json.count === 'number' ? json.count : 0
+  } catch {
+    return 0
+  }
 }
 
 export async function LandingPage({ locale }: { locale: string }) {
   const t = await getTranslations({ locale, namespace: 'landing' })
   const tCatalog = await getTranslations({ locale, namespace: 'games.catalog' })
+  const tMeta = await getTranslations({ locale, namespace: 'metadata' })
   const tNavLegal = await getTranslations({ locale, namespace: 'nav.legal' })
 
-  const games = GAMES.filter((g) => !g.hidden)
+  const visibleGames = GAMES.filter((g) => !g.hidden)
+  // Les jeux phares ouvrent la grille : le héros promet « Loup-Garou, quiz,
+  // dessin, bluff » alors que l'ordre brut du tableau démarre sur des jeux de
+  // dés locaux. Tri stable — le reste du catalogue garde son ordre d'origine.
+  const games = [
+    ...visibleGames.filter((g) => g.featured),
+    ...visibleGames.filter((g) => !g.featured),
+  ]
+
+  const playersOnline = await readPlayersOnline()
+  const previewGameTitle = tCatalog(`${PREVIEW_GAME_ID}.title`)
+  const previewSeats = [
+    t('preview.seat1'),
+    t('preview.seat2'),
+    t('preview.seat3'),
+    t('preview.seat4'),
+  ]
 
   const features = [
     { Icon: Mic, title: t('features.voice'), desc: t('features.voiceDesc') },
@@ -71,7 +118,91 @@ export async function LandingPage({ locale }: { locale: string }) {
             {t('hero.ctaSolo')}
           </Link>
         </div>
+        {/* Preuve sociale : le compteur de présence réel, jamais un chiffre
+            inventé. Personne en ligne → rien du tout, plutôt que « 0 joueur ». */}
+        {playersOnline > 0 && (
+          <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            {t('hero.live', { count: playersOnline })}
+          </p>
+        )}
         <p className="mt-4 text-xs text-white/40">{t('hero.trust')}</p>
+      </section>
+
+      {/* ── Aperçu ──
+          Maquette HTML/CSS, pas une capture d'écran : le dépôt n'en héberge
+          aucune. Elle reprend les tokens du produit (feutre, or, crème,
+          Playfair) et la légende dit explicitement que c'est une illustration.
+          Purement décorative → aria-hidden, la légende porte le sens. */}
+      <section className="py-8">
+        <h2 className="text-center font-display text-xl font-bold text-gold sm:text-2xl">
+          {t('preview.title')}
+        </h2>
+        <p className="mx-auto mt-1 max-w-xl text-center text-xs text-white/45">
+          {t('preview.subtitle')}
+        </p>
+
+        <div className="mt-6 flex flex-col items-center gap-5 sm:flex-row sm:items-end sm:justify-center sm:gap-6">
+          {/* Écran TV */}
+          <div aria-hidden className="w-full max-w-sm sm:max-w-md">
+            <div className="rounded-xl border-2 border-gold/35 bg-felt-deep p-3 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)] sm:p-4">
+              <div className="flex items-center justify-between gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-gold/70">
+                <span className="truncate">{tMeta('title')}</span>
+                <span className="truncate text-cream/55">♠ {previewGameTitle}</span>
+              </div>
+              <div className="mt-3 rounded-lg border border-gold/20 bg-felt px-3 py-4 text-center">
+                <p className="font-display text-[10px] uppercase tracking-[0.2em] text-cream/55">
+                  {t('preview.tvJoin')}
+                </p>
+                <p className="mt-1 font-display text-2xl font-black tracking-[0.3em] text-gold sm:text-3xl">
+                  {PREVIEW_CODE}
+                </p>
+                <p className="mt-1 text-[10px] tracking-wide text-cream/40">{SITE_HOST}</p>
+              </div>
+              <ul className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+                {previewSeats.map((name) => (
+                  <li
+                    key={name}
+                    className="rounded-full border border-gold/20 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-cream/80"
+                  >
+                    {name}
+                  </li>
+                ))}
+                <li className="rounded-full border border-violet-400/30 bg-violet-500/15 px-2 py-0.5 text-[9px] font-semibold text-violet-100">
+                  🤖 {t('preview.seatBot')}
+                </li>
+              </ul>
+            </div>
+            <div className="mx-auto h-2 w-20 rounded-b-lg bg-black/40" />
+          </div>
+
+          {/* Téléphone du joueur */}
+          <div aria-hidden className="w-[136px] shrink-0 sm:w-[150px]">
+            <div className="rounded-[1.6rem] border-4 border-black/50 bg-felt-deep p-2 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)]">
+              <div className="mx-auto mb-2 h-1 w-8 rounded-full bg-white/15" />
+              <p className="text-center text-[8px] font-bold uppercase tracking-[0.18em] text-gold/70">
+                {t('preview.phoneLabel')}
+              </p>
+              <div className="mt-1.5 rounded-lg border border-[#D8CCAE] bg-cream px-2 pb-2 pt-1 text-[#24201A]">
+                <span className="font-display text-[9px] font-black leading-none">
+                  A
+                  <br />♠
+                </span>
+                <p className="pb-1 pt-0.5 text-center text-2xl">🐺</p>
+                <p className="text-center font-display text-[11px] font-bold leading-tight">
+                  {previewGameTitle}
+                </p>
+              </div>
+              <p className="mt-1.5 text-center text-[8px] leading-tight text-white/40">
+                {t('preview.phoneHint')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="mx-auto mt-4 max-w-xl text-center text-[11px] leading-snug text-white/35">
+          {t('preview.caption', { game: previewGameTitle })}
+        </p>
       </section>
 
       {/* ── Comment ça marche ── */}
@@ -125,6 +256,9 @@ export async function LandingPage({ locale }: { locale: string }) {
           >
             {t('solo.cta')}
           </Link>
+          {/* Le bouton mène à la grille filtrée : on annonce le filtre AVANT le
+              clic, mot pour mot comme le bandeau du hub (hub.jeux.soloBanner). */}
+          <p className="mt-2 text-xs text-white/45">{t('solo.hint')}</p>
         </div>
       </section>
 
@@ -141,7 +275,10 @@ export async function LandingPage({ locale }: { locale: string }) {
               <Link
                 key={game.id}
                 href={game.path}
-                className="group relative overflow-hidden rounded-2xl border border-[#D8CCAE] bg-cream p-3 text-[#24201A] shadow-[0_8px_18px_-10px_rgba(0,0,0,0.6)] transition-transform hover:-translate-y-0.5"
+                className={cn(
+                  'group relative overflow-hidden rounded-2xl border bg-cream p-3 text-[#24201A] shadow-[0_8px_18px_-10px_rgba(0,0,0,0.6)] transition-transform hover:-translate-y-0.5',
+                  game.featured ? 'border-gold' : 'border-[#D8CCAE]'
+                )}
               >
                 {game.suit && (
                   <span
@@ -156,6 +293,11 @@ export async function LandingPage({ locale }: { locale: string }) {
                     {SUIT_GLYPH[game.suit]}
                   </span>
                 )}
+                {game.featured && (
+                  <span className="absolute right-2 top-1.5 rounded-full bg-gold/25 px-1.5 py-0.5 text-[8px] font-black uppercase leading-tight tracking-tight text-[#6B4E0F]">
+                    ★ {t('catalog.featured')}
+                  </span>
+                )}
                 <div className="px-4 pt-4 text-center">
                   <h3 className="truncate font-display text-sm font-bold">
                     {tCatalog(`${game.id}.title`)}
@@ -165,6 +307,11 @@ export async function LandingPage({ locale }: { locale: string }) {
                       {t('catalog.players', { min: game.minPlayers, max: game.maxPlayers })}
                     </p>
                   )}
+                  {/* L'accroche traduite existait déjà mais n'était jamais rendue :
+                      le catalogue n'annonçait que des titres. */}
+                  <p className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-[#4A443A]">
+                    {tCatalog(`${game.id}.description`)}
+                  </p>
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
                     {game.onlineReady && (
                       <span className="rounded-full bg-emerald-700/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-800">
@@ -184,25 +331,30 @@ export async function LandingPage({ locale }: { locale: string }) {
         </div>
       </section>
 
-      {/* ── Règles (maillage interne SEO) ── */}
-      <section className="py-8">
-        <h2 className="text-center font-display text-xl font-bold text-gold sm:text-2xl">
-          {t('rules.title')}
-        </h2>
-        <p className="mt-1 text-center text-xs text-white/45">{t('rules.subtitle')}</p>
-        <ul className="mt-4 flex flex-wrap justify-center gap-2">
-          {RULES_GAME_IDS.map((id) => (
-            <li key={id}>
-              <Link
-                href={`/regles/${id}`}
-                className="inline-flex rounded-full border border-gold/25 px-3 py-1.5 text-xs font-semibold text-cream/75 transition-colors hover:border-gold/50 hover:text-cream"
-              >
-                {t('rules.linkLabel', { game: tCatalog(`${id}.title`) })}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* ── Règles (maillage interne SEO) ──
+          Les articles de /regles n'existent QU'EN FRANÇAIS (docs/rules/fr/, et
+          leur canonique pointe déjà sur /fr). Les proposer à un anglophone était
+          une promesse non tenue : la section ne sort donc qu'en français. */}
+      {locale === 'fr' && (
+        <section className="py-8">
+          <h2 className="text-center font-display text-xl font-bold text-gold sm:text-2xl">
+            {t('rules.title')}
+          </h2>
+          <p className="mt-1 text-center text-xs text-white/45">{t('rules.subtitle')}</p>
+          <ul className="mt-4 flex flex-wrap justify-center gap-2">
+            {RULES_GAME_IDS.map((id) => (
+              <li key={id}>
+                <Link
+                  href={`/regles/${id}`}
+                  className="inline-flex rounded-full border border-gold/25 px-3 py-1.5 text-xs font-semibold text-cream/75 transition-colors hover:border-gold/50 hover:text-cream"
+                >
+                  {t('rules.linkLabel', { game: tCatalog(`${id}.title`) })}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* ── CTA final ── */}
       <section className="py-10 text-center">

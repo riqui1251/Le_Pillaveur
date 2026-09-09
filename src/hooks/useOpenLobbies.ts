@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { LobbyListItem } from '@/lib/online-room'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { usePagePresence } from '@/hooks/usePagePresence'
 
 const POLL_MS = 4000
 
 export function useOpenLobbies() {
   const { user } = useAuth()
+  const visible = usePagePresence()
   const [lobbies, setLobbies] = useState<LobbyListItem[]>([])
   const [loading, setLoading] = useState(true)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -51,12 +53,17 @@ export function useOpenLobbies() {
       return
     }
 
+    // Onglet caché : on ne sonde plus. L'effet est relancé au retour au
+    // premier plan (`visible` est une dépendance), donc avec un
+    // rafraîchissement immédiat — voir usePagePresence.
+    if (!visible) return
+
     void fetchLobbies()
     pollRef.current = setInterval(fetchLobbies, POLL_MS)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [user?.id, user?.playMode])
+  }, [user?.id, user?.playMode, visible])
 
   const refresh = async () => {
     if (!user || user.playMode !== 'online' || inFlightRef.current) return

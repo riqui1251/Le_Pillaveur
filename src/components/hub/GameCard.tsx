@@ -25,8 +25,8 @@ function playersLabel(min?: number, max?: number): string | null {
 /**
  * Tuile de jeu « Vitrine » : mini-carte à jouer verticale — coin rang+enseigne,
  * icône en vedette teintée par la famille (♥♦ rouge carreau, ♠♣ encre), titre
- * Playfair centré. La description vit dans le briefing du lobby, pas ici :
- * les 13 jeux tiennent sur un seul écran.
+ * Playfair centré et accroche sur deux lignes — 22 noms de code sans un mot
+ * d'explication ne se choisissent pas au doigt.
  */
 export function GameCard({ game, icon }: GameCardProps) {
   const t = useTranslations("hub.jeux")
@@ -73,11 +73,18 @@ export function GameCard({ game, icon }: GameCardProps) {
             🤖
           </span>
         )}
-        <article className="flex h-full min-h-[5.5rem] flex-col items-center px-1.5 pb-1.5 pt-3 text-center sm:min-h-[6rem]">
+        <article className="flex h-full min-h-[7rem] flex-col items-center px-1.5 pb-1.5 pt-3 text-center sm:min-h-[7.5rem]">
           <div className={cn(red ? "text-suit-red" : "text-[#24201A]")}>{icon}</div>
           <h3 className="mt-1 line-clamp-2 font-display text-[11px] font-bold leading-tight text-[#24201A] sm:text-xs">
             {game.title}
           </h3>
+          {/* L'accroche ne vivait que dans le `title=` du lien : invisible au
+              doigt, le hub n'était qu'une liste de noms de code. Deux lignes
+              maximum — au-delà, la colonne de 375/3 px déborde de la carte
+              (le `title=` du lien garde le texte entier au survol). */}
+          <p className="mt-0.5 line-clamp-2 text-[9px] leading-[1.25] text-[#6B6455] sm:text-[10px]">
+            {game.description}
+          </p>
           {players && (
             <span className="mt-auto pt-0.5 text-[9px] font-bold text-[#6B6455]" aria-label={`${players} joueurs`}>
               {players} j.

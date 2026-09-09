@@ -33,6 +33,10 @@ export async function GET() {
     cached = { count, at: now }
     return NextResponse.json({ count })
   } catch {
-    return NextResponse.json({ count: cached?.count ?? 0 })
+    // Le cache est alimenté MÊME en échec : la vitrine rend ce compteur à
+    // chaque visite, et sans ça une base indisponible ferait retenter deux
+    // requêtes à chaque rendu — le pic de trafic qui accompagne une panne.
+    cached = { count: cached?.count ?? 0, at: now }
+    return NextResponse.json({ count: cached.count })
   }
 }

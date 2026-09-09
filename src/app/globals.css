@@ -63,19 +63,40 @@ body.is-mobile-device,
   color: var(--foreground) !important;
 }
 
+/* Confort tactile : on garde le comportement de pointeur (pas de délai de
+   double-tap, pas de flash gris) mais PLUS de `min-height: 44px` ici — cette
+   contrainte agrandissait la BOÎTE et déformait tout ce qui doit rester
+   petit (pastilles de couleur, jetons, cases de plateau, boutons d'icône de
+   24 à 28px). La cible confortable passe désormais par `.touch-target`, qui
+   étend la ZONE touchable sans toucher au visuel. */
 .is-mobile-device button,
 .is-mobile-device [role="button"],
 .is-mobile-device a {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  min-height: 44px !important;
   /* Ajouter une transition pour aider à forcer le rendu sur mobile */
   transition: background-color 0.01s, color 0.01s !important;
 }
 
-/* Cellules de plateau de jeu : la taille tactile minimale globale (44px)
-   ferait déborder les grilles denses (ex. Toucher-Coulé 10×10 sur 320px).
-   Les cellules remplissent exactement leur case de grille. */
+/* iOS zoome automatiquement sur tout champ dont le texte fait moins de 16px
+   au focus, puis laisse la page décalée — insupportable au Petit Bac où l'on
+   enchaîne les saisies. Plancher à 16px sous le point de rupture `sm` ; au-delà
+   (tablette/desktop) le zoom ne s'applique pas et la taille d'origine reprend.
+   `!important` parce que les utilitaires Tailwind posés sur les champs
+   (`text-sm`) l'emporteraient sinon ; limité aux champs de SAISIE (les
+   cases à cocher, curseurs et boutons ne déclenchent aucun zoom). */
+@media (max-width: 639.98px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Cellules de plateau de jeu : garde-fou historique contre la taille tactile
+   minimale globale (44px), retirée depuis. Conservé parce qu'il vaut comme
+   déclaration d'intention — ces cellules remplissent exactement leur case de
+   grille et ne doivent JAMAIS se voir imposer un plancher de taille. */
 .is-mobile-device .game-grid-cell,
 .game-grid-cell {
   min-height: 0 !important;
@@ -214,13 +235,11 @@ body.is-mobile-device,
   body {
     @apply bg-background text-foreground;
   }
-  
-  /* Améliorations tactiles pour les appareils mobiles uniquement */
-  @media (max-width: 640px) {
-    button, a, input[type="button"], input[type="submit"] {
-      @apply min-h-[2.5rem] min-w-[2.5rem] leading-none;
-    }
-  }
+
+  /* (Ancien bloc « améliorations tactiles » retiré : il imposait
+     min-h/min-w 2.5rem + leading-none à TOUS les boutons et liens sous
+     640px, ce qui carrait les pastilles et écrasait l'interligne des liens
+     en pleine phrase. Voir `.touch-target` dans @layer utilities.) */
 }
 
 @layer components {
@@ -302,6 +321,27 @@ body.is-mobile-device,
      Soft automatiquement (variables --felt / --felt-deep). */
   .app-felt {
     background: radial-gradient(140% 100% at 50% 0%, var(--felt), var(--felt-deep));
+  }
+
+  /* Cible tactile confortable SANS déformer le visuel : la boîte garde sa
+     taille (une pastille de 28px reste à 28px), c'est un pseudo-élément
+     centré d'au moins 44×44 qui capte le doigt. À poser sur les petits
+     boutons d'icône, jetons et pastilles.
+     Réservé au pointeur grossier : à la souris, la zone débordante volerait
+     les clics des éléments voisins alors que la précision ne l'exige pas. */
+  @media (pointer: coarse) {
+    .touch-target {
+      position: relative;
+    }
+    .touch-target::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
   }
 
   /* Respect des encoches / barres système (iOS notch, Android nav bar) */

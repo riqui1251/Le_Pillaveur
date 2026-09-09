@@ -46,7 +46,7 @@ export function FriendsPanel({ open, onClose }: FriendsPanelProps) {
                 type="button"
                 onClick={onClose}
                 aria-label={tNav('closeMenu')}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>

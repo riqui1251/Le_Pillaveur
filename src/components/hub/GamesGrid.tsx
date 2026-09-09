@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Search, Sparkles } from 'lucide-react'
+import { Link } from '@/i18n/navigation'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
 import { GameCard } from '@/components/hub/GameCard'
 import { GameIconById } from '@/components/hub/GameIconById'
@@ -74,6 +75,15 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
     )
   }, [visible, query])
 
+  // Rangée « les incontournables » : les jeux qui montrent le mieux le produit,
+  // en tête du hub. Ils restent aussi dans leur famille plus bas — c'est une
+  // mise en avant, pas un déplacement. Rien à mettre en avant en mode local
+  // (les phares sont online) : la rangée disparaît alors d'elle-même.
+  const featured = useMemo(
+    () => (query.trim() ? [] : visible.filter((g) => g.featured)),
+    [visible, query]
+  )
+
   // Sections par enseigne hors recherche — grille plate quand on cherche.
   const sections = useMemo(() => {
     if (query.trim()) return null
@@ -107,6 +117,23 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
         </div>
       </div>
 
+      {/* Atterrissage « Jouer seul avec les bots » : la liste a rétréci sans
+          un mot d'explication — on dit pourquoi, et comment tout revoir. */}
+      {soloBots && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-3 py-2">
+          <p className="text-xs leading-snug text-amber-100/85">
+            <span className="font-semibold text-amber-200">{t('soloBanner.title')}</span>{' '}
+            {t('soloBanner.text')}
+          </p>
+          <Link
+            href="/jeux"
+            className="ml-auto shrink-0 text-xs font-semibold text-amber-200 underline underline-offset-2 transition-colors hover:text-amber-100"
+          >
+            {t('soloBanner.showAll')}
+          </Link>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-12 text-center">
           <Sparkles className="mb-3 h-7 w-7 text-amber-300/60" aria-hidden />
@@ -115,6 +142,17 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
         </div>
       ) : sections ? (
         <div className="space-y-4">
+          {featured.length > 0 && (
+            <section>
+              <h2 className="mb-1.5 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
+                <span className="shrink-0">
+                  <span aria-hidden>★</span> {t('featured')}
+                </span>
+                <span aria-hidden className="h-px flex-1 bg-gold/15" />
+              </h2>
+              <GamesCardGrid games={featured} />
+            </section>
+          )}
           {sections.map((section) => (
             <section key={section.suit}>
               <h2 className="mb-1.5 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">

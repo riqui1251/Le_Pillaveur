@@ -153,7 +153,20 @@ export function TvRoomView({ code }: { code: string }) {
   // Chaque nouveau jeu gère sa propre fin de partie ; TvVictory (écran
   // historique) ne sert qu'au Petit Buveur et au Toucher-Coulé.
   let content: ReactNode
-  if (room.status === 'waiting' || !state) {
+  if (room.status === 'briefing') {
+    // Le lancement ne crée PAS l'état de jeu tout de suite : la salle passe en
+    // `briefing` (chacun lit les règles sur son téléphone, jusqu'à 90 s) et
+    // `gameStateJson` reste nul. Sans ce cas, la TV retombait dans le lobby et
+    // affichait « en attente du lancement » pendant tout le briefing, alors
+    // que la partie est bel et bien lancée. Aucun trafic en plus : le bus SSE
+    // pousse déjà ce changement de statut (`publishRoomChanged` au lancement).
+    content = (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+        <p className="text-6xl font-black text-cream">{t('starting')}</p>
+        <p className="text-2xl text-white/50">{t('startingHint')}</p>
+      </div>
+    )
+  } else if (room.status === 'waiting' || !state) {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   } else if (room.gameId === 'petit-buveur') {
     content = finished ? (

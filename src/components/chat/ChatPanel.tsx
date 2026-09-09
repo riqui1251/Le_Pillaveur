@@ -185,7 +185,7 @@ function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () =
           onClick={() => { void send() }}
           disabled={!draft.trim() || sending}
           aria-label={t('send')}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white transition-colors hover:bg-violet-500 disabled:opacity-40"
+          className="touch-target flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white transition-colors hover:bg-violet-500 disabled:opacity-40"
         >
           <Send className="h-4 w-4" />
         </button>
@@ -248,7 +248,7 @@ export function ChatPanel({ open, onClose, unread, onRead }: ChatPanelProps) {
                       type="button"
                       onClick={() => setFriendId(null)}
                       aria-label={t('back')}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                      className="touch-target flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </button>
@@ -265,7 +265,7 @@ export function ChatPanel({ open, onClose, unread, onRead }: ChatPanelProps) {
                 type="button"
                 onClick={onClose}
                 aria-label={tNav('closeMenu')}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                className="touch-target flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>

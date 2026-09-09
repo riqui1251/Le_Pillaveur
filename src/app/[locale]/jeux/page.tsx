@@ -17,15 +17,18 @@ import { useRequireSelectedPlayers } from '@/hooks/useRequireSelectedPlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GAMES } from '@/lib/games'
+import { cn } from '@/lib/utils'
 
 export default function GamesHubPage() {
   const t = useTranslations('hub.jeux')
   const tOnline = useTranslations('hub.jeuxOnline')
   const router = useRouter()
-  const { user, setPlayMode } = useAuth()
+  const { user, setPlayMode, loading: authLoading } = useAuth()
   const { joinRoom, loading: joining } = useOnlineRoom()
   const isOnline = user?.playMode === 'online'
-  const { ready, browsing } = useRequireSelectedPlayers('/joueurs', { skipWhenOnline: true })
+  // Appelé pour son effet de bord (redirection vers /joueurs en mode local
+  // sans joueur) : la vitrine ne dépend PLUS de son retour — voir plus bas.
+  useRequireSelectedPlayers('/joueurs', { skipWhenOnline: true })
   const searchParams = useSearchParams()
   // Funnel landing « Jouer seul avec les bots » : ?solo=1 filtre la grille
   // sur les jeux jouables avec des bots (voir GamesGrid).
@@ -123,9 +126,6 @@ export default function GamesHubPage() {
     }
   }
 
-  // Visiteur sans mode choisi (browsing) : on montre quand même la vitrine.
-  if (!isOnline && !ready && !browsing) return null
-
   const dismissGate = () => {
     try {
       window.localStorage.removeItem('lp-pending-join')
@@ -146,12 +146,19 @@ export default function GamesHubPage() {
       headerExtra={
         <div className="space-y-2">
           {/* Chrome condensé (Vitrine) : les deux bascules sur UNE ligne —
-              l'ambiance en icônes seules, le libellé reste en title/aria. */}
-          <div className="flex items-center gap-2">
+              l'ambiance en icônes seules, le libellé reste en title/aria.
+              La hauteur de la ligne est RÉSERVÉE tant que l'auth n'a pas
+              répondu : sans ça, l'arrivée des bascules pousserait la grille
+              déjà affichée vers le bas. Une fois l'auth connue sans compte,
+              la ligne se referme au lieu de laisser une bande vide. */}
+          <div className={cn('flex items-center gap-2', (authLoading || Boolean(user)) && 'min-h-[3.375rem]')}>
             <PlayModeToggle className="max-w-none flex-[1.4]" />
             {isOnline && <AmbianceModeToggle dense className="max-w-none flex-1" />}
           </div>
-          {!isOnline && <SelectedPlayersBar />}
+          {/* Bandeau de session : tant que l'auth n'a pas répondu, `isOnline`
+              vaut false pour TOUT LE MONDE — l'afficher tout de suite le
+              ferait clignoter chez les joueurs en ligne. */}
+          {!authLoading && !isOnline && <SelectedPlayersBar />}
           {user?.displayName && (
             <p className="flex items-center justify-end gap-1.5 px-1 text-[11px] text-white/45">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -167,6 +174,12 @@ export default function GamesHubPage() {
       {isOnline && <RecentGamesRow />}
       {isOnline && <OpenLobbiesList />}
 
+      {/* La grille ne dépend QUE du catalogue statique : elle est rendue sans
+          condition, dès le rendu serveur. La page renvoyait `null` tant que
+          l'appel d'authentification n'avait pas répondu — HTML vide, flash
+          blanc pour tout le monde et catalogue invisible sans JavaScript sur
+          la page poussée en priorité 1.0 au sitemap. Seuls les bandeaux
+          au-dessus (bascules, joueurs, tables récentes) attendent la session. */}
       <GamesGrid solo={soloBots} />
     </HubShell>
     </>

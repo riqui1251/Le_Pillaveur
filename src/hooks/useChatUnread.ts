@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { usePagePresence } from '@/hooks/usePagePresence'
 
 const POLL_MS = 10000
 
@@ -16,6 +17,7 @@ const EMPTY: ChatUnread = { total: 0, room: 0, friends: {} }
 /** Compteur de messages de chat non lus (badge du header) — poll léger. */
 export function useChatUnread() {
   const { user } = useAuth()
+  const visible = usePagePresence()
   const [unread, setUnread] = useState<ChatUnread>(EMPTY)
   const inFlightRef = useRef(false)
 
@@ -42,10 +44,14 @@ export function useChatUnread() {
       setUnread(EMPTY)
       return
     }
+    // Onglet caché : sondage suspendu, repris avec un rafraîchissement
+    // immédiat au retour au premier plan (voir usePagePresence).
+    if (!visible) return
+
     void refresh()
     const timer = setInterval(refresh, POLL_MS)
     return () => clearInterval(timer)
-  }, [user?.id, refresh]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, refresh, visible]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { unread, refresh }
 }

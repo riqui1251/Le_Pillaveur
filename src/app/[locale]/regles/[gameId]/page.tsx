@@ -11,6 +11,7 @@ import {
 } from '@/lib/rules/rules-content'
 import { GAMES } from '@/lib/games'
 import { TryBotsGate } from '@/components/online/TryBotsGate'
+import { SITE_URL } from '@/lib/site'
 
 /**
  * Pages « règles » SEO — un article par jeu en ligne (contenu français,
@@ -58,9 +59,49 @@ export default async function RulesPage({
   const content = loadRulesDoc(gameId)
   if (!content) notFound()
   const game = GAMES.find((g) => g.id === gameId)
+  const meta = RULES_META[gameId]
+  const canonicalUrl = `${SITE_URL}/fr/regles/${gameId}`
+
+  // Données structurées de l'article de règles : le canonical est /fr, la
+  // langue déclarée doit l'être aussi (voir le `lang="fr"` plus bas). `about`
+  // rattache l'article au jeu décrit, ce qui manquait complètement.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: meta.title,
+    description: meta.description,
+    inLanguage: 'fr',
+    url: canonicalUrl,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+    publisher: { '@type': 'Organization', name: 'Le Pillaveur', url: SITE_URL },
+    about: game
+      ? {
+          '@type': 'Game',
+          name: game.title,
+          url: `${SITE_URL}/fr${game.path}`,
+          ...(game.minPlayers && game.maxPlayers
+            ? {
+                numberOfPlayers: {
+                  '@type': 'QuantitativeValue',
+                  minValue: game.minPlayers,
+                  maxValue: game.maxPlayers,
+                },
+              }
+            : {}),
+        }
+      : undefined,
+  }
 
   return (
-    <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 pb-24 sm:px-6">
+    // Contenu 100 % FRANÇAIS servi aussi sous /en, /es et /it : sans ce
+    // `lang`, le document annonçait de l'anglais (ou de l'espagnol…) sur du
+    // texte français — faute pour un moteur comme pour un lecteur d'écran.
+    // Le middleware et le préfixe d'URL, eux, ne bougent pas.
+    <div lang="fr" className="mx-auto min-h-screen max-w-3xl px-4 py-8 pb-24 sm:px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Link
         href="/"
         className="mb-6 inline-flex items-center gap-2 text-sm text-white/50 transition-colors hover:text-white/80"

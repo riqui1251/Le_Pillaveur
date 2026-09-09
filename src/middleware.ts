@@ -42,6 +42,30 @@ const PUBLIC_PREFIXES = [
   '/images',
 ]
 
+/**
+ * Premiers segments réellement servis par src/app/[locale] (publics comme
+ * protégés). Sert UNIQUEMENT à distinguer « page protégée » de « page qui
+ * n'existe pas » : la garde d'accès elle-même ne change pas. À tenir à jour
+ * en même temps que les dossiers de src/app/[locale].
+ */
+const KNOWN_SEGMENTS = new Set([
+  'achievements',
+  'application',
+  'classement',
+  'compte',
+  'games',
+  'invite',
+  'jeux',
+  'joueurs',
+  'legal',
+  'online',
+  'regles',
+  'stats',
+  'supervision',
+  'test-colors',
+  'tv',
+])
+
 function isPublicPath(pathname: string): boolean {
   const pathWithoutLocale = stripLocalePrefix(pathname)
   // Racine : la page d'accueil redirige elle-même vers /jeux (public).
@@ -82,6 +106,16 @@ export function middleware(request: NextRequest) {
 
   const locale = getLocaleFromPath(pathname)
   const pathWithoutLocale = stripLocalePrefix(pathname)
+
+  // URL qui ne correspond à AUCUNE route du site : on laisse passer pour que
+  // Next serve la 404 localisée. Sans ça, /fr/nimportequoi était redirigé vers
+  // /compte comme une page protégée — un visiteur (et Googlebot) ne voyait
+  // jamais la 404, et un lien mort ressemblait à un mur de connexion.
+  const firstSegment = pathWithoutLocale.split('/')[1] ?? ''
+  if (firstSegment && !KNOWN_SEGMENTS.has(firstSegment)) {
+    return intlResponse
+  }
+
   const url = request.nextUrl.clone()
   url.pathname = `/${locale}/compte`
   url.searchParams.set('redirect', pathWithoutLocale)

@@ -257,7 +257,7 @@ export function PetitBacOnline() {
             <span className="rounded-lg border border-gold/40 bg-gold/10 px-2.5 py-0.5 font-display text-xl font-black text-gold">
               {view.letter}
             </span>
-            <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
+            <TutorialReopenButton onClick={tutorial.reopen} className="touch-target h-7 w-7" />
           </span>
         </div>
         {timeLeftMs !== null && view.phase === 'write' && (
@@ -296,11 +296,21 @@ export function PetitBacOnline() {
                 <span className="text-[11px] font-bold uppercase tracking-wide text-[#8A7A55]">
                   {catLabel(cat)}
                 </span>
+                {/* Saisie mobile : 16px sous `sm` (en dessous, iOS zoome au
+                    focus et décale la page à chaque champ — insupportable ici
+                    où l'on enchaîne cinq saisies contre la montre) ; « suivant »
+                    sur la touche entrée sauf au dernier champ ; correcteur et
+                    autocorrection coupés, les réponses sont des noms propres
+                    (le moteur normalise la casse, la majuscule est sans effet). */}
                 <input
                   type="text"
                   value={draft[i] ?? ''}
                   maxLength={40}
                   autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="words"
+                  spellCheck={false}
+                  enterKeyHint={i === view.categories.length - 1 ? 'done' : 'next'}
                   disabled={view.phase !== 'write' || Boolean(me?.hasSubmitted)}
                   onChange={(e) => {
                     const next = [...draft]
@@ -308,7 +318,7 @@ export function PetitBacOnline() {
                     setDraft(next)
                   }}
                   placeholder={`${view.letter}…`}
-                  className="mt-0.5 w-full bg-transparent text-sm font-bold text-[#24201A] placeholder:text-[#B7A87F] focus:outline-none"
+                  className="mt-0.5 w-full bg-transparent text-base font-bold text-[#24201A] placeholder:text-[#B7A87F] focus:outline-none sm:text-sm"
                 />
               </label>
             ))}
@@ -388,7 +398,7 @@ export function PetitBacOnline() {
                           }
                           title={t('contest')}
                           className={cn(
-                            'flex shrink-0 items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] font-bold transition-colors',
+                            'touch-target flex shrink-0 items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] font-bold transition-colors',
                             cell.rejected
                               ? 'border-suit-red/40 bg-suit-red/15 text-suit-red'
                               : cell.iContested

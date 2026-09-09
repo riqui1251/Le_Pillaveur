@@ -25,6 +25,17 @@ function hasCookie(name: string): boolean {
  */
 type GateMode = 'gate' | 'cookies-only'
 
+/**
+ * Routes SANS AUCUNE surcouche (ni portail 18+, ni bandeau cookies) : l'écran
+ * TV. C'est un afficheur PASSIF, souvent sans clavier ni souris — une modale
+ * bloquante y est un cul-de-sac. Et il n'y a rien à certifier : la TV
+ * n'affiche que ce que lui pousse le téléphone qui a lancé la diffusion, et
+ * c'est CE téléphone qui a franchi le portail (et posé le cookie analytics).
+ */
+export function isOverlayFreeRoute(pathname: string): boolean {
+  return pathname === '/tv' || pathname.startsWith('/tv/')
+}
+
 export function AgeGate() {
   const t = useTranslations('legal.ageGate')
   const tNav = useTranslations('nav.legal')
@@ -62,6 +73,7 @@ export function AgeGate() {
   // discret, lui, reste possible partout.
   const readingPage =
     pathname === '/' || pathname.startsWith('/legal') || pathname.startsWith('/regles')
+  if (isOverlayFreeRoute(pathname)) return null
   if (!mode || (mode === 'gate' && readingPage)) return null
   if (mode === 'cookies-only' && pathname.startsWith('/legal')) return null
 

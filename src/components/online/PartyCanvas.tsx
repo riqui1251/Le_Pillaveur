@@ -146,6 +146,9 @@ export function PartyCanvas({
         />
       </div>
       {!readOnly && (
+        // `touch-target` sur chaque pastille : au doigt, la zone touchable monte
+        // à 44px alors que la pastille reste à 28px — la palette ne doit pas
+        // grossir, elle tiendrait sinon sur deux lignes à 360px.
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-1.5">
             <button
@@ -154,7 +157,7 @@ export function PartyCanvas({
               aria-label={t('eraser')}
               title={t('eraser')}
               className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-full border-2 bg-white transition-transform',
+                'touch-target flex h-7 w-7 items-center justify-center rounded-full border-2 bg-white transition-transform',
                 color === BG_COLOR ? 'scale-110 border-emerald-400' : 'border-white/20'
               )}
             >
@@ -167,7 +170,7 @@ export function PartyCanvas({
                 onClick={() => setColor(c)}
                 aria-label={c}
                 className={cn(
-                  'h-7 w-7 rounded-full border-2 transition-transform',
+                  'touch-target h-7 w-7 rounded-full border-2 transition-transform',
                   color === c ? 'scale-110 border-emerald-400' : 'border-white/20'
                 )}
                 style={{ backgroundColor: c }}
@@ -182,7 +185,7 @@ export function PartyCanvas({
                 onClick={() => setWidth(wd)}
                 aria-label={`${wd}px`}
                 className={cn(
-                  'flex h-7 w-7 items-center justify-center rounded-full border',
+                  'touch-target flex h-7 w-7 items-center justify-center rounded-full border',
                   width === wd ? 'border-emerald-400 bg-emerald-500/10' : 'border-white/20'
                 )}
               >
@@ -195,7 +198,7 @@ export function PartyCanvas({
             <button
               type="button"
               onClick={onClear}
-              className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10"
+              className="touch-target rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10"
             >
               {t('clear')}
             </button>

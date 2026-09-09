@@ -585,7 +585,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               type="button"
               onClick={() => setSeatSel(null)}
               aria-label={tOnline('close')}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white/40 hover:text-white"
+              className="touch-target flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white/40 hover:text-white"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -658,6 +658,19 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           <p className="rounded-xl border border-[#D8CCAE] bg-cream px-5 py-2 font-mono text-3xl font-black tracking-[0.3em] text-[#24201A]">
             {room.code}
           </p>
+          {/* Le seul chemin vers /tv dans tout le produit : sans ce lien, il
+              fallait taper l'URL à la main. Nouvel onglet (et <a> nu, sans
+              préfixe de langue) — le téléphone reste la manette de la table. */}
+          <a
+            href={`/tv/${room.code}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-200 transition-colors hover:bg-amber-500/20"
+          >
+            <Tv className="h-3.5 w-3.5" />
+            {tTv('openTvScreen')}
+          </a>
+          <p className="text-[11px] leading-relaxed text-white/40">{tTv('openTvScreenHint')}</p>
           <JoinQR
             url={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${room.code}`}
             size={128}

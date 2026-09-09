@@ -1,6 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { useToast } from '@/components/ui/toast'
 
 /**
  * Diffusion d'un jeu LOCAL vers une TV. Crée une salle de cast, y pousse l'état
@@ -9,29 +11,59 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  */
 const PUSH_INTERVAL_MS = 300
 
+/** Pourquoi la diffusion n'a pas démarré — `auth` = pas de compte (401). */
+export type CastError = 'auth' | 'failed'
+
 export function useCastRoom(gameId: string) {
+  const t = useTranslations('tv')
+  const { showToast } = useToast()
   const [code, setCode] = useState<string | null>(null)
+  const [error, setError] = useState<CastError | null>(null)
   const codeRef = useRef<string | null>(null)
   const lastPushRef = useRef(0)
   const pendingRef = useRef<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  /**
+   * Aucun chemin muet : le bouton « TV » est proposé à TOUT LE MONDE alors que
+   * `/api/tv/cast` exige un compte (401) — l'échec doit donc se voir.
+   * On remonte un message traduit plutôt que de créer un compte invité à la
+   * volée (`/api/auth/guest`) : cette route bascule la session en playMode
+   * 'online' et efface le cookie de jeu local, ce qui changerait le mode du
+   * joueur EN PLEINE PARTIE locale juste parce qu'il a cliqué sur « TV ».
+   * Le toast couvre les trois jeux castables (Plinko, PMU, Petit Buveur) sans
+   * dupliquer d'UI ; `error` reste exposé pour un affichage en ligne éventuel.
+   */
+  const fail = useCallback(
+    (kind: CastError) => {
+      setError(kind)
+      showToast({
+        message: kind === 'auth' ? t('castNeedsAccount') : t('castFailed'),
+        type: 'error',
+        duration: 6000,
+      })
+      return null
+    },
+    [showToast, t],
+  )
+
   const start = useCallback(
     async (initialState?: string) => {
+      setError(null)
       const res = await fetch('/api/tv/cast', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gameId, state: initialState }),
       }).catch(() => null)
-      if (!res || !res.ok) return null
+      if (!res || !res.ok) return fail(res?.status === 401 ? 'auth' : 'failed')
       const data = (await res.json().catch(() => ({}))) as { code?: string }
-      if (!data.code) return null
+      if (!data.code) return fail('failed')
       codeRef.current = data.code
       setCode(data.code)
       return data.code
     },
-    [gameId],
+    [gameId, fail],
   )
 
   const doPush = useCallback((state: string) => {
@@ -84,6 +116,7 @@ export function useCastRoom(gameId: string) {
     const c = codeRef.current
     codeRef.current = null
     setCode(null)
+    setError(null)
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
@@ -101,5 +134,5 @@ export function useCastRoom(gameId: string) {
     }
   }, [])
 
-  return { code, active: code != null, start, push, pushFrame, stop }
+  return { code, active: code != null, error, start, push, pushFrame, stop }
 }

@@ -12,7 +12,16 @@
   "metadata": {
     "title": "Le Pillaveur",
     "titleFull": "Le Pillaveur — Giochi di società gratis online con gli amici",
-    "description": "21 giochi di società gratis, senza installazione: Lupo Mannaro, quiz, disegno, bluff. Con gli amici, chat vocale e modalità TV — o da solo coi bot."
+    "description": "Giochi di società gratis, senza installazione: Lupo Mannaro, quiz, disegno, bluff. Con gli amici, chat vocale e modalità TV — o da solo coi bot.",
+    "descriptionCount": "{count} giochi di società gratis, senza installazione: Lupo Mannaro, quiz, disegno, bluff. Con gli amici, chat vocale e modalità TV — o da solo coi bot.",
+    "ranking": {
+      "title": "Classifica dei giocatori",
+      "description": "La classifica delle partite online di Le Pillaveur: vittorie, sconfitte e percentuale di vittorie, in generale e gioco per gioco."
+    },
+    "mobileApp": {
+      "title": "App per cellulare",
+      "description": "Le Pillaveur sul telefono: l’app Android e iOS sta arrivando. Nel frattempo tutti i giochi funzionano già nel browser, senza installare nulla."
+    }
   },
   "nav": {
     "brand": "Le Pillaveur",
@@ -168,7 +177,15 @@
       },
       "emptyTitle": "Nessun gioco trovato",
       "emptyHint": "Prova un'altra parola chiave.",
-      "botsBadge": "Giocabile con i bot"
+      "botsBadge": "Giocabile con i bot",
+      "h1": "Giochi da festa gratis, con gli amici o con i bot",
+      "intro": "Scegli un gioco e inizia in pochi secondi: tutti su un solo telefono che gira intorno al tavolo, o ognuno sul proprio con un codice tavolo.",
+      "featured": "Immancabili",
+      "soloBanner": {
+        "title": "Giocare da solo con i bot.",
+        "text": "Sono mostrati solo i giochi in cui i bot possono completare il tavolo.",
+        "showAll": "Vedi tutto il catalogo"
+      }
     },
     "jeuxOnline": {
       "title": "Giochi online",
@@ -195,7 +212,8 @@
     "playMode": {
       "label": "Modalità di gioco",
       "local": "Locale",
-      "online": "Online"
+      "online": "Online",
+      "onlineNeedsAccount": "Accedi per giocare online"
     }
   },
   "onlineXp": {
@@ -673,7 +691,10 @@
       "frame": "Cornice dell'icona",
       "frameStaffOnly": "Riservato ai membri dello staff (moderatore+)",
       "lockedLevel": "Lv. {level}"
-    }
+    },
+    "loadError": "Errore nel caricamento dei giocatori",
+    "selectedTitle": "Giocatori selezionati",
+    "gamesPlayedCount": "{count, plural, one {# partita} other {# partite}}"
   },
   "games": {
     "1220": {
@@ -744,7 +765,7 @@
     },
     "meta": {
       "hub": {
-        "title": "Gioca a 21 giochi di società gratis — con amici o con bot",
+        "title": "Giochi di società gratis online — con amici o con bot",
         "description": "Lupo Mannaro, quiz, disegno, bluff: apri un tavolo gratis e invita gli amici con link o QR — o gioca da solo, i bot completano il tavolo."
       },
       "purple": {
@@ -3679,12 +3700,20 @@
       "tipRefresh": "Aggiorna la pagina",
       "tipCache": "Svuota la cache del browser",
       "tipConnection": "Controlla la connessione Internet",
-      "logPrefix": "Errore applicazione:"
+      "logPrefix": "Errore applicazione:",
+      "games": "Vedi i giochi",
+      "digest": "Codice: {digest}"
     },
     "boundary": {
       "title": "Si è verificato un errore",
       "retry": "Riprova",
       "backToGames": "Torna ai giochi"
+    },
+    "notFound": {
+      "title": "Questa carta non è nel mazzo",
+      "description": "La pagina ha cambiato posto, il tavolo è stato chiuso o il link si è perso per strada.",
+      "home": "Torna alla home",
+      "games": "Vedi i giochi"
     }
   },
   "supervision": {
@@ -4107,7 +4136,13 @@
     "giveVerb": "Dà",
     "racing": "In gara!",
     "castShort": "TV",
-    "answerOnPhone": "Rispondete dai vostri telefoni!"
+    "answerOnPhone": "Rispondete dai vostri telefoni!",
+    "openTvScreen": "Apri lo schermo TV",
+    "openTvScreenHint": "Si apre in una nuova scheda: mettila in TV. Il telefono resta il telecomando.",
+    "castNeedsAccount": "Accedi per trasmettere in TV (è gratis).",
+    "castFailed": "Trasmissione non riuscita al momento. Riprova.",
+    "starting": "La partita sta per iniziare…",
+    "startingHint": "Ognuno legge le regole sul proprio telefono."
   },
   "gameTutorial": {
     "next": "Avanti",
@@ -4142,12 +4177,27 @@
       "subtitle": "Lupus con chat vocale, quiz, disegno, bluff e giochi da festa: fino a 16 giocatori online, o un telefono che gira intorno al tavolo — con i tuoi amici, o da solo contro i nostri bot.",
       "ctaPlay": "Apri un tavolo con gli amici",
       "ctaSolo": "Gioca da solo con i bot",
-      "trust": "100% gratis · zero installazioni · zero registrazione — un nickname e il tavolo è tuo"
+      "trust": "100% gratis · zero installazioni · zero registrazione — un nickname e il tavolo è tuo",
+      "live": "{count, plural, one {# giocatore online in questo momento} other {# giocatori online in questo momento}}"
+    },
+    "preview": {
+      "title": "Che aspetto ha",
+      "subtitle": "Il tavolo si vede in grande in TV o su qualsiasi schermo; ognuno tiene il proprio ruolo e le proprie carte sul telefono.",
+      "tvJoin": "Unisciti al tavolo",
+      "seat1": "Lea",
+      "seat2": "Sam",
+      "seat3": "Teo",
+      "seat4": "Nina",
+      "seatBot": "Bot",
+      "phoneLabel": "Il tuo ruolo",
+      "phoneHint": "Lo vedi solo tu.",
+      "caption": "Illustrazione: lo schermo condiviso e il telefono di un giocatore durante una partita di {game}."
     },
     "solo": {
       "title": "Nessuno disponibile stasera? Gioca lo stesso.",
       "body": "I nostri bot non danno mai buca: lancia un Bugiardo, un quiz del Gran Pillaveur o un Purple in solitaria — completano il tavolo in un clic. E se un amico arriva a partita in corso, scansiona il QR e prende posto.",
-      "cta": "Inizia una partita con i bot"
+      "cta": "Inizia una partita con i bot",
+      "hint": "Sono mostrati solo i giochi in cui i bot possono completare il tavolo."
     },
     "how": {
       "title": "Come funziona",
@@ -4178,7 +4228,8 @@
       "subtitle": "♠ ruoli nascosti · ♥ cultura · ♦ fortuna e dadi · ♣ crea",
       "online": "Online",
       "local": "Locale",
-      "players": "{min}-{max} giocatori"
+      "players": "{min}-{max} giocatori",
+      "featured": "Immancabile"
     },
     "rules": {
       "title": "Imparare le regole",
