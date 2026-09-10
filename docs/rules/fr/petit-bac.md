@@ -12,8 +12,12 @@ voisin.
    Personnage de fiction, Monument… tirées parmi vingt-quatre, différentes à
    chaque manche.
 2. Tout le monde écrit **en même temps**, en secret, sur son téléphone.
-3. Le premier joueur qui a rempli ses cinq cases crie **STOP** : la table est
-   gelée, les autres rendent leur copie telle quelle.
+3. Le premier joueur qui a rempli ses cinq cases **pour de bon** crie **STOP** :
+   la table est gelée, les autres rendent leur copie telle quelle. Le STOP a
+   deux conditions, vérifiées par le serveur — les cinq réponses doivent
+   **commencer par la bonne lettre** et faire au moins deux caractères, et la
+   manche doit avoir tourné **au moins 20 secondes** : pas de STOP à l'instant
+   zéro avec cinq « aaaaa ».
 
 ## Le comptage (automatique)
 
@@ -29,6 +33,13 @@ voisin.
 **contester** une réponse qu'il juge inventée. Si la **majorité des autres
 joueurs** conteste aussi, la réponse est invalidée et passe à 0. Pas
 d'arbitre : la table tranche.
+
+**Il faut toujours au moins deux voix** : sur une table de deux (ou quand il ne
+reste qu'un seul adversaire en jeu), personne ne peut rayer seul la copie de
+l'autre — le bouton de contestation est alors simplement indisponible.
+
+La grille de comptage reste affichée le temps que tout le monde la lise : le
+premier impatient ne peut pas enchaîner la manche suivante avant les autres.
 
 ## Déroulé d'une partie
 

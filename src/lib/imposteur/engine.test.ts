@@ -14,6 +14,8 @@ import {
   IMPOSTEUR_COUNTDOWN_MS,
   IMPOSTEUR_EMPTY_CLUE,
   IMPOSTEUR_SIPS_CIVIL_OUT,
+  IMPOSTEUR_REVEAL_MS,
+  IMPOSTEUR_REVEAL_MIN_MS,
   IMPOSTEUR_SIPS_PER_ALIVE,
   IMPOSTEUR_VOTE_MS,
   type ImposteurState,
@@ -27,6 +29,14 @@ const PAIRS: ImposteurWordPair[] = [
 ]
 
 const T0 = 1_000_000
+
+/**
+ * Instant auquel le « continuer » de la révélation est recevable : le
+ * plancher de lecture (F33) est toujours atteint à l'échéance de phase.
+ */
+function readAt(state: ImposteurState): number {
+  return state.phaseEndsAt ?? T0
+}
 const FOUR = ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id.toUpperCase() }))
 
 /** Partie créée puis countdown consommé : phase indice pile à T0. */
@@ -147,7 +157,7 @@ describe('nombre d’imposteurs configurable', () => {
       s = reduceImposteur(s, { type: 'VOTE', playerId: p.id, targetId, now: T0 })
     }
     expect(s.lastReveal?.eliminatedId).toBe(civils[0].id)
-    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: civils[0].id, now: T0 })
+    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: civils[0].id, now: readAt(s) })
     expect(done.phase).toBe('finished')
     expect(done.winnerTeam).toBe('imposteur')
   })
@@ -276,6 +286,31 @@ describe('révélation, gorgées et victoires', () => {
     return s
   }
 
+  it('la révélation est chronométrée et ne dépend plus du seul premier vivant (F33)', () => {
+    const s0 = make(5)
+    const civil = s0.players.find((p) => p.team === 'civil')!
+    const s = eliminate(s0, civil.id)
+    expect(s.phase).toBe('reveal')
+    expect(s.phaseEndsAt).toBe(T0 + IMPOSTEUR_REVEAL_MS)
+    // Le premier impatient n'efface plus le mot et le camp de l'éliminé.
+    expect(() =>
+      reduceImposteur(s, {
+        type: 'CONTINUE',
+        playerId: civil.id,
+        now: T0 + IMPOSTEUR_REVEAL_MIN_MS - 1,
+      })
+    ).toThrow('READING_TIME')
+    expect(toImposteurClientView(s, civil.id).continueAt).toBe(T0 + IMPOSTEUR_REVEAL_MIN_MS)
+    // À l'échéance, la manche repart toute seule (personne n'a cliqué).
+    const auto = reduceImposteur(s, {
+      type: 'ADVANCE',
+      claimedKey: phaseKey(s),
+      now: T0 + IMPOSTEUR_REVEAL_MS,
+    })
+    expect(auto.phase).toBe('clue')
+    expect(auto.round).toBe(2)
+  })
+
   it('civil éliminé : 3 gorgées, mot+camp publics, la partie continue', () => {
     const s0 = make(5)
     const civil = s0.players.find((p) => p.team === 'civil')!
@@ -286,7 +321,7 @@ describe('révélation, gorgées et victoires', () => {
       word: civil.word,
       sips: IMPOSTEUR_SIPS_CIVIL_OUT,
     })
-    const next = reduceImposteur(s, { type: 'CONTINUE', playerId: civil.id, now: T0 })
+    const next = reduceImposteur(s, { type: 'CONTINUE', playerId: civil.id, now: readAt(s) })
     expect(next.phase).toBe('clue')
     expect(next.round).toBe(2)
     expect(next.clueOrder).toHaveLength(4)
@@ -303,7 +338,7 @@ describe('révélation, gorgées et victoires', () => {
       team: 'imposteur',
       sips: IMPOSTEUR_SIPS_PER_ALIVE * 3,
     })
-    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: imposteur.id, now: T0 })
+    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: imposteur.id, now: readAt(s) })
     expect(done.phase).toBe('finished')
     expect(done.winnerTeam).toBe('civil')
   })
@@ -314,7 +349,7 @@ describe('révélation, gorgées et victoires', () => {
     expect(s0.phase).toBe('clue') // pas fini d'entrée de jeu
     const civil = s0.players.find((p) => p.team === 'civil')!
     const s = eliminate(s0, civil.id)
-    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: civil.id, now: T0 })
+    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: civil.id, now: readAt(s) })
     expect(done.phase).toBe('finished') // 2 vivants dont l'imposteur
     expect(done.winnerTeam).toBe('imposteur')
   })
@@ -323,10 +358,10 @@ describe('révélation, gorgées et victoires', () => {
     const s0 = make(5) // 1 imposteur + 4 civils
     const civils = s0.players.filter((p) => p.team === 'civil')
     let s = eliminate(s0, civils[0].id)
-    s = reduceImposteur(s, { type: 'CONTINUE', playerId: civils[0].id, now: T0 })
+    s = reduceImposteur(s, { type: 'CONTINUE', playerId: civils[0].id, now: readAt(s) })
     expect(s.phase).toBe('clue') // 4 vivants, on continue
     s = eliminate(s, civils[1].id)
-    s = reduceImposteur(s, { type: 'CONTINUE', playerId: civils[1].id, now: T0 })
+    s = reduceImposteur(s, { type: 'CONTINUE', playerId: civils[1].id, now: readAt(s) })
     expect(s.phase).toBe('finished') // 3 vivants dont l'imposteur
     expect(s.winnerTeam).toBe('imposteur')
   })
@@ -401,7 +436,7 @@ describe('vues anti-triche', () => {
     expect(outed.team).toBe('imposteur')
     expect(outed.word).toBe(imposteur.word)
 
-    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: s0.players[0].id, now: T0 })
+    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: s0.players[0].id, now: readAt(s) })
     const finalView = toImposteurSpectatorView(done)
     expect(finalView.players.every((p) => p.word !== '' && p.team !== null)).toBe(true)
 

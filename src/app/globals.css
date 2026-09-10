@@ -371,3 +371,55 @@ body.is-mobile-device,
     aspect-ratio: 1 / 1;
   }
 }
+
+@layer utilities {
+  /* Barre de commandes FIXE en bas d'un écran de jeu (Menteur).
+     Deux réserves, invisibles tant qu'on ne les oublie pas :
+     1. la zone sûre du bas (barre gestuelle iOS / barre de navigation
+        Android) — l'app ne passe PAS en plein écran sous l'encoche, donc
+        `env(safe-area-inset-bottom)` est le seul recours ; on l'AJOUTE aux
+        12px de marge au lieu de laisser `.safe-bottom` les écraser ;
+     2. la pastille de vocal, qui est elle aussi `position: fixed` et passe
+        AU-DESSUS de la barre (z-90 contre z-30) : elle recouvrait les
+        commandes d'enchère. Elle mesure 3rem et se pose à 0,75rem du bord
+        droit, d'où la gouttière — réservée seulement là où ça se chevauche :
+        au delà de ~720px, le contenu est centré sur `max-w-lg` et la pastille
+        tombe dans la marge. */
+  .game-bottom-bar {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  @media (max-width: 719.98px) {
+    .game-bottom-bar {
+      padding-right: calc(0.75rem + 3rem);
+    }
+  }
+}
+
+/* ═══ Préférence système « réduire les animations » ═══════════════════════
+   Le site anime beaucoup (halos qui pulsent, pastilles de présence qui
+   clignotent en permanence dans la navbar, transitions à chaque écran) et
+   n'écoutait `prefers-reduced-motion` NULLE PART : un joueur sujet au mal
+   des transports, à la migraine ou à la photosensibilité n'avait aucun
+   moyen de calmer l'écran, alors que son système le demande déjà.
+
+   Prise en charge sobre : on ne SUPPRIME pas les animations (des composants
+   attendent la fin d'une transition pour monter ou démonter — les couper
+   net les figerait à l'état initial), on les rend quasi instantanées et on
+   coupe les BOUCLES infinies, qui ne sont que du décor. `!important` parce
+   que ces durées viennent d'utilitaires Tailwind et de styles en ligne. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  html {
+    scroll-behavior: auto !important;
+  }
+}

@@ -23,6 +23,12 @@ export const PRE_COUNTDOWN_MS = 5_000
 export const PRE_TURN_MS = 30_000
 /** Écran de fin de manche (classement + échange) avant la manche suivante. */
 export const PRE_INTERLUDE_MS = 15_000
+/**
+ * TEMPS DE LECTURE MINIMAL de l'interlude : le « continuer » est ouvert à
+ * tous, et sans plancher le premier impatient relançait la donne avant que
+ * les autres aient vu le classement et leurs cartes d'échange (F33).
+ */
+export const PRE_INTERLUDE_MIN_MS = 5_000
 export const PRE_MANCHE_OPTIONS = [1, 3, 5] as const
 export const PRE_DEFAULT_MANCHES = 3
 
@@ -506,6 +512,15 @@ function endManche(state: PreState, now: number): PreState {
   }
 }
 
+/**
+ * Millisecondes écoulées depuis l'entrée en interlude, déduites de l'échéance
+ * de phase (l'horloge SERVEUR reste la seule autorité).
+ */
+export function preInterludeElapsedMs(state: PreState, now: number): number {
+  if (state.phaseEndsAt === null) return Number.POSITIVE_INFINITY
+  return now - (state.phaseEndsAt - PRE_INTERLUDE_MS)
+}
+
 function startNextManche(state: PreState, now: number): PreState {
   return dealManche({ ...state, manche: state.manche + 1 }, now)
 }
@@ -691,8 +706,12 @@ export function reducePre(state: PreState, action: PreAction): PreState {
 
     case 'CONTINUE': {
       if (state.phase !== 'interlude') throw new PreEngineError('NOT_INTERLUDE')
-      if (!state.players.some((p) => p.id === action.playerId)) {
-        throw new PreEngineError('UNKNOWN_PLAYER')
+      const asker = state.players.find((p) => p.id === action.playerId)
+      if (!asker) throw new PreEngineError('UNKNOWN_PLAYER')
+      // Plancher de lecture du classement/échange (F33) — un BOT en est
+      // exempt : son tick de service est déjà cadencé côté client.
+      if (!asker.isBot && preInterludeElapsedMs(state, action.now) < PRE_INTERLUDE_MIN_MS) {
+        throw new PreEngineError('READING_TIME')
       }
       return startNextManche(state, action.now)
     }
@@ -930,6 +949,8 @@ export type PreClientView = Omit<PreState, 'rngState' | 'players'> & {
   players: PrePlayerView[]
   /** Ma main triée (vide pour un spectateur). */
   myHand: number[]
+  /** Instant (epoch ms) à partir duquel le « continuer » de l'interlude passe. */
+  continueAt: number | null
 }
 
 /**
@@ -941,7 +962,10 @@ export type PreClientView = Omit<PreState, 'rngState' | 'players'> & {
 export function toPreClientView(state: PreState, viewerId: string): PreClientView {
   const { rngState: _rng, players, ...rest } = state
   void _rng
-  const exchange = state.lastExchange
+  // `?? null` : un état sérialisé avant l'ajout du champ porte `undefined`,
+  // qui passait le test `!== null` puis plantait à l'accès — et c'est la vue
+  // SPECTATEUR, donc l'écran TV entier, qui tombait en 500.
+  const exchange = state.lastExchange ?? null
   const seesMain =
     exchange !== null && (viewerId === exchange.trouId || viewerId === exchange.presidentId)
   const seesVice =
@@ -961,6 +985,10 @@ export function toPreClientView(state: PreState, viewerId: string): PreClientVie
         }
       : null,
     phaseKey: phaseKey(state),
+    continueAt:
+      state.phase === 'interlude' && state.phaseEndsAt !== null
+        ? state.phaseEndsAt - PRE_INTERLUDE_MS + PRE_INTERLUDE_MIN_MS
+        : null,
     myHand: preSortHand(players.find((p) => p.id === viewerId)?.hand ?? []),
     players: players.map(({ hand, ...p }) => ({ ...p, handCount: hand.length })),
   }

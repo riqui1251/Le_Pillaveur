@@ -12,7 +12,7 @@ Chaque joueur démarre une **chaîne** avec une phrase de son cru. Les chaînes 
 2. **Le dessin** : vous recevez la phrase d'un autre joueur — dessinez-la, sans texte !
 3. **La description** : vous recevez un dessin — décrivez ce que vous voyez.
 4. On alterne jusqu'à ce que chaque chaîne ait fait le tour de la table.
-5. **La révélation** : chaque chaîne est rejouée du début à la fin devant tout le monde — c'est LE moment du jeu.
+5. **La révélation** : chaque chaîne est rejouée du début à la fin devant tout le monde — c'est LE moment du jeu. Un meneur fait défiler les chaînes (il peut revenir en arrière), et si personne ne touche à rien, la suivante s'affiche toute seule au bout de 45 secondes : la table n'attend jamais un joueur endormi.
 
 ## Victoire
 

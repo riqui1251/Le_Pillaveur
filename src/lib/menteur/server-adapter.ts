@@ -64,7 +64,7 @@ export function parseMenteurState(json: string | null): MenteurState | null {
   try {
     const raw = JSON.parse(json) as MenteurState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [], revealAt: raw.revealAt ?? null }
   } catch {
     return null
   }
@@ -92,11 +92,14 @@ export function applyMenteurRoomAction(
       case 'bid':
         return { ok: true, state: reduceMenteur(state, { type: 'BID', playerId: userId, qty: input.qty, face: input.face }) }
       case 'dudo':
-        return { ok: true, state: reduceMenteur(state, { type: 'DUDO', playerId: userId }) }
+        return { ok: true, state: reduceMenteur(state, { type: 'DUDO', playerId: userId, now: Date.now() }) }
       case 'calza':
-        return { ok: true, state: reduceMenteur(state, { type: 'CALZA', playerId: userId }) }
+        return { ok: true, state: reduceMenteur(state, { type: 'CALZA', playerId: userId, now: Date.now() }) }
       case 'continue':
-        return { ok: true, state: reduceMenteur(state, { type: 'CONTINUE', playerId: userId }) }
+        return {
+          ok: true,
+          state: reduceMenteur(state, { type: 'CONTINUE', playerId: userId, now: Date.now() }),
+        }
       case 'bot':
         return applyMenteurBotAction(state)
       case 'replace-left':
@@ -172,7 +175,10 @@ export function applyMenteurBotAction(state: MenteurState): MenteurRoomActionRes
 
   try {
     if (state.phase === 'reveal') {
-      return { ok: true, state: reduceMenteur(state, { type: 'CONTINUE', playerId: actor.id }) }
+      return {
+        ok: true,
+        state: reduceMenteur(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() }),
+      }
     }
     if (state.phase !== 'bidding') return { ok: false, error: 'NOT_BIDDING' }
 
@@ -186,15 +192,24 @@ export function applyMenteurBotAction(state: MenteurState): MenteurRoomActionRes
       const expected = countMine(actor.dice, bid.face, palifico) + unknown * perDieOdds
       // Pile dessus et Calza dispo → tenté de temps en temps plutôt que de relancer.
       if (state.ruleCalza && Math.abs(bid.qty - expected) < 0.5 && Math.random() < 0.4) {
-        return { ok: true, state: reduceMenteur(state, { type: 'CALZA', playerId: actor.id }) }
+        return {
+          ok: true,
+          state: reduceMenteur(state, { type: 'CALZA', playerId: actor.id, now: Date.now() }),
+        }
       }
       // Marge légèrement aléatoire pour ne pas être prévisible.
       if (bid.qty > expected + 0.6 + Math.random() * 0.8) {
-        return { ok: true, state: reduceMenteur(state, { type: 'DUDO', playerId: actor.id }) }
+        return {
+          ok: true,
+          state: reduceMenteur(state, { type: 'DUDO', playerId: actor.id, now: Date.now() }),
+        }
       }
       const candidate = pickRaise(bid, actor.dice, totalDice, palifico)
       if (!candidate) {
-        return { ok: true, state: reduceMenteur(state, { type: 'DUDO', playerId: actor.id }) }
+        return {
+          ok: true,
+          state: reduceMenteur(state, { type: 'DUDO', playerId: actor.id, now: Date.now() }),
+        }
       }
       return {
         ok: true,

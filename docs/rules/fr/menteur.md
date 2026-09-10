@@ -11,7 +11,9 @@ Chaque joueur secoue ses dés **cachés sous son gobelet** : lui seul les voit. 
 1. **Le lancer** : chacun regarde ses dés en secret.
 2. **Les enchères** : chaque joueur doit surenchérir (plus de dés, ou une valeur plus haute) — ou accuser le précédent.
 3. **MENTEUR !** : tous les gobelets se lèvent. Si l'enchère était tenue, l'accusateur perd un dé ; sinon, c'est le menteur qui trinque.
-4. Le joueur qui n'a plus de dés est éliminé.
+4. **Révélation** : tous les gobelets restent ouverts quelques secondes, le
+   temps que la table voie le verdict, puis les dés sont relancés.
+5. Le joueur qui n'a plus de dés est éliminé.
 
 ## Variantes incluses
 
@@ -29,6 +31,13 @@ Le dernier joueur avec des dés remporte la table.
 
 ## Le mode apéro
 
-Perdre un dé se fête d'une gorgée ; l'élimination, d'une tournée symbolique. Mode soft : les dés seulement.
+**L'addition grimpe avec les dés perdus** : au premier dé perdu, le malheureux
+boit **1 gorgée** ; au deuxième, **2** ; au troisième, **3**… Autrement dit,
+il boit **autant de gorgées qu'il a déjà perdu de dés**, à chaque fois. Perdre
+ses cinq dés coûte donc 15 gorgées au total — et l'élimination se fête d'un cul
+sec symbolique.
+
+Un **Calza réussi** ne fait boire personne (et rend un dé). Mode soft : les dés
+seulement, aucun compteur.
 
 [▶ Jouer au Menteur en ligne](/games/menteur)

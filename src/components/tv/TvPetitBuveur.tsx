@@ -79,7 +79,7 @@ export function TvPetitBuveur({ room, state }: { room: TvRoomDto; state: EngineS
           >
             <TvAvatar name={active.name} index={activeIndex} size={64} active />
             <div className="text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-gold/60">{t('turnOf')}</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-gold/90">{t('turnOf')}</p>
               <p className="text-4xl font-black sm:text-5xl">{active.name}</p>
             </div>
           </motion.div>
@@ -109,7 +109,7 @@ export function TvPetitBuveur({ room, state }: { room: TvRoomDto; state: EngineS
                       : 'border-white/10 bg-white/[0.03]',
                 )}
               >
-                <span className="absolute left-1 top-1 text-[10px] font-semibold text-white/30">{i + 1}</span>
+                <span className="absolute left-1 top-1 text-[11px] font-semibold text-white/60">{i + 1}</span>
                 {isFinish && <Trophy aria-hidden className="absolute h-6 w-6 opacity-25" />}
                 <div className="flex flex-wrap items-center justify-center gap-0.5">
                   {here.map(({ p, idx }) => (
@@ -140,7 +140,7 @@ export function TvPetitBuveur({ room, state }: { room: TvRoomDto; state: EngineS
           >
             <TvAvatar name={p.name} index={idx} size={28} />
             <span className="text-base font-bold">{p.name}</span>
-            <span className="text-sm text-white/45">{t('position')} {p.position + 1}</span>
+            <span className="text-sm text-white/75">{t('position')} {p.position + 1}</span>
             <span className="text-sm font-bold text-red-300">{p.drinks} 🍺</span>
           </div>
         ))}

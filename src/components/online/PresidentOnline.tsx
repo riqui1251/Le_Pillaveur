@@ -310,12 +310,12 @@ export function PresidentOnline() {
                   i === 0 ? 'border-gold/50 bg-gold/10' : isTrou ? 'border-suit-red/40 bg-suit-red/10' : 'border-white/10 bg-white/5'
                 )}
               >
-                <span className="w-5 text-center font-display text-sm font-black text-white/50">{i + 1}</span>
+                <span className="w-5 text-center font-display text-sm font-black text-white/75">{i + 1}</span>
                 <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                 <span className={cn('flex-1 truncate text-sm font-bold', p.id === user.id && 'text-gold')}>
                   {p.name}
                 </span>
-                <span className="text-xs font-bold uppercase tracking-wide text-white/50">
+                <span className="text-xs font-bold uppercase tracking-wide text-white/75">
                   {rankRoleLabel(i, ranking.length)}
                 </span>
               </div>
@@ -374,7 +374,7 @@ export function PresidentOnline() {
             {secondsLeft}
           </motion.span>
         </AnimatePresence>
-        <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
+        <p className="text-xs font-semibold text-white/75">{t('countdown.hint')}</p>
       </div>
     )
   }
@@ -401,19 +401,19 @@ export function PresidentOnline() {
                   i === 0 ? 'border-gold/50 bg-gold/10' : isTrou ? 'border-suit-red/40 bg-suit-red/10' : 'border-white/10 bg-white/5'
                 )}
               >
-                <span className="w-5 text-center font-display text-sm font-black text-white/50">{i + 1}</span>
+                <span className="w-5 text-center font-display text-sm font-black text-white/75">{i + 1}</span>
                 <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                 <span className={cn('flex-1 truncate text-sm font-bold', p.id === user.id && 'text-gold')}>
                   {p.name}
                 </span>
-                <span className="text-xs font-bold uppercase tracking-wide text-white/50">
+                <span className="text-xs font-bold uppercase tracking-wide text-white/75">
                   {rankRoleLabel(i, ranking.length)}
                 </span>
               </div>
             )
           })}
         </div>
-        <p className="max-w-xs text-center text-xs font-semibold text-white/50">{t('exchangeInfo')}</p>
+        <p className="max-w-xs text-center text-xs font-semibold text-white/75">{t('exchangeInfo')}</p>
         {!isSoft && <p className="text-sm font-bold text-amber-200">{t('trouDrinks')}</p>}
         <Button
           onClick={() => void sendAction({ action: 'continue' })}
@@ -504,7 +504,7 @@ export function PresidentOnline() {
             <span
               key={p.id}
               className={cn(
-                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold',
+                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold',
                 view.currentTurnId === p.id
                   ? 'border-gold/60 bg-gold/15 text-gold'
                   : outIdx !== -1
@@ -519,7 +519,7 @@ export function PresidentOnline() {
                   {ROLE_BADGES[p.role]}
                 </span>
               )}
-              <span className="tabular-nums text-white/50">
+              <span className="tabular-nums text-white/75">
                 {outIdx !== -1 ? `#${outIdx + 1}` : p.handCount}
               </span>
             </span>
@@ -536,7 +536,7 @@ export function PresidentOnline() {
                 <CardFace key={card} card={card} />
               ))}
             </div>
-            <p className="text-[11px] font-semibold text-white/50">
+            <p className="text-xs font-semibold text-white/75">
               {t('lastPlayBy', { name: nameOf(view.lastPlay.playerId) })}
             </p>
             {lockedRank !== null && (
@@ -550,14 +550,14 @@ export function PresidentOnline() {
             )}
           </>
         ) : (
-          <p className="text-sm font-bold text-white/50">{t('freeTrick')}</p>
+          <p className="text-sm font-bold text-white/80">{t('freeTrick')}</p>
         )}
       </div>
 
       {/* Historique des plis de la manche (le plus récent en premier) */}
       {trickHistory.length > 0 && (
         <details className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2">
-          <summary className="cursor-pointer select-none text-xs font-bold text-white/60">
+          <summary className="cursor-pointer select-none text-xs font-bold text-white/80">
             {t('history.title', { count: trickHistory.length })}
           </summary>
           <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
@@ -566,9 +566,9 @@ export function PresidentOnline() {
               return (
                 <div
                   key={n}
-                  className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold text-white/60"
+                  className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold text-white/80"
                 >
-                  <span className="w-4 shrink-0 text-right tabular-nums text-white/30">{n}</span>
+                  <span className="w-4 shrink-0 text-right tabular-nums text-white/65">{n}</span>
                   {entry.plays.map((pl, j) => {
                     const p = view.players.find((x) => x.id === pl.playerId)
                     return (
@@ -643,7 +643,7 @@ export function PresidentOnline() {
             </Button>
           </div>
           {myTurn && !view.lastPlay && (
-            <p className="text-center text-[11px] font-semibold text-white/40">{t('leadHint')}</p>
+            <p className="text-center text-xs font-semibold text-white/75">{t('leadHint')}</p>
           )}
         </>
       )}

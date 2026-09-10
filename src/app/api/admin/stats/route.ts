@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth-server'
 import { getVisitorStats } from '@/lib/analytics-server'
 import { getGlobalGamePlayStats } from '@/lib/game-stats-server'
 import { canViewSupervisionAnalytics } from '@/lib/roles'
 import { prisma } from '@/lib/prisma'
+import { adminErrorResponse, requireRole } from '../_guard'
 
 export async function GET() {
   try {
-    const actor = await getCurrentUser()
-    if (!actor || !canViewSupervisionAnalytics(actor.role)) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
+    const actor = await requireRole(canViewSupervisionAnalytics)
 
     const [stats, gameStats] = await Promise.all([
       getVisitorStats(),
@@ -46,10 +43,6 @@ export async function GET() {
       },
     })
   } catch (error) {
-    if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
-    console.error('admin stats error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'stats GET')
   }
 }

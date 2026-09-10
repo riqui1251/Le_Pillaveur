@@ -69,6 +69,11 @@ model User {
   onlineGameHistory     OnlineGameHistory[]
   cosmeticGrants        CosmeticGrant[]    @relation("CosmeticGrantTarget")
   cosmeticGrantsIssued  CosmeticGrant[]    @relation("CosmeticGrantActor")
+  abuseReportsSent      AbuseReport[]      @relation("AbuseReportReporter")
+  abuseReportsReceived  AbuseReport[]      @relation("AbuseReportTarget")
+  abuseReportsReviewed  AbuseReport[]      @relation("AbuseReportReviewer")
+  blocksMade            UserBlock[]        @relation("UserBlockBlocker")
+  blocksReceived        UserBlock[]        @relation("UserBlockBlocked")
 }
 
 model ChatRead {
@@ -375,4 +380,64 @@ model FeatureBan {
 
   @@unique([userId, feature])
   @@index([userId])
+}
+
+/// Signalement d'abus posé par un joueur (message de chat ou joueur).
+/// Deux principes :
+///  - le signalement EMBARQUE de quoi instruire (`contextJson` : copie figée des
+///    derniers messages du canal au moment du clic) plutôt que d'ouvrir au staff
+///    une lecture live des conversations privées ;
+///  - aucune clé étrangère vers ChatMessage : le message peut être purgé, le
+///    dossier de modération lui survit.
+/// Les liens vers les comptes sont NULLABLES / SetNull, jamais Cascade : la
+/// suppression de compte est en libre-service, et une cascade laisserait
+/// n'importe qui effacer d'un clic les dossiers en cours d'instruction —
+/// y compris ceux qu'il a déposés CONTRE quelqu'un d'autre. Le dossier
+/// survit donc au compte, orphelin mais lisible (même parti pris que
+/// Feedback / NameModerationAttempt).
+model AbuseReport {
+  id             String    @id @default(cuid())
+  reporterId     String?
+  reporter       User?     @relation("AbuseReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  reportedUserId String?
+  reportedUser   User?     @relation("AbuseReportTarget", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  /// 'message' (un message précis) | 'player' (comportement général)
+  targetType     String
+  /// ChatMessage.id quand targetType = 'message' — sans FK (voir ci-dessus).
+  messageId      String?
+  /// Canal concerné (`room:<id>`, `friend:<a>:<b>`, `wolves:<id>`) — réservé au staff.
+  channel        String?
+  /// Motif normalisé : voir REPORT_REASONS (src/lib/moderation/reports.ts).
+  reason         String
+  /// Précision libre du signalant, plafonnée côté route.
+  comment        String?
+  /// Extrait figé du canal au moment du signalement (JSON) — la seule fenêtre
+  /// de lecture accordée au staff pour ce dossier.
+  contextJson    String?
+  /// 'open' | 'reviewed' | 'dismissed'
+  status         String    @default("open")
+  reviewedById   String?
+  reviewedBy     User?     @relation("AbuseReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt     DateTime?
+  reviewNote     String?
+  createdAt      DateTime  @default(now())
+
+  @@index([status, createdAt])
+  @@index([reportedUserId, createdAt])
+  @@index([reporterId, createdAt])
+}
+
+/// Blocage unilatéral : `blocker` ne veut plus rien recevoir de `blocked`
+/// (demande d'ami, message privé). Vérifié dans les DEUX sens à l'usage —
+/// bloquer coupe la relation, pas seulement le sens sortant.
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   User     @relation("UserBlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("UserBlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
 }

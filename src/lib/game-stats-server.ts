@@ -56,10 +56,22 @@ async function aggregateOnlineGameStats(): Promise<Map<string, number>> {
   return new Map([...roomsByGame.entries()].map(([gameId, rooms]) => [gameId, rooms.size]))
 }
 
-export async function getGlobalGamePlayStats(): Promise<{
-  games: GamePlayStat[]
-  totalParties: number
-}> {
+type GlobalGamePlayStats = { games: GamePlayStat[]; totalParties: number }
+
+/**
+ * La Supervision rappelle ces statistiques toutes les 15 s, or le calcul
+ * parcourt TOUS les comptes (pour lire leurs joueurs locaux) et tout
+ * l'historique des parties en ligne : deux balayages complets, pour des
+ * chiffres qui ne bougent pas à la minute. Cache mémoire d'une minute — le
+ * même motif que le compteur de présence.
+ */
+const STATS_CACHE_MS = 60 * 1000
+let statsCache: { at: number; value: GlobalGamePlayStats } | null = null
+
+export async function getGlobalGamePlayStats(): Promise<GlobalGamePlayStats> {
+  const now = Date.now()
+  if (statsCache && now - statsCache.at < STATS_CACHE_MS) return statsCache.value
+
   const [dbCounts, users, onlineMap] = await Promise.all([
     prisma.stats.groupBy({
       by: ['gameType'],
@@ -106,5 +118,7 @@ export async function getGlobalGamePlayStats(): Promise<{
 
   const totalParties = games.reduce((sum, g) => sum + g.partiesPlayed, 0)
 
-  return { games, totalParties }
+  const value = { games, totalParties }
+  statsCache = { at: now, value }
+  return value
 }

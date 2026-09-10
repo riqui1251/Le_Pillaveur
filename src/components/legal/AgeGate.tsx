@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,10 @@ export function isOverlayFreeRoute(pathname: string): boolean {
   return pathname === '/tv' || pathname.startsWith('/tv/')
 }
 
+/** Éléments réellement atteignables au clavier à l'intérieur d'un conteneur. */
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export function AgeGate() {
   const t = useTranslations('legal.ageGate')
   const tNav = useTranslations('nav.legal')
@@ -43,12 +47,73 @@ export function AgeGate() {
   const [mode, setMode] = useState<GateMode | null>(null)
   const [analyticsChecked, setAnalyticsChecked] = useState(false)
   const [loading, setLoading] = useState(false)
+  const dialogRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!hasCookie(AGE_VERIFIED_COOKIE)) setMode('gate')
     else if (!hasCookie(ANALYTICS_CONSENT_COOKIE)) setMode('cookies-only')
     else setMode(null)
   }, [])
+
+  /**
+   * Le portail 18+ est une modale BLOQUANTE : au clavier, il faut donc y
+   * entrer et ne pas pouvoir en sortir. Sans ça, le focus restait sur la page
+   * masquée derrière — une tabulation promenait l'utilisateur dans une
+   * navigation qu'il ne voyait plus, et un lecteur d'écran annonçait le
+   * contenu du site alors que le portail n'était pas franchi.
+   *
+   * Trois gestes : on pose le focus sur la carte au montage (elle est
+   * `tabIndex={-1}`, donc focusable par programme sans entrer dans l'ordre de
+   * tabulation), on piège Tab / Maj+Tab en boucle sur ses éléments, et on
+   * rend le focus à l'élément d'origine à la fermeture.
+   *
+   * Pas d'échappatoire par Échap : la certification d'âge n'est pas
+   * annulable, contrairement à une modale ordinaire.
+   */
+  useEffect(() => {
+    if (mode !== 'gate') return
+    const dialog = dialogRef.current
+    if (!dialog) return
+
+    const previous = document.activeElement as HTMLElement | null
+    dialog.focus()
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      // Tout ce que contient la carte est visible (le sélecteur écarte déjà
+      // les éléments désactivés) : pas de filtrage supplémentaire à faire.
+      const items = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+      if (items.length === 0) {
+        // Tout est désactivé (envoi en cours) : on garde le focus sur la carte.
+        e.preventDefault()
+        dialog.focus()
+        return
+      }
+      const first = items[0]
+      const last = items[items.length - 1]
+      const active = document.activeElement
+      if (e.shiftKey && (active === first || active === dialog)) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      } else if (active && !dialog.contains(active)) {
+        // Le focus s'est échappé (clic dans la page derrière) : on le ramène.
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true)
+      previous?.focus?.()
+    }
+    // `pathname` compte : le portail n'est PAS rendu sur les pages de lecture
+    // alors que `mode` y vaut déjà 'gate'. Sans cette dépendance, arriver sur
+    // le hub depuis la landing laissait la carte sans focus ni piège.
+  }, [mode, pathname])
 
   const submit = useCallback(async (analytics: boolean) => {
     setLoading(true)
@@ -80,7 +145,9 @@ export function AgeGate() {
   if (mode === 'cookies-only') {
     return (
       <div className="fixed inset-x-3 bottom-3 z-[100] mx-auto max-w-md rounded-2xl border border-gold/25 bg-felt-deep/95 p-3 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)] backdrop-blur-sm">
-        <p className="text-xs leading-relaxed text-white/70">{t('cookiesBanner')}</p>
+        {/* Contraste : /70 sur le feutre profond passait sous le seuil AA en
+            12px — remonté à /85 (le texte porte l'information légale). */}
+        <p className="text-xs leading-relaxed text-white/85">{t('cookiesBanner')}</p>
         <div className="mt-2 flex gap-2">
           <Button
             onClick={() => void submit(true)}
@@ -93,7 +160,7 @@ export function AgeGate() {
             onClick={() => void submit(false)}
             disabled={loading}
             variant="outline"
-            className="h-8 flex-1 border-white/20 bg-transparent text-xs text-white/70 hover:bg-white/10"
+            className="h-8 flex-1 border-white/25 bg-transparent text-xs text-white/85 hover:bg-white/10"
           >
             {t('refuse')}
           </Button>
@@ -104,26 +171,35 @@ export function AgeGate() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/40 p-4">
+      {/* `role="dialog"` est un rôle INTERACTIF : posé tel quel sur une simple
+          div, il annonçait une boîte de dialogue que le clavier ne pouvait
+          jamais atteindre. `tabIndex={-1}` en fait une cible de focus par
+          programme (sans l'ajouter à l'ordre de tabulation), ce qui donne au
+          piège à focus ci-dessus un point d'entrée légitime. */}
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="age-gate-title"
-        className="my-auto w-full max-w-sm rounded-2xl border border-gold/30 bg-felt-deep p-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.9)]"
+        tabIndex={-1}
+        className="my-auto w-full max-w-sm rounded-2xl border border-gold/30 bg-felt-deep p-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.9)] outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
       >
         <h2 id="age-gate-title" className="text-center font-display text-lg font-bold text-cream">
           {t('title')}
         </h2>
-        <p className="mt-2 text-center text-xs leading-relaxed text-white/55">
-          <strong className="text-white/75">{t('healthWarning')}</strong> {t('moderation')}
+        {/* Contrastes remontés (/55 → /80, /75 → crème) : c'est l'avertissement
+            sanitaire, il doit se lire du premier coup en 12px. */}
+        <p className="mt-2 text-center text-xs leading-relaxed text-white/80">
+          <strong className="text-cream">{t('healthWarning')}</strong> {t('moderation')}
         </p>
 
         <label className="mt-4 flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
           <Checkbox
             checked={analyticsChecked}
             onCheckedChange={(v) => setAnalyticsChecked(v === true)}
-            className="border-white/30 data-[state=checked]:bg-amber-500 data-[state=checked]:text-black"
+            className="border-white/40 data-[state=checked]:bg-amber-500 data-[state=checked]:text-black"
           />
-          <span className="text-xs text-white/60">{t('analyticsLabel')}</span>
+          <span className="text-xs text-white/85">{t('analyticsLabel')}</span>
         </label>
 
         <Button
@@ -134,14 +210,16 @@ export function AgeGate() {
           {loading ? t('validating') : t('enterAdult')}
         </Button>
 
-        <p className="mt-3 text-center text-[11px] leading-relaxed text-white/40">
+        {/* Mentions légales : 11px à /40 était illisible sur le feutre — /70
+            (et liens en ambre plein) sans changer la hiérarchie visuelle. */}
+        <p className="mt-3 text-center text-[11px] leading-relaxed text-white/70">
           {t('termsPrefix')}{' '}
-          <Link href="/legal/cgu" className="text-amber-400/90 underline underline-offset-2 hover:text-amber-300">
+          <Link href="/legal/cgu" className="text-amber-300 underline underline-offset-2 hover:text-amber-200">
             {tNav('cgu')}
           </Link>{' '}
           {t('termsAnd')}
           {t('termsAnd').endsWith("'") ? '' : ' '}
-          <Link href="/legal/confidentialite" className="text-amber-400/90 underline underline-offset-2 hover:text-amber-300">
+          <Link href="/legal/confidentialite" className="text-amber-300 underline underline-offset-2 hover:text-amber-200">
             {tNav('confidentialite')}
           </Link>
           {t('termsSuffix')} {t('minorWarning')}

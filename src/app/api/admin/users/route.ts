@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
-import { assertCanAssignRoles, requireSupervisionUser } from '@/lib/auth-server'
-import { getBanState } from '@/lib/ban-server'
+import { Prisma } from '@prisma/client'
+import { assertCanAssignRoles } from '@/lib/auth-server'
+import { getBanState, logAccountEvent } from '@/lib/ban-server'
 import {
+  canAccessSupervision,
   canAssignRole,
   canManageUsers,
   canModifyTarget,
   isUserRole,
   normalizeRole,
+  roleLabel,
 } from '@/lib/roles'
 import { prisma } from '@/lib/prisma'
 import {
@@ -20,6 +23,19 @@ import { resolveRequestLocale } from '@/lib/name-moderation/request-locale'
 import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { getIpsBySubjectKeys, subjectKeyFor } from '@/lib/ip-history-server'
 import { listFeatureBansForUsers, type FeatureBanState } from '@/lib/feature-bans'
+import { adminErrorResponse, parsePaging, requireRole } from '../_guard'
+
+/**
+ * Liste des comptes — PAGINÉE et filtrée EN BASE (F75). Auparavant la route
+ * renvoyait TOUS les comptes avec TOUT leur historique d'IP, et le navigateur
+ * faisait le tri : tenable à cinquante comptes, ruineux à mille. Recherche,
+ * filtre de rôle et filtre d'état sont donc passés côté serveur, et
+ * l'historique d'IP n'est chargé que pour la page affichée.
+ */
+
+const DEFAULT_PAGE_SIZE = 25
+const MAX_PAGE_SIZE = 100
+const ONLINE_WINDOW_MS = 5 * 60 * 1000
 
 function serializeUser(user: {
   id: string
@@ -68,39 +84,109 @@ function serializeUser(user: {
   }
 }
 
-export async function GET() {
+const USER_LIST_SELECT = {
+  id: true,
+  email: true,
+  displayName: true,
+  accountCode: true,
+  passwordHash: true,
+  role: true,
+  createdAt: true,
+  updatedAt: true,
+  lastCountry: true,
+  lastIp: true,
+  lastDevice: true,
+  lastSeenAt: true,
+  lastLoginAt: true,
+  totalPresenceSeconds: true,
+  banType: true,
+  bannedUntil: true,
+  banComment: true,
+  bannedAt: true,
+} as const
+
+/**
+ * Comptes ayant utilisé cette IP — la recherche par IP portait sur TOUT
+ * l'historique côté client, ce qui obligeait à le télécharger en entier. On
+ * remonte ici les seuls identifiants concernés (requête bornée), qui
+ * rejoignent ensuite le OR de la recherche.
+ */
+async function userIdsMatchingIp(query: string): Promise<string[]> {
+  const rows = await prisma.$queryRaw<Array<{ subjectKey: string }>>`
+    SELECT "subjectKey"
+    FROM "IpSeenLog"
+    WHERE "subjectKey" LIKE 'user:%' AND "ip" LIKE ${`%${query}%`}
+    GROUP BY "subjectKey"
+    LIMIT 200
+  `
+  return rows.map((row) => row.subjectKey.slice('user:'.length))
+}
+
+export async function GET(request: Request) {
   try {
-    await requireSupervisionUser()
+    await requireRole(canAccessSupervision)
 
-    const users = await prisma.user.findMany({
-      // Tout compte ENREGISTRÉ : email + mot de passe OU connexion Google
-      // (passwordHash vide). Seuls les invités (email null) restent exclus.
-      where: { email: { not: null } },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        email: true,
-        displayName: true,
-        accountCode: true,
-        passwordHash: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        lastCountry: true,
-        lastIp: true,
-        lastDevice: true,
-        lastSeenAt: true,
-        lastLoginAt: true,
-        totalPresenceSeconds: true,
-        banType: true,
-        bannedUntil: true,
-        banComment: true,
-        bannedAt: true,
-      },
+    const { searchParams } = new URL(request.url)
+    const { page, pageSize, skip } = parsePaging(searchParams, {
+      defaultSize: DEFAULT_PAGE_SIZE,
+      maxSize: MAX_PAGE_SIZE,
     })
+    const query = (searchParams.get('q') ?? '').trim().slice(0, 80)
+    const roleFilter = searchParams.get('role') ?? 'all'
+    const statusFilter = searchParams.get('status') ?? 'all'
 
-    const ipsMap = await getIpsBySubjectKeys(users.map((u) => subjectKeyFor(u.id, '')))
-    const featureBansMap = await listFeatureBansForUsers(users.map((u) => u.id))
+    // Tout compte ENREGISTRÉ : email + mot de passe OU connexion Google
+    // (passwordHash vide). Seuls les invités (email null) restent exclus.
+    const filters: Prisma.UserWhereInput[] = [{ email: { not: null } }]
+
+    if (roleFilter !== 'all' && isUserRole(roleFilter)) {
+      filters.push({ role: roleFilter })
+    }
+
+    if (statusFilter === 'online') {
+      filters.push({ lastSeenAt: { gte: new Date(Date.now() - ONLINE_WINDOW_MS) } })
+    } else if (statusFilter === 'banned') {
+      filters.push({
+        OR: [
+          { banType: 'permanent' },
+          { banType: 'temporary', bannedUntil: { gt: new Date() } },
+        ],
+      })
+    }
+
+    if (query) {
+      // Le code de compte s'affiche « LP-XXXX » mais se stocke sans préfixe.
+      const codeQuery = query.replace(/^lp-/i, '')
+      const ipUserIds = await userIdsMatchingIp(query)
+      filters.push({
+        OR: [
+          { displayName: { contains: query } },
+          { email: { contains: query } },
+          { accountCode: { contains: codeQuery } },
+          { lastIp: { contains: query } },
+          ...(ipUserIds.length > 0 ? [{ id: { in: ipUserIds } }] : []),
+        ],
+      })
+    }
+
+    const where: Prisma.UserWhereInput = { AND: filters }
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        select: USER_LIST_SELECT,
+      }),
+      prisma.user.count({ where }),
+    ])
+
+    // Historique d'IP et sanctions ciblées : uniquement pour la page affichée.
+    const [ipsMap, featureBansMap] = await Promise.all([
+      getIpsBySubjectKeys(users.map((u) => subjectKeyFor(u.id, ''))),
+      listFeatureBansForUsers(users.map((u) => u.id)),
+    ])
 
     return NextResponse.json({
       users: users.map((u) => ({
@@ -108,19 +194,18 @@ export async function GET() {
         ips: ipsMap.get(subjectKeyFor(u.id, '')) ?? [],
         featureBans: featureBansMap.get(u.id) ?? ([] as FeatureBanState[]),
       })),
+      total,
+      page,
+      pageSize,
     })
   } catch (error) {
-    if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
-    console.error('admin users GET error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'users GET')
   }
 }
 
 export async function PATCH(request: Request) {
   try {
-    const actor = await requireSupervisionUser()
+    const actor = await requireRole(canAccessSupervision)
     const body = await request.json()
     const userId = typeof body.userId === 'string' ? body.userId : ''
     const displayName =
@@ -219,33 +304,21 @@ export async function PATCH(request: Request) {
     const updated = await prisma.user.update({
       where: { id: userId },
       data,
-      select: {
-        id: true,
-        email: true,
-        displayName: true,
-        accountCode: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        lastCountry: true,
-        lastIp: true,
-        lastDevice: true,
-        lastSeenAt: true,
-        lastLoginAt: true,
-        totalPresenceSeconds: true,
-        banType: true,
-        bannedUntil: true,
-        banComment: true,
-        bannedAt: true,
-      },
+      select: USER_LIST_SELECT,
     })
+
+    // F42 : un changement de grade laisse désormais une trace, comme un ban.
+    if (role !== undefined && role !== target.role) {
+      await logAccountEvent({
+        userId,
+        actorId: actor.id,
+        action: 'role-change',
+        comment: `${roleLabel(target.role)} → ${roleLabel(role)}`,
+      })
+    }
 
     return NextResponse.json({ user: serializeUser(updated) })
   } catch (error) {
-    if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
-    console.error('admin users PATCH error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'users PATCH')
   }
 }

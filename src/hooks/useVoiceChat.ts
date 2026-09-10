@@ -62,6 +62,10 @@ export function useVoiceChat(
   const [joined, setJoined] = useState(false)
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<VoiceError>(null)
+  /** Micro perdu en cours de route (téléphone verrouillé, appel entrant, autre appli). */
+  const [micLost, setMicLost] = useState(false)
+  /** Flux de signalisation coupé : plus aucune nouvelle connexion ne peut s'établir. */
+  const [signalingLost, setSignalingLost] = useState(false)
   const [micMuted, setMicMuted] = useState(false)
   const [deafened, setDeafened] = useState(false)
   const [speaker, setSpeaker] = useState<boolean>(loadSpeakerPref)
@@ -82,6 +86,11 @@ export function useVoiceChat(
   const mutedPeersRef = useRef(mutedPeers)
   const micMutedRef = useRef(micMuted)
   const speakerRef = useRef(speaker)
+  // `joined`/`joining` sont AUSSI suivis par ref : une reprise (quitter puis
+  // rejoindre dans la foulée) lit l'état réel, pas celui figé dans la closure
+  // du rendu précédent — sinon `join()` se croirait déjà connecté et ne ferait rien.
+  const joinedRef = useRef(false)
+  const joiningRef = useRef(false)
   deafenedRef.current = deafened
   mutedPeersRef.current = mutedPeers
   micMutedRef.current = micMuted
@@ -165,6 +174,10 @@ export function useVoiceChat(
     if (!entry) return
     peersRef.current.delete(peerId)
     try {
+      // Fermeture VOLONTAIRE : on débranche l'écouteur d'abord, sinon le
+      // passage à `closed` rouvrirait un statut « échec » pour un pair qu'on
+      // vient justement de retirer de la liste.
+      entry.pc.onconnectionstatechange = null
       entry.pc.close()
     } catch {
       /* déjà fermé */
@@ -219,9 +232,17 @@ export function useVoiceChat(
       }
       pc.onconnectionstatechange = () => {
         const st = pc.connectionState
+        // L'affichage doit dire la VÉRITÉ : `closed` est un échec définitif au
+        // même titre que `failed` — le montrer comme « connexion en cours »
+        // faisait croire à une pastille verte imminente qui n'arrivait jamais.
         setPeerStatus((prev) => ({
           ...prev,
-          [peerId]: st === 'connected' ? 'connected' : st === 'failed' ? 'failed' : 'connecting',
+          [peerId]:
+            st === 'connected'
+              ? 'connected'
+              : st === 'failed' || st === 'closed'
+                ? 'failed'
+                : 'connecting',
         }))
         // Relance ICE côté initiateur si la connexion casse (changement de réseau…)
         if (st === 'failed' && isInitiator(peerId)) {
@@ -328,20 +349,39 @@ export function useVoiceChat(
     esRef.current = null
     analysersRef.current.clear()
     gainsRef.current.clear()
+    joinedRef.current = false
     setJoined(false)
     setRoster(new Set())
     setSpeaking({})
     setPeerStatus({})
+    setMicLost(false)
+    setSignalingLost(false)
   }, [closePeer, sendSignal])
 
+  /**
+   * Surveille la piste micro locale. Sur mobile, verrouiller l'écran ou
+   * recevoir un appel coupe la piste : sans ce guet, le vocal mourait en
+   * silence et le joueur croyait simplement que plus personne ne parlait.
+   */
+  const watchLocalTrack = useCallback((stream: MediaStream) => {
+    stream.getAudioTracks().forEach((track) => {
+      track.onended = () => setMicLost(true)
+      track.onmute = () => setMicLost(true)
+      track.onunmute = () => setMicLost(false)
+    })
+  }, [])
+
   const join = useCallback(async () => {
-    if (!roomId || !selfId || joined || joining) return
+    if (!roomId || !selfId || joinedRef.current || joiningRef.current) return
     if (!supported) {
       setError('unsupported')
       return
     }
+    joiningRef.current = true
     setJoining(true)
     setError(null)
+    setMicLost(false)
+    setSignalingLost(false)
     try {
       // ⚠️ iOS Safari (et d'autres navigateurs mobiles) CONSOMMENT l'activation
       // utilisateur dès le premier `await`. Si on récupérait les identifiants
@@ -372,6 +412,7 @@ export function useVoiceChat(
       stream.getAudioTracks().forEach((t) => {
         t.enabled = !micMutedRef.current
       })
+      watchLocalTrack(stream)
       attachAnalyser(selfId, stream)
 
       // Flux SSE dédié à la signalisation (ouvert seulement pendant le vocal).
@@ -383,8 +424,13 @@ export function useVoiceChat(
           /* signal illisible ignoré */
         }
       })
+      // EventSource se reconnecte tout seul (readyState CONNECTING) ; seul un
+      // flux réellement CLOSED est une panne à annoncer au joueur.
+      es.onopen = () => setSignalingLost(false)
+      es.onerror = () => setSignalingLost(es.readyState === EventSource.CLOSED)
       esRef.current = es
 
+      joinedRef.current = true
       setJoined(true)
       // S'annoncer à tous les membres : ceux qui sont en vocal répondront.
       members
@@ -396,9 +442,45 @@ export function useVoiceChat(
       localStreamRef.current?.getTracks().forEach((t) => t.stop())
       localStreamRef.current = null
     } finally {
+      joiningRef.current = false
       setJoining(false)
     }
-  }, [attachAnalyser, joined, joining, members, roomId, selfId, sendSignal, supported])
+  }, [attachAnalyser, members, roomId, selfId, sendSignal, supported, watchLocalTrack])
+
+  /**
+   * Reprise du micro APRÈS une coupure, sans rompre les connexions établies :
+   * on redemande une piste (le clic du joueur fournit le geste utilisateur
+   * exigé par iOS) et on la substitue à l'ancienne sur chaque pair.
+   */
+  const resumeMic = useCallback(async () => {
+    if (!joinedRef.current || !selfId) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      })
+      const track = stream.getAudioTracks()[0]
+      if (!track) throw new Error('no-audio-track')
+
+      localStreamRef.current?.getTracks().forEach((t) => t.stop())
+      localStreamRef.current = stream
+      track.enabled = !micMutedRef.current
+      watchLocalTrack(stream)
+
+      for (const entry of peersRef.current.values()) {
+        const sender = entry.pc.getSenders().find((s) => s.track?.kind === 'audio')
+        if (sender) await sender.replaceTrack(track).catch(() => {})
+        else entry.pc.addTrack(track, stream)
+      }
+
+      attachAnalyser(selfId, stream)
+      if (audioCtxRef.current?.state === 'suspended') void audioCtxRef.current.resume()
+      setMicLost(false)
+      setError(null)
+    } catch (e) {
+      const name = (e as { name?: string })?.name
+      setError(name === 'NotAllowedError' || name === 'NotFoundError' ? 'mic-denied' : 'network')
+    }
+  }, [attachAnalyser, selfId, watchLocalTrack])
 
   // Micro coupé/rouvert → sur la piste locale (les autres n'entendent plus rien).
   useEffect(() => {
@@ -476,6 +558,12 @@ export function useVoiceChat(
     return () => leaveRef.current()
   }, [roomId])
 
+  /** Repartir de zéro quand la signalisation est tombée : couper puis rouvrir. */
+  const reconnect = useCallback(async () => {
+    leave()
+    await join()
+  }, [join, leave])
+
   const toggleMic = useCallback(() => setMicMuted((v) => !v), [])
   const toggleDeafen = useCallback(() => setDeafened((v) => !v), [])
   const toggleSpeaker = useCallback(() => setSpeaker((v) => !v), [])
@@ -500,8 +588,12 @@ export function useVoiceChat(
     roster,
     speaking,
     peerStatus,
+    micLost,
+    signalingLost,
     join,
     leave,
+    resumeMic,
+    reconnect,
     toggleMic,
     toggleDeafen,
     toggleSpeaker,

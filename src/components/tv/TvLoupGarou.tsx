@@ -234,7 +234,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
       {/* La table : cartes crème sur deux rangées propres (une seule si ≤ 5),
           morts retournés côté feutre. */}
       <div className="space-y-3">
-        <p className="text-center text-lg font-semibold uppercase tracking-widest text-gold/60">
+        <p className="text-center text-lg font-semibold uppercase tracking-widest text-gold/90">
           {t('village', { alive: alive.length, total: state.players.length })}
         </p>
         {(() => {
@@ -284,7 +284,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
                     ) : (
                       <span
                         key={p.id}
-                        className="flex items-center gap-2 rounded-xl border border-gold/30 bg-felt-deep px-4 py-2.5 text-xl font-bold text-cream/60 opacity-80"
+                        className="flex items-center gap-2 rounded-xl border border-gold/30 bg-felt-deep px-4 py-2.5 text-xl font-bold text-cream/80 opacity-90"
                       >
                         <Skull aria-hidden className="h-5 w-5 text-cream/50" />
                         {p.name}

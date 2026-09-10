@@ -17,6 +17,15 @@ import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
  */
 
 export const MENTEUR_START_DICE = 5
+/**
+ * TEMPS DE LECTURE MINIMAL de la révélation. Le bouton « manche suivante »
+ * est ouvert à toute la table : sans plancher, le premier impatient relançait
+ * les dés avant que les autres aient vu les gobelets levés (F33). Le Menteur
+ * n'a PAS d'horloge de phase — on horodate donc l'entrée en révélation.
+ * Un BOT en est exempt (il ne lit rien, et son tick de service est cadencé
+ * côté client) : une table 100 % bots ne peut donc jamais rester figée.
+ */
+export const MENTEUR_REVEAL_MIN_MS = 4_000
 export const MENTEUR_MIN_PLAYERS = 2
 export const MENTEUR_MAX_PLAYERS = 6
 
@@ -27,7 +36,12 @@ export type MenteurPlayer = {
   leftAt: number | null
   /** SECRET — dés sous le gobelet (vide = éliminé). */
   dice: number[]
-  /** Dés perdus au total (= gorgées bues au fil des manches). */
+  /**
+   * Dés perdus au total. ATTENTION : ce n'est PAS le nombre de gorgées bues —
+   * l'addition grimpe (1 gorgée au 1er dé, 2 au 2e, 3 au 3e…), donc le total
+   * bu vaut n(n+1)/2, pas n. Pour l'affichage, utiliser `sipsTotal` de la vue
+   * client, jamais `lostCount` (F35).
+   */
   lostCount: number
 }
 
@@ -72,6 +86,8 @@ export type MenteurState = {
   rulePalifico: boolean
   /** Règle Calza activée pour la partie (choix hôte, figé au lancement). */
   ruleCalza: boolean
+  /** Horodatage serveur de l'entrée en révélation (plancher de lecture). */
+  revealAt: number | null
   /** Manche Palifico en cours (un joueur vivant n'a plus qu'un dé) : les 1 ne
    * sont plus jokers et la face de l'enchère est verrouillée sur la manche. */
   palifico: boolean
@@ -79,9 +95,9 @@ export type MenteurState = {
 
 export type MenteurAction =
   | { type: 'BID'; playerId: string; qty: number; face: number }
-  | { type: 'DUDO'; playerId: string }
-  | { type: 'CALZA'; playerId: string }
-  | { type: 'CONTINUE'; playerId: string }
+  | { type: 'DUDO'; playerId: string; now: number }
+  | { type: 'CALZA'; playerId: string; now: number }
+  | { type: 'CONTINUE'; playerId: string; now: number }
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
@@ -168,6 +184,16 @@ function rollDice(rng: SeededRng, count: number): number[] {
   return dice
 }
 
+/**
+ * Millisecondes écoulées depuis l'entrée en révélation. Un état sérialisé
+ * AVANT l'horodatage (revealAt absent) est traité comme déjà lisible : on ne
+ * bloque jamais une partie en cours.
+ */
+export function menteurRevealElapsedMs(state: MenteurState, now: number): number {
+  if (state.revealAt == null) return Number.POSITIVE_INFINITY
+  return now - state.revealAt
+}
+
 /** Une manche Palifico débute quand un joueur vivant n'a plus qu'un dé. */
 function computePalifico(players: MenteurPlayer[], rulePalifico: boolean): boolean {
   return rulePalifico && players.some((p) => p.dice.length === 1)
@@ -207,6 +233,7 @@ export function createMenteurState(
     rngState: rng.getState(),
     rulePalifico,
     ruleCalza: Boolean(rules.calza),
+    revealAt: null,
     palifico: computePalifico(withDice, rulePalifico),
   }
 }
@@ -258,6 +285,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
         ...state,
         players,
         phase: 'reveal',
+        revealAt: action.now,
         lastReveal: {
           bid,
           challengerId: actor.id,
@@ -300,6 +328,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
           ...state,
           players,
           phase: 'reveal',
+          revealAt: action.now,
           lastReveal: {
             bid,
             challengerId: actor.id,
@@ -333,6 +362,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
         ...state,
         players,
         phase: 'reveal',
+        revealAt: action.now,
         lastReveal: {
           bid,
           challengerId: actor.id,
@@ -351,14 +381,17 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
 
     case 'CONTINUE': {
       if (state.phase !== 'reveal') throw new MenteurEngineError('NOT_REVEAL')
-      if (!state.players.some((p) => p.id === action.playerId)) {
-        throw new MenteurEngineError('UNKNOWN_PLAYER')
+      const asker = state.players.find((p) => p.id === action.playerId)
+      if (!asker) throw new MenteurEngineError('UNKNOWN_PLAYER')
+      if (!asker.isBot && menteurRevealElapsedMs(state, action.now) < MENTEUR_REVEAL_MIN_MS) {
+        throw new MenteurEngineError('READING_TIME')
       }
       const alive = menteurAlivePlayers(state)
       if (alive.length <= 1) {
         return {
           ...state,
           phase: 'finished',
+          revealAt: null,
           winnerId: alive[0]?.id ?? null,
           currentBid: null,
           version: state.version + 1,
@@ -381,6 +414,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       return {
         ...base,
         phase: 'bidding',
+        revealAt: null,
         turnIdx,
         currentBid: null,
         lastReveal: null,
@@ -489,6 +523,18 @@ export type MenteurPlayerView = Omit<MenteurPlayer, 'dice'> & {
   /** Ses propres dés uniquement (vide pour les autres). */
   dice: number[]
   diceCount: number
+  /**
+   * GORGÉES réellement bues depuis le début de la partie — le SEUL nombre à
+   * mettre derrière une chope. `lostCount` compte les dés, et l'addition
+   * grimpe (1 + 2 + 3…) : afficher `lostCount` annonçait 3 gorgées à un
+   * joueur qui en avait bu 6 (F35).
+   */
+  sipsTotal: number
+}
+
+/** Total bu après `lostCount` dés perdus : 1 + 2 + … + n. */
+export function menteurSipsTotal(lostCount: number): number {
+  return (lostCount * (lostCount + 1)) / 2
 }
 
 export type MenteurClientView = Omit<MenteurState, 'rngState' | 'players'> & {
@@ -505,6 +551,7 @@ export function toMenteurClientView(state: MenteurState, viewerId: string): Ment
       ...p,
       dice: p.id === viewerId ? [...p.dice] : [],
       diceCount: p.dice.length,
+      sipsTotal: menteurSipsTotal(p.lostCount),
     })),
   }
 }

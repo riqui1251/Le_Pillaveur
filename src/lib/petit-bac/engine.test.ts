@@ -8,7 +8,11 @@ import {
   reducePbc,
   toPbcClientView,
   PBC_CATEGORY_COUNT,
+  pbcContestThreshold,
+  PBC_CONTEST_MIN_VOTES,
   PBC_FLUSH_MS,
+  PBC_REVEAL_MIN_MS,
+  PBC_STOP_MIN_MS,
   PBC_WRITE_MS,
   type PbcState,
 } from './engine'
@@ -73,7 +77,7 @@ describe('petit-bac — STOP et flush', () => {
     const answers = validAnswers(state, 'a')
     answers[2] = '  '
     expect(() =>
-      reducePbc(state, { type: 'STOP', playerId: 'p1', answers, now: NOW + 10_000 })
+      reducePbc(state, { type: 'STOP', playerId: 'p1', answers, now: NOW + 30_000 })
     ).toThrow('INCOMPLETE_STOP')
   })
 
@@ -83,24 +87,24 @@ describe('petit-bac — STOP et flush', () => {
       type: 'STOP',
       playerId: 'p1',
       answers: validAnswers(state, 'a'),
-      now: NOW + 10_000,
+      now: NOW + 30_000,
     })
     expect(s1.phase).toBe('flush')
     expect(s1.stopperId).toBe('p1')
-    expect(s1.phaseEndsAt).toBe(NOW + 10_000 + PBC_FLUSH_MS)
+    expect(s1.phaseEndsAt).toBe(NOW + 30_000 + PBC_FLUSH_MS)
 
     const s2 = reducePbc(s1, {
       type: 'SUBMIT',
       playerId: 'p2',
       answers: validAnswers(state, 'b'),
-      now: NOW + 11_000,
+      now: NOW + 31_000,
     })
     expect(s2.phase).toBe('flush')
     const s3 = reducePbc(s2, {
       type: 'SUBMIT',
       playerId: 'p3',
       answers: validAnswers(state, 'c'),
-      now: NOW + 12_000,
+      now: NOW + 32_000,
     })
     expect(s3.phase).toBe('reveal')
     expect(s3.roundPoints).not.toBeNull()
@@ -175,7 +179,7 @@ describe('petit-bac — comptage', () => {
       type: 'STOP',
       playerId: 'p1',
       answers: validAnswers(state, 'a'),
-      now: NOW + 10_000,
+      now: NOW + 30_000,
     })
     const during = toPbcClientView(state, 'p2')
     expect(during.revealGrid).toBeNull()
@@ -186,12 +190,124 @@ describe('petit-bac — comptage', () => {
       type: 'SUBMIT',
       playerId: 'p2',
       answers: validAnswers(state, 'b'),
-      now: NOW + 11_000,
+      now: NOW + 31_000,
     })
     const after = toPbcClientView(state, 'p2')
     expect(after.phase).toBe('reveal')
     expect(after.revealGrid).toHaveLength(PBC_CATEGORY_COUNT)
     expect(after.revealGrid?.[0].map((c) => c.playerId)).toEqual(['p1', 'p2'])
+  })
+})
+
+describe('petit-bac — STOP crédible (F32)', () => {
+  it('refuse un STOP crié à l’instant zéro', () => {
+    const state = inWrite(3)
+    expect(() =>
+      reducePbc(state, {
+        type: 'STOP',
+        playerId: 'p1',
+        answers: validAnswers(state, 'a'),
+        now: NOW + 5_000,
+      })
+    ).toThrow('STOP_TOO_EARLY')
+    // Une seconde avant le seuil : toujours refusé.
+    expect(() =>
+      reducePbc(state, {
+        type: 'STOP',
+        playerId: 'p1',
+        answers: validAnswers(state, 'a'),
+        now: NOW + 5_000 + PBC_STOP_MIN_MS - 1,
+      })
+    ).toThrow('STOP_TOO_EARLY')
+    const ok = reducePbc(state, {
+      type: 'STOP',
+      playerId: 'p1',
+      answers: validAnswers(state, 'a'),
+      now: NOW + 5_000 + PBC_STOP_MIN_MS,
+    })
+    expect(ok.phase).toBe('flush')
+  })
+
+  it('refuse un STOP aux réponses bidon (mauvaise lettre ou trop courtes)', () => {
+    const state = inWrite(3)
+    const letter = state.letters[0]
+    const wrongLetter = letter === 'A' ? 'B' : 'A'
+    expect(() =>
+      reducePbc(state, {
+        type: 'STOP',
+        playerId: 'p1',
+        answers: Array.from({ length: PBC_CATEGORY_COUNT }, () => `${wrongLetter}aaa`),
+        now: NOW + 30_000,
+      })
+    ).toThrow('INCOMPLETE_STOP')
+    expect(() =>
+      reducePbc(state, {
+        type: 'STOP',
+        playerId: 'p1',
+        answers: Array.from({ length: PBC_CATEGORY_COUNT }, () => letter),
+        now: NOW + 30_000,
+      })
+    ).toThrow('INCOMPLETE_STOP')
+    // Une seule case bâclée suffit à refuser le STOP.
+    const almost = validAnswers(state, 'a')
+    almost[3] = '   '
+    expect(() =>
+      reducePbc(state, { type: 'STOP', playerId: 'p1', answers: almost, now: NOW + 30_000 })
+    ).toThrow('INCOMPLETE_STOP')
+  })
+
+  it('la vue annonce l’instant où le STOP devient recevable', () => {
+    const state = inWrite(3)
+    const view = toPbcClientView(state, 'p1')
+    expect(view.stopAt).toBe(NOW + 5_000 + PBC_STOP_MIN_MS)
+  })
+})
+
+describe('petit-bac — révélation lisible (F33)', () => {
+  function reveal2(): PbcState {
+    let state = inWrite(2)
+    state = reducePbc(state, {
+      type: 'STOP',
+      playerId: 'p1',
+      answers: validAnswers(state, 'a'),
+      now: NOW + 30_000,
+    })
+    return reducePbc(state, {
+      type: 'SUBMIT',
+      playerId: 'p2',
+      answers: validAnswers(state, 'b'),
+      now: NOW + 31_000,
+    })
+  }
+
+  it('le premier impatient ne peut pas escamoter la grille de comptage', () => {
+    const state = reveal2()
+    expect(state.phase).toBe('reveal')
+    expect(() =>
+      reducePbc(state, {
+        type: 'CONTINUE',
+        playerId: 'p2',
+        now: NOW + 31_000 + PBC_REVEAL_MIN_MS - 1,
+      })
+    ).toThrow('READING_TIME')
+    const next = reducePbc(state, {
+      type: 'CONTINUE',
+      playerId: 'p1',
+      now: NOW + 31_000 + PBC_REVEAL_MIN_MS,
+    })
+    expect(next.phase).toBe('write')
+    expect(toPbcClientView(state, 'p1').continueAt).toBe(NOW + 31_000 + PBC_REVEAL_MIN_MS)
+  })
+
+  it('l’échéance de révélation enchaîne la manche même si personne ne clique', () => {
+    const state = reveal2()
+    const next = reducePbc(state, {
+      type: 'ADVANCE',
+      claimedKey: phaseKey(state),
+      now: state.phaseEndsAt!,
+    })
+    expect(next.phase).toBe('write')
+    expect(next.round).toBe(1)
   })
 })
 
@@ -202,7 +318,7 @@ describe('petit-bac — contestation', () => {
       type: 'STOP',
       playerId: 'p1',
       answers: validAnswers(state, 'a'),
-      now: NOW + 10_000,
+      now: NOW + 30_000,
     })
     for (let i = 2; i <= n; i += 1) {
       if (state.phase !== 'flush') break
@@ -210,7 +326,7 @@ describe('petit-bac — contestation', () => {
         type: 'SUBMIT',
         playerId: `p${i}`,
         answers: validAnswers(state, String.fromCharCode(96 + i)),
-        now: NOW + 11_000,
+        now: NOW + 31_000,
       })
     }
     return state
@@ -218,15 +334,15 @@ describe('petit-bac — contestation', () => {
 
   it('la majorité des AUTRES joueurs invalide la case', () => {
     let state = inReveal(4) // 3 autres joueurs → seuil 2.
-    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 12_000 })
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 32_000 })
     expect(state.rejected).toHaveLength(0)
     expect(state.roundPoints?.p1[0]).toBe(2)
-    state = reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 13_000 })
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 33_000 })
     expect(state.rejected).toContain('p1:0')
     expect(state.roundPoints?.p1[0]).toBe(0)
     // Une case déjà rejetée ne se reconteste pas.
     expect(() =>
-      reducePbc(state, { type: 'CONTEST', playerId: 'p4', targetId: 'p1', category: 0, now: NOW + 14_000 })
+      reducePbc(state, { type: 'CONTEST', playerId: 'p4', targetId: 'p1', category: 0, now: NOW + 34_000 })
     ).toThrow('ALREADY_REJECTED')
   })
 
@@ -241,20 +357,31 @@ describe('petit-bac — contestation', () => {
     ).toThrow('ALREADY_CONTESTED')
   })
 
-  it('à 2 joueurs, une seule contestation suffit', () => {
-    let state = inReveal(2)
-    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW })
+  it('à 2 joueurs, une contestation ne peut PAS trancher seule (F32)', () => {
+    const state = inReveal(2)
+    expect(pbcContestThreshold(state, 'p1')).toBeNull()
+    expect(() =>
+      reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 32_000 })
+    ).toThrow('CONTEST_NEEDS_MORE_PLAYERS')
+  })
+
+  it('à 3 joueurs, il faut les DEUX autres voix (plancher, pas la moitié)', () => {
+    let state = inReveal(3)
+    expect(pbcContestThreshold(state, 'p1')).toBe(PBC_CONTEST_MIN_VOTES)
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 32_000 })
+    expect(state.rejected).toHaveLength(0)
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 33_000 })
     expect(state.rejected).toContain('p1:0')
   })
 
-  it('2 humains + 2 partis : les partis sortent du dénominateur, une contestation suffit', () => {
+  it('2 humains + 2 partis : la table redevient trop petite pour contester', () => {
     let state = inReveal(4)
-    state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 12_000 })
-    state = reducePbc(state, { type: 'LEAVE', playerId: 'p4', at: NOW + 12_000 })
-    // Seul autre humain actif hors p1 : p2 → seuil 1, sa contestation invalide seule.
-    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 13_000 })
-    expect(state.rejected).toContain('p1:0')
-    expect(state.roundPoints?.p1[0]).toBe(0)
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 32_000 })
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p4', at: NOW + 32_000 })
+    // Seul autre humain actif hors p1 : p2 — il ne raye pas seul la copie.
+    expect(() =>
+      reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 33_000 })
+    ).toThrow('CONTEST_NEEDS_MORE_PLAYERS')
   })
 
   it('bot legacy (état sérialisé) : hors dénominateur et sans droit de vote', () => {
@@ -271,21 +398,24 @@ describe('petit-bac — contestation', () => {
       type: 'STOP',
       playerId: 'p1',
       answers: validAnswers(state, 'a'),
-      now: NOW + 10_000,
+      now: NOW + 30_000,
     })
     state = reducePbc(state, {
       type: 'SUBMIT',
       playerId: 'p2',
       answers: validAnswers(state, 'b'),
-      now: NOW + 11_000,
+      now: NOW + 31_000,
     })
     expect(state.phase).toBe('reveal')
     expect(() =>
-      reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 12_000 })
+      reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 32_000 })
     ).toThrow('BOT_CANNOT_CONTEST')
-    // Dénominateur sans le bot : la contestation de p2 suffit.
-    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 13_000 })
-    expect(state.rejected).toContain('p1:0')
+    // Le bot sort du dénominateur : il ne reste qu'UN votant possible face à
+    // p1, ce qui ne suffit plus à invalider une case (F32).
+    expect(pbcContestThreshold(state, 'p1')).toBeNull()
+    expect(() =>
+      reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 33_000 })
+    ).toThrow('CONTEST_NEEDS_MORE_PLAYERS')
   })
 })
 
@@ -296,18 +426,18 @@ describe('petit-bac — continue et fin', () => {
       type: 'STOP',
       playerId: 'p1',
       answers: validAnswers(state, 'a'),
-      now: NOW + 10_000,
+      now: NOW + 30_000,
     })
     state = reducePbc(state, {
       type: 'SUBMIT',
       playerId: 'p2',
       answers: validAnswers(state, 'b'),
-      now: NOW + 11_000,
+      now: NOW + 31_000,
     })
     expect(state.phase).toBe('reveal')
     expect(currentPbcActorId(state)).toBe('p1')
     // Toutes uniques et valides → 10 pts chacun.
-    state = reducePbc(state, { type: 'CONTINUE', playerId: 'p1', now: NOW + 20_000 })
+    state = reducePbc(state, { type: 'CONTINUE', playerId: 'p1', now: NOW + 45_000 })
     expect(state.phase).toBe('write')
     expect(state.round).toBe(1)
     expect(state.players.map((p) => p.total)).toEqual([10, 10])
@@ -320,14 +450,14 @@ describe('petit-bac — continue et fin', () => {
       type: 'STOP',
       playerId: 'p2',
       answers: validAnswers(state, 'c'),
-      now: NOW + 25_000,
+      now: NOW + 70_000,
     })
     state = reducePbc(state, {
       type: 'ADVANCE',
       claimedKey: phaseKey(state),
-      now: NOW + 25_000 + PBC_FLUSH_MS,
+      now: NOW + 70_000 + PBC_FLUSH_MS,
     })
-    state = reducePbc(state, { type: 'CONTINUE', playerId: 'p1', now: NOW + 40_000 })
+    state = reducePbc(state, { type: 'CONTINUE', playerId: 'p1', now: NOW + 90_000 })
     expect(state.phase).toBe('finished')
     expect(state.players.find((p) => p.id === 'p2')?.total).toBe(20)
     expect(state.players.find((p) => p.id === 'p1')?.total).toBe(10)
@@ -372,17 +502,17 @@ describe('petit-bac — départs', () => {
       type: 'STOP',
       playerId: 'p1',
       answers: validAnswers(state, 'a'),
-      now: NOW + 10_000,
+      now: NOW + 30_000,
     })
     state = reducePbc(state, {
       type: 'SUBMIT',
       playerId: 'p2',
       answers: validAnswers(state, 'b'),
-      now: NOW + 11_000,
+      now: NOW + 31_000,
     })
     // p3 n'a pas déposé : la manche attend encore lui seul.
     expect(state.phase).toBe('flush')
-    state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 12_000 })
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 32_000 })
     expect(state.phase).toBe('reveal')
   })
 })

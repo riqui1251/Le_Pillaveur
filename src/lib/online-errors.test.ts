@@ -43,4 +43,24 @@ describe('codes d’erreur online', () => {
     expect(resolveOnlineErrorCode('pas-un-code')).toBeNull()
     expect(resolveOnlineErrorCode(undefined)).toBeNull()
   })
+
+  /**
+   * Ces noms sont levés TELS QUELS par les moteurs (`throw new XEngineError(…)`)
+   * et voyagent jusqu'au client via `result.error`. Sans alias ils retombaient
+   * sur « Action impossible » : le joueur voyait un refus sans savoir ce qu'on
+   * lui demandait. Le tableau tient la correspondance nom moteur → code stable.
+   */
+  it('les refus des moteurs ont chacun leur code stable', () => {
+    const attendus = {
+      READING_TIME: 'reading_time',
+      STOP_TOO_EARLY: 'stop_too_early',
+      INCOMPLETE_STOP: 'incomplete_stop',
+      CONTEST_NEEDS_MORE_PLAYERS: 'contest_needs_more_players',
+    } as const
+    for (const [nomMoteur, code] of Object.entries(attendus)) {
+      expect(resolveOnlineErrorCode(nomMoteur)).toBe(code)
+      // Un code non déclaré passerait le test précédent en silence.
+      expect(ONLINE_ERROR_CODES).toContain(code)
+    }
+  })
 })

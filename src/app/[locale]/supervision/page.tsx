@@ -49,6 +49,7 @@ import {
   canTemporaryBanTarget,
   canBanFeatureTarget,
   canManageSiteSettings,
+  canManageUserFeedback,
   canManageUsers,
   canModifyTarget,
   canDeleteTarget,
@@ -93,6 +94,8 @@ import {
   LiveTableCard,
   JournalList,
   QueueList,
+  GrowthMetric,
+  Pager,
   SkeletonRows,
   EmptyState,
   ErrorState,
@@ -100,6 +103,27 @@ import {
 } from '@/components/supervision/SupervisionLayout'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { cn } from '@/lib/utils'
+
+/**
+ * Taille des pages de la Supervision. La liste des comptes et celle des
+ * retours sont paginées EN BASE (F40/F75) : le navigateur ne reçoit plus que
+ * la page affichée.
+ */
+const ACCOUNTS_PAGE_SIZE = 25
+const FEEDBACK_PAGE_SIZE = 25
+
+/** Un taux non calculable (cohorte vide) s'affiche « — », jamais « 0 % ». */
+function rateLabel(rate: number | null): string {
+  return rate == null ? '—' : `${Math.round(rate * 100)} %`
+}
+
+/** Durée d'inactivité à partir de laquelle on parle de table figée (F46). */
+function idleLabel(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${Math.max(1, minutes)} min`
+  const hours = Math.floor(minutes / 60)
+  return `${hours} h ${String(minutes % 60).padStart(2, '0')}`
+}
 
 type CountryRow = { country: string | null; count: number }
 
@@ -183,17 +207,50 @@ type LiveTable = {
   code: string
   gameId: string | null
   gameTitle: string
-  status: 'waiting' | 'briefing' | 'playing'
+  /** `cast` = salle de diffusion TV d'un jeu LOCAL (G5). */
+  status: 'waiting' | 'briefing' | 'playing' | 'cast'
   visibility: string
   memberCount: number
   memberNames: string[]
+  hostName: string | null
+  currentTurnName: string | null
   createdAt: string
   updatedAt: string
+  lastActivityAt: string
+  idleSeconds: number
+  stalled: boolean
+}
+
+type GrowthStats = {
+  retentionD1: { cohort: number; retained: number; rate: number | null }
+  retentionD7: { cohort: number; retained: number; rate: number | null }
+  /** PART des comptes enregistrés parmi les comptes créés — pas un entonnoir. */
+  registeredShare: { registered: number; guests: number; share: number | null }
+  playersByGame: Array<{ gameId: string; gameTitle: string; players: number }>
+  abandonedTables: { stalled: number; live: number; rate: number | null }
+  windows: {
+    retentionD1CohortDays: [number, number]
+    retentionD7CohortDays: [number, number]
+    registeredShareDays: number
+    playersByGameDays: number
+  }
+  /** Ces chiffres sont mis en cache côté serveur : on affiche leur date. */
+  computedAt: string
+  cacheSeconds: number
 }
 
 type JournalEntry = {
   id: string
-  kind: 'ban' | 'unban' | 'feature-ban' | 'cosmetic-grant' | 'moderation-term'
+  kind:
+    | 'ban'
+    | 'unban'
+    | 'feature-ban'
+    | 'cosmetic-grant'
+    | 'moderation-term'
+    | 'role-change'
+    | 'account-delete'
+    | 'room-close'
+    | 'site-setting'
   actorName: string | null
   targetName: string | null
   detail: string | null
@@ -263,15 +320,18 @@ type ActiveBan = {
   bannedByName: string | null
 }
 
+/**
+ * Entrée de LISTE : ni message complet ni captures (F40) — la liste ne porte
+ * que le NOMBRE de captures. Le détail (message entier + images base64)
+ * n'arrive qu'à l'ouverture du retour, via /api/admin/feedback/[id].
+ */
 type FeedbackItem = {
   id: string
   type: string
   typeLabel: string
-  message: string
   messagePreview: string
-  screenshots: string[]
+  screenshotCount: number
   pageUrl: string | null
-  userAgent: string | null
   userId: string | null
   authorName: string
   contactEmail: string | null
@@ -279,6 +339,10 @@ type FeedbackItem = {
   statusLabel: string
   createdAt: string
   updatedAt: string
+  /** Renseignés uniquement sur le détail chargé à l'ouverture. */
+  message?: string
+  screenshots?: string[]
+  userAgent?: string | null
 }
 
 type UserDetail = {
@@ -338,27 +402,6 @@ function AccountCodeBadge({ code }: { code: string | null | undefined }) {
   )
 }
 
-function matchesAccountSearch(
-  user: {
-    displayName: string
-    email: string | null
-    accountCode: string | null
-    lastIp?: string | null
-    ips?: IpEntry[]
-  },
-  query: string
-): boolean {
-  const q = query.trim().toLowerCase()
-  if (!q) return true
-  const codeQ = q.replace(/^lp-/, '')
-  if (user.displayName.toLowerCase().includes(q)) return true
-  if (user.email?.toLowerCase().includes(q)) return true
-  if (user.accountCode?.toLowerCase().includes(codeQ)) return true
-  if (user.lastIp?.toLowerCase().includes(q)) return true
-  if (user.ips?.some((entry) => entry.ip.toLowerCase().includes(q))) return true
-  return false
-}
-
 /** Phrase du journal — un texte par nature d'action, acteur/cible en gras côté rendu. */
 function journalText(t: ReturnType<typeof useTranslations<'supervision'>>, e: JournalEntry): string {
   const actor = e.actorName ?? '—'
@@ -382,6 +425,14 @@ function journalText(t: ReturnType<typeof useTranslations<'supervision'>>, e: Jo
       return e.actorName
         ? t('room.journalTermByActor', { actor, detail: e.detail ?? '' })
         : t('room.journalTerm', { detail: e.detail ?? '' })
+    case 'role-change':
+      return t('room.journalRoleChange', { actor, target, detail: e.detail ?? '' })
+    case 'account-delete':
+      return t('room.journalAccountDelete', { actor, detail: e.detail ?? '' })
+    case 'room-close':
+      return t('room.journalRoomClose', { actor, detail: e.detail ?? '' })
+    case 'site-setting':
+      return t('room.journalSiteSetting', { actor, detail: e.detail ?? '' })
   }
 }
 
@@ -470,20 +521,6 @@ function IpAddressDisplay({
   )
 }
 
-function matchesFeedbackSearch(item: FeedbackItem, query: string): boolean {
-  const q = query.trim().toLowerCase()
-  if (!q) return true
-  if (item.message.toLowerCase().includes(q)) return true
-  if (item.messagePreview.toLowerCase().includes(q)) return true
-  if (item.authorName.toLowerCase().includes(q)) return true
-  if (item.typeLabel.toLowerCase().includes(q)) return true
-  if (item.type.toLowerCase().includes(q)) return true
-  if (item.statusLabel.toLowerCase().includes(q)) return true
-  if (item.contactEmail?.toLowerCase().includes(q)) return true
-  if (item.pageUrl?.toLowerCase().includes(q)) return true
-  return false
-}
-
 function FeedbackListSection({
   items,
   emptyMessage,
@@ -529,10 +566,10 @@ function FeedbackListSection({
           </div>
           <p className="mt-2 text-sm font-medium text-white">{item.authorName}</p>
           <p className="mt-1 text-sm text-white/60">{item.messagePreview}</p>
-          {item.screenshots.length > 0 && (
+          {item.screenshotCount > 0 && (
             <p className="mt-1 text-xs text-white/35">
-              {item.screenshots.length}
-              {item.screenshots.length > 1 ? t('feedback.screenshots') : t('feedback.screenshot')}
+              {item.screenshotCount}
+              {item.screenshotCount > 1 ? t('feedback.screenshots') : t('feedback.screenshot')}
             </p>
           )}
         </button>
@@ -661,6 +698,8 @@ function useActionLabel() {
       return t('actions.feedbackAck')
     case 'name-flag-ack':
       return t('actions.nameFlagAck')
+    case 'role-change':
+      return t('actions.roleChange')
     default:
       return action
   }
@@ -980,8 +1019,16 @@ export default function SupervisionPage() {
   const router = useRouter()
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [overview, setOverview] = useState<SupervisionOverview | null>(null)
+  // Indicateurs de croissance : hors de la boucle de 15 s (F40), chargés une
+  // seule fois à l'ouverture de l'onglet et servis avec leur date de calcul.
+  const [growth, setGrowth] = useState<GrowthStats | null>(null)
   const [queueBusyId, setQueueBusyId] = useState<string | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
+  // Liste des comptes paginée EN BASE (F75) : `users` ne contient plus que la
+  // page affichée, `usersTotal` le nombre total de comptes correspondants.
+  const [usersTotal, setUsersTotal] = useState(0)
+  const [usersPage, setUsersPage] = useState(1)
+  const [usersLoading, setUsersLoading] = useState(false)
   const [bans, setBans] = useState<ActiveBan[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -1068,9 +1115,16 @@ export default function SupervisionPage() {
     displayName: string
   } | null>(null)
 
+  // Retours joueurs : page courante uniquement, captures exclues (F40).
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([])
+  const [feedbackTotal, setFeedbackTotal] = useState(0)
+  const [feedbackPage, setFeedbackPage] = useState(1)
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [activeFeedbackTotal, setActiveFeedbackTotal] = useState(0)
+  const [resolvedFeedbackTotal, setResolvedFeedbackTotal] = useState(0)
   const [feedbackSearch, setFeedbackSearch] = useState('')
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null)
+  const [feedbackDetailLoading, setFeedbackDetailLoading] = useState(false)
   const [lightboxImage, setLightboxImage] = useState<string | null>(null)
 
   const canEditAccounts = user ? canManageUsers(user.role) : false
@@ -1079,6 +1133,8 @@ export default function SupervisionPage() {
   const showAnalytics = user ? canViewSupervisionAnalytics(user.role) : false
   const showBansTab = user ? canViewSupervisionBans(user.role) : false
   const showFeedbackTab = user ? canViewUserFeedback(user.role) : false
+  // Lire un retour est ouvert aux modérateurs, le CLORE reste admin+ (F44).
+  const canTriageFeedback = user ? canManageUserFeedback(user.role) : false
   const defaultTab = showAnalytics ? 'overview' : 'accounts'
   const onlineSinceMs = Date.now() - 5 * 60 * 1000
 
@@ -1088,44 +1144,9 @@ export default function SupervisionPage() {
       ? t('subtitles.bans')
       : t('subtitles.accounts')
 
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
-      if (!matchesAccountSearch(u, accountSearch)) return false
-      if (accountFilterRole !== 'all' && u.role !== accountFilterRole) return false
-      if (accountFilterStatus === 'banned' && !u.ban.banned) return false
-      if (accountFilterStatus === 'online') {
-        const seen = u.lastSeenAt ? new Date(u.lastSeenAt).getTime() : 0
-        if (seen < onlineSinceMs) return false
-      }
-      return true
-    })
-  }, [users, accountSearch, accountFilterRole, accountFilterStatus, onlineSinceMs])
-
-  const activeFeedbackItems = useMemo(
-    () =>
-      feedbackItems.filter(
-        (f) => f.status !== 'resolved' && matchesFeedbackSearch(f, feedbackSearch)
-      ),
-    [feedbackItems, feedbackSearch]
-  )
-
-  const resolvedFeedbackItems = useMemo(
-    () =>
-      feedbackItems.filter(
-        (f) => f.status === 'resolved' && matchesFeedbackSearch(f, feedbackSearch)
-      ),
-    [feedbackItems, feedbackSearch]
-  )
-
-  const activeFeedbackTotal = useMemo(
-    () => feedbackItems.filter((f) => f.status !== 'resolved').length,
-    [feedbackItems]
-  )
-
-  const resolvedFeedbackTotal = useMemo(
-    () => feedbackItems.filter((f) => f.status === 'resolved').length,
-    [feedbackItems]
-  )
+  // L'onglet ouvert détermine ce que le serveur renvoie : « en cours » (tout
+  // ce qui n'est pas résolu) ou « résolus ». Plus de tri côté navigateur.
+  const feedbackScope = activeTab === 'feedback-resolved' ? 'resolved' : 'active'
 
   // Navigation groupée par famille (Analyse / Communauté / Modération).
   const navGroups = useMemo<SupervisionNavGroup[]>(() => {
@@ -1141,7 +1162,7 @@ export default function SupervisionPage() {
     }
     const community: SupervisionNavGroup = {
       label: t('navGroups.community'),
-      items: [{ value: 'accounts', label: t('tabs.accountsShort'), icon: Users, count: users.length || stats?.accounts.total || '' }],
+      items: [{ value: 'accounts', label: t('tabs.accountsShort'), icon: Users, count: usersTotal || stats?.accounts.total || '' }],
     }
     if (showBansTab) {
       community.items.push({
@@ -1180,7 +1201,7 @@ export default function SupervisionPage() {
     showBansTab,
     canEditAccounts,
     showFeedbackTab,
-    users.length,
+    usersTotal,
     stats?.accounts.total,
     bans.length,
     activeFeedbackTotal,
@@ -1196,83 +1217,168 @@ export default function SupervisionPage() {
   const userId = user?.id
   const userRole = user?.role
 
-  const loadAll = useCallback(async (silent = false) => {
-    if (!userId || !userRole) return
-    if (!silent) {
-      setBusy(true)
-      setError(null)
-    }
-    try {
-      const analytics = canViewSupervisionAnalytics(userRole)
-      const bansAllowed = canViewSupervisionBans(userRole)
-      const feedbackAllowed = canViewUserFeedback(userRole)
+  /**
+   * Un chargeur PAR domaine plutôt qu'un « tout recharger » (F40). Seul
+   * `loadLive` (stats + vue d'ensemble) est appelé en boucle : c'est le seul
+   * contenu qui bouge tout seul. Les comptes se rechargent quand on change de
+   * page ou de filtre, les retours quand on change d'onglet ou de recherche,
+   * et tout le monde à la demande via le bouton Actualiser.
+   */
+  const loadUsers = useCallback(
+    async (silent = false) => {
+      if (!userId || !userRole) return
+      if (!silent) setUsersLoading(true)
+      try {
+        const params = new URLSearchParams({
+          page: String(usersPage),
+          pageSize: String(ACCOUNTS_PAGE_SIZE),
+        })
+        const q = accountSearch.trim()
+        if (q) params.set('q', q)
+        if (accountFilterRole !== 'all') params.set('role', accountFilterRole)
+        if (accountFilterStatus !== 'all') params.set('status', accountFilterStatus)
 
-      const usersRes = await fetch('/api/admin/users', { credentials: 'include' })
-      if (usersRes.status === 403) {
-        router.replace('/compte')
+        const res = await fetch(`/api/admin/users?${params.toString()}`, {
+          credentials: 'include',
+        })
+        if (res.status === 403) {
+          router.replace('/compte')
+          return
+        }
+        if (!res.ok) throw new Error(tRef.current('apiErrors.loadAccounts'))
+
+        const data = await res.json()
+        const pageUsers = (data.users ?? []) as AdminUser[]
+        setUsers(pageUsers)
+        setUsersTotal(data.total ?? pageUsers.length)
+        setEditingNames((prev) => ({
+          ...prev,
+          ...Object.fromEntries(pageUsers.map((u) => [u.id, u.displayName])),
+        }))
+      } catch (e) {
+        if (!silent) setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
+      } finally {
+        setUsersLoading(false)
+        setDataLoaded(true)
+      }
+    },
+    [router, userId, userRole, usersPage, accountSearch, accountFilterRole, accountFilterStatus]
+  )
+
+  const loadSettings = useCallback(async () => {
+    // Réglages globaux du site (ex. vocal) — lecture pour tout compte connecté.
+    const res = await fetch('/api/admin/site-settings', { credentials: 'include' })
+    if (res.ok) {
+      const settings = await res.json()
+      setVoiceEnabled(Boolean(settings.voiceEnabled))
+    }
+  }, [])
+
+  const loadBans = useCallback(async () => {
+    if (!userRole || !canViewSupervisionBans(userRole)) {
+      setBans([])
+      return
+    }
+    const res = await fetch('/api/admin/bans', { credentials: 'include' })
+    setBans(res.ok ? ((await res.json()).bans ?? []) : [])
+  }, [userRole])
+
+  const loadLive = useCallback(
+    async (silent = false) => {
+      if (!userRole || !canViewSupervisionAnalytics(userRole)) {
+        setStats(null)
+        setOverview(null)
         return
       }
-      if (!usersRes.ok) throw new Error(tRef.current('apiErrors.loadAccounts'))
-
-      const usersData = await usersRes.json()
-      setUsers(usersData.users ?? [])
-      setEditingNames(
-        Object.fromEntries(
-          (usersData.users as AdminUser[]).map((u) => [u.id, u.displayName])
-        )
-      )
-
-      // Réglages globaux du site (ex. vocal) — lecture pour tout le staff.
-      const settingsRes = await fetch('/api/admin/site-settings', { credentials: 'include' })
-      if (settingsRes.ok) {
-        const settings = await settingsRes.json()
-        setVoiceEnabled(Boolean(settings.voiceEnabled))
-      }
-
-      if (analytics) {
+      try {
         const [statsRes, overviewRes] = await Promise.all([
           fetch('/api/admin/stats', { credentials: 'include' }),
           fetch('/api/admin/supervision-overview', { credentials: 'include' }),
         ])
-        setStats(statsRes.ok ? await statsRes.json() : null)
-        setOverview(overviewRes.ok ? await overviewRes.json() : null)
-      } else {
-        setStats(null)
-        setOverview(null)
+        if (statsRes.ok) setStats(await statsRes.json())
+        if (overviewRes.ok) setOverview(await overviewRes.json())
+      } catch (e) {
+        if (!silent) setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
       }
+    },
+    [userRole]
+  )
 
-      if (bansAllowed) {
-        const bansRes = await fetch('/api/admin/bans', { credentials: 'include' })
-        if (bansRes.ok) {
-          const bansData = await bansRes.json()
-          setBans(bansData.bans ?? [])
-        } else {
-          setBans([])
-        }
-      } else {
-        setBans([])
-      }
-
-      if (feedbackAllowed) {
-        const feedbackRes = await fetch('/api/admin/feedback', { credentials: 'include' })
-        if (feedbackRes.ok) {
-          const feedbackData = await feedbackRes.json()
-          setFeedbackItems(feedbackData.feedback ?? [])
-        } else {
-          setFeedbackItems([])
-        }
-      } else {
-        setFeedbackItems([])
-      }
-    } catch (e) {
-      if (!silent) {
-        setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
-      }
-    } finally {
-      if (!silent) setBusy(false)
-      setDataLoaded(true)
+  /**
+   * Indicateurs de croissance : requête à part, tirée à l'ouverture de
+   * l'onglet et JAMAIS dans la boucle — elle coûte plusieurs parcours de la
+   * table des comptes pour des chiffres qui portent sur 7 à 30 jours.
+   */
+  const loadGrowth = useCallback(async () => {
+    if (!userRole || !canViewSupervisionAnalytics(userRole)) {
+      setGrowth(null)
+      return
     }
-  }, [router, userId, userRole])
+    try {
+      const res = await fetch('/api/admin/growth', { credentials: 'include' })
+      if (res.ok) setGrowth(await res.json())
+    } catch {
+      /* silencieux : les indicateurs ne doivent pas casser la console */
+    }
+  }, [userRole])
+
+  const loadFeedback = useCallback(
+    async (silent = false) => {
+      if (!userRole || !canViewUserFeedback(userRole)) {
+        setFeedbackItems([])
+        setFeedbackTotal(0)
+        return
+      }
+      if (!silent) setFeedbackLoading(true)
+      try {
+        const params = new URLSearchParams({
+          status: feedbackScope,
+          page: String(feedbackPage),
+          pageSize: String(FEEDBACK_PAGE_SIZE),
+        })
+        const q = feedbackSearch.trim()
+        if (q) params.set('q', q)
+
+        const res = await fetch(`/api/admin/feedback?${params.toString()}`, {
+          credentials: 'include',
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        setFeedbackItems(data.feedback ?? [])
+        setFeedbackTotal(data.total ?? 0)
+        setActiveFeedbackTotal(data.activeCount ?? 0)
+        setResolvedFeedbackTotal(data.resolvedCount ?? 0)
+      } finally {
+        setFeedbackLoading(false)
+      }
+    },
+    [userRole, feedbackScope, feedbackPage, feedbackSearch]
+  )
+
+  const loadAll = useCallback(
+    async (silent = false) => {
+      if (!userId || !userRole) return
+      if (!silent) {
+        setBusy(true)
+        setError(null)
+      }
+      try {
+        await Promise.all([
+          loadUsers(silent),
+          loadSettings(),
+          loadBans(),
+          loadLive(silent),
+          loadFeedback(silent),
+        ])
+      } catch (e) {
+        if (!silent) setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
+      } finally {
+        if (!silent) setBusy(false)
+        setDataLoaded(true)
+      }
+    },
+    [userId, userRole, loadUsers, loadSettings, loadBans, loadLive, loadFeedback]
+  )
 
   const loadUserHistory = useCallback(async (userIdToLoad: string) => {
     setHistoryLoading(true)
@@ -1306,12 +1412,60 @@ export default function SupervisionPage() {
     }
   }, [user, loading, defaultTab])
 
+  // Comptes : rechargés quand la page ou un filtre change, avec un court
+  // délai pour ne pas interroger la base à chaque frappe.
   useEffect(() => {
     if (loading || !userId || !userRole || !canAccessSupervision(userRole)) return
-    void loadAll()
-    const id = window.setInterval(() => void loadAll(true), 15_000)
+    const id = window.setTimeout(() => void loadUsers(), 300)
+    return () => window.clearTimeout(id)
+  }, [loading, userId, userRole, loadUsers])
+
+  // Retours joueurs : idem, au rythme de l'onglet et de la recherche.
+  useEffect(() => {
+    if (loading || !userId || !userRole || !canAccessSupervision(userRole)) return
+    const id = window.setTimeout(() => void loadFeedback(), 300)
+    return () => window.clearTimeout(id)
+  }, [loading, userId, userRole, loadFeedback])
+
+  // Un filtre qui change remet la pagination à la première page.
+  useEffect(() => {
+    setUsersPage(1)
+  }, [accountSearch, accountFilterRole, accountFilterStatus])
+
+  useEffect(() => {
+    setFeedbackPage(1)
+  }, [feedbackSearch, feedbackScope])
+
+  // Chargés une fois : ni les bans ni les réglages ne bougent tout seuls.
+  useEffect(() => {
+    if (loading || !userId || !userRole || !canAccessSupervision(userRole)) return
+    void loadSettings()
+    void loadBans()
+  }, [loading, userId, userRole, loadSettings, loadBans])
+
+  /**
+   * SEULE boucle de rafraîchissement (F40) : les tables en direct, la file à
+   * traiter et les compteurs de visiteurs. Elle s'arrête quand l'onglet passe
+   * en arrière-plan — inutile d'interroger le serveur pour une page que
+   * personne ne regarde.
+   */
+  useEffect(() => {
+    if (loading || !userId || !userRole || !canAccessSupervision(userRole)) return
+    void loadLive()
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void loadLive(true)
+    }, 15_000)
     return () => window.clearInterval(id)
-  }, [loading, userId, userRole, loadAll])
+  }, [loading, userId, userRole, loadLive])
+
+  // Croissance : au premier affichage de l'onglet qui la montre, puis plus
+  // rien — le serveur garde la valeur quelques minutes et l'écran affiche
+  // l'heure du calcul.
+  useEffect(() => {
+    if (loading || !userId || !userRole || activeTab !== 'overview') return
+    if (growth) return
+    void loadGrowth()
+  }, [loading, userId, userRole, activeTab, growth, loadGrowth])
 
   const handleIpClick = useCallback(async (ip: string) => {
     setAccountSearch(ip)
@@ -1447,7 +1601,8 @@ export default function SupervisionPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? t('apiErrors.closeTableDenied'))
       setCloseTableDialog(null)
-      await loadAll()
+      // Seules les tables en direct changent : inutile de tout recharger.
+      await loadLive()
     } catch (e) {
       setError(e instanceof Error ? e.message : tErrors('generic'))
     } finally {
@@ -1549,6 +1704,25 @@ export default function SupervisionPage() {
     }
   }
 
+  /**
+   * Ouvre un retour : la liste ne porte que l'aperçu, le message complet et
+   * les captures base64 sont chargés MAINTENANT, pour ce seul retour (F40).
+   */
+  const openFeedback = async (item: FeedbackItem) => {
+    setSelectedFeedback(item)
+    setFeedbackDetailLoading(true)
+    try {
+      const res = await fetch(`/api/admin/feedback/${item.id}`, { credentials: 'include' })
+      if (!res.ok) return
+      const data = await res.json()
+      setSelectedFeedback((prev) => (prev?.id === item.id ? data.feedback : prev))
+    } catch {
+      /* le résumé de la liste reste affiché */
+    } finally {
+      setFeedbackDetailLoading(false)
+    }
+  }
+
   const updateFeedbackStatus = async (id: string, status: 'read' | 'resolved') => {
     setBusy(true)
     setError(null)
@@ -1580,6 +1754,8 @@ export default function SupervisionPage() {
       if (status === 'resolved') {
         setSelectedFeedback(null)
       }
+      // Les compteurs d'onglets et la page courante viennent du serveur.
+      await loadFeedback(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : tErrors('generic'))
     } finally {
@@ -1639,7 +1815,8 @@ export default function SupervisionPage() {
         })
       }
       setOverview((prev) => (prev ? { ...prev, queue: prev.queue.filter((q) => q.id !== id) } : prev))
-      void loadAll(true)
+      void loadLive(true)
+      if (item.kind === 'feedback') void loadFeedback(true)
     } finally {
       setQueueBusyId(null)
     }
@@ -1745,6 +1922,102 @@ export default function SupervisionPage() {
             <TrendChart points={trendPoints} primaryLabel={t('room.trendVisitors')} secondaryLabel={t('room.trendParties')} />
           </SectionCard>
 
+          {growth && (
+            <SectionCard
+              icon={Sparkles}
+              title={t('growth.title')}
+              description={t('growth.desc')}
+              bodyClassName="space-y-4"
+            >
+              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                <GrowthMetric
+                  label={t('growth.retentionD1Label')}
+                  value={rateLabel(growth.retentionD1.rate)}
+                  detail={t('growth.cohortDetail', {
+                    retained: growth.retentionD1.retained,
+                    cohort: growth.retentionD1.cohort,
+                  })}
+                  definition={t('growth.retentionD1Def', {
+                    from: growth.windows.retentionD1CohortDays[0],
+                    to: growth.windows.retentionD1CohortDays[1],
+                  })}
+                />
+                <GrowthMetric
+                  label={t('growth.retentionD7Label')}
+                  value={rateLabel(growth.retentionD7.rate)}
+                  detail={t('growth.cohortDetail', {
+                    retained: growth.retentionD7.retained,
+                    cohort: growth.retentionD7.cohort,
+                  })}
+                  definition={t('growth.retentionD7Def', {
+                    from: growth.windows.retentionD7CohortDays[0],
+                    to: growth.windows.retentionD7CohortDays[1],
+                  })}
+                />
+                <GrowthMetric
+                  label={t('growth.registeredShareLabel')}
+                  value={rateLabel(growth.registeredShare.share)}
+                  detail={t('growth.registeredShareDetail', {
+                    registered: growth.registeredShare.registered,
+                    guests: growth.registeredShare.guests,
+                  })}
+                  definition={t('growth.registeredShareDef', {
+                    days: growth.windows.registeredShareDays,
+                  })}
+                />
+                <GrowthMetric
+                  label={t('growth.abandonedLabel')}
+                  value={String(growth.abandonedTables.stalled)}
+                  detail={t('growth.abandonedDetail', {
+                    stalled: growth.abandonedTables.stalled,
+                    live: growth.abandonedTables.live,
+                  })}
+                  definition={t('growth.abandonedDef')}
+                  tone={growth.abandonedTables.stalled > 0 ? 'alert' : 'default'}
+                />
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
+                  {t('growth.playersByGameTitle')}
+                </p>
+                {growth.playersByGame.length === 0 ? (
+                  <p className="mt-1.5 text-sm text-white/40">{t('growth.noData')}</p>
+                ) : (
+                  <ul className="mt-1.5 space-y-1.5">
+                    {growth.playersByGame.map((row) => (
+                      <li
+                        key={row.gameId}
+                        className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2"
+                      >
+                        <span className="flex min-w-0 items-center gap-2 text-sm text-white">
+                          <GameIconById id={row.gameId} className="h-4 w-4 shrink-0 text-gold" />
+                          <span className="truncate">{row.gameTitle}</span>
+                        </span>
+                        <Badge variant="secondary" className="tabular-nums">{row.players}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="mt-1.5 text-[11px] leading-relaxed text-white/40">
+                  {t('growth.playersByGameDef', {
+                    days: growth.windows.playersByGameDays,
+                  })}
+                </p>
+              </div>
+
+              {/* Ces chiffres sortent d'un cache serveur : on dit à quelle
+                  heure ils ont été calculés plutôt que de les laisser passer
+                  pour du temps réel. */}
+              <p className="border-t border-white/[0.07] pt-2 text-[11px] text-white/35">
+                {t('growth.freshness', {
+                  time: format.dateTime(new Date(growth.computedAt), { timeStyle: 'short' }),
+                  minutes: Math.max(1, Math.round(growth.cacheSeconds / 60)),
+                })}
+              </p>
+            </SectionCard>
+          )}
+
           <div className="grid gap-4 lg:grid-cols-2">
             <SectionCard icon={Gamepad2} title={t('room.liveTablesTitle')} description={t('room.liveTablesDesc')}>
               {(overview?.liveTables ?? []).length === 0 ? (
@@ -1759,11 +2032,28 @@ export default function SupervisionPage() {
                       code={tbl.code}
                       status={tbl.status}
                       statusLabel={t(
-                        tbl.status === 'waiting' ? 'room.statusWaiting' : tbl.status === 'briefing' ? 'room.statusBriefing' : 'room.statusPlaying'
+                        tbl.status === 'waiting'
+                          ? 'room.statusWaiting'
+                          : tbl.status === 'briefing'
+                            ? 'room.statusBriefing'
+                            : tbl.status === 'cast'
+                              ? 'room.statusCast'
+                              : 'room.statusPlaying'
                       )}
                       memberCount={tbl.memberCount}
                       memberNames={tbl.memberNames}
                       elapsed={formatPresenceDuration((Date.now() - new Date(tbl.createdAt).getTime()) / 1000)}
+                      stalled={tbl.stalled}
+                      stalledLabel={t('room.stalledFor', { duration: idleLabel(tbl.idleSeconds) })}
+                      turnLabel={
+                        tbl.status === 'cast'
+                          ? tbl.hostName
+                            ? t('room.castHost', { name: tbl.hostName })
+                            : undefined
+                          : tbl.currentTurnName
+                            ? t('room.turnLabel', { name: tbl.currentTurnName })
+                            : undefined
+                      }
                       closeLabel={canEditAccounts ? t('room.closeTable') : undefined}
                       onClose={
                         canEditAccounts
@@ -1793,6 +2083,8 @@ export default function SupervisionPage() {
                     icon: q.kind === 'feedback' ? MessageSquareWarning : UserX,
                     title: q.title,
                     subtitle: q.subtitle,
+                    // Un modérateur lit les retours mais ne les clôt pas (F44).
+                    canAcknowledge: q.kind === 'feedback' ? canTriageFeedback : canEditAccounts,
                   }))}
                   viewLabel={t('room.queueViewAction')}
                   acknowledgeLabel={t('room.queueAckAction')}
@@ -2034,10 +2326,9 @@ export default function SupervisionPage() {
 
               {(accountSearch.trim() || accountFilterRole !== 'all' || accountFilterStatus !== 'all') && (
                 <p className="text-xs text-white/45">
-                  {t('accounts.results', {
-                    count: filteredUsers.length,
-                    plural: filteredUsers.length > 1 ? 's' : '',
-                    total: users.length,
+                  {t('accounts.matchCount', {
+                    total: usersTotal,
+                    plural: usersTotal > 1 ? 's' : '',
                   })}
                 </p>
               )}
@@ -2073,12 +2364,12 @@ export default function SupervisionPage() {
                   )}
                 </div>
               )}
-              {filteredUsers.length === 0 ? (
+              {users.length === 0 ? (
                 <p className="py-8 text-center text-sm text-white/45">
-                  {t('accounts.noMatch')}
+                  {usersLoading ? t('loading') : t('accounts.noMatch')}
                 </p>
               ) : (
-              filteredUsers.map((u) => {
+              users.map((u) => {
                 const isOnline =
                   u.lastSeenAt != null && new Date(u.lastSeenAt).getTime() >= onlineSinceMs
                 return (
@@ -2402,6 +2693,21 @@ export default function SupervisionPage() {
                 )
               })
               )}
+
+              <Pager
+                page={usersPage}
+                pageSize={ACCOUNTS_PAGE_SIZE}
+                total={usersTotal}
+                onPage={setUsersPage}
+                busy={usersLoading}
+                summary={t('states.pageSummary', {
+                  page: usersPage,
+                  pages: Math.max(1, Math.ceil(usersTotal / ACCOUNTS_PAGE_SIZE)),
+                  total: usersTotal,
+                })}
+                previousLabel={t('states.previousPage')}
+                nextLabel={t('states.nextPage')}
+              />
           </SectionCard>
         </TabsContent>
 
@@ -2498,17 +2804,33 @@ export default function SupervisionPage() {
                 value={feedbackSearch}
                 onChange={setFeedbackSearch}
                 placeholder={t('feedback.searchActive')}
-                resultCount={activeFeedbackItems.length}
+                resultCount={feedbackTotal}
                 totalCount={activeFeedbackTotal}
               />
               <FeedbackListSection
-                items={activeFeedbackItems}
+                items={feedbackItems}
                 emptyMessage={
-                  feedbackSearch.trim()
-                    ? t('feedback.noActiveSearch')
-                    : t('feedback.noActive')
+                  feedbackLoading
+                    ? t('loading')
+                    : feedbackSearch.trim()
+                      ? t('feedback.noActiveSearch')
+                      : t('feedback.noActive')
                 }
-                onSelect={setSelectedFeedback}
+                onSelect={openFeedback}
+              />
+              <Pager
+                page={feedbackPage}
+                pageSize={FEEDBACK_PAGE_SIZE}
+                total={feedbackTotal}
+                onPage={setFeedbackPage}
+                busy={feedbackLoading}
+                summary={t('states.pageSummary', {
+                  page: feedbackPage,
+                  pages: Math.max(1, Math.ceil(feedbackTotal / FEEDBACK_PAGE_SIZE)),
+                  total: feedbackTotal,
+                })}
+                previousLabel={t('states.previousPage')}
+                nextLabel={t('states.nextPage')}
               />
           </SectionCard>
         </TabsContent>
@@ -2521,17 +2843,33 @@ export default function SupervisionPage() {
                 value={feedbackSearch}
                 onChange={setFeedbackSearch}
                 placeholder={t('feedback.searchResolved')}
-                resultCount={resolvedFeedbackItems.length}
+                resultCount={feedbackTotal}
                 totalCount={resolvedFeedbackTotal}
               />
               <FeedbackListSection
-                items={resolvedFeedbackItems}
+                items={feedbackItems}
                 emptyMessage={
-                  feedbackSearch.trim()
-                    ? t('feedback.noResolvedSearch')
-                    : t('feedback.noResolved')
+                  feedbackLoading
+                    ? t('loading')
+                    : feedbackSearch.trim()
+                      ? t('feedback.noResolvedSearch')
+                      : t('feedback.noResolved')
                 }
-                onSelect={setSelectedFeedback}
+                onSelect={openFeedback}
+              />
+              <Pager
+                page={feedbackPage}
+                pageSize={FEEDBACK_PAGE_SIZE}
+                total={feedbackTotal}
+                onPage={setFeedbackPage}
+                busy={feedbackLoading}
+                summary={t('states.pageSummary', {
+                  page: feedbackPage,
+                  pages: Math.max(1, Math.ceil(feedbackTotal / FEEDBACK_PAGE_SIZE)),
+                  total: feedbackTotal,
+                })}
+                previousLabel={t('states.previousPage')}
+                nextLabel={t('states.nextPage')}
               />
           </SectionCard>
         </TabsContent>
@@ -2921,7 +3259,9 @@ export default function SupervisionPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="whitespace-pre-wrap text-sm text-white/80">{selectedFeedback.message}</p>
+                <p className="whitespace-pre-wrap text-sm text-white/80">
+                  {selectedFeedback.message ?? selectedFeedback.messagePreview}
+                </p>
                 {selectedFeedback.contactEmail && (
                   <p className="text-sm text-white/50">
                     {t('feedback.contact')}{' '}
@@ -2936,11 +3276,14 @@ export default function SupervisionPage() {
                 {selectedFeedback.pageUrl && (
                   <p className="text-xs text-white/40">{t('feedback.page')} {selectedFeedback.pageUrl}</p>
                 )}
-                {selectedFeedback.screenshots.length > 0 && (
+                {feedbackDetailLoading && selectedFeedback.screenshotCount > 0 && (
+                  <p className="text-xs text-white/40">{t('feedback.loadingDetail')}</p>
+                )}
+                {(selectedFeedback.screenshots ?? []).length > 0 && (
                   <div>
                     <p className="mb-2 text-xs font-semibold text-white/50">{t('feedback.screenshotsTitle')}</p>
                     <div className="flex flex-wrap gap-2">
-                      {selectedFeedback.screenshots.map((src, i) => (
+                      {(selectedFeedback.screenshots ?? []).map((src, i) => (
                         <button
                           key={i}
                           type="button"
@@ -2956,7 +3299,7 @@ export default function SupervisionPage() {
                 )}
               </div>
               <DialogFooter className="gap-2 sm:gap-0">
-                {selectedFeedback.status === 'open' && (
+                {canTriageFeedback && selectedFeedback.status === 'open' && (
                   <Button
                     variant="outline"
                     disabled={busy}
@@ -2965,7 +3308,7 @@ export default function SupervisionPage() {
                     {t('feedback.markRead')}
                   </Button>
                 )}
-                {selectedFeedback.status !== 'resolved' && (
+                {canTriageFeedback && selectedFeedback.status !== 'resolved' && (
                   <Button
                     disabled={busy}
                     className="bg-emerald-600 text-white hover:bg-emerald-500"

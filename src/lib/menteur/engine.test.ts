@@ -9,6 +9,8 @@ import {
   toMenteurClientView,
   toMenteurSpectatorView,
   MENTEUR_START_DICE,
+  MENTEUR_REVEAL_MIN_MS,
+  menteurSipsTotal,
   MenteurEngineError,
   type MenteurPlayer,
   type MenteurState,
@@ -25,6 +27,11 @@ const P = (id: string, dice: number[], extra: Partial<MenteurPlayer> = {}): Ment
   ...extra,
 })
 
+/** Horloge de référence des tests (le moteur n'appelle jamais Date.now). */
+const T0 = 1_000_000
+/** Après le plancher de lecture du reveal : le « manche suivante » passe. */
+const T_CONT = T0 + MENTEUR_REVEAL_MIN_MS
+
 /** État artisanal à dés CONNUS (bypass du RNG) pour tester les résolutions. */
 const craft = (players: MenteurPlayer[], over: Partial<MenteurState> = {}): MenteurState => ({
   version: 1,
@@ -39,6 +46,7 @@ const craft = (players: MenteurPlayer[], over: Partial<MenteurState> = {}): Ment
   rngState: 12345,
   rulePalifico: false,
   ruleCalza: false,
+  revealAt: null,
   palifico: false,
   ...over,
 })
@@ -148,7 +156,7 @@ describe('BID / DUDO', () => {
 
   it('DUDO impossible sans enchère', () => {
     const s = craft([P('a', [2, 2, 3, 4, 5]), P('b', [1, 2, 3, 4, 6])])
-    expect(() => reduceMenteur(s, { type: 'DUDO', playerId: 'a' })).toThrow('NO_BID_TO_CHALLENGE')
+    expect(() => reduceMenteur(s, { type: 'DUDO', playerId: 'a', now: T0 })).toThrow('NO_BID_TO_CHALLENGE')
   })
 
   it('enchère qui TIENT → l’accusateur perd un dé et boit', () => {
@@ -157,7 +165,7 @@ describe('BID / DUDO', () => {
       currentBid: { qty: 3, face: 3, by: 'a' },
       turnIdx: 1,
     })
-    const after = reduceMenteur(s, { type: 'DUDO', playerId: 'b' })
+    const after = reduceMenteur(s, { type: 'DUDO', playerId: 'b', now: T0 })
     expect(after.phase).toBe('reveal')
     expect(after.lastReveal).toMatchObject({
       matchCount: 3,
@@ -178,7 +186,7 @@ describe('BID / DUDO', () => {
       currentBid: { qty: 4, face: 6, by: 'a' },
       turnIdx: 1,
     })
-    const after = reduceMenteur(s, { type: 'DUDO', playerId: 'b' })
+    const after = reduceMenteur(s, { type: 'DUDO', playerId: 'b', now: T0 })
     expect(after.lastReveal).toMatchObject({ matchCount: 1, bidHeld: false, loserId: 'a' })
     expect(after.players[0].dice.length).toBe(2)
   })
@@ -188,7 +196,7 @@ describe('BID / DUDO', () => {
       currentBid: { qty: 2, face: 6, by: 'a' },
       turnIdx: 1,
     })
-    const after = reduceMenteur(s, { type: 'DUDO', playerId: 'b' })
+    const after = reduceMenteur(s, { type: 'DUDO', playerId: 'b', now: T0 })
     expect(after.lastReveal?.loserId).toBe('a')
     expect(after.lastReveal?.eliminatedId).toBe('a')
     expect(after.players[0].dice.length).toBe(0)
@@ -210,7 +218,7 @@ describe('CONTINUE', () => {
         eliminatedId: null,
       },
     })
-    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'a' })
+    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'a', now: T_CONT })
     expect(after.phase).toBe('bidding')
     expect(after.round).toBe(2)
     expect(after.currentBid).toBeNull()
@@ -234,7 +242,7 @@ describe('CONTINUE', () => {
         eliminatedId: 'b',
       },
     })
-    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'c' })
+    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'c', now: T_CONT })
     expect(after.turnIdx).toBe(2)
   })
 
@@ -252,9 +260,132 @@ describe('CONTINUE', () => {
         eliminatedId: 'a',
       },
     })
-    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'b' })
+    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'b', now: T_CONT })
     expect(after.phase).toBe('finished')
     expect(after.winnerId).toBe('b')
+  })
+})
+
+describe('gorgées annoncées = gorgées appliquées (F35)', () => {
+  /**
+   * Source de vérité du Menteur : le perdant boit AUTANT DE GORGÉES QUE DE DÉS
+   * déjà perdus (1 au premier dé, 2 au deuxième, 3 au troisième…). Le nombre
+   * annoncé dans `lastReveal.sips` est donc exactement son `lostCount` APRÈS
+   * la perte — c'est cette valeur que l'affichage doit reprendre, et le total
+   * réellement bu est la SOMME des annonces, pas le nombre de dés perdus.
+   */
+  it('lastReveal.sips vaut le lostCount du perdant après la perte, et escalade dé après dé', () => {
+    let s = craft([P('a', [2, 2, 2, 2, 2]), P('b', [6, 6, 6, 6, 6])])
+    const announced: number[] = []
+    for (let lost = 1; lost <= 3; lost += 1) {
+      // Enchère intenable de « a » : « b » démasque, « a » perd un dé.
+      s = {
+        ...s,
+        phase: 'bidding',
+        currentBid: { qty: 10, face: 3, by: 'a' },
+        turnIdx: 1,
+        revealAt: null,
+      }
+      s = reduceMenteur(s, { type: 'DUDO', playerId: 'b', now: T0 })
+      const loser = s.players.find((p) => p.id === 'a')!
+      expect(s.lastReveal?.loserId).toBe('a')
+      expect(s.lastReveal?.sips).toBe(loser.lostCount)
+      expect(loser.lostCount).toBe(lost)
+      announced.push(s.lastReveal!.sips)
+    }
+    expect(announced).toEqual([1, 2, 3])
+    // Le compteur de dés perdus (3) n'est PAS le total bu (6) : un écran qui
+    // affiche `lostCount` comme un nombre de gorgées mentirait.
+    const loser = s.players.find((p) => p.id === 'a')!
+    expect(loser.lostCount).toBe(3)
+    expect(announced.reduce((x, y) => x + y, 0)).toBe(6)
+  })
+
+  it('la vue client expose le TOTAL bu (sipsTotal), pas le nombre de dés perdus', () => {
+    let s = craft([P('a', [2, 2, 2, 2, 2]), P('b', [6, 6, 6, 6, 6])])
+    let announced = 0
+    for (let lost = 1; lost <= 3; lost += 1) {
+      s = {
+        ...s,
+        phase: 'bidding',
+        currentBid: { qty: 10, face: 3, by: 'a' },
+        turnIdx: 1,
+        revealAt: null,
+      }
+      s = reduceMenteur(s, { type: 'DUDO', playerId: 'b', now: T0 })
+      announced += s.lastReveal!.sips
+      const view = toMenteurClientView(s, 'a').players.find((p) => p.id === 'a')!
+      // Le nombre derrière la chope = la SOMME des gorgées annoncées.
+      expect(view.sipsTotal).toBe(announced)
+      expect(view.sipsTotal).toBe(menteurSipsTotal(view.lostCount))
+    }
+    // 3 dés perdus, mais 6 gorgées bues : afficher lostCount mentirait.
+    expect(announced).toBe(6)
+    expect(toMenteurClientView(s, 'a').players[0].lostCount).toBe(3)
+  })
+
+  it('Calza réussi : rien d’annoncé, rien d’appliqué', () => {
+    const s = craft([P('a', [3, 3, 2]), P('b', [4, 5, 6])], {
+      currentBid: { qty: 2, face: 3, by: 'b' },
+      turnIdx: 0,
+      ruleCalza: true,
+    })
+    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a', now: T0 })
+    expect(after.lastReveal).toMatchObject({ loserId: null, sips: 0 })
+    expect(after.players.map((p) => p.lostCount)).toEqual(s.players.map((p) => p.lostCount))
+  })
+})
+
+describe('temps de lecture de la révélation (F33)', () => {
+  it('le premier impatient ne relance pas les dés avant que la table ait vu', () => {
+    const s = craft([P('a', [2, 2, 4]), P('b', [6, 5, 5])], {
+      currentBid: { qty: 4, face: 6, by: 'a' },
+      turnIdx: 1,
+    })
+    const revealed = reduceMenteur(s, { type: 'DUDO', playerId: 'b', now: T0 })
+    expect(revealed.revealAt).toBe(T0)
+    expect(() =>
+      reduceMenteur(revealed, {
+        type: 'CONTINUE',
+        playerId: 'b',
+        now: T0 + MENTEUR_REVEAL_MIN_MS - 1,
+      })
+    ).toThrow('READING_TIME')
+    const next = reduceMenteur(revealed, {
+      type: 'CONTINUE',
+      playerId: 'b',
+      now: T0 + MENTEUR_REVEAL_MIN_MS,
+    })
+    expect(next.phase).toBe('bidding')
+    expect(next.revealAt).toBeNull()
+  })
+
+  it('un BOT (tick de service) enchaîne sans attendre — une table de bots ne se figera jamais', () => {
+    const s = craft(
+      [P('a', [2, 2, 4], { isBot: true }), P('b', [6, 5, 5], { isBot: true })],
+      { currentBid: { qty: 4, face: 6, by: 'a' }, turnIdx: 1 }
+    )
+    const revealed = reduceMenteur(s, { type: 'DUDO', playerId: 'b', now: T0 })
+    const next = reduceMenteur(revealed, { type: 'CONTINUE', playerId: 'b', now: T0 })
+    expect(next.phase).toBe('bidding')
+  })
+
+  it('état sérialisé sans horodatage (partie en vol) : jamais bloqué', () => {
+    const s = craft([P('a', [2]), P('b', [6])], {
+      phase: 'reveal',
+      revealAt: null,
+      lastReveal: {
+        bid: { qty: 1, face: 2, by: 'b' },
+        challengerId: 'a',
+        allDice: [],
+        matchCount: 0,
+        bidHeld: false,
+        loserId: 'b',
+        sips: 4,
+        eliminatedId: null,
+      },
+    })
+    expect(reduceMenteur(s, { type: 'CONTINUE', playerId: 'a', now: T0 }).phase).toBe('bidding')
   })
 })
 
@@ -420,7 +551,7 @@ describe('Palifico', () => {
         gainedId: null,
       },
     })
-    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'a' })
+    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'a', now: T_CONT })
     // a n'a qu'un dé → la manche suivante est Palifico.
     expect(after.palifico).toBe(true)
   })
@@ -445,7 +576,7 @@ describe('Calza', () => {
       currentBid: { qty: 2, face: 3, by: 'b' },
       turnIdx: 0,
     })
-    expect(() => reduceMenteur(s, { type: 'CALZA', playerId: 'a' })).toThrow('CALZA_DISABLED')
+    expect(() => reduceMenteur(s, { type: 'CALZA', playerId: 'a', now: T0 })).toThrow('CALZA_DISABLED')
   })
 
   it('Calza exact → regagne un dé, personne ne boit', () => {
@@ -455,7 +586,7 @@ describe('Calza', () => {
       currentBid: { qty: 2, face: 3, by: 'b' },
       turnIdx: 0,
     })
-    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a' })
+    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a', now: T0 })
     expect(after.lastReveal).toMatchObject({ mode: 'calza', matchCount: 2, loserId: null, sips: 0 })
     expect(after.lastReveal?.gainedId).toBe('a')
     expect(after.players[0].dice.length).toBe(3) // a avait 2 dés (3 perdus), en regagne 1
@@ -468,7 +599,7 @@ describe('Calza', () => {
       currentBid: { qty: 3, face: 6, by: 'b' },
       turnIdx: 0,
     })
-    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a' })
+    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a', now: T0 })
     expect(after.lastReveal).toMatchObject({ mode: 'calza', matchCount: 1, loserId: 'a', gainedId: null })
     expect(after.players[0].dice.length).toBe(1)
   })
@@ -479,7 +610,7 @@ describe('Calza', () => {
       currentBid: { qty: 2, face: 3, by: 'b' },
       turnIdx: 0,
     })
-    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a' })
+    const after = reduceMenteur(s, { type: 'CALZA', playerId: 'a', now: T0 })
     expect(after.lastReveal?.gainedId).toBeNull() // déjà à 5 dés, plafond atteint
     expect(after.players[0].dice.length).toBe(5)
   })
@@ -501,7 +632,7 @@ describe('Calza', () => {
         gainedId: 'a',
       },
     })
-    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'a' })
+    const after = reduceMenteur(s, { type: 'CONTINUE', playerId: 'a', now: T_CONT })
     expect(after.turnIdx).toBe(0) // a (challengerId) rouvre, pas de loserId à suivre
   })
 })

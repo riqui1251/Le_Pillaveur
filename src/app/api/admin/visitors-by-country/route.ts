@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { requireSupervisionUser } from '@/lib/auth-server'
+import { canAccessSupervision } from '@/lib/roles'
 import { getVisitorsByCountry } from '@/lib/ip-history-server'
+import { adminErrorResponse, requireRole } from '../_guard'
 
 export async function GET(request: Request) {
   try {
-    await requireSupervisionUser()
+    await requireRole(canAccessSupervision)
     const { searchParams } = new URL(request.url)
     const countryParam = searchParams.get('country')
     const scope = searchParams.get('scope') === 'today' ? 'today' : 'online'
@@ -21,10 +22,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ country, scope, visitors })
   } catch (error) {
-    if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
-    console.error('admin visitors-by-country error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'visitors-by-country GET')
   }
 }

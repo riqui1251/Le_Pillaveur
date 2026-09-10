@@ -8,6 +8,8 @@ import {
   preRankOf,
   reducePre,
   toPreClientView,
+  PRE_INTERLUDE_MS,
+  PRE_INTERLUDE_MIN_MS,
   PRE_TWO,
   type PreState,
 } from './engine'
@@ -304,6 +306,29 @@ describe('président — fin de manche et rôles', () => {
     expect(state.players.find((p) => p.id === 'p2')?.role).toBe('vicePresident')
     expect(state.players.find((p) => p.id === 'p3')?.role).toBe('viceTrou')
     expect(state.players.find((p) => p.id === 'p4')?.role).toBe('trou')
+  })
+
+  it('interlude : le premier impatient ne relance pas la donne avant lecture (F33)', () => {
+    let state = rigged({ p1: [c(9)], p2: [c(3)], p3: [c(5)], p4: [c(7), c(8)] }, 'p1', {
+      totalManches: 3,
+    })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(9)], now: NOW })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(3)], now: NOW })
+    state = reducePre(state, { type: 'PASS', playerId: 'p3', now: NOW })
+    state = reducePre(state, { type: 'PASS', playerId: 'p4', now: NOW })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p3', cards: [c(5)], now: NOW })
+    expect(state.phase).toBe('interlude')
+    expect(state.phaseEndsAt).toBe(NOW + PRE_INTERLUDE_MS)
+    expect(() =>
+      reducePre(state, { type: 'CONTINUE', playerId: 'p1', now: NOW + PRE_INTERLUDE_MIN_MS - 1 })
+    ).toThrow('READING_TIME')
+    expect(toPreClientView(state, 'p1').continueAt).toBe(NOW + PRE_INTERLUDE_MIN_MS)
+    const next = reducePre(state, {
+      type: 'CONTINUE',
+      playerId: 'p1',
+      now: NOW + PRE_INTERLUDE_MIN_MS,
+    })
+    expect(next.phase).toBe('playing')
   })
 
   it('avec plusieurs manches : interlude, puis échanges automatiques à la redistribution', () => {

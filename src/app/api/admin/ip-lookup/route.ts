@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { requireSupervisionUser } from '@/lib/auth-server'
+import { canAccessSupervision } from '@/lib/roles'
 import { lookupByIp } from '@/lib/analytics-server'
+import { adminErrorResponse, requireRole } from '../_guard'
 
 export async function GET(request: Request) {
   try {
-    await requireSupervisionUser()
+    await requireRole(canAccessSupervision)
     const { searchParams } = new URL(request.url)
     const ip = searchParams.get('ip')?.trim() ?? ''
 
@@ -15,10 +16,6 @@ export async function GET(request: Request) {
     const result = await lookupByIp(ip)
     return NextResponse.json(result)
   } catch (error) {
-    if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
-    console.error('admin ip-lookup error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'ip-lookup GET')
   }
 }

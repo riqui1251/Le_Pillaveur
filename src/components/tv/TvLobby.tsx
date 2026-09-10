@@ -18,11 +18,11 @@ export function TvLobby({ room, joinUrl }: { room: TvRoomDto; joinUrl: string })
           <JoinQR url={joinUrl} size={240} />
           <p className="font-mono text-6xl font-black tracking-[0.35em] text-[#24201A]">{room.code}</p>
         </div>
-        <p className="text-lg text-white/50">{t('waiting')}</p>
+        <p className="text-lg text-white/75">{t('waiting')}</p>
       </div>
 
       <div className="w-full max-w-md">
-        <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-gold/60">
+        <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-gold/90">
           {t('players')} · {room.members.length}
         </p>
         <div className="space-y-3">
@@ -40,7 +40,7 @@ export function TvLobby({ room, joinUrl }: { room: TvRoomDto; joinUrl: string })
               <span
                 className={cn(
                   'rounded-full px-3 py-1 text-xs font-bold',
-                  m.isReady ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-white/40',
+                  m.isReady ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-white/75',
                 )}
               >
                 {m.isReady ? t('ready') : t('notReady')}

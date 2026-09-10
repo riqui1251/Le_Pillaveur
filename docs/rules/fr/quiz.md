@@ -8,10 +8,21 @@ Une question s'affiche avec plusieurs réponses. Tout le monde répond sur son t
 
 ## Déroulement
 
-1. **La question** apparaît en même temps chez tout le monde, avec un temps limité.
-2. **Chacun buzze** sa réponse — le chrono tourne, la vitesse compte.
-3. **La révélation** montre la bonne réponse et le score de la manche.
-4. On enchaîne les questions ; le total désigne le champion.
+1. **La question** apparaît en même temps chez tout le monde : quatre réponses,
+   **15 secondes**.
+2. **Chacun buzze** sa réponse — une seule réponse par joueur, horodatée par le
+   serveur (impossible de tricher sur la vitesse).
+3. **La révélation** montre la bonne réponse et le classement (6 secondes ; on
+   peut l'abréger une fois que la table a eu le temps de lire).
+4. On enchaîne les questions — **10, 15 ou 20** selon le choix de l'hôte — et le
+   total désigne le champion.
+
+## Le barème
+
+- Bonne réponse : **100 points**, plus un **bonus de vitesse jusqu'à 100
+  points** (il fond au fil des 15 secondes).
+- Mauvaise réponse, ou pas de réponse : **0 point**.
+- Trois bonnes réponses d'affilée allument la série 🔥 (fierté uniquement).
 
 ## Les questions
 
@@ -28,6 +39,9 @@ Le meilleur total de points à la fin de la série gagne la partie — et sa pla
 
 ## Le mode apéro
 
-Les derniers de chaque manche trinquent. En mode soft, le jeu s'appelle « Quiz Party » et le compteur disparaît.
+**Chaque mauvaise réponse coûte 2 gorgées** — et ne pas répondre du tout compte
+comme une mauvaise réponse. Le compteur de gorgées suit chaque joueur jusqu'au
+podium, où le dernier finit son verre. En mode soft, le jeu s'appelle « Quiz
+Party » et le compteur disparaît.
 
 [▶ Lancer un quiz en ligne](/games/quiz)

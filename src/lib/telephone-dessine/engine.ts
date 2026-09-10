@@ -25,6 +25,15 @@ export const TELEPHONE_COUNTDOWN_MS = 5_000
 export const TELEPHONE_WRITE_MS = 60_000
 /** Durée d'une manche de dessin. */
 export const TELEPHONE_DRAW_MS = 80_000
+/**
+ * Durée d'affichage d'UNE chaîne pendant la révélation. La révélation est le
+ * moment qui fait tout l'intérêt du jeu : elle ne doit dépendre d'AUCUN
+ * joueur en particulier. Le meneur garde la main (il fait défiler quand il
+ * veut, en avant comme en arrière), mais l'horloge de phase serveur prend le
+ * relais s'il est absent, endormi ou déconnecté — sans jamais accélérer le
+ * déroulé normal, puisque le meneur passe toujours AVANT l'échéance.
+ */
+export const TELEPHONE_REVEAL_MS = 45_000
 /** Longueur maximale d'une phrase (écriture ou devinette). */
 export const TELEPHONE_TEXT_MAX_LEN = 140
 
@@ -71,7 +80,7 @@ export type TelephoneAction =
   | { type: 'SUBMIT'; playerId: string; strokes?: Stroke[]; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
-  | { type: 'PREVIOUS'; playerId: string }
+  | { type: 'PREVIOUS'; playerId: string; now: number }
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
@@ -170,7 +179,7 @@ function resolveRound(state: TelephoneState, now: number): TelephoneState {
       submittedIds: [],
       revealOrder,
       revealIdx: 0,
-      ...enterPhase(state.phaseSeq, 'reveal', null, now),
+      ...enterPhase(state.phaseSeq, 'reveal', TELEPHONE_REVEAL_MS, now),
       phase: 'reveal',
       rngState: rng.getState(),
       version: state.version + 1,
@@ -187,6 +196,32 @@ function resolveRound(state: TelephoneState, now: number): TelephoneState {
     round: nextRound,
     ...enterPhase(state.phaseSeq, 'contributing', duration, now),
     phase: 'contributing',
+    version: state.version + 1,
+  }
+}
+
+/**
+ * Fait défiler la révélation d'un cran (+1 = suivant, -1 = précédent) et
+ * REARME l'échéance : chaque chaîne dispose de son plein temps d'affichage,
+ * qu'on y arrive par le bouton du meneur ou par l'horloge serveur.
+ */
+function revealStep(state: TelephoneState, delta: number, now: number): TelephoneState {
+  const nextIdx = state.revealIdx + delta
+  if (nextIdx >= state.revealOrder.length) {
+    return {
+      ...state,
+      phase: 'finished',
+      phaseSeq: state.phaseSeq + 1,
+      phaseEndsAt: null,
+      version: state.version + 1,
+    }
+  }
+  if (nextIdx < 0) throw new TelephoneEngineError('ALREADY_FIRST_CHAIN')
+  return {
+    ...state,
+    revealIdx: nextIdx,
+    ...enterPhase(state.phaseSeq, 'reveal', TELEPHONE_REVEAL_MS, now),
+    phase: 'reveal',
     version: state.version + 1,
   }
 }
@@ -293,30 +328,26 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
       if (state.phase === 'contributing') {
         return resolveRound(state, action.now)
       }
+      // Révélation : l'échéance fait défiler la chaîne suivante MÊME si le
+      // meneur a disparu — c'est ce qui empêche la table de rester bloquée
+      // sur le moment le plus attendu du jeu.
+      if (state.phase === 'reveal') {
+        return revealStep(state, 1, action.now)
+      }
       throw new TelephoneEngineError('NOTHING_TO_ADVANCE')
     }
 
     case 'CONTINUE': {
       if (state.phase !== 'reveal') throw new TelephoneEngineError('NOT_REVEAL')
       if (action.playerId !== currentTelephoneActorId(state)) throw new TelephoneEngineError('NOT_LEADER')
-      const nextIdx = state.revealIdx + 1
-      if (nextIdx >= state.revealOrder.length) {
-        return {
-          ...state,
-          phase: 'finished',
-          phaseSeq: state.phaseSeq + 1,
-          phaseEndsAt: null,
-          version: state.version + 1,
-        }
-      }
-      return { ...state, revealIdx: nextIdx, version: state.version + 1 }
+      return revealStep(state, 1, action.now)
     }
 
     case 'PREVIOUS': {
       if (state.phase !== 'reveal') throw new TelephoneEngineError('NOT_REVEAL')
       if (action.playerId !== currentTelephoneActorId(state)) throw new TelephoneEngineError('NOT_LEADER')
       if (state.revealIdx <= 0) throw new TelephoneEngineError('ALREADY_FIRST_CHAIN')
-      return { ...state, revealIdx: state.revealIdx - 1, version: state.version + 1 }
+      return revealStep(state, -1, action.now)
     }
 
     case 'LEAVE': {

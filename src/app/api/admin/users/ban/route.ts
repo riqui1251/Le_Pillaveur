@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server'
-import { requireSupervisionUser } from '@/lib/auth-server'
 import { applyBan, type BanType } from '@/lib/ban-server'
 import {
+  canBanUsers,
   canPermanentBanTarget,
   canTemporaryBanTarget,
   normalizeRole,
 } from '@/lib/roles'
+import { adminErrorResponse, requireRole } from '../../_guard'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: Request) {
   try {
-    const actor = await requireSupervisionUser()
+    const actor = await requireRole(canBanUsers)
     const body = await request.json()
     const userId = typeof body.userId === 'string' ? body.userId : ''
     const type = body.type === 'permanent' || body.type === 'temporary' ? body.type : null
@@ -69,10 +70,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
-    console.error('admin ban error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'ban POST')
   }
 }

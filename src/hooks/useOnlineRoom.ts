@@ -7,7 +7,16 @@ import { parseApiJson } from '@/lib/api-response'
 import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { usePagePresence } from '@/hooks/usePagePresence'
 
+/**
+ * AUCUNE salle : il n'y a rien à surveiller, seulement à découvrir qu'un autre
+ * appareil (ou une invitation acceptée ailleurs) nous a mis à table. Sonder
+ * `/rooms/me` toutes les 2 s pour ça, c'était 43 000 requêtes par jour et par
+ * compte resté ouvert sur le hub, pour un événement qui n'arrive presque
+ * jamais — et sans le moindre flux SSE à alimenter, faute de salle.
+ */
+const POLL_IDLE_MS = 10_000
 /** Lobby en attente */
 const POLL_LOBBY_MS = 2000
 /** Partie en cours — en attente du tour adverse (filet de secours ; le SSE assure la réactivité) */
@@ -163,7 +172,8 @@ export function useOnlineRoomState() {
   }, [handleRoomGone])
 
   const getPollDelay = useCallback((r: RoomDto | null) => {
-    if (!r || r.status !== 'playing') return POLL_LOBBY_MS
+    if (!r) return POLL_IDLE_MS
+    if (r.status !== 'playing') return POLL_LOBBY_MS
     const uid = userIdRef.current
     if (uid && r.currentTurnUserId && r.currentTurnUserId !== uid) {
       return POLL_PLAYING_WAIT_MS
@@ -473,31 +483,35 @@ export function useOnlineRoomState() {
     [room, refreshGameState]
   )
 
+  /**
+   * Onglet en arrière-plan (ou téléphone dans la poche) : le sondage est
+   * SUSPENDU. Personne ne regarde, et le SSE — qui reste ouvert — rattrapera
+   * de toute façon ce qui a bougé. Même mécanisme que les sondages du header
+   * (voir usePagePresence) : la visibilité fait partie des dépendances de
+   * l'effet, donc le retour au premier plan relance un rafraîchissement
+   * immédiat avant de reprendre la boucle.
+   */
+  const visible = usePagePresence()
+
   useEffect(() => {
-    if (!user || user.playMode !== 'online') {
-      setRoom(null)
+    if (!user || user.playMode !== 'online' || !visible) {
+      if (!user || user.playMode !== 'online') setRoom(null)
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
       return
     }
 
     void fetchRoom().then(() => schedulePoll())
 
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void pollTick()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-
     return () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
-      document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [user, user?.playMode, fetchRoom, schedulePoll, pollTick])
+  }, [user, user?.playMode, visible, fetchRoom, schedulePoll])
 
   /** Ré-accélère le polling quand le tour ou le statut change */
   useEffect(() => {
-    if (!user || user.playMode !== 'online') return
+    if (!user || user.playMode !== 'online' || !visible) return
     schedulePoll()
-  }, [room?.status, room?.currentTurnUserId, room?.stateVersion, user, user?.playMode, schedulePoll])
+  }, [room?.status, room?.currentTurnUserId, room?.stateVersion, user, user?.playMode, visible, schedulePoll])
 
   /** Temps réel : SSE pousse les changements ; on rafraîchit immédiatement (polling = secours) */
   useEffect(() => {

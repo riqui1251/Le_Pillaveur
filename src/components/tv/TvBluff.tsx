@@ -55,7 +55,7 @@ export function TvBluff({ room, state }: { room: TvRoomDto; state: BluffClientVi
                   : 'border-white/10 bg-white/5 text-white/80'
               )}
             >
-              <span className="w-8 text-center text-white/40">{i + 1}</span>
+              <span className="w-8 text-center text-white/70">{i + 1}</span>
               <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               <span className="ml-auto tabular-nums text-amber-200">{p.score}</span>
@@ -116,7 +116,7 @@ export function TvBluff({ room, state }: { room: TvRoomDto; state: BluffClientVi
             >
               <span className="min-w-0 flex-1 truncate text-2xl font-black text-white">« {c.text} »</span>
               {!c.isReal && c.authorId && (
-                <span className="shrink-0 text-lg text-white/40">{nameOf(c.authorId)}</span>
+                <span className="shrink-0 text-lg text-white/70">{nameOf(c.authorId)}</span>
               )}
               {c.votes.length > 0 && (
                 <span className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-lg font-bold text-white/70">

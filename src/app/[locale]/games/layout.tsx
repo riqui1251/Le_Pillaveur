@@ -1,85 +1,35 @@
 "use client"
 
-import { useEffect } from "react"
+import dynamic from "next/dynamic"
 import { useRequireSelectedPlayers } from "@/hooks/useRequireSelectedPlayers"
-import { VoiceDock } from "@/components/voice/VoiceDock"
-
-/** Verrou d'écran du navigateur — typé ici, l'API n'est pas dans tous les lib.dom. */
-type WakeLockSentinelLike = {
-  release: () => Promise<void>
-  addEventListener?: (type: "release", listener: () => void) => void
-}
+import { useAuth } from "@/components/providers/AuthProvider"
+import { useKeepScreenAwake } from "@/components/tv/use-keep-screen-awake"
 
 /**
- * Empêche l'écran de s'éteindre pendant une partie.
+ * Vocal de salle — chargé À LA DEMANDE.
  *
- * Le téléphone posé au milieu de la table se verrouille pendant qu'on discute,
- * et il faut l'empreinte de son propriétaire pour le rallumer : la partie
- * s'arrête. On tient donc un Screen Wake Lock tant qu'on est sur une page de
- * jeu — c'est l'interface standard du navigateur, aucune dépendance.
+ * Il était importé en dur ici, donc livré au navigateur de TOUT joueur
+ * ouvrant n'importe quel jeu, y compris en mode LOCAL (un téléphone qui
+ * tourne autour de la table) : le dock vocal, la pile WebRTC de
+ * `useVoiceChat` et la bibliothèque d'animation partaient avec la page pour
+ * un joueur qui n'en verra jamais un pixel. On le sort en morceau séparé,
+ * réclamé seulement quand le joueur est en mode « en ligne ».
  *
- * Trois cas se gèrent seuls : API absente (webview, Safari ancien) ou demande
- * refusée (batterie faible, page non visible) → on ne fait rien, aucun jeu n'en
- * dépend ; page passée en arrière-plan → le navigateur relâche le verrou de
- * lui-même, on le redemande au retour ; sortie des pages de jeu → on relâche.
+ * `ssr: false` : le dock est une surcouche flottante qui ne rend rien tant
+ * qu'on n'est pas dans une salle — il n'y a donc aucun contenu de premier
+ * rendu à préserver, rien ne peut sauter ni clignoter.
  */
-function useKeepScreenAwake() {
-  useEffect(() => {
-    const nav = navigator as unknown as {
-      wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinelLike> }
-    }
-    const wakeLock = nav.wakeLock
-    if (!wakeLock) return
-
-    let sentinel: WakeLockSentinelLike | null = null
-    let cancelled = false
-
-    const acquire = async () => {
-      if (cancelled || sentinel || document.visibilityState !== "visible") return
-      try {
-        const next = await wakeLock.request("screen")
-        if (cancelled) {
-          void next.release().catch(() => {})
-          return
-        }
-        sentinel = next
-        // Le navigateur peut relâcher tout seul (écran verrouillé par
-        // l'utilisateur, onglet caché) : on oublie la référence morte pour
-        // pouvoir en redemander une au retour au premier plan.
-        next.addEventListener?.("release", () => {
-          if (sentinel === next) sentinel = null
-        })
-      } catch {
-        // Refusé (batterie faible, permission, page cachée) : sans effet.
-      }
-    }
-
-    const release = () => {
-      const current = sentinel
-      sentinel = null
-      void current?.release().catch(() => {})
-    }
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") void acquire()
-      else release()
-    }
-
-    void acquire()
-    document.addEventListener("visibilitychange", onVisibilityChange)
-    return () => {
-      cancelled = true
-      document.removeEventListener("visibilitychange", onVisibilityChange)
-      release()
-    }
-  }, [])
-}
+const VoiceDock = dynamic(
+  () => import("@/components/voice/VoiceDock").then((m) => m.VoiceDock),
+  { ssr: false }
+)
 
 export default function GamesLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { user } = useAuth()
   useRequireSelectedPlayers("/joueurs", { skipWhenOnline: true })
   useKeepScreenAwake()
 
@@ -94,8 +44,10 @@ export default function GamesLayout({
         {children}
       </div>
       {/* Vocal de salle — apparaît dès qu'on est dans une salle en ligne,
-          pour TOUS les jeux (actuels et futurs), lobby inclus. */}
-      <VoiceDock />
+          pour TOUS les jeux (actuels et futurs), lobby inclus. Le dock se
+          masquait déjà tout seul hors salle : la condition ici ne change donc
+          rien à l'écran, elle évite seulement de TÉLÉCHARGER le morceau. */}
+      {user?.playMode === "online" && <VoiceDock />}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { requireSupervisionUser } from '@/lib/auth-server'
 import { canManageUsers } from '@/lib/roles'
+import { adminErrorResponse, requireRole } from '../_guard'
 import { prisma } from '@/lib/prisma'
 import { isAppLocale } from '@/lib/locale-utils'
 import { PROFANITY_BY_LOCALE } from '@/lib/name-moderation/terms'
@@ -14,10 +14,7 @@ import { normalizeTermForMatching } from '@/lib/name-moderation/terms'
 
 export async function GET() {
   try {
-    const actor = await requireSupervisionUser()
-    if (!canManageUsers(actor.role)) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
+    await requireRole(canManageUsers)
 
     await ensureServerModerationTermsLoaded()
     const dbTerms = await listDbModerationTerms()
@@ -34,17 +31,13 @@ export async function GET() {
       dbTerms,
     })
   } catch (error) {
-    console.error('admin moderation-terms GET error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'moderation-terms GET')
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const actor = await requireSupervisionUser()
-    if (!canManageUsers(actor.role)) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
+    const actor = await requireRole(canManageUsers)
 
     const body = await request.json()
     const term = typeof body.term === 'string' ? body.term.trim() : ''
@@ -74,17 +67,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ term: created }, { status: 201 })
   } catch (error) {
-    console.error('admin moderation-terms POST error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'moderation-terms POST')
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const actor = await requireSupervisionUser()
-    if (!canManageUsers(actor.role)) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
+    await requireRole(canManageUsers)
 
     const body = await request.json()
     const id = typeof body.id === 'string' ? body.id : ''
@@ -97,7 +86,6 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('admin moderation-terms DELETE error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'moderation-terms DELETE')
   }
 }

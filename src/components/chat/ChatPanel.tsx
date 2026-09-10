@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Gamepad2, MessageCircle, Send, Users, X } from 'lucide-react'
+import { ArrowLeft, Flag, Gamepad2, MessageCircle, Send, UserX, Users, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { useFriends } from '@/hooks/useFriends'
 import type { ChatUnread } from '@/hooks/useChatUnread'
+import { ReportDialog, type ReportTarget } from '@/components/chat/ReportDialog'
 import { cn } from '@/lib/utils'
 
 const POLL_MS = 3000
@@ -25,7 +26,15 @@ type ChatMessage = {
 type ChatScope = { scope: 'room' } | { scope: 'friend'; friendUserId: string }
 
 /** Conversation (partie ou ami) : polling léger tant qu'elle est affichée. */
-function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () => void }) {
+function ChatConversation({
+  target,
+  onRead,
+  onReport,
+}: {
+  target: ChatScope
+  onRead?: () => void
+  onReport: (report: ReportTarget) => void
+}) {
   const t = useTranslations('chat')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [noRoom, setNoRoom] = useState(false)
@@ -147,6 +156,26 @@ function ChatConversation({ target, onRead }: { target: ChatScope; onRead?: () =
                       </span>
                     )}
                     {m.senderName}
+                    {/* Seule prise de la victime sur un abus : un signalement
+                        par message, à portée de pouce. */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onReport({
+                          messageId: m.id,
+                          reportedUserId: m.senderId,
+                          displayName: m.senderName,
+                          scope: target.scope,
+                          friendUserId:
+                            target.scope === 'friend' ? target.friendUserId : undefined,
+                        })
+                      }
+                      aria-label={t('report')}
+                      title={t('report')}
+                      className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white/25 transition-colors hover:bg-red-500/15 hover:text-red-300"
+                    >
+                      <Flag className="h-3 w-3" />
+                    </button>
                   </p>
                 )}
                 <p className="whitespace-pre-wrap break-words text-sm">{m.body}</p>
@@ -206,17 +235,49 @@ export function ChatPanel({ open, onClose, unread, onRead }: ChatPanelProps) {
   const t = useTranslations('chat')
   const tNav = useTranslations('nav')
   const { user } = useAuth()
-  const { friends } = useFriends()
+  const tCommon = useTranslations('common')
+  const { friends, refresh: refreshFriends } = useFriends()
   const [tab, setTab] = useState<'game' | 'friends'>('game')
   const [friendId, setFriendId] = useState<string | null>(null)
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
+  const [confirmBlockId, setConfirmBlockId] = useState<string | null>(null)
+  const [blocking, setBlocking] = useState(false)
 
   useEffect(() => {
-    if (!open) setFriendId(null)
+    if (!open) {
+      setFriendId(null)
+      setReportTarget(null)
+      setConfirmBlockId(null)
+    }
   }, [open])
 
   if (!user) return null
 
   const activeFriend = friends.find((f) => f.userId === friendId) ?? null
+
+  /**
+   * Blocage depuis la conversation : coupe l'amitié ET toute relance. On
+   * revient à la liste, la conversation n'a plus lieu d'être.
+   */
+  const blockActiveFriend = async () => {
+    if (!activeFriend || blocking) return
+    setBlocking(true)
+    try {
+      const res = await fetch('/api/friends/blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId: activeFriend.userId }),
+      })
+      if (res.ok) {
+        setConfirmBlockId(null)
+        setFriendId(null)
+        await refreshFriends()
+      }
+    } finally {
+      setBlocking(false)
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -261,15 +322,51 @@ export function ChatPanel({ open, onClose, unread, onRead }: ChatPanelProps) {
                   </>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label={tNav('closeMenu')}
-                className="touch-target flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                {activeFriend && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmBlockId(activeFriend.userId)}
+                    aria-label={t('block')}
+                    title={t('block')}
+                    className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-red-500/15 hover:text-red-300"
+                  >
+                    <UserX className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label={tNav('closeMenu')}
+                  className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
+
+            {confirmBlockId && activeFriend && (
+              <div className="border-b border-red-400/20 bg-red-500/10 px-3 py-2.5">
+                <p className="text-xs text-red-100">{t('blockConfirm')}</p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void blockActiveFriend()}
+                    disabled={blocking}
+                    className="flex-1 rounded-lg bg-red-600 py-1.5 text-xs font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
+                  >
+                    {t('block')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmBlockId(null)}
+                    className="flex-1 rounded-lg border border-white/15 bg-white/5 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10"
+                  >
+                    {tCommon('cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {!activeFriend && (
               <div className="grid grid-cols-2 border-b border-white/10">
@@ -311,9 +408,13 @@ export function ChatPanel({ open, onClose, unread, onRead }: ChatPanelProps) {
             )}
 
             {activeFriend ? (
-              <ChatConversation target={{ scope: 'friend', friendUserId: activeFriend.userId }} onRead={onRead} />
+              <ChatConversation
+                target={{ scope: 'friend', friendUserId: activeFriend.userId }}
+                onRead={onRead}
+                onReport={setReportTarget}
+              />
             ) : tab === 'game' ? (
-              <ChatConversation target={{ scope: 'room' }} onRead={onRead} />
+              <ChatConversation target={{ scope: 'room' }} onRead={onRead} onReport={setReportTarget} />
             ) : friends.length === 0 ? (
               <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-white/40">
                 {t('noFriends')}
@@ -344,6 +445,10 @@ export function ChatPanel({ open, onClose, unread, onRead }: ChatPanelProps) {
                     </li>
                   ))}
               </ul>
+            )}
+
+            {reportTarget && (
+              <ReportDialog target={reportTarget} onClose={() => setReportTarget(null)} />
             )}
           </motion.div>
         </>

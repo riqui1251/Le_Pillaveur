@@ -236,11 +236,13 @@ export function MenteurOnline() {
                   : 'border-white/10 bg-white/5'
               )}
             >
-              <span className="w-6 text-center text-lg font-black text-white/50">{idx + 1}</span>
+              <span className="w-6 text-center text-lg font-black text-white/75">{idx + 1}</span>
               <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
               <span className="flex items-center gap-1 text-sm text-white/60">
-                <Beer className="h-4 w-4 text-amber-300" /> {p.lostCount}
+                {/* Derrière la chope : les GORGÉES bues (1+2+3…), pas le nombre de dés
+                    perdus — à 3 dés perdus on a bu 6 gorgées, pas 3 (F35). */}
+                <Beer className="h-4 w-4 text-amber-300" /> {p.sipsTotal}
               </span>
             </div>
           ))}
@@ -281,12 +283,15 @@ export function MenteurOnline() {
   // ── Partie en cours ──────────────────────────────────────────────────────
   return (
     <>
-    <div className="flex flex-1 flex-col gap-3 p-3 pb-40 text-white sm:mx-auto sm:w-full sm:max-w-lg sm:pb-44">
+    {/* La réserve basse suit la barre fixe, zone sûre comprise : sans le
+        `env(safe-area-inset-bottom)` ici aussi, les derniers dés de la
+        révélation repassaient sous la barre sur les écrans à encoche. */}
+    <div className="flex flex-1 flex-col gap-3 p-3 pb-[calc(14rem+env(safe-area-inset-bottom))] text-white sm:mx-auto sm:w-full sm:max-w-lg sm:pb-[calc(12rem+env(safe-area-inset-bottom))]">
       {/* Bandeau haut : manche + dés sur la table */}
       <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
         <span className="text-sm font-bold text-white/80">{t('round', { n: view.round })}</span>
         <span className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-white/50">{t('diceOnTable', { n: totalDice })}</span>
+          <span className="text-xs font-semibold text-white/75">{t('diceOnTable', { n: totalDice })}</span>
           <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
         </span>
       </div>
@@ -347,11 +352,12 @@ export function MenteurOnline() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-bold">
                   <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                  {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
+                  {p.id === user.id && <span className="text-white/70"> {t('you')}</span>}
                 </p>
-                <p className="text-[10px] text-white/50">
+                <p className="text-xs text-white/75">
                   {dead ? t('eliminated') : `🎲 ${p.diceCount}`}
-                  {p.lostCount > 0 && !dead && ` · 🍺 ${p.lostCount}`}
+                  {/* Même échelle que le classement : gorgées bues, pas dés perdus (F35). */}
+                  {p.sipsTotal > 0 && !dead && ` · 🍺 ${p.sipsTotal}`}
                 </p>
               </div>
               {isActive && <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-orange-400" />}
@@ -364,7 +370,7 @@ export function MenteurOnline() {
       <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-orange-600/10 to-transparent px-4 py-3 text-center">
         {view.currentBid ? (
           <>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
               {t('currentBid')} · {t('bidBy', { name: nameOf(view.currentBid.by) })}
             </p>
             <p className="mt-1 flex items-center justify-center gap-2 text-2xl font-black">
@@ -372,9 +378,9 @@ export function MenteurOnline() {
             </p>
           </>
         ) : (
-          <p className="text-sm font-semibold text-white/60">{t('noBid')}</p>
+          <p className="text-sm font-semibold text-white/80">{t('noBid')}</p>
         )}
-        <p className="mt-1 text-[10px] text-white/35">{t('pillaveurHint')}</p>
+        <p className="mt-1 text-xs text-white/70">{t('pillaveurHint')}</p>
       </div>
 
       {/* Indicateur de tour */}
@@ -469,13 +475,19 @@ export function MenteurOnline() {
         )}
       </AnimatePresence>
 
-      {/* Mon gobelet + commandes (barre basse fixe) */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-gray-950/95 p-3 backdrop-blur-md">
+      {/* Mon gobelet + commandes (barre basse fixe).
+          `game-bottom-bar` ajoute les deux réserves qui manquaient : la zone
+          sûre du bas (la barre gestuelle d'iOS mangeait le bouton « Menteur ! »
+          et le site ne passe pas en plein écran sous l'encoche) et, sous 720px,
+          la place de la pastille de vocal — elle est aussi en `fixed` et passe
+          AU-DESSUS de cette barre (z-90 contre z-30), donc elle recouvrait les
+          commandes d'enchère. Détail dans globals.css. */}
+      <div className="game-bottom-bar fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-gray-950/95 p-3 backdrop-blur-md">
         <div className="mx-auto w-full max-w-lg space-y-2.5">
           {/* Mes dés */}
           {me && aliveInView(me) && (
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
+              <span className="text-xs font-semibold uppercase tracking-wide text-white/70">
                 {t('yourDice')}
               </span>
               <div className="flex flex-1 justify-center gap-1.5">
@@ -501,7 +513,7 @@ export function MenteurOnline() {
             </div>
           )}
           {me && !aliveInView(me) && (
-            <p className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center text-xs font-semibold text-white/50">
+            <p className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center text-xs font-semibold text-white/75">
               {t('spectator')}
             </p>
           )}
@@ -509,9 +521,17 @@ export function MenteurOnline() {
           {/* Commandes d'enchère (à mon tour uniquement) */}
           {isMyTurn && me && aliveInView(me) && (
             <div className="space-y-2.5">
-              <div className="flex items-center gap-2">
+              {/* Quantité et face : une seule ligne dès qu'il y a la place,
+                  sinon la face passe à la ligne. Les six dés et le sélecteur de
+                  quantité dépassaient déjà la largeur d'un écran de 375px (ils
+                  se tassaient jusqu'à déborder) ; avec la gouttière réservée au
+                  vocal, le repli devient la seule mise en page tenable. Les
+                  `basis-*` sont les largeurs MINIMALES de chaque groupe : c'est
+                  leur somme qui décide du repli (un `flex-1`, de base nulle, ne
+                  déclencherait jamais de retour à la ligne). */}
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Quantité */}
-                <div className="flex flex-1 items-center justify-between rounded-2xl border border-white/12 bg-white/5 px-2 py-1.5">
+                <div className="flex grow basis-[8.5rem] items-center justify-between rounded-2xl border border-white/12 bg-white/5 px-2 py-1.5">
                   <button
                     onClick={() => setBidQty((q) => Math.max(1, q - 1))}
                     className="game-grid-cell flex h-9 w-9 items-center justify-center rounded-xl bg-white/8 text-white transition-colors hover:bg-white/15"
@@ -528,28 +548,31 @@ export function MenteurOnline() {
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
-                <span className="text-lg font-black text-white/40">×</span>
-                {/* Face */}
+                {/* Face — le « × » reste soudé au groupe, sinon il resterait
+                    orphelin en fin de ligne après le repli. */}
                 {(() => {
                   const faceLocked = view.palifico && Boolean(view.currentBid)
                   return (
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5, 6].map((face) => (
-                        <button
-                          key={face}
-                          onClick={() => !faceLocked && setBidFace(face)}
-                          disabled={faceLocked && face !== bidFace}
-                          className={cn(
-                            'game-grid-cell rounded-lg transition-all disabled:cursor-not-allowed',
-                            bidFace === face ? 'scale-110 ring-2 ring-orange-400' : 'opacity-60',
-                            faceLocked && face !== bidFace && 'opacity-20'
-                          )}
-                          aria-label={`${face}`}
-                          aria-pressed={bidFace === face}
-                        >
-                          <Die face={face} size="sm" />
-                        </button>
-                      ))}
+                    <div className="flex grow basis-[14.5rem] items-center justify-end gap-2">
+                      <span className="text-lg font-black text-white/70" aria-hidden>×</span>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5, 6].map((face) => (
+                          <button
+                            key={face}
+                            onClick={() => !faceLocked && setBidFace(face)}
+                            disabled={faceLocked && face !== bidFace}
+                            className={cn(
+                              'game-grid-cell rounded-lg transition-all disabled:cursor-not-allowed',
+                              bidFace === face ? 'scale-110 ring-2 ring-orange-400' : 'opacity-75',
+                              faceLocked && face !== bidFace && 'opacity-30'
+                            )}
+                            aria-label={`${face}`}
+                            aria-pressed={bidFace === face}
+                          >
+                            <Die face={face} size="sm" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )
                 })()}
@@ -580,7 +603,7 @@ export function MenteurOnline() {
                 )}
               </div>
               {!bidLegal && (
-                <p className="text-center text-[10px] font-semibold text-red-300/80">{t('illegalBid')}</p>
+                <p className="text-center text-xs font-semibold text-red-300">{t('illegalBid')}</p>
               )}
             </div>
           )}

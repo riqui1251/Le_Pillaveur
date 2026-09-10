@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server'
-import { requireSupervisionUser } from '@/lib/auth-server'
 import { canManageUsers } from '@/lib/roles'
 import {
   listFlaggedNameModerationUsers,
   listNameModerationAttemptsForAdmin,
 } from '@/lib/name-moderation-attempts-server'
+import { adminErrorResponse, requireRole } from '../_guard'
 
 export async function GET(request: Request) {
   try {
-    const actor = await requireSupervisionUser()
-    if (!canManageUsers(actor.role)) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
+    await requireRole(canManageUsers)
 
     const url = new URL(request.url)
     const userId = url.searchParams.get('userId')
@@ -26,7 +23,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ attempts, flaggedUsers })
   } catch (error) {
-    console.error('admin name-moderation-attempts GET error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'name-moderation-attempts GET')
   }
 }

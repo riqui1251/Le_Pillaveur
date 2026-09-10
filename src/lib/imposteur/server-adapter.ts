@@ -10,6 +10,7 @@ import {
   IMPOSTEUR_EMPTY_CLUE,
   IMPOSTEUR_MIN_PLAYERS,
   IMPOSTEUR_MAX_PLAYERS,
+  IMPOSTEUR_REVEAL_MS,
   type ImposteurState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
@@ -72,6 +73,12 @@ export function parseImposteurState(json: string | null): ImposteurState | null 
       rematchVotes: raw.rematchVotes ?? [],
       pendingVotes: raw.pendingVotes ?? {},
       imposteurCount: raw.imposteurCount ?? raw.players.filter((p) => p.team === 'imposteur').length,
+      // Parties lancées avant l'horloge de révélation : leur reveal n'a pas
+      // d'échéance et attendrait indéfiniment un clic. On lui en pose une.
+      phaseEndsAt:
+        raw.phase === 'reveal' && raw.phaseEndsAt == null
+          ? Date.now() + IMPOSTEUR_REVEAL_MS
+          : raw.phaseEndsAt,
     }
   } catch {
     return null

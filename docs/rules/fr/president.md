@@ -11,8 +11,9 @@ vraiment secrètes.
    Président : **3 le plus faible… As, puis 2 le plus fort**.
 2. Le premier joueur pose un **combo** : une carte seule, une paire, un
    brelan ou un carré (même rang).
-3. Les suivants doivent poser **le même nombre de cartes, d'un rang
-   strictement supérieur** — ou passer.
+3. Les suivants doivent poser **le même nombre de cartes**, d'un rang
+   **supérieur — ou égal** (l'égal est permis ici, et il verrouille le pli :
+   voir « Dame ou rien » plus bas) — ou passer.
 4. Quand tout le monde passe, le dernier poseur **remporte le pli** et
    relance ce qu'il veut.
 
@@ -34,7 +35,9 @@ vraiment secrètes.
   veut.
 - **2 jokers caméléons** : un joker remplace n'importe quelle carte. Il
   complète un combo (un 7 + un joker = paire de 7), et joué seul il copie la
-  carte du dessus — ce qui déclenche la règle « ou rien ». Il peut aussi
+  carte du dessus — ce qui déclenche la règle « ou rien ». Sur un **pli
+  libre**, en revanche, un joker posé seul ouvre au rang le plus faible : il
+  ne prend la valeur de personne, il se contente d'ouvrir. Il peut aussi
   servir à fermer un carré.
 - **Les positions survivent à la revanche** : au « Rejouer », le Président,
   le Trou et les vices de la partie précédente gardent leur rôle (échanges de
@@ -63,15 +66,24 @@ coupe relance aussitôt — arme redoutable, à ne pas gaspiller.
 ## Déroulé d'une partie
 
 - L'hôte choisit le nombre de manches (**1, 3 ou 5**).
-- 30 secondes par tour — un joueur endormi passe d'office.
+- **30 secondes par tour** — un joueur endormi **passe d'office**. S'il devait
+  ouvrir le pli (où passer est interdit), le serveur pose à sa place sa
+  **plus petite carte**.
+- Entre deux manches, un **écran de fin de manche** de 15 secondes affiche le
+  classement et les cartes échangées. Il s'enchaîne tout seul à l'échéance, et
+  personne ne peut le faire sauter avant que la table ait eu le temps de le
+  lire.
 - Le classement final est celui de la **dernière manche** : son Président
   gagne la partie (victoires et rangs comptent au classement en ligne).
 - En mode Apéro, le Trou boit. En mode Soft, il ne perd que son honneur.
 
 ## Bon à savoir
 
-- **4 joueurs minimum**, jusqu'à 8 — les bots complètent la table (ils
-  jouent le plus petit combo valide, sans pitié ni génie).
+- **4 joueurs minimum**, jusqu'à 8 — les bots complètent la table. Ils ont
+  chacun leur tempérament : l'agressif surenchérit et coupe volontiers,
+  le prudent lâche les plis trop hauts, le farceur ouvre parfois de travers.
+  Tous gardent leurs 2 pour couper, évitent de casser un brelan pour rien,
+  et savent **fermer un carré hors de leur tour**.
 - Anti-triche : les mains adverses ne quittent jamais le serveur, seuls les
   comptes de cartes circulent.
 - Le mode TV affiche le tapis au centre et les comptes de cartes autour.

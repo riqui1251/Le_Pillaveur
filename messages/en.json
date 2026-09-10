@@ -467,7 +467,11 @@
       "invalid_action": "You can't do that right now.",
       "replaced_by_bot": "You were replaced by a bot.",
       "roomClosed": "The table has been closed.",
-      "roomLeft": "You're no longer in this room."
+      "roomLeft": "You're no longer in this room.",
+      "reading_time": "Give the others a moment to read — it moves on shortly.",
+      "stop_too_early": "Too early to call STOP — let the round get going.",
+      "incomplete_stop": "Fill all five boxes with the right letter before calling STOP.",
+      "contest_needs_more_players": "At least two other players are needed to contest an answer."
     }
   },
   "chat": {
@@ -481,7 +485,27 @@
     "back": "Back",
     "empty": "No messages yet — start the conversation!",
     "tooFast": "Slow down! Wait a few seconds before sending again.",
-    "sendFailed": "Message not sent. Try again."
+    "sendFailed": "Message not sent. Try again.",
+    "report": "Report",
+    "block": "Block",
+    "blockConfirm": "Block this player? You will no longer see each other’s messages or requests.",
+    "reportTitle": "Report this message",
+    "reportPlayerTitle": "Report this player",
+    "reportReason": "Reason",
+    "reportReasons": {
+      "harassment": "Harassment",
+      "hate": "Hate speech",
+      "sexual": "Sexual content",
+      "threat": "Threats",
+      "spam": "Spam or advertising",
+      "cheating": "Cheating",
+      "other": "Other"
+    },
+    "reportComment": "Details (optional)",
+    "reportSubmit": "Send report",
+    "reportSent": "Report sent to the moderation team. Thank you.",
+    "reportAlready": "You already reported this — the team has it in the queue.",
+    "reportFailed": "Report not sent. Try again."
   },
   "auth": {
     "brand": "Le Pillaveur",
@@ -592,7 +616,12 @@
       "online": "Online",
       "sendRequest": "Add friend",
       "requestSent": "Request sent",
-      "alreadyFriend": "Friend"
+      "alreadyFriend": "Friend",
+      "inviteSection": "Invite a friend to this table",
+      "inviteToTable": "Invite",
+      "invited": "Invited",
+      "blockedTitle": "Blocked players",
+      "unblock": "Unblock"
     },
     "nameModerationWarning": "Several inappropriate name attempts have been recorded on this account. Please use a respectful nickname — the moderation team can review the history.",
     "reset": {
@@ -3641,7 +3670,11 @@
           "rematchWaiting": "Rematch {count}/{total}…",
           "backToMenu": "Back to menu"
         },
-        "leftTable": "{name} left the table — they can come back at any time."
+        "leftTable": "{name} left the table — they can come back at any time.",
+        "stopLocked": "STOP in {seconds}s",
+        "nextRoundLocked": "{seconds}s left to read",
+        "contestNeeds": "Contest — {votes} votes needed",
+        "contestTooFewPlayers": "Too few players to contest: two other players are needed."
       },
       "tutorial": {
         "steps": [
@@ -3715,15 +3748,15 @@
         "steps": [
           {
             "title": "Empty your hand",
-            "body": "Play combos: single, pair, triple or quad. The next player must play the same size, strictly higher — or pass."
+            "body": "Play combos: single, pair, triple or quad. The next player matches the size and goes higher — or EQUAL. Equal locks the rank: match it or lose your turn, for as long as it keeps matching."
           },
           {
-            "title": "The 2 cuts",
-            "body": "The 2 is the supreme card: it wins the trick immediately. The trick winner leads whatever they want."
+            "title": "The 2 cuts, the joker copies",
+            "body": "The 2 wins the trick on the spot. The 2 jokers are chameleons: they fill in any combo. And the 4th card of a rank already played three times closes the trick, even out of turn."
           },
           {
             "title": "President and Trou",
-            "body": "First out = President, last = Trou. Between rounds, the Trou gives their 2 best cards to the President, and the Vice-Trou their best card to the Vice-President."
+            "body": "First out = President, and nobody plays after them: the trick is burnt. Last = Trou. Between rounds, the Trou gives their 2 best cards to the President, the Vice-Trou their best to the Vice-President."
           }
         ]
       }
@@ -4003,7 +4036,8 @@
       "permanentBan": "Permanent ban",
       "temporaryBan": "Temporary ban",
       "deleteAccount": "Delete account",
-      "googleAccount": "Google account"
+      "googleAccount": "Google account",
+      "matchCount": "{total} account{plural} found"
     },
     "bans": {
       "activeTitle": "Active bans",
@@ -4027,6 +4061,25 @@
       "recentTitle": "Recently connected accounts",
       "recentDesc": "Identified players with IP and country",
       "noneRecent": "No recently connected account."
+    },
+    "growth": {
+      "title": "Growth",
+      "desc": "Every figure carries the exact definition of the query behind it.",
+      "retentionD1Label": "Seen again after 1 day",
+      "retentionD1Def": "Accounts registered (with an e-mail) between {from} and {to} days ago whose last visit falls at least 1 day after sign-up. Only the LAST visit is stored, so this reads “still around a day later”, not “came back on day 1”.",
+      "retentionD7Label": "Seen again after 7 days",
+      "retentionD7Def": "Accounts registered (with an e-mail) between {from} and {to} days ago whose last visit falls at least 7 days after sign-up. Same reading: “still around a week later”.",
+      "cohortDetail": "{retained} of {cohort}",
+      "registeredShareLabel": "Share of registered accounts",
+      "registeredShareDetail": "{registered} registered, {guests} guests",
+      "registeredShareDef": "Share of the accounts CREATED in the last {days} days that carry an e-mail, among all those created over the same window. This is not a funnel: nothing links a registered account to the guest account used before it, so the share of guests who later signed up stays out of reach.",
+      "abandonedLabel": "Stalled tables",
+      "abandonedDetail": "{stalled} stalled out of {live} live tables",
+      "abandonedDef": "Every live play table (waiting, briefing or playing) with nothing moving since its state’s threshold: 3 min waiting, 5 min briefing, 10 min playing. Counted in the database, not from the list below; TV displays are excluded. A snapshot: a game that dies without a result leaves nothing to count afterwards.",
+      "playersByGameTitle": "Players per game, online",
+      "playersByGameDef": "Accounts that STARTED an online game of that game over the last {days} days — one row per player per game, 12 games at most. The start is what counts, not the finish: a game left halfway still shows up. Local games (same device) and TV mode write nothing, so they do not appear here.",
+      "noData": "No online game started within this window.",
+      "freshness": "Computed at {time} — recalculated at most once every {minutes} min."
     },
     "room": {
       "todayLabel": "Today",
@@ -4059,7 +4112,14 @@
       "journalGrant": "{actor} granted a cosmetic to {target}",
       "journalTerm": "Moderated term added: “{detail}”",
       "journalTermByActor": "{actor} added the term “{detail}”",
-      "closeTable": "Close"
+      "closeTable": "Close",
+      "stalledFor": "Stalled for {duration}",
+      "turnLabel": "{name} to play",
+      "castHost": "Cast by {name}",
+      "journalRoleChange": "{actor} changed {target}’s role: {detail}",
+      "journalAccountDelete": "{actor} deleted the account {detail}",
+      "journalRoomClose": "{actor} closed the table {detail}",
+      "journalSiteSetting": "{actor} changed a site setting: {detail}"
     },
     "games": {
       "playedTitle": "Games played",
@@ -4128,7 +4188,8 @@
       "lightboxAlt": "Enlarged capture",
       "captureAlt": "Capture {index}",
       "statusRead": "Read",
-      "statusResolved": "Resolved"
+      "statusResolved": "Resolved",
+      "loadingDetail": "Loading details…"
     },
     "history": {
       "title": "Account history",
@@ -4155,7 +4216,8 @@
       "banTemporary": "Temporary ban",
       "unban": "Unban",
       "feedbackAck": "Report handled",
-      "nameFlagAck": "Name alert acknowledged"
+      "nameFlagAck": "Name alert acknowledged",
+      "roleChange": "Role change"
     },
     "dialogs": {
       "deleteTitle": "Permanently delete this account?",
@@ -4245,7 +4307,10 @@
       "moderation": "Moderation"
     },
     "states": {
-      "retry": "Retry"
+      "retry": "Retry",
+      "pageSummary": "Page {page} of {pages} — {total} results",
+      "previousPage": "Previous",
+      "nextPage": "Next"
     }
   },
   "voice": {
@@ -4277,8 +4342,14 @@
       "title": "Enable your mic for this game?",
       "hint": "Talk with the other players in the room.",
       "enable": "Enable",
-      "later": "Later"
-    }
+      "later": "Later",
+      "micHint": "Talk with the other players. Your mic only turns on once you agree."
+    },
+    "micLost": "Your mic dropped — voice chat is carrying on without you.",
+    "resumeMic": "Resume mic",
+    "signalLost": "Voice connection lost — nobody can hear you.",
+    "reconnect": "Reconnect",
+    "peerFailed": "dropped"
   },
   "tv": {
     "brand": "Le Pillaveur",
@@ -4320,7 +4391,10 @@
     "castNeedsAccount": "Sign in to cast to the TV (it’s free).",
     "castFailed": "Casting isn’t working right now. Try again.",
     "starting": "Game starting…",
-    "startingHint": "Everyone’s reading the rules on their phone."
+    "startingHint": "Everyone’s reading the rules on their phone.",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "changeCode": "Change code"
   },
   "gameTutorial": {
     "next": "Next",

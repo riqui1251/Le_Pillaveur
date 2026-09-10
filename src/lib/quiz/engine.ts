@@ -17,6 +17,14 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
 
 export const QUIZ_QUESTION_MS = 15_000
 export const QUIZ_REVEAL_MS = 6_000
+/**
+ * TEMPS DE LECTURE MINIMAL de la révélation. Le bouton « question suivante »
+ * est ouvert à TOUS : sans plancher, le premier impatient escamotait la bonne
+ * réponse et le mini-classement pour toute la table. Le plancher reste bien
+ * en deçà de QUIZ_REVEAL_MS : la partie n'est pas rallongée, seul le saut
+ * anticipé est retardé.
+ */
+export const QUIZ_REVEAL_MIN_MS = 3_000
 /** Compte à rebours d'échauffement au lancement (5… 4… 3… 2… 1…). */
 export const QUIZ_COUNTDOWN_MS = 5_000
 export const QUIZ_POINTS_BASE = 100
@@ -192,6 +200,15 @@ function resolveQuestion(state: QuizState, now: number): QuizState {
   }
 }
 
+/**
+ * Millisecondes écoulées depuis l'entrée en révélation, déduites de
+ * l'échéance de phase (l'horloge serveur reste la seule autorité).
+ */
+export function quizRevealElapsedMs(state: QuizState, now: number): number {
+  if (state.phaseEndsAt === null) return Number.POSITIVE_INFINITY
+  return now - (state.phaseEndsAt - QUIZ_REVEAL_MS)
+}
+
 /** Après le reveal : question suivante ou podium final. */
 function advanceFromReveal(state: QuizState, now: number): QuizState {
   const nextIdx = state.qIdx + 1
@@ -257,10 +274,16 @@ export function reduceQuiz(state: QuizState, action: QuizAction): QuizState {
     }
 
     case 'CONTINUE': {
-      // Passage anticipé du reveal (tap impatient) — n'importe quel joueur.
+      // Passage anticipé du reveal — n'importe quel joueur, mais PAS avant
+      // que tout le monde ait eu le temps de lire (F33).
       if (state.phase !== 'reveal') throw new QuizEngineError('NOT_REVEAL')
-      if (!state.players.some((p) => p.id === action.playerId)) {
-        throw new QuizEngineError('UNKNOWN_PLAYER')
+      const asker = state.players.find((p) => p.id === action.playerId)
+      if (!asker) throw new QuizEngineError('UNKNOWN_PLAYER')
+      // Un BOT n'a rien à lire : son tick de service garde son tempo (c'est
+      // le client arbitre qui le cadence). Le plancher ne vise que les
+      // joueurs humains, qui s'escamotaient l'écran les uns aux autres.
+      if (!asker.isBot && quizRevealElapsedMs(state, action.now) < QUIZ_REVEAL_MIN_MS) {
+        throw new QuizEngineError('READING_TIME')
       }
       return advanceFromReveal(state, action.now)
     }
@@ -338,6 +361,8 @@ export type QuizClientView = Omit<
   currentQuestion: QuizQuestionView | null
   /** Mon choix (feedback « réponse envoyée ») — null pour les autres/spectateur. */
   myChoice: number | null
+  /** Instant (epoch ms) à partir duquel le saut du reveal est accepté. */
+  continueAt: number | null
 }
 
 export function toQuizClientView(state: QuizState, viewerId: string): QuizClientView {
@@ -357,6 +382,10 @@ export function toQuizClientView(state: QuizState, viewerId: string): QuizClient
       ? { id: current.id, cat: current.cat, diff: current.diff, q: current.q, choices: current.choices }
       : null,
     myChoice: answers[viewerId]?.choice ?? null,
+    continueAt:
+      state.phase === 'reveal' && state.phaseEndsAt !== null
+        ? state.phaseEndsAt - QUIZ_REVEAL_MS + QUIZ_REVEAL_MIN_MS
+        : null,
     players: players.map((p) => ({ ...p, hasAnswered: Boolean(answers[p.id]) })),
   }
 }

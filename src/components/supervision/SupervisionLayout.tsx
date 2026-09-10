@@ -289,15 +289,21 @@ export function TrendChart({
   )
 }
 
-export type LiveTableStatus = 'waiting' | 'briefing' | 'playing'
+export type LiveTableStatus = 'waiting' | 'briefing' | 'playing' | 'cast'
 
 const LIVE_STATUS_TONE: Record<LiveTableStatus, string> = {
   waiting: 'border-white/15 bg-white/[0.05] text-white/55',
   briefing: 'border-gold/40 bg-gold/15 text-amber-100',
   playing: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200',
+  cast: 'border-chip-blue/40 bg-chip-blue/15 text-sky-200',
 }
 
-/** Mini-table ovale — le même vocabulaire visuel que le lobby Table Ronde. */
+/**
+ * Mini-table ovale — le même vocabulaire visuel que le lobby Table Ronde.
+ * Une table FIGÉE (aucune écriture d'état ni présence depuis le seuil du
+ * statut) se distingue au premier coup d'œil : bordure rouge d'enseigne et
+ * bandeau d'inactivité. C'est exactement ce que l'exploitant doit repérer.
+ */
 export function LiveTableCard({
   icon,
   gameTitle,
@@ -307,6 +313,9 @@ export function LiveTableCard({
   memberCount,
   memberNames,
   elapsed,
+  stalled,
+  stalledLabel,
+  turnLabel,
   closeLabel,
   onClose,
   closing,
@@ -319,6 +328,12 @@ export function LiveTableCard({
   memberCount: number
   memberNames: string[]
   elapsed: string
+  /** Table sans aucun signe de vie depuis le seuil de son statut (F46). */
+  stalled?: boolean
+  /** Ex. « Figée depuis 12 min » — affiché seulement si `stalled`. */
+  stalledLabel?: string
+  /** Ex. « Tour : Léa » quand le jeu tient un tour courant. */
+  turnLabel?: string
   /** Fermeture forcée (admin) : bouton rendu seulement si `onClose` est fourni. */
   closeLabel?: string
   onClose?: () => void
@@ -326,7 +341,12 @@ export function LiveTableCard({
 }) {
   const extra = memberCount - memberNames.length
   return (
-    <div className="rounded-2xl border border-gold/15 bg-felt-deep/50 p-3">
+    <div
+      className={cn(
+        'rounded-2xl border p-3',
+        stalled ? 'border-suit-red/50 bg-suit-red/[0.07]' : 'border-gold/15 bg-felt-deep/50'
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-bold text-white">
           {icon}
@@ -340,6 +360,15 @@ export function LiveTableCard({
       <div className="my-2 flex h-11 items-center justify-center rounded-[50%/70%] border border-gold/25 bg-gradient-to-b from-felt to-felt-deep font-display text-sm font-bold tracking-widest text-cream">
         {code}
       </div>
+      {stalled && stalledLabel && (
+        <p className="mb-2 flex items-center gap-1.5 rounded-lg border border-suit-red/40 bg-suit-red/15 px-2 py-1 text-[11px] font-bold text-red-200">
+          <AlertGlyph />
+          {stalledLabel}
+        </p>
+      )}
+      {turnLabel && (
+        <p className="mb-1.5 truncate text-[11px] font-medium text-amber-200/80">{turnLabel}</p>
+      )}
       <div className="flex items-center justify-between gap-2 text-[11px] text-white/45">
         <span className="min-w-0 truncate">
           {memberNames.length > 0 ? memberNames.join(', ') : '—'}
@@ -364,7 +393,16 @@ export function LiveTableCard({
   )
 }
 
-export type JournalKind = 'ban' | 'unban' | 'feature-ban' | 'cosmetic-grant' | 'moderation-term'
+export type JournalKind =
+  | 'ban'
+  | 'unban'
+  | 'feature-ban'
+  | 'cosmetic-grant'
+  | 'moderation-term'
+  | 'role-change'
+  | 'account-delete'
+  | 'room-close'
+  | 'site-setting'
 
 const JOURNAL_DOT: Record<JournalKind, string> = {
   ban: 'bg-suit-red',
@@ -372,6 +410,10 @@ const JOURNAL_DOT: Record<JournalKind, string> = {
   'feature-ban': 'bg-amber-400',
   'cosmetic-grant': 'bg-chip-blue',
   'moderation-term': 'bg-amber-400',
+  'role-change': 'bg-gold',
+  'account-delete': 'bg-suit-red',
+  'room-close': 'bg-chip-blue',
+  'site-setting': 'bg-gold',
 }
 
 /** Journal chronologique des actions du staff — traçabilité d'équipe. */
@@ -408,7 +450,15 @@ export function QueueList({
   onAcknowledge,
   busyId,
 }: {
-  items: Array<{ id: string; icon: IconType; danger?: boolean; title: ReactNode; subtitle: string }>
+  items: Array<{
+    id: string
+    icon: IconType
+    danger?: boolean
+    title: ReactNode
+    subtitle: string
+    /** À false, l'entrée se consulte mais ne s'acquitte pas (grade insuffisant). */
+    canAcknowledge?: boolean
+  }>
   viewLabel: string
   acknowledgeLabel: string
   onView: (id: string) => void
@@ -443,6 +493,7 @@ export function QueueList({
               >
                 {viewLabel}
               </button>
+              {it.canAcknowledge !== false && (
               <button
                 type="button"
                 onClick={() => onAcknowledge(it.id)}
@@ -452,6 +503,7 @@ export function QueueList({
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 {acknowledgeLabel}
               </button>
+              )}
             </div>
           </li>
         )
@@ -528,6 +580,91 @@ export function ErrorState({
 
 // ── Glyphes internes (évite d'alourdir les imports d'icônes de la page) ──────
 
+/**
+ * Indicateur de croissance : la valeur ET sa définition, écrites noir sur
+ * blanc juste en dessous. Un chiffre dont on ignore la définition ne sert à
+ * rien — l'exploitant doit pouvoir le défendre sans nous appeler (F45).
+ */
+export function GrowthMetric({
+  label,
+  value,
+  detail,
+  definition,
+  tone = 'default',
+}: {
+  label: string
+  value: string
+  detail?: string
+  definition: string
+  tone?: 'default' | 'alert'
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-xl border p-3',
+        tone === 'alert' ? 'border-suit-red/35 bg-suit-red/[0.07]' : 'border-white/10 bg-white/[0.02]'
+      )}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</p>
+      <p className="mt-0.5 font-display text-2xl font-bold tabular-nums text-white">{value}</p>
+      {detail && <p className="text-xs text-white/50">{detail}</p>}
+      <p className="mt-1.5 border-t border-white/[0.07] pt-1.5 text-[11px] leading-relaxed text-white/40">
+        {definition}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Pagination sobre : rien à afficher tant qu'une seule page suffit. Les
+ * listes de la Supervision se chargent désormais page par page côté serveur
+ * (F75) — ce bandeau est le seul moyen d'atteindre la suite.
+ */
+export function Pager({
+  page,
+  pageSize,
+  total,
+  onPage,
+  summary,
+  previousLabel,
+  nextLabel,
+  busy,
+}: {
+  page: number
+  pageSize: number
+  total: number
+  onPage: (page: number) => void
+  summary: string
+  previousLabel: string
+  nextLabel: string
+  busy?: boolean
+}) {
+  const pageCount = Math.max(1, Math.ceil(total / Math.max(1, pageSize)))
+  if (pageCount <= 1) return null
+
+  const buttonClass =
+    'rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50'
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] pt-3">
+      <p className="text-xs text-white/45">{summary}</p>
+      <div className="flex items-center gap-2">
+        <button type="button" className={buttonClass} disabled={busy || page <= 1} onClick={() => onPage(page - 1)}>
+          {previousLabel}
+        </button>
+        <button
+          type="button"
+          className={buttonClass}
+          disabled={busy || page >= pageCount}
+          onClick={() => onPage(page + 1)}
+        >
+          {nextLabel}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ShieldGlyph() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -551,6 +688,16 @@ function RefreshGlyph({ spinning }: { spinning?: boolean }) {
     >
       <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
       <path d="M21 3v5h-5" />
+    </svg>
+  )
+}
+
+function AlertGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
     </svg>
   )
 }

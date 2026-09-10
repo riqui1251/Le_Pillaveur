@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { requireSupervisionUser } from '@/lib/auth-server'
-import { canBanFeatureTarget, normalizeRole } from '@/lib/roles'
+import { canBanFeatureTarget, canBanUsers, normalizeRole } from '@/lib/roles'
+import { adminErrorResponse, requireRole } from '../../_guard'
 import { applyFeatureBan, liftFeatureBan, isBannableFeature } from '@/lib/feature-bans'
 import { prisma } from '@/lib/prisma'
 
@@ -14,7 +14,7 @@ import { prisma } from '@/lib/prisma'
  */
 export async function POST(request: Request) {
   try {
-    const actor = await requireSupervisionUser()
+    const actor = await requireRole(canBanUsers)
     const body = await request.json().catch(() => ({}))
     const userId = typeof body.userId === 'string' ? body.userId : ''
     const feature = typeof body.feature === 'string' ? body.feature : ''
@@ -54,10 +54,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
-    console.error('feature-ban POST error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'feature-ban POST')
   }
 }

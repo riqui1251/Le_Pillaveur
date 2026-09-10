@@ -10,6 +10,7 @@ import {
   TELEPHONE_COUNTDOWN_MS,
   TELEPHONE_WRITE_MS,
   TELEPHONE_DRAW_MS,
+  TELEPHONE_REVEAL_MS,
   type TelephoneState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
@@ -233,13 +234,69 @@ describe('partie complète (N=3) jusqu’au reveal', () => {
     expect(currentTelephoneActorId(s)).toBe('p0')
 
     expect(() => reduceTelephone(s, { type: 'CONTINUE', playerId: 'p1', now: T0 })).toThrow('NOT_LEADER')
-    expect(() => reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p1' })).toThrow('NOT_LEADER')
+    expect(() => reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p1', now: T0 })).toThrow('NOT_LEADER')
 
     s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
     expect(s.revealIdx).toBe(1)
-    s = reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0' })
+    s = reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0', now: T0 })
     expect(s.revealIdx).toBe(0)
-    expect(() => reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0' })).toThrow('ALREADY_FIRST_CHAIN')
+    expect(() => reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0', now: T0 })).toThrow('ALREADY_FIRST_CHAIN')
+  })
+})
+
+describe('révélation indépendante du meneur (horloge de phase)', () => {
+  /** Amène une table de 3 joueurs jusqu'à la phase `reveal`. */
+  function upToReveal(): TelephoneState {
+    let s = make(3)
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p0', text: 'a', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p1', text: 'b', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p2', text: 'c', now: T0 })
+    for (const id of ['p0', 'p1', 'p2']) s = reduceTelephone(s, { type: 'SUBMIT', playerId: id, now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p0', text: 'd', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p1', text: 'e', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p2', text: 'f', now: T0 })
+    return s
+  }
+
+  it('le reveal porte une échéance serveur (plus de phase sans horloge)', () => {
+    const s = upToReveal()
+    expect(s.phase).toBe('reveal')
+    expect(s.phaseEndsAt).toBe(T0 + TELEPHONE_REVEAL_MS)
+  })
+
+  it('ADVANCE fait défiler les chaînes puis termine, MÊME sans meneur', () => {
+    let s = upToReveal()
+    // Le meneur s'endort : personne ne clique, seule l'échéance agit.
+    for (let i = 1; i <= 2; i += 1) {
+      const at = T0 + i * TELEPHONE_REVEAL_MS
+      s = reduceTelephone(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: at })
+      expect(s.phase).toBe('reveal')
+      expect(s.revealIdx).toBe(i)
+      expect(s.phaseEndsAt).toBe(at + TELEPHONE_REVEAL_MS)
+    }
+    s = reduceTelephone(s, {
+      type: 'ADVANCE',
+      claimedKey: phaseKey(s),
+      now: T0 + 3 * TELEPHONE_REVEAL_MS,
+    })
+    expect(s.phase).toBe('finished')
+    expect(s.phaseEndsAt).toBeNull()
+  })
+
+  it("n'accélère pas le déroulé normal : ADVANCE avant l'échéance est refusé, et un tick en retard devient un no-op", () => {
+    const s = upToReveal()
+    const key = phaseKey(s)
+    expect(() => reduceTelephone(s, { type: 'ADVANCE', claimedKey: key, now: T0 + 1_000 })).toThrow(
+      'NOT_EXPIRED'
+    )
+    // Le meneur a fait défiler avant l'échéance : le tick retardataire vise
+    // une phase qui n'existe plus (idempotence structurelle).
+    const led = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 + 5_000 })
+    expect(led.revealIdx).toBe(1)
+    expect(led.phaseEndsAt).toBe(T0 + 5_000 + TELEPHONE_REVEAL_MS)
+    expect(() =>
+      reduceTelephone(led, { type: 'ADVANCE', claimedKey: key, now: T0 + TELEPHONE_REVEAL_MS })
+    ).toThrow('PHASE_CHANGED')
   })
 })
 

@@ -467,7 +467,11 @@
       "invalid_action": "Action impossible ici.",
       "replaced_by_bot": "Tu as été remplacé par un bot.",
       "roomClosed": "La table a été fermée.",
-      "roomLeft": "Tu n'es plus dans cette table."
+      "roomLeft": "Tu n'es plus dans cette table.",
+      "reading_time": "Laisse aux autres le temps de lire, ça repart dans un instant.",
+      "stop_too_early": "Trop tôt pour crier STOP : laisse la manche démarrer.",
+      "incomplete_stop": "Remplis les cinq cases avec la bonne lettre avant de crier STOP.",
+      "contest_needs_more_players": "Il faut au moins deux autres joueurs pour contester une réponse."
     }
   },
   "chat": {
@@ -481,7 +485,27 @@
     "back": "Retour",
     "empty": "Aucun message pour l’instant — lance la conversation !",
     "tooFast": "Doucement ! Attends quelques secondes avant de renvoyer.",
-    "sendFailed": "Message non envoyé. Réessaie."
+    "sendFailed": "Message non envoyé. Réessaie.",
+    "report": "Signaler",
+    "block": "Bloquer",
+    "blockConfirm": "Bloquer ce joueur ? Vous ne verrez plus vos messages ni vos demandes.",
+    "reportTitle": "Signaler ce message",
+    "reportPlayerTitle": "Signaler ce joueur",
+    "reportReason": "Motif",
+    "reportReasons": {
+      "harassment": "Harcèlement",
+      "hate": "Propos haineux",
+      "sexual": "Contenu sexuel",
+      "threat": "Menaces",
+      "spam": "Spam ou publicité",
+      "cheating": "Triche",
+      "other": "Autre"
+    },
+    "reportComment": "Précision (facultatif)",
+    "reportSubmit": "Envoyer le signalement",
+    "reportSent": "Signalement transmis à l’équipe de modération. Merci.",
+    "reportAlready": "Tu as déjà signalé ceci, l’équipe l’a en file.",
+    "reportFailed": "Signalement non envoyé. Réessaie."
   },
   "auth": {
     "brand": "Le Pillaveur",
@@ -592,7 +616,12 @@
       "online": "En ligne",
       "sendRequest": "Ajouter en ami",
       "requestSent": "Demande envoyée",
-      "alreadyFriend": "Ami"
+      "alreadyFriend": "Ami",
+      "inviteSection": "Inviter un ami à cette table",
+      "inviteToTable": "Inviter",
+      "invited": "Invité",
+      "blockedTitle": "Joueurs bloqués",
+      "unblock": "Débloquer"
     },
     "nameModerationWarning": "Plusieurs tentatives de nom inapproprié ont été enregistrées sur ce compte. Merci d'utiliser un pseudo respectueux — l'équipe de modération peut consulter l'historique.",
     "reset": {
@@ -3641,7 +3670,11 @@
           "rematchWaiting": "Revanche {count}/{total}…",
           "backToMenu": "Retour au menu"
         },
-        "leftTable": "{name} a quitté la table — il peut revenir à tout moment."
+        "leftTable": "{name} a quitté la table — il peut revenir à tout moment.",
+        "stopLocked": "STOP dans {seconds} s",
+        "nextRoundLocked": "Encore {seconds} s pour lire",
+        "contestNeeds": "Contester — {votes} voix nécessaires",
+        "contestTooFewPlayers": "Table trop petite pour contester : il faut deux autres joueurs."
       },
       "tutorial": {
         "steps": [
@@ -3715,15 +3748,15 @@
         "steps": [
           {
             "title": "Videz votre main",
-            "body": "Posez des combos : simple, paire, brelan ou carré. Le suivant doit poser la même taille, strictement plus fort — ou passer."
+            "body": "Posez des combos : simple, paire, brelan ou carré. Le suivant pose la même taille, plus fort — ou ÉGAL. Et l’égal verrouille le rang : « Dame ou rien », les suivants égalent ou sautent leur tour."
           },
           {
-            "title": "Le 2 coupe",
-            "body": "Le 2 est la carte suprême : il remporte le pli immédiatement. Le gagnant du pli relance ce qu’il veut."
+            "title": "Le 2 coupe, le joker copie",
+            "body": "Le 2 remporte le pli sur-le-champ. Les 2 jokers sont des caméléons : ils complètent n’importe quel combo. Et la 4e carte d’un rang déjà posé trois fois ferme le pli, même hors de votre tour."
           },
           {
             "title": "Président et Trou",
-            "body": "Premier sorti = Président, dernier = Trou. Entre les manches, le Trou donne ses 2 meilleures cartes au Président, et le Vice-Trou sa meilleure au Vice-Président."
+            "body": "Premier sorti = Président, et personne ne joue après lui : le pli est brûlé. Dernier = Trou. Entre les manches, le Trou donne ses 2 meilleures cartes au Président, le Vice-Trou sa meilleure au Vice-Président."
           }
         ]
       }
@@ -4003,7 +4036,8 @@
       "permanentBan": "Ban permanent",
       "temporaryBan": "Ban temporaire",
       "deleteAccount": "Supprimer le compte",
-      "googleAccount": "Compte Google"
+      "googleAccount": "Compte Google",
+      "matchCount": "{total} compte{plural} trouvé{plural}"
     },
     "bans": {
       "activeTitle": "Bannissements actifs",
@@ -4027,6 +4061,25 @@
       "recentTitle": "Comptes connectés récemment",
       "recentDesc": "Joueurs identifiés avec leur IP et pays",
       "noneRecent": "Aucun compte connecté récemment."
+    },
+    "growth": {
+      "title": "Croissance",
+      "desc": "Chaque chiffre porte la définition exacte de la requête qui le produit.",
+      "retentionD1Label": "Revus après 1 jour",
+      "retentionD1Def": "Comptes inscrits (avec e-mail) entre il y a {from} et {to} jours dont la dernière visite tombe au moins 1 jour après l’inscription. Seule la DERNIÈRE visite est mémorisée : on lit « encore là un jour plus tard », pas « revenu le jour 1 ».",
+      "retentionD7Label": "Revus après 7 jours",
+      "retentionD7Def": "Comptes inscrits (avec e-mail) entre il y a {from} et {to} jours dont la dernière visite tombe au moins 7 jours après l’inscription. Même lecture : « encore là une semaine plus tard ».",
+      "cohortDetail": "{retained} sur {cohort}",
+      "registeredShareLabel": "Part de comptes enregistrés",
+      "registeredShareDetail": "{registered} enregistrés, {guests} invités",
+      "registeredShareDef": "Part des comptes CRÉÉS depuis {days} jours qui portent un e-mail, parmi tous ceux créés sur la même fenêtre. Ce n’est pas un entonnoir : rien ne relie un compte enregistré au compte invité utilisé avant, donc la proportion d’invités devenus membres reste hors de portée.",
+      "abandonedLabel": "Tables figées",
+      "abandonedDetail": "{stalled} figées sur {live} tables en cours",
+      "abandonedDef": "Toutes les tables de jeu en cours (en attente, briefing ou en jeu) dont plus rien ne bouge depuis le seuil de leur état : 3 min en attente, 5 min au briefing, 10 min en jeu. Comptées en base, pas sur la liste affichée plus bas ; les afficheurs TV sont exclus. Photo de l’instant : une partie morte sans résultat ne laisse rien à compter après coup.",
+      "playersByGameTitle": "Joueurs par jeu, en ligne",
+      "playersByGameDef": "Comptes ayant LANCÉ une partie en ligne de ce jeu au cours des {days} derniers jours — une ligne par joueur et par jeu, 12 jeux au plus. C’est le lancement qui compte, pas la fin : une partie quittée en route y figure. Les parties locales (même appareil) et le mode TV n’écrivent rien : ils n’apparaissent pas ici.",
+      "noData": "Aucune partie en ligne lancée sur cette fenêtre.",
+      "freshness": "Calculé à {time} — recalculé au plus une fois toutes les {minutes} min."
     },
     "room": {
       "todayLabel": "Aujourd'hui",
@@ -4059,7 +4112,14 @@
       "journalGrant": "{actor} a offert un cosmétique à {target}",
       "journalTerm": "Terme modéré ajouté : « {detail} »",
       "journalTermByActor": "{actor} a ajouté le terme « {detail} »",
-      "closeTable": "Fermer"
+      "closeTable": "Fermer",
+      "stalledFor": "Figée depuis {duration}",
+      "turnLabel": "Au tour de {name}",
+      "castHost": "Diffusée par {name}",
+      "journalRoleChange": "{actor} a changé le grade de {target} : {detail}",
+      "journalAccountDelete": "{actor} a supprimé le compte {detail}",
+      "journalRoomClose": "{actor} a fermé la table {detail}",
+      "journalSiteSetting": "{actor} a modifié un réglage du site : {detail}"
     },
     "games": {
       "playedTitle": "Parties jouées par jeu",
@@ -4128,7 +4188,8 @@
       "lightboxAlt": "Capture agrandie",
       "captureAlt": "Capture {index}",
       "statusRead": "Lu",
-      "statusResolved": "Résolu"
+      "statusResolved": "Résolu",
+      "loadingDetail": "Chargement du détail…"
     },
     "history": {
       "title": "Historique du compte",
@@ -4155,7 +4216,8 @@
       "banTemporary": "Bannissement temporaire",
       "unban": "Débannissement",
       "feedbackAck": "Signalement traité",
-      "nameFlagAck": "Alerte pseudo acquittée"
+      "nameFlagAck": "Alerte pseudo acquittée",
+      "roleChange": "Changement de grade"
     },
     "dialogs": {
       "deleteTitle": "Supprimer définitivement ce compte ?",
@@ -4245,7 +4307,10 @@
       "moderation": "Modération"
     },
     "states": {
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "pageSummary": "Page {page} sur {pages} — {total} résultats",
+      "previousPage": "Précédent",
+      "nextPage": "Suivant"
     }
   },
   "voice": {
@@ -4277,8 +4342,14 @@
       "title": "Activer le micro pour cette partie ?",
       "hint": "Parle avec les autres joueurs de la salle.",
       "enable": "Activer",
-      "later": "Plus tard"
-    }
+      "later": "Plus tard",
+      "micHint": "Parle avec les autres joueurs. Ton micro ne s’active qu’après ton accord."
+    },
+    "micLost": "Ton micro s’est coupé — le vocal continue sans toi.",
+    "resumeMic": "Reprendre le micro",
+    "signalLost": "Connexion au vocal perdue — plus personne ne t’entend.",
+    "reconnect": "Se reconnecter",
+    "peerFailed": "coupé"
   },
   "tv": {
     "brand": "Le Pillaveur",
@@ -4320,7 +4391,10 @@
     "castNeedsAccount": "Connecte-toi pour diffuser sur la télé (c’est gratuit).",
     "castFailed": "Diffusion impossible pour le moment. Réessaie.",
     "starting": "La partie démarre…",
-    "startingHint": "Chacun lit les règles sur son téléphone."
+    "startingHint": "Chacun lit les règles sur son téléphone.",
+    "fullscreen": "Plein écran",
+    "exitFullscreen": "Quitter le plein écran",
+    "changeCode": "Changer de code"
   },
   "gameTutorial": {
     "next": "Suivant",

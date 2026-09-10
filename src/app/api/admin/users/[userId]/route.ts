@@ -1,20 +1,26 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser, requireSupervisionUser } from '@/lib/auth-server'
 import { countLocalPlayers, getBanState } from '@/lib/ban-server'
 import { prisma } from '@/lib/prisma'
 import {
+  canAccessSupervision,
+  canDeleteAccount,
   canDeleteTarget,
   canViewAccountActivity,
   normalizeRole,
 } from '@/lib/roles'
 import { deleteUserAccount, getUserGamePlayStats } from '@/lib/user-activity-server'
+import {
+  logStaffAction,
+  STAFF_SELF_ANCHORED_ACTIONS,
+} from '@/lib/supervision-overview-server'
+import { adminErrorResponse, requireRole } from '../../_guard'
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const actor = await requireSupervisionUser()
+    const actor = await requireRole(canAccessSupervision)
     const { userId } = await params
 
     const user = await prisma.user.findUnique({
@@ -54,7 +60,13 @@ export async function GET(
     }
 
     const banEvents = await prisma.accountBanEvent.findMany({
-      where: { userId },
+      where: {
+        userId,
+        // Les actions de staff sans cible propre sont ancrées sur leur AUTEUR
+        // (F42) : elles n'ont rien à faire dans l'historique de modération
+        // subi par ce compte.
+        action: { notIn: [...STAFF_SELF_ANCHORED_ACTIONS] },
+      },
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
@@ -120,11 +132,7 @@ export async function GET(
       })),
     })
   } catch (error) {
-    if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
-    console.error('admin user detail error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return adminErrorResponse(error, 'user detail GET')
   }
 }
 
@@ -133,10 +141,7 @@ export async function DELETE(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const actor = await getCurrentUser()
-    if (!actor) {
-      return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
-    }
+    const actor = await requireRole(canDeleteAccount)
 
     const { userId } = await params
 
@@ -149,7 +154,7 @@ export async function DELETE(
 
     const target = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true, email: true },
+      select: { id: true, role: true, email: true, displayName: true, accountCode: true },
     })
 
     if (!target || !target.email) {
@@ -167,9 +172,16 @@ export async function DELETE(
 
     await deleteUserAccount(userId)
 
+    // F42 : la trace doit SURVIVRE au compte effacé — elle est donc ancrée sur
+    // l'auteur (la ligne de journal de la cible partirait en cascade).
+    await logStaffAction({
+      actorId: actor.id,
+      action: 'account-delete',
+      detail: `${target.displayName}${target.accountCode ? ` (${target.accountCode})` : ''} — ${target.email}`,
+    })
+
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('admin user delete error:', error)
-    return NextResponse.json({ error: 'Erreur lors de la suppression' }, { status: 500 })
+    return adminErrorResponse(error, 'user delete')
   }
 }

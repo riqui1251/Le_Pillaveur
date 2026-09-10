@@ -977,6 +977,117 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
   }
 }
 
+// ─── Décisions des bots à rôle (déterministes, donc testables) ───────────────
+
+/**
+ * BOTS À RÔLE CLÉ — pourquoi ici et pas dans l'adaptateur : un bot sorcière
+ * qui ne boit jamais ses potions et un chasseur qui tire au hasard vident la
+ * partie de son sel dès qu'un humain est remplacé (F39). Ces décisions sont
+ * donc des fonctions PURES du moteur : aucun Math.random, donc reproductibles
+ * et couvertes par des tests.
+ *
+ * Elles s'appuient sur ce qu'un joueur pourrait légitimement savoir (le
+ * débat public, le maire élu, les morts annoncées, les comptes de vivants) —
+ * pas sur les rôles secrets de la table.
+ */
+
+/** Joueur vivant le plus accusé au débat (toutes manches), hors `excluded`. */
+function topDebateSuspect(state: LGState, excluded: (string | null)[]): string | null {
+  const score = new Map<string, number>()
+  for (const sp of state.debateSpeech) {
+    if (sp.kind !== 'suspect' || !sp.targetId) continue
+    score.set(sp.targetId, (score.get(sp.targetId) ?? 0) + 1)
+  }
+  let best: string | null = null
+  let bestScore = 0
+  // Parcours dans l'ORDRE DE TABLE : égalité départagée de façon stable.
+  for (const p of state.players) {
+    if (!p.alive || excluded.includes(p.id)) continue
+    const sc = score.get(p.id) ?? 0
+    if (sc > bestScore) {
+      bestScore = sc
+      best = p.id
+    }
+  }
+  return best
+}
+
+export type LGBotWitchDecision = { action: 'save' | 'kill' | 'none'; targetId?: string }
+
+/**
+ * Décision de la SORCIÈRE bot.
+ *
+ * Potion de VIE — elle la garde sauf quand ça vaut vraiment le coup :
+ *   • c'est ELLE que les loups ont désignée ;
+ *   • la victime est le MAIRE (sa voix compte double au lynchage — info publique) ;
+ *   • ou cette mort ferait passer les loups à parité : le village est perdu sinon.
+ * Potion de MORT — volontairement RARE : seulement quand le village est au
+ * bord de la défaite ET que le débat a désigné un suspect clair.
+ */
+export function lgBotWitchAction(state: LGState, witchId: string): LGBotWitchDecision {
+  const witch = state.players.find((p) => p.id === witchId)
+  if (!witch?.alive || witch.role !== 'sorciere') return { action: 'none' }
+
+  const alive = lgAlive(state)
+  const wolvesAlive = alive.filter((p) => p.role === 'loup').length
+  const victim = state.nightVictimId
+    ? state.players.find((p) => p.id === state.nightVictimId)
+    : undefined
+
+  if (!state.witchSaveUsed && victim?.alive) {
+    const villageAfter =
+      alive.length - wolvesAlive - (victim.role === 'loup' ? 0 : 1)
+    const worthIt =
+      victim.id === witchId || victim.id === state.mayorId || villageAfter <= wolvesAlive
+    if (worthIt) return { action: 'save' }
+  }
+
+  if (!state.witchKillUsed) {
+    const villageAfter =
+      alive.length - wolvesAlive - (victim && victim.alive && victim.role !== 'loup' ? 1 : 0)
+    // Au bord de la bascule (un villageois de marge au plus) : on ose.
+    if (villageAfter <= wolvesAlive + 1) {
+      // Inutile d'empoisonner quelqu'un que les loups emportent déjà.
+      const suspect = topDebateSuspect(state, [witchId, state.nightVictimId])
+      if (suspect) return { action: 'kill', targetId: suspect }
+    }
+  }
+
+  return { action: 'none' }
+}
+
+/**
+ * Cible du CHASSEUR bot : son coup de fusil part sur un SUSPECT, pas au
+ * hasard. Dans l'ordre de poids :
+ *   • celui qui l'a accusé au débat (il a poussé à sa mort — 3 points) ;
+ *   • celui que le village accusait (1 point par accusation) ;
+ *   • celui qui a récolté des voix au dernier vote (1 point par voix).
+ * Égalité ou table muette : premier vivant dans l'ordre de table (jamais lui).
+ */
+export function lgBotHunterTarget(state: LGState, hunterId: string): string | null {
+  const score = new Map<string, number>()
+  const add = (id: string, n: number) => score.set(id, (score.get(id) ?? 0) + n)
+  for (const sp of state.debateSpeech) {
+    if (sp.kind !== 'suspect' || !sp.targetId) continue
+    if (sp.targetId === hunterId) add(sp.playerId, 3)
+    add(sp.targetId, 1)
+  }
+  for (const [targetId, votes] of Object.entries(state.lastVoteResult?.tally ?? {})) {
+    add(targetId, votes)
+  }
+  let best: string | null = null
+  let bestScore = -1
+  for (const p of state.players) {
+    if (!p.alive || p.id === hunterId) continue
+    const sc = score.get(p.id) ?? 0
+    if (best === null || sc > bestScore) {
+      best = p.id
+      bestScore = sc
+    }
+  }
+  return best
+}
+
 // ─── Acteur courant ──────────────────────────────────────────────────────────
 
 /**

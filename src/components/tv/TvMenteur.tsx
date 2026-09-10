@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils'
  * anonymes (comptes de dés seulement — la vue TV est neutre), et la
  * révélation quand les gobelets se lèvent. Les téléphones restent les mains.
  */
+// La chope compte des GORGÉES (sipsTotal), pas des dés perdus : un joueur à
+// 3 dés perdus a bu 1+2+3 = 6 gorgées. Le tri reste sur lostCount, monotone.
 export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClientView }) {
   const t = useTranslations('games.menteur.game')
   const totalDice = state.players.reduce((s, p) => s + p.diceCount, 0)
@@ -51,7 +53,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
               <span>{idx + 1}.</span>
               <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
-              <span className="text-amber-200">🍺 {p.lostCount}</span>
+              <span className="text-amber-200">🍺 {p.sipsTotal}</span>
             </div>
           ))}
         </div>
@@ -165,7 +167,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
               <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               <span className="text-white/50">{dead ? <Skull aria-hidden className="inline h-4 w-4" /> : `🎲 ${p.diceCount}`}</span>
-              {p.lostCount > 0 && <span className="text-amber-200/80">🍺{p.lostCount}</span>}
+              {p.sipsTotal > 0 && <span className="text-amber-200/80">🍺{p.sipsTotal}</span>}
             </span>
           )
         })}

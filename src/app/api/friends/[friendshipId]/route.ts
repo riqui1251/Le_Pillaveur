@@ -19,6 +19,13 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (friendship.requesterId !== user.id && friendship.addresseeId !== user.id) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
+  // Un REFUS ne s'efface pas : c'est lui qui porte le délai de latence avant
+  // une nouvelle demande. Sans cette garde, l'éconduit supprimait la ligne et
+  // pouvait redemander dans la foulée — le blocage a la même exigence.
+  // Celui qui a refusé, lui, peut effacer : c'est sa décision, pas sa punition.
+  if (friendship.status === 'declined' && friendship.addresseeId !== user.id) {
+    return NextResponse.json({ error: 'Demande déjà refusée' }, { status: 409 })
+  }
 
   await prisma.friendship.delete({ where: { id: friendshipId } })
   return NextResponse.json({ ok: true })

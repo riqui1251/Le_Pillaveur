@@ -50,7 +50,7 @@ export function TvPmu({ state, frame }: { state: PmuCastState; frame: PmuCastFra
                 <p className="text-lg font-bold" style={{ color: h.colorFrom }}>
                   {h.emoji} {h.name}
                 </p>
-                {h.players.length > 0 && <p className="truncate text-sm text-white/45">{h.players.join(', ')}</p>}
+                {h.players.length > 0 && <p className="truncate text-sm text-white/75">{h.players.join(', ')}</p>}
               </div>
               <div
                 className={cn(
@@ -94,7 +94,7 @@ export function TvPmu({ state, frame }: { state: PmuCastState; frame: PmuCastFra
         <div className="flex flex-wrap items-center justify-center gap-2">
           {ranked.map((h, i) => (
             <div key={h.key} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
-              <span className="text-sm font-black text-white/40">{i + 1}</span>
+              <span className="text-sm font-black text-white/70">{i + 1}</span>
               <span className="text-base font-bold" style={{ color: h.colorFrom }}>
                 {h.emoji} {h.name}
               </span>

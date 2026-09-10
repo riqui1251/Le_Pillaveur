@@ -25,7 +25,7 @@ export default function TvHomePage() {
         <h1 className="mt-2 text-3xl font-black">{t('brand')}</h1>
       </div>
       <form onSubmit={submit} className="flex flex-col items-center gap-5">
-        <label htmlFor="tv-code" className="text-lg text-white/60">{t('enterCode')}</label>
+        <label htmlFor="tv-code" className="text-lg text-white/80">{t('enterCode')}</label>
         <input
           id="tv-code"
           value={code}

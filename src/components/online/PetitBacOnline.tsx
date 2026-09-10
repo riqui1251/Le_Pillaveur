@@ -9,7 +9,7 @@ import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { PBC_WRITE_MS, type PbcClientView } from '@/lib/petit-bac/engine'
+import { pbcIsValid, PBC_WRITE_MS, type PbcClientView } from '@/lib/petit-bac/engine'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useBotReferee } from '@/hooks/useBotReferee'
@@ -239,8 +239,15 @@ export function PetitBacOnline() {
     )
   }
 
+  // STOP : MÊMES conditions que le serveur (moteur = source de vérité), sinon
+  // le bouton promet une action que la route refusera — cinq cases réellement
+  // remplies (bonne lettre, 2 caractères au moins) ET un délai d'écriture
+  // minimal, pour qu'on ne gèle plus la table à l'instant zéro (F32).
+  const stopFilled = draft.every((a) => pbcIsValid(a, view.letter))
+  const stopWaitMs = view.stopAt === null ? 0 : Math.max(0, view.stopAt - clock)
   const canStop =
-    view.phase === 'write' && !me?.hasSubmitted && draft.every((a) => a.trim().length > 0)
+    view.phase === 'write' && !me?.hasSubmitted && stopFilled && stopWaitMs === 0
+  const continueWaitMs = view.continueAt === null ? 0 : Math.max(0, view.continueAt - clock)
   const submittedCount = view.players.filter((p) => p.hasSubmitted && !p.leftAt).length
   const activeCount = view.players.filter((p) => !p.leftAt).length
 
@@ -335,7 +342,10 @@ export function PetitBacOnline() {
                 disabled={!canStop || busy}
                 className="w-full rounded-2xl bg-gradient-to-r from-sky-700 to-amber-600 py-5 text-base font-black tracking-wide disabled:opacity-50"
               >
-                <Hand className="mr-2 h-5 w-5" /> {t('stop')}
+                <Hand className="mr-2 h-5 w-5" />{' '}
+                {stopWaitMs > 0
+                  ? t('stopLocked', { seconds: Math.ceil(stopWaitMs / 1000) })
+                  : t('stop')}
               </Button>
             )
           ) : (
@@ -357,8 +367,14 @@ export function PetitBacOnline() {
               <div className="space-y-1.5">
                 {(view.revealGrid?.[i] ?? []).map((cell) => {
                   const cellPlayer = view.players.find((p) => p.id === cell.playerId)
+                  // Une seule voix ne raye plus une case sur une petite table :
+                  // le seuil vient du moteur (null = table trop petite).
                   const canContest =
-                    cell.playerId !== user.id && cell.points > 0 && !cell.rejected && !cell.iContested
+                    view.contestThreshold !== null &&
+                    cell.playerId !== user.id &&
+                    cell.points > 0 &&
+                    !cell.rejected &&
+                    !cell.iContested
                   return (
                     <div
                       key={cell.playerId}
@@ -396,7 +412,11 @@ export function PetitBacOnline() {
                           onClick={() =>
                             void sendAction({ action: 'contest', targetId: cell.playerId, category: i })
                           }
-                          title={t('contest')}
+                          title={
+                            view.contestThreshold === null
+                              ? t('contestTooFewPlayers')
+                              : t('contestNeeds', { votes: view.contestThreshold })
+                          }
                           className={cn(
                             'touch-target flex shrink-0 items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] font-bold transition-colors',
                             cell.rejected
@@ -407,7 +427,11 @@ export function PetitBacOnline() {
                           )}
                         >
                           <AlertTriangle className="h-3 w-3" />
-                          {cell.contestCount > 0 ? cell.contestCount : ''}
+                          {cell.contestCount > 0
+                            ? view.contestThreshold !== null
+                              ? `${cell.contestCount}/${view.contestThreshold}`
+                              : cell.contestCount
+                            : ''}
                         </button>
                       )}
                     </div>
@@ -416,6 +440,14 @@ export function PetitBacOnline() {
               </div>
             </div>
           ))}
+
+          {/* Table trop petite pour trancher : on le DIT, plutôt que de laisser
+              le bouton de contestation disparaître sans explication (F32). */}
+          {view.contestThreshold === null && (
+            <p className="text-center text-[11px] font-semibold text-white/50">
+              {t('contestTooFewPlayers')}
+            </p>
+          )}
 
           {/* Totaux */}
           <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -438,12 +470,18 @@ export function PetitBacOnline() {
             </div>
           </div>
 
+          {/* Le serveur refuse l'avancement avant le temps de lecture (F33) :
+              le bouton le dit au lieu de se faire rejeter. */}
           <Button
             onClick={() => void sendAction({ action: 'continue' })}
-            disabled={busy}
-            className="w-full rounded-2xl bg-gradient-to-r from-sky-700 to-amber-600 py-4 text-sm font-bold"
+            disabled={busy || continueWaitMs > 0}
+            className="w-full rounded-2xl bg-gradient-to-r from-sky-700 to-amber-600 py-4 text-sm font-bold disabled:opacity-50"
           >
-            {view.round + 1 >= view.totalRounds ? t('seeEnd') : t('nextRound')}
+            {continueWaitMs > 0
+              ? t('nextRoundLocked', { seconds: Math.ceil(continueWaitMs / 1000) })
+              : view.round + 1 >= view.totalRounds
+                ? t('seeEnd')
+                : t('nextRound')}
           </Button>
         </div>
       )}

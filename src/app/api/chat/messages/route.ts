@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser, type AuthUser } from '@/lib/auth-server'
-import { areFriends } from '@/lib/friends'
+import { getCurrentUser } from '@/lib/auth-server'
 import { parseOnlinePreferences } from '@/lib/online-preferences'
 import { censorChatMessage } from '@/lib/chat-moderation'
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 import { isFeatureBanned } from '@/lib/feature-bans'
-import { parseLGState } from '@/lib/loup-garou/server-adapter'
+import { resolveChatChannel } from '@/lib/moderation/chat-access'
+import { listBlockedCounterpartIds } from '@/lib/moderation/blocks'
 import {
   checkRateLimit,
   rateLimitResponse,
@@ -15,12 +15,8 @@ import {
 } from '@/lib/rate-limit'
 
 /**
- * Chat léger par canal :
- * - `room:<roomId>`  — chat de la partie/lobby en cours (réservé aux membres) ;
- * - `friend:<idA>:<idB>` — conversation privée entre deux amis (ids triés) ;
- * - `wolves:<roomId>` — chat privé des loups (Loup-Garou uniquement, réservé
- *   aux joueurs dont le rôle réel est `loup`, vérifié à chaque requête sur
- *   l'état serveur — jamais fait confiance au client).
+ * Chat léger par canal — les droits d'accès vivent dans `resolveChatChannel`
+ * (partagé avec le signalement, pour que les deux ne puissent pas diverger).
  * Lecture par polling côté client (pattern établi), 50 derniers messages.
  */
 
@@ -38,60 +34,12 @@ const CHAT_WINDOW_MS = 10 * 1000
 const MAX_CHAT_BODY_BYTES = 8 * 1024
 
 /**
- * La lecture écrit aussi (upsert ChatRead à chaque appel) : elle a donc besoin
- * de son propre plafond, dans la même fenêtre que l'envoi. Le client poll une
- * conversation toutes les 3 s (≈ 4 requêtes / 10 s), plus un refetch après
- * chaque envoi : 30 laisse tourner plusieurs onglets ouverts en parallèle tout
- * en coupant un script qui martèlerait la route.
+ * La lecture a son propre plafond, dans la même fenêtre que l'envoi. Le client
+ * poll une conversation toutes les 3 s (≈ 4 requêtes / 10 s), plus un refetch
+ * après chaque envoi : 30 laisse tourner plusieurs onglets ouverts en parallèle
+ * tout en coupant un script qui martèlerait la route.
  */
 const CHAT_READ_LIMIT = 30
-
-type ChannelResolution =
-  | { ok: true; channel: string }
-  | { ok: false; error: string; status: number }
-
-async function resolveChannel(
-  user: AuthUser,
-  scope: string | null,
-  friendUserId: string | null
-): Promise<ChannelResolution> {
-  if (scope === 'room') {
-    const membership = await prisma.onlineRoomMember.findFirst({
-      where: { userId: user.id },
-      select: { roomId: true },
-    })
-    if (!membership) return { ok: false, error: 'Aucune partie en cours', status: 404 }
-    return { ok: true, channel: `room:${membership.roomId}` }
-  }
-  if (scope === 'friend' && friendUserId) {
-    if (!(await areFriends(user.id, friendUserId))) {
-      return { ok: false, error: "Vous n'êtes pas amis", status: 403 }
-    }
-    const [a, b] = [user.id, friendUserId].sort()
-    return { ok: true, channel: `friend:${a}:${b}` }
-  }
-  if (scope === 'wolves') {
-    const membership = await prisma.onlineRoomMember.findFirst({
-      where: { userId: user.id },
-      select: { roomId: true },
-    })
-    if (!membership) return { ok: false, error: 'Aucune partie en cours', status: 404 }
-    const room = await prisma.onlineRoom.findUnique({
-      where: { id: membership.roomId },
-      select: { gameId: true, gameStateJson: true },
-    })
-    if (!room || room.gameId !== 'loup-garou') {
-      return { ok: false, error: 'Canal invalide', status: 400 }
-    }
-    const state = parseLGState(room.gameStateJson)
-    const me = state?.players.find((p) => p.id === user.id)
-    if (!me || me.role !== 'loup') {
-      return { ok: false, error: 'Réservé aux loups', status: 403 }
-    }
-    return { ok: true, channel: `wolves:${membership.roomId}` }
-  }
-  return { ok: false, error: 'Canal invalide', status: 400 }
-}
 
 function toDto(
   message: {
@@ -126,29 +74,66 @@ export async function GET(request: Request) {
   if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
   const url = new URL(request.url)
-  const resolved = await resolveChannel(user, url.searchParams.get('scope'), url.searchParams.get('friend'))
+  const resolved = await resolveChatChannel(
+    user,
+    url.searchParams.get('scope'),
+    url.searchParams.get('friend')
+  )
   if (!resolved.ok) {
     return NextResponse.json({ error: resolved.error, messages: [] }, { status: resolved.status })
   }
 
-  const rows = await prisma.chatMessage.findMany({
-    where: { channel: resolved.channel },
-    orderBy: { createdAt: 'desc' },
-    take: PAGE_SIZE,
-    include: { sender: { select: { displayName: true, onlinePreferencesJson: true } } },
-  })
+  const [rows, blockedIds] = await Promise.all([
+    prisma.chatMessage.findMany({
+      where: { channel: resolved.channel },
+      orderBy: { createdAt: 'desc' },
+      take: PAGE_SIZE,
+      include: { sender: { select: { displayName: true, onlinePreferencesJson: true } } },
+    }),
+    listBlockedCounterpartIds(user.id),
+  ])
 
-  // Consulter une conversation la marque comme lue (indicateur non-lu).
-  await prisma.chatRead.upsert({
-    where: { userId_channel: { userId: user.id, channel: resolved.channel } },
-    create: { userId: user.id, channel: resolved.channel },
-    update: { lastReadAt: new Date() },
-  })
+  // Un joueur bloqué reste dans la salle, mais ses messages ne s'affichent plus
+  // chez celui qui l'a bloqué (le blocage vaut aussi dans le chat de partie).
+  const visible = rows.filter((m) => !blockedIds.has(m.senderId))
+
+  await markChannelRead(user.id, resolved.channel, visible)
 
   return NextResponse.json(
-    { messages: rows.reverse().map((m) => toDto(m, user.id)) },
+    { messages: visible.reverse().map((m) => toDto(m, user.id)) },
     { headers: { 'Cache-Control': 'no-store' } }
   )
+}
+
+/**
+ * Marquage « lu » ÉCONOME : consulter une conversation n'écrit que si l'état
+ * change réellement. Sans ce garde-fou, chaque relève (toutes les 3 s et par
+ * joueur) déclenchait une écriture, alors qu'un simple SELECT suffit à
+ * constater qu'il n'y a rien de neuf à marquer.
+ */
+async function markChannelRead(
+  userId: string,
+  channel: string,
+  rows: { senderId: string; createdAt: Date }[]
+): Promise<void> {
+  const latestOther = rows
+    .filter((m) => m.senderId !== userId)
+    .reduce<Date | null>((max, m) => (!max || m.createdAt > max ? m.createdAt : max), null)
+
+  // Rien reçu des autres sur ce canal : le compteur de non-lus est déjà à zéro.
+  if (!latestOther) return
+
+  const existing = await prisma.chatRead.findUnique({
+    where: { userId_channel: { userId, channel } },
+    select: { lastReadAt: true },
+  })
+  if (existing && existing.lastReadAt >= latestOther) return
+
+  await prisma.chatRead.upsert({
+    where: { userId_channel: { userId, channel } },
+    create: { userId, channel },
+    update: { lastReadAt: new Date() },
+  })
 }
 
 export async function POST(request: Request) {
@@ -179,7 +164,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'chat-banned' }, { status: 403 })
   }
 
-  const resolved = await resolveChannel(user, scope, friendUserId)
+  const resolved = await resolveChatChannel(user, scope, friendUserId)
   if (!resolved.ok) {
     return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   }

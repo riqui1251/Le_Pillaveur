@@ -60,17 +60,17 @@ export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: Te
         <div className="mx-auto grid w-full max-w-5xl flex-1 grid-cols-3 gap-4 overflow-y-auto">
           {state.revealChain.links.map((link, i) => (
             <div key={`${state.revealIdx}-${i}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-white/40">
+              <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-white/75">
                 {t('reveal.step', { n: i + 1 })}
               </p>
               {link.type === 'text' ? (
                 <p className="text-xl font-bold text-white">
-                  {link.text.trim() ? link.text : <span className="italic text-white/30">{t('reveal.blank')}</span>}
+                  {link.text.trim() ? link.text : <span className="italic text-white/60">{t('reveal.blank')}</span>}
                 </p>
               ) : link.strokes.length > 0 ? (
                 <PartyCanvas strokes={link.strokes} readOnly />
               ) : (
-                <p className="italic text-white/30">{t('reveal.blank')}</p>
+                <p className="italic text-white/60">{t('reveal.blank')}</p>
               )}
             </div>
           ))}

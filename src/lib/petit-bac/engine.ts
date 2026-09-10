@@ -18,6 +18,25 @@ export const PBC_COUNTDOWN_MS = 5_000
 export const PBC_WRITE_MS = 120_000
 /** Fenêtre après le STOP pour que les autres clients envoient leurs brouillons. */
 export const PBC_FLUSH_MS = 6_000
+/**
+ * Durée maximale de la révélation (comptage + contestations). L'horloge
+ * serveur enchaîne d'elle-même si personne ne clique — assez longue pour
+ * laisser le temps de contester, jamais dans le chemin du jeu normal.
+ */
+export const PBC_REVEAL_MS = 90_000
+/**
+ * TEMPS DE LECTURE MINIMAL de la révélation : le « manche suivante » est
+ * ouvert à tous, et sans plancher le premier impatient escamotait la grille
+ * de comptage — et la fenêtre de contestation — pour toute la table (F33).
+ * Un BOT en est exempt (il ne lit rien) : la table ne peut pas se figer.
+ */
+export const PBC_REVEAL_MIN_MS = 5_000
+/**
+ * Délai minimal d'écriture avant qu'un STOP soit recevable. Sans lui, crier
+ * STOP à l'instant zéro avec cinq réponses bidon gelait la table avant que
+ * quiconque ait pu écrire (F32).
+ */
+export const PBC_STOP_MIN_MS = 20_000
 export const PBC_ROUND_OPTIONS = [3, 5, 8] as const
 export const PBC_DEFAULT_ROUNDS = 3
 export const PBC_CATEGORY_COUNT = 5
@@ -195,6 +214,39 @@ export function createPbcState(
   }
 }
 
+/**
+ * Millisecondes écoulées depuis le début de la phase d'écriture, déduites de
+ * l'échéance de phase (l'horloge SERVEUR reste la seule autorité).
+ */
+export function pbcWriteElapsedMs(state: PbcState, now: number): number {
+  if (state.phaseEndsAt === null) return Number.POSITIVE_INFINITY
+  return now - (state.phaseEndsAt - PBC_WRITE_MS)
+}
+
+/** Idem pour la révélation. */
+export function pbcRevealElapsedMs(state: PbcState, now: number): number {
+  if (state.phaseEndsAt === null) return Number.POSITIVE_INFINITY
+  return now - (state.phaseEndsAt - PBC_REVEAL_MS)
+}
+
+/** Plancher de voix d'une contestation, quelle que soit la taille de la table. */
+export const PBC_CONTEST_MIN_VOTES = 2
+
+/**
+ * Nombre de voix nécessaires pour invalider une case, ou null quand la table
+ * est trop petite pour trancher. Majorité STRICTE des autres joueurs actifs
+ * NON-bots (le propriétaire ne vote pas), avec le PLANCHER ci-dessus : à deux
+ * joueurs, la « majorité » se réduisait à la décision d'un seul, qui pouvait
+ * rayer toutes les réponses de son adversaire (F32). Les bots — déserteurs
+ * convertis — ne contestent jamais : les compter au dénominateur rendrait la
+ * majorité inatteignable dès qu'ils remplacent la moitié des votants.
+ */
+export function pbcContestThreshold(state: PbcState, targetId: string): number | null {
+  const others = pbcActive(state).filter((p) => !p.isBot && p.id !== targetId).length
+  if (others < PBC_CONTEST_MIN_VOTES) return null
+  return Math.max(PBC_CONTEST_MIN_VOTES, Math.floor(others / 2) + 1)
+}
+
 // ─── Transitions internes ────────────────────────────────────────────────────
 
 function enterWrite(state: PbcState, now: number): PbcState {
@@ -262,10 +314,30 @@ function enterReveal(state: PbcState, now: number): PbcState {
   return {
     ...state,
     roundPoints: scoreRound(state),
-    ...enterPhase(state.phaseSeq, 'reveal', null, now),
+    ...enterPhase(state.phaseSeq, 'reveal', PBC_REVEAL_MS, now),
     phase: 'reveal',
     version: state.version + 1,
   }
+}
+
+/** Clôt la manche révélée : cumul des points, puis manche suivante ou podium. */
+function pbcNextRound(state: PbcState, now: number): PbcState {
+  const players = state.players.map((p) => ({
+    ...p,
+    total: p.total + (state.roundPoints?.[p.id] ?? []).reduce((a, b) => a + b, 0),
+  }))
+  const nextRound = state.round + 1
+  if (nextRound >= state.letters.length) {
+    return {
+      ...state,
+      players,
+      phase: 'finished',
+      phaseSeq: state.phaseSeq + 1,
+      phaseEndsAt: null,
+      version: state.version + 1,
+    }
+  }
+  return enterWrite({ ...state, players, round: nextRound }, now)
 }
 
 // ─── Réducteur ───────────────────────────────────────────────────────────────
@@ -276,8 +348,16 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
       if (state.phase !== 'write') throw new PbcEngineError('NOT_WRITE_PHASE')
       const actor = state.players.find((p) => p.id === action.playerId)
       if (!actor || actor.leftAt) throw new PbcEngineError('UNKNOWN_PLAYER')
+      // Un STOP crédible : la manche doit avoir vraiment commencé…
+      if (pbcWriteElapsedMs(state, action.now) < PBC_STOP_MIN_MS) {
+        throw new PbcEngineError('STOP_TOO_EARLY')
+      }
       const answers = sanitizeAnswers(action.answers, state.categories.length)
-      if (answers.some((a) => a.trim().length === 0)) throw new PbcEngineError('INCOMPLETE_STOP')
+      // …et les cinq cases doivent être REMPLIES pour de bon (bonne lettre,
+      // deux caractères au moins) : « aaaaa » ne gèle plus la table.
+      if (!answers.every((a) => pbcIsValid(a, pbcCurrentLetter(state)))) {
+        throw new PbcEngineError('INCOMPLETE_STOP')
+      }
       return enterFlush(
         {
           ...state,
@@ -324,12 +404,9 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
       const voters = state.contests[key] ?? []
       if (voters.includes(voter.id)) throw new PbcEngineError('ALREADY_CONTESTED')
       const nextVoters = [...voters, voter.id]
-      // Majorité STRICTE des autres joueurs actifs NON-bots (le propriétaire
-      // ne vote pas). Les bots — déserteurs convertis — ne contestent jamais :
-      // les compter au dénominateur rendrait la majorité inatteignable dès
-      // qu'ils remplacent la moitié des votants potentiels.
-      const others = pbcActive(state).filter((p) => !p.isBot && p.id !== action.targetId).length
-      const threshold = Math.floor(others / 2) + 1
+      const threshold = pbcContestThreshold(state, action.targetId)
+      // Table trop petite : personne ne peut rayer seul la copie d'un autre.
+      if (threshold === null) throw new PbcEngineError('CONTEST_NEEDS_MORE_PLAYERS')
       if (nextVoters.length >= threshold) {
         const roundPoints = { ...(state.roundPoints ?? {}) }
         roundPoints[action.targetId] = [...(roundPoints[action.targetId] ?? [])]
@@ -351,25 +428,14 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
 
     case 'CONTINUE': {
       if (state.phase !== 'reveal') throw new PbcEngineError('NOT_REVEAL')
-      if (!state.players.some((p) => p.id === action.playerId)) {
-        throw new PbcEngineError('UNKNOWN_PLAYER')
+      const asker = state.players.find((p) => p.id === action.playerId)
+      if (!asker) throw new PbcEngineError('UNKNOWN_PLAYER')
+      // Plancher de lecture de la grille de comptage, et de la fenêtre de
+      // contestation qu'elle ouvre (F33). Un BOT en est exempt.
+      if (!asker.isBot && pbcRevealElapsedMs(state, action.now) < PBC_REVEAL_MIN_MS) {
+        throw new PbcEngineError('READING_TIME')
       }
-      const players = state.players.map((p) => ({
-        ...p,
-        total: p.total + (state.roundPoints?.[p.id] ?? []).reduce((a, b) => a + b, 0),
-      }))
-      const nextRound = state.round + 1
-      if (nextRound >= state.letters.length) {
-        return {
-          ...state,
-          players,
-          phase: 'finished',
-          phaseSeq: state.phaseSeq + 1,
-          phaseEndsAt: null,
-          version: state.version + 1,
-        }
-      }
-      return enterWrite({ ...state, players, round: nextRound }, action.now)
+      return pbcNextRound(state, action.now)
     }
 
     case 'ADVANCE': {
@@ -378,6 +444,9 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
       if (state.phase === 'countdown') return enterWrite(state, action.now)
       if (state.phase === 'write') return enterFlush(state, action.now)
       if (state.phase === 'flush') return enterReveal(state, action.now)
+      // L'échéance de révélation enchaîne toute seule : la table ne reste
+      // jamais figée sur la grille de comptage.
+      if (state.phase === 'reveal') return pbcNextRound(state, action.now)
       throw new PbcEngineError('NOTHING_TO_ADVANCE')
     }
 
@@ -460,6 +529,12 @@ export type PbcClientView = Omit<PbcState, 'rngState' | 'players' | 'letters' | 
   revealGrid: PbcRevealCell[][] | null
   /** Points de la manche courante par joueur (null hors reveal). */
   roundTotals: Record<string, number> | null
+  /** Instant (epoch ms) à partir duquel un STOP est recevable (null hors write). */
+  stopAt: number | null
+  /** Instant (epoch ms) à partir duquel « manche suivante » passe (null hors reveal). */
+  continueAt: number | null
+  /** Voix nécessaires pour invalider une case, null si la table est trop petite. */
+  contestThreshold: number | null
 }
 
 /** Vue PAR JOUEUR : réponses secrètes pendant write/flush, publiques au reveal. */
@@ -495,6 +570,17 @@ export function toPbcClientView(state: PbcState, viewerId: string): PbcClientVie
   return {
     ...rest,
     phaseKey: phaseKey(state),
+    stopAt:
+      state.phase === 'write' && state.phaseEndsAt !== null
+        ? state.phaseEndsAt - PBC_WRITE_MS + PBC_STOP_MIN_MS
+        : null,
+    continueAt:
+      state.phase === 'reveal' && state.phaseEndsAt !== null
+        ? state.phaseEndsAt - PBC_REVEAL_MS + PBC_REVEAL_MIN_MS
+        : null,
+    // Le viewer ne conteste jamais SA case : le seuil affiché est celui d'une
+    // case adverse (identique pour toutes, le propriétaire ne votant pas).
+    contestThreshold: showReveal ? pbcContestThreshold(state, viewerId) : null,
     totalRounds: state.letters.length,
     letter: state.phase === 'countdown' ? '?' : pbcCurrentLetter(state),
     myAnswers: answers[viewerId] ?? null,

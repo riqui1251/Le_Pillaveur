@@ -171,7 +171,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
         })}
       </div>
       {state.phase === 'question' && (
-        <p className="text-center text-sm text-white/40">{t('answerOnPhone')}</p>
+        <p className="text-center text-sm text-white/75">{t('answerOnPhone')}</p>
       )}
     </div>
   )

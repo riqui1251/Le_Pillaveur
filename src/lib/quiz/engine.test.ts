@@ -11,6 +11,7 @@ import {
   QUIZ_POINTS_SPEED_MAX,
   QUIZ_QUESTION_MS,
   QUIZ_REVEAL_MS,
+  QUIZ_REVEAL_MIN_MS,
   QUIZ_SIPS_WRONG,
   type QuizQuestion,
   type QuizState,
@@ -34,8 +35,9 @@ const DUO = [
 ]
 
 /** Partie créée puis countdown consommé : 1re question pile à T0. */
-function make(count = 3): QuizState {
-  const raw = createQuizState(DUO, POOL, count, 'seed', T0 - QUIZ_COUNTDOWN_MS)
+function make(count = 3, withBot = false): QuizState {
+  const roster = withBot ? [DUO[0], { ...DUO[1], isBot: true }] : DUO
+  const raw = createQuizState(roster, POOL, count, 'seed', T0 - QUIZ_COUNTDOWN_MS)
   return reduceQuiz(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
 }
 
@@ -156,6 +158,49 @@ describe('ANSWER', () => {
   })
 })
 
+describe('gorgées annoncées = gorgées appliquées (F35)', () => {
+  /**
+   * Le moteur est la SEULE source de vérité des gorgées : le nombre annoncé
+   * au joueur (`lastResult.perPlayer[id].sips`) doit être exactement celui
+   * ajouté à son compteur. Ce test verrouille la correspondance — c'est elle
+   * que l'affichage doit reprendre, jamais une constante recopiée.
+   */
+  it('le nombre annoncé au reveal est exactement celui ajouté au compteur, manche après manche', () => {
+    let s = make(3)
+    const before = new Map(s.players.map((p) => [p.id, p.sips]))
+    for (let q = 0; q < 3; q += 1) {
+      const good = answerOf(s)
+      // « a » répond juste, « b » répond faux (et parfois pas du tout).
+      const qStart = s.questionStartAt
+      s = reduceQuiz(s, { type: 'ANSWER', playerId: 'a', choice: good, now: qStart + 1_000 })
+      if (q < 2) {
+        s = reduceQuiz(s, { type: 'ANSWER', playerId: 'b', choice: (good + 1) % 4, now: qStart + 1_200 })
+      } else {
+        // Dernière question : « b » ne répond pas du tout (trop lent).
+        s = reduceQuiz(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt! })
+      }
+      expect(s.phase).toBe('reveal')
+      for (const p of s.players) {
+        const announced = s.lastResult!.perPlayer[p.id].sips
+        expect(p.sips - before.get(p.id)!).toBe(announced)
+        // Et l'annonce reste cohérente avec la règle : 0 si juste, sinon le barème.
+        expect(announced).toBe(s.lastResult!.perPlayer[p.id].correct ? 0 : QUIZ_SIPS_WRONG)
+        before.set(p.id, p.sips)
+      }
+      if (s.phase === 'reveal' && q < 2) {
+        s = reduceQuiz(s, {
+          type: 'CONTINUE',
+          playerId: 'a',
+          now: (s.phaseEndsAt ?? T0) - QUIZ_REVEAL_MS + QUIZ_REVEAL_MIN_MS,
+        })
+      }
+    }
+    // Total cumulé = somme des annonces (aucune gorgée fantôme).
+    expect(s.players.find((p) => p.id === 'b')?.sips).toBe(3 * QUIZ_SIPS_WRONG)
+    expect(s.players.find((p) => p.id === 'a')?.sips).toBe(0)
+  })
+})
+
 describe('ADVANCE / CONTINUE (reveal → suite)', () => {
   function toReveal(s: QuizState): QuizState {
     let n = reduceQuiz(s, { type: 'ANSWER', playerId: 'a', choice: 0, now: T0 + 1000 })
@@ -177,11 +222,25 @@ describe('ADVANCE / CONTINUE (reveal → suite)', () => {
     expect(s.questionStartAt).toBe(t1)
   })
 
-  it('CONTINUE saute le reveal sans attendre ; dernière question → podium', () => {
-    let s = toReveal(make(1))
-    s = reduceQuiz(s, { type: 'CONTINUE', playerId: 'a', now: T0 + 2000 })
-    expect(s.phase).toBe('finished')
-    expect(s.phaseEndsAt).toBeNull()
+  it('CONTINUE saute le reveal après le temps de lecture ; dernière question → podium', () => {
+    const s = toReveal(make(1))
+    // Le premier impatient ne peut plus escamoter la bonne réponse (F33).
+    expect(() =>
+      reduceQuiz(s, { type: 'CONTINUE', playerId: 'a', now: T0 + 1000 + QUIZ_REVEAL_MIN_MS - 1 })
+    ).toThrow('READING_TIME')
+    const skipped = reduceQuiz(s, {
+      type: 'CONTINUE',
+      playerId: 'a',
+      now: T0 + 1000 + QUIZ_REVEAL_MIN_MS,
+    })
+    expect(skipped.phase).toBe('finished')
+    expect(skipped.phaseEndsAt).toBeNull()
+  })
+
+  it('un BOT (tick de service) n’est pas soumis au temps de lecture', () => {
+    const s = toReveal(make(1, true))
+    const skipped = reduceQuiz(s, { type: 'CONTINUE', playerId: 'b', now: T0 + 1000 })
+    expect(skipped.phase).toBe('finished')
   })
 
   it('acteur courant toujours null (échéances serveur en guise d’arbitre)', () => {

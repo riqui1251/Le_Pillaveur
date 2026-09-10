@@ -103,7 +103,7 @@ export function TvPlinko({ state, frame }: { state: PlinkoCastState; frame: Plin
             </>
           ) : (
             <>
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-gold/60">{t('turnOf')}</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-gold/90">{t('turnOf')}</p>
               <p className="text-4xl font-black sm:text-5xl">{state.currentPlayerName ?? '—'}</p>
             </>
           )}

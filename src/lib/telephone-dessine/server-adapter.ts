@@ -7,6 +7,7 @@ import {
   toTelephoneClientView,
   toTelephoneSpectatorView,
   TelephoneEngineError,
+  TELEPHONE_REVEAL_MS,
   type TelephoneState,
 } from './engine'
 import type { Stroke } from '@/lib/crobard/engine'
@@ -51,6 +52,13 @@ export function parseTelephoneState(json: string | null): TelephoneState | null 
       rematchVotes: raw.rematchVotes ?? [],
       submittedIds: raw.submittedIds ?? [],
       revealOrder: raw.revealOrder ?? [],
+      // Parties LANCÉES avant l'horloge de révélation : leur reveal n'a pas
+      // d'échéance et resterait suspendu au seul meneur. On lui en pose une
+      // à la première relecture — la table repart toute seule.
+      phaseEndsAt:
+        raw.phase === 'reveal' && raw.phaseEndsAt == null
+          ? Date.now() + TELEPHONE_REVEAL_MS
+          : raw.phaseEndsAt,
     }
   } catch {
     return null
@@ -123,7 +131,7 @@ export function applyTelephoneRoomAction(
       case 'previous':
         return {
           ok: true,
-          state: reduceTelephone(state, { type: 'PREVIOUS', playerId: userId }),
+          state: reduceTelephone(state, { type: 'PREVIOUS', playerId: userId, now: Date.now() }),
         }
       case 'bot':
         return applyTelephoneBotAction(state)

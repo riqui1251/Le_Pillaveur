@@ -1,7 +1,8 @@
 "use client"
 
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { useTvRoom } from '@/hooks/useTvRoom'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import type { TCClientView } from '@/lib/toucher-coule/engine'
@@ -88,13 +89,34 @@ export function TvRoomView({ code }: { code: string }) {
   const t = useTranslations('tv')
   const normalized = code.toUpperCase()
   const { room, notFound, frame } = useTvRoom(normalized)
+  const countedRef = useRef(false)
+
+  /**
+   * Mesure d'usage du mode TV : un simple « une TV de plus s'est allumée
+   * aujourd'hui », sans identifiant ni code de table (voir
+   * /api/tv/opened). Une seule fois par écran ouvert — le garde-fou couvre le
+   * double montage du mode strict en développement.
+   */
+  useEffect(() => {
+    if (countedRef.current) return
+    countedRef.current = true
+    void fetch('/api/tv/opened', { method: 'POST' }).catch(() => {})
+  }, [])
 
   if (notFound) {
     return (
       <TvStage title={t('brand')} code={normalized}>
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-          <p className="text-5xl font-black text-white/70">{t('notFound')}</p>
-          <p className="text-white/40">{t('notFoundHint')}</p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+          <p className="text-5xl font-black text-cream">{t('notFound')}</p>
+          <p className="text-lg text-white/70">{t('notFoundHint')}</p>
+          {/* Sans issue, cet écran était un cul-de-sac : sur une télé, il n'y
+              a ni barre d'adresse ni bouton « retour » à portée de main. */}
+          <Link
+            href="/tv"
+            className="mt-2 rounded-2xl border border-gold/50 bg-gold/15 px-8 py-3 text-xl font-bold text-gold transition-colors hover:bg-gold/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+          >
+            {t('changeCode')}
+          </Link>
         </div>
       </TvStage>
     )
@@ -104,7 +126,7 @@ export function TvRoomView({ code }: { code: string }) {
     return (
       <TvStage title={t('brand')} code={normalized}>
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-3xl text-white/50">{t('loading')}</p>
+          <p className="text-3xl text-white/75">{t('loading')}</p>
         </div>
       </TvStage>
     )
@@ -135,7 +157,7 @@ export function TvRoomView({ code }: { code: string }) {
           )
         ) : (
           <div className="flex flex-1 items-center justify-center">
-            <p className="text-3xl text-white/50">{t('loading')}</p>
+            <p className="text-3xl text-white/75">{t('loading')}</p>
           </div>
         )}
       </TvStage>
@@ -163,7 +185,7 @@ export function TvRoomView({ code }: { code: string }) {
     content = (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
         <p className="text-6xl font-black text-cream">{t('starting')}</p>
-        <p className="text-2xl text-white/50">{t('startingHint')}</p>
+        <p className="text-2xl text-white/75">{t('startingHint')}</p>
       </div>
     )
   } else if (room.status === 'waiting' || !state) {

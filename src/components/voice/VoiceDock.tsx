@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, MicOff, Headphones, PhoneCall, PhoneOff, Volume2, VolumeX, Speaker, Ear, X, Loader2 } from 'lucide-react'
+import { Mic, MicOff, MicVocal, Headphones, PhoneCall, PhoneOff, Volume2, VolumeX, Speaker, Ear, X, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useVoiceChat } from '@/hooks/useVoiceChat'
@@ -145,7 +145,7 @@ export function VoiceDock() {
             <p className="flex items-center gap-2 text-sm font-bold text-white">
               <Mic className="h-4 w-4 text-emerald-300" /> {t('prompt.title')}
             </p>
-            <p className="mt-1 text-xs text-white/50">{t('prompt.hint')}</p>
+            <p className="mt-1 text-xs text-white/50">{t('prompt.micHint')}</p>
             <div className="mt-3 flex gap-2">
               <button
                 onClick={acceptPrompt}
@@ -219,6 +219,40 @@ export function VoiceDock() {
                 <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
                   {t('banned')}
                 </p>
+              )}
+
+              {/* Pannes en cours de vocal — annoncées, avec de quoi repartir.
+                  Sans ça, le vocal mourait sans un mot : le joueur croyait
+                  simplement que plus personne ne parlait. */}
+              {voice.joined && voice.micLost && (
+                <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2">
+                  <p className="flex items-start gap-2 text-xs text-amber-100">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    {t('micLost')}
+                  </p>
+                  <button
+                    onClick={() => void voice.resumeMic()}
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-500/25 py-1.5 text-xs font-bold text-amber-50 transition-colors hover:bg-amber-500/40"
+                  >
+                    <MicVocal className="h-3.5 w-3.5" />
+                    {t('resumeMic')}
+                  </button>
+                </div>
+              )}
+              {voice.joined && voice.signalingLost && (
+                <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2">
+                  <p className="flex items-start gap-2 text-xs text-red-100">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    {t('signalLost')}
+                  </p>
+                  <button
+                    onClick={() => void voice.reconnect()}
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-red-500/25 py-1.5 text-xs font-bold text-red-50 transition-colors hover:bg-red-500/40"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    {t('reconnect')}
+                  </button>
+                </div>
               )}
 
               {/* Contrôles */}
@@ -302,10 +336,31 @@ export function VoiceDock() {
               <ul className="space-y-1.5">
                 {members.map((m) => {
                   const self = m.userId === user.id
-                  const inVoice = self ? voice.joined : voice.roster.has(m.userId)
                   const isSpeaking = Boolean(voice.speaking[m.userId])
                   const isMuted = voice.mutedPeers.has(m.userId)
-                  const status = voice.peerStatus[m.userId]
+                  // Ce qu'on affiche à droite d'un joueur, et RIEN d'autre :
+                  //  - 'connected' / 'connecting' / 'failed' : état réel de la
+                  //    liaison pair-à-pair (un pair annoncé en vocal mais dont
+                  //    la connexion a échoué ne doit pas porter la pastille
+                  //    verte : c'est ce mensonge qui laissait tout le monde
+                  //    chercher pourquoi il n'entendait rien) ;
+                  //  - 'absent' : on sait qu'il n'est pas en vocal ;
+                  //  - null : ON NE SAIT PAS, donc on ne dit rien.
+                  //
+                  // Le cas `null` est la contrepartie du précédent : tant qu'on
+                  // n'a pas rejoint le vocal soi-même, il n'existe aucune
+                  // connexion ni aucune liste de présence — ni « en cours de
+                  // connexion », ni « pas en vocal » ne seraient vrais pour les
+                  // autres. Seul son propre état reste connaissable.
+                  const peerState: 'connected' | 'connecting' | 'failed' | 'absent' | null = self
+                    ? voice.joined
+                      ? 'connected'
+                      : 'absent'
+                    : !voice.joined
+                      ? null
+                      : voice.roster.has(m.userId)
+                        ? (voice.peerStatus[m.userId] ?? 'connecting')
+                        : 'absent'
                   return (
                     <li
                       key={m.userId}
@@ -314,7 +369,7 @@ export function VoiceDock() {
                       <span
                         className={cn(
                           'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base transition-shadow',
-                          isSpeaking && inVoice && 'ring-2 ring-emerald-400'
+                          isSpeaking && peerState === 'connected' && 'ring-2 ring-emerald-400'
                         )}
                         aria-hidden
                       >
@@ -324,22 +379,31 @@ export function VoiceDock() {
                         {m.displayName}
                         {self && <span className="text-white/40"> {t('you')}</span>}
                       </span>
-                      {inVoice ? (
-                        status === 'connecting' && !self ? (
-                          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-white/40" />
-                        ) : (
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full bg-emerald-400"
-                            title={t('inVoice')}
-                            aria-label={t('inVoice')}
-                          />
-                        )
-                      ) : (
+                      {peerState === 'connecting' && (
+                        <span className="flex shrink-0 items-center gap-1 text-[9px] uppercase tracking-wide text-white/40">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {t('connecting')}
+                        </span>
+                      )}
+                      {peerState === 'connected' && (
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full bg-emerald-400"
+                          title={t('inVoice')}
+                          aria-label={t('inVoice')}
+                        />
+                      )}
+                      {peerState === 'failed' && (
+                        <span className="flex shrink-0 items-center gap-1 text-[9px] uppercase tracking-wide text-red-300">
+                          <span className="h-2 w-2 rounded-full bg-red-400" aria-hidden />
+                          {t('peerFailed')}
+                        </span>
+                      )}
+                      {peerState === 'absent' && (
                         <span className="shrink-0 text-[9px] uppercase tracking-wide text-white/30">
                           {t('notInVoice')}
                         </span>
                       )}
-                      {!self && inVoice && voice.joined && (
+                      {!self && peerState === 'connected' && (
                         <button
                           onClick={() => voice.toggleMutePeer(m.userId)}
                           className={cn(

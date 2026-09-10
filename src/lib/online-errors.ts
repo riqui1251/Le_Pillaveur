@@ -58,6 +58,12 @@ export const ONLINE_ERROR_CODES = [
   // Actions de jeu : intention mal formée, ou joueur retiré de la salle
   'invalid_action',
   'replaced_by_bot',
+  // Refus des moteurs qui DEMANDENT quelque chose au joueur : sans code dédié
+  // ils tombaient sur « Action impossible », qui n'explique rien.
+  'reading_time',
+  'stop_too_early',
+  'incomplete_stop',
+  'contest_needs_more_players',
   // Refus du moteur sans code dédié — filet générique, jamais de texte brut
   'action_failed',
 ] as const
@@ -79,6 +85,14 @@ const LEGACY_ALIASES: Record<string, OnlineErrorCode> = {
   NOT_AFK_YET: 'not_afk_yet',
   NOTHING_TO_REPLACE: 'nothing_to_replace',
   ACTION_FAILED: 'action_failed',
+  // Plancher de lecture des écrans de révélation — même nom levé par les
+  // moteurs Menteur, Quiz, Imposteur, Petit Bac et Président : un seul code.
+  READING_TIME: 'reading_time',
+  // Petit Bac : STOP avant le délai minimal, STOP sur une grille incomplète,
+  // et contestation impossible faute de votants sur une petite table.
+  STOP_TOO_EARLY: 'stop_too_early',
+  INCOMPLETE_STOP: 'incomplete_stop',
+  CONTEST_NEEDS_MORE_PLAYERS: 'contest_needs_more_players',
 }
 
 /** Résout une valeur `error` de l'API vers un code stable, ou null si inconnue */
@@ -137,6 +151,10 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   max_players: 'Trop de joueurs pour ce format (max {count})',
   invalid_action: 'Action invalide',
   replaced_by_bot: 'Tu as été remplacé par un bot',
+  reading_time: 'Laissez le temps de lire le résultat',
+  stop_too_early: 'Trop tôt pour crier STOP',
+  incomplete_stop: 'Remplissez toutes les cases avant de crier STOP',
+  contest_needs_more_players: 'Pas assez de joueurs pour contester une réponse',
   action_failed: 'Action impossible',
 }
 

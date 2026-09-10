@@ -24,6 +24,19 @@ export const IMPOSTEUR_COUNTDOWN_MS = 5_000
 export const IMPOSTEUR_CLUE_MS = 45_000
 /** Temps pour voter (les retardataires s'abstiennent). */
 export const IMPOSTEUR_VOTE_MS = 60_000
+/**
+ * Durée d'affichage de la révélation (mot + camp de l'éliminé). L'horloge
+ * serveur enchaîne d'elle-même : la table ne dépend plus du seul « premier
+ * vivant » pour repartir. Calée sur la durée du vote — c'est l'échéance du
+ * pire cas (personne ne clique), pas le rythme normal : en pratique le
+ * « manche suivante » tombe bien avant.
+ */
+export const IMPOSTEUR_REVEAL_MS = IMPOSTEUR_VOTE_MS
+/**
+ * TEMPS DE LECTURE MINIMAL de la révélation : le premier impatient ne peut
+ * plus escamoter le mot et le camp de l'éliminé pour toute la table (F33).
+ */
+export const IMPOSTEUR_REVEAL_MIN_MS = 4_000
 /** Longueur maximale d'un indice. */
 export const IMPOSTEUR_CLUE_MAX_LEN = 30
 /** Indice automatique d'un joueur muet (timeout ou bot). */
@@ -293,8 +306,61 @@ function resolveVotes(state: ImposteurState, now: number): ImposteurState {
       team,
       sips,
     },
-    ...enterPhase(state.phaseSeq, 'reveal', null, now),
+    ...enterPhase(state.phaseSeq, 'reveal', IMPOSTEUR_REVEAL_MS, now),
     phase: 'reveal',
+    version: state.version + 1,
+  }
+}
+
+/**
+ * Millisecondes écoulées depuis l'entrée en révélation, déduites de
+ * l'échéance de phase (l'horloge SERVEUR reste la seule autorité).
+ */
+export function imposteurRevealElapsedMs(state: ImposteurState, now: number): number {
+  if (state.phaseEndsAt === null) return Number.POSITIVE_INFINITY
+  return now - (state.phaseEndsAt - IMPOSTEUR_REVEAL_MS)
+}
+
+/** Suite de la révélation : fin de partie, ou nouvelle manche d'indices. */
+function afterReveal(state: ImposteurState, now: number): ImposteurState {
+  const alive = imposteurAlive(state)
+  const imposteursAlive = alive.filter((p) => p.team === 'imposteur')
+  if (imposteursAlive.length === 0) {
+    return {
+      ...state,
+      phase: 'finished',
+      phaseSeq: state.phaseSeq + 1,
+      phaseEndsAt: null,
+      winnerTeam: 'civil',
+      version: state.version + 1,
+    }
+  }
+  // L'imposteur gagne en atteignant les 3 derniers — sauf table de 3
+  // joueurs, où la partie DÉMARRE à 3 : il doit y survivre jusqu'à 2.
+  // Généralisation à N imposteurs : gagné aussi dès que les imposteurs
+  // ne sont plus minoritaires parmi les vivants (parité).
+  const imposteurWinAt = state.players.length <= 3 ? 2 : 3
+  const civilsAlive = alive.length - imposteursAlive.length
+  if (imposteursAlive.length >= civilsAlive || alive.length <= imposteurWinAt) {
+    return {
+      ...state,
+      phase: 'finished',
+      phaseSeq: state.phaseSeq + 1,
+      phaseEndsAt: null,
+      winnerTeam: 'imposteur',
+      version: state.version + 1,
+    }
+  }
+  // Nouvelle manche d'indices (ordre = vivants, ordre de table conservé).
+  return {
+    ...state,
+    clueOrder: alive.map((p) => p.id),
+    clueTurnIdx: 0,
+    pendingVotes: {},
+    lastReveal: null,
+    round: state.round + 1,
+    ...enterPhase(state.phaseSeq, 'clue', IMPOSTEUR_CLUE_MS, now),
+    phase: 'clue',
     version: state.version + 1,
   }
 }
@@ -348,54 +414,23 @@ export function reduceImposteur(state: ImposteurState, action: ImposteurAction):
         // Les retardataires s'abstiennent.
         return resolveVotes(state, action.now)
       }
+      // L'échéance enchaîne la révélation, même si personne ne clique.
+      if (state.phase === 'reveal') return afterReveal(state, action.now)
       throw new ImposteurEngineError('NOTHING_TO_ADVANCE')
     }
 
     case 'CONTINUE': {
       if (state.phase !== 'reveal') throw new ImposteurEngineError('NOT_REVEAL')
-      if (!state.players.some((p) => p.id === action.playerId)) {
-        throw new ImposteurEngineError('UNKNOWN_PLAYER')
+      const asker = state.players.find((p) => p.id === action.playerId)
+      if (!asker) throw new ImposteurEngineError('UNKNOWN_PLAYER')
+      // Plancher de lecture : sans lui, le premier tap effaçait le mot et le
+      // camp de l'éliminé avant que les autres aient pu les lire (F33). Un
+      // BOT en est exempt — il ne lit rien, et son tick de service est déjà
+      // cadencé côté client.
+      if (!asker.isBot && imposteurRevealElapsedMs(state, action.now) < IMPOSTEUR_REVEAL_MIN_MS) {
+        throw new ImposteurEngineError('READING_TIME')
       }
-      const alive = imposteurAlive(state)
-      const imposteursAlive = alive.filter((p) => p.team === 'imposteur')
-      if (imposteursAlive.length === 0) {
-        return {
-          ...state,
-          phase: 'finished',
-          phaseSeq: state.phaseSeq + 1,
-          phaseEndsAt: null,
-          winnerTeam: 'civil',
-          version: state.version + 1,
-        }
-      }
-      // L'imposteur gagne en atteignant les 3 derniers — sauf table de 3
-      // joueurs, où la partie DÉMARRE à 3 : il doit y survivre jusqu'à 2.
-      // Généralisation à N imposteurs : gagné aussi dès que les imposteurs
-      // ne sont plus minoritaires parmi les vivants (parité).
-      const imposteurWinAt = state.players.length <= 3 ? 2 : 3
-      const civilsAlive = alive.length - imposteursAlive.length
-      if (imposteursAlive.length >= civilsAlive || alive.length <= imposteurWinAt) {
-        return {
-          ...state,
-          phase: 'finished',
-          phaseSeq: state.phaseSeq + 1,
-          phaseEndsAt: null,
-          winnerTeam: 'imposteur',
-          version: state.version + 1,
-        }
-      }
-      // Nouvelle manche d'indices (ordre = vivants, ordre de table conservé).
-      return {
-        ...state,
-        clueOrder: alive.map((p) => p.id),
-        clueTurnIdx: 0,
-        pendingVotes: {},
-        lastReveal: null,
-        round: state.round + 1,
-        ...enterPhase(state.phaseSeq, 'clue', IMPOSTEUR_CLUE_MS, action.now),
-        phase: 'clue',
-        version: state.version + 1,
-      }
+      return afterReveal(state, action.now)
     }
 
     case 'LEAVE': {
@@ -482,6 +517,8 @@ export type ImposteurClientView = Omit<
   /** Clé de phase pour les ticks ADVANCE. */
   phaseKey: string
   myVote: string | null
+  /** Instant (epoch ms) à partir duquel le « continuer » du reveal est accepté. */
+  continueAt: number | null
 }
 
 /**
@@ -501,6 +538,10 @@ export function toImposteurClientView(
     ...rest,
     phaseKey: phaseKey(state),
     myVote: pendingVotes[viewerId] ?? null,
+    continueAt:
+      state.phase === 'reveal' && state.phaseEndsAt !== null
+        ? state.phaseEndsAt - IMPOSTEUR_REVEAL_MS + IMPOSTEUR_REVEAL_MIN_MS
+        : null,
     players: players.map((p) => ({
       id: p.id,
       name: p.name,

@@ -3,6 +3,8 @@ import {
   createLGState,
   currentLGActorId,
   lgAlive,
+  lgBotHunterTarget,
+  lgBotWitchAction,
   lgRolesFor,
   reduceLG,
   toLGClientView,
@@ -801,5 +803,165 @@ describe('échéance raccourcie quand l\'acteur a agi (LG_EARLY_FINISH_MS)', () 
     const s = craft(SIX, 'night-wolves', { phaseEndsAt: T0 + LG_WOLVES_MS })
     const next = reduceLG(s, { type: 'WOLF_VOTE', playerId: 'loup1', targetId: 'vil1' })
     expect(next.phaseEndsAt).toBe(T0 + LG_WOLVES_MS)
+  })
+})
+
+describe('bots à rôle clé (F39)', () => {
+  describe('sorcière', () => {
+    it('se sauve elle-même quand les loups la désignent', () => {
+      const s = craft(SIX, 'night-witch', { nightVictimId: 'sor' })
+      expect(lgBotWitchAction(s, 'sor')).toEqual({ action: 'save' })
+    })
+
+    it('sauve le maire (sa voix compte double au lynchage)', () => {
+      const s = craft(SIX, 'night-witch', { nightVictimId: 'vil1', mayorId: 'vil1' })
+      expect(lgBotWitchAction(s, 'sor')).toEqual({ action: 'save' })
+    })
+
+    it('sauve quand la mort ferait passer les loups à parité', () => {
+      // 2 loups, 3 villageois : si vil1 meurt, 2 contre 2 — village perdu.
+      const table = [
+        P('loup1', 'loup'),
+        P('loup2', 'loup'),
+        P('sor', 'sorciere'),
+        P('vil1', 'villageois'),
+        P('vil2', 'villageois'),
+      ]
+      const s = craft(table, 'night-witch', { nightVictimId: 'vil1' })
+      expect(lgBotWitchAction(s, 'sor')).toEqual({ action: 'save' })
+    })
+
+    it('garde la potion de vie quand le village a de la marge', () => {
+      const s = craft(SIX, 'night-witch', { nightVictimId: 'vil1' })
+      expect(lgBotWitchAction(s, 'sor')).toEqual({ action: 'none' })
+    })
+
+    it('empoisonne rarement : village au bord de la bascule ET suspect désigné', () => {
+      const table = [
+        P('loup1', 'loup'),
+        P('loup2', 'loup'),
+        P('sor', 'sorciere'),
+        P('vil1', 'villageois'),
+        P('vil2', 'villageois'),
+        P('vil3', 'villageois'),
+      ]
+      const debate = [
+        { playerId: 'vil1', kind: 'suspect' as const, targetId: 'loup2', round: 1 },
+        { playerId: 'vil2', kind: 'suspect' as const, targetId: 'loup2', round: 1 },
+        { playerId: 'vil3', kind: 'suspect' as const, targetId: 'vil1', round: 1 },
+      ]
+      // Potion de vie déjà bue : seule la potion de mort reste sur la table.
+      const s = craft(table, 'night-witch', {
+        nightVictimId: 'vil1',
+        witchSaveUsed: true,
+        debateSpeech: debate,
+      })
+      expect(lgBotWitchAction(s, 'sor')).toEqual({ action: 'kill', targetId: 'loup2' })
+
+      // Même situation SANS débat : elle garde sa fiole (aucun suspect).
+      const mute = craft(table, 'night-witch', { nightVictimId: 'vil1', witchSaveUsed: true })
+      expect(lgBotWitchAction(mute, 'sor')).toEqual({ action: 'none' })
+
+      // Village confortable (un seul loup) : pas de poison non plus.
+      const safe = craft(SIX, 'night-witch', {
+        nightVictimId: 'vil1',
+        witchSaveUsed: true,
+        debateSpeech: debate,
+      })
+      expect(lgBotWitchAction(safe, 'sor')).toEqual({ action: 'none' })
+    })
+
+    it('ses décisions sont acceptées par le réducteur (action légale)', () => {
+      const s = craft(SIX, 'night-witch', { nightVictimId: 'sor', phaseEndsAt: T0 + LG_WITCH_MS })
+      const decision = lgBotWitchAction(s, 'sor')
+      const next = reduceLG(s, {
+        type: 'WITCH_ACTION',
+        playerId: 'sor',
+        action: decision.action,
+        targetId: decision.targetId,
+        now: T0,
+      })
+      expect(next.witchActed).toBe(true)
+      expect(next.witchSavedId).toBe('sor')
+    })
+
+    it('ne décide rien si elle est morte, ou si le joueur n’est pas la sorcière', () => {
+      const dead = craft(
+        SIX.map((p) => (p.id === 'sor' ? { ...p, alive: false } : p)),
+        'night-witch',
+        { nightVictimId: 'vil1' }
+      )
+      expect(lgBotWitchAction(dead, 'sor')).toEqual({ action: 'none' })
+      expect(lgBotWitchAction(dead, 'vil1')).toEqual({ action: 'none' })
+    })
+  })
+
+  describe('chasseur', () => {
+    const hunterDead = SIX.map((p) => (p.id === 'cha' ? { ...p, alive: false } : p))
+
+    it('tire sur celui qui l’a accusé au débat', () => {
+      const s = craft(SIX, 'hunter-shot', {
+        pendingHunterId: 'cha',
+        players: hunterDead,
+        debateSpeech: [
+          { playerId: 'loup1', kind: 'suspect', targetId: 'cha', round: 1 },
+          { playerId: 'vil1', kind: 'suspect', targetId: 'vil2', round: 1 },
+        ],
+      })
+      expect(lgBotHunterTarget(s, 'cha')).toBe('loup1')
+    })
+
+    it('à défaut, tire sur le joueur que le village soupçonnait le plus', () => {
+      const s = craft(SIX, 'hunter-shot', {
+        pendingHunterId: 'cha',
+        players: hunterDead,
+        debateSpeech: [
+          { playerId: 'vil1', kind: 'suspect', targetId: 'loup1', round: 1 },
+          { playerId: 'vil2', kind: 'suspect', targetId: 'loup1', round: 1 },
+          { playerId: 'voy', kind: 'suspect', targetId: 'vil1', round: 1 },
+        ],
+      })
+      expect(lgBotHunterTarget(s, 'cha')).toBe('loup1')
+    })
+
+    it('tient compte des voix du dernier vote, jamais de lui-même ni d’un mort', () => {
+      const s = craft(SIX, 'hunter-shot', {
+        pendingHunterId: 'cha',
+        players: SIX.map((p) =>
+          p.id === 'cha' || p.id === 'vil2' ? { ...p, alive: false } : p
+        ),
+        lastVoteResult: {
+          round: 1,
+          tally: { cha: 3, vil2: 4, voy: 2 },
+          eliminatedId: 'cha',
+          tie: false,
+          role: 'chasseur',
+        },
+      })
+      expect(lgBotHunterTarget(s, 'cha')).toBe('voy')
+    })
+
+    it('table muette : une cible vivante quand même, et toujours la même', () => {
+      const s = craft(SIX, 'hunter-shot', { pendingHunterId: 'cha', players: hunterDead })
+      const target = lgBotHunterTarget(s, 'cha')
+      expect(target).not.toBeNull()
+      expect(target).not.toBe('cha')
+      expect(s.players.find((p) => p.id === target)?.alive).toBe(true)
+      expect(lgBotHunterTarget(s, 'cha')).toBe(target)
+    })
+
+    it('sa cible est acceptée par le réducteur', () => {
+      const s = craft(SIX, 'hunter-shot', {
+        pendingHunterId: 'cha',
+        afterHunter: 'night',
+        phaseEndsAt: T0 + 30_000,
+        players: hunterDead,
+        debateSpeech: [{ playerId: 'loup1', kind: 'suspect', targetId: 'cha', round: 1 }],
+      })
+      const targetId = lgBotHunterTarget(s, 'cha')!
+      const next = reduceLG(s, { type: 'HUNTER_SHOT', playerId: 'cha', targetId, now: T0 })
+      expect(next.players.find((p) => p.id === targetId)?.alive).toBe(false)
+      expect(next.deaths.some((d) => d.playerId === targetId && d.cause === 'chasseur')).toBe(true)
+    })
   })
 })

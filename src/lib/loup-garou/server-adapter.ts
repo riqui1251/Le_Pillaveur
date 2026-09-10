@@ -2,6 +2,8 @@ import {
   createLGState,
   currentLGActorId,
   lgAlive,
+  lgBotHunterTarget,
+  lgBotWitchAction,
   reduceLG,
   toLGClientView,
   toLGSpectatorView,
@@ -337,10 +339,15 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
     } else if (next.phase === 'night-witch') {
       const witch = alive().find((p) => p.isBot && p.role === 'sorciere')
       if (witch && !next.witchActed) {
+        // Décision DÉTERMINISTE du moteur (lgBotWitchAction) : une sorcière
+        // bot sauve quand ça vaut le coup et n'empoisonne que rarement —
+        // avant, elle passait systématiquement son tour (F39).
+        const decision = lgBotWitchAction(next, witch.id)
         next = reduceLG(next, {
           type: 'WITCH_ACTION',
           playerId: witch.id,
-          action: 'none',
+          action: decision.action,
+          targetId: decision.targetId,
           now: Date.now(),
         })
         acted = true
@@ -348,12 +355,14 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
     } else if (next.phase === 'hunter-shot') {
       const hunter = next.players.find((p) => p.id === next.pendingHunterId)
       if (hunter?.isBot) {
-        const targets = alive()
-        if (targets.length > 0) {
+        // Le chasseur bot visait au hasard : il vise désormais le joueur que
+        // le débat et le vote désignent comme suspect (F39).
+        const targetId = lgBotHunterTarget(next, hunter.id)
+        if (targetId) {
           next = reduceLG(next, {
             type: 'HUNTER_SHOT',
             playerId: hunter.id,
-            targetId: pickRandom(targets).id,
+            targetId,
             now: Date.now(),
           })
           acted = true

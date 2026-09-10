@@ -57,7 +57,7 @@ export function TvSansFiltre({ room, state }: { room: TvRoomDto; state: SFClient
                   : 'border-white/10 bg-white/5 text-white/80'
               )}
             >
-              <span className="w-8 text-center text-white/40">{i + 1}</span>
+              <span className="w-8 text-center text-white/70">{i + 1}</span>
               <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
               {p.name}
               <span className="ml-auto inline-flex items-center gap-1.5 tabular-nums text-amber-200">

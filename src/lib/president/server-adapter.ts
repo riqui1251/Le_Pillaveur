@@ -70,6 +70,7 @@ export function parsePreState(json: string | null): PreState | null {
     return {
       ...raw,
       trickRun: raw.trickRun ?? null,
+      lastExchange: raw.lastExchange ?? null,
       trickPlays: raw.trickPlays ?? [],
       trickHistory: raw.trickHistory ?? [],
       passedIds: raw.passedIds ?? [],

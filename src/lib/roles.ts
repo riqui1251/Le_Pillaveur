@@ -126,9 +126,23 @@ export function canViewAccountActivity(role: string): boolean {
   return roleRank(role) >= ROLE_RANK.moderator
 }
 
-/** Retours joueurs (bugs, suggestions) : fondateur uniquement. */
+/**
+ * LECTURE des retours joueurs (bugs, suggestions) : modérateur et au-dessus.
+ * Ce sont les modérateurs et les admins qui font tourner le site au quotidien —
+ * leur cacher les bugs remontés n'apporte aucune sécurité, ça retarde juste la
+ * correction. La lecture ne donne aucun pouvoir : voir F44.
+ */
 export function canViewUserFeedback(role: string): boolean {
-  return normalizeRole(role) === 'fondateur'
+  return roleRank(role) >= ROLE_RANK.moderator
+}
+
+/**
+ * TRAITEMENT d'un retour (marquer lu / résolu, acquitter depuis la file) :
+ * admin et au-dessus. Clore un signalement engage l'exploitation du site, ce
+ * n'est pas de la lecture — on n'élargit donc pas au grade modérateur.
+ */
+export function canManageUserFeedback(role: string): boolean {
+  return roleRank(role) >= ROLE_RANK.admin
 }
 
 export function assignableRoles(actorRole: string): UserRole[] {

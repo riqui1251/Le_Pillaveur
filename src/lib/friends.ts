@@ -38,8 +38,26 @@ export async function areFriends(userIdA: string, userIdB: string): Promise<bool
 }
 
 export type SendFriendRequestResult = {
-  status: 'sent' | 'auto-accepted' | 'already-friends' | 'already-pending'
+  status: 'sent' | 'auto-accepted' | 'already-friends' | 'already-pending' | 'declined-cooldown'
   friendship: Friendship
+}
+
+/**
+ * Délai avant de pouvoir relancer quelqu'un qui a refusé. Sans lui, un refus
+ * n'arrêtait rien : la même demande pouvait revenir dans la seconde, en
+ * boucle. Sept jours laissent la place à un refus par erreur sans transformer
+ * la fonction en harcèlement à un clic.
+ */
+export const DECLINE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
+
+/** Le refus est-il encore trop frais pour relancer ? (fonction pure, testée) */
+export function isDeclineCooldownActive(
+  respondedAt: Date | null,
+  now: Date = new Date()
+): boolean {
+  // Refus d'avant l'introduction du délai (pas d'horodatage) : on laisse passer.
+  if (!respondedAt) return false
+  return now.getTime() - respondedAt.getTime() < DECLINE_COOLDOWN_MS
 }
 
 /**
@@ -57,6 +75,9 @@ export async function sendFriendRequest(
   if (existing) {
     if (existing.status === 'accepted') return { status: 'already-friends', friendship: existing }
     if (existing.status === 'pending') return { status: 'already-pending', friendship: existing }
+    if (isDeclineCooldownActive(existing.respondedAt)) {
+      return { status: 'declined-cooldown', friendship: existing }
+    }
     const reactivated = await prisma.friendship.update({
       where: { id: existing.id },
       data: { status: 'pending', respondedAt: null },

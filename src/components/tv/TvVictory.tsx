@@ -71,7 +71,7 @@ export function TvVictory({
         <p className="mt-2 font-display text-6xl font-bold text-gold sm:text-7xl">{winnerLabel}</p>
       </div>
       <div className="w-full max-w-lg">
-        <p className="mb-3 text-center text-sm font-semibold uppercase tracking-widest text-white/40">{t('standings')}</p>
+        <p className="mb-3 text-center text-sm font-semibold uppercase tracking-widest text-white/75">{t('standings')}</p>
         <div className="space-y-2">
           {standings.map((s, rank) => (
             <div
