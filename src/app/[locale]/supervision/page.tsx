@@ -84,6 +84,7 @@ import {
 import { ModerationTermsPanel } from '@/components/supervision/ModerationTermsPanel'
 import { NameModerationAttemptsPanel } from '@/components/supervision/NameModerationAttemptsPanel'
 import { CosmeticGrantsDialog } from '@/components/supervision/CosmeticGrantsDialog'
+import { GameSessionsPanel } from '@/components/supervision/GameSessionsPanel'
 import {
   SupervisionShell,
   SupervisionHeader,
@@ -2095,6 +2096,10 @@ export default function SupervisionPage() {
               )}
             </SectionCard>
           </div>
+
+          {/* Journal des parties : panneau autonome, hors de la boucle de
+              15 s (F40) — il se charge à l'ouverture de l'onglet. */}
+          <GameSessionsPanel />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <SectionCard icon={ScrollText} title={t('room.journalTitle')} description={t('room.journalDesc')}>

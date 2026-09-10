@@ -52,7 +52,7 @@ Si lo rechaza, no se registra ningún seguimiento de visita.
 
 ### 3.4 Chat y partidas en línea
 
-Los mensajes enviados en el **chat** (chat de partida y mensajes entre amigos) se almacenan en nuestros servidores y pueden someterse a un filtrado automático de lenguaje inapropiado. Se conservan un máximo de **12 meses** y luego se eliminan. El estado de las partidas en línea (jugadas, votos, dibujos) es temporal y se elimina junto con la mesa de juego.
+Los mensajes enviados en el **chat** (chat de partida y mensajes entre amigos) se almacenan en nuestros servidores y pueden someterse a un filtrado automático de lenguaje inapropiado. Se conservan un máximo de **12 meses** y luego se eliminan. El estado de las partidas en línea (jugadas, votos, dibujos) es temporal y se elimina junto con la mesa de juego. En cambio, conservamos un **registro de explotación** de las partidas iniciadas — juego, fecha, duración y participantes — durante **12 meses**, para seguir el uso del servicio y tramitar las denuncias. Este registro no contiene ningún contenido de partida, y una cuenta eliminada deja de aparecer nombrada en él.
 
 ### 3.5 Chat de voz
 
@@ -130,6 +130,7 @@ El editor sigue siendo el responsable del tratamiento. No se realiza ninguna otr
 - **Cuenta eliminada**: supresión o anonimización en un plazo máximo de **12 meses** tras la solicitud, salvo obligación legal de conservación más larga.
 - **Registros técnicos (direcciones IP, presencia)**: **6 meses**. La dirección IP y el país de la última conexión asociados a una cuenta se borran tras **6 meses** sin actividad; el historial de direcciones IP de una cuenta se elimina inmediatamente junto con la cuenta.
 - **Mensajes de chat**: **12 meses**.
+- **Registro de partidas iniciadas** (juego, fecha, duración, participantes): **12 meses**.
 - **Trazas de moderación de apodos**: **12 meses**.
 - **Datos de medición de audiencia**: **13 meses**.
 - **Comentarios**: conservación hasta **24 meses** o supresión previa solicitud; el correo electrónico de contacto asociado se borra si elimina su cuenta.

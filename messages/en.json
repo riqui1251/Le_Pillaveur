@@ -410,6 +410,15 @@
       "empty": "No open lobby — pick a game below to create one.",
       "title": "Open lobbies ({count})"
     },
+    "live": {
+      "title": "Games in progress · {count}",
+      "tables": "{count, plural, one {# table} other {# tables}}",
+      "openedAgo": "opened {minutes} min ago",
+      "justOpened": "just opened",
+      "more": "{count, plural, one {+ # more game in progress} other {+ # more games in progress}}",
+      "elsewhere": "{count, plural, one {# other game in progress on the site} other {# other games in progress on the site}}",
+      "notJoinable": "A game that has started cannot be joined — open your own table to play."
+    },
     "errors": {
       "generic": "Error",
       "network": "Network error",
@@ -4305,6 +4314,18 @@
       "analysis": "Analytics",
       "community": "Community",
       "moderation": "Moderation"
+    },
+    "gameSessions": {
+      "title": "Games launched",
+      "desc": "Every game actually launched, most recent first. Tap a row to see who played.",
+      "empty": "No game launched yet.",
+      "emptyHint": "Games appear here as soon as they start, even when they end without a ranking.",
+      "ongoing": "In progress",
+      "lineup": "{players} players · {humans} humans · {bots} bots",
+      "botTag": "Bot",
+      "deletedAccount": "Deleted account",
+      "noParticipants": "No participant recorded.",
+      "loadError": "Could not load the launched games."
     },
     "states": {
       "retry": "Retry",

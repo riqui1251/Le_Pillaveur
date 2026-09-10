@@ -8,6 +8,7 @@ import {
   streakBonusXp,
 } from '@/lib/online/cosmetics'
 import { checkMatchAchievements } from '@/lib/online/achievements'
+import { closeGameSession } from '@/lib/online/game-sessions'
 import {
   buildXpGainDetail,
   rememberXpGain,
@@ -421,6 +422,15 @@ export async function recordMatchResults(
   client: PrismaClient | Prisma.TransactionClient,
   args: { roomId: string; gameId: string; state: unknown }
 ): Promise<number> {
+  // Journal des parties : la partie vient de se terminer, sa ligne se ferme —
+  // AVANT tout le reste, car les règles de comptage ci-dessous font sortir
+  // plusieurs cas par la petite porte (jeu inconnu, solo contre bots) et la
+  // partie a bel et bien eu lieu dans tous.
+  try {
+    await closeGameSession(client, args.roomId)
+  } catch (e) {
+    console.error('[game-sessions] fermeture de partie échouée', e)
+  }
   const outcomes = matchOutcomesFor(args.gameId, args.state)
   if (!outcomes) return 0
   const rows = computeMatchResults(outcomes)

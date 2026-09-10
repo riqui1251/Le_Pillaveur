@@ -52,7 +52,7 @@ Se rifiuti, nessun tracciamento di visita viene registrato.
 
 ### 3.4 Chat e partite online
 
-I messaggi inviati nella **chat** (chat di partita e messaggi tra amici) sono memorizzati sui nostri server e possono essere sottoposti a un filtraggio automatico del linguaggio inappropriato. Sono conservati per un massimo di **12 mesi** e poi eliminati. Lo stato delle partite online (mosse, voti, disegni) è temporaneo ed eliminato insieme al tavolo di gioco.
+I messaggi inviati nella **chat** (chat di partita e messaggi tra amici) sono memorizzati sui nostri server e possono essere sottoposti a un filtraggio automatico del linguaggio inappropriato. Sono conservati per un massimo di **12 mesi** e poi eliminati. Lo stato delle partite online (mosse, voti, disegni) è temporaneo ed eliminato insieme al tavolo di gioco. Conserviamo invece un **registro operativo** delle partite avviate — gioco, data, durata e partecipanti — per **12 mesi**, per monitorare l'uso del servizio e istruire le segnalazioni. Questo registro non contiene alcun contenuto di partita, e un account eliminato non vi è più nominato.
 
 ### 3.5 Chat vocale
 
@@ -130,6 +130,7 @@ L'editore resta il titolare del trattamento. Nessun altro trasferimento a terzi 
 - **Account eliminato**: cancellazione o anonimizzazione entro un massimo di **12 mesi** dalla richiesta, salvo obbligo legale di conservazione più lunga.
 - **Log tecnici (indirizzi IP, presenza)**: **6 mesi**. L'indirizzo IP e il paese dell'ultima connessione associati a un account vengono cancellati dopo **6 mesi** di inattività; lo storico degli indirizzi IP di un account viene eliminato immediatamente insieme all'account.
 - **Messaggi di chat**: **12 mesi**.
+- **Registro delle partite avviate** (gioco, data, durata, partecipanti): **12 mesi**.
 - **Tracce di moderazione dei nickname**: **12 mesi**.
 - **Dati di misurazione dell'audience**: **13 mesi**.
 - **Feedback**: conservazione fino a **24 mesi** o cancellazione su richiesta; l'email di contatto associata viene cancellata se elimini il tuo account.

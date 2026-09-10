@@ -61,6 +61,86 @@ export type LobbyListItem = {
   members: { displayName: string; isReady: boolean }[]
 }
 
+/**
+ * Une partie EN COURS montrée au guichet. Purement informative : on ne peut
+ * pas rejoindre une salle lancée (POST /api/online/rooms/join répond
+ * `game_already_started`, sauf reprise de siège d'un joueur déjà inscrit), donc
+ * ce DTO ne porte VOLONTAIREMENT ni le code de la table ni son id de jointure.
+ */
+export type LiveGameItem = {
+  id: string
+  gameId: string
+  /** Pseudos des joueurs — seulement pour les tables PUBLIQUES (cf. summarizeLiveGames). */
+  playerNames: string[]
+  playerCount: number
+  /**
+   * Âge de la table en minutes. Il n'existe pas de colonne `startedAt` : on
+   * mesure depuis `createdAt` (ouverture de la table), c'est donc « ouverte
+   * il y a X », pas « joue depuis X » — le libellé i18n dit bien l'ouverture.
+   */
+  openedAgoMinutes: number
+}
+
+export type LobbyOverview = {
+  lobbies: LobbyListItem[]
+  /** Parties en cours DÉTAILLÉES — publiques uniquement. */
+  liveGames: LiveGameItem[]
+  /**
+   * Total ANONYME de parties en cours, toutes visibilités confondues : c'est
+   * la SEULE trace laissée par une table privée ou sur invitation.
+   */
+  liveGamesTotal: number
+}
+
+/** Ligne brute d'une salle candidate, telle que la lit `buildLobbyOverview`. */
+export type LiveRoomRow = {
+  id: string
+  gameId: string | null
+  status: string
+  visibility: string
+  createdAt: Date
+  /**
+   * Détail chargé UNIQUEMENT pour les tables publiques. `summarizeLiveGames`
+   * le rejette de toute façon si la visibilité n'est pas 'public' : la vie
+   * privée ne dépend pas de la prudence de l'appelant.
+   */
+  detail?: { names: string[]; playerCount: number }
+}
+
+/** Statuts d'une vraie partie en ligne. 'cast' (afficheur TV d'une partie LOCALE) n'en est pas une. */
+const LIVE_STATUSES = ['playing', 'briefing'] as const
+
+/**
+ * Met en forme les parties en cours pour le guichet.
+ * Deux règles, non négociables :
+ * - une salle non 'playing'/'briefing' (notamment 'cast') n'existe pas ici ;
+ * - une table non publique ne sort JAMAIS ni pseudo, ni jeu, ni identifiant :
+ *   elle n'est qu'une unité dans le total anonyme.
+ * Fonction pure (le `now` est injectable) pour rester testable sans base.
+ */
+export function summarizeLiveGames(
+  rows: LiveRoomRow[],
+  now: number = Date.now()
+): { liveGames: LiveGameItem[]; liveGamesTotal: number } {
+  const live = rows.filter(
+    (row) => (LIVE_STATUSES as readonly string[]).includes(row.status) && Boolean(row.gameId)
+  )
+
+  const liveGames = live
+    .filter((row) => row.visibility === 'public' && row.detail)
+    .map((row) => ({
+      id: row.id,
+      gameId: row.gameId!,
+      playerNames: row.detail!.names,
+      playerCount: row.detail!.playerCount,
+      openedAgoMinutes: Math.max(0, Math.floor((now - row.createdAt.getTime()) / 60000)),
+    }))
+    // La plus fraîche en tête : c'est celle qui donne le sentiment de vie.
+    .sort((a, b) => a.openedAgoMinutes - b.openedAgoMinutes)
+
+  return { liveGames, liveGamesTotal: live.length }
+}
+
 function computeReadyState(
   membersWithIds: { userId: string; isReady: boolean }[],
   gameId: string | null,
@@ -347,6 +427,75 @@ export async function buildLobbyList(): Promise<LobbyListItem[]> {
       isReady: m.isReady,
     })),
   }))
+}
+
+/**
+ * Une partie vraiment vivante réécrit sa ligne salle à chaque coup joué
+ * (`stateVersion` → `updatedAt`) : au-delà de ce délai sans la moindre
+ * écriture, la salle est un fantôme et ne doit pas gonfler le compteur —
+ * annoncer « 4 parties en cours » alors que personne ne joue serait un
+ * mensonge. On FILTRE plutôt que de purger : le ménage des salles actives
+ * (cleanupStaleActiveRooms, seuil 60 min) reste hors de ce chemin très chaud.
+ */
+const LIVE_ROOM_FRESH_MS = 15 * 60 * 1000
+/** Bornes de coût : ce que la liste ramène au maximum, quoi qu'il arrive. */
+const LIVE_ROOMS_SCAN_MAX = 60
+const LIVE_GAME_DETAIL_MAX = 12
+const LIVE_GAME_NAMES_MAX = 6
+
+/**
+ * Tout ce que le guichet affiche : tables ouvertes + parties en cours.
+ * Trois requêtes bornées au total, aucune n'ouvre les membres de TOUTES les
+ * salles : la première (buildLobbyList) sert les tables ouvertes, la deuxième
+ * ne lit que des scalaires (pour le total anonyme, visibilités comprises), la
+ * troisième ne charge des pseudos que pour les tables publiques.
+ */
+export async function buildLobbyOverview(): Promise<LobbyOverview> {
+  // Ménage des tables ouvertes seulement — déjà fait par buildLobbyList.
+  const lobbies = await buildLobbyList()
+
+  const freshSince = new Date(Date.now() - LIVE_ROOM_FRESH_MS)
+  const liveWhere = {
+    status: { in: [...LIVE_STATUSES] },
+    gameId: { not: null },
+    updatedAt: { gte: freshSince },
+  }
+
+  const [rooms, publicRooms] = await Promise.all([
+    prisma.onlineRoom.findMany({
+      where: liveWhere,
+      select: { id: true, gameId: true, status: true, visibility: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: LIVE_ROOMS_SCAN_MAX,
+    }),
+    prisma.onlineRoom.findMany({
+      where: { ...liveWhere, visibility: 'public' },
+      select: {
+        id: true,
+        _count: { select: { members: true } },
+        members: {
+          select: { user: { select: { displayName: true } } },
+          orderBy: { joinedAt: 'asc' },
+          take: LIVE_GAME_NAMES_MAX,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: LIVE_GAME_DETAIL_MAX,
+    }),
+  ])
+
+  const detailByRoom = new Map(
+    publicRooms.map((room) => [
+      room.id,
+      { names: room.members.map((m) => m.user.displayName), playerCount: room._count.members },
+    ])
+  )
+
+  const { liveGames, liveGamesTotal } = summarizeLiveGames(
+    rooms.map((room) => ({ ...room, detail: detailByRoom.get(room.id) }))
+  )
+
+  return { lobbies, liveGames, liveGamesTotal }
 }
 
 export async function createUniqueRoomCode(): Promise<string> {

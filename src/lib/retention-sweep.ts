@@ -12,6 +12,13 @@ import { deleteUserAccount } from '@/lib/user-activity-server'
  * - User.lastIp / User.lastCountry : effacés après 6 mois d'inactivité du
  *   compte (le compte lui-même est conservé — seule la trace technique part) ;
  * - ChatMessage / NameModerationAttempt : 12 mois ;
+ * - OnlineGameSession (journal des parties lancées) : 12 mois, comme les
+ *   autres traces d'exploitation. La durée se défend : ce journal sert à
+ *   comprendre l'usage d'une SAISON de jeu (comparer une rentrée à la
+ *   précédente, retrouver le contexte d'un signalement de plusieurs mois),
+ *   pas à constituer un historique de vie. Il ne porte d'ailleurs aucun
+ *   pseudo recopié — juste une référence de compte qui tombe à null dès la
+ *   suppression dudit compte. Les participants partent en cascade ;
  * - DailyVisitor (mesure d'audience) : 13 mois ;
  * - comptes INVITÉS (isGuest, scan de QR) : 90 jours après la dernière
  *   activité (voir GUEST_INACTIVITY_DAYS ci-dessous).
@@ -72,6 +79,10 @@ export async function runRetentionSweep(): Promise<void> {
       prisma.chatMessage.deleteMany({ where: { createdAt: { lt: twelveMonthsAgo } } }),
       prisma.nameModerationAttempt.deleteMany({ where: { createdAt: { lt: twelveMonthsAgo } } }),
       prisma.dailyVisitor.deleteMany({ where: { date: { lt: dailyVisitorCutoff } } }),
+      // Journal des parties : la ligne part avec ses participants (cascade).
+      // On borne sur le LANCEMENT, seule date toujours renseignée (`endedAt`
+      // reste nul pour une partie que rien n'a jamais close).
+      prisma.onlineGameSession.deleteMany({ where: { startedAt: { lt: twelveMonthsAgo } } }),
       // La dernière IP/pays connus d'un compte sont des logs techniques : ils
       // tombent sous les 6 mois annoncés, au même titre qu'IpSeenLog. On ne
       // touche qu'aux comptes silencieux depuis 6 mois (lastSeenAt jamais

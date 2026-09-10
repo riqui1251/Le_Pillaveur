@@ -52,7 +52,7 @@ Si vous refusez, aucun suivi de visite n'est enregistré.
 
 ### 3.4 Chat et parties en ligne
 
-Les messages envoyés dans le **chat** (chat de partie et messages entre amis) sont stockés sur nos serveurs et peuvent être soumis à un filtrage automatique de langage inapproprié. Ils sont conservés au maximum **12 mois** puis supprimés. L'état des parties en ligne (coups joués, votes, dessins) est temporaire et supprimé avec la table de jeu.
+Les messages envoyés dans le **chat** (chat de partie et messages entre amis) sont stockés sur nos serveurs et peuvent être soumis à un filtrage automatique de langage inapproprié. Ils sont conservés au maximum **12 mois** puis supprimés. L'état des parties en ligne (coups joués, votes, dessins) est temporaire et supprimé avec la table de jeu. Nous conservons en revanche un **journal d'exploitation** des parties lancées — jeu, date, durée et participants — pendant **12 mois**, pour suivre l'usage du service et instruire les signalements. Ce journal ne contient aucun contenu de partie, et un compte supprimé cesse d'y être nommé.
 
 ### 3.5 Chat vocal
 
@@ -130,6 +130,7 @@ L'éditeur reste responsable du traitement. Aucun autre transfert à des tiers n
 - **Compte supprimé** : suppression ou anonymisation dans un délai de **12 mois** maximum après la demande, sauf obligation légale de conservation plus longue.
 - **Logs techniques (adresses IP, présence)** : **6 mois**. L'adresse IP et le pays de dernière connexion attachés à un compte sont effacés après **6 mois** sans activité ; l'historique d'adresses IP d'un compte est supprimé immédiatement avec le compte.
 - **Messages de chat** : **12 mois**.
+- **Journal des parties lancées** (jeu, date, durée, participants) : **12 mois**.
 - **Traces de modération de pseudo** : **12 mois**.
 - **Données de mesure d'audience** : **13 mois**.
 - **Feedback** : conservation jusqu'à **24 mois** ou suppression sur demande ; l'email de contact associé est effacé si vous supprimez votre compte.

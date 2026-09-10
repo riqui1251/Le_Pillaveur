@@ -410,6 +410,15 @@
       "empty": "Aucun lobby ouvert — choisis un jeu ci-dessous pour en créer un.",
       "title": "Lobbies ouverts ({count})"
     },
+    "live": {
+      "title": "Parties en cours · {count}",
+      "tables": "{count, plural, one {# table} other {# tables}}",
+      "openedAgo": "ouverte il y a {minutes} min",
+      "justOpened": "vient d'ouvrir",
+      "more": "{count, plural, one {+ # autre partie en cours} other {+ # autres parties en cours}}",
+      "elsewhere": "{count, plural, one {# autre partie en cours sur le site} other {# autres parties en cours sur le site}}",
+      "notJoinable": "Une partie lancée ne se rejoint pas — ouvre ta table pour jouer."
+    },
     "errors": {
       "generic": "Erreur",
       "network": "Erreur réseau",
@@ -4305,6 +4314,18 @@
       "analysis": "Analyse",
       "community": "Communauté",
       "moderation": "Modération"
+    },
+    "gameSessions": {
+      "title": "Parties lancées",
+      "desc": "Chaque partie réellement lancée, la plus récente d'abord. Touchez une ligne pour voir qui y a joué.",
+      "empty": "Aucune partie lancée.",
+      "emptyHint": "Les parties apparaissent ici dès leur lancement, même quand elles se terminent sans classement.",
+      "ongoing": "En cours",
+      "lineup": "{players} joueurs · {humans} humains · {bots} bots",
+      "botTag": "Bot",
+      "deletedAccount": "Compte supprimé",
+      "noParticipants": "Aucun participant enregistré.",
+      "loadError": "Impossible de charger les parties lancées."
     },
     "states": {
       "retry": "Réessayer",

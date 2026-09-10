@@ -115,6 +115,11 @@ export async function getUserGamePlayStats(userId: string): Promise<UserGamePlay
  *
  * Symétriquement, le journal des actions de staff ne doit PAS partir avec le
  * compte : voir le détail des trois cas dans la transaction ci-dessous.
+ *
+ * Le journal des parties (OnlineGameSessionPlayer) n'a rien à faire ici et
+ * c'est voulu : sa référence au compte est en SetNull et il ne recopie aucun
+ * pseudo, si bien que le `user.delete` ci-dessous suffit à ce que la ligne
+ * cesse de nommer ce joueur (la Supervision affiche « compte supprimé »).
  */
 export async function deleteUserAccount(userId: string): Promise<void> {
   const anchorId = await findStaffJournalAnchorId(userId)

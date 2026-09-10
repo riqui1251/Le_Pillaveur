@@ -52,7 +52,7 @@ If you decline, no visit tracking is recorded.
 
 ### 3.4 Chat and online games
 
-Messages sent in the **chat** (game chat and friend messages) are stored on our servers and may go through automatic filtering of inappropriate language. They are kept for a maximum of **12 months** and then deleted. Online game state (moves, votes, drawings) is temporary and deleted together with the game table.
+Messages sent in the **chat** (game chat and friend messages) are stored on our servers and may go through automatic filtering of inappropriate language. They are kept for a maximum of **12 months** and then deleted. Online game state (moves, votes, drawings) is temporary and deleted together with the game table. We do, however, keep an **operations log** of launched games — game, date, duration and participants — for **12 months**, to monitor usage and investigate reports. This log holds no game content, and a deleted account is no longer named in it.
 
 ### 3.5 Voice chat
 
@@ -130,6 +130,7 @@ The publisher remains the data controller. No other transfer to third parties ta
 - **Deleted account**: deletion or anonymisation within a maximum of **12 months** after the request, unless a longer retention is legally required.
 - **Technical logs (IP addresses, presence)**: **6 months**. The IP address and country of last connection attached to an account are erased after **6 months** without activity; an account's IP address history is deleted immediately together with the account.
 - **Chat messages**: **12 months**.
+- **Launched-game log** (game, date, duration, participants): **12 months**.
 - **Nickname moderation traces**: **12 months**.
 - **Audience measurement data**: **13 months**.
 - **Feedback**: kept up to **24 months** or deleted on request; the associated contact email is erased if you delete your account.

@@ -67,6 +67,7 @@ model User {
   featureBansIssued     FeatureBan[]       @relation("FeatureBanActor")
   onlineMatchResults    OnlineMatchResult[]
   onlineGameHistory     OnlineGameHistory[]
+  onlineGameSessions    OnlineGameSessionPlayer[] @relation("OnlineGameSessionPlayer")
   cosmeticGrants        CosmeticGrant[]    @relation("CosmeticGrantTarget")
   cosmeticGrantsIssued  CosmeticGrant[]    @relation("CosmeticGrantActor")
   abuseReportsSent      AbuseReport[]      @relation("AbuseReportReporter")
@@ -203,6 +204,59 @@ model OnlineGameHistory {
 
   @@unique([userId, gameId])
   @@index([userId, lastPlayedAt])
+}
+
+// JOURNAL DES PARTIES : une ligne par partie LANCÉE (pas par partie gagnée).
+// Ni OnlineGameHistory (un compteur par couple joueur/jeu) ni OnlineMatchResult
+// (les seules parties terminées AVEC classement) ne disent à l'exploitant ce
+// qui a réellement été lancé : une partie abandonnée, ou un jeu qui ne produit
+// aucun classement, ne laissaient aucune trace. La ligne naît donc au
+// lancement, et `endedAt` reste NUL tant que la partie tourne.
+// Une revanche est une NOUVELLE ligne : c'est une autre partie, même salle.
+// Pas de clé étrangère vers OnlineRoom : la salle est éphémère (purgée à
+// l'abandon), le journal lui survit — `roomId` et `code` restent des repères.
+model OnlineGameSession {
+  id           String    @id @default(cuid())
+  roomId       String
+  code         String
+  gameId       String
+  startedAt    DateTime  @default(now())
+  /// Null = partie encore en cours (ou salle disparue avant réconciliation).
+  endedAt      DateTime?
+  /// Effectif total à l'écran (bots compris) et comptes humains.
+  playerCount  Int
+  humanCount   Int
+  participants OnlineGameSessionPlayer[]
+
+  // Liste « la plus récente d'abord » en Supervision.
+  @@index([startedAt])
+  // Fermeture de la partie en cours d'une salle (fin, revanche, purge).
+  @@index([roomId, endedAt])
+}
+
+// Un participant d'une partie journalisée : SOIT un compte, SOIT un bot.
+//
+// RGPD : aucune COPIE du pseudo humain n'est stockée ici. Le nom est résolu à
+// la LECTURE via la relation, si bien qu'une suppression de compte
+// (deleteUserAccount → user.delete) vide `userId` (SetNull) et la ligne cesse
+// définitivement de nommer qui que ce soit — l'écran affiche « compte
+// supprimé ». Symétriquement, la ligne ne part PAS avec le compte : le journal
+// d'exploitation doit rester lisible (même parti pris que AbuseReport).
+// `botName` ne concerne que les pions du moteur (Gépéto, Suzette...) : ce n'est la
+// donnée personnelle de personne.
+model OnlineGameSessionPlayer {
+  id        String            @id @default(cuid())
+  sessionId String
+  session   OnlineGameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?             @relation("OnlineGameSessionPlayer", fields: [userId], references: [id], onDelete: SetNull)
+  /// Nom d'affichage du BOT (null pour un compte : voir ci-dessus).
+  botName   String?
+  /// Rang d'affichage, tel que le moteur ordonnait la table au lancement.
+  seat      Int               @default(0)
+
+  @@index([sessionId])
+  @@index([userId])
 }
 
 // Déblocage MANUEL d'un cosmétique (effet de pseudo / cadre) par un fondateur.

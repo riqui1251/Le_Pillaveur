@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import type { LobbyListItem } from '@/lib/online-room'
+import type { LiveGameItem, LobbyListItem } from '@/lib/online-room'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePagePresence } from '@/hooks/usePagePresence'
 
@@ -11,6 +11,10 @@ export function useOpenLobbies() {
   const { user } = useAuth()
   const visible = usePagePresence()
   const [lobbies, setLobbies] = useState<LobbyListItem[]>([])
+  // Parties en cours : détail des tables PUBLIQUES, et total anonyme (toutes
+  // visibilités) — une table privée ne se voit que dans ce compteur.
+  const [liveGames, setLiveGames] = useState<LiveGameItem[]>([])
+  const [liveGamesTotal, setLiveGamesTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const initializedRef = useRef(false)
@@ -20,6 +24,8 @@ export function useOpenLobbies() {
     const fetchLobbies = async () => {
       if (!user || user.playMode !== 'online') {
         setLobbies([])
+        setLiveGames([])
+        setLiveGamesTotal(0)
         setLoading(false)
         initializedRef.current = true
         return
@@ -36,6 +42,11 @@ export function useOpenLobbies() {
             const nextJson = JSON.stringify(next)
             return prevJson === nextJson ? prev : next
           })
+          // Même garde d'identité que pour les lobbys : le poll tourne toutes
+          // les 4 s, on évite de re-rendre le guichet quand rien n'a bougé.
+          const nextLive = Array.isArray(data?.liveGames) ? data.liveGames : []
+          setLiveGames((prev) => (JSON.stringify(prev) === JSON.stringify(nextLive) ? prev : nextLive))
+          setLiveGamesTotal(typeof data?.liveGamesTotal === 'number' ? data.liveGamesTotal : 0)
         }
       } finally {
         inFlightRef.current = false
@@ -48,6 +59,8 @@ export function useOpenLobbies() {
 
     if (!user || user.playMode !== 'online') {
       setLobbies([])
+      setLiveGames([])
+      setLiveGamesTotal(0)
       setLoading(false)
       initializedRef.current = true
       return
@@ -73,11 +86,13 @@ export function useOpenLobbies() {
       if (res.ok) {
         const data = await res.json()
         setLobbies(Array.isArray(data?.lobbies) ? data.lobbies : [])
+        setLiveGames(Array.isArray(data?.liveGames) ? data.liveGames : [])
+        setLiveGamesTotal(typeof data?.liveGamesTotal === 'number' ? data.liveGamesTotal : 0)
       }
     } finally {
       inFlightRef.current = false
     }
   }
 
-  return { lobbies, loading, refresh }
+  return { lobbies, liveGames, liveGamesTotal, loading, refresh }
 }

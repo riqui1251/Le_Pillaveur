@@ -16,6 +16,7 @@ import { GameIconById } from '@/components/hub/GameIconById'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { GameBriefing } from '@/components/online/GameBriefing'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
+import { LiveDot } from '@/components/online/OpenLobbiesList'
 import { OnlinePlayerIcon } from '@/components/online/OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { JoinQR } from '@/components/tv/JoinQR'
@@ -77,7 +78,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const pathname = usePathname()
   const { user } = useAuth()
   const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend } = useOnlineRoom()
-  const { lobbies } = useOpenLobbies()
+  const { lobbies, liveGames, liveGamesTotal } = useOpenLobbies()
   const { friends, incoming, outgoing, sendRequestToUser, acceptRequest } = useFriends()
   const [copied, setCopied] = useState(false)
   const [joinCode, setJoinCode] = useState('')
@@ -147,6 +148,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tFriends = useTranslations('account.friends')
 
   const gameLobbies = lobbies.filter((l) => l.gameId === gameId)
+  // Parties EN COURS de ce jeu (tables publiques uniquement) : informatif, on
+  // ne peut pas les rejoindre. Le reste du site n'est qu'un total anonyme —
+  // c'est la seule trace laissée par les tables privées.
+  const liveHere = liveGames.filter((l) => l.gameId === gameId)
+  const liveElsewhere = Math.max(0, liveGamesTotal - liveHere.length)
   const isHost = room?.hostUserId === user?.id
   const inThisGameRoom = room?.gameId === gameId
   const selfMember = room?.members.find((m) => m.isSelf)
@@ -362,6 +368,55 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               ))}
             </ul>
           </div>
+        )}
+
+        {/* Parties en cours : le guichet doit montrer que ça joue, même quand
+            aucune table n'attend. Aucun code, aucun bouton — une partie
+            lancée ne se rejoint pas (le serveur répond game_already_started),
+            proposer « Rejoindre » serait promettre l'impossible. */}
+        {liveHere.length > 0 && (
+          <div className="mb-4">
+            <p className="mb-2 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/75">
+              <LiveDot />
+              {tOnline('live.title', { count: liveHere.length })}
+              <span aria-hidden className="h-px flex-1 bg-gold/15" />
+            </p>
+            <ul className="space-y-2">
+              {liveHere.map((live) => {
+                const extra = Math.max(0, live.playerCount - live.playerNames.length)
+                return (
+                  <li
+                    key={live.id}
+                    className="flex items-center gap-2.5 rounded-xl border border-gold/10 bg-felt-deep/50 px-3 py-2.5"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/20 bg-gold/10">
+                      <GameIconById id={gameId} className="h-4 w-4 text-gold" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-white/85">
+                        {live.playerNames.join(' · ')}
+                        {extra > 0 && ` +${extra}`}
+                      </p>
+                      <p className="truncate text-[11px] text-white/40">
+                        {tOnline('playersCount', { count: live.playerCount })} ·{' '}
+                        {live.openedAgoMinutes < 1
+                          ? tOnline('live.justOpened')
+                          : tOnline('live.openedAgo', { minutes: live.openedAgoMinutes })}
+                      </p>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="mt-2 text-[11px] text-white/35">{tOnline('live.notJoinable')}</p>
+          </div>
+        )}
+
+        {liveElsewhere > 0 && (
+          <p className="mb-4 flex items-center gap-2 rounded-xl border border-dashed border-gold/15 px-3 py-2 text-[11px] text-white/45">
+            <LiveDot />
+            {tOnline('live.elsewhere', { count: liveElsewhere })}
+          </p>
         )}
 
         {error && <p className="mt-4 text-center text-sm text-red-300">{error}</p>}

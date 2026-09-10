@@ -410,6 +410,15 @@
       "empty": "Nessuna lobby aperta — scegli un gioco qui sotto per crearne una.",
       "title": "Lobby aperte ({count})"
     },
+    "live": {
+      "title": "Partite in corso · {count}",
+      "tables": "{count, plural, one {# tavolo} other {# tavoli}}",
+      "openedAgo": "aperta {minutes} min fa",
+      "justOpened": "appena aperta",
+      "more": "{count, plural, one {+ # altra partita in corso} other {+ # altre partite in corso}}",
+      "elsewhere": "{count, plural, one {# altra partita in corso sul sito} other {# altre partite in corso sul sito}}",
+      "notJoinable": "Non si può entrare in una partita già iniziata: apri il tuo tavolo per giocare."
+    },
     "errors": {
       "generic": "Errore",
       "network": "Errore di rete",
@@ -4305,6 +4314,18 @@
       "analysis": "Analisi",
       "community": "Comunità",
       "moderation": "Moderazione"
+    },
+    "gameSessions": {
+      "title": "Partite avviate",
+      "desc": "Ogni partita davvero avviata, dalla più recente. Tocca una riga per vedere chi ha giocato.",
+      "empty": "Nessuna partita avviata.",
+      "emptyHint": "Le partite compaiono qui appena iniziano, anche quando finiscono senza classifica.",
+      "ongoing": "In corso",
+      "lineup": "{players} giocatori · {humans} umani · {bots} bot",
+      "botTag": "Bot",
+      "deletedAccount": "Account eliminato",
+      "noParticipants": "Nessun partecipante registrato.",
+      "loadError": "Impossibile caricare le partite avviate."
     },
     "states": {
       "retry": "Riprova",

@@ -22,6 +22,7 @@ import { launchDilemmesRoom } from '@/lib/online-dilemmes'
 import { launchPetitBacRoom } from '@/lib/online-petit-bac'
 import { launchPresidentRoom } from '@/lib/online-president'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
+import { recordGameSessionStart } from '@/lib/online/game-sessions'
 
 export type RoomWithMembers = {
   id: string
@@ -156,6 +157,10 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
       })
     }
   }
+  // Journal des parties (Supervision), APRÈS le lancement : c'est lui qui
+  // écrit l'état, et donc les bots — ils ne sont pas membres de la salle.
+  // Même règle que l'historique ci-dessus : ne lève jamais.
+  await recordGameSessionStart(roomId)
 }
 
 /**

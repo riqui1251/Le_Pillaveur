@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // règle métier du vote « Rejouer » (compare-and-swap des votes, réclamation
 // unique de la relance). La base est simulée par une ligne en mémoire dont
 // `updateMany` respecte la clause `where` — c'est elle qui fait la course.
-const { roomMock, historyMock, memberMock, launchPresidentMock } = vi.hoisted(() => ({
+const { roomMock, historyMock, memberMock, sessionMock, launchPresidentMock } = vi.hoisted(() => ({
   roomMock: { updateMany: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
   historyMock: { upsert: vi.fn() },
   memberMock: { updateMany: vi.fn() },
+  // Journal des parties : écrit lui aussi au lancement, sans rien y changer.
+  sessionMock: { create: vi.fn(), updateMany: vi.fn() },
   launchPresidentMock: vi.fn(),
 }))
 vi.mock('@/lib/prisma', () => ({
@@ -15,6 +17,7 @@ vi.mock('@/lib/prisma', () => ({
     onlineRoom: roomMock,
     onlineGameHistory: historyMock,
     onlineRoomMember: memberMock,
+    onlineGameSession: sessionMock,
   },
 }))
 vi.mock('@/lib/online-president', () => ({ launchPresidentRoom: launchPresidentMock }))
@@ -60,6 +63,8 @@ beforeEach(() => {
   })
   roomMock.findUnique.mockImplementation(async () => ({ ...db }))
   historyMock.upsert.mockResolvedValue({})
+  sessionMock.updateMany.mockResolvedValue({ count: 0 })
+  sessionMock.create.mockResolvedValue({})
   // Un vrai lancement remplace l'état terminé par la nouvelle partie.
   launchPresidentMock.mockImplementation(async () => {
     db = { gameStateJson: playing(), stateVersion: 1 }

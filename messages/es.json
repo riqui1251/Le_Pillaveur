@@ -410,6 +410,15 @@
       "empty": "Ninguna sala abierta — elige un juego abajo para crear una.",
       "title": "Salas abiertas ({count})"
     },
+    "live": {
+      "title": "Partidas en curso · {count}",
+      "tables": "{count, plural, one {# mesa} other {# mesas}}",
+      "openedAgo": "abierta hace {minutes} min",
+      "justOpened": "recién abierta",
+      "more": "{count, plural, one {+ # partida más en curso} other {+ # partidas más en curso}}",
+      "elsewhere": "{count, plural, one {# partida más en curso en el sitio} other {# partidas más en curso en el sitio}}",
+      "notJoinable": "No se puede entrar en una partida ya empezada: abre tu propia mesa para jugar."
+    },
     "errors": {
       "generic": "Error",
       "network": "Error de red",
@@ -4305,6 +4314,18 @@
       "analysis": "Análisis",
       "community": "Comunidad",
       "moderation": "Moderación"
+    },
+    "gameSessions": {
+      "title": "Partidas lanzadas",
+      "desc": "Cada partida realmente lanzada, la más reciente primero. Toca una fila para ver quién jugó.",
+      "empty": "Ninguna partida lanzada.",
+      "emptyHint": "Las partidas aparecen aquí en cuanto empiezan, incluso si terminan sin clasificación.",
+      "ongoing": "En curso",
+      "lineup": "{players} jugadores · {humans} humanos · {bots} bots",
+      "botTag": "Bot",
+      "deletedAccount": "Cuenta eliminada",
+      "noParticipants": "Ningún participante registrado.",
+      "loadError": "No se han podido cargar las partidas lanzadas."
     },
     "states": {
       "retry": "Reintentar",
