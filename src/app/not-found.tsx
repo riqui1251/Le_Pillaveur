@@ -1,3 +1,9 @@
+/* eslint-disable @next/next/no-html-link-for-pages --
+   Ces pages REMPLACENT le document entier : elles vivent au-dessus de
+   l'application (leur propre <html>/<body>, ni Tailwind ni next-intl). Une
+   navigation par <Link> tenterait un routage côté client depuis un arbre
+   cassé ou absent ; le <a> provoque un rechargement complet, qui est
+   précisément ce qu'on veut pour repartir d'une application saine. */
 /**
  * 404 des URL qui n'atteignent JAMAIS le segment de langue (fichier absent,
  * chemin exclu du middleware…). Elle vit au-dessus de [locale] : ni next-intl
