@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { LiveGameItem, LobbyListItem } from '@/lib/online-room'
+import type { RecentLaunchItem } from '@/lib/online/game-sessions'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePagePresence } from '@/hooks/usePagePresence'
 
@@ -15,6 +16,9 @@ export function useOpenLobbies() {
   // visibilités) — une table privée ne se voit que dans ce compteur.
   const [liveGames, setLiveGames] = useState<LiveGameItem[]>([])
   const [liveGamesTotal, setLiveGamesTotal] = useState(0)
+  // Dernières parties LANCÉES (journal, 10 max) : la table privée y est
+  // anonyme — voir summarizeRecentLaunches.
+  const [recentLaunches, setRecentLaunches] = useState<RecentLaunchItem[]>([])
   const [loading, setLoading] = useState(true)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const initializedRef = useRef(false)
@@ -26,6 +30,7 @@ export function useOpenLobbies() {
         setLobbies([])
         setLiveGames([])
         setLiveGamesTotal(0)
+        setRecentLaunches([])
         setLoading(false)
         initializedRef.current = true
         return
@@ -47,6 +52,10 @@ export function useOpenLobbies() {
           const nextLive = Array.isArray(data?.liveGames) ? data.liveGames : []
           setLiveGames((prev) => (JSON.stringify(prev) === JSON.stringify(nextLive) ? prev : nextLive))
           setLiveGamesTotal(typeof data?.liveGamesTotal === 'number' ? data.liveGamesTotal : 0)
+          const nextRecent = Array.isArray(data?.recentLaunches) ? data.recentLaunches : []
+          setRecentLaunches((prev) =>
+            JSON.stringify(prev) === JSON.stringify(nextRecent) ? prev : nextRecent
+          )
         }
       } finally {
         inFlightRef.current = false
@@ -61,6 +70,7 @@ export function useOpenLobbies() {
       setLobbies([])
       setLiveGames([])
       setLiveGamesTotal(0)
+      setRecentLaunches([])
       setLoading(false)
       initializedRef.current = true
       return
@@ -88,11 +98,12 @@ export function useOpenLobbies() {
         setLobbies(Array.isArray(data?.lobbies) ? data.lobbies : [])
         setLiveGames(Array.isArray(data?.liveGames) ? data.liveGames : [])
         setLiveGamesTotal(typeof data?.liveGamesTotal === 'number' ? data.liveGamesTotal : 0)
+        setRecentLaunches(Array.isArray(data?.recentLaunches) ? data.recentLaunches : [])
       }
     } finally {
       inFlightRef.current = false
     }
   }
 
-  return { lobbies, liveGames, liveGamesTotal, loading, refresh }
+  return { lobbies, liveGames, liveGamesTotal, recentLaunches, loading, refresh }
 }

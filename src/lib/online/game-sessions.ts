@@ -84,6 +84,7 @@ export async function recordGameSessionStart(roomId: string): Promise<void> {
       select: {
         code: true,
         gameId: true,
+        visibility: true,
         gameStateJson: true,
         members: { select: { userId: true }, orderBy: { joinedAt: 'asc' } },
       },
@@ -136,6 +137,10 @@ export async function recordGameSessionStart(roomId: string): Promise<void> {
         roomId,
         code: room.code,
         gameId: room.gameId,
+        // Figée ici : la salle peut changer de visibilité après coup (ou
+        // disparaître), or c'est bien ce qu'elle était AU LANCEMENT qui décide
+        // de ce que le guichet a le droit de raconter de cette partie.
+        visibility: room.visibility,
         startedAt: now,
         playerCount: participants.length,
         humanCount,
@@ -305,4 +310,80 @@ export async function listGameSessions(args: {
   })
 
   return { sessions, total }
+}
+
+// ─── Guichet public : les dernières parties lancées ──────────────────────────
+
+/**
+ * Taille de l'indicateur « dernières parties lancées » du guichet (/jeux).
+ * Le journal, lui, remonte bien plus loin — c'est la Supervision qui le lit.
+ */
+export const RECENT_LAUNCHES_MAX = 10
+
+/** Ligne brute du journal, réduite aux scalaires dont le guichet a besoin. */
+export type RecentLaunchRow = {
+  id: string
+  gameId: string
+  visibility: string
+  playerCount: number
+  startedAt: Date
+}
+
+/**
+ * Une partie lancée, telle que le guichet a le droit de la raconter.
+ *
+ * Même règle que `LiveGameItem` (src/lib/online-room.ts) : une table qui
+ * n'était pas PUBLIQUE au lancement ne livre ni son jeu, ni son effectif —
+ * elle n'est qu'une trace de vie horodatée. Aucun pseudo ne sort d'ici, quelle
+ * que soit la visibilité : le journal nomme ses joueurs pour l'exploitant, pas
+ * pour les visiteurs.
+ *
+ * `id` est celui de la LIGNE DE JOURNAL : il n'ouvre aucune route (le code de
+ * table et l'identifiant de salle, eux, restent au chaud), il ne sert qu'à
+ * donner une clé stable à la liste.
+ */
+export type RecentLaunchItem = {
+  id: string
+  /** null = table non publique. */
+  gameId: string | null
+  /** null pour la même raison. */
+  playerCount: number | null
+  startedAgoMinutes: number
+}
+
+/**
+ * Met en forme et anonymise les dernières parties lancées.
+ * Fonction pure (`now` injectable) pour rester testable sans base.
+ */
+export function summarizeRecentLaunches(
+  rows: RecentLaunchRow[],
+  now: number = Date.now()
+): RecentLaunchItem[] {
+  return rows
+    .map((row) => {
+      const isPublic = row.visibility === 'public'
+      return {
+        id: row.id,
+        gameId: isPublic ? row.gameId : null,
+        playerCount: isPublic ? row.playerCount : null,
+        startedAgoMinutes: Math.max(0, Math.floor((now - row.startedAt.getTime()) / 60000)),
+      }
+    })
+    .sort((a, b) => a.startedAgoMinutes - b.startedAgoMinutes)
+}
+
+/**
+ * Les dernières parties lancées, la plus fraîche en tête. Une seule requête
+ * bornée, sur l'index `startedAt`, et uniquement des scalaires : les
+ * participants ne sont PAS chargés — ils n'ont rien à faire au guichet.
+ */
+export async function listRecentLaunches(
+  limit: number = RECENT_LAUNCHES_MAX
+): Promise<RecentLaunchItem[]> {
+  const rows = await prisma.onlineGameSession.findMany({
+    orderBy: { startedAt: 'desc' },
+    take: Math.max(1, Math.min(limit, RECENT_LAUNCHES_MAX)),
+    select: { id: true, gameId: true, visibility: true, playerCount: true, startedAt: true },
+  })
+  return summarizeRecentLaunches(rows)
 }

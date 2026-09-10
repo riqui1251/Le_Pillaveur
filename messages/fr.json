@@ -419,6 +419,15 @@
       "elsewhere": "{count, plural, one {# autre partie en cours sur le site} other {# autres parties en cours sur le site}}",
       "notJoinable": "Une partie lancée ne se rejoint pas — ouvre ta table pour jouer."
     },
+    "recentLaunches": {
+      "title": "Dernières parties lancées",
+      "privateTable": "Table privée",
+      "justNow": "à l'instant",
+      "agoMinutes": "il y a {minutes} min",
+      "agoHours": "il y a {hours} h",
+      "agoDays": "{days, plural, one {il y a # jour} other {il y a # jours}}",
+      "players": "{count, plural, one {# joueur} other {# joueurs}}"
+    },
     "errors": {
       "generic": "Erreur",
       "network": "Erreur réseau",

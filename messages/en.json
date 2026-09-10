@@ -419,6 +419,15 @@
       "elsewhere": "{count, plural, one {# other game in progress on the site} other {# other games in progress on the site}}",
       "notJoinable": "A game that has started cannot be joined — open your own table to play."
     },
+    "recentLaunches": {
+      "title": "Last games launched",
+      "privateTable": "Private table",
+      "justNow": "just now",
+      "agoMinutes": "{minutes} min ago",
+      "agoHours": "{hours} h ago",
+      "agoDays": "{days, plural, one {# day ago} other {# days ago}}",
+      "players": "{count, plural, one {# player} other {# players}}"
+    },
     "errors": {
       "generic": "Error",
       "network": "Network error",

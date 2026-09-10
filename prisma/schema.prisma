@@ -220,6 +220,10 @@ model OnlineGameSession {
   roomId       String
   code         String
   gameId       String
+  /// Visibilité de la table AU LANCEMENT ('public' | 'private' | 'invite').
+  /// 'unknown' pour les lignes antérieures à cette colonne. Côté guichet, tout
+  /// ce qui n'est pas 'public' reste anonyme : ni jeu, ni effectif.
+  visibility   String    @default("unknown")
   startedAt    DateTime  @default(now())
   /// Null = partie encore en cours (ou salle disparue avant réconciliation).
   endedAt      DateTime?

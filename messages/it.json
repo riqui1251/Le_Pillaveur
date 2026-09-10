@@ -419,6 +419,15 @@
       "elsewhere": "{count, plural, one {# altra partita in corso sul sito} other {# altre partite in corso sul sito}}",
       "notJoinable": "Non si può entrare in una partita già iniziata: apri il tuo tavolo per giocare."
     },
+    "recentLaunches": {
+      "title": "Ultime partite avviate",
+      "privateTable": "Tavolo privato",
+      "justNow": "proprio ora",
+      "agoMinutes": "{minutes} min fa",
+      "agoHours": "{hours} h fa",
+      "agoDays": "{days, plural, one {# giorno fa} other {# giorni fa}}",
+      "players": "{count, plural, one {# giocatore} other {# giocatori}}"
+    },
     "errors": {
       "generic": "Errore",
       "network": "Errore di rete",

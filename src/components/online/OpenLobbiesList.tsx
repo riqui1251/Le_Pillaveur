@@ -10,6 +10,7 @@ import { useOpenLobbies } from '@/hooks/useOpenLobbies'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { Button } from '@/components/ui/button'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { RecentLaunchesPanel } from '@/components/online/RecentLaunchesPanel'
 
 /** Nombre de pseudos montrés par jeu avant de basculer sur « +N ». */
 const LIVE_NAMES_SHOWN = 4
@@ -113,7 +114,7 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
 export function OpenLobbiesList() {
   const router = useRouter()
   const t = useTranslations('onlineLobby')
-  const { lobbies, liveGames, liveGamesTotal, loading } = useOpenLobbies()
+  const { lobbies, liveGames, liveGamesTotal, recentLaunches, loading } = useOpenLobbies()
   const { joinRoom, loading: joining, error } = useOnlineRoom()
 
   const byGame = useMemo(() => {
@@ -134,7 +135,7 @@ export function OpenLobbiesList() {
     }
   }
 
-  if (loading && lobbies.length === 0 && liveGamesTotal === 0) {
+  if (loading && lobbies.length === 0 && liveGamesTotal === 0 && recentLaunches.length === 0) {
     return (
       <div className="mb-4 flex items-center justify-center rounded-xl border border-gold/15 py-2.5">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
@@ -142,20 +143,11 @@ export function OpenLobbiesList() {
     )
   }
 
-  // Personne n'attend ET personne ne joue : une ligne discrète suffit,
-  // surtout pas un « 0 partie en cours » qui souligne le vide.
-  if (lobbies.length === 0 && liveGamesTotal === 0) {
-    return (
-      <div className="mb-4">
-        <p className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-gold/20 px-4 py-2.5 text-xs text-white/55">
-          <Globe className="h-3.5 w-3.5 shrink-0 text-gold/60" aria-hidden />
-          {t('list.empty')}
-        </p>
-        {error && <p className="mt-2 text-center text-sm text-red-300">{error}</p>}
-      </div>
-    )
-  }
-
+  // Un seul rendu, y compris quand personne n'attend ET que personne ne joue :
+  // la ligne discrète ci-dessous suffit alors (surtout pas un « 0 partie en
+  // cours » qui souligne le vide), mais la rangée des derniers lancements doit
+  // rester visible — c'est précisément l'écran vide qu'elle est là pour
+  // démentir. Un retour anticipé la court-circuitait.
   return (
     <div className="mb-6 space-y-4">
       <LiveGamesPanel games={liveGames} total={liveGamesTotal} />
@@ -233,6 +225,8 @@ export function OpenLobbiesList() {
           })}
         </>
       )}
+
+      <RecentLaunchesPanel items={recentLaunches} />
     </div>
   )
 }

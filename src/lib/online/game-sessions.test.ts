@@ -26,7 +26,9 @@ import {
   closeGameSession,
   closeOrphanGameSessions,
   listGameSessions,
+  listRecentLaunches,
   recordGameSessionStart,
+  summarizeRecentLaunches,
 } from '@/lib/online/game-sessions'
 
 /** Ce que `create` a reçu, sous une forme lisible. */
@@ -280,5 +282,87 @@ describe('listGameSessions', () => {
     expect(sessions[0].durationSeconds).toBeNull()
     // Jeu retiré du catalogue : on affiche son identifiant plutôt que rien.
     expect(sessions[0].gameTitle).toBe('inconnu')
+  })
+})
+
+describe('recordGameSessionStart, visibilité', () => {
+  it('fige la visibilité de la table au moment du lancement', async () => {
+    roomMock.findUnique.mockResolvedValue({
+      code: 'ZZZZ',
+      gameId: 'quiz',
+      visibility: 'private',
+      gameStateJson: null,
+      members: [{ userId: 'u1' }],
+    })
+
+    await recordGameSessionStart('room-9')
+
+    expect(createdData().visibility).toBe('private')
+  })
+})
+
+describe('summarizeRecentLaunches', () => {
+  const NOW = new Date('2026-09-10T12:00:00Z').getTime()
+  const minutesAgo = (m: number) => new Date(NOW - m * 60_000)
+
+  it('détaille une table publique et laisse une table privée anonyme', () => {
+    const items = summarizeRecentLaunches(
+      [
+        {
+          id: 's1',
+          gameId: 'menteur',
+          visibility: 'public',
+          playerCount: 4,
+          startedAt: minutesAgo(3),
+        },
+        {
+          id: 's2',
+          gameId: 'president',
+          visibility: 'private',
+          playerCount: 6,
+          startedAt: minutesAgo(8),
+        },
+      ],
+      NOW
+    )
+
+    expect(items).toEqual([
+      { id: 's1', gameId: 'menteur', playerCount: 4, startedAgoMinutes: 3 },
+      { id: 's2', gameId: null, playerCount: null, startedAgoMinutes: 8 },
+    ])
+    // Le jeu d'une table non publique ne doit fuiter NULLE PART.
+    expect(JSON.stringify(items)).not.toContain('president')
+  })
+
+  it('traite « invite » et une visibilité inconnue comme non publiques', () => {
+    const rows = [
+      { id: 'a', gameId: 'quiz', visibility: 'invite', playerCount: 3, startedAt: minutesAgo(1) },
+      { id: 'b', gameId: 'quiz', visibility: 'unknown', playerCount: 3, startedAt: minutesAgo(2) },
+    ]
+    expect(summarizeRecentLaunches(rows, NOW).map((i) => i.gameId)).toEqual([null, null])
+  })
+
+  it('met la plus fraîche en tête et ne descend jamais sous zéro minute', () => {
+    const rows = [
+      { id: 'vieille', gameId: 'quiz', visibility: 'public', playerCount: 2, startedAt: minutesAgo(40) },
+      // Horloge en avance (décalage serveur/base) : pas d'âge négatif.
+      { id: 'future', gameId: 'quiz', visibility: 'public', playerCount: 2, startedAt: new Date(NOW + 5_000) },
+    ]
+    const items = summarizeRecentLaunches(rows, NOW)
+    expect(items.map((i) => i.id)).toEqual(['future', 'vieille'])
+    expect(items[0].startedAgoMinutes).toBe(0)
+  })
+})
+
+describe('listRecentLaunches', () => {
+  it('borne la requête à 10 lignes, sans jamais charger les participants', async () => {
+    sessionMock.findMany.mockResolvedValue([])
+    await listRecentLaunches(500)
+
+    const args = sessionMock.findMany.mock.calls[0][0]
+    expect(args.take).toBe(10)
+    expect(args.orderBy).toEqual({ startedAt: 'desc' })
+    expect(args.include).toBeUndefined()
+    expect(args.select.participants).toBeUndefined()
   })
 })
