@@ -177,7 +177,11 @@ export function SectionCard({
   bodyClassName?: string
 }) {
   return (
-    <section className={cn('rounded-2xl border border-white/10 bg-white/[0.02]', className)}>
+    /* `min-w-0` : dans une grille, une section garde `min-width: auto` — la
+       piste ne peut pas descendre sous la largeur de son contenu, si bien que
+       la carte débordait de l'écran et se faisait couper par l'overflow caché
+       de la page (invisible sur grand écran, cassant sur téléphone). */
+    <section className={cn('min-w-0 rounded-2xl border border-white/10 bg-white/[0.02]', className)}>
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/[0.07] px-4 py-3.5 sm:px-5">
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-base font-semibold text-white">
@@ -217,7 +221,7 @@ export function KpiPlaque({
   return (
     <div
       className={cn(
-        'rounded-2xl border p-3 sm:p-4',
+        'min-w-0 rounded-2xl border p-3 sm:p-4',
         alert
           ? 'border-suit-red/40 bg-suit-red text-cream'
           : 'border-gold/30 bg-cream text-[#24201A] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]'
@@ -343,7 +347,10 @@ export function LiveTableCard({
   return (
     <div
       className={cn(
-        'rounded-2xl border p-3',
+        // `min-w-0` pour la même raison que SectionCard : posée dans une
+        // grille, la carte ne pouvait pas descendre sous la largeur de son
+        // contenu (pseudos, « Figée depuis… », « Au tour de… ») et débordait.
+        'min-w-0 rounded-2xl border p-3',
         stalled ? 'border-suit-red/50 bg-suit-red/[0.07]' : 'border-gold/15 bg-felt-deep/50'
       )}
     >
@@ -471,20 +478,27 @@ export function QueueList({
         const Icon = it.icon
         const busy = busyId === it.id
         return (
-          <li key={it.id} className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5">
-            <span
-              className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border',
-                it.danger ? 'border-suit-red/35 bg-suit-red/15 text-suit-red' : 'border-gold/25 bg-gold/10 text-gold'
-              )}
-            >
-              <Icon className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-white">{it.title}</p>
-              <p className="truncate text-xs text-white/45">{it.subtitle}</p>
+          /* Sur téléphone, les deux boutons dévoraient la ligne : il ne
+             restait qu'une quinzaine de caractères du signalement, donc plus
+             moyen de savoir de quoi il s'agissait. On empile en dessous sous
+             640 px, on revient sur une ligne au-delà. */
+          <li key={it.id} className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 sm:flex-row sm:items-center sm:gap-2.5">
+            {/* Icône et texte restent SOLIDAIRES quand la ligne s'empile. */}
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <span
+                className={cn(
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border',
+                  it.danger ? 'border-suit-red/35 bg-suit-red/15 text-suit-red' : 'border-gold/25 bg-gold/10 text-gold'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-white">{it.title}</p>
+                <p className="text-xs text-white/45 line-clamp-2 sm:truncate">{it.subtitle}</p>
+              </div>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
               <button
                 type="button"
                 onClick={() => onView(it.id)}

@@ -4105,6 +4105,7 @@
       "statusWaiting": "Espera",
       "statusBriefing": "Instrucciones",
       "statusPlaying": "En juego",
+      "statusCast": "Emisión",
       "queueTitle": "Por atender",
       "queueDesc": "Reportes y nombres sospechosos pendientes",
       "queueEmpty": "Cola despejada — nada por atender.",
