@@ -9,6 +9,7 @@ import {
 } from '@/lib/online/cosmetics'
 import { checkMatchAchievements } from '@/lib/online/achievements'
 import { closeGameSession } from '@/lib/online/game-sessions'
+import { parisDayOffset } from '@/lib/paris-time'
 import {
   buildXpGainDetail,
   rememberXpGain,
@@ -320,16 +321,6 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
   }
 }
 
-/** Date du jour à Paris ('YYYY-MM-DD') — même convention que retention-sweep. */
-function dayStringParis(offsetDays = 0): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(Date.now() - offsetDays * 24 * 60 * 60 * 1000))
-}
-
 /** Ce que la série a rapporté à un joueur, plus son XP AVANT tout crédit. */
 type StreakCredit = {
   /** Série en jours après cette partie. */
@@ -355,8 +346,12 @@ async function updateStreaks(
 ): Promise<Map<string, StreakCredit>> {
   const credits = new Map<string, StreakCredit>()
   if (userIds.length === 0) return credits
-  const today = dayStringParis()
-  const yesterday = dayStringParis(1)
+  // Jours de Paris CALENDAIRES, lus sur un seul instant : « hier » n'est plus
+  // « maintenant − 24 h », qui tombait sur avant-hier (ou sur aujourd'hui)
+  // autour de minuit les jours de changement d'heure, et cassait la série.
+  const now = new Date()
+  const today = parisDayOffset(0, now)
+  const yesterday = parisDayOffset(1, now)
   const users = await client.user.findMany({
     where: { id: { in: userIds } },
     select: { id: true, streakCount: true, streakLastDay: true, onlineXp: true },
@@ -425,9 +420,9 @@ export async function recordMatchResults(
   // Journal des parties : la partie vient de se terminer, sa ligne se ferme —
   // AVANT tout le reste, car les règles de comptage ci-dessous font sortir
   // plusieurs cas par la petite porte (jeu inconnu, solo contre bots) et la
-  // partie a bel et bien eu lieu dans tous.
+  // partie a bel et bien eu lieu dans tous. Fin vue à l'instant : durée sûre.
   try {
-    await closeGameSession(client, args.roomId)
+    await closeGameSession(client, args.roomId, new Date(), 'finished')
   } catch (e) {
     console.error('[game-sessions] fermeture de partie échouée', e)
   }

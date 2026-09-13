@@ -55,7 +55,7 @@ Negli strumenti di moderazione del sito, gli indirizzi IPv6 di una stessa rete (
 
 ### 3.4 Chat e partite online
 
-I messaggi inviati nella **chat** (chat di partita e messaggi tra amici) sono memorizzati sui nostri server e possono essere sottoposti a un filtraggio automatico del linguaggio inappropriato. Sono conservati per un massimo di **12 mesi** e poi eliminati. Lo stato delle partite online (mosse, voti, disegni) è temporaneo ed eliminato insieme al tavolo di gioco. Conserviamo invece un **registro operativo** delle partite avviate — gioco, data, durata e partecipanti — per **12 mesi**, per monitorare l'uso del servizio e istruire le segnalazioni. Questo registro non contiene alcun contenuto di partita, e un account eliminato non vi è più nominato.
+I messaggi inviati nella **chat** (chat di partita e messaggi tra amici) sono memorizzati sui nostri server e possono essere sottoposti a un filtraggio automatico del linguaggio inappropriato. Sono conservati per un massimo di **12 mesi** e poi eliminati. Lo stato delle partite online (mosse, voti, disegni) è temporaneo ed eliminato insieme al tavolo di gioco. Conserviamo invece un **registro operativo** delle partite avviate — gioco, data, durata del tavolo, motivo di chiusura (conclusa, rivincita, uscita dei giocatori, chiusa dal team, abbandonata) e partecipanti — per **12 mesi**, per monitorare l'uso del servizio e istruire le segnalazioni. L'amministrazione del sito può consultare questo registro **account per account** (partite avviate, sessioni di gioco e durata dei tavoli a cui l'account ha partecipato), e lo utilizza anche per statistiche di gioco online che non nominano nessuno (giocatori unici, partite avviate al giorno) — base: legittimo interesse. Non contiene alcun contenuto di partita, e un account eliminato non vi è più nominato.
 
 ### 3.5 Chat vocale
 
@@ -96,7 +96,7 @@ I tuoi dati sono trattati per:
 - creare e gestire il tuo account;
 - autenticare le tue connessioni;
 - sincronizzare i tuoi giocatori e le statistiche tra dispositivi;
-- far funzionare le partite online (tavoli, chat, classifiche);
+- far funzionare le partite online (tavoli, chat, classifiche) e monitorarne l'uso (registro delle partite, consultabile account per account dall'amministrazione del sito);
 - garantire la sicurezza del Servizio e prevenire gli abusi;
 - moderare gli account e i contenuti (sospensione, ban in caso di violazione);
 - rispondere alle tue richieste di supporto e feedback;
@@ -114,6 +114,7 @@ I tuoi dati sono trattati per:
 | Chat e partite online | Esecuzione del contratto |
 | Sicurezza e moderazione (account, nickname, contenuti) | Legittimo interesse |
 | Data di ultima attività dell'account (stato «online» visibile ai tuoi amici, sicurezza, eliminazione degli account ospite inattivi) | Legittimo interesse |
+| Registro delle partite avviate (monitoraggio dell'uso, segnalazioni, consultazione account per account da parte dell'amministrazione del sito) | Legittimo interesse |
 | Statistiche di visita (cookie `lp_vid`, IP, dispositivo) | **Consenso** |
 | Verifica dell'età (cookie) | Legittimo interesse (conformità) |
 | Feedback | Consenso (invio volontario) |
@@ -135,7 +136,7 @@ L'editore resta il titolare del trattamento. Nessun altro trasferimento a terzi 
 - **Log tecnici (indirizzi IP, presenza)**: **6 mesi**. L'indirizzo IP e il paese dell'ultima connessione associati a un account vengono cancellati dopo **6 mesi** di inattività; lo storico degli indirizzi IP di un account viene eliminato immediatamente insieme all'account.
 - **Sessioni di accesso**: eliminate alla disconnessione o, automaticamente, una volta scadute.
 - **Messaggi di chat**: **12 mesi**.
-- **Registro delle partite avviate** (gioco, data, durata, partecipanti): **12 mesi**.
+- **Registro delle partite avviate** (gioco, data, durata del tavolo, motivo di chiusura, partecipanti): **12 mesi**.
 - **Tracce di moderazione dei nickname**: **12 mesi**.
 - **Dati di misurazione dell'audience**: **13 mesi**.
 - **Feedback**: conservazione fino a **24 mesi** o cancellazione su richiesta; l'email di contatto associata viene cancellata se elimini il tuo account.

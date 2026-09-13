@@ -20,26 +20,22 @@ import {
   visitorPresenceSelect,
 } from '@/lib/ip-history-server'
 import { ipNetworkKey } from '@/lib/ip-network'
+import { parisDayOffset, parisDayString } from '@/lib/paris-time'
 import { isOnline, onlineSince } from '@/lib/presence'
 
+/** Jour de Paris courant (AAAA-MM-JJ) — clé des DailyVisitor et des compteurs datés. */
 export function todayParis(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
+  return parisDayString()
 }
 
+/**
+ * Jour de Paris d'il y a `days` jours. Délègue à l'arithmétique CALENDAIRE de
+ * paris-time : l'ancien `setDate` dans le fuseau du processus (UTC en
+ * production) doublait ou sautait un jour autour de minuit les jours de
+ * changement d'heure.
+ */
 export function daysAgoParis(days: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - days)
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d)
+  return parisDayOffset(days)
 }
 
 export async function recordVisitorPing(

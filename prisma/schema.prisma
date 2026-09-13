@@ -216,6 +216,9 @@ model OnlineGameHistory {
 // Une revanche est une NOUVELLE ligne : c'est une autre partie, même salle.
 // Pas de clé étrangère vers OnlineRoom : la salle est éphémère (purgée à
 // l'abandon), le journal lui survit — `roomId` et `code` restent des repères.
+// Chaque point où une salle s'arrête ou disparaît ferme donc la ligne LUI-MÊME,
+// avec la meilleure date connue et son motif (`endReason`) : jamais l'heure à
+// laquelle la Supervision lit le journal (voir src/lib/online/game-sessions.ts).
 model OnlineGameSession {
   id           String    @id @default(cuid())
   roomId       String
@@ -228,6 +231,16 @@ model OnlineGameSession {
   startedAt    DateTime  @default(now())
   /// Null = partie encore en cours (ou salle disparue avant réconciliation).
   endedAt      DateTime?
+  /// Motif de fermeture, qui dit si la durée est fiable :
+  ///  - 'finished' (fin de partie) et 'rematch' (revanche relancée) : SÛRE ;
+  ///  - 'left' (dernier membre parti, compte hôte supprimé), 'staff' (table
+  ///    fermée d'office) et 'abandoned' (salle purgée ou qui ne joue plus,
+  ///    datée à sa dernière écriture ; plafond de 12 h) : ESTIMÉE ;
+  ///  - 'unknown' : salle disparue sans fermeture, endedAt = startedAt, durée
+  ///    exclue des totaux.
+  /// Null = ligne antérieure à cette colonne (10-12/09/2026), fiabilité
+  /// inconnue, sans rattrapage possible. Aucune donnée personnelle.
+  endReason    String?
   /// Effectif total à l'écran (bots compris) et comptes humains.
   playerCount  Int
   humanCount   Int

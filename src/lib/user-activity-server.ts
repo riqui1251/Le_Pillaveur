@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { GAMES } from '@/lib/games'
 import { subjectKeyFor } from '@/lib/ip-history-server'
+import { prepareHostedGameSessionsClose } from '@/lib/online/game-sessions'
 import type * as SupervisionServer from '@/lib/supervision-overview-server'
 
 export const PRESENCE_PING_SECONDS = 60
@@ -39,73 +39,6 @@ async function findStaffJournalAnchorId(excludedUserId: string): Promise<string 
   return null
 }
 
-export type UserGamePlayStat = {
-  gameId: string
-  title: string
-  emoji: string
-  partiesPlayed: number
-}
-
-function aggregateCloudGameStats(localPlayersJson: string | null): Map<string, number> {
-  const map = new Map<string, number>()
-  if (!localPlayersJson) return map
-
-  try {
-    const players = JSON.parse(localPlayersJson) as Array<{
-      stats?: { gameStats?: Record<string, { gamesPlayed?: number }> }
-    }>
-    if (!Array.isArray(players)) return map
-
-    for (const player of players) {
-      const gameStats = player.stats?.gameStats
-      if (!gameStats) continue
-      for (const [gameId, data] of Object.entries(gameStats)) {
-        const played = typeof data.gamesPlayed === 'number' ? data.gamesPlayed : 0
-        if (played > 0) {
-          map.set(gameId, (map.get(gameId) ?? 0) + played)
-        }
-      }
-    }
-  } catch {
-    /* ignore */
-  }
-
-  return map
-}
-
-export async function getUserGamePlayStats(userId: string): Promise<UserGamePlayStat[]> {
-  const [dbCounts, user] = await Promise.all([
-    prisma.stats.groupBy({
-      by: ['gameType'],
-      where: { userId },
-      _count: { _all: true },
-    }),
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { localPlayersJson: true },
-    }),
-  ])
-
-  const dbMap = new Map(dbCounts.map((row) => [row.gameType, row._count._all]))
-  const cloudMap = aggregateCloudGameStats(user?.localPlayersJson ?? null)
-
-  const allIds = new Set([...dbMap.keys(), ...cloudMap.keys()])
-
-  return [...allIds]
-    .map((gameId) => {
-      const meta = GAMES.find((g) => g.id === gameId)
-      const partiesPlayed = (cloudMap.get(gameId) ?? 0) + (dbMap.get(gameId) ?? 0)
-      return {
-        gameId,
-        title: meta?.title ?? gameId,
-        emoji: meta?.emoji ?? '🎮',
-        partiesPlayed,
-      }
-    })
-    .filter((g) => g.partiesPlayed > 0)
-    .sort((a, b) => b.partiesPlayed - a.partiesPlayed)
-}
-
 /**
  * Effacement RGPD d'un compte. Les tables sans clé étrangère vers User
  * (IpSeenLog, indexée par `subjectKey`) et les champs conservés par une
@@ -116,13 +49,18 @@ export async function getUserGamePlayStats(userId: string): Promise<UserGamePlay
  * Symétriquement, le journal des actions de staff ne doit PAS partir avec le
  * compte : voir le détail des trois cas dans la transaction ci-dessous.
  *
- * Le journal des parties (OnlineGameSessionPlayer) n'a rien à faire ici et
- * c'est voulu : sa référence au compte est en SetNull et il ne recopie aucun
- * pseudo, si bien que le `user.delete` ci-dessous suffit à ce que la ligne
- * cesse de nommer ce joueur (la Supervision affiche « compte supprimé »).
+ * Le journal des parties (OnlineGameSessionPlayer) n'a rien à anonymiser ici
+ * et c'est voulu : sa référence au compte est en SetNull et il ne recopie
+ * aucun pseudo, si bien que le `user.delete` ci-dessous suffit à ce que la
+ * ligne cesse de nommer ce joueur (la Supervision affiche « compte supprimé »).
+ * Seule sa DATE DE FIN est en jeu : les salles dont ce compte est l'hôte
+ * partent en cascade avec lui, leur partie en cours est donc close avant.
  */
 export async function deleteUserAccount(userId: string): Promise<void> {
-  const anchorId = await findStaffJournalAnchorId(userId)
+  const [anchorId, closeHostedGames] = await Promise.all([
+    findStaffJournalAnchorId(userId),
+    prepareHostedGameSessionsClose(userId),
+  ])
 
   await prisma.$transaction([
     prisma.stats.deleteMany({ where: { userId } }),
@@ -176,6 +114,11 @@ export async function deleteUserAccount(userId: string): Promise<void> {
       where: { userId },
       data: { userId: null, userSeenAt: null },
     }),
+    // Journal des parties : `user.delete` emporte en cascade les salles dont
+    // ce compte est l'hôte (OnlineRoom.host), sans que rien ne ferme leur
+    // partie en cours — elle tombait en « fiabilité inconnue ». L'hôte parti,
+    // la table s'arrête maintenant ('left').
+    ...closeHostedGames,
     prisma.user.delete({ where: { id: userId } }),
   ])
 }

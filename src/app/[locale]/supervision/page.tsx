@@ -1,15 +1,16 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
-import { useRouter } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import {
   Ban,
   CalendarDays,
   Clock,
   Crown,
+  FileText,
   Globe,
-  History,
   Info,
   Network,
   Search,
@@ -38,19 +39,10 @@ import {
   Inbox,
   AlertTriangle,
   Sparkles,
-  KeyRound,
-  UserRound,
-  Unplug,
-  type LucideIcon,
 } from 'lucide-react'
 import { deviceLabel } from '@/lib/device-from-user-agent'
-import {
-  guestLastActivityAt,
-  isGuestProbablyLost,
-  isGuestPurgeOverdue,
-  parseAccountDeleteLogDetail,
-  type AccountKind,
-} from '@/lib/account-kind'
+import { isGuestPurgeOverdue, parseAccountDeleteLogDetail, type AccountKind } from '@/lib/account-kind'
+import type { OnlinePlayStats } from '@/lib/supervision-overview-server'
 import { useAuth } from '@/hooks/useAuth'
 import {
   assignableRoles,
@@ -73,7 +65,7 @@ import {
 } from '@/lib/roles'
 import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
-import { PARIS_TIME_ZONE, parisDayString } from '@/lib/paris-time'
+import { PARIS_TIME_ZONE, parisDayOffset, parisDayString } from '@/lib/paris-time'
 import { isOnline, ONLINE_WINDOW_MS } from '@/lib/presence'
 import { groupIpsByNetwork, type IpNetworkGroup } from '@/lib/ip-network'
 import { Button } from '@/components/ui/button'
@@ -99,6 +91,7 @@ import { ModerationTermsPanel } from '@/components/supervision/ModerationTermsPa
 import { NameModerationAttemptsPanel } from '@/components/supervision/NameModerationAttemptsPanel'
 import { CosmeticGrantsDialog } from '@/components/supervision/CosmeticGrantsDialog'
 import { GameSessionsPanel } from '@/components/supervision/GameSessionsPanel'
+import { ACCOUNT_KIND_BADGES, AccountKindBadge } from '@/components/supervision/AccountKindBadge'
 import {
   SupervisionShell,
   SupervisionHeader,
@@ -129,8 +122,6 @@ const FEEDBACK_PAGE_SIZE = 25
 
 // Toutes les dates de la Supervision s'affichent à l'heure de Paris
 // (PARIS_TIME_ZONE, src/lib/paris-time.ts, partagé avec les panneaux autonomes).
-
-const DAY_MS = 24 * 60 * 60 * 1000
 
 /** Fenêtre « en ligne » en minutes, pour les libellés (src/lib/presence.ts). */
 const ONLINE_WINDOW_MINUTES = Math.round(ONLINE_WINDOW_MS / 60_000)
@@ -299,6 +290,12 @@ type GrowthStats = {
   registeredShare: { registered: number; guests: number; share: number | null }
   playersByGame: Array<{ gameId: string; gameTitle: string; players: number }>
   abandonedTables: { stalled: number; live: number; rate: number | null }
+  /**
+   * Joueurs uniques et parties lancées en ligne, tirés du journal des parties
+   * (lot 4). Type importé du serveur, pas recopié. Optionnel : une réponse
+   * antérieure au lot 4 n'affiche simplement pas la section.
+   */
+  onlinePlay?: OnlinePlayStats
   windows: {
     retentionD1CohortDays: [number, number]
     retentionD7CohortDays: [number, number]
@@ -324,6 +321,12 @@ type JournalEntry = {
     | 'site-setting'
   actorName: string | null
   targetName: string | null
+  /**
+   * Id du compte visé, pour le lien vers sa fiche (servi par getJournal). Null
+   * quand l'action n'a pas de cible propre (terme de modération, réglage,
+   * compte supprimé, table fermée) : pas de lien.
+   */
+  targetUserId: string | null
   detail: string | null
   createdAt: string
 }
@@ -444,49 +447,51 @@ type FeedbackItem = {
   userAgent?: string | null
 }
 
-type UserDetail = {
-  user: AccountKindFields & {
-    id: string
-    /** Null pour un invité : la fiche lui est ouverte (lot 2). */
-    email: string | null
-    displayName: string
-    accountCode: string | null
-    role: string
-    playMode: string
-    lastCountry: string | null
-    lastIp: string | null
-    lastDevice: string | null
-    lastSeenAt: string | null
-    lastLoginAt: string | null
-    totalPresenceSeconds: number
-    createdAt: string
-    localPlayerCount: number
-    gamesPlayed?: Array<{
-      gameId: string
-      title: string
-      emoji: string
-      partiesPlayed: number
-    }>
-    localPlayerNames: string[]
-    statsCount: number
-    achievementsCount: number
-    /** Sessions VALIDES uniquement (les jetons expirés ne comptent plus). */
-    sessionsCount: number
-    ban: {
-      banned: boolean
-      banType: string | null
-      bannedUntil: string | null
-      banComment: string | null
-    }
-  }
-  banHistory: Array<{
-    id: string
-    action: string
-    comment: string | null
-    bannedUntil: string | null
-    createdAt: string
-    actorName: string
-  }>
+/**
+ * Fiche compte en PLEINE PAGE (lot 4), qui remplace le dialogue Historique :
+ * un vrai lien, qu'on garde, qu'on rouvre après un rechargement ou qu'on
+ * ouvre dans un autre onglet. Seul l'id du compte voyage dans l'URL — jamais
+ * son pseudo ni son email.
+ */
+function accountFileHref(userId: string): string {
+  return `/supervision/comptes/${encodeURIComponent(userId)}`
+}
+
+/**
+ * Pseudo cliquable vers la fiche. Posé aussi dans l'en-tête d'une carte
+ * visiteur, elle-même dépliable au clic et au clavier : le lien garde ses
+ * événements, sans quoi la carte se repliait (et Entrée, intercepté par la
+ * carte, n'ouvrait plus rien).
+ */
+function AccountNameLink({ userId, name, className }: { userId: string; name: string; className?: string }) {
+  const t = useTranslations('supervision')
+  return (
+    <Link
+      href={accountFileHref(userId)}
+      title={t('accounts.openFileOf', { name })}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+      className={cn(
+        'min-w-0 break-words underline decoration-white/25 underline-offset-2 hover:decoration-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50',
+        className
+      )}
+    >
+      {name}
+    </Link>
+  )
+}
+
+/** Bouton « Ouvrir la fiche » : même destination, pour les zones d'actions. */
+function AccountFileButton({ userId }: { userId: string }) {
+  const t = useTranslations('supervision')
+  return (
+    <Button asChild size="sm" variant="outline">
+      <Link href={accountFileHref(userId)}>
+        <FileText className="mr-1 h-3.5 w-3.5" />
+        {t('visitorCard.openFile')}
+      </Link>
+    </Button>
+  )
 }
 
 function AccountCodeBadge({ code }: { code: string | null | undefined }) {
@@ -516,84 +521,6 @@ function kindSummaryValues(total: number, counts: AccountKindCounts) {
     guests: counts.guest + counts.guestOrphan,
     orphans: counts.guestOrphan,
   }
-}
-
-const ACCOUNT_KIND_BADGES: Record<AccountKind, { labelKey: string; icon: LucideIcon; className: string }> = {
-  password: {
-    labelKey: 'accountKind.password',
-    icon: KeyRound,
-    className: 'border-white/15 bg-white/[0.06] text-white/75',
-  },
-  google: {
-    labelKey: 'accountKind.google',
-    icon: Globe,
-    className: 'border-sky-500/30 bg-sky-500/15 text-sky-200',
-  },
-  guest: {
-    labelKey: 'accountKind.guest',
-    icon: UserRound,
-    className: 'border-violet-500/30 bg-violet-500/15 text-violet-200',
-  },
-  guest_orphan: {
-    labelKey: 'accountKind.guestOrphan',
-    icon: Unplug,
-    className: 'border-orange-500/35 bg-orange-500/15 text-orange-200',
-  },
-  legacy: {
-    labelKey: 'accountKind.legacy',
-    icon: UserX,
-    className: 'border-white/10 bg-white/[0.03] text-white/50',
-  },
-}
-
-/**
- * Badge du TYPE de compte (lot 2), partagé par la liste, la fiche et
- * l'analyse d'IP. Le type vient du serveur (account-kind). Un invité inactif
- * depuis plus de GUEST_STALE_DAYS garde parfois une session valide en base
- * alors que son cookie a disparu : on l'écrit à côté du badge, sans quoi il
- * passerait pour un joueur qui peut revenir. Rendu en fragment : le parent
- * est toujours une rangée `flex-wrap`.
- */
-function AccountKindBadge({
-  kind,
-  lastSeenAt,
-  createdAt,
-  sessionExpiresAt,
-  compact,
-}: {
-  kind: AccountKind
-  lastSeenAt: string | null
-  /** Sans date de référence, pas de mention « cookie perdu ». */
-  createdAt: string | null
-  /**
-   * Jour d'échéance de la session : un renouvellement récent prouve l'usage
-   * même quand le ping, seul à écrire lastSeenAt, est bloqué.
-   */
-  sessionExpiresAt?: string | null
-  compact?: boolean
-}) {
-  const t = useTranslations('supervision')
-  const badge = ACCOUNT_KIND_BADGES[kind]
-  // Réponse d'un serveur antérieur au lot 2 : pas de type, pas de badge.
-  if (!badge) return null
-  const Icon = badge.icon
-  const reference = lastSeenAt ?? createdAt
-  const activity = reference ? { lastSeenAt, createdAt: reference, sessionExpiresAt } : null
-  const lastActivity = activity && isGuestProbablyLost({ kind, ...activity }) ? guestLastActivityAt(activity) : null
-  const staleDays = lastActivity !== null ? Math.floor((Date.now() - lastActivity) / DAY_MS) : null
-  return (
-    <>
-      <Badge className={cn(badge.className, compact && 'px-1.5 py-0 text-[10px]')}>
-        <Icon className={compact ? 'mr-0.5 h-2.5 w-2.5' : 'mr-1 h-3 w-3'} />
-        {t(badge.labelKey)}
-      </Badge>
-      {staleDays != null && (
-        <span className="min-w-0 text-[11px] leading-tight text-amber-200/80">
-          {t('accountKind.staleGuest', { days: staleDays })}
-        </span>
-      )}
-    </>
-  )
 }
 
 /** Phrase du journal — un texte par nature d'action, acteur/cible en gras côté rendu. */
@@ -1009,28 +936,6 @@ function UserActivityLines({
   )
 }
 
-function useActionLabel() {
-  const t = useTranslations('supervision')
-  return (action: string): string => {
-  switch (action) {
-    case 'ban_permanent':
-      return t('actions.banPermanent')
-    case 'ban_temporary':
-      return t('actions.banTemporary')
-    case 'unban':
-      return t('actions.unban')
-    case 'feedback-ack':
-      return t('actions.feedbackAck')
-    case 'name-flag-ack':
-      return t('actions.nameFlagAck')
-    case 'role-change':
-      return t('actions.roleChange')
-    default:
-      return action
-  }
-  }
-}
-
 function CountryList({
   title,
   description,
@@ -1207,7 +1112,11 @@ function VisitorAccountLine({ row }: { row: VisitorIpRow }) {
         <span className="text-xs text-white/45">
           {browserActive ? t('visitorCard.connectedHere') : t('visitorCard.connectedLastVisit')}
         </span>
-        <span className="min-w-0 break-words text-sm font-medium text-white">{row.displayName}</span>
+        {row.userId ? (
+          <AccountNameLink userId={row.userId} name={row.displayName} className="text-sm font-medium text-white" />
+        ) : (
+          <span className="min-w-0 break-words text-sm font-medium text-white">{row.displayName}</span>
+        )}
         <AccountCodeBadge code={row.accountCode} />
         {row.accountKind && (
           <AccountKindBadge kind={row.accountKind} lastSeenAt={row.accountLastSeenAt} createdAt={null} compact />
@@ -1225,7 +1134,7 @@ function VisitorAccountLine({ row }: { row: VisitorIpRow }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
       <span className="text-xs text-white/45">{t('visitorCard.lastAccount')}</span>
-      <span className="min-w-0 break-words text-sm font-medium text-white/80">{last.displayName}</span>
+      <AccountNameLink userId={last.userId} name={last.displayName} className="text-sm font-medium text-white/80" />
       <AccountCodeBadge code={last.accountCode} />
       {/* Sans date de création servie, la dernière activité sert de référence
           (même règle que l'analyse d'IP). */}
@@ -1284,12 +1193,10 @@ function VisitorDetailPanel({
   row,
   onIpClick,
   onNetworkClick,
-  onOpenAccount,
 }: {
   row: VisitorIpRow
   onIpClick?: (ip: string) => void
   onNetworkClick?: (ip: string, network: string) => void
-  onOpenAccount?: (userId: string) => void
 }) {
   const t = useTranslations('supervision')
   // Deux historiques, JAMAIS fusionnés : rattacher au compte les IP d'une
@@ -1334,12 +1241,8 @@ function VisitorDetailPanel({
           {row.cardType === 'account' && row.email && (
             <p className="min-w-0 break-all text-xs text-white/45">{row.email}</p>
           )}
-          {onOpenAccount && (
-            <Button size="sm" variant="outline" onClick={() => onOpenAccount(accountId)}>
-              <History className="mr-1 h-3.5 w-3.5" />
-              {t('visitorCard.openFile')}
-            </Button>
-          )}
+          {/* Compte connecté ou dernier compte vu : la fiche est la même. */}
+          <AccountFileButton userId={accountId} />
         </div>
       ) : (
         <p className="text-white/45">{t('geo.noLinkedAccount')}</p>
@@ -1360,12 +1263,10 @@ function VisitorCardList({
   rows,
   onIpClick,
   onNetworkClick,
-  onOpenAccount,
 }: {
   rows: VisitorIpRow[]
   onIpClick?: (ip: string) => void
   onNetworkClick?: (ip: string, network: string) => void
-  onOpenAccount?: (userId: string) => void
 }) {
   const t = useTranslations('supervision')
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
@@ -1440,7 +1341,6 @@ function VisitorCardList({
                   row={row}
                   onIpClick={onIpClick}
                   onNetworkClick={onNetworkClick}
-                  onOpenAccount={onOpenAccount}
                 />
               </div>
             )}
@@ -1455,12 +1355,10 @@ function IpVisitorList({
   rows,
   onIpClick,
   onNetworkClick,
-  onOpenAccount,
 }: {
   rows: VisitorIpRow[]
   onIpClick?: (ip: string) => void
   onNetworkClick?: (ip: string, network: string) => void
-  onOpenAccount?: (userId: string) => void
 }) {
   const t = useTranslations('supervision')
   const locale = useLocale()
@@ -1513,9 +1411,279 @@ function IpVisitorList({
             rows={filtered}
             onIpClick={onIpClick}
             onNetworkClick={onNetworkClick}
-            onOpenAccount={onOpenAccount}
           />
         )}
+    </SectionCard>
+  )
+}
+
+/**
+ * Réécrit un paramètre de l'URL courante SANS navigation : ni rechargement,
+ * ni défilement, ni nouveau rendu serveur. Next synchronise useSearchParams
+ * sur history.replaceState. `null` retire le paramètre.
+ */
+function replaceUrlParam(key: string, value: string | null) {
+  const url = new URL(window.location.href)
+  if (value === null) url.searchParams.delete(key)
+  else url.searchParams.set(key, value)
+  window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+/**
+ * Jour de Paris (AAAA-MM-JJ) → instant à MIDI UTC, loin de tout bord de jour :
+ * formaté à l'heure de Paris, il retombe toujours sur ce même jour.
+ */
+function parisDayToDate(day: string): Date {
+  return new Date(`${day}T12:00:00.000Z`)
+}
+
+/** Rayures des jours antérieurs au journal : « rien à compter », jamais un zéro. */
+const BEFORE_JOURNAL_HATCH = {
+  backgroundImage: 'repeating-linear-gradient(135deg, rgb(255 255 255 / 0.08) 0 2px, transparent 2px 6px)',
+}
+
+/**
+ * Parties lancées par jour de Paris, en barres empilées À L'ÉCHELLE : solo
+ * contre des bots en bas (crème), avec d'autres humains au-dessus (or). Deux
+ * teintes lisibles sur le feutre vert comme sur le bleu nuit du mode Soft
+ * (le bleu jeton, lui, disparaissait sur le bleu nuit), séparées d'un filet
+ * pour ne pas dépendre de la seule couleur. Des divs plutôt qu'un SVG étiré :
+ * les chiffres gardent leur taille sur téléphone. Les jours d'avant le
+ * journal sont rayés — un 0 y mentirait.
+ */
+function OnlineLaunchesChart({
+  days,
+  journalSince,
+}: {
+  days: OnlinePlayStats['launchesByDay']
+  journalSince: string
+}) {
+  const t = useTranslations('supervision')
+  const format = useFormatter()
+  if (days.length === 0) return null
+  // Échelle commune : la plus haute pile touche la graduation haute. Jamais 0.
+  const max = Math.max(1, ...days.map((d) => d.solo + d.withHumans))
+  const columns = { gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }
+  const dayText = (day: string, options: Pick<Intl.DateTimeFormatOptions, 'weekday' | 'day' | 'month'>) =>
+    format.dateTime(parisDayToDate(day), { ...options, timeZone: PARIS_TIME_ZONE })
+  const today = days[days.length - 1].day
+  const hasDaysBeforeJournal = days.some((d) => d.day < journalSince)
+
+  return (
+    <div className="min-w-0">
+      <div className="flex min-w-0 gap-1.5">
+        {/* Axe : graduation haute (l'échelle) et zéro, alignés sur le tracé. */}
+        <div
+          aria-hidden
+          className="flex h-32 shrink-0 flex-col justify-between pt-4 text-right text-[10px] leading-none tabular-nums text-white/50"
+        >
+          <span className="-translate-y-1/2">{max}</span>
+          <span className="translate-y-1/2">0</span>
+        </div>
+        <div className="relative min-w-0 flex-1">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-4 border-t border-dashed border-white/15" />
+          {/* pt-4 : place des totaux au-dessus de la plus haute barre. */}
+          <ul
+            aria-label={t('onlinePlayers.launchesTitle')}
+            className="grid h-32 gap-0.5 border-b border-white/30 pt-4 sm:gap-1"
+            style={columns}
+          >
+            {days.map((d) => {
+              const total = d.solo + d.withHumans
+              const date = dayText(d.day, { weekday: 'short', day: 'numeric', month: 'short' })
+              const beforeJournal = d.day < journalSince
+              const label = beforeJournal
+                ? t('onlinePlayers.dayBeforeJournal', { date })
+                : t('onlinePlayers.dayBar', { date, solo: d.solo, withHumans: d.withHumans })
+              const height = `${(total / max) * 100}%`
+              return (
+                <li key={d.day} className="relative min-w-0" title={label}>
+                  <span className="sr-only">{label}</span>
+                  {beforeJournal ? (
+                    <div aria-hidden className="absolute inset-0 rounded-t-sm" style={BEFORE_JOURNAL_HATCH} />
+                  ) : (
+                    total > 0 && (
+                      <>
+                        <span
+                          aria-hidden
+                          className="absolute inset-x-0 text-center text-[9px] font-semibold leading-none tabular-nums text-white/75 sm:text-[10px]"
+                          style={{ bottom: `calc(${height} + 3px)` }}
+                        >
+                          {total}
+                        </span>
+                        <div
+                          aria-hidden
+                          className="absolute inset-x-0 bottom-0 flex flex-col-reverse gap-px overflow-hidden rounded-t-sm"
+                          style={{ height }}
+                        >
+                          {d.solo > 0 && <div className="bg-cream/40" style={{ flex: `${d.solo} 1 0%` }} />}
+                          {d.withHumans > 0 && <div className="bg-gold" style={{ flex: `${d.withHumans} 1 0%` }} />}
+                        </div>
+                      </>
+                    )
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      </div>
+      {/* Jours du mois sous chaque colonne ; l'espaceur invisible reprend la
+          largeur de l'axe pour garder l'alignement. */}
+      <div aria-hidden className="mt-1 flex min-w-0 gap-1.5">
+        <span className="invisible shrink-0 text-[10px] leading-none tabular-nums">{max}</span>
+        <div className="grid min-w-0 flex-1 gap-0.5 sm:gap-1" style={columns}>
+          {days.map((d) => (
+            <span
+              key={d.day}
+              className={cn(
+                'min-w-0 text-center text-[9px] leading-none tabular-nums sm:text-[10px]',
+                d.day === today ? 'font-bold text-white/80' : 'text-white/45'
+              )}
+            >
+              {dayText(d.day, { day: 'numeric' })}
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className="mt-1.5 text-[11px] text-white/45">
+        {t('onlinePlayers.range', {
+          from: dayText(days[0].day, { day: 'numeric', month: 'short' }),
+          to: dayText(today, { day: 'numeric', month: 'short' }),
+        })}
+      </p>
+      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-white/60">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-sm bg-cream/40" />
+          {t('onlinePlayers.legendSolo')}
+        </span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-sm bg-gold" />
+          {t('onlinePlayers.legendWithHumans')}
+        </span>
+        {hasDaysBeforeJournal && (
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-sm border border-white/20" style={BEFORE_JOURNAL_HATCH} />
+            {t('onlinePlayers.legendBeforeJournal')}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * « Joueurs en ligne » (lot 4) : comptes distincts assis à une partie en ligne
+ * et parties lancées par jour, tirés du JOURNAL DES PARTIES — la seule source
+ * qui voit le solo contre des bots et tous les comptes, invités compris.
+ * Effectifs bruts, jamais de pourcentage : le journal n'a que quelques jours.
+ * Servi avec la croissance (même route, même cache de quelques minutes).
+ */
+function OnlinePlayersSection({
+  onlinePlay,
+  computedAt,
+  cacheSeconds,
+}: {
+  onlinePlay: OnlinePlayStats
+  computedAt: string
+  cacheSeconds: number
+}) {
+  const t = useTranslations('supervision')
+  const format = useFormatter()
+  const { uniquePlayers, launchesByDay } = onlinePlay
+  const journalSinceLabel = format.dateTime(parisDayToDate(onlinePlay.journalSince), {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: PARIS_TIME_ZONE,
+  })
+  // Tant que le journal est plus jeune que la fenêtre, la tuile le dit : « 30
+  // jours » promettrait un mois de données qui n'existent pas. Jour de début de
+  // la fenêtre lu à l'heure du calcul (la valeur est mise en cache).
+  const windowLabel = (label: string, days: number) =>
+    parisDayOffset(days - 1, new Date(computedAt)) < onlinePlay.journalSince
+      ? t('gameSessions.windowSince', { window: label, date: journalSinceLabel })
+      : label
+  // Jours de PARIS glissants, aujourd'hui compris (voir summarizeOnlinePlay).
+  const windows = [
+    {
+      key: 'd1',
+      label: t('stats.today'),
+      definition: t('onlinePlayers.todayDef'),
+      value: uniquePlayers.d1,
+      guests: uniquePlayers.guests.d1,
+    },
+    {
+      key: 'd7',
+      label: windowLabel(t('stats.week'), 7),
+      definition: t('onlinePlayers.windowDef', { days: 7 }),
+      value: uniquePlayers.d7,
+      guests: uniquePlayers.guests.d7,
+    },
+    {
+      key: 'd30',
+      label: windowLabel(t('stats.month'), 30),
+      definition: t('onlinePlayers.windowDef', { days: 30 }),
+      value: uniquePlayers.d30,
+      guests: uniquePlayers.guests.d30,
+    },
+  ]
+  const solo = launchesByDay.reduce((sum, d) => sum + d.solo, 0)
+  const withHumans = launchesByDay.reduce((sum, d) => sum + d.withHumans, 0)
+
+  return (
+    <SectionCard
+      icon={Gamepad2}
+      title={t('onlinePlayers.title')}
+      description={t('onlinePlayers.desc', {
+        date: format.dateTime(parisDayToDate(onlinePlay.journalSince), {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          timeZone: PARIS_TIME_ZONE,
+        }),
+      })}
+      bodyClassName="space-y-4"
+    >
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+        {windows.map((w) => (
+          <div key={w.key} className="min-w-0">
+            <GrowthMetric
+              label={w.label}
+              value={String(w.value)}
+              detail={t('onlinePlayers.accountsDetail', { count: w.value, guests: w.guests })}
+              definition={w.definition}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Ce que les effectifs ne comptent pas, dit à côté d'eux. */}
+      <ul className="space-y-1 text-xs leading-relaxed text-white/55">
+        <li className="min-w-0">{t('onlinePlayers.staffExcluded', { count: onlinePlay.staffExcluded })}</li>
+        <li className="min-w-0">{t('onlinePlayers.deletedSeats', { count: onlinePlay.deletedSeats30 })}</li>
+      </ul>
+
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
+          {t('onlinePlayers.launchesTitle')}
+        </p>
+        <p className="mt-0.5 text-xs text-white/65">
+          {solo + withHumans > 0
+            ? t('onlinePlayers.launchesTotal', { total: solo + withHumans, days: launchesByDay.length, solo, withHumans })
+            : t('onlinePlayers.launchesNone', { days: launchesByDay.length })}
+        </p>
+        <div className="mt-3">
+          <OnlineLaunchesChart days={launchesByDay} journalSince={onlinePlay.journalSince} />
+        </div>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-white/40">{t('onlinePlayers.launchesDef')}</p>
+      </div>
+
+      <p className="border-t border-white/[0.07] pt-2 text-[11px] text-white/35">
+        {t('growth.freshness', {
+          time: format.dateTime(new Date(computedAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
+          minutes: Math.max(1, Math.round(cacheSeconds / 60)),
+        })}
+      </p>
     </SectionCard>
   )
 }
@@ -1527,14 +1695,23 @@ export default function SupervisionPage() {
   const locale = useLocale()
   const format = useFormatter()
   const durationUnits = useDurationUnits()
-  const actionLabel = useActionLabel()
   const { user, loading } = useAuth()
   const router = useRouter()
+  // Onglet ouvert, lu dans ?tab= : un rechargement ou un retour depuis la
+  // fiche d'un compte ramène sur le même onglet (voir selectTab).
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  // ?userId= : journal des parties restreint à un compte (lien « voir dans le
+  // journal » de la fiche). Le nom n'y figure jamais, seul l'id.
+  const journalUserId = searchParams.get('userId') || undefined
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [overview, setOverview] = useState<SupervisionOverview | null>(null)
   // Indicateurs de croissance : hors de la boucle de 15 s (F40), chargés une
   // seule fois à l'ouverture de l'onglet et servis avec leur date de calcul.
   const [growth, setGrowth] = useState<GrowthStats | null>(null)
+  // Échec du chargement de la croissance : affiché, et il ne bloque plus
+  // l'arrivée sur le journal filtré (qui attendait ces indicateurs).
+  const [growthFailed, setGrowthFailed] = useState(false)
   const [queueBusyId, setQueueBusyId] = useState<string | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   // Liste des comptes paginée EN BASE (F75) : `users` ne contient plus que la
@@ -1620,11 +1797,6 @@ export default function SupervisionPage() {
   const [banComment, setBanComment] = useState('')
   const [banDays, setBanDays] = useState('7')
 
-  const [historyUserId, setHistoryUserId] = useState<string | null>(null)
-  const [historyDetail, setHistoryDetail] = useState<UserDetail | null>(null)
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyError, setHistoryError] = useState<string | null>(null)
-
   const [deleteDialog, setDeleteDialog] = useState<{
     userId: string
     displayName: string
@@ -1677,6 +1849,17 @@ export default function SupervisionPage() {
   // Lire un retour est ouvert aux modérateurs, le CLORE reste admin+ (F44).
   const canTriageFeedback = user ? canManageUserFeedback(user.role) : false
   const defaultTab = showAnalytics ? 'overview' : 'accounts'
+  // Onglets que ce rôle peut ouvrir : mêmes conditions que la navigation et
+  // les TabsContent. Un ?tab= inconnu ou hors de portée retombe sur l'onglet
+  // par défaut (vue d'ensemble, ou Comptes sans les statistiques).
+  const allowedTabs = useMemo(() => {
+    const tabs = ['accounts']
+    if (showAnalytics) tabs.push('overview', 'geo')
+    if (showBansTab) tabs.push('bans')
+    if (canEditAccounts) tabs.push('moderation')
+    if (showFeedbackTab) tabs.push('feedback', 'feedback-resolved')
+    return tabs
+  }, [showAnalytics, showBansTab, canEditAccounts, showFeedbackTab])
 
   const subtitle = showAnalytics
     ? t('subtitles.full')
@@ -1870,11 +2053,15 @@ export default function SupervisionPage() {
       setGrowth(null)
       return
     }
+    setGrowthFailed(false)
     try {
       const res = await fetch('/api/admin/growth', { credentials: 'include' })
-      if (res.ok) setGrowth(await res.json())
+      if (!res.ok) throw new Error(`growth ${res.status}`)
+      setGrowth(await res.json())
     } catch {
-      /* silencieux : les indicateurs ne doivent pas casser la console */
+      // Les indicateurs ne cassent pas la console : une carte le signale à
+      // leur place, avec « Réessayer ».
+      setGrowthFailed(true)
     }
   }, [userRole])
 
@@ -1936,25 +2123,14 @@ export default function SupervisionPage() {
     [userId, userRole, loadUsers, loadSettings, loadBans, loadLive, loadFeedback]
   )
 
-  const loadUserHistory = useCallback(async (userIdToLoad: string) => {
-    setHistoryLoading(true)
-    setHistoryDetail(null)
-    setHistoryError(null)
-    try {
-      const res = await fetch(`/api/admin/users/${userIdToLoad}`, { credentials: 'include' })
-      if (!res.ok) throw new Error(tRef.current('apiErrors.historyUnavailable'))
-      const data = await res.json()
-      setHistoryDetail(data)
-    } catch (e) {
-      // L'erreur s'affiche DANS le dialogue : envoyée en haut de page, elle
-      // restait cachée derrière lui, bloqué sur « Chargement… ».
-      setHistoryError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
-    } finally {
-      setHistoryLoading(false)
-    }
-  }, [])
-
-  const initialTabSet = useRef(false)
+  /**
+   * Dernier ?tab= appliqué. L'onglet affiché vit dans l'état ; l'URL n'en est
+   * que le reflet, relu seulement quand elle CHANGE (premier rendu connecté,
+   * navigation vers un autre ?tab=). selectTab met l'état à jour tout de suite
+   * et l'URL un rendu plus tard : sans ce repère, une autre dépendance qui
+   * bougerait entre les deux rejouerait l'ancien onglet.
+   */
+  const appliedTabParam = useRef<string | null | undefined>(undefined)
 
   useEffect(() => {
     if (loading) return
@@ -1964,12 +2140,40 @@ export default function SupervisionPage() {
   }, [user, loading, router])
 
   useEffect(() => {
-    if (loading || !user || !canAccessSupervision(user.role)) return
-    if (!initialTabSet.current) {
-      setActiveTab(defaultTab)
-      initialTabSet.current = true
-    }
-  }, [user, loading, defaultTab])
+    if (loading || !userRole || !canAccessSupervision(userRole)) return
+    if (appliedTabParam.current === tabParam) return
+    appliedTabParam.current = tabParam
+    setActiveTab(tabParam && allowedTabs.includes(tabParam) ? tabParam : defaultTab)
+  }, [loading, userRole, tabParam, allowedTabs, defaultTab])
+
+  /**
+   * Change d'onglet et l'écrit dans l'URL (?tab=), sans recharger ni défiler.
+   * replaceUrlParam plutôt que router.replace : le routeur de
+   * @/i18n/navigation ne transmet pas `scroll: false`, et une navigation
+   * relancerait le rendu serveur (layout gardé par la session) à chaque clic
+   * d'onglet. Remplacer plutôt qu'empiler : le retour arrière ne rejoue pas
+   * chaque onglet visité, il quitte la Supervision ou revient d'une fiche.
+   */
+  const selectTab = useCallback((tab: string) => {
+    appliedTabParam.current = tab
+    setActiveTab(tab)
+    replaceUrlParam('tab', tab)
+  }, [])
+
+  // Arrivée par « voir dans le journal » : le panneau est loin sous les
+  // indicateurs. On l'amène à l'écran une fois par compte filtré, quand ce qui
+  // le précède est chargé (sinon il redescend sous la croissance et les tables).
+  const journalPanelRef = useRef<HTMLDivElement>(null)
+  const journalScrolledFor = useRef<string | null>(null)
+  const overviewLoaded = overview !== null
+  // Chargée OU en échec : dans les deux cas, ce qui précède le journal a sa hauteur.
+  const growthSettled = growth !== null || growthFailed
+  useEffect(() => {
+    if (!journalUserId || activeTab !== 'overview' || !dataLoaded || !overviewLoaded || !growthSettled) return
+    if (journalScrolledFor.current === journalUserId) return
+    journalScrolledFor.current = journalUserId
+    journalPanelRef.current?.scrollIntoView({ block: 'start' })
+  }, [journalUserId, activeTab, dataLoaded, overviewLoaded, growthSettled])
 
   // Comptes : rechargés quand la page ou un filtre change, avec un court
   // délai pour ne pas interroger la base à chaque frappe.
@@ -2029,7 +2233,7 @@ export default function SupervisionPage() {
   const handleIpClick = useCallback(async (ip: string) => {
     ipLookupForRef.current = ip
     setAccountSearch(ip)
-    setActiveTab('accounts')
+    selectTab('accounts')
     setIpLookupLoading(true)
     setIpLookup(null)
     try {
@@ -2045,7 +2249,7 @@ export default function SupervisionPage() {
     } finally {
       if (ipLookupForRef.current === ip) setIpLookupLoading(false)
     }
-  }, [])
+  }, [selectTab])
 
   /**
    * « Même réseau » (admins) : comptes et navigateurs vus sur le /64 (IPv6) ou
@@ -2058,7 +2262,7 @@ export default function SupervisionPage() {
     const token = `network:${network}`
     ipLookupForRef.current = token
     setAccountSearch('')
-    setActiveTab('accounts')
+    selectTab('accounts')
     setIpLookupLoading(true)
     setIpLookup(null)
     try {
@@ -2075,7 +2279,7 @@ export default function SupervisionPage() {
     } finally {
       if (ipLookupForRef.current === token) setIpLookupLoading(false)
     }
-  }, [])
+  }, [selectTab])
 
   /**
    * Toute modification de la recherche efface l'analyse d'IP : le bandeau
@@ -2112,10 +2316,6 @@ export default function SupervisionPage() {
     },
     [locale, t]
   )
-
-  useEffect(() => {
-    if (historyUserId) loadUserHistory(historyUserId)
-  }, [historyUserId, loadUserHistory])
 
   const updateUser = async (
     userId: string,
@@ -2191,10 +2391,6 @@ export default function SupervisionPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? t('apiErrors.deleteDenied'))
       setDeleteDialog(null)
-      if (historyUserId === deleteDialog.userId) {
-        setHistoryUserId(null)
-        setHistoryDetail(null)
-      }
       await loadAll()
     } catch (e) {
       setError(e instanceof Error ? e.message : tErrors('generic'))
@@ -2407,24 +2603,8 @@ export default function SupervisionPage() {
     const item = overview?.queue.find((q) => q.id === id)
     if (!item) return
     if (item.href === 'accounts') changeAccountSearch(item.title)
-    setActiveTab(item.href)
+    selectTab(item.href)
   }
-
-  // Fiche du dialogue Historique : un invité inactif depuis plus de
-  // GUEST_STALE_DAYS n'a peut-être plus son cookie, même si sa session est
-  // encore valide en base — jamais « Connexion active » dans ce cas.
-  const historyUser = historyDetail?.user ?? null
-  const historyGuestLost = historyUser
-    ? isGuestProbablyLost({
-        kind: historyUser.kind,
-        lastSeenAt: historyUser.lastSeenAt,
-        createdAt: historyUser.createdAt,
-        sessionExpiresAt: historyUser.sessionExpiresAt,
-      })
-    : false
-  // Date de purge déjà passée : le balayage (au fil du trafic, par lots) n'est
-  // pas encore passé. On ne l'annonce pas au futur.
-  const historyPurgeOverdue = historyUser?.guestPurgeAt ? isGuestPurgeOverdue(historyUser.guestPurgeAt) : false
 
   const handleQueueAcknowledge = async (id: string) => {
     const item = overview?.queue.find((q) => q.id === id)
@@ -2511,11 +2691,11 @@ export default function SupervisionPage() {
       <SupervisionNav
         groups={navGroups}
         active={activeTab}
-        onSelect={setActiveTab}
+        onSelect={selectTab}
         groupAria={t('tabs.section')}
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0 space-y-4">
+      <Tabs value={activeTab} onValueChange={selectTab} className="min-w-0 space-y-4">
         {showAnalytics && (
         <>
         <TabsContent value="overview" className="space-y-4">
@@ -2664,6 +2844,25 @@ export default function SupervisionPage() {
             </SectionCard>
           )}
 
+          {growthFailed && !growth && (
+            <SectionCard icon={Gamepad2} title={t('onlinePlayers.title')}>
+              <ErrorState
+                icon={AlertTriangle}
+                message={t('onlinePlayers.loadError')}
+                retryLabel={t('states.retry')}
+                onRetry={() => void loadGrowth()}
+              />
+            </SectionCard>
+          )}
+
+          {growth?.onlinePlay && (
+            <OnlinePlayersSection
+              onlinePlay={growth.onlinePlay}
+              computedAt={growth.computedAt}
+              cacheSeconds={growth.cacheSeconds}
+            />
+          )}
+
           <div className="grid gap-4 lg:grid-cols-2">
             <SectionCard icon={Gamepad2} title={t('room.liveTablesTitle')} description={t('room.liveTablesDesc')}>
               {(overview?.liveTables ?? []).length === 0 ? (
@@ -2744,7 +2943,17 @@ export default function SupervisionPage() {
 
           {/* Journal des parties : panneau autonome, hors de la boucle de
               15 s (F40) — il se charge à l'ouverture de l'onglet. */}
-          <GameSessionsPanel />
+          <div ref={journalPanelRef} className="min-w-0 scroll-mt-4 space-y-2">
+            {journalUserId && (
+              <div className="flex justify-end">
+                <Button size="sm" variant="ghost" className="text-white/60" onClick={() => replaceUrlParam('userId', null)}>
+                  <X className="mr-1 h-3.5 w-3.5" />
+                  {t('journalFilter.showAll')}
+                </Button>
+              </div>
+            )}
+            <GameSessionsPanel userId={journalUserId} />
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <SectionCard icon={ScrollText} title={t('room.journalTitle')} description={t('room.journalDesc')}>
@@ -2756,7 +2965,23 @@ export default function SupervisionPage() {
                     id: e.id,
                     kind: e.kind,
                     time: format.dateTime(new Date(e.createdAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
-                    text: journalText(t, e),
+                    // Phrase traduite d'un bloc, puis le lien vers la fiche de
+                    // la cible : découper la phrase autour du pseudo casserait
+                    // dès qu'il apparaît aussi dans le nom de l'acteur.
+                    text: e.targetUserId ? (
+                      <>
+                        {journalText(t, e)}{' '}
+                        <Link
+                          href={accountFileHref(e.targetUserId)}
+                          title={t('accounts.openFileOf', { name: e.targetName ?? '—' })}
+                          className="whitespace-nowrap text-amber-300/80 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                        >
+                          {t('visitorCard.openFile')}
+                        </Link>
+                      </>
+                    ) : (
+                      journalText(t, e)
+                    ),
                   }))}
                 />
               )}
@@ -2870,7 +3095,11 @@ export default function SupervisionPage() {
                     >
                       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
                         <span className="text-base leading-none">{countryFlag(acc.country)}</span>
-                        <span className="min-w-0 break-words text-sm font-medium text-white sm:text-base">{acc.displayName}</span>
+                        <AccountNameLink
+                          userId={acc.id}
+                          name={acc.displayName}
+                          className="text-sm font-medium text-white sm:text-base"
+                        />
                         <AccountCodeBadge code={acc.accountCode} />
                         {/* Rôle pour l'équipe seulement : le type (badge voisin)
                             dit déjà invité ou compte, plus de « Joueur » accolé
@@ -2936,7 +3165,6 @@ export default function SupervisionPage() {
             rows={stats?.visitorIpList ?? []}
             onIpClick={handleIpClick}
             onNetworkClick={handleNetworkLookup}
-            onOpenAccount={setHistoryUserId}
           />
         </TabsContent>
         </>
@@ -3099,8 +3327,8 @@ export default function SupervisionPage() {
                   {ipLookup.accounts.length > 0 && (
                     <ul className="mt-2 space-y-1 text-white/70">
                       {ipLookup.accounts.map((acc) => (
-                        <li key={acc.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                          <span className="min-w-0 break-words">{acc.displayName}</span>
+                        <li key={acc.id} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                          <AccountNameLink userId={acc.id} name={acc.displayName} className="text-white/85" />
                           {acc.accountCode && (
                             <span className="font-mono text-amber-200/70">{acc.accountCode}</span>
                           )}
@@ -3288,14 +3516,9 @@ export default function SupervisionPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setHistoryUserId(u.id)}
-                      >
-                        <History className="mr-1 h-3.5 w-3.5" />
-                        {t('accounts.history')}
-                      </Button>
+                      {/* Fiche en pleine page (ex-dialogue Historique) : parties en
+                          ligne, séances, réseaux et modération y vivent. */}
+                      <AccountFileButton userId={u.id} />
 
                       {canAssignRoles(user.role) &&
                         u.id !== user.id &&
@@ -3885,268 +4108,6 @@ export default function SupervisionPage() {
       <CosmeticGrantsDialog target={cosmeticsDialog} onClose={() => setCosmeticsDialog(null)} />
 
       <Dialog
-        open={!!historyUserId}
-        onOpenChange={(open) => {
-          if (!open) {
-            setHistoryUserId(null)
-            setHistoryDetail(null)
-            setHistoryError(null)
-          }
-        }}
-      >
-        <DialogContent className="max-h-[85vh] overflow-y-auto border-white/10 bg-felt-deep text-white sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t('history.title')}</DialogTitle>
-            <DialogDescription asChild className="text-white/50">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                {historyDetail ? (
-                  <>
-                    <span className="min-w-0 break-words">{historyDetail.user.displayName}</span>
-                    <AccountCodeBadge code={historyDetail.user.accountCode} />
-                    <AccountKindBadge
-                      kind={historyDetail.user.kind}
-                      lastSeenAt={historyDetail.user.lastSeenAt}
-                      createdAt={historyDetail.user.createdAt}
-                      sessionExpiresAt={historyDetail.user.sessionExpiresAt}
-                    />
-                  </>
-                ) : historyError ? (
-                  <span>—</span>
-                ) : (
-                  <span>{t('loading')}</span>
-                )}
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          {historyError ? (
-            <ErrorState
-              icon={AlertTriangle}
-              message={historyError}
-              retryLabel={t('states.retry')}
-              onRetry={() => {
-                if (historyUserId) void loadUserHistory(historyUserId)
-              }}
-            />
-          ) : historyLoading || !historyDetail ? (
-            <p className="py-8 text-center text-white/50">{t('loading')}</p>
-          ) : (
-            <div className="space-y-4">
-              {/* Invité orphelin : ni email, ni mot de passe, ni Google, et plus
-                  de session. Personne ne peut rouvrir ce compte : on le dit en
-                  premier, avec la date de sa suppression automatique. */}
-              {historyDetail.user.kind === 'guest_orphan' && (
-                <p className="flex items-start gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 text-sm text-orange-100">
-                  <Unplug className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
-                  <span className="min-w-0">
-                    {!historyDetail.user.guestPurgeAt
-                      ? t('history.orphanInaccessible')
-                      : historyPurgeOverdue
-                        ? t('history.orphanPurgePending')
-                        : t('history.orphanPurge', {
-                            date: format.dateTime(new Date(historyDetail.user.guestPurgeAt), {
-                              dateStyle: 'medium',
-                              timeZone: PARIS_TIME_ZONE,
-                            }),
-                          })}
-                  </span>
-                </p>
-              )}
-
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="min-w-0 rounded-lg border border-white/10 bg-black/20 p-3">
-                  <p className="text-xs text-white/45">{t('geo.localPlayersLabel')}</p>
-                  <p className="text-xl font-bold">{historyDetail.user.localPlayerCount}</p>
-                </div>
-                <div className="min-w-0 rounded-lg border border-white/10 bg-black/20 p-3">
-                  <p className="text-xs text-white/45">{t('history.partiesStats')}</p>
-                  <p className="text-xl font-bold">{historyDetail.user.statsCount}</p>
-                </div>
-                <div className="min-w-0 rounded-lg border border-white/10 bg-black/20 p-3">
-                  <p className="text-xs text-white/45">{t('history.achievements')}</p>
-                  <p className="text-xl font-bold">{historyDetail.user.achievementsCount}</p>
-                </div>
-                {/* Ex-tuile « Sessions » : elle comptait des jetons, expirés
-                    compris, et se lisait comme un nombre de visites. Elle dit
-                    maintenant si le compte peut encore servir, et jusqu'à quand.
-                    Invité probablement perdu : la session existe en base, mais
-                    rien ne prouve que son cookie aussi — jamais « Connexion
-                    active » dans ce cas. */}
-                <div className="min-w-0 rounded-lg border border-white/10 bg-black/20 p-3">
-                  <p className="text-xs text-white/45">
-                    {historyGuestLost ? t('history.sessionInDb') : t('history.activeConnection')}
-                  </p>
-                  {historyDetail.user.hasValidSession && historyDetail.user.sessionExpiresAt ? (
-                    <p
-                      className={cn(
-                        'mt-1 break-words text-sm font-semibold',
-                        historyGuestLost ? 'text-amber-200' : 'text-emerald-300'
-                      )}
-                    >
-                      {/* Le JOUR seulement (servi ainsi) : l'heure d'échéance
-                          redonnerait celle d'une visite. */}
-                      {t(historyGuestLost ? 'history.sessionMaybeLost' : 'history.until', {
-                        date: format.dateTime(new Date(historyDetail.user.sessionExpiresAt), {
-                          dateStyle: 'medium',
-                          timeZone: PARIS_TIME_ZONE,
-                        }),
-                      })}
-                    </p>
-                  ) : (
-                    <p className="mt-1 break-words text-sm font-semibold text-white/60">
-                      {t('history.noValidSession')}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {historyDetail.user.localPlayerNames.length > 0 && (
-                <div>
-                  <p className="mb-1 text-xs font-semibold text-white/50">{t('history.localPlayerNames')}</p>
-                  <p className="text-sm text-white/80">
-                    {historyDetail.user.localPlayerNames.join(', ')}
-                  </p>
-                </div>
-              )}
-
-              <div className="min-w-0 text-sm text-white/60">
-                <p>{t('history.mode', { mode: historyDetail.user.playMode })}</p>
-                <p>{t('history.country', { country: countryLabel(historyDetail.user.lastCountry, locale, t('unknownCountry')) })}</p>
-                {historyDetail.user.lastIp && (
-                  <p className="flex flex-wrap items-center gap-2">
-                    {t('history.ip')}{' '}
-                    <span className="min-w-0 break-all font-mono text-amber-200/80">{historyDetail.user.lastIp}</span>
-                    <DeviceBadge device={historyDetail.user.lastDevice} compact />
-                  </p>
-                )}
-                <p>
-                  {t('accounts.registeredOn', {
-                    date: format.dateTime(new Date(historyDetail.user.createdAt), {
-                      dateStyle: 'medium',
-                      timeZone: PARIS_TIME_ZONE,
-                    }),
-                  })}
-                </p>
-                {historyDetail.user.lastSeenAt && (
-                  <p>
-                    {t('history.lastActivity', {
-                      date: format.dateTime(new Date(historyDetail.user.lastSeenAt), {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                        timeZone: PARIS_TIME_ZONE,
-                      }),
-                    })}
-                  </p>
-                )}
-                {/* Invité avec session : sa suppression automatique recule à
-                    chaque visite. L'orphelin a déjà son encart en tête. */}
-                {historyDetail.user.kind === 'guest' && historyDetail.user.guestPurgeAt && (
-                  <p>
-                    {historyPurgeOverdue
-                      ? t('history.guestPurgePending')
-                      : t('history.guestPurge', {
-                          date: format.dateTime(new Date(historyDetail.user.guestPurgeAt), {
-                            dateStyle: 'medium',
-                            timeZone: PARIS_TIME_ZONE,
-                          }),
-                        })}
-                  </p>
-                )}
-              </div>
-
-              {showAccountActivity && (
-                <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
-                    {t('history.playerActivity')}
-                  </p>
-                  <UserActivityLines
-                    lastLoginAt={historyDetail.user.lastLoginAt}
-                    totalPresenceSeconds={historyDetail.user.totalPresenceSeconds}
-                  />
-                  <div className="mt-3">
-                    <p className="mb-1.5 text-xs font-medium text-white/50">{t('history.gamesPlayed')}</p>
-                    {historyDetail.user.gamesPlayed &&
-                    historyDetail.user.gamesPlayed.length > 0 ? (
-                      <ul className="space-y-1.5">
-                        {historyDetail.user.gamesPlayed.map((g) => (
-                          <li
-                            key={g.gameId}
-                            className="flex items-center justify-between rounded-md border border-white/10 bg-black/30 px-2.5 py-1.5 text-sm"
-                          >
-                            <span className="text-white/90">
-                              {g.emoji} {g.title}
-                            </span>
-                            <Badge variant="secondary">
-                              {g.partiesPlayed}{' '}
-                              {g.partiesPlayed > 1 ? t('games.parties') : t('games.party')}
-                            </Badge>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-white/45">{t('history.noParties')}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {historyDetail.user.ban.banned && (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-                  {t('history.currentlyBanned')}
-                  {historyDetail.user.ban.banComment && (
-                    <> — {historyDetail.user.ban.banComment}</>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
-                  {t('history.moderationHistory')}
-                </p>
-                {historyDetail.banHistory.length === 0 ? (
-                  <p className="text-sm text-white/45">{t('history.noEvents')}</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {historyDetail.banHistory.map((ev) => (
-                      <li
-                        key={ev.id}
-                        className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm"
-                      >
-                        <p className="font-medium text-white">{actionLabel(ev.action)}</p>
-                        <p className="text-xs text-white/45">
-                          {t('history.by', {
-                            date: format.dateTime(new Date(ev.createdAt), {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                              timeZone: PARIS_TIME_ZONE,
-                            }),
-                            name: ev.actorName,
-                          })}
-                        </p>
-                        {ev.comment && (
-                          <p className="mt-1 text-white/70">{ev.comment}</p>
-                        )}
-                        {ev.bannedUntil && (
-                          <p className="text-xs text-white/45">
-                            {t('history.until', {
-                              date: format.dateTime(new Date(ev.bannedUntil), {
-                                dateStyle: 'medium',
-                                timeStyle: 'short',
-                                timeZone: PARIS_TIME_ZONE,
-                              }),
-                            })}
-                          </p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
         open={!!selectedFeedback}
         onOpenChange={(open) => !open && setSelectedFeedback(null)}
       >
@@ -4254,8 +4215,8 @@ export default function SupervisionPage() {
           ) : (
             // Mêmes cartes que la liste Visiteurs, dépliables : IP du compte et
             // hors connexion, « Ouvrir la fiche ». Une recherche d'IP s'affiche
-            // dans l'onglet Comptes et la fiche dans son propre dialogue : ce
-            // dialogue se ferme, sinon il masquait le résultat.
+            // dans l'onglet Comptes : ce dialogue se ferme, sinon il masquait
+            // le résultat. La fiche, en pleine page, le démonte d'elle-même.
             <VisitorCardList
               rows={countryVisitors}
               onIpClick={(ip) => {
@@ -4265,10 +4226,6 @@ export default function SupervisionPage() {
               onNetworkClick={(ip, network) => {
                 setCountryDialog(null)
                 void handleNetworkLookup(ip, network)
-              }}
-              onOpenAccount={(accountId) => {
-                setCountryDialog(null)
-                setHistoryUserId(accountId)
               }}
             />
           )}

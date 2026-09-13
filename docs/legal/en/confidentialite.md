@@ -55,7 +55,7 @@ In the site's moderation tools, IPv6 addresses from the same network (same /64 p
 
 ### 3.4 Chat and online games
 
-Messages sent in the **chat** (game chat and friend messages) are stored on our servers and may go through automatic filtering of inappropriate language. They are kept for a maximum of **12 months** and then deleted. Online game state (moves, votes, drawings) is temporary and deleted together with the game table. We do, however, keep an **operations log** of launched games — game, date, duration and participants — for **12 months**, to monitor usage and investigate reports. This log holds no game content, and a deleted account is no longer named in it.
+Messages sent in the **chat** (game chat and friend messages) are stored on our servers and may go through automatic filtering of inappropriate language. They are kept for a maximum of **12 months** and then deleted. Online game state (moves, votes, drawings) is temporary and deleted together with the game table. We do, however, keep an **operations log** of launched games — game, date, table duration, end reason (finished, rematch, players left, closed by our team, abandoned) and participants — for **12 months**, to monitor usage and investigate reports. The site's administrators can view this log **account by account** (games launched, play sessions and duration of the tables the account took part in), and it is also used for online play statistics that name no one (unique players, games launched per day) — legal basis: legitimate interest. It holds no game content, and a deleted account is no longer named in it.
 
 ### 3.5 Voice chat
 
@@ -96,7 +96,7 @@ Your data is processed to:
 - create and manage your account;
 - authenticate your connections;
 - synchronise your players and statistics across devices;
-- run online games (tables, chat, rankings);
+- run online games (tables, chat, rankings) and monitor their use (game log, viewable account by account by the site's administrators);
 - ensure the security of the Service and prevent abuse;
 - moderate accounts and content (suspension, banning in case of violation);
 - respond to your support requests and feedback;
@@ -114,6 +114,7 @@ We **do not sell** your personal data to third parties.
 | Chat and online games | Performance of the contract |
 | Security and moderation (accounts, nicknames, content) | Legitimate interest |
 | Account's last activity date (online status shown to your friends, security, deletion of inactive guest accounts) | Legitimate interest |
+| Launched-game log (usage monitoring, reports, account-by-account viewing by the site's administrators) | Legitimate interest |
 | Visit statistics (`lp_vid` cookie, IP, device) | **Consent** |
 | Age gate (cookie) | Legitimate interest (compliance) |
 | Feedback | Consent (voluntary submission) |
@@ -135,7 +136,7 @@ The publisher remains the data controller. No other transfer to third parties ta
 - **Technical logs (IP addresses, presence)**: **6 months**. The IP address and country of last connection attached to an account are erased after **6 months** without activity; an account's IP address history is deleted immediately together with the account.
 - **Sign-in sessions**: deleted on sign-out, or automatically once they have expired.
 - **Chat messages**: **12 months**.
-- **Launched-game log** (game, date, duration, participants): **12 months**.
+- **Launched-game log** (game, date, table duration, end reason, participants): **12 months**.
 - **Nickname moderation traces**: **12 months**.
 - **Audience measurement data**: **13 months**.
 - **Feedback**: kept up to **24 months** or deleted on request; the associated contact email is erased if you delete your account.

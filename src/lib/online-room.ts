@@ -7,6 +7,7 @@ import { parseOnlinePreferences, type OnlinePreferences } from '@/lib/online-pre
 import { levelForXp } from '@/lib/online/cosmetics'
 import { parseBriefing, type RoomBriefing } from '@/lib/online/briefing'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { closeGameSession, closeGameSessionsOfPurgedRooms } from '@/lib/online/game-sessions'
 
 const ROOM_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 const ROOM_CODE_LENGTH = 6
@@ -351,11 +352,16 @@ export async function cleanupStaleWaitingRooms(): Promise<void> {
       // (salle vide → supprimée immédiatement, comme avant).
       members: { none: { lastSeenAt: { gte: cutoff } } },
     },
-    select: { id: true },
+    select: { id: true, updatedAt: true },
   })
   if (stale.length === 0) return
 
   const ids = stale.map((r) => r.id)
+  // Journal des parties : une salle revenue au lobby sans fin de partie peut
+  // encore porter une ligne ouverte. Fermée AVANT la suppression, à la
+  // dernière écriture de la salle (ne lève jamais : la purge passe quoi qu'il
+  // arrive).
+  await closeGameSessionsOfPurgedRooms(prisma, stale)
   await prisma.onlineRoom.deleteMany({ where: { id: { in: ids } } })
   // Notifie tout client encore branché en SSE sur une de ces salles (l'hôte
   // resté dans son lobby, par ex.) : il retombera aussitôt sur le Guichet.
@@ -387,11 +393,15 @@ export async function cleanupStaleActiveRooms(): Promise<void> {
       // les deux : aucune écriture d'état ET plus personne vu depuis 60 min.
       members: { none: { lastSeenAt: { gte: cutoff } } },
     },
-    select: { id: true },
+    select: { id: true, updatedAt: true },
   })
   if (stale.length === 0) return
 
   const ids = stale.map((r) => r.id)
+  // Journal des parties : la partie abandonnée s'est arrêtée au dernier coup
+  // (`updatedAt`), pas 60 min plus tard à la purge. Fermée AVANT la
+  // suppression, sans jamais faire échouer celle-ci.
+  await closeGameSessionsOfPurgedRooms(prisma, stale)
   await prisma.onlineRoom.deleteMany({ where: { id: { in: ids } } })
   for (const id of ids) publishRoomChanged(id, { type: 'lobby' })
 }
@@ -515,6 +525,50 @@ export async function touchMemberPresence(roomId: string, userId: string): Promi
 }
 
 /**
+ * Salle en jeu restée sans la moindre écriture d'état au-delà du seuil de la
+ * purge (STALE_ACTIVE_ROOM_MS) : sa partie est abandonnée depuis sa dernière
+ * écriture, même si personne n'est encore passé la purger.
+ */
+export function isAbandonedActiveRoom(
+  room: { status: string; updatedAt: Date },
+  now: number = Date.now()
+): boolean {
+  return (
+    (room.status === 'playing' || room.status === 'briefing') &&
+    room.updatedAt.getTime() < now - STALE_ACTIVE_ROOM_MS
+  )
+}
+
+/**
+ * Journal des parties d'une salle supprimée HORS purge : départ du dernier
+ * membre (DELETE /rooms/[roomId], deleteRoomIfEmpty) ou fermeture par le staff.
+ * À appeler AVANT la suppression.
+ *
+ * En temps normal, la partie s'arrête maintenant, avec le motif de l'appelant
+ * (durée estimée). Mais une partie abandonnée plus longtemps que le seuil de
+ * purge (onglet fermé en pleine partie, retour trois heures plus tard pour
+ * créer une table) serait datée à ce retour : c'est précisément l'artefact que
+ * la purge évite. Elle est alors close comme la purge l'aurait fait :
+ * 'abandoned', à la dernière écriture de la salle. Ne lève jamais : quitter une
+ * table ne doit pas échouer à cause du journal.
+ */
+export async function closeGameSessionBeforeRoomDelete(
+  room: { id: string; status: string; updatedAt: Date },
+  reason: 'left' | 'staff',
+  now: number = Date.now()
+): Promise<void> {
+  try {
+    if (isAbandonedActiveRoom(room, now)) {
+      await closeGameSessionsOfPurgedRooms(prisma, [{ id: room.id, updatedAt: room.updatedAt }])
+      return
+    }
+    await closeGameSession(prisma, room.id, new Date(now), reason)
+  } catch (error) {
+    console.error('[game-sessions] fermeture avant suppression de salle échouée', error)
+  }
+}
+
+/**
  * Supprime une salle si elle n'a plus aucun membre — évite les lobbys
  * fantômes quand un joueur en quitte une pour en créer/rejoindre une autre
  * (create/join retirent sa membership sans jamais passer par DELETE).
@@ -522,6 +576,15 @@ export async function touchMemberPresence(roomId: string, userId: string): Promi
 export async function deleteRoomIfEmpty(roomId: string): Promise<void> {
   const remaining = await prisma.onlineRoomMember.count({ where: { roomId } })
   if (remaining === 0) {
+    const room = await prisma.onlineRoom.findUnique({
+      where: { id: roomId },
+      select: { id: true, status: true, updatedAt: true },
+    })
+    if (!room) return
+    // Journal des parties : le dernier membre vient de partir ailleurs, la
+    // partie éventuelle s'arrête maintenant (durée estimée) — ou à sa dernière
+    // écriture si elle était déjà abandonnée.
+    await closeGameSessionBeforeRoomDelete(room, 'left')
     await prisma.onlineRoom.delete({ where: { id: roomId } }).catch(() => {})
   }
 }

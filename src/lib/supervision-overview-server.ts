@@ -3,8 +3,9 @@ import { GAMES } from '@/lib/games'
 import { canViewUserFeedback, canManageUsers } from '@/lib/roles'
 import { feedbackTypeLabel, isFeedbackType } from '@/lib/feedback'
 import { listFlaggedNameModerationUsers } from '@/lib/name-moderation-attempts-server'
-import { daysAgoParis, todayParis } from '@/lib/analytics-server'
+import { parisDayOffset, parisDayStartUtc, parisDayString, parisDaysBack } from '@/lib/paris-time'
 import { cleanupAbandonedRooms } from '@/lib/online-room'
+import { GAME_JOURNAL_SINCE } from '@/lib/online/game-sessions'
 
 /**
  * Salles listées en Supervision. Les salles `cast` (afficheur TV d'un jeu
@@ -55,7 +56,12 @@ const PLAYERS_BY_GAME_WINDOW_DAYS = 7
  */
 const GROWTH_CACHE_MS = 5 * 60 * 1000
 
-const DAY_MS = 24 * 60 * 60 * 1000
+/** Fenêtres des indicateurs de jeu en ligne, en jours de Paris (aujourd'hui inclus). */
+const ONLINE_PLAY_WINDOW_DAYS = { d1: 1, d7: 7, d30: 30 }
+const ONLINE_LAUNCH_SERIES_DAYS = 14
+
+const HOUR_MS = 60 * 60 * 1000
+const DAY_MS = 24 * HOUR_MS
 
 export type DailyPoint = { date: string; visitors: number; parties: number }
 
@@ -99,6 +105,12 @@ export type JournalEntry = {
   kind: JournalKind
   actorName: string | null
   targetName: string | null
+  /**
+   * Compte visé, pour le lien vers sa fiche : un identifiant, jamais un
+   * pseudo (résolu à la lecture). Null sans cible propre (action ancrée sur
+   * son auteur, terme de modération).
+   */
+  targetUserId: string | null
   detail: string | null
   createdAt: string
 }
@@ -112,6 +124,44 @@ export type QueueItem = {
   subtitle: string
   href: 'feedback' | 'accounts'
   createdAt: string
+}
+
+/** Compteurs sur 1, 7 et 30 jours de Paris (aujourd'hui inclus). */
+export type ParisDayWindows = { d1: number; d7: number; d30: number }
+
+/**
+ * Jeu en ligne tiré du JOURNAL DES PARTIES (OnlineGameSession), la seule
+ * source qui compte chaque lancement — solo contre des bots, jeux sans
+ * gagnant et revanches compris — pour TOUS les comptes, invités et comptes
+ * sans consentement statistique compris (intérêt légitime, déjà déclaré).
+ * Uniquement des effectifs : aucun nom, le compte n'est jamais nommé ici.
+ */
+export type OnlinePlayStats = {
+  /** Jour de Paris où le journal a commencé (AAAA-MM-JJ) : rien avant. */
+  journalSince: string
+  /**
+   * Comptes DISTINCTS ayant pris place dans une partie lancée depuis le minuit
+   * de Paris d'aujourd'hui (d1), des 7 ou des 30 derniers jours de Paris.
+   * Équipe (rôle ≠ 'user') exclue ; `guests` = dont comptes invités. Libellé
+   * « comptes », jamais « personnes ».
+   */
+  uniquePlayers: ParisDayWindows & { guests: ParisDayWindows }
+  /** Comptes d'équipe écartés de `uniquePlayers` sur 30 jours (« + N équipe »). */
+  staffExcluded: number
+  /**
+   * Parties LANCÉES par jour de Paris sur 14 jours, du plus ancien au plus
+   * récent. solo = au plus un humain (contre des bots), withHumans = deux
+   * humains ou plus ; humains = sièges sans botName. Parties jouées par
+   * l'équipe SEULE exclues.
+   */
+  launchesByDay: Array<{ day: string; solo: number; withHumans: number }>
+  /**
+   * Sièges humains SANS compte (ni compte ni bot) des parties lancées sur
+   * 30 jours : compte supprimé depuis, ou humain jamais rattaché à un membre
+   * au lancement — indiscernables en base. Comptés À PART : un compte supprimé
+   * depuis sort de `uniquePlayers`, qui baisse donc après coup.
+   */
+  deletedSeats30: number
 }
 
 export type GrowthStats = {
@@ -132,6 +182,8 @@ export type GrowthStats = {
    */
   playersByGame: Array<{ gameId: string; gameTitle: string; players: number }>
   abandonedTables: { stalled: number; live: number; rate: number | null }
+  /** Joueurs uniques et parties lancées en ligne, depuis le journal (lot 4). */
+  onlinePlay: OnlinePlayStats
   /** Fenêtres employées, pour afficher la définition exacte à l'écran. */
   windows: {
     retentionD1CohortDays: [number, number]
@@ -186,13 +238,15 @@ function gameTitleFor(gameId: string | null): string {
   return GAMES.find((g) => g.id === gameId)?.title ?? gameId
 }
 
-/** Série 14 derniers jours : visiteurs uniques (DailyVisitor) + parties distinctes (OnlineMatchResult, dédupliquées par salle). */
+/**
+ * Série 14 derniers jours de PARIS : visiteurs uniques (DailyVisitor, déjà
+ * datés au jour de Paris) + parties distinctes (OnlineMatchResult,
+ * dédupliquées par salle au sein d'un même jour de Paris).
+ */
 async function getDailySeries(days: number): Promise<DailyPoint[]> {
-  const since = daysAgoParis(days - 1)
-  const today = todayParis()
-
-  const dates: string[] = []
-  for (let i = days - 1; i >= 0; i -= 1) dates.push(daysAgoParis(i))
+  const dates = parisDaysBack(days)
+  const since = dates[0]
+  const today = dates[dates.length - 1]
 
   const [visitorRows, matchRows] = await Promise.all([
     prisma.dailyVisitor.groupBy({
@@ -200,21 +254,32 @@ async function getDailySeries(days: number): Promise<DailyPoint[]> {
       where: { date: { gte: since, lte: today } },
       _count: { _all: true },
     }),
-    // Prisma stocke DateTime en SQLite comme entier (ms epoch), pas en texte —
-    // date() ne sait pas le lire directement, il faut le modifieur 'unixepoch'
-    // (qui attend des SECONDES, d'où le /1000). Bucket en jour calendaire UTC
-    // (approximation suffisante pour une tendance, pas un décompte exact).
-    prisma.$queryRawUnsafe<Array<{ d: string; c: bigint }>>(
-      `SELECT date(finishedAt / 1000, 'unixepoch') as d, COUNT(DISTINCT roomId) as c
+    // Prisma stocke DateTime en SQLite comme entier (ms epoch, vérifié :
+    // typeof(finishedAt) = 'integer'), pas en texte. SQLite ne connaît pas
+    // Europe/Paris et le conteneur tourne en UTC : le regroupement par jour de
+    // Paris se fait donc en JS. Pour ne pas remonter une ligne par joueur
+    // toutes les 15 s, la base ne renvoie que les couples DISTINCTS (salle,
+    // heure UTC) — l'avance de Paris sur UTC étant d'heures entières, une
+    // heure UTC tombe tout entière dans un seul jour de Paris. Borne basse :
+    // le minuit de PARIS du premier jour (le minuit UTC perdait les parties
+    // finies entre 0 h et 2 h, heure de Paris).
+    prisma.$queryRawUnsafe<Array<{ roomId: string; h: bigint | number }>>(
+      `SELECT DISTINCT roomId, finishedAt / ${HOUR_MS} as h
        FROM OnlineMatchResult
-       WHERE finishedAt >= ?
-       GROUP BY d`,
-      new Date(`${since}T00:00:00.000Z`).getTime()
+       WHERE finishedAt >= ?`,
+      parisDayStartUtc(since).getTime()
     ),
   ])
 
   const visitorsByDate = new Map(visitorRows.map((r) => [r.date, r._count._all]))
-  const partiesByDate = new Map(matchRows.map((r) => [r.d, Number(r.c)]))
+  const roomsByDate = new Map<string, Set<string>>()
+  for (const row of matchRows) {
+    const day = parisDayString(new Date(Number(row.h) * HOUR_MS))
+    const rooms = roomsByDate.get(day) ?? new Set<string>()
+    rooms.add(row.roomId)
+    roomsByDate.set(day, rooms)
+  }
+  const partiesByDate = new Map([...roomsByDate].map(([day, rooms]) => [day, rooms.size]))
 
   return dates.map((date) => ({
     date,
@@ -319,6 +384,118 @@ async function getLiveTables(): Promise<LiveTable[]> {
   })
 }
 
+/** Partie du journal telle que la lit `getOnlinePlayStats` (voir la requête). */
+export type OnlinePlaySessionRow = {
+  startedAt: Date
+  humanCount: number
+  /** Sièges HUMAINS seulement (botName nul) : compte, ou compte supprimé. */
+  humanSeats: Array<{ userId: string | null; user: { role: string; isGuest: boolean } | null }>
+}
+
+/**
+ * Agrégation PURE des indicateurs de jeu en ligne (voir `OnlinePlayStats`).
+ * Les fenêtres sont des jours de Paris : d7 part du minuit de Paris d'il y a
+ * 6 jours, pas de « maintenant − 7 × 24 h ». Un lancement à 0 h 30 heure de
+ * Paris (22 h 30 UTC la veille en été) compte bien pour aujourd'hui, quel que
+ * soit le fuseau du conteneur.
+ */
+export function summarizeOnlinePlay(sessions: OnlinePlaySessionRow[], now: Date): OnlinePlayStats {
+  const windowStartMs = (days: number) => parisDayStartUtc(parisDayOffset(days - 1, now)).getTime()
+  const windows = (['d1', 'd7', 'd30'] as const).map((key) => ({
+    sinceMs: windowStartMs(ONLINE_PLAY_WINDOW_DAYS[key]),
+    players: new Set<string>(),
+    guests: new Set<string>(),
+  }))
+  const oldestMs = windowStartMs(ONLINE_PLAY_WINDOW_DAYS.d30)
+  const staff = new Set<string>()
+  let deletedSeats30 = 0
+
+  const launches = new Map(
+    parisDaysBack(ONLINE_LAUNCH_SERIES_DAYS, now).map((day) => [day, { day, solo: 0, withHumans: 0 }])
+  )
+
+  for (const session of sessions) {
+    const startedMs = session.startedAt.getTime()
+    // La requête borne déjà ; on ne se fie pas à l'appelant pour la fenêtre.
+    if (startedMs < oldestMs) continue
+
+    // Équipe exclue de la série aussi : une partie où tous les humains sont
+    // des comptes de l'équipe (un test de TryBotsGate) n'est pas une partie
+    // de joueur. Une table équipe + joueur, elle, reste une partie de joueur.
+    // Un siège sans compte (supprimé ou non rattaché) n'est pas présumé équipe.
+    const staffOnly =
+      session.humanSeats.length > 0 &&
+      session.humanSeats.every((seat) => seat.user !== null && seat.user.role !== 'user')
+    const launch = staffOnly ? undefined : launches.get(parisDayString(session.startedAt))
+    if (launch) {
+      // Humains = sièges sans botName. `humanCount` ne compte que les sièges
+      // RATTACHÉS à un compte au lancement : un humain non rattaché y passait
+      // pour un bot. Le plus grand des deux, pour qu'une ligne sans sièges
+      // écrits garde son effectif.
+      const humans = Math.max(session.humanCount, session.humanSeats.length)
+      if (humans >= 2) launch.withHumans += 1
+      else launch.solo += 1
+    }
+
+    for (const seat of session.humanSeats) {
+      if (!seat.userId || !seat.user) {
+        deletedSeats30 += 1
+        continue
+      }
+      if (seat.user.role !== 'user') {
+        staff.add(seat.userId)
+        continue
+      }
+      for (const span of windows) {
+        if (startedMs < span.sinceMs) continue
+        span.players.add(seat.userId)
+        if (seat.user.isGuest) span.guests.add(seat.userId)
+      }
+    }
+  }
+
+  const [d1, d7, d30] = windows
+  return {
+    journalSince: GAME_JOURNAL_SINCE,
+    uniquePlayers: {
+      d1: d1.players.size,
+      d7: d7.players.size,
+      d30: d30.players.size,
+      guests: { d1: d1.guests.size, d7: d7.guests.size, d30: d30.guests.size },
+    },
+    staffExcluded: staff.size,
+    launchesByDay: [...launches.values()],
+    deletedSeats30,
+  }
+}
+
+/**
+ * Lecture du journal pour `summarizeOnlinePlay` : UNE requête bornée aux
+ * 30 derniers jours de Paris (au plus 31 × 24 h), regroupée en JS — jamais une
+ * requête par jour. Les sièges de bots ne sont pas remontés. Appelée
+ * uniquement sous le cache de `getGrowthStats`.
+ */
+async function getOnlinePlayStats(now: Date): Promise<OnlinePlayStats> {
+  const since = parisDayStartUtc(parisDayOffset(ONLINE_PLAY_WINDOW_DAYS.d30 - 1, now))
+  const rows = await prisma.onlineGameSession.findMany({
+    where: { startedAt: { gte: since } },
+    select: {
+      startedAt: true,
+      humanCount: true,
+      participants: {
+        where: { botName: null },
+        // Rôle et type lus À LA LECTURE via la relation : aucun pseudo, et un
+        // compte supprimé depuis revient avec userId nul (SetNull).
+        select: { userId: true, user: { select: { role: true, isGuest: true } } },
+      },
+    },
+  })
+  return summarizeOnlinePlay(
+    rows.map((row) => ({ startedAt: row.startedAt, humanCount: row.humanCount, humanSeats: row.participants })),
+    now
+  )
+}
+
 /**
  * Indicateurs de croissance (F45). Tout est dérivé de l'existant — dates de
  * création / dernière visite des comptes, historique des lancements de
@@ -331,10 +508,17 @@ async function getLiveTables(): Promise<LiveTable[]> {
  */
 async function computeGrowthStats(): Promise<GrowthStats> {
   const now = Date.now()
+  // Bornes au minuit de PARIS, en arithmétique calendaire (paris-time) : une
+  // fenêtre de « N jours » est faite de jours de Paris, comme les joueurs en
+  // ligne, et ne glisse plus d'heure en heure. Jamais `now − N × 24 h`.
+  const parisDayStartMs = (daysAgo: number) =>
+    parisDayStartUtc(parisDayOffset(daysAgo, new Date(now))).getTime()
 
   // `lastSeenAt` ne garde que la DERNIÈRE visite : « revenu » se lit donc
   // « revu au moins N jours après son inscription », pas « revenu le jour N ».
-  // La définition affichée à l'écran dit exactement cela.
+  // La définition affichée à l'écran dit exactement cela. Cohorte = comptes
+  // créés du jour de Paris J−from au jour J−to, tous deux inclus : un compte
+  // du jour J−to a déjà au moins `to − 1` jours pleins, soit l'écart attendu.
   const retentionQuery = (cohort: { from: number; to: number }, gapDays: number) =>
     prisma.$queryRawUnsafe<Array<{ cohort: bigint; retained: bigint }>>(
       `SELECT COUNT(*) as cohort,
@@ -343,14 +527,15 @@ async function computeGrowthStats(): Promise<GrowthStats> {
        WHERE email IS NOT NULL AND isGuest = 0
          AND createdAt >= ? AND createdAt < ?`,
       gapDays * DAY_MS,
-      now - cohort.from * DAY_MS,
-      now - cohort.to * DAY_MS
+      parisDayStartMs(cohort.from),
+      parisDayStartMs(cohort.to - 1)
     )
 
-  const shareSince = new Date(now - REGISTERED_SHARE_WINDOW_DAYS * DAY_MS)
-  const playersSince = new Date(now - PLAYERS_BY_GAME_WINDOW_DAYS * DAY_MS)
+  // « Sur les N derniers jours » = N jours de Paris, aujourd'hui compris.
+  const shareSince = new Date(parisDayStartMs(REGISTERED_SHARE_WINDOW_DAYS - 1))
+  const playersSince = new Date(parisDayStartMs(PLAYERS_BY_GAME_WINDOW_DAYS - 1))
 
-  const [d1Rows, d7Rows, registered, guests, gameRows, abandonedRows] = await Promise.all([
+  const [d1Rows, d7Rows, registered, guests, gameRows, abandonedRows, onlinePlay] = await Promise.all([
     retentionQuery(RETENTION_D1_COHORT_DAYS, 1),
     retentionQuery(RETENTION_D7_COHORT_DAYS, 7),
     prisma.user.count({
@@ -401,6 +586,7 @@ async function computeGrowthStats(): Promise<GrowthStats> {
       now - STALLED_MS.briefing,
       now - STALLED_MS.playing
     ),
+    getOnlinePlayStats(new Date(now)),
   ])
 
   const ratio = (part: number, whole: number) => (whole > 0 ? part / whole : null)
@@ -435,6 +621,7 @@ async function computeGrowthStats(): Promise<GrowthStats> {
       live: liveRooms,
       rate: ratio(stalledRooms, liveRooms),
     },
+    onlinePlay,
     windows: {
       retentionD1CohortDays: [RETENTION_D1_COHORT_DAYS.from, RETENTION_D1_COHORT_DAYS.to],
       retentionD7CohortDays: [RETENTION_D7_COHORT_DAYS.from, RETENTION_D7_COHORT_DAYS.to],
@@ -534,6 +721,7 @@ async function getJournal(limit = 20): Promise<JournalEntry[]> {
       // Une action ancrée sur son auteur n'a pas de « cible » : le détail
       // porte le sujet réel (compte supprimé, code de table, réglage).
       targetName: selfAnchored ? null : e.user.displayName,
+      targetUserId: selfAnchored ? null : e.userId,
       detail: e.comment,
       createdAt: e.createdAt.toISOString(),
     })
@@ -546,6 +734,7 @@ async function getJournal(limit = 20): Promise<JournalEntry[]> {
       kind: 'cosmetic-grant' as const,
       actorName: g.grantedBy?.displayName ?? null,
       targetName: g.user.displayName,
+      targetUserId: g.userId,
       detail: g.cosmeticKey,
       createdAt: g.createdAt.toISOString(),
     })),
@@ -554,6 +743,7 @@ async function getJournal(limit = 20): Promise<JournalEntry[]> {
       kind: 'feature-ban' as const,
       actorName: f.actor?.displayName ?? null,
       targetName: f.user.displayName,
+      targetUserId: f.userId,
       detail: f.feature,
       createdAt: f.createdAt.toISOString(),
     })),
@@ -562,6 +752,7 @@ async function getJournal(limit = 20): Promise<JournalEntry[]> {
       kind: 'moderation-term' as const,
       actorName: t.addedById ? (termActorMap.get(t.addedById) ?? null) : null,
       targetName: null,
+      targetUserId: null,
       detail: t.term,
       createdAt: t.createdAt.toISOString(),
     })),

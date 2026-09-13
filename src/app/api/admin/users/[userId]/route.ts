@@ -8,7 +8,7 @@ import {
   canViewAccountActivity,
   normalizeRole,
 } from '@/lib/roles'
-import { deleteUserAccount, getUserGamePlayStats } from '@/lib/user-activity-server'
+import { deleteUserAccount } from '@/lib/user-activity-server'
 import {
   logStaffAction,
   STAFF_SELF_ANCHORED_ACTIONS,
@@ -56,8 +56,6 @@ export async function GET(
         bannedAt: true,
         _count: {
           select: {
-            stats: true,
-            achievements: true,
             // Sessions VALIDES seulement : les lignes échues attendent le
             // balayage et faisaient croire à une connexion encore ouverte.
             sessions: { where: { expiresAt: { gt: now } } },
@@ -90,22 +88,10 @@ export async function GET(
     const ban = getBanState(user)
     const localPlayerCount = countLocalPlayers(user.localPlayersJson)
 
-    let localPlayerNames: string[] = []
-    if (user.localPlayersJson) {
-      try {
-        const parsed = JSON.parse(user.localPlayersJson) as Array<{ name?: string }>
-        if (Array.isArray(parsed)) {
-          localPlayerNames = parsed
-            .map((p) => p.name)
-            .filter((n): n is string => typeof n === 'string')
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
+    // Plus de « Jeux joués » (table Stats vide, compteurs locaux) ni de
+    // prénoms des joueurs locaux : la fiche ne les affiche plus, la route ne
+    // les lit plus (minimisation). Les parties en ligne viennent de /activity.
     const showActivity = canViewAccountActivity(actor.role)
-    const gamesPlayed = showActivity ? await getUserGamePlayStats(userId) : undefined
 
     return NextResponse.json({
       user: {
@@ -125,11 +111,7 @@ export async function GET(
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
         localPlayerCount,
-        localPlayerNames,
-        statsCount: user._count.stats,
-        achievementsCount: user._count.achievements,
         sessionsCount: user._count.sessions,
-        gamesPlayed,
         ban: {
           ...ban,
           bannedUntil: ban.bannedUntil?.toISOString() ?? null,

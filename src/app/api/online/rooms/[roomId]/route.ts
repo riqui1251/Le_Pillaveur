@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
-import { buildRoomDto, touchMemberPresence } from '@/lib/online-room'
+import { buildRoomDto, closeGameSessionBeforeRoomDelete, touchMemberPresence } from '@/lib/online-room'
 import { resetRoomToWaitingLobby } from '@/lib/online-petit-buveur'
 import { parsePetitBuveurState } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
@@ -56,6 +56,12 @@ export async function DELETE(_request: Request, { params }: Params) {
   const remaining = await prisma.onlineRoomMember.count({ where: { roomId } })
 
   if (remaining === 0) {
+    // Journal des parties : le dernier humain quitte la table (souvent une
+    // partie contre des bots), elle s'arrête maintenant — durée estimée —, ou
+    // à sa dernière écriture si elle était abandonnée depuis plus longtemps
+    // que le seuil de purge (onglet resté ouvert). Ne lève jamais : un échec
+    // du journal ne doit pas empêcher de sortir.
+    await closeGameSessionBeforeRoomDelete(room, 'left')
     await prisma.onlineRoom.delete({ where: { id: roomId } }).catch(() => {})
     return NextResponse.json({ ok: true })
   }

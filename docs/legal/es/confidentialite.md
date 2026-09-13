@@ -55,7 +55,7 @@ En las herramientas de moderación del sitio, las direcciones IPv6 de una misma 
 
 ### 3.4 Chat y partidas en línea
 
-Los mensajes enviados en el **chat** (chat de partida y mensajes entre amigos) se almacenan en nuestros servidores y pueden someterse a un filtrado automático de lenguaje inapropiado. Se conservan un máximo de **12 meses** y luego se eliminan. El estado de las partidas en línea (jugadas, votos, dibujos) es temporal y se elimina junto con la mesa de juego. En cambio, conservamos un **registro de explotación** de las partidas iniciadas — juego, fecha, duración y participantes — durante **12 meses**, para seguir el uso del servicio y tramitar las denuncias. Este registro no contiene ningún contenido de partida, y una cuenta eliminada deja de aparecer nombrada en él.
+Los mensajes enviados en el **chat** (chat de partida y mensajes entre amigos) se almacenan en nuestros servidores y pueden someterse a un filtrado automático de lenguaje inapropiado. Se conservan un máximo de **12 meses** y luego se eliminan. El estado de las partidas en línea (jugadas, votos, dibujos) es temporal y se elimina junto con la mesa de juego. En cambio, conservamos un **registro de explotación** de las partidas iniciadas — juego, fecha, duración de la mesa, motivo de finalización (terminada, revancha, salida de los jugadores, cerrada por el equipo, abandonada) y participantes — durante **12 meses**, para seguir el uso del servicio y tramitar las denuncias. La administración del sitio puede consultar este registro **cuenta por cuenta** (partidas iniciadas, sesiones de juego y duración de las mesas en las que participó la cuenta), y también sirve para estadísticas de juego en línea que no nombran a nadie (jugadores únicos, partidas iniciadas por día) — base: interés legítimo. No contiene ningún contenido de partida, y una cuenta eliminada deja de aparecer nombrada en él.
 
 ### 3.5 Chat de voz
 
@@ -96,7 +96,7 @@ Sus datos se tratan para:
 - crear y gestionar su cuenta;
 - autenticar sus conexiones;
 - sincronizar sus jugadores y estadísticas entre dispositivos;
-- hacer funcionar las partidas en línea (mesas, chat, clasificaciones);
+- hacer funcionar las partidas en línea (mesas, chat, clasificaciones) y seguir su uso (registro de partidas, consultable cuenta por cuenta por la administración del sitio);
 - garantizar la seguridad del Servicio y prevenir los abusos;
 - moderar las cuentas y los contenidos (suspensión, baneo en caso de infracción);
 - responder a sus solicitudes de soporte y comentarios;
@@ -114,6 +114,7 @@ Sus datos se tratan para:
 | Chat y partidas en línea | Ejecución del contrato |
 | Seguridad y moderación (cuentas, apodos, contenidos) | Interés legítimo |
 | Fecha de última actividad de la cuenta (estado «en línea» visible para sus amigos, seguridad, eliminación de las cuentas de invitado inactivas) | Interés legítimo |
+| Registro de partidas iniciadas (seguimiento del uso, denuncias, consulta cuenta por cuenta por la administración del sitio) | Interés legítimo |
 | Estadísticas de visita (cookie `lp_vid`, IP, dispositivo) | **Consentimiento** |
 | Puerta de edad (cookie) | Interés legítimo (conformidad) |
 | Comentarios | Consentimiento (envío voluntario) |
@@ -135,7 +136,7 @@ El editor sigue siendo el responsable del tratamiento. No se realiza ninguna otr
 - **Registros técnicos (direcciones IP, presencia)**: **6 meses**. La dirección IP y el país de la última conexión asociados a una cuenta se borran tras **6 meses** sin actividad; el historial de direcciones IP de una cuenta se elimina inmediatamente junto con la cuenta.
 - **Sesiones de conexión**: se eliminan al cerrar sesión o, automáticamente, una vez caducadas.
 - **Mensajes de chat**: **12 meses**.
-- **Registro de partidas iniciadas** (juego, fecha, duración, participantes): **12 meses**.
+- **Registro de partidas iniciadas** (juego, fecha, duración de la mesa, motivo de finalización, participantes): **12 meses**.
 - **Trazas de moderación de apodos**: **12 meses**.
 - **Datos de medición de audiencia**: **13 meses**.
 - **Comentarios**: conservación hasta **24 meses** o supresión previa solicitud; el correo electrónico de contacto asociado se borra si elimina su cuenta.
