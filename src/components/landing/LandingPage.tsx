@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import { Bot, Droplets, Globe2, Mic, Tv, Zap } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { BrandLogo } from '@/components/brand/BrandLogo'
+import { AnalyticsConsentButton } from '@/components/legal/AgeGate'
 import { GAMES, type GameSuit } from '@/lib/games'
 import { RULES_GAME_IDS } from '@/lib/rules/rules-ids'
 import { SITE_URL } from '@/lib/site'
@@ -381,6 +382,10 @@ export async function LandingPage({ locale }: { locale: string }) {
           <Link href="/legal/mentions-legales" className="hover:text-white/70">
             {tNavLegal('mentionsLegales')}
           </Link>
+          {/* Rouvre le bandeau statistiques (retrait du consentement). */}
+          <AnalyticsConsentButton className="hover:text-white/70">
+            {tNavLegal('analytics')}
+          </AnalyticsConsentButton>
         </nav>
       </footer>
     </main>

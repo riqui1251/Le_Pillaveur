@@ -7,6 +7,7 @@ import {
   canAssignRole,
   canManageUsers,
   canModifyTarget,
+  canViewSupervisionAnalytics,
   isUserRole,
   normalizeRole,
   roleLabel,
@@ -24,6 +25,7 @@ import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { getIpsBySubjectKeys, subjectKeyFor } from '@/lib/ip-history-server'
 import { onlineSince } from '@/lib/presence'
 import { listFeatureBansForUsers, type FeatureBanState } from '@/lib/feature-bans'
+import { summarizeRecentVisitsByUser, type AccountVisitsDigest } from '@/lib/account-activity-server'
 import {
   accountDescriptionSelect,
   accountKindWhere,
@@ -54,6 +56,12 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const ACTIVITY_FILTERS = ['all', '24h', '7d', 'inactive30', 'never'] as const
 type ActivityFilter = (typeof ACTIVITY_FILTERS)[number]
 
+/**
+ * Compte sans visite commencée ces 7 jours. « Visites non suivies » ne se
+ * déduit pas d'ici : des visites plus anciennes peuvent exister (la fiche le dit).
+ */
+const NO_RECENT_VISITS: AccountVisitsDigest = { visits: 0, activeSeconds: 0 }
+
 function parseKindFilter(value: string | null): ListedAccountKind | 'all' {
   return LISTED_ACCOUNT_KINDS.find((kind) => kind === value) ?? 'all'
 }
@@ -76,7 +84,6 @@ function serializeUser(
     lastDevice: string | null
     lastSeenAt: Date | null
     lastLoginAt: Date | null
-    totalPresenceSeconds: number
     banType: string | null
     bannedUntil: Date | null
     banComment: string | null
@@ -101,7 +108,6 @@ function serializeUser(
     lastDevice: user.lastDevice,
     lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
-    totalPresenceSeconds: user.totalPresenceSeconds,
     ban: {
       banned: ban.banned,
       banType: ban.banType,
@@ -124,7 +130,6 @@ function userListSelect(now: Date) {
     lastIp: true,
     lastDevice: true,
     lastLoginAt: true,
-    totalPresenceSeconds: true,
     bannedUntil: true,
     banComment: true,
     bannedAt: true,
@@ -152,7 +157,7 @@ async function userIdsMatchingIp(query: string): Promise<string[]> {
 
 export async function GET(request: Request) {
   try {
-    await requireRole(canAccessSupervision)
+    const actor = await requireRole(canAccessSupervision)
 
     const { searchParams } = new URL(request.url)
     const { page, pageSize, skip } = parsePaging(searchParams, {
@@ -244,10 +249,19 @@ export async function GET(request: Request) {
       countAccountsByKind(now),
     ])
 
-    // Historique d'IP et sanctions ciblées : uniquement pour la page affichée.
-    const [ipsMap, featureBansMap] = await Promise.all([
+    // Résumé des visites sur 7 jours de Paris (« 3 visites · 1 h 10 actif ») :
+    // durées d'activité, donc admins et plus seulement. Pour un modérateur,
+    // rien n'est calculé et la propriété `visits7d` est ABSENTE — il ne voit
+    // que « actif il y a … » (lastSeenAt).
+    const showVisits = canViewSupervisionAnalytics(actor.role)
+    const userIds = users.map((u) => u.id)
+
+    // Historique d'IP, sanctions ciblées et visites : uniquement pour la page
+    // affichée (un seul groupBy pour les visites).
+    const [ipsMap, featureBansMap, visitsMap] = await Promise.all([
       getIpsBySubjectKeys(users.map((u) => subjectKeyFor(u.id, ''))),
-      listFeatureBansForUsers(users.map((u) => u.id)),
+      listFeatureBansForUsers(userIds),
+      showVisits ? summarizeRecentVisitsByUser(userIds, now) : null,
     ])
 
     return NextResponse.json({
@@ -255,6 +269,7 @@ export async function GET(request: Request) {
         ...serializeUser(u),
         ips: ipsMap.get(subjectKeyFor(u.id, '')) ?? [],
         featureBans: featureBansMap.get(u.id) ?? ([] as FeatureBanState[]),
+        ...(visitsMap ? { visits7d: visitsMap.get(u.id) ?? NO_RECENT_VISITS } : {}),
       })),
       total,
       page,
@@ -374,6 +389,14 @@ export async function PATCH(request: Request) {
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'Aucune modification' }, { status: 400 })
+    }
+
+    // Entrée dans l'équipe : le staff n'a pas d'historique de visites (la
+    // politique le dit, et planPing n'en écrit plus). Celles du joueur partent
+    // AVANT le changement de grade : un échec laisse le rôle intact, et l'on
+    // peut réessayer.
+    if (role !== undefined && role !== target.role && normalizeRole(role) !== 'user') {
+      await prisma.accountVisit.deleteMany({ where: { userId } })
     }
 
     const updated = await prisma.user.update({

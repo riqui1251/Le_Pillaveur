@@ -39,25 +39,33 @@ En **modo local** (sin cuenta), sus jugadores locales se almacenan en su disposi
 
 ### 3.3 Datos técnicos y de uso
 
-**Con su consentimiento** (opción «estadísticas de visita» al entrar en el sitio), recogemos para estadísticas de audiencia y lucha contra los abusos:
+**Con su consentimiento** (opción «estadísticas de visita», propuesta al entrar en el sitio y modificable en cualquier momento mediante el enlace «Estadísticas de visita» del menú y del pie de la página de inicio), recogemos, para estadísticas de audiencia consultables por la administración del sitio:
 
-- identificador de visitante (cookie `lp_vid`);
+- identificador del navegador (cookie `lp_vid`, 1 año);
 - dirección IP;
 - país estimado (geolocalización aproximada por dirección IP, calculada en nuestros servidores — sin servicios de terceros);
 - tipo de dispositivo / navegador (user-agent simplificado);
-- fechas de sus visitas al sitio (páginas mostradas y actividad), así como la última cuenta utilizada en este navegador y la fecha de su último uso con la sesión iniciada (para distinguir un navegador que sigue conectado a esa cuenta de otro en el que solo se utilizó anteriormente).
+- fechas de sus visitas al sitio (páginas mostradas y actividad), así como la última cuenta utilizada en este navegador y la fecha de su último uso con la sesión iniciada (para distinguir un navegador que sigue conectado a esa cuenta de otro en el que solo se utilizó anteriormente);
+- los nombres de sus jugadores locales (véase 3.2);
+- si está conectado a una cuenta, el historial de **visitas** de esa cuenta, descrito a continuación.
 
-Si lo rechaza, no se registra ningún seguimiento de visita.
+Una **visita** es un periodo de uso del sitio sin interrupciones de más de 30 minutos, sumando todas las pestañas y todos los dispositivos; solo se tienen en cuenta los navegadores en los que se han aceptado las estadísticas de visita. Para cada visita registramos su inicio, su última señal de actividad (el final se fija en esa señal más un minuto), el tiempo con la página mostrada y en uso, el **tiempo activo** (la parte de ese tiempo en la que se había utilizado la página — clic, tecla, toque en la pantalla o rueda del ratón — en los 10 minutos anteriores), el **tiempo en partida** (la parte pasada en una página de juego en modo local o durante una partida en línea iniciada: es una estimación, deducida de la pantalla mostrada) y el tipo de dispositivo (móvil, tableta, Mac o PC). Con una visita no se registra ninguna dirección IP, dirección de página, juego ni apodo. Las cuentas del equipo de moderación no tienen historial de visitas: el de un jugador que se une al equipo se borra.
+
+La administración del sitio puede consultar el historial de visitas cuenta por cuenta; ni los moderadores ni los demás jugadores tienen acceso a él. Al consultarlo, cada visita se relaciona con las partidas en línea iniciadas durante ella (registro de partidas, véase 3.4) y se calculan totales de 7 y 30 días. La cronología solo muestra el día, la duración y una franja horaria (madrugada, mañana, tarde o noche, hora de París); la hora exacta solo aparece en el detalle de una visita.
+
+Si lo rechaza, no se registra ningún seguimiento de visita. Si retira su consentimiento (enlace «Estadísticas de visita» y, después, «Rechazar»), los datos recogidos por este concepto en este navegador (dirección IP, país, dispositivo, nombres de los jugadores locales, fechas de visita, direcciones IP registradas sin sesión iniciada, registros diarios de visita) se borran inmediatamente y se retira la cookie `lp_vid`; el historial de visitas de la cuenta conectada en ese momento también se borra, en todos los dispositivos. Rechazar en un navegador en el que no había aceptado las estadísticas de visita (un dispositivo nuevo, por ejemplo) no borra ese historial. La elección vale para este navegador: en otro navegador en el que las hubiera aceptado, las visitas se siguen registrando mientras no las rechace también allí.
+
+Anteriormente, al entrar en el sitio, estas estadísticas se presentaban como anónimas y destinadas únicamente a contar las visitas, lo cual no era cierto (identificador del navegador, direcciones IP). El consentimiento dado con ese texto anterior ya no se tiene en cuenta: se le vuelve a plantear la pregunta. Con este cambio se suprimieron los nombres de los jugadores locales y las direcciones IP registradas sin sesión iniciada, así como los datos de los navegadores nunca utilizados con una cuenta. En un navegador utilizado con una cuenta, la última dirección IP, el país, el dispositivo, las fechas de visita y la última cuenta utilizada se conservan hasta la siguiente visita de ese navegador al sitio, en la que se borran junto con la cookie `lp_vid`, y como máximo 6 meses después de su última visita. Los registros diarios de visita de cada navegador (identificador del navegador y fecha, sin dirección IP, nombre ni cuenta) se conservan hasta su purga a los 13 meses.
 
 **Independientemente de este consentimiento**, únicamente para las **cuentas conectadas**, conservamos la dirección IP, el país estimado y el tipo de dispositivo de las últimas conexiones, así como la fecha de última actividad de la cuenta, actualizada solo cuando el sitio se utiliza realmente (página mostrada y alguna interacción en los últimos 30 minutos) o al autenticarse, que también sirve para el estado «en línea» visible para sus amigos y para la eliminación automática de las cuentas de invitado inactivas; no se registra ningún tiempo de presencia por este concepto. Finalidades: **seguridad y moderación de cuentas** (prevención de fraudes, baneos), estado «en línea» y eliminación de las cuentas de invitado inactivas — base: interés legítimo.
 
-Se considera actividad el uso de una página mostrada en pantalla: se envía una señal como máximo una vez por minuto, solo mientras la página está visible y usted la ha utilizado (clic, tecla, toque en la pantalla o rueda del ratón) en los últimos 30 minutos. Solo se conserva el momento de su última interacción, en la memoria de la página y sin su contenido; no se registra ni se transmite. Con o sin consentimiento, no se registra ninguna duración a partir de esta señal. Un acumulado de tiempo de presencia calculado antes del 13 de septiembre de 2026, con un método abandonado que también contaba las pestañas que quedaban abiertas (y que, por tanto, está sobreestimado), se conserva congelado para las cuentas afectadas hasta su puesta a cero; ya no se actualiza.
+Se considera actividad el uso de una página mostrada en pantalla: se envía una señal como máximo una vez por minuto, solo mientras la página está visible y usted la ha utilizado (clic, tecla, toque en la pantalla o rueda del ratón) en los últimos 30 minutos. Solo se conserva el momento de su última interacción, en la memoria de la página y sin su contenido; no se registra ni se transmite. Sin su consentimiento, la señal no contiene nada más y solo sirve para la fecha de última actividad de una cuenta conectada (véase más arriba): no se registra ninguna duración a partir de ella. Con su consentimiento, solo indica además «activo o no» y «en partida o no», y sirve para medir la duración de las visitas de su cuenta si está conectado (véase más arriba); no se registran ni la dirección de la página, ni el juego, ni el número de interacciones. El acumulado de tiempo de presencia calculado antes del 13 de septiembre de 2026, con un método abandonado que también contaba las pestañas que quedaban abiertas, se ha puesto a cero; ya no se actualiza ni se muestra.
 
 En las herramientas de moderación del sitio, las direcciones IPv6 de una misma red (mismo prefijo /64, por lo general un mismo router o un mismo lugar) se agrupan en la visualización: esta agrupación se calcula al consultar los datos y no almacena ningún dato adicional.
 
 ### 3.4 Chat y partidas en línea
 
-Los mensajes enviados en el **chat** (chat de partida y mensajes entre amigos) se almacenan en nuestros servidores y pueden someterse a un filtrado automático de lenguaje inapropiado. Se conservan un máximo de **12 meses** y luego se eliminan. El estado de las partidas en línea (jugadas, votos, dibujos) es temporal y se elimina junto con la mesa de juego. En cambio, conservamos un **registro de explotación** de las partidas iniciadas — juego, fecha, duración de la mesa, motivo de finalización (terminada, revancha, salida de los jugadores, cerrada por el equipo, abandonada) y participantes — durante **12 meses**, para seguir el uso del servicio y tramitar las denuncias. La administración del sitio puede consultar este registro **cuenta por cuenta** (partidas iniciadas, sesiones de juego y duración de las mesas en las que participó la cuenta), y también sirve para estadísticas de juego en línea que no nombran a nadie (jugadores únicos, partidas iniciadas por día) — base: interés legítimo. No contiene ningún contenido de partida, y una cuenta eliminada deja de aparecer nombrada en él.
+Los mensajes enviados en el **chat** (chat de partida y mensajes entre amigos) se almacenan en nuestros servidores y pueden someterse a un filtrado automático de lenguaje inapropiado. Se conservan un máximo de **12 meses** y luego se eliminan. El estado de las partidas en línea (jugadas, votos, dibujos) es temporal y se elimina junto con la mesa de juego. En cambio, conservamos un **registro de explotación** de las partidas iniciadas — juego, fecha, duración de la mesa, motivo de finalización (terminada, revancha, salida de los jugadores, cerrada por el equipo, abandonada) y participantes — durante **12 meses**, para seguir el uso del servicio y tramitar las denuncias. La administración del sitio puede consultar este registro **cuenta por cuenta** (partidas iniciadas, sesiones de juego y duración de las mesas en las que participó la cuenta; para una cuenta que aceptó las estadísticas de visita, partidas iniciadas durante cada una de sus visitas), y también sirve para estadísticas de juego en línea que no nombran a nadie (jugadores únicos, partidas iniciadas por día) — base: interés legítimo. No contiene ningún contenido de partida, y una cuenta eliminada deja de aparecer nombrada en él.
 
 ### 3.5 Chat de voz
 
@@ -85,11 +93,11 @@ El Servicio utiliza las siguientes cookies:
 | `lp_session` | Mantener su sesión iniciada | 30 días (91 días para una cuenta de invitado), prorrogados en cada visita, salvo para las cuentas del equipo de moderación |
 | `lp_local_play` | Activar el modo local sin cuenta | Persistente |
 | `lp_age_verified` | Recordar su declaración de edad (18+), exigida antes de crear una cuenta de invitado | 1 año |
-| `lp_analytics_consent` | Recordar su elección sobre las estadísticas de visita | 1 año |
+| `lp_analytics_consent` | Recordar su elección sobre las estadísticas de visita (la pregunta se vuelve a plantear si cambia lo que abarcan) | 1 año |
 | `lp_locale` | Recordar su idioma de interfaz | 1 año |
-| `lp_vid` | Identificador de visitante para estadísticas y anti-abuso — **instalada únicamente si ha aceptado las estadísticas de visita** | Persistente |
+| `lp_vid` | Identificador del navegador para las estadísticas de visita — **instalada únicamente si las ha aceptado, retirada si las rechaza** | 1 año |
 
-Puede cambiar su elección sobre las estadísticas de visita eliminando las cookies del sitio en su navegador: la pregunta se le planteará de nuevo en la próxima visita.
+Puede cambiar su elección en cualquier momento, sin eliminar sus cookies, con el enlace «Estadísticas de visita» del menú y del pie de la página de inicio: vuelve a abrir la elección Aceptar / Rechazar. Rechazar borra inmediatamente los datos descritos en el apartado 3.3 para este navegador y, si está conectado y había aceptado las estadísticas en este navegador, el historial de visitas de su cuenta. La elección solo vale para este navegador.
 
 ## 4. Finalidades del tratamiento
 
@@ -102,7 +110,7 @@ Sus datos se tratan para:
 - garantizar la seguridad del Servicio y prevenir los abusos;
 - moderar las cuentas y los contenidos (suspensión, baneo en caso de infracción);
 - responder a sus solicitudes de soporte y comentarios;
-- producir estadísticas de audiencia (con su consentimiento);
+- producir estadísticas de visita, incluido el historial de visitas de su cuenta (con su consentimiento);
 - cumplir nuestras obligaciones legales.
 
 **No vendemos** sus datos personales a terceros.
@@ -117,7 +125,7 @@ Sus datos se tratan para:
 | Seguridad y moderación (cuentas, apodos, contenidos) | Interés legítimo |
 | Fecha de última actividad de la cuenta (estado «en línea» visible para sus amigos, seguridad, eliminación de las cuentas de invitado inactivas) | Interés legítimo |
 | Registro de partidas iniciadas (seguimiento del uso, denuncias, consulta cuenta por cuenta por la administración del sitio) | Interés legítimo |
-| Estadísticas de visita (cookie `lp_vid`, IP, dispositivo) | **Consentimiento** |
+| Estadísticas de visita (cookie `lp_vid`, IP, país, dispositivo, nombres de los jugadores locales, historial de visitas de la cuenta) | **Consentimiento** |
 | Puerta de edad (cookie) | Interés legítimo (conformidad) |
 | Comentarios | Consentimiento (envío voluntario) |
 
@@ -136,6 +144,7 @@ El editor sigue siendo el responsable del tratamiento. No se realiza ninguna otr
 - **Cuenta de invitado** (creada sin email ni contraseña: escaneando un código QR, mediante un enlace de invitación o con «Pruébalo con bots»): se elimina automáticamente tras **90 días** de inactividad, con todo lo que contiene (apodo, progresión, cosméticos, amigos). Solo es accesible mediante la cookie de sesión del navegador (o de la aplicación) en el que se creó: cada visita desde ese navegador reinicia este plazo, pero no es accesible desde otro navegador ni desde otro dispositivo, y cerrar sesión, iniciar sesión con otra cuenta en ese navegador o borrar las cookies la deja definitivamente inaccesible. Una cuenta de invitado que ya no tiene ninguna sesión válida (tras un cierre de sesión, un inicio de sesión con otra cuenta en ese navegador o la caducidad de su sesión) se elimina antes, tras **7 días** de inactividad, salvo que esté baneada o sea objeto de una denuncia pendiente de revisión. Añadir un email y una contraseña, o vincular la cuenta a Google, la hace permanente.
 - **Cuenta eliminada**: supresión o anonimización en un plazo máximo de **12 meses** tras la solicitud, salvo obligación legal de conservación más larga.
 - **Registros técnicos (direcciones IP, presencia)**: **6 meses**. La dirección IP y el país de la última conexión asociados a una cuenta se borran tras **6 meses** sin actividad; el historial de direcciones IP de una cuenta se elimina inmediatamente junto con la cuenta.
+- **Historial de visitas de una cuenta** (inicio, final, tiempos con la página mostrada / activo / en partida, tipo de dispositivo): **6 meses** desde el inicio de cada visita; se borra inmediatamente al retirar el consentimiento a las estadísticas de visita desde un navegador conectado a esa cuenta en el que se habían aceptado, o cuando la cuenta se une al equipo de moderación, y se elimina junto con la cuenta.
 - **Sesiones de conexión**: se eliminan al cerrar sesión o, automáticamente, una vez caducadas.
 - **Mensajes de chat**: **12 meses**.
 - **Registro de partidas iniciadas** (juego, fecha, duración de la mesa, motivo de finalización, participantes): **12 meses**.
@@ -155,7 +164,7 @@ Conforme al RGPD, usted dispone de los siguientes derechos:
 - **Supresión**: solicitar la eliminación de sus datos;
 - **Limitación**: restringir determinados tratamientos;
 - **Oposición**: oponerse a un tratamiento basado en el interés legítimo;
-- **Retirada del consentimiento**: en cualquier momento, para los tratamientos basados en el consentimiento;
+- **Retirada del consentimiento**: en cualquier momento, para los tratamientos basados en el consentimiento. Para las estadísticas de visita, mediante el enlace «Estadísticas de visita» (menú y pie de la página de inicio): la retirada borra de inmediato los datos de este navegador y el historial de visitas de la cuenta conectada, en todos los dispositivos; vale para este navegador, y los demás navegadores en los que las hubiera aceptado siguen registrando sus visitas mientras no las rechace también allí;
 - **Portabilidad**: recibir sus datos en un formato estructurado (en su caso).
 
 Puede **eliminar su cuenta directamente** desde la página Cuenta (botón «Eliminar mi cuenta»): la eliminación es inmediata y definitiva.

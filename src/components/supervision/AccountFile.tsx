@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import {
+  Activity,
   AlertTriangle,
   ArrowLeft,
   CalendarDays,
   ChevronRight,
   Clock,
+  EyeOff,
   Gamepad2,
   Gavel,
   History,
@@ -15,8 +17,12 @@ import {
   Laptop,
   Lock,
   Monitor,
+  Moon,
   Network,
   Smartphone,
+  Sun,
+  Sunrise,
+  Sunset,
   Tablet,
   Unplug,
   UserRound,
@@ -39,12 +45,20 @@ import {
 } from '@/components/supervision/SupervisionLayout'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { isGuestProbablyLost, isGuestPurgeOverdue } from '@/lib/account-kind'
-import type { AccountActivity, AccountPlayTotals } from '@/lib/account-activity-server'
+import { ANALYTICS_CONSENT_V2_SINCE } from '@/lib/auth-cookies'
+import type {
+  AccountActivity,
+  AccountPlayTotals,
+  AccountVisitRow,
+  AccountVisitsSummary,
+  AccountVisitTotals,
+  VisitSlot,
+} from '@/lib/account-activity-server'
 import type { AccountDescription } from '@/lib/account-kind-server'
 import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
 import { GAMES } from '@/lib/games'
-import { HONEST_PRESENCE_SINCE } from '@/lib/heartbeat'
+import { ACTIVE_WINDOW_MS, BEAT_INTERVAL_MS, HONEST_PRESENCE_SINCE, INTERACTION_WINDOW_MS } from '@/lib/heartbeat'
 import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
 import { isOnline } from '@/lib/presence'
 import { normalizeRole } from '@/lib/roles'
@@ -57,14 +71,17 @@ import { cn } from '@/lib/utils'
  * Deux sources, chargées ensemble à l'ouverture et sur « Actualiser », jamais
  * en boucle :
  *  - GET /api/admin/users/[userId] — identité et modération, tout le staff ;
- *  - GET /api/admin/users/[userId]/activity — parties, séances, jeux, réseaux
- *    et navigateurs, admins et plus. Un 403 n'est pas une erreur : les blocs
+ *  - GET /api/admin/users/[userId]/activity — parties, visites, séances, jeux,
+ *    réseaux et navigateurs, admins et plus. Un 403 n'est pas une erreur : les blocs
  *    d'activité sont simplement remplacés par une mention.
  * Toute erreur s'affiche DANS la page (le dialogue Historique restait bloqué
  * sur « Chargement… »).
  *
- * Les durées sont des DURÉES DE TABLE (du lancement à la fin de la partie,
- * pour toute la table), jamais présentées comme le temps de jeu du joueur.
+ * Les durées des parties sont des DURÉES DE TABLE (du lancement à la fin de la
+ * partie, pour toute la table), jamais présentées comme le temps de jeu du
+ * joueur. Le temps passé sur le site vient des VISITES (lot 6), suivies
+ * seulement sous consentement : partielles par nature, jamais « 0 visite »
+ * pour un compte non suivi.
  * Toutes les dates sont à l'heure de Paris, quel que soit le fuseau du
  * navigateur.
  */
@@ -83,12 +100,6 @@ type AccountDetail = {
     lastSeenAt: string | null
     /** Null aussi quand le rôle du lecteur ne permet pas de la voir. */
     lastLoginAt: string | null
-    /**
-     * Cumul hérité (60 s par requête, onglets cachés compris) : surestimé,
-     * jamais un temps de jeu, et figé (plus alimenté). 0 aussi quand le rôle
-     * du lecteur ne le voit pas.
-     */
-    totalPresenceSeconds: number
     createdAt: string
     ban: {
       banned: boolean
@@ -109,6 +120,22 @@ type AccountDetail = {
 
 /** Parties affichées dans le bloc « Dernières parties » (la route en sert 20). */
 const RECENT_GAMES_SHOWN = 5
+
+/**
+ * Pause au-delà de laquelle le battement suivant ouvre une nouvelle visite
+ * (seuil de account-visits-server, module serveur non importable ici). Ne
+ * sert qu'au texte des définitions.
+ */
+const VISIT_GAP_MINUTES = 30
+
+/**
+ * Écart maximal crédité entre deux battements (MAX_BEAT_CREDIT_MS de
+ * account-visits-server, même raison). Ne sert qu'au texte des définitions.
+ */
+const MAX_BEAT_CREDIT_SECONDS = 150
+
+const ACTIVE_WINDOW_MINUTES = Math.round(ACTIVE_WINDOW_MS / 60_000)
+const INTERACTION_WINDOW_MINUTES = Math.round(INTERACTION_WINDOW_MS / 60_000)
 
 const ROLE_BADGE_STYLES: Record<ReturnType<typeof normalizeRole>, string> = {
   fondateur: 'border-yellow-400/50 bg-amber-500/20 text-yellow-100',
@@ -259,6 +286,8 @@ export function AccountFile({ userId }: { userId: string }) {
           ) : (
             <>
               <PlayTotalsSection activity={activity} />
+              {/* Absent d'une réponse antérieure au lot 6 : pas de bloc plutôt qu'un faux « non suivi ». */}
+              {activity.visits && <VisitsSection visits={activity.visits} role={user.role} />}
               <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <SeancesSection activity={activity} />
                 <RecentGamesSection activity={activity} userId={userId} />
@@ -269,10 +298,6 @@ export function AccountFile({ userId }: { userId: string }) {
           )}
 
           <ModerationSection detail={detail} />
-
-          {/* Pied de fiche (jusqu'aux visites du lot 6) : l'ancien cumul, figé et
-              dit pour ce qu'il est — des onglets ouverts, pas du temps de jeu. */}
-          {user.totalPresenceSeconds > 0 && <LegacyPresenceFooter seconds={user.totalPresenceSeconds} />}
         </>
       )}
     </SupervisionShell>
@@ -467,6 +492,310 @@ function PlayTotalsSection({ activity }: { activity: AccountActivity }) {
       <p className="text-[11px] leading-snug text-white/40">{t('windowHint')}</p>
       <DurationReliabilityLegend />
     </SectionCard>
+  )
+}
+
+/* ------------------------------------------------------------------------- */
+/* Visites (lot 6) : temps passé sur le site, sous consentement seulement.    */
+/* ------------------------------------------------------------------------- */
+
+/** Visites regroupées par jour de Paris de leur début, dans l'ordre servi (la plus récente d'abord). */
+function groupVisitsByDay(visits: AccountVisitRow[]): Array<{ day: string; visits: AccountVisitRow[] }> {
+  const groups = new Map<string, AccountVisitRow[]>()
+  for (const visit of visits) {
+    const rows = groups.get(visit.day)
+    if (rows) rows.push(visit)
+    else groups.set(visit.day, [visit])
+  }
+  return Array.from(groups, ([day, rows]) => ({ day, visits: rows }))
+}
+
+/**
+ * Échelle COMMUNE des barres : la plus longue visite affichée (au moins une
+ * minute). Une barre par visite à sa propre échelle serait toujours pleine :
+ * on ne verrait plus qu'une visite de 5 min est dix fois plus courte qu'une
+ * soirée.
+ */
+function visitBarScale(visits: AccountVisitRow[]): number {
+  return Math.max(60, ...visits.map((v) => Math.max(v.durationSeconds, v.visibleSeconds)))
+}
+
+/** Largeur d'un segment de barre ; un temps non nul reste visible (2 % au moins). */
+function barWidth(seconds: number, scale: number): string {
+  if (seconds <= 0 || scale <= 0) return '0%'
+  return `${Math.min(100, Math.max(2, (seconds / scale) * 100))}%`
+}
+
+/**
+ * Visite en cours : la fin servie est le dernier battement + 60 s ; « en
+ * cours » tant que ce dernier battement est dans la fenêtre « en ligne »
+ * (presence.ts), la même que la pastille du compte.
+ */
+function isVisitOngoing(visit: AccountVisitRow, now: number = Date.now()): boolean {
+  const endedAt = Date.parse(visit.endedAt)
+  return !Number.isNaN(endedAt) && isOnline(new Date(endedAt - BEAT_INTERVAL_MS), now)
+}
+
+const SLOT_ICONS: Record<VisitSlot, typeof Moon> = {
+  night: Moon,
+  morning: Sunrise,
+  afternoon: Sun,
+  evening: Sunset,
+}
+
+/**
+ * Bloc « Visites » : tuiles 7 j / 30 j et chronologie des dernières visites.
+ * Garde-fou (décision D2) : la chronologie ne montre que le JOUR, la DURÉE et
+ * une TRANCHE horaire ; l'heure exacte reste dans le détail déplié d'une
+ * visite, pour ne pas dresser d'emblée un profil horaire des soirées.
+ */
+function VisitsSection({ visits, role }: { visits: AccountVisitsSummary; role: string }) {
+  const t = useTranslations('supervision.accountFile')
+  const format = useFormatter()
+  const shortDay = (day: string) =>
+    format.dateTime(parisDayStartUtc(day), { dateStyle: 'short', timeZone: PARIS_TIME_ZONE })
+  const sinceLabel = visits.since ? shortDay(visits.since) : null
+  // Absente d'une réponse servie avant son ajout (onglet ouvert pendant un
+  // déploiement) : pas de ligne plutôt qu'un plantage.
+  const coverage = visits.coverage as AccountVisitsSummary['coverage'] | undefined
+
+  return (
+    <SectionCard icon={Activity} title={t('visitsTitle')} description={t('visitsDesc')} bodyClassName="space-y-3">
+      {!visits.tracked ? (
+        // Jamais « 0 visite » : rien ne dit que le compte n'est pas venu. Le
+        // staff, lui, n'est jamais suivi : la raison est connue.
+        <p className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm text-white/60">
+          <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+          <span className="min-w-0">
+            {normalizeRole(role) !== 'user'
+              ? t('visitsStaffNotTracked')
+              : t('visitsNotTracked', { date: shortDay(ANALYTICS_CONSENT_V2_SINCE) })}
+          </span>
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <VisitWindowTiles label={t('window7')} totals={visits.totals.d7} />
+            <VisitWindowTiles label={t('window30')} totals={visits.totals.d30} />
+          </div>
+          <p className="text-[11px] leading-snug text-white/40">
+            {sinceLabel && `${t('visitsSince', { date: sinceLabel })} `}
+            {t('visitsWindowHint')}
+          </p>
+        </>
+      )}
+      {/* Couverture : ne jamais laisser croire à un temps complet. Aucun
+          navigateur lié au compte : rien à comparer, pas de ligne. */}
+      {coverage && coverage.seenBrowsers > 0 && (
+        <p className="min-w-0 break-words text-[11px] leading-snug text-white/50">
+          {t('visitsCoverage', { tracked: coverage.trackedBrowsers, seen: coverage.seenBrowsers })}
+        </p>
+      )}
+      {visits.tracked && <VisitTimeline visits={visits.recent} />}
+      <VisitDefinitions />
+    </SectionCard>
+  )
+}
+
+function VisitWindowTiles({ label, totals }: { label: string; totals: AccountVisitTotals }) {
+  const t = useTranslations('supervision.accountFile')
+  const { units } = useFileFormat()
+  return (
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-gold/70">{label}</p>
+      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2.5">
+        <Stat label={t('visitsCount')} value={totals.visits} />
+        <Stat label={t('visitsActive')} value={formatPresenceDuration(totals.activeSeconds, units)} />
+        <Stat label={t('visitsGame')} value={formatPresenceDuration(totals.gameSeconds, units)} />
+        {/* Sans visite sur la fenêtre, pas de médiane : « — », jamais « 0 s ». */}
+        <Stat
+          label={t('visitsMedian')}
+          value={totals.visits > 0 ? formatPresenceDuration(totals.medianVisitSeconds, units) : '—'}
+        />
+      </dl>
+    </div>
+  )
+}
+
+function VisitTimeline({ visits }: { visits: AccountVisitRow[] }) {
+  const t = useTranslations('supervision.accountFile')
+  const format = useFormatter()
+
+  if (visits.length === 0) return <EmptyState icon={Inbox} title={t('visitsRecentEmpty')} />
+
+  const groups = groupVisitsByDay(visits)
+  const scale = visitBarScale(visits)
+  const now = new Date()
+  const today = parisDayString(now)
+  const yesterday = parisDayOffset(1, now)
+  // « Aujourd'hui », « Hier », sinon « mar. 8 sept. » (année ajoutée hors de
+  // l'année en cours : la fenêtre de 30 jours peut enjamber le 1er janvier).
+  const dayLabel = (day: string) =>
+    day === today
+      ? t('visitsToday')
+      : day === yesterday
+        ? t('visitsYesterday')
+        : format.dateTime(parisDayStartUtc(day), {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            ...(day.slice(0, 4) !== today.slice(0, 4) ? { year: 'numeric' as const } : {}),
+            timeZone: PARIS_TIME_ZONE,
+          })
+
+  return (
+    <div className="min-w-0 space-y-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-white/45">
+          {t('visitsRecentTitle', { count: visits.length })}
+        </h3>
+        <VisitBarLegend />
+      </div>
+      {groups.map((group) => (
+        <div key={group.day} className="min-w-0 space-y-1.5">
+          <p className="text-[11px] font-semibold text-white/55">{dayLabel(group.day)}</p>
+          <ul className="space-y-2">
+            {group.visits.map((visit) => (
+              <VisitLine key={visit.startedAt} visit={visit} scale={scale} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Légende de la barre : durée (pauses comprises), visible, actif, en partie. */
+function VisitBarLegend() {
+  const t = useTranslations('supervision.accountFile')
+  const items = [
+    { key: 'duration', swatch: 'h-2 bg-white/[0.12]', label: t('visitLegendDuration') },
+    { key: 'visible', swatch: 'h-2 bg-white/35', label: t('visitLegendVisible') },
+    { key: 'active', swatch: 'h-2 bg-gold', label: t('visitLegendActive') },
+    { key: 'game', swatch: 'h-1 bg-chip-blue', label: t('visitLegendGame') },
+  ]
+  return (
+    <ul className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-white/50">
+      {items.map((item) => (
+        <li key={item.key} className="flex items-center gap-1.5">
+          <span className={cn('w-3 shrink-0 rounded-full', item.swatch)} aria-hidden />
+          {item.label}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function VisitLine({ visit, scale }: { visit: AccountVisitRow; scale: number }) {
+  const t = useTranslations('supervision.accountFile')
+  const tSessions = useTranslations('supervision.gameSessions')
+  const format = useFormatter()
+  const { units } = useFileFormat()
+  const gameTitle = useGameTitle()
+
+  const SlotIcon = SLOT_ICONS[visit.slot] ?? Clock
+  const DeviceIcon = (visit.device && DEVICE_ICONS[visit.device]) || Monitor
+  const deviceKey = visit.device && DEVICE_ICONS[visit.device] ? visit.device : 'unknown'
+  const deviceLabel = t(`devices.${deviceKey}`)
+  const ongoing = isVisitOngoing(visit)
+  // Une entrée par partie lancée (revanches comprises) : le nombre de parties
+  // est la longueur, les noms sont dédoublonnés.
+  const gameTitles = Array.from(new Set(visit.games)).map(gameTitle)
+  const duration = (seconds: number) => formatPresenceDuration(seconds, units)
+
+  // Détail déplié : heures exactes, avec la date de fin si la visite passe minuit.
+  const time = (iso: string) => format.dateTime(new Date(iso), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
+  const endLabel =
+    parisDayString(new Date(visit.startedAt)) === parisDayString(new Date(visit.endedAt))
+      ? time(visit.endedAt)
+      : format.dateTime(new Date(visit.endedAt), { dateStyle: 'short', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
+
+  return (
+    <li className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white">
+          <SlotIcon className="h-3.5 w-3.5 shrink-0 text-gold/80" aria-hidden />
+          {t(`visitSlots.${visit.slot}`)}
+        </span>
+        <span className="text-sm tabular-nums text-white/75">{duration(visit.durationSeconds)}</span>
+        {ongoing && <span className="text-xs font-medium text-green-300">{tSessions('ongoing')}</span>}
+        <span className="ml-auto inline-flex shrink-0 items-center text-white/50" title={deviceLabel}>
+          <DeviceIcon className="h-3.5 w-3.5" aria-hidden />
+          <span className="sr-only">{deviceLabel}</span>
+        </span>
+      </div>
+
+      {/* Barre à l'échelle commune : fond = durée (pauses comprises), puis
+          visible et actif superposés (actif ⊆ visible), en partie en liseré. */}
+      <div className="relative mt-2 h-3 w-full overflow-hidden rounded-full" aria-hidden>
+        <span
+          className="absolute inset-y-0 left-0 rounded-full bg-white/[0.12]"
+          style={{ width: barWidth(visit.durationSeconds, scale) }}
+        />
+        <span
+          className="absolute left-0 top-0 h-2 rounded-full bg-white/35"
+          style={{ width: barWidth(visit.visibleSeconds, scale) }}
+        />
+        <span
+          className="absolute left-0 top-0 h-2 rounded-full bg-gold"
+          style={{ width: barWidth(visit.activeSeconds, scale) }}
+        />
+        <span
+          className="absolute bottom-0 left-0 h-1 rounded-full bg-chip-blue"
+          style={{ width: barWidth(visit.gameSeconds, scale) }}
+        />
+      </div>
+      <p className="mt-1 min-w-0 break-words text-[11px] tabular-nums text-white/50">
+        {t('visitTimes', {
+          active: duration(visit.activeSeconds),
+          game: duration(visit.gameSeconds),
+          visible: duration(visit.visibleSeconds),
+        })}
+      </p>
+      {visit.games.length > 0 && (
+        <p className="mt-0.5 min-w-0 break-words text-xs text-white/60">
+          {t('visitGames', { count: visit.games.length, games: gameTitles.join(', ') })}
+        </p>
+      )}
+
+      {/* Cible de tap élargie par le padding (≈ 32 px), qui remplace la marge
+          du dessus ; marge négative pour garder l'alignement : jusqu'à 20
+          repliables se suivent sur téléphone. */}
+      <details className="group min-w-0 text-[11px] text-white/50">
+        <summary className="-mx-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-2 text-white/45 transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 [&::-webkit-details-marker]:hidden">
+          <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-open:rotate-90" />
+          {t('visitExactTime')}
+        </summary>
+        <p className="mt-1 min-w-0 break-words tabular-nums text-white/70">
+          {ongoing
+            ? t('visitRangeOngoing', { start: time(visit.startedAt) })
+            : t('visitRange', { start: time(visit.startedAt), end: endLabel })}
+        </p>
+      </details>
+    </li>
+  )
+}
+
+/** Définitions repliées : ce que valent une visite et ses trois temps. */
+function VisitDefinitions() {
+  const t = useTranslations('supervision.accountFile')
+  const { units } = useFileFormat()
+  // « 2 min 30 s » : formatPresenceDuration arrondirait à la minute.
+  const credit = `${Math.floor(MAX_BEAT_CREDIT_SECONDS / 60)} ${units.min} ${MAX_BEAT_CREDIT_SECONDS % 60} ${units.s}`
+  return (
+    <details className="group min-w-0 text-[11px] leading-snug text-white/50">
+      <summary className="-mx-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-2 text-white/55 transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 [&::-webkit-details-marker]:hidden">
+        <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-open:rotate-90" />
+        {t('visitDefsTitle')}
+      </summary>
+      <ul className="mt-1.5 space-y-1">
+        <li className="min-w-0">{t('visitDefVisit', { gap: VISIT_GAP_MINUTES, credit })}</li>
+        <li className="min-w-0">{t('visitDefVisible', { minutes: INTERACTION_WINDOW_MINUTES, credit })}</li>
+        <li className="min-w-0">{t('visitDefActive', { minutes: ACTIVE_WINDOW_MINUTES })}</li>
+        <li className="min-w-0">{t('visitDefGame')}</li>
+        <li className="min-w-0">{t('visitDefSlots')}</li>
+      </ul>
+    </details>
   )
 }
 
@@ -759,24 +1088,6 @@ function NetworksSection({ activity }: { activity: AccountActivity }) {
         </div>
       </div>
     </SectionCard>
-  )
-}
-
-/**
- * « Cumul hérité, figé le 13/09 : 31 h 41 — surestimé, compté sur les onglets
- * ouverts », en pied de fiche. Plus alimenté depuis le battement honnête : il
- * ne bouge plus.
- */
-function LegacyPresenceFooter({ seconds }: { seconds: number }) {
-  const tSup = useTranslations('supervision')
-  const { units, honestPresenceSince } = useFileFormat()
-  return (
-    <p className="min-w-0 break-words px-1 text-[11px] leading-snug text-white/40">
-      {tSup('activity.legacyPresenceFrozen', {
-        date: honestPresenceSince,
-        duration: formatPresenceDuration(seconds, units),
-      })}
-    </p>
   )
 }
 

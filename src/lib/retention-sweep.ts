@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { ANALYTICS_CONSENT_GRANTED } from '@/lib/auth-cookies'
 import { deleteUserAccount } from '@/lib/user-activity-server'
 import {
   ACCOUNT_DELETE_ANONYMIZED_DETAIL,
@@ -13,6 +14,9 @@ import {
  *
  * Durées (doivent rester alignées avec docs/legal/<langue>/confidentialite.md §7) :
  * - IpSeenLog / SitePresence : 6 mois après la dernière activité ;
+ * - AccountVisit (visites d'un compte consentant : début, durées visible,
+ *   active et en partie, appareil) : 6 mois après le DÉBUT de la visite,
+ *   comme les autres traces de présence ;
  * - User.lastIp / User.lastCountry : effacés après 6 mois d'inactivité du
  *   compte (le compte lui-même est conservé — seule la trace technique part) ;
  * - ChatMessage / NameModerationAttempt : 12 mois ;
@@ -34,12 +38,25 @@ import {
  *   dernière activité (voir ORPHAN_GUEST_INACTIVITY_DAYS ci-dessous) ;
  * - journal du staff, suppressions de compte ('account-delete') : aucune
  *   purge, mais tout détail hors du format neutre `type:rôle` est anonymisé
- *   (filet de la migration 20260912100000_anonymize_account_delete_log).
+ *   (filet de la migration 20260912100000_anonymize_account_delete_log) ;
+ * - données de l'ancien accord '1' aux statistiques (filet de la migration
+ *   20260912130100_legacy_consent_cleanup) : présences non liées et pseudos
+ *   locaux écrits hors accord courant, historique IP `visitor:` sans présence
+ *   consentie, ancien cumul totalPresenceSeconds.
  *
  * Chaque bloc est indépendant : l'échec de l'un (table verrouillée, compte
  * impossible à supprimer…) est journalisé sans empêcher les autres de passer.
  */
 const SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000
+
+/**
+ * Présence écrite hors de l'accord courant : NULL (ancien '1', ou ancien
+ * conteneur qui ignore la colonne) ou version dépassée. Le OR sur null est
+ * nécessaire : un `not` seul exclut les lignes NULL.
+ */
+const OUTDATED_CONSENT_PRESENCE = {
+  OR: [{ consentVersion: null }, { consentVersion: { not: ANALYTICS_CONSENT_GRANTED } }],
+}
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const MONTH_MS = 30 * DAY_MS
@@ -147,6 +164,10 @@ export async function runRetentionSweep(): Promise<void> {
       // (voir ip-history-server.ts) et ses dates sont stockées en ISO string.
       ['IpSeenLog', prisma.$executeRaw`DELETE FROM "IpSeenLog" WHERE "lastSeen" < ${sixMonthsAgo.toISOString()}`],
       ['SitePresence', prisma.sitePresence.deleteMany({ where: { lastSeen: { lt: sixMonthsAgo } } })],
+      // Visites des comptes : bornées sur leur début (index startedAt). Client
+      // Prisma, donc dates en millisecondes sans piège de format — jamais le
+      // SQL brut en chaînes ISO d'IpSeenLog ci-dessus.
+      ['AccountVisit', prisma.accountVisit.deleteMany({ where: { startedAt: { lt: sixMonthsAgo } } })],
       ['ChatMessage', prisma.chatMessage.deleteMany({ where: { createdAt: { lt: twelveMonthsAgo } } })],
       [
         'NameModerationAttempt',
@@ -176,6 +197,43 @@ export async function runRetentionSweep(): Promise<void> {
             NOT: { comment: { in: [...NEUTRAL_ACCOUNT_DELETE_DETAILS] } },
           },
           data: { comment: ACCOUNT_DELETE_ANONYMIZED_DETAIL },
+        }),
+      ],
+      // Filets idempotents de la migration de l'ancien accord '1', pour la
+      // même raison : entre `migrate deploy` et le remplacement du conteneur
+      // (ou après un retour arrière), l'ancien code prend encore '1' pour un
+      // accord et réécrit présences, pseudos locaux, historique IP visiteur et
+      // cumul de présence. Le nouveau code n'écrit jamais rien de tout cela
+      // hors accord courant : une fois nettoyée, une ligne ne correspond plus.
+      [
+        'SitePresence.legacy',
+        prisma.sitePresence.deleteMany({ where: { userId: null, ...OUTDATED_CONSENT_PRESENCE } }),
+      ],
+      [
+        'SitePresence.legacyNames',
+        prisma.sitePresence.updateMany({
+          where: {
+            AND: [
+              OUTDATED_CONSENT_PRESENCE,
+              { OR: [{ localPlayerNames: { not: null } }, { localPlayerCount: { not: 0 } }] },
+            ],
+          },
+          data: { localPlayerNames: null, localPlayerCount: 0 },
+        }),
+      ],
+      // Un navigateur consentant a toujours sa présence (écrite avant son
+      // historique IP, effacée avec lui) : une ligne `visitor:` sans présence à
+      // l'accord courant n'a pas de base, et plus aucun refus ne la désigne.
+      // `substr(…, 9)` retire le préfixe « visitor: » (8 caractères).
+      [
+        'IpSeenLog.legacyVisitor',
+        prisma.$executeRaw`DELETE FROM "IpSeenLog" WHERE "subjectKey" LIKE 'visitor:%' AND substr("subjectKey", 9) NOT IN (SELECT "visitorId" FROM "SitePresence" WHERE "consentVersion" = ${ANALYTICS_CONSENT_GRANTED})`,
+      ],
+      [
+        'User.totalPresenceSeconds',
+        prisma.user.updateMany({
+          where: { totalPresenceSeconds: { gt: 0 } },
+          data: { totalPresenceSeconds: 0 },
         }),
       ],
       // La dernière IP/pays connus d'un compte sont des logs techniques : ils

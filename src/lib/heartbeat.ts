@@ -13,7 +13,9 @@
  * - au plus un battement toutes les 60 s.
  *
  * Seuls des horodatages en mémoire entrent ici : ni contenu, ni nombre
- * d'interactions, rien de stocké ni d'envoyé.
+ * d'interactions, rien de stocké ni d'envoyé. Avec le consentement (lot 6),
+ * le battement porte en plus deux booléens, « actif » et « en partie »
+ * (beatBody), calculés ici à partir de ces horodatages et du chemin.
  */
 
 /**
@@ -86,4 +88,73 @@ export function shouldBeat({ visible, lastInteractionAt, lastBeatAt, now }: Beat
   if (!visible) return false
   if (!hasRecentInteraction(lastInteractionAt, now)) return false
   return msUntilNextBeat(lastBeatAt, now) === 0
+}
+
+/* ------------------------------------------------------------------------- */
+/* Détail d'un battement (lot 6) : SEULEMENT sous consentement de version 2.  */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * « Actif » = interaction réelle dans les 10 dernières minutes. Seuil large
+ * exprès : à table, le téléphone passe de main en main et reste posé pendant
+ * qu'on boit ou qu'on discute. Inclus dans la fenêtre des battements (30 min) :
+ * entre 10 et 30 min sans geste, la page bat encore mais n'est plus « active ».
+ */
+export const ACTIVE_WINDOW_MS = 10 * 60_000
+
+/**
+ * Interaction réelle dans les 10 dernières minutes (borne comprise) ? Mêmes
+ * règles que hasRecentInteraction : aucune interaction ou horodatage illisible
+ * → faux ; « dans le futur » (horloge reculée) → vrai, le traceur le recale.
+ */
+export function isActive(lastInteractionAt: number | null, now: number): boolean {
+  if (lastInteractionAt === null || !Number.isFinite(lastInteractionAt)) return false
+  return now - lastInteractionAt <= ACTIVE_WINDOW_MS
+}
+
+/** Pages de jeu : /games/<jeu>, chemin SANS préfixe de langue. */
+const GAME_PATH = /^\/games\/[^/]/
+
+/** Statuts d'une salle en ligne dont la partie est lancée (briefing tuto compris). */
+const IN_GAME_ROOM_STATUSES: ReadonlySet<string> = new Set(['playing', 'briefing'])
+
+export type InGameInput = {
+  /** usePathname de @/i18n/navigation : sans préfixe de langue. */
+  pathname: string | null | undefined
+  /** Mode de jeu du compte (useAuth().user?.playMode) ; absent sans compte. */
+  playMode: string | null | undefined
+  /** Statut de la salle en ligne (useOnlineRoom().room?.status) ; absent sans salle. */
+  roomStatus: string | null | undefined
+}
+
+/**
+ * « En partie » = page de jeu ET (mode local OU salle en ligne lancée).
+ * ESTIMATION : le jeu local ne laisse aucun signal serveur, seule la page le
+ * trahit (écran de réglages compris). Une salle en attente (lobby) n'est pas
+ * une partie. Seul ce booléen part : jamais l'URL ni le jeu.
+ */
+export function isInGame({ pathname, playMode, roomStatus }: InGameInput): boolean {
+  if (typeof pathname !== 'string' || !GAME_PATH.test(pathname)) return false
+  if (playMode === 'local') return true
+  return typeof roomStatus === 'string' && IN_GAME_ROOM_STATUSES.has(roomStatus)
+}
+
+export type BeatDetail = {
+  active: boolean
+  inGame: boolean
+}
+
+/**
+ * Corps d'un battement. Sans consentement accordé (valeur '2'), exactement
+ * { beat: true } : la dernière activité du compte n'a besoin de rien d'autre,
+ * et le détail d'une visite (temps actif, temps en partie) repose sur le seul
+ * consentement. Avec, deux booléens stricts et rien d'autre (ni URL, ni jeu,
+ * ni nombre d'interactions).
+ */
+export function beatBody(
+  detail: BeatDetail | undefined,
+  consentGranted: boolean,
+): { beat: true; active?: boolean; inGame?: boolean } {
+  if (!detail || !consentGranted) return { beat: true }
+  return { beat: true, active: detail.active === true, inGame: detail.inGame === true }
 }

@@ -19,7 +19,7 @@ import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/loca
 import { getDisplayNameValidationError, isDisplayNameTaken, DISPLAY_NAME_MAX_LENGTH } from '@/lib/display-name'
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 import { linkVisitorNameModerationAttempts } from '@/lib/name-moderation-attempts-server'
-import { VISITOR_COOKIE } from '@/lib/auth-cookies'
+import { readConsentedVisitorId } from '@/lib/auth-cookies'
 
 const GOOGLE_LIMIT = 15
 const GOOGLE_WINDOW_MS = 15 * 60 * 1000
@@ -137,7 +137,8 @@ export async function POST(request: Request) {
     const role = normalizeRole(user.role)
     const accountCode = user.accountCode ?? (await ensureUserAccountCode(user.id))
 
-    const visitorId = cookieStore.get(VISITOR_COOKIE)?.value
+    // Tentatives de pseudo du navigateur : lp_vid sous l'accord courant seulement.
+    const visitorId = readConsentedVisitorId(cookieStore)
     if (visitorId) {
       await linkVisitorNameModerationAttempts(visitorId, user.id)
     }

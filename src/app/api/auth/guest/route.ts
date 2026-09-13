@@ -21,10 +21,9 @@ import { resolveRequestLocale } from '@/lib/name-moderation/request-locale'
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { linkVisitorNameModerationAttempts } from '@/lib/name-moderation-attempts-server'
-import { VISITOR_COOKIE } from '@/lib/auth-server'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
-import { AGE_VERIFIED_COOKIE } from '@/lib/auth-cookies'
+import { AGE_VERIFIED_COOKIE, readConsentedVisitorId } from '@/lib/auth-cookies'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
 
 const GUEST_LIMIT = 8
@@ -133,7 +132,8 @@ export async function POST(request: Request) {
       },
     })
 
-    const visitorId = cookieStore.get(VISITOR_COOKIE)?.value
+    // Tentatives de pseudo du navigateur : lp_vid sous l'accord courant seulement.
+    const visitorId = readConsentedVisitorId(cookieStore)
     if (visitorId) {
       await linkVisitorNameModerationAttempts(visitorId, user.id)
     }

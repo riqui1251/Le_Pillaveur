@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { createVisitorId, getCurrentUser, visitorCookieOptions } from '@/lib/auth-server'
 import {
-  createVisitorId,
-  getCurrentUser,
-  visitorCookieOptions,
-  VISITOR_COOKIE,
-} from '@/lib/auth-server'
-import { ANALYTICS_CONSENT_COOKIE } from '@/lib/auth-cookies'
+  ANALYTICS_CONSENT_COOKIE,
+  isAnalyticsConsentGranted,
+  readConsentedVisitorId,
+} from '@/lib/auth-cookies'
 import {
   recordNameModerationAttempt,
   type NameModerationAttemptContext,
@@ -79,7 +78,9 @@ export async function POST(request: Request) {
 
     const user = await getCurrentUser()
     const cookieStore = await cookies()
-    let visitorId = cookieStore.get(VISITOR_COOKIE)?.value ?? null
+    // lp_vid lu seulement sous l'accord courant : un navigateur resté à
+    // l'ancien '1' garde parfois son cookie, qui ne doit plus rien corréler.
+    let visitorId = readConsentedVisitorId(cookieStore)
     let setVisitorCookie = false
 
     // lp_vid est un identifiant de suivi : il n'est créé qu'avec le
@@ -94,7 +95,9 @@ export async function POST(request: Request) {
     // compteur d'avertissements (showWarning) du futur inscrit. Ces lignes
     // restent visibles côté modération, mais orphelines. On préfère cette perte
     // de corrélation au dépôt d'un cookie de suivi sans consentement.
-    if (!visitorId && cookieStore.get(ANALYTICS_CONSENT_COOKIE)?.value === '1') {
+    // Accord de la version courante seulement : l'ancien '1' (libellé
+    // « anonymes ») ne vaut plus accord.
+    if (!visitorId && isAnalyticsConsentGranted(cookieStore.get(ANALYTICS_CONSENT_COOKIE)?.value)) {
       visitorId = createVisitorId()
       setVisitorCookie = true
     }

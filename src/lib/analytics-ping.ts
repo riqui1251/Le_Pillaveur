@@ -1,4 +1,5 @@
 import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
+import type { UserRole } from '@/lib/roles'
 
 /**
  * Contrat du POST /api/analytics/ping (lot 5). PUR : aucune lecture de base,
@@ -9,7 +10,9 @@ import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
  *   (audience, pages de règles lues sans un clic) sans rien dire de son usage :
  *   jamais la dernière activité du compte.
  * - `{ beat: true }` : BATTEMENT, émis par VisitTracker seul, onglet visible et
- *   interaction réelle depuis 30 min au plus. SEUL signal de présence.
+ *   interaction réelle depuis 30 min au plus. SEUL signal de présence. Sous
+ *   consentement de version 2 (lot 6), le client y ajoute `active` et
+ *   `inGame`, qui ventilent le crédit de la visite du compte.
  * - `{ localPlayers: true, localPlayerNames }` : synchro des pseudos locaux
  *   (usePlayers, et après un battement tant qu'elle n'est pas confirmée). Ni
  *   présence, ni visite.
@@ -23,6 +26,10 @@ import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
 export type PingBody = {
   view: boolean
   beat: boolean
+  /** Battement avec interaction réelle depuis 10 min au plus. Faux hors battement. */
+  active: boolean
+  /** Battement sur un écran de jeu, local ou en ligne (estimation du client). Faux hors battement. */
+  inGame: boolean
   /** Vrai seulement avec une liste de pseudos exploitable : sans elle, rien à écrire. */
   syncLocalPlayers: boolean
   /** Pseudos nettoyés (parseLocalPlayerNamesInput) ; vide hors synchro. */
@@ -31,7 +38,8 @@ export type PingBody = {
 
 /**
  * Lecture stricte : un drapeau ne vaut que `true` (pas "1", pas 1). Un corps
- * illisible (null, tableau, texte) vaut un corps vide. Une synchro sans
+ * illisible (null, tableau, texte) vaut un corps vide. `active` et `inGame`
+ * n'existent qu'avec un battement : seuls, ils ne disent rien. Une synchro sans
  * tableau de pseudos n'en est pas une : on n'efface pas la liste stockée faute
  * de l'avoir reçue. Un tableau vide, lui, est une vraie liste (tous les joueurs
  * locaux supprimés).
@@ -44,9 +52,13 @@ export function parsePingBody(json: unknown): PingBody {
   const names =
     raw.localPlayers === true ? parseLocalPlayerNamesInput(raw.localPlayerNames) : undefined
 
+  const beat = raw.beat === true
+
   return {
     view: raw.view === true,
-    beat: raw.beat === true,
+    beat,
+    active: beat && raw.active === true,
+    inGame: beat && raw.inGame === true,
     syncLocalPlayers: names !== undefined,
     localPlayerNames: names ?? [],
   }
@@ -58,6 +70,10 @@ export function parsePingBody(json: unknown): PingBody {
  * - `account` : dernière activité du COMPTE — User.lastSeenAt, lastIp,
  *   lastCountry, lastDevice — et IpSeenLog `user:<id>`. Intérêt légitime
  *   (sécurité, statut « en ligne » des amis, purge des invités) : aucune durée.
+ * - `account-visit` : visite du COMPTE (AccountVisit, recordAccountBeat) —
+ *   durées visible, active et en partie, appareil. Consentement aux
+ *   statistiques de visite et rôle 'user' seulement : le staff n'est jamais
+ *   suivi.
  * - `visitor-cookie` : création du cookie lp_vid, absent de la requête.
  * - `visitor-view` : SitePresence (lastSeen, pays, appareil, lastIp ; userId
  *   et userSeenAt si session) et DailyVisitor.
@@ -72,6 +88,7 @@ export function parsePingBody(json: unknown): PingBody {
  */
 export type PingWrite =
   | 'account'
+  | 'account-visit'
   | 'visitor-cookie'
   | 'visitor-view'
   | 'visitor-beat'
@@ -79,10 +96,15 @@ export type PingWrite =
   | 'local-players'
 
 export type PingContext = Pick<PingBody, 'view' | 'beat' | 'syncLocalPlayers'> & {
-  /** Cookie de consentement aux statistiques de visite accepté. */
+  /** Consentement aux statistiques de visite accepté sous le libellé actuel ('2', isAnalyticsConsentGranted). */
   hasConsent: boolean
   /** Session valide (compte connecté). */
   hasSession: boolean
+  /**
+   * Rôle du compte de la session (null sans session). Explicite pour que la
+   * règle « le staff n'est jamais suivi » se lise et se teste ici.
+   */
+  accountRole: UserRole | null
   /** Cookie lp_vid présent dans la requête. */
   hasVisitorId: boolean
 }
@@ -95,10 +117,16 @@ export function planPing(ctx: PingContext): PingWrite[] {
   // ni une synchro de joueurs (rafales à chaque stat de partie locale).
   if (ctx.beat && ctx.hasSession) writes.push('account')
 
-  // Tout le reste suit le NAVIGATEUR : consentement obligatoire (art. 82 loi I&L).
+  // Tout le reste exige le consentement (art. 82 loi I&L).
   if (!ctx.hasConsent) return writes
 
-  // Un battement contient la vue : jamais les deux upserts pour une requête.
+  // Visite du compte : détail des durées par visite, fondé sur le consentement
+  // seul. Rôle 'user' uniquement : les passages du staff (Supervision, tests)
+  // ne sont pas un usage du jeu et ne sont jamais enregistrés.
+  if (ctx.beat && ctx.hasSession && ctx.accountRole === 'user') writes.push('account-visit')
+
+  // Le reste suit le NAVIGATEUR. Un battement contient la vue : jamais les
+  // deux upserts pour une requête.
   const presence: PingWrite | null = ctx.beat ? 'visitor-beat' : ctx.view ? 'visitor-view' : null
   if (presence) {
     if (!ctx.hasVisitorId) writes.push('visitor-cookie')

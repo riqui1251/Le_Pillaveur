@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { VISITOR_COOKIE } from '@/lib/auth-server'
+import { readConsentedVisitorId } from '@/lib/auth-cookies'
 import {
   recordNameModerationAttempt,
   type NameModerationAttemptContext,
@@ -15,8 +15,9 @@ export async function logRejectedNameOnServer(
     userId?: string | null
   }
 ) {
-  const cookieStore = await cookies()
-  const visitorId = cookieStore.get(VISITOR_COOKIE)?.value ?? null
+  // lp_vid seulement sous l'accord courant : un cookie hérité de l'ancien
+  // '1' n'est plus un identifiant qu'on a le droit de lire.
+  const visitorId = readConsentedVisitorId(await cookies())
 
   return recordNameModerationAttempt({
     attemptedName: input.attemptedName,

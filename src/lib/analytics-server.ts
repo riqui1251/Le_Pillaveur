@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { ANALYTICS_CONSENT_GRANTED } from '@/lib/auth-cookies'
 import type { DeviceKind } from '@/lib/device-from-user-agent'
 import {
   accountKindSelect,
@@ -50,6 +51,10 @@ export function daysAgoParis(days: number): string {
  * navigation anonyme sous un navigateur ensuite « connecté », que la recherche
  * par IP rattachait au compte. L'historique IpSeenLog, lui, suit le battement
  * seul (route.ts).
+ *
+ * consentVersion est réécrit à chaque signal : la ligne est désormais celle
+ * d'un accord de la version courante (couverture de la fiche, filet du
+ * balayage sur les lignes de l'ancien '1').
  */
 export async function recordVisitorPing(
   visitorId: string,
@@ -79,9 +84,11 @@ export async function recordVisitorPing(
         lastDevice: device,
         userId,
         userSeenAt: userId ? now : null,
+        consentVersion: ANALYTICS_CONSENT_GRANTED,
       },
       update: {
         lastSeen: now,
+        consentVersion: ANALYTICS_CONSENT_GRANTED,
         ...(country ? { country } : {}),
         ...(ip ? { lastIp: ip } : {}),
         ...(device ? { lastDevice: device } : {}),
@@ -98,6 +105,26 @@ export async function recordVisitorPing(
       create: { visitorId, date },
       update: {},
     }),
+  ])
+}
+
+/**
+ * Efface le suivi d'un NAVIGATEUR (lp_vid) : présence (IP, pays, appareil,
+ * pseudos locaux, dernier compte vu), historique IP `visitor:<vid>` et, si
+ * demandé, jours de visite. Une transaction : tout ou rien. Lève en cas
+ * d'échec, à l'appelant de décider si c'est bloquant.
+ * - refus ou retrait du consentement (accept-age) : jours de visite compris ;
+ * - navigateur resté à l'ancien accord '1' (ping) : jours de visite gardés,
+ *   comme la migration 20260912130100_legacy_consent_cleanup.
+ */
+export async function eraseVisitorTracking(
+  visitorId: string,
+  options: { dailyVisitors: boolean }
+): Promise<void> {
+  await prisma.$transaction([
+    prisma.sitePresence.deleteMany({ where: { visitorId } }),
+    prisma.ipSeenLog.deleteMany({ where: { subjectKey: subjectKeyFor(null, visitorId) } }),
+    ...(options.dailyVisitors ? [prisma.dailyVisitor.deleteMany({ where: { visitorId } })] : []),
   ])
 }
 

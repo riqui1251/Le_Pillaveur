@@ -9,27 +9,47 @@ function ctx(overrides: Partial<PingContext>): PingContext {
     syncLocalPlayers: false,
     hasConsent: false,
     hasSession: false,
+    accountRole: null,
     hasVisitorId: false,
     ...overrides,
   }
 }
+
+/** Compte joueur connecté (rôle 'user'), avec son cookie lp_vid. */
+const PLAYER = { hasSession: true, accountRole: 'user', hasVisitorId: true } as const
 
 describe('parsePingBody — les trois corps du contrat', () => {
   it('{ view: true } est une vue, et rien d’autre', () => {
     expect(parsePingBody({ view: true })).toEqual({
       view: true,
       beat: false,
+      active: false,
+      inGame: false,
       syncLocalPlayers: false,
       localPlayerNames: [],
     })
   })
 
-  it('{ beat: true } est un battement, et rien d’autre', () => {
+  it('{ beat: true } est un battement, et rien d’autre (client sans consentement)', () => {
     expect(parsePingBody({ beat: true })).toEqual({
       view: false,
       beat: true,
+      active: false,
+      inGame: false,
       syncLocalPlayers: false,
       localPlayerNames: [],
+    })
+  })
+
+  it('{ beat: true, active, inGame } : battement détaillé (client sous consentement)', () => {
+    expect(parsePingBody({ beat: true, active: true, inGame: true })).toMatchObject({
+      beat: true,
+      active: true,
+      inGame: true,
+    })
+    expect(parsePingBody({ beat: true, active: false, inGame: true })).toMatchObject({
+      active: false,
+      inGame: true,
     })
   })
 
@@ -39,6 +59,8 @@ describe('parsePingBody — les trois corps du contrat', () => {
     ).toEqual({
       view: false,
       beat: false,
+      active: false,
+      inGame: false,
       syncLocalPlayers: true,
       localPlayerNames: ['Alice', 'Bob'],
     })
@@ -53,7 +75,14 @@ describe('parsePingBody — les trois corps du contrat', () => {
 })
 
 describe('parsePingBody — tout le reste ne vaut aucun signal', () => {
-  const EMPTY = { view: false, beat: false, syncLocalPlayers: false, localPlayerNames: [] }
+  const EMPTY = {
+    view: false,
+    beat: false,
+    active: false,
+    inGame: false,
+    syncLocalPlayers: false,
+    localPlayerNames: [],
+  }
 
   it.each([
     ['corps absent ou illisible', null],
@@ -67,6 +96,7 @@ describe('parsePingBody — tout le reste ne vaut aucun signal', () => {
     ['tableau', [{ beat: true }]],
     ['texte', 'beat'],
     ['drapeaux non booléens', { view: 'true', beat: 1 }],
+    ['active et inGame sans battement', { active: true, inGame: true }],
   ])('%s', (_label, json) => {
     expect(parsePingBody(json)).toEqual(EMPTY)
   })
@@ -74,6 +104,10 @@ describe('parsePingBody — tout le reste ne vaut aucun signal', () => {
   it('synchro sans tableau de pseudos : pas de synchro (la liste stockée n’est pas effacée)', () => {
     expect(parsePingBody({ localPlayers: true })).toEqual(EMPTY)
     expect(parsePingBody({ localPlayers: true, localPlayerNames: 'Alice' })).toEqual(EMPTY)
+  })
+
+  it('active et inGame non booléens : faux, le battement reste', () => {
+    expect(parsePingBody({ beat: true, active: 'true', inGame: 1 })).toEqual({ ...EMPTY, beat: true })
   })
 
   it('pseudos ignorés hors synchro, même accompagnés d’un battement', () => {
@@ -85,22 +119,24 @@ describe('parsePingBody — tout le reste ne vaut aucun signal', () => {
 })
 
 describe('planPing — battement', () => {
-  it('session sans consentement : le compte seulement (intérêt légitime), rien du navigateur', () => {
-    expect(planPing(ctx({ beat: true, hasSession: true, hasVisitorId: true }))).toEqual(['account'])
+  it('session sans consentement : le compte seulement (intérêt légitime), ni visite ni navigateur', () => {
+    expect(planPing(ctx({ beat: true, ...PLAYER }))).toEqual(['account'])
   })
 
-  it('session avec consentement : compte, puis présence du navigateur (IP comprise)', () => {
-    expect(
-      planPing(ctx({ beat: true, hasSession: true, hasConsent: true, hasVisitorId: true }))
-    ).toEqual(['account', 'visitor-beat'])
+  it('session avec consentement : compte, visite du compte, puis présence du navigateur (IP comprise)', () => {
+    expect(planPing(ctx({ beat: true, hasConsent: true, ...PLAYER }))).toEqual([
+      'account',
+      'account-visit',
+      'visitor-beat',
+    ])
   })
 
   it('session avec consentement : l’IP va au compte, jamais en double au navigateur', () => {
-    const writes = planPing(ctx({ beat: true, hasSession: true, hasConsent: true, hasVisitorId: true }))
+    const writes = planPing(ctx({ beat: true, hasConsent: true, ...PLAYER }))
     expect(writes).not.toContain('visitor-ip')
   })
 
-  it('consentement sans session : présence et historique IP du navigateur, jamais le compte', () => {
+  it('consentement sans session : présence et historique IP du navigateur, jamais le compte ni une visite', () => {
     expect(planPing(ctx({ beat: true, hasConsent: true, hasVisitorId: true }))).toEqual([
       'visitor-beat',
       'visitor-ip',
@@ -121,10 +157,11 @@ describe('planPing — battement', () => {
 })
 
 describe('planPing — vue', () => {
-  it('avec consentement et session : présence du navigateur, JAMAIS la dernière activité du compte', () => {
-    const writes = planPing(ctx({ view: true, hasConsent: true, hasSession: true, hasVisitorId: true }))
+  it('avec consentement et session : présence du navigateur, JAMAIS l’activité ni une visite du compte', () => {
+    const writes = planPing(ctx({ view: true, hasConsent: true, ...PLAYER }))
     expect(writes).toEqual(['visitor-view'])
     expect(writes).not.toContain('account')
+    expect(writes).not.toContain('account-visit')
   })
 
   it('avec consentement sans lp_vid : cookie créé, présence, sans historique IP', () => {
@@ -132,32 +169,34 @@ describe('planPing — vue', () => {
   })
 
   it('sans consentement : rien, même connecté', () => {
-    expect(planPing(ctx({ view: true, hasSession: true, hasVisitorId: true }))).toEqual([])
+    expect(planPing(ctx({ view: true, ...PLAYER }))).toEqual([])
     expect(planPing(ctx({ view: true }))).toEqual([])
   })
 
   it('vue ET battement dans le même corps : un seul upsert, celui du battement', () => {
-    expect(
-      planPing(ctx({ view: true, beat: true, hasConsent: true, hasSession: true, hasVisitorId: true }))
-    ).toEqual(['account', 'visitor-beat'])
+    expect(planPing(ctx({ view: true, beat: true, hasConsent: true, ...PLAYER }))).toEqual([
+      'account',
+      'account-visit',
+      'visitor-beat',
+    ])
   })
 })
 
 describe('planPing — synchro des pseudos locaux', () => {
-  it('avec consentement : le patch des pseudos seulement, sans présence ni compte', () => {
-    expect(
-      planPing(ctx({ syncLocalPlayers: true, hasConsent: true, hasSession: true, hasVisitorId: true }))
-    ).toEqual(['local-players'])
+  it('avec consentement : le patch des pseudos seulement, sans présence, compte ni visite', () => {
+    expect(planPing(ctx({ syncLocalPlayers: true, hasConsent: true, ...PLAYER }))).toEqual([
+      'local-players',
+    ])
   })
 
   it('avec consentement mais sans lp_vid : rien (ni cookie ni présence créés)', () => {
-    expect(planPing(ctx({ syncLocalPlayers: true, hasConsent: true, hasSession: true }))).toEqual([])
+    expect(
+      planPing(ctx({ syncLocalPlayers: true, hasConsent: true, hasSession: true, accountRole: 'user' }))
+    ).toEqual([])
   })
 
   it('sans consentement : rien, même connecté', () => {
-    expect(
-      planPing(ctx({ syncLocalPlayers: true, hasSession: true, hasVisitorId: true }))
-    ).toEqual([])
+    expect(planPing(ctx({ syncLocalPlayers: true, ...PLAYER }))).toEqual([])
   })
 
   it('accompagnée d’un battement sans lp_vid : patch après la présence créée par la même requête', () => {
@@ -171,17 +210,15 @@ describe('planPing — synchro des pseudos locaux', () => {
 
   it('bout à bout : le corps du nouveau client ne patche que les pseudos', () => {
     const body = parsePingBody({ localPlayers: true, localPlayerNames: ['Alice'] })
-    expect(planPing({ ...body, hasConsent: true, hasSession: true, hasVisitorId: true })).toEqual([
-      'local-players',
-    ])
+    expect(planPing({ ...body, hasConsent: true, ...PLAYER })).toEqual(['local-players'])
   })
 })
 
 describe('planPing — corps inconnu ou ancien', () => {
   it.each([
     ['sans rien', ctx({})],
-    ['connecté', ctx({ hasSession: true, hasVisitorId: true })],
-    ['connecté avec consentement', ctx({ hasSession: true, hasConsent: true, hasVisitorId: true })],
+    ['connecté', ctx({ ...PLAYER })],
+    ['connecté avec consentement', ctx({ hasConsent: true, ...PLAYER })],
     ['consentement sans lp_vid', ctx({ hasConsent: true })],
   ])('%s : aucune écriture', (_label, context) => {
     expect(planPing(context)).toEqual([])
@@ -193,9 +230,61 @@ describe('planPing — corps inconnu ou ancien', () => {
     // drapeau avec. Même envoyés avec consentement, session et lp_vid : rien.
     for (const json of [{}, { localPlayerNames: ['Alice'], syncLocalPlayers: true }]) {
       const body = parsePingBody(json)
-      expect(
-        planPing({ ...body, hasConsent: true, hasSession: true, hasVisitorId: true })
-      ).toEqual([])
+      expect(planPing({ ...body, hasConsent: true, ...PLAYER })).toEqual([])
     }
+  })
+})
+
+describe('planPing — visite du compte (AccountVisit)', () => {
+  it('battement d’un joueur connecté, consentement accordé : visite enregistrée', () => {
+    expect(planPing(ctx({ beat: true, hasConsent: true, ...PLAYER }))).toContain('account-visit')
+  })
+
+  it('premier battement sans lp_vid : la visite ne dépend pas du cookie de navigateur', () => {
+    expect(
+      planPing(ctx({ beat: true, hasConsent: true, hasSession: true, accountRole: 'user' }))
+    ).toEqual(['account', 'account-visit', 'visitor-cookie', 'visitor-beat'])
+  })
+
+  it.each(['moderator', 'admin', 'superadmin', 'fondateur'] as const)(
+    'staff (%s) : jamais de visite, même avec consentement ; sa dernière activité reste écrite',
+    (role) => {
+      const writes = planPing(ctx({ beat: true, hasConsent: true, ...PLAYER, accountRole: role }))
+      expect(writes).not.toContain('account-visit')
+      expect(writes).toContain('account')
+    }
+  )
+
+  it('sans consentement accordé (refus, ou ancien accord « 1 » non reconfirmé) : aucune visite', () => {
+    expect(planPing(ctx({ beat: true, ...PLAYER }))).not.toContain('account-visit')
+  })
+
+  it('sans session : aucune visite', () => {
+    expect(planPing(ctx({ beat: true, hasConsent: true, hasVisitorId: true }))).not.toContain(
+      'account-visit'
+    )
+  })
+
+  it('ni une vue ni une synchro de pseudos ne sont une visite', () => {
+    expect(planPing(ctx({ view: true, hasConsent: true, ...PLAYER }))).not.toContain('account-visit')
+    expect(planPing(ctx({ syncLocalPlayers: true, hasConsent: true, ...PLAYER }))).not.toContain(
+      'account-visit'
+    )
+  })
+
+  it('bout à bout : corps du client sous consentement → visite, drapeaux transmis', () => {
+    const body = parsePingBody({ beat: true, active: true, inGame: false })
+    expect(planPing({ ...body, hasConsent: true, ...PLAYER })).toEqual([
+      'account',
+      'account-visit',
+      'visitor-beat',
+    ])
+    expect(body).toMatchObject({ active: true, inGame: false })
+  })
+
+  it('bout à bout : battement sans détail (onglet sur l’ancien JavaScript) → visite créditée en visible seul', () => {
+    const body = parsePingBody({ beat: true })
+    expect(planPing({ ...body, hasConsent: true, ...PLAYER })).toContain('account-visit')
+    expect(body).toMatchObject({ active: false, inGame: false })
   })
 })

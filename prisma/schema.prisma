@@ -37,6 +37,11 @@ model User {
   lastDevice       String?
   lastSeenAt       DateTime?
   lastLoginAt      DateTime?
+  // Cumul HÉRITÉ, plus alimenté depuis le lot 5 (60 s par requête, onglets
+  // cachés compris : surestimé) et remis à zéro par la migration
+  // 20260912130100_legacy_consent_cleanup. Colonne gardée : la supprimer en
+  // SQLite oblige à reconstruire la table. Le temps d'un compte se lit dans
+  // AccountVisit.
   totalPresenceSeconds Int   @default(0)
   onlineXp         Int       @default(0)
   // Série quotidienne : nombre de jours consécutifs avec au moins une partie
@@ -49,6 +54,7 @@ model User {
   stats            Stats[]
   achievements     Achievement[]
   sessions         Session[]
+  accountVisits    AccountVisit[]
   hostedRooms      OnlineRoom[]       @relation("HostedRooms")
   roomMemberships  OnlineRoomMember[]
   roomInvitesReceived OnlineRoomInvite[] @relation("RoomInvitesReceived")
@@ -320,6 +326,13 @@ model SitePresence {
   lastDevice       String?
   localPlayerCount Int      @default(0)
   localPlayerNames String?
+  /// Version du consentement aux statistiques sous laquelle la présence a été
+  /// écrite en dernier : '2' (ANALYTICS_CONSENT_GRANTED, recordVisitorPing).
+  /// NULL = ligne de l'ancien accord '1' (libellé « anonymes »), gardée par la
+  /// migration 20260912130100_legacy_consent_cleanup seulement si elle est
+  /// liée à un compte, sans pseudos locaux. Sert la couverture « visites
+  /// suivies sur N navigateurs sur M » de la fiche et le filet du balayage.
+  consentVersion   String?
   firstSeen        DateTime @default(now())
   lastSeen         DateTime @default(now())
 
@@ -357,6 +370,47 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+// VISITE d'un compte : suite de battements (page visible et utilisée) séparés
+// de moins de 30 min, tous onglets et appareils confondus. ≠ Session, qui
+// n'est qu'un jeton d'authentification (30 jours glissants, sans mesure
+// d'usage). Écrite par recordAccountBeat (src/lib/account-visits-server.ts),
+// seulement avec le consentement aux statistiques de visite ('2') et pour le
+// rôle 'user' : le staff n'est jamais suivi.
+//
+// Minimisation : ni IP (déjà dans IpSeenLog), ni URL, ni jeu, ni pseudo, ni
+// visitorId — des durées en secondes et une catégorie d'appareil. Pas de
+// colonne de fin : elle se déduit de lastBeatAt à la lecture, sans clôture ni
+// cron.
+// Cascade (et non SetNull) : ce sont les données d'usage du joueur, sans
+// valeur d'audit ; rien n'a à survivre au compte. Purge 6 mois après
+// startedAt (retention-sweep.ts).
+// Dates écrites par le client Prisma, donc en millisecondes epoch : tout SQL
+// brut sur cette table doit raisonner en ms.
+model AccountVisit {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt      DateTime @default(now())
+  /// Dernier battement pris en compte (crédité ou non). Fin de la visite =
+  /// lastBeatAt + 60 s (lecture) ; référence du crédit suivant
+  /// (compare-and-swap, voir recordAccountBeat).
+  lastBeatAt     DateTime @default(now())
+  /// Somme des crédits : temps page visible et utilisée (pauses non comprises).
+  visibleSeconds Int      @default(0)
+  /// Crédits des battements avec interaction depuis 10 min au plus.
+  activeSeconds  Int      @default(0)
+  /// Crédits des battements sur un écran de jeu, local ou en ligne.
+  gameSeconds    Int      @default(0)
+  /// DeviceKind du premier battement : 'mobile' | 'tablet' | 'mac' | 'pc' ;
+  /// null si non reconnu.
+  device         String?
+
+  // Visite ouverte à chaque battement, dernières visites d'un compte.
+  @@index([userId, lastBeatAt])
+  // Fenêtres de dates et purge.
+  @@index([startedAt])
 }
 
 model Stats {

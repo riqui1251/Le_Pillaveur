@@ -8,13 +8,19 @@ import {
   sessionCookieOptions,
   visitorCookieOptions,
 } from '@/lib/auth-server'
-import { ANALYTICS_CONSENT_COOKIE } from '@/lib/auth-cookies'
 import {
+  ANALYTICS_CONSENT_COOKIE,
+  ANALYTICS_CONSENT_LEGACY,
+  isAnalyticsConsentGranted,
+} from '@/lib/auth-cookies'
+import {
+  eraseVisitorTracking,
   recordAccountPresence,
   recordVisitorPing,
   syncVisitorLocalPlayers,
 } from '@/lib/analytics-server'
 import { parsePingBody, planPing } from '@/lib/analytics-ping'
+import { recordAccountBeat } from '@/lib/account-visits-server'
 import { recordIpSeen } from '@/lib/ip-history-server'
 import { runRetentionSweep } from '@/lib/retention-sweep'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
@@ -37,7 +43,30 @@ export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
     let visitorId = cookieStore.get(VISITOR_COOKIE)?.value
-    const hasConsent = cookieStore.get(ANALYTICS_CONSENT_COOKIE)?.value === '1'
+    // Accord donné sous le libellé actuel seulement ('2') : l'ancien '1'
+    // (« statistiques anonymes ») ne vaut plus accord et le bandeau se repose.
+    const consentValue = cookieStore.get(ANALYTICS_CONSENT_COOKIE)?.value
+    const hasConsent = isAnalyticsConsentGranted(consentValue)
+
+    // lp_vid sans accord valable : identifiant de suivi qui ne sert plus à rien,
+    // retiré dans la réponse et plus jamais lu ici.
+    const dropVisitorCookie = !hasConsent && Boolean(visitorId)
+    if (dropVisitorCookie && visitorId && consentValue === ANALYTICS_CONSENT_LEGACY) {
+      // Navigateur resté à l'ancien '1' : on efface ce qu'il a laissé sous cet
+      // accord, y compris ce que l'ancien conteneur a pu réécrire APRÈS la
+      // migration de nettoyage pendant le déploiement. Présence liée à un
+      // compte comprise : sans lp_vid, plus aucun refus ne pourrait la
+      // désigner. Jours de visite gardés, comme la migration. Une seule fois :
+      // la réponse retire le cookie. Un échec ne prive pas le compte du
+      // renouvellement de sa session.
+      try {
+        await eraseVisitorTracking(visitorId, { dailyVisitors: false })
+      } catch (error) {
+        console.error("analytics ping: effacement des données de l'ancien accord impossible:", error)
+      }
+    }
+    if (dropVisitorCookie) visitorId = undefined
+
     const { country, ip } = resolveGeoFromRequest(request)
     const device = deviceKindFromHeader(request)
     const session = await getCurrentSession()
@@ -58,6 +87,7 @@ export async function POST(request: Request) {
       syncLocalPlayers: body.syncLocalPlayers,
       hasConsent,
       hasSession: currentUser !== null,
+      accountRole: currentUser?.role ?? null,
       hasVisitorId: Boolean(visitorId),
     })
 
@@ -65,6 +95,17 @@ export async function POST(request: Request) {
     // avec ou sans consentement.
     if (currentUser && writes.includes('account')) {
       await recordAccountPresence(currentUser.id, { country, ip, device })
+    }
+
+    // Visite du compte (durées par visite) : consentement et rôle 'user'
+    // seulement, décidés par planPing. Ne lève jamais : une mesure d'usage ne
+    // prive pas le compte du renouvellement de sa session plus bas.
+    if (currentUser && writes.includes('account-visit')) {
+      await recordAccountBeat(currentUser.id, {
+        active: body.active,
+        inGame: body.inGame,
+        device,
+      })
     }
 
     // Suivi du navigateur : planPing ne le prévoit qu'avec consentement
@@ -94,6 +135,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({ ok: true, localPlayersSynced })
     if (createdVisitorId) response.cookies.set(visitorCookieOptions(createdVisitorId))
+    if (dropVisitorCookie) response.cookies.delete(VISITOR_COOKIE)
 
     // Session glissante (au plus une écriture par jour), avec ou sans
     // consentement — le cookie de session est strictement nécessaire. Un

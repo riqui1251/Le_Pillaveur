@@ -18,6 +18,7 @@ const { prismaMock } = vi.hoisted(() => {
       stats: { deleteMany: token('stats.deleteMany') },
       achievement: { deleteMany: token('achievement.deleteMany') },
       session: { deleteMany: token('session.deleteMany') },
+      accountVisit: { deleteMany: token('accountVisit.deleteMany') },
       accountBanEvent: { updateMany: token('ban.updateMany'), deleteMany: token('ban.deleteMany') },
       userFeedback: { updateMany: token('feedback.updateMany') },
       sitePresence: { updateMany: token('presence.updateMany') },
@@ -69,5 +70,16 @@ describe('deleteUserAccount', () => {
 
     expect(transactionQueries()).not.toContain('journal.close')
     expect(prismaMock.onlineGameSession.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('efface explicitement les visites du compte (AccountVisit) dans la transaction, avant user.delete', async () => {
+    prismaMock.onlineRoom.findMany.mockResolvedValue([])
+
+    await deleteUserAccount('u1')
+
+    expect(prismaMock.accountVisit.deleteMany).toHaveBeenCalledWith({ where: { userId: 'u1' } })
+    const queries = transactionQueries()
+    expect(queries).toContain('accountVisit.deleteMany')
+    expect(queries.indexOf('accountVisit.deleteMany')).toBeLessThan(queries.indexOf('user.delete'))
   })
 })

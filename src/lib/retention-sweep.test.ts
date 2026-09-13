@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const { prismaMock, deleteUserAccountMock } = vi.hoisted(() => ({
   prismaMock: {
     $executeRaw: vi.fn(),
-    sitePresence: { deleteMany: vi.fn() },
+    sitePresence: { deleteMany: vi.fn(), updateMany: vi.fn() },
+    accountVisit: { deleteMany: vi.fn() },
     chatMessage: { deleteMany: vi.fn() },
     nameModerationAttempt: { deleteMany: vi.fn() },
     dailyVisitor: { deleteMany: vi.fn() },
@@ -55,6 +56,7 @@ describe('balayage de conservation', () => {
     prismaMock.$executeRaw.mockReset().mockResolvedValue(0)
     for (const model of [
       prismaMock.sitePresence,
+      prismaMock.accountVisit,
       prismaMock.chatMessage,
       prismaMock.nameModerationAttempt,
       prismaMock.dailyVisitor,
@@ -64,6 +66,7 @@ describe('balayage de conservation', () => {
       model.deleteMany.mockReset().mockResolvedValue({ count: 0 })
     }
     prismaMock.user.updateMany.mockReset().mockResolvedValue({ count: 0 })
+    prismaMock.sitePresence.updateMany.mockReset().mockResolvedValue({ count: 0 })
     prismaMock.accountBanEvent.updateMany.mockReset().mockResolvedValue({ count: 0 })
     prismaMock.user.findMany
       .mockReset()
@@ -81,6 +84,47 @@ describe('balayage de conservation', () => {
     await runSweep()
     expect(prismaMock.session.deleteMany).toHaveBeenCalledWith({
       where: { expiresAt: { lt: new Date(NOW) } },
+    })
+  })
+
+  it('purge les visites de compte commencées il y a plus de 6 mois', async () => {
+    await runSweep()
+    expect(prismaMock.accountVisit.deleteMany).toHaveBeenCalledWith({
+      where: { startedAt: { lt: new Date(NOW - 180 * DAY_MS) } },
+    })
+  })
+
+  it("l'échec de la purge des visites n'empêche ni les autres purges ni les suppressions de comptes", async () => {
+    prismaMock.accountVisit.deleteMany.mockRejectedValue(new Error('base verrouillée'))
+    orphans = [{ id: 'guest-a' }]
+    await expect(runSweep()).resolves.toBeUndefined()
+    expect(prismaMock.sitePresence.deleteMany).toHaveBeenCalled()
+    expect(prismaMock.session.deleteMany).toHaveBeenCalled()
+    expect(deleteUserAccountMock).toHaveBeenCalledWith('guest-a')
+    expect(console.error).toHaveBeenCalledWith('retention sweep error (AccountVisit):', expect.any(Error))
+  })
+
+  it("rattrape ce que l'ancien accord '1' a pu réécrire pendant un déploiement", async () => {
+    await runSweep()
+    const outdated = [{ consentVersion: null }, { consentVersion: { not: '2' } }]
+    // Présences jamais liées à un compte, écrites hors accord courant : supprimées.
+    expect(prismaMock.sitePresence.deleteMany).toHaveBeenCalledWith({ where: { userId: null, OR: outdated } })
+    // Présences liées gardées, mais sans pseudos locaux.
+    expect(prismaMock.sitePresence.updateMany).toHaveBeenCalledWith({
+      where: {
+        AND: [{ OR: outdated }, { OR: [{ localPlayerNames: { not: null } }, { localPlayerCount: { not: 0 } }] }],
+      },
+      data: { localPlayerNames: null, localPlayerCount: 0 },
+    })
+    // Historique IP visiteur sans présence consentie (SQL brut, IpSeenLog).
+    const rawCalls = prismaMock.$executeRaw.mock.calls as Array<[TemplateStringsArray, ...unknown[]]>
+    const legacyIps = rawCalls.find(([strings]) => strings.join('?').includes('NOT IN'))
+    expect(legacyIps?.[0].join('?')).toContain(`"subjectKey" LIKE 'visitor:%'`)
+    expect(legacyIps?.slice(1)).toEqual(['2'])
+    // Ancien cumul de présence.
+    expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
+      where: { totalPresenceSeconds: { gt: 0 } },
+      data: { totalPresenceSeconds: 0 },
     })
   })
 

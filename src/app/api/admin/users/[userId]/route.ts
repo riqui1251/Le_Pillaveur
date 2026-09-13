@@ -47,7 +47,6 @@ export async function GET(
         lastDevice: true,
         lastSeenAt: true,
         lastLoginAt: true,
-        totalPresenceSeconds: true,
         createdAt: true,
         updatedAt: true,
         banType: true,
@@ -90,7 +89,10 @@ export async function GET(
 
     // Plus de « Jeux joués » (table Stats vide, compteurs locaux) ni de
     // prénoms des joueurs locaux : la fiche ne les affiche plus, la route ne
-    // les lit plus (minimisation). Les parties en ligne viennent de /activity.
+    // les lit plus (minimisation). Les parties en ligne et les visites
+    // viennent de /activity. Plus de cumul hérité totalPresenceSeconds non
+    // plus : remis à zéro par migration et plus alimenté (60 s par requête,
+    // onglets ouverts compris), il ne mesurait rien.
     const showActivity = canViewAccountActivity(actor.role)
 
     return NextResponse.json({
@@ -107,7 +109,6 @@ export async function GET(
         lastDevice: showActivity ? user.lastDevice : null,
         lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
         lastLoginAt: showActivity ? user.lastLoginAt?.toISOString() ?? null : null,
-        totalPresenceSeconds: showActivity ? user.totalPresenceSeconds : 0,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
         localPlayerCount,

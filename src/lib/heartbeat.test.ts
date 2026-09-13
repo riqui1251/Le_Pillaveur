@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ACTIVE_WINDOW_MS,
   BEAT_INTERVAL_MS,
   HONEST_PRESENCE_SINCE,
   INTERACTION_WINDOW_MS,
+  beatBody,
   clampToNow,
   hasRecentInteraction,
+  isActive,
+  isInGame,
   msUntilNextBeat,
   shouldBeat,
 } from '@/lib/heartbeat'
@@ -245,5 +249,115 @@ describe('scénarios sur une durée', () => {
       }
     }
     expect(lastBeatMonotonic).toBe(JUMP_AT + INTERACTION_WINDOW_MS)
+  })
+})
+
+describe('isActive (lot 6)', () => {
+  it('fenêtre de 10 min, incluse dans celle des battements', () => {
+    expect(ACTIVE_WINDOW_MS).toBe(10 * 60 * 1000)
+    expect(ACTIVE_WINDOW_MS).toBeLessThan(INTERACTION_WINDOW_MS)
+  })
+
+  it('faux sans interaction (le montage n’en est pas une) ou horodatage illisible', () => {
+    expect(isActive(null, NOW)).toBe(false)
+    expect(isActive(Number.NaN, NOW)).toBe(false)
+    expect(isActive(Number.NEGATIVE_INFINITY, NOW)).toBe(false)
+  })
+
+  it('vrai juste après un geste et pile à 10 min (« au plus »), faux une milliseconde après', () => {
+    expect(isActive(NOW, NOW)).toBe(true)
+    expect(isActive(NOW - 3 * MIN, NOW)).toBe(true)
+    expect(isActive(NOW - ACTIVE_WINDOW_MS, NOW)).toBe(true)
+    expect(isActive(NOW - ACTIVE_WINDOW_MS - 1, NOW)).toBe(false)
+  })
+
+  it('une interaction « dans le futur » (horloge reculée) reste active', () => {
+    expect(isActive(NOW + 10 * MIN, NOW)).toBe(true)
+  })
+
+  it('téléphone posé : entre 10 et 30 min sans geste, la page bat encore mais n’est plus active', () => {
+    const lastInteractionAt = NOW - 20 * MIN
+    expect(shouldBeat({ visible: true, lastInteractionAt, lastBeatAt: NOW - MIN, now: NOW })).toBe(true)
+    expect(isActive(lastInteractionAt, NOW)).toBe(false)
+  })
+
+  it('un seul geste puis écran allumé : 11 battements actifs sur 31', () => {
+    // Même cadence que VisitTracker : un battement par minute tant que le geste
+    // date de 30 min au plus, marqué actif s'il date de 10 min au plus.
+    const beats: boolean[] = []
+    let lastBeatAt: number | null = null
+    for (let t = 0; t <= 60 * MIN; t += 1000) {
+      if (shouldBeat({ visible: true, lastInteractionAt: 0, lastBeatAt, now: t })) {
+        lastBeatAt = t
+        beats.push(isActive(0, t))
+      }
+    }
+    expect(beats).toHaveLength(31)
+    expect(beats.filter(Boolean)).toHaveLength(11)
+    // Les battements actifs viennent d'abord, jamais après un battement inactif.
+    expect(beats.indexOf(false)).toBe(11)
+  })
+})
+
+describe('isInGame (lot 6)', () => {
+  it('page de jeu en mode local : en partie (estimation, réglages compris)', () => {
+    expect(isInGame({ pathname: '/games/quiz', playMode: 'local', roomStatus: undefined })).toBe(true)
+    expect(isInGame({ pathname: '/games/roue-des-gorgees/', playMode: 'local', roomStatus: null })).toBe(true)
+  })
+
+  it('page de jeu en ligne : seulement salle lancée (partie ou briefing tuto)', () => {
+    const pathname = '/games/sans-filtre'
+    expect(isInGame({ pathname, playMode: 'online', roomStatus: 'playing' })).toBe(true)
+    expect(isInGame({ pathname, playMode: 'online', roomStatus: 'briefing' })).toBe(true)
+    expect(isInGame({ pathname, playMode: 'online', roomStatus: 'waiting' })).toBe(false)
+    expect(isInGame({ pathname, playMode: 'online', roomStatus: 'finished' })).toBe(false)
+    expect(isInGame({ pathname, playMode: 'online', roomStatus: undefined })).toBe(false)
+  })
+
+  it('salle lancée mais compte sans mode connu : la salle suffit', () => {
+    expect(isInGame({ pathname: '/games/quiz', playMode: undefined, roomStatus: 'playing' })).toBe(true)
+  })
+
+  it('hors page de jeu : jamais en partie, même en mode local ou salle lancée', () => {
+    for (const pathname of ['/', '/jeux', '/online', '/regles/quiz', '/classement', '/games', '/games/']) {
+      expect(isInGame({ pathname, playMode: 'local', roomStatus: 'playing' })).toBe(false)
+    }
+    // Un préfixe de langue n'est pas attendu (usePathname de @/i18n/navigation le retire).
+    expect(isInGame({ pathname: '/fr/games/quiz', playMode: 'local', roomStatus: 'playing' })).toBe(false)
+    expect(isInGame({ pathname: '/gamesquiz', playMode: 'local', roomStatus: 'playing' })).toBe(false)
+  })
+
+  it('chemin absent (rendu serveur) : pas en partie', () => {
+    expect(isInGame({ pathname: null, playMode: 'local', roomStatus: 'playing' })).toBe(false)
+    expect(isInGame({ pathname: undefined, playMode: 'local', roomStatus: 'playing' })).toBe(false)
+  })
+
+  it('sans compte ni salle : pas en partie', () => {
+    expect(isInGame({ pathname: '/games/quiz', playMode: undefined, roomStatus: undefined })).toBe(false)
+  })
+})
+
+describe('beatBody (lot 6)', () => {
+  const detail = { active: true, inGame: false }
+
+  it('sans consentement accordé : exactement { beat: true }, détail jamais envoyé', () => {
+    expect(beatBody(detail, false)).toEqual({ beat: true })
+    expect(Object.keys(beatBody({ active: true, inGame: true }, false))).toEqual(['beat'])
+  })
+
+  it('sans détail fourni : { beat: true }, même avec consentement', () => {
+    expect(beatBody(undefined, true)).toEqual({ beat: true })
+    expect(beatBody(undefined, false)).toEqual({ beat: true })
+  })
+
+  it('avec consentement : les deux booléens et rien d’autre', () => {
+    expect(beatBody(detail, true)).toEqual({ beat: true, active: true, inGame: false })
+    expect(beatBody({ active: false, inGame: true }, true)).toEqual({ beat: true, active: false, inGame: true })
+    expect(Object.keys(beatBody(detail, true)).sort()).toEqual(['active', 'beat', 'inGame'])
+  })
+
+  it('valeurs strictes : tout ce qui n’est pas true part à false (jamais une chaîne ou un objet)', () => {
+    const loose = { active: 'oui', inGame: { url: '/games/quiz' } } as unknown as { active: boolean; inGame: boolean }
+    expect(beatBody(loose, true)).toEqual({ beat: true, active: false, inGame: false })
   })
 })

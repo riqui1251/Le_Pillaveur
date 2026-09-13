@@ -6,12 +6,17 @@ import { cleanupStaleActiveRooms } from '@/lib/online-room'
 import { adminErrorResponse, requireRole } from '../../../_guard'
 
 /**
- * Activité EN LIGNE d'un compte pour sa fiche : parties, séances, durées de
- * table, jeux, réseaux IP et navigateurs liés. Réservée aux admins et plus
+ * Activité d'un compte pour sa fiche : parties, séances, durées de table,
+ * jeux, réseaux IP, navigateurs liés et `visits` (visites du compte si les
+ * statistiques ont été acceptées : cumuls 7 j / 30 j de Paris, les 20
+ * dernières conservées avec leurs parties, et la couverture — navigateurs
+ * liés au compte, dont ceux de l'accord courant). Réservée aux admins et plus
  * (canViewSupervisionAnalytics), comme le journal des parties dont elle est
  * tirée : l'identité et la modération du compte restent servies à tout le
  * staff par /api/admin/users/[userId]. Un modérateur reçoit 403 et la fiche
- * masque simplement ces blocs.
+ * masque simplement ces blocs — il ne voit donc jamais ni durée de visite ni
+ * heure exacte (la chronologie ne montre que la tranche, l'heure reste au
+ * détail déplié).
  *
  * Chargée à l'ouverture de la fiche et sur « Actualiser », jamais en boucle.
  */

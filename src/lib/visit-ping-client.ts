@@ -1,13 +1,23 @@
 import { getStoredPlayers } from '@/lib/players'
-import { ANALYTICS_CONSENT_COOKIE } from '@/lib/auth-cookies'
+import { ANALYTICS_CONSENT_COOKIE, isAnalyticsConsentGranted } from '@/lib/auth-cookies'
+import { beatBody, type BeatDetail } from '@/lib/heartbeat'
 
 const PING_URL = '/api/analytics/ping'
 
+/**
+ * Consentement ACCORDÉ, lu comme le serveur (isAnalyticsConsentGranted) :
+ * seule la valeur de version 2 compte. L'ancien '1', donné sous le libellé
+ * « anonymes », ne vaut plus accord : le bandeau est reposé, et d'ici là ni
+ * synchro des pseudos locaux ni détail du battement ne part.
+ */
 export function hasAnalyticsConsent(): boolean {
   if (typeof document === 'undefined') return false
-  return document.cookie
+  const prefix = `${ANALYTICS_CONSENT_COOKIE}=`
+  const entry = document.cookie
     .split(';')
-    .some((c) => c.trim() === `${ANALYTICS_CONSENT_COOKIE}=1`)
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(prefix))
+  return isAnalyticsConsentGranted(entry?.slice(prefix.length))
 }
 
 export function collectLocalPlayerNamesForPing(): string[] {
@@ -24,7 +34,8 @@ export function collectLocalPlayerNamesForPing(): string[] {
  * compris à chaque mise à jour de stats en partie locale), et chacun comptait
  * comme de la présence.
  * - { view: true } : une vue de page, une fois par chargement ;
- * - { beat: true } : battement d'une page réellement utilisée (VisitTracker) ;
+ * - { beat: true } : battement d'une page réellement utilisée (VisitTracker),
+ *   plus { active, inGame } avec le consentement ;
  * - { localPlayers: true, localPlayerNames } : pseudos locaux, jamais une
  *   présence (drapeau neuf : l'ancien `syncLocalPlayers` est ignoré).
  *
@@ -64,10 +75,14 @@ export function sendView(): void {
  * Battement de présence — les conditions (visibilité, interaction, cadence)
  * sont vérifiées par l'appelant. Résolue à la réponse (jamais rejetée) : le
  * traceur y enchaîne la synchro des pseudos restée en attente.
+ *
+ * `extra` (actif, en partie) n'est ajouté au corps QUE si le consentement est
+ * accordé au moment de l'envoi (beatBody) : il nourrit le détail des visites
+ * du compte, fondé sur ce seul consentement. Sans lui, { beat: true } seul.
  */
-export function sendHeartbeat(): Promise<void> {
+export function sendHeartbeat(extra?: BeatDetail): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve()
-  return postPing({ beat: true }).then(() => undefined)
+  return postPing(beatBody(extra, hasAnalyticsConsent())).then(() => undefined)
 }
 
 /**
@@ -81,6 +96,18 @@ export function sendHeartbeat(): Promise<void> {
 let syncedNamesKey: string | null = null
 /** Clé en cours d'envoi : deux appels rapprochés n'envoient pas deux fois la même liste. */
 let pendingNamesKey: string | null = null
+
+/**
+ * Oublie la synchro confirmée : à appeler après un choix sur les statistiques
+ * (AgeGate). Un refus efface la présence du navigateur et ses pseudos ; sans
+ * cette remise à zéro, un nouvel accord dans le même document laissait la
+ * présence recréée sans pseudos jusqu'au rechargement. Une réponse encore en
+ * vol est ignorée (pendingNamesKey ne correspond plus).
+ */
+export function resetLocalPlayersSync(): void {
+  syncedNamesKey = null
+  pendingNamesKey = null
+}
 
 /**
  * Synchro des pseudos locaux. AUCUN fetch sans consentement (avant : un corps

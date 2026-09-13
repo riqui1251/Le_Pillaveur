@@ -64,6 +64,10 @@ export async function deleteUserAccount(userId: string): Promise<void> {
     prisma.stats.deleteMany({ where: { userId } }),
     prisma.achievement.deleteMany({ where: { userId } }),
     prisma.session.deleteMany({ where: { userId } }),
+    // Visites du compte (AccountVisit) : la cascade du `user.delete` les
+    // emporterait, on reste explicite — données d'usage fondées sur le
+    // consentement, rien n'a à survivre au compte.
+    prisma.accountVisit.deleteMany({ where: { userId } }),
     // Journal d'exploitation (F42) : les traces d'ACTIONS DE STAFF doivent
     // survivre au compte de leur auteur — un journal qui s'efface avec lui
     // n'en est pas un. On anonymise donc l'auteur au lieu de jeter la ligne.

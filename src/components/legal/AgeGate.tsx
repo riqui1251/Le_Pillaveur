@@ -1,15 +1,34 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
+import { X } from 'lucide-react'
 import { Link, usePathname } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AGE_VERIFIED_COOKIE, ANALYTICS_CONSENT_COOKIE } from '@/lib/auth-cookies'
+import {
+  AGE_VERIFIED_COOKIE,
+  ANALYTICS_CONSENT_COOKIE,
+  ANALYTICS_CONSENT_GRANTED,
+  hasAnsweredAnalyticsConsent,
+  isAnalyticsConsentGranted,
+} from '@/lib/auth-cookies'
+import { resetLocalPlayersSync } from '@/lib/visit-ping-client'
 
 function hasCookie(name: string): boolean {
   if (typeof document === 'undefined') return false
   return document.cookie.split(';').some((c) => c.trim().startsWith(`${name}=`))
+}
+
+/** Valeur brute d'un cookie lisible en JS (pas lp_vid, httpOnly), ou null. */
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const prefix = `${name}=`
+  const entry = document.cookie
+    .split(';')
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(prefix))
+  return entry === undefined ? null : entry.slice(prefix.length)
 }
 
 /**
@@ -17,9 +36,10 @@ function hasCookie(name: string): boolean {
  *  - 'gate' (première visite, pas de cookie 18+) : petite carte bloquante —
  *    le clic sur « J'ai 18 ans ou plus — Entrer » vaut certification, la
  *    case statistiques reste optionnelle et décochée (opt-in RGPD) ;
- *  - 'cookies-only' (âge déjà validé, choix analytics absent — visiteurs
- *    d'avant le consentement) : simple bandeau bas de page Accepter/Refuser,
- *    au même niveau visuel (pas de dark pattern), le site reste utilisable.
+ *  - 'cookies-only' (âge déjà validé, pas de réponse à la question ACTUELLE :
+ *    cookie absent, ou ancien accord '1' donné sous le libellé « anonymes ») :
+ *    simple bandeau bas de page Accepter/Refuser, au même niveau visuel (pas
+ *    de dark pattern), le site reste utilisable.
  * Les pages /legal/* sont exemptées : les CGU et la politique de
  * confidentialité doivent être lisibles AVANT d'accepter.
  */
@@ -66,6 +86,38 @@ export function requestAgeVerification(): Promise<boolean> {
   })
 }
 
+const ANALYTICS_CONSENT_REQUEST_EVENT = 'lp:analytics-consent-request'
+
+/**
+ * Rouvre le bandeau des statistiques de visite, MÊME si un choix existe : le
+ * retrait doit être aussi simple que l'accord (art. 7(3)), sans passer par
+ * l'effacement des cookies, qui déconnecte et efface la déclaration d'âge.
+ * Le bandeau s'affiche partout (pages légales comprises, puisqu'on le demande)
+ * sauf sur l'écran TV, et ne certifie jamais l'âge.
+ */
+export function openAnalyticsConsent(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(ANALYTICS_CONSENT_REQUEST_EVENT))
+}
+
+/**
+ * Bouton « Statistiques de visite » pour les composants SERVEUR (pied de la
+ * landing) : le libellé est traduit côté serveur et passé en enfant.
+ */
+export function AnalyticsConsentButton({
+  className,
+  children,
+}: {
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <button type="button" onClick={() => openAnalyticsConsent()} className={className}>
+      {children}
+    </button>
+  )
+}
+
 /** Éléments réellement atteignables au clavier à l'intérieur d'un conteneur. */
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -79,15 +131,53 @@ export function AgeGate() {
   const [analyticsChecked, setAnalyticsChecked] = useState(false)
   const [loading, setLoading] = useState(false)
   const dialogRef = useRef<HTMLDivElement | null>(null)
+  const bannerRef = useRef<HTMLDivElement | null>(null)
   // Page sur laquelle le portail a été DEMANDÉ (requestAgeVerification) : il
   // s'y affiche même si c'est une page de lecture.
   const [requestedOn, setRequestedOn] = useState<string | null>(null)
+  // Bandeau statistiques rouvert à la demande (openAnalyticsConsent), avec le
+  // choix en vigueur à ce moment-là pour le rappeler (null : pas de réponse
+  // à la question actuelle).
+  const [consentRequested, setConsentRequested] = useState(false)
+  const [currentChoice, setCurrentChoice] = useState<'granted' | 'refused' | null>(null)
 
   useEffect(() => {
     if (!hasCookie(AGE_VERIFIED_COOKIE)) setMode('gate')
-    else if (!hasCookie(ANALYTICS_CONSENT_COOKIE)) setMode('cookies-only')
+    else if (!hasAnsweredAnalyticsConsent(readCookie(ANALYTICS_CONSENT_COOKIE))) setMode('cookies-only')
     else setMode(null)
   }, [])
+
+  // Portail affiché : la case reprend un accord déjà donné sous le libellé
+  // actuel (bandeau accepté sur une page de lecture, cookie d'âge perdu). Sans
+  // ça, « Entrer » case décochée transformait cet accord en refus — et le
+  // refus efface les données. Jamais cochée d'office sans accord explicite.
+  useEffect(() => {
+    if (mode !== 'gate') return
+    setAnalyticsChecked(isAnalyticsConsentGranted(readCookie(ANALYTICS_CONSENT_COOKIE)))
+  }, [mode])
+
+  useEffect(() => {
+    const onRequest = () => {
+      const value = readCookie(ANALYTICS_CONSENT_COOKIE)
+      setCurrentChoice(
+        !hasAnsweredAnalyticsConsent(value)
+          ? null
+          : isAnalyticsConsentGranted(value)
+            ? 'granted'
+            : 'refused'
+      )
+      setConsentRequested(true)
+    }
+    window.addEventListener(ANALYTICS_CONSENT_REQUEST_EVENT, onRequest)
+    return () => window.removeEventListener(ANALYTICS_CONSENT_REQUEST_EVENT, onRequest)
+  }, [])
+
+  // Bandeau rouvert depuis un menu (tiroir fermé dans le même geste) : le
+  // focus y est posé, sinon il se perdait au clavier. Pas sur « Accepter » :
+  // on ne pousse vers aucun des deux choix.
+  useEffect(() => {
+    if (consentRequested) bannerRef.current?.focus()
+  }, [consentRequested])
 
   useEffect(() => {
     const onRequest = () => {
@@ -184,19 +274,39 @@ export function AgeGate() {
     // fait apparaître, sans que `mode` change.
   }, [mode, pathname, requestedOn])
 
-  const submit = useCallback(async (analytics: boolean) => {
+  /**
+   * `consentOnly` : choix donné depuis le BANDEAU. Il n'enregistre que les
+   * statistiques — le bandeau peut être rouvert sur une page de lecture par
+   * un visiteur qui n'a jamais franchi le portail, et ne vaut pas déclaration
+   * d'âge. Le portail reste alors dû (masqué sur les pages de lecture).
+   *
+   * `consentVersion` : version du libellé AFFICHÉ ici. Le serveur n'écrit
+   * l'accord '2' que s'il la reçoit, jamais pour un onglet resté sur un
+   * ancien libellé.
+   */
+  const submit = useCallback(async (analytics: boolean, consentOnly: boolean) => {
     setLoading(true)
     try {
       const res = await fetch('/api/legal/accept-age', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analytics }),
+        body: JSON.stringify({ analytics, consentOnly, consentVersion: ANALYTICS_CONSENT_GRANTED }),
       })
       if (res.ok) {
-        setMode(null)
-        setRequestedOn(null)
-        announceAgeGateResult(true)
+        // Un refus (ici ou dans un autre onglet) efface la présence du
+        // navigateur et ses pseudos locaux : la synchro déjà confirmée dans ce
+        // document ne vaut plus, la liste repartira au prochain battement.
+        resetLocalPlayersSync()
+        setConsentRequested(false)
+        if (consentOnly) {
+          setAnalyticsChecked(analytics)
+          setMode(hasCookie(AGE_VERIFIED_COOKIE) ? null : 'gate')
+        } else {
+          setMode(null)
+          setRequestedOn(null)
+          announceAgeGateResult(true)
+        }
       }
     } finally {
       setLoading(false)
@@ -213,28 +323,69 @@ export function AgeGate() {
     pathname === '/' || pathname.startsWith('/legal') || pathname.startsWith('/regles')
   const requestedHere = requestedOn === pathname
   if (isOverlayFreeRoute(pathname)) return null
-  if (!mode || (mode === 'gate' && readingPage && !requestedHere)) return null
-  if (mode === 'cookies-only' && pathname.startsWith('/legal')) return null
+  const showGate = mode === 'gate' && (!readingPage || requestedHere)
+  // Bandeau proposé de lui-même (hors pages légales, lisibles avant de
+  // choisir), ou rouvert à la demande : alors partout, y compris sur la
+  // politique qu'il cite. Le portail, qui porte déjà la case, passe devant.
+  const bannerPrompted = mode === 'cookies-only' && !pathname.startsWith('/legal')
+  const showBanner = !showGate && (consentRequested || bannerPrompted)
+  // Fermer sans choisir n'est offert qu'au bandeau ROUVERT : proposé de
+  // lui-même, il attend une réponse (il reviendrait au chargement suivant).
+  const canDismissBanner = consentRequested && !bannerPrompted
 
-  if (mode === 'cookies-only') {
+  if (showBanner) {
     return (
-      <div className="fixed inset-x-3 bottom-3 z-[100] mx-auto max-w-md rounded-2xl border border-gold/25 bg-felt-deep/95 p-3 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)] backdrop-blur-sm">
+      <div
+        ref={bannerRef}
+        role="region"
+        aria-label={tNav('analytics')}
+        tabIndex={-1}
+        className="fixed inset-x-3 bottom-3 z-[100] mx-auto max-w-md rounded-2xl border border-gold/25 bg-felt-deep/95 p-3 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)] outline-none backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-gold/60"
+      >
+        {canDismissBanner && (
+          <button
+            type="button"
+            onClick={() => setConsentRequested(false)}
+            disabled={loading}
+            aria-label={tCommon('close')}
+            className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        )}
         {/* Contraste : /70 sur le feutre profond passait sous le seuil AA en
-            12px — remonté à /85 (le texte porte l'information légale). */}
-        <p className="text-xs leading-relaxed text-white/85">{t('cookiesBanner')}</p>
+            12px — remonté à /85 (le texte porte l'information légale). Le
+            détail (durées, droits, retrait) est dans la politique liée. */}
+        <p className={`text-xs leading-relaxed text-white/85 ${canDismissBanner ? 'pr-7' : ''}`}>
+          {t('cookiesBanner')}{' '}
+          <Link
+            href="/legal/confidentialite"
+            className="text-amber-300 underline underline-offset-2 hover:text-amber-200"
+          >
+            {t('privacyLink')}
+          </Link>
+        </p>
+        {consentRequested && currentChoice && (
+          <p className="mt-1.5 text-[11px] font-semibold text-cream/90">
+            {currentChoice === 'granted' ? t('currentChoiceGranted') : t('currentChoiceRefused')}
+          </p>
+        )}
+        {/* Accepter et Refuser strictement au même niveau visuel (même
+            style, même taille) : refuser doit être aussi simple qu'accepter. */}
         <div className="mt-2 flex gap-2">
           <Button
-            onClick={() => void submit(true)}
+            onClick={() => void submit(true, true)}
             disabled={loading}
-            className="h-8 flex-1 bg-amber-500 text-xs font-semibold text-black hover:bg-amber-400"
+            variant="outline"
+            className="h-8 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/15 hover:text-cream"
           >
             {t('accept')}
           </Button>
           <Button
-            onClick={() => void submit(false)}
+            onClick={() => void submit(false, true)}
             disabled={loading}
             variant="outline"
-            className="h-8 flex-1 border-white/25 bg-transparent text-xs text-white/85 hover:bg-white/10"
+            className="h-8 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/15 hover:text-cream"
           >
             {t('refuse')}
           </Button>
@@ -242,6 +393,8 @@ export function AgeGate() {
       </div>
     )
   }
+
+  if (!showGate) return null
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/40 p-4">
@@ -277,7 +430,7 @@ export function AgeGate() {
         </label>
 
         <Button
-          onClick={() => void submit(analyticsChecked)}
+          onClick={() => void submit(analyticsChecked, false)}
           disabled={loading}
           className="mt-4 w-full bg-amber-500 font-semibold text-black hover:bg-amber-400"
         >

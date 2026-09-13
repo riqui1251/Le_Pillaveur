@@ -67,6 +67,7 @@ import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
 import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
 import { HONEST_PRESENCE_SINCE } from '@/lib/heartbeat'
+import { ANALYTICS_CONSENT_V2_SINCE } from '@/lib/auth-cookies'
 import { isOnline, ONLINE_WINDOW_MS } from '@/lib/presence'
 import { groupIpsByNetwork, type IpNetworkGroup } from '@/lib/ip-network'
 import { Button } from '@/components/ui/button'
@@ -403,7 +404,13 @@ type AdminUser = AccountKindFields & {
   ips?: IpEntry[]
   lastSeenAt: string | null
   lastLoginAt: string | null
-  totalPresenceSeconds: number
+  /**
+   * Résumé des visites sur 7 jours glissants (lot 6), servi aux admins et plus
+   * seulement (canViewSupervisionAnalytics) : absent pour un modérateur.
+   * Visites suivies sous consentement uniquement : 0 ne veut pas dire « pas
+   * venu ».
+   */
+  visits7d?: { visits: number; activeSeconds: number }
   ban: {
     banned: boolean
     banType: string | null
@@ -919,17 +926,13 @@ function RoleBadge({ role, compact }: { role: string; compact?: boolean }) {
 
 function UserActivityLines({
   lastLoginAt,
-  totalPresenceSeconds,
   compact,
 }: {
   lastLoginAt: string | null
-  totalPresenceSeconds: number
   compact?: boolean
 }) {
   const t = useTranslations('supervision')
   const format = useFormatter()
-  const durationUnits = useDurationUnits()
-  const frozenSince = useHonestPresenceSince()
   return (
     <div className={compact ? 'space-y-0.5 text-[11px] text-white/35' : 'space-y-1 text-sm text-white/60'}>
       {/* lastLoginAt n'est écrit qu'à une saisie d'identifiants, une connexion
@@ -941,18 +944,6 @@ function UserActivityLines({
           ? format.dateTime(new Date(lastLoginAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
           : t('activity.neverLoggedIn')}
       </p>
-      {/* Ancien cumul (60 s par requête, onglets cachés compris) : plus alimenté
-          depuis le battement honnête, donc FIGÉ. Un cumul d'onglets ouverts, pas
-          un temps de jeu : le libellé le dit en entier, y compris en version
-          compacte. À 0 (compte récent, ou rôle qui ne le voit pas), rien. */}
-      {totalPresenceSeconds > 0 && (
-        <p>
-          {t('activity.legacyPresenceFrozen', {
-            date: frozenSince,
-            duration: formatPresenceDuration(totalPresenceSeconds, durationUnits),
-          })}
-        </p>
-      )}
     </div>
   )
 }
@@ -2615,11 +2606,18 @@ export default function SupervisionPage() {
   const prev7 = trendPoints.slice(-14, -7)
   const sumBy = (arr: DailyPoint[], key: 'visitors' | 'parties') => arr.reduce((s, p) => s + p[key], 0)
   const prevWeekVisitors = sumBy(prev7, 'visitors')
+  // Consentement de version 2 : le bandeau est reposé à tous et les
+  // navigateurs ne comptent plus tant qu'ils n'ont pas répondu. Une
+  // comparaison qui inclut ce jour (ou un jour d'avant) montrerait une chute
+  // de fréquentation qui n'en est pas une : pas de delta tant que la période de
+  // comparaison n'est pas entièrement postérieure.
+  const comparableSince = (day: string | undefined) => day !== undefined && day > ANALYTICS_CONSENT_V2_SINCE
   const weekVisitorsDelta =
-    prev7.length > 0 && prevWeekVisitors > 0
+    prev7.length > 0 && prevWeekVisitors > 0 && comparableSince(prev7[0]?.date)
       ? Math.round(((sumBy(last7, 'visitors') - prevWeekVisitors) / prevWeekVisitors) * 100)
       : null
-  const todayVisitorsDelta = lastPoint && prevPoint ? lastPoint.visitors - prevPoint.visitors : null
+  const todayVisitorsDelta =
+    lastPoint && prevPoint && comparableSince(prevPoint.date) ? lastPoint.visitors - prevPoint.visitors : null
 
   const handleQueueAction = (id: string) => {
     const item = overview?.queue.find((q) => q.id === id)
@@ -2725,6 +2723,9 @@ export default function SupervisionPage() {
             <SkeletonRows rows={4} />
           ) : (
           <>
+          {/* Jour, 7 jours et courbe : NAVIGATEURS ayant accepté les
+              statistiques (DailyVisitor), pas des comptes ni des personnes —
+              les libellés le disent, et rien n'est additionné aux comptes. */}
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <KpiPlaque
               label={t('room.todayLabel')}
@@ -3437,6 +3438,19 @@ export default function SupervisionPage() {
                             {t('accounts.you')}
                           </Badge>
                         )}
+                        {/* Résumé 7 j (admins et plus : absent pour un modérateur).
+                            Visites suivies sous consentement seulement : sans
+                            visite, « aucune visite suivie », jamais « 0 visite ». */}
+                        {u.visits7d && (
+                          <span className="min-w-0 break-words text-[11px] tabular-nums text-white/45">
+                            {u.visits7d.visits > 0
+                              ? t('accounts.visits7d', {
+                                  visits: u.visits7d.visits,
+                                  active: formatPresenceDuration(u.visits7d.activeSeconds, durationUnits),
+                                })
+                              : t('accounts.visits7dNone')}
+                          </span>
+                        )}
                         <ChevronDown
                           className={cn(
                             'ml-auto h-4 w-4 shrink-0 text-white/40 transition-transform',
@@ -3528,11 +3542,7 @@ export default function SupervisionPage() {
                         )}
                       </div>
                       {showAccountActivity && (
-                        <UserActivityLines
-                          compact
-                          lastLoginAt={u.lastLoginAt}
-                          totalPresenceSeconds={u.totalPresenceSeconds}
-                        />
+                        <UserActivityLines compact lastLoginAt={u.lastLoginAt} />
                       )}
                       {u.ban.banned && u.ban.banComment && (
                         <p className="text-xs text-red-300/80">{t('accounts.banReason', { reason: u.ban.banComment })}</p>

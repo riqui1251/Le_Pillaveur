@@ -17,6 +17,7 @@ import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { FriendsPanel } from '@/components/layout/FriendsPanel'
 import { ChatPanel } from '@/components/chat/ChatPanel'
 import { BrandMark } from '@/components/brand/BrandLogo'
+import { openAnalyticsConsent } from '@/components/legal/AgeGate'
 import { cn } from '@/lib/utils'
 
 const NAV_LINK_KEYS = [
@@ -454,6 +455,19 @@ export default function Navbar() {
             <Link href="/legal/mentions-legales" onClick={() => setDrawerOpen(false)} className="hover:text-amber-400/80">
               {t('legal.mentionsLegales')}
             </Link>
+            <span aria-hidden>·</span>
+            {/* Retrait du consentement aussi simple que l'accord : rouvre le
+                bandeau statistiques, sans effacer ses cookies. */}
+            <button
+              type="button"
+              onClick={() => {
+                setDrawerOpen(false)
+                openAnalyticsConsent()
+              }}
+              className="hover:text-amber-400/80"
+            >
+              {t('legal.analytics')}
+            </button>
           </div>
         </div>
       </aside>

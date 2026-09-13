@@ -39,25 +39,33 @@ In **local mode** (without an account), your local players are stored on your de
 
 ### 3.3 Technical and usage data
 
-**With your consent** (the "visit statistics" choice offered when entering the site), we collect for audience statistics and abuse prevention:
+**With your consent** (the "visit statistics" choice, offered when entering the site and changeable at any time through the "Visit statistics" link in the menu and in the home page footer), we collect, for audience statistics viewable by the site's administrators:
 
-- visitor identifier (`lp_vid` cookie);
+- browser identifier (`lp_vid` cookie, 1 year);
 - IP address;
 - estimated country (approximate geolocation from the IP address, computed on our servers — no third-party service);
 - device / browser type (simplified user-agent);
-- dates of your visits to the site (pages displayed and activity), as well as the last account used in this browser and the date of its last signed-in visit (to tell a browser still signed in to that account apart from one where it was only used before).
+- dates of your visits to the site (pages displayed and activity), as well as the last account used in this browser and the date of its last signed-in visit (to tell a browser still signed in to that account apart from one where it was only used before);
+- the names of your local players (see 3.2);
+- if you are signed in to an account, that account's **visit** history, described below.
 
-If you decline, no visit tracking is recorded.
+A **visit** is a period of use of the site without a break of more than 30 minutes, across all tabs and devices; only browsers where visit statistics have been accepted are taken into account. For each visit, we record its start, its last activity signal (the end is taken as that signal plus one minute), the time spent with the page displayed and in use, the **active time** (the share of that time when the page had been used — click, key press, screen touch or mouse wheel — within the previous 10 minutes), the **in-game time** (the share spent on a game page in local mode or during a launched online game: this is an estimate, based on the screen displayed) and the device type (mobile, tablet, Mac or PC). No IP address, page address, game or nickname is recorded with a visit. Moderation team accounts have no visit history: the history of a player who joins the team is erased.
+
+The site's administrators can view the visit history account by account; moderators and other players cannot. When it is read, each visit is matched with the online games launched during it (game log, see 3.4), and totals over 7 and 30 days are calculated. The timeline only shows the day, the duration and a time slot (night, morning, afternoon or evening, Paris time); the exact time only appears in the details of a visit.
+
+If you decline, no visit tracking is recorded. If you withdraw your consent ("Visit statistics" link, then "Decline"), the data collected on this basis in this browser (IP address, country, device, local player names, dates of visits, IP addresses recorded while signed out, daily visit records) is erased immediately and the `lp_vid` cookie is removed; the visit history of the account signed in at that moment is erased too, across all devices. Declining in a browser where you had not accepted visit statistics (a new device, for example) does not erase that history. The choice applies to this browser: in another browser where you had accepted them, visits keep being recorded until you decline there too.
+
+These statistics used to be presented when entering the site as anonymous and used only to count visits, which they were not (browser identifier, IP addresses). Consent given under that former wording is no longer taken into account: you will be asked again. When this change was made, local player names and IP addresses recorded while signed out were deleted, as was the data of browsers never used with an account. For a browser used with an account, the last IP address, country, device, dates of visits and last account used are kept until that browser's next visit to the site, when they are erased together with the `lp_vid` cookie, and at the latest 6 months after its last visit. Each browser's daily visit records (browser identifier and date, with no IP address, name or account) are kept until they are purged after 13 months.
 
 **Regardless of this consent**, for **signed-in accounts** only, we keep the IP address, estimated country and device type of recent connections, as well as the account's last activity date, updated only when the site is actually being used (page displayed and an interaction within the last 30 minutes) or when you sign in, which is also used for the online status shown to your friends and for the automatic deletion of inactive guest accounts; no presence time is recorded for this purpose. Purposes: **account security and moderation** (fraud prevention, bans), online status and deletion of inactive guest accounts — legal basis: legitimate interest.
 
-Activity means using a page displayed on screen: a signal is sent at most once a minute, only while the page is visible and you have used it (click, key press, screen touch or mouse wheel) within the last 30 minutes. Only the time of your last interaction is kept, in the page's memory and without its content; it is neither stored nor transmitted. With or without consent, no duration is recorded from this signal. A cumulative presence time calculated before 13 September 2026, using a discontinued method that also counted tabs left open (and is therefore overestimated), remains stored, frozen, for the accounts concerned until it is reset; it is no longer updated.
+Activity means using a page displayed on screen: a signal is sent at most once a minute, only while the page is visible and you have used it (click, key press, screen touch or mouse wheel) within the last 30 minutes. Only the time of your last interaction is kept, in the page's memory and without its content; it is neither stored nor transmitted. Without your consent, the signal contains nothing else and is only used for the last activity date of a signed-in account (see above): no duration is recorded from it. With your consent, it only adds "active or not" and "in a game or not", and is used to measure the length of your account's visits if you are signed in (see above); neither the page address, nor the game, nor the number of interactions is recorded. The cumulative presence time calculated before 13 September 2026, using a discontinued method that also counted tabs left open, has been reset; it is no longer updated or displayed.
 
 In the site's moderation tools, IPv6 addresses from the same network (same /64 prefix, usually the same router or the same place) are grouped together on display: this grouping is computed when the data is read and stores no additional data.
 
 ### 3.4 Chat and online games
 
-Messages sent in the **chat** (game chat and friend messages) are stored on our servers and may go through automatic filtering of inappropriate language. They are kept for a maximum of **12 months** and then deleted. Online game state (moves, votes, drawings) is temporary and deleted together with the game table. We do, however, keep an **operations log** of launched games — game, date, table duration, end reason (finished, rematch, players left, closed by our team, abandoned) and participants — for **12 months**, to monitor usage and investigate reports. The site's administrators can view this log **account by account** (games launched, play sessions and duration of the tables the account took part in), and it is also used for online play statistics that name no one (unique players, games launched per day) — legal basis: legitimate interest. It holds no game content, and a deleted account is no longer named in it.
+Messages sent in the **chat** (game chat and friend messages) are stored on our servers and may go through automatic filtering of inappropriate language. They are kept for a maximum of **12 months** and then deleted. Online game state (moves, votes, drawings) is temporary and deleted together with the game table. We do, however, keep an **operations log** of launched games — game, date, table duration, end reason (finished, rematch, players left, closed by our team, abandoned) and participants — for **12 months**, to monitor usage and investigate reports. The site's administrators can view this log **account by account** (games launched, play sessions and duration of the tables the account took part in; for an account that accepted visit statistics, games launched during each of its visits), and it is also used for online play statistics that name no one (unique players, games launched per day) — legal basis: legitimate interest. It holds no game content, and a deleted account is no longer named in it.
 
 ### 3.5 Voice chat
 
@@ -85,11 +93,11 @@ The Service uses the following cookies:
 | `lp_session` | Keeping your session signed in | 30 days (91 days for a guest account), extended on every visit, except for moderation team accounts |
 | `lp_local_play` | Enabling local mode without an account | Persistent |
 | `lp_age_verified` | Remembering your age declaration (18+), required before a guest account can be created | 1 year |
-| `lp_analytics_consent` | Remembering your choice about visit statistics | 1 year |
+| `lp_analytics_consent` | Remembering your choice about visit statistics (the question is asked again if what they cover changes) | 1 year |
 | `lp_locale` | Remembering your interface language | 1 year |
-| `lp_vid` | Visitor identifier for statistics and anti-abuse — **set only if you have accepted visit statistics** | Persistent |
+| `lp_vid` | Browser identifier for visit statistics — **set only if you have accepted them, removed if you decline them** | 1 year |
 
-You can change your choice about visit statistics by deleting the site's cookies in your browser: the question will be asked again on your next visit.
+You can change your choice at any time, without deleting your cookies, with the "Visit statistics" link in the menu and in the home page footer: it reopens the Accept / Decline choice. Declining immediately erases the data described in 3.3 for this browser and, if you are signed in and had accepted visit statistics in this browser, your account's visit history. The choice only applies to this browser.
 
 ## 4. Purposes of processing
 
@@ -102,7 +110,7 @@ Your data is processed to:
 - ensure the security of the Service and prevent abuse;
 - moderate accounts and content (suspension, banning in case of violation);
 - respond to your support requests and feedback;
-- produce audience statistics (with your consent);
+- produce visit statistics, including your account's visit history (with your consent);
 - comply with our legal obligations.
 
 We **do not sell** your personal data to third parties.
@@ -117,7 +125,7 @@ We **do not sell** your personal data to third parties.
 | Security and moderation (accounts, nicknames, content) | Legitimate interest |
 | Account's last activity date (online status shown to your friends, security, deletion of inactive guest accounts) | Legitimate interest |
 | Launched-game log (usage monitoring, reports, account-by-account viewing by the site's administrators) | Legitimate interest |
-| Visit statistics (`lp_vid` cookie, IP, device) | **Consent** |
+| Visit statistics (`lp_vid` cookie, IP, country, device, local player names, account visit history) | **Consent** |
 | Age gate (cookie) | Legitimate interest (compliance) |
 | Feedback | Consent (voluntary submission) |
 
@@ -136,6 +144,7 @@ The publisher remains the data controller. No other transfer to third parties ta
 - **Guest account** (created without an email or password: by scanning a QR code, through an invitation link or with "Try it with bots"): automatically deleted after **90 days** of inactivity, along with everything it holds (nickname, progression, cosmetics, friends). It can only be reached through the session cookie of the browser (or app) where it was created: every visit from that browser resets this period, but it cannot be reached from another browser or another device, and signing out, signing in to another account in that browser or clearing your cookies makes it permanently inaccessible. A guest account that no longer has any valid session (after a sign-out, a sign-in to another account in that browser or the expiry of its session) is deleted sooner, after **7 days** of inactivity, unless it is banned or subject to a report still under review. Adding an email and password, or linking the account to Google, makes it permanent.
 - **Deleted account**: deletion or anonymisation within a maximum of **12 months** after the request, unless a longer retention is legally required.
 - **Technical logs (IP addresses, presence)**: **6 months**. The IP address and country of last connection attached to an account are erased after **6 months** without activity; an account's IP address history is deleted immediately together with the account.
+- **Account visit history** (start, end, displayed / active / in-game times, device type): **6 months** after the start of each visit; erased immediately when consent to visit statistics is withdrawn from a browser signed in to that account where they had been accepted, or when the account joins the moderation team, and deleted together with the account.
 - **Sign-in sessions**: deleted on sign-out, or automatically once they have expired.
 - **Chat messages**: **12 months**.
 - **Launched-game log** (game, date, table duration, end reason, participants): **12 months**.
@@ -155,7 +164,7 @@ Under the GDPR, you have the following rights:
 - **Erasure**: request deletion of your data;
 - **Restriction**: restrict certain processing;
 - **Objection**: object to processing based on legitimate interest;
-- **Withdrawal of consent**: at any time, for processing based on consent;
+- **Withdrawal of consent**: at any time, for processing based on consent. For visit statistics, through the "Visit statistics" link (menu and home page footer): withdrawal immediately erases this browser's data and the visit history of the signed-in account, across all devices; it applies to this browser, and other browsers where you had accepted keep recording your visits until you decline there too;
 - **Portability**: receive your data in a structured format (where applicable).
 
 You can **delete your account directly** from the Account page ("Delete my account" button): deletion is immediate and permanent.

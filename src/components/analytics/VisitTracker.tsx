@@ -1,11 +1,16 @@
 "use client"
 
 import { useEffect, useRef } from 'react'
+import { usePathname } from '@/i18n/navigation'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { usePagePresence } from '@/hooks/usePagePresence'
 import {
   INTERACTION_EVENTS,
   clampToNow,
   hasRecentInteraction,
+  isActive,
+  isInGame,
   msUntilNextBeat,
   shouldBeat,
 } from '@/lib/heartbeat'
@@ -35,7 +40,9 @@ const LISTENER_OPTIONS: AddEventListenerOptions = { capture: true, passive: true
  * inutilisée ne réveille plus rien, le prochain geste relance tout.
  *
  * Seuls deux horodatages vivent en mémoire : ni contenu ni nombre de gestes,
- * rien de stocké, rien d'envoyé d'autre que le drapeau.
+ * rien de stocké. Chaque battement porte le drapeau et, avec le consentement
+ * (lot 6, filtré par sendHeartbeat), deux booléens : « actif » (geste depuis
+ * 10 min au plus) et « en partie » (lib/heartbeat.ts). Ni URL, ni jeu.
  */
 export function VisitTracker() {
   const visible = usePagePresence()
@@ -43,6 +50,21 @@ export function VisitTracker() {
   // plan doit savoir si le dernier geste date de 30 min au plus).
   const lastInteractionAtRef = useRef<number | null>(null)
   const lastBeatAtRef = useRef<number | null>(null)
+
+  // « En partie » : page de jeu ET (mode local OU salle lancée). Monté sous
+  // AuthProvider et OnlineRoomProvider (providers.tsx). Lu par ref au moment du
+  // battement : la salle est sondée toutes les 1,5 s en partie, et en faire une
+  // dépendance relancerait le minuteur (et un battement) à chaque sondage.
+  const pathname = usePathname()
+  const { user } = useAuth()
+  const { room } = useOnlineRoom()
+  const inGame = isInGame({ pathname, playMode: user?.playMode, roomStatus: room?.status })
+  const inGameRef = useRef(inGame)
+  // Déclaré AVANT l'effet du minuteur : dans un même rendu, la ref est à jour
+  // quand son battement immédiat part.
+  useEffect(() => {
+    inGameRef.current = inGame
+  }, [inGame])
 
   useEffect(() => {
     // usePagePresence part de `true` (rendu serveur) : au montage d'un onglet
@@ -86,7 +108,10 @@ export function VisitTracker() {
         // Le battement crée la présence du navigateur (avec consentement) : une
         // synchro des pseudos perdue faute de présence part à sa réponse. Une
         // fois la liste confirmée, l'appel ne fait rien.
-        void sendHeartbeat().then(syncLocalPlayersNow)
+        void sendHeartbeat({
+          active: isActive(lastInteractionAtRef.current, now),
+          inGame: inGameRef.current,
+        }).then(syncLocalPlayersNow)
       }
       schedule()
     }
