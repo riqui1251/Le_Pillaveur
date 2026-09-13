@@ -7,10 +7,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { requestAgeVerification } from '@/components/legal/AgeGate'
 import { GAMES } from '@/lib/games'
 import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
+
+/**
+ * /api/auth/guest répond 200 avec le compte DÉJÀ connecté quand une session
+ * valide existait (la page croyait le visiteur déconnecté, par exemple après
+ * une panne passagère de /api/auth/me) : rien n'a été créé.
+ */
+function isExistingAccountResponse(data: unknown): boolean {
+  return Boolean(data && typeof data === 'object' && (data as { alreadySignedIn?: unknown }).alreadySignedIn === true)
+}
 
 /**
  * « Essayer avec des bots » — le chemin le plus court entre un visiteur
@@ -72,6 +82,11 @@ export function TryBotsGate({
     )
   }
 
+  /** Navigation DOCUMENT vers la page du jeu (routeur vierge, session fraîche). */
+  const goToGame = () => {
+    window.location.assign(`/${locale}/games/${gameId}`)
+  }
+
   const start = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -83,6 +98,9 @@ export function TryBotsGate({
       return
     }
     setLoading(true)
+    // Le bouton reste en « chargement » seulement si l'on quitte la page ;
+    // sur une erreur, il se réactive pour permettre de réessayer.
+    let leaving = false
     try {
       // 1. Compte invité (session posée, playMode online).
       const guestRes = await fetch('/api/auth/guest', {
@@ -92,8 +110,24 @@ export function TryBotsGate({
         body: JSON.stringify({ displayName: trimmed, locale }),
       })
       const guestData = await guestRes.json().catch(() => null)
+      if (guestRes.status === 403 && guestData?.code === 'age_gate_required') {
+        // Rare : cookie d'âge disparu entre l'ouverture du formulaire et
+        // l'envoi. La porte 18+ s'ouvre sur place ; une fois franchie, le
+        // pseudo est toujours là et un nouveau clic lance la partie (jamais de
+        // relance automatique : rien ne doit se créer à l'insu du visiteur).
+        void requestAgeVerification()
+        return
+      }
       if (!guestRes.ok) {
         showApiError(guestData?.error)
+        return
+      }
+      if (isExistingAccountResponse(guestData)) {
+        // Session déjà valide : pas de table créée d'office — créer une salle
+        // retire le compte de sa table en cours. La page du jeu, rechargée,
+        // retrouve le compte et propose la suite.
+        leaving = true
+        goToGame()
         return
       }
       // 2. Table privée sur CE jeu.
@@ -120,11 +154,24 @@ export function TryBotsGate({
         }).catch(() => null)
       }
       // 4. Direction le lobby, session fraîche.
-      window.location.assign(`/${locale}/games/${gameId}`)
+      leaving = true
+      goToGame()
     } catch {
       setError(t('error'))
-      setLoading(false)
+    } finally {
+      if (!leaving) setLoading(false)
     }
+  }
+
+  const openForm = async () => {
+    // Âge pas encore certifié (visiteur SEO arrivé sur /regles, où la porte
+    // 18+ ne s'affiche pas d'elle-même) : la route refuserait le compte
+    // (403 age_gate_required). La porte s'ouvre donc SUR PLACE, puis le
+    // formulaire — sans quitter la page, pour tous les jeux (les pages de jeu
+    // n'offrent pas toutes « Essayer avec des bots »). Renoncer laisse la page
+    // en l'état.
+    if (!(await requestAgeVerification())) return
+    setOpen(true)
   }
 
   if (!canBots) {
@@ -142,7 +189,7 @@ export function TryBotsGate({
     return (
       <div className="space-y-2.5">
         <Button
-          onClick={() => setOpen(true)}
+          onClick={() => { void openForm() }}
           className={accentClassName ?? 'w-full rounded-2xl bg-amber-500 py-5 text-base font-bold text-black hover:bg-amber-400'}
         >
           <Bot className="mr-2 h-4 w-4" />
@@ -183,7 +230,7 @@ export function TryBotsGate({
         <Bot className="mr-2 h-4 w-4" />
         {loading ? tCommon('loading') : t('go')}
       </Button>
-      <p className="text-center text-[11px] leading-snug text-white/40">{t('guestHint')}</p>
+      <p className="text-center text-[11px] leading-snug text-white/40">{t('guestHintDevice')}</p>
     </form>
   )
 }

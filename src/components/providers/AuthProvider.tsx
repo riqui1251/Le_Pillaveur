@@ -30,7 +30,12 @@ export type AuthUser = {
   locale: string
   playMode: 'local' | 'online'
   ambianceMode: 'alcool' | 'soft'
-  /** Compte invité temporaire (scan de QR) — email vide, purgé après 90 jours. */
+  /**
+   * Compte invité temporaire (scan de QR, « Essayer avec des bots ») — email
+   * vide, lié au seul cookie de session de ce navigateur. Purgé après 90 jours
+   * sans activité, ou 7 jours après sa dernière activité s'il n'a plus de
+   * session valide en base (déconnexion, connexion à un autre compte).
+   */
   isGuest?: boolean
 }
 
@@ -47,11 +52,30 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-async function fetchMe(): Promise<AuthUser | null> {
-  const res = await fetch('/api/auth/me', { credentials: 'include' })
-  if (!res.ok) return null
-  const data = await res.json()
-  return data.user ?? null
+/**
+ * Réponse de /api/auth/me. Seul un 401 (ou une réponse sans compte) veut dire
+ * « pas de session ». Une erreur serveur (5xx), réseau ou une réponse
+ * illisible est une panne passagère : la traiter comme une déconnexion
+ * faisait réafficher JoinGate / TryBotsGate à un joueur connecté, qui
+ * créait alors un SECOND invité et rendait le premier orphelin.
+ */
+type MeResult =
+  | { kind: 'user'; user: AuthUser }
+  | { kind: 'signed-out' }
+  | { kind: 'unavailable' }
+
+async function fetchMe(): Promise<MeResult> {
+  let res: Response
+  try {
+    res = await fetch('/api/auth/me', { credentials: 'include' })
+  } catch {
+    return { kind: 'unavailable' }
+  }
+  if (res.status === 401) return { kind: 'signed-out' }
+  if (!res.ok) return { kind: 'unavailable' }
+  const data = await res.json().catch(() => null)
+  if (!data) return { kind: 'unavailable' }
+  return data.user ? { kind: 'user', user: data.user } : { kind: 'signed-out' }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -61,12 +85,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     const me = await fetchMe()
-    setUser(me)
+    // Panne passagère : on garde le compte déjà chargé (ou l'absence de
+    // compte au premier chargement) plutôt que d'annoncer une déconnexion.
+    if (me.kind === 'unavailable') return
+    setUser(me.kind === 'user' ? me.user : null)
   }, [])
 
   useEffect(() => {
-    fetchMe().then(setUser).finally(() => setLoading(false))
-  }, [])
+    refresh().finally(() => setLoading(false))
+  }, [refresh])
 
   const login = useCallback(async (email: string, password: string) => {
     let res: Response

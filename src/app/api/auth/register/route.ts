@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import {
   createSession,
   clearLocalPlayCookieOptions,
+  deleteIncomingSession,
   hashPassword,
   isValidEmail,
   isValidPassword,
@@ -126,6 +127,10 @@ export async function POST(request: Request) {
     }
 
     const token = await createSession(user.id)
+    // Inscription depuis une autre session (invité compris) : l'ancienne
+    // ligne est supprimée, pas seulement son cookie écrasé — une fois la
+    // nouvelle session créée, pour qu'un 503 ne déconnecte jamais.
+    await deleteIncomingSession()
     const userLocale = normalizeAppLocale(user.locale)
     const response = NextResponse.json({
       user: {

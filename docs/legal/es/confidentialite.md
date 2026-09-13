@@ -1,6 +1,6 @@
 # Política de privacidad
 
-**Última actualización:** 13 de julio de 2026
+**Última actualización:** 13 de septiembre de 2026
 
 ## 1. Introducción
 
@@ -77,9 +77,9 @@ El Servicio utiliza las siguientes cookies:
 
 | Cookie | Finalidad | Duración |
 |--------|-----------|----------|
-| `lp_session` | Mantener su sesión iniciada | Sesión o duración configurada |
+| `lp_session` | Mantener su sesión iniciada | 30 días (91 días para una cuenta de invitado), prorrogados en cada visita, salvo para las cuentas del equipo de moderación |
 | `lp_local_play` | Activar el modo local sin cuenta | Persistente |
-| `lp_age_verified` | Recordar su declaración de edad (18+) | 1 año |
+| `lp_age_verified` | Recordar su declaración de edad (18+), exigida antes de crear una cuenta de invitado | 1 año |
 | `lp_analytics_consent` | Recordar su elección sobre las estadísticas de visita | 1 año |
 | `lp_locale` | Recordar su idioma de interfaz | 1 año |
 | `lp_vid` | Identificador de visitante para estadísticas y anti-abuso — **instalada únicamente si ha aceptado las estadísticas de visita** | Persistente |
@@ -126,9 +126,10 @@ El editor sigue siendo el responsable del tratamiento. No se realiza ninguna otr
 ## 7. Plazos de conservación
 
 - **Cuenta activa**: datos conservados mientras exista la cuenta.
-- **Cuenta de invitado** (creada sin email ni contraseña, por ejemplo escaneando un código QR): se elimina automáticamente tras **90 días** de inactividad, con todo lo que contiene (apodo, progresión, cosméticos, amigos). Cada conexión reinicia este plazo; añadir un email y una contraseña, o vincular la cuenta a Google, la hace permanente.
+- **Cuenta de invitado** (creada sin email ni contraseña: escaneando un código QR, mediante un enlace de invitación o con «Pruébalo con bots»): se elimina automáticamente tras **90 días** de inactividad, con todo lo que contiene (apodo, progresión, cosméticos, amigos). Solo es accesible mediante la cookie de sesión del navegador (o de la aplicación) en el que se creó: cada visita desde ese navegador reinicia este plazo, pero no es accesible desde otro navegador ni desde otro dispositivo, y cerrar sesión, iniciar sesión con otra cuenta en ese navegador o borrar las cookies la deja definitivamente inaccesible. Una cuenta de invitado que ya no tiene ninguna sesión válida (tras un cierre de sesión, un inicio de sesión con otra cuenta en ese navegador o la caducidad de su sesión) se elimina antes, tras **7 días** de inactividad, salvo que esté baneada o sea objeto de una denuncia pendiente de revisión. Añadir un email y una contraseña, o vincular la cuenta a Google, la hace permanente.
 - **Cuenta eliminada**: supresión o anonimización en un plazo máximo de **12 meses** tras la solicitud, salvo obligación legal de conservación más larga.
 - **Registros técnicos (direcciones IP, presencia)**: **6 meses**. La dirección IP y el país de la última conexión asociados a una cuenta se borran tras **6 meses** sin actividad; el historial de direcciones IP de una cuenta se elimina inmediatamente junto con la cuenta.
+- **Sesiones de conexión**: se eliminan al cerrar sesión o, automáticamente, una vez caducadas.
 - **Mensajes de chat**: **12 meses**.
 - **Registro de partidas iniciadas** (juego, fecha, duración, participantes): **12 meses**.
 - **Trazas de moderación de apodos**: **12 meses**.

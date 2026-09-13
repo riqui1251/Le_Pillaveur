@@ -682,8 +682,14 @@
       "capitalRule": "Todo se eliminará tras 90 días de inactividad. Añade un email y una contraseña, o vincula tu cuenta a Google, para conservarlo todo."
     },
     "guestExpiry": {
-      "what": "Cuenta de invitado: se elimina tras {days} días sin conectarte — apodo, nivel, XP, cosméticos y amigos incluidos.",
-      "when": "A este ritmo, sería el {date}. Cada visita retrasa la fecha."
+      "rule": "Cuenta de invitado: solo puedes acceder a ella desde este navegador. Tras {days} días sin actividad aquí, se elimina — apodo, nivel, XP, cosméticos y amigos incluidos.",
+      "loss": "Si te desconectas o borras tus cookies, pierdes el acceso para siempre. Tras una desconexión, se elimina a los {days} días.",
+      "deadline": "Si no vuelves desde este navegador, sería el {date}. Cada visita retrasa la fecha."
+    },
+    "guestLogout": {
+      "title": "¿Desconectarte de esta cuenta de invitado?",
+      "body": "Una cuenta de invitado no tiene email ni contraseña: este navegador es tu única llave. Si te desconectas, no podrás volver a entrar nunca — apodo, nivel, XP, cosméticos y amigos incluidos — y se eliminará a los {days} días. Guárdala antes para conservarla.",
+      "logoutAnyway": "Desconectarme de todos modos"
     }
   },
   "legal": {
@@ -4529,7 +4535,7 @@
     "cta": "Pruébalo con bots",
     "go": "¡Vamos!",
     "hint": "Sin cuenta: un apodo, una mesa privada, los bots completan — tus amigos pueden unirse en plena partida.",
-    "guestHint": "Apodo de invitado — se elimina tras 90 días de inactividad. Podrás guardarlo después.",
+    "guestHintDevice": "Cuenta de invitado vinculada a este navegador: se elimina tras 90 días sin actividad y se pierde si te desconectas. Podrás guardarla después.",
     "loginCta": "Iniciar sesión o crear una cuenta",
     "pseudoPlaceholder": "Tu apodo para esta noche",
     "error": "No se puede empezar ahora. Inténtalo de nuevo."
@@ -4539,11 +4545,12 @@
     "subtitle": "Has escaneado el código de una mesa. Elige un apodo para jugar ya, o inicia sesión con tu cuenta.",
     "pseudoPlaceholder": "Tu apodo para esta noche",
     "guestCta": "Jugar como invitado",
-    "guestHint": "Apodo de invitado — se elimina tras 90 días de inactividad. Podrás guardarlo después.",
+    "guestHintDevice": "Cuenta de invitado vinculada a este navegador: se elimina tras 90 días sin actividad y se pierde si te desconectas. Podrás guardarla después.",
     "or": "o",
     "loginCta": "Iniciar sesión o crear una cuenta",
     "dismiss": "No gracias, solo estoy mirando",
-    "error": "No se puede unir ahora mismo. Inténtalo de nuevo."
+    "error": "No se puede unir ahora mismo. Inténtalo de nuevo.",
+    "ageGateRequired": "Primero confirma que tienes 18 años o más. Si no aparece la verificación, recarga la página."
   },
   "og": {
     "siteTagline": "La casa de los juegos de fiesta",

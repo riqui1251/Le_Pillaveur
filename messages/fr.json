@@ -682,8 +682,14 @@
       "capitalRule": "Tout sera supprimé après 90 jours d’inactivité. Ajoute un email et un mot de passe, ou lie ton compte à Google, pour tout garder."
     },
     "guestExpiry": {
-      "what": "Compte invité : il est supprimé après {days} jours sans connexion — pseudo, niveau, XP, cosmétiques et amis compris.",
-      "when": "Au rythme actuel, ce serait le {date}. Chaque passage repousse la date."
+      "rule": "Compte invité : tu n’y accèdes que depuis ce navigateur. Après {days} jours sans activité ici, il est supprimé — pseudo, niveau, XP, cosmétiques et amis compris.",
+      "loss": "Te déconnecter ou effacer tes cookies le rend inaccessible pour de bon. Après une déconnexion, il est supprimé au bout de {days} jours.",
+      "deadline": "Sans nouvelle visite depuis ce navigateur, ce serait le {date}. Chaque visite repousse la date."
+    },
+    "guestLogout": {
+      "title": "Te déconnecter de ce compte invité ?",
+      "body": "Un compte invité n’a ni email ni mot de passe : ce navigateur est ta seule clé. Si tu te déconnectes, tu ne pourras plus jamais y revenir — pseudo, niveau, XP, cosmétiques et amis compris — et il sera supprimé au bout de {days} jours. Sauvegarde-le d’abord pour le garder.",
+      "logoutAnyway": "Me déconnecter quand même"
     }
   },
   "legal": {
@@ -4529,7 +4535,7 @@
     "cta": "Essayer avec des bots",
     "go": "C'est parti !",
     "hint": "Sans compte : un pseudo, une table privée, les bots complètent — tes potes peuvent rejoindre en cours de route.",
-    "guestHint": "Pseudo invité — supprimé après 90 jours d’inactivité. Tu pourras le sauvegarder ensuite.",
+    "guestHintDevice": "Compte invité, lié à ce navigateur : supprimé après 90 jours sans activité, perdu si tu te déconnectes. Tu pourras le sauvegarder ensuite.",
     "loginCta": "Se connecter ou créer un compte",
     "pseudoPlaceholder": "Ton pseudo pour la soirée",
     "error": "Impossible de lancer pour l'instant. Réessaie."
@@ -4539,11 +4545,12 @@
     "subtitle": "Tu as scanné le code d’une table. Choisis un pseudo pour jouer tout de suite, ou connecte-toi à ton compte.",
     "pseudoPlaceholder": "Ton pseudo pour la soirée",
     "guestCta": "Jouer en invité",
-    "guestHint": "Pseudo invité — supprimé après 90 jours d’inactivité. Tu pourras le sauvegarder ensuite.",
+    "guestHintDevice": "Compte invité, lié à ce navigateur : supprimé après 90 jours sans activité, perdu si tu te déconnectes. Tu pourras le sauvegarder ensuite.",
     "or": "ou",
     "loginCta": "Se connecter ou créer un compte",
     "dismiss": "Non merci, je visite d’abord",
-    "error": "Impossible de rejoindre pour l’instant. Réessaie."
+    "error": "Impossible de rejoindre pour l’instant. Réessaie.",
+    "ageGateRequired": "Confirme d’abord que tu as 18 ans ou plus. Si la vérification ne s’affiche pas, recharge la page."
   },
   "og": {
     "siteTagline": "La maison des jeux de soirée",

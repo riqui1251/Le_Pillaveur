@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-**Dernière mise à jour :** 13 juillet 2026
+**Dernière mise à jour :** 13 septembre 2026
 
 ## 1. Introduction
 
@@ -77,9 +77,9 @@ Le Service utilise les cookies suivants :
 
 | Cookie | Finalité | Durée |
 |--------|----------|-------|
-| `lp_session` | Maintien de votre session connectée | Session ou durée configurée |
+| `lp_session` | Maintien de votre session connectée | 30 jours (91 jours pour un compte invité), prolongés à chaque visite, sauf pour les comptes de l'équipe de modération |
 | `lp_local_play` | Activation du mode local sans compte | Persistant |
-| `lp_age_verified` | Mémorisation de votre déclaration d'âge (18+) | 1 an |
+| `lp_age_verified` | Mémorisation de votre déclaration d'âge (18+), exigée avant la création d'un compte invité | 1 an |
 | `lp_analytics_consent` | Mémorisation de votre choix sur les statistiques de visite | 1 an |
 | `lp_locale` | Mémorisation de votre langue d'interface | 1 an |
 | `lp_vid` | Identifiant visiteur pour statistiques et anti-abus — **déposé uniquement si vous avez accepté les statistiques de visite** | Persistant |
@@ -126,9 +126,10 @@ L'éditeur reste responsable du traitement. Aucun autre transfert à des tiers n
 ## 7. Durée de conservation
 
 - **Compte actif** : données conservées tant que le compte existe.
-- **Compte invité** (créé sans email ni mot de passe, par exemple en scannant un QR code) : supprimé automatiquement après **90 jours** sans activité, avec tout ce qu'il contient (pseudo, progression, cosmétiques, amis). Chaque connexion repousse ce délai ; ajouter un email et un mot de passe, ou lier le compte à Google, le rend permanent.
+- **Compte invité** (créé sans email ni mot de passe : en scannant un QR code, par un lien d'invitation ou avec « Essayer avec des bots ») : supprimé automatiquement après **90 jours** sans activité, avec tout ce qu'il contient (pseudo, progression, cosmétiques, amis). Il n'est accessible que par le cookie de session du navigateur (ou de l'application) où il a été créé : chaque visite depuis ce navigateur repousse ce délai, mais il reste inaccessible depuis un autre navigateur ou un autre appareil, et se déconnecter, se connecter à un autre compte dans ce navigateur ou effacer ses cookies le rend définitivement inaccessible. Un compte invité qui n'a plus aucune session valide (après une déconnexion, une connexion à un autre compte dans ce navigateur ou l'expiration de sa session) est supprimé plus tôt, après **7 jours** sans activité, sauf s'il est banni ou visé par un signalement en cours d'examen. Ajouter un email et un mot de passe, ou lier le compte à Google, le rend permanent.
 - **Compte supprimé** : suppression ou anonymisation dans un délai de **12 mois** maximum après la demande, sauf obligation légale de conservation plus longue.
 - **Logs techniques (adresses IP, présence)** : **6 mois**. L'adresse IP et le pays de dernière connexion attachés à un compte sont effacés après **6 mois** sans activité ; l'historique d'adresses IP d'un compte est supprimé immédiatement avec le compte.
+- **Sessions de connexion** : supprimées à la déconnexion, ou automatiquement après leur expiration.
 - **Messages de chat** : **12 mois**.
 - **Journal des parties lancées** (jeu, date, durée, participants) : **12 mois**.
 - **Traces de modération de pseudo** : **12 mois**.

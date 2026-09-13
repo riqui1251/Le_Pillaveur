@@ -3,7 +3,9 @@ import { cookies } from 'next/headers'
 import {
   VISITOR_COOKIE,
   createVisitorId,
-  getCurrentUser,
+  getCurrentSession,
+  renewSessionIfStale,
+  sessionCookieOptions,
   visitorCookieOptions,
 } from '@/lib/auth-server'
 import { ANALYTICS_CONSENT_COOKIE } from '@/lib/auth-cookies'
@@ -22,7 +24,19 @@ export async function POST(request: Request) {
     const hasConsent = cookieStore.get(ANALYTICS_CONSENT_COOKIE)?.value === '1'
     const { country, ip } = resolveGeoFromRequest(request)
     const device = deviceKindFromHeader(request)
-    const currentUser = await getCurrentUser()
+    const session = await getCurrentSession()
+    const currentUser = session?.user ?? null
+
+    // Session glissante (au plus une écriture par jour) : appliquée juste avant
+    // CHACUNE des deux réponses, avec ou sans consentement — le cookie de
+    // session est strictement nécessaire. En dernier, pour qu'une erreur des
+    // écritures précédentes (→ 500 sans cookie) ne laisse jamais une base
+    // prolongée derrière un cookie qui expire quand même.
+    const withRenewedSession = async (response: NextResponse) => {
+      const days = session ? await renewSessionIfStale(session) : null
+      if (session && days) response.cookies.set(sessionCookieOptions(session.token, days))
+      return response
+    }
 
     // Ménage RGPD au passage (throttlé) : purge des données au-delà des
     // durées annoncées dans la politique de confidentialité.
@@ -35,7 +49,7 @@ export async function POST(request: Request) {
       if (currentUser) {
         await recordAccountPresence(currentUser.id, { country, ip, device })
       }
-      return NextResponse.json({ ok: true })
+      return await withRenewedSession(NextResponse.json({ ok: true }))
     }
 
     let localPlayerNames: string[] | undefined
@@ -66,7 +80,7 @@ export async function POST(request: Request) {
       forceLocalPlayerSync,
       device,
     })
-    return response
+    return await withRenewedSession(response)
   } catch (error) {
     console.error('analytics ping error:', error)
     return NextResponse.json({ ok: false }, { status: 500 })

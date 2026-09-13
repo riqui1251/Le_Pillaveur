@@ -138,7 +138,10 @@ export default function GamesHubPage() {
 
   return (
     <>
-    {gateCode && !user && <JoinGate code={gateCode} onDismiss={dismissGate} />}
+    {/* Pas de porte tant que l'auth n'a pas répondu : pendant ce temps `user`
+        vaut null pour TOUT LE MONDE, et un joueur déjà connecté se voyait
+        proposer de créer un second compte invité. */}
+    {gateCode && !user && !authLoading && <JoinGate code={gateCode} onDismiss={dismissGate} />}
     <HubShell
       compact
       title={isOnline ? tOnline('title') : t('title')}

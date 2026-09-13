@@ -4,7 +4,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Globe, ChevronDown, ChevronRight, FileText, Trophy } from 'lucide-react'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, ShieldCheck, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Globe, ChevronDown, ChevronRight, FileText, Trophy } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { PlayingCard } from '@/components/ui/PlayingCard'
 import { usePlayers } from '@/hooks/usePlayers'
@@ -51,9 +60,20 @@ function StatCard({ label, value, color }: { label: string; value: number; color
  */
 const GUEST_INACTIVITY_DAYS = 90
 
+/**
+ * Compte INVITÉ sans plus aucune session valide en base (déconnexion,
+ * connexion à un autre compte dans ce navigateur) : nombre de jours avant sa
+ * suppression. Un cookie simplement effacé laisse la session valide en base :
+ * ce compte-là, inaccessible lui aussi, ne part qu'à l'échéance de sa session.
+ * Même contrainte d'alignement, avec ORPHAN_GUEST_INACTIVITY_DAYS de
+ * src/lib/retention-sweep.ts.
+ */
+const ORPHAN_GUEST_INACTIVITY_DAYS = 7
+
 export function AccountInfo() {
   const t = useTranslations('account')
   const tCommon = useTranslations('common')
+  const tAuthErrors = useTranslations('auth.errors')
   const tNameValidation = useTranslations('common.nameValidation')
   const locale = useLocale()
   const games = useLocalizedGames()
@@ -78,7 +98,11 @@ export function AccountInfo() {
 
   // Échéance d'un compte invité : la purge compte à partir de la DERNIÈRE
   // activité, et le joueur est justement en train d'en avoir une — la date
-  // affichée est donc « aujourd'hui + délai », et elle recule à chaque visite.
+  // affichée est donc « aujourd'hui + délai », et elle recule à chaque visite
+  // depuis ce navigateur (sa session, seule clé du compte, glisse avec elle).
+  // C'est la date la plus PROCHE possible : la session d'invité dure un jour
+  // de plus que ce délai (GUEST_SESSION_DAYS, auth-server), donc elle
+  // n'expire — et le compte ne part — jamais avant.
   // Calculée après montage : Date.now() diffère entre serveur et client.
   const [guestDeadline, setGuestDeadline] = useState<string | null>(null)
   useEffect(() => {
@@ -91,6 +115,44 @@ export function AccountInfo() {
       new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(at)
     )
   }, [user?.isGuest, locale])
+
+  // Déconnexion d'un INVITÉ : son cookie de session est sa seule clé (ni
+  // email, ni mot de passe, ni Google). Se déconnecter le rend inaccessible
+  // pour toujours — on le dit avant, avec la sortie « sauvegarder » en premier.
+  const [confirmGuestLogout, setConfirmGuestLogout] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState<string | null>(null)
+  const upgradeCardRef = useRef<HTMLDivElement>(null)
+  // Posé par « Sauvegarder mon compte » : à la fermeture de la confirmation,
+  // le focus va à la carte de pérennisation au lieu de revenir au bouton.
+  const goToUpgradeOnCloseRef = useRef(false)
+
+  const logoutGuestAnyway = async () => {
+    setLoggingOut(true)
+    setLogoutError(null)
+    try {
+      await logout()
+      setConfirmGuestLogout(false)
+    } catch {
+      setLogoutError(tAuthErrors('network'))
+    } finally {
+      setLoggingOut(false)
+    }
+  }
+
+  const onGuestLogoutCloseAutoFocus = (event: Event) => {
+    if (!goToUpgradeOnCloseRef.current) return
+    goToUpgradeOnCloseRef.current = false
+    event.preventDefault()
+    // Image suivante : le verrou de défilement de la modale est levé.
+    window.requestAnimationFrame(() => {
+      const card = upgradeCardRef.current
+      if (!card) return
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      card.focus({ preventScroll: true })
+    })
+  }
+
   const [onlineName, setOnlineName] = useState('')
   const [onlineNameError, setOnlineNameError] = useState<string | null>(null)
   const [onlineNameSaved, setOnlineNameSaved] = useState(false)
@@ -413,7 +475,15 @@ export function AccountInfo() {
             </Link>
           )}
           <button
-            onClick={() => logout()}
+            onClick={() => {
+              if (user?.isGuest) {
+                setLogoutError(null)
+                setConfirmGuestLogout(true)
+                return
+              }
+              void logout()
+            }}
+            aria-label={t('logout')}
             className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
           >
             <LogOut className="h-4 w-4" />
@@ -424,21 +494,97 @@ export function AccountInfo() {
 
       {/* Avertissement AVANT la perte : un invité découvrait le vide (pseudo
           libre, niveau 1, succès effacés) en revenant le samedi suivant. On
-          annonce donc ce qui part et quand — sans dramatiser : la carte de
+          annonce donc ce qui part, quand, et ce qui le rend inaccessible
+          sur-le-champ (déconnexion, cookies effacés) — sans dramatiser : la carte de
           pérennisation juste en dessous règle le problème en un clic. */}
       {user?.isGuest && (
         <div className="flex gap-3 rounded-2xl border border-gold/20 bg-felt-deep/50 px-4 py-3 text-sm text-white/70">
           <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
           <div className="min-w-0 flex-1">
-            <p>{t('guestExpiry.what', { days: GUEST_INACTIVITY_DAYS })}</p>
+            <p>{t('guestExpiry.rule', { days: GUEST_INACTIVITY_DAYS })}</p>
+            <p className="mt-1">{t('guestExpiry.loss', { days: ORPHAN_GUEST_INACTIVITY_DAYS })}</p>
             {guestDeadline && (
-              <p className="mt-1 text-white/50">{t('guestExpiry.when', { date: guestDeadline })}</p>
+              <p className="mt-1 text-white/50">{t('guestExpiry.deadline', { date: guestDeadline })}</p>
             )}
           </div>
         </div>
       )}
 
-      <GuestUpgradeCard />
+      {/* Cible de « Sauvegarder mon compte » (confirmation de déconnexion).
+          `empty:hidden` : la carte ne rend rien pour un compte déjà
+          enregistré, l'enveloppe vide ne doit pas creuser d'espace. */}
+      <div ref={upgradeCardRef} tabIndex={-1} className="scroll-mt-20 outline-none empty:hidden">
+        <GuestUpgradeCard />
+      </div>
+
+      <Dialog
+        open={confirmGuestLogout}
+        onOpenChange={(open) => {
+          if (loggingOut) return
+          setConfirmGuestLogout(open)
+        }}
+      >
+        {/* Sans la croix (cible de 16 px sur téléphone, libellé non traduit) :
+            un vrai bouton Annuler la remplace. Échap reste actif hors envoi —
+            le composant le bloque dès que la croix est retirée, d'où ce
+            gestionnaire explicite. */}
+        <DialogContent
+          showCloseButton={false}
+          onEscapeKeyDown={(event) => {
+            if (loggingOut) event.preventDefault()
+          }}
+          className="border-gold/25 bg-felt-deep text-white"
+          onCloseAutoFocus={onGuestLogoutCloseAutoFocus}
+        >
+          <DialogHeader>
+            <DialogTitle className="font-display text-cream">{t('guestLogout.title')}</DialogTitle>
+            <DialogDescription className="text-white/70">
+              {t('guestLogout.body', { days: ORPHAN_GUEST_INACTIVITY_DAYS })}
+            </DialogDescription>
+          </DialogHeader>
+          {logoutError && (
+            <p role="alert" className="flex items-center gap-2 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {logoutError}
+            </p>
+          )}
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              onClick={() => {
+                goToUpgradeOnCloseRef.current = true
+                setConfirmGuestLogout(false)
+              }}
+              disabled={loggingOut}
+              className="h-auto min-h-11 w-full whitespace-normal rounded-2xl bg-amber-500 font-bold text-black hover:bg-amber-400"
+            >
+              <ShieldCheck className="mr-2 h-4 w-4 shrink-0" />
+              {/* Même libellé que le bouton de la carte vers laquelle il mène. */}
+              {t('guestUpgrade.submit')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { void logoutGuestAnyway() }}
+              disabled={loggingOut}
+              className="h-auto min-h-11 w-full whitespace-normal rounded-2xl border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10 hover:text-red-200"
+            >
+              <LogOut className="mr-2 h-4 w-4 shrink-0" />
+              {loggingOut ? tCommon('loading') : t('guestLogout.logoutAnyway')}
+            </Button>
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={loggingOut}
+                className="h-auto min-h-11 w-full whitespace-normal rounded-2xl text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                {tCommon('cancel')}
+              </Button>
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {nameModerationWarning && (
         <div

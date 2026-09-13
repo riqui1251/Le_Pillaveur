@@ -180,6 +180,25 @@ echo "=== Purge unique des sessions (jetons desormais haches) ==="
 # Etape explicite et marquee : un fichier temoin dans le volume empeche de la
 # rejouer a chaque deploiement (sinon on deconnecterait tout le monde a chaque
 # mise en ligne).
+#
+# /!\ REGLE POUR TOUTE FUTURE PURGE OU MIGRATION DE SESSIONS /!\
+# Supprimer, invalider ou transformer des lignes Session rend TOUS les comptes
+# INVITES concernes definitivement inaccessibles : un invite n'a ni email, ni
+# mot de passe, ni Google, son cookie de session est sa SEULE cle. Il ne
+# pourra jamais "se reconnecter" (vrai seulement pour les comptes
+# email/Google), et le balayage de conservation (src/lib/retention-sweep.ts)
+# supprimera ensuite ces invites orphelins apres 7 jours d'inactivite. C'est
+# exactement ce que la premiere execution de cette purge a fait le 10/09/2026
+# (DELETE sans filtre). Donc, pour toute operation future :
+#   - migrer EN PLACE (ex. token = sha256(token) via un script Node, sqlite3
+#     n'ayant pas sha256) : les cookies existants restent valides ;
+#   - ou, a defaut, EPARGNER les sessions des invites :
+#     DELETE FROM Session WHERE userId NOT IN (SELECT id FROM User WHERE isGuest = 1);
+# Ce bloc applique desormais lui-meme ce filtre : le temoin n'est plus la
+# seule protection. Rejoue par erreur (base restauree dans un volume NEUF,
+# sans le fichier .session-purge-hashed-tokens.done), il ne ferait que
+# deconnecter les comptes email/Google, jamais perdre un invite. Recreer quand
+# meme le temoin AVANT de deployer sur un volume neuf.
 docker run --rm -v "$DB_VOLUME:/data" alpine sh -c '
   set -e
   MARKER=/data/.session-purge-hashed-tokens.done
@@ -192,12 +211,12 @@ docker run --rm -v "$DB_VOLUME:/data" alpine sh -c '
     exit 0
   fi
   apk add --no-cache sqlite >/dev/null 2>&1
-  COUNT=$(sqlite3 /data/prod.db "SELECT COUNT(*) FROM Session;") || {
+  COUNT=$(sqlite3 /data/prod.db "SELECT COUNT(*) FROM Session WHERE userId NOT IN (SELECT id FROM User WHERE isGuest = 1);") || {
     echo "ECHEC : table Session illisible (schema non migre ?), purge impossible"
     exit 1
   }
-  sqlite3 /data/prod.db "DELETE FROM Session;"
-  echo "$COUNT session(s) supprimee(s) : TOUT LE MONDE DEVRA SE RECONNECTER (jetons en clair devenus inutilisables)."
+  sqlite3 /data/prod.db "DELETE FROM Session WHERE userId NOT IN (SELECT id FROM User WHERE isGuest = 1);"
+  echo "$COUNT session(s) de compte email/Google supprimee(s) : ces comptes devront se reconnecter. Sessions d invites epargnees."
   : > "$MARKER"
 '
 

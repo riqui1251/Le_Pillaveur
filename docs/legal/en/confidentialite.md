@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 13 July 2026
+**Last updated:** 13 September 2026
 
 ## 1. Introduction
 
@@ -77,9 +77,9 @@ The Service uses the following cookies:
 
 | Cookie | Purpose | Duration |
 |--------|---------|----------|
-| `lp_session` | Keeping your session signed in | Session or configured duration |
+| `lp_session` | Keeping your session signed in | 30 days (91 days for a guest account), extended on every visit, except for moderation team accounts |
 | `lp_local_play` | Enabling local mode without an account | Persistent |
-| `lp_age_verified` | Remembering your age declaration (18+) | 1 year |
+| `lp_age_verified` | Remembering your age declaration (18+), required before a guest account can be created | 1 year |
 | `lp_analytics_consent` | Remembering your choice about visit statistics | 1 year |
 | `lp_locale` | Remembering your interface language | 1 year |
 | `lp_vid` | Visitor identifier for statistics and anti-abuse — **set only if you have accepted visit statistics** | Persistent |
@@ -126,9 +126,10 @@ The publisher remains the data controller. No other transfer to third parties ta
 ## 7. Retention periods
 
 - **Active account**: data kept as long as the account exists.
-- **Guest account** (created without an email or password, e.g. by scanning a QR code): automatically deleted after **90 days** of inactivity, along with everything it holds (nickname, progression, cosmetics, friends). Every sign-in resets this period; adding an email and password, or linking the account to Google, makes it permanent.
+- **Guest account** (created without an email or password: by scanning a QR code, through an invitation link or with "Try it with bots"): automatically deleted after **90 days** of inactivity, along with everything it holds (nickname, progression, cosmetics, friends). It can only be reached through the session cookie of the browser (or app) where it was created: every visit from that browser resets this period, but it cannot be reached from another browser or another device, and signing out, signing in to another account in that browser or clearing your cookies makes it permanently inaccessible. A guest account that no longer has any valid session (after a sign-out, a sign-in to another account in that browser or the expiry of its session) is deleted sooner, after **7 days** of inactivity, unless it is banned or subject to a report still under review. Adding an email and password, or linking the account to Google, makes it permanent.
 - **Deleted account**: deletion or anonymisation within a maximum of **12 months** after the request, unless a longer retention is legally required.
 - **Technical logs (IP addresses, presence)**: **6 months**. The IP address and country of last connection attached to an account are erased after **6 months** without activity; an account's IP address history is deleted immediately together with the account.
+- **Sign-in sessions**: deleted on sign-out, or automatically once they have expired.
 - **Chat messages**: **12 months**.
 - **Launched-game log** (game, date, duration, participants): **12 months**.
 - **Nickname moderation traces**: **12 months**.

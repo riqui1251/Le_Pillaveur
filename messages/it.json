@@ -682,8 +682,14 @@
       "capitalRule": "Tutto verrà eliminato dopo 90 giorni di inattività. Aggiungi un’email e una password, o collega il tuo account a Google, per conservare tutto."
     },
     "guestExpiry": {
-      "what": "Account ospite: viene eliminato dopo {days} giorni senza accessi — nickname, livello, XP, cosmetici e amici compresi.",
-      "when": "Di questo passo sarebbe il {date}. Ogni visita sposta in avanti la data."
+      "rule": "Account ospite: puoi accedervi solo da questo browser. Dopo {days} giorni senza attività qui viene eliminato — nickname, livello, XP, cosmetici e amici compresi.",
+      "loss": "Se ti disconnetti o cancelli i cookie, perdi l’accesso per sempre. In caso di disconnessione, viene eliminato dopo {days} giorni.",
+      "deadline": "Senza nuove visite da questo browser, sarebbe il {date}. Ogni visita sposta in avanti la data."
+    },
+    "guestLogout": {
+      "title": "Disconnetterti da questo account ospite?",
+      "body": "Un account ospite non ha email né password: questo browser è la tua unica chiave. Se ti disconnetti, non potrai più rientrarci — nickname, livello, XP, cosmetici e amici compresi — e verrà eliminato dopo {days} giorni. Salvalo prima per tenerlo.",
+      "logoutAnyway": "Disconnettimi comunque"
     }
   },
   "legal": {
@@ -4529,7 +4535,7 @@
     "cta": "Provalo con i bot",
     "go": "Si parte!",
     "hint": "Senza account: un nickname, un tavolo privato, i bot completano — gli amici possono unirsi a partita in corso.",
-    "guestHint": "Nickname ospite — eliminato dopo 90 giorni di inattività. Potrai salvarlo in seguito.",
+    "guestHintDevice": "Account ospite legato a questo browser: eliminato dopo 90 giorni senza attività, perso se ti disconnetti. Potrai salvarlo in seguito.",
     "loginCta": "Accedi o crea un account",
     "pseudoPlaceholder": "Il tuo nickname per la serata",
     "error": "Impossibile iniziare ora. Riprova."
@@ -4539,11 +4545,12 @@
     "subtitle": "Hai scansionato il codice di un tavolo. Scegli un nome per giocare subito, oppure accedi al tuo account.",
     "pseudoPlaceholder": "Il tuo nome per stasera",
     "guestCta": "Gioca come ospite",
-    "guestHint": "Nickname ospite — eliminato dopo 90 giorni di inattività. Potrai salvarlo in seguito.",
+    "guestHintDevice": "Account ospite legato a questo browser: eliminato dopo 90 giorni senza attività, perso se ti disconnetti. Potrai salvarlo in seguito.",
     "or": "oppure",
     "loginCta": "Accedi o crea un account",
     "dismiss": "No grazie, sto solo guardando",
-    "error": "Impossibile unirsi al momento. Riprova."
+    "error": "Impossibile unirsi al momento. Riprova.",
+    "ageGateRequired": "Prima conferma di avere almeno 18 anni. Se la verifica non compare, ricarica la pagina."
   },
   "og": {
     "siteTagline": "La casa dei giochi da festa",

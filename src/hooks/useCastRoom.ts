@@ -31,6 +31,9 @@ export function useCastRoom(gameId: string) {
    * volée (`/api/auth/guest`) : cette route bascule la session en playMode
    * 'online' et efface le cookie de jeu local, ce qui changerait le mode du
    * joueur EN PLEINE PARTIE locale juste parce qu'il a cliqué sur « TV ».
+   * Elle exige en outre le cookie d'âge (403 `age_gate_required`) et crée un
+   * compte lié à ce seul navigateur, perdu à la déconnexion : rien à faire à
+   * l'insu du joueur.
    * Le toast couvre les trois jeux castables (Plinko, PMU, Petit Buveur) sans
    * dupliquer d'UI ; `error` reste exposé pour un affichage en ligne éventuel.
    */

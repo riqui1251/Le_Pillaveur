@@ -36,6 +36,36 @@ export function isOverlayFreeRoute(pathname: string): boolean {
   return pathname === '/tv' || pathname.startsWith('/tv/')
 }
 
+const AGE_GATE_REQUEST_EVENT = 'lp:age-gate-request'
+const AGE_GATE_RESULT_EVENT = 'lp:age-gate-result'
+
+function announceAgeGateResult(verified: boolean) {
+  window.dispatchEvent(new CustomEvent<boolean>(AGE_GATE_RESULT_EVENT, { detail: verified }))
+}
+
+/**
+ * Déclaration 18+ exigée AVANT une action (création d'un compte invité) sur
+ * une page où le portail ne s'affiche pas de lui-même : les pages de LECTURE
+ * (landing, règles, légal). Le portail s'ouvre alors sur place, sans quitter
+ * la page. Résout `true` si l'âge est (ou vient d'être) certifié, `false` si
+ * le visiteur renonce (bouton Annuler, navigation vers une autre page).
+ *
+ * Ne relance JAMAIS l'action d'elle-même : c'est à l'appelant de la proposer
+ * de nouveau (un appelant démonté entre-temps ne doit rien créer).
+ */
+export function requestAgeVerification(): Promise<boolean> {
+  if (typeof window === 'undefined') return Promise.resolve(false)
+  if (hasCookie(AGE_VERIFIED_COOKIE)) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const onResult = (event: Event) => {
+      window.removeEventListener(AGE_GATE_RESULT_EVENT, onResult)
+      resolve((event as CustomEvent<boolean>).detail === true)
+    }
+    window.addEventListener(AGE_GATE_RESULT_EVENT, onResult)
+    window.dispatchEvent(new Event(AGE_GATE_REQUEST_EVENT))
+  })
+}
+
 /** Éléments réellement atteignables au clavier à l'intérieur d'un conteneur. */
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -43,16 +73,53 @@ const FOCUSABLE_SELECTOR =
 export function AgeGate() {
   const t = useTranslations('legal.ageGate')
   const tNav = useTranslations('nav.legal')
+  const tCommon = useTranslations('common')
   const pathname = usePathname()
   const [mode, setMode] = useState<GateMode | null>(null)
   const [analyticsChecked, setAnalyticsChecked] = useState(false)
   const [loading, setLoading] = useState(false)
   const dialogRef = useRef<HTMLDivElement | null>(null)
+  // Page sur laquelle le portail a été DEMANDÉ (requestAgeVerification) : il
+  // s'y affiche même si c'est une page de lecture.
+  const [requestedOn, setRequestedOn] = useState<string | null>(null)
 
   useEffect(() => {
     if (!hasCookie(AGE_VERIFIED_COOKIE)) setMode('gate')
     else if (!hasCookie(ANALYTICS_CONSENT_COOKIE)) setMode('cookies-only')
     else setMode(null)
+  }, [])
+
+  useEffect(() => {
+    const onRequest = () => {
+      // Âge certifié entre-temps (autre onglet) ou route sans surcouche : on
+      // répond tout de suite.
+      if (hasCookie(AGE_VERIFIED_COOKIE)) {
+        announceAgeGateResult(true)
+        return
+      }
+      if (isOverlayFreeRoute(pathname)) {
+        announceAgeGateResult(false)
+        return
+      }
+      setMode('gate')
+      setRequestedOn(pathname)
+    }
+    window.addEventListener(AGE_GATE_REQUEST_EVENT, onRequest)
+    return () => window.removeEventListener(AGE_GATE_REQUEST_EVENT, onRequest)
+  }, [pathname])
+
+  // Navigation hors de la page demandeuse (lien CGU du portail, retour…) : la
+  // demande tombe — le composant qui l'a faite n'est plus là — et le portail
+  // reprend sa règle ordinaire (masqué sur les pages de lecture).
+  useEffect(() => {
+    if (requestedOn === null || requestedOn === pathname) return
+    setRequestedOn(null)
+    announceAgeGateResult(false)
+  }, [pathname, requestedOn])
+
+  const cancelRequest = useCallback(() => {
+    setRequestedOn(null)
+    announceAgeGateResult(false)
   }, [])
 
   /**
@@ -113,7 +180,9 @@ export function AgeGate() {
     // `pathname` compte : le portail n'est PAS rendu sur les pages de lecture
     // alors que `mode` y vaut déjà 'gate'. Sans cette dépendance, arriver sur
     // le hub depuis la landing laissait la carte sans focus ni piège.
-  }, [mode, pathname])
+    // `requestedOn` aussi : sur une page de lecture, c'est la demande qui le
+    // fait apparaître, sans que `mode` change.
+  }, [mode, pathname, requestedOn])
 
   const submit = useCallback(async (analytics: boolean) => {
     setLoading(true)
@@ -126,6 +195,8 @@ export function AgeGate() {
       })
       if (res.ok) {
         setMode(null)
+        setRequestedOn(null)
+        announceAgeGateResult(true)
       }
     } finally {
       setLoading(false)
@@ -135,11 +206,14 @@ export function AgeGate() {
   // Le portail bloquant ne s'affiche PAS sur les pages de LECTURE (landing,
   // règles, légal) : un visiteur SEO peut lire librement, la certification
   // 18+ arrive au moment de JOUER (hub, pages jeux). Le bandeau cookies
-  // discret, lui, reste possible partout.
+  // discret, lui, reste possible partout. Exception : une action qui l'exige
+  // l'a demandé sur cette page (« Essayer avec des bots ») — il s'affiche
+  // alors, annulable puisque rien n'oblige à jouer pour lire.
   const readingPage =
     pathname === '/' || pathname.startsWith('/legal') || pathname.startsWith('/regles')
+  const requestedHere = requestedOn === pathname
   if (isOverlayFreeRoute(pathname)) return null
-  if (!mode || (mode === 'gate' && readingPage)) return null
+  if (!mode || (mode === 'gate' && readingPage && !requestedHere)) return null
   if (mode === 'cookies-only' && pathname.startsWith('/legal')) return null
 
   if (mode === 'cookies-only') {
@@ -209,6 +283,20 @@ export function AgeGate() {
         >
           {loading ? t('validating') : t('enterAdult')}
         </Button>
+
+        {/* Portail DEMANDÉ sur une page de lecture : on peut y renoncer et
+            continuer à lire (ailleurs, la certification n'est pas annulable). */}
+        {readingPage && requestedHere && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={cancelRequest}
+            disabled={loading}
+            className="mt-2 h-auto min-h-11 w-full text-white/70 hover:bg-white/10 hover:text-white"
+          >
+            {tCommon('cancel')}
+          </Button>
+        )}
 
         {/* Mentions légales : 11px à /40 était illisible sur le feutre — /70
             (et liens en ambre plein) sans changer la hiérarchie visuelle. */}

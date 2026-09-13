@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import {
   createSession,
   clearLocalPlayCookieOptions,
+  deleteIncomingSession,
   sessionCookieOptions,
 } from '@/lib/auth-server'
 import { verifyGoogleIdToken } from '@/lib/google-auth-server'
@@ -140,6 +141,12 @@ export async function POST(request: Request) {
     if (visitorId) {
       await linkVisitorNameModerationAttempts(visitorId, user.id)
     }
+
+    // Connexion par-dessus une autre session (invité compris) : l'ancienne
+    // ligne est supprimée, pas seulement son cookie écrasé. En dernier, après
+    // toutes les écritures qui peuvent lever : un 503 (sans cookie) ne doit
+    // jamais laisser le navigateur sur une session déjà supprimée.
+    await deleteIncomingSession()
 
     const userLocale = normalizeAppLocale(freshUser?.locale ?? user.locale)
 

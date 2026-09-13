@@ -13,7 +13,7 @@ import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 /**
  * Porte d'entrée après scan d'un QR de table (?join=CODE) pour un visiteur
  * SANS session : jouer tout de suite avec un pseudo d'invité (compte
- * temporaire, purgé après la soirée) ou se connecter à un compte existant.
+ * temporaire, lié à ce navigateur) ou se connecter à un compte existant.
  * Dans les deux cas, le code reste « sous le coude » (localStorage) et le hub
  * rejoint la table automatiquement dès que la session existe — pas besoin de
  * re-scanner le QR.
@@ -48,12 +48,20 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
         body: JSON.stringify({ displayName: trimmed, locale }),
       })
       const data = await res.json().catch(() => null)
+      if (res.status === 403 && data?.code === 'age_gate_required') {
+        // Âge jamais certifié sur ce navigateur : le hub n'est pas une page de
+        // lecture, la porte 18+ s'y affiche (ou revient au rechargement).
+        setError(t('ageGateRequired'))
+        return
+      }
       if (!res.ok) {
         setError(data?.error ?? t('error'))
         return
       }
-      // La session invité existe : le hub consomme le code en attente et
-      // rejoint la table tout seul (même mécanique qu'après une inscription).
+      // La session existe — invité tout juste créé, ou compte déjà connecté
+      // que la route renvoie tel quel au lieu d'en créer un second : le hub
+      // consomme le code en attente et rejoint la table tout seul (même
+      // mécanique qu'après une inscription).
       await refresh()
     } catch {
       setError(t('error'))
@@ -96,7 +104,7 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
             <UserPlus className="mr-2 h-4 w-4" />
             {loading ? tCommon('loading') : t('guestCta')}
           </Button>
-          <p className="text-center text-[11px] leading-snug text-white/40">{t('guestHint')}</p>
+          <p className="text-center text-[11px] leading-snug text-white/40">{t('guestHintDevice')}</p>
         </form>
 
         <div className="mt-4 flex items-center gap-3" aria-hidden>

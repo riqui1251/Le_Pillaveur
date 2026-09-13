@@ -1,6 +1,6 @@
 # Informativa sulla privacy
 
-**Ultimo aggiornamento:** 13 luglio 2026
+**Ultimo aggiornamento:** 13 settembre 2026
 
 ## 1. Introduzione
 
@@ -77,9 +77,9 @@ Il Servizio utilizza i seguenti cookie:
 
 | Cookie | Finalità | Durata |
 |--------|----------|--------|
-| `lp_session` | Mantenimento della sessione connessa | Sessione o durata configurata |
+| `lp_session` | Mantenimento della sessione connessa | 30 giorni (91 giorni per un account ospite), prorogati a ogni visita, salvo per gli account del team di moderazione |
 | `lp_local_play` | Attivazione della modalità locale senza account | Persistente |
-| `lp_age_verified` | Memorizzazione della tua dichiarazione di età (18+) | 1 anno |
+| `lp_age_verified` | Memorizzazione della tua dichiarazione di età (18+), richiesta prima della creazione di un account ospite | 1 anno |
 | `lp_analytics_consent` | Memorizzazione della tua scelta sulle statistiche di visita | 1 anno |
 | `lp_locale` | Memorizzazione della lingua dell'interfaccia | 1 anno |
 | `lp_vid` | Identificativo visitatore per statistiche e anti-abuso — **installato solo se hai accettato le statistiche di visita** | Persistente |
@@ -126,9 +126,10 @@ L'editore resta il titolare del trattamento. Nessun altro trasferimento a terzi 
 ## 7. Durata di conservazione
 
 - **Account attivo**: dati conservati finché l'account esiste.
-- **Account ospite** (creato senza email né password, per esempio scansionando un QR code): eliminato automaticamente dopo **90 giorni** di inattività, con tutto ciò che contiene (nickname, progressione, cosmetici, amici). Ogni accesso azzera questo termine; aggiungere un’email e una password, o collegare l’account a Google, lo rende permanente.
+- **Account ospite** (creato senza email né password: scansionando un QR code, tramite un link di invito o con «Provalo con i bot»): eliminato automaticamente dopo **90 giorni** di inattività, con tutto ciò che contiene (nickname, progressione, cosmetici, amici). È accessibile solo tramite il cookie di sessione del browser (o dell’app) in cui è stato creato: ogni visita da quel browser azzera questo termine, ma non è accessibile da un altro browser né da un altro dispositivo, e disconnettersi, accedere a un altro account in quel browser o cancellare i cookie lo rende definitivamente inaccessibile. Un account ospite che non ha più alcuna sessione valida (dopo una disconnessione, un accesso a un altro account in quel browser o la scadenza della sua sessione) viene eliminato prima, dopo **7 giorni** di inattività, salvo che sia bannato o oggetto di una segnalazione in corso di esame. Aggiungere un’email e una password, o collegare l’account a Google, lo rende permanente.
 - **Account eliminato**: cancellazione o anonimizzazione entro un massimo di **12 mesi** dalla richiesta, salvo obbligo legale di conservazione più lunga.
 - **Log tecnici (indirizzi IP, presenza)**: **6 mesi**. L'indirizzo IP e il paese dell'ultima connessione associati a un account vengono cancellati dopo **6 mesi** di inattività; lo storico degli indirizzi IP di un account viene eliminato immediatamente insieme all'account.
+- **Sessioni di accesso**: eliminate alla disconnessione o, automaticamente, una volta scadute.
 - **Messaggi di chat**: **12 mesi**.
 - **Registro delle partite avviate** (gioco, data, durata, partecipanti): **12 mesi**.
 - **Tracce di moderazione dei nickname**: **12 mesi**.

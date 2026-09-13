@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
+  createSession,
+  deleteIncomingSession,
   getCurrentUser,
   hashPassword,
   isValidEmail,
   isValidPassword,
   passwordRequirementsHint,
+  sessionCookieOptions,
 } from '@/lib/auth-server'
 import { verifyGoogleIdToken } from '@/lib/google-auth-server'
 import { normalizeRole } from '@/lib/roles'
@@ -98,7 +101,22 @@ export async function POST(request: Request) {
       },
     })
 
-    return NextResponse.json({
+    // Plus un invité : sa session d'invité (91 jours) laisse place à une
+    // session de compte (30 jours glissants, la durée annoncée), avec un
+    // NOUVEAU jeton maintenant qu'un identifiant durable y est attaché.
+    // Nouvelle session d'abord, ancienne ensuite. Le compte est déjà
+    // pérennisé à ce stade : un échec ici ne fait pas échouer la réponse (un
+    // nouvel essai répondrait « déjà enregistré »), l'ancienne session reste
+    // simplement valable.
+    let token: string | null = null
+    try {
+      token = await createSession(updated.id)
+      await deleteIncomingSession()
+    } catch (error) {
+      console.error('guest upgrade session rotate error:', error)
+    }
+
+    const response = NextResponse.json({
       ok: true,
       user: {
         id: updated.id,
@@ -118,6 +136,8 @@ export async function POST(request: Request) {
         isGuest: false,
       },
     })
+    if (token) response.cookies.set(sessionCookieOptions(token))
+    return response
   } catch (error) {
     console.error('guest upgrade error:', error)
     return NextResponse.json(

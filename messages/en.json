@@ -682,8 +682,14 @@
       "capitalRule": "Everything will be deleted after 90 days of inactivity. Add an email and password, or link your account to Google, to keep it all."
     },
     "guestExpiry": {
-      "what": "Guest account: it is deleted after {days} days without signing in — nickname, level, XP, cosmetics and friends included.",
-      "when": "At this rate, that would be {date}. Every visit pushes the date back."
+      "rule": "Guest account: you can only reach it from this browser. After {days} days without activity here, it is deleted — nickname, level, XP, cosmetics and friends included.",
+      "loss": "Disconnecting or clearing your cookies locks you out of it for good. After a disconnection, it is deleted after {days} days.",
+      "deadline": "With no new visit from this browser, that would be {date}. Every visit pushes the date back."
+    },
+    "guestLogout": {
+      "title": "Disconnect from this guest account?",
+      "body": "A guest account has no email or password: this browser is your only key. If you disconnect, you can never get back in — nickname, level, XP, cosmetics and friends included — and it will be deleted after {days} days. Save it first to keep it.",
+      "logoutAnyway": "Disconnect anyway"
     }
   },
   "legal": {
@@ -4529,7 +4535,7 @@
     "cta": "Try it with bots",
     "go": "Let's go!",
     "hint": "No account needed: a nickname, a private table, bots fill the seats — friends can join mid-game.",
-    "guestHint": "Guest nickname — deleted after 90 days of inactivity. You can save it afterwards.",
+    "guestHintDevice": "Guest account tied to this browser: deleted after 90 days without activity, lost if you disconnect. You can save it afterwards.",
     "loginCta": "Sign in or create an account",
     "pseudoPlaceholder": "Your nickname for tonight",
     "error": "Can't start right now. Try again."
@@ -4539,11 +4545,12 @@
     "subtitle": "You scanned a table code. Pick a name to play right away, or sign in to your account.",
     "pseudoPlaceholder": "Your name for tonight",
     "guestCta": "Play as guest",
-    "guestHint": "Guest nickname — deleted after 90 days of inactivity. You can save it afterwards.",
+    "guestHintDevice": "Guest account tied to this browser: deleted after 90 days without activity, lost if you disconnect. You can save it afterwards.",
     "or": "or",
     "loginCta": "Sign in or create an account",
     "dismiss": "No thanks, just browsing",
-    "error": "Can’t join right now. Try again."
+    "error": "Can’t join right now. Try again.",
+    "ageGateRequired": "First confirm that you are 18 or older. If the check doesn’t appear, reload the page."
   },
   "og": {
     "siteTagline": "The home of party games",
