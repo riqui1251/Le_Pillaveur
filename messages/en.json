@@ -4267,6 +4267,16 @@
       "journalMetricsExclusionOn": "{actor} flagged {target} as a test account, excluded from statistics",
       "journalMetricsExclusionOff": "{actor} put {target} back into the statistics (no longer a test account)"
     },
+    "retentionRun": {
+      "lastRun": "Last data clean-up: {date}",
+      "never": "Last data clean-up: never run since the update",
+      "purged": "{count, plural, =0 {nothing erased} one {# item erased or anonymised} other {# items erased or anonymised}}",
+      "detail": "Breakdown by block",
+      "blockFailed": "failed",
+      "errored": "The last run ended with an error.",
+      "failedBlocks": "{count, plural, one {# block failed: {blocks}} other {# blocks failed: {blocks}}}",
+      "stale": "No run for more than {hours} h: the clean-up only runs when the site gets traffic, so retention periods are no longer guaranteed."
+    },
     "games": {
       "playedTitle": "Games played",
       "playedDesc": "Cloud aggregate of synced accounts",

@@ -4267,6 +4267,16 @@
       "journalMetricsExclusionOn": "{actor} a marqué {target} comme compte de test, exclu des statistiques",
       "journalMetricsExclusionOff": "{actor} a réintégré {target} dans les statistiques (plus un compte de test)"
     },
+    "retentionRun": {
+      "lastRun": "Dernier ménage des données : {date}",
+      "never": "Dernier ménage des données : jamais exécuté depuis la mise à jour",
+      "purged": "{count, plural, =0 {rien d'effacé} one {# élément effacé ou anonymisé} other {# éléments effacés ou anonymisés}}",
+      "detail": "Détail par bloc",
+      "blockFailed": "échec",
+      "errored": "Le dernier passage s'est terminé en erreur.",
+      "failedBlocks": "{count, plural, one {# bloc en échec : {blocks}} other {# blocs en échec : {blocks}}}",
+      "stale": "Aucun passage depuis plus de {hours} h : le ménage ne tourne qu'avec du trafic sur le site, les durées de conservation ne sont plus garanties."
+    },
     "games": {
       "playedTitle": "Parties jouées par jeu",
       "playedDesc": "Agrégat cloud des comptes synchronisés",

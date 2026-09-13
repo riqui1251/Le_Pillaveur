@@ -23,6 +23,8 @@ Lors de la création d'un compte, nous collectons :
 - mot de passe (stocké sous forme de **empreinte cryptographique** — jamais en clair) ;
 - pseudo (nom d'affichage).
 
+Si vous créez votre compte ou vous connectez **avec Google** (bouton « Continuer avec Google » ou, dans l'application mobile, fenêtre de connexion Google), ou si vous liez un compte invité à Google, aucun mot de passe n'est enregistré. Une fois la connexion acceptée dans la fenêtre de Google, Google nous transmet votre adresse email, l'identifiant de votre compte Google et, selon les réglages de ce compte, votre nom (prénom et nom de famille) et votre photo de profil ; notre serveur fait vérifier ces informations par Google. Nous ne conservons que l'adresse email, qui identifie votre compte. À la création du compte, votre prénom (à défaut, votre nom complet ou, s'il manque aussi, la partie de votre adresse email placée avant le @) sert à proposer votre pseudo de départ, visible des autres joueurs et modifiable depuis la page Compte ; l'identifiant du compte Google et la photo ne sont pas conservés, et le nom ne l'est qu'à travers ce pseudo de départ. Google traite de son côté vos données de connexion (voir 6).
+
 ### 3.2 Données de jeu
 
 Si vous utilisez un compte, nous pouvons stocker :
@@ -43,7 +45,7 @@ En **mode local** (sans compte), vos joueurs locaux sont stockés sur votre appa
 
 - identifiant de navigateur (cookie `lp_vid`, 1 an) ;
 - adresse IP ;
-- pays estimé (géolocalisation approximative par adresse IP, calculée sur nos serveurs — aucun service tiers) ;
+- pays estimé à partir de l'adresse IP (géolocalisation approximative) : indiqué par Cloudflare, par qui transitent les requêtes adressées au site (voir 6), ou, à défaut, calculé sur nos serveurs avec une base de géolocalisation locale ;
 - type d'appareil / navigateur (user-agent simplifié) ;
 - dates de vos passages sur le site (pages affichées et activité), ainsi que le dernier compte utilisé sur ce navigateur et la date de son dernier passage connecté (pour distinguer un navigateur encore connecté à ce compte d'un navigateur où il a seulement été utilisé auparavant) ;
 - les noms de vos joueurs locaux (voir 3.2) ;
@@ -59,7 +61,7 @@ Si vous refusez, aucun suivi de visite n'est enregistré. Si vous retirez votre 
 
 Ces statistiques étaient auparavant présentées à l'entrée du site comme anonymes et servant uniquement à compter les visites, ce qu'elles n'étaient pas (identifiant de navigateur, adresses IP). Un accord donné sous cet ancien libellé n'est plus pris en compte : la question vous est reposée. Lors de ce changement, les noms des joueurs locaux et les adresses IP enregistrées hors connexion ont été supprimés, ainsi que les données des navigateurs jamais utilisés avec un compte. Pour un navigateur utilisé avec un compte, la dernière adresse IP, le pays, l'appareil, les dates de passage et le dernier compte utilisé restent conservés jusqu'au prochain passage de ce navigateur sur le site, où ils sont effacés avec le cookie `lp_vid`, et au plus tard 6 mois après son dernier passage. Les jours de visite de chaque navigateur (identifiant de navigateur et date, sans adresse IP, nom ni compte) sont conservés jusqu'à leur purge à 13 mois.
 
-**Indépendamment de ce consentement**, pour les **comptes connectés** uniquement, nous conservons l'adresse IP, le pays estimé et le type d'appareil des dernières connexions, ainsi que la date de dernière activité du compte, mise à jour seulement quand le site est réellement utilisé (page affichée et interaction depuis 30 minutes au plus) ou lors d'une authentification, qui sert aussi au statut « en ligne » visible par vos amis, au nombre de comptes en ligne (un décompte, sans nom) et à la suppression automatique des comptes invités inactifs ; aucune durée de présence n'est enregistrée à ce titre. Finalités : **sécurité et modération des comptes** (prévention des fraudes, bannissements), statut « en ligne », nombre de comptes en ligne et suppression des comptes invités inactifs — base : intérêt légitime.
+**Indépendamment de ce consentement**, pour les **comptes connectés** uniquement, nous conservons l'adresse IP, le pays estimé et le type d'appareil relevés à la création du compte et lors des dernières connexions, ainsi que la date de dernière activité du compte, mise à jour seulement quand le site est réellement utilisé (page affichée et interaction depuis 30 minutes au plus) ou lors d'une authentification, qui sert aussi au statut « en ligne » visible par vos amis, au nombre de comptes en ligne (un décompte, sans nom) et à la suppression automatique des comptes invités inactifs ; aucune durée de présence n'est enregistrée à ce titre. Finalités : **sécurité et modération des comptes** (prévention des fraudes, bannissements), statut « en ligne », nombre de comptes en ligne et suppression des comptes invités inactifs — base : intérêt légitime.
 
 Est considérée comme activité l'utilisation d'une page affichée à l'écran : un signal part au plus une fois par minute, seulement tant que la page est visible et que vous l'avez utilisée (clic, touche, toucher d'écran ou molette) au cours des 30 dernières minutes. Seul l'instant de votre dernier geste est gardé, dans la mémoire de la page et sans son contenu ; il n'est ni enregistré ni transmis. Sans votre consentement, le signal ne contient rien d'autre et ne sert qu'à la date de dernière activité d'un compte connecté (voir ci-dessus) : aucune durée n'est enregistrée à partir de lui. Avec votre consentement, il indique seulement en plus « actif ou non » et « en partie ou non », et sert à mesurer la durée des visites de votre compte si vous êtes connecté (voir ci-dessus) ; ni l'adresse de la page, ni le jeu, ni le nombre de gestes ne sont enregistrés. Le cumul de temps de présence calculé avant le 13 septembre 2026, selon une méthode abandonnée qui comptait aussi les onglets restés ouverts, a été remis à zéro ; il n'est plus ni alimenté ni affiché.
 
@@ -71,7 +73,7 @@ Les messages envoyés dans le **chat** (chat de partie et messages entre amis) s
 
 ### 3.5 Chat vocal
 
-Le chat vocal utilise une connexion **pair-à-pair (WebRTC)** entre les joueurs : la voix **n'est ni enregistrée ni stockée** sur nos serveurs. Le serveur ne relaie que la signalisation technique (mise en relation) et, si nécessaire, un relais chiffré (TURN) sans conservation.
+Le chat vocal utilise une connexion **pair-à-pair (WebRTC)** entre les joueurs : la voix **n'est ni enregistrée ni stockée** sur nos serveurs. Le serveur ne relaie que la signalisation technique (mise en relation) et, si nécessaire, un relais chiffré (TURN) sans conservation. Pour établir la connexion, votre navigateur interroge des serveurs publics de Google (STUN), qui reçoivent votre adresse IP (voir 6) ; comme dans toute connexion pair-à-pair, les navigateurs des autres participants au chat vocal peuvent aussi recevoir votre adresse IP.
 
 ### 3.6 Modération des pseudos
 
@@ -135,17 +137,19 @@ Nous **ne vendons pas** vos données personnelles à des tiers.
 
 Vos données peuvent être traitées par :
 
-- **L'hébergeur du Service** : OVH SAS — 2 rue Kellermann, 59100 Roubaix (France)
+- **L'hébergeur du Service** : OVH SAS — 2 rue Kellermann, 59100 Roubaix (France). Le serveur héberge la base de données et ses sauvegardes quotidiennes (voir 7).
+- **Cloudflare, Inc.** (intermédiaire technique : proxy et réseau de diffusion de contenu) — États-Unis. Toutes les requêtes adressées au Service passent par Cloudflare avant d'atteindre notre serveur : Cloudflare reçoit donc votre adresse IP et le contenu des échanges avec le site, qu'il achemine jusqu'à notre serveur (avec mise en cache des fichiers publics du site et protection contre les attaques). Il nous indique aussi le pays estimé de votre adresse IP (voir 3.3). Cloudflare conserve en outre la copie hors site des sauvegardes de la base de données (service de stockage R2, voir 7). Cloudflare pouvant traiter ces données hors de l'Union européenne, notamment aux États-Unis, ces transferts sont encadrés par les clauses contractuelles types de la Commission européenne ou par le cadre de protection des données UE–États-Unis (Data Privacy Framework), selon les engagements de ce prestataire.
 - **Resend** (envoi d'emails de réinitialisation de mot de passe) — États-Unis, avec garanties contractuelles appropriées
+- **Google** — si vous utilisez la connexion avec Google : la connexion se fait auprès de Google, qui traite les données de connexion à votre compte Google selon ses propres règles de confidentialité, en tant que responsable de traitement distinct, puis nous transmet les données décrites au 3.1. Le bouton « Continuer avec Google » est chargé depuis les serveurs de Google sur la page Compte : son affichage transmet déjà à Google votre adresse IP et des informations techniques sur votre navigateur. Pour le chat vocal, votre navigateur interroge aussi des serveurs publics de Google (STUN), qui reçoivent votre adresse IP (voir 3.5). Google peut traiter ces données hors de l'Union européenne.
 
-L'éditeur reste responsable du traitement. Aucun autre transfert à des tiers n'est effectué sans votre consentement, sauf obligation légale.
+L'éditeur reste responsable des traitements décrits dans la présente politique. Aucun autre transfert à des tiers n'est effectué sans votre consentement, sauf obligation légale.
 
 ## 7. Durée de conservation
 
 - **Compte actif** : données conservées tant que le compte existe.
 - **Compte invité** (créé sans email ni mot de passe : en scannant un QR code, par un lien d'invitation ou avec « Essayer avec des bots ») : supprimé automatiquement après **90 jours** sans activité, avec tout ce qu'il contient (pseudo, progression, cosmétiques, amis). Il n'est accessible que par le cookie de session du navigateur (ou de l'application) où il a été créé : chaque visite depuis ce navigateur repousse ce délai, mais il reste inaccessible depuis un autre navigateur ou un autre appareil, et se déconnecter, se connecter à un autre compte dans ce navigateur ou effacer ses cookies le rend définitivement inaccessible. Un compte invité qui n'a plus aucune session valide (après une déconnexion, une connexion à un autre compte dans ce navigateur ou l'expiration de sa session) est supprimé plus tôt, après **7 jours** sans activité, sauf s'il est banni ou visé par un signalement en cours d'examen. Ajouter un email et un mot de passe, ou lier le compte à Google, le rend permanent.
 - **Compte supprimé** : suppression ou anonymisation dans un délai de **12 mois** maximum après la demande, sauf obligation légale de conservation plus longue.
-- **Logs techniques (adresses IP, présence)** : **6 mois**. L'adresse IP et le pays de dernière connexion attachés à un compte sont effacés après **6 mois** sans activité ; l'historique d'adresses IP d'un compte est supprimé immédiatement avec le compte.
+- **Logs techniques (adresses IP, présence)** : **6 mois**. L'adresse IP et le pays de dernière connexion attachés à un compte sont effacés après **6 mois** sans activité ; l'historique d'adresses IP d'un compte est supprimé immédiatement avec le compte, et un contrôle automatique efface aussi tout historique d'adresses IP resté rattaché à un compte supprimé.
 - **Historique des visites d'un compte** (début, fin, durées page affichée / active / en partie, type d'appareil) : **6 mois** après le début de chaque visite ; effacé immédiatement au retrait du consentement aux statistiques de visite depuis un navigateur connecté à ce compte où elles avaient été acceptées, ou quand le compte rejoint l'équipe de modération, et supprimé avec le compte.
 - **Sessions de connexion** : supprimées à la déconnexion, ou automatiquement après leur expiration.
 - **Messages de chat** : **12 mois**.
@@ -154,6 +158,7 @@ L'éditeur reste responsable du traitement. Aucun autre transfert à des tiers n
 - **Données de mesure d'audience** : **13 mois**.
 - **Feedback** : conservation jusqu'à **24 mois** ou suppression sur demande ; l'email de contact associé est effacé si vous supprimez votre compte.
 - **Cookies âge et consentement** : 1 an, renouvelables à chaque validation.
+- **Sauvegardes de la base de données** (copie de l'ensemble des données ci-dessus) : **16 jours au plus** sur le serveur, **31 jours au plus** pour la copie hors site ; une donnée supprimée disparaît des sauvegardes à leur expiration.
 
 Ces durées sont appliquées automatiquement par des purges régulières.
 

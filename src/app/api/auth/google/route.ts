@@ -13,6 +13,7 @@ import { normalizeRole } from '@/lib/roles'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
+import { recordIpSeen } from '@/lib/ip-history-server'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
@@ -99,6 +100,28 @@ export async function POST(request: Request) {
         },
       })
       createdNow = true
+
+      // Réseau de création (anti-abus : comptes en série depuis un même
+      // réseau). Une connexion l'écrit plus bas ; une création passait à côté
+      // jusqu'au premier battement, qu'un script sans JavaScript n'envoie
+      // jamais. Même collecte qu'une connexion (IP, pays, appareil, déjà
+      // déclarés), plus l'historique d'IP du compte. Jamais bloquant : le
+      // compte existe, une trace manquée ne doit pas le faire échouer.
+      try {
+        const { country, ip } = resolveGeoFromRequest(request)
+        const device = deviceKindFromHeader(request)
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            ...(country ? { lastCountry: country } : {}),
+            ...(ip ? { lastIp: ip } : {}),
+            ...(device !== 'unknown' ? { lastDevice: device } : {}),
+          },
+        })
+        await recordIpSeen(user.id, '', ip, country)
+      } catch (error) {
+        console.error('google auth network trace error:', error)
+      }
     }
 
     await clearExpiredBanIfNeeded(user.id)

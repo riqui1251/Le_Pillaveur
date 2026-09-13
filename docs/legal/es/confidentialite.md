@@ -23,6 +23,8 @@ Al crear una cuenta, recogemos:
 - contraseña (almacenada como **huella criptográfica** — nunca en claro);
 - apodo (nombre visible).
 
+Si crea su cuenta o inicia sesión **con Google** (botón «Continuar con Google» o, en la aplicación móvil, ventana de inicio de sesión de Google), o si vincula una cuenta de invitado a Google, no se registra ninguna contraseña. Una vez aceptado el inicio de sesión en la ventana de Google, Google nos transmite su dirección de correo electrónico, el identificador de su cuenta de Google y, según la configuración de esa cuenta, su nombre (nombre de pila y apellidos) y su foto de perfil; nuestro servidor hace verificar esta información por Google. Solo conservamos la dirección de correo electrónico, que identifica su cuenta. Al crear la cuenta, su nombre de pila (o, en su defecto, su nombre completo o, si también falta, la parte de su dirección de correo electrónico anterior a la @) sirve para proponer su apodo inicial, visible para los demás jugadores y modificable desde la página Cuenta; el identificador de la cuenta de Google y la foto no se conservan, y el nombre solo se conserva a través de ese apodo inicial. Google trata por su parte sus datos de inicio de sesión (véase 6).
+
 ### 3.2 Datos de juego
 
 Si utiliza una cuenta, podemos almacenar:
@@ -43,7 +45,7 @@ En **modo local** (sin cuenta), sus jugadores locales se almacenan en su disposi
 
 - identificador del navegador (cookie `lp_vid`, 1 año);
 - dirección IP;
-- país estimado (geolocalización aproximada por dirección IP, calculada en nuestros servidores — sin servicios de terceros);
+- país estimado a partir de la dirección IP (geolocalización aproximada): indicado por Cloudflare, a través del cual pasan las solicitudes dirigidas al sitio (véase 6), o, en su defecto, calculado en nuestros servidores con una base de datos de geolocalización local;
 - tipo de dispositivo / navegador (user-agent simplificado);
 - fechas de sus visitas al sitio (páginas mostradas y actividad), así como la última cuenta utilizada en este navegador y la fecha de su último uso con la sesión iniciada (para distinguir un navegador que sigue conectado a esa cuenta de otro en el que solo se utilizó anteriormente);
 - los nombres de sus jugadores locales (véase 3.2);
@@ -59,7 +61,7 @@ Si lo rechaza, no se registra ningún seguimiento de visita. Si retira su consen
 
 Anteriormente, al entrar en el sitio, estas estadísticas se presentaban como anónimas y destinadas únicamente a contar las visitas, lo cual no era cierto (identificador del navegador, direcciones IP). El consentimiento dado con ese texto anterior ya no se tiene en cuenta: se le vuelve a plantear la pregunta. Con este cambio se suprimieron los nombres de los jugadores locales y las direcciones IP registradas sin sesión iniciada, así como los datos de los navegadores nunca utilizados con una cuenta. En un navegador utilizado con una cuenta, la última dirección IP, el país, el dispositivo, las fechas de visita y la última cuenta utilizada se conservan hasta la siguiente visita de ese navegador al sitio, en la que se borran junto con la cookie `lp_vid`, y como máximo 6 meses después de su última visita. Los registros diarios de visita de cada navegador (identificador del navegador y fecha, sin dirección IP, nombre ni cuenta) se conservan hasta su purga a los 13 meses.
 
-**Independientemente de este consentimiento**, únicamente para las **cuentas conectadas**, conservamos la dirección IP, el país estimado y el tipo de dispositivo de las últimas conexiones, así como la fecha de última actividad de la cuenta, actualizada solo cuando el sitio se utiliza realmente (página mostrada y alguna interacción en los últimos 30 minutos) o al autenticarse, que también sirve para el estado «en línea» visible para sus amigos, para el número de cuentas en línea (un recuento, sin nombres) y para la eliminación automática de las cuentas de invitado inactivas; no se registra ningún tiempo de presencia por este concepto. Finalidades: **seguridad y moderación de cuentas** (prevención de fraudes, baneos), estado «en línea», número de cuentas en línea y eliminación de las cuentas de invitado inactivas — base: interés legítimo.
+**Independientemente de este consentimiento**, únicamente para las **cuentas conectadas**, conservamos la dirección IP, el país estimado y el tipo de dispositivo registrados al crear la cuenta y en las últimas conexiones, así como la fecha de última actividad de la cuenta, actualizada solo cuando el sitio se utiliza realmente (página mostrada y alguna interacción en los últimos 30 minutos) o al autenticarse, que también sirve para el estado «en línea» visible para sus amigos, para el número de cuentas en línea (un recuento, sin nombres) y para la eliminación automática de las cuentas de invitado inactivas; no se registra ningún tiempo de presencia por este concepto. Finalidades: **seguridad y moderación de cuentas** (prevención de fraudes, baneos), estado «en línea», número de cuentas en línea y eliminación de las cuentas de invitado inactivas — base: interés legítimo.
 
 Se considera actividad el uso de una página mostrada en pantalla: se envía una señal como máximo una vez por minuto, solo mientras la página está visible y usted la ha utilizado (clic, tecla, toque en la pantalla o rueda del ratón) en los últimos 30 minutos. Solo se conserva el momento de su última interacción, en la memoria de la página y sin su contenido; no se registra ni se transmite. Sin su consentimiento, la señal no contiene nada más y solo sirve para la fecha de última actividad de una cuenta conectada (véase más arriba): no se registra ninguna duración a partir de ella. Con su consentimiento, solo indica además «activo o no» y «en partida o no», y sirve para medir la duración de las visitas de su cuenta si está conectado (véase más arriba); no se registran ni la dirección de la página, ni el juego, ni el número de interacciones. El acumulado de tiempo de presencia calculado antes del 13 de septiembre de 2026, con un método abandonado que también contaba las pestañas que quedaban abiertas, se ha puesto a cero; ya no se actualiza ni se muestra.
 
@@ -71,7 +73,7 @@ Los mensajes enviados en el **chat** (chat de partida y mensajes entre amigos) s
 
 ### 3.5 Chat de voz
 
-El chat de voz utiliza una conexión **entre pares (WebRTC)**: la voz **no se graba ni se almacena** en nuestros servidores. El servidor solo transmite la señalización técnica (puesta en contacto) y, si es necesario, un relé cifrado (TURN) sin conservación.
+El chat de voz utiliza una conexión **entre pares (WebRTC)**: la voz **no se graba ni se almacena** en nuestros servidores. El servidor solo transmite la señalización técnica (puesta en contacto) y, si es necesario, un relé cifrado (TURN) sin conservación. Para establecer la conexión, su navegador consulta servidores públicos de Google (STUN), que reciben su dirección IP (véase 6); como en toda conexión entre pares, los navegadores de los demás participantes en el chat de voz también pueden recibir su dirección IP.
 
 ### 3.6 Moderación de apodos
 
@@ -135,17 +137,19 @@ Sus datos se tratan para:
 
 Sus datos pueden ser tratados por:
 
-- **El proveedor de alojamiento del Servicio**: OVH SAS — 2 rue Kellermann, 59100 Roubaix (Francia)
+- **El proveedor de alojamiento del Servicio**: OVH SAS — 2 rue Kellermann, 59100 Roubaix (Francia). El servidor aloja la base de datos y sus copias de seguridad diarias (véase 7).
+- **Cloudflare, Inc.** (intermediario técnico: proxy y red de distribución de contenidos) — Estados Unidos. Todas las solicitudes dirigidas al Servicio pasan por Cloudflare antes de llegar a nuestro servidor: Cloudflare recibe, por tanto, su dirección IP y el contenido de los intercambios con el sitio, que encamina hasta nuestro servidor (con almacenamiento en caché de los archivos públicos del sitio y protección contra ataques). También nos indica el país estimado de su dirección IP (véase 3.3). Además, Cloudflare almacena la réplica externa de las copias de seguridad de la base de datos (servicio de almacenamiento R2, véase 7). Dado que Cloudflare puede tratar estos datos fuera de la Unión Europea, en particular en Estados Unidos, estas transferencias se rigen por las cláusulas contractuales tipo de la Comisión Europea o por el Marco de Privacidad de Datos UE-EE. UU. (Data Privacy Framework), según los compromisos de este proveedor.
 - **Resend** (envío de correos de restablecimiento de contraseña) — Estados Unidos, con garantías contractuales apropiadas
+- **Google** — si utiliza el inicio de sesión con Google: el inicio de sesión se realiza ante Google, que trata los datos del inicio de sesión en su cuenta de Google conforme a sus propias normas de privacidad, como responsable del tratamiento independiente, y después nos transmite los datos descritos en el apartado 3.1. El botón «Continuar con Google» se carga desde los servidores de Google en la página Cuenta: con solo mostrarse, transmite ya a Google su dirección IP e información técnica sobre su navegador. Para el chat de voz, su navegador también consulta servidores públicos de Google (STUN), que reciben su dirección IP (véase 3.5). Google puede tratar estos datos fuera de la Unión Europea.
 
-El editor sigue siendo el responsable del tratamiento. No se realiza ninguna otra transferencia a terceros sin su consentimiento, salvo obligación legal.
+El editor sigue siendo el responsable de los tratamientos descritos en esta política. No se realiza ninguna otra transferencia a terceros sin su consentimiento, salvo obligación legal.
 
 ## 7. Plazos de conservación
 
 - **Cuenta activa**: datos conservados mientras exista la cuenta.
 - **Cuenta de invitado** (creada sin email ni contraseña: escaneando un código QR, mediante un enlace de invitación o con «Pruébalo con bots»): se elimina automáticamente tras **90 días** de inactividad, con todo lo que contiene (apodo, progresión, cosméticos, amigos). Solo es accesible mediante la cookie de sesión del navegador (o de la aplicación) en el que se creó: cada visita desde ese navegador reinicia este plazo, pero no es accesible desde otro navegador ni desde otro dispositivo, y cerrar sesión, iniciar sesión con otra cuenta en ese navegador o borrar las cookies la deja definitivamente inaccesible. Una cuenta de invitado que ya no tiene ninguna sesión válida (tras un cierre de sesión, un inicio de sesión con otra cuenta en ese navegador o la caducidad de su sesión) se elimina antes, tras **7 días** de inactividad, salvo que esté baneada o sea objeto de una denuncia pendiente de revisión. Añadir un email y una contraseña, o vincular la cuenta a Google, la hace permanente.
 - **Cuenta eliminada**: supresión o anonimización en un plazo máximo de **12 meses** tras la solicitud, salvo obligación legal de conservación más larga.
-- **Registros técnicos (direcciones IP, presencia)**: **6 meses**. La dirección IP y el país de la última conexión asociados a una cuenta se borran tras **6 meses** sin actividad; el historial de direcciones IP de una cuenta se elimina inmediatamente junto con la cuenta.
+- **Registros técnicos (direcciones IP, presencia)**: **6 meses**. La dirección IP y el país de la última conexión asociados a una cuenta se borran tras **6 meses** sin actividad; el historial de direcciones IP de una cuenta se elimina inmediatamente junto con la cuenta, y un control automático borra también cualquier historial de direcciones IP que siga asociado a una cuenta eliminada.
 - **Historial de visitas de una cuenta** (inicio, final, tiempos con la página mostrada / activo / en partida, tipo de dispositivo): **6 meses** desde el inicio de cada visita; se borra inmediatamente al retirar el consentimiento a las estadísticas de visita desde un navegador conectado a esa cuenta en el que se habían aceptado, o cuando la cuenta se une al equipo de moderación, y se elimina junto con la cuenta.
 - **Sesiones de conexión**: se eliminan al cerrar sesión o, automáticamente, una vez caducadas.
 - **Mensajes de chat**: **12 meses**.
@@ -154,6 +158,7 @@ El editor sigue siendo el responsable del tratamiento. No se realiza ninguna otr
 - **Datos de medición de audiencia**: **13 meses**.
 - **Comentarios**: conservación hasta **24 meses** o supresión previa solicitud; el correo electrónico de contacto asociado se borra si elimina su cuenta.
 - **Cookies de edad y consentimiento**: 1 año, renovables en cada validación.
+- **Copias de seguridad de la base de datos** (copia de todos los datos anteriores): **16 días como máximo** en el servidor y **31 días como máximo** para la réplica externa; un dato eliminado desaparece de las copias de seguridad cuando estas caducan.
 
 Estos plazos se aplican automáticamente mediante purgas regulares.
 

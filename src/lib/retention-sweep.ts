@@ -14,6 +14,8 @@ import {
  *
  * Durées (doivent rester alignées avec docs/legal/<langue>/confidentialite.md §7) :
  * - IpSeenLog / SitePresence : 6 mois après la dernière activité ;
+ * - IpSeenLog `user:<id>` d'un compte qui n'existe plus : aussitôt (la
+ *   politique promet que l'historique d'IP part avec le compte) ;
  * - AccountVisit (visites d'un compte consentant : début, durées visible,
  *   active et en partie, appareil) : 6 mois après le DÉBUT de la visite,
  *   comme les autres traces de présence ;
@@ -46,8 +48,69 @@ import {
  *
  * Chaque bloc est indépendant : l'échec de l'un (table verrouillée, compte
  * impossible à supprimer…) est journalisé sans empêcher les autres de passer.
+ * Chaque passage laisse un témoin (RETENTION_LAST_RUN_KEY) lu par la
+ * Supervision : un échec qui se répète ne reste pas enfoui dans les journaux.
  */
 const SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000
+
+/**
+ * Témoin du dernier passage, dans SiteSetting (clé/valeur, sans migration) :
+ * de quoi PROUVER que les durées annoncées sont tenues, et voir un bloc qui
+ * échoue à chaque passage — allSettled ne fait que journaliser. Réécrit à
+ * chaque passage, donc au plus une écriture toutes les 6 h par processus.
+ */
+export const RETENTION_LAST_RUN_KEY = 'retention.lastRun'
+
+/**
+ * Contenu du témoin. Aucune donnée personnelle : des noms de blocs (tables et
+ * purges, jamais un identifiant de compte) et des volumes.
+ */
+export type RetentionLastRun = {
+  /** Début du passage (ISO) : l'instant d'où partent toutes les échéances. */
+  at: string
+  /** Vrai quand aucun bloc n'a échoué. */
+  ok: boolean
+  /**
+   * Lignes supprimées ou mises à jour par bloc abouti ; comptes supprimés pour
+   * les blocs d'invités (User.orphanGuests, User.staleGuests), où un bloc peut
+   * aussi figurer dans `failed` si un compte a résisté.
+   */
+  counts: Record<string, number>
+  /** Blocs en échec ; l'erreur elle-même est dans les journaux du conteneur. */
+  failed: string[]
+}
+
+/**
+ * Lecture TOLÉRANTE du témoin : absent, JSON illisible ou sans date → null ;
+ * volumes qui ne sont pas des entiers positifs et noms de blocs qui ne sont
+ * pas des chaînes ignorés. Un témoin abîmé ne doit jamais faire échouer la vue
+ * d'ensemble. Pure.
+ */
+export function parseRetentionLastRun(value: string | null | undefined): RetentionLastRun | null {
+  if (!value) return null
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(value)
+  } catch {
+    return null
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+  const raw = parsed as Record<string, unknown>
+  if (typeof raw.at !== 'string' || Number.isNaN(Date.parse(raw.at))) return null
+
+  const counts: Record<string, number> = {}
+  if (raw.counts && typeof raw.counts === 'object' && !Array.isArray(raw.counts)) {
+    for (const [block, rows] of Object.entries(raw.counts)) {
+      if (typeof rows === 'number' && Number.isInteger(rows) && rows >= 0) counts[block] = rows
+    }
+  }
+  const failed = Array.isArray(raw.failed)
+    ? raw.failed.filter((block): block is string => typeof block === 'string')
+    : []
+  // Un `ok` absent se déduit des échecs ; jamais « tout va bien » avec des échecs listés.
+  const ok = (typeof raw.ok === 'boolean' ? raw.ok : true) && failed.length === 0
+  return { at: raw.at, ok, counts, failed }
+}
 
 /**
  * Présence écrite hors de l'accord courant : NULL (ancien '1', ou ancien
@@ -117,6 +180,25 @@ const ORPHAN_GUEST_TTL_MS = ORPHAN_GUEST_INACTIVITY_DAYS * DAY_MS
 /** Taille des lots de suppression de comptes, par passage. */
 const ACCOUNT_PURGE_BATCH = 50
 
+/** Noms des blocs de suppression de comptes dans le témoin. */
+const ORPHAN_GUESTS_BLOCK = 'User.orphanGuests'
+const STALE_GUESTS_BLOCK = 'User.staleGuests'
+/** Échec avant même le lancement des purges simples (voir le filet plus bas). */
+const SIMPLE_PURGES_BLOCK = 'purges'
+
+/**
+ * Lignes touchées par une purge : `{ count }` pour deleteMany / updateMany,
+ * un nombre pour $executeRaw.
+ */
+function affectedRows(result: unknown): number {
+  if (typeof result === 'number') return result
+  if (typeof result === 'bigint') return Number(result)
+  if (result && typeof result === 'object' && 'count' in result && typeof result.count === 'number') {
+    return result.count
+  }
+  return 0
+}
+
 let lastSweepAt = 0
 
 function dateStringParis(msAgo: number): string {
@@ -133,16 +215,25 @@ function dateStringParis(msAgo: number): string {
  * suppression de compte), un par un : un compte récalcitrant ne doit pas
  * bloquer les suivants — sans quoi, revenant en tête de chaque lot, il
  * immobiliserait la purge pour de bon. Seul l'identifiant est journalisé,
- * jamais le pseudo.
+ * jamais le pseudo — et dans les journaux du conteneur seulement, jamais dans
+ * le témoin, qui ne reçoit que les deux compteurs renvoyés.
  */
-async function deleteAccounts(label: string, ids: string[]): Promise<void> {
+async function deleteAccounts(
+  label: string,
+  ids: string[]
+): Promise<{ deleted: number; failures: number }> {
+  let deleted = 0
+  let failures = 0
   for (const id of ids) {
     try {
       await deleteUserAccount(id)
+      deleted += 1
     } catch (error) {
+      failures += 1
       console.error(`retention sweep error (${label}, user ${id}):`, error)
     }
   }
+  return { deleted, failures }
 }
 
 export async function runRetentionSweep(): Promise<void> {
@@ -155,6 +246,10 @@ export async function runRetentionSweep(): Promise<void> {
   const twelveMonthsAgo = new Date(now - TWELVE_MONTHS_MS)
   const dailyVisitorCutoff = dateStringParis(THIRTEEN_MONTHS_MS)
 
+  // Témoin du passage (RetentionLastRun), rempli bloc par bloc.
+  const counts: Record<string, number> = {}
+  const failed: string[] = []
+
   try {
     // Purges simples : allSettled plutôt que Promise.all, pour qu'une table en
     // échec n'empêche ni les autres purges de ce bloc ni les suppressions de
@@ -163,6 +258,20 @@ export async function runRetentionSweep(): Promise<void> {
       // $executeRaw : IpSeenLog est manipulé en SQL brut partout ailleurs
       // (voir ip-history-server.ts) et ses dates sont stockées en ISO string.
       ['IpSeenLog', prisma.$executeRaw`DELETE FROM "IpSeenLog" WHERE "lastSeen" < ${sixMonthsAgo.toISOString()}`],
+      // Historique IP de comptes qui n'existent plus. deleteUserAccount efface
+      // `user:<id>` avec le compte, mais seulement depuis le déploiement du
+      // 10/09/2026 : les suppressions d'avant (invités purgés à 48 h surtout)
+      // en ont laissé — au moins 21 sujets en production, que rien n'affiche
+      // et qui ne partaient qu'à 6 mois. Filet permanent : la table n'a pas de
+      // clé étrangère vers User, et un compte supprimé entre l'écriture de sa
+      // présence et celle de son IP (recordAccountPresence) en laisserait une.
+      // Aucune date comparée : le format des colonnes (ISO ici, millisecondes
+      // ailleurs) n'entre pas en jeu. `substr(…, 6)` retire le préfixe « user: »
+      // (5 caractères) ; User.id n'est jamais NULL, donc pas de piège NOT IN.
+      [
+        'IpSeenLog.orphanUser',
+        prisma.$executeRaw`DELETE FROM "IpSeenLog" WHERE "subjectKey" LIKE 'user:%' AND substr("subjectKey", 6) NOT IN (SELECT "id" FROM "User")`,
+      ],
       ['SitePresence', prisma.sitePresence.deleteMany({ where: { lastSeen: { lt: sixMonthsAgo } } })],
       // Visites des comptes : bornées sur leur début (index startedAt). Client
       // Prisma, donc dates en millisecondes sans piège de format — jamais le
@@ -260,13 +369,18 @@ export async function runRetentionSweep(): Promise<void> {
     ]
     const results = await Promise.allSettled(purges.map(([, purge]) => purge))
     results.forEach((result, index) => {
+      const block = purges[index][0]
       if (result.status === 'rejected') {
-        console.error(`retention sweep error (${purges[index][0]}):`, result.reason)
+        failed.push(block)
+        console.error(`retention sweep error (${block}):`, result.reason)
+      } else {
+        counts[block] = affectedRows(result.value)
       }
     })
   } catch (error) {
     // Filet : une purge qui lèverait avant même d'être lancée ne doit pas
     // remonter en rejet non géré (appel sans await depuis le ping).
+    failed.push(SIMPLE_PURGES_BLOCK)
     console.error('retention sweep error:', error)
   }
 
@@ -288,8 +402,11 @@ export async function runRetentionSweep(): Promise<void> {
       select: { id: true },
       take: ACCOUNT_PURGE_BATCH,
     })
-    await deleteAccounts('orphan guests', orphanGuests.map((guest) => guest.id))
+    const { deleted, failures } = await deleteAccounts('orphan guests', orphanGuests.map((guest) => guest.id))
+    counts[ORPHAN_GUESTS_BLOCK] = deleted
+    if (failures > 0) failed.push(ORPHAN_GUESTS_BLOCK)
   } catch (error) {
+    failed.push(ORPHAN_GUESTS_BLOCK)
     console.error('retention sweep error (orphan guests):', error)
   }
 
@@ -317,8 +434,26 @@ export async function runRetentionSweep(): Promise<void> {
       select: { id: true },
       take: ACCOUNT_PURGE_BATCH,
     })
-    await deleteAccounts('stale guests', staleGuests.map((guest) => guest.id))
+    const { deleted, failures } = await deleteAccounts('stale guests', staleGuests.map((guest) => guest.id))
+    counts[STALE_GUESTS_BLOCK] = deleted
+    if (failures > 0) failed.push(STALE_GUESTS_BLOCK)
   } catch (error) {
+    failed.push(STALE_GUESTS_BLOCK)
     console.error('retention sweep error (stale guests):', error)
+  }
+
+  // Témoin écrit en dernier, que les blocs aient abouti ou non : c'est
+  // justement un échec qu'il doit rendre visible. Son propre échec ne fait
+  // que se journaliser (appel sans await depuis le ping).
+  const lastRun: RetentionLastRun = { at: nowDate.toISOString(), ok: failed.length === 0, counts, failed }
+  try {
+    const value = JSON.stringify(lastRun)
+    await prisma.siteSetting.upsert({
+      where: { key: RETENTION_LAST_RUN_KEY },
+      create: { key: RETENTION_LAST_RUN_KEY, value },
+      update: { value },
+    })
+  } catch (error) {
+    console.error('retention sweep error (lastRun):', error)
   }
 }

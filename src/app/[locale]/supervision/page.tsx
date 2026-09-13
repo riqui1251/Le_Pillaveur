@@ -44,7 +44,7 @@ import {
 } from 'lucide-react'
 import { deviceLabel } from '@/lib/device-from-user-agent'
 import { isGuestPurgeOverdue, parseAccountDeleteLogDetail, type AccountKind } from '@/lib/account-kind'
-import type { OnlinePlayStats } from '@/lib/supervision-overview-server'
+import type { OnlinePlayStats, RetentionLastRun } from '@/lib/supervision-overview-server'
 import type { ActiveAccountsStats } from '@/lib/active-accounts-server'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -365,6 +365,14 @@ type SupervisionOverview = {
   liveTables: LiveTable[]
   journal: JournalEntry[]
   queue: QueueItem[]
+  /**
+   * Trace du dernier passage du ménage des données (SiteSetting
+   * 'retention.lastRun', lot 8) : une date et des volumes par bloc, aucune
+   * donnée personnelle. Admins seulement. null : aucun passage enregistré
+   * depuis la mise à jour ; absent : réponse d'un serveur antérieur au lot 8
+   * (rien n'est affiché).
+   */
+  retentionLastRun?: RetentionLastRun | null
 }
 
 /** Décompte par type de compte, servi par le serveur (account-kind). */
@@ -1706,6 +1714,137 @@ function OnlinePlayersSection({
         })}
       </p>
     </SectionCard>
+  )
+}
+
+/**
+ * Délai sans passage du ménage au-delà duquel la ligne passe en alerte. Le
+ * balayage n'a pas de cron : il ne tourne qu'avec du trafic (ping), au plus
+ * toutes les 6 h. Au-delà d'une journée, les durées de conservation annoncées
+ * ne sont plus garanties.
+ */
+const RETENTION_RUN_STALE_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Lecture de la trace du dernier ménage : total et motifs d'alerte. Le total
+ * additionne des natures différentes (lignes supprimées, lignes vidées ou
+ * anonymisées, comptes invités supprimés avec leur contenu) : son libellé reste
+ * donc neutre (« éléments »), le détail donne le volume de chaque bloc.
+ * Une date illisible compte comme un passage trop ancien, jamais comme un
+ * passage récent.
+ */
+function retentionRunStatus(run: RetentionLastRun, now: number) {
+  const total = Object.values(run.counts).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0)
+  const at = new Date(run.at).getTime()
+  const stale = !Number.isFinite(at) || now - at > RETENTION_RUN_STALE_MS
+  const failed = run.failed ?? []
+  // Blocs du détail : ceux qui ont purgé, puis ceux qui ont échoué sans volume.
+  const blocks = [...Object.keys(run.counts), ...failed.filter((name) => !(name in run.counts))]
+  return {
+    total,
+    stale,
+    failed,
+    blocks,
+    errored: !run.ok,
+    alert: !run.ok || failed.length > 0 || stale,
+  }
+}
+
+/**
+ * Ligne discrète de la vue d'ensemble : preuve que le ménage des données
+ * tourne (RGPD-20). En évidence dès qu'un bloc échoue ou que le dernier
+ * passage date de plus de 24 h — Promise.allSettled masquerait sinon des
+ * échecs répétés que personne ne regarde.
+ */
+function RetentionRunLine({ run }: { run: RetentionLastRun | null }) {
+  const t = useTranslations('supervision.retentionRun')
+  const format = useFormatter()
+
+  if (run === null) {
+    return (
+      <p className="flex min-w-0 items-start gap-1.5 text-[11px] leading-relaxed text-white/40">
+        <Trash2 className="mt-0.5 h-3 w-3 shrink-0" />
+        <span className="min-w-0 break-words">{t('never')}</span>
+      </p>
+    )
+  }
+
+  const status = retentionRunStatus(run, Date.now())
+  const at = new Date(run.at)
+  const date = Number.isFinite(at.getTime())
+    ? format.dateTime(at, { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
+    : '—'
+  const failedSet = new Set(status.failed)
+
+  return (
+    <div
+      className={cn(
+        'min-w-0 text-[11px] leading-relaxed',
+        status.alert
+          ? 'rounded-lg border border-suit-red/35 bg-suit-red/[0.07] px-3 py-2 text-red-200'
+          : 'text-white/40'
+      )}
+    >
+      <p className="flex min-w-0 items-start gap-1.5">
+        {status.alert ? (
+          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-red-300" />
+        ) : (
+          <Trash2 className="mt-0.5 h-3 w-3 shrink-0" />
+        )}
+        <span className="min-w-0 break-words">
+          {t('lastRun', { date })} · {t('purged', { count: status.total })}
+        </span>
+      </p>
+
+      {status.alert && (
+        <ul className="mt-1 space-y-0.5 pl-[18px]">
+          {status.failed.length > 0 ? (
+            <li className="min-w-0 break-words">
+              {t('failedBlocks', { count: status.failed.length, blocks: status.failed.join(', ') })}
+            </li>
+          ) : (
+            status.errored && <li className="min-w-0 break-words">{t('errored')}</li>
+          )}
+          {status.stale && (
+            <li className="min-w-0 break-words">
+              {t('stale', { hours: Math.round(RETENTION_RUN_STALE_MS / 3_600_000) })}
+            </li>
+          )}
+        </ul>
+      )}
+
+      {status.blocks.length > 0 && (
+        <details className="group min-w-0 pl-[18px]">
+          <summary
+            className={cn(
+              '-mx-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 [&::-webkit-details-marker]:hidden',
+              status.alert ? 'text-red-200/80 hover:text-red-100' : 'text-white/45 hover:text-white/75'
+            )}
+          >
+            <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-open:rotate-90" />
+            {t('detail')}
+          </summary>
+          {/* Identifiants techniques des blocs, affichés tels quels. */}
+          <ul className="max-w-sm space-y-0.5 pb-0.5">
+            {status.blocks.map((name) => (
+              <li key={name} className="flex min-w-0 items-baseline justify-between gap-3">
+                <span className="min-w-0 break-all font-mono">{name}</span>
+                {failedSet.has(name) ? (
+                  // Bloc d'invités en échec partiel : les comptes supprimés
+                  // comptent dans le total, leur volume reste donc affiché.
+                  <span className="flex shrink-0 items-baseline gap-2">
+                    {name in run.counts && <span className="tabular-nums">{run.counts[name]}</span>}
+                    <span className="font-semibold text-red-300">{t('blockFailed')}</span>
+                  </span>
+                ) : (
+                  <span className="shrink-0 tabular-nums">{run.counts[name]}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
   )
 }
 
@@ -3384,6 +3523,12 @@ export default function SupervisionPage() {
               tone={overview && overview.queue.length > 0 ? 'alert' : 'default'}
             />
           </div>
+
+          {/* Dernier ménage des données (lot 8) : sous les chiffres du jour,
+              pour qu'une alerte ne passe pas inaperçue en bas de page. */}
+          {overview && overview.retentionLastRun !== undefined && (
+            <RetentionRunLine run={overview.retentionLastRun} />
+          )}
 
           <SectionCard icon={CalendarDays} title={t('room.trendTitle')}>
             <TrendChart points={trendPoints} primaryLabel={t('room.trendVisitors')} secondaryLabel={t('room.trendParties')} />

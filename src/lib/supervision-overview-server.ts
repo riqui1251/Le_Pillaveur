@@ -1,12 +1,19 @@
 import { prisma } from '@/lib/prisma'
 import { GAMES } from '@/lib/games'
-import { canViewUserFeedback, canManageUsers } from '@/lib/roles'
+import { canViewUserFeedback, canManageUsers, canViewSupervisionAnalytics } from '@/lib/roles'
 import { feedbackTypeLabel, isFeedbackType } from '@/lib/feedback'
 import { listFlaggedNameModerationUsers } from '@/lib/name-moderation-attempts-server'
 import { getExcludedUserIds } from '@/lib/metrics-exclusions'
 import { parisDayOffset, parisDayStartUtc, parisDayString, parisDaysBack } from '@/lib/paris-time'
 import { cleanupAbandonedRooms } from '@/lib/online-room'
 import { GAME_JOURNAL_SINCE } from '@/lib/online/game-sessions'
+import {
+  RETENTION_LAST_RUN_KEY,
+  parseRetentionLastRun,
+  type RetentionLastRun,
+} from '@/lib/retention-sweep'
+
+export type { RetentionLastRun } from '@/lib/retention-sweep'
 
 /**
  * Salles listées en Supervision. Les salles `cast` (afficheur TV d'un jeu
@@ -848,17 +855,31 @@ async function getQueue(actorRole: string): Promise<QueueItem[]> {
 }
 
 /**
+ * Témoin du dernier passage du balayage de conservation (retention-sweep.ts),
+ * pour prouver que les durées annoncées sont tenues. Réservé aux admins et
+ * plus, comme les autres indicateurs d'exploitation : null pour un autre
+ * grade, sans lecture. Null aussi tant qu'aucun passage n'a été enregistré.
+ * Une lecture par clé primaire : rien à craindre de la boucle de 15 s.
+ */
+async function getRetentionLastRun(actorRole: string): Promise<RetentionLastRun | null> {
+  if (!canViewSupervisionAnalytics(actorRole)) return null
+  const row = await prisma.siteSetting.findUnique({ where: { key: RETENTION_LAST_RUN_KEY } })
+  return parseRetentionLastRun(row?.value)
+}
+
+/**
  * Vue d'ensemble RAFRAÎCHIE EN BOUCLE (15 s) : uniquement ce qui bouge à la
  * minute. Les indicateurs de croissance n'en font plus partie — ils vivent
  * sur `/api/admin/growth` (voir GROWTH_CACHE_MS).
  */
 export async function getSupervisionOverview(actorRole: string) {
-  const [dailySeries, liveTables, journal, queue] = await Promise.all([
+  const [dailySeries, liveTables, journal, queue, retentionLastRun] = await Promise.all([
     getDailySeries(14),
     getLiveTables(),
     getJournal(20),
     getQueue(actorRole),
+    getRetentionLastRun(actorRole),
   ])
 
-  return { dailySeries, liveTables, journal, queue }
+  return { dailySeries, liveTables, journal, queue, retentionLastRun }
 }

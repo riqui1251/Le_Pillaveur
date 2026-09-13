@@ -14,16 +14,38 @@ const { prismaMock, deleteUserAccountMock } = vi.hoisted(() => ({
     session: { deleteMany: vi.fn() },
     accountBanEvent: { updateMany: vi.fn() },
     user: { updateMany: vi.fn(), findMany: vi.fn() },
+    siteSetting: { upsert: vi.fn() },
   },
   deleteUserAccountMock: vi.fn(),
 }))
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/user-activity-server', () => ({ deleteUserAccount: deleteUserAccountMock }))
 
+import { parseRetentionLastRun, type RetentionLastRun } from '@/lib/retention-sweep'
+
 const NOW = new Date('2026-10-10T12:00:00.000Z').getTime()
 const DAY_MS = 24 * 60 * 60 * 1000
 
 type FindManyArgs = { where: Record<string, unknown>; take?: number }
+type RawCall = [TemplateStringsArray, ...unknown[]]
+
+/** Requête SQL brute passée à $executeRaw, paramètres remplacés par « ? ». */
+const sqlOf = ([strings]: RawCall) => strings.join('?')
+
+function rawCall(predicate: (sql: string) => boolean): RawCall | undefined {
+  return (prismaMock.$executeRaw.mock.calls as RawCall[]).find((call) => predicate(sqlOf(call)))
+}
+
+/** Témoin écrit par le passage (dernier upsert de SiteSetting). */
+function writtenLastRun(): RetentionLastRun {
+  const calls = prismaMock.siteSetting.upsert.mock.calls as Array<
+    [{ where: { key: string }; create: { key: string; value: string }; update: { value: string } }]
+  >
+  const [args] = calls[calls.length - 1]
+  expect(args.where).toEqual({ key: 'retention.lastRun' })
+  expect(args.create).toEqual({ key: 'retention.lastRun', value: args.update.value })
+  return JSON.parse(args.update.value) as RetentionLastRun
+}
 
 /** Les deux purges de comptes passent par user.findMany et filtrent toutes deux
  *  les sessions : les orphelins se reconnaissent au filtre sur les signalements. */
@@ -68,6 +90,7 @@ describe('balayage de conservation', () => {
     prismaMock.user.updateMany.mockReset().mockResolvedValue({ count: 0 })
     prismaMock.sitePresence.updateMany.mockReset().mockResolvedValue({ count: 0 })
     prismaMock.accountBanEvent.updateMany.mockReset().mockResolvedValue({ count: 0 })
+    prismaMock.siteSetting.upsert.mockReset().mockResolvedValue({})
     prismaMock.user.findMany
       .mockReset()
       .mockImplementation(async (args: FindManyArgs) => (isOrphanQuery(args) ? orphans : staleGuests))
@@ -85,6 +108,17 @@ describe('balayage de conservation', () => {
     expect(prismaMock.session.deleteMany).toHaveBeenCalledWith({
       where: { expiresAt: { lt: new Date(NOW) } },
     })
+  })
+
+  it("purge l'historique IP des comptes qui n'existent plus, sans condition de date", async () => {
+    await runSweep()
+    const orphanIps = rawCall((sql) => sql.includes(`LIKE 'user:%'`))
+    expect(orphanIps).toBeDefined()
+    expect(sqlOf(orphanIps!)).toBe(
+      `DELETE FROM "IpSeenLog" WHERE "subjectKey" LIKE 'user:%' AND substr("subjectKey", 6) NOT IN (SELECT "id" FROM "User")`
+    )
+    // Aucun paramètre : ni date (piège ISO / millisecondes), ni identifiant.
+    expect(orphanIps!.slice(1)).toEqual([])
   })
 
   it('purge les visites de compte commencées il y a plus de 6 mois', async () => {
@@ -117,9 +151,8 @@ describe('balayage de conservation', () => {
       data: { localPlayerNames: null, localPlayerCount: 0 },
     })
     // Historique IP visiteur sans présence consentie (SQL brut, IpSeenLog).
-    const rawCalls = prismaMock.$executeRaw.mock.calls as Array<[TemplateStringsArray, ...unknown[]]>
-    const legacyIps = rawCalls.find(([strings]) => strings.join('?').includes('NOT IN'))
-    expect(legacyIps?.[0].join('?')).toContain(`"subjectKey" LIKE 'visitor:%'`)
+    const legacyIps = rawCall((sql) => sql.includes(`LIKE 'visitor:%'`))
+    expect(legacyIps && sqlOf(legacyIps)).toContain('NOT IN (SELECT "visitorId" FROM "SitePresence"')
     expect(legacyIps?.slice(1)).toEqual(['2'])
     // Ancien cumul de présence.
     expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
@@ -212,5 +245,111 @@ describe('balayage de conservation', () => {
     })
     await runSweep()
     expect(deleteUserAccountMock).toHaveBeenCalledWith('guest-old')
+    const lastRun = writtenLastRun()
+    expect(lastRun.failed).toEqual(['User.orphanGuests'])
+    expect(lastRun.counts['User.staleGuests']).toBe(1)
+  })
+
+  describe('témoin du passage (SiteSetting retention.lastRun)', () => {
+    it('écrit la date du passage et les volumes par bloc, sans aucun identifiant de compte', async () => {
+      prismaMock.session.deleteMany.mockResolvedValue({ count: 3 })
+      prismaMock.$executeRaw.mockImplementation(async (strings: TemplateStringsArray) =>
+        strings.join('?').includes(`LIKE 'user:%'`) ? 21 : 0
+      )
+      orphans = [{ id: 'guest-a' }, { id: 'guest-b' }]
+      staleGuests = [{ id: 'guest-old' }]
+
+      await runSweep()
+
+      const lastRun = writtenLastRun()
+      expect(lastRun.at).toBe(new Date(NOW).toISOString())
+      expect(lastRun.ok).toBe(true)
+      expect(lastRun.failed).toEqual([])
+      expect(lastRun.counts).toMatchObject({
+        Session: 3,
+        'IpSeenLog.orphanUser': 21,
+        IpSeenLog: 0,
+        AccountVisit: 0,
+        'User.orphanGuests': 2,
+        'User.staleGuests': 1,
+      })
+      // Un bloc par purge simple, plus les deux blocs de comptes.
+      expect(Object.keys(lastRun.counts)).toHaveLength(17)
+      const stored = prismaMock.siteSetting.upsert.mock.calls[0][0].update.value as string
+      for (const id of ['guest-a', 'guest-b', 'guest-old']) expect(stored).not.toContain(id)
+    })
+
+    it('liste les blocs en échec, y compris un compte qui résiste à la suppression', async () => {
+      prismaMock.accountVisit.deleteMany.mockRejectedValue(new Error('base verrouillée'))
+      orphans = [{ id: 'guest-a' }, { id: 'guest-b' }]
+      deleteUserAccountMock.mockRejectedValueOnce(new Error('contrainte'))
+
+      await runSweep()
+
+      const lastRun = writtenLastRun()
+      expect(lastRun.ok).toBe(false)
+      expect(lastRun.failed).toEqual(['AccountVisit', 'User.orphanGuests'])
+      expect(lastRun.counts).not.toHaveProperty('AccountVisit')
+      expect(lastRun.counts['User.orphanGuests']).toBe(1)
+      expect(lastRun.counts.Session).toBe(0)
+    })
+
+    it("un témoin impossible à écrire ne fait que se journaliser", async () => {
+      prismaMock.siteSetting.upsert.mockRejectedValue(new Error('base verrouillée'))
+      await expect(runSweep()).resolves.toBeUndefined()
+      expect(console.error).toHaveBeenCalledWith('retention sweep error (lastRun):', expect.any(Error))
+    })
+
+    it("n'est écrit qu'une fois par intervalle de balayage", async () => {
+      vi.resetModules()
+      const { runRetentionSweep } = await import('@/lib/retention-sweep')
+      await runRetentionSweep()
+      await runRetentionSweep()
+      expect(prismaMock.siteSetting.upsert).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
+describe('parseRetentionLastRun', () => {
+  const valid: RetentionLastRun = {
+    at: '2026-10-10T12:00:00.000Z',
+    ok: false,
+    counts: { Session: 3, 'User.orphanGuests': 1 },
+    failed: ['AccountVisit'],
+  }
+
+  it('relit un témoin écrit par le balayage', () => {
+    expect(parseRetentionLastRun(JSON.stringify(valid))).toEqual(valid)
+  })
+
+  it('renvoie null sans témoin exploitable', () => {
+    for (const value of [null, undefined, '', 'pas du json', '[]', '42', '{"ok":true}', '{"at":"hier"}']) {
+      expect(parseRetentionLastRun(value)).toBeNull()
+    }
+  })
+
+  it('ignore les volumes et noms de blocs mal formés', () => {
+    const parsed = parseRetentionLastRun(
+      JSON.stringify({
+        at: valid.at,
+        ok: true,
+        counts: { Session: 3, IpSeenLog: -1, ChatMessage: 1.5, DailyVisitor: '4' },
+        failed: ['SitePresence', 7, null],
+      })
+    )
+    expect(parsed?.counts).toEqual({ Session: 3 })
+    expect(parsed?.failed).toEqual(['SitePresence'])
+    // Jamais « tout va bien » avec un bloc en échec.
+    expect(parsed?.ok).toBe(false)
+  })
+
+  it('déduit `ok` des échecs quand il manque', () => {
+    expect(parseRetentionLastRun(JSON.stringify({ at: valid.at, counts: {}, failed: [] }))?.ok).toBe(true)
+    expect(parseRetentionLastRun(JSON.stringify({ at: valid.at }))).toEqual({
+      at: valid.at,
+      ok: true,
+      counts: {},
+      failed: [],
+    })
   })
 })

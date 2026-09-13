@@ -23,6 +23,8 @@ When you create an account, we collect:
 - password (stored as a **cryptographic hash** — never in plain text);
 - nickname (display name).
 
+If you create your account or sign in **with Google** ("Continue with Google" button or, in the mobile app, the Google sign-in window), or link a guest account to Google, no password is stored. Once you accept the sign-in in Google's window, Google sends us your email address, your Google account identifier and, depending on that account's settings, your name (first name and last name) and your profile picture; our server has this information verified by Google. We only keep the email address, which identifies your account. When the account is created, your first name (or, failing that, your full name or, if that is missing too, the part of your email address before the @) is used to suggest your starting nickname, which other players can see and which you can change from the Account page; the Google account identifier and the picture are not kept, and your name is only kept through that starting nickname. Google processes your sign-in data on its side (see 6).
+
 ### 3.2 Game data
 
 If you use an account, we may store:
@@ -43,7 +45,7 @@ In **local mode** (without an account), your local players are stored on your de
 
 - browser identifier (`lp_vid` cookie, 1 year);
 - IP address;
-- estimated country (approximate geolocation from the IP address, computed on our servers — no third-party service);
+- estimated country based on the IP address (approximate geolocation): provided by Cloudflare, through which requests to the site pass (see 6), or, failing that, computed on our servers using a local geolocation database;
 - device / browser type (simplified user-agent);
 - dates of your visits to the site (pages displayed and activity), as well as the last account used in this browser and the date of its last signed-in visit (to tell a browser still signed in to that account apart from one where it was only used before);
 - the names of your local players (see 3.2);
@@ -59,7 +61,7 @@ If you decline, no visit tracking is recorded. If you withdraw your consent ("Vi
 
 These statistics used to be presented when entering the site as anonymous and used only to count visits, which they were not (browser identifier, IP addresses). Consent given under that former wording is no longer taken into account: you will be asked again. When this change was made, local player names and IP addresses recorded while signed out were deleted, as was the data of browsers never used with an account. For a browser used with an account, the last IP address, country, device, dates of visits and last account used are kept until that browser's next visit to the site, when they are erased together with the `lp_vid` cookie, and at the latest 6 months after its last visit. Each browser's daily visit records (browser identifier and date, with no IP address, name or account) are kept until they are purged after 13 months.
 
-**Regardless of this consent**, for **signed-in accounts** only, we keep the IP address, estimated country and device type of recent connections, as well as the account's last activity date, updated only when the site is actually being used (page displayed and an interaction within the last 30 minutes) or when you sign in, which is also used for the online status shown to your friends, for the number of accounts online (a count, with no names) and for the automatic deletion of inactive guest accounts; no presence time is recorded for this purpose. Purposes: **account security and moderation** (fraud prevention, bans), online status, number of accounts online and deletion of inactive guest accounts — legal basis: legitimate interest.
+**Regardless of this consent**, for **signed-in accounts** only, we keep the IP address, estimated country and device type recorded when the account is created and during recent connections, as well as the account's last activity date, updated only when the site is actually being used (page displayed and an interaction within the last 30 minutes) or when you sign in, which is also used for the online status shown to your friends, for the number of accounts online (a count, with no names) and for the automatic deletion of inactive guest accounts; no presence time is recorded for this purpose. Purposes: **account security and moderation** (fraud prevention, bans), online status, number of accounts online and deletion of inactive guest accounts — legal basis: legitimate interest.
 
 Activity means using a page displayed on screen: a signal is sent at most once a minute, only while the page is visible and you have used it (click, key press, screen touch or mouse wheel) within the last 30 minutes. Only the time of your last interaction is kept, in the page's memory and without its content; it is neither stored nor transmitted. Without your consent, the signal contains nothing else and is only used for the last activity date of a signed-in account (see above): no duration is recorded from it. With your consent, it only adds "active or not" and "in a game or not", and is used to measure the length of your account's visits if you are signed in (see above); neither the page address, nor the game, nor the number of interactions is recorded. The cumulative presence time calculated before 13 September 2026, using a discontinued method that also counted tabs left open, has been reset; it is no longer updated or displayed.
 
@@ -71,7 +73,7 @@ Messages sent in the **chat** (game chat and friend messages) are stored on our 
 
 ### 3.5 Voice chat
 
-Voice chat uses a **peer-to-peer (WebRTC)** connection between players: voice is **neither recorded nor stored** on our servers. The server only relays technical signalling (connection setup) and, if needed, an encrypted relay (TURN) without retention.
+Voice chat uses a **peer-to-peer (WebRTC)** connection between players: voice is **neither recorded nor stored** on our servers. The server only relays technical signalling (connection setup) and, if needed, an encrypted relay (TURN) without retention. To set up the connection, your browser queries public Google servers (STUN), which receive your IP address (see 6); as with any peer-to-peer connection, the browsers of other voice chat participants may also receive your IP address.
 
 ### 3.6 Nickname moderation
 
@@ -135,17 +137,19 @@ We **do not sell** your personal data to third parties.
 
 Your data may be processed by:
 
-- **The Service's hosting provider**: OVH SAS — 2 rue Kellermann, 59100 Roubaix (France)
+- **The Service's hosting provider**: OVH SAS — 2 rue Kellermann, 59100 Roubaix (France). The server hosts the database and its daily backups (see 7).
+- **Cloudflare, Inc.** (technical intermediary: proxy and content delivery network) — United States. All requests to the Service pass through Cloudflare before reaching our server: Cloudflare therefore receives your IP address and the content exchanged with the site, which it routes to our server (caching the site's public files and protecting it against attacks). It also tells us the estimated country of your IP address (see 3.3). Cloudflare also stores the off-site copy of the database backups (R2 storage service, see 7). As Cloudflare may process this data outside the European Union, particularly in the United States, these transfers are covered by the European Commission's standard contractual clauses or by the EU–US Data Privacy Framework, in line with this provider's commitments.
 - **Resend** (password reset emails) — United States, with appropriate contractual safeguards
+- **Google** — if you use Google sign-in: the sign-in takes place with Google, which processes the data relating to the sign-in to your Google account under its own privacy rules, as a separate data controller, and then sends us the data described in 3.1. The "Continue with Google" button is loaded from Google's servers on the Account page: displaying it already sends Google your IP address and technical information about your browser. For voice chat, your browser also queries public Google servers (STUN), which receive your IP address (see 3.5). Google may process this data outside the European Union.
 
-The publisher remains the data controller. No other transfer to third parties takes place without your consent, except where legally required.
+The publisher remains the controller of the processing described in this policy. No other transfer to third parties takes place without your consent, except where legally required.
 
 ## 7. Retention periods
 
 - **Active account**: data kept as long as the account exists.
 - **Guest account** (created without an email or password: by scanning a QR code, through an invitation link or with "Try it with bots"): automatically deleted after **90 days** of inactivity, along with everything it holds (nickname, progression, cosmetics, friends). It can only be reached through the session cookie of the browser (or app) where it was created: every visit from that browser resets this period, but it cannot be reached from another browser or another device, and signing out, signing in to another account in that browser or clearing your cookies makes it permanently inaccessible. A guest account that no longer has any valid session (after a sign-out, a sign-in to another account in that browser or the expiry of its session) is deleted sooner, after **7 days** of inactivity, unless it is banned or subject to a report still under review. Adding an email and password, or linking the account to Google, makes it permanent.
 - **Deleted account**: deletion or anonymisation within a maximum of **12 months** after the request, unless a longer retention is legally required.
-- **Technical logs (IP addresses, presence)**: **6 months**. The IP address and country of last connection attached to an account are erased after **6 months** without activity; an account's IP address history is deleted immediately together with the account.
+- **Technical logs (IP addresses, presence)**: **6 months**. The IP address and country of last connection attached to an account are erased after **6 months** without activity; an account's IP address history is deleted immediately together with the account, and an automatic check also erases any IP address history still linked to a deleted account.
 - **Account visit history** (start, end, displayed / active / in-game times, device type): **6 months** after the start of each visit; erased immediately when consent to visit statistics is withdrawn from a browser signed in to that account where they had been accepted, or when the account joins the moderation team, and deleted together with the account.
 - **Sign-in sessions**: deleted on sign-out, or automatically once they have expired.
 - **Chat messages**: **12 months**.
@@ -154,6 +158,7 @@ The publisher remains the data controller. No other transfer to third parties ta
 - **Audience measurement data**: **13 months**.
 - **Feedback**: kept up to **24 months** or deleted on request; the associated contact email is erased if you delete your account.
 - **Age and consent cookies**: 1 year, renewed on each validation.
+- **Database backups** (a copy of all the data above): **at most 16 days** on the server, **at most 31 days** for the off-site copy; deleted data disappears from the backups when they expire.
 
 These durations are enforced automatically by regular purges.
 

@@ -24,6 +24,9 @@ import { linkVisitorNameModerationAttempts } from '@/lib/name-moderation-attempt
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { AGE_VERIFIED_COOKIE, readConsentedVisitorId } from '@/lib/auth-cookies'
+import { resolveGeoFromRequest } from '@/lib/geo-server'
+import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
+import { recordIpSeen } from '@/lib/ip-history-server'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
 
 const GUEST_LIMIT = 8
@@ -131,6 +134,28 @@ export async function POST(request: Request) {
         lastSeenAt: new Date(),
       },
     })
+
+    // Réseau de création : « combien d'invités depuis le même réseau en une
+    // heure ? » est le signal de multi-compte le plus simple pour un site à QR
+    // code. Un navigateur l'enverrait au premier battement ; un invité créé par
+    // script, sans JavaScript, n'en envoie jamais. Même collecte qu'une
+    // connexion (IP, pays, appareil, déjà déclarés). Jamais bloquant : le
+    // compte existe, une trace manquée ne doit pas le faire échouer.
+    try {
+      const { country, ip } = resolveGeoFromRequest(request)
+      const device = deviceKindFromHeader(request)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          ...(country ? { lastCountry: country } : {}),
+          ...(ip ? { lastIp: ip } : {}),
+          ...(device !== 'unknown' ? { lastDevice: device } : {}),
+        },
+      })
+      await recordIpSeen(user.id, '', ip, country)
+    } catch (error) {
+      console.error('guest auth network trace error:', error)
+    }
 
     // Tentatives de pseudo du navigateur : lp_vid sous l'accord courant seulement.
     const visitorId = readConsentedVisitorId(cookieStore)

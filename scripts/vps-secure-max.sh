@@ -46,7 +46,15 @@ docker run --rm \
   -v "$BACKUP_DIR:/backup" \
   alpine sh -c "apk add --no-cache sqlite >/dev/null && sqlite3 /data/prod.db \".backup /backup/prod-${STAMP}.db\""
 gzip -f "$OUT"
-find "$BACKUP_DIR" -name "prod-*.db.gz" -mtime +14 -delete
+# 14 jours sur le serveur (politique de confidentialité §7). Pas -mtime +14 :
+# find arrondit l'âge au jour inférieur, la copie du jour J ne partait qu'au
+# passage de J+15, voire J+16. Seuil de 13 jours et 1 heure : le cron ne
+# passant qu'une fois par jour, la copie du jour J part au passage de J+14
+# (l'heure de marge absorbe l'écart de durée entre deux sauvegardes) ; un
+# instantané pris en cours de journée J (prod-deploy.sh) part au plus tard à
+# ce même passage. prod-deploy.sh rejouant ce script, un déploiement peut
+# avancer la purge, jamais la retarder.
+find "$BACKUP_DIR" -name "prod-*.db.gz" -mmin +$((13 * 24 * 60 + 60)) -delete
 echo "[$(date -Is)] backup OK: ${OUT}.gz"
 SCRIPT
 sudo chmod 750 "$BACKUP_SCRIPT"
