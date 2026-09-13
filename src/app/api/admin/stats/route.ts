@@ -3,6 +3,7 @@ import { getVisitorStats } from '@/lib/analytics-server'
 import { getGlobalGamePlayStats } from '@/lib/game-stats-server'
 import { canViewSupervisionAnalytics } from '@/lib/roles'
 import { prisma } from '@/lib/prisma'
+import { NON_LEGACY_ACCOUNT_WHERE } from '@/lib/account-kind-server'
 import { adminErrorResponse, requireRole } from '../_guard'
 
 export async function GET() {
@@ -14,9 +15,12 @@ export async function GET() {
       getGlobalGamePlayStats(),
     ])
 
+    // Même périmètre que le total (getVisitorStats) et la liste des comptes :
+    // mot de passe, Google ET invités. Les comptes Google et les invités
+    // manquaient à la répartition par rôle.
     const roleCounts = await prisma.user.groupBy({
       by: ['role'],
-      where: { passwordHash: { not: '' }, email: { not: null } },
+      where: NON_LEGACY_ACCOUNT_WHERE,
       _count: { _all: true },
     })
 

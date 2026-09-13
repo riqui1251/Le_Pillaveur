@@ -38,8 +38,19 @@ import {
   Inbox,
   AlertTriangle,
   Sparkles,
+  KeyRound,
+  UserRound,
+  Unplug,
+  type LucideIcon,
 } from 'lucide-react'
 import { deviceLabel } from '@/lib/device-from-user-agent'
+import {
+  guestLastActivityAt,
+  isGuestProbablyLost,
+  isGuestPurgeOverdue,
+  parseAccountDeleteLogDetail,
+  type AccountKind,
+} from '@/lib/account-kind'
 import { useAuth } from '@/hooks/useAuth'
 import {
   assignableRoles,
@@ -61,7 +72,8 @@ import {
   roleLabel,
 } from '@/lib/roles'
 import { countryFlag, countryLabel } from '@/lib/country-display'
-import { formatPresenceDuration } from '@/lib/format-presence'
+import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
+import { PARIS_TIME_ZONE } from '@/lib/paris-time'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -112,6 +124,17 @@ import { cn } from '@/lib/utils'
  */
 const ACCOUNTS_PAGE_SIZE = 25
 const FEEDBACK_PAGE_SIZE = 25
+
+// Toutes les dates de la Supervision s'affichent à l'heure de Paris
+// (PARIS_TIME_ZONE, src/lib/paris-time.ts, partagé avec les panneaux autonomes).
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** Unités de durée traduites (« 1 j 7 h » en français, « 1 d 7 h » en anglais…). */
+function useDurationUnits(): DurationUnits {
+  const t = useTranslations('supervision.units')
+  return { s: t('s'), min: t('min'), h: t('h'), d: t('d') }
+}
 
 /** Un taux non calculable (cohorte vide) s'affiche « — », jamais « 0 % ». */
 function rateLabel(rate: number | null): string {
@@ -185,7 +208,9 @@ type StatsResponse = {
   connectedAccounts: ConnectedAccount[]
   visitorIpList: VisitorIpRow[]
   accounts: {
+    /** Tous les comptes non legacy, invités compris (même prédicat que la liste). */
     total: number
+    byKind?: AccountKindCounts
     byRole: {
       user: number
       moderator: number
@@ -275,13 +300,39 @@ type SupervisionOverview = {
   queue: QueueItem[]
 }
 
-type AdminUser = {
+/** Décompte par type de compte, servi par le serveur (account-kind). */
+type AccountKindCounts = {
+  password: number
+  google: number
+  guest: number
+  guestOrphan: number
+}
+
+/**
+ * Champs de compte communs à la liste et à la fiche (lot 2). Le type est
+ * calculé côté serveur : la page ne le déduit jamais de l'email ou du mot de
+ * passe (un invité passait pour un compte Google).
+ */
+type AccountKindFields = {
+  kind: AccountKind
+  isGuest: boolean
+  /** Au moins une Session dont expiresAt est dans le futur. */
+  hasValidSession: boolean
+  /**
+   * JOUR de Paris (AAAA-MM-JJ) de l'échéance de la session valide ; null sans
+   * session valide. Jamais l'heure : elle redonnerait celle d'une visite.
+   */
+  sessionExpiresAt: string | null
+  /** Invités seulement : jour de Paris (AAAA-MM-JJ) prévu de la purge automatique. */
+  guestPurgeAt: string | null
+}
+
+type AdminUser = AccountKindFields & {
   id: string
+  /** Null pour un invité. */
   email: string | null
   displayName: string
   accountCode: string | null
-  /** Moyen de connexion : 'google' = compte sans mot de passe (GIS). */
-  authProvider?: 'google' | 'password'
   role: string
   createdAt: string
   lastCountry: string | null
@@ -314,6 +365,8 @@ type ActiveBan = {
   displayName: string
   accountCode: string | null
   role: string
+  /** Absent d'une réponse antérieure au lot 2. */
+  isGuest?: boolean
   banType: string
   bannedUntil: string | null
   banComment: string | null
@@ -347,9 +400,10 @@ type FeedbackItem = {
 }
 
 type UserDetail = {
-  user: {
+  user: AccountKindFields & {
     id: string
-    email: string
+    /** Null pour un invité : la fiche lui est ouverte (lot 2). */
+    email: string | null
     displayName: string
     accountCode: string | null
     role: string
@@ -371,6 +425,7 @@ type UserDetail = {
     localPlayerNames: string[]
     statsCount: number
     achievementsCount: number
+    /** Sessions VALIDES uniquement (les jetons expirés ne comptent plus). */
     sessionsCount: number
     ban: {
       banned: boolean
@@ -403,6 +458,99 @@ function AccountCodeBadge({ code }: { code: string | null | undefined }) {
   )
 }
 
+/**
+ * Valeurs de la phrase « 28 comptes : 15 mot de passe · 7 Google · 6 invités
+ * (dont 2 orphelins) ». Les quatre types du serveur sont DISJOINTS : « invités »
+ * additionne donc les invités avec session et les orphelins.
+ */
+function kindSummaryValues(total: number, counts: AccountKindCounts) {
+  return {
+    total,
+    password: counts.password,
+    google: counts.google,
+    guests: counts.guest + counts.guestOrphan,
+    orphans: counts.guestOrphan,
+  }
+}
+
+const ACCOUNT_KIND_BADGES: Record<AccountKind, { labelKey: string; icon: LucideIcon; className: string }> = {
+  password: {
+    labelKey: 'accountKind.password',
+    icon: KeyRound,
+    className: 'border-white/15 bg-white/[0.06] text-white/75',
+  },
+  google: {
+    labelKey: 'accountKind.google',
+    icon: Globe,
+    className: 'border-sky-500/30 bg-sky-500/15 text-sky-200',
+  },
+  guest: {
+    labelKey: 'accountKind.guest',
+    icon: UserRound,
+    className: 'border-violet-500/30 bg-violet-500/15 text-violet-200',
+  },
+  guest_orphan: {
+    labelKey: 'accountKind.guestOrphan',
+    icon: Unplug,
+    className: 'border-orange-500/35 bg-orange-500/15 text-orange-200',
+  },
+  legacy: {
+    labelKey: 'accountKind.legacy',
+    icon: UserX,
+    className: 'border-white/10 bg-white/[0.03] text-white/50',
+  },
+}
+
+/**
+ * Badge du TYPE de compte (lot 2), partagé par la liste, la fiche et
+ * l'analyse d'IP. Le type vient du serveur (account-kind). Un invité inactif
+ * depuis plus de GUEST_STALE_DAYS garde parfois une session valide en base
+ * alors que son cookie a disparu : on l'écrit à côté du badge, sans quoi il
+ * passerait pour un joueur qui peut revenir. Rendu en fragment : le parent
+ * est toujours une rangée `flex-wrap`.
+ */
+function AccountKindBadge({
+  kind,
+  lastSeenAt,
+  createdAt,
+  sessionExpiresAt,
+  compact,
+}: {
+  kind: AccountKind
+  lastSeenAt: string | null
+  /** Sans date de référence, pas de mention « cookie perdu ». */
+  createdAt: string | null
+  /**
+   * Jour d'échéance de la session : un renouvellement récent prouve l'usage
+   * même quand le ping, seul à écrire lastSeenAt, est bloqué.
+   */
+  sessionExpiresAt?: string | null
+  compact?: boolean
+}) {
+  const t = useTranslations('supervision')
+  const badge = ACCOUNT_KIND_BADGES[kind]
+  // Réponse d'un serveur antérieur au lot 2 : pas de type, pas de badge.
+  if (!badge) return null
+  const Icon = badge.icon
+  const reference = lastSeenAt ?? createdAt
+  const activity = reference ? { lastSeenAt, createdAt: reference, sessionExpiresAt } : null
+  const lastActivity = activity && isGuestProbablyLost({ kind, ...activity }) ? guestLastActivityAt(activity) : null
+  const staleDays = lastActivity !== null ? Math.floor((Date.now() - lastActivity) / DAY_MS) : null
+  return (
+    <>
+      <Badge className={cn(badge.className, compact && 'px-1.5 py-0 text-[10px]')}>
+        <Icon className={compact ? 'mr-0.5 h-2.5 w-2.5' : 'mr-1 h-3 w-3'} />
+        {t(badge.labelKey)}
+      </Badge>
+      {staleDays != null && (
+        <span className="min-w-0 text-[11px] leading-tight text-amber-200/80">
+          {t('accountKind.staleGuest', { days: staleDays })}
+        </span>
+      )}
+    </>
+  )
+}
+
 /** Phrase du journal — un texte par nature d'action, acteur/cible en gras côté rendu. */
 function journalText(t: ReturnType<typeof useTranslations<'supervision'>>, e: JournalEntry): string {
   const actor = e.actorName ?? '—'
@@ -428,8 +576,19 @@ function journalText(t: ReturnType<typeof useTranslations<'supervision'>>, e: Jo
         : t('room.journalTerm', { detail: e.detail ?? '' })
     case 'role-change':
       return t('room.journalRoleChange', { actor, target, detail: e.detail ?? '' })
-    case 'account-delete':
-      return t('room.journalAccountDelete', { actor, detail: e.detail ?? '' })
+    case 'account-delete': {
+      // Détail neutre `type:rôle`, traduit ici. Les lignes anonymisées
+      // (« compte supprimé ») n'ont ni type ni rôle : le détail, écrit en
+      // français, n'est jamais affiché tel quel.
+      const deleted = parseAccountDeleteLogDetail(e.detail)
+      return deleted
+        ? t('room.journalAccountDeleteTyped', {
+            actor,
+            kind: t(ACCOUNT_KIND_BADGES[deleted.kind].labelKey),
+            role: t(`roles.${deleted.role}`),
+          })
+        : t('room.journalAccountDelete', { actor })
+    }
     case 'room-close':
       return t('room.journalRoomClose', { actor, detail: e.detail ?? '' })
     case 'site-setting':
@@ -486,32 +645,34 @@ function IpAddressDisplay({
   const others = ips.slice(1)
 
   return (
-    <div className={`inline-flex flex-wrap items-center gap-1 ${compact ? 'text-xs' : 'text-sm'}`}>
+    <div className={`inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 ${compact ? 'text-xs' : 'text-sm'}`}>
       <button
         type="button"
         onClick={() => onIpClick?.(primary.ip)}
-        className="font-mono text-amber-200/90 hover:underline"
+        className="min-w-0 break-all text-left font-mono text-amber-200/90 hover:underline"
       >
         {primary.ip}
       </button>
       <DeviceBadge device={device} compact={compact} />
       {others.length > 0 && (
-        <details className="inline-block">
+        <details className="inline-block max-w-full">
           <summary className="cursor-pointer list-none rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-amber-200/70 hover:bg-white/10 [&::-webkit-details-marker]:hidden">
             {t('device.moreIps', { count: others.length })}
           </summary>
           <ul className="mt-1 space-y-0.5 rounded-md border border-white/10 bg-black/40 p-2">
             {others.map((entry) => (
               <li key={entry.ip}>
+                {/* IPv6 secondaires comprises : un invité en cumule plusieurs,
+                    et une adresse complète ne tient pas sur 360 px. */}
                 <button
                   type="button"
                   onClick={() => onIpClick?.(entry.ip)}
-                  className="font-mono text-[11px] text-amber-200/80 hover:underline"
+                  className="min-w-0 break-all text-left font-mono text-[11px] text-amber-200/80 hover:underline"
                 >
                   {entry.ip}
                 </button>
                 <span className="ml-1 text-[10px] text-white/35">
-                  {countryLabel(entry.country, locale, t('unknownCountry'))} · {format.dateTime(new Date(entry.lastSeenAt), { dateStyle: 'medium' })}
+                  {countryLabel(entry.country, locale, t('unknownCountry'))} · {format.dateTime(new Date(entry.lastSeenAt), { dateStyle: 'medium', timeZone: PARIS_TIME_ZONE })}
                 </span>
               </li>
             ))}
@@ -562,7 +723,7 @@ function FeedbackListSection({
               <Badge variant="secondary">{item.statusLabel}</Badge>
             </div>
             <span className="text-xs text-white/40">
-              {format.dateTime(new Date(item.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}
+              {format.dateTime(new Date(item.createdAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
             </span>
           </div>
           <p className="mt-2 text-sm font-medium text-white">{item.authorName}</p>
@@ -667,19 +828,23 @@ function UserActivityLines({
 }) {
   const t = useTranslations('supervision')
   const format = useFormatter()
+  const durationUnits = useDurationUnits()
   return (
     <div className={compact ? 'space-y-0.5 text-[11px] text-white/35' : 'space-y-1 text-sm text-white/60'}>
+      {/* lastLoginAt n'est écrit qu'à une saisie d'identifiants, une connexion
+          Google ou une création d'invité — jamais quand une session est réutilisée :
+          c'est une AUTHENTIFICATION, pas une visite. */}
       <p>
-        {t('activity.lastLogin')}{' '}
+        {t('activity.lastAuth')}{' '}
         {lastLoginAt
-          ? format.dateTime(new Date(lastLoginAt), { dateStyle: 'medium', timeStyle: 'short' })
+          ? format.dateTime(new Date(lastLoginAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
           : t('activity.neverLoggedIn')}
       </p>
+      {/* 60 s par requête, onglets cachés compris : un cumul d'onglets ouverts,
+          pas un temps de jeu. Le libellé le dit, y compris en version compacte. */}
       <p>
-        {t('activity.timeOnSite', { duration: formatPresenceDuration(totalPresenceSeconds) })}
-        {!compact && (
-          <span className="text-xs text-white/35">{t('activity.estimated')}</span>
-        )}
+        {t('activity.legacyPresence', { duration: formatPresenceDuration(totalPresenceSeconds, durationUnits) })}
+        <span className={compact ? undefined : 'text-xs text-white/35'}>{t('activity.legacyPresenceNote')}</span>
       </p>
     </div>
   )
@@ -839,7 +1004,7 @@ function VisitorDetailPanel({
                   {countryFlag(entry.country)} {countryLabel(entry.country, locale, t('unknownCountry'))}
                 </span>
                 <span className="text-[11px] text-white/35">
-                  {format.dateTime(new Date(entry.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short' })}
+                  {format.dateTime(new Date(entry.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
                 </span>
               </li>
             ))}
@@ -991,7 +1156,7 @@ function IpVisitorList({
                       </div>
                       <div className="flex shrink-0 items-center justify-between gap-2 sm:block sm:text-right">
                         <span className="text-xs text-white/40">
-                          {format.dateTime(new Date(row.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short' })}
+                          {format.dateTime(new Date(row.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
                         </span>
                         <p className="text-[10px] text-amber-300/60 sm:mt-1">
                           {expanded ? t('geo.hide') : t('geo.details')}
@@ -1015,6 +1180,7 @@ export default function SupervisionPage() {
   const tErrors = useTranslations('errors')
   const locale = useLocale()
   const format = useFormatter()
+  const durationUnits = useDurationUnits()
   const actionLabel = useActionLabel()
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -1028,6 +1194,9 @@ export default function SupervisionPage() {
   // Liste des comptes paginée EN BASE (F75) : `users` ne contient plus que la
   // page affichée, `usersTotal` le nombre total de comptes correspondants.
   const [usersTotal, setUsersTotal] = useState(0)
+  // Décompte NON filtré par type (lot 2) : le compteur de l'onglet ne varie
+  // plus avec la recherche en cours.
+  const [accountCounts, setAccountCounts] = useState<(AccountKindCounts & { total: number }) | null>(null)
   const [usersPage, setUsersPage] = useState(1)
   const [usersLoading, setUsersLoading] = useState(false)
   const [bans, setBans] = useState<ActiveBan[]>([])
@@ -1043,6 +1212,11 @@ export default function SupervisionPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [accountFilterRole, setAccountFilterRole] = useState('all')
   const [accountFilterStatus, setAccountFilterStatus] = useState('all')
+  const [accountFilterKind, setAccountFilterKind] = useState('all')
+  const [accountFilterActivity, setAccountFilterActivity] = useState('all')
+  // Tri par dernière activité par défaut : un compte actif ne se retrouve
+  // plus derrière des inscrits récents qui ne sont jamais revenus.
+  const [accountSort, setAccountSort] = useState<'activity' | 'created'>('activity')
   const [rolesHelpOpen, setRolesHelpOpen] = useState(false)
   const [ipLookup, setIpLookup] = useState<{
     ip: string
@@ -1052,12 +1226,20 @@ export default function SupervisionPage() {
       email: string | null
       accountCode: string | null
       role: string
+      kind?: AccountKind
+      lastSeenAt: string | null
+      createdAt?: string
+      /** Jour d'échéance de la session valide (AAAA-MM-JJ). */
+      sessionExpiresAt?: string | null
       online: boolean
       banned: boolean
     }>
     visitors: Array<{ visitorId: string; displayName: string | null; online: boolean }>
   } | null>(null)
   const [ipLookupLoading, setIpLookupLoading] = useState(false)
+  // IP dont l'analyse est attendue : une saisie dans la recherche la rend
+  // caduque, et une réponse tardive ne doit pas réafficher son bandeau.
+  const ipLookupForRef = useRef<string | null>(null)
 
   const [countryDialog, setCountryDialog] = useState<{
     country: string | null
@@ -1070,6 +1252,8 @@ export default function SupervisionPage() {
   const [unbanDialog, setUnbanDialog] = useState<{
     userId: string
     displayName: string
+    /** Invité : sans ban, la purge des orphelins l'emporte (7 jours). */
+    isGuest: boolean
   } | null>(null)
   const [unbanComment, setUnbanComment] = useState('')
 
@@ -1077,6 +1261,8 @@ export default function SupervisionPage() {
     userId: string
     displayName: string
     type: 'permanent' | 'temporary'
+    /** Invité : un ban temporaire lui coupe définitivement l'accès. */
+    isGuest: boolean
   } | null>(null)
   const [banComment, setBanComment] = useState('')
   const [banDays, setBanDays] = useState('7')
@@ -1084,6 +1270,7 @@ export default function SupervisionPage() {
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
   const [historyDetail, setHistoryDetail] = useState<UserDetail | null>(null)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState<string | null>(null)
 
   const [deleteDialog, setDeleteDialog] = useState<{
     userId: string
@@ -1163,7 +1350,9 @@ export default function SupervisionPage() {
     }
     const community: SupervisionNavGroup = {
       label: t('navGroups.community'),
-      items: [{ value: 'accounts', label: t('tabs.accountsShort'), icon: Users, count: usersTotal || stats?.accounts.total || '' }],
+      // Total NON filtré, invités compris : l'ancien `usersTotal || stats…`
+      // mêlait deux définitions et suivait la recherche en cours.
+      items: [{ value: 'accounts', label: t('tabs.accountsShort'), icon: Users, count: accountCounts?.total || '' }],
     }
     if (showBansTab) {
       community.items.push({
@@ -1202,8 +1391,7 @@ export default function SupervisionPage() {
     showBansTab,
     canEditAccounts,
     showFeedbackTab,
-    usersTotal,
-    stats?.accounts.total,
+    accountCounts?.total,
     bans.length,
     activeFeedbackTotal,
     resolvedFeedbackTotal,
@@ -1238,6 +1426,9 @@ export default function SupervisionPage() {
         if (q) params.set('q', q)
         if (accountFilterRole !== 'all') params.set('role', accountFilterRole)
         if (accountFilterStatus !== 'all') params.set('status', accountFilterStatus)
+        if (accountFilterKind !== 'all') params.set('kind', accountFilterKind)
+        if (accountFilterActivity !== 'all') params.set('activity', accountFilterActivity)
+        if (accountSort !== 'activity') params.set('sort', accountSort)
 
         const res = await fetch(`/api/admin/users?${params.toString()}`, {
           credentials: 'include',
@@ -1252,6 +1443,7 @@ export default function SupervisionPage() {
         const pageUsers = (data.users ?? []) as AdminUser[]
         setUsers(pageUsers)
         setUsersTotal(data.total ?? pageUsers.length)
+        setAccountCounts(data.counts ?? null)
         setEditingNames((prev) => ({
           ...prev,
           ...Object.fromEntries(pageUsers.map((u) => [u.id, u.displayName])),
@@ -1263,7 +1455,18 @@ export default function SupervisionPage() {
         setDataLoaded(true)
       }
     },
-    [router, userId, userRole, usersPage, accountSearch, accountFilterRole, accountFilterStatus]
+    [
+      router,
+      userId,
+      userRole,
+      usersPage,
+      accountSearch,
+      accountFilterRole,
+      accountFilterStatus,
+      accountFilterKind,
+      accountFilterActivity,
+      accountSort,
+    ]
   )
 
   const loadSettings = useCallback(async () => {
@@ -1384,13 +1587,16 @@ export default function SupervisionPage() {
   const loadUserHistory = useCallback(async (userIdToLoad: string) => {
     setHistoryLoading(true)
     setHistoryDetail(null)
+    setHistoryError(null)
     try {
       const res = await fetch(`/api/admin/users/${userIdToLoad}`, { credentials: 'include' })
       if (!res.ok) throw new Error(tRef.current('apiErrors.historyUnavailable'))
       const data = await res.json()
       setHistoryDetail(data)
     } catch (e) {
-      setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
+      // L'erreur s'affiche DANS le dialogue : envoyée en haut de page, elle
+      // restait cachée derrière lui, bloqué sur « Chargement… ».
+      setHistoryError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
     } finally {
       setHistoryLoading(false)
     }
@@ -1431,7 +1637,7 @@ export default function SupervisionPage() {
   // Un filtre qui change remet la pagination à la première page.
   useEffect(() => {
     setUsersPage(1)
-  }, [accountSearch, accountFilterRole, accountFilterStatus])
+  }, [accountSearch, accountFilterRole, accountFilterStatus, accountFilterKind, accountFilterActivity, accountSort])
 
   useEffect(() => {
     setFeedbackPage(1)
@@ -1469,6 +1675,7 @@ export default function SupervisionPage() {
   }, [loading, userId, userRole, activeTab, growth, loadGrowth])
 
   const handleIpClick = useCallback(async (ip: string) => {
+    ipLookupForRef.current = ip
     setAccountSearch(ip)
     setActiveTab('accounts')
     setIpLookupLoading(true)
@@ -1477,12 +1684,26 @@ export default function SupervisionPage() {
       const res = await fetch(`/api/admin/ip-lookup?ip=${encodeURIComponent(ip)}`, {
         credentials: 'include',
       })
-      if (res.ok) setIpLookup(await res.json())
+      if (res.ok) {
+        const data = await res.json()
+        if (ipLookupForRef.current === ip) setIpLookup(data)
+      }
     } catch {
       /* ignore */
     } finally {
-      setIpLookupLoading(false)
+      if (ipLookupForRef.current === ip) setIpLookupLoading(false)
     }
+  }, [])
+
+  /**
+   * Toute modification de la recherche efface l'analyse d'IP : le bandeau
+   * « IP … — N comptes » restait affiché au-dessus d'une recherche de pseudo.
+   */
+  const changeAccountSearch = useCallback((value: string) => {
+    ipLookupForRef.current = null
+    setAccountSearch(value)
+    setIpLookup(null)
+    setIpLookupLoading(false)
   }, [])
 
   const handleCountryClick = useCallback(
@@ -1528,8 +1749,18 @@ export default function SupervisionPage() {
         body: JSON.stringify({ userId, ...patch }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? t('apiErrors.modifyDenied'))
-      setUsers((prev) => prev.map((u) => (u.id === userId ? data.user : u)))
+      if (!res.ok) {
+        // Le sélecteur de rôle est masqué pour un invité ; le serveur refuse
+        // quand même (409) si une liste ancienne l'affichait encore.
+        throw new Error(
+          data.code === 'guest_cannot_be_staff'
+            ? t('apiErrors.guestCannotBeStaff')
+            : (data.error ?? t('apiErrors.modifyDenied'))
+        )
+      }
+      // Fusion plutôt que remplacement : la réponse ne porte ni l'historique
+      // d'IP, ni les sanctions ciblées, ni forcément l'état des sessions.
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ...data.user } : u)))
     } catch (e) {
       setError(e instanceof Error ? e.message : tErrors('generic'))
     } finally {
@@ -1793,9 +2024,25 @@ export default function SupervisionPage() {
   const handleQueueAction = (id: string) => {
     const item = overview?.queue.find((q) => q.id === id)
     if (!item) return
-    if (item.href === 'accounts') setAccountSearch(item.title)
+    if (item.href === 'accounts') changeAccountSearch(item.title)
     setActiveTab(item.href)
   }
+
+  // Fiche du dialogue Historique : un invité inactif depuis plus de
+  // GUEST_STALE_DAYS n'a peut-être plus son cookie, même si sa session est
+  // encore valide en base — jamais « Connexion active » dans ce cas.
+  const historyUser = historyDetail?.user ?? null
+  const historyGuestLost = historyUser
+    ? isGuestProbablyLost({
+        kind: historyUser.kind,
+        lastSeenAt: historyUser.lastSeenAt,
+        createdAt: historyUser.createdAt,
+        sessionExpiresAt: historyUser.sessionExpiresAt,
+      })
+    : false
+  // Date de purge déjà passée : le balayage (au fil du trafic, par lots) n'est
+  // pas encore passé. On ne l'annonce pas au futur.
+  const historyPurgeOverdue = historyUser?.guestPurgeAt ? isGuestPurgeOverdue(historyUser.guestPurgeAt) : false
 
   const handleQueueAcknowledge = async (id: string) => {
     const item = overview?.queue.find((q) => q.id === id)
@@ -2012,7 +2259,7 @@ export default function SupervisionPage() {
                   pour du temps réel. */}
               <p className="border-t border-white/[0.07] pt-2 text-[11px] text-white/35">
                 {t('growth.freshness', {
-                  time: format.dateTime(new Date(growth.computedAt), { timeStyle: 'short' }),
+                  time: format.dateTime(new Date(growth.computedAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
                   minutes: Math.max(1, Math.round(growth.cacheSeconds / 60)),
                 })}
               </p>
@@ -2043,7 +2290,7 @@ export default function SupervisionPage() {
                       )}
                       memberCount={tbl.memberCount}
                       memberNames={tbl.memberNames}
-                      elapsed={formatPresenceDuration((Date.now() - new Date(tbl.createdAt).getTime()) / 1000)}
+                      elapsed={formatPresenceDuration((Date.now() - new Date(tbl.createdAt).getTime()) / 1000, durationUnits)}
                       stalled={tbl.stalled}
                       stalledLabel={t('room.stalledFor', { duration: idleLabel(tbl.idleSeconds) })}
                       turnLabel={
@@ -2110,7 +2357,7 @@ export default function SupervisionPage() {
                   entries={(overview?.journal ?? []).map((e) => ({
                     id: e.id,
                     kind: e.kind,
-                    time: format.dateTime(new Date(e.createdAt), { timeStyle: 'short' }),
+                    time: format.dateTime(new Date(e.createdAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
                     text: journalText(t, e),
                   }))}
                 />
@@ -2154,27 +2401,37 @@ export default function SupervisionPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <SectionCard icon={Users} title={t('accounts.registered')} bodyClassName="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 lg:grid-cols-5">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5 sm:p-3">
-                <p className="text-xl font-bold text-white sm:text-2xl">{stats?.accounts.total ?? 0}</p>
-                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.total')}</p>
+            {/* Tous les comptes, invités compris (lot 2) : la tuile ne comptait
+                que les comptes à mot de passe (15 sur 28). Même décompte que
+                la liste Comptes et que la répartition par rôle. */}
+            <SectionCard icon={Users} title={t('accounts.overviewTitle')} bodyClassName="space-y-3">
+              <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 lg:grid-cols-5">
+                <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 sm:p-3">
+                  <p className="text-xl font-bold text-white sm:text-2xl">{stats?.accounts.total ?? 0}</p>
+                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.total')}</p>
+                </div>
+                <div className="min-w-0 rounded-xl border border-chip-blue/25 bg-chip-blue/10 p-2.5 sm:p-3">
+                  <p className="text-xl font-bold text-sky-200 sm:text-2xl">{stats?.accounts.byRole.moderator ?? 0}</p>
+                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.moderators')}</p>
+                </div>
+                <div className="min-w-0 rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 sm:p-3">
+                  <p className="text-xl font-bold text-amber-200 sm:text-2xl">{stats?.accounts.byRole.admin ?? 0}</p>
+                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.admins')}</p>
+                </div>
+                <div className="min-w-0 rounded-xl border border-rose-500/20 bg-rose-500/5 p-2.5 sm:p-3">
+                  <p className="text-xl font-bold text-rose-200 sm:text-2xl">{stats?.accounts.byRole.superadmin ?? 0}</p>
+                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.superAdmins')}</p>
+                </div>
+                <div className="col-span-2 min-w-0 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-2.5 sm:col-span-1 sm:p-3">
+                  <p className="text-xl font-bold text-yellow-200 sm:text-2xl">{stats?.accounts.byRole.fondateur ?? 0}</p>
+                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.founders')}</p>
+                </div>
               </div>
-              <div className="rounded-xl border border-chip-blue/25 bg-chip-blue/10 p-2.5 sm:p-3">
-                <p className="text-xl font-bold text-sky-200 sm:text-2xl">{stats?.accounts.byRole.moderator ?? 0}</p>
-                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.moderators')}</p>
-              </div>
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 sm:p-3">
-                <p className="text-xl font-bold text-amber-200 sm:text-2xl">{stats?.accounts.byRole.admin ?? 0}</p>
-                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.admins')}</p>
-              </div>
-              <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-2.5 sm:p-3">
-                <p className="text-xl font-bold text-rose-200 sm:text-2xl">{stats?.accounts.byRole.superadmin ?? 0}</p>
-                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.superAdmins')}</p>
-              </div>
-              <div className="col-span-2 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-2.5 sm:col-span-1 sm:p-3">
-                <p className="text-xl font-bold text-yellow-200 sm:text-2xl">{stats?.accounts.byRole.fondateur ?? 0}</p>
-                <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.founders')}</p>
-              </div>
+              {stats?.accounts.byKind && (
+                <p className="text-xs leading-relaxed text-white/55">
+                  {t('accounts.kindSummary', kindSummaryValues(stats.accounts.total, stats.accounts.byKind))}
+                </p>
+              )}
             </SectionCard>
 
             <SectionCard icon={Gavel} title={t('bans.activeTitle')} description={t('bans.suspendedCount', { count: bans.length })}>
@@ -2190,7 +2447,7 @@ export default function SupervisionPage() {
                       {b.banType === 'permanent'
                         ? t('bans.permanent').toLowerCase()
                         : t('bans.until', {
-                            date: b.bannedUntil ? format.dateTime(new Date(b.bannedUntil), { dateStyle: 'medium' }) : '?',
+                            date: b.bannedUntil ? format.dateTime(new Date(b.bannedUntil), { dateStyle: 'medium', timeZone: PARIS_TIME_ZONE }) : '?',
                           })}
                     </li>
                   ))}
@@ -2239,7 +2496,7 @@ export default function SupervisionPage() {
                           <span>{countryLabel(acc.country, locale, t('unknownCountry'))}</span>
                           {acc.lastSeenAt && (
                             <span>
-                              · {format.dateTime(new Date(acc.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short' })}
+                              · {format.dateTime(new Date(acc.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
                             </span>
                           )}
                         </div>
@@ -2279,7 +2536,7 @@ export default function SupervisionPage() {
                   className="bg-black/30 pl-9"
                   placeholder={t('accounts.searchPlaceholder')}
                   value={accountSearch}
-                  onChange={(e) => setAccountSearch(e.target.value)}
+                  onChange={(e) => changeAccountSearch(e.target.value)}
                 />
               </div>
 
@@ -2289,7 +2546,7 @@ export default function SupervisionPage() {
                   <span className="text-xs text-white/45 sm:hidden">{t('accounts.rolePlaceholder')}</span>
                 </div>
                 <Select value={accountFilterRole} onValueChange={setAccountFilterRole}>
-                  <SelectTrigger className="w-full bg-black/30 sm:w-[150px]">
+                  <SelectTrigger className="w-full bg-black/30 sm:w-[150px]" aria-label={t('accounts.rolePlaceholder')}>
                     <SelectValue placeholder={t('accounts.rolePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -2302,7 +2559,7 @@ export default function SupervisionPage() {
                   </SelectContent>
                 </Select>
                 <Select value={accountFilterStatus} onValueChange={setAccountFilterStatus}>
-                  <SelectTrigger className="w-full bg-black/30 sm:w-[150px]">
+                  <SelectTrigger className="w-full bg-black/30 sm:w-[150px]" aria-label={t('accounts.statusPlaceholder')}>
                     <SelectValue placeholder={t('accounts.statusPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -2311,16 +2568,60 @@ export default function SupervisionPage() {
                     <SelectItem value="banned">{t('accounts.banned')}</SelectItem>
                   </SelectContent>
                 </Select>
-                {(accountSearch || accountFilterRole !== 'all' || accountFilterStatus !== 'all') && (
+                {/* Type et activité (lot 2) : filtrés EN BASE, comme le rôle. Le
+                    type « invités » ne garde que ceux qui ont encore une
+                    session valide ; les orphelins ont leur propre entrée. */}
+                <Select value={accountFilterKind} onValueChange={setAccountFilterKind}>
+                  <SelectTrigger className="w-full bg-black/30 sm:w-[190px]" aria-label={t('accounts.kindPlaceholder')}>
+                    <SelectValue placeholder={t('accounts.kindPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('accounts.allKinds')}</SelectItem>
+                    <SelectItem value="password">{t('accountKind.password')}</SelectItem>
+                    <SelectItem value="google">{t('accountKind.google')}</SelectItem>
+                    <SelectItem value="guest">{t('accounts.kindGuests')}</SelectItem>
+                    <SelectItem value="guest_orphan">{t('accounts.kindOrphans')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={accountFilterActivity} onValueChange={setAccountFilterActivity}>
+                  <SelectTrigger className="w-full bg-black/30 sm:w-[160px]" aria-label={t('accounts.activityPlaceholder')}>
+                    <SelectValue placeholder={t('accounts.activityPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('accounts.allActivity')}</SelectItem>
+                    <SelectItem value="24h">{t('accounts.activity24h')}</SelectItem>
+                    <SelectItem value="7d">{t('accounts.activity7d')}</SelectItem>
+                    <SelectItem value="inactive30">{t('accounts.activityInactive30')}</SelectItem>
+                    <SelectItem value="never">{t('accounts.activityNever')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={accountSort}
+                  onValueChange={(value) => setAccountSort(value === 'created' ? 'created' : 'activity')}
+                >
+                  <SelectTrigger className="w-full bg-black/30 sm:w-[200px]" aria-label={t('accounts.sortPlaceholder')}>
+                    <SelectValue placeholder={t('accounts.sortPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="activity">{t('accounts.sortActivity')}</SelectItem>
+                    <SelectItem value="created">{t('accounts.sortCreated')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(accountSearch ||
+                  accountFilterRole !== 'all' ||
+                  accountFilterStatus !== 'all' ||
+                  accountFilterKind !== 'all' ||
+                  accountFilterActivity !== 'all') && (
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-white/50"
                     onClick={() => {
-                      setAccountSearch('')
+                      changeAccountSearch('')
                       setAccountFilterRole('all')
                       setAccountFilterStatus('all')
-                      setIpLookup(null)
+                      setAccountFilterKind('all')
+                      setAccountFilterActivity('all')
                     }}
                   >
                     <X className="mr-1 h-3.5 w-3.5" />
@@ -2329,7 +2630,22 @@ export default function SupervisionPage() {
                 )}
               </div>
 
-              {(accountSearch.trim() || accountFilterRole !== 'all' || accountFilterStatus !== 'all') && (
+              {/* Décompte NON filtré, le même que la tuile de la vue
+                  d'ensemble : il ne bouge pas avec la recherche. */}
+              {accountCounts && (
+                <div className="space-y-0.5">
+                  <p className="text-xs leading-relaxed text-white/60">
+                    {t('accounts.kindSummary', kindSummaryValues(accountCounts.total, accountCounts))}
+                  </p>
+                  <p className="text-[11px] leading-relaxed text-white/35">{t('accounts.countsNote')}</p>
+                </div>
+              )}
+
+              {(accountSearch.trim() ||
+                accountFilterRole !== 'all' ||
+                accountFilterStatus !== 'all' ||
+                accountFilterKind !== 'all' ||
+                accountFilterActivity !== 'all') && (
                 <p className="text-xs text-white/45">
                   {t('accounts.matchCount', {
                     total: usersTotal,
@@ -2344,7 +2660,9 @@ export default function SupervisionPage() {
 
               {ipLookup && (
                 <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-sm">
-                  <p className="font-medium text-amber-100">
+                  {/* overflow-wrap anywhere : une IPv6 se coupe si elle ne tient
+                      pas sur un téléphone, sans hacher le reste de la phrase. */}
+                  <p className="font-medium text-amber-100 [overflow-wrap:anywhere]">
                     {t('accounts.ipSummary', {
                       ip: ipLookup.ip,
                       accounts: ipLookup.accounts.length,
@@ -2356,13 +2674,24 @@ export default function SupervisionPage() {
                   {ipLookup.accounts.length > 0 && (
                     <ul className="mt-2 space-y-1 text-white/70">
                       {ipLookup.accounts.map((acc) => (
-                        <li key={acc.id}>
-                          {acc.displayName}
+                        <li key={acc.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                          <span className="min-w-0 break-words">{acc.displayName}</span>
                           {acc.accountCode && (
-                            <span className="font-mono text-amber-200/70"> {acc.accountCode}</span>
+                            <span className="font-mono text-amber-200/70">{acc.accountCode}</span>
                           )}
-                          {acc.online && <span className="text-green-300"> · {t('accounts.online').toLowerCase()}</span>}
-                          {acc.banned && <span className="text-red-300"> · {t('accounts.banned').toLowerCase()}</span>}
+                          {/* Comptes Google et invités compris (lot 2). Sans date
+                              de création, la dernière activité sert de référence. */}
+                          {acc.kind && (
+                            <AccountKindBadge
+                              kind={acc.kind}
+                              lastSeenAt={acc.lastSeenAt}
+                              createdAt={acc.createdAt ?? acc.lastSeenAt}
+                              sessionExpiresAt={acc.sessionExpiresAt}
+                              compact
+                            />
+                          )}
+                          {acc.online && <span className="text-green-300">· {t('accounts.online').toLowerCase()}</span>}
+                          {acc.banned && <span className="text-red-300">· {t('accounts.banned').toLowerCase()}</span>}
                         </li>
                       ))}
                     </ul>
@@ -2405,14 +2734,16 @@ export default function SupervisionPage() {
                           title={isOnline ? t('accounts.online') : undefined}
                           aria-hidden
                         />
-                        <span className="font-medium text-white">{u.displayName}</span>
+                        <span className="min-w-0 break-words font-medium text-white">{u.displayName}</span>
                         <AccountCodeBadge code={u.accountCode} />
                         <RoleBadge role={u.role} compact />
-                        {u.authProvider === 'google' && (
-                          <Badge className="border-sky-500/30 bg-sky-500/15 text-sky-200">
-                            {t('accounts.googleAccount')}
-                          </Badge>
-                        )}
+                        <AccountKindBadge
+                          kind={u.kind}
+                          lastSeenAt={u.lastSeenAt}
+                          createdAt={u.createdAt}
+                          sessionExpiresAt={u.sessionExpiresAt}
+                          compact
+                        />
                         {u.ban.banned && (
                           <Badge className="border-red-500/30 bg-red-500/15 text-red-200">
                             <Ban className="mr-1 h-3 w-3" />
@@ -2455,11 +2786,12 @@ export default function SupervisionPage() {
                           }}
                         />
                       )}
-                      <p className="truncate text-xs text-white/45">{u.email}</p>
-                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/30">
+                      {/* Un invité n'a pas d'email : pas de ligne vide. */}
+                      {u.email && <p className="truncate text-xs text-white/45">{u.email}</p>}
+                      <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-white/30">
                         <span>
                           {t('accounts.registeredOn', {
-                            date: format.dateTime(new Date(u.createdAt), { dateStyle: 'medium' }),
+                            date: format.dateTime(new Date(u.createdAt), { dateStyle: 'medium', timeZone: PARIS_TIME_ZONE }),
                           })}
                         </span>
                         {u.lastCountry && (
@@ -2468,7 +2800,7 @@ export default function SupervisionPage() {
                           </span>
                         )}
                         {u.lastIp || (u.ips && u.ips.length > 0) ? (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex min-w-0 max-w-full items-center gap-1">
                             ·{' '}
                             <IpAddressDisplay
                               ips={
@@ -2491,8 +2823,23 @@ export default function SupervisionPage() {
                               date: format.dateTime(new Date(u.lastSeenAt), {
                                 dateStyle: 'medium',
                                 timeStyle: 'short',
+                                timeZone: PARIS_TIME_ZONE,
                               }),
                             })}
+                          </span>
+                        )}
+                        {u.guestPurgeAt && (
+                          <span>
+                            ·{' '}
+                            {/* Jour déjà passé : le balayage n'est pas encore passé. */}
+                            {isGuestPurgeOverdue(u.guestPurgeAt)
+                              ? t('history.guestPurgePending')
+                              : t('history.guestPurge', {
+                                  date: format.dateTime(new Date(u.guestPurgeAt), {
+                                    dateStyle: 'medium',
+                                    timeZone: PARIS_TIME_ZONE,
+                                  }),
+                                })}
                           </span>
                         )}
                       </div>
@@ -2520,24 +2867,29 @@ export default function SupervisionPage() {
 
                       {canAssignRoles(user.role) &&
                         u.id !== user.id &&
-                        canModifyTarget(user.role, u.role) && (
-                        <Select
-                          value={u.role}
-                          onValueChange={(role) => updateUser(u.id, { role })}
-                          disabled={busy}
-                        >
-                          <SelectTrigger className="w-full bg-black/30 sm:w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {assignableRoleOptions.map((r) => (
-                              <SelectItem key={r} value={r}>
-                                {roleLabel(r)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
+                        canModifyTarget(user.role, u.role) &&
+                        (u.isGuest ? (
+                          // Invité : aucun rôle d'équipe possible (son seul
+                          // identifiant est un cookie) ; le serveur répond 409.
+                          <p className="min-w-0 self-center text-[11px] text-white/40">{t('accounts.guestNoRole')}</p>
+                        ) : (
+                          <Select
+                            value={u.role}
+                            onValueChange={(role) => updateUser(u.id, { role })}
+                            disabled={busy}
+                          >
+                            <SelectTrigger className="w-full bg-black/30 sm:w-[180px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {assignableRoleOptions.map((r) => (
+                                <SelectItem key={r} value={r}>
+                                  {roleLabel(r)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ))}
                     </div>
                   </div>
 
@@ -2553,7 +2905,7 @@ export default function SupervisionPage() {
                             variant="secondary"
                             disabled={busy}
                             onClick={() =>
-                              setUnbanDialog({ userId: u.id, displayName: u.displayName })
+                              setUnbanDialog({ userId: u.id, displayName: u.displayName, isGuest: u.isGuest })
                             }
                           >
                             {t('accounts.liftBan')}
@@ -2571,6 +2923,7 @@ export default function SupervisionPage() {
                                   userId: u.id,
                                   displayName: u.displayName,
                                   type: 'permanent',
+                                  isGuest: u.isGuest,
                                 })
                               }
                             >
@@ -2584,11 +2937,15 @@ export default function SupervisionPage() {
                               variant="outline"
                               className="border-orange-500/40 text-orange-300"
                               disabled={busy}
+                              // Un ban temporaire efface les sessions : pour un
+                              // invité, c'est une perte définitive du compte.
+                              title={u.isGuest ? t('dialogs.guestTemporaryBanWarning') : undefined}
                               onClick={() =>
                                 setBanDialog({
                                   userId: u.id,
                                   displayName: u.displayName,
                                   type: 'temporary',
+                                  isGuest: u.isGuest,
                                 })
                               }
                             >
@@ -2643,7 +3000,7 @@ export default function SupervisionPage() {
                               {active.permanent
                                 ? t('featureBans.permanentShort')
                                 : active.until
-                                  ? format.dateTime(new Date(active.until), { dateStyle: 'short' })
+                                  ? format.dateTime(new Date(active.until), { dateStyle: 'short', timeZone: PARIS_TIME_ZONE })
                                   : ''}
                             </span>
                           </Button>
@@ -2728,12 +3085,12 @@ export default function SupervisionPage() {
                     className="rounded-xl border border-red-500/20 bg-red-500/5 p-4"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
+                      <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-2 font-medium text-white">
                           {b.displayName}
                           <AccountCodeBadge code={b.accountCode} />
                         </p>
-                        <p className="text-xs text-white/45">{b.email}</p>
+                        {b.email && <p className="truncate text-xs text-white/45">{b.email}</p>}
                       </div>
                       <Badge className="border-red-500/30 bg-red-500/15 text-red-200">
                         {b.banType === 'permanent' ? t('bans.permanent') : t('bans.temporary')}
@@ -2741,10 +3098,10 @@ export default function SupervisionPage() {
                     </div>
                     <div className="mt-2 space-y-1 text-sm text-white/60">
                       {b.bannedAt && (
-                        <p>{t('bans.bannedOn', { date: format.dateTime(new Date(b.bannedAt), { dateStyle: 'medium', timeStyle: 'short' }) })}</p>
+                        <p>{t('bans.bannedOn', { date: format.dateTime(new Date(b.bannedAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE }) })}</p>
                       )}
                       {b.banType === 'temporary' && b.bannedUntil && (
-                        <p>{t('bans.expiresOn', { date: format.dateTime(new Date(b.bannedUntil), { dateStyle: 'medium', timeStyle: 'short' }) })}</p>
+                        <p>{t('bans.expiresOn', { date: format.dateTime(new Date(b.bannedUntil), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE }) })}</p>
                       )}
                       {b.bannedByName && <p>{t('bans.by', { name: b.bannedByName })}</p>}
                       {b.banComment && (
@@ -2758,7 +3115,7 @@ export default function SupervisionPage() {
                         className="mt-3"
                         disabled={busy}
                         onClick={() =>
-                          setUnbanDialog({ userId: b.id, displayName: b.displayName })
+                          setUnbanDialog({ userId: b.id, displayName: b.displayName, isGuest: b.isGuest === true })
                         }
                       >
                         {t('bans.unban')}
@@ -2936,6 +3293,16 @@ export default function SupervisionPage() {
               <strong className="text-white">{unbanDialog?.displayName}</strong>
             </DialogDescription>
           </DialogHeader>
+          {/* Le ban a effacé les sessions d'un invité : le lever ne lui rend
+              rien, mais le remet dans la purge des orphelins (retention-sweep),
+              qui l'emporte avec son historique de modération. Un modérateur,
+              qui ne peut pas supprimer de compte, doit le savoir. */}
+          {unbanDialog?.isGuest && (
+            <p className="flex items-start gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 text-sm text-orange-100">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
+              <span className="min-w-0">{t('dialogs.guestUnbanWarning')}</span>
+            </p>
+          )}
           <div>
             <label className="mb-1 block text-xs text-white/50">
               {t('dialogs.commentOptional')}
@@ -2970,6 +3337,15 @@ export default function SupervisionPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {/* Le ban efface les sessions du compte : un invité (ni email, ni
+                mot de passe, ni Google) ne peut plus jamais se reconnecter,
+                même une fois le ban échu. */}
+            {banDialog?.type === 'temporary' && banDialog.isGuest && (
+              <p className="flex items-start gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 text-sm text-orange-100">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
+                <span className="min-w-0">{t('dialogs.guestTemporaryBanWarning')}</span>
+              </p>
+            )}
             {banDialog?.type === 'temporary' && (
               <div>
                 <label className="mb-1 block text-xs text-white/50">{t('dialogs.durationDays')}</label>
@@ -3082,6 +3458,7 @@ export default function SupervisionPage() {
           if (!open) {
             setHistoryUserId(null)
             setHistoryDetail(null)
+            setHistoryError(null)
           }
         }}
       >
@@ -3089,38 +3466,104 @@ export default function SupervisionPage() {
           <DialogHeader>
             <DialogTitle>{t('history.title')}</DialogTitle>
             <DialogDescription asChild className="text-white/50">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {historyDetail ? (
                   <>
-                    {historyDetail.user.displayName}
+                    <span className="min-w-0 break-words">{historyDetail.user.displayName}</span>
                     <AccountCodeBadge code={historyDetail.user.accountCode} />
+                    <AccountKindBadge
+                      kind={historyDetail.user.kind}
+                      lastSeenAt={historyDetail.user.lastSeenAt}
+                      createdAt={historyDetail.user.createdAt}
+                      sessionExpiresAt={historyDetail.user.sessionExpiresAt}
+                    />
                   </>
+                ) : historyError ? (
+                  <span>—</span>
                 ) : (
                   <span>{t('loading')}</span>
                 )}
               </div>
             </DialogDescription>
           </DialogHeader>
-          {historyLoading || !historyDetail ? (
+          {historyError ? (
+            <ErrorState
+              icon={AlertTriangle}
+              message={historyError}
+              retryLabel={t('states.retry')}
+              onRetry={() => {
+                if (historyUserId) void loadUserHistory(historyUserId)
+              }}
+            />
+          ) : historyLoading || !historyDetail ? (
             <p className="py-8 text-center text-white/50">{t('loading')}</p>
           ) : (
             <div className="space-y-4">
+              {/* Invité orphelin : ni email, ni mot de passe, ni Google, et plus
+                  de session. Personne ne peut rouvrir ce compte : on le dit en
+                  premier, avec la date de sa suppression automatique. */}
+              {historyDetail.user.kind === 'guest_orphan' && (
+                <p className="flex items-start gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 text-sm text-orange-100">
+                  <Unplug className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
+                  <span className="min-w-0">
+                    {!historyDetail.user.guestPurgeAt
+                      ? t('history.orphanInaccessible')
+                      : historyPurgeOverdue
+                        ? t('history.orphanPurgePending')
+                        : t('history.orphanPurge', {
+                            date: format.dateTime(new Date(historyDetail.user.guestPurgeAt), {
+                              dateStyle: 'medium',
+                              timeZone: PARIS_TIME_ZONE,
+                            }),
+                          })}
+                  </span>
+                </p>
+              )}
+
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                <div className="min-w-0 rounded-lg border border-white/10 bg-black/20 p-3">
                   <p className="text-xs text-white/45">{t('geo.localPlayersLabel')}</p>
                   <p className="text-xl font-bold">{historyDetail.user.localPlayerCount}</p>
                 </div>
-                <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                <div className="min-w-0 rounded-lg border border-white/10 bg-black/20 p-3">
                   <p className="text-xs text-white/45">{t('history.partiesStats')}</p>
                   <p className="text-xl font-bold">{historyDetail.user.statsCount}</p>
                 </div>
-                <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                <div className="min-w-0 rounded-lg border border-white/10 bg-black/20 p-3">
                   <p className="text-xs text-white/45">{t('history.achievements')}</p>
                   <p className="text-xl font-bold">{historyDetail.user.achievementsCount}</p>
                 </div>
-                <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                  <p className="text-xs text-white/45">{t('history.sessions')}</p>
-                  <p className="text-xl font-bold">{historyDetail.user.sessionsCount}</p>
+                {/* Ex-tuile « Sessions » : elle comptait des jetons, expirés
+                    compris, et se lisait comme un nombre de visites. Elle dit
+                    maintenant si le compte peut encore servir, et jusqu'à quand.
+                    Invité probablement perdu : la session existe en base, mais
+                    rien ne prouve que son cookie aussi — jamais « Connexion
+                    active » dans ce cas. */}
+                <div className="min-w-0 rounded-lg border border-white/10 bg-black/20 p-3">
+                  <p className="text-xs text-white/45">
+                    {historyGuestLost ? t('history.sessionInDb') : t('history.activeConnection')}
+                  </p>
+                  {historyDetail.user.hasValidSession && historyDetail.user.sessionExpiresAt ? (
+                    <p
+                      className={cn(
+                        'mt-1 break-words text-sm font-semibold',
+                        historyGuestLost ? 'text-amber-200' : 'text-emerald-300'
+                      )}
+                    >
+                      {/* Le JOUR seulement (servi ainsi) : l'heure d'échéance
+                          redonnerait celle d'une visite. */}
+                      {t(historyGuestLost ? 'history.sessionMaybeLost' : 'history.until', {
+                        date: format.dateTime(new Date(historyDetail.user.sessionExpiresAt), {
+                          dateStyle: 'medium',
+                          timeZone: PARIS_TIME_ZONE,
+                        }),
+                      })}
+                    </p>
+                  ) : (
+                    <p className="mt-1 break-words text-sm font-semibold text-white/60">
+                      {t('history.noValidSession')}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -3133,24 +3576,47 @@ export default function SupervisionPage() {
                 </div>
               )}
 
-              <div className="text-sm text-white/60">
+              <div className="min-w-0 text-sm text-white/60">
                 <p>{t('history.mode', { mode: historyDetail.user.playMode })}</p>
                 <p>{t('history.country', { country: countryLabel(historyDetail.user.lastCountry, locale, t('unknownCountry')) })}</p>
                 {historyDetail.user.lastIp && (
                   <p className="flex flex-wrap items-center gap-2">
                     {t('history.ip')}{' '}
-                    <span className="font-mono text-amber-200/80">{historyDetail.user.lastIp}</span>
+                    <span className="min-w-0 break-all font-mono text-amber-200/80">{historyDetail.user.lastIp}</span>
                     <DeviceBadge device={historyDetail.user.lastDevice} compact />
                   </p>
                 )}
+                <p>
+                  {t('accounts.registeredOn', {
+                    date: format.dateTime(new Date(historyDetail.user.createdAt), {
+                      dateStyle: 'medium',
+                      timeZone: PARIS_TIME_ZONE,
+                    }),
+                  })}
+                </p>
                 {historyDetail.user.lastSeenAt && (
                   <p>
                     {t('history.lastActivity', {
                       date: format.dateTime(new Date(historyDetail.user.lastSeenAt), {
                         dateStyle: 'medium',
                         timeStyle: 'short',
+                        timeZone: PARIS_TIME_ZONE,
                       }),
                     })}
+                  </p>
+                )}
+                {/* Invité avec session : sa suppression automatique recule à
+                    chaque visite. L'orphelin a déjà son encart en tête. */}
+                {historyDetail.user.kind === 'guest' && historyDetail.user.guestPurgeAt && (
+                  <p>
+                    {historyPurgeOverdue
+                      ? t('history.guestPurgePending')
+                      : t('history.guestPurge', {
+                          date: format.dateTime(new Date(historyDetail.user.guestPurgeAt), {
+                            dateStyle: 'medium',
+                            timeZone: PARIS_TIME_ZONE,
+                          }),
+                        })}
                   </p>
                 )}
               </div>
@@ -3219,6 +3685,7 @@ export default function SupervisionPage() {
                             date: format.dateTime(new Date(ev.createdAt), {
                               dateStyle: 'medium',
                               timeStyle: 'short',
+                              timeZone: PARIS_TIME_ZONE,
                             }),
                             name: ev.actorName,
                           })}
@@ -3232,6 +3699,7 @@ export default function SupervisionPage() {
                               date: format.dateTime(new Date(ev.bannedUntil), {
                                 dateStyle: 'medium',
                                 timeStyle: 'short',
+                                timeZone: PARIS_TIME_ZONE,
                               }),
                             })}
                           </p>
@@ -3260,7 +3728,7 @@ export default function SupervisionPage() {
                 </div>
                 <DialogDescription className="text-white/50">
                   {selectedFeedback.authorName} ·{' '}
-                  {format.dateTime(new Date(selectedFeedback.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}
+                  {format.dateTime(new Date(selectedFeedback.createdAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -3389,7 +3857,7 @@ export default function SupervisionPage() {
                     </div>
                     {row.email && <p className="mt-1 text-xs text-white/45">{row.email}</p>}
                     <p className="mt-1 text-[10px] text-white/30">
-                      {format.dateTime(new Date(row.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short' })}
+                      {format.dateTime(new Date(row.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
                     </p>
                   </div>
                 )

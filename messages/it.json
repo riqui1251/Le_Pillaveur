@@ -4030,7 +4030,7 @@
       "monthHint": "Visitatori unici (mese)"
     },
     "accounts": {
-      "registered": "Account registrati",
+      "overviewTitle": "Account",
       "total": "Totale",
       "moderators": "Moderatori",
       "admins": "Admin",
@@ -4046,6 +4046,19 @@
       "allStatus": "Tutti",
       "online": "Online",
       "banned": "Bannati",
+      "kindPlaceholder": "Tipo",
+      "allKinds": "Tutti i tipi",
+      "kindGuests": "Ospiti (sessione valida)",
+      "kindOrphans": "Ospiti orfani",
+      "activityPlaceholder": "Attività",
+      "allActivity": "Qualsiasi attività",
+      "activity24h": "Visti nelle ultime 24 h",
+      "activity7d": "Visti negli ultimi 7 giorni",
+      "activityInactive30": "Inattivi da più di 30 giorni",
+      "activityNever": "Mai visti",
+      "sortPlaceholder": "Ordinamento",
+      "sortActivity": "Ordina: ultima attività",
+      "sortCreated": "Ordina: data di iscrizione",
       "resetFilters": "Reimposta",
       "results": "{count} risultat{plural} su {total}",
       "ipAnalyzing": "Analisi IP in corso…",
@@ -4060,8 +4073,24 @@
       "permanentBan": "Ban permanente",
       "temporaryBan": "Ban temporaneo",
       "deleteAccount": "Elimina account",
-      "googleAccount": "Account Google",
-      "matchCount": "Account trovati: {total}"
+      "guestNoRole": "Account ospite: nessun ruolo dello staff possibile",
+      "matchCount": "Account trovati: {total}",
+      "kindSummary": "{total, plural, one {# account} other {# account}}: {password} con password · {google} Google · {guests, plural, one {# ospite} other {# ospiti}}{orphans, plural, =0 {} one { (di cui # orfano)} other { (di cui # orfani)}}",
+      "countsNote": "Ospiti inclusi. L'ultima attività avanza anche con una scheda rimasta aperta in background: non prova che la persona stia giocando."
+    },
+    "units": {
+      "s": "s",
+      "min": "min",
+      "h": "h",
+      "d": "g"
+    },
+    "accountKind": {
+      "password": "Password",
+      "google": "Google",
+      "guest": "Ospite",
+      "guestOrphan": "Ospite orfano",
+      "legacy": "Vecchio account",
+      "staleGuest": "inattivo da {days} g — il cookie potrebbe essere andato perso"
     },
     "bans": {
       "activeTitle": "Ban attivi",
@@ -4142,7 +4171,8 @@
       "turnLabel": "Turno di {name}",
       "castHost": "Trasmessa da {name}",
       "journalRoleChange": "{actor} ha cambiato il grado di {target}: {detail}",
-      "journalAccountDelete": "{actor} ha eliminato l’account {detail}",
+      "journalAccountDelete": "{actor} ha eliminato un account",
+      "journalAccountDeleteTyped": "{actor} ha eliminato un account ({kind}, {role})",
       "journalRoomClose": "{actor} ha chiuso il tavolo {detail}",
       "journalSiteSetting": "{actor} ha modificato un’impostazione del sito: {detail}"
     },
@@ -4186,10 +4216,10 @@
       "scopeToday": "oggi"
     },
     "activity": {
-      "lastLogin": "Ultimo accesso:",
+      "lastAuth": "Ultima autenticazione:",
       "neverLoggedIn": "Mai registrato",
-      "timeOnSite": "Tempo sul sito: {duration}",
-      "estimated": " (stimato dall'attività)"
+      "legacyPresence": "Cumulo storico: {duration}",
+      "legacyPresenceNote": " (sovrastimato: schede aperte)"
     },
     "feedback": {
       "activeTitle": "Feedback aperti",
@@ -4221,12 +4251,18 @@
       "localPlayers": "Giocatori locali",
       "partiesStats": "Partite (stats)",
       "achievements": "Successi",
-      "sessions": "Sessioni",
+      "activeConnection": "Connessione attiva",
+      "sessionInDb": "Sessione nel database",
       "localPlayerNames": "Nomi giocatori locali",
       "mode": "Modalità: {mode}",
       "country": "Paese: {country}",
       "ip": "IP:",
       "lastActivity": "Ultima attività: {date}",
+      "guestPurge": "Eliminazione automatica il {date}",
+      "orphanPurge": "Account inaccessibile (né email, né password, né Google): eliminazione automatica il {date}",
+      "orphanInaccessible": "Account inaccessibile (né email, né password, né Google)",
+      "guestPurgePending": "Eliminazione automatica imminente (prossima pulizia)",
+      "orphanPurgePending": "Account inaccessibile (né email, né password, né Google): eliminazione automatica imminente (prossima pulizia)",
       "playerActivity": "Attività giocatore",
       "gamesPlayed": "Giochi giocati",
       "noParties": "Nessuna partita registrata.",
@@ -4234,6 +4270,8 @@
       "moderationHistory": "Cronologia moderazione",
       "noEvents": "Nessun evento.",
       "until": "Fino al {date}",
+      "sessionMaybeLost": "Valida fino al {date} (il cookie potrebbe essere andato perso)",
+      "noValidSession": "Nessuna sessione valida",
       "by": "{date} · da {name}"
     },
     "actions": {
@@ -4265,6 +4303,8 @@
       "banCommentLabel": "Commento / motivo (interno)",
       "banCommentPlaceholder": "Es.: spam, comportamento tossico…",
       "banConfirm": "Conferma ban",
+      "guestTemporaryBanWarning": "Account ospite: un ban temporaneo equivale a un'eliminazione. Le sue sessioni vengono cancellate e non ha alcun modo di riconnettersi (né email, né password, né Google), anche a ban scaduto.",
+      "guestUnbanWarning": "Account ospite: rimuovere il ban non gli restituisce l'accesso, perché le sue sessioni sono state cancellate al momento del ban. Senza ban, verrà eliminato automaticamente 7 giorni dopo la sua ultima attività, insieme al suo storico di moderazione.",
       "closeTableTitle": "Chiudere questo tavolo forzatamente?",
       "closeTableLabel": "Tavolo:",
       "closeTableWarning": "{count, plural, =0 {Il tavolo sarà eliminato immediatamente.} one {Il giocatore presente tornerà allo sportello.} other {I # giocatori presenti torneranno allo sportello.}} Nessun risultato sarà registrato.",
@@ -4277,6 +4317,7 @@
     },
     "apiErrors": {
       "modifyDenied": "Modifica rifiutata",
+      "guestCannotBeStaff": "Un account ospite non può ricevere un ruolo dello staff",
       "banDenied": "Ban rifiutato",
       "deleteDenied": "Eliminazione rifiutata",
       "unbanDenied": "Sbannamento rifiutato",

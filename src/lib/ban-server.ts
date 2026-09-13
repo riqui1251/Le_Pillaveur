@@ -208,6 +208,9 @@ export async function getActiveBans() {
       displayName: true,
       accountCode: true,
       role: true,
+      // Invité : lever son ban le rend éligible à la purge des orphelins
+      // (retention-sweep.ts), le dialogue de levée doit le dire.
+      isGuest: true,
       banType: true,
       bannedUntil: true,
       banComment: true,
@@ -232,6 +235,7 @@ export async function getActiveBans() {
     displayName: u.displayName,
     accountCode: u.accountCode,
     role: u.role,
+    isGuest: u.isGuest,
     banType: u.banType as BanType,
     bannedUntil: u.bannedUntil?.toISOString() ?? null,
     banComment: u.banComment,

@@ -31,8 +31,10 @@ const GUEST_LIMIT = 8
 const GUEST_WINDOW_MS = 60 * 60 * 1000
 
 /**
- * Compte INVITÉ : créé quand quelqu'un scanne le QR d'une table et veut jouer
- * tout de suite, sans inscription. Un vrai User (le online exige un userId)
+ * Compte INVITÉ : créé quand quelqu'un veut jouer tout de suite, sans
+ * inscription — en rejoignant une table par son code ou son QR (JoinGate), ou
+ * par « Essayer avec des bots » depuis une page de jeu ou de règles
+ * (TryBotsGate). Un vrai User (le online exige un userId)
  * mais sans email ni mot de passe, marqué isGuest et en mode online d'office ;
  * purgé automatiquement après inactivité par le retention sweep.
  *

@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { UserSearch } from 'lucide-react'
 import { SectionCard } from '@/components/supervision/SupervisionLayout'
+import { PARIS_TIME_ZONE } from '@/lib/paris-time'
 import { AlertTriangle } from 'lucide-react'
 
 type AttemptRow = {
@@ -36,6 +37,7 @@ type FlaggedUser = {
 
 export function NameModerationAttemptsPanel() {
   const t = useTranslations('supervision.moderation')
+  const format = useFormatter()
   const [attempts, setAttempts] = useState<AttemptRow[]>([])
   const [flaggedUsers, setFlaggedUsers] = useState<FlaggedUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,10 +68,13 @@ export function NameModerationAttemptsPanel() {
     void load()
   }, [load])
 
+  // Langue de la Supervision et heure de Paris, comme le reste de la page
+  // (toLocaleString suivait la langue ET le fuseau du navigateur).
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleString(undefined, {
+    format.dateTime(new Date(iso), {
       dateStyle: 'short',
       timeStyle: 'short',
+      timeZone: PARIS_TIME_ZONE,
     })
 
   return (

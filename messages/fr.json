@@ -4030,7 +4030,7 @@
       "monthHint": "Visiteurs uniques (mois)"
     },
     "accounts": {
-      "registered": "Comptes enregistrés",
+      "overviewTitle": "Comptes",
       "total": "Total",
       "moderators": "Modérateurs",
       "admins": "Admins",
@@ -4046,6 +4046,19 @@
       "allStatus": "Tous",
       "online": "En ligne",
       "banned": "Bannis",
+      "kindPlaceholder": "Type",
+      "allKinds": "Tous les types",
+      "kindGuests": "Invités (session valide)",
+      "kindOrphans": "Invités orphelins",
+      "activityPlaceholder": "Activité",
+      "allActivity": "Toute activité",
+      "activity24h": "Vus ces dernières 24 h",
+      "activity7d": "Vus ces 7 derniers jours",
+      "activityInactive30": "Inactifs depuis plus de 30 j",
+      "activityNever": "Jamais vus",
+      "sortPlaceholder": "Tri",
+      "sortActivity": "Tri : dernière activité",
+      "sortCreated": "Tri : inscription",
       "resetFilters": "Réinitialiser",
       "results": "{count} résultat{plural} sur {total}",
       "ipAnalyzing": "Analyse de l'IP en cours…",
@@ -4060,8 +4073,24 @@
       "permanentBan": "Ban permanent",
       "temporaryBan": "Ban temporaire",
       "deleteAccount": "Supprimer le compte",
-      "googleAccount": "Compte Google",
-      "matchCount": "{total} compte{plural} trouvé{plural}"
+      "guestNoRole": "Compte invité : aucun rôle d'équipe possible",
+      "matchCount": "{total} compte{plural} trouvé{plural}",
+      "kindSummary": "{total, plural, one {# compte} other {# comptes}} : {password} mot de passe · {google} Google · {guests, plural, one {# invité} other {# invités}}{orphans, plural, =0 {} one { (dont # orphelin)} other { (dont # orphelins)}}",
+      "countsNote": "Invités compris. La dernière activité avance aussi avec un onglet resté ouvert en arrière-plan : elle ne prouve pas que la personne joue."
+    },
+    "units": {
+      "s": "s",
+      "min": "min",
+      "h": "h",
+      "d": "j"
+    },
+    "accountKind": {
+      "password": "Mot de passe",
+      "google": "Google",
+      "guest": "Invité",
+      "guestOrphan": "Invité orphelin",
+      "legacy": "Ancien compte",
+      "staleGuest": "inactif depuis {days} j — le cookie a pu être perdu"
     },
     "bans": {
       "activeTitle": "Bannissements actifs",
@@ -4142,7 +4171,8 @@
       "turnLabel": "Au tour de {name}",
       "castHost": "Diffusée par {name}",
       "journalRoleChange": "{actor} a changé le grade de {target} : {detail}",
-      "journalAccountDelete": "{actor} a supprimé le compte {detail}",
+      "journalAccountDelete": "{actor} a supprimé un compte",
+      "journalAccountDeleteTyped": "{actor} a supprimé un compte ({kind}, {role})",
       "journalRoomClose": "{actor} a fermé la table {detail}",
       "journalSiteSetting": "{actor} a modifié un réglage du site : {detail}"
     },
@@ -4186,10 +4216,10 @@
       "scopeToday": "aujourd'hui"
     },
     "activity": {
-      "lastLogin": "Dernière connexion :",
+      "lastAuth": "Dernière authentification :",
       "neverLoggedIn": "Jamais enregistrée",
-      "timeOnSite": "Temps sur le site : {duration}",
-      "estimated": " (estimé via activité)"
+      "legacyPresence": "Cumul hérité : {duration}",
+      "legacyPresenceNote": " (surestimé : onglets ouverts)"
     },
     "feedback": {
       "activeTitle": "Retours en cours",
@@ -4221,12 +4251,18 @@
       "localPlayers": "Joueurs locaux",
       "partiesStats": "Parties (stats)",
       "achievements": "Succès",
-      "sessions": "Sessions",
+      "activeConnection": "Connexion active",
+      "sessionInDb": "Session en base",
       "localPlayerNames": "Noms des joueurs locaux",
       "mode": "Mode : {mode}",
       "country": "Pays : {country}",
       "ip": "IP :",
       "lastActivity": "Dernière activité : {date}",
+      "guestPurge": "Suppression automatique le {date}",
+      "orphanPurge": "Compte inaccessible (ni email, ni mot de passe, ni Google) : suppression automatique le {date}",
+      "orphanInaccessible": "Compte inaccessible (ni email, ni mot de passe, ni Google)",
+      "guestPurgePending": "Suppression automatique imminente (prochaine purge)",
+      "orphanPurgePending": "Compte inaccessible (ni email, ni mot de passe, ni Google) : suppression automatique imminente (prochaine purge)",
       "playerActivity": "Activité du joueur",
       "gamesPlayed": "Jeux joués",
       "noParties": "Aucune partie enregistrée.",
@@ -4234,6 +4270,8 @@
       "moderationHistory": "Historique modération",
       "noEvents": "Aucun événement.",
       "until": "Jusqu'au {date}",
+      "sessionMaybeLost": "Valide jusqu'au {date} (le cookie a pu être perdu)",
+      "noValidSession": "Aucune session valide",
       "by": "{date} · par {name}"
     },
     "actions": {
@@ -4265,6 +4303,8 @@
       "banCommentLabel": "Commentaire / motif (visible en interne)",
       "banCommentPlaceholder": "Ex. : spam, comportement toxique…",
       "banConfirm": "Confirmer le ban",
+      "guestTemporaryBanWarning": "Compte invité : un bannissement temporaire équivaut à une suppression. Ses sessions sont effacées et il n'a aucun moyen de se reconnecter (ni email, ni mot de passe, ni Google), même une fois le ban terminé.",
+      "guestUnbanWarning": "Compte invité : lever le ban ne lui rend pas l'accès, ses sessions ont été effacées au bannissement. Sans ban, il sera supprimé automatiquement 7 jours après sa dernière activité, avec son historique de modération.",
       "closeTableTitle": "Fermer cette table de force ?",
       "closeTableLabel": "Table :",
       "closeTableWarning": "{count, plural, =0 {La table sera supprimée immédiatement.} one {Le joueur présent sera renvoyé au Guichet.} other {Les # joueurs présents seront renvoyés au Guichet.}} Aucun résultat de partie ne sera enregistré.",
@@ -4277,6 +4317,7 @@
     },
     "apiErrors": {
       "modifyDenied": "Modification refusée",
+      "guestCannotBeStaff": "Un compte invité ne peut pas recevoir de rôle d'équipe",
       "banDenied": "Bannissement refusé",
       "deleteDenied": "Suppression refusée",
       "unbanDenied": "Débannissement refusé",

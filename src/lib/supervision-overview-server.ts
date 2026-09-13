@@ -154,7 +154,18 @@ export type GrowthStats = {
  */
 export const STAFF_SELF_ANCHORED_ACTIONS = ['account-delete', 'room-close', 'site-setting'] as const
 
-/** Journalise une action du staff sans compte cible (voir ci-dessus). */
+/**
+ * Journalise une action du staff sans compte cible (voir ci-dessus).
+ *
+ * `detail` est recopié tel quel et SURVIT à tout compte supprimé ensuite
+ * (ancré sur l'auteur, jamais purgé) : il ne doit porter ni pseudo, ni code
+ * de compte, ni email — seulement de quoi relire l'action (type et rôle d'un
+ * compte supprimé en détail neutre `type:rôle`, code de table, réglage). Les
+ * lignes 'account-delete' écrites avant cette règle ont été anonymisées par
+ * la migration 20260912100000_anonymize_account_delete_log, et le balayage de
+ * conservation anonymise toute ligne restée hors de ce format (écrite par un
+ * ancien conteneur pendant un déploiement, ou après un retour arrière).
+ */
 export async function logStaffAction(params: {
   actorId: string
   action: (typeof STAFF_SELF_ANCHORED_ACTIONS)[number]

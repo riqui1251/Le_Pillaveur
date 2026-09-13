@@ -16,7 +16,8 @@ model User {
   onlinePreferencesJson String?
   accountCode      String?   @unique
   role             String    @default("user")
-  // Compte invité (QR scanné) : pseudo temporaire sans email ni mot de passe,
+  // Compte invité : pseudo saisi pour rejoindre une table (code ou QR, JoinGate)
+  // ou pour « Essayer avec des bots » (TryBotsGate), sans email ni mot de passe,
   // purgé automatiquement après inactivité (retention-sweep).
   isGuest          Boolean   @default(false)
   playMode         String    @default("local")

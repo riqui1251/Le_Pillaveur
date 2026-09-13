@@ -11,6 +11,7 @@ const { prismaMock, deleteUserAccountMock } = vi.hoisted(() => ({
     dailyVisitor: { deleteMany: vi.fn() },
     onlineGameSession: { deleteMany: vi.fn() },
     session: { deleteMany: vi.fn() },
+    accountBanEvent: { updateMany: vi.fn() },
     user: { updateMany: vi.fn(), findMany: vi.fn() },
   },
   deleteUserAccountMock: vi.fn(),
@@ -63,6 +64,7 @@ describe('balayage de conservation', () => {
       model.deleteMany.mockReset().mockResolvedValue({ count: 0 })
     }
     prismaMock.user.updateMany.mockReset().mockResolvedValue({ count: 0 })
+    prismaMock.accountBanEvent.updateMany.mockReset().mockResolvedValue({ count: 0 })
     prismaMock.user.findMany
       .mockReset()
       .mockImplementation(async (args: FindManyArgs) => (isOrphanQuery(args) ? orphans : staleGuests))
@@ -80,6 +82,21 @@ describe('balayage de conservation', () => {
     expect(prismaMock.session.deleteMany).toHaveBeenCalledWith({
       where: { expiresAt: { lt: new Date(NOW) } },
     })
+  })
+
+  it('anonymise toute suppression de compte journalisée hors du format neutre', async () => {
+    await runSweep()
+    const [args] = prismaMock.accountBanEvent.updateMany.mock.calls[0] as [
+      { where: { action: string; NOT: { comment: { in: string[] } } }; data: { comment: string } },
+    ]
+    expect(args.where.action).toBe('account-delete')
+    expect(args.data).toEqual({ comment: 'compte supprimé' })
+    const allowed = args.where.NOT.comment.in
+    // Détails neutres et forme déjà anonymisée : laissés tels quels.
+    expect(allowed).toEqual(expect.arrayContaining(['compte supprimé', 'guest:user', 'password:moderator']))
+    // L'ancien format recopiait pseudo, code et email : jamais admis.
+    expect(allowed).not.toContain('diablo (LP-NNCRCK) — a@b.fr')
+    expect(allowed.every((detail) => !detail.includes('@'))).toBe(true)
   })
 
   it('cible les invités orphelins non bannis, sans session valide, inactifs depuis 7 jours et sans signalement ouvert', async () => {

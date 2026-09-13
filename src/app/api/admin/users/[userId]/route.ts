@@ -13,6 +13,13 @@ import {
   logStaffAction,
   STAFF_SELF_ANCHORED_ACTIONS,
 } from '@/lib/supervision-overview-server'
+import {
+  accountDescriptionSelect,
+  accountKindSelect,
+  describeAccount,
+  kindOfAccount,
+} from '@/lib/account-kind-server'
+import { accountDeleteLogDetail } from '@/lib/account-kind'
 import { adminErrorResponse, requireRole } from '../../_guard'
 
 export async function GET(
@@ -22,10 +29,12 @@ export async function GET(
   try {
     const actor = await requireRole(canAccessSupervision)
     const { userId } = await params
+    const now = new Date()
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
+        ...accountDescriptionSelect(now),
         id: true,
         email: true,
         displayName: true,
@@ -49,13 +58,17 @@ export async function GET(
           select: {
             stats: true,
             achievements: true,
-            sessions: true,
+            // Sessions VALIDES seulement : les lignes échues attendent le
+            // balayage et faisaient croire à une connexion encore ouverte.
+            sessions: { where: { expiresAt: { gt: now } } },
           },
         },
       },
     })
 
-    if (!user || !user.email) {
+    // Les invités ont désormais leur fiche ; seul un compte legacy (ni email
+    // ni invité, 0 en production) reste hors du périmètre de la supervision.
+    if (!user || (!user.email && !user.isGuest)) {
       return NextResponse.json({ error: 'Compte introuvable' }, { status: 404 })
     }
 
@@ -100,6 +113,7 @@ export async function GET(
         email: user.email,
         displayName: user.displayName,
         accountCode: user.accountCode,
+        ...describeAccount(user),
         role: user.role,
         playMode: user.playMode,
         lastCountry: user.lastCountry,
@@ -154,10 +168,12 @@ export async function DELETE(
 
     const target = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true, email: true, displayName: true, accountCode: true },
+      select: { ...accountKindSelect(new Date()), id: true, role: true },
     })
 
-    if (!target || !target.email) {
+    // Même garde que la fiche : un invité se supprime (demande d'effacement,
+    // pseudo injurieux) sans passer par SQL ; deleteUserAccount le gère déjà.
+    if (!target || (!target.email && !target.isGuest)) {
       return NextResponse.json({ error: 'Compte introuvable' }, { status: 404 })
     }
 
@@ -170,14 +186,20 @@ export async function DELETE(
       )
     }
 
+    // Type lu AVANT l'effacement : les sessions partent avec le compte.
+    const kind = kindOfAccount(target)
+
     await deleteUserAccount(userId)
 
     // F42 : la trace doit SURVIVRE au compte effacé — elle est donc ancrée sur
-    // l'auteur (la ligne de journal de la cible partirait en cascade).
+    // l'auteur (la ligne de journal de la cible partirait en cascade). Parce
+    // qu'elle survit, elle ne garde ni pseudo, ni code, ni email : seulement
+    // le type et le rôle du compte supprimé, en détail neutre `type:rôle`
+    // traduit à la lecture (journal affiché en fr, en, es et it).
     await logStaffAction({
       actorId: actor.id,
       action: 'account-delete',
-      detail: `${target.displayName}${target.accountCode ? ` (${target.accountCode})` : ''} — ${target.email}`,
+      detail: accountDeleteLogDetail(kind, target.role),
     })
 
     return NextResponse.json({ ok: true })

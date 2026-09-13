@@ -23,6 +23,18 @@ import { resolveRequestLocale } from '@/lib/name-moderation/request-locale'
 import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { getIpsBySubjectKeys, subjectKeyFor } from '@/lib/ip-history-server'
 import { listFeatureBansForUsers, type FeatureBanState } from '@/lib/feature-bans'
+import {
+  accountDescriptionSelect,
+  accountKindWhere,
+  countAccountsByKind,
+  describeAccount,
+  escapeLikePattern,
+  LIKE_ESCAPE_CHAR,
+  LISTED_ACCOUNT_KINDS,
+  looksLikeIpQuery,
+  NON_LEGACY_ACCOUNT_WHERE,
+  type ListedAccountKind,
+} from '@/lib/account-kind-server'
 import { adminErrorResponse, parsePaging, requireRole } from '../_guard'
 
 /**
@@ -36,36 +48,51 @@ import { adminErrorResponse, parsePaging, requireRole } from '../_guard'
 const DEFAULT_PAGE_SIZE = 25
 const MAX_PAGE_SIZE = 100
 const ONLINE_WINDOW_MS = 5 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
 
-function serializeUser(user: {
-  id: string
-  email: string | null
-  displayName: string
-  accountCode: string | null
-  passwordHash?: string
-  role: string
-  createdAt: Date
-  updatedAt: Date
-  lastCountry: string | null
-  lastIp: string | null
-  lastDevice: string | null
-  lastSeenAt: Date | null
-  lastLoginAt: Date | null
-  totalPresenceSeconds: number
-  banType: string | null
-  bannedUntil: Date | null
-  banComment: string | null
-  bannedAt: Date | null
-}) {
+/** Filtre d'activité, sur User.lastSeenAt (dernière activité du compte). */
+const ACTIVITY_FILTERS = ['all', '24h', '7d', 'inactive30', 'never'] as const
+type ActivityFilter = (typeof ACTIVITY_FILTERS)[number]
+
+function parseKindFilter(value: string | null): ListedAccountKind | 'all' {
+  return LISTED_ACCOUNT_KINDS.find((kind) => kind === value) ?? 'all'
+}
+
+function parseActivityFilter(value: string | null): ActivityFilter {
+  return ACTIVITY_FILTERS.find((filter) => filter === value) ?? 'all'
+}
+
+function serializeUser(
+  user: {
+    id: string
+    email: string | null
+    displayName: string
+    accountCode: string | null
+    role: string
+    createdAt: Date
+    updatedAt: Date
+    lastCountry: string | null
+    lastIp: string | null
+    lastDevice: string | null
+    lastSeenAt: Date | null
+    lastLoginAt: Date | null
+    totalPresenceSeconds: number
+    banType: string | null
+    bannedUntil: Date | null
+    banComment: string | null
+    bannedAt: Date | null
+  } & Parameters<typeof describeAccount>[0]
+) {
   const ban = getBanState(user)
   return {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
     accountCode: user.accountCode,
-    // Jamais le hash lui-même : juste le MOYEN de connexion (un compte sans
-    // mot de passe mais avec email = connexion Google).
-    authProvider: user.passwordHash === '' ? ('google' as const) : ('password' as const),
+    // Type de compte calculé à la lecture (account-kind), jamais le hash
+    // lui-même. Remplace `authProvider`, qui déduisait « Google » d'un mot de
+    // passe vide et classait donc un invité parmi les comptes Google.
+    ...describeAccount(user),
     role: user.role,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
@@ -84,38 +111,39 @@ function serializeUser(user: {
   }
 }
 
-const USER_LIST_SELECT = {
-  id: true,
-  email: true,
-  displayName: true,
-  accountCode: true,
-  passwordHash: true,
-  role: true,
-  createdAt: true,
-  updatedAt: true,
-  lastCountry: true,
-  lastIp: true,
-  lastDevice: true,
-  lastSeenAt: true,
-  lastLoginAt: true,
-  totalPresenceSeconds: true,
-  banType: true,
-  bannedUntil: true,
-  banComment: true,
-  bannedAt: true,
-} as const
+/** Select de la liste : la description du type dépend de l'instant (sessions valides). */
+function userListSelect(now: Date) {
+  return {
+    ...accountDescriptionSelect(now),
+    id: true,
+    displayName: true,
+    accountCode: true,
+    role: true,
+    updatedAt: true,
+    lastCountry: true,
+    lastIp: true,
+    lastDevice: true,
+    lastLoginAt: true,
+    totalPresenceSeconds: true,
+    bannedUntil: true,
+    banComment: true,
+    bannedAt: true,
+  } as const satisfies Prisma.UserSelect
+}
 
 /**
  * Comptes ayant utilisé cette IP — la recherche par IP portait sur TOUT
  * l'historique côté client, ce qui obligeait à le télécharger en entier. On
  * remonte ici les seuls identifiants concernés (requête bornée), qui
- * rejoignent ensuite le OR de la recherche.
+ * rejoignent ensuite le OR de la recherche. La saisie est échappée : un « _ »
+ * ou un « % » tapé ne doit pas devenir un joker.
  */
 async function userIdsMatchingIp(query: string): Promise<string[]> {
   const rows = await prisma.$queryRaw<Array<{ subjectKey: string }>>`
     SELECT "subjectKey"
     FROM "IpSeenLog"
-    WHERE "subjectKey" LIKE 'user:%' AND "ip" LIKE ${`%${query}%`}
+    WHERE "subjectKey" LIKE 'user:%'
+      AND "ip" LIKE ${`%${escapeLikePattern(query)}%`} ESCAPE ${LIKE_ESCAPE_CHAR}
     GROUP BY "subjectKey"
     LIMIT 200
   `
@@ -134,36 +162,59 @@ export async function GET(request: Request) {
     const query = (searchParams.get('q') ?? '').trim().slice(0, 80)
     const roleFilter = searchParams.get('role') ?? 'all'
     const statusFilter = searchParams.get('status') ?? 'all'
+    const kindFilter = parseKindFilter(searchParams.get('kind'))
+    const activityFilter = parseActivityFilter(searchParams.get('activity'))
+    const sort = searchParams.get('sort') === 'created' ? 'created' : 'activity'
+    const now = new Date()
 
-    // Tout compte ENREGISTRÉ : email + mot de passe OU connexion Google
-    // (passwordHash vide). Seuls les invités (email null) restent exclus.
-    const filters: Prisma.UserWhereInput[] = [{ email: { not: null } }]
+    // Tous les comptes non legacy : email (mot de passe ou Google) OU invité.
+    // Les invités en étaient exclus : ni liste, ni recherche, ni fiche.
+    const filters: Prisma.UserWhereInput[] = [NON_LEGACY_ACCOUNT_WHERE]
 
     if (roleFilter !== 'all' && isUserRole(roleFilter)) {
       filters.push({ role: roleFilter })
     }
 
+    if (kindFilter !== 'all') {
+      filters.push(accountKindWhere(kindFilter, now))
+    }
+
     if (statusFilter === 'online') {
-      filters.push({ lastSeenAt: { gte: new Date(Date.now() - ONLINE_WINDOW_MS) } })
+      filters.push({ lastSeenAt: { gte: new Date(now.getTime() - ONLINE_WINDOW_MS) } })
     } else if (statusFilter === 'banned') {
       filters.push({
         OR: [
           { banType: 'permanent' },
-          { banType: 'temporary', bannedUntil: { gt: new Date() } },
+          { banType: 'temporary', bannedUntil: { gt: now } },
         ],
       })
+    }
+
+    // « Inactif depuis plus de 30 j » ne reprend pas les comptes jamais vus :
+    // ils ont leur propre filtre (`lt` écarte déjà les valeurs nulles).
+    if (activityFilter === '24h') {
+      filters.push({ lastSeenAt: { gte: new Date(now.getTime() - DAY_MS) } })
+    } else if (activityFilter === '7d') {
+      filters.push({ lastSeenAt: { gte: new Date(now.getTime() - 7 * DAY_MS) } })
+    } else if (activityFilter === 'inactive30') {
+      filters.push({ lastSeenAt: { lt: new Date(now.getTime() - 30 * DAY_MS) } })
+    } else if (activityFilter === 'never') {
+      filters.push({ lastSeenAt: null })
     }
 
     if (query) {
       // Le code de compte s'affiche « LP-XXXX » mais se stocke sans préfixe.
       const codeQuery = query.replace(/^lp-/i, '')
-      const ipUserIds = await userIdsMatchingIp(query)
+      // Adresses IP fouillées seulement si la saisie en a l'allure : un pseudo
+      // court remontait sinon tous les comptes dont une IPv6 le contient.
+      const ipSearch = looksLikeIpQuery(query)
+      const ipUserIds = ipSearch ? await userIdsMatchingIp(query) : []
       filters.push({
         OR: [
           { displayName: { contains: query } },
           { email: { contains: query } },
           { accountCode: { contains: codeQuery } },
-          { lastIp: { contains: query } },
+          ...(ipSearch ? [{ lastIp: { contains: query } }] : []),
           ...(ipUserIds.length > 0 ? [{ id: { in: ipUserIds } }] : []),
         ],
       })
@@ -171,15 +222,25 @@ export async function GET(request: Request) {
 
     const where: Prisma.UserWhereInput = { AND: filters }
 
-    const [users, total] = await Promise.all([
+    // Tri par défaut : dernière activité, comptes jamais vus en dernier — un
+    // compte actif ne doit pas passer derrière des inscrits récents muets.
+    const orderBy: Prisma.UserOrderByWithRelationInput[] =
+      sort === 'created'
+        ? [{ createdAt: 'desc' }]
+        : [{ lastSeenAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }]
+
+    const [users, total, counts] = await Promise.all([
       prisma.user.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip,
         take: pageSize,
-        select: USER_LIST_SELECT,
+        select: userListSelect(now),
       }),
       prisma.user.count({ where }),
+      // Décompte NON filtré, le même que la tuile « Comptes » : le compteur de
+      // l'onglet ne doit plus varier avec la recherche en cours.
+      countAccountsByKind(now),
     ])
 
     // Historique d'IP et sanctions ciblées : uniquement pour la page affichée.
@@ -197,6 +258,7 @@ export async function GET(request: Request) {
       total,
       page,
       pageSize,
+      counts,
     })
   } catch (error) {
     return adminErrorResponse(error, 'users GET')
@@ -218,7 +280,7 @@ export async function PATCH(request: Request) {
 
     const target = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true },
+      select: { id: true, role: true, isGuest: true },
     })
     if (!target) {
       return NextResponse.json({ error: 'Compte introuvable' }, { status: 404 })
@@ -243,6 +305,18 @@ export async function PATCH(request: Request) {
       }
       if (!canAssignRole(normalizeRole(actor.role), role)) {
         return NextResponse.json({ error: 'Tu ne peux pas attribuer ce rôle' }, { status: 403 })
+      }
+      // Un invité n'a pour toute clé qu'un cookie (ni email, ni mot de passe,
+      // ni Google) : lui confier un grade d'équipe, c'est ouvrir la
+      // supervision à quiconque récupère ce cookie. Le renommage reste permis.
+      if (target.isGuest && role !== 'user') {
+        return NextResponse.json(
+          {
+            error: 'Un compte invité ne peut pas recevoir de rôle d\'équipe',
+            code: 'guest_cannot_be_staff',
+          },
+          { status: 409 }
+        )
       }
     }
 
@@ -304,7 +378,7 @@ export async function PATCH(request: Request) {
     const updated = await prisma.user.update({
       where: { id: userId },
       data,
-      select: USER_LIST_SELECT,
+      select: userListSelect(new Date()),
     })
 
     // F42 : un changement de grade laisse désormais une trace, comme un ban.

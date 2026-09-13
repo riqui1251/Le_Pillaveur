@@ -4030,7 +4030,7 @@
       "monthHint": "Unique visitors (month)"
     },
     "accounts": {
-      "registered": "Registered accounts",
+      "overviewTitle": "Accounts",
       "total": "Total",
       "moderators": "Moderators",
       "admins": "Admins",
@@ -4046,6 +4046,19 @@
       "allStatus": "All",
       "online": "Online",
       "banned": "Banned",
+      "kindPlaceholder": "Type",
+      "allKinds": "All types",
+      "kindGuests": "Guests (valid session)",
+      "kindOrphans": "Orphaned guests",
+      "activityPlaceholder": "Activity",
+      "allActivity": "Any activity",
+      "activity24h": "Seen in the last 24 h",
+      "activity7d": "Seen in the last 7 days",
+      "activityInactive30": "Inactive for over 30 days",
+      "activityNever": "Never seen",
+      "sortPlaceholder": "Sort",
+      "sortActivity": "Sort: last activity",
+      "sortCreated": "Sort: sign-up date",
       "resetFilters": "Reset",
       "results": "{count} result{plural} of {total}",
       "ipAnalyzing": "Analyzing IP…",
@@ -4060,8 +4073,24 @@
       "permanentBan": "Permanent ban",
       "temporaryBan": "Temporary ban",
       "deleteAccount": "Delete account",
-      "googleAccount": "Google account",
-      "matchCount": "{total} account{plural} found"
+      "guestNoRole": "Guest account: no staff role possible",
+      "matchCount": "{total} account{plural} found",
+      "kindSummary": "{total, plural, one {# account} other {# accounts}}: {password} password · {google} Google · {guests, plural, one {# guest} other {# guests}}{orphans, plural, =0 {} other { (including # orphaned)}}",
+      "countsNote": "Guests included. Last activity also moves forward with a tab left open in the background: it does not prove the person is playing."
+    },
+    "units": {
+      "s": "s",
+      "min": "min",
+      "h": "h",
+      "d": "d"
+    },
+    "accountKind": {
+      "password": "Password",
+      "google": "Google",
+      "guest": "Guest",
+      "guestOrphan": "Orphaned guest",
+      "legacy": "Legacy account",
+      "staleGuest": "inactive for {days} d — the cookie may have been lost"
     },
     "bans": {
       "activeTitle": "Active bans",
@@ -4142,7 +4171,8 @@
       "turnLabel": "{name} to play",
       "castHost": "Cast by {name}",
       "journalRoleChange": "{actor} changed {target}’s role: {detail}",
-      "journalAccountDelete": "{actor} deleted the account {detail}",
+      "journalAccountDelete": "{actor} deleted an account",
+      "journalAccountDeleteTyped": "{actor} deleted an account ({kind}, {role})",
       "journalRoomClose": "{actor} closed the table {detail}",
       "journalSiteSetting": "{actor} changed a site setting: {detail}"
     },
@@ -4186,10 +4216,10 @@
       "scopeToday": "today"
     },
     "activity": {
-      "lastLogin": "Last login:",
+      "lastAuth": "Last authentication:",
       "neverLoggedIn": "Never recorded",
-      "timeOnSite": "Time on site: {duration}",
-      "estimated": " (estimated from activity)"
+      "legacyPresence": "Legacy total: {duration}",
+      "legacyPresenceNote": " (overestimated: open tabs)"
     },
     "feedback": {
       "activeTitle": "Open feedback",
@@ -4221,12 +4251,18 @@
       "localPlayers": "Local players",
       "partiesStats": "Games (stats)",
       "achievements": "Achievements",
-      "sessions": "Sessions",
+      "activeConnection": "Active sign-in",
+      "sessionInDb": "Session in database",
       "localPlayerNames": "Local player names",
       "mode": "Mode: {mode}",
       "country": "Country: {country}",
       "ip": "IP:",
       "lastActivity": "Last activity: {date}",
+      "guestPurge": "Automatic deletion on {date}",
+      "orphanPurge": "Inaccessible account (no email, password or Google): automatic deletion on {date}",
+      "orphanInaccessible": "Inaccessible account (no email, password or Google)",
+      "guestPurgePending": "Automatic deletion pending (next cleanup)",
+      "orphanPurgePending": "Inaccessible account (no email, password or Google): automatic deletion pending (next cleanup)",
       "playerActivity": "Player activity",
       "gamesPlayed": "Games played",
       "noParties": "No game recorded.",
@@ -4234,6 +4270,8 @@
       "moderationHistory": "Moderation history",
       "noEvents": "No events.",
       "until": "Until {date}",
+      "sessionMaybeLost": "Valid until {date} (the cookie may have been lost)",
+      "noValidSession": "No valid session",
       "by": "{date} · by {name}"
     },
     "actions": {
@@ -4265,6 +4303,8 @@
       "banCommentLabel": "Comment / reason (internal)",
       "banCommentPlaceholder": "E.g. spam, toxic behavior…",
       "banConfirm": "Confirm ban",
+      "guestTemporaryBanWarning": "Guest account: a temporary ban amounts to deleting it. Its sessions are erased and it has no way to sign back in (no email, password or Google), even after the ban ends.",
+      "guestUnbanWarning": "Guest account: lifting the ban does not give it access back, as its sessions were erased when it was banned. Without a ban, it will be deleted automatically 7 days after its last activity, along with its moderation history.",
       "closeTableTitle": "Force-close this table?",
       "closeTableLabel": "Table:",
       "closeTableWarning": "{count, plural, =0 {The table will be deleted immediately.} one {The player at the table will be sent back to the lobby.} other {The # players at the table will be sent back to the lobby.}} No match result will be recorded.",
@@ -4277,6 +4317,7 @@
     },
     "apiErrors": {
       "modifyDenied": "Modification denied",
+      "guestCannotBeStaff": "A guest account cannot be given a staff role",
       "banDenied": "Ban denied",
       "deleteDenied": "Deletion denied",
       "unbanDenied": "Unban denied",

@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight, History, Inbox } from 'lucide-react'
 import { EmptyState, Pager, SectionCard, SkeletonRows } from '@/components/supervision/SupervisionLayout'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { formatPresenceDuration } from '@/lib/format-presence'
+import { PARIS_TIME_ZONE } from '@/lib/paris-time'
 import { cn } from '@/lib/utils'
 
 /**
@@ -46,6 +47,7 @@ type SessionRow = {
 export function GameSessionsPanel() {
   const t = useTranslations('supervision.gameSessions')
   const tStates = useTranslations('supervision.states')
+  const tUnits = useTranslations('supervision.units')
   const format = useFormatter()
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [total, setTotal] = useState(0)
@@ -127,6 +129,7 @@ export function GameSessionsPanel() {
                     {format.dateTime(new Date(s.startedAt), {
                       dateStyle: 'short',
                       timeStyle: 'short',
+                      timeZone: PARIS_TIME_ZONE,
                     })}
                   </span>
                   <span
@@ -137,7 +140,12 @@ export function GameSessionsPanel() {
                   >
                     {s.durationSeconds === null
                       ? t('ongoing')
-                      : formatPresenceDuration(s.durationSeconds)}
+                      : formatPresenceDuration(s.durationSeconds, {
+                          s: tUnits('s'),
+                          min: tUnits('min'),
+                          h: tUnits('h'),
+                          d: tUnits('d'),
+                        })}
                   </span>
                   <span className="ml-auto text-xs text-white/55">
                     {t('lineup', {

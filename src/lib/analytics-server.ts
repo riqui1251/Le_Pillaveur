@@ -3,6 +3,13 @@ import { PRESENCE_PING_SECONDS } from '@/lib/user-activity-server'
 import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
 import type { DeviceKind } from '@/lib/device-from-user-agent'
 import {
+  accountKindSelect,
+  countAccountsByKind,
+  kindOfAccount,
+  NON_LEGACY_ACCOUNT_WHERE,
+  sessionExpiryDay,
+} from '@/lib/account-kind-server'
+import {
   buildGroupedVisitors,
   findSubjectKeysByIp,
   getIpsBySubjectKeys,
@@ -149,7 +156,7 @@ export async function getVisitorStats() {
   const weekStart = daysAgoParis(6)
   const monthStart = daysAgoParis(29)
 
-  const [onlineNow, todayCount, weekCount, monthCount, totalAccounts] = await Promise.all([
+  const [onlineNow, todayCount, weekCount, monthCount, accountCounts] = await Promise.all([
     prisma.sitePresence.count({ where: { lastSeen: { gte: onlineSince } } }),
     prisma.dailyVisitor.count({ where: { date: today } }),
     prisma.dailyVisitor.groupBy({
@@ -160,9 +167,9 @@ export async function getVisitorStats() {
       by: ['visitorId'],
       where: { date: { gte: monthStart } },
     }).then((rows) => rows.length),
-    prisma.user.count({
-      where: { passwordHash: { not: '' }, email: { not: null } },
-    }),
+    // Décompte unique par type (account-kind-server) : mot de passe, Google
+    // ET invités. L'ancien filtre `passwordHash ≠ ''` oubliait les deux derniers.
+    countAccountsByKind(now),
   ])
 
   const onlinePresences = await prisma.sitePresence.findMany({
@@ -304,7 +311,13 @@ export async function getVisitorStats() {
     connectedAccounts,
     visitorIpList,
     accounts: {
-      total: totalAccounts,
+      total: accountCounts.total,
+      byKind: {
+        password: accountCounts.password,
+        google: accountCounts.google,
+        guest: accountCounts.guest,
+        guestOrphan: accountCounts.guestOrphan,
+      },
     },
     generatedAt: now.toISOString(),
   }
@@ -312,7 +325,8 @@ export async function getVisitorStats() {
 
 export async function lookupByIp(ip: string) {
   const normalized = ip.trim()
-  const onlineSince = new Date(Date.now() - ONLINE_WINDOW_MS)
+  const now = new Date()
+  const onlineSince = new Date(now.getTime() - ONLINE_WINDOW_MS)
 
   const subjectUserIds = [
     ...new Set(
@@ -323,14 +337,19 @@ export async function lookupByIp(ip: string) {
   ] as string[]
 
   const [users, presences] = await Promise.all([
+    // Aucun filtre sur le moyen de connexion : comptes Google et invités
+    // étaient introuvables par IP, alors que ce sont les plus faciles à
+    // multiplier. Le type est servi à la place, pour les distinguer. Seuls
+    // les comptes legacy restent exclus, comme de la liste et des totaux :
+    // le bandeau « N comptes » ne doit pas annoncer un compte introuvable.
     prisma.user.findMany({
       where: {
-        passwordHash: { not: '' },
-        email: { not: null },
-        OR: [{ lastIp: normalized }, { id: { in: subjectUserIds } }],
+        AND: [NON_LEGACY_ACCOUNT_WHERE, { OR: [{ lastIp: normalized }, { id: { in: subjectUserIds } }] }],
       },
       select: {
+        ...accountKindSelect(now),
         id: true,
+        createdAt: true,
         displayName: true,
         email: true,
         accountCode: true,
@@ -388,6 +407,11 @@ export async function lookupByIp(ip: string) {
       displayName: u.displayName,
       email: u.email,
       accountCode: u.accountCode,
+      kind: kindOfAccount(u),
+      // Au jour près (voir sessionExpiryDay) : de quoi ne pas dire « cookie
+      // perdu » d'un invité dont seul le ping est bloqué.
+      sessionExpiresAt: sessionExpiryDay(u),
+      createdAt: u.createdAt.toISOString(),
       role: u.role,
       lastCountry: u.lastCountry,
       lastSeenAt: u.lastSeenAt?.toISOString() ?? null,

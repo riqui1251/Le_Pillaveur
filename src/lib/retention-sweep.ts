@@ -1,5 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { deleteUserAccount } from '@/lib/user-activity-server'
+import {
+  ACCOUNT_DELETE_ANONYMIZED_DETAIL,
+  NEUTRAL_ACCOUNT_DELETE_DETAILS,
+} from '@/lib/account-kind'
 
 /**
  * Purges RGPD « au passage » : le projet n'a aucun cron serveur (tout est
@@ -23,10 +27,14 @@ import { deleteUserAccount } from '@/lib/user-activity-server'
  * - Session : la ligne part dès son échéance (jusqu'ici, seule la lecture du
  *   cookie correspondant l'effaçait — une session jamais représentée restait
  *   en base indéfiniment) ;
- * - comptes INVITÉS (isGuest, scan de QR) : 90 jours après la dernière
- *   activité (voir GUEST_INACTIVITY_DAYS ci-dessous) ;
+ * - comptes INVITÉS (isGuest : pseudo saisi pour rejoindre une table par son
+ *   code ou son QR, ou pour « Essayer avec des bots ») : 90 jours après la
+ *   dernière activité (voir GUEST_INACTIVITY_DAYS ci-dessous) ;
  * - comptes INVITÉS ORPHELINS (plus aucune session valide) : 7 jours après la
- *   dernière activité (voir ORPHAN_GUEST_INACTIVITY_DAYS ci-dessous).
+ *   dernière activité (voir ORPHAN_GUEST_INACTIVITY_DAYS ci-dessous) ;
+ * - journal du staff, suppressions de compte ('account-delete') : aucune
+ *   purge, mais tout détail hors du format neutre `type:rôle` est anonymisé
+ *   (filet de la migration 20260912100000_anonymize_account_delete_log).
  *
  * Chaque bloc est indépendant : l'échec de l'un (table verrouillée, compte
  * impossible à supprimer…) est journalisé sans empêcher les autres de passer.
@@ -154,6 +162,22 @@ export async function runRetentionSweep(): Promise<void> {
       // compteur de sessions d'une fiche. Client Prisma, donc comparaison de
       // DateTime sans piège de format.
       ['Session', prisma.session.deleteMany({ where: { expiresAt: { lt: nowDate } } })],
+      // Filet idempotent de la migration d'anonymisation : pendant un
+      // déploiement, l'ancien conteneur tourne encore APRÈS `migrate deploy`
+      // (et un retour arrière le relance) ; une suppression faite par le staff
+      // dans cet intervalle réécrirait « pseudo (code) — email » dans une
+      // table jamais purgée. Tout détail hors du format neutre est ramené à la
+      // forme anonymisée — une fois fait, la ligne ne correspond plus.
+      [
+        'AccountBanEvent.account-delete',
+        prisma.accountBanEvent.updateMany({
+          where: {
+            action: 'account-delete',
+            NOT: { comment: { in: [...NEUTRAL_ACCOUNT_DELETE_DETAILS] } },
+          },
+          data: { comment: ACCOUNT_DELETE_ANONYMIZED_DETAIL },
+        }),
+      ],
       // La dernière IP/pays connus d'un compte sont des logs techniques : ils
       // tombent sous les 6 mois annoncés, au même titre qu'IpSeenLog. On ne
       // touche qu'aux comptes silencieux depuis 6 mois (lastSeenAt jamais

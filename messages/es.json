@@ -4030,7 +4030,7 @@
       "monthHint": "Visitantes únicos (mes)"
     },
     "accounts": {
-      "registered": "Cuentas registradas",
+      "overviewTitle": "Cuentas",
       "total": "Total",
       "moderators": "Moderadores",
       "admins": "Admins",
@@ -4046,6 +4046,19 @@
       "allStatus": "Todos",
       "online": "En línea",
       "banned": "Baneados",
+      "kindPlaceholder": "Tipo",
+      "allKinds": "Todos los tipos",
+      "kindGuests": "Invitados (sesión válida)",
+      "kindOrphans": "Invitados huérfanos",
+      "activityPlaceholder": "Actividad",
+      "allActivity": "Cualquier actividad",
+      "activity24h": "Vistos en las últimas 24 h",
+      "activity7d": "Vistos en los últimos 7 días",
+      "activityInactive30": "Inactivos desde hace más de 30 días",
+      "activityNever": "Nunca vistos",
+      "sortPlaceholder": "Orden",
+      "sortActivity": "Orden: última actividad",
+      "sortCreated": "Orden: fecha de registro",
       "resetFilters": "Restablecer",
       "results": "{count} resultado{plural} de {total}",
       "ipAnalyzing": "Analizando IP…",
@@ -4060,8 +4073,24 @@
       "permanentBan": "Ban permanente",
       "temporaryBan": "Ban temporal",
       "deleteAccount": "Eliminar cuenta",
-      "googleAccount": "Cuenta Google",
-      "matchCount": "{total} cuenta{plural} encontrada{plural}"
+      "guestNoRole": "Cuenta de invitado: sin rol de equipo posible",
+      "matchCount": "{total} cuenta{plural} encontrada{plural}",
+      "kindSummary": "{total, plural, one {# cuenta} other {# cuentas}}: {password} con contraseña · {google} Google · {guests, plural, one {# invitado} other {# invitados}}{orphans, plural, =0 {} one { (# huérfano incluido)} other { (# huérfanos incluidos)}}",
+      "countsNote": "Invitados incluidos. La última actividad también avanza con una pestaña abierta en segundo plano: no prueba que la persona esté jugando."
+    },
+    "units": {
+      "s": "s",
+      "min": "min",
+      "h": "h",
+      "d": "d"
+    },
+    "accountKind": {
+      "password": "Contraseña",
+      "google": "Google",
+      "guest": "Invitado",
+      "guestOrphan": "Invitado huérfano",
+      "legacy": "Cuenta antigua",
+      "staleGuest": "inactivo desde hace {days} d — la cookie puede haberse perdido"
     },
     "bans": {
       "activeTitle": "Baneos activos",
@@ -4142,7 +4171,8 @@
       "turnLabel": "Turno de {name}",
       "castHost": "Emitida por {name}",
       "journalRoleChange": "{actor} cambió el rango de {target}: {detail}",
-      "journalAccountDelete": "{actor} eliminó la cuenta {detail}",
+      "journalAccountDelete": "{actor} eliminó una cuenta",
+      "journalAccountDeleteTyped": "{actor} eliminó una cuenta ({kind}, {role})",
       "journalRoomClose": "{actor} cerró la mesa {detail}",
       "journalSiteSetting": "{actor} cambió un ajuste del sitio: {detail}"
     },
@@ -4186,10 +4216,10 @@
       "scopeToday": "hoy"
     },
     "activity": {
-      "lastLogin": "Última conexión:",
+      "lastAuth": "Última autenticación:",
       "neverLoggedIn": "Nunca registrada",
-      "timeOnSite": "Tiempo en el sitio: {duration}",
-      "estimated": " (estimado por actividad)"
+      "legacyPresence": "Acumulado heredado: {duration}",
+      "legacyPresenceNote": " (sobreestimado: pestañas abiertas)"
     },
     "feedback": {
       "activeTitle": "Comentarios abiertos",
@@ -4221,12 +4251,18 @@
       "localPlayers": "Jugadores locales",
       "partiesStats": "Partidas (stats)",
       "achievements": "Logros",
-      "sessions": "Sesiones",
+      "activeConnection": "Conexión activa",
+      "sessionInDb": "Sesión en la base de datos",
       "localPlayerNames": "Nombres de jugadores locales",
       "mode": "Modo: {mode}",
       "country": "País: {country}",
       "ip": "IP:",
       "lastActivity": "Última actividad: {date}",
+      "guestPurge": "Eliminación automática el {date}",
+      "orphanPurge": "Cuenta inaccesible (ni email, ni contraseña, ni Google): eliminación automática el {date}",
+      "orphanInaccessible": "Cuenta inaccesible (ni email, ni contraseña, ni Google)",
+      "guestPurgePending": "Eliminación automática inminente (próxima purga)",
+      "orphanPurgePending": "Cuenta inaccesible (ni email, ni contraseña, ni Google): eliminación automática inminente (próxima purga)",
       "playerActivity": "Actividad del jugador",
       "gamesPlayed": "Juegos jugados",
       "noParties": "Ninguna partida registrada.",
@@ -4234,6 +4270,8 @@
       "moderationHistory": "Historial de moderación",
       "noEvents": "Ningún evento.",
       "until": "Hasta el {date}",
+      "sessionMaybeLost": "Válida hasta el {date} (la cookie puede haberse perdido)",
+      "noValidSession": "Ninguna sesión válida",
       "by": "{date} · por {name}"
     },
     "actions": {
@@ -4265,6 +4303,8 @@
       "banCommentLabel": "Comentario / motivo (interno)",
       "banCommentPlaceholder": "Ej.: spam, comportamiento tóxico…",
       "banConfirm": "Confirmar baneo",
+      "guestTemporaryBanWarning": "Cuenta de invitado: un baneo temporal equivale a eliminarla. Sus sesiones se borran y no tiene forma de volver a conectarse (ni email, ni contraseña, ni Google), incluso cuando termine el baneo.",
+      "guestUnbanWarning": "Cuenta de invitado: levantar el baneo no le devuelve el acceso, ya que sus sesiones se borraron al banearla. Sin baneo, se eliminará automáticamente 7 días después de su última actividad, junto con su historial de moderación.",
       "closeTableTitle": "¿Cerrar esta mesa a la fuerza?",
       "closeTableLabel": "Mesa:",
       "closeTableWarning": "{count, plural, =0 {La mesa se eliminará inmediatamente.} one {El jugador presente volverá a la taquilla.} other {Los # jugadores presentes volverán a la taquilla.}} No se registrará ningún resultado.",
@@ -4277,6 +4317,7 @@
     },
     "apiErrors": {
       "modifyDenied": "Modificación denegada",
+      "guestCannotBeStaff": "Una cuenta de invitado no puede recibir un rol de equipo",
       "banDenied": "Baneo denegado",
       "deleteDenied": "Eliminación denegada",
       "unbanDenied": "Desbaneo denegado",
