@@ -170,9 +170,11 @@ export async function deleteUserAccount(userId: string): Promise<void> {
       where: { userId },
       data: { contactEmail: null },
     }),
+    // Lien navigateur → compte ET date du dernier passage connecté : sans
+    // compte, cette date n'a plus d'objet et ne doit pas lui survivre.
     prisma.sitePresence.updateMany({
       where: { userId },
-      data: { userId: null },
+      data: { userId: null, userSeenAt: null },
     }),
     prisma.user.delete({ where: { id: userId } }),
   ])

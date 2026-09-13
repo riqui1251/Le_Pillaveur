@@ -32,6 +32,7 @@ Si vous utilisez un compte, nous pouvons stocker :
 - succès et achievements débloqués ;
 - progression en ligne (expérience, niveau, cosmétiques) et résultats de parties en ligne (classements) ;
 - liste d'amis (demandes envoyées et acceptées) ;
+- statut « en ligne » visible par vos amis : il indique seulement si votre compte a été actif sur le site au cours des 3 dernières minutes (date de dernière activité du compte), que vous ayez accepté ou non les statistiques de visite ; ni l'heure exacte ni votre historique ne leur sont communiqués ;
 - liste de joueurs synchronisée (pseudos locaux que vous créez).
 
 En **mode local** (sans compte), vos joueurs locaux sont stockés sur votre appareil. La liste de leurs pseudos peut toutefois être transmise au serveur dans deux cas : si vous avez **accepté les statistiques de visite** (voir 3.3 — elle sert alors aussi à la détection de robots), ou si vous êtes **connecté à un compte** (synchronisation entre appareils). Si vous refusez les statistiques et n'avez pas de compte, ces pseudos ne quittent pas votre appareil.
@@ -44,11 +45,13 @@ En **mode local** (sans compte), vos joueurs locaux sont stockés sur votre appa
 - adresse IP ;
 - pays estimé (géolocalisation approximative par adresse IP, calculée sur nos serveurs — aucun service tiers) ;
 - type d'appareil / navigateur (user-agent simplifié) ;
-- dates de connexion et temps de présence sur le site.
+- dates de connexion et temps de présence sur le site, ainsi que le dernier compte utilisé sur ce navigateur et la date de son dernier passage connecté (pour distinguer un navigateur encore connecté à ce compte d'un navigateur où il a seulement été utilisé auparavant).
 
 Si vous refusez, aucun suivi de visite n'est enregistré.
 
-**Indépendamment de ce consentement**, pour les **comptes connectés** uniquement, nous conservons l'adresse IP, le pays estimé et le type d'appareil des dernières connexions au titre de la **sécurité et de la modération des comptes** (prévention des fraudes, bannissements) — base : intérêt légitime.
+**Indépendamment de ce consentement**, pour les **comptes connectés** uniquement, nous conservons l'adresse IP, le pays estimé et le type d'appareil des dernières connexions, ainsi que la date de dernière activité du compte (qui sert aussi au statut « en ligne » visible par vos amis et à la suppression automatique des comptes invités inactifs), au titre de la **sécurité et de la modération des comptes** (prévention des fraudes, bannissements) — base : intérêt légitime.
+
+Dans les outils de modération du site, les adresses IPv6 d'un même réseau (même préfixe /64, en général une même box ou un même lieu) sont regroupées à l'affichage : ce regroupement est calculé à la lecture et n'enregistre aucune donnée supplémentaire.
 
 ### 3.4 Chat et parties en ligne
 
@@ -110,6 +113,7 @@ Nous **ne vendons pas** vos données personnelles à des tiers.
 | Statistiques de jeu, amis, classements | Exécution du contrat |
 | Chat et parties en ligne | Exécution du contrat |
 | Sécurité et modération (comptes, pseudos, contenus) | Intérêt légitime |
+| Date de dernière activité du compte (statut « en ligne » visible par vos amis, sécurité, suppression des comptes invités inactifs) | Intérêt légitime |
 | Statistiques de visite (cookie `lp_vid`, IP, appareil) | **Consentement** |
 | Porte d'âge (cookie) | Intérêt légitime (conformité) |
 | Feedback | Consentement (envoi volontaire) |

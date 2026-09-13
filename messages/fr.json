@@ -4020,8 +4020,8 @@
       "attemptsAnonymous": "Visiteur non connecté"
     },
     "stats": {
-      "onlineNow": "En ligne maintenant",
-      "onlineNowHint": "Visiteurs actifs (5 dernières min.)",
+      "activeBrowsers": "Navigateurs actifs",
+      "activeBrowsersHint": "Statistiques acceptées ({minutes} dernières min.)",
       "today": "Aujourd'hui",
       "todayHint": "Visiteurs uniques (jour)",
       "week": "7 jours",
@@ -4112,7 +4112,7 @@
     },
     "connected": {
       "recentTitle": "Comptes connectés récemment",
-      "recentDesc": "Joueurs identifiés avec leur IP et pays",
+      "recentWindowDesc": "Comptes actifs ces {minutes} dernières minutes, tous types (invités compris), avec leur IP et leur pays",
       "noneRecent": "Aucun compte connecté récemment."
     },
     "growth": {
@@ -4186,13 +4186,12 @@
     },
     "geo": {
       "onlineByCountry": "En ligne par pays",
-      "onlineByCountryDesc": "Visiteurs actifs ces 5 dernières minutes",
+      "onlineByCountryWindowDesc": "Navigateurs actifs ces {minutes} dernières minutes",
       "todayByCountry": "Connectés aujourd'hui par pays",
       "todayByCountryDesc": "Visiteurs ayant été actifs dans les dernières 24 h",
       "tapCountry": " Touchez un pays pour voir les visiteurs.",
       "noData": "Aucune donnée pour le moment.",
       "visitorsTitle": "Visiteurs et joueurs",
-      "visitorsDesc": "Un joueur = une ligne (IP principale + menu pour les autres). Touchez une carte pour le détail.",
       "filterPlaceholder": "Filtrer par IP, pseudo, email ou pays…",
       "noVisitors": "Aucun visiteur enregistré pour le moment.",
       "noSearchResults": "Aucun résultat pour cette recherche.",
@@ -4201,12 +4200,9 @@
       "localPlayer": " joueur local",
       "localPlayers": " joueurs locaux",
       "suspicious": "Suspect",
-      "anonymousVisitor": "Visiteur anonyme",
       "localPlayersLabel": "Joueurs locaux",
       "noLocalPlayers": "Aucun joueur remonté (visiteur sans liste ou pas encore synchronisé).",
-      "ipAddresses": "Adresses IP",
       "noIp": "Aucune IP enregistrée",
-      "linkedAccount": "Compte lié",
       "noLinkedAccount": "Aucun compte associé (visiteur anonyme)",
       "visitorId": "Visitor ID : {id}",
       "countryDialogTitle": "Visiteurs — {title}",
@@ -4214,6 +4210,36 @@
       "noVisitorsForCountry": "Aucun visiteur pour ce pays.",
       "scopeOnline": "en ligne",
       "scopeToday": "aujourd'hui"
+    },
+    "visitorCard": {
+      "listDesc": "Une carte par navigateur, ou par compte connecté sur ce navigateur. Touchez une carte pour le détail des IP.",
+      "browserActive": "Navigateur actif",
+      "browserSeen": "Navigateur vu le {date}",
+      "connectedHere": "Connecté sur ce navigateur :",
+      "connectedLastVisit": "Connecté lors de son dernier passage :",
+      "lastAccount": "Dernier compte vu sur ce navigateur :",
+      "accountActivityUntil": "activité du compte jusqu'au {date}",
+      "accountNoActivity": "aucune activité du compte enregistrée",
+      "accountOnlineElsewhere": "compte en ligne ailleurs (autre navigateur ou appareil)",
+      "openFile": "Ouvrir la fiche",
+      "accountIps": "IP du compte",
+      "accountIpsHint": "Vues avec une session valide, sur tous les appareils du compte.",
+      "browserIps": "IP de ce navigateur hors connexion",
+      "browsersIps": "IP de ses {count, plural, one {# navigateur} other {# navigateurs}} hors connexion",
+      "browserIpsHint": "Vues sans session valide : jamais rattachées au compte (appareil partagé possible).",
+      "noLocalList": "Aucune liste de joueurs locaux associée."
+    },
+    "ipNetwork": {
+      "summary": "{addresses, plural, one {# adresse} other {# adresses}} · {networks, plural, one {# réseau} other {# réseaux}}",
+      "addresses": "{count, plural, one {# adresse} other {# adresses}}",
+      "help": "Une box change seule d'adresse IPv6 ; même réseau = même foyer ou lieu, pas forcément la même personne.",
+      "sameNetwork": "Même réseau",
+      "sameNetworkTitle": "Chercher les comptes et navigateurs vus sur ce réseau (foyer ou lieu)",
+      "seenOn": "vu le {date}",
+      "seenRange": "vu du {first} au {last}",
+      "lookupSummary": "Réseau {network} — {accounts, plural, one {# compte} other {# comptes}}, {visitors, plural, one {# navigateur} other {# navigateurs}}",
+      "lookupNote": "Même réseau = même foyer ou lieu (bar, colocation), pas forcément la même personne.",
+      "listNotFiltered": "La liste des comptes ci-dessous n'est pas filtrée par ce réseau."
     },
     "activity": {
       "lastAuth": "Dernière authentification :",
@@ -4312,8 +4338,7 @@
     },
     "device": {
       "accountCodeTitle": "Code compte unique",
-      "deviceTitle": "Appareil : {label}",
-      "moreIps": "+{count} IP"
+      "deviceTitle": "Appareil : {label}"
     },
     "apiErrors": {
       "modifyDenied": "Modification refusée",

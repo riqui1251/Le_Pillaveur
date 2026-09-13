@@ -4020,8 +4020,8 @@
       "attemptsAnonymous": "Anonymous visitor"
     },
     "stats": {
-      "onlineNow": "Online now",
-      "onlineNowHint": "Active visitors (last 5 min.)",
+      "activeBrowsers": "Active browsers",
+      "activeBrowsersHint": "Statistics accepted (last {minutes} min.)",
       "today": "Today",
       "todayHint": "Unique visitors (day)",
       "week": "7 days",
@@ -4112,7 +4112,7 @@
     },
     "connected": {
       "recentTitle": "Recently connected accounts",
-      "recentDesc": "Identified players with IP and country",
+      "recentWindowDesc": "Accounts active in the last {minutes} minutes, all types (guests included), with their IP and country",
       "noneRecent": "No recently connected account."
     },
     "growth": {
@@ -4186,13 +4186,12 @@
     },
     "geo": {
       "onlineByCountry": "Online by country",
-      "onlineByCountryDesc": "Active visitors in the last 5 minutes",
+      "onlineByCountryWindowDesc": "Browsers active in the last {minutes} minutes",
       "todayByCountry": "Connected today by country",
       "todayByCountryDesc": "Visitors active in the last 24 h",
       "tapCountry": " Tap a country to see visitors.",
       "noData": "No data yet.",
       "visitorsTitle": "Visitors and players",
-      "visitorsDesc": "One player = one row (primary IP + menu for others). Tap a card for details.",
       "filterPlaceholder": "Filter by IP, username, email or country…",
       "noVisitors": "No visitor recorded yet.",
       "noSearchResults": "No results for this search.",
@@ -4201,12 +4200,9 @@
       "localPlayer": " local player",
       "localPlayers": " local players",
       "suspicious": "Suspicious",
-      "anonymousVisitor": "Anonymous visitor",
       "localPlayersLabel": "Local players",
       "noLocalPlayers": "No player reported (visitor without list or not synced yet).",
-      "ipAddresses": "IP addresses",
       "noIp": "No IP recorded",
-      "linkedAccount": "Linked account",
       "noLinkedAccount": "No linked account (anonymous visitor)",
       "visitorId": "Visitor ID: {id}",
       "countryDialogTitle": "Visitors — {title}",
@@ -4214,6 +4210,36 @@
       "noVisitorsForCountry": "No visitor for this country.",
       "scopeOnline": "online",
       "scopeToday": "today"
+    },
+    "visitorCard": {
+      "listDesc": "One card per browser, or per account signed in on that browser. Tap a card for its IP details.",
+      "browserActive": "Active browser",
+      "browserSeen": "Browser seen on {date}",
+      "connectedHere": "Signed in on this browser:",
+      "connectedLastVisit": "Signed in at last visit:",
+      "lastAccount": "Last account seen on this browser:",
+      "accountActivityUntil": "account active until {date}",
+      "accountNoActivity": "no account activity recorded",
+      "accountOnlineElsewhere": "account online elsewhere (another browser or device)",
+      "openFile": "Open account file",
+      "accountIps": "Account IPs",
+      "accountIpsHint": "Seen with a valid session, on all of the account's devices.",
+      "browserIps": "This browser's IPs while signed out",
+      "browsersIps": "IPs of its {count, plural, one {# browser} other {# browsers}} while signed out",
+      "browserIpsHint": "Seen without a valid session: never attributed to the account (the device may be shared).",
+      "noLocalList": "No local player list linked."
+    },
+    "ipNetwork": {
+      "summary": "{addresses, plural, one {# address} other {# addresses}} · {networks, plural, one {# network} other {# networks}}",
+      "addresses": "{count, plural, one {# address} other {# addresses}}",
+      "help": "A home router changes its IPv6 address on its own; same network = same household or venue, not necessarily the same person.",
+      "sameNetwork": "Same network",
+      "sameNetworkTitle": "Find accounts and browsers seen on this network (household or venue)",
+      "seenOn": "seen on {date}",
+      "seenRange": "seen from {first} to {last}",
+      "lookupSummary": "Network {network} — {accounts, plural, one {# account} other {# accounts}}, {visitors, plural, one {# browser} other {# browsers}}",
+      "lookupNote": "Same network = same household or venue (bar, shared flat), not necessarily the same person.",
+      "listNotFiltered": "The account list below is not filtered by this network."
     },
     "activity": {
       "lastAuth": "Last authentication:",
@@ -4312,8 +4338,7 @@
     },
     "device": {
       "accountCodeTitle": "Unique account code",
-      "deviceTitle": "Device: {label}",
-      "moreIps": "+{count} IP"
+      "deviceTitle": "Device: {label}"
     },
     "apiErrors": {
       "modifyDenied": "Modification denied",

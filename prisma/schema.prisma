@@ -294,7 +294,14 @@ model AccountBanEvent {
 
 model SitePresence {
   visitorId        String   @id
+  /// DERNIER compte vu sur ce navigateur : conservé quand un ping arrive sans
+  /// session (seule trace du rapprochement), donc jamais « compte connecté ».
   userId           String?
+  /// Dernier ping de ce navigateur fait AVEC une session valide, écrit avec la
+  /// même date que lastSeen. Connecté ici = userSeenAt ≥ lastSeen, sans marge
+  /// (isPresenceConnectedHere, src/lib/ip-history-server.ts). Null pour les
+  /// lignes antérieures à cette colonne, jusqu'au prochain ping connecté.
+  userSeenAt       DateTime?
   country          String?
   lastIp           String?
   lastDevice       String?

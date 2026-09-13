@@ -22,6 +22,7 @@ import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-t
 import { resolveRequestLocale } from '@/lib/name-moderation/request-locale'
 import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { getIpsBySubjectKeys, subjectKeyFor } from '@/lib/ip-history-server'
+import { onlineSince } from '@/lib/presence'
 import { listFeatureBansForUsers, type FeatureBanState } from '@/lib/feature-bans'
 import {
   accountDescriptionSelect,
@@ -47,7 +48,6 @@ import { adminErrorResponse, parsePaging, requireRole } from '../_guard'
 
 const DEFAULT_PAGE_SIZE = 25
 const MAX_PAGE_SIZE = 100
-const ONLINE_WINDOW_MS = 5 * 60 * 1000
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /** Filtre d'activité, sur User.lastSeenAt (dernière activité du compte). */
@@ -180,7 +180,8 @@ export async function GET(request: Request) {
     }
 
     if (statusFilter === 'online') {
-      filters.push({ lastSeenAt: { gte: new Date(now.getTime() - ONLINE_WINDOW_MS) } })
+      // Même fenêtre (3 min) que la pastille, les amis et le compteur public.
+      filters.push({ lastSeenAt: { gte: onlineSince(now.getTime()) } })
     } else if (statusFilter === 'banned') {
       filters.push({
         OR: [

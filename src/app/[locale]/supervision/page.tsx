@@ -73,7 +73,9 @@ import {
 } from '@/lib/roles'
 import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
-import { PARIS_TIME_ZONE } from '@/lib/paris-time'
+import { PARIS_TIME_ZONE, parisDayString } from '@/lib/paris-time'
+import { isOnline, ONLINE_WINDOW_MS } from '@/lib/presence'
+import { groupIpsByNetwork, type IpNetworkGroup } from '@/lib/ip-network'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -130,6 +132,9 @@ const FEEDBACK_PAGE_SIZE = 25
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+/** Fenêtre « en ligne » en minutes, pour les libellés (src/lib/presence.ts). */
+const ONLINE_WINDOW_MINUTES = Math.round(ONLINE_WINDOW_MS / 60_000)
+
 /** Unités de durée traduites (« 1 j 7 h » en français, « 1 d 7 h » en anglais…). */
 function useDurationUnits(): DurationUnits {
   const t = useTranslations('supervision.units')
@@ -158,18 +163,22 @@ type IpEntry = {
   firstSeenAt?: string
 }
 
+/**
+ * Compte vu récemment (User.lastSeenAt, tous types). « En ligne » se recalcule
+ * ici avec isOnline : une seule fenêtre pour toute la page.
+ */
 type ConnectedAccount = {
   id: string
   displayName: string
   email: string | null
   accountCode: string | null
+  accountKind: AccountKind
   country: string | null
   ip: string | null
   ips?: IpEntry[]
   lastDevice?: string | null
   lastSeenAt: string | null
   role: string
-  online: boolean
 }
 
 type BotSignals = {
@@ -177,23 +186,59 @@ type BotSignals = {
   reasons: string[]
 }
 
+/**
+ * Dernier compte connecté sur un navigateur qui ne l'est plus : le lien
+ * SitePresence.userId est gardé comme trace, jamais présenté comme une
+ * connexion en cours.
+ */
+type VisitorLastAccount = {
+  userId: string
+  displayName: string
+  accountCode: string | null
+  role: string
+  accountKind: AccountKind
+  /** User.lastSeenAt : activité du COMPTE, tous appareils confondus. */
+  lastSeenAt: string | null
+}
+
+/**
+ * Carte visiteur (lot 3). L'en-tête est TOUJOURS le navigateur
+ * (SitePresence.lastSeen) ; le compte vient en deuxième ligne.
+ * - `account` : compte connecté sur ce navigateur au dernier ping ;
+ * - `browser` : navigateur seul — pseudo, email, code et rôle à null —,
+ *   avec au plus le dernier compte vu (`lastAccount`).
+ */
 type VisitorIpRow = {
   subjectKey: string
   visitorId: string
   userId: string | null
+  cardType: 'account' | 'browser'
+  connectedHere: boolean
+  /** IP et pays « actuels » : l'entrée la plus récente des deux historiques. */
   country: string | null
   primaryIp: string | null
+  /** Pays du dernier ping de CE navigateur (en-tête), jamais d'un autre appareil du compte. */
+  browserCountry: string | null
   lastDevice: string | null
+  /** Navigateurs regroupés (carte account connectée sur plusieurs navigateurs). */
+  browserCount: number
+  /** Carte account : IP du compte (user:<id>) ; carte browser : IP du navigateur. */
   ips: IpEntry[]
+  /** IP de ce navigateur vues hors connexion (visitor:<vid>), jamais mêlées à celles du compte. */
+  browserIps: IpEntry[]
   displayName: string | null
   email: string | null
   accountCode: string | null
   role: string | null
+  accountKind: AccountKind | null
+  accountLastSeenAt: string | null
+  accountOnline: boolean
+  lastAccount: VisitorLastAccount | null
   localPlayerNames: string[]
   localPlayerCount: number
   botSignals: BotSignals
+  /** Dernier ping du NAVIGATEUR. */
   lastSeenAt: string
-  online: boolean
 }
 
 type StatsResponse = {
@@ -623,26 +668,154 @@ function DeviceBadge({ device, compact }: { device?: string | null; compact?: bo
   )
 }
 
+/** IP prête à regrouper : une entrée de repli (dernière IP seule) n'a pas de première vue. */
+type DatedIpEntry = IpEntry & { firstSeenAt: string }
+
+/**
+ * Historique regroupé par réseau (/64 en IPv6, adresse entière en IPv4) : les
+ * adresses temporaires d'une même box ne passent plus pour autant de lieux.
+ * UN historique à la fois (compte OU navigateur), jamais les deux mêlés.
+ */
+function networkGroupsOf(ips: IpEntry[]): IpNetworkGroup<DatedIpEntry>[] {
+  return groupIpsByNetwork(ips.map((entry) => ({ ...entry, firstSeenAt: entry.firstSeenAt ?? entry.lastSeenAt })))
+}
+
+/** Date ISO lisible ? Une IP de repli peut porter une date vide. */
+function isValidDate(iso: string | null | undefined): iso is string {
+  return iso != null && !Number.isNaN(Date.parse(iso))
+}
+
+/**
+ * Détail d'un historique d'IP, réseau par réseau : pays, première et dernière
+ * vue, puis les adresses. `onNetworkClick` (admins) cherche les comptes et
+ * navigateurs du même réseau — même foyer ou lieu, pas forcément la même
+ * personne. IPv6 en break-all : une adresse complète ne tient pas sur 360 px.
+ */
+function IpNetworkList({
+  groups,
+  onIpClick,
+  onNetworkClick,
+}: {
+  groups: IpNetworkGroup<DatedIpEntry>[]
+  onIpClick?: (ip: string) => void
+  onNetworkClick?: (ip: string, network: string) => void
+}) {
+  const t = useTranslations('supervision')
+  const locale = useLocale()
+  const format = useFormatter()
+  const day = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeZone: PARIS_TIME_ZONE })
+
+  return (
+    <ul className="space-y-1.5">
+      {groups.map((group) => {
+        // IPv4 (ou adresse seule de son réseau) : la clé EST l'adresse, on ne
+        // l'écrit pas deux fois.
+        const single = group.entries.length === 1 && group.entries[0].ip === group.key
+        const seen =
+          isValidDate(group.firstSeenAt) && isValidDate(group.lastSeenAt)
+            ? parisDayString(new Date(group.firstSeenAt)) === parisDayString(new Date(group.lastSeenAt))
+              ? t('ipNetwork.seenOn', { date: day(group.lastSeenAt) })
+              : t('ipNetwork.seenRange', { first: day(group.firstSeenAt), last: day(group.lastSeenAt) })
+            : null
+        const countries =
+          group.countries.length > 0
+            ? group.countries.map((c) => `${countryFlag(c)} ${countryLabel(c, locale, t('unknownCountry'))}`).join(', ')
+            : t('unknownCountry')
+        return (
+          <li key={group.key} className="min-w-0 rounded-md border border-white/10 bg-black/30 px-2 py-1.5">
+            {/* Cibles tactiles : chaque adresse lance une analyse et change
+                d'onglet, « Même réseau » une autre recherche — padding
+                vertical et écart pour ne pas se tromper de bouton au doigt. */}
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+              {single ? (
+                <button
+                  type="button"
+                  onClick={() => onIpClick?.(group.entries[0].ip)}
+                  className="min-w-0 break-all py-1 text-left font-mono text-[11px] text-amber-200/90 hover:underline"
+                >
+                  {group.key}
+                </button>
+              ) : (
+                <>
+                  <span className="min-w-0 break-all font-mono text-[11px] text-white/75">{group.key}</span>
+                  <span className="text-[10px] text-white/40">
+                    {t('ipNetwork.addresses', { count: group.entries.length })}
+                  </span>
+                </>
+              )}
+              {onNetworkClick && (
+                <button
+                  type="button"
+                  onClick={() => onNetworkClick(group.entries[0].ip, group.key)}
+                  title={t('ipNetwork.sameNetworkTitle')}
+                  className="ml-auto inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/60 hover:bg-white/10 hover:text-white"
+                >
+                  <Network className="h-3 w-3" />
+                  {t('ipNetwork.sameNetwork')}
+                </button>
+              )}
+            </div>
+            <p className="mt-0.5 min-w-0 break-words text-[10px] text-white/40">
+              {countries}
+              {seen && ` · ${seen}`}
+            </p>
+            {!single && (
+              <ul className="mt-1 space-y-1">
+                {group.entries.map((entry) => (
+                  <li key={entry.ip} className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onIpClick?.(entry.ip)}
+                      className="min-w-0 break-all py-1 text-left font-mono text-[11px] text-amber-200/80 hover:underline"
+                    >
+                      {entry.ip}
+                    </button>
+                    {isValidDate(entry.lastSeenAt) && (
+                      <span className="text-[10px] text-white/35">
+                        {format.dateTime(new Date(entry.lastSeenAt), {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                          timeZone: PARIS_TIME_ZONE,
+                        })}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/**
+ * IP la plus récente, puis « N adresses · M réseaux » (ex-« +N IP », qui
+ * comptait des adresses brutes : six IPv6 d'une même box faisaient croire à
+ * six lieux) et le détail regroupé par réseau.
+ */
 function IpAddressDisplay({
   ips,
   device,
   onIpClick,
+  onNetworkClick,
   compact,
 }: {
   ips: IpEntry[]
   device?: string | null
   onIpClick?: (ip: string) => void
+  /** Admins seulement : recherche « même réseau ». */
+  onNetworkClick?: (ip: string, network: string) => void
   compact?: boolean
 }) {
   const t = useTranslations('supervision')
-  const locale = useLocale()
-  const format = useFormatter()
   if (ips.length === 0) {
     return <span className="text-white/40">—</span>
   }
 
-  const primary = ips[0]
-  const others = ips.slice(1)
+  const groups = networkGroupsOf(ips)
+  const primary = groups[0].entries[0]
 
   return (
     <div className={`inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 ${compact ? 'text-xs' : 'text-sm'}`}>
@@ -654,29 +827,15 @@ function IpAddressDisplay({
         {primary.ip}
       </button>
       <DeviceBadge device={device} compact={compact} />
-      {others.length > 0 && (
-        <details className="inline-block max-w-full">
-          <summary className="cursor-pointer list-none rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-amber-200/70 hover:bg-white/10 [&::-webkit-details-marker]:hidden">
-            {t('device.moreIps', { count: others.length })}
+      {ips.length > 1 && (
+        <details className="min-w-0 max-w-full">
+          <summary className="w-fit cursor-pointer list-none rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-amber-200/70 hover:bg-white/10 [&::-webkit-details-marker]:hidden">
+            {t('ipNetwork.summary', { addresses: ips.length, networks: groups.length })}
           </summary>
-          <ul className="mt-1 space-y-0.5 rounded-md border border-white/10 bg-black/40 p-2">
-            {others.map((entry) => (
-              <li key={entry.ip}>
-                {/* IPv6 secondaires comprises : un invité en cumule plusieurs,
-                    et une adresse complète ne tient pas sur 360 px. */}
-                <button
-                  type="button"
-                  onClick={() => onIpClick?.(entry.ip)}
-                  className="min-w-0 break-all text-left font-mono text-[11px] text-amber-200/80 hover:underline"
-                >
-                  {entry.ip}
-                </button>
-                <span className="ml-1 text-[10px] text-white/35">
-                  {countryLabel(entry.country, locale, t('unknownCountry'))} · {format.dateTime(new Date(entry.lastSeenAt), { dateStyle: 'medium', timeZone: PARIS_TIME_ZONE })}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-1 space-y-1.5 rounded-md border border-white/10 bg-black/40 p-2">
+            <IpNetworkList groups={groups} onIpClick={onIpClick} onNetworkClick={onNetworkClick} />
+            <p className="text-[10px] leading-snug text-white/35">{t('ipNetwork.help')}</p>
+          </div>
         </details>
       )}
     </div>
@@ -933,7 +1092,9 @@ function LocalPlayersSection({ row }: { row: VisitorIpRow }) {
       <div>
         <p className="text-xs font-medium text-white/45">{t('geo.localPlayersLabel')}</p>
         <p className="mt-1 text-sm text-white/40">
-          {t('geo.noLocalPlayers')}
+          {/* Compte connecté : sa liste se synchronise avec le compte, « pas
+              encore synchronisé » n'a pas de sens — il n'en a simplement pas. */}
+          {row.cardType === 'account' ? t('visitorCard.noLocalList') : t('geo.noLocalPlayers')}
         </p>
       </div>
     )
@@ -969,66 +1130,323 @@ function LocalPlayersSection({ row }: { row: VisitorIpRow }) {
   )
 }
 
-function VisitorDetailPanel({
-  row,
-  onIpClick,
-}: {
-  row: VisitorIpRow
-  onIpClick?: (ip: string) => void
-}) {
+/**
+ * IP de la carte (repliée) : l'historique propre à la carte — le compte pour
+ * une carte account, le navigateur pour une carte browser. La dernière IP de
+ * la présence ne sert de repli qu'à une carte browser : c'est l'IP du
+ * navigateur, jamais celle du compte.
+ */
+function visitorCardIps(row: VisitorIpRow): IpEntry[] {
+  if (row.ips.length > 0) return row.ips
+  if (row.cardType === 'browser' && row.primaryIp) {
+    return [{ ip: row.primaryIp, country: row.country, lastSeenAt: row.lastSeenAt }]
+  }
+  return []
+}
+
+/**
+ * En-tête d'une carte visiteur : le NAVIGATEUR (SitePresence.lastSeen), jamais
+ * le compte — « Navigateur actif » ou « vu le … », appareil, pays.
+ */
+function VisitorBrowserLine({ row }: { row: VisitorIpRow }) {
   const t = useTranslations('supervision')
   const locale = useLocale()
   const format = useFormatter()
   return (
-    <div className="mt-3 space-y-2 border-t border-white/10 pt-3 text-sm">
-      <div>
-        <p className="text-xs font-medium text-white/45">{t('geo.ipAddresses')}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <DeviceBadge device={row.lastDevice} />
-        </div>
-        {row.ips.length > 0 ? (
-          <ul className="mt-1 space-y-1">
-            {row.ips.map((entry) => (
-              <li
-                key={entry.ip}
-                className="flex flex-wrap items-center gap-2 rounded-md border border-white/10 bg-black/30 px-2 py-1.5"
-              >
-                <button
-                  type="button"
-                  onClick={() => onIpClick?.(entry.ip)}
-                  className="font-mono text-xs text-amber-200/90 hover:underline"
-                >
-                  {entry.ip}
-                </button>
-                <span className="text-white/50">
-                  {countryFlag(entry.country)} {countryLabel(entry.country, locale, t('unknownCountry'))}
-                </span>
-                <span className="text-[11px] text-white/35">
-                  {format.dateTime(new Date(entry.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-white/40">{t('geo.noIp')}</p>
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      {isOnline(row.lastSeenAt) ? (
+        <Badge className="border-green-500/30 bg-green-500/10 text-[10px] text-green-300">
+          {t('visitorCard.browserActive')}
+        </Badge>
+      ) : (
+        <span className="min-w-0 text-xs text-white/55">
+          {t('visitorCard.browserSeen', {
+            date: format.dateTime(new Date(row.lastSeenAt), {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+              timeZone: PARIS_TIME_ZONE,
+            }),
+          })}
+        </span>
+      )}
+      <DeviceBadge device={row.lastDevice} compact />
+      {/* Pays du navigateur : `country` d'une carte account peut venir d'un
+          autre appareil du compte. */}
+      <span className="flex min-w-0 items-center gap-1 text-xs text-white/50">
+        {countryFlag(row.browserCountry)}
+        {countryLabel(row.browserCountry, locale, t('unknownCountry'))}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Ligne COMPTE d'une carte visiteur. « Connecté sur ce navigateur » seulement
+ * si la session était valide au dernier ping de CE navigateur ; sinon le
+ * dernier compte vu, avec l'activité du compte (User.lastSeenAt) — plus de
+ * « En ligne » accolé au pseudo d'un compte déconnecté. Le badge de type
+ * remplace le rôle : plus de « Joueur » pour un invité, le rôle ne s'affiche
+ * que pour l'équipe.
+ */
+function VisitorAccountLine({ row }: { row: VisitorIpRow }) {
+  const t = useTranslations('supervision')
+  const format = useFormatter()
+  const activityUntil = (iso: string) =>
+    t('visitorCard.accountActivityUntil', {
+      date: format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
+    })
+
+  if (row.cardType === 'account' && row.displayName) {
+    const browserActive = isOnline(row.lastSeenAt)
+    // Navigateur inactif mais compte vu dans la fenêtre : il joue ailleurs.
+    const elsewhere = !browserActive && isOnline(row.accountLastSeenAt)
+    return (
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        {/* Navigateur inactif : la session du dernier passage a pu expirer
+            depuis (le type, lui, est calculé maintenant) — libellé au passé. */}
+        <span className="text-xs text-white/45">
+          {browserActive ? t('visitorCard.connectedHere') : t('visitorCard.connectedLastVisit')}
+        </span>
+        <span className="min-w-0 break-words text-sm font-medium text-white">{row.displayName}</span>
+        <AccountCodeBadge code={row.accountCode} />
+        {row.accountKind && (
+          <AccountKindBadge kind={row.accountKind} lastSeenAt={row.accountLastSeenAt} createdAt={null} compact />
+        )}
+        {row.role && row.role !== 'user' && <RoleBadge role={row.role} compact />}
+        {elsewhere && (
+          <span className="min-w-0 text-xs text-green-300/80">· {t('visitorCard.accountOnlineElsewhere')}</span>
         )}
       </div>
-      {row.displayName ? (
-        <div>
-          <p className="text-xs font-medium text-white/45">{t('geo.linkedAccount')}</p>
-          <p className="mt-1 text-white">
-            {row.displayName}
-            {row.accountCode && (
-              <span className="ml-2 font-mono text-amber-200/70">{row.accountCode}</span>
-            )}
-          </p>
-          {row.email && <p className="text-xs text-white/45">{row.email}</p>}
+    )
+  }
+
+  const last = row.lastAccount
+  if (!last) return null
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      <span className="text-xs text-white/45">{t('visitorCard.lastAccount')}</span>
+      <span className="min-w-0 break-words text-sm font-medium text-white/80">{last.displayName}</span>
+      <AccountCodeBadge code={last.accountCode} />
+      {/* Sans date de création servie, la dernière activité sert de référence
+          (même règle que l'analyse d'IP). */}
+      <AccountKindBadge kind={last.accountKind} lastSeenAt={last.lastSeenAt} createdAt={last.lastSeenAt} compact />
+      {last.role !== 'user' && <RoleBadge role={last.role} compact />}
+      {isOnline(last.lastSeenAt) ? (
+        <span className="min-w-0 text-xs text-green-300/80">· {t('visitorCard.accountOnlineElsewhere')}</span>
+      ) : (
+        <span className="min-w-0 text-xs text-white/45">
+          · {last.lastSeenAt ? activityUntil(last.lastSeenAt) : t('visitorCard.accountNoActivity')}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** Un historique d'IP de la carte (compte OU navigateur), regroupé par réseau. */
+function VisitorIpGroup({
+  title,
+  hint,
+  ips,
+  onIpClick,
+  onNetworkClick,
+}: {
+  title: string
+  hint: string
+  ips: IpEntry[]
+  onIpClick?: (ip: string) => void
+  onNetworkClick?: (ip: string, network: string) => void
+}) {
+  const t = useTranslations('supervision')
+  const groups = networkGroupsOf(ips)
+  return (
+    <div className="min-w-0">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+        <p className="text-xs font-medium text-white/60">{title}</p>
+        {ips.length > 0 && (
+          <span className="text-[11px] text-white/40">
+            {t('ipNetwork.summary', { addresses: ips.length, networks: groups.length })}
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] leading-snug text-white/35">{hint}</p>
+      {ips.length > 0 ? (
+        <div className="mt-1">
+          <IpNetworkList groups={groups} onIpClick={onIpClick} onNetworkClick={onNetworkClick} />
+        </div>
+      ) : (
+        <p className="mt-1 text-white/40">{t('geo.noIp')}</p>
+      )}
+    </div>
+  )
+}
+
+function VisitorDetailPanel({
+  row,
+  onIpClick,
+  onNetworkClick,
+  onOpenAccount,
+}: {
+  row: VisitorIpRow
+  onIpClick?: (ip: string) => void
+  onNetworkClick?: (ip: string, network: string) => void
+  onOpenAccount?: (userId: string) => void
+}) {
+  const t = useTranslations('supervision')
+  // Deux historiques, JAMAIS fusionnés : rattacher au compte les IP d'une
+  // navigation sans session attribuerait à son titulaire l'activité d'un
+  // tiers (PC partagé, tablette de bar).
+  const accountIps = row.cardType === 'account' ? row.ips : []
+  // Section « hors connexion » : l'historique visitor:<vid> seul. Le repli sur
+  // la dernière IP du navigateur n'y vaut que sans compte lié : sinon elle peut
+  // venir d'un ping CONNECTÉ (lignes antérieures à userSeenAt, ping sans IP).
+  const browserIps =
+    row.cardType === 'account' ? row.browserIps : row.lastAccount ? row.ips : visitorCardIps(row)
+  const accountId = row.cardType === 'account' ? row.userId : (row.lastAccount?.userId ?? null)
+  return (
+    <div className="mt-3 space-y-3 border-t border-white/10 pt-3 text-sm">
+      {row.cardType === 'account' && (
+        <VisitorIpGroup
+          title={t('visitorCard.accountIps')}
+          hint={t('visitorCard.accountIpsHint')}
+          ips={accountIps}
+          onIpClick={onIpClick}
+          onNetworkClick={onNetworkClick}
+        />
+      )}
+      {(row.cardType === 'browser' || browserIps.length > 0) && (
+        <VisitorIpGroup
+          // Carte account sur plusieurs navigateurs : leurs IP hors connexion
+          // sont réunies, l'en-tête ne décrit que le plus récent.
+          title={
+            row.browserCount > 1
+              ? t('visitorCard.browsersIps', { count: row.browserCount })
+              : t('visitorCard.browserIps')
+          }
+          hint={t('visitorCard.browserIpsHint')}
+          ips={browserIps}
+          onIpClick={onIpClick}
+          onNetworkClick={onNetworkClick}
+        />
+      )}
+      <p className="text-[11px] leading-snug text-white/35">{t('ipNetwork.help')}</p>
+      {accountId ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {row.cardType === 'account' && row.email && (
+            <p className="min-w-0 break-all text-xs text-white/45">{row.email}</p>
+          )}
+          {onOpenAccount && (
+            <Button size="sm" variant="outline" onClick={() => onOpenAccount(accountId)}>
+              <History className="mr-1 h-3.5 w-3.5" />
+              {t('visitorCard.openFile')}
+            </Button>
+          )}
         </div>
       ) : (
         <p className="text-white/45">{t('geo.noLinkedAccount')}</p>
       )}
       <LocalPlayersSection row={row} />
-      <p className="font-mono text-[10px] text-white/30">{t('geo.visitorId', { id: row.visitorId })}</p>
+      <p className="break-all font-mono text-[10px] text-white/30">{t('geo.visitorId', { id: row.visitorId })}</p>
+    </div>
+  )
+}
+
+/**
+ * Cartes visiteurs dépliables, partagées par la liste Visiteurs et le dialogue
+ * par pays : repliée, le navigateur, le compte et l'IP de la carte ; dépliée,
+ * les deux historiques d'IP (compte / hors connexion) et « Ouvrir la fiche ».
+ * Une seule carte dépliée à la fois.
+ */
+function VisitorCardList({
+  rows,
+  onIpClick,
+  onNetworkClick,
+  onOpenAccount,
+}: {
+  rows: VisitorIpRow[]
+  onIpClick?: (ip: string) => void
+  onNetworkClick?: (ip: string, network: string) => void
+  onOpenAccount?: (userId: string) => void
+}) {
+  const t = useTranslations('supervision')
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
+
+  const toggleExpand = (key: string) => {
+    setExpandedKey((current) => (current === key ? null : key))
+  }
+
+  return (
+    <div className="space-y-2">
+      {rows.map((row) => {
+        const expanded = expandedKey === row.subjectKey
+
+        return (
+          <div
+            key={row.subjectKey}
+            className={`min-w-0 rounded-xl border bg-black/20 transition-colors ${
+              expanded ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10'
+            }`}
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => toggleExpand(row.subjectKey)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  toggleExpand(row.subjectKey)
+                }
+              }}
+              className="w-full cursor-pointer p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <VisitorBrowserLine row={row} />
+                  <VisitorAccountLine row={row} />
+                  <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+                    {/* Clics et touches gardés ici : ouvrir le détail des
+                        réseaux ne replie plus la carte. */}
+                    <div
+                      className="w-fit min-w-0 max-w-full"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <IpAddressDisplay
+                        ips={visitorCardIps(row)}
+                        onIpClick={onIpClick}
+                        onNetworkClick={onNetworkClick}
+                        compact
+                      />
+                    </div>
+                    {row.localPlayerCount > 0 && (
+                      <Badge variant="outline" className="w-fit text-[10px] text-white/55">
+                        {row.localPlayerCount}{row.localPlayerCount > 1 ? t('geo.localPlayers') : t('geo.localPlayer')}
+                      </Badge>
+                    )}
+                    {row.botSignals.suspicious && (
+                      <Badge className="w-fit border-orange-500/35 bg-orange-500/10 text-[10px] text-orange-200">
+                        {t('geo.suspicious')}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <p className="shrink-0 text-[10px] text-amber-300/60 sm:text-right">
+                  {expanded ? t('geo.hide') : t('geo.details')}
+                </p>
+              </div>
+            </div>
+            {expanded && (
+              <div className="px-3 pb-3">
+                <VisitorDetailPanel
+                  row={row}
+                  onIpClick={onIpClick}
+                  onNetworkClick={onNetworkClick}
+                  onOpenAccount={onOpenAccount}
+                />
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -1036,15 +1454,17 @@ function VisitorDetailPanel({
 function IpVisitorList({
   rows,
   onIpClick,
+  onNetworkClick,
+  onOpenAccount,
 }: {
   rows: VisitorIpRow[]
   onIpClick?: (ip: string) => void
+  onNetworkClick?: (ip: string, network: string) => void
+  onOpenAccount?: (userId: string) => void
 }) {
   const t = useTranslations('supervision')
   const locale = useLocale()
-  const format = useFormatter()
   const [query, setQuery] = useState('')
-  const [expandedKey, setExpandedKey] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -1052,41 +1472,26 @@ function IpVisitorList({
     return rows.filter((row) => {
       if (row.primaryIp?.toLowerCase().includes(q)) return true
       if (row.ips.some((entry) => entry.ip.toLowerCase().includes(q))) return true
+      if (row.browserIps.some((entry) => entry.ip.toLowerCase().includes(q))) return true
       if (row.visitorId.toLowerCase().includes(q)) return true
       if (row.displayName?.toLowerCase().includes(q)) return true
       if (row.email?.toLowerCase().includes(q)) return true
       if (row.accountCode?.toLowerCase().includes(q)) return true
+      if (row.lastAccount?.displayName.toLowerCase().includes(q)) return true
+      if (row.lastAccount?.accountCode?.toLowerCase().includes(q)) return true
       if (row.localPlayerNames.some((name) => name.toLowerCase().includes(q))) return true
       if (countryLabel(row.country, locale, t('unknownCountry')).toLowerCase().includes(q)) return true
       if (row.country?.toLowerCase().includes(q)) return true
       return false
     })
-  }, [rows, query])
-
-  const renderPlayer = (row: VisitorIpRow) =>
-    row.displayName ? (
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-sm font-medium text-white">{row.displayName}</span>
-        <AccountCodeBadge code={row.accountCode} />
-        {row.role && <RoleBadge role={row.role} compact />}
-        {row.online && (
-          <Badge className="border-green-500/30 bg-green-500/10 text-[10px] text-green-300">{t('accounts.online')}</Badge>
-        )}
-      </div>
-    ) : (
-      <span className="text-sm text-white/40">{t('geo.anonymousVisitor')}</span>
-    )
-
-  const toggleExpand = (key: string) => {
-    setExpandedKey((current) => (current === key ? null : key))
-  }
+  }, [rows, query, locale, t])
 
   return (
     <SectionCard
       className="md:col-span-2"
       icon={Network}
       title={t('geo.visitorsTitle')}
-      description={t('geo.visitorsDesc')}
+      description={t('visitorCard.listDesc')}
       bodyClassName="space-y-3"
     >
         <div className="relative">
@@ -1104,71 +1509,12 @@ function IpVisitorList({
             title={rows.length === 0 ? t('geo.noVisitors') : t('geo.noSearchResults')}
           />
         ) : (
-          <div className="space-y-2">
-            {filtered.map((row) => {
-              const expanded = expandedKey === row.subjectKey
-              const ips =
-                row.ips.length > 0
-                  ? row.ips
-                  : row.primaryIp
-                    ? [{ ip: row.primaryIp, country: row.country, lastSeenAt: row.lastSeenAt }]
-                    : []
-
-              return (
-                <div
-                  key={row.subjectKey}
-                  className={`rounded-xl border bg-black/20 transition-colors ${
-                    expanded ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10'
-                  }`}
-                >
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => toggleExpand(row.subjectKey)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        toggleExpand(row.subjectKey)
-                      }
-                    }}
-                    className="w-full cursor-pointer p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-                  >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0 flex-1 space-y-2">
-                        {renderPlayer(row)}
-                        <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
-                          <IpAddressDisplay ips={ips} device={row.lastDevice} onIpClick={onIpClick} compact />
-                          <span className="flex items-center gap-1 text-xs text-white/50">
-                            {countryFlag(row.country)}
-                            {countryLabel(row.country, locale, t('unknownCountry'))}
-                          </span>
-                          {row.localPlayerCount > 0 && (
-                            <Badge variant="outline" className="w-fit text-[10px] text-white/55">
-                              {row.localPlayerCount}{row.localPlayerCount > 1 ? t('geo.localPlayers') : t('geo.localPlayer')}
-                            </Badge>
-                          )}
-                          {row.botSignals.suspicious && (
-                            <Badge className="w-fit border-orange-500/35 bg-orange-500/10 text-[10px] text-orange-200">
-                              Suspect
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center justify-between gap-2 sm:block sm:text-right">
-                        <span className="text-xs text-white/40">
-                          {format.dateTime(new Date(row.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
-                        </span>
-                        <p className="text-[10px] text-amber-300/60 sm:mt-1">
-                          {expanded ? t('geo.hide') : t('geo.details')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  {expanded && <div className="px-3 pb-3"><VisitorDetailPanel row={{ ...row, ips }} onIpClick={onIpClick} /></div>}
-                </div>
-              )
-            })}
-          </div>
+          <VisitorCardList
+            rows={filtered}
+            onIpClick={onIpClick}
+            onNetworkClick={onNetworkClick}
+            onOpenAccount={onOpenAccount}
+          />
         )}
     </SectionCard>
   )
@@ -1220,6 +1566,12 @@ export default function SupervisionPage() {
   const [rolesHelpOpen, setRolesHelpOpen] = useState(false)
   const [ipLookup, setIpLookup] = useState<{
     ip: string
+    /**
+     * `network` : même /64 (IPv6) ou même IPv4, lancé par « Même réseau »
+     * (admins). `network` porte alors la clé du réseau et ses adresses connues.
+     */
+    mode?: 'exact' | 'network'
+    network?: { key: string; ips: string[] } | null
     accounts: Array<{
       id: string
       displayName: string
@@ -1234,7 +1586,8 @@ export default function SupervisionPage() {
       online: boolean
       banned: boolean
     }>
-    visitors: Array<{ visitorId: string; displayName: string | null; online: boolean }>
+    /** Seul leur nombre est affiché : le détail n'est servi qu'aux admins. */
+    visitors: Array<{ visitorId: string; online: boolean }>
   } | null>(null)
   const [ipLookupLoading, setIpLookupLoading] = useState(false)
   // IP dont l'analyse est attendue : une saisie dans la recherche la rend
@@ -1324,7 +1677,6 @@ export default function SupervisionPage() {
   // Lire un retour est ouvert aux modérateurs, le CLORE reste admin+ (F44).
   const canTriageFeedback = user ? canManageUserFeedback(user.role) : false
   const defaultTab = showAnalytics ? 'overview' : 'accounts'
-  const onlineSinceMs = Date.now() - 5 * 60 * 1000
 
   const subtitle = showAnalytics
     ? t('subtitles.full')
@@ -1692,6 +2044,36 @@ export default function SupervisionPage() {
       /* ignore */
     } finally {
       if (ipLookupForRef.current === ip) setIpLookupLoading(false)
+    }
+  }, [])
+
+  /**
+   * « Même réseau » (admins) : comptes et navigateurs vus sur le /64 (IPv6) ou
+   * la même IPv4. Même foyer ou lieu, pas forcément la même personne : le
+   * bandeau le rappelle. La recherche de comptes est vidée plutôt que remplie
+   * avec le préfixe — un LIKE sur la forme textuelle d'une IPv6 (« :: », zéros
+   * omis) n'est pas fiable, le bandeau fait foi.
+   */
+  const handleNetworkLookup = useCallback(async (ip: string, network: string) => {
+    const token = `network:${network}`
+    ipLookupForRef.current = token
+    setAccountSearch('')
+    setActiveTab('accounts')
+    setIpLookupLoading(true)
+    setIpLookup(null)
+    try {
+      const res = await fetch(`/api/admin/ip-lookup?ip=${encodeURIComponent(ip)}&mode=network`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error(`ip-lookup ${res.status}`)
+      const data = await res.json()
+      if (ipLookupForRef.current === token) setIpLookup(data)
+    } catch {
+      // La recherche vient d'être vidée : sans message, l'échec laissait la
+      // liste complète des comptes passer pour le résultat.
+      if (ipLookupForRef.current === token) setError(tErrorsRef.current('generic'))
+    } finally {
+      if (ipLookupForRef.current === token) setIpLookupLoading(false)
     }
   }, [])
 
@@ -2076,7 +2458,17 @@ export default function SupervisionPage() {
         kicker={t('kicker')}
         title={t('title')}
         roleBadge={<RoleBadge role={user.role} compact />}
-        onlineLabel={t('header.onlineCount', { count: stats?.visitors.onlineNow ?? 0 })}
+        // « En ligne » = COMPTES actifs (User.lastSeenAt), la définition de
+        // presence.ts : les navigateurs consentants ne sont qu'une tuile à
+        // part. Sans statistiques (modérateurs), pas de chiffre du tout plutôt
+        // qu'un « 0 en ligne » permanent.
+        onlineLabel={
+          stats
+            ? t('header.onlineCount', {
+                count: stats.connectedAccounts.filter((acc) => isOnline(acc.lastSeenAt)).length,
+              })
+            : undefined
+        }
         onRefresh={() => void loadAll()}
         refreshLabel={t('header.refresh')}
         refreshing={busy}
@@ -2158,7 +2550,13 @@ export default function SupervisionPage() {
                   : undefined
               }
             />
-            <KpiPlaque label={t('stats.onlineNow')} value={stats?.visitors.onlineNow ?? 0} hint={t('stats.onlineNowHint')} />
+            <KpiPlaque
+              // Navigateurs (statistiques acceptées), pas des comptes : jamais
+              // intitulé « en ligne », réservé à la présence des comptes.
+              label={t('stats.activeBrowsers')}
+              value={stats?.visitors.onlineNow ?? 0}
+              hint={t('stats.activeBrowsersHint', { minutes: ONLINE_WINDOW_MINUTES })}
+            />
             <KpiPlaque
               label={t('room.queueTitle')}
               value={overview?.queue.length ?? 0}
@@ -2456,7 +2854,11 @@ export default function SupervisionPage() {
             </SectionCard>
           </div>
 
-          <SectionCard icon={Globe} title={t('connected.recentTitle')} description={t('connected.recentDesc')}>
+          <SectionCard
+            icon={Globe}
+            title={t('connected.recentTitle')}
+            description={t('connected.recentWindowDesc', { minutes: ONLINE_WINDOW_MINUTES })}
+          >
               {(stats?.connectedAccounts ?? []).length === 0 ? (
                 <EmptyState icon={Inbox} title={t('connected.noneRecent')} />
               ) : (
@@ -2464,21 +2866,27 @@ export default function SupervisionPage() {
                   {stats?.connectedAccounts.map((acc) => (
                     <li
                       key={acc.id}
-                      className="space-y-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-3"
+                      className="min-w-0 space-y-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-3"
                     >
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
                         <span className="text-base leading-none">{countryFlag(acc.country)}</span>
-                        <span className="text-sm font-medium text-white sm:text-base">{acc.displayName}</span>
+                        <span className="min-w-0 break-words text-sm font-medium text-white sm:text-base">{acc.displayName}</span>
                         <AccountCodeBadge code={acc.accountCode} />
-                        <RoleBadge role={acc.role} compact />
-                        {acc.online && (
+                        {/* Rôle pour l'équipe seulement : le type (badge voisin)
+                            dit déjà invité ou compte, plus de « Joueur » accolé
+                            à « Invité ». */}
+                        {acc.role !== 'user' && <RoleBadge role={acc.role} compact />}
+                        {/* Liste servie par User.lastSeenAt, tous types, invités
+                            compris ; « En ligne » recalculé à chaque rendu. */}
+                        <AccountKindBadge kind={acc.accountKind} lastSeenAt={acc.lastSeenAt} createdAt={null} compact />
+                        {isOnline(acc.lastSeenAt) && (
                           <Badge className="border-green-500/30 bg-green-500/10 text-[10px] text-green-300 sm:text-xs">
                             {t('accounts.online')}
                           </Badge>
                         )}
                       </div>
                       <div className="space-y-1.5 border-t border-white/5 pt-2 text-xs text-white/45">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                           <IpAddressDisplay
                             ips={
                               acc.ips && acc.ips.length > 0
@@ -2488,6 +2896,7 @@ export default function SupervisionPage() {
                                   : []
                             }
                             onIpClick={handleIpClick}
+                            onNetworkClick={handleNetworkLookup}
                             compact
                             device={acc.lastDevice}
                           />
@@ -2513,7 +2922,7 @@ export default function SupervisionPage() {
         <TabsContent value="geo" className="grid gap-4 md:grid-cols-2">
           <CountryList
             title={t('geo.onlineByCountry')}
-            description={t('geo.onlineByCountryDesc')}
+            description={t('geo.onlineByCountryWindowDesc', { minutes: ONLINE_WINDOW_MINUTES })}
             rows={stats?.visitors.onlineByCountry ?? []}
             onCountryClick={handleCountryClick}
           />
@@ -2523,7 +2932,12 @@ export default function SupervisionPage() {
             rows={stats?.visitors.visitorsTodayByCountry ?? []}
             onCountryClick={handleCountryClick}
           />
-          <IpVisitorList rows={stats?.visitorIpList ?? []} onIpClick={handleIpClick} />
+          <IpVisitorList
+            rows={stats?.visitorIpList ?? []}
+            onIpClick={handleIpClick}
+            onNetworkClick={handleNetworkLookup}
+            onOpenAccount={setHistoryUserId}
+          />
         </TabsContent>
         </>
         )}
@@ -2663,14 +3077,25 @@ export default function SupervisionPage() {
                   {/* overflow-wrap anywhere : une IPv6 se coupe si elle ne tient
                       pas sur un téléphone, sans hacher le reste de la phrase. */}
                   <p className="font-medium text-amber-100 [overflow-wrap:anywhere]">
-                    {t('accounts.ipSummary', {
-                      ip: ipLookup.ip,
-                      accounts: ipLookup.accounts.length,
-                      accountsPlural: ipLookup.accounts.length > 1 ? 's' : '',
-                      visitors: ipLookup.visitors.length,
-                      visitorsPlural: ipLookup.visitors.length > 1 ? 's' : '',
-                    })}
+                    {ipLookup.mode === 'network' && ipLookup.network
+                      ? t('ipNetwork.lookupSummary', {
+                          network: ipLookup.network.key,
+                          accounts: ipLookup.accounts.length,
+                          visitors: ipLookup.visitors.length,
+                        })
+                      : t('accounts.ipSummary', {
+                          ip: ipLookup.ip,
+                          accounts: ipLookup.accounts.length,
+                          accountsPlural: ipLookup.accounts.length > 1 ? 's' : '',
+                          visitors: ipLookup.visitors.length,
+                          visitorsPlural: ipLookup.visitors.length > 1 ? 's' : '',
+                        })}
                   </p>
+                  {/* Libellé obligatoire : un réseau rassemble un foyer, un bar,
+                      une colocation — jamais la preuve d'une même personne. */}
+                  {ipLookup.mode === 'network' && (
+                    <p className="mt-0.5 text-xs text-amber-100/70">{t('ipNetwork.lookupNote')}</p>
+                  )}
                   {ipLookup.accounts.length > 0 && (
                     <ul className="mt-2 space-y-1 text-white/70">
                       {ipLookup.accounts.map((acc) => (
@@ -2690,11 +3115,16 @@ export default function SupervisionPage() {
                               compact
                             />
                           )}
-                          {acc.online && <span className="text-green-300">· {t('accounts.online').toLowerCase()}</span>}
+                          {isOnline(acc.lastSeenAt) && <span className="text-green-300">· {t('accounts.online').toLowerCase()}</span>}
                           {acc.banned && <span className="text-red-300">· {t('accounts.banned').toLowerCase()}</span>}
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {/* La recherche est vidée en mode réseau : la liste sous le
+                      bandeau est celle de tous les comptes, pas le résultat. */}
+                  {ipLookup.mode === 'network' && (
+                    <p className="mt-2 text-xs text-white/45">{t('ipNetwork.listNotFiltered')}</p>
                   )}
                 </div>
               )}
@@ -2704,8 +3134,8 @@ export default function SupervisionPage() {
                 </p>
               ) : (
               users.map((u) => {
-                const isOnline =
-                  u.lastSeenAt != null && new Date(u.lastSeenAt).getTime() >= onlineSinceMs
+                // Même fenêtre que le filtre « En ligne » du serveur (presence.ts).
+                const accountOnline = isOnline(u.lastSeenAt)
                 return (
                 <div
                   key={u.id}
@@ -2729,9 +3159,9 @@ export default function SupervisionPage() {
                         <span
                           className={cn(
                             'h-2 w-2 shrink-0 rounded-full',
-                            isOnline ? 'bg-emerald-400' : 'bg-white/20'
+                            accountOnline ? 'bg-emerald-400' : 'bg-white/20'
                           )}
-                          title={isOnline ? t('accounts.online') : undefined}
+                          title={accountOnline ? t('accounts.online') : undefined}
                           aria-hidden
                         />
                         <span className="min-w-0 break-words font-medium text-white">{u.displayName}</span>
@@ -2811,6 +3241,8 @@ export default function SupervisionPage() {
                                     : []
                               }
                               onIpClick={handleIpClick}
+                              // Liste ouverte aux modérateurs : « Même réseau » reste admin.
+                              onNetworkClick={showAnalytics ? handleNetworkLookup : undefined}
                               compact
                               device={u.lastDevice}
                             />
@@ -3820,49 +4252,25 @@ export default function SupervisionPage() {
           ) : countryVisitors.length === 0 ? (
             <p className="py-8 text-center text-white/50">{t('geo.noVisitorsForCountry')}</p>
           ) : (
-            <div className="space-y-2">
-              {countryVisitors.map((row) => {
-                const ips =
-                  row.ips.length > 0
-                    ? row.ips
-                    : row.primaryIp
-                      ? [{ ip: row.primaryIp, country: row.country, lastSeenAt: row.lastSeenAt }]
-                      : []
-                return (
-                  <div
-                    key={row.subjectKey}
-                    className="rounded-xl border border-white/10 bg-black/20 p-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      {row.displayName ? (
-                        <>
-                          <span className="font-medium text-white">{row.displayName}</span>
-                          <AccountCodeBadge code={row.accountCode} />
-                          {row.role && <RoleBadge role={row.role} />}
-                        </>
-                      ) : (
-                        <span className="text-white/50">{t('geo.anonymousVisitor')}</span>
-                      )}
-                      {row.online && (
-                        <Badge className="border-green-500/30 bg-green-500/10 text-green-300">
-                          {t('accounts.online')}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-2">
-                      <IpAddressDisplay ips={ips} device={row.lastDevice} onIpClick={handleIpClick} compact />
-                    </div>
-                    <div className="mt-2">
-                      <LocalPlayersSection row={row} />
-                    </div>
-                    {row.email && <p className="mt-1 text-xs text-white/45">{row.email}</p>}
-                    <p className="mt-1 text-[10px] text-white/30">
-                      {format.dateTime(new Date(row.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
+            // Mêmes cartes que la liste Visiteurs, dépliables : IP du compte et
+            // hors connexion, « Ouvrir la fiche ». Une recherche d'IP s'affiche
+            // dans l'onglet Comptes et la fiche dans son propre dialogue : ce
+            // dialogue se ferme, sinon il masquait le résultat.
+            <VisitorCardList
+              rows={countryVisitors}
+              onIpClick={(ip) => {
+                setCountryDialog(null)
+                void handleIpClick(ip)
+              }}
+              onNetworkClick={(ip, network) => {
+                setCountryDialog(null)
+                void handleNetworkLookup(ip, network)
+              }}
+              onOpenAccount={(accountId) => {
+                setCountryDialog(null)
+                setHistoryUserId(accountId)
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

@@ -45,7 +45,8 @@ export function SupervisionHeader({
   kicker: string
   title: string
   roleBadge: ReactNode
-  onlineLabel: string
+  /** Absent : pastille « en ligne » masquée (compte sans accès aux statistiques). */
+  onlineLabel?: string
   onRefresh: () => void
   refreshLabel: string
   refreshing?: boolean
@@ -70,10 +71,12 @@ export function SupervisionHeader({
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <span className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-gold/60">{kicker}</span>
         <span className="h-3 w-px shrink-0 bg-white/10" aria-hidden />
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          {onlineLabel}
-        </span>
+        {onlineLabel && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            {onlineLabel}
+          </span>
+        )}
         {roleBadge}
       </div>
     </header>

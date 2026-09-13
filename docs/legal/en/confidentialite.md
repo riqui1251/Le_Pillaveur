@@ -32,6 +32,7 @@ If you use an account, we may store:
 - unlocked achievements;
 - online progression (experience, level, cosmetics) and online match results (rankings);
 - friends list (sent and accepted requests);
+- online status visible to your friends: it only shows whether your account has been active on the site within the last 3 minutes (the account's last activity date), whether or not you accepted visit statistics; neither the exact time nor your history is shared with them;
 - synchronised player list (local nicknames you create).
 
 In **local mode** (without an account), your local players are stored on your device. Their nicknames may however be sent to the server in two cases: if you have **accepted visit statistics** (see 3.3 — the list is then also used for bot detection), or if you are **signed in to an account** (cross-device synchronisation). If you decline statistics and have no account, these nicknames never leave your device.
@@ -44,11 +45,13 @@ In **local mode** (without an account), your local players are stored on your de
 - IP address;
 - estimated country (approximate geolocation from the IP address, computed on our servers — no third-party service);
 - device / browser type (simplified user-agent);
-- connection dates and time spent on the site.
+- connection dates and time spent on the site, as well as the last account used in this browser and the date of its last signed-in visit (to tell a browser still signed in to that account apart from one where it was only used before).
 
 If you decline, no visit tracking is recorded.
 
-**Regardless of this consent**, for **signed-in accounts** only, we keep the IP address, estimated country and device type of recent connections for **account security and moderation** purposes (fraud prevention, bans) — legal basis: legitimate interest.
+**Regardless of this consent**, for **signed-in accounts** only, we keep the IP address, estimated country and device type of recent connections, as well as the account's last activity date (also used for the online status shown to your friends and for the automatic deletion of inactive guest accounts), for **account security and moderation** purposes (fraud prevention, bans) — legal basis: legitimate interest.
+
+In the site's moderation tools, IPv6 addresses from the same network (same /64 prefix, usually the same router or the same place) are grouped together on display: this grouping is computed when the data is read and stores no additional data.
 
 ### 3.4 Chat and online games
 
@@ -110,6 +113,7 @@ We **do not sell** your personal data to third parties.
 | Game statistics, friends, rankings | Performance of the contract |
 | Chat and online games | Performance of the contract |
 | Security and moderation (accounts, nicknames, content) | Legitimate interest |
+| Account's last activity date (online status shown to your friends, security, deletion of inactive guest accounts) | Legitimate interest |
 | Visit statistics (`lp_vid` cookie, IP, device) | **Consent** |
 | Age gate (cookie) | Legitimate interest (compliance) |
 | Feedback | Consent (voluntary submission) |

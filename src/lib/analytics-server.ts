@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma'
 import { PRESENCE_PING_SECONDS } from '@/lib/user-activity-server'
-import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
 import type { DeviceKind } from '@/lib/device-from-user-agent'
 import {
   accountKindSelect,
@@ -11,13 +10,17 @@ import {
 } from '@/lib/account-kind-server'
 import {
   buildGroupedVisitors,
+  findIpSeenInNetwork,
   findSubjectKeysByIp,
   getIpsBySubjectKeys,
+  getLinkedAccounts,
+  isPresenceConnectedHere,
   recordIpSeen,
   subjectKeyFor,
+  visitorPresenceSelect,
 } from '@/lib/ip-history-server'
-
-const ONLINE_WINDOW_MS = 5 * 60 * 1000
+import { ipNetworkKey } from '@/lib/ip-network'
+import { isOnline, onlineSince } from '@/lib/presence'
 
 export function todayParis(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -82,6 +85,7 @@ export async function recordVisitorPing(
         lastIp: ip,
         lastDevice: device,
         userId,
+        userSeenAt: userId ? now : null,
         ...localPlayersPatch,
       },
       update: {
@@ -89,7 +93,10 @@ export async function recordVisitorPing(
         ...(country ? { country } : {}),
         ...(ip ? { lastIp: ip } : {}),
         ...(device ? { lastDevice: device } : {}),
-        ...(userId ? { userId } : {}),
+        // userId n'est JAMAIS remis à null : sans session, il reste le dernier
+        // compte vu sur ce navigateur. Seul userSeenAt dit si CE ping était
+        // connecté (voir isPresenceConnectedHere, ip-history-server.ts).
+        ...(userId ? { userId, userSeenAt: now } : {}),
         ...localPlayersPatch,
       },
     }),
@@ -151,13 +158,13 @@ export async function recordAccountPresence(
 
 export async function getVisitorStats() {
   const now = new Date()
-  const onlineSince = new Date(now.getTime() - ONLINE_WINDOW_MS)
+  const since = onlineSince(now.getTime())
   const today = todayParis()
   const weekStart = daysAgoParis(6)
   const monthStart = daysAgoParis(29)
 
   const [onlineNow, todayCount, weekCount, monthCount, accountCounts] = await Promise.all([
-    prisma.sitePresence.count({ where: { lastSeen: { gte: onlineSince } } }),
+    prisma.sitePresence.count({ where: { lastSeen: { gte: since } } }),
     prisma.dailyVisitor.count({ where: { date: today } }),
     prisma.dailyVisitor.groupBy({
       by: ['visitorId'],
@@ -173,8 +180,8 @@ export async function getVisitorStats() {
   ])
 
   const onlinePresences = await prisma.sitePresence.findMany({
-    where: { lastSeen: { gte: onlineSince } },
-    select: { country: true, lastIp: true, lastDevice: true, userId: true, visitorId: true, lastSeen: true },
+    where: { lastSeen: { gte: since } },
+    select: { country: true },
   })
 
   const onlineByCountryMap = new Map<string, number>()
@@ -187,55 +194,51 @@ export async function getVisitorStats() {
     .map(([country, count]) => ({ country, count }))
     .sort((a, b) => b.count - a.count)
 
-  const recentUserIds = [
-    ...new Set(onlinePresences.map((p) => p.userId).filter(Boolean)),
-  ] as string[]
-
-  const recentUsers =
-    recentUserIds.length > 0
-      ? await prisma.user.findMany({
-          where: { id: { in: recentUserIds } },
-          select: {
-            id: true,
-            displayName: true,
-            email: true,
-            accountCode: true,
-            lastCountry: true,
-            lastIp: true,
-            lastDevice: true,
-            lastSeenAt: true,
-            role: true,
-          },
-        })
-      : []
+  // « Comptes connectés récemment » : User.lastSeenAt, écrit à chaque ping à
+  // session valide AVEC OU SANS consentement (intérêt légitime), tous types de
+  // comptes, invités compris. La liste partait des SitePresence récentes :
+  // elle oubliait les comptes qui ont refusé les statistiques, et y rangeait
+  // le dernier compte vu sur un navigateur actif mais déconnecté (cas diablo).
+  // Legacy exclu, comme de la liste Comptes et des totaux.
+  const recentUsers = await prisma.user.findMany({
+    where: { AND: [NON_LEGACY_ACCOUNT_WHERE, { lastSeenAt: { gte: since } }] },
+    orderBy: { lastSeenAt: 'desc' },
+    take: 100,
+    select: {
+      ...accountKindSelect(now),
+      id: true,
+      displayName: true,
+      accountCode: true,
+      lastCountry: true,
+      lastIp: true,
+      lastDevice: true,
+      lastSeenAt: true,
+      role: true,
+    },
+  })
 
   const connectedUserIps = await getIpsBySubjectKeys(
     recentUsers.map((u) => subjectKeyFor(u.id, ''))
   )
 
-  const connectedAccounts = recentUsers
-    .map((u) => {
-      const ips = connectedUserIps.get(subjectKeyFor(u.id, '')) ?? []
-      const primaryIp = ips[0]?.ip ?? u.lastIp
-      return {
-        id: u.id,
-        displayName: u.displayName,
-        email: u.email,
-        accountCode: u.accountCode,
-        country: ips[0]?.country ?? u.lastCountry,
-        ip: primaryIp,
-        ips,
-        lastDevice: u.lastDevice,
-        lastSeenAt: u.lastSeenAt?.toISOString() ?? null,
-        role: u.role,
-        online: u.lastSeenAt ? u.lastSeenAt >= onlineSince : false,
-      }
-    })
-    .sort((a, b) => {
-      const ta = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0
-      const tb = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0
-      return tb - ta
-    })
+  const connectedAccounts = recentUsers.map((u) => {
+    const ips = connectedUserIps.get(subjectKeyFor(u.id, '')) ?? []
+    const primaryIp = ips[0]?.ip ?? u.lastIp
+    return {
+      id: u.id,
+      displayName: u.displayName,
+      email: u.email,
+      accountCode: u.accountCode,
+      accountKind: kindOfAccount(u),
+      country: ips[0]?.country ?? u.lastCountry,
+      ip: primaryIp,
+      ips,
+      lastDevice: u.lastDevice,
+      lastSeenAt: u.lastSeenAt?.toISOString() ?? null,
+      role: u.role,
+      online: isOnline(u.lastSeenAt, now.getTime()),
+    }
+  })
 
   const todayVisitorsByCountry = await prisma.sitePresence.groupBy({
     by: ['country'],
@@ -253,51 +256,11 @@ export async function getVisitorStats() {
   const recentPresences = await prisma.sitePresence.findMany({
     orderBy: { lastSeen: 'desc' },
     take: 200,
-    select: {
-      visitorId: true,
-      userId: true,
-      country: true,
-      lastIp: true,
-      lastDevice: true,
-      lastSeen: true,
-      localPlayerCount: true,
-      localPlayerNames: true,
-    },
+    select: visitorPresenceSelect,
   })
 
-  const presenceUserIds = [
-    ...new Set(recentPresences.map((p) => p.userId).filter(Boolean)),
-  ] as string[]
-
-  const presenceUsers =
-    presenceUserIds.length > 0
-      ? await prisma.user.findMany({
-          where: { id: { in: presenceUserIds } },
-          select: {
-            id: true,
-            displayName: true,
-            email: true,
-            accountCode: true,
-            role: true,
-            localPlayersJson: true,
-          },
-        })
-      : []
-
-  const visitorIpList = await buildGroupedVisitors(
-    recentPresences.map((p) => ({
-      visitorId: p.visitorId,
-      userId: p.userId,
-      country: p.country,
-      lastIp: p.lastIp,
-      lastDevice: p.lastDevice,
-      lastSeen: p.lastSeen,
-      localPlayerCount: p.localPlayerCount,
-      localPlayerNames: p.localPlayerNames,
-    })),
-    presenceUsers,
-    onlineSince
-  )
+  const presenceUsers = await getLinkedAccounts(recentPresences, now)
+  const visitorIpList = await buildGroupedVisitors(recentPresences, presenceUsers, now.getTime())
 
   return {
     visitors: {
@@ -323,14 +286,65 @@ export async function getVisitorStats() {
   }
 }
 
-export async function lookupByIp(ip: string) {
+/**
+ * `exact` : l'adresse telle quelle (défaut, ouvert dès modérateur).
+ * `network` : toutes les adresses du même réseau (ipNetworkKey : /64 en IPv6,
+ * adresse entière en IPv4), réservé aux admins. Même réseau = même foyer ou
+ * même lieu (bar, colocation), JAMAIS la même personne.
+ */
+export type IpLookupMode = 'exact' | 'network'
+
+/**
+ * Adresses connues d'un réseau, toutes sources de la recherche confondues
+ * (historique IpSeenLog, dernière IP des navigateurs et des comptes), et sujets
+ * de l'historique qui y sont passés. Parcours en JS : quelques centaines de
+ * lignes, et le réseau ne se calcule pas en SQL.
+ */
+async function findAddressesInNetwork(
+  networkKey: string
+): Promise<{ ips: string[]; subjectKeys: string[] }> {
+  const [seen, presenceIps, userIps] = await Promise.all([
+    findIpSeenInNetwork(networkKey),
+    prisma.sitePresence.findMany({
+      where: { lastIp: { not: null } },
+      distinct: ['lastIp'],
+      select: { lastIp: true },
+    }),
+    prisma.user.findMany({
+      where: { lastIp: { not: null } },
+      distinct: ['lastIp'],
+      select: { lastIp: true },
+    }),
+  ])
+  const ips = new Set(seen.ips)
+  for (const { lastIp } of [...presenceIps, ...userIps]) {
+    if (lastIp && ipNetworkKey(lastIp) === networkKey) ips.add(lastIp)
+  }
+  return { ips: [...ips], subjectKeys: seen.subjectKeys }
+}
+
+/**
+ * `visitorDetails` (admins seulement) : détail des navigateurs trouvés. Sans
+ * lui, seuls leur identifiant et leur activité sortent — le bandeau n'affiche
+ * que leur nombre, et un modérateur n'a pas accès aux cartes visiteurs.
+ */
+export async function lookupByIp(
+  ip: string,
+  mode: IpLookupMode = 'exact',
+  { visitorDetails = false }: { visitorDetails?: boolean } = {}
+) {
   const normalized = ip.trim()
   const now = new Date()
-  const onlineSince = new Date(now.getTime() - ONLINE_WINDOW_MS)
+  const networkKey = mode === 'network' ? ipNetworkKey(normalized) : null
+
+  const { ips: matchedIps, subjectKeys } =
+    networkKey !== null
+      ? await findAddressesInNetwork(networkKey)
+      : { ips: [normalized], subjectKeys: await findSubjectKeysByIp(normalized) }
 
   const subjectUserIds = [
     ...new Set(
-      (await findSubjectKeysByIp(normalized))
+      subjectKeys
         .map((key) => (key.startsWith('user:') ? key.slice(5) : null))
         .filter(Boolean)
     ),
@@ -344,7 +358,10 @@ export async function lookupByIp(ip: string) {
     // le bandeau « N comptes » ne doit pas annoncer un compte introuvable.
     prisma.user.findMany({
       where: {
-        AND: [NON_LEGACY_ACCOUNT_WHERE, { OR: [{ lastIp: normalized }, { id: { in: subjectUserIds } }] }],
+        AND: [
+          NON_LEGACY_ACCOUNT_WHERE,
+          { OR: [{ lastIp: { in: matchedIps } }, { id: { in: subjectUserIds } }] },
+        ],
       },
       select: {
         ...accountKindSelect(now),
@@ -364,12 +381,13 @@ export async function lookupByIp(ip: string) {
       take: 50,
     }),
     prisma.sitePresence.findMany({
-      where: { lastIp: normalized },
+      where: { lastIp: { in: matchedIps } },
       orderBy: { lastSeen: 'desc' },
       take: 50,
       select: {
         visitorId: true,
         userId: true,
+        userSeenAt: true,
         country: true,
         lastIp: true,
         lastSeen: true,
@@ -380,18 +398,22 @@ export async function lookupByIp(ip: string) {
 
   const userIpsMap = await getIpsBySubjectKeys(users.map((u) => subjectKeyFor(u.id, '')))
 
-  const presenceUserIds = [
-    ...new Set(presences.map((p) => p.userId).filter(Boolean)),
-  ] as string[]
+  // Comptes liés : seulement ceux des navigateurs CONNECTÉS au dernier ping,
+  // et seulement pour le détail. userId seul n'est que le DERNIER compte vu :
+  // la lastIp d'un navigateur déconnecté vient d'une navigation sans session,
+  // jamais rattachée à une identité.
+  const presenceUserIds = visitorDetails
+    ? ([...new Set(presences.filter(isPresenceConnectedHere).map((p) => p.userId))] as string[])
+    : []
 
   const linkedUsers =
     presenceUserIds.length > 0
       ? await prisma.user.findMany({
           where: { id: { in: presenceUserIds } },
           select: {
+            ...accountKindSelect(now),
             id: true,
             displayName: true,
-            email: true,
             accountCode: true,
             role: true,
           },
@@ -402,6 +424,9 @@ export async function lookupByIp(ip: string) {
 
   return {
     ip: normalized,
+    mode,
+    // Mode réseau : clé du réseau et adresses retrouvées (y compris celle demandée si elle est connue).
+    network: networkKey !== null ? { key: networkKey, ips: matchedIps } : null,
     accounts: users.map((u) => ({
       id: u.id,
       displayName: u.displayName,
@@ -415,22 +440,32 @@ export async function lookupByIp(ip: string) {
       role: u.role,
       lastCountry: u.lastCountry,
       lastSeenAt: u.lastSeenAt?.toISOString() ?? null,
-      online: u.lastSeenAt ? u.lastSeenAt >= onlineSince : false,
+      online: isOnline(u.lastSeenAt, now.getTime()),
       banned: Boolean(u.banType && (u.banType === 'permanent' || (u.bannedUntil && u.bannedUntil > new Date()))),
       ips: userIpsMap.get(subjectKeyFor(u.id, '')) ?? [],
     })),
     visitors: presences.map((p) => {
-      const linked = p.userId ? linkedById.get(p.userId) : undefined
+      const online = isOnline(p.lastSeen, now.getTime())
+      if (!visitorDetails) return { visitorId: p.visitorId, online }
+      // Identité servie seulement si le navigateur était connecté à ce compte
+      // au dernier ping (isPresenceConnectedHere) : jamais le dernier compte vu.
+      const identity =
+        p.userId && isPresenceConnectedHere(p) ? linkedById.get(p.userId) : undefined
       return {
         visitorId: p.visitorId,
-        userId: p.userId,
+        userId: identity?.id ?? null,
         country: p.country,
+        // Adresse qui a répondu à la recherche (utile en mode réseau).
+        lastIp: p.lastIp,
         lastSeenAt: p.lastSeen.toISOString(),
         firstSeenAt: p.firstSeen.toISOString(),
-        online: p.lastSeen >= onlineSince,
-        displayName: linked?.displayName ?? null,
-        accountCode: linked?.accountCode ?? null,
-        role: linked?.role ?? null,
+        // Navigateur actif, pas le compte.
+        online,
+        connectedHere: identity !== undefined,
+        displayName: identity?.displayName ?? null,
+        accountCode: identity?.accountCode ?? null,
+        accountKind: identity ? kindOfAccount(identity) : null,
+        role: identity?.role ?? null,
       }
     }),
   }

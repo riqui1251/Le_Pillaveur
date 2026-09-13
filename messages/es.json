@@ -4020,8 +4020,8 @@
       "attemptsAnonymous": "Visitante anónimo"
     },
     "stats": {
-      "onlineNow": "En línea ahora",
-      "onlineNowHint": "Visitantes activos (últimos 5 min.)",
+      "activeBrowsers": "Navegadores activos",
+      "activeBrowsersHint": "Estadísticas aceptadas (últimos {minutes} min.)",
       "today": "Hoy",
       "todayHint": "Visitantes únicos (día)",
       "week": "7 días",
@@ -4112,7 +4112,7 @@
     },
     "connected": {
       "recentTitle": "Cuentas conectadas recientemente",
-      "recentDesc": "Jugadores identificados con IP y país",
+      "recentWindowDesc": "Cuentas activas en los últimos {minutes} minutos, de todo tipo (invitados incluidos), con su IP y país",
       "noneRecent": "Ninguna cuenta conectada recientemente."
     },
     "growth": {
@@ -4186,13 +4186,12 @@
     },
     "geo": {
       "onlineByCountry": "En línea por país",
-      "onlineByCountryDesc": "Visitantes activos en los últimos 5 minutos",
+      "onlineByCountryWindowDesc": "Navegadores activos en los últimos {minutes} minutos",
       "todayByCountry": "Conectados hoy por país",
       "todayByCountryDesc": "Visitantes activos en las últimas 24 h",
       "tapCountry": " Toca un país para ver visitantes.",
       "noData": "Sin datos por ahora.",
       "visitorsTitle": "Visitantes y jugadores",
-      "visitorsDesc": "Un jugador = una fila (IP principal + menú para otras). Toca una tarjeta para detalles.",
       "filterPlaceholder": "Filtrar por IP, usuario, email o país…",
       "noVisitors": "Ningún visitante registrado.",
       "noSearchResults": "Sin resultados para esta búsqueda.",
@@ -4201,19 +4200,46 @@
       "localPlayer": " jugador local",
       "localPlayers": " jugadores locales",
       "suspicious": "Sospechoso",
-      "anonymousVisitor": "Visitante anónimo",
       "localPlayersLabel": "Jugadores locales",
       "noLocalPlayers": "Ningún jugador reportado (visitante sin lista o no sincronizado).",
-      "ipAddresses": "Direcciones IP",
       "noIp": "Ninguna IP registrada",
-      "linkedAccount": "Cuenta vinculada",
       "noLinkedAccount": "Sin cuenta asociada (visitante anónimo)",
       "visitorId": "Visitor ID: {id}",
       "countryDialogTitle": "Visitantes — {title}",
-      "countryDialogDesc": "Lista de visitantes y cuentas para este país.",
+      "countryDialogDesc": "Lista de visitantes y cuentas para este país. Toca una tarjeta para ver todas las IP.",
       "noVisitorsForCountry": "Ningún visitante para este país.",
       "scopeOnline": "en línea",
       "scopeToday": "hoy"
+    },
+    "visitorCard": {
+      "listDesc": "Una tarjeta por navegador, o por cuenta conectada en ese navegador. Toca una tarjeta para ver el detalle de las IP.",
+      "browserActive": "Navegador activo",
+      "browserSeen": "Navegador visto el {date}",
+      "connectedHere": "Conectado en este navegador:",
+      "connectedLastVisit": "Conectado en su última visita:",
+      "lastAccount": "Última cuenta vista en este navegador:",
+      "accountActivityUntil": "actividad de la cuenta hasta el {date}",
+      "accountNoActivity": "ninguna actividad de la cuenta registrada",
+      "accountOnlineElsewhere": "cuenta en línea en otro lugar (otro navegador o dispositivo)",
+      "openFile": "Abrir la ficha",
+      "accountIps": "IP de la cuenta",
+      "accountIpsHint": "Vistas con una sesión válida, en todos los dispositivos de la cuenta.",
+      "browserIps": "IP de este navegador sin sesión iniciada",
+      "browsersIps": "IP de sus {count, plural, one {# navegador} other {# navegadores}} sin sesión iniciada",
+      "browserIpsHint": "Vistas sin sesión válida: nunca se atribuyen a la cuenta (el dispositivo puede ser compartido).",
+      "noLocalList": "Ninguna lista de jugadores locales asociada."
+    },
+    "ipNetwork": {
+      "summary": "{addresses, plural, one {# dirección} other {# direcciones}} · {networks, plural, one {# red} other {# redes}}",
+      "addresses": "{count, plural, one {# dirección} other {# direcciones}}",
+      "help": "Un router cambia por sí solo su dirección IPv6; misma red = mismo hogar o lugar, no necesariamente la misma persona.",
+      "sameNetwork": "Misma red",
+      "sameNetworkTitle": "Buscar cuentas y navegadores vistos en esta red (hogar o lugar)",
+      "seenOn": "vista el {date}",
+      "seenRange": "vista del {first} al {last}",
+      "lookupSummary": "Red {network} — {accounts, plural, one {# cuenta} other {# cuentas}}, {visitors, plural, one {# navegador} other {# navegadores}}",
+      "lookupNote": "Misma red = mismo hogar o lugar (bar, piso compartido), no necesariamente la misma persona.",
+      "listNotFiltered": "La lista de cuentas de abajo no está filtrada por esta red."
     },
     "activity": {
       "lastAuth": "Última autenticación:",
@@ -4312,8 +4338,7 @@
     },
     "device": {
       "accountCodeTitle": "Código de cuenta único",
-      "deviceTitle": "Dispositivo: {label}",
-      "moreIps": "+{count} IP"
+      "deviceTitle": "Dispositivo: {label}"
     },
     "apiErrors": {
       "modifyDenied": "Modificación denegada",

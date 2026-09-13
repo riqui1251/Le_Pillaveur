@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { isOnline } from '@/lib/presence'
 import type { Friendship } from '@prisma/client'
 
 export type FriendDto = {
@@ -107,33 +108,35 @@ export async function sendFriendRequest(
   return { status: 'sent', friendship: created }
 }
 
+/**
+ * Statut « en ligne » d'un ami : dernière activité du COMPTE (User.lastSeenAt)
+ * de moins de 3 min, la définition partagée de presence.ts. Il reposait sur
+ * SitePresence, qui n'est écrite qu'avec le consentement aux statistiques : un
+ * ami qui les avait refusées n'apparaissait jamais en ligne, et un navigateur
+ * resté lié à un compte déconnecté l'affichait en ligne à tort. Seul le
+ * booléen sort d'ici, jamais la date elle-même.
+ */
 export async function listFriends(userId: string): Promise<FriendDto[]> {
+  const friendSelect = { id: true, displayName: true, accountCode: true, lastSeenAt: true } as const
   const friendships = await prisma.friendship.findMany({
     where: { status: 'accepted', OR: [{ requesterId: userId }, { addresseeId: userId }] },
     include: {
-      requester: { select: { id: true, displayName: true, accountCode: true } },
-      addressee: { select: { id: true, displayName: true, accountCode: true } },
+      requester: { select: friendSelect },
+      addressee: { select: friendSelect },
     },
   })
 
-  const pairs = friendships.map((f) => ({
-    friendshipId: f.id,
-    other: f.requesterId === userId ? f.addressee : f.requester,
-  }))
-  const recentCutoff = new Date(Date.now() - 2 * 60 * 1000)
-  const presences = await prisma.sitePresence.findMany({
-    where: { userId: { in: pairs.map((p) => p.other.id) }, lastSeen: { gt: recentCutoff } },
-    select: { userId: true },
+  const now = Date.now()
+  return friendships.map((f) => {
+    const other = f.requesterId === userId ? f.addressee : f.requester
+    return {
+      friendshipId: f.id,
+      userId: other.id,
+      displayName: other.displayName,
+      accountCode: other.accountCode,
+      isOnline: isOnline(other.lastSeenAt, now),
+    }
   })
-  const onlineIds = new Set(presences.map((p) => p.userId))
-
-  return pairs.map(({ friendshipId, other }) => ({
-    friendshipId,
-    userId: other.id,
-    displayName: other.displayName,
-    accountCode: other.accountCode,
-    isOnline: onlineIds.has(other.id),
-  }))
 }
 
 export async function listPendingRequests(

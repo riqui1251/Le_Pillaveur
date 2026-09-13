@@ -32,6 +32,7 @@ Si utiliza una cuenta, podemos almacenar:
 - logros desbloqueados;
 - progresión en línea (experiencia, nivel, cosméticos) y resultados de partidas en línea (clasificaciones);
 - lista de amigos (solicitudes enviadas y aceptadas);
+- estado «en línea» visible para sus amigos: solo indica si su cuenta ha tenido actividad en el sitio en los últimos 3 minutos (fecha de última actividad de la cuenta), haya aceptado o no las estadísticas de visita; no se les comunica ni la hora exacta ni su historial;
 - lista de jugadores sincronizada (apodos locales que usted crea).
 
 En **modo local** (sin cuenta), sus jugadores locales se almacenan en su dispositivo. Sin embargo, la lista de sus apodos puede transmitirse al servidor en dos casos: si ha **aceptado las estadísticas de visita** (véase 3.3 — la lista sirve entonces también para la detección de robots), o si está **conectado a una cuenta** (sincronización entre dispositivos). Si rechaza las estadísticas y no tiene cuenta, estos apodos no salen de su dispositivo.
@@ -44,11 +45,13 @@ En **modo local** (sin cuenta), sus jugadores locales se almacenan en su disposi
 - dirección IP;
 - país estimado (geolocalización aproximada por dirección IP, calculada en nuestros servidores — sin servicios de terceros);
 - tipo de dispositivo / navegador (user-agent simplificado);
-- fechas de conexión y tiempo de presencia en el sitio.
+- fechas de conexión y tiempo de presencia en el sitio, así como la última cuenta utilizada en este navegador y la fecha de su último uso con la sesión iniciada (para distinguir un navegador que sigue conectado a esa cuenta de otro en el que solo se utilizó anteriormente).
 
 Si lo rechaza, no se registra ningún seguimiento de visita.
 
-**Independientemente de este consentimiento**, únicamente para las **cuentas conectadas**, conservamos la dirección IP, el país estimado y el tipo de dispositivo de las últimas conexiones por motivos de **seguridad y moderación de cuentas** (prevención de fraudes, baneos) — base: interés legítimo.
+**Independientemente de este consentimiento**, únicamente para las **cuentas conectadas**, conservamos la dirección IP, el país estimado y el tipo de dispositivo de las últimas conexiones, así como la fecha de última actividad de la cuenta (que también sirve para el estado «en línea» visible para sus amigos y para la eliminación automática de las cuentas de invitado inactivas), por motivos de **seguridad y moderación de cuentas** (prevención de fraudes, baneos) — base: interés legítimo.
+
+En las herramientas de moderación del sitio, las direcciones IPv6 de una misma red (mismo prefijo /64, por lo general un mismo router o un mismo lugar) se agrupan en la visualización: esta agrupación se calcula al consultar los datos y no almacena ningún dato adicional.
 
 ### 3.4 Chat y partidas en línea
 
@@ -110,6 +113,7 @@ Sus datos se tratan para:
 | Estadísticas de juego, amigos, clasificaciones | Ejecución del contrato |
 | Chat y partidas en línea | Ejecución del contrato |
 | Seguridad y moderación (cuentas, apodos, contenidos) | Interés legítimo |
+| Fecha de última actividad de la cuenta (estado «en línea» visible para sus amigos, seguridad, eliminación de las cuentas de invitado inactivas) | Interés legítimo |
 | Estadísticas de visita (cookie `lp_vid`, IP, dispositivo) | **Consentimiento** |
 | Puerta de edad (cookie) | Interés legítimo (conformidad) |
 | Comentarios | Consentimiento (envío voluntario) |

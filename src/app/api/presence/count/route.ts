@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { onlineSince } from '@/lib/presence'
 
 export const dynamic = 'force-dynamic'
 
-/** Même fenêtre que le statut « en ligne » des amis (friends.ts) ; le ping client tourne toutes les 60 s. */
-const ONLINE_WINDOW_MS = 2 * 60 * 1000
 /** Cache mémoire : la navbar de chaque visiteur poll — on ne compte qu'une fois par 15 s. */
 const CACHE_MS = 15 * 1000
 
@@ -12,11 +11,18 @@ let cached: { count: number; at: number } | null = null
 
 /**
  * Nombre de joueurs actifs sur le site — public. Deux sources combinées,
- * sans double compte :
+ * sur la fenêtre « en ligne » partagée (presence.ts) :
  *  - comptes connectés via User.lastSeenAt (mis à jour au ping même SANS
  *    consentement analytics — intérêt légitime) ;
- *  - visiteurs anonymes via SitePresence sans userId (écrit seulement avec
+ *  - navigateurs actifs dont le dernier compte vu (SitePresence.userId) n'est
+ *    pas lui-même dans la fenêtre (SitePresence, écrite seulement avec
  *    consentement — les non-consentants anonymes ne sont pas comptés, RGPD).
+ * Chaque navigateur actif est compté UNE fois : par son compte s'il est en
+ * ligne, sinon comme anonyme. Un navigateur resté ouvert après la perte de sa
+ * session redevient anonyme dès que son compte sort de la fenêtre (il n'était
+ * compté nulle part), et un onglet déconnecté d'un compte actif ailleurs ne
+ * compte pas une deuxième fois ce joueur. Borne basse assumée : un tiers sur
+ * ce navigateur partagé n'est pas compté pendant ce temps.
  */
 export async function GET() {
   const now = Date.now()
@@ -24,12 +30,19 @@ export async function GET() {
     return NextResponse.json({ count: cached.count })
   }
   try {
-    const cutoff = new Date(now - ONLINE_WINDOW_MS)
-    const [accounts, anonymous] = await Promise.all([
-      prisma.user.count({ where: { lastSeenAt: { gt: cutoff } } }),
-      prisma.sitePresence.count({ where: { lastSeen: { gt: cutoff }, userId: null } }),
+    const cutoff = onlineSince(now)
+    const [onlineAccounts, recentBrowsers] = await Promise.all([
+      prisma.user.findMany({ where: { lastSeenAt: { gte: cutoff } }, select: { id: true } }),
+      // Rapprochement fait en JS, sur les seuls navigateurs de la fenêtre
+      // (quelques lignes).
+      prisma.sitePresence.findMany({
+        where: { lastSeen: { gte: cutoff } },
+        select: { userId: true },
+      }),
     ])
-    const count = accounts + anonymous
+    const onlineIds = new Set(onlineAccounts.map((u) => u.id))
+    const anonymous = recentBrowsers.filter((p) => !(p.userId && onlineIds.has(p.userId))).length
+    const count = onlineIds.size + anonymous
     cached = { count, at: now }
     return NextResponse.json({ count })
   } catch {

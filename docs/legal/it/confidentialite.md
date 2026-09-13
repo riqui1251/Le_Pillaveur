@@ -32,6 +32,7 @@ Se utilizzi un account, possiamo memorizzare:
 - obiettivi sbloccati;
 - progressione online (esperienza, livello, cosmetici) e risultati delle partite online (classifiche);
 - lista amici (richieste inviate e accettate);
+- stato «online» visibile ai tuoi amici: indica soltanto se il tuo account è stato attivo sul sito negli ultimi 3 minuti (data di ultima attività dell'account), che tu abbia accettato o meno le statistiche di visita; né l'ora esatta né la tua cronologia vengono comunicate loro;
 - lista di giocatori sincronizzata (nickname locali che crei).
 
 In **modalità locale** (senza account), i tuoi giocatori locali sono memorizzati sul tuo dispositivo. La lista dei loro nickname può tuttavia essere trasmessa al server in due casi: se hai **accettato le statistiche di visita** (vedi 3.3 — la lista serve allora anche al rilevamento di bot), o se sei **connesso a un account** (sincronizzazione tra dispositivi). Se rifiuti le statistiche e non hai un account, questi nickname non lasciano il tuo dispositivo.
@@ -44,11 +45,13 @@ In **modalità locale** (senza account), i tuoi giocatori locali sono memorizzat
 - indirizzo IP;
 - paese stimato (geolocalizzazione approssimativa tramite indirizzo IP, calcolata sui nostri server — nessun servizio di terzi);
 - tipo di dispositivo / browser (user-agent semplificato);
-- date di connessione e tempo di presenza sul sito.
+- date di connessione e tempo di presenza sul sito, nonché l'ultimo account utilizzato su questo browser e la data del suo ultimo utilizzo con accesso effettuato (per distinguere un browser ancora connesso a quell'account da uno in cui è stato soltanto utilizzato in precedenza).
 
 Se rifiuti, nessun tracciamento di visita viene registrato.
 
-**Indipendentemente da questo consenso**, solo per gli **account connessi**, conserviamo l'indirizzo IP, il paese stimato e il tipo di dispositivo delle ultime connessioni per la **sicurezza e la moderazione degli account** (prevenzione delle frodi, ban) — base: legittimo interesse.
+**Indipendentemente da questo consenso**, solo per gli **account connessi**, conserviamo l'indirizzo IP, il paese stimato e il tipo di dispositivo delle ultime connessioni, nonché la data di ultima attività dell'account (usata anche per lo stato «online» visibile ai tuoi amici e per l'eliminazione automatica degli account ospite inattivi), per la **sicurezza e la moderazione degli account** (prevenzione delle frodi, ban) — base: legittimo interesse.
+
+Negli strumenti di moderazione del sito, gli indirizzi IPv6 di una stessa rete (stesso prefisso /64, in genere uno stesso router o uno stesso luogo) vengono raggruppati in visualizzazione: questo raggruppamento è calcolato al momento della consultazione e non memorizza alcun dato aggiuntivo.
 
 ### 3.4 Chat e partite online
 
@@ -110,6 +113,7 @@ I tuoi dati sono trattati per:
 | Statistiche di gioco, amici, classifiche | Esecuzione del contratto |
 | Chat e partite online | Esecuzione del contratto |
 | Sicurezza e moderazione (account, nickname, contenuti) | Legittimo interesse |
+| Data di ultima attività dell'account (stato «online» visibile ai tuoi amici, sicurezza, eliminazione degli account ospite inattivi) | Legittimo interesse |
 | Statistiche di visita (cookie `lp_vid`, IP, dispositivo) | **Consenso** |
 | Verifica dell'età (cookie) | Legittimo interesse (conformità) |
 | Feedback | Consenso (invio volontario) |
