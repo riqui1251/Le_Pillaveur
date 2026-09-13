@@ -281,7 +281,8 @@ export async function getLinkedAccounts(
  * JAMAIS User.lastSeenAt au navigateur : le compte peut être actif sur un
  * autre appareil (foyer, PC partagé), ce qui ferait passer ce navigateur pour
  * connecté. Tout signal qui avance lastSeen doit aussi écrire userSeenAt quand
- * la session est valide.
+ * la session est valide, et lastIp dans le même upsert : sinon « connecté ici »
+ * rattacherait au compte l'adresse d'une navigation sans session.
  */
 export function isPresenceConnectedHere(
   presence: Pick<VisitorPresence, 'userId' | 'userSeenAt' | 'lastSeen'>

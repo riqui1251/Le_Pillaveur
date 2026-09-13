@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma'
-import { PRESENCE_PING_SECONDS } from '@/lib/user-activity-server'
 import type { DeviceKind } from '@/lib/device-from-user-agent'
 import {
   accountKindSelect,
@@ -38,14 +37,26 @@ export function daysAgoParis(days: number): string {
   return parisDayOffset(days)
 }
 
+/**
+ * Présence du NAVIGATEUR (SitePresence + DailyVisitor), pour une vue comme pour
+ * un battement : consentement aux statistiques seulement, décidé en amont par
+ * planPing. Ne touche JAMAIS le compte (voir recordAccountPresence) ni aucun
+ * temps : l'ancien incrément de User.totalPresenceSeconds (60 s par requête,
+ * quelle qu'elle soit) est retiré, la colonne n'est plus alimentée.
+ *
+ * lastIp est écrit par les deux signaux, dans le même upsert que lastSeen et
+ * userSeenAt : « connecté ici » (isPresenceConnectedHere) garantit ainsi que
+ * lastIp vient d'un signal connecté. Une vue sans IP laissait l'adresse d'une
+ * navigation anonyme sous un navigateur ensuite « connecté », que la recherche
+ * par IP rattachait au compte. L'historique IpSeenLog, lui, suit le battement
+ * seul (route.ts).
+ */
 export async function recordVisitorPing(
   visitorId: string,
   options?: {
     country?: string | null
     userId?: string | null
     ip?: string | null
-    localPlayerNames?: string[]
-    forceLocalPlayerSync?: boolean
     device?: DeviceKind | null
   }
 ): Promise<void> {
@@ -55,20 +66,6 @@ export async function recordVisitorPing(
   const userId = options?.userId ?? null
   const ip = options?.ip ?? null
   const device = options?.device && options.device !== 'unknown' ? options.device : null
-  const localPlayerNames = options?.localPlayerNames
-  const forceLocalPlayerSync = options?.forceLocalPlayerSync === true
-  const localPlayersPatch =
-    forceLocalPlayerSync && localPlayerNames !== undefined
-      ? {
-          localPlayerCount: localPlayerNames.length,
-          localPlayerNames: JSON.stringify(localPlayerNames),
-        }
-      : localPlayerNames && localPlayerNames.length > 0
-        ? {
-            localPlayerCount: localPlayerNames.length,
-            localPlayerNames: JSON.stringify(localPlayerNames),
-          }
-        : {}
 
   await prisma.$transaction([
     prisma.sitePresence.upsert({
@@ -82,7 +79,6 @@ export async function recordVisitorPing(
         lastDevice: device,
         userId,
         userSeenAt: userId ? now : null,
-        ...localPlayersPatch,
       },
       update: {
         lastSeen: now,
@@ -90,10 +86,11 @@ export async function recordVisitorPing(
         ...(ip ? { lastIp: ip } : {}),
         ...(device ? { lastDevice: device } : {}),
         // userId n'est JAMAIS remis à null : sans session, il reste le dernier
-        // compte vu sur ce navigateur. Seul userSeenAt dit si CE ping était
-        // connecté (voir isPresenceConnectedHere, ip-history-server.ts).
+        // compte vu sur ce navigateur. Seul userSeenAt dit si CE signal était
+        // connecté (voir isPresenceConnectedHere, ip-history-server.ts) : une
+        // vue qui avance lastSeen l'écrit donc aussi, comme un battement (et
+        // lastIp avec, voir plus haut).
         ...(userId ? { userId, userSeenAt: now } : {}),
-        ...localPlayersPatch,
       },
     }),
     prisma.dailyVisitor.upsert({
@@ -102,27 +99,46 @@ export async function recordVisitorPing(
       update: {},
     }),
   ])
-
-  if (userId) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        lastSeenAt: now,
-        totalPresenceSeconds: { increment: PRESENCE_PING_SECONDS },
-        ...(country ? { lastCountry: country } : {}),
-        ...(ip ? { lastIp: ip } : {}),
-        ...(device ? { lastDevice: device } : {}),
-      },
-    })
-  }
-
-  await recordIpSeen(userId, visitorId, ip, country)
 }
 
 /**
- * Présence côté compte UNIQUEMENT — pour les utilisateurs connectés qui ont
- * refusé les statistiques de visite. Base : intérêt légitime (sécurité et
- * modération des comptes, déclaré dans la politique de confidentialité).
+ * Pseudos locaux d'un navigateur qui a accepté les statistiques (détection de
+ * robots). Patch d'une présence EXISTANTE : updateMany ne crée aucune ligne et
+ * n'avance pas lastSeen — une synchro de joueurs n'est pas une présence. Une
+ * liste vide est écrite telle quelle (joueurs locaux tous supprimés).
+ *
+ * N'écrit que si la liste stockée DIFFÈRE (le OR sur null est nécessaire : un
+ * NOT seul exclut les lignes NULL) : un renvoi à l'identique, depuis un autre
+ * onglet ou après un rechargement, ne coûte aucune écriture.
+ *
+ * Renvoie vrai si la présence porte désormais cette liste (écrite, ou déjà
+ * là) ; faux s'il n'existe aucune présence pour ce navigateur — synchro
+ * perdue, que le client renverra après son prochain battement.
+ */
+export async function syncVisitorLocalPlayers(
+  visitorId: string,
+  localPlayerNames: string[]
+): Promise<boolean> {
+  const json = JSON.stringify(localPlayerNames)
+  const { count } = await prisma.sitePresence.updateMany({
+    where: { visitorId, OR: [{ localPlayerNames: null }, { NOT: { localPlayerNames: json } }] },
+    data: {
+      localPlayerCount: localPlayerNames.length,
+      localPlayerNames: json,
+    },
+  })
+  if (count > 0) return true
+  // Rien d'écrit : liste déjà à jour, ou aucune présence à patcher.
+  return (await prisma.sitePresence.count({ where: { visitorId } })) > 0
+}
+
+/**
+ * Dernière activité du COMPTE, à chaque battement à session valide, avec ou
+ * sans consentement aux statistiques de visite. Base : intérêt légitime
+ * (sécurité et modération des comptes, statut « en ligne » visible des amis,
+ * suppression des invités inactifs), déclaré dans la politique de
+ * confidentialité. AUCUNE durée : totalPresenceSeconds n'est plus incrémenté.
+ * Jamais appelée pour une vue ni pour une synchro de joueurs (planPing).
  * Aucune écriture SitePresence/DailyVisitor, aucun pseudo local stocké.
  */
 export async function recordAccountPresence(
@@ -141,7 +157,6 @@ export async function recordAccountPresence(
     where: { id: userId },
     data: {
       lastSeenAt: new Date(),
-      totalPresenceSeconds: { increment: PRESENCE_PING_SECONDS },
       ...(country ? { lastCountry: country } : {}),
       ...(ip ? { lastIp: ip } : {}),
       ...(device ? { lastDevice: device } : {}),
@@ -190,8 +205,8 @@ export async function getVisitorStats() {
     .map(([country, count]) => ({ country, count }))
     .sort((a, b) => b.count - a.count)
 
-  // « Comptes connectés récemment » : User.lastSeenAt, écrit à chaque ping à
-  // session valide AVEC OU SANS consentement (intérêt légitime), tous types de
+  // « Comptes connectés récemment » : User.lastSeenAt, écrit à chaque battement
+  // à session valide AVEC OU SANS consentement (intérêt légitime), tous types de
   // comptes, invités compris. La liste partait des SitePresence récentes :
   // elle oubliait les comptes qui ont refusé les statistiques, et y rangeait
   // le dernier compte vu sur un navigateur actif mais déconnecté (cas diablo).

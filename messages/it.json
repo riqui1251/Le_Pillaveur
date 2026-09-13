@@ -4076,7 +4076,7 @@
       "guestNoRole": "Account ospite: nessun ruolo dello staff possibile",
       "matchCount": "Account trovati: {total}",
       "kindSummary": "{total, plural, one {# account} other {# account}}: {password} con password · {google} Google · {guests, plural, one {# ospite} other {# ospiti}}{orphans, plural, =0 {} one { (di cui # orfano)} other { (di cui # orfani)}}",
-      "countsNote": "Ospiti inclusi. L'ultima attività avanza anche con una scheda rimasta aperta in background: non prova che la persona stia giocando."
+      "countsNote": "Ospiti inclusi. Dall'aggiornamento del monitoraggio della presenza ({date}), l'ultima attività segue una pagina realmente in uso: scheda visibile e un'interazione negli ultimi 30 minuti (prima bastava una scheda rimasta aperta). Non prova che la persona stia giocando."
     },
     "units": {
       "s": "s",
@@ -4264,8 +4264,7 @@
     "activity": {
       "lastAuth": "Ultima autenticazione:",
       "neverLoggedIn": "Mai registrato",
-      "legacyPresence": "Cumulo storico: {duration}",
-      "legacyPresenceNote": " (sovrastimato: schede aperte)"
+      "legacyPresenceFrozen": "Cumulo storico, congelato il {date}: {duration} — sovrastimato, contava anche le schede aperte"
     },
     "feedback": {
       "activeTitle": "Feedback aperti",
@@ -4318,7 +4317,7 @@
       "identityTitle": "Account",
       "createdAt": "Creato il",
       "lastActivity": "Ultima attività",
-      "lastActivityHint": "Ultimo passaggio con una sessione valida, su tutti i dispositivi. Anche una scheda rimasta aperta la fa avanzare.",
+      "lastActivityHint": "Ultimo passaggio con una sessione valida, su tutti i dispositivi. Dall'aggiornamento del monitoraggio della presenza ({date}), solo una pagina realmente in uso (scheda visibile e un'interazione negli ultimi 30 minuti) o un'autenticazione la fa avanzare; prima bastava una scheda rimasta aperta.",
       "lastAuth": "Ultima autenticazione",
       "lastAuthHint": "Credenziali, Google o creazione ospite: non ogni visita.",
       "never": "Mai",

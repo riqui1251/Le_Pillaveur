@@ -65,7 +65,8 @@ import {
 } from '@/lib/roles'
 import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
-import { PARIS_TIME_ZONE, parisDayOffset, parisDayString } from '@/lib/paris-time'
+import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
+import { HONEST_PRESENCE_SINCE } from '@/lib/heartbeat'
 import { isOnline, ONLINE_WINDOW_MS } from '@/lib/presence'
 import { groupIpsByNetwork, type IpNetworkGroup } from '@/lib/ip-network'
 import { Button } from '@/components/ui/button'
@@ -130,6 +131,19 @@ const ONLINE_WINDOW_MINUTES = Math.round(ONLINE_WINDOW_MS / 60_000)
 function useDurationUnits(): DurationUnits {
   const t = useTranslations('supervision.units')
   return { s: t('s'), min: t('min'), h: t('h'), d: t('d') }
+}
+
+/**
+ * « 13/09 » : jour de mise en production du battement honnête (gel de l'ancien
+ * cumul, nouveau sens de la dernière activité), en jour de Paris.
+ */
+function useHonestPresenceSince(): string {
+  const format = useFormatter()
+  return format.dateTime(parisDayStartUtc(HONEST_PRESENCE_SINCE), {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: PARIS_TIME_ZONE,
+  })
 }
 
 /** Un taux non calculable (cohorte vide) s'affiche « — », jamais « 0 % ». */
@@ -915,6 +929,7 @@ function UserActivityLines({
   const t = useTranslations('supervision')
   const format = useFormatter()
   const durationUnits = useDurationUnits()
+  const frozenSince = useHonestPresenceSince()
   return (
     <div className={compact ? 'space-y-0.5 text-[11px] text-white/35' : 'space-y-1 text-sm text-white/60'}>
       {/* lastLoginAt n'est écrit qu'à une saisie d'identifiants, une connexion
@@ -926,12 +941,18 @@ function UserActivityLines({
           ? format.dateTime(new Date(lastLoginAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
           : t('activity.neverLoggedIn')}
       </p>
-      {/* 60 s par requête, onglets cachés compris : un cumul d'onglets ouverts,
-          pas un temps de jeu. Le libellé le dit, y compris en version compacte. */}
-      <p>
-        {t('activity.legacyPresence', { duration: formatPresenceDuration(totalPresenceSeconds, durationUnits) })}
-        <span className={compact ? undefined : 'text-xs text-white/35'}>{t('activity.legacyPresenceNote')}</span>
-      </p>
+      {/* Ancien cumul (60 s par requête, onglets cachés compris) : plus alimenté
+          depuis le battement honnête, donc FIGÉ. Un cumul d'onglets ouverts, pas
+          un temps de jeu : le libellé le dit en entier, y compris en version
+          compacte. À 0 (compte récent, ou rôle qui ne le voit pas), rien. */}
+      {totalPresenceSeconds > 0 && (
+        <p>
+          {t('activity.legacyPresenceFrozen', {
+            date: frozenSince,
+            duration: formatPresenceDuration(totalPresenceSeconds, durationUnits),
+          })}
+        </p>
+      )}
     </div>
   )
 }
@@ -1695,6 +1716,7 @@ export default function SupervisionPage() {
   const locale = useLocale()
   const format = useFormatter()
   const durationUnits = useDurationUnits()
+  const honestPresenceSince = useHonestPresenceSince()
   const { user, loading } = useAuth()
   const router = useRouter()
   // Onglet ouvert, lu dans ?tab= : un rechargement ou un retour depuis la
@@ -3279,7 +3301,9 @@ export default function SupervisionPage() {
                   <p className="text-xs leading-relaxed text-white/60">
                     {t('accounts.kindSummary', kindSummaryValues(accountCounts.total, accountCounts))}
                   </p>
-                  <p className="text-[11px] leading-relaxed text-white/35">{t('accounts.countsNote')}</p>
+                  <p className="text-[11px] leading-relaxed text-white/35">
+                    {t('accounts.countsNote', { date: honestPresenceSince })}
+                  </p>
                 </div>
               )}
 

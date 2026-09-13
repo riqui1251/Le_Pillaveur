@@ -44,7 +44,8 @@ import type { AccountDescription } from '@/lib/account-kind-server'
 import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
 import { GAMES } from '@/lib/games'
-import { PARIS_TIME_ZONE, parisDayOffset, parisDayString } from '@/lib/paris-time'
+import { HONEST_PRESENCE_SINCE } from '@/lib/heartbeat'
+import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
 import { isOnline } from '@/lib/presence'
 import { normalizeRole } from '@/lib/roles'
 import { cn } from '@/lib/utils'
@@ -84,7 +85,8 @@ type AccountDetail = {
     lastLoginAt: string | null
     /**
      * Cumul hérité (60 s par requête, onglets cachés compris) : surestimé,
-     * jamais un temps de jeu. 0 aussi quand le rôle du lecteur ne le voit pas.
+     * jamais un temps de jeu, et figé (plus alimenté). 0 aussi quand le rôle
+     * du lecteur ne le voit pas.
      */
     totalPresenceSeconds: number
     createdAt: string
@@ -127,6 +129,12 @@ function useFileFormat() {
       format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
     day: (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeZone: PARIS_TIME_ZONE }),
     shortDay: (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'short', timeZone: PARIS_TIME_ZONE }),
+    /** « 13/09 » : mise en production du battement honnête (gel de l'ancien cumul), jour de Paris. */
+    honestPresenceSince: format.dateTime(parisDayStartUtc(HONEST_PRESENCE_SINCE), {
+      day: '2-digit',
+      month: '2-digit',
+      timeZone: PARIS_TIME_ZONE,
+    }),
   }
 }
 
@@ -262,8 +270,8 @@ export function AccountFile({ userId }: { userId: string }) {
 
           <ModerationSection detail={detail} />
 
-          {/* Pied de fiche (jusqu'aux visites du lot 6) : l'ancien cumul, dit
-              pour ce qu'il est — des onglets ouverts, pas du temps de jeu. */}
+          {/* Pied de fiche (jusqu'aux visites du lot 6) : l'ancien cumul, figé et
+              dit pour ce qu'il est — des onglets ouverts, pas du temps de jeu. */}
           {user.totalPresenceSeconds > 0 && <LegacyPresenceFooter seconds={user.totalPresenceSeconds} />}
         </>
       )}
@@ -331,7 +339,7 @@ function Fact({
 function IdentitySection({ user }: { user: AccountDetail['user'] }) {
   const t = useTranslations('supervision.accountFile')
   const tSup = useTranslations('supervision')
-  const { dateTime, day } = useFileFormat()
+  const { dateTime, day, honestPresenceSince } = useFileFormat()
 
   // Invité inactif depuis plus de GUEST_STALE_DAYS : la session existe en base,
   // rien ne prouve que son cookie aussi — jamais « Connexion active ».
@@ -363,7 +371,11 @@ function IdentitySection({ user }: { user: AccountDetail['user'] }) {
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Fact label={t('createdAt')}>{day(user.createdAt)}</Fact>
-        <Fact label={t('lastActivity')} hint={t('lastActivityHint')} tone={user.lastSeenAt ? 'default' : 'muted'}>
+        <Fact
+          label={t('lastActivity')}
+          hint={t('lastActivityHint', { date: honestPresenceSince })}
+          tone={user.lastSeenAt ? 'default' : 'muted'}
+        >
           {user.lastSeenAt ? dateTime(user.lastSeenAt) : t('never')}
         </Fact>
         <Fact label={t('lastAuth')} hint={t('lastAuthHint')} tone={user.lastLoginAt ? 'default' : 'muted'}>
@@ -750,14 +762,20 @@ function NetworksSection({ activity }: { activity: AccountActivity }) {
   )
 }
 
-/** « Cumul hérité : 31 h 41 (surestimé : onglets ouverts) », en pied de fiche. */
+/**
+ * « Cumul hérité, figé le 13/09 : 31 h 41 — surestimé, compté sur les onglets
+ * ouverts », en pied de fiche. Plus alimenté depuis le battement honnête : il
+ * ne bouge plus.
+ */
 function LegacyPresenceFooter({ seconds }: { seconds: number }) {
   const tSup = useTranslations('supervision')
-  const { units } = useFileFormat()
+  const { units, honestPresenceSince } = useFileFormat()
   return (
     <p className="min-w-0 break-words px-1 text-[11px] leading-snug text-white/40">
-      {tSup('activity.legacyPresence', { duration: formatPresenceDuration(seconds, units) })}
-      {tSup('activity.legacyPresenceNote')}
+      {tSup('activity.legacyPresenceFrozen', {
+        date: honestPresenceSince,
+        duration: formatPresenceDuration(seconds, units),
+      })}
     </p>
   )
 }

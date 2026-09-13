@@ -4076,7 +4076,7 @@
       "guestNoRole": "Guest account: no staff role possible",
       "matchCount": "{total} account{plural} found",
       "kindSummary": "{total, plural, one {# account} other {# accounts}}: {password} password · {google} Google · {guests, plural, one {# guest} other {# guests}}{orphans, plural, =0 {} other { (including # orphaned)}}",
-      "countsNote": "Guests included. Last activity also moves forward with a tab left open in the background: it does not prove the person is playing."
+      "countsNote": "Guests included. Since the presence tracking update ({date}), last activity follows a page actually in use: visible tab and an interaction within the last 30 minutes (before, a tab left open was enough). It does not prove the person is playing."
     },
     "units": {
       "s": "s",
@@ -4264,8 +4264,7 @@
     "activity": {
       "lastAuth": "Last authentication:",
       "neverLoggedIn": "Never recorded",
-      "legacyPresence": "Legacy total: {duration}",
-      "legacyPresenceNote": " (overestimated: open tabs)"
+      "legacyPresenceFrozen": "Legacy total, frozen on {date}: {duration} — overestimated, open tabs were counted"
     },
     "feedback": {
       "activeTitle": "Open feedback",
@@ -4318,7 +4317,7 @@
       "identityTitle": "Account",
       "createdAt": "Created on",
       "lastActivity": "Last activity",
-      "lastActivityHint": "Last visit with a valid session, across all devices. A tab left open also moves it forward.",
+      "lastActivityHint": "Last visit with a valid session, across all devices. Since the presence tracking update ({date}), only a page actually in use (visible tab and an interaction within the last 30 minutes) or a sign-in moves it forward; before, a tab left open was enough.",
       "lastAuth": "Last authentication",
       "lastAuthHint": "Credentials, Google or guest creation: not every visit.",
       "never": "Never",

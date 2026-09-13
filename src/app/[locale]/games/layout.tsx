@@ -24,6 +24,9 @@ const VoiceDock = dynamic(
   { ssr: false }
 )
 
+/** Verrou d'écran des pages de jeu : relâché après 15 min sans interaction. */
+const GAME_SCREEN_IDLE_RELEASE_MS = 15 * 60_000
+
 export default function GamesLayout({
   children,
 }: {
@@ -31,7 +34,9 @@ export default function GamesLayout({
 }) {
   const { user } = useAuth()
   useRequireSelectedPlayers("/joueurs", { skipWhenOnline: true })
-  useKeepScreenAwake()
+  // Relâché après 15 min sans aucun geste : un écran de jeu oublié (lobby,
+  // écran de fin, portail) retrouve sa mise en veille. Repris au geste suivant.
+  useKeepScreenAwake({ idleReleaseMs: GAME_SCREEN_IDLE_RELEASE_MS })
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-1 px-2 py-1 sm:px-4">

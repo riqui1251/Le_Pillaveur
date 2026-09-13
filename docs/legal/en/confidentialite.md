@@ -45,11 +45,13 @@ In **local mode** (without an account), your local players are stored on your de
 - IP address;
 - estimated country (approximate geolocation from the IP address, computed on our servers — no third-party service);
 - device / browser type (simplified user-agent);
-- connection dates and time spent on the site, as well as the last account used in this browser and the date of its last signed-in visit (to tell a browser still signed in to that account apart from one where it was only used before).
+- dates of your visits to the site (pages displayed and activity), as well as the last account used in this browser and the date of its last signed-in visit (to tell a browser still signed in to that account apart from one where it was only used before).
 
 If you decline, no visit tracking is recorded.
 
-**Regardless of this consent**, for **signed-in accounts** only, we keep the IP address, estimated country and device type of recent connections, as well as the account's last activity date (also used for the online status shown to your friends and for the automatic deletion of inactive guest accounts), for **account security and moderation** purposes (fraud prevention, bans) — legal basis: legitimate interest.
+**Regardless of this consent**, for **signed-in accounts** only, we keep the IP address, estimated country and device type of recent connections, as well as the account's last activity date, updated only when the site is actually being used (page displayed and an interaction within the last 30 minutes) or when you sign in, which is also used for the online status shown to your friends and for the automatic deletion of inactive guest accounts; no presence time is recorded for this purpose. Purposes: **account security and moderation** (fraud prevention, bans), online status and deletion of inactive guest accounts — legal basis: legitimate interest.
+
+Activity means using a page displayed on screen: a signal is sent at most once a minute, only while the page is visible and you have used it (click, key press, screen touch or mouse wheel) within the last 30 minutes. Only the time of your last interaction is kept, in the page's memory and without its content; it is neither stored nor transmitted. With or without consent, no duration is recorded from this signal. A cumulative presence time calculated before 13 September 2026, using a discontinued method that also counted tabs left open (and is therefore overestimated), remains stored, frozen, for the accounts concerned until it is reset; it is no longer updated.
 
 In the site's moderation tools, IPv6 addresses from the same network (same /64 prefix, usually the same router or the same place) are grouped together on display: this grouping is computed when the data is read and stores no additional data.
 

@@ -4076,7 +4076,7 @@
       "guestNoRole": "Compte invité : aucun rôle d'équipe possible",
       "matchCount": "{total} compte{plural} trouvé{plural}",
       "kindSummary": "{total, plural, one {# compte} other {# comptes}} : {password} mot de passe · {google} Google · {guests, plural, one {# invité} other {# invités}}{orphans, plural, =0 {} one { (dont # orphelin)} other { (dont # orphelins)}}",
-      "countsNote": "Invités compris. La dernière activité avance aussi avec un onglet resté ouvert en arrière-plan : elle ne prouve pas que la personne joue."
+      "countsNote": "Invités compris. Depuis la mise à jour du suivi de présence (le {date}), la dernière activité suit une page réellement utilisée : onglet visible et interaction dans les 30 dernières minutes (avant, un onglet resté ouvert suffisait). Elle ne prouve pas que la personne joue."
     },
     "units": {
       "s": "s",
@@ -4264,8 +4264,7 @@
     "activity": {
       "lastAuth": "Dernière authentification :",
       "neverLoggedIn": "Jamais enregistrée",
-      "legacyPresence": "Cumul hérité : {duration}",
-      "legacyPresenceNote": " (surestimé : onglets ouverts)"
+      "legacyPresenceFrozen": "Cumul hérité, figé le {date} : {duration} — surestimé, compté sur les onglets ouverts"
     },
     "feedback": {
       "activeTitle": "Retours en cours",
@@ -4318,7 +4317,7 @@
       "identityTitle": "Compte",
       "createdAt": "Créé le",
       "lastActivity": "Dernière activité",
-      "lastActivityHint": "Dernier passage avec une session valide, tous appareils confondus. Un onglet resté ouvert la fait aussi avancer.",
+      "lastActivityHint": "Dernier passage avec une session valide, tous appareils confondus. Depuis la mise à jour du suivi de présence (le {date}), seule une page réellement utilisée (onglet visible et interaction dans les 30 dernières minutes) ou une authentification la fait avancer ; avant, un onglet resté ouvert suffisait.",
       "lastAuth": "Dernière authentification",
       "lastAuthHint": "Identifiants, Google ou création d'invité : pas chaque visite.",
       "never": "Jamais",

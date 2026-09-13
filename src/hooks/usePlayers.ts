@@ -49,7 +49,6 @@ export function usePlayers() {
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [mostActivePlayers, setMostActivePlayers] = useState<Player[]>([]);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cloudSyncedRef = useRef(false);
   const listenerRef = useRef<PlayersListener | null>(null);
 
@@ -84,9 +83,6 @@ export function usePlayers() {
         setMostActivePlayers(getMostActivePlayers());
         cloudSyncedRef.current = !user;
         setLoading(false);
-        if (local.length > 0) {
-          syncLocalPlayersNow();
-        }
       }
     }
 
@@ -144,7 +140,6 @@ export function usePlayers() {
     const updatedPlayers = addPlayerToStorage(name);
     setPlayers(updatedPlayers);
     notifyOthers();
-    syncLocalPlayersNow();
     pushCloudIfReady(updatedPlayers);
     return updatedPlayers;
   }, [notifyOthers, pushCloudIfReady]);
@@ -153,7 +148,6 @@ export function usePlayers() {
     const updatedPlayers = removePlayerFromStorage(playerId);
     setPlayers(updatedPlayers);
     notifyOthers();
-    syncLocalPlayersNow();
     pushCloudIfReady(updatedPlayers);
     return updatedPlayers;
   }, [notifyOthers, pushCloudIfReady]);
@@ -162,7 +156,6 @@ export function usePlayers() {
     const updatedPlayers = updatePlayerInStorage(playerId, updates);
     setPlayers(updatedPlayers);
     notifyOthers();
-    syncLocalPlayersNow();
     pushCloudIfReady(updatedPlayers);
     return updatedPlayers;
   }, [notifyOthers, pushCloudIfReady]);
@@ -214,9 +207,6 @@ export function usePlayers() {
     if (loading) return;
     savePlayers(players);
 
-    if (pingTimeoutRef.current) clearTimeout(pingTimeoutRef.current);
-    pingTimeoutRef.current = setTimeout(() => syncLocalPlayersNow(), 300);
-
     if (!user || !cloudSyncedRef.current) return;
 
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -229,6 +219,18 @@ export function usePlayers() {
       }).catch(() => {});
     }, 800);
   }, [players, loading, user?.id]);
+
+  // Pseudos locaux → statistiques de visite. Relancé seulement quand les NOMS
+  // changent (ajout, suppression, renommage, fusion cloud), jamais pour une
+  // mise à jour de stats en partie. syncLocalPlayersNow filtre encore le
+  // consentement et dédoublonne entre instances (page + composant de jeu).
+  // Déclaré APRÈS l'effet qui enregistre la liste : elle la relit en stockage.
+  // Ce n'est pas une présence : seul VisitTracker émet des battements.
+  const localNamesKey = JSON.stringify(players.map((player) => player.name));
+  useEffect(() => {
+    if (loading) return;
+    syncLocalPlayersNow();
+  }, [localNamesKey, loading]);
 
   return {
     players,

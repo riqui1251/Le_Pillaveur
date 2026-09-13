@@ -3,8 +3,6 @@ import { subjectKeyFor } from '@/lib/ip-history-server'
 import { prepareHostedGameSessionsClose } from '@/lib/online/game-sessions'
 import type * as SupervisionServer from '@/lib/supervision-overview-server'
 
-export const PRESENCE_PING_SECONDS = 60
-
 /**
  * Actions de staff SANS compte cible propre, ancrées sur leur auteur (F42).
  * Liste recopiée volontairement : l'import de valeur créerait un cycle

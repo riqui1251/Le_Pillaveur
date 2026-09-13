@@ -4076,7 +4076,7 @@
       "guestNoRole": "Cuenta de invitado: sin rol de equipo posible",
       "matchCount": "{total} cuenta{plural} encontrada{plural}",
       "kindSummary": "{total, plural, one {# cuenta} other {# cuentas}}: {password} con contraseña · {google} Google · {guests, plural, one {# invitado} other {# invitados}}{orphans, plural, =0 {} one { (# huérfano incluido)} other { (# huérfanos incluidos)}}",
-      "countsNote": "Invitados incluidos. La última actividad también avanza con una pestaña abierta en segundo plano: no prueba que la persona esté jugando."
+      "countsNote": "Invitados incluidos. Desde la actualización del seguimiento de presencia ({date}), la última actividad sigue una página realmente en uso: pestaña visible e interacción en los últimos 30 minutos (antes bastaba con una pestaña abierta). No prueba que la persona esté jugando."
     },
     "units": {
       "s": "s",
@@ -4264,8 +4264,7 @@
     "activity": {
       "lastAuth": "Última autenticación:",
       "neverLoggedIn": "Nunca registrada",
-      "legacyPresence": "Acumulado heredado: {duration}",
-      "legacyPresenceNote": " (sobreestimado: pestañas abiertas)"
+      "legacyPresenceFrozen": "Acumulado heredado, congelado el {date}: {duration} — sobreestimado, se contaban las pestañas abiertas"
     },
     "feedback": {
       "activeTitle": "Comentarios abiertos",
@@ -4318,7 +4317,7 @@
       "identityTitle": "Cuenta",
       "createdAt": "Creada el",
       "lastActivity": "Última actividad",
-      "lastActivityHint": "Última visita con una sesión válida, en todos los dispositivos. Una pestaña abierta también la hace avanzar.",
+      "lastActivityHint": "Última visita con una sesión válida, en todos los dispositivos. Desde la actualización del seguimiento de presencia ({date}), solo una página realmente en uso (pestaña visible e interacción en los últimos 30 minutos) o una autenticación la hace avanzar; antes bastaba con una pestaña abierta.",
       "lastAuth": "Última autenticación",
       "lastAuthHint": "Credenciales, Google o creación de invitado: no cada visita.",
       "never": "Nunca",

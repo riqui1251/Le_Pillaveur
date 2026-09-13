@@ -45,11 +45,13 @@ En **mode local** (sans compte), vos joueurs locaux sont stockés sur votre appa
 - adresse IP ;
 - pays estimé (géolocalisation approximative par adresse IP, calculée sur nos serveurs — aucun service tiers) ;
 - type d'appareil / navigateur (user-agent simplifié) ;
-- dates de connexion et temps de présence sur le site, ainsi que le dernier compte utilisé sur ce navigateur et la date de son dernier passage connecté (pour distinguer un navigateur encore connecté à ce compte d'un navigateur où il a seulement été utilisé auparavant).
+- dates de vos passages sur le site (pages affichées et activité), ainsi que le dernier compte utilisé sur ce navigateur et la date de son dernier passage connecté (pour distinguer un navigateur encore connecté à ce compte d'un navigateur où il a seulement été utilisé auparavant).
 
 Si vous refusez, aucun suivi de visite n'est enregistré.
 
-**Indépendamment de ce consentement**, pour les **comptes connectés** uniquement, nous conservons l'adresse IP, le pays estimé et le type d'appareil des dernières connexions, ainsi que la date de dernière activité du compte (qui sert aussi au statut « en ligne » visible par vos amis et à la suppression automatique des comptes invités inactifs), au titre de la **sécurité et de la modération des comptes** (prévention des fraudes, bannissements) — base : intérêt légitime.
+**Indépendamment de ce consentement**, pour les **comptes connectés** uniquement, nous conservons l'adresse IP, le pays estimé et le type d'appareil des dernières connexions, ainsi que la date de dernière activité du compte, mise à jour seulement quand le site est réellement utilisé (page affichée et interaction depuis 30 minutes au plus) ou lors d'une authentification, qui sert aussi au statut « en ligne » visible par vos amis et à la suppression automatique des comptes invités inactifs ; aucune durée de présence n'est enregistrée à ce titre. Finalités : **sécurité et modération des comptes** (prévention des fraudes, bannissements), statut « en ligne » et suppression des comptes invités inactifs — base : intérêt légitime.
+
+Est considérée comme activité l'utilisation d'une page affichée à l'écran : un signal part au plus une fois par minute, seulement tant que la page est visible et que vous l'avez utilisée (clic, touche, toucher d'écran ou molette) au cours des 30 dernières minutes. Seul l'instant de votre dernier geste est gardé, dans la mémoire de la page et sans son contenu ; il n'est ni enregistré ni transmis. Avec ou sans consentement, aucune durée n'est enregistrée à partir de ce signal. Un cumul de temps de présence calculé avant le 13 septembre 2026, selon une méthode abandonnée qui comptait aussi les onglets restés ouverts (il est donc surestimé), reste conservé, figé, pour les comptes concernés jusqu'à sa remise à zéro ; il n'est plus alimenté.
 
 Dans les outils de modération du site, les adresses IPv6 d'un même réseau (même préfixe /64, en général une même box ou un même lieu) sont regroupées à l'affichage : ce regroupement est calculé à la lecture et n'enregistre aucune donnée supplémentaire.
 
