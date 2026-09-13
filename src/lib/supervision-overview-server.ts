@@ -3,6 +3,7 @@ import { GAMES } from '@/lib/games'
 import { canViewUserFeedback, canManageUsers } from '@/lib/roles'
 import { feedbackTypeLabel, isFeedbackType } from '@/lib/feedback'
 import { listFlaggedNameModerationUsers } from '@/lib/name-moderation-attempts-server'
+import { getExcludedUserIds } from '@/lib/metrics-exclusions'
 import { parisDayOffset, parisDayStartUtc, parisDayString, parisDaysBack } from '@/lib/paris-time'
 import { cleanupAbandonedRooms } from '@/lib/online-room'
 import { GAME_JOURNAL_SINCE } from '@/lib/online/game-sessions'
@@ -37,9 +38,12 @@ const STALLED_MS: Record<string, number> = {
   cast: 30 * 60 * 1000,
 }
 
-/** Fenêtres des indicateurs de croissance (F45) — bornées, en jours. */
-const RETENTION_D1_COHORT_DAYS = { from: 8, to: 2 }
-const RETENTION_D7_COHORT_DAYS = { from: 21, to: 8 }
+/**
+ * Fenêtres des indicateurs de croissance (F45) — bornées, en jours. La
+ * rétention J1 / J7, calculée ici sur `lastSeenAt` (un onglet oublié suffisait
+ * à « retenir » un compte), est remplacée par les retours J+1 / J+7 par
+ * cohorte de active-accounts-server.ts, tirés des visites et du journal.
+ */
 const REGISTERED_SHARE_WINDOW_DAYS = 30
 const PLAYERS_BY_GAME_WINDOW_DAYS = 7
 
@@ -61,7 +65,6 @@ const ONLINE_PLAY_WINDOW_DAYS = { d1: 1, d7: 7, d30: 30 }
 const ONLINE_LAUNCH_SERIES_DAYS = 14
 
 const HOUR_MS = 60 * 60 * 1000
-const DAY_MS = 24 * HOUR_MS
 
 export type DailyPoint = { date: string; visitors: number; parties: number }
 
@@ -142,17 +145,20 @@ export type OnlinePlayStats = {
   /**
    * Comptes DISTINCTS ayant pris place dans une partie lancée depuis le minuit
    * de Paris d'aujourd'hui (d1), des 7 ou des 30 derniers jours de Paris.
-   * Équipe (rôle ≠ 'user') exclue ; `guests` = dont comptes invités. Libellé
-   * « comptes », jamais « personnes ».
+   * Équipe (rôle ≠ 'user') et comptes de test (metrics-exclusions.ts) exclus,
+   * comme dans le tableau des comptes actifs affiché sur le même écran ;
+   * `guests` = dont comptes invités. Libellé « comptes », jamais « personnes ».
    */
   uniquePlayers: ParisDayWindows & { guests: ParisDayWindows }
   /** Comptes d'équipe écartés de `uniquePlayers` sur 30 jours (« + N équipe »). */
   staffExcluded: number
+  /** Comptes de test écartés de `uniquePlayers` sur 30 jours. */
+  testExcluded: number
   /**
    * Parties LANCÉES par jour de Paris sur 14 jours, du plus ancien au plus
    * récent. solo = au plus un humain (contre des bots), withHumans = deux
    * humains ou plus ; humains = sièges sans botName. Parties jouées par
-   * l'équipe SEULE exclues.
+   * l'équipe ou des comptes de test SEULS exclues.
    */
   launchesByDay: Array<{ day: string; solo: number; withHumans: number }>
   /**
@@ -165,8 +171,6 @@ export type OnlinePlayStats = {
 }
 
 export type GrowthStats = {
-  retentionD1: { cohort: number; retained: number; rate: number | null }
-  retentionD7: { cohort: number; retained: number; rate: number | null }
   /**
    * PART des comptes enregistrés parmi les comptes CRÉÉS sur la fenêtre.
    * Ce n'est PAS un entonnoir de conversion : rien ne relie un compte
@@ -186,8 +190,6 @@ export type GrowthStats = {
   onlinePlay: OnlinePlayStats
   /** Fenêtres employées, pour afficher la définition exacte à l'écran. */
   windows: {
-    retentionD1CohortDays: [number, number]
-    retentionD7CohortDays: [number, number]
     registeredShareDays: number
     playersByGameDays: number
   }
@@ -207,25 +209,46 @@ export type GrowthStats = {
 export const STAFF_SELF_ANCHORED_ACTIONS = ['account-delete', 'room-close', 'site-setting'] as const
 
 /**
- * Journalise une action du staff sans compte cible (voir ci-dessus).
+ * Actions du staff qui VISENT un compte sans être une sanction : ancrées sur
+ * la cible (`userId`), l'auteur dans `actorId`, comme un ban. Elles partent
+ * donc avec le compte visé — sans objet une fois le compte supprimé.
+ * - 'metrics-exclusion' : compte marqué (ou démarqué) « compte de test »,
+ *   exclu des statistiques d'usage (metrics-exclusions.ts). Détail neutre
+ *   'on' (marqué) ou 'off' (démarqué), traduit à la lecture.
+ * Réservées aux admins : l'historique d'une fiche, ouvert dès modérateur, ne
+ * les montre pas aux grades inférieurs.
+ */
+export const STAFF_TARGETED_ACTIONS = ['metrics-exclusion'] as const
+
+/**
+ * Journalise une action du staff : sans compte cible (voir
+ * STAFF_SELF_ANCHORED_ACTIONS), ou sur un compte cible (STAFF_TARGETED_ACTIONS,
+ * `targetUserId` obligatoire).
  *
- * `detail` est recopié tel quel et SURVIT à tout compte supprimé ensuite
- * (ancré sur l'auteur, jamais purgé) : il ne doit porter ni pseudo, ni code
- * de compte, ni email — seulement de quoi relire l'action (type et rôle d'un
- * compte supprimé en détail neutre `type:rôle`, code de table, réglage). Les
- * lignes 'account-delete' écrites avant cette règle ont été anonymisées par
- * la migration 20260912100000_anonymize_account_delete_log, et le balayage de
+ * `detail` est recopié tel quel et, pour une action sans cible, SURVIT à tout
+ * compte supprimé ensuite (ancré sur l'auteur, jamais purgé) : il ne doit
+ * porter ni pseudo, ni code de compte, ni email — seulement de quoi relire
+ * l'action (type et rôle d'un compte supprimé en détail neutre `type:rôle`,
+ * code de table, réglage). Même règle pour une action ciblée : la cible est
+ * la référence du compte, son nom se résout à la lecture. Les lignes
+ * 'account-delete' écrites avant cette règle ont été anonymisées par la
+ * migration 20260912100000_anonymize_account_delete_log, et le balayage de
  * conservation anonymise toute ligne restée hors de ce format (écrite par un
  * ancien conteneur pendant un déploiement, ou après un retour arrière).
  */
-export async function logStaffAction(params: {
-  actorId: string
-  action: (typeof STAFF_SELF_ANCHORED_ACTIONS)[number]
-  detail: string
-}): Promise<void> {
+export async function logStaffAction(
+  params:
+    | { actorId: string; action: (typeof STAFF_SELF_ANCHORED_ACTIONS)[number]; detail: string }
+    | {
+        actorId: string
+        action: (typeof STAFF_TARGETED_ACTIONS)[number]
+        targetUserId: string
+        detail: string
+      }
+): Promise<void> {
   await prisma.accountBanEvent.create({
     data: {
-      userId: params.actorId,
+      userId: 'targetUserId' in params ? params.targetUserId : params.actorId,
       actorId: params.actorId,
       action: params.action,
       comment: params.detail.slice(0, 300),
@@ -398,8 +421,15 @@ export type OnlinePlaySessionRow = {
  * 6 jours, pas de « maintenant − 7 × 24 h ». Un lancement à 0 h 30 heure de
  * Paris (22 h 30 UTC la veille en été) compte bien pour aujourd'hui, quel que
  * soit le fuseau du conteneur.
+ *
+ * `excludedUserIds` = comptes de test : traités comme l'équipe (hors
+ * effectifs, parties jouées par eux seuls non comptées), comptés à part.
  */
-export function summarizeOnlinePlay(sessions: OnlinePlaySessionRow[], now: Date): OnlinePlayStats {
+export function summarizeOnlinePlay(
+  sessions: OnlinePlaySessionRow[],
+  now: Date,
+  excludedUserIds: readonly string[] = []
+): OnlinePlayStats {
   const windowStartMs = (days: number) => parisDayStartUtc(parisDayOffset(days - 1, now)).getTime()
   const windows = (['d1', 'd7', 'd30'] as const).map((key) => ({
     sinceMs: windowStartMs(ONLINE_PLAY_WINDOW_DAYS[key]),
@@ -407,8 +437,13 @@ export function summarizeOnlinePlay(sessions: OnlinePlaySessionRow[], now: Date)
     guests: new Set<string>(),
   }))
   const oldestMs = windowStartMs(ONLINE_PLAY_WINDOW_DAYS.d30)
+  const excluded = new Set(excludedUserIds)
   const staff = new Set<string>()
+  const tests = new Set<string>()
   let deletedSeats30 = 0
+  /** Siège d'un compte INTERNE : équipe (rôle) ou compte de test (liste). */
+  const isInternal = (seat: OnlinePlaySessionRow['humanSeats'][number]) =>
+    seat.user !== null && (seat.user.role !== 'user' || (seat.userId !== null && excluded.has(seat.userId)))
 
   const launches = new Map(
     parisDaysBack(ONLINE_LAUNCH_SERIES_DAYS, now).map((day) => [day, { day, solo: 0, withHumans: 0 }])
@@ -419,14 +454,12 @@ export function summarizeOnlinePlay(sessions: OnlinePlaySessionRow[], now: Date)
     // La requête borne déjà ; on ne se fie pas à l'appelant pour la fenêtre.
     if (startedMs < oldestMs) continue
 
-    // Équipe exclue de la série aussi : une partie où tous les humains sont
-    // des comptes de l'équipe (un test de TryBotsGate) n'est pas une partie
+    // Équipe et comptes de test exclus de la série aussi : une partie où tous
+    // les humains sont internes (un essai de TryBotsGate) n'est pas une partie
     // de joueur. Une table équipe + joueur, elle, reste une partie de joueur.
-    // Un siège sans compte (supprimé ou non rattaché) n'est pas présumé équipe.
-    const staffOnly =
-      session.humanSeats.length > 0 &&
-      session.humanSeats.every((seat) => seat.user !== null && seat.user.role !== 'user')
-    const launch = staffOnly ? undefined : launches.get(parisDayString(session.startedAt))
+    // Un siège sans compte (supprimé ou non rattaché) n'est pas présumé interne.
+    const internalOnly = session.humanSeats.length > 0 && session.humanSeats.every(isInternal)
+    const launch = internalOnly ? undefined : launches.get(parisDayString(session.startedAt))
     if (launch) {
       // Humains = sièges sans botName. `humanCount` ne compte que les sièges
       // RATTACHÉS à un compte au lancement : un humain non rattaché y passait
@@ -444,6 +477,10 @@ export function summarizeOnlinePlay(sessions: OnlinePlaySessionRow[], now: Date)
       }
       if (seat.user.role !== 'user') {
         staff.add(seat.userId)
+        continue
+      }
+      if (excluded.has(seat.userId)) {
+        tests.add(seat.userId)
         continue
       }
       for (const span of windows) {
@@ -464,6 +501,7 @@ export function summarizeOnlinePlay(sessions: OnlinePlaySessionRow[], now: Date)
       guests: { d1: d1.guests.size, d7: d7.guests.size, d30: d30.guests.size },
     },
     staffExcluded: staff.size,
+    testExcluded: tests.size,
     launchesByDay: [...launches.values()],
     deletedSeats30,
   }
@@ -477,28 +515,34 @@ export function summarizeOnlinePlay(sessions: OnlinePlaySessionRow[], now: Date)
  */
 async function getOnlinePlayStats(now: Date): Promise<OnlinePlayStats> {
   const since = parisDayStartUtc(parisDayOffset(ONLINE_PLAY_WINDOW_DAYS.d30 - 1, now))
-  const rows = await prisma.onlineGameSession.findMany({
-    where: { startedAt: { gte: since } },
-    select: {
-      startedAt: true,
-      humanCount: true,
-      participants: {
-        where: { botName: null },
-        // Rôle et type lus À LA LECTURE via la relation : aucun pseudo, et un
-        // compte supprimé depuis revient avec userId nul (SetNull).
-        select: { userId: true, user: { select: { role: true, isGuest: true } } },
+  const [rows, excludedUserIds] = await Promise.all([
+    prisma.onlineGameSession.findMany({
+      where: { startedAt: { gte: since } },
+      select: {
+        startedAt: true,
+        humanCount: true,
+        participants: {
+          where: { botName: null },
+          // Rôle et type lus À LA LECTURE via la relation : aucun pseudo, et un
+          // compte supprimé depuis revient avec userId nul (SetNull).
+          select: { userId: true, user: { select: { role: true, isGuest: true } } },
+        },
       },
-    },
-  })
+    }),
+    // Même liste de comptes de test que le tableau des comptes actifs : les
+    // deux blocs de la Vue d'ensemble comptent les mêmes joueurs.
+    getExcludedUserIds(),
+  ])
   return summarizeOnlinePlay(
     rows.map((row) => ({ startedAt: row.startedAt, humanCount: row.humanCount, humanSeats: row.participants })),
-    now
+    now,
+    excludedUserIds
   )
 }
 
 /**
  * Indicateurs de croissance (F45). Tout est dérivé de l'existant — dates de
- * création / dernière visite des comptes, historique des lancements de
+ * création des comptes, historique des lancements de parties, journal des
  * parties, salles en cours — sans le moindre changement de schéma, et chaque
  * requête est bornée par une fenêtre de dates, un LIMIT, ou ne renvoie que
  * des comptages (aucune ligne chargée).
@@ -514,30 +558,11 @@ async function computeGrowthStats(): Promise<GrowthStats> {
   const parisDayStartMs = (daysAgo: number) =>
     parisDayStartUtc(parisDayOffset(daysAgo, new Date(now))).getTime()
 
-  // `lastSeenAt` ne garde que la DERNIÈRE visite : « revenu » se lit donc
-  // « revu au moins N jours après son inscription », pas « revenu le jour N ».
-  // La définition affichée à l'écran dit exactement cela. Cohorte = comptes
-  // créés du jour de Paris J−from au jour J−to, tous deux inclus : un compte
-  // du jour J−to a déjà au moins `to − 1` jours pleins, soit l'écart attendu.
-  const retentionQuery = (cohort: { from: number; to: number }, gapDays: number) =>
-    prisma.$queryRawUnsafe<Array<{ cohort: bigint; retained: bigint }>>(
-      `SELECT COUNT(*) as cohort,
-              SUM(CASE WHEN lastSeenAt IS NOT NULL AND lastSeenAt >= createdAt + ? THEN 1 ELSE 0 END) as retained
-       FROM User
-       WHERE email IS NOT NULL AND isGuest = 0
-         AND createdAt >= ? AND createdAt < ?`,
-      gapDays * DAY_MS,
-      parisDayStartMs(cohort.from),
-      parisDayStartMs(cohort.to - 1)
-    )
-
   // « Sur les N derniers jours » = N jours de Paris, aujourd'hui compris.
   const shareSince = new Date(parisDayStartMs(REGISTERED_SHARE_WINDOW_DAYS - 1))
   const playersSince = new Date(parisDayStartMs(PLAYERS_BY_GAME_WINDOW_DAYS - 1))
 
-  const [d1Rows, d7Rows, registered, guests, gameRows, abandonedRows, onlinePlay] = await Promise.all([
-    retentionQuery(RETENTION_D1_COHORT_DAYS, 1),
-    retentionQuery(RETENTION_D7_COHORT_DAYS, 7),
+  const [registered, guests, gameRows, abandonedRows, onlinePlay] = await Promise.all([
     prisma.user.count({
       where: { createdAt: { gte: shareSince }, email: { not: null }, isGuest: false },
     }),
@@ -591,11 +616,6 @@ async function computeGrowthStats(): Promise<GrowthStats> {
 
   const ratio = (part: number, whole: number) => (whole > 0 ? part / whole : null)
 
-  const d1Cohort = Number(d1Rows[0]?.cohort ?? 0)
-  const d1Retained = Number(d1Rows[0]?.retained ?? 0)
-  const d7Cohort = Number(d7Rows[0]?.cohort ?? 0)
-  const d7Retained = Number(d7Rows[0]?.retained ?? 0)
-
   // « Partie abandonnée » ne peut se mesurer que sur le vivant : rien n'est
   // écrit quand une partie meurt sans résultat (voir le rapport). Le chiffre
   // affiché est donc celui des tables de JEU figées À L'INSTANT — celles
@@ -604,8 +624,6 @@ async function computeGrowthStats(): Promise<GrowthStats> {
   const stalledRooms = Number(abandonedRows[0]?.stalled ?? 0)
 
   return {
-    retentionD1: { cohort: d1Cohort, retained: d1Retained, rate: ratio(d1Retained, d1Cohort) },
-    retentionD7: { cohort: d7Cohort, retained: d7Retained, rate: ratio(d7Retained, d7Cohort) },
     registeredShare: {
       registered,
       guests,
@@ -623,8 +641,6 @@ async function computeGrowthStats(): Promise<GrowthStats> {
     },
     onlinePlay,
     windows: {
-      retentionD1CohortDays: [RETENTION_D1_COHORT_DAYS.from, RETENTION_D1_COHORT_DAYS.to],
-      retentionD7CohortDays: [RETENTION_D7_COHORT_DAYS.from, RETENTION_D7_COHORT_DAYS.to],
       registeredShareDays: REGISTERED_SHARE_WINDOW_DAYS,
       playersByGameDays: PLAYERS_BY_GAME_WINDOW_DAYS,
     },
@@ -639,13 +655,26 @@ async function computeGrowthStats(): Promise<GrowthStats> {
  * perte au redéploiement ne coûte qu'un recalcul.
  */
 let growthCache: { at: number; value: GrowthStats } | null = null
+/** Incrémentée à chaque invalidation : un calcul lancé avant ne remplit pas le cache. */
+let growthCacheGeneration = 0
 
 /** Indicateurs de croissance, recalculés au plus une fois par GROWTH_CACHE_MS. */
 export async function getGrowthStats(): Promise<GrowthStats> {
   if (growthCache && Date.now() - growthCache.at < GROWTH_CACHE_MS) return growthCache.value
+  const generation = growthCacheGeneration
   const value = await computeGrowthStats()
-  growthCache = { at: Date.now(), value }
+  if (generation === growthCacheGeneration) growthCache = { at: Date.now(), value }
   return value
+}
+
+/**
+ * Oublie le cache de la croissance : appelé quand la liste des comptes de test
+ * change, pour que « Joueurs du jeu en ligne » suive la coche aussitôt que le
+ * tableau des comptes actifs.
+ */
+export function invalidateGrowthStats(): void {
+  growthCacheGeneration += 1
+  growthCache = null
 }
 
 /** Nature d'entrée de journal déduite de l'action stockée sur AccountBanEvent. */
@@ -660,6 +689,12 @@ function journalKindForAction(action: string): JournalKind | null {
     case 'room-close':
       return 'room-close'
     case 'site-setting':
+      return 'site-setting'
+    // Compte de test exclu des statistiques : un réglage du site qui vise un
+    // compte. Rendu comme un réglage (détail neutre 'on' / 'off', traduit à
+    // l'écran) avec le lien vers la fiche de la cible — surtout pas « a
+    // banni » par défaut.
+    case 'metrics-exclusion':
       return 'site-setting'
     // Les acquittements (feedback, pseudo) ne sont pas des actes de journal :
     // ils encombreraient la liste sans rien apprendre.

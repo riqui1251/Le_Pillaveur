@@ -15,6 +15,11 @@ import { adminErrorResponse, requireRole } from '../_guard'
  * ligne, tirés du journal des parties) : même garde admin et plus que le
  * journal lui-même (admin/game-sessions), même cache. Des effectifs
  * seulement, jamais un nom de compte.
+ *
+ * Ne porte plus de rétention J1 / J7 : calculée sur `lastSeenAt`, elle
+ * comptait « retenu » un compte dont l'onglet était resté ouvert. Les retours
+ * J+1 / J+7 par cohorte, tirés des visites et du journal, sont servis par
+ * /api/admin/accounts/activity.
  */
 export async function GET() {
   try {

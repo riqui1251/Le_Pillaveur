@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
@@ -39,10 +39,13 @@ import {
   Inbox,
   AlertTriangle,
   Sparkles,
+  RefreshCw,
+  UserCheck,
 } from 'lucide-react'
 import { deviceLabel } from '@/lib/device-from-user-agent'
 import { isGuestPurgeOverdue, parseAccountDeleteLogDetail, type AccountKind } from '@/lib/account-kind'
 import type { OnlinePlayStats } from '@/lib/supervision-overview-server'
+import type { ActiveAccountsStats } from '@/lib/active-accounts-server'
 import { useAuth } from '@/hooks/useAuth'
 import {
   assignableRoles,
@@ -66,7 +69,7 @@ import {
 import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
 import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
-import { HONEST_PRESENCE_SINCE } from '@/lib/heartbeat'
+import { ACTIVE_WINDOW_MS, HONEST_PRESENCE_SINCE } from '@/lib/heartbeat'
 import { ANALYTICS_CONSENT_V2_SINCE } from '@/lib/auth-cookies'
 import { isOnline, ONLINE_WINDOW_MS } from '@/lib/presence'
 import { groupIpsByNetwork, type IpNetworkGroup } from '@/lib/ip-network'
@@ -298,9 +301,12 @@ type LiveTable = {
   stalled: boolean
 }
 
+/**
+ * Plus de rétention J+1 / J+7 ici (lot 7) : calculée sur lastSeenAt, un onglet
+ * resté ouvert suffisait à « retenir » un compte. Les retours se lisent
+ * désormais dans le tableau des comptes actifs, sur de vrais jours d'activité.
+ */
 type GrowthStats = {
-  retentionD1: { cohort: number; retained: number; rate: number | null }
-  retentionD7: { cohort: number; retained: number; rate: number | null }
   /** PART des comptes enregistrés parmi les comptes créés — pas un entonnoir. */
   registeredShare: { registered: number; guests: number; share: number | null }
   playersByGame: Array<{ gameId: string; gameTitle: string; players: number }>
@@ -312,8 +318,6 @@ type GrowthStats = {
    */
   onlinePlay?: OnlinePlayStats
   windows: {
-    retentionD1CohortDays: [number, number]
-    retentionD7CohortDays: [number, number]
     registeredShareDays: number
     playersByGameDays: number
   }
@@ -585,6 +589,10 @@ function journalText(t: ReturnType<typeof useTranslations<'supervision'>>, e: Jo
     case 'room-close':
       return t('room.journalRoomClose', { actor, detail: e.detail ?? '' })
     case 'site-setting':
+      // Compte de test (action 'metrics-exclusion', ciblée) : détail neutre
+      // 'on' / 'off' traduit ici, jamais affiché tel quel.
+      if (e.targetUserId && e.detail === 'on') return t('room.journalMetricsExclusionOn', { actor, target })
+      if (e.targetUserId && e.detail === 'off') return t('room.journalMetricsExclusionOff', { actor, target })
       return t('room.journalSiteSetting', { actor, detail: e.detail ?? '' })
   }
 }
@@ -1672,6 +1680,7 @@ function OnlinePlayersSection({
       {/* Ce que les effectifs ne comptent pas, dit à côté d'eux. */}
       <ul className="space-y-1 text-xs leading-relaxed text-white/55">
         <li className="min-w-0">{t('onlinePlayers.staffExcluded', { count: onlinePlay.staffExcluded })}</li>
+        <li className="min-w-0">{t('onlinePlayers.testExcluded', { count: onlinePlay.testExcluded })}</li>
         <li className="min-w-0">{t('onlinePlayers.deletedSeats', { count: onlinePlay.deletedSeats30 })}</li>
       </ul>
 
@@ -1700,6 +1709,576 @@ function OnlinePlayersSection({
   )
 }
 
+/**
+ * Taille de cohorte à partir de laquelle le taux de retour s'affiche. En
+ * dessous, un seul compte fait bouger le pourcentage de 10 points ou plus :
+ * seuls les effectifs bruts (« 2 sur 5 ») ont un sens.
+ */
+const RETURN_RATE_MIN_COHORT = 10
+
+/**
+ * Cohortes des retours, en jours de Paris avant aujourd'hui, bornes incluses
+ * (RETENTION_COHORTS de active-accounts-server, module serveur non importable
+ * ici). Ne sert qu'au texte des définitions.
+ */
+const RETURN_COHORT_DAYS = { d1: { from: 8, to: 2 }, d7: { from: 21, to: 8 } } as const
+
+/** Fenêtre « actif » d'un battement, en minutes (src/lib/heartbeat.ts), pour les définitions. */
+const ACTIVE_WINDOW_MINUTES = Math.round(ACTIVE_WINDOW_MS / 60_000)
+
+/** Sous-titre d'un groupe de chiffres du tableau des comptes actifs. */
+const ACTIVITY_GROUP_TITLE = 'text-[11px] font-semibold uppercase tracking-wide text-white/45'
+
+/**
+ * Définition courte d'un chiffre, repliée : la vue garde sa densité sur
+ * téléphone, et chaque chiffre reste défendable sans nous appeler (F45).
+ */
+function MetricDefinition({ text, className }: { text: string; className?: string }) {
+  const t = useTranslations('supervision.activeAccounts')
+  return (
+    <details
+      className={cn(
+        'group mt-1.5 min-w-0 border-t border-white/[0.07] text-[11px] leading-relaxed text-white/45',
+        className
+      )}
+    >
+      <summary className="-mx-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-1.5 text-white/55 transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 [&::-webkit-details-marker]:hidden">
+        <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-open:rotate-90" />
+        {t('definition')}
+      </summary>
+      <p className="min-w-0 break-words pb-0.5">{text}</p>
+    </details>
+  )
+}
+
+/** Tuile d'un chiffre : valeur (ou contenu libre), précision, définition repliée. */
+function ActivityMetric({
+  label,
+  value,
+  detail,
+  definition,
+  children,
+}: {
+  label: string
+  value?: string
+  detail?: string
+  definition: string
+  children?: ReactNode
+}) {
+  return (
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <p className="break-words text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</p>
+      {value !== undefined && (
+        <p className="mt-0.5 break-words font-display text-2xl font-bold tabular-nums text-white">{value}</p>
+      )}
+      {children}
+      {detail && <p className="break-words text-xs text-white/50">{detail}</p>}
+      <MetricDefinition text={definition} />
+    </div>
+  )
+}
+
+/** Deux effectifs côte à côte, 7 et 30 jours (nouveaux, revenants). */
+function WindowPair({
+  values,
+  labels,
+}: {
+  values: { d7: number; d30: number }
+  labels: { d7: string; d30: string }
+}) {
+  return (
+    <div className="mt-0.5 grid grid-cols-2 gap-x-3">
+      {(['d7', 'd30'] as const).map((key) => (
+        <div key={key} className="min-w-0">
+          <p className="font-display text-2xl font-bold tabular-nums text-white">{values[key]}</p>
+          <p className="break-words text-[11px] leading-snug text-white/50">{labels[key]}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Retour J+1 ou J+7 : effectifs bruts d'abord (« 2 sur 5 »), le pourcentage
+ * seulement à partir de RETURN_RATE_MIN_COHORT comptes de cohorte. Cohorte
+ * vide : « — », jamais « 0 sur 0 ». Cohorte rognée au début du journal
+ * (`createdSince`) : dit sous le chiffre, pendant les 2 à 3 semaines où elle
+ * le précède — « 0 sur 2 » ne doit pas se lire comme une rétention nulle.
+ */
+function ReturnMetric({
+  label,
+  cohort,
+  definition,
+}: {
+  label: string
+  cohort: ActiveAccountsStats['retention']['d1']
+  definition: string
+}) {
+  const t = useTranslations('supervision.activeAccounts')
+  const format = useFormatter()
+  const empty = cohort.cohort === 0
+  const since = cohort.createdSince
+    ? format.dateTime(parisDayToDate(cohort.createdSince), { day: '2-digit', month: '2-digit', timeZone: PARIS_TIME_ZONE })
+    : null
+  const detail = empty
+    ? since
+      ? t('returnEmptySince', { date: since })
+      : t('returnEmpty')
+    : cohort.cohort >= RETURN_RATE_MIN_COHORT
+      ? t('returnRate', { rate: rateLabel(cohort.retained / cohort.cohort) })
+      : t('returnRateHidden', { min: RETURN_RATE_MIN_COHORT })
+  return (
+    <ActivityMetric
+      label={label}
+      value={empty ? '—' : t('returnCount', { retained: cohort.retained, cohort: cohort.cohort })}
+      detail={!empty && since ? `${detail} ${t('returnPartial', { date: since })}` : detail}
+      definition={definition}
+    />
+  )
+}
+
+type ActivitySeriesKey = 'activeAccounts' | 'uniquePlayers' | 'launches'
+
+/**
+ * Série de 14 jours de Paris en trois rangées de barres À L'ÉCHELLE, sur le
+ * modèle du graphique des parties lancées : un petit graphique par mesure
+ * plutôt que trois barres serrées par jour, illisibles sur téléphone.
+ * Comptes actifs et joueurs uniques partagent leur échelle (même unité, des
+ * comptes : les hauteurs se comparent d'une rangée à l'autre) ; les parties
+ * ont la leur, graduée à part. Teintes or et crème, lisibles sur le feutre
+ * vert comme sur le bleu nuit du mode Soft. Les jours antérieurs à la source
+ * d'une rangée sont rayés : un 0 y mentirait.
+ */
+function ActivitySeriesChart({
+  series,
+  accountsSince,
+  journalSince,
+}: {
+  series: ActiveAccountsStats['series']
+  accountsSince: string
+  journalSince: string
+}) {
+  const t = useTranslations('supervision')
+  const format = useFormatter()
+  if (series.length === 0) return null
+  const columns = { gridTemplateColumns: `repeat(${series.length}, minmax(0, 1fr))` }
+  const dayText = (day: string, options: Pick<Intl.DateTimeFormatOptions, 'weekday' | 'day' | 'month'>) =>
+    format.dateTime(parisDayToDate(day), { ...options, timeZone: PARIS_TIME_ZONE })
+  const today = series[series.length - 1].day
+  const accountsMax = Math.max(1, ...series.map((d) => Math.max(d.activeAccounts, d.uniquePlayers)))
+  const launchesMax = Math.max(1, ...series.map((d) => d.launches))
+  const rows: Array<{ key: ActivitySeriesKey; label: string; max: number; since: string; bar: string }> = [
+    { key: 'activeAccounts', label: t('activeAccounts.seriesAccounts'), max: accountsMax, since: accountsSince, bar: 'bg-gold' },
+    { key: 'uniquePlayers', label: t('activeAccounts.seriesPlayers'), max: accountsMax, since: accountsSince, bar: 'bg-cream/60' },
+    {
+      key: 'launches',
+      label: t('activeAccounts.seriesLaunches'),
+      max: launchesMax,
+      since: journalSince,
+      bar: 'bg-cream/20 ring-1 ring-inset ring-cream/55',
+    },
+  ]
+  // Le journal est la source la plus tardive : rien de rayé sans jour antérieur.
+  const hasDaysWithoutData = series.some((d) => d.day < journalSince)
+
+  return (
+    <div className="min-w-0">
+      <div className="space-y-3">
+        {rows.map((row) => (
+          <div key={row.key} className="min-w-0">
+            <p className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-white/70">
+              <span aria-hidden className={cn('h-2.5 w-2.5 shrink-0 rounded-sm', row.bar)} />
+              <span className="min-w-0 break-words">{row.label}</span>
+            </p>
+            <div className="mt-1 flex min-w-0 gap-1.5">
+              {/* Axe à largeur fixe : les colonnes des trois rangées restent alignées. */}
+              <div
+                aria-hidden
+                className="flex h-16 w-6 shrink-0 flex-col justify-between pt-3 text-right text-[10px] leading-none tabular-nums text-white/50"
+              >
+                <span className="-translate-y-1/2">{row.max}</span>
+                <span className="translate-y-1/2">0</span>
+              </div>
+              <div className="relative min-w-0 flex-1">
+                <div aria-hidden className="pointer-events-none absolute inset-x-0 top-3 border-t border-dashed border-white/15" />
+                {/* pt-3 : place des valeurs au-dessus de la plus haute barre. */}
+                <ul aria-label={row.label} className="grid h-16 gap-0.5 border-b border-white/30 pt-3 sm:gap-1" style={columns}>
+                  {series.map((d) => {
+                    const value = d[row.key]
+                    const date = dayText(d.day, { weekday: 'short', day: 'numeric', month: 'short' })
+                    const noData = d.day < row.since
+                    const label = noData
+                      ? t('activeAccounts.seriesDayNoData', { date })
+                      : row.key === 'uniquePlayers' && d.deletedSeats > 0
+                        ? t('activeAccounts.seriesDayDeletedSeats', { date, value, seats: d.deletedSeats })
+                        : t('activeAccounts.seriesDay', { date, value })
+                    const height = `${(value / row.max) * 100}%`
+                    return (
+                      <li key={d.day} className="relative min-w-0" title={label}>
+                        <span className="sr-only">{label}</span>
+                        {noData ? (
+                          <div aria-hidden className="absolute inset-0 rounded-t-sm" style={BEFORE_JOURNAL_HATCH} />
+                        ) : (
+                          value > 0 && (
+                            <>
+                              <span
+                                aria-hidden
+                                className="absolute inset-x-0 text-center text-[9px] font-semibold leading-none tabular-nums text-white/75 sm:text-[10px]"
+                                style={{ bottom: `calc(${height} + 3px)` }}
+                              >
+                                {value}
+                              </span>
+                              <div aria-hidden className={cn('absolute inset-x-0 bottom-0 rounded-t-sm', row.bar)} style={{ height }} />
+                            </>
+                          )
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Jours du mois sous la dernière rangée ; l'espaceur reprend la largeur de l'axe. */}
+      <div aria-hidden className="mt-1 flex min-w-0 gap-1.5">
+        <span className="w-6 shrink-0" />
+        <div className="grid min-w-0 flex-1 gap-0.5 sm:gap-1" style={columns}>
+          {series.map((d) => (
+            <span
+              key={d.day}
+              className={cn(
+                'min-w-0 text-center text-[9px] leading-none tabular-nums sm:text-[10px]',
+                d.day === today ? 'font-bold text-white/80' : 'text-white/45'
+              )}
+            >
+              {dayText(d.day, { day: 'numeric' })}
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className="mt-1.5 text-[11px] text-white/45">
+        {t('onlinePlayers.range', {
+          from: dayText(series[0].day, { day: 'numeric', month: 'short' }),
+          to: dayText(today, { day: 'numeric', month: 'short' }),
+        })}
+      </p>
+      {hasDaysWithoutData && (
+        <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-white/60">
+          <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-sm border border-white/20" style={BEFORE_JOURNAL_HATCH} />
+          <span className="min-w-0">{t('activeAccounts.legendNoData')}</span>
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * « Comptes actifs » (lot 7) : combien de comptes différents viennent et
+ * jouent, nouveaux ou revenants, combien de temps, et s'ils reviennent.
+ * Panneau hors de la boucle de 15 s : chargé à l'ouverture de la vue
+ * d'ensemble et sur son propre bouton Actualiser, servi avec son heure de
+ * calcul. Une valeur déjà affichée reste en place si l'actualisation échoue.
+ */
+function ActiveAccountsSection({
+  stats,
+  loading,
+  failed,
+  onRefresh,
+}: {
+  stats: ActiveAccountsStats | null
+  loading: boolean
+  failed: boolean
+  onRefresh: () => void
+}) {
+  const t = useTranslations('supervision')
+  return (
+    <SectionCard
+      icon={UserCheck}
+      title={t('activeAccounts.title')}
+      description={t('activeAccounts.desc')}
+      actions={
+        <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
+          <RefreshCw className={cn('mr-1 h-3.5 w-3.5', loading && 'animate-spin')} />
+          {t('refresh')}
+        </Button>
+      }
+      bodyClassName="space-y-5"
+    >
+      {stats ? (
+        <>
+          {failed && (
+            <p role="alert" className="rounded-lg border border-rose-500/25 bg-rose-500/[0.06] px-3 py-2 text-xs text-rose-100">
+              {t('activeAccounts.refreshError')}
+            </p>
+          )}
+          <ActiveAccountsBody stats={stats} />
+        </>
+      ) : failed ? (
+        <ErrorState
+          icon={AlertTriangle}
+          message={t('activeAccounts.loadError')}
+          retryLabel={t('states.retry')}
+          onRetry={onRefresh}
+        />
+      ) : (
+        <SkeletonRows rows={3} />
+      )}
+    </SectionCard>
+  )
+}
+
+function ActiveAccountsBody({ stats }: { stats: ActiveAccountsStats }) {
+  const t = useTranslations('supervision')
+  const format = useFormatter()
+  const units = useDurationUnits()
+  const { accounts, players, visits, retention } = stats
+  const computedAt = new Date(stats.computedAt)
+  const { journalSince, visitsSince } = stats.coverage
+  // Comptes actifs et joueurs uniques viennent du journal OU des visites : la
+  // plus ancienne des deux sources ouvre leur couverture.
+  const accountsSince = visitsSince && visitsSince < journalSince ? visitsSince : journalSince
+  const shortDay = (day: string) =>
+    format.dateTime(parisDayToDate(day), { day: '2-digit', month: '2-digit', timeZone: PARIS_TIME_ZONE })
+  const fullDay = (day: string) =>
+    format.dateTime(parisDayToDate(day), { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: PARIS_TIME_ZONE })
+  // Tant que la source est plus jeune que la fenêtre, l'intitulé le dit :
+  // « 30 jours » promettrait un mois de données qui n'existent pas. Jour de
+  // début lu à l'heure du calcul (la valeur est mise en cache).
+  const windowLabel = (label: string, days: number, since: string) =>
+    parisDayOffset(days - 1, computedAt) < since
+      ? t('gameSessions.windowSince', { window: label, date: shortDay(since) })
+      : label
+  const duration = (seconds: number | null) => (seconds == null ? '—' : formatPresenceDuration(seconds, units))
+  // Jours de PARIS glissants, aujourd'hui compris.
+  const windows = [
+    { key: 'd1', label: t('stats.today'), days: 1 },
+    { key: 'd7', label: t('stats.week'), days: 7 },
+    { key: 'd30', label: t('stats.month'), days: 30 },
+  ] as const
+  const pairLabels = {
+    d7: windowLabel(t('stats.week'), 7, accountsSince),
+    d30: windowLabel(t('stats.month'), 30, accountsSince),
+  }
+  const hasVisibleTime = visits.visibleSeconds7d > 0
+
+  return (
+    <>
+      {/* Comptes : en ligne, actifs, nouveaux et revenants. */}
+      <div className="min-w-0 space-y-2.5">
+        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.accountsTitle')}</h3>
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          <ActivityMetric
+            label={t('activeAccounts.onlineNow')}
+            value={String(accounts.onlineNow)}
+            detail={t('activeAccounts.accountsUnit', { count: accounts.onlineNow })}
+            definition={t('activeAccounts.onlineNowDef', { minutes: ONLINE_WINDOW_MINUTES })}
+          />
+          {windows.map((w) => (
+            <ActivityMetric
+              key={w.key}
+              label={t('activeAccounts.activeLabel', { window: windowLabel(w.label, w.days, accountsSince) })}
+              value={String(accounts.active[w.key])}
+              detail={t('onlinePlayers.accountsDetail', { count: accounts.active[w.key], guests: accounts.guests[w.key] })}
+              definition={
+                w.days === 1
+                  ? t('activeAccounts.activeTodayDef', { minutes: ACTIVE_WINDOW_MINUTES })
+                  : t('activeAccounts.activeWindowDef', { days: w.days, minutes: ACTIVE_WINDOW_MINUTES })
+              }
+            />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <ActivityMetric label={t('activeAccounts.newLabel')} definition={t('activeAccounts.newDef')}>
+            <WindowPair values={accounts.newAccounts} labels={pairLabels} />
+          </ActivityMetric>
+          <ActivityMetric label={t('activeAccounts.returningLabel')} definition={t('activeAccounts.returningDef')}>
+            <WindowPair values={accounts.returning} labels={pairLabels} />
+          </ActivityMetric>
+        </div>
+        {/* Ce que les effectifs ne comptent pas, dit à côté d'eux. */}
+        <div className="min-w-0 text-xs text-white/55">
+          <p className="break-words">
+            {t('activeAccounts.excluded', { staff: accounts.staffExcluded, test: accounts.testExcluded })}
+          </p>
+          <MetricDefinition text={t('activeAccounts.excludedDef')} className="mt-0 border-t-0" />
+          <p className="break-words">
+            {t('activeAccounts.idleGuests', {
+              weekLabel: pairLabels.d7,
+              week: accounts.idleGuests.d7,
+              monthLabel: pairLabels.d30,
+              month: accounts.idleGuests.d30,
+            })}
+          </p>
+          <MetricDefinition text={t('activeAccounts.idleGuestsDef')} className="mt-0 border-t-0" />
+        </div>
+      </div>
+
+      {/* Joueurs uniques : journal des parties ou temps en partie des visites. */}
+      <div className="min-w-0 space-y-2.5">
+        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.playersTitle')}</h3>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          {windows.map((w) => (
+            <ActivityMetric
+              key={w.key}
+              label={windowLabel(w.label, w.days, accountsSince)}
+              value={String(players.unique[w.key])}
+              detail={t('activeAccounts.accountsUnit', { count: players.unique[w.key] })}
+              definition={
+                w.days === 1
+                  ? t('activeAccounts.playersTodayDef')
+                  : t('activeAccounts.playersWindowDef', { days: w.days })
+              }
+            />
+          ))}
+        </div>
+        {/* Sièges sans compte : hors effectifs, jamais additionnés aux comptes. */}
+        <div className="min-w-0 text-xs text-white/55">
+          <p className="break-words">
+            {t('activeAccounts.deletedSeats', {
+              todayLabel: t('stats.today'),
+              today: players.deletedSeats.d1,
+              weekLabel: windowLabel(t('stats.week'), 7, journalSince),
+              week: players.deletedSeats.d7,
+              monthLabel: windowLabel(t('stats.month'), 30, journalSince),
+              month: players.deletedSeats.d30,
+            })}
+          </p>
+          <MetricDefinition text={t('activeAccounts.deletedSeatsDef')} className="mt-0 border-t-0" />
+        </div>
+      </div>
+
+      {/* Visites : consentement seulement, dit en tête du groupe. */}
+      <div className="min-w-0 space-y-2.5">
+        <div className="min-w-0">
+          <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.visitsTitle')}</h3>
+          <p className="mt-0.5 break-words text-xs text-white/55">
+            {visitsSince
+              ? t('activeAccounts.visitsScope', { date: shortDay(visitsSince) })
+              : t('activeAccounts.visitsScopeNone')}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <ActivityMetric
+            label={t('activeAccounts.medianVisit')}
+            value={duration(visits.medianVisitSeconds7d)}
+            definition={t('activeAccounts.medianVisitDef')}
+          />
+          <ActivityMetric
+            label={t('activeAccounts.medianActive')}
+            value={duration(visits.medianActiveSecondsPerAccount7d)}
+            definition={t('activeAccounts.medianActiveDef', { minutes: ACTIVE_WINDOW_MINUTES })}
+          />
+          <ActivityMetric
+            label={t('activeAccounts.gameShare')}
+            value={hasVisibleTime ? rateLabel(visits.gameSeconds7d / visits.visibleSeconds7d) : '—'}
+            detail={
+              hasVisibleTime
+                ? t('activeAccounts.gameShareDetail', {
+                    game: duration(visits.gameSeconds7d),
+                    visible: duration(visits.visibleSeconds7d),
+                  })
+                : undefined
+            }
+            definition={t('activeAccounts.gameShareDef')}
+          />
+        </div>
+      </div>
+
+      <div className="min-w-0 space-y-2.5">
+        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.seriesTitle')}</h3>
+        <ActivitySeriesChart series={stats.series} accountsSince={accountsSince} journalSince={journalSince} />
+        {/* Le passé bouge (visites en cascade, places à compte nul) : dit en clair, pas seulement replié. */}
+        <p className="min-w-0 break-words text-[11px] leading-relaxed text-white/55">
+          {t('activeAccounts.seriesRecomputed')}
+        </p>
+        <MetricDefinition text={t('activeAccounts.seriesDef')} />
+      </div>
+
+      <div className="min-w-0 space-y-2.5">
+        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.returnsTitle')}</h3>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <ReturnMetric
+            label={t('activeAccounts.returnD1Label')}
+            cohort={retention.d1}
+            definition={t('activeAccounts.returnDef', { days: 1, ...RETURN_COHORT_DAYS.d1, min: RETURN_RATE_MIN_COHORT })}
+          />
+          <ReturnMetric
+            label={t('activeAccounts.returnD7Label')}
+            cohort={retention.d7}
+            definition={t('activeAccounts.returnDef', { days: 7, ...RETURN_COHORT_DAYS.d7, min: RETURN_RATE_MIN_COHORT })}
+          />
+        </div>
+      </div>
+
+      {/* Les plus actifs sur 7 jours, chacun vers sa fiche (noms résolus à la lecture). */}
+      <div className="min-w-0 space-y-2">
+        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.topTitle')}</h3>
+        {stats.topAccounts7d.length === 0 ? (
+          <p className="text-sm text-white/45">{t('activeAccounts.topEmpty')}</p>
+        ) : (
+          <ol className="space-y-1.5">
+            {stats.topAccounts7d.map((acc, index) => (
+              <li
+                key={acc.userId}
+                className="flex min-w-0 items-start gap-2.5 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2"
+              >
+                <span className="w-5 shrink-0 pt-0.5 text-right text-xs font-semibold tabular-nums text-gold/80">
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <AccountNameLink userId={acc.userId} name={acc.displayName} className="text-sm font-medium text-white" />
+                    <AccountCodeBadge code={acc.accountCode} />
+                    <AccountKindBadge kind={acc.kind} lastSeenAt={null} createdAt={null} compact />
+                  </div>
+                  <p className="mt-0.5 break-words text-xs tabular-nums text-white/55">
+                    {acc.activeSeconds == null
+                      ? t('activeAccounts.topLineUntracked', { games: acc.games })
+                      : t('activeAccounts.topLine', { active: duration(acc.activeSeconds), games: acc.games })}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+        <MetricDefinition text={t('activeAccounts.topDef')} />
+      </div>
+
+      {/* Autre unité que les comptes : encadré à part, jamais additionné. */}
+      <div className="min-w-0 rounded-xl border border-dashed border-white/15 p-3">
+        <h3 className={cn(ACTIVITY_GROUP_TITLE, 'flex min-w-0 items-center gap-1.5')}>
+          <Globe className="h-3.5 w-3.5 shrink-0 text-white/40" />
+          <span className="min-w-0 break-words">{t('activeAccounts.browsersTitle')}</span>
+        </h3>
+        <p className="mt-1 break-words text-sm tabular-nums text-white/80">
+          {t('activeAccounts.browsersValues', {
+            today: stats.browsersWithoutAccount.d1,
+            week: stats.browsersWithoutAccount.d7,
+          })}
+        </p>
+        <p className="mt-0.5 break-words text-[11px] text-white/50">{t('activeAccounts.browsersNotAdded')}</p>
+        <MetricDefinition text={t('activeAccounts.browsersDef')} />
+      </div>
+
+      <div className="space-y-1 border-t border-white/[0.07] pt-2 text-[11px]">
+        <p className="min-w-0 break-words text-white/50">
+          {visitsSince
+            ? t('activeAccounts.coverage', { journal: fullDay(journalSince), visits: fullDay(visitsSince) })
+            : t('activeAccounts.coverageNoVisits', { journal: fullDay(journalSince) })}
+        </p>
+        <p className="text-white/35">
+          {t('growth.freshness', {
+            time: format.dateTime(computedAt, { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
+            minutes: Math.max(1, Math.round(stats.cacheSeconds / 60)),
+          })}
+        </p>
+      </div>
+    </>
+  )
+}
+
 export default function SupervisionPage() {
   const t = useTranslations('supervision')
   const tCommon = useTranslations('common')
@@ -1725,6 +2304,12 @@ export default function SupervisionPage() {
   // Échec du chargement de la croissance : affiché, et il ne bloque plus
   // l'arrivée sur le journal filtré (qui attendait ces indicateurs).
   const [growthFailed, setGrowthFailed] = useState(false)
+  // Tableau des comptes actifs (lot 7) : même régime que la croissance, hors
+  // de la boucle — chargé à l'ouverture de la vue d'ensemble, puis sur son
+  // propre bouton Actualiser.
+  const [activeAccounts, setActiveAccounts] = useState<ActiveAccountsStats | null>(null)
+  const [activeAccountsLoading, setActiveAccountsLoading] = useState(false)
+  const [activeAccountsFailed, setActiveAccountsFailed] = useState(false)
   const [queueBusyId, setQueueBusyId] = useState<string | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   // Liste des comptes paginée EN BASE (F75) : `users` ne contient plus que la
@@ -2078,6 +2663,29 @@ export default function SupervisionPage() {
     }
   }, [userRole])
 
+  /**
+   * Comptes actifs : une requête à part, jamais dans la boucle (un parcours
+   * de 31 jours de visites et de journal, mis en cache côté serveur). Un échec
+   * garde la valeur déjà affichée : le panneau le signale au-dessus.
+   */
+  const loadActiveAccounts = useCallback(async () => {
+    if (!userRole || !canViewSupervisionAnalytics(userRole)) {
+      setActiveAccounts(null)
+      return
+    }
+    setActiveAccountsLoading(true)
+    setActiveAccountsFailed(false)
+    try {
+      const res = await fetch('/api/admin/accounts/activity', { credentials: 'include' })
+      if (!res.ok) throw new Error(`accounts activity ${res.status}`)
+      setActiveAccounts(await res.json())
+    } catch {
+      setActiveAccountsFailed(true)
+    } finally {
+      setActiveAccountsLoading(false)
+    }
+  }, [userRole])
+
   const loadFeedback = useCallback(
     async (silent = false) => {
       if (!userRole || !canViewUserFeedback(userRole)) {
@@ -2181,12 +2789,23 @@ export default function SupervisionPage() {
   const overviewLoaded = overview !== null
   // Chargée OU en échec : dans les deux cas, ce qui précède le journal a sa hauteur.
   const growthSettled = growth !== null || growthFailed
+  // Idem pour les comptes actifs, placés eux aussi au-dessus du journal.
+  const activeAccountsSettled = activeAccounts !== null || activeAccountsFailed
   useEffect(() => {
-    if (!journalUserId || activeTab !== 'overview' || !dataLoaded || !overviewLoaded || !growthSettled) return
+    if (
+      !journalUserId ||
+      activeTab !== 'overview' ||
+      !dataLoaded ||
+      !overviewLoaded ||
+      !growthSettled ||
+      !activeAccountsSettled
+    ) {
+      return
+    }
     if (journalScrolledFor.current === journalUserId) return
     journalScrolledFor.current = journalUserId
     journalPanelRef.current?.scrollIntoView({ block: 'start' })
-  }, [journalUserId, activeTab, dataLoaded, overviewLoaded, growthSettled])
+  }, [journalUserId, activeTab, dataLoaded, overviewLoaded, growthSettled, activeAccountsSettled])
 
   // Comptes : rechargés quand la page ou un filtre change, avec un court
   // délai pour ne pas interroger la base à chaque frappe.
@@ -2242,6 +2861,15 @@ export default function SupervisionPage() {
     if (growth) return
     void loadGrowth()
   }, [loading, userId, userRole, activeTab, growth, loadGrowth])
+
+  // Comptes actifs : même règle. Ni l'état de chargement ni l'échec ne sont
+  // des dépendances — un échec relancerait la requête en boucle ; on réessaie
+  // au prochain retour sur l'onglet ou par le bouton du panneau.
+  useEffect(() => {
+    if (loading || !userId || !userRole || activeTab !== 'overview') return
+    if (activeAccounts) return
+    void loadActiveAccounts()
+  }, [loading, userId, userRole, activeTab, activeAccounts, loadActiveAccounts])
 
   const handleIpClick = useCallback(async (ip: string) => {
     ipLookupForRef.current = ip
@@ -2597,11 +3225,11 @@ export default function SupervisionPage() {
   }
 
   // La Salle — tendance dérivée de la même série 14 j (pas d'appel dédié) :
-  // delta jour = dernier point vs veille ; delta semaine = 7 derniers points
-  // vs les 7 précédents.
+  // delta semaine = 7 derniers points vs les 7 précédents. Plus de delta du
+  // jour : il comparait une journée entamée à la veille entière (presque
+  // toujours rouge le matin), et DailyVisitor ne garde pas l'heure qui
+  // permettrait de comparer à la même heure la veille.
   const trendPoints = overview?.dailySeries ?? []
-  const lastPoint = trendPoints[trendPoints.length - 1]
-  const prevPoint = trendPoints[trendPoints.length - 2]
   const last7 = trendPoints.slice(-7)
   const prev7 = trendPoints.slice(-14, -7)
   const sumBy = (arr: DailyPoint[], key: 'visitors' | 'parties') => arr.reduce((s, p) => s + p[key], 0)
@@ -2616,8 +3244,6 @@ export default function SupervisionPage() {
     prev7.length > 0 && prevWeekVisitors > 0 && comparableSince(prev7[0]?.date)
       ? Math.round(((sumBy(last7, 'visitors') - prevWeekVisitors) / prevWeekVisitors) * 100)
       : null
-  const todayVisitorsDelta =
-    lastPoint && prevPoint && comparableSince(prevPoint.date) ? lastPoint.visitors - prevPoint.visitors : null
 
   const handleQueueAction = (id: string) => {
     const item = overview?.queue.find((q) => q.id === id)
@@ -2731,14 +3357,6 @@ export default function SupervisionPage() {
               label={t('room.todayLabel')}
               value={stats?.visitors.today ?? 0}
               hint={t('stats.todayHint')}
-              delta={
-                todayVisitorsDelta != null
-                  ? {
-                      direction: todayVisitorsDelta >= 0 ? 'up' : 'down',
-                      label: `${todayVisitorsDelta >= 0 ? '+' : ''}${todayVisitorsDelta} ${t('room.vsYesterday')}`,
-                    }
-                  : undefined
-              }
             />
             <KpiPlaque
               label={t('room.weekLabel')}
@@ -2771,6 +3389,13 @@ export default function SupervisionPage() {
             <TrendChart points={trendPoints} primaryLabel={t('room.trendVisitors')} secondaryLabel={t('room.trendParties')} />
           </SectionCard>
 
+          <ActiveAccountsSection
+            stats={activeAccounts}
+            loading={activeAccountsLoading}
+            failed={activeAccountsFailed}
+            onRefresh={() => void loadActiveAccounts()}
+          />
+
           {growth && (
             <SectionCard
               icon={Sparkles}
@@ -2778,31 +3403,9 @@ export default function SupervisionPage() {
               description={t('growth.desc')}
               bodyClassName="space-y-4"
             >
-              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-                <GrowthMetric
-                  label={t('growth.retentionD1Label')}
-                  value={rateLabel(growth.retentionD1.rate)}
-                  detail={t('growth.cohortDetail', {
-                    retained: growth.retentionD1.retained,
-                    cohort: growth.retentionD1.cohort,
-                  })}
-                  definition={t('growth.retentionD1Def', {
-                    from: growth.windows.retentionD1CohortDays[0],
-                    to: growth.windows.retentionD1CohortDays[1],
-                  })}
-                />
-                <GrowthMetric
-                  label={t('growth.retentionD7Label')}
-                  value={rateLabel(growth.retentionD7.rate)}
-                  detail={t('growth.cohortDetail', {
-                    retained: growth.retentionD7.retained,
-                    cohort: growth.retentionD7.cohort,
-                  })}
-                  definition={t('growth.retentionD7Def', {
-                    from: growth.windows.retentionD7CohortDays[0],
-                    to: growth.windows.retentionD7CohortDays[1],
-                  })}
-                />
+              {/* Rétention J+1 / J+7 retirée (lot 7) : remplacée par les retours
+                  du tableau des comptes actifs, sur de vrais jours d'activité. */}
+              <div className="grid gap-2.5 sm:grid-cols-2">
                 <GrowthMetric
                   label={t('growth.registeredShareLabel')}
                   value={rateLabel(growth.registeredShare.share)}

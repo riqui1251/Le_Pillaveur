@@ -12,7 +12,8 @@ const { prismaMock } = vi.hoisted(() => {
   const token = (name: string) => vi.fn(() => name)
   return {
     prismaMock: {
-      user: { findFirst: vi.fn(), delete: token('user.delete') },
+      user: { findFirst: vi.fn(), findMany: vi.fn(), delete: token('user.delete') },
+      siteSetting: { findUnique: vi.fn(), updateMany: vi.fn(), create: vi.fn() },
       onlineRoom: { findMany: vi.fn() },
       onlineGameSession: { updateMany: token('journal.close') },
       stats: { deleteMany: token('stats.deleteMany') },
@@ -81,5 +82,20 @@ describe('deleteUserAccount', () => {
     const queries = transactionQueries()
     expect(queries).toContain('accountVisit.deleteMany')
     expect(queries.indexOf('accountVisit.deleteMany')).toBeLessThan(queries.indexOf('user.delete'))
+  })
+
+  it('retire le compte effacé de la liste des comptes de test', async () => {
+    prismaMock.onlineRoom.findMany.mockResolvedValue([])
+    prismaMock.siteSetting.findUnique.mockResolvedValue({ key: 'metrics.excludedUserIds', value: '["u1","u2"]' })
+    // u1 n'existe plus une fois la transaction passée.
+    prismaMock.user.findMany.mockResolvedValue([{ id: 'u2' }])
+    prismaMock.siteSetting.updateMany.mockResolvedValue({ count: 1 })
+
+    await deleteUserAccount('u1')
+
+    expect(prismaMock.siteSetting.updateMany).toHaveBeenCalledWith({
+      where: { key: 'metrics.excludedUserIds', value: '["u1","u2"]' },
+      data: { value: '["u2"]' },
+    })
   })
 })

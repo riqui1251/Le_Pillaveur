@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { subjectKeyFor } from '@/lib/ip-history-server'
 import { prepareHostedGameSessionsClose } from '@/lib/online/game-sessions'
+import { setUserExcluded } from '@/lib/metrics-exclusions'
 import type * as SupervisionServer from '@/lib/supervision-overview-server'
 
 /**
@@ -123,4 +124,15 @@ export async function deleteUserAccount(userId: string): Promise<void> {
     ...closeHostedGames,
     prisma.user.delete({ where: { id: userId } }),
   ])
+
+  // Liste des comptes de test (SiteSetting, JSON d'identifiants) : hors de la
+  // transaction, faute d'opération atomique sur une valeur JSON. Le compte
+  // effacé en sort — la liste ne garde pas la trace d'un compte qui n'existe
+  // plus, les invités de test purgés sous 7 jours compris. Un échec ne remet
+  // pas en cause l'effacement : le prochain changement de la liste la nettoie.
+  try {
+    await setUserExcluded(userId, false)
+  } catch (error) {
+    console.error('deleteUserAccount: retrait de la liste des comptes de test impossible:', error)
+  }
 }

@@ -6,12 +6,14 @@ import {
   canDeleteAccount,
   canDeleteTarget,
   canViewAccountActivity,
+  canViewSupervisionAnalytics,
   normalizeRole,
 } from '@/lib/roles'
 import { deleteUserAccount } from '@/lib/user-activity-server'
 import {
   logStaffAction,
   STAFF_SELF_ANCHORED_ACTIONS,
+  STAFF_TARGETED_ACTIONS,
 } from '@/lib/supervision-overview-server'
 import {
   accountDescriptionSelect,
@@ -74,8 +76,15 @@ export async function GET(
         userId,
         // Les actions de staff sans cible propre sont ancrées sur leur AUTEUR
         // (F42) : elles n'ont rien à faire dans l'historique de modération
-        // subi par ce compte.
-        action: { notIn: [...STAFF_SELF_ANCHORED_ACTIONS] },
+        // subi par ce compte. Les actions ciblées qui ne sont pas des
+        // sanctions (compte de test exclu des statistiques) relèvent du
+        // périmètre admin : un modérateur ne les voit pas.
+        action: {
+          notIn: [
+            ...STAFF_SELF_ANCHORED_ACTIONS,
+            ...(canViewSupervisionAnalytics(actor.role) ? [] : STAFF_TARGETED_ACTIONS),
+          ],
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: 50,

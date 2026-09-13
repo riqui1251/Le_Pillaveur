@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Clock,
   EyeOff,
+  FlaskConical,
   Gamepad2,
   Gavel,
   History,
@@ -44,6 +45,7 @@ import {
   SupervisionShell,
 } from '@/components/supervision/SupervisionLayout'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { useAuth } from '@/hooks/useAuth'
 import { isGuestProbablyLost, isGuestPurgeOverdue } from '@/lib/account-kind'
 import { ANALYTICS_CONSENT_V2_SINCE } from '@/lib/auth-cookies'
 import type {
@@ -61,7 +63,7 @@ import { GAMES } from '@/lib/games'
 import { ACTIVE_WINDOW_MS, BEAT_INTERVAL_MS, HONEST_PRESENCE_SINCE, INTERACTION_WINDOW_MS } from '@/lib/heartbeat'
 import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
 import { isOnline } from '@/lib/presence'
-import { normalizeRole } from '@/lib/roles'
+import { canManageUsers, normalizeRole } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 
 /**
@@ -84,6 +86,10 @@ import { cn } from '@/lib/utils'
  * pour un compte non suivi.
  * Toutes les dates sont à l'heure de Paris, quel que soit le fuseau du
  * navigateur.
+ *
+ * Admins et plus : un interrupteur « compte de test » (lot 7) retire le compte
+ * des statistiques d'usage, par sa propre route (GET et POST
+ * /api/admin/accounts/exclusions).
  */
 
 /**
@@ -135,6 +141,9 @@ const VISIT_GAP_MINUTES = 30
 const MAX_BEAT_CREDIT_SECONDS = 150
 
 const ACTIVE_WINDOW_MINUTES = Math.round(ACTIVE_WINDOW_MS / 60_000)
+
+/** Liste des comptes de test exclus des statistiques (lot 7). */
+const METRICS_EXCLUSIONS_URL = '/api/admin/accounts/exclusions'
 const INTERACTION_WINDOW_MINUTES = Math.round(INTERACTION_WINDOW_MS / 60_000)
 
 const ROLE_BADGE_STYLES: Record<ReturnType<typeof normalizeRole>, string> = {
@@ -183,6 +192,10 @@ export function AccountFile({ userId }: { userId: string }) {
   const [activityDenied, setActivityDenied] = useState(false)
   const [activityError, setActivityError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  // Rôle du LECTEUR (session) : l'interrupteur « compte de test » suit la
+  // garde de sa route d'écriture, la gestion des comptes (admins et plus).
+  const { user: viewer } = useAuth()
+  const canExcludeFromMetrics = viewer ? canManageUsers(viewer.role) : false
 
   const tRef = useRef(t)
   tRef.current = t
@@ -263,7 +276,7 @@ export function AccountFile({ userId }: { userId: string }) {
         <SkeletonRows rows={4} />
       ) : (
         <>
-          <IdentitySection user={user} />
+          <IdentitySection user={user} canExcludeFromMetrics={canExcludeFromMetrics} />
 
           {activityDenied ? (
             <p className="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-xs text-white/50">
@@ -361,7 +374,13 @@ function Fact({
   )
 }
 
-function IdentitySection({ user }: { user: AccountDetail['user'] }) {
+function IdentitySection({
+  user,
+  canExcludeFromMetrics,
+}: {
+  user: AccountDetail['user']
+  canExcludeFromMetrics: boolean
+}) {
   const t = useTranslations('supervision.accountFile')
   const tSup = useTranslations('supervision')
   const { dateTime, day, honestPresenceSince } = useFileFormat()
@@ -421,7 +440,157 @@ function IdentitySection({ user }: { user: AccountDetail['user'] }) {
           </Fact>
         )}
       </dl>
+
+      {canExcludeFromMetrics && (
+        <MetricsExclusionToggle userId={user.id} isStaff={normalizeRole(user.role) !== 'user'} />
+      )}
     </SectionCard>
+  )
+}
+
+/**
+ * « Compte de test » (lot 7) : retire ce compte de TOUS les effectifs du
+ * tableau des comptes actifs et des joueurs du jeu en ligne (Vue d'ensemble)
+ * — typiquement un invité créé par l'équipe en
+ * essayant « Jouer contre des bots ». Rien n'est effacé : le compte, ses
+ * parties et ses visites restent, seuls les agrégats l'ignorent.
+ * L'état affiché est celui de la liste servie (identifiants seulement), lue
+ * au chargement puis renvoyée par chaque bascule, jamais supposé. L'équipe,
+ * exclue d'office par son rôle, n'a pas d'interrupteur.
+ */
+function MetricsExclusionToggle({ userId, isStaff }: { userId: string; isStaff: boolean }) {
+  const t = useTranslations('supervision.accountFile')
+  const tSup = useTranslations('supervision')
+  const [excluded, setExcluded] = useState<boolean | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // Relance la lecture de la liste après un échec (bouton « Réessayer ») : le
+  // bouton Actualiser de la fiche ne démonte pas cet interrupteur.
+  const [reloadKey, setReloadKey] = useState(0)
+
+  const tRef = useRef(t)
+  tRef.current = t
+
+  useEffect(() => {
+    if (isStaff) return
+    // Réponse tardive d'une fiche quittée entre-temps : ignorée.
+    let cancelled = false
+    setExcluded(null)
+    setError(null)
+    fetch(METRICS_EXCLUSIONS_URL, { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`exclusions ${res.status}`)
+        const data = (await res.json()) as { userIds?: string[] }
+        if (!cancelled) setExcluded((data.userIds ?? []).includes(userId))
+      })
+      .catch(() => {
+        if (!cancelled) setError(tRef.current('metricsExclusionLoadError'))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userId, isStaff, reloadKey])
+
+  if (isStaff) {
+    return (
+      <p className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs text-white/55">
+        <FlaskConical className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/40" />
+        <span className="min-w-0">{t('metricsExclusionStaff')}</span>
+      </p>
+    )
+  }
+
+  const toggle = async () => {
+    if (excluded === null || saving) return
+    const next = !excluded
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch(METRICS_EXCLUSIONS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId, excluded: next }),
+      })
+      if (!res.ok) {
+        // 409 : liste des comptes de test pleine, le compte n'a pas été ajouté.
+        setError(t(res.status === 409 ? 'metricsExclusionFull' : 'metricsExclusionSaveError'))
+        return
+      }
+      // La liste écrite fait foi : un autre admin a pu la modifier entre-temps.
+      const data = (await res.json()) as { userIds?: string[] }
+      setExcluded(data.userIds ? data.userIds.includes(userId) : next)
+    } catch {
+      setError(t('metricsExclusionSaveError'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const labelId = `metrics-exclusion-${userId}`
+  // Lecture en échec (état inconnu) : on peut la relancer ; un échec
+  // d'enregistrement, lui, se réessaie par l'interrupteur resté actif.
+  const loadFailed = excluded === null && error !== null
+  return (
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p id={labelId} className="flex min-w-0 items-start gap-1.5 text-sm font-semibold text-white">
+            <FlaskConical className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold/80" />
+            <span className="min-w-0 break-words">{t('metricsExclusionLabel')}</span>
+          </p>
+          <p className="mt-0.5 min-w-0 break-words text-xs text-white/55">
+            {excluded === null
+              ? error
+                ? '—'
+                : tSup('loading')
+              : excluded
+                ? t('metricsExclusionOn')
+                : t('metricsExclusionOff')}
+          </p>
+        </div>
+        {/* Interrupteur : désactivé tant que l'état réel n'est pas connu. Le
+            pseudo-élément agrandit la zone tactile à 44 px de haut sans
+            changer le dessin. */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={excluded === true}
+          aria-labelledby={labelId}
+          disabled={excluded === null || saving}
+          onClick={() => void toggle()}
+          className={cn(
+            "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 disabled:cursor-not-allowed disabled:opacity-50",
+            excluded ? 'border-gold/60 bg-gold/80' : 'border-white/20 bg-white/10'
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              'inline-block h-4 w-4 rounded-full bg-cream shadow transition-transform',
+              excluded ? 'translate-x-6' : 'translate-x-1'
+            )}
+          />
+        </button>
+      </div>
+      <p className="mt-2 min-w-0 break-words text-[11px] leading-snug text-white/40">{t('metricsExclusionHint')}</p>
+      {error && (
+        <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <p role="alert" className="min-w-0 break-words text-xs text-rose-200">
+            {error}
+          </p>
+          {loadFailed && (
+            <button
+              type="button"
+              onClick={() => setReloadKey((key) => key + 1)}
+              className="min-h-[44px] rounded-lg px-2 text-xs font-medium text-amber-300/85 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+            >
+              {tSup('states.retry')}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -1094,7 +1263,7 @@ function NetworksSection({ activity }: { activity: AccountActivity }) {
 /** Libellé d'une action de l'historique de modération (même table que la page). */
 function useModerationActionLabel() {
   const t = useTranslations('supervision.actions')
-  return (action: string): string => {
+  return (action: string, comment: string | null): string => {
     switch (action) {
       case 'ban_permanent':
         return t('banPermanent')
@@ -1108,6 +1277,15 @@ function useModerationActionLabel() {
         return t('nameFlagAck')
       case 'role-change':
         return t('roleChange')
+      // Compte marqué ou démarqué « compte de test » (lot 7) : pas une
+      // sanction, une action du staff ancrée sur ce compte. Le sens se lit
+      // dans le détail neutre 'on' / 'off' (réservé aux admins par la route).
+      case 'metrics-exclusion':
+        return comment === 'on'
+          ? t('metricsExclusionOn')
+          : comment === 'off'
+            ? t('metricsExclusionOff')
+            : t('metricsExclusion')
       default:
         return action
     }
@@ -1146,11 +1324,14 @@ function ModerationSection({ detail }: { detail: AccountDetail }) {
           <ul className="space-y-2">
             {detail.banHistory.map((ev) => (
               <li key={ev.id} className="min-w-0 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm">
-                <p className="font-medium text-white">{actionLabel(ev.action)}</p>
+                <p className="font-medium text-white">{actionLabel(ev.action, ev.comment)}</p>
                 <p className="text-xs text-white/45">
                   {tSup('history.by', { date: dateTime(ev.createdAt), name: ev.actorName })}
                 </p>
-                {ev.comment && <p className="mt-1 min-w-0 break-words text-white/70">{ev.comment}</p>}
+                {/* Détail technique d'un compte de test ('on' / 'off') : déjà dit par le libellé. */}
+                {ev.comment && ev.action !== 'metrics-exclusion' && (
+                  <p className="mt-1 min-w-0 break-words text-white/70">{ev.comment}</p>
+                )}
                 {ev.bannedUntil && (
                   <p className="text-xs text-white/45">{tSup('history.until', { date: dateTime(ev.bannedUntil) })}</p>
                 )}

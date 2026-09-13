@@ -20,7 +20,7 @@ import {
   visitorPresenceSelect,
 } from '@/lib/ip-history-server'
 import { ipNetworkKey } from '@/lib/ip-network'
-import { parisDayOffset, parisDayString } from '@/lib/paris-time'
+import { parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
 import { isOnline, onlineSince } from '@/lib/presence'
 
 /** Jour de Paris courant (AAAA-MM-JJ) — clé des DailyVisitor et des compteurs datés. */
@@ -278,9 +278,11 @@ export async function getVisitorStats() {
     }
   })
 
+  // « Aujourd'hui » = depuis le minuit de PARIS, comme le compteur du jour
+  // (DailyVisitor) : 24 h glissantes y mêlaient la soirée de la veille.
   const todayVisitorsByCountry = await prisma.sitePresence.groupBy({
     by: ['country'],
-    where: { lastSeen: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
+    where: { lastSeen: { gte: parisDayStartUtc(today) } },
     _count: { _all: true },
   })
 
