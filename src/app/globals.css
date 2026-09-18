@@ -78,6 +78,21 @@ body.is-mobile-device,
   transition: background-color 0.01s, color 0.01s !important;
 }
 
+/* Plateaux de jeu : `select-none` + `[-webkit-touch-callout:none]` sont posés
+   sur le conteneur feutre (games/layout.tsx) — un doigt qui martèle « Boire »
+   ou reste posé sur une carte sélectionnait le texte ou ouvrait le menu
+   contextuel iOS/Android en pleine partie. Or `user-select: auto` reprend le
+   `none` du parent : les CHAMPS DE SAISIE (Petit Bac, Mots codés, code de
+   table à coller) le récupèrent ici, sinon plus moyen d'y sélectionner ni
+   d'y coller quoi que ce soit. Sélecteur d'élément, donc un `select-none`
+   posé exprès sur un champ garde le dernier mot. */
+input,
+textarea,
+[contenteditable]:not([contenteditable="false"]) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* iOS zoome automatiquement sur tout champ dont le texte fait moins de 16px
    au focus, puis laisse la page décalée — insupportable au Petit Bac où l'on
    enchaîne les saisies. Plancher à 16px sous le point de rupture `sm` ; au-delà

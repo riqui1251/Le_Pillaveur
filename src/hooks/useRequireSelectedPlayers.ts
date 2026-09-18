@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "@/i18n/navigation"
+import { usePathname, useRouter } from "@/i18n/navigation"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 import { useAuth } from "@/hooks/useAuth"
 import { LOCAL_PLAY_COOKIE } from "@/lib/auth-cookies"
+import { resolveNextGamePath } from "@/lib/next-game-path"
 
 type Options = {
   /** Ne redirige pas vers /joueurs quand le mode en ligne est actif. */
@@ -22,6 +23,7 @@ function hasChosenLocalMode(): boolean {
 /** Redirige vers /joueurs si aucun joueur n'est sélectionné (mode local uniquement). */
 export function useRequireSelectedPlayers(redirectTo = "/joueurs", options?: Options) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, loading } = useAuth()
   const isOnline = options?.skipWhenOnline && user?.playMode === "online"
   const { selectedIds } = useSelectedPlayers()
@@ -40,9 +42,14 @@ export function useRequireSelectedPlayers(redirectTo = "/joueurs", options?: Opt
     if (isOnline) return
     if (visitor) return
     if (!ready) {
-      router.replace(redirectTo)
+      // Le jeu que le groupe venait d'ouvrir repart avec lui (?next=) :
+      // /joueurs le relance après « Commencer » au lieu de le renvoyer au hub
+      // re-toucher la carte. Seul un chemin de jeu publié passe la garde ;
+      // depuis /jeux il n'y a rien à retenir, la cible reste nue.
+      const next = resolveNextGamePath(pathname)
+      router.replace(next ? `${redirectTo}?next=${encodeURIComponent(next)}` : redirectTo)
     }
-  }, [loading, isOnline, ready, router, redirectTo, user])
+  }, [loading, isOnline, ready, router, redirectTo, user, pathname])
 
   return { ready, selectedIds, isOnline }
 }

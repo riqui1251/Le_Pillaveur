@@ -21,7 +21,7 @@ import { resolveRequestLocale } from '@/lib/name-moderation/request-locale'
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { linkVisitorNameModerationAttempts } from '@/lib/name-moderation-attempts-server'
-import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { checkRateLimit, networkRateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { AGE_VERIFIED_COOKIE, readConsentedVisitorId } from '@/lib/auth-cookies'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
@@ -29,7 +29,15 @@ import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { recordIpSeen } from '@/lib/ip-history-server'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
 
-const GUEST_LIMIT = 8
+// Quota de création d'invités par RÉSEAU (networkRateLimitKey : IPv4 entière,
+// IPv6 ramenée à son /64), pas par adresse : le réseau, c'est la tablée —
+// derrière une box IPv4 tous les téléphones sortent avec la même adresse ; en
+// IPv6 chacun a la sienne dans le même /64. 40 par heure : une salle accueille
+// jusqu'à 16 joueurs, deux tablées peuvent partager le Wi-Fi d'un bar, et
+// chaque essai compte (pseudo refusé, double clic). L'ancienne limite de 8 par
+// adresse renvoyait un 429 à la neuvième personne d'une même tablée, et aux
+// inconnus regroupés derrière le CGNAT d'un opérateur mobile.
+const GUEST_LIMIT = 40
 const GUEST_WINDOW_MS = 60 * 60 * 1000
 
 /**
@@ -48,7 +56,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const requested = typeof body.displayName === 'string' ? body.displayName.trim() : ''
 
-    const rate = checkRateLimit(rateLimitKey(request, 'guest'), GUEST_LIMIT, GUEST_WINDOW_MS)
+    const rate = checkRateLimit(networkRateLimitKey(request, 'guest'), GUEST_LIMIT, GUEST_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
     const cookieStore = await cookies()

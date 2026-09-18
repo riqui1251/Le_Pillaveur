@@ -1,6 +1,6 @@
 "use client"
 
-import { Link } from "@/i18n/navigation"
+import { Link, useRouter } from "@/i18n/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 import { ArrowLeft, ChevronDown, Trophy, Users, X } from "lucide-react"
@@ -8,6 +8,7 @@ import { usePlayers } from "@/hooks/usePlayers"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 import { useAuth } from "@/hooks/useAuth"
 import { useNightSummary } from "@/lib/gameMetrics-i18n"
+import { enterLocalPlay } from "@/lib/local-play-client"
 import { PlayerIcon } from "@/components/ui/PlayerIcon"
 import { PlayerName } from "@/components/ui/PlayerName"
 import { Button } from "@/components/ui/button"
@@ -24,7 +25,8 @@ export function SelectedPlayersBar() {
   const tAwards = useTranslations('hub.nightAwards')
   const { players, loading } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
-  const { user, setPlayMode } = useAuth()
+  const { user, loading: authLoading, setPlayMode } = useAuth()
+  const router = useRouter()
 
   // Masqué par défaut : le premier rendu (serveur puis hydratation) ne connaît
   // pas encore le localStorage — afficher le pont puis le retirer ferait
@@ -60,6 +62,22 @@ export function SelectedPlayersBar() {
   const [awardsOpen, setAwardsOpen] = useState(false)
   const nightSummary = useNightSummary(selectedPlayers)
 
+  // Un visiteur (ni compte ni mode local) qui touchait « Choisir les joueurs »
+  // suivait un lien nu vers /joueurs, route protégée : le middleware le
+  // renvoyait sur le formulaire de compte, à rebours du « zéro inscription »
+  // promis par la vitrine. Même porte que la bascule PlayModeToggle : le
+  // cookie de mode local se pose d'abord (POST /api/auth/local-play), la
+  // navigation suit. Si la pose échoue, on navigue quand même — il retombe
+  // sur /compte comme avant, jamais sur un bouton qui ne fait rien. Tant que
+  // l'auth n'a pas répondu, le lien nu reste : un compte n'a pas besoin du
+  // cookie, et le poser pour lui serait sans effet.
+  const isVisitor = !authLoading && !user
+  const goToPlayers = () => {
+    void enterLocalPlay()
+      .catch(() => undefined)
+      .then(() => router.push('/joueurs'))
+  }
+
   if (loading) return null
 
   // Un compte invité (scan de QR, purgé après 90 jours) ne garde rien : on lui
@@ -87,15 +105,23 @@ export function SelectedPlayersBar() {
           </span>
         </div>
         <Button
-          asChild
+          asChild={!isVisitor}
           variant="ghost"
           size="sm"
+          onClick={isVisitor ? goToPlayers : undefined}
           className="h-8 gap-1.5 border border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/10 hover:text-white"
         >
-          <Link href="/joueurs">
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {selectedPlayers.length === 0 ? t('choose') : t('modify')}
-          </Link>
+          {isVisitor ? (
+            <>
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {selectedPlayers.length === 0 ? t('choose') : t('modify')}
+            </>
+          ) : (
+            <Link href="/joueurs">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {selectedPlayers.length === 0 ? t('choose') : t('modify')}
+            </Link>
+          )}
         </Button>
       </div>
 
@@ -113,6 +139,14 @@ export function SelectedPlayersBar() {
             </div>
           ))}
         </div>
+      ) : isVisitor ? (
+        <button
+          type="button"
+          onClick={goToPlayers}
+          className="block w-full rounded-xl border border-dashed border-amber-400/25 bg-amber-500/5 px-4 py-3 text-center text-sm text-amber-200/80 transition-colors hover:border-amber-400/40 hover:bg-amber-500/10 hover:text-amber-100"
+        >
+          {t('tapToChoose')}
+        </button>
       ) : (
         <Link
           href="/joueurs"

@@ -168,7 +168,8 @@
       "title": "¿Quién toca esta noche?",
       "subtitle": "Agrega a tus amigos, selecciona el equipo y ve al siguiente paso para elegir el juego.",
       "guestPrompt": "Crea una cuenta para encontrar a tus jugadores en todos tus dispositivos (teléfono, tableta, computadora).",
-      "guestCta": "Iniciar sesión / Crear una cuenta"
+      "guestCta": "Iniciar sesión / Crear una cuenta",
+      "playGame": "Jugar a {game}"
     },
     "jeux": {
       "title": "Elige tu juego",
@@ -196,7 +197,8 @@
       "onlineOnly": {
         "title": "Solo en línea",
         "hint": "Estos juegos necesitan un teléfono por jugador: abre una mesa en línea con una cuenta gratuita o pruébalos en solitario contra bots."
-      }
+      },
+      "opening": "Abriendo…"
     },
     "jeuxOnline": {
       "title": "Juegos en línea",
@@ -803,7 +805,12 @@
     },
     "loadError": "Error al cargar los jugadores",
     "selectedTitle": "Jugadores seleccionados",
-    "gamesPlayedCount": "{count, plural, one {# partida} other {# partidas}}"
+    "gamesPlayedCount": "{count, plural, one {# partida} other {# partidas}}",
+    "namesPlaceholder": "Lea, Tom, Max…",
+    "emptyHint": "Añade al menos {min} nombres, separados por comas",
+    "rejectedNames": "No añadidos: {names} — {reason}",
+    "onlineNeedsAccount": "Inicia sesión para jugar en línea.",
+    "goOnline": "Ir a los juegos en línea"
   },
   "games": {
     "1220": {
@@ -4818,7 +4825,8 @@
     "guestHintDevice": "Cuenta de invitado vinculada a este navegador: se elimina tras 90 días sin actividad y se pierde si te desconectas. Podrás guardarla después.",
     "loginCta": "Iniciar sesión o crear una cuenta",
     "pseudoPlaceholder": "Tu apodo para esta noche",
-    "error": "No se puede empezar ahora. Inténtalo de nuevo."
+    "error": "No se puede empezar ahora. Inténtalo de nuevo.",
+    "rateLimited": "Demasiados intentos desde esta red. Vuelve a intentarlo en {seconds} s."
   },
   "joinGate": {
     "title": "Unirse a la mesa",
@@ -4830,7 +4838,8 @@
     "loginCta": "Iniciar sesión o crear una cuenta",
     "dismiss": "No gracias, solo estoy mirando",
     "error": "No se puede unir ahora mismo. Inténtalo de nuevo.",
-    "ageGateRequired": "Primero confirma que tienes 18 años o más. Si no aparece la verificación, recarga la página."
+    "ageGateRequired": "Primero confirma que tienes 18 años o más. Si no aparece la verificación, recarga la página.",
+    "rateLimited": "Demasiados intentos desde esta red. Vuelve a intentarlo en {seconds} s."
   },
   "og": {
     "siteTagline": "La casa de los juegos de fiesta",

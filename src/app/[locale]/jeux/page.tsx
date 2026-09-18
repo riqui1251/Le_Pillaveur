@@ -13,6 +13,7 @@ import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { RecentGamesRow } from '@/components/online/RecentGamesRow'
 import { PlayModeToggle } from '@/components/auth/PlayModeToggle'
 import { AmbianceModeToggle } from '@/components/auth/AmbianceModeToggle'
+import { requestAgeVerification } from '@/components/legal/AgeGate'
 import { useRequireSelectedPlayers } from '@/hooks/useRequireSelectedPlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
@@ -36,6 +37,9 @@ export default function GamesHubPage() {
   const joinAttemptedRef = useRef(false)
   const modeSwitchedRef = useRef(false)
   const [gateCode, setGateCode] = useState<string | null>(null)
+  // Déclaration 18+ faite (cookie présent, ou portail franchi à l'instant) :
+  // condition d'affichage de la porte d'invitation, voir l'effet plus bas.
+  const [ageVerified, setAgeVerified] = useState(false)
 
   // Deep-link « rejoins ma table » (QR TV ou lien partagé) : ?join=CODE →
   // rejoint la salle et ouvre le jeu. Un visiteur pas encore connecté (ou
@@ -72,6 +76,24 @@ export default function GamesHubPage() {
     }
     setGateCode(code)
   }, [searchParams, user])
+
+  // Le portail 18+ (AgeGate, au-dessus de tout) et la porte d'invitation se
+  // montaient EN MÊME TEMPS : le champ pseudo prenait le focus SOUS le portail
+  // et le clavier s'ouvrait sur un champ invisible. La porte attend donc la
+  // déclaration d'âge — immédiate si le cookie existe, sinon une fois le
+  // portail franchi (requestAgeVerification). Sur le hub il n'est pas
+  // annulable : un « non » ne vient que d'une navigation ailleurs, et la page
+  // n'est alors plus là pour l'entendre — d'où le garde-fou au démontage.
+  useEffect(() => {
+    if (!gateCode || user || authLoading) return
+    let stale = false
+    void requestAgeVerification().then((verified) => {
+      if (!stale) setAgeVerified(verified)
+    })
+    return () => {
+      stale = true
+    }
+  }, [gateCode, user, authLoading])
 
   // Connecté mais en mode local avec un code en attente (retour de connexion
   // après un scan de QR) : on bascule en ligne d'office — c'est ce que le
@@ -140,8 +162,11 @@ export default function GamesHubPage() {
     <>
     {/* Pas de porte tant que l'auth n'a pas répondu : pendant ce temps `user`
         vaut null pour TOUT LE MONDE, et un joueur déjà connecté se voyait
-        proposer de créer un second compte invité. */}
-    {gateCode && !user && !authLoading && <JoinGate code={gateCode} onDismiss={dismissGate} />}
+        proposer de créer un second compte invité. Ni avant la déclaration
+        18+ : son champ (autoFocus) ouvrait le clavier sous le portail. */}
+    {gateCode && !user && !authLoading && ageVerified && (
+      <JoinGate code={gateCode} onDismiss={dismissGate} />
+    )}
     <HubShell
       compact
       title={isOnline ? tOnline('title') : t('title')}

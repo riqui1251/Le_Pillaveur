@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useRouter } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
+import { enterLocalPlay } from '@/lib/local-play-client'
 
 type PlayMode = 'local' | 'online'
 
@@ -40,7 +41,7 @@ export function PlayModeToggle({ className }: { className?: string }) {
       router.push('/compte?redirect=/jeux')
       return
     }
-    void fetch('/api/auth/local-play', { method: 'POST', credentials: 'include' })
+    void enterLocalPlay()
       .then(() => router.refresh())
       .catch(() => {
         // Cookie non posé : le visiteur passera par /compte au premier lien

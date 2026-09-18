@@ -7,7 +7,10 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
-import { Link } from '@/i18n/navigation'
+import { Link, usePathname, useRouter } from '@/i18n/navigation'
+import { useAuth } from '@/hooks/useAuth'
+import { resolveNextGamePath } from '@/lib/next-game-path'
+import { enterLocalPlay } from '@/lib/local-play-client'
 
 interface SelectedPlayersDisplayProps {
   players: Player[]
@@ -27,6 +30,28 @@ export function SelectedPlayersDisplay({
   minPlayers = 2,
 }: SelectedPlayersDisplayProps) {
   const t = useTranslations('players')
+  const router = useRouter()
+  const pathname = usePathname()
+  const { user, loading: authLoading } = useAuth()
+
+  // Le jeu courant repart avec le groupe (?next=) : /joueurs le relance après
+  // « Commencer » au lieu de le renvoyer au hub re-toucher la carte. Seul un
+  // chemin de jeu publié passe la garde ; sinon /joueurs nu, comme avant.
+  const next = resolveNextGamePath(pathname)
+  const playersHref = next ? `/joueurs?next=${encodeURIComponent(next)}` : '/joueurs'
+  // Visiteur (ni compte ni mode local) : un lien nu vers /joueurs, route
+  // protégée, finissait sur le formulaire de compte — à rebours du « zéro
+  // inscription » de la vitrine. Même porte que la bascule PlayModeToggle :
+  // le cookie de mode local d'abord (POST /api/auth/local-play), la
+  // navigation ensuite ; et on navigue même si la pose échoue, il retombe
+  // alors sur /compte comme avant. Tant que l'auth n'a pas répondu, le lien
+  // nu reste : un compte n'a pas besoin du cookie.
+  const isVisitor = !authLoading && !user
+  const goToPlayers = () => {
+    void enterLocalPlay()
+      .catch(() => undefined)
+      .then(() => router.push(playersHref))
+  }
 
   if (!players || !Array.isArray(players)) {
     return (
@@ -52,9 +77,15 @@ export function SelectedPlayersDisplay({
           </p>
           {/* `asChild` : un <button> dans un <a> est du HTML invalide (et deux
               anneaux de focus concurrents) — le bouton EST le lien. */}
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/joueurs">{t('selectTitle')}</Link>
-          </Button>
+          {isVisitor ? (
+            <Button type="button" variant="outline" className="w-full" onClick={goToPlayers}>
+              {t('selectTitle')}
+            </Button>
+          ) : (
+            <Button asChild variant="outline" className="w-full">
+              <Link href={playersHref}>{t('selectTitle')}</Link>
+            </Button>
+          )}
         </div>
       </Card>
     )

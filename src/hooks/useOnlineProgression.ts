@@ -15,6 +15,9 @@ export type OnlineProgression = {
 
 export function useOnlineProgression() {
   const { user } = useAuth()
+  // Seule l'identité du compte compte ici : l'objet `user` change de référence
+  // à chaque rafraîchissement de session sans que la progression bouge.
+  const userId = user?.id
   const [progression, setProgression] = useState<OnlineProgression | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -32,13 +35,13 @@ export function useOnlineProgression() {
   }, [])
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setProgression(null)
       setLoading(false)
       return
     }
     void refresh()
-  }, [user?.id, refresh])
+  }, [userId, refresh])
 
   return { progression, loading, refresh }
 }

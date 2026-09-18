@@ -11,7 +11,7 @@ import { X, Trophy, Pencil } from 'lucide-react';
 import { PlayerIcon } from '@/components/ui/PlayerIcon';
 import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer';
 import { Player, getPlayerNameValidationError } from '@/lib/players';
-import { nameValidationI18nKey } from '@/lib/name-moderation';
+import { nameValidationI18nKey, type NameModerationReason } from '@/lib/name-moderation';
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -21,17 +21,31 @@ interface PlayerManagerProps {
   minPlayers?: number;
   hideRemoveButtons?: boolean;
   variant?: 'default' | 'hub';
+  /**
+   * Libellé du bouton de démarrage quand l'appelant sait déjà où il mène
+   * (« Jouer à Purple ») ; à défaut, le « Commencer la partie » générique.
+   */
+  startLabel?: string;
 }
 
 const HUB_CARD = 'bg-felt-deep/60 border-gold/15 backdrop-blur-md shadow-lg';
 
-export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2, hideRemoveButtons = false, variant = 'default' }: PlayerManagerProps) {
+/**
+ * Séparateurs acceptés entre plusieurs prénoms saisis d'un coup : virgule,
+ * point-virgule, retour à la ligne. Pas l'espace — « Jean Pierre » est un
+ * seul convive. Le retour à la ligne n'arrive jamais tel quel : un `<input>`
+ * mono-ligne l'efface au collage (« Léa⏎Tom » devenait « Léa Tom », UN
+ * convive) — il est converti en virgule à la volée dans `handlePaste`.
+ */
+const NAME_SEPARATORS = /[,;\n]/;
+
+export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2, hideRemoveButtons = false, variant = 'default', startLabel }: PlayerManagerProps) {
   const t = useTranslations('players');
   const tCommon = useTranslations('common.nameValidation');
   const isHub = variant === 'hub';
   const cardClass = isHub ? HUB_CARD : 'shadow-md';
   const { user, refresh, setPlayMode } = useAuth();
-  const { players, loading, addPlayer, removePlayer, updatePlayerPreferences } = usePlayers();
+  const { players, loading, addPlayers, removePlayer, updatePlayerPreferences } = usePlayers();
 
   const [newPlayerName, setNewPlayerName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
@@ -47,10 +61,16 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
   // partait avec lui. On le rend au champ dans le geste de l'utilisateur.
   const nameInputRef = useRef<HTMLInputElement>(null);
 
+  // Les trois champs lus par l'effet sont extraits d'abord : l'effet ne dépend
+  // ainsi que de ce qu'il lit vraiment, pas de l'objet `user` entier (qui
+  // change d'identité à chaque rafraîchissement de session).
+  const userId = user?.id;
+  const userOnlineDisplayName = user?.onlineDisplayName;
+  const userDisplayName = user?.displayName;
   useEffect(() => {
-    if (!user) return;
-    setOnlineName((prev) => prev || user.onlineDisplayName || user.displayName || '');
-  }, [user?.id, user?.onlineDisplayName, user?.displayName]);
+    if (!userId) return;
+    setOnlineName((prev) => prev || userOnlineDisplayName || userDisplayName || '');
+  }, [userId, userOnlineDisplayName, userDisplayName]);
 
   // Contrepartie de la persistance : un joueur supprimé (ici ou sur un autre
   // appareil, la liste étant resynchronisée au retour) laisserait un id
@@ -65,24 +85,73 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
 
   const handleAddPlayer = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = newPlayerName.trim();
-    if (!trimmed) return;
+    // Plusieurs prénoms en une saisie (« Léa, Tom ; Max ») : la tablée se
+    // dicte d'un trait au lieu de six allers-retours clavier. Doublons d'une
+    // même saisie ignorés ; chaque prénom passe la validation habituelle.
+    const names = Array.from(
+      new Set(newPlayerName.split(NAME_SEPARATORS).map((name) => name.trim()).filter(Boolean))
+    );
+    if (names.length === 0) return;
 
-    const validationError = getPlayerNameValidationError(trimmed);
-    if (validationError) {
-      void reportProfanityIfNeeded(trimmed, validationError, 'local_player_add');
-      const key = nameValidationI18nKey(validationError);
-      const messageKey =
-        validationError === 'invalid_characters' ? 'invalidCharactersPlayer' : key;
-      setNameError(tCommon(messageKey));
-      nameInputRef.current?.focus();
-      return;
+    const rejected: { name: string; reason: NameModerationReason }[] = [];
+    const accepted: string[] = [];
+    for (const name of names) {
+      const validationError = getPlayerNameValidationError(name);
+      if (validationError) {
+        void reportProfanityIfNeeded(name, validationError, 'local_player_add');
+        rejected.push({ name, reason: validationError });
+        continue;
+      }
+      accepted.push(name);
     }
 
-    setNameError(null);
-    addPlayer(trimmed);
-    setNewPlayerName('');
+    // Tout le lot en un geste (une écriture, une poussée cloud), et le hook
+    // nous rend les joueurs créés. Fraîchement ajouté = à la table : personne
+    // n'inscrit un prénom pour ne pas le faire jouer, et le décocher reste un
+    // geste. Avant, chaque ajout réclamait un second toucher sur la carte —
+    // six fois par soirée.
+    if (accepted.length > 0) {
+      const { created } = addPlayers(accepted);
+      if (created.length > 0) {
+        selectPlayerIds([...selectedPlayerIds, ...created.map((player) => player.id)]);
+      }
+    }
+
+    if (rejected.length > 0) {
+      const { reason } = rejected[0];
+      const key = nameValidationI18nKey(reason);
+      const messageKey = reason === 'invalid_characters' ? 'invalidCharactersPlayer' : key;
+      const message = tCommon(messageKey);
+      // Un seul prénom saisi : le message habituel. En lot : on nomme les
+      // refusés, qui restent dans le champ prêts à corriger — les acceptés
+      // en sortent.
+      setNameError(
+        names.length === 1
+          ? message
+          : t('rejectedNames', { names: rejected.map((r) => r.name).join(', '), reason: message })
+      );
+      setNewPlayerName(rejected.map((r) => r.name).join(', '));
+    } else {
+      setNameError(null);
+      setNewPlayerName('');
+    }
     nameInputRef.current?.focus();
+  };
+
+  // Liste collée depuis une conversation (un prénom par ligne) : le champ
+  // mono-ligne aurait avalé les sauts de ligne — on les remplace par des
+  // virgules et on insère nous-mêmes à l'endroit du curseur. Un collage sans
+  // saut de ligne suit le chemin natif.
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text');
+    if (!/[\r\n]/.test(text)) return;
+    e.preventDefault();
+    const input = e.currentTarget;
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? start;
+    const joined = text.replace(/[\r\n]+/g, ', ');
+    setNewPlayerName(input.value.slice(0, start) + joined + input.value.slice(end));
+    if (nameError) setNameError(null);
   };
 
   const togglePlayerSelection = (playerId: string) => {
@@ -155,12 +224,13 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
               <Input
                 ref={nameInputRef}
                 type="text"
-                placeholder={t('namePlaceholder')}
+                placeholder={t('namesPlaceholder')}
                 value={newPlayerName}
                 onChange={(e) => {
                   setNewPlayerName(e.target.value);
                   if (nameError) setNameError(null);
                 }}
+                onPaste={handlePaste}
                 autoComplete="off"
                 enterKeyHint="done"
                 className="min-w-0 flex-1"
@@ -183,6 +253,15 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
           {/* Chaque convive est une carte crème qu'on abat pour le sélectionner
               (ring d'or) — encre pure sur crème, comme partout. 2 colonnes dès
               le mobile : avatar + actions en tête, nom en dessous. */}
+          {/* Liste vide : une grille sans carte ne disait rien à un groupe qui
+              arrive pour la première fois — ni combien de prénoms il faut, ni
+              où ils vont. Le mot d'ordre tient en une ligne ; la grille
+              (vide, donc sans hauteur) reprend dès le premier ajout. */}
+          {players.length === 0 && (
+            <p className="rounded-xl border border-dashed border-gold/25 bg-black/20 px-4 py-6 text-center text-sm text-white/70">
+              {t('emptyHint', { min: minPlayers })}
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {players.map((player) => (
               <Card
@@ -242,7 +321,7 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
         {onStartOnline && (
           <div className="rounded-xl border border-gold/25 bg-gold/10 p-3">
             {!user ? (
-              <p className="text-sm text-amber-100/90">Connexion requise pour jouer en ligne.</p>
+              <p className="text-sm text-amber-100/90">{t('onlineNeedsAccount')}</p>
             ) : (
               <Button
                 type="button"
@@ -250,7 +329,7 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
                 className="bg-gradient-to-r from-amber-400 to-amber-500 text-black hover:from-amber-300 hover:to-amber-400"
                 disabled={onlineLoading}
               >
-                Aller aux jeux en ligne
+                {t('goOnline')}
               </Button>
             )}
           </div>
@@ -277,12 +356,16 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
               ? t('selectionStatus.ready', { count: selectedPlayerIds.length })
               : t('selectionStatus.needMore', { min: minPlayers, current: selectedPlayerIds.length })}
           </p>
+          {/* « Jouer à Qui est l'Espion ? » sur 375 px : un bouton qui refuse
+              de se replier (`whitespace-nowrap` du Button) écrasait le statut
+              à gauche sur quatre lignes. C'est le libellé du CTA qui se replie,
+              borné à 60 % de la barre — le statut garde le reste. */}
           <Button
             onClick={handleStartGame}
             disabled={!canStart}
-            className="h-11 shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 px-5 font-medium text-white hover:from-amber-600 hover:to-orange-600 disabled:opacity-50"
+            className="h-auto min-h-11 max-w-[60%] shrink-0 whitespace-normal bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2 text-center font-medium leading-tight text-white hover:from-amber-600 hover:to-orange-600 disabled:opacity-50"
           >
-            {t('startGame')}
+            {startLabel ?? t('startGame')}
           </Button>
         </div>
       </div>

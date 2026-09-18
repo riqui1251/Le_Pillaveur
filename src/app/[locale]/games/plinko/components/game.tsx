@@ -508,8 +508,6 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
     // Nettoyer le timeout si le composant est démonté ou si l'état change avant la fin
     return () => clearTimeout(cleanupTimeout);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPlayerIndex, gameOver, isAnimating, difficulty]);
   // --- Fin Effet Nettoyage ---
 

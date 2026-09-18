@@ -57,7 +57,7 @@ export default function GlobalStats() {
     }
 
     fetchStats()
-  }, [t])
+  }, [tErrors])
 
   if (loading) {
     return (

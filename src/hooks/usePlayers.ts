@@ -44,6 +44,10 @@ function refreshPlayersState(
 
 export function usePlayers() {
   const { user } = useAuth();
+  // Toute la synchro cloud ne dépend que de l'identité du compte : l'objet
+  // `user` change de référence à chaque rafraîchissement de session, ce qui
+  // relancerait fusion et poussées sans qu'aucun joueur n'ait bougé.
+  const userId = user?.id;
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
@@ -60,7 +64,7 @@ export function usePlayers() {
       cloudSyncedRef.current = false;
       const local = getStoredPlayers();
 
-      if (user) {
+      if (userId) {
         try {
           const merged = await syncLocalWithCloud();
           if (!cancelled) {
@@ -81,14 +85,14 @@ export function usePlayers() {
         setPlayers(local);
         setTopPlayers(getTopPlayers());
         setMostActivePlayers(getMostActivePlayers());
-        cloudSyncedRef.current = !user;
+        cloudSyncedRef.current = !userId;
         setLoading(false);
       }
     }
 
     load();
     return () => { cancelled = true };
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
     const listener: PlayersListener = () => {
@@ -107,13 +111,13 @@ export function usePlayers() {
   }, []);
 
   const pushCloudIfReady = useCallback((playerList: Player[]) => {
-    if (user && cloudSyncedRef.current) {
+    if (userId && cloudSyncedRef.current) {
       pushPlayersToCloud(playerList).catch(() => {});
     }
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
-    if (!user?.id || loading) return;
+    if (!userId || loading) return;
 
     const resyncFromCloud = () => {
       if (document.visibilityState === 'hidden') return;
@@ -134,7 +138,7 @@ export function usePlayers() {
       window.removeEventListener('focus', resyncFromCloud);
       window.removeEventListener('pageshow', resyncFromCloud);
     };
-  }, [user?.id, loading]);
+  }, [userId, loading]);
 
   const addPlayer = useCallback((name: string) => {
     const updatedPlayers = addPlayerToStorage(name);
@@ -142,6 +146,30 @@ export function usePlayers() {
     notifyOthers();
     pushCloudIfReady(updatedPlayers);
     return updatedPlayers;
+  }, [notifyOthers, pushCloudIfReady]);
+
+  // Plusieurs prénoms d'un trait (« Léa, Tom, Max ») : UN état, UNE
+  // notification, UNE poussée cloud pour tout le lot. Passer par addPlayer en
+  // boucle envoyait autant de requêtes que de prénoms, chacune avec une liste
+  // partielle — trois allers-retours pour un geste, sur réseau de soirée.
+  // Renvoie aussi les joueurs créés : le stockage ajoute toujours en fin de
+  // liste, et c'est la seule façon sûre de les reconnaître (comparer à l'état
+  // React pouvait désigner un joueur arrivé d'un autre onglet entre-temps).
+  const addPlayers = useCallback((names: string[]) => {
+    const created: Player[] = [];
+    let updatedPlayers = getStoredPlayers();
+    for (const name of names) {
+      const before = updatedPlayers.length;
+      updatedPlayers = addPlayerToStorage(name);
+      // Prénom refusé par le stockage : la liste revient telle quelle.
+      if (updatedPlayers.length > before) created.push(updatedPlayers[updatedPlayers.length - 1]);
+    }
+    setPlayers(updatedPlayers);
+    if (created.length > 0) {
+      notifyOthers();
+      pushCloudIfReady(updatedPlayers);
+    }
+    return { players: updatedPlayers, created };
   }, [notifyOthers, pushCloudIfReady]);
 
   const removePlayer = useCallback((playerId: string) => {
@@ -207,7 +235,7 @@ export function usePlayers() {
     if (loading) return;
     savePlayers(players);
 
-    if (!user || !cloudSyncedRef.current) return;
+    if (!userId || !cloudSyncedRef.current) return;
 
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(() => {
@@ -218,7 +246,7 @@ export function usePlayers() {
         body: JSON.stringify({ players }),
       }).catch(() => {});
     }, 800);
-  }, [players, loading, user?.id]);
+  }, [players, loading, userId]);
 
   // Pseudos locaux → statistiques de visite. Relancé seulement quand les NOMS
   // changent (ajout, suppression, renommage, fusion cloud), jamais pour une
@@ -238,6 +266,7 @@ export function usePlayers() {
     topPlayers,
     mostActivePlayers,
     addPlayer,
+    addPlayers,
     removePlayer,
     updatePlayer,
     updatePlayerStats,

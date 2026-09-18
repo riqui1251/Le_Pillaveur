@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   checkRateLimit,
+  networkRateLimitKey,
   rateLimitKey,
+  rateLimitResponse,
   readJsonBodyLimited,
   userRateLimitKey,
 } from '@/lib/rate-limit'
@@ -20,6 +22,13 @@ function jsonRequest(payload: string, withContentLength = true): Request {
   }
   return new Request('https://example.test/api', { method: 'POST', headers, body: payload })
 }
+
+/** Requête telle que Cloudflare la présente : l'adresse du visiteur dans CF-Connecting-IP. */
+function cloudflareRequest(ip: string): Request {
+  return new Request('https://example.test/api', { headers: { 'cf-connecting-ip': ip } })
+}
+
+const fromNetwork = (ip: string) => networkRateLimitKey(cloudflareRequest(ip), 'guest')
 
 describe('checkRateLimit', () => {
   it('laisse passer jusqu’à la limite puis refuse avec un délai', () => {
@@ -53,6 +62,47 @@ describe('clés de quota', () => {
       rateLimitKey(new Request('https://example.test/api', { headers: { 'x-forwarded-for': ip } }), 'feedback')
     expect(withIp('1.2.3.4')).not.toBe(withIp('5.6.7.8'))
     expect(withIp('1.2.3.4')).toBe('feedback:1.2.3.4')
+  })
+
+  it('networkRateLimitKey ramène deux IPv6 du même /64 à une seule clé', () => {
+    // Deux téléphones d'une même box : adresses différentes, même /64.
+    expect(fromNetwork('2a01:cb05:545:a200:1c2d:3e4f:5a6b:7c8d')).toBe('guest:2a01:cb05:0545:a200::/64')
+    expect(fromNetwork('2a01:cb05:545:a200::9')).toBe('guest:2a01:cb05:0545:a200::/64')
+    // Un /64 voisin est un autre foyer.
+    expect(fromNetwork('2a01:cb05:545:a201::9')).not.toBe(fromNetwork('2a01:cb05:545:a200::9'))
+  })
+
+  it('networkRateLimitKey garde deux IPv4 différentes séparées (pas de /24 : CGNAT)', () => {
+    expect(fromNetwork('203.0.113.7')).toBe('guest:203.0.113.7')
+    expect(fromNetwork('203.0.113.8')).toBe('guest:203.0.113.8')
+    expect(fromNetwork('203.0.113.7')).not.toBe(fromNetwork('203.0.113.8'))
+  })
+
+  it('le compteur est partagé dans un /64 IPv6, pas entre deux IPv4', () => {
+    const scope = freshKey()
+    const key = (ip: string) => networkRateLimitKey(cloudflareRequest(ip), scope)
+    expect(checkRateLimit(key('2a01:cb05:545:a200::1'), 1, 10_000).ok).toBe(true)
+    // Autre adresse, même /64 : c'est le même compteur, déjà plein.
+    expect(checkRateLimit(key('2a01:cb05:545:a200::2'), 1, 10_000).ok).toBe(false)
+    expect(checkRateLimit(key('203.0.113.7'), 1, 10_000).ok).toBe(true)
+    expect(checkRateLimit(key('203.0.113.8'), 1, 10_000).ok).toBe(true)
+  })
+
+  it('sans adresse lisible, la clé réseau retombe sur « unknown » comme rateLimitKey', () => {
+    const request = new Request('https://example.test/api')
+    expect(networkRateLimitKey(request, 'guest')).toBe('guest:unknown')
+    expect(rateLimitKey(request, 'guest')).toBe('guest:unknown')
+  })
+})
+
+describe('rateLimitResponse', () => {
+  it('porte un code stable et le délai en secondes, en plus du texte et de Retry-After', async () => {
+    const response = rateLimitResponse(42)
+    expect(response.status).toBe(429)
+    expect(response.headers.get('retry-after')).toBe('42')
+    const body = await response.json()
+    expect(body).toMatchObject({ code: 'rate_limited', retryAfterSec: 42 })
+    expect(typeof body.error).toBe('string')
   })
 })
 

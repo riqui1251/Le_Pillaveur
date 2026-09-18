@@ -118,6 +118,14 @@ export function TryBotsGate({
         void requestAgeVerification()
         return
       }
+      if (guestData?.code === 'rate_limited') {
+        // Quota du réseau atteint (grosse tablée, CGNAT) : le délai vient de
+        // la route et se dit dans la langue du joueur — jamais le texte
+        // français brut de `error`, que showApiError ne saurait pas traduire.
+        const seconds = typeof guestData.retryAfterSec === 'number' ? guestData.retryAfterSec : 60
+        setError(t('rateLimited', { seconds }))
+        return
+      }
       if (!guestRes.ok) {
         showApiError(guestData?.error)
         return

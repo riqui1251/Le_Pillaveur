@@ -22,6 +22,7 @@ import type { PetitBuveurT } from './case-config'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { PetitBuveurOnline } from '@/components/online/PetitBuveurOnline'
+import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
 
 const GAME_ID = 'petit-buveur'
 const SAVE_KEY = 'petit-buveur-save'
@@ -128,7 +129,7 @@ export default function PetitBuveurPage() {
   }
 
   if (!sessionChecked) {
-    return <div className="min-h-screen bg-gray-950" aria-hidden />
+    return <OnlineGameSkeleton gameId="petit-buveur" />
   }
 
   // Mode en ligne : lobby + partie serveur-autoritaire (indépendant du flux local).

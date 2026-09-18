@@ -67,7 +67,10 @@ function announceAgeGateResult(verified: boolean) {
  * Déclaration 18+ exigée AVANT une action (création d'un compte invité) sur
  * une page où le portail ne s'affiche pas de lui-même : les pages de LECTURE
  * (landing, règles, légal). Le portail s'ouvre alors sur place, sans quitter
- * la page. Résout `true` si l'âge est (ou vient d'être) certifié, `false` si
+ * la page. Le hub (/jeux) s'en sert aussi, à l'inverse : le portail s'y
+ * affiche déjà, et l'appel ne fait qu'ATTENDRE la déclaration avant de monter
+ * le guichet JoinGate — sinon le champ pseudo prenait le focus sous le
+ * portail. Résout `true` si l'âge est (ou vient d'être) certifié, `false` si
  * le visiteur renonce (bouton Annuler, navigation vers une autre page).
  *
  * Ne relance JAMAIS l'action d'elle-même : c'est à l'appelant de la proposer

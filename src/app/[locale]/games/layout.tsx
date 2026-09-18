@@ -44,8 +44,14 @@ export default function GamesLayout({
           (feutre, or, crème) tombait sur un plateau gris anthracite au moment
           décisif et croyait changer de site. Feutre profond, filet or et
           titrage Playfair — décor mesuré, lisibilité d'abord : le texte reste
-          crème sur vert sombre, et rien de la mise en page des jeux ne bouge. */}
-      <div className="flex min-h-0 w-full flex-1 flex-col space-y-3 rounded-md border border-gold/20 bg-felt-deep/70 p-2 text-cream shadow-[0_18px_50px_-24px_rgba(0,0,0,0.85)] [&_h1]:font-display sm:space-y-6 sm:rounded-xl sm:p-6">
+          crème sur vert sombre, et rien de la mise en page des jeux ne bouge.
+
+          `select-none` + `-webkit-touch-callout: none` : un doigt qui martèle
+          « Boire » ou reste posé sur une carte sélectionnait le texte du
+          plateau ou ouvrait le menu contextuel iOS/Android en pleine partie.
+          Les champs de saisie restent sélectionnables (règle `user-select:
+          text` dans globals.css) ; le code de table se copie par son bouton. */}
+      <div className="flex min-h-0 w-full flex-1 flex-col space-y-3 rounded-md border border-gold/20 bg-felt-deep/70 p-2 text-cream shadow-[0_18px_50px_-24px_rgba(0,0,0,0.85)] select-none [-webkit-touch-callout:none] [&_h1]:font-display sm:space-y-6 sm:rounded-xl sm:p-6">
         {children}
       </div>
       {/* Vocal de salle — apparaît dès qu'on est dans une salle en ligne,

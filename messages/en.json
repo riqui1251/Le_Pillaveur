@@ -168,7 +168,8 @@
       "title": "Who's playing tonight?",
       "subtitle": "Add your friends, select the team and go to the next step to choose the game.",
       "guestPrompt": "Create an account to find your players on all your devices (phone, tablet, computer).",
-      "guestCta": "Log in / Create an account"
+      "guestCta": "Log in / Create an account",
+      "playGame": "Play {game}"
     },
     "jeux": {
       "title": "Choose your game",
@@ -196,7 +197,8 @@
       "onlineOnly": {
         "title": "Online only",
         "hint": "These games need one phone per player: open an online table with a free account, or try them solo against bots."
-      }
+      },
+      "opening": "Opening…"
     },
     "jeuxOnline": {
       "title": "Online games",
@@ -803,7 +805,12 @@
     },
     "loadError": "Could not load the players",
     "selectedTitle": "Selected players",
-    "gamesPlayedCount": "{count, plural, one {# game} other {# games}}"
+    "gamesPlayedCount": "{count, plural, one {# game} other {# games}}",
+    "namesPlaceholder": "Lea, Tom, Max…",
+    "emptyHint": "Add at least {min} names, separated by commas",
+    "rejectedNames": "Not added: {names} — {reason}",
+    "onlineNeedsAccount": "Sign in to play online.",
+    "goOnline": "Go to online games"
   },
   "games": {
     "1220": {
@@ -4818,7 +4825,8 @@
     "guestHintDevice": "Guest account tied to this browser: deleted after 90 days without activity, lost if you disconnect. You can save it afterwards.",
     "loginCta": "Sign in or create an account",
     "pseudoPlaceholder": "Your nickname for tonight",
-    "error": "Can't start right now. Try again."
+    "error": "Can't start right now. Try again.",
+    "rateLimited": "Too many attempts from this network. Try again in {seconds, plural, one {# second} other {# seconds}}."
   },
   "joinGate": {
     "title": "Join the table",
@@ -4830,7 +4838,8 @@
     "loginCta": "Sign in or create an account",
     "dismiss": "No thanks, just browsing",
     "error": "Can’t join right now. Try again.",
-    "ageGateRequired": "First confirm that you are 18 or older. If the check doesn’t appear, reload the page."
+    "ageGateRequired": "First confirm that you are 18 or older. If the check doesn’t appear, reload the page.",
+    "rateLimited": "Too many attempts from this network. Try again in {seconds, plural, one {# second} other {# seconds}}."
   },
   "og": {
     "siteTagline": "The home of party games",

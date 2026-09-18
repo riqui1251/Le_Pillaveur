@@ -168,7 +168,8 @@
       "title": "Chi suona stasera?",
       "subtitle": "Aggiungi i tuoi amici, seleziona la squadra e vai al passaggio successivo per scegliere il gioco.",
       "guestPrompt": "Crea un account per trovare i tuoi giocatori su tutti i tuoi dispositivi (telefono, tablet, computer).",
-      "guestCta": "Accedi / Crea un account"
+      "guestCta": "Accedi / Crea un account",
+      "playGame": "Gioca a {game}"
     },
     "jeux": {
       "title": "Scegli il tuo gioco",
@@ -196,7 +197,8 @@
       "onlineOnly": {
         "title": "Solo online",
         "hint": "Questi giochi richiedono un telefono per giocatore: apri un tavolo online con un account gratuito, oppure provali da solo contro i bot."
-      }
+      },
+      "opening": "Apertura in corso…"
     },
     "jeuxOnline": {
       "title": "Giochi online",
@@ -803,7 +805,12 @@
     },
     "loadError": "Errore nel caricamento dei giocatori",
     "selectedTitle": "Giocatori selezionati",
-    "gamesPlayedCount": "{count, plural, one {# partita} other {# partite}}"
+    "gamesPlayedCount": "{count, plural, one {# partita} other {# partite}}",
+    "namesPlaceholder": "Lea, Tom, Max…",
+    "emptyHint": "Aggiungi almeno {min} nomi, separati da virgole",
+    "rejectedNames": "Non aggiunti: {names} — {reason}",
+    "onlineNeedsAccount": "Accedi per giocare online.",
+    "goOnline": "Vai ai giochi online"
   },
   "games": {
     "1220": {
@@ -4818,7 +4825,8 @@
     "guestHintDevice": "Account ospite legato a questo browser: eliminato dopo 90 giorni senza attività, perso se ti disconnetti. Potrai salvarlo in seguito.",
     "loginCta": "Accedi o crea un account",
     "pseudoPlaceholder": "Il tuo nickname per la serata",
-    "error": "Impossibile iniziare ora. Riprova."
+    "error": "Impossibile iniziare ora. Riprova.",
+    "rateLimited": "Troppi tentativi da questa rete. Riprova tra {seconds} s."
   },
   "joinGate": {
     "title": "Unisciti al tavolo",
@@ -4830,7 +4838,8 @@
     "loginCta": "Accedi o crea un account",
     "dismiss": "No grazie, sto solo guardando",
     "error": "Impossibile unirsi al momento. Riprova.",
-    "ageGateRequired": "Prima conferma di avere almeno 18 anni. Se la verifica non compare, ricarica la pagina."
+    "ageGateRequired": "Prima conferma di avere almeno 18 anni. Se la verifica non compare, ricarica la pagina.",
+    "rateLimited": "Troppi tentativi da questa rete. Riprova tra {seconds} s."
   },
   "og": {
     "siteTagline": "La casa dei giochi da festa",

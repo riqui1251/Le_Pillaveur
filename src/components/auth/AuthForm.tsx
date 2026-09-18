@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
+import { enterLocalPlay } from '@/lib/local-play-client'
 import { isNativeGoogleAvailable } from '@/lib/native-google-login'
 import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
 import { LogIn, UserPlus, Gamepad2 } from 'lucide-react'
@@ -242,7 +243,7 @@ export function AuthForm() {
     setLocalLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/auth/local-play', { method: 'POST', credentials: 'include' })
+      const res = await enterLocalPlay()
       if (!res.ok) throw new Error(t('localPlay.errorActivate'))
       goToApp()
     } catch {

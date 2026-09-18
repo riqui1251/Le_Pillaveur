@@ -168,7 +168,8 @@
       "title": "Qui joue ce soir ?",
       "subtitle": "Ajoutez vos amis, sélectionnez l'équipe et passez à l'étape suivante pour choisir le jeu.",
       "guestPrompt": "Créez un compte pour retrouver vos joueurs sur tous vos appareils (téléphone, tablette, ordinateur).",
-      "guestCta": "Se connecter / Créer un compte"
+      "guestCta": "Se connecter / Créer un compte",
+      "playGame": "Jouer à {game}"
     },
     "jeux": {
       "title": "Choisissez votre jeu",
@@ -196,7 +197,8 @@
       "onlineOnly": {
         "title": "En ligne uniquement",
         "hint": "Ces jeux demandent un téléphone par joueur : ouvrez une table en ligne avec un compte gratuit, ou essayez-les seul contre des bots."
-      }
+      },
+      "opening": "Ouverture…"
     },
     "jeuxOnline": {
       "title": "Jeux en ligne",
@@ -803,7 +805,12 @@
     },
     "loadError": "Erreur de chargement des joueurs",
     "selectedTitle": "Joueurs sélectionnés",
-    "gamesPlayedCount": "{count, plural, one {# partie} other {# parties}}"
+    "gamesPlayedCount": "{count, plural, one {# partie} other {# parties}}",
+    "namesPlaceholder": "Léa, Tom, Max…",
+    "emptyHint": "Ajoutez au moins {min} prénoms, séparés par des virgules",
+    "rejectedNames": "Non ajoutés : {names} — {reason}",
+    "onlineNeedsAccount": "Connexion requise pour jouer en ligne.",
+    "goOnline": "Aller aux jeux en ligne"
   },
   "games": {
     "1220": {
@@ -4818,7 +4825,8 @@
     "guestHintDevice": "Compte invité, lié à ce navigateur : supprimé après 90 jours sans activité, perdu si tu te déconnectes. Tu pourras le sauvegarder ensuite.",
     "loginCta": "Se connecter ou créer un compte",
     "pseudoPlaceholder": "Ton pseudo pour la soirée",
-    "error": "Impossible de lancer pour l'instant. Réessaie."
+    "error": "Impossible de lancer pour l'instant. Réessaie.",
+    "rateLimited": "Trop d'essais depuis ce réseau. Réessaie dans {seconds} s."
   },
   "joinGate": {
     "title": "Rejoindre la table",
@@ -4830,7 +4838,8 @@
     "loginCta": "Se connecter ou créer un compte",
     "dismiss": "Non merci, je visite d’abord",
     "error": "Impossible de rejoindre pour l’instant. Réessaie.",
-    "ageGateRequired": "Confirme d’abord que tu as 18 ans ou plus. Si la vérification ne s’affiche pas, recharge la page."
+    "ageGateRequired": "Confirme d’abord que tu as 18 ans ou plus. Si la vérification ne s’affiche pas, recharge la page.",
+    "rateLimited": "Trop d’essais depuis ce réseau. Réessaie dans {seconds} s."
   },
   "og": {
     "siteTagline": "La maison des jeux de soirée",

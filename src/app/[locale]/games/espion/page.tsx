@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { Globe } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { EspionOnline } from '@/components/online/EspionOnline'
+import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
 import { TryBotsGate } from '@/components/online/TryBotsGate'
@@ -19,7 +20,7 @@ export default function EspionPage() {
   const { user, loading, setPlayMode } = useAuth()
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-950" aria-hidden />
+    return <OnlineGameSkeleton gameId="espion" />
   }
 
   if (user?.playMode === 'online') {

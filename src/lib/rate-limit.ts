@@ -1,4 +1,5 @@
 import { getClientIpFromRequest } from '@/lib/geo-server'
+import { ipNetworkKey } from '@/lib/ip-network'
 
 type RateLimitEntry = {
   count: number
@@ -43,10 +44,29 @@ export function checkRateLimit(
   return { ok: true }
 }
 
+/** Adresse du client, ou « unknown » : sans IP lisible, un compteur à part. */
+function clientIp(request: Request): string {
+  return getClientIpFromRequest(request) ?? 'unknown'
+}
+
 export function rateLimitKey(request: Request, scope: string, email?: string): string {
-  const ip = getClientIpFromRequest(request) ?? 'unknown'
+  const ip = clientIp(request)
   const normalizedEmail = email?.trim().toLowerCase()
   return normalizedEmail ? `${scope}:${ip}:${normalizedEmail}` : `${scope}:${ip}`
+}
+
+/**
+ * Clé par RÉSEAU et non par adresse (ipNetworkKey : IPv4 entière, IPv6
+ * ramenée à son /64), pour les quotas qui doivent compter « un foyer, un
+ * lieu ». Derrière une box IPv4, tous les téléphones sortent avec la même
+ * adresse ; en IPv6, chacun a la sienne dans le même /64 et en change chaque
+ * jour — par adresse, une tablée n'était jamais comptée ensemble et un script
+ * contournait le compteur en changeant d'adresse. Par /64, les deux familles
+ * mesurent la même chose. Forme : « scope:203.0.113.7 » ou
+ * « scope:2a01:cb05:0545:a200::/64 ».
+ */
+export function networkRateLimitKey(request: Request, scope: string): string {
+  return `${scope}:${ipNetworkKey(clientIp(request))}`
 }
 
 /**
@@ -138,10 +158,20 @@ async function readBodyLimited(
   return raw + decoder.decode()
 }
 
+/**
+ * 429 commun à toutes les routes. `error` garde sa phrase française : des
+ * écrans l'affichent encore telle quelle. `code` et `retryAfterSec` (le même
+ * délai que l'en-tête Retry-After) permettent à un client de traduire et de
+ * dire au joueur combien de temps attendre, dans sa langue. Le code reste un
+ * littéral côté client (JoinGate, TryBotsGate) : ce module tire geoip-lite,
+ * il ne s'importe pas dans un composant.
+ */
 export function rateLimitResponse(retryAfterSec: number): Response {
   return new Response(
     JSON.stringify({
       error: `Trop de tentatives. Réessayez dans ${retryAfterSec} secondes.`,
+      code: 'rate_limited',
+      retryAfterSec,
     }),
     {
       status: 429,

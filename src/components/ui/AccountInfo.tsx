@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from 'react'
@@ -82,6 +81,9 @@ export function AccountInfo() {
     [games]
   )
   const { user, logout, refresh } = useAuth()
+  // Les effets réseau ne dépendent que de l'identité du compte, pas de
+  // l'objet `user` (nouvelle référence à chaque rafraîchissement de session).
+  const userId = user?.id
   const { progression, refresh: refreshProgression } = useOnlineProgression()
   const { players, loading, removePlayer, updatePlayer, updatePlayerPreferences } = usePlayers()
   const tFriends = useTranslations('account.friends')
@@ -174,7 +176,7 @@ export function AccountInfo() {
   const [deleteMethod, setDeleteMethod] = useState<'password' | 'google' | 'session' | null>(null)
 
   useEffect(() => {
-    if (!showDangerZone || !user || deleteMethod) return
+    if (!showDangerZone || !userId || deleteMethod) return
     let cancelled = false
     fetch('/api/auth/delete-account', { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
@@ -190,7 +192,7 @@ export function AccountInfo() {
     return () => {
       cancelled = true
     }
-  }, [showDangerZone, user?.id, deleteMethod])
+  }, [showDangerZone, userId, deleteMethod])
 
   const handleDeleteAccount = async (credential?: string) => {
     setDeletingAccount(true)
@@ -305,7 +307,7 @@ export function AccountInfo() {
   }
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setNameModerationWarning(false)
       return
     }
@@ -321,7 +323,7 @@ export function AccountInfo() {
     return () => {
       cancelled = true
     }
-  }, [user?.id])
+  }, [userId])
 
   useEffect(() => {
     setOnlineName(user?.onlineDisplayName ?? user?.displayName ?? '')

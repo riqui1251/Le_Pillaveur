@@ -18,6 +18,10 @@ export type PendingRoomInvite = {
 /** Invitations de lobby reçues d'amis — poll léger, même pattern que useOpenLobbies. */
 export function useFriendInvites() {
   const { user } = useAuth()
+  // Le sondage ne dépend que de l'identité et du mode de jeu : l'objet `user`
+  // change de référence à chaque rafraîchissement de session, pas ces deux-là.
+  const userId = user?.id
+  const playMode = user?.playMode
   const visible = usePagePresence()
   const [invites, setInvites] = useState<PendingRoomInvite[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,7 +30,7 @@ export function useFriendInvites() {
 
   useEffect(() => {
     const fetchInvites = async () => {
-      if (!user || user.playMode !== 'online') {
+      if (!userId || playMode !== 'online') {
         setInvites([])
         setLoading(false)
         return
@@ -50,7 +54,7 @@ export function useFriendInvites() {
       }
     }
 
-    if (!user || user.playMode !== 'online') {
+    if (!userId || playMode !== 'online') {
       setInvites([])
       setLoading(false)
       return
@@ -65,7 +69,7 @@ export function useFriendInvites() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [user?.id, user?.playMode, visible])
+  }, [userId, playMode, visible])
 
   const declineInvite = async (inviteId: string) => {
     setInvites((prev) => prev.filter((i) => i.id !== inviteId))

@@ -10,6 +10,10 @@ const POLL_MS = 4000
 
 export function useOpenLobbies() {
   const { user } = useAuth()
+  // Le sondage ne dépend que de l'identité et du mode de jeu : l'objet `user`
+  // change de référence à chaque rafraîchissement de session, pas ces deux-là.
+  const userId = user?.id
+  const playMode = user?.playMode
   const visible = usePagePresence()
   const [lobbies, setLobbies] = useState<LobbyListItem[]>([])
   // Parties en cours : détail des tables PUBLIQUES, et total anonyme (toutes
@@ -26,7 +30,7 @@ export function useOpenLobbies() {
 
   useEffect(() => {
     const fetchLobbies = async () => {
-      if (!user || user.playMode !== 'online') {
+      if (!userId || playMode !== 'online') {
         setLobbies([])
         setLiveGames([])
         setLiveGamesTotal(0)
@@ -66,7 +70,7 @@ export function useOpenLobbies() {
       }
     }
 
-    if (!user || user.playMode !== 'online') {
+    if (!userId || playMode !== 'online') {
       setLobbies([])
       setLiveGames([])
       setLiveGamesTotal(0)
@@ -86,10 +90,10 @@ export function useOpenLobbies() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [user?.id, user?.playMode, visible])
+  }, [userId, playMode, visible])
 
   const refresh = async () => {
-    if (!user || user.playMode !== 'online' || inFlightRef.current) return
+    if (!userId || playMode !== 'online' || inFlightRef.current) return
     inFlightRef.current = true
     try {
       const res = await fetch('/api/online/lobbies', { credentials: 'include' })

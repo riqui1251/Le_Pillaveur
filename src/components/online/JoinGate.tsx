@@ -54,6 +54,14 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
         setError(t('ageGateRequired'))
         return
       }
+      if (data?.code === 'rate_limited') {
+        // Quota du réseau atteint (grosse tablée, CGNAT) : le délai vient de
+        // la route et se dit dans la langue du joueur — jamais le texte
+        // français brut de `error`.
+        const seconds = typeof data.retryAfterSec === 'number' ? data.retryAfterSec : 60
+        setError(t('rateLimited', { seconds }))
+        return
+      }
       if (!res.ok) {
         setError(data?.error ?? t('error'))
         return
