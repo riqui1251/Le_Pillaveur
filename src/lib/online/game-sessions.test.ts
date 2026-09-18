@@ -616,7 +616,7 @@ describe('summarizeRecentLaunches', () => {
   const NOW = new Date('2026-09-10T12:00:00Z').getTime()
   const minutesAgo = (m: number) => new Date(NOW - m * 60_000)
 
-  it('détaille une table publique et laisse une table privée anonyme', () => {
+  it('annonce le jeu des deux, et l’effectif de la seule table publique', () => {
     const items = summarizeRecentLaunches(
       [
         {
@@ -638,11 +638,9 @@ describe('summarizeRecentLaunches', () => {
     )
 
     expect(items).toEqual([
-      { id: 's1', gameId: 'menteur', playerCount: 4, startedAgoMinutes: 3 },
-      { id: 's2', gameId: null, playerCount: null, startedAgoMinutes: 8 },
+      { id: 's1', gameId: 'menteur', isPrivate: false, playerCount: 4, startedAgoMinutes: 3 },
+      { id: 's2', gameId: 'president', isPrivate: true, playerCount: null, startedAgoMinutes: 8 },
     ])
-    // Le jeu d'une table non publique ne doit fuiter NULLE PART.
-    expect(JSON.stringify(items)).not.toContain('president')
   })
 
   it('traite « invite » et une visibilité inconnue comme non publiques', () => {
@@ -650,7 +648,11 @@ describe('summarizeRecentLaunches', () => {
       { id: 'a', gameId: 'quiz', visibility: 'invite', playerCount: 3, startedAt: minutesAgo(1) },
       { id: 'b', gameId: 'quiz', visibility: 'unknown', playerCount: 3, startedAt: minutesAgo(2) },
     ]
-    expect(summarizeRecentLaunches(rows, NOW).map((i) => i.gameId)).toEqual([null, null])
+    const items = summarizeRecentLaunches(rows, NOW)
+    expect(items.map((i) => i.isPrivate)).toEqual([true, true])
+    // Le jeu est annoncé, l'effectif non.
+    expect(items.map((i) => i.gameId)).toEqual(['quiz', 'quiz'])
+    expect(items.map((i) => i.playerCount)).toEqual([null, null])
   })
 
   it('met la plus fraîche en tête et ne descend jamais sous zéro minute', () => {

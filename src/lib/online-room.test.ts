@@ -10,14 +10,15 @@ import { summarizeLiveGames, type LiveRoomRow } from '@/lib/online-room'
 const NOW = new Date('2026-09-10T12:00:00Z').getTime()
 const minutesAgo = (m: number) => new Date(NOW - m * 60_000)
 
-/** Salle candidate par défaut : publique, en jeu, avec son détail chargé. */
+/** Salle candidate par défaut : publique, en jeu, avec ses pseudos chargés. */
 const room = (over: Partial<LiveRoomRow> = {}): LiveRoomRow => ({
   id: 'r1',
   gameId: 'menteur',
   status: 'playing',
   visibility: 'public',
   createdAt: minutesAgo(3),
-  detail: { names: ['Alice', 'Bob'], playerCount: 2 },
+  playerCount: 2,
+  names: ['Alice', 'Bob'],
   ...over,
 })
 
@@ -29,6 +30,7 @@ describe('summarizeLiveGames', () => {
       {
         id: 'r1',
         gameId: 'menteur',
+        isPrivate: false,
         playerNames: ['Alice', 'Bob'],
         playerCount: 2,
         openedAgoMinutes: 3,
@@ -36,22 +38,28 @@ describe('summarizeLiveGames', () => {
     ])
   })
 
-  it('ne laisse RIEN fuir d’une table privée ou sur invitation, mais la compte', () => {
+  it('annonce le jeu d’une table privée ou sur invitation, JAMAIS ses pseudos', () => {
     const rows = [
       room({ id: 'pub', visibility: 'public' }),
-      room({ id: 'priv', visibility: 'private', gameId: 'president' }),
-      room({ id: 'inv', visibility: 'invite', gameId: 'quiz' }),
+      room({ id: 'priv', visibility: 'private', gameId: 'president', playerCount: 6 }),
+      // Cas du serveur prudent qui aurait quand même chargé des pseudos :
+      // la visibilité décide, pas l'appelant.
+      room({ id: 'inv', visibility: 'invite', gameId: 'quiz', names: ['Chloé'] }),
     ]
     const { liveGames, liveGamesTotal } = summarizeLiveGames(rows, NOW)
 
     expect(liveGamesTotal).toBe(3)
-    expect(liveGames.map((g) => g.id)).toEqual(['pub'])
-    // Ni pseudo, ni jeu, ni identifiant des tables non publiques.
-    const leaked = JSON.stringify(liveGames)
-    expect(leaked).not.toContain('priv')
-    expect(leaked).not.toContain('inv')
-    expect(leaked).not.toContain('president')
-    expect(leaked).not.toContain('quiz')
+    expect(liveGames.map((g) => g.id).sort()).toEqual(['inv', 'priv', 'pub'])
+    expect(liveGames.filter((g) => g.isPrivate).map((g) => g.gameId).sort()).toEqual([
+      'president',
+      'quiz',
+    ])
+    // L'effectif d'une table fermée sort (c'est un nombre), ses pseudos non.
+    expect(liveGames.find((g) => g.id === 'priv')).toMatchObject({
+      playerCount: 6,
+      playerNames: [],
+    })
+    expect(JSON.stringify(liveGames)).not.toContain('Chloé')
   })
 
   it('exclut les salles « cast » (afficheur TV d’une partie locale)', () => {
@@ -86,12 +94,16 @@ describe('summarizeLiveGames', () => {
     expect(summarizeLiveGames(rows, NOW).liveGames.map((g) => g.id)).toEqual(['fraiche', 'vieille'])
   })
 
-  it('ne détaille pas une table publique dont les joueurs n’ont pas été chargés', () => {
-    // Garde de coût : le détail est chargé pour un sous-ensemble borné de
-    // salles ; celles qui débordent restent dans le total, sans détail.
-    const rows = [room({ id: 'sansDetail', detail: undefined }), room({ id: 'avecDetail' })]
+  it('affiche une table publique dont les pseudos n’ont pas été chargés, sans pseudo', () => {
+    // Garde de coût : les pseudos ne sont chargés que pour un sous-ensemble
+    // borné de salles ; celles qui débordent gardent leur jeu et leur effectif.
+    const rows = [room({ id: 'sansNoms', names: undefined }), room({ id: 'avecNoms' })]
     const { liveGames, liveGamesTotal } = summarizeLiveGames(rows, NOW)
     expect(liveGamesTotal).toBe(2)
-    expect(liveGames.map((g) => g.id)).toEqual(['avecDetail'])
+    expect(liveGames.map((g) => g.id).sort()).toEqual(['avecNoms', 'sansNoms'])
+    expect(liveGames.find((g) => g.id === 'sansNoms')).toMatchObject({
+      playerNames: [],
+      playerCount: 2,
+    })
   })
 })

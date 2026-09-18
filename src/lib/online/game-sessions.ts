@@ -535,11 +535,11 @@ export type RecentLaunchRow = {
 /**
  * Une partie lancée, telle que le guichet a le droit de la raconter.
  *
- * Même règle que `LiveGameItem` (src/lib/online-room.ts) : une table qui
- * n'était pas PUBLIQUE au lancement ne livre ni son jeu, ni son effectif —
- * elle n'est qu'une trace de vie horodatée. Aucun pseudo ne sort d'ici, quelle
- * que soit la visibilité : le journal nomme ses joueurs pour l'exploitant, pas
- * pour les visiteurs.
+ * Même règle que `LiveGameItem` (src/lib/online-room.ts) : le JEU est annoncé
+ * quelle que soit la visibilité — c'est ce qui fait vivre le guichet — mais
+ * une table qui n'était pas PUBLIQUE au lancement ne livre pas son effectif,
+ * et AUCUN pseudo ne sort d'ici dans aucun cas : le journal nomme ses joueurs
+ * pour l'exploitant, pas pour les visiteurs.
  *
  * `id` est celui de la LIGNE DE JOURNAL : il n'ouvre aucune route (le code de
  * table et l'identifiant de salle, eux, restent au chaud), il ne sert qu'à
@@ -547,9 +547,10 @@ export type RecentLaunchRow = {
  */
 export type RecentLaunchItem = {
   id: string
-  /** null = table non publique. */
-  gameId: string | null
-  /** null pour la même raison. */
+  gameId: string
+  /** Table non publique au lancement : le jeu sort, l'effectif non. */
+  isPrivate: boolean
+  /** null pour une table non publique. */
   playerCount: number | null
   startedAgoMinutes: number
 }
@@ -567,7 +568,8 @@ export function summarizeRecentLaunches(
       const isPublic = row.visibility === 'public'
       return {
         id: row.id,
-        gameId: isPublic ? row.gameId : null,
+        gameId: row.gameId,
+        isPrivate: !isPublic,
         playerCount: isPublic ? row.playerCount : null,
         startedAgoMinutes: Math.max(0, Math.floor((now - row.startedAt.getTime()) / 60000)),
       }

@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Crown, Globe, Users } from 'lucide-react'
+import { Crown, Globe, Lock, Users } from 'lucide-react'
 import { GAMES } from '@/lib/games'
 import type { LiveGameItem } from '@/lib/online-room'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
@@ -29,8 +29,9 @@ export function LiveDot() {
  * Parties EN COURS, regroupées par jeu. Purement informatif : une partie
  * lancée ne se rejoint pas (le serveur répond `game_already_started`), donc
  * ni bouton « Rejoindre », ni code de table ici.
- * Les tables privées n'apparaissent que dans `total` — jamais leur jeu, leurs
- * joueurs ou leur code.
+ * Une table privée ou sur invitation annonce son JEU et son effectif comme
+ * les autres — c'est ce qui fait vivre le guichet — mais le serveur n'en
+ * envoie AUCUN pseudo (cf. summarizeLiveGames) : elle porte un cadenas.
  */
 export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total: number }) {
   const t = useTranslations('onlineLobby')
@@ -46,8 +47,8 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
     return Array.from(map.entries()).sort((a, b) => b[1].length - a[1].length)
   }, [games])
 
-  // Honnêteté : ce qui n'est pas détaillé (tables privées, débordement du
-  // plafond) reste compté, mais annoncé comme tel.
+  // Honnêteté : ce que le plafond d'affichage laisse de côté reste compté,
+  // mais annoncé comme tel.
   const hidden = Math.max(0, total - games.length)
 
   if (total <= 0) return null
@@ -68,7 +69,11 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
             const game = GAMES.find((g) => g.id === gameId)
             const players = items.flatMap((item) => item.playerNames)
             const shown = players.slice(0, LIVE_NAMES_SHOWN)
-            const extra = items.reduce((sum, item) => sum + item.playerCount, 0) - shown.length
+            const playerCount = items.reduce((sum, item) => sum + item.playerCount, 0)
+            const extra = playerCount - shown.length
+            // Au moins une table fermée dans ce groupe : le cadenas dit
+            // pourquoi ses joueurs ne sont pas nommés.
+            const hasPrivate = items.some((item) => item.isPrivate)
             const freshest = items.reduce(
               (min, item) => Math.min(min, item.openedAgoMinutes),
               Number.MAX_SAFE_INTEGER
@@ -84,6 +89,12 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 truncate text-sm font-semibold text-white">
                     <span className="truncate">{game?.title ?? gameId}</span>
+                    {hasPrivate && (
+                      <Lock
+                        className="h-3 w-3 shrink-0 text-white/40"
+                        aria-label={t('recentLaunches.privateTable')}
+                      />
+                    )}
                     {items.length > 1 && (
                       <span className="shrink-0 rounded-full border border-gold/20 bg-gold/10 px-1.5 py-px text-[10px] font-medium text-gold">
                         {t('live.tables', { count: items.length })}
@@ -91,9 +102,13 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
                     )}
                   </p>
                   <p className="truncate text-[11px] text-white/45">
-                    {shown.join(' · ')}
-                    {extra > 0 && ` +${extra}`}
-                    {shown.length > 0 && ' · '}
+                    {/* Sans aucun pseudo (tables fermées), « +2 » ne veut rien
+                        dire : on annonce l'effectif en toutes lettres. */}
+                    {shown.length > 0
+                      ? `${shown.join(' · ')}${extra > 0 ? ` +${extra}` : ''} · `
+                      : playerCount > 0
+                        ? `${t('playersCount', { count: playerCount })} · `
+                        : ''}
                     {freshest < 1 ? t('live.justOpened') : t('live.openedAgo', { minutes: freshest })}
                   </p>
                 </div>
