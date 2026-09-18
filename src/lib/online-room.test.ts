@@ -10,7 +10,7 @@ import { summarizeLiveGames, type LiveRoomRow } from '@/lib/online-room'
 const NOW = new Date('2026-09-10T12:00:00Z').getTime()
 const minutesAgo = (m: number) => new Date(NOW - m * 60_000)
 
-/** Salle candidate par défaut : publique, en jeu, avec ses pseudos chargés. */
+/** Salle candidate par défaut : publique, en jeu, deux joueurs. */
 const room = (over: Partial<LiveRoomRow> = {}): LiveRoomRow => ({
   id: 'r1',
   gameId: 'menteur',
@@ -18,12 +18,11 @@ const room = (over: Partial<LiveRoomRow> = {}): LiveRoomRow => ({
   visibility: 'public',
   createdAt: minutesAgo(3),
   playerCount: 2,
-  names: ['Alice', 'Bob'],
   ...over,
 })
 
 describe('summarizeLiveGames', () => {
-  it('détaille une table publique en cours', () => {
+  it('décrit une table publique en cours sans nommer personne', () => {
     const { liveGames, liveGamesTotal } = summarizeLiveGames([room()], NOW)
     expect(liveGamesTotal).toBe(1)
     expect(liveGames).toEqual([
@@ -31,20 +30,17 @@ describe('summarizeLiveGames', () => {
         id: 'r1',
         gameId: 'menteur',
         isPrivate: false,
-        playerNames: ['Alice', 'Bob'],
         playerCount: 2,
         openedAgoMinutes: 3,
       },
     ])
   })
 
-  it('annonce le jeu d’une table privée ou sur invitation, JAMAIS ses pseudos', () => {
+  it('annonce le jeu et l’effectif de toutes les tables, privées comprises', () => {
     const rows = [
       room({ id: 'pub', visibility: 'public' }),
       room({ id: 'priv', visibility: 'private', gameId: 'president', playerCount: 6 }),
-      // Cas du serveur prudent qui aurait quand même chargé des pseudos :
-      // la visibilité décide, pas l'appelant.
-      room({ id: 'inv', visibility: 'invite', gameId: 'quiz', names: ['Chloé'] }),
+      room({ id: 'inv', visibility: 'invite', gameId: 'quiz' }),
     ]
     const { liveGames, liveGamesTotal } = summarizeLiveGames(rows, NOW)
 
@@ -54,12 +50,21 @@ describe('summarizeLiveGames', () => {
       'president',
       'quiz',
     ])
-    // L'effectif d'une table fermée sort (c'est un nombre), ses pseudos non.
-    expect(liveGames.find((g) => g.id === 'priv')).toMatchObject({
-      playerCount: 6,
-      playerNames: [],
-    })
-    expect(JSON.stringify(liveGames)).not.toContain('Chloé')
+    expect(liveGames.find((g) => g.id === 'priv')).toMatchObject({ playerCount: 6 })
+  })
+
+  it('ne peut PAS livrer de pseudo : la sortie n’en porte aucun champ', () => {
+    // Garde-fou de forme : le guichet dit combien ils sont, jamais qui joue.
+    // Une table publique n'y échappe pas — une table ouverte à tous n'est pas
+    // une table dont on publie les noms.
+    const [item] = summarizeLiveGames([room()], NOW).liveGames
+    expect(Object.keys(item).sort()).toEqual([
+      'gameId',
+      'id',
+      'isPrivate',
+      'openedAgoMinutes',
+      'playerCount',
+    ])
   })
 
   it('exclut les salles « cast » (afficheur TV d’une partie locale)', () => {
@@ -94,16 +99,10 @@ describe('summarizeLiveGames', () => {
     expect(summarizeLiveGames(rows, NOW).liveGames.map((g) => g.id)).toEqual(['fraiche', 'vieille'])
   })
 
-  it('affiche une table publique dont les pseudos n’ont pas été chargés, sans pseudo', () => {
-    // Garde de coût : les pseudos ne sont chargés que pour un sous-ensemble
-    // borné de salles ; celles qui débordent gardent leur jeu et leur effectif.
-    const rows = [room({ id: 'sansNoms', names: undefined }), room({ id: 'avecNoms' })]
+  it('garde une table dont l’effectif est vide (dernier membre parti)', () => {
+    const rows = [room({ id: 'vide', playerCount: 0 }), room({ id: 'pleine' })]
     const { liveGames, liveGamesTotal } = summarizeLiveGames(rows, NOW)
     expect(liveGamesTotal).toBe(2)
-    expect(liveGames.map((g) => g.id).sort()).toEqual(['avecNoms', 'sansNoms'])
-    expect(liveGames.find((g) => g.id === 'sansNoms')).toMatchObject({
-      playerNames: [],
-      playerCount: 2,
-    })
+    expect(liveGames.map((g) => g.id).sort()).toEqual(['pleine', 'vide'])
   })
 })

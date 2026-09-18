@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, ChevronDown, Copy, Check, Crown, Globe, Lock, Mail, LogOut, Play, Plus, Settings, Share2, Users, UserPlus, Tv, Trophy, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Copy, Crown, Globe, Lock, LogOut, Mail, Play, Plus, Settings, Share2, Trophy, Tv, UserPlus, Users, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -382,31 +382,36 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               <span aria-hidden className="h-px flex-1 bg-gold/15" />
             </p>
             <ul className="space-y-2">
-              {liveHere.map((live) => {
-                const extra = Math.max(0, live.playerCount - live.playerNames.length)
-                return (
-                  <li
-                    key={live.id}
-                    className="flex items-center gap-2.5 rounded-xl border border-gold/10 bg-felt-deep/50 px-3 py-2.5"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/20 bg-gold/10">
-                      <GameIconById id={gameId} className="h-4 w-4 text-gold" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-white/85">
-                        {live.playerNames.join(' · ')}
-                        {extra > 0 && ` +${extra}`}
-                      </p>
-                      <p className="truncate text-[11px] text-white/40">
-                        {tOnline('playersCount', { count: live.playerCount })} ·{' '}
-                        {live.openedAgoMinutes < 1
-                          ? tOnline('live.justOpened')
-                          : tOnline('live.openedAgo', { minutes: live.openedAgoMinutes })}
-                      </p>
-                    </div>
-                  </li>
-                )
-              })}
+              {liveHere.map((live) => (
+                <li
+                  key={live.id}
+                  className="flex items-center gap-2.5 rounded-xl border border-gold/10 bg-felt-deep/50 px-3 py-2.5"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/20 bg-gold/10">
+                    <GameIconById id={gameId} className="h-4 w-4 text-gold" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    {/* Aucun pseudo : une table en cours dit combien ils sont
+                        et depuis quand, jamais qui joue. */}
+                    <p className="flex items-center gap-1.5 truncate text-sm text-white/85">
+                      <span className="truncate">
+                        {tOnline('playersCount', { count: live.playerCount })}
+                      </span>
+                      {live.isPrivate && (
+                        <Lock
+                          className="h-3 w-3 shrink-0 text-white/40"
+                          aria-label={tOnline('recentLaunches.privateTable')}
+                        />
+                      )}
+                    </p>
+                    <p className="truncate text-[11px] text-white/40">
+                      {live.openedAgoMinutes < 1
+                        ? tOnline('live.justOpened')
+                        : tOnline('live.openedAgo', { minutes: live.openedAgoMinutes })}
+                    </p>
+                  </div>
+                </li>
+              ))}
             </ul>
             <p className="mt-2 text-[11px] text-white/35">{tOnline('live.notJoinable')}</p>
           </div>

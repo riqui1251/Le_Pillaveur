@@ -12,9 +12,6 @@ import { Button } from '@/components/ui/button'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { RecentLaunchesPanel } from '@/components/online/RecentLaunchesPanel'
 
-/** Nombre de pseudos montrés par jeu avant de basculer sur « +N ». */
-const LIVE_NAMES_SHOWN = 4
-
 /** Pastille « ça joue en ce moment » — rouge d'enseigne, discrète mais vivante. */
 export function LiveDot() {
   return (
@@ -29,9 +26,9 @@ export function LiveDot() {
  * Parties EN COURS, regroupées par jeu. Purement informatif : une partie
  * lancée ne se rejoint pas (le serveur répond `game_already_started`), donc
  * ni bouton « Rejoindre », ni code de table ici.
- * Une table privée ou sur invitation annonce son JEU et son effectif comme
- * les autres — c'est ce qui fait vivre le guichet — mais le serveur n'en
- * envoie AUCUN pseudo (cf. summarizeLiveGames) : elle porte un cadenas.
+ * Chaque table dit son jeu, son effectif et son âge — jamais qui y joue :
+ * le serveur n'envoie plus aucun pseudo de partie en cours, publique comprise
+ * (cf. summarizeLiveGames). Une table fermée porte en plus un cadenas.
  */
 export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total: number }) {
   const t = useTranslations('onlineLobby')
@@ -67,10 +64,7 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
         <ul className="grid gap-2 sm:grid-cols-2">
           {byGame.map(([gameId, items]) => {
             const game = GAMES.find((g) => g.id === gameId)
-            const players = items.flatMap((item) => item.playerNames)
-            const shown = players.slice(0, LIVE_NAMES_SHOWN)
             const playerCount = items.reduce((sum, item) => sum + item.playerCount, 0)
-            const extra = playerCount - shown.length
             // Au moins une table fermée dans ce groupe : le cadenas dit
             // pourquoi ses joueurs ne sont pas nommés.
             const hasPrivate = items.some((item) => item.isPrivate)
@@ -102,13 +96,7 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
                     )}
                   </p>
                   <p className="truncate text-[11px] text-white/45">
-                    {/* Sans aucun pseudo (tables fermées), « +2 » ne veut rien
-                        dire : on annonce l'effectif en toutes lettres. */}
-                    {shown.length > 0
-                      ? `${shown.join(' · ')}${extra > 0 ? ` +${extra}` : ''} · `
-                      : playerCount > 0
-                        ? `${t('playersCount', { count: playerCount })} · `
-                        : ''}
+                    {playerCount > 0 && `${t('playersCount', { count: playerCount })} · `}
                     {freshest < 1 ? t('live.justOpened') : t('live.openedAgo', { minutes: freshest })}
                   </p>
                 </div>

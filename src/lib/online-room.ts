@@ -71,10 +71,8 @@ export type LobbyListItem = {
 export type LiveGameItem = {
   id: string
   gameId: string
-  /** Table non publique (privée ou sur invitation) : le JEU sort, jamais les pseudos. */
+  /** Table privée ou sur invitation — signalée, mais montrée comme les autres. */
   isPrivate: boolean
-  /** Pseudos des joueurs — seulement pour les tables PUBLIQUES (cf. summarizeLiveGames). */
-  playerNames: string[]
   playerCount: number
   /**
    * Âge de la table en minutes. Il n'existe pas de colonne `startedAt` : on
@@ -86,7 +84,7 @@ export type LiveGameItem = {
 
 export type LobbyOverview = {
   lobbies: LobbyListItem[]
-  /** Parties en cours : toutes visibilités, pseudos des tables publiques seulement. */
+  /** Parties en cours : toutes visibilités, et AUCUN pseudo (cf. summarizeLiveGames). */
   liveGames: LiveGameItem[]
   /**
    * Total des parties en cours, y compris celles que le plafond d'affichage
@@ -102,14 +100,8 @@ export type LiveRoomRow = {
   status: string
   visibility: string
   createdAt: Date
-  /** Effectif de la table — connu pour toutes les visibilités. */
+  /** Effectif de la table — la seule chose qu'on dise de ses joueurs. */
   playerCount: number
-  /**
-   * Pseudos, chargés UNIQUEMENT pour les tables publiques. `summarizeLiveGames`
-   * les rejette de toute façon si la visibilité n'est pas 'public' : la vie
-   * privée ne dépend pas de la prudence de l'appelant.
-   */
-  names?: string[]
 }
 
 /** Statuts d'une vraie partie en ligne. 'cast' (afficheur TV d'une partie LOCALE) n'en est pas une. */
@@ -119,9 +111,9 @@ const LIVE_STATUSES = ['playing', 'briefing'] as const
  * Met en forme les parties en cours pour le guichet.
  * Deux règles, non négociables :
  * - une salle non 'playing'/'briefing' (notamment 'cast') n'existe pas ici ;
- * - une table non publique montre son JEU et son effectif, jamais un PSEUDO :
- *   savoir qu'une table de Président tourne fait vivre le guichet, nommer ses
- *   joueurs les exposerait alors qu'ils ont justement fermé leur table.
+ * - AUCUN pseudo ne sort d'ici, quelle que soit la visibilité : le guichet dit
+ *   le jeu, l'effectif et l'âge de la table, jamais qui y joue. Une table
+ *   ouverte à tous n'est pas pour autant une table dont on publie les noms.
  * Fonction pure (le `now` est injectable) pour rester testable sans base.
  */
 export function summarizeLiveGames(
@@ -133,17 +125,13 @@ export function summarizeLiveGames(
   )
 
   const liveGames = live
-    .map((row) => {
-      const isPublic = row.visibility === 'public'
-      return {
-        id: row.id,
-        gameId: row.gameId!,
-        isPrivate: !isPublic,
-        playerNames: isPublic ? (row.names ?? []) : [],
-        playerCount: row.playerCount,
-        openedAgoMinutes: Math.max(0, Math.floor((now - row.createdAt.getTime()) / 60000)),
-      }
-    })
+    .map((row) => ({
+      id: row.id,
+      gameId: row.gameId!,
+      isPrivate: row.visibility !== 'public',
+      playerCount: row.playerCount,
+      openedAgoMinutes: Math.max(0, Math.floor((now - row.createdAt.getTime()) / 60000)),
+    }))
     // La plus fraîche en tête : c'est celle qui donne le sentiment de vie.
     .sort((a, b) => a.openedAgoMinutes - b.openedAgoMinutes)
 
@@ -456,17 +444,14 @@ export async function buildLobbyList(): Promise<LobbyListItem[]> {
  * (cleanupStaleActiveRooms, seuil 60 min) reste hors de ce chemin très chaud.
  */
 const LIVE_ROOM_FRESH_MS = 15 * 60 * 1000
-/** Bornes de coût : ce que la liste ramène au maximum, quoi qu'il arrive. */
+/** Borne de coût : ce que la liste ramène au maximum, quoi qu'il arrive. */
 const LIVE_ROOMS_SCAN_MAX = 60
-const LIVE_GAME_DETAIL_MAX = 12
-const LIVE_GAME_NAMES_MAX = 6
 
 /**
  * Tout ce que le guichet affiche : tables ouvertes + parties en cours.
- * Trois requêtes bornées au total, aucune n'ouvre les membres de TOUTES les
- * salles : la première (buildLobbyList) sert les tables ouvertes, la deuxième
- * ne lit que des scalaires (pour le total anonyme, visibilités comprises), la
- * troisième ne charge des pseudos que pour les tables publiques.
+ * Deux requêtes bornées au total : la première (buildLobbyList) sert les
+ * tables ouvertes, la seconde ne lit que des scalaires et l'effectif des
+ * parties en cours — aucun membre, donc aucun pseudo de partie lancée.
  */
 export async function buildLobbyOverview(): Promise<LobbyOverview> {
   // Ménage des tables ouvertes seulement — déjà fait par buildLobbyList.
@@ -479,47 +464,24 @@ export async function buildLobbyOverview(): Promise<LobbyOverview> {
     updatedAt: { gte: freshSince },
   }
 
-  const [rooms, publicRooms] = await Promise.all([
-    prisma.onlineRoom.findMany({
-      where: liveWhere,
-      select: {
-        id: true,
-        gameId: true,
-        status: true,
-        visibility: true,
-        createdAt: true,
-        // Effectif de TOUTES les tables : une table privée montre son jeu et
-        // son nombre de joueurs, jamais leurs pseudos (requête suivante).
-        _count: { select: { members: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: LIVE_ROOMS_SCAN_MAX,
-    }),
-    prisma.onlineRoom.findMany({
-      where: { ...liveWhere, visibility: 'public' },
-      select: {
-        id: true,
-        members: {
-          select: { user: { select: { displayName: true } } },
-          orderBy: { joinedAt: 'asc' },
-          take: LIVE_GAME_NAMES_MAX,
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: LIVE_GAME_DETAIL_MAX,
-    }),
-  ])
-
-  const namesByRoom = new Map(
-    publicRooms.map((room) => [room.id, room.members.map((m) => m.user.displayName)])
-  )
+  // Une seule lecture, scalaires et effectif : le guichet n'ouvre plus les
+  // membres des salles, puisqu'il ne nomme personne.
+  const rooms = await prisma.onlineRoom.findMany({
+    where: liveWhere,
+    select: {
+      id: true,
+      gameId: true,
+      status: true,
+      visibility: true,
+      createdAt: true,
+      _count: { select: { members: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: LIVE_ROOMS_SCAN_MAX,
+  })
 
   const { liveGames, liveGamesTotal } = summarizeLiveGames(
-    rooms.map((room) => ({
-      ...room,
-      playerCount: room._count.members,
-      names: namesByRoom.get(room.id),
-    }))
+    rooms.map((room) => ({ ...room, playerCount: room._count.members }))
   )
 
   return { lobbies, liveGames, liveGamesTotal }
