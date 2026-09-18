@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { detectBrowserCapabilities } from '@/lib/browser-support'
 import { getSafeStorage } from '@/lib/storage'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { resolveAmbianceMode, withAmbiance } from '../ambiance'
 import { PlayerName, isSpecialPlayer } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
@@ -198,9 +199,11 @@ interface GameProps {
 export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal', initialMode = 'new' }: GameProps) {
   const baseT = useTranslations('games.petit-buveur') as PetitBuveurT
   const { user } = useAuth()
-  // Mode d'ambiance du compte : en Soft, les formulations alcoolisées du jeu
-  // basculent sur leurs équivalents en gages (mêmes cases, mêmes effets).
-  const ambiance = resolveAmbianceMode(user?.ambianceMode)
+  // Ambiance de la table (compte s'il y en a un, sinon l'appareil) : en Soft,
+  // les formulations alcoolisées du jeu basculent sur leurs équivalents en
+  // gages (mêmes cases, mêmes effets).
+  const { mode: ambianceMode } = useAmbianceMode()
+  const ambiance = resolveAmbianceMode(ambianceMode)
   const t = useMemo(() => withAmbiance(baseT, ambiance), [baseT, ambiance])
   const tCommon = useTranslations('common')
   const { updatePlayerStats } = usePlayers();

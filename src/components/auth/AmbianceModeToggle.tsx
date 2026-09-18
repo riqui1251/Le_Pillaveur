@@ -11,7 +11,12 @@ const MODES: { id: AmbianceMode; icon: typeof Beer }[] = [
   { id: 'soft', icon: Leaf },
 ]
 
-export function AmbianceModeToggle({ className, dense = false }: { className?: string; dense?: boolean }) {
+/**
+ * Bascule d'ambiance. Les deux libellés sont TOUJOURS écrits : en icônes
+ * seules (une chope, une feuille), personne ne devinait ni le réglage, ni son
+ * état — or il change les textes des jeux ET les couleurs du site.
+ */
+export function AmbianceModeToggle({ className, hint = true }: { className?: string; hint?: boolean }) {
   const t = useTranslations('hub.ambianceMode')
   const { loading } = useAuth()
   // Le réglage vise d'abord la table SANS compte (un téléphone posé au milieu) :
@@ -23,44 +28,47 @@ export function AmbianceModeToggle({ className, dense = false }: { className?: s
   if (loading) return null
 
   return (
-    <div
-      role="radiogroup"
-      aria-label={t('label')}
-      className={cn(
-        'inline-flex w-full max-w-md rounded-full border border-white/10 bg-black/30 p-1 shadow-inner',
-        className
+    <div className={cn('w-full min-w-0', className)}>
+      <div
+        role="radiogroup"
+        aria-label={t('label')}
+        aria-describedby={hint ? 'ambiance-hint' : undefined}
+        className="inline-flex w-full rounded-full border border-white/10 bg-black/30 p-1 shadow-inner"
+      >
+        {MODES.map(({ id, icon: Icon }) => {
+          const active = mode === id
+          return (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => {
+                if (!active) setMode(id)
+              }}
+              className={cn(
+                'flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[13px] font-semibold transition-all sm:gap-2 sm:px-3 sm:text-sm',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#07060b]',
+                active
+                  ? id === 'soft'
+                    ? 'bg-emerald-400 text-black shadow-[0_0_18px_rgba(52,211,153,0.35)]'
+                    : 'bg-amber-400 text-black shadow-[0_0_18px_rgba(245,158,11,0.35)]'
+                  : 'text-white/65 hover:bg-white/[0.06] hover:text-white'
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="truncate">{t(id)}</span>
+            </button>
+          )
+        })}
+      </div>
+      {/* Ce que la bascule change vraiment, en une ligne : sans elle, le
+          joueur voit le site changer de couleur sans comprendre pourquoi. */}
+      {hint && (
+        <p id="ambiance-hint" className="mt-1 px-2 text-[11px] leading-snug text-white/45">
+          {t(mode === 'soft' ? 'hintSoft' : 'hintAlcool')}
+        </p>
       )}
-    >
-      {MODES.map(({ id, icon: Icon }) => {
-        const active = mode === id
-        return (
-          <button
-            key={id}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => {
-              if (!active) setMode(id)
-            }}
-            aria-label={t(id)}
-            title={t(id)}
-            className={cn(
-              'flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-all',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#07060b]',
-              active
-                ? id === 'soft'
-                  ? 'bg-emerald-400 text-black shadow-[0_0_18px_rgba(52,211,153,0.35)]'
-                  : 'bg-amber-400 text-black shadow-[0_0_18px_rgba(245,158,11,0.35)]'
-                : 'text-white/65 hover:bg-white/[0.06] hover:text-white'
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden />
-            {/* En mode dense (ligne partagée avec Local/En ligne), l'icône
-                suffit — le libellé reste en title/aria. */}
-            {!dense && <span>{t(id)}</span>}
-          </button>
-        )
-      })}
     </div>
   )
 }

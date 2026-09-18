@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useAuth } from '@/components/providers/AuthProvider'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { GAMES, type GameMeta } from '@/lib/games'
 
 export type LocalizedGameMeta = GameMeta & {
@@ -11,8 +11,11 @@ export type LocalizedGameMeta = GameMeta & {
 
 export function useLocalizedGames(): LocalizedGameMeta[] {
   const t = useTranslations('games.catalog')
-  const { user } = useAuth()
-  const isSoft = user?.playMode === 'online' && user?.ambianceMode === 'soft'
+  // Le mode d'ambiance, pas le mode de jeu : une table locale qui joue sans
+  // alcool doit lire les mêmes titres adoucis qu'une table en ligne, avec ou
+  // sans compte (useAmbianceMode retombe sur le réglage de l'appareil).
+  const { mode } = useAmbianceMode()
+  const isSoft = mode === 'soft'
 
   return GAMES.map((game) => {
     const softTitleKey = `${game.id}.softTitle`

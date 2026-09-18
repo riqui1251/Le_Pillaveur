@@ -148,19 +148,22 @@ export default function GamesHubPage() {
       subtitle={isOnline ? tOnline('subtitle') : t('subtitle')}
       headerExtra={
         <div className="space-y-2">
-          {/* Chrome condensé (Vitrine) : les deux bascules sur UNE ligne —
-              l'ambiance en icônes seules, le libellé reste en title/aria.
-              La hauteur de la ligne est RÉSERVÉE tant que l'auth n'a pas
-              répondu : sans ça, l'arrivée des bascules pousserait la grille
-              déjà affichée vers le bas. Une fois l'auth connue sans compte,
-              la ligne se referme au lieu de laisser une bande vide.
-              L'ambiance n'était proposée qu'en ligne : le groupe local qui
-              joue sans alcool ne trouvait le réglage nulle part au moment où
-              il en a besoin. Elle est là dans les deux modes — discrète, à
-              côté de Local/En ligne (le composant se tait sans compte). */}
-          <div className={cn('flex items-center gap-2', (authLoading || Boolean(user)) && 'min-h-[3.375rem]')}>
-            <PlayModeToggle className="max-w-none flex-[1.4]" />
-            <AmbianceModeToggle dense className="max-w-none flex-1" />
+          {/* Deux réglages, deux lignes. Côte à côte, l'ambiance tenait en
+              icônes seules (une chope, une feuille) : personne ne savait ce
+              qu'elle changeait, ni laquelle était active. Elle a désormais ses
+              libellés et sa phrase d'explication, sur toute la largeur.
+              La hauteur est RÉSERVÉE tant que l'auth n'a pas répondu : sans
+              ça, l'arrivée des bascules pousserait la grille déjà affichée
+              vers le bas. Une fois l'auth connue sans compte, la zone se
+              referme au lieu de laisser une bande vide. */}
+          <div
+            className={cn(
+              'flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3',
+              (authLoading || Boolean(user)) && 'min-h-[6.75rem] sm:min-h-[4.75rem]'
+            )}
+          >
+            <PlayModeToggle className="max-w-none sm:max-w-sm sm:flex-1" />
+            <AmbianceModeToggle className="sm:max-w-sm sm:flex-1" />
           </div>
           {/* Bandeau de session : tant que l'auth n'a pas répondu, `isOnline`
               vaut false pour TOUT LE MONDE — l'afficher tout de suite le

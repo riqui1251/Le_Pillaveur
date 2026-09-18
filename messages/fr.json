@@ -220,9 +220,11 @@
       "onlineNeedsAccount": "Connexion requise pour jouer en ligne"
     },
     "ambianceMode": {
-      "label": "Ambiance",
-      "alcool": "Alcool",
-      "soft": "Soft"
+      "label": "Ambiance des jeux",
+      "alcool": "Avec alcool",
+      "soft": "Sans alcool",
+      "hintAlcool": "Gorgées et cul-secs. Touchez « Sans alcool » pour les remplacer par des gages.",
+      "hintSoft": "Les gorgées deviennent des gages, et le site passe en bleu nuit."
     },
     "selectedPlayers": {
       "ready": "{count, plural, one {# joueur prêt} other {# joueurs prêts}}",

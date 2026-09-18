@@ -9,6 +9,7 @@ import { GameCard } from '@/components/hub/GameCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 
 /**
  * Familles d'enseignes du hub « Vitrine » : ♠ rôles cachés, ♥ culture,
@@ -42,7 +43,11 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const games = useLocalizedGames()
   const { user } = useAuth()
   const isOnline = user?.playMode === 'online'
-  const isSoft = isOnline && user?.ambianceMode === 'soft'
+  // Ambiance de l'appareil ou du compte (useAmbianceMode) : elle ne dépend
+  // plus d'une session. Le filtre par softModeReady, lui, ne concerne que les
+  // jeux EN LIGNE (seuls à avoir une variante sans alcool côté serveur).
+  const { mode: ambiance } = useAmbianceMode()
+  const isSoft = ambiance === 'soft'
   const [query, setQuery] = useState('')
 
   // Visiteur sans session : la vitrine montre TOUT (comme la landing) —

@@ -20,6 +20,7 @@ import {
 import { resolveAmbianceMode, withAmbiance } from './ambiance'
 import type { PetitBuveurT } from './case-config'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { PetitBuveurOnline } from '@/components/online/PetitBuveurOnline'
 
 const GAME_ID = 'petit-buveur'
@@ -73,10 +74,13 @@ export default function PetitBuveurPage() {
   const [showRules, setShowRules] = useState(false)
   const [hasActiveSave, setHasActiveSave] = useState(false)
   const { user } = useAuth()
-  // Même règle que dans la partie : en Soft, règles et niveaux se lisent en gages.
+  // Même règle que dans la partie : en Soft, règles et niveaux se lisent en
+  // gages. L'ambiance vient de useAmbianceMode : sans compte (le cas d'une
+  // table locale), le réglage de l'appareil comptait pour rien.
+  const { mode: ambianceMode } = useAmbianceMode()
   const t = useMemo(
-    () => withAmbiance(baseT, resolveAmbianceMode(user?.ambianceMode)),
-    [baseT, user?.ambianceMode]
+    () => withAmbiance(baseT, resolveAmbianceMode(ambianceMode)),
+    [baseT, ambianceMode]
   )
   const { players } = usePlayers()
   const { selectedIds } = useSelectedPlayers()

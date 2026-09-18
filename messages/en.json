@@ -220,9 +220,11 @@
       "onlineNeedsAccount": "Sign in required to play online"
     },
     "ambianceMode": {
-      "label": "Ambiance",
-      "alcool": "Alcohol",
-      "soft": "Soft"
+      "label": "Game ambiance",
+      "alcool": "With alcohol",
+      "soft": "Alcohol-free",
+      "hintAlcool": "Sips and shots. Tap “Alcohol-free” to swap them for dares.",
+      "hintSoft": "Sips become dares, and the site turns midnight blue."
     },
     "selectedPlayers": {
       "ready": "{count, plural, one {# player ready} other {# players ready}}",

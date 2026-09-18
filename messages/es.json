@@ -214,9 +214,11 @@
       }
     },
     "ambianceMode": {
-      "label": "Ambiente",
-      "alcool": "Alcohol",
-      "soft": "Soft"
+      "label": "Ambiente de los juegos",
+      "alcool": "Con alcohol",
+      "soft": "Sin alcohol",
+      "hintAlcool": "Tragos y chupitos. Toca «Sin alcohol» para cambiarlos por retos.",
+      "hintSoft": "Los tragos se convierten en retos y el sitio pasa al azul noche."
     },
     "selectedPlayers": {
       "ready": "{count, plural, one {# jugador listo} other {# jugadores listos}}",
