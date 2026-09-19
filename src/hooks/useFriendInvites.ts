@@ -4,7 +4,19 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePagePresence } from '@/hooks/usePagePresence'
 
-const POLL_MS = 5000
+/**
+ * Cadence du sondage. Il tournait à 5 s : deuxième poste de requêtes du hub
+ * connecté (derrière le sondage de salle, cf. online-room-polling), pour un
+ * événement rare — l'invitation d'un ami. À 15 s, trois fois moins de
+ * requêtes par joueur resté sur /jeux ou en lobby un samedi soir. Le prix :
+ * une invitation reçue met au pire 15 s à apparaître au lieu de 5, ce qui
+ * reste acceptable — l'invité ne fixe pas l'écran en l'attendant, et l'hôte
+ * a de toute façon le code de table à donner de vive voix ou par le chat.
+ * Sondage suspendu onglet caché, repris avec un rafraîchissement immédiat au
+ * retour (usePagePresence, ci-dessous) : le retour sur la page ne paie pas
+ * ces 15 s.
+ */
+const POLL_MS = 15_000
 
 export type PendingRoomInvite = {
   id: string

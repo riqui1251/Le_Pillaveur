@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
-import { buildRoomDto, cleanupAbandonedRooms, createUniqueRoomCode, deleteRoomIfEmpty } from '@/lib/online-room'
+import { buildRoomDto, cleanupAbandonedRooms, createUniqueRoomCode, leaveOtherRooms } from '@/lib/online-room'
 import { GAMES } from '@/lib/games'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { onlineErrorBody } from '@/lib/online-errors'
@@ -26,12 +26,10 @@ export async function POST(request: Request) {
       return NextResponse.json(onlineErrorBody('invalid_game'), { status: 400 })
     }
 
-    const previousMemberships = await prisma.onlineRoomMember.findMany({
-      where: { userId: user.id },
-      select: { roomId: true },
-    })
-    await prisma.onlineRoomMember.deleteMany({ where: { userId: user.id } })
-    await Promise.all(previousMemberships.map((m) => deleteRoomIfEmpty(m.roomId)))
+    // Une seule table à la fois : les autres sont quittées proprement
+    // (marqué « parti » si une partie y tourne, hôte transféré, salle vide
+    // supprimée) — voir leaveOtherRooms.
+    await leaveOtherRooms(user.id)
     await cleanupAbandonedRooms()
 
     // Langue de la SALLE (contenu localisé côté serveur, ex. mots de

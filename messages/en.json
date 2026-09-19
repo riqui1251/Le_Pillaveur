@@ -395,7 +395,10 @@
       "you": "You",
       "ready": "Ready",
       "notReady": "Not ready yet",
-      "bot": "Bot"
+      "bot": "Bot",
+      "kick": "Remove {name} from the table",
+      "kickConfirm": "Remove?",
+      "kickConfirmLabel": "Tap again to remove {name}"
     },
     "settings": {
       "title": "Settings",
@@ -409,7 +412,9 @@
       "cta": "Start the game",
       "minPlayers": "{count, plural, one {Min. # player} other {Min. # players}}",
       "waitingForHost": "Waiting for {name} to start the game…",
-      "withBots": "Start with bots"
+      "withBots": "Start with bots",
+      "force": "Start without {count, plural, one {the latecomer} other {the # latecomers}}",
+      "forceBlocked": "Not enough players ready: {count} more needed"
     },
     "list": {
       "empty": "No open lobby — pick a game below to create one.",
@@ -433,6 +438,10 @@
       "agoDays": "{days, plural, one {# day ago} other {# days ago}}",
       "players": "{count, plural, one {# player} other {# players}}"
     },
+    "connection": {
+      "reconnecting": "Connection lost — reconnecting…",
+      "offline": "Offline — check your connection"
+    },
     "errors": {
       "generic": "Error",
       "network": "Network error",
@@ -441,6 +450,7 @@
       "launchFailed": "Could not start the game",
       "rematchFailed": "Could not vote for a rematch",
       "inviteFailed": "Could not invite this friend",
+      "kickFailed": "Could not remove this player",
       "wrongGameRoom": "You're in a lobby for another game. Leave it to continue.",
       "inOtherLobby": "You're in the “{game}” lobby.",
       "auth_required": "Sign in to play online.",
@@ -468,6 +478,9 @@
       "team_full": "This team is full.",
       "room_full": "This lobby is full.",
       "invite_only": "This lobby is invite-only.",
+      "not_host": "Only the host of the table can do that.",
+      "cannot_kick_self": "You can't remove yourself from the table.",
+      "member_not_found": "This player is no longer at the table.",
       "host_only_invite": "Only the host can invite.",
       "room_already_public": "This lobby is already public, no invite needed.",
       "friend_required": "Pick a friend to invite.",

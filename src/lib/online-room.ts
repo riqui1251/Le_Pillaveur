@@ -302,10 +302,19 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
 
   if (!room) return null
 
-  const memberDtos = room.members.map((m) => ({
+  // Sièges des absents libérés AVANT de décrire la table : le sondage qui
+  // constate l'absence renvoie déjà une table sans eux, hôte transmis compris
+  // (purge gratuite tant que tout le monde est là — voir
+  // purgeAbsentLobbyMembers).
+  const purge = await purgeAbsentLobbyMembers(room, currentUserId)
+  const purged = new Set(purge.absent)
+  const hostUserId = purge.hostUserId
+  const members = purged.size === 0 ? room.members : room.members.filter((m) => !purged.has(m.userId))
+
+  const memberDtos = members.map((m) => ({
     userId: m.userId,
     displayName: m.user.displayName,
-    isHost: m.userId === room.hostUserId,
+    isHost: m.userId === hostUserId,
     isReady: m.isReady,
     isSelf: m.userId === currentUserId,
     preferences: parseOnlinePreferences(m.user.onlinePreferencesJson),
@@ -326,7 +335,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     status: room.status,
     visibility: room.visibility,
     gameId: room.gameId,
-    hostUserId: room.hostUserId,
+    hostUserId,
     members: memberDtos,
     allReady,
     canLaunch,
@@ -627,5 +636,216 @@ export async function deleteRoomIfEmpty(roomId: string): Promise<void> {
     await closeGameSessionBeforeRoomDelete(room, 'left')
     await prisma.onlineRoom.delete({ where: { id: roomId } }).catch(() => {})
     invalidateLobbiesCache()
+  }
+}
+
+/**
+ * Retire un membre de la table et, s'il en était l'hôte, passe la main au
+ * plus ancien membre restant : une table dont l'hôte n'est plus membre ne peut
+ * plus être ni lancée ni fermée par personne. Implémentation UNIQUE de
+ * l'expulsion — remplacement pour inactivité (route action), expulsion au
+ * lobby (DELETE /rooms/[roomId]/members/[userId]) et changement de table
+ * (leaveOtherRooms) passent tous ici. Ne supprime pas une salle devenue vide :
+ * c'est à l'appelant d'en décider (deleteRoomIfEmpty).
+ */
+export async function kickMember(roomId: string, hostUserId: string, kickedUserId: string): Promise<void> {
+  await prisma.onlineRoomMember.deleteMany({ where: { roomId, userId: kickedUserId } })
+  if (hostUserId === kickedUserId) {
+    const nextHost = await prisma.onlineRoomMember.findFirst({
+      where: { roomId },
+      orderBy: { joinedAt: 'asc' },
+    })
+    if (nextHost) {
+      await prisma.onlineRoom.update({
+        where: { id: roomId },
+        data: { hostUserId: nextHost.userId },
+      })
+    }
+  }
+  // L'effectif (et l'hôte) d'une table sont affichés au guichet.
+  invalidateLobbiesCache()
+}
+
+/**
+ * Un membre d'une table OUVERTE (statut waiting) non vu depuis ce délai est
+ * retiré de la table (purgeAbsentLobbyMembers) : sans cela, l'onglet fermé
+ * d'un ami parti se coucher garde son siège, et le lancement bute sur
+ * « 4/5 prêts » jusqu'à ce que l'hôte force ou l'expulse à la main.
+ * Rapporté à la présence : `lastSeenAt` ne s'écrit qu'au plus toutes les 30 s
+ * (PRESENCE_WRITE_INTERVAL_MS) sur un sondage de 25 s en lobby au flux SSE
+ * vivant — la trace d'un membre BIEN PRÉSENT peut donc avoir ~55 s. Deux
+ * minutes laissent plus du double de marge, et un onglet passé une minute en
+ * arrière-plan (sondage ralenti par le navigateur) survit. Reste sous les
+ * 5 min de la purge des tables (cleanupStaleWaitingRooms) : les sièges se
+ * libèrent avant que la table elle-même soit jugée abandonnée.
+ */
+export const ROOM_MEMBER_ABSENT_MS = 2 * 60 * 1000
+
+/** Ce que la purge des absents lit d'une salle déjà chargée — rien de plus. */
+export type AbsentPurgeRoom = {
+  id: string
+  status: string
+  hostUserId: string
+  members: { userId: string; lastSeenAt: Date }[]
+}
+
+/** Ce que la purge décide : les sièges à libérer, et à qui passe la main. */
+export type AbsentLobbyPurgePlan = {
+  /** userId qui ne sont plus à la table. */
+  absent: string[]
+  /** Nouvel hôte quand l'hôte est absent et qu'un autre est là — sinon null. */
+  nextHostUserId: string | null
+}
+
+/**
+ * Sièges à libérer sur une table ouverte : les membres non vus depuis
+ * ROOM_MEMBER_ABSENT_MS, sauf `keepUserId`, celui pour qui la salle est
+ * construite — il vient d'agir, il est là quoi que dise sa trace (les routes
+ * ready/settings/team n'écrivent pas toutes la présence).
+ *
+ * L'hôte absent ne bloque plus la table : sans lui, personne ne peut ni
+ * lancer (host_only_launch) ni expulser (not_host), et seule la purge des
+ * tables (5 min, si TOUS sont absents) finissait par fermer. Il passe donc la
+ * main au plus ancien membre à la trace FRAÎCHE — même règle que le départ
+ * volontaire (kickMember) et la relance (dropAbsentMembers) — puis perd son
+ * siège comme n'importe quel absent. Pas de successeur sur la seule bonne foi
+ * de `keepUserId` : deux sondages concurrents doivent désigner le même, sans
+ * quoi l'un pourrait retirer l'hôte que l'autre vient de nommer ; celui qui
+ * agit avec une trace vieille sera vu au sondage suivant. Sans successeur,
+ * l'hôte reste (table qui se vide : c'est cleanupStaleWaitingRooms). Rien
+ * hors du statut waiting : en partie, l'absence se règle par le remplacement
+ * AFK (replacement.ts). Pure, pour être testée sans base.
+ */
+export function planAbsentLobbyPurge(
+  room: AbsentPurgeRoom,
+  keepUserId: string | null,
+  now: number = Date.now()
+): AbsentLobbyPurgePlan {
+  if (room.status !== 'waiting') return { absent: [], nextHostUserId: null }
+  const cutoff = now - ROOM_MEMBER_ABSENT_MS
+  const seen = (m: AbsentPurgeRoom['members'][number]) => m.lastSeenAt.getTime() >= cutoff
+  const host = room.members.find((m) => m.userId === room.hostUserId)
+  const hostAbsent = host !== undefined && host.userId !== keepUserId && !seen(host)
+  const successor = hostAbsent
+    ? (room.members.find((m) => m.userId !== room.hostUserId && seen(m)) ?? null)
+    : null
+  const absent = room.members
+    .filter(
+      (m) =>
+        m.userId !== keepUserId &&
+        !seen(m) &&
+        (m.userId !== room.hostUserId || successor !== null)
+    )
+    .map((m) => m.userId)
+  return { absent, nextHostUserId: successor?.userId ?? null }
+}
+
+/**
+ * Retire de la table les membres absents (planAbsentLobbyPurge), passe la
+ * main si l'hôte en fait partie, et prévient les clients. Appelée depuis
+ * buildRoomDto (donc à chaque sondage) et à l'entrée d'un joueur (/join,
+ * avant de compter les places), mais GRATUITE tant que personne n'est
+ * absent : la décision se prend sur les membres déjà chargés pour le DTO,
+ * sans lecture supplémentaire, et la base n'est touchée (un deleteMany, un
+ * updateMany si la main passe) que lorsqu'un siège doit se libérer — c'est
+ * pour cela qu'il n'y a ni throttle ni Map en mémoire. Deux sondages
+ * concurrents peuvent viser les mêmes absents : le second n'efface rien
+ * (count 0) et ne notifie personne ; le transfert d'hôte est un
+ * compare-and-swap, et celui qui le perd n'efface rien ce tour-ci (l'autre
+ * finit son geste, le sondage suivant repart d'une base fraîche). L'expulsé
+ * verra 403 à son prochain sondage (handleRoomGone → « Tu n'es plus dans
+ * cette table ») et pourra revenir par le code. Renvoie les userId qui ne
+ * sont plus à la table et l'hôte tel qu'il faut le décrire.
+ */
+export async function purgeAbsentLobbyMembers(
+  room: AbsentPurgeRoom,
+  keepUserId: string | null,
+  now: number = Date.now()
+): Promise<{ absent: string[]; hostUserId: string }> {
+  const { absent, nextHostUserId } = planAbsentLobbyPurge(room, keepUserId, now)
+  if (absent.length === 0) return { absent, hostUserId: room.hostUserId }
+
+  let hostUserId = room.hostUserId
+  if (nextHostUserId) {
+    const { count } = await prisma.onlineRoom.updateMany({
+      where: { id: room.id, hostUserId: room.hostUserId },
+      data: { hostUserId: nextHostUserId },
+    })
+    if (count === 0) return { absent: [], hostUserId }
+    hostUserId = nextHostUserId
+  }
+
+  const { count } = await prisma.onlineRoomMember.deleteMany({
+    where: { roomId: room.id, userId: { in: absent } },
+  })
+  if (count > 0 || hostUserId !== room.hostUserId) {
+    // L'effectif (et l'hôte) de la table sont affichés au guichet ; les
+    // clients encore branchés relisent la table (et l'absent y découvre son
+    // 403).
+    invalidateLobbiesCache()
+    publishRoomChanged(room.id, { type: 'lobby' })
+  }
+  return { absent, hostUserId }
+}
+
+/**
+ * Quitte toutes les AUTRES tables de l'utilisateur, avant d'en créer ou d'en
+ * rejoindre une. Même contrat que DELETE /rooms/[roomId] : dans une partie en
+ * cours, il est d'abord marqué « parti » dans l'état (adapter.markLeft) — la
+ * table continue, le tour passe, un bot le remplace au bout du délai de grâce
+ * (replacement.ts). Avant, create/join effaçaient l'adhésion sans toucher à
+ * l'état : le joueur restait « au tour » dans le moteur sans plus être membre,
+ * et la partie des autres se figeait jusqu'au remplacement AFK. Puis son siège
+ * est libéré (transfert d'hôte compris), la salle supprimée si elle se vide,
+ * et les clients prévenus : `changed` (avec la version) si la partie a bougé,
+ * `lobby` sinon.
+ */
+export async function leaveOtherRooms(userId: string, exceptRoomId?: string): Promise<void> {
+  const memberships = await prisma.onlineRoomMember.findMany({
+    where: { userId, ...(exceptRoomId ? { roomId: { not: exceptRoomId } } : {}) },
+    select: {
+      room: {
+        select: {
+          id: true,
+          status: true,
+          hostUserId: true,
+          gameId: true,
+          gameStateJson: true,
+          stateVersion: true,
+        },
+      },
+    },
+  })
+
+  for (const { room } of memberships) {
+    let stateVersion: number | null = null
+    const adapter = getGameAdapter(room.gameId)
+    if (adapter && room.status === 'playing') {
+      const state = adapter.parse(room.gameStateJson)
+      const next = state ? adapter.markLeft(state, userId, Date.now()) : null
+      if (next) {
+        // Compare-and-swap sur la version, comme /action : un coup joué entre
+        // notre lecture et cette écriture gagne, et une salle disparue
+        // entre-temps ne fait pas échouer le changement de table (updateMany
+        // ne lève jamais sur zéro ligne). Le départ non marqué est rattrapé
+        // par le remplacement AFK.
+        const { count } = await prisma.onlineRoom.updateMany({
+          where: { id: room.id, stateVersion: room.stateVersion },
+          data: {
+            gameStateJson: adapter.serialize(next),
+            stateVersion: room.stateVersion + 1,
+            // Un départ peut faire TOURNER le tour : même règle que DELETE.
+            currentTurnUserId: adapter.isFinished(next) ? null : adapter.currentActorId(next),
+          },
+        })
+        if (count > 0) stateVersion = room.stateVersion + 1
+      }
+    }
+    await kickMember(room.id, room.hostUserId, userId)
+    await deleteRoomIfEmpty(room.id)
+    publishRoomChanged(
+      room.id,
+      stateVersion === null ? { type: 'lobby' } : { type: 'changed', stateVersion }
+    )
   }
 }

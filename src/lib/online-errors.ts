@@ -32,6 +32,10 @@ export const ONLINE_ERROR_CODES = [
   'team_full',
   'room_full',
   'invite_only',
+  // Expulsion au lobby par l'hôte (DELETE /rooms/[roomId]/members/[userId])
+  'not_host',
+  'cannot_kick_self',
+  'member_not_found',
   // Invitations d'amis
   'host_only_invite',
   'room_already_public',
@@ -131,6 +135,9 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   team_full: 'Cette équipe est complète',
   room_full: 'Ce lobby est complet pour ce format',
   invite_only: 'Ce lobby est sur invitation uniquement',
+  not_host: "Seul l'hôte de la table peut faire ça",
+  cannot_kick_self: "Impossible de s'expulser soi-même",
+  member_not_found: "Ce joueur n'est plus à la table",
   host_only_invite: 'Seul le créateur peut inviter',
   room_already_public: 'Ce lobby est déjà public, aucune invitation nécessaire',
   friend_required: 'Ami requis',

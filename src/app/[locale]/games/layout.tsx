@@ -4,6 +4,7 @@ import dynamic from "next/dynamic"
 import { useRequireSelectedPlayers } from "@/hooks/useRequireSelectedPlayers"
 import { useAuth } from "@/components/providers/AuthProvider"
 import { useKeepScreenAwake } from "@/components/tv/use-keep-screen-awake"
+import { ConnectionBanner, ConnectionLiveRegion } from "@/components/online/ConnectionBanner"
 
 /**
  * Vocal de salle — chargé À LA DEMANDE.
@@ -52,7 +53,19 @@ export default function GamesLayout({
           Les champs de saisie restent sélectionnables (règle `user-select:
           text` dans globals.css) ; le code de table se copie par son bouton. */}
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-3 rounded-md border border-gold/20 bg-felt-deep/70 p-2 text-cream shadow-[0_18px_50px_-24px_rgba(0,0,0,0.85)] select-none [-webkit-touch-callout:none] [&_h1]:font-display sm:space-y-6 sm:rounded-xl sm:p-6">
+        {/* Coupure réseau dite au joueur — même condition que le dock vocal
+            (mode en ligne), mais DANS la coquille et en tête : le bandeau
+            prend sa place dans le flux au lieu de flotter par-dessus un
+            bouton. Import statique, à la différence du dock : quelques
+            lignes et une icône, le hook de salle est déjà dans le bundle
+            (OnlineRoomProvider est global). Il ne rend rien hors salle ou
+            tant que la connexion tient. */}
+        {user?.playMode === "online" && <ConnectionBanner />}
         {children}
+        {/* Sa voix pour le lecteur d'écran, en DERNIER : une région live doit
+            exister vide avant de parler, et `sr-only` en fin de liste ne
+            décale aucun frère visible (cf. ConnectionLiveRegion). */}
+        {user?.playMode === "online" && <ConnectionLiveRegion />}
       </div>
       {/* Vocal de salle — apparaît dès qu'on est dans une salle en ligne,
           pour TOUS les jeux (actuels et futurs), lobby inclus. Le dock se

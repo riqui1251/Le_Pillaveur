@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { publishRoomChanged } from '@/lib/online/room-bus'
-import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
+import { kickMember } from '@/lib/online-room'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { recordMatchResults } from '@/lib/online/match-results'
@@ -29,25 +29,6 @@ function afkCandidate(room: RoomRow, requesterId: string): { userId: string } | 
   const elapsed = Date.now() - room.updatedAt.getTime()
   if (elapsed < ONLINE_REPLACE_GRACE_MS) return { error: 'NOT_AFK_YET' }
   return { userId: room.currentTurnUserId }
-}
-
-/** Expulse un membre remplacé par un bot ; réassigne l'hôte si nécessaire. */
-async function kickMember(roomId: string, hostUserId: string, kickedUserId: string) {
-  await prisma.onlineRoomMember.deleteMany({ where: { roomId, userId: kickedUserId } })
-  if (hostUserId === kickedUserId) {
-    const nextHost = await prisma.onlineRoomMember.findFirst({
-      where: { roomId },
-      orderBy: { joinedAt: 'asc' },
-    })
-    if (nextHost) {
-      await prisma.onlineRoom.update({
-        where: { id: roomId },
-        data: { hostUserId: nextHost.userId },
-      })
-    }
-  }
-  // L'effectif d'une partie en cours est affiché au guichet (liveGames).
-  invalidateLobbiesCache()
 }
 
 /**

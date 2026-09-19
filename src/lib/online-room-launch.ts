@@ -194,14 +194,81 @@ const REMATCH_RETRY_BASE_MS = 12
  */
 const REMATCH_CLAIMED_VERSION = -1
 
+/**
+ * Fenêtre de présence (ms) du vote « Rejouer » : un membre dont la dernière
+ * trace (`lastSeenAt`) remonte à plus de 90 s est tenu pour ABSENT — il ne
+ * compte ni dans le quorum ni par son vote, et la relance le retire de la
+ * table. Avant cette règle, le vote de CHAQUE membre en base était exigé : un
+ * joueur qui avait fermé l'onglet sans quitter bloquait la relance pour de
+ * bon, sans délai ni majorité — et personne à la table ne pouvait la
+ * débloquer.
+ *
+ * Pourquoi 90 s et pas moins : `lastSeenAt` n'est écrit qu'au plus toutes les
+ * 30 s (PRESENCE_WRITE_INTERVAL_MS, online-room.ts) par le sondage de
+ * GET /rooms/[roomId], lui-même cadencé à 15 s sur l'écran de fin flux SSE
+ * vivant (25 s en lobby) : la trace d'un joueur BIEN LÀ peut donc accuser
+ * jusqu'à ~55 s de retard. 90 s laisse un sondage entier de marge sans faire
+ * poireauter la tablée. Un onglet caché suspend son sondage (pollEnabledRef,
+ * useOnlineRoom.ts) : un téléphone dans la poche depuis plus de 90 s passe
+ * absent, c'est voulu — la table ne l'attend pas, il retombe sur un 403 au
+ * retour (cf. dropAbsentMembers).
+ */
+export const REMATCH_PRESENCE_MS = 90 * 1000
+
+/**
+ * Salle telle que la route rematch la lit : RoomWithMembers plus la partie
+ * terminée et, sur chaque membre, sa présence — c'est elle qui fait le quorum.
+ */
+export type RematchRoom = Omit<RoomWithMembers, 'members'> & {
+  gameStateJson: string | null
+  stateVersion: number
+  members: (RoomWithMembers['members'][number] & { lastSeenAt: Date })[]
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-/** Vote rematch : relance si tous ont voté, sinon enregistre le vote */
-export async function processRematchVote(
+/**
+ * Retire de la table les membres absents au moment de la relance, pour que
+ * la nouvelle partie ne les attende jamais : les moteurs distribuent à
+ * `members`, un fantôme y aurait un tour qui ne vient pas. Rend la salle à
+ * relancer — effectif réduit aux présents, hôte transmis au plus ancien
+ * d'entre eux si l'hôte était absent (même règle que le départ volontaire,
+ * DELETE /rooms/[roomId]) — pour que le lancement lise le même effectif que
+ * la base.
+ *
+ * Ce que devient le retiré : son prochain sondage de GET /rooms/[roomId]
+ * répond 403, et le client affiche « tu n'es plus à cette table »
+ * (handleRoomGone, useOnlineRoom.ts). /rooms/rejoinable ne lui offre pas de
+ * retour : il ne figure pas dans la nouvelle partie, donc aucun `leftAt` à
+ * reprendre — il repasse par le guichet, et ne peut rentrer que si la table
+ * revient en lobby.
+ */
+async function dropAbsentMembers(
   roomId: string,
-  room: RoomWithMembers & { gameStateJson: string | null; stateVersion: number },
-  userId: string
-) {
+  room: RematchRoom,
+  presentMembers: RematchRoom['members'],
+  absentUserIds: string[]
+): Promise<RematchRoom> {
+  if (absentUserIds.length === 0) return room
+  await prisma.onlineRoomMember.deleteMany({
+    where: { roomId, userId: { in: absentUserIds } },
+  })
+  let hostUserId = room.hostUserId
+  if (absentUserIds.includes(hostUserId)) {
+    // `members` arrive trié par joinedAt (la route) : le premier présent est
+    // le plus ancien à la table.
+    hostUserId = presentMembers[0]?.userId ?? hostUserId
+    await prisma.onlineRoom.update({ where: { id: roomId }, data: { hostUserId } })
+  }
+  return { ...room, hostUserId, members: presentMembers }
+}
+
+/**
+ * Vote rematch : relance quand tous les membres PRÉSENTS ont voté, sinon
+ * enregistre le vote. Les absents (REMATCH_PRESENCE_MS) sont retirés de la
+ * table au moment de la relance.
+ */
+export async function processRematchVote(roomId: string, room: RematchRoom, userId: string) {
   const gameId = room.gameId ?? ''
   // La sentinelle vaut AUSSI pour un vote qui lit la salle pendant la fenêtre de
   // relance : l'état terminé y est momentanément remis en base (le Président y
@@ -213,7 +280,18 @@ export async function processRematchVote(
     throw new Error('game_not_finished')
   }
 
-  const memberUserIds = room.members.map((m) => m.userId)
+  // Quorum = membres PRÉSENTS. Le votant en fait toujours partie : sa requête
+  // prouve qu'il est là, alors que la trace lue ici peut dater — la route ne
+  // la rafraîchit qu'au plus toutes les 30 s (touchMemberPresence), et un
+  // onglet revenu au premier plan clique parfois avant que son sondage ait
+  // touché la base. Seul à la table (les autres partis, ou partie contre
+  // bots : le cas courant du solo), il relance donc seul.
+  const presenceCutoff = Date.now() - REMATCH_PRESENCE_MS
+  const isPresent = (m: RematchRoom['members'][number]) =>
+    m.userId === userId || m.lastSeenAt.getTime() >= presenceCutoff
+  const presentMembers = room.members.filter(isPresent)
+  const presentUserIds = presentMembers.map((m) => m.userId)
+  const absentUserIds = room.members.filter((m) => !isPresent(m)).map((m) => m.userId)
   let state = initialState
   /**
    * JSON EXACT de la partie terminée : la réclamation ci-dessous l'efface, or
@@ -227,7 +305,10 @@ export async function processRematchVote(
   for (let attempt = 0; attempt < REMATCH_VOTE_ATTEMPTS; attempt++) {
     const votes = new Set(state.rematchVotes ?? [])
     votes.add(userId)
-    const everyoneVoted = memberUserIds.length > 0 && memberUserIds.every((id) => votes.has(id))
+    // Seuls les présents font le quorum, et seuls leurs votes y comptent : un
+    // membre qui a voté puis fermé l'onglet n'en fait plus partie — sinon son
+    // vote « gratuit » aidait à relancer une table qu'il ne rejoindra pas.
+    const everyoneVoted = presentUserIds.length > 0 && presentUserIds.every((id) => votes.has(id))
 
     if (everyoneVoted) {
       // Réclamation atomique anti-double-relance : la MÊME écriture fait perdre
@@ -248,10 +329,15 @@ export async function processRematchVote(
             where: { id: roomId },
             data: { gameStateJson: stateJson },
           })
-          await launchOnlineRoom(roomId, room)
+          // Les absents sortent AVANT le lancement, dans la même relance : la
+          // nouvelle partie se distribue aux seuls présents.
+          const relaunched = await dropAbsentMembers(roomId, room, presentMembers, absentUserIds)
+          await launchOnlineRoom(roomId, relaunched)
         } catch (error) {
           // Relance ratée : sans ce retour en arrière la sentinelle figerait la
-          // salle pour de bon (plus aucun vote « Rejouer » n'aboutirait).
+          // salle pour de bon (plus aucun vote « Rejouer » n'aboutirait). Les
+          // absents déjà retirés ne reviennent pas : ils l'étaient de toute
+          // façon, le prochain vote compte simplement une table plus petite.
           await prisma.onlineRoom.update({
             where: { id: roomId },
             data: { gameStateJson: stateJson, stateVersion },

@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import { DIL_VOTE_MS, type DilClientView } from '@/lib/dilemmes/engine'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { useBotReferee } from '@/hooks/useBotReferee'
+import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -54,20 +54,16 @@ export function DilemmesOnline() {
     return () => clearInterval(timer)
   }, [view])
 
-  useEffect(() => {
-    if (!view || !room || view.phase === 'finished' || view.phaseEndsAt === null) return
-    const expectedVersion = room.stateVersion
-    const delay = Math.max(250, view.phaseEndsAt - Date.now() + 300 + Math.random() * 700)
-    const timer = setTimeout(() => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
-      })
-    }, delay)
-    return () => clearTimeout(timer)
-  }, [view, room])
+  // Tick « advance » à l'échéance, arbitré par rang (cf. useAdvanceTick).
+  useAdvanceTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    advance:
+      view && view.phaseEndsAt !== null ? { phaseKey: view.phaseKey, dueAt: view.phaseEndsAt } : null,
+  })
 
   // Ticks « arbitre » (bots + remplacement), avec secours par rang.
   const pendingBot =

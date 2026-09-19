@@ -395,7 +395,10 @@
       "you": "Tu",
       "ready": "Pronto",
       "notReady": "Non ancora pronto",
-      "bot": "Bot"
+      "bot": "Bot",
+      "kick": "Togli {name} dal tavolo",
+      "kickConfirm": "Togliere?",
+      "kickConfirmLabel": "Tocca di nuovo per togliere {name}"
     },
     "settings": {
       "title": "Impostazioni",
@@ -409,7 +412,9 @@
       "cta": "Avvia la partita",
       "minPlayers": "{count, plural, one {Min. # giocatore} other {Min. # giocatori}}",
       "waitingForHost": "In attesa che {name} avvii la partita…",
-      "withBots": "Avvia con i bot"
+      "withBots": "Avvia con i bot",
+      "force": "Avvia senza {count, plural, one {il ritardatario} other {i # ritardatari}}",
+      "forceBlocked": "Non ci sono abbastanza giocatori pronti: {count, plural, one {ne manca #} other {ne mancano #}}"
     },
     "list": {
       "empty": "Nessuna lobby aperta — scegli un gioco qui sotto per crearne una.",
@@ -433,6 +438,10 @@
       "agoDays": "{days, plural, one {# giorno fa} other {# giorni fa}}",
       "players": "{count, plural, one {# giocatore} other {# giocatori}}"
     },
+    "connection": {
+      "reconnecting": "Connessione persa — riconnessione…",
+      "offline": "Offline — controlla la connessione"
+    },
     "errors": {
       "generic": "Errore",
       "network": "Errore di rete",
@@ -441,6 +450,7 @@
       "launchFailed": "Impossibile avviare la partita",
       "rematchFailed": "Impossibile votare per la rivincita",
       "inviteFailed": "Impossibile invitare questo amico",
+      "kickFailed": "Impossibile togliere questo giocatore",
       "wrongGameRoom": "Sei in una lobby di un altro gioco. Esci per continuare.",
       "inOtherLobby": "Sei nella lobby «{game}».",
       "auth_required": "Accedi per giocare online.",
@@ -468,6 +478,9 @@
       "team_full": "Questa squadra è al completo.",
       "room_full": "La lobby è al completo.",
       "invite_only": "Questa lobby è solo su invito.",
+      "not_host": "Solo l'host del tavolo può farlo.",
+      "cannot_kick_self": "Non puoi espellere te stesso dal tavolo.",
+      "member_not_found": "Questo giocatore non è più al tavolo.",
       "host_only_invite": "Solo l'host può invitare.",
       "room_already_public": "Questa lobby è già pubblica, non serve invito.",
       "friend_required": "Scegli un amico da invitare.",

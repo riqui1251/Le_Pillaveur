@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
  * « Le joueur a-t-il la page sous les yeux ? »
  *
  * Au repos, les sondages du header (salles ouvertes 4 s, invitations d'amis
- * 5 s, chat non lu 10 s) tournaient même onglet en arrière-plan ou téléphone
+ * 15 s, chat non lu 10 s) tournaient même onglet en arrière-plan ou téléphone
  * dans la poche : de la batterie et de la donnée brûlées pour rien, et autant
  * de requêtes inutiles sur le serveur un samedi soir. Les hooks de sondage
  * s'abonnent ici : leur effet est relancé au changement de visibilité, donc

@@ -41,7 +41,7 @@ import { cn } from '@/lib/utils'
 import { lgTeamOf } from '@/lib/loup-garou/engine'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
-import { useBotReferee } from '@/hooks/useBotReferee'
+import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { playGameSound } from '@/lib/sound/game-sounds'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
@@ -430,24 +430,20 @@ export function LoupGarouOnline() {
     }
   }, [view])
 
-  // ÉCHÉANCE DE PHASE : TOUS les clients envoient le tick « advance »
-  // (idempotent — 409 PHASE_CHANGED pour les retardataires, jitter pour
-  // étaler). Un arbitre unique ne suffisait pas : téléphone verrouillé =
-  // timers gelés = partie bloquée jusqu'au refresh.
-  useEffect(() => {
-    if (!view || !room || view.phase === 'finished' || view.phaseEndsAt === null) return
-    const expectedVersion = room.stateVersion
-    const delay = Math.max(250, view.phaseEndsAt - Date.now() + 300 + Math.random() * 700)
-    const timer = setTimeout(() => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
-      })
-    }, delay)
-    return () => clearTimeout(timer)
-  }, [view, room])
+  // ÉCHÉANCE DE PHASE : tick « advance » arbitré par rang (cf. useAdvanceTick).
+  // Un arbitre unique ne suffisait pas (téléphone verrouillé = timers gelés =
+  // partie bloquée) ; tous en même temps non plus (rafale de 409) : le rang 0
+  // tire à l'échéance, les suivants 4 s plus tard chacun, coupés dès que la
+  // version bouge.
+  useAdvanceTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    advance:
+      view && view.phaseEndsAt !== null ? { phaseKey: view.phaseKey, dueAt: view.phaseEndsAt } : null,
+  })
 
   // Ticks « arbitre » (bots + remplacement), avec secours par rang : tout
   // humain RESTANT arbitre — vivant OU fantôme (un mort pilote les ticks).

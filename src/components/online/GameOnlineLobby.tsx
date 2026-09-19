@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
@@ -22,6 +22,7 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { JoinQR } from '@/components/tv/JoinQR'
 import { cn } from '@/lib/utils'
 import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
+import { forceLaunchDecision, MC_TEAM_MIN_PLAYERS } from '@/components/online/lobby-launch'
 
 const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
 type Visibility = (typeof VISIBILITY_OPTIONS)[number]
@@ -73,11 +74,23 @@ const PB_DIFFICULTY_GRADIENT: Record<(typeof PB_DIFFICULTIES)[number], string> =
   extreme: 'from-red-600 to-rose-700 shadow-red-500/30',
 }
 
+/**
+ * Fenêtre du second toucher qui confirme le retrait d'un joueur. Assez
+ * courte pour qu'un pouce qui tremble ne vide pas la table, assez longue
+ * pour ne pas avoir à viser deux fois de suite.
+ */
+const KICK_CONFIRM_MS = 3000
+/**
+ * Un second toucher plus tôt que ça n'est pas une confirmation mais le
+ * rebond du premier (double-tap involontaire, doigt qui glisse) : ignoré.
+ */
+const KICK_BOUNCE_MS = 250
+
 export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps) {
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
   const pathname = usePathname()
   const { user } = useAuth()
-  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend } = useOnlineRoom()
+  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend, kickMember } = useOnlineRoom()
   const { lobbies, liveGames, liveGamesTotal } = useOpenLobbies({ pollMs: 15_000 }) // la table, elle, est sondée par useOnlineRoom
   const { friends, incoming, outgoing, sendRequestToUser, acceptRequest } = useFriends()
   const [copied, setCopied] = useState(false)
@@ -88,6 +101,21 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   // Anti double-tap du bouton fusionné « Lancer avec les bots » (l'appel
   // setReady préalable ne passe pas par `loading`).
   const [soloLaunching, setSoloLaunching] = useState(false)
+  // Même garde pour « Lancer sans les retardataires », qui enchaîne lui aussi
+  // « prêt » (l'hôte) puis le lancement forcé.
+  const [forceLaunching, setForceLaunching] = useState(false)
+  // Retrait d'un joueur par l'hôte : la croix du siège s'ARME au premier
+  // toucher et n'agit qu'au second, dans les KICK_CONFIRM_MS — une
+  // confirmation qui ne demande rien à lire à minuit. Le siège armé est
+  // identifié par son userId ; la fenêtre retombe d'elle-même.
+  const [kickArmed, setKickArmed] = useState<string | null>(null)
+  // Instant de l'armement : le second toucher doit lui laisser KICK_BOUNCE_MS.
+  const kickArmedAtRef = useRef(0)
+  useEffect(() => {
+    if (!kickArmed) return
+    const timer = setTimeout(() => setKickArmed(null), KICK_CONFIRM_MS)
+    return () => clearTimeout(timer)
+  }, [kickArmed])
   const tOnline = useTranslations('onlineLobby')
   // Choix ouvert/privé proposé au clic « Ouvrir une table » (modifiable
   // ensuite dans les réglages du lobby).
@@ -519,6 +547,49 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     }
   }
 
+  // « Lancer sans les retardataires » : un ami parti fumer sans toucher
+  // « Prêt » ne doit pas bloquer la tablée. Proposé à l'hôte dès qu'un AUTRE
+  // siège n'est pas prêt ; actionnable seulement si ceux qui restent (+ bots)
+  // atteignent le minimum du jeu (logique pure, cf. lobby-launch.ts). Le
+  // serveur retire les non-prêts puis lance — l'hôte est mis prêt avant,
+  // pour ne jamais compter parmi eux.
+  const forceLaunch = forceLaunchDecision({
+    members: room.members.map((m) => ({
+      isReady: m.isReady,
+      isHost: m.isHost,
+      team: room.settings.mcTeams?.[m.userId] ?? null,
+    })),
+    botCount: botSeatCount,
+    minPlayers: game?.minPlayers ?? 2,
+    // Mots Codés : chaque équipe doit garder 2 joueurs une fois les
+    // retardataires retirés — la même borne que la route (team_min_players).
+    teamMinPlayers: gameId === 'mots-codes' ? MC_TEAM_MIN_PLAYERS : undefined,
+  })
+  const showForceLaunch = isHost && !canLaunchSoloWithBots && forceLaunch.offered
+  const launchWithoutLate = async () => {
+    if (forceLaunching || loading || !forceLaunch.allowed) return
+    setForceLaunching(true)
+    try {
+      if (!selfMember?.isReady) await setReady(true)
+      await launchGame({ force: true })
+    } finally {
+      setForceLaunching(false)
+    }
+  }
+
+  // Premier toucher : arme la croix ; second dans la fenêtre (mais pas dans
+  // le rebond du premier) : retire.
+  const handleKickTap = (userId: string) => {
+    if (kickArmed !== userId) {
+      kickArmedAtRef.current = Date.now()
+      setKickArmed(userId)
+      return
+    }
+    if (Date.now() - kickArmedAtRef.current < KICK_BOUNCE_MS) return
+    setKickArmed(null)
+    void kickMember(userId)
+  }
+
   // Dans le lobby en attente
   return (
     <LobbyShell>
@@ -547,40 +618,83 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </div>
         {room.members.map((m, i) => {
           const memberCosmetics = { preferences: m.preferences, level: m.level, role: m.role }
+          // Croix « Retirer de la table » : l'hôte seul, sur les AUTRES sièges
+          // (la salle attend, garanti par la branche). Sœur du bouton-siège et
+          // non enfant : un bouton dans un bouton n'existe pas en HTML.
+          const kickable = isHost && !m.isSelf
+          const armed = kickArmed === m.userId
           return (
-            <button
+            <div
               key={m.userId}
-              type="button"
-              disabled={m.isSelf}
-              onClick={() => setSeatSel((v) => (v === m.userId ? null : m.userId))}
-              className="absolute flex w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
+              className="absolute w-16 -translate-x-1/2 -translate-y-1/2"
               style={seatPos(i, totalSeatCount)}
             >
-              <span className="relative">
-                <OnlinePlayerIcon
-                  icon={m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
-                  cosmetics={memberCosmetics}
-                  className="h-9 w-9 border border-[#D8CCAE] bg-cream text-base text-[#24201A] shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]"
-                />
+              <button
+                type="button"
+                disabled={m.isSelf}
+                onClick={() => setSeatSel((v) => (v === m.userId ? null : m.userId))}
+                className="flex w-16 flex-col items-center gap-0.5"
+              >
+                <span className="relative">
+                  <OnlinePlayerIcon
+                    icon={m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
+                    cosmetics={memberCosmetics}
+                    className="h-9 w-9 border border-[#D8CCAE] bg-cream text-base text-[#24201A] shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]"
+                  />
+                  <span
+                    aria-label={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
+                    title={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
+                    className={cn(
+                      'absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-felt-deep',
+                      m.isReady ? 'bg-emerald-400' : 'bg-white/25'
+                    )}
+                  />
+                  {m.isHost && <Crown className="absolute -left-1.5 -top-1.5 h-3.5 w-3.5 text-amber-400" />}
+                </span>
                 <span
-                  aria-label={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
-                  title={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
                   className={cn(
-                    'absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-felt-deep',
-                    m.isReady ? 'bg-emerald-400' : 'bg-white/25'
+                    'flex max-w-16 items-center gap-0.5 text-[10px] leading-tight',
+                    armed ? 'font-bold text-red-300' : 'text-white/85'
                   )}
-                />
-                {m.isHost && <Crown className="absolute -left-1.5 -top-1.5 h-3.5 w-3.5 text-amber-400" />}
-              </span>
-              <span className="flex max-w-16 items-center gap-0.5 text-[10px] leading-tight text-white/85">
-                <span className="truncate">{m.isSelf ? tOnline('seat.you') : m.displayName}</span>
-                {top5.has(m.userId) && (
-                  <span className="shrink-0 font-bold text-amber-300" title={tOnline('top5Badge', { rank: top5.get(m.userId) ?? 0 })}>
-                    #{top5.get(m.userId)}
+                >
+                  <span className="truncate">
+                    {armed ? tOnline('seat.kickConfirm') : m.isSelf ? tOnline('seat.you') : m.displayName}
                   </span>
-                )}
-              </span>
-            </button>
+                  {!armed && top5.has(m.userId) && (
+                    <span className="shrink-0 font-bold text-amber-300" title={tOnline('top5Badge', { rank: top5.get(m.userId) ?? 0 })}>
+                      #{top5.get(m.userId)}
+                    </span>
+                  )}
+                </span>
+              </button>
+              {kickable && (
+                /* Posée à la place de la couronne (jamais sur un siège
+                   retirable : l'hôte ne se retire pas lui-même), à l'opposé de
+                   la pastille « prêt ». Le span porte la position, le bouton
+                   la cible tactile — PAS `.touch-target` : ses 44 px centrés
+                   sur une croix de 20 px recouvraient près de la moitié de
+                   l'avatar, et un doigt qui touchait un ami pour ouvrir son
+                   panneau armait le retrait une fois sur deux. Ici un carré de
+                   32 px ancré vers l'EXTÉRIEUR du siège (haut-gauche) : il
+                   n'effleure que le coin de l'avatar. */
+                <span className="absolute -top-1.5 left-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleKickTap(m.userId)}
+                    aria-label={armed ? tOnline('seat.kickConfirmLabel', { name: m.displayName }) : tOnline('seat.kick', { name: m.displayName })}
+                    title={armed ? tOnline('seat.kickConfirmLabel', { name: m.displayName }) : tOnline('seat.kick', { name: m.displayName })}
+                    className={cn(
+                      "relative flex h-5 w-5 items-center justify-center rounded-full border shadow-[0_2px_6px_-2px_rgba(0,0,0,0.7)] transition-colors after:absolute after:-left-3 after:-top-3 after:h-8 after:w-8 after:content-['']",
+                      armed
+                        ? 'animate-pulse border-red-300 bg-red-500 text-white'
+                        : 'border-white/25 bg-felt-deep text-white/60 hover:border-red-400/60 hover:text-red-300'
+                    )}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
           )
         })}
         {/* Sièges bots : avatars discrets après les vrais joueurs, pour que
@@ -1700,8 +1814,17 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </p>
       )}
 
-      {/* Espace réservé pour que la barre fixe ne masque pas le contenu. */}
-      <div aria-hidden className="h-20" />
+      {/* Espace réservé pour que la barre fixe ne masque pas le contenu —
+          plus haut quand elle porte la ligne « sans les retardataires », et
+          safe-area comprise : la barre la prend (pb), l'espace doit la
+          prendre aussi, sinon 34 px de réglages passent sous elle sur iPhone. */}
+      <div
+        aria-hidden
+        className={cn(
+          'h-[calc(5rem+env(safe-area-inset-bottom))]',
+          showForceLaunch && 'h-[calc(8rem+env(safe-area-inset-bottom))]'
+        )}
+      />
 
       {/* Prêt + Lancer : fixes en zone pouce, safe-area comprise. */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
@@ -1760,6 +1883,31 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             </>
           )}
         </div>
+        {/* Sous le lancement, discret : « Lancer sans les retardataires ».
+            Désactivé (titre + rappel en clair, un titre ne se lit pas au
+            doigt) tant que ceux qui restent ne font pas le minimum du jeu.
+            Cible tactile par la boîte elle-même (py-2 : 32 px), pas par
+            `.touch-target` : ses 44 px centrés débordaient sous la rangée
+            Prêt/Lancer, et le bas de ces boutons aurait déclenché un
+            lancement forcé. */}
+        {showForceLaunch && (
+          <div className="mx-auto mt-1 w-full max-w-lg text-center">
+            <button
+              type="button"
+              onClick={() => void launchWithoutLate()}
+              disabled={!forceLaunch.allowed || forceLaunching || loading}
+              title={forceLaunch.allowed ? undefined : tOnline('launch.forceBlocked', { count: forceLaunch.missing })}
+              className="px-3 py-2 text-xs font-semibold text-amber-200/80 underline-offset-2 transition-colors hover:text-amber-100 hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
+            >
+              {tOnline('launch.force', { count: forceLaunch.late })}
+            </button>
+            {!forceLaunch.allowed && (
+              <p className="mt-0.5 text-[11px] text-cream/70">
+                {tOnline('launch.forceBlocked', { count: forceLaunch.missing })}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </LobbyShell>
   )

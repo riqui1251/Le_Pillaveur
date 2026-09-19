@@ -23,7 +23,14 @@ export async function POST(request: Request, { params }: Params) {
   const { roomId } = await params
   const room = await prisma.onlineRoom.findUnique({
     where: { id: roomId },
-    include: { members: { include: { user: true }, orderBy: { joinedAt: 'asc' } } },
+    include: {
+      // Le lancement ne lit du joueur que son pseudo (RoomWithMembers) : pas
+      // de ligne User entière (passwordHash, e-mail…) sortie de la base pour rien.
+      members: {
+        include: { user: { select: { displayName: true } } },
+        orderBy: { joinedAt: 'asc' },
+      },
+    },
   })
   if (!room) return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   if (!room.members.some((m) => m.userId === user.id)) {

@@ -155,6 +155,181 @@ export function useBotReferee(options: UseBotRefereeOptions): number {
   return rank
 }
 
+/**
+ * TICK « ADVANCE » À L'ÉCHÉANCE DE PHASE — même arbitrage par rang.
+ *
+ * Les phases chronométrées (vote 60 s, question de quiz 15 s…) posent
+ * `phaseEndsAt` côté serveur (cf. phase-clock.ts) et attendent qu'un client
+ * réveille le moteur à l'échéance. Historiquement TOUS les clients envoyaient
+ * ce tick avec un jitter de 300-1 000 ms : à 16 joueurs, 15 requêtes prenaient
+ * un 409 à CHAQUE transition — une rafale par phase, pour rien. Même remède
+ * que les ticks bot : le rang 0 tire à l'échéance (petite marge, l'horloge
+ * serveur fait foi), les suivants avec un pas de retard par rang, et la
+ * version d'état qui bouge coupe les minuteurs des suppléants avant qu'ils ne
+ * tirent. Un téléphone verrouillé au rang 0 ne bloque donc rien : le rang 1
+ * prend le relais 4 s plus tard.
+ */
+
+/**
+ * Marge après l'échéance : le serveur refuse NOT_EXPIRED si on tire trop tôt,
+ * or `dueAt` est une date SERVEUR comparée à l'horloge du téléphone — 300 ms,
+ * soit le plancher de l'ancien jitter (300 + 0..700 ms), et non moins : en
+ * solo contre des bots il n'y a pas de rang 1 pour rattraper un tick refusé.
+ */
+export const ADVANCE_TICK_MARGIN_MS = 300
+/**
+ * Plancher du délai : un état reçu déjà périmé ne tire pas « à froid » — le
+ * flux SSE a souvent la version suivante en route.
+ */
+export const ADVANCE_TICK_MIN_DELAY_MS = 250
+/** Écart entre deux reprises d'un tick parti trop tôt (horloge en avance). */
+export const ADVANCE_TICK_EARLY_RETRY_MS = 1000
+/** Reprises au plus : couvre une horloge en avance de ~3 s, puis on s'arrête. */
+export const ADVANCE_TICK_EARLY_RETRIES = 3
+
+/**
+ * Un tick « advance » refusé 409 SANS conflit de version est parti trop tôt
+ * (NOT_EXPIRED : le téléphone est en avance sur le serveur) ou juste derrière
+ * un autre (PHASE_CHANGED) — la route rend le même `action_failed` pour les
+ * deux. Dans le premier cas personne d'autre ne le renverra : à une table le
+ * rang 1 rattrape 4 s plus tard, mais en solo il n'y a pas de rang 1, et le
+ * sondage ne réarme rien tant que la version ne bouge pas — la phase (vote,
+ * question de quiz…) restait figée. On reprend donc quelques fois à 1 s
+ * d'écart. Un conflit de version dit que l'état a bougé : l'effet se réarme
+ * sur la nouvelle version, inutile d'insister. PHASE_CHANGED reprend pour
+ * rien (un 409 de plus, puis la nouvelle version coupe tout).
+ */
+export function shouldRetryAdvanceTick(
+  status: number,
+  error: string | undefined,
+  attempt: number
+): boolean {
+  if (status !== 409 || error === 'version_conflict') return false
+  return attempt < ADVANCE_TICK_EARLY_RETRIES
+}
+
+export type AdvanceTickTarget = {
+  /** Clé de phase de la vue : le serveur répond PHASE_CHANGED si elle a bougé. */
+  phaseKey: string
+  /** Échéance serveur (epoch ms) — chaque jeu garde son propre calcul. */
+  dueAt: number
+  /**
+   * Réarmement après l'échéance, pour une phase que SEUL ce tick fait bouger
+   * (mise en place du 12/20) : un coup unique perdu la figerait pour de bon.
+   */
+  retryMs?: number
+}
+
+/** Délai avant le tick « advance » pour un rang — le rang 0 vise l'échéance. */
+export function advanceTickDelayMs(
+  dueAt: number,
+  rank: number,
+  now: number = Date.now(),
+  stepMs: number = BOT_REFEREE_BACKUP_STEP_MS
+): number {
+  return (
+    Math.max(ADVANCE_TICK_MIN_DELAY_MS, dueAt - now + ADVANCE_TICK_MARGIN_MS) +
+    botRefereeBackupDelayMs(rank, stepMs)
+  )
+}
+
+/**
+ * Arme le minuteur du tick « advance » et renvoie sa fonction d'annulation.
+ * Logique pure (testable) : le hook n'ajoute que l'envoi réseau et le
+ * réarmement à chaque changement de version ou de phase.
+ */
+export function scheduleAdvanceTick(options: {
+  dueAt: number
+  rank: number
+  retryMs?: number
+  send: () => void
+}): () => void {
+  const { dueAt, rank, retryMs = 0, send } = options
+  const backup = botRefereeBackupDelayMs(rank)
+  let retry: ReturnType<typeof setInterval> | undefined
+  const timer = setTimeout(() => {
+    send()
+    // Les suppléants espacent aussi leurs relances (cf. replace-left).
+    if (retryMs > 0) retry = setInterval(send, retryMs + backup)
+  }, advanceTickDelayMs(dueAt, rank))
+  return () => {
+    clearTimeout(timer)
+    if (retry) clearInterval(retry)
+  }
+}
+
+export type UseAdvanceTickOptions = {
+  roomId: string | null | undefined
+  stateVersion: number | null | undefined
+  userId: string | null | undefined
+  players: readonly RefereePlayer[] | null | undefined
+  /** false coupe le tick (vue absente, partie finie…). */
+  enabled: boolean
+  /** Échéance à honorer, ou null si la phase courante n'a pas de chrono. */
+  advance: AdvanceTickTarget | null
+}
+
+/**
+ * Tick « advance » à l'échéance de phase, arbitré par rang. Tick de service :
+ * envoyé via fetch, 409 muet (pas de useGameAction, rien à annoncer au
+ * joueur) — mais lu, pour reprendre un tick parti trop tôt (cf.
+ * shouldRetryAdvanceTick). Renvoie le rang d'arbitre (-1 = n'arbitre pas).
+ */
+export function useAdvanceTick(options: UseAdvanceTickOptions): number {
+  const { roomId, stateVersion, userId, players, enabled, advance } = options
+
+  const rank = botRefereeRank(players, userId)
+  // Dépendances primitives : `advance` est un objet neuf à chaque rendu, et
+  // plusieurs composants rendent toutes les 500 ms (horloge du compte à
+  // rebours). Le minuteur ne se réarme qu'à un vrai changement de version,
+  // de phase ou d'échéance.
+  const phaseKey = advance?.phaseKey ?? null
+  const dueAt = advance?.dueAt ?? null
+  const retryMs = advance?.retryMs ?? 0
+
+  useEffect(() => {
+    if (!enabled || !roomId || typeof stateVersion !== 'number' || rank < 0) return
+    if (phaseKey === null || dueAt === null) return
+    const expectedVersion = stateVersion
+    let cancelled = false
+    let earlyRetry: ReturnType<typeof setTimeout> | undefined
+    const send = (attempt: number) => {
+      void fetch(`/api/online/rooms/${roomId}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'advance', phaseKey, expectedVersion }),
+      })
+        .then(async (res) => {
+          // Le corps n'est lu que sur un 409 : ailleurs il ne sert à rien.
+          const code =
+            res.status === 409
+              ? await res
+                  .json()
+                  .then((data: { error?: unknown }) =>
+                    typeof data?.error === 'string' ? data.error : undefined
+                  )
+                  .catch(() => undefined)
+              : undefined
+          if (cancelled || !shouldRetryAdvanceTick(res.status, code, attempt)) return
+          earlyRetry = setTimeout(() => send(attempt + 1), ADVANCE_TICK_EARLY_RETRY_MS)
+        })
+        .catch(() => {
+          // Raté réseau : rien à reprendre ici, le bandeau de connexion et le
+          // sondage s'en chargent.
+        })
+    }
+    const cancel = scheduleAdvanceTick({ dueAt, rank, retryMs, send: () => send(0) })
+    return () => {
+      cancelled = true
+      cancel()
+      if (earlyRetry) clearTimeout(earlyRetry)
+    }
+  }, [enabled, roomId, stateVersion, rank, phaseKey, dueAt, retryMs])
+
+  return rank
+}
+
 export type UseAfkTickOptions = {
   roomId: string | null | undefined
   stateVersion: number | null | undefined

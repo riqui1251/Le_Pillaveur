@@ -14,7 +14,7 @@ import type { TabouClientView, TabouTeam } from '@/lib/tabou/engine'
 import { TABOU_ROUND_MS } from '@/lib/tabou/engine'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { useBotReferee } from '@/hooks/useBotReferee'
+import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -69,21 +69,16 @@ export function TabouOnline() {
     return () => clearInterval(timer)
   }, [view])
 
-  // ÉCHÉANCE DE PHASE : tick « advance » générique.
-  useEffect(() => {
-    if (!view || !room || view.phase === 'finished' || view.phaseEndsAt === null) return
-    const expectedVersion = room.stateVersion
-    const delay = Math.max(250, view.phaseEndsAt - Date.now() + 300 + Math.random() * 700)
-    const timer = setTimeout(() => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
-      })
-    }, delay)
-    return () => clearTimeout(timer)
-  }, [view, room])
+  // ÉCHÉANCE DE PHASE : tick « advance » générique, arbitré par rang.
+  useAdvanceTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    advance:
+      view && view.phaseEndsAt !== null ? { phaseKey: view.phaseKey, dueAt: view.phaseEndsAt } : null,
+  })
 
   // Ticks « arbitre » (bots en attente au bilan + remplacement), avec secours
   // par rang (cf. useBotReferee).

@@ -16,7 +16,7 @@ import {
   type QuizClientView,
 } from '@/lib/quiz/engine'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
-import { useBotReferee } from '@/hooks/useBotReferee'
+import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -77,23 +77,18 @@ export function QuizOnline() {
     return () => clearInterval(timer)
   }, [view])
 
-  // ÉCHÉANCE DE PHASE : TOUS les clients envoient le tick « advance »
-  // (idempotent, jitter) — un arbitre unique au téléphone verrouillé
-  // laissait la partie bloquée jusqu'au refresh.
-  useEffect(() => {
-    if (!view || !room || view.phase === 'finished' || view.phaseEndsAt === null) return
-    const expectedVersion = room.stateVersion
-    const delay = Math.max(250, view.phaseEndsAt - Date.now() + 300 + Math.random() * 700)
-    const timer = setTimeout(() => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
-      })
-    }, delay)
-    return () => clearTimeout(timer)
-  }, [view, room])
+  // ÉCHÉANCE DE PHASE : tick « advance » arbitré par rang (cf. useAdvanceTick)
+  // — le rang 0 tire à l'échéance, le suivant prend le relais 4 s plus tard si
+  // son téléphone est verrouillé, et la version qui bouge coupe les autres.
+  useAdvanceTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    advance:
+      view && view.phaseEndsAt !== null ? { phaseKey: view.phaseKey, dueAt: view.phaseEndsAt } : null,
+  })
 
   // Ticks « arbitre » (bots + remplacement des partis), avec secours par rang.
   const botsPending = Boolean(

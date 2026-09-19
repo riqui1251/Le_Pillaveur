@@ -15,7 +15,7 @@ import { TOTAL_MAX, TOTAL_MIN } from '@/lib/game-1220'
 import type { Game1220SyncedState } from '@/lib/online-game-state'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { useBotReferee } from '@/hooks/useBotReferee'
+import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
@@ -76,35 +76,23 @@ export function Game1220Online() {
   })
 
   // ÉCHÉANCE DE MISE EN PLACE : la phase setup est SIMULTANÉE (aucun acteur
-  // unique, donc pas d'anti-AFK possible). TOUS les clients envoient le tick
-  // « advance » (idempotent, jitter) — le moteur déclare alors prêts les
-  // retardataires plutôt que de laisser la table figée.
+  // unique, donc pas d'anti-AFK possible). Le tick « advance », arbitré par
+  // rang (cf. useAdvanceTick), fait déclarer prêts les retardataires plutôt
+  // que de laisser la table figée. Il se RÉARME après l'échéance (retryMs) :
+  // un coup unique perdu (requête en échec, onglet endormi au mauvais moment)
+  // figerait la mise en place pour de bon, puisque l'état ne bouge plus.
   const phaseEndsAt = view?.phaseEndsAt ?? null
-  useEffect(() => {
-    if (!view || !room || view.phase === 'finished' || phaseEndsAt === null || !view.phaseKey) return
-    const expectedVersion = room.stateVersion
-    const delay = Math.max(250, phaseEndsAt - Date.now() + 300 + Math.random() * 700)
-    const fire = () => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
-      })
-    }
-    // Le tick se RÉARME après l'échéance : un coup unique perdu (requête en
-    // échec, onglet endormi au mauvais moment) figerait la mise en place pour
-    // de bon, puisque l'état ne bouge plus et que l'effet ne serait pas rejoué.
-    let retry: ReturnType<typeof setInterval> | undefined
-    const timer = setTimeout(() => {
-      fire()
-      retry = setInterval(fire, 5000 + Math.random() * 2000)
-    }, delay)
-    return () => {
-      clearTimeout(timer)
-      if (retry) clearInterval(retry)
-    }
-  }, [view, room, phaseEndsAt])
+  useAdvanceTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    advance:
+      view && phaseEndsAt !== null && view.phaseKey
+        ? { phaseKey: view.phaseKey, dueAt: phaseEndsAt, retryMs: 5000 }
+        : null,
+  })
 
   const [clock, setClock] = useState(() => Date.now())
   const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'

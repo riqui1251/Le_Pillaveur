@@ -15,7 +15,7 @@ import type { EspionClientView } from '@/lib/espion/engine'
 import { getEspionLocations } from '@/lib/espion/data'
 import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { useBotReferee } from '@/hooks/useBotReferee'
+import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -73,23 +73,21 @@ export function EspionOnline() {
   // ÉCHÉANCE DE PHASE : tick « advance » générique (résout aussi une
   // accusation expirée en priorité, cf. moteur). Se recale sur la PLUS
   // PROCHE des deux échéances (accusation en cours ou timer principal).
-  useEffect(() => {
-    if (!view || !room || view.phase === 'finished' || view.phaseEndsAt === null) return
-    const expectedVersion = room.stateVersion
-    const nextDeadline = view.activeAccusation
-      ? Math.min(view.activeAccusation.endsAt, view.phaseEndsAt)
-      : view.phaseEndsAt
-    const delay = Math.max(250, nextDeadline - Date.now() + 300 + Math.random() * 700)
-    const timer = setTimeout(() => {
-      void fetch(`/api/online/rooms/${room.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'advance', phaseKey: view.phaseKey, expectedVersion }),
-      })
-    }, delay)
-    return () => clearTimeout(timer)
-  }, [view, room])
+  // Arbitré par rang (cf. useAdvanceTick) : plus de rafale de 409.
+  const nextDeadline =
+    view && view.phaseEndsAt !== null
+      ? view.activeAccusation
+        ? Math.min(view.activeAccusation.endsAt, view.phaseEndsAt)
+        : view.phaseEndsAt
+      : null
+  useAdvanceTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    advance: view && nextDeadline !== null ? { phaseKey: view.phaseKey, dueAt: nextDeadline } : null,
+  })
 
   // Ticks « arbitre » (bots en attente + remplacement), avec secours par rang.
   const supportBot =

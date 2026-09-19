@@ -395,7 +395,10 @@
       "you": "Tú",
       "ready": "Listo",
       "notReady": "Aún no está listo",
-      "bot": "Bot"
+      "bot": "Bot",
+      "kick": "Quitar a {name} de la mesa",
+      "kickConfirm": "¿Quitar?",
+      "kickConfirmLabel": "Toca de nuevo para quitar a {name}"
     },
     "settings": {
       "title": "Ajustes",
@@ -409,7 +412,9 @@
       "cta": "Empezar la partida",
       "minPlayers": "{count, plural, one {Mín. # jugador} other {Mín. # jugadores}}",
       "waitingForHost": "Esperando a que {name} empiece la partida…",
-      "withBots": "Lanzar con bots"
+      "withBots": "Lanzar con bots",
+      "force": "Lanzar sin {count, plural, one {el rezagado} other {los # rezagados}}",
+      "forceBlocked": "No hay suficientes jugadores listos: {count, plural, one {falta #} other {faltan #}}"
     },
     "list": {
       "empty": "Ninguna sala abierta — elige un juego abajo para crear una.",
@@ -433,6 +438,10 @@
       "agoDays": "{days, plural, one {hace # día} other {hace # días}}",
       "players": "{count, plural, one {# jugador} other {# jugadores}}"
     },
+    "connection": {
+      "reconnecting": "Conexión perdida — reconectando…",
+      "offline": "Sin conexión — revisa tu red"
+    },
     "errors": {
       "generic": "Error",
       "network": "Error de red",
@@ -441,6 +450,7 @@
       "launchFailed": "No se pudo empezar la partida",
       "rematchFailed": "No se pudo votar la revancha",
       "inviteFailed": "No se pudo invitar a este amigo",
+      "kickFailed": "No se pudo quitar a este jugador",
       "wrongGameRoom": "Estás en una sala de otro juego. Sal de ella para continuar.",
       "inOtherLobby": "Estás en la sala «{game}».",
       "auth_required": "Inicia sesión para jugar en línea.",
@@ -468,6 +478,9 @@
       "team_full": "Este equipo está completo.",
       "room_full": "La sala está completa.",
       "invite_only": "Esta sala es solo por invitación.",
+      "not_host": "Solo el anfitrión de la mesa puede hacer eso.",
+      "cannot_kick_self": "No puedes expulsarte a ti mismo de la mesa.",
+      "member_not_found": "Este jugador ya no está en la mesa.",
       "host_only_invite": "Solo el anfitrión puede invitar.",
       "room_already_public": "Esta sala ya es pública, no hace falta invitación.",
       "friend_required": "Elige a un amigo para invitar.",

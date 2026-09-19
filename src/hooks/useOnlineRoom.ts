@@ -17,9 +17,43 @@ import {
   STREAM_WATCHDOG_MS,
   type ServerView,
 } from '@/hooks/online-room-polling'
+import { connectionStatus, serverReached, type ConnectionStatus } from '@/hooks/connection-status'
 
 // Cadences de sondage, tri des événements SSE et garde de version : logique
-// pure dans ./online-room-polling.ts (testée sans React ni réseau).
+// pure dans ./online-room-polling.ts (testée sans React ni réseau). Verdict
+// « connexion perdue » dit au joueur : ./connection-status.ts, même régime.
+
+/**
+ * Délai avant de ROUVRIR un flux SSE que le navigateur a abandonné. Un
+ * EventSource ne se reconnecte tout seul qu'après une coupure en cours de
+ * route (readyState CONNECTING) ; s'il reçoit un statut non-200 (502 du proxy
+ * pendant un redéploiement) ou une réponse qui n'est pas du text/event-stream
+ * (portail captif), il passe CLOSED et n'y revient JAMAIS : tous les clients
+ * de la table restaient alors au sondage serré (1,5 s) jusqu'au changement de
+ * salle ou au rechargement — exactement les requêtes que la cadence longue
+ * économise. Cinq secondes : le temps qu'un redéploiement finisse de
+ * répondre, sans marteler un serveur qui redémarre.
+ */
+const STREAM_REOPEN_MS = 5_000
+
+/**
+ * Quoi dire au joueur qui découvre qu'il n'est plus membre de sa table. Le
+ * serveur ne dit pas encore POURQUOI (siège purgé pour absence, expulsion,
+ * lancement forcé, relance sans lui, remplacement par un bot) : on le déduit
+ * de la table qu'on affichait. En pleine partie, c'est presque toujours le
+ * remplacement pour inactivité — on le dit, sinon il revient au guichet sans
+ * rien comprendre. Sur l'écran de fin (partie locale finie), c'est la relance
+ * sans lui : « remplacé par un bot » serait faux, « tu n'es plus dans cette
+ * table » reste juste. Reste le cas rare d'un départ déclenché depuis un autre
+ * appareil, où le message est approximatif.
+ */
+function membershipLostKey(room: RoomDto): 'replaced_by_bot' | 'roomLeft' {
+  if (room.status !== 'playing') return 'roomLeft'
+  const gameId = room.gameId ?? ''
+  const state = gameId ? parseOnlineGameState(gameId, room.gameStateJson) : null
+  const finished = state ? isOnlineGameFinished(gameId, state) : false
+  return finished ? 'roomLeft' : 'replaced_by_bot'
+}
 
 /**
  * TOUTE la logique salon (état, polling, SSE, actions) vit dans CE hook, mais
@@ -52,6 +86,22 @@ export function useOnlineRoomState() {
    * porte le temps réel, cadence serrée dès qu'il tombe (cf. pollDelayMs).
    */
   const streamAliveRef = useRef(false)
+  /**
+   * État de connexion DIT AU JOUEUR (cf. ConnectionBanner). La décision vit
+   * dans ./connection-status.ts ; ici on ne fait que relever les signaux :
+   * `browserOnlineRef` suit navigator.onLine (événements window
+   * online/offline), `streamErroredRef` l'erreur du flux vue par le
+   * navigateur depuis le dernier `ready`, `pollFailedRef` une lecture qui n'a
+   * pas pu JOINDRE le serveur (fetch a levé, ou 502/503/504 d'une passerelle
+   * qui parle pour un processus absent — un 4xx ou un 500, eux, sont des
+   * réponses du jeu, cf. serverReached). Des refs et non des états : les
+   * signaux bougent dans des handlers et des promesses, seul le verdict est
+   * rendu.
+   */
+  const [connection, setConnection] = useState<ConnectionStatus>('online')
+  const browserOnlineRef = useRef(true)
+  const streamErroredRef = useRef(false)
+  const pollFailedRef = useRef(false)
   /**
    * Le sondage est-il autorisé (mode online ET page visible) ? Les handlers
    * du flux replanifient le sondage à chaque bascule vivant/mort : sans ce
@@ -102,6 +152,35 @@ export function useOnlineRoomState() {
     [t]
   )
 
+  /** Recalcule le verdict à partir des signaux ; React ne rend que s'il change. */
+  const syncConnection = useCallback(() => {
+    setConnection(
+      connectionStatus({
+        browserOnline: browserOnlineRef.current,
+        inRoom: roomRef.current !== null,
+        streamAlive: streamAliveRef.current,
+        streamErrored: streamErroredRef.current,
+        pollFailed: pollFailedRef.current,
+      })
+    )
+  }, [])
+
+  /**
+   * Issue RÉSEAU d'une lecture (sondage ou relecture) : le serveur du jeu
+   * a-t-il répondu, quel que soit le statut ? Une réponse efface aussi
+   * l'erreur du flux — si le HTTP passe, la table vit au rythme du sondage
+   * serré, il n'y a plus de coupure à annoncer, même si le flux met du temps
+   * à rouvrir.
+   */
+  const notePollReach = useCallback(
+    (reached: boolean) => {
+      pollFailedRef.current = !reached
+      if (reached) streamErroredRef.current = false
+      syncConnection()
+    },
+    [syncConnection]
+  )
+
   const fetchRoom = useCallback(async () => {
     if (!user || user.playMode !== 'online') {
       setRoom(null)
@@ -109,6 +188,7 @@ export function useOnlineRoomState() {
     }
     try {
       const res = await fetch('/api/online/rooms/me', { credentials: 'include' })
+      notePollReach(serverReached(res.status))
       if (!res.ok) return null
       const data = await parseApiJson<{ room?: RoomDto }>(res)
       // Le serveur nous remet dans la salle qu'on venait de quitter (retour
@@ -118,13 +198,24 @@ export function useOnlineRoomState() {
       if (data.room && leavingRoomIdRef.current === data.room.id) {
         leavingRoomIdRef.current = null
       }
+      // Adhésion disparue PENDANT qu'on était à une table — siège purgé pour
+      // absence, expulsion, lancement forcé ou relance sans nous : autant de
+      // cas où l'onglet était CACHÉ, donc ne sondait plus et n'a jamais vu le
+      // 403 de GET /rooms/[roomId]. Au retour au premier plan, cette relecture
+      // est la seule à passer, et elle rendait le joueur au guichet sans un
+      // mot. Départ volontaire exclu (verrou de départ).
+      const current = roomRef.current
+      if (!data.room && current && leavingRoomIdRef.current !== current.id) {
+        setError(t(membershipLostKey(current)))
+      }
       setRoom(data.room ?? null)
       return data.room as RoomDto | null
     } catch {
       // Raté réseau ponctuel : on retentera au tick de polling suivant.
+      notePollReach(false)
       return null
     }
-  }, [user])
+  }, [user, notePollReach, t])
 
   /**
    * 403/404 sur la salle courante : on purge l'état, sinon le polling boucle
@@ -132,23 +223,15 @@ export function useOnlineRoomState() {
    * table disparaissait sans un mot et le joueur croyait à un bug. Les deux
    * codes ne racontent PAS la même histoire : 404 = la salle n'existe plus
    * (hôte parti, ménage des salles abandonnées), 403 = elle existe mais on n'en
-   * est plus membre (exclusion, départ depuis un autre appareil) — annoncer
-   * « table fermée » dans ce cas-là serait faux. Un 403 EN PLEINE PARTIE vient
-   * presque toujours du remplacement pour inactivité : on le dit, sinon le
-   * joueur revient au guichet sans rien comprendre. Reste le cas rare d'un
-   * départ déclenché depuis un autre appareil, où le message est approximatif
-   * — le serveur ne distingue pas les deux aujourd'hui.
+   * est plus membre — la raison est déduite de la table qu'on affichait (cf.
+   * membershipLostKey) ; annoncer « table fermée » dans ce cas-là serait faux.
    */
   const handleRoomGone = useCallback(
     (status: number) => {
-      const replacedByBot = status === 403 && roomRef.current?.status === 'playing'
+      const current = roomRef.current
       setRoom(null)
       setError(
-        status === 404
-          ? t('roomClosed')
-          : replacedByBot
-            ? t('replaced_by_bot')
-            : t('roomLeft')
+        status === 404 ? t('roomClosed') : t(current ? membershipLostKey(current) : 'roomLeft')
       )
     },
     [t]
@@ -161,6 +244,7 @@ export function useOnlineRoomState() {
     const superseded = () => seq < roomRefreshAppliedRef.current
     try {
       const res = await fetch(`/api/online/rooms/${roomId}`, { credentials: 'include' })
+      notePollReach(serverReached(res.status))
       if (leavingRoomIdRef.current === roomId) return null
       if (superseded()) return null
       if (!res.ok) {
@@ -177,9 +261,10 @@ export function useOnlineRoomState() {
       setRoom(data.room ?? null)
       return data.room as RoomDto | null
     } catch {
+      notePollReach(false)
       return null
     }
-  }, [handleRoomGone])
+  }, [handleRoomGone, notePollReach])
 
   /** Polling léger — uniquement l'état de partie (plus rapide qu'un refresh complet) */
   const refreshGameState = useCallback(async (roomId: string) => {
@@ -189,6 +274,7 @@ export function useOnlineRoomState() {
     const knownAtRequest = knownVersionRef.current
     try {
       const res = await fetch(`/api/online/rooms/${roomId}/state`, { credentials: 'include' })
+      notePollReach(serverReached(res.status))
       if (leavingRoomIdRef.current === roomId) return null
       if (!res.ok) {
         if (res.status === 403 || res.status === 404) handleRoomGone(res.status)
@@ -207,9 +293,10 @@ export function useOnlineRoomState() {
       setRoom((prev) => mergePolledState(prev, roomId, data, knownAtRequest))
       return data
     } catch {
+      notePollReach(false)
       return null
     }
-  }, [handleRoomGone])
+  }, [handleRoomGone, notePollReach])
 
   const pollTick = useCallback(async () => {
     const r = roomRef.current
@@ -443,14 +530,20 @@ export function useOnlineRoomState() {
     }
   }, [room, apiError, t])
 
-  const launchGame = useCallback(async () => {
+  const launchGame = useCallback(async (opts?: { force?: boolean }) => {
     if (!room) return null
     setLoading(true)
     setError(null)
     try {
+      // `force` (hôte) : le serveur retire d'abord les non-prêts, puis lance
+      // — « Lancer sans les retardataires ». Le corps n'est envoyé QUE dans
+      // ce cas : le lancement ordinaire reste une requête sans corps.
       const res = await fetch(`/api/online/rooms/${room.id}/launch`, {
         method: 'POST',
         credentials: 'include',
+        ...(opts?.force
+          ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force: true }) }
+          : {}),
       })
       // `count` : borne de joueurs renvoyée par la route de lancement
       // (min_players / max_players), traduite ici avec le bon nombre.
@@ -553,6 +646,36 @@ export function useOnlineRoomState() {
     [room, apiError]
   )
 
+  /**
+   * L'hôte retire un joueur de la table (salle en attente) : le siège d'un
+   * ami parti sans quitter ne doit pas bloquer le lancement. La route répond
+   * `{ ok: true }` sans DTO : on relit la salle tout de suite plutôt que
+   * d'attendre l'écho SSE, pour que le siège disparaisse sous le doigt.
+   */
+  const kickMember = useCallback(
+    async (userId: string) => {
+      if (!room) return false
+      setError(null)
+      try {
+        const res = await fetch(`/api/online/rooms/${room.id}/members/${userId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        })
+        if (!res.ok) {
+          const data = await parseApiJson<{ error?: string }>(res)
+          setError(apiError(data.error, 'kickFailed'))
+          return false
+        }
+        void refreshRoom(room.id)
+        return true
+      } catch {
+        setError(t('network'))
+        return false
+      }
+    },
+    [room, apiError, t, refreshRoom]
+  )
+
   const pushGameState = useCallback(
     async (gameStateJson: string, expectedVersion: number) => {
       if (!room) return false
@@ -619,24 +742,50 @@ export function useOnlineRoomState() {
    * (polling = secours). La route émet `ready` en premier, puis `changed` /
    * `lobby` / `finished` (data = RoomEvent en JSON), et un événement `ping`
    * toutes les STREAM_HEARTBEAT_MS (cf. api/online/rooms/[roomId]/stream).
-   * Onglet caché, aucun handler ne sonde (cf. pollTickIfVisible).
+   * Onglet caché, aucun handler ne sonde (cf. pollTickIfVisible). Le flux
+   * est ROUVERT par nos soins quand le navigateur l'a abandonné (CLOSED) ou
+   * quand le chien de garde le tient pour zombie — l'EventSource seul ne
+   * couvre que la coupure en cours de route.
    */
   useEffect(() => {
     const roomId = room?.id
     if (!roomId || !user || user.playMode !== 'online') return
     if (typeof window === 'undefined' || typeof EventSource === 'undefined') return
 
-    const es = new EventSource(`/api/online/rooms/${roomId}/stream`)
+    // Instance COURANTE du flux : `reopen` la remplace (flux abandonné par le
+    // navigateur, ou zombie déclaré mort par le chien de garde). Les handlers
+    // sont attachés à chaque instance par `open`, plus bas.
+    let es: EventSource | null = null
+    let reopenTimer: ReturnType<typeof setTimeout> | null = null
+    // L'effet est démonté (salle quittée, mode changé) : plus aucune réouverture.
+    let unmounted = false
     // Le flux a-t-il été perdu depuis la dernière ouverture ? Une reconnexion
     // n'a pas de rattrapage côté serveur (pas de Last-Event-ID) : ce qui a
     // bougé entre le dernier sondage serré et le `ready` serait perdu.
     let lost = false
+    /**
+     * Ferme le flux courant et en ouvre un autre après `delay`. Un seul
+     * minuteur à la fois : deux causes rapprochées (chien de garde puis
+     * `error`) ne font qu'une réouverture.
+     */
+    const reopen = (delay: number) => {
+      if (unmounted) return
+      es?.close()
+      es = null
+      if (reopenTimer) clearTimeout(reopenTimer)
+      reopenTimer = setTimeout(() => {
+        reopenTimer = null
+        if (!unmounted) open()
+      }, delay)
+    }
     // Chien de garde : un flux « zombie » (Wi-Fi → 4G, coupure TCP que l'OS
     // met des minutes à voir) ne produit ni `error` ni événement. Passé
     // STREAM_WATCHDOG_MS sans rien recevoir — le `ping` serveur compris —, on
     // le tient pour mort : la cadence serrée reprend en ~50 s au lieu de
-    // dépendre de l'OS. Le prochain événement reçu (ping, ou `ready` de la
-    // reconnexion) le ramène à la cadence longue.
+    // dépendre de l'OS. Et on ne l'attend pas : le zombie est fermé et un flux
+    // neuf ouvert tout de suite — par la 4G, le temps réel revient en une
+    // poignée de secondes au lieu d'attendre que l'OS constate la coupure. Le
+    // `ready` du nouveau flux ramène la cadence longue.
     let watchdog: ReturnType<typeof setTimeout> | null = null
     const armWatchdog = () => {
       if (watchdog) clearTimeout(watchdog)
@@ -644,7 +793,16 @@ export function useOnlineRoomState() {
         watchdog = null
         if (!streamAliveRef.current) return
         streamAliveRef.current = false
+        // Un soupçon, pas une coupure : rien n'est dit au joueur tant que le
+        // sondage serré passe (cf. connectionStatus, cas du flux zombie).
+        syncConnection()
         schedulePoll()
+        // Ce qui a bougé pendant la fenêtre zombie n'a pas été poussé : le
+        // `ready` du flux neuf déclenche un rattrapage (onReady) — le tick
+        // serré planifié juste au-dessus, lui, est annulé par ce même `ready`
+        // qui ramène la cadence longue.
+        lost = true
+        reopen(0)
       }, STREAM_WATCHDOG_MS)
     }
     // Un événement, quel qu'il soit, prouve que le flux vit : cadence longue.
@@ -652,6 +810,8 @@ export function useOnlineRoomState() {
       armWatchdog()
       if (streamAliveRef.current) return
       streamAliveRef.current = true
+      streamErroredRef.current = false
+      syncConnection()
       schedulePoll()
     }
     // `ready` est le premier message du serveur : il prouve que le flux est
@@ -667,15 +827,25 @@ export function useOnlineRoomState() {
         void pollTick()
       }
     }
-    // L'EventSource se reconnecte tout seul ; en attendant, le sondage
-    // reprend sa cadence serrée — sans attendre la fin du délai en cours.
+    // L'EventSource se reconnecte tout seul (readyState CONNECTING) ; en
+    // attendant, le sondage reprend sa cadence serrée — sans attendre la fin
+    // du délai en cours. Le navigateur a VU le flux tomber : c'est le signal
+    // fort de la coupure dite au joueur (cf. connectionStatus), là où le chien
+    // de garde n'est qu'un soupçon. Relevé même si le flux était déjà tenu
+    // pour mort — et à chaque tentative ratée de l'EventSource, qui rejoue
+    // `error`. Sauf s'il a ABANDONNÉ (CLOSED : statut non-200, mauvais type
+    // de contenu) : là, personne ne rouvrira à notre place — on s'en charge
+    // (cf. STREAM_REOPEN_MS).
     const onError = () => {
       lost = true
       if (watchdog) clearTimeout(watchdog)
       watchdog = null
-      if (!streamAliveRef.current) return
+      streamErroredRef.current = true
+      const wasAlive = streamAliveRef.current
       streamAliveRef.current = false
-      schedulePoll()
+      syncConnection()
+      if (wasAlive) schedulePoll()
+      if (es?.readyState === EventSource.CLOSED) reopen(STREAM_REOPEN_MS)
     }
     const onChanged = (e: Event) => {
       markAlive()
@@ -710,21 +880,32 @@ export function useOnlineRoomState() {
       if (!pollEnabledRef.current) return
       void refreshRoom(roomId)
     }
-    es.addEventListener('ready', onReady)
-    es.addEventListener('ping', markAlive)
-    es.addEventListener('changed', onChanged)
-    es.addEventListener('lobby', onLobby)
-    es.addEventListener('finished', onFinished)
-    es.addEventListener('error', onError)
+    /** Ouvre le flux et y attache les handlers (première fois, et à chaque `reopen`). */
+    function open() {
+      const stream = new EventSource(`/api/online/rooms/${roomId}/stream`)
+      stream.addEventListener('ready', onReady)
+      stream.addEventListener('ping', markAlive)
+      stream.addEventListener('changed', onChanged)
+      stream.addEventListener('lobby', onLobby)
+      stream.addEventListener('finished', onFinished)
+      stream.addEventListener('error', onError)
+      es = stream
+    }
+    open()
 
     return () => {
+      unmounted = true
+      if (reopenTimer) clearTimeout(reopenTimer)
       streamAliveRef.current = false
+      // L'erreur appartient à CE flux : la salle suivante repart sans dette
+      // (le verdict est relu par l'effet « la salle change », plus bas).
+      streamErroredRef.current = false
       if (watchdog) clearTimeout(watchdog)
       if (deferredRefreshRef.current) {
         clearTimeout(deferredRefreshRef.current.timer)
         deferredRefreshRef.current = null
       }
-      es.close()
+      es?.close()
     }
   }, [
     room?.id,
@@ -735,12 +916,48 @@ export function useOnlineRoomState() {
     refreshRoom,
     schedulePoll,
     resolveDeferredRefresh,
+    syncConnection,
   ])
+
+  /**
+   * Ce que dit le navigateur. `offline` est certain (mode avion, Wi-Fi
+   * coupé) et se dit au joueur tout de suite — avant que le flux ne tombe ou
+   * qu'un sondage n'échoue. `online` déclenche une lecture SANS attendre le
+   * tick en cours : jusqu'à 1,5 s de plus sur une table déjà figée, et
+   * l'EventSource, lui, ne rouvrira qu'à son propre délai (~3 s). pollTick
+   * choisit quoi relire (état de partie, salle complète, ou /rooms/me hors
+   * salle) ; pollTickIfVisible respecte l'onglet caché, dont le retour au
+   * premier plan refait de toute façon un fetchRoom complet.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const sync = () => {
+      browserOnlineRef.current = navigator.onLine
+      syncConnection()
+    }
+    const onOnline = () => {
+      sync()
+      pollTickIfVisible()
+    }
+    sync()
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', sync)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', sync)
+    }
+  }, [syncConnection, pollTickIfVisible])
+
+  /** La salle change (entrée, sortie, disparition) : le verdict la suit. */
+  useEffect(() => {
+    syncConnection()
+  }, [room?.id, syncConnection])
 
   return {
     room,
     loading,
     error,
+    connection,
     setError,
     createRoom,
     joinRoom,
@@ -751,6 +968,7 @@ export function useOnlineRoomState() {
     updateSettings,
     setTeam,
     inviteFriend,
+    kickMember,
     pushGameState,
     fetchRoom,
     refreshRoom,
