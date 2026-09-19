@@ -58,11 +58,27 @@ export function getBanState(user: UserBanFields): BanState {
   }
 }
 
-export async function clearExpiredBanIfNeeded(userId: string): Promise<void> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { banType: true, bannedUntil: true },
-  })
+/** Les seules colonnes du compte qu'il faut pour savoir si un ban temporaire est échu. */
+type BanExpiryFields = { id: string; banType: string | null; bannedUntil: Date | null }
+
+/**
+ * Lève un ban TEMPORAIRE dont l'échéance est passée (colonnes remises à nul).
+ *
+ * Accepte l'id OU la ligne déjà lue. getSessionFromToken charge le compte
+ * entier avec la session : relire ici les deux mêmes colonnes coûtait une
+ * requête de trop à CHAQUE appel API authentifié (sondages de lobby, guichet,
+ * invitations, chat). Les appelants qui n'ont que l'id (isUserCurrentlyBanned,
+ * connexion) gardent la lecture.
+ */
+export async function clearExpiredBanIfNeeded(userOrId: string | BanExpiryFields): Promise<void> {
+  const userId = typeof userOrId === 'string' ? userOrId : userOrId.id
+  const user =
+    typeof userOrId === 'string'
+      ? await prisma.user.findUnique({
+          where: { id: userId },
+          select: { banType: true, bannedUntil: true },
+        })
+      : userOrId
   if (!user || user.banType !== 'temporary') return
   if (user.bannedUntil && user.bannedUntil <= new Date()) {
     await prisma.user.update({

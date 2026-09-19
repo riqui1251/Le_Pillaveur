@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { launchPetitBuveurRoom } from '@/lib/online-petit-buveur'
 import { launchPurpleRoom } from '@/lib/online-purple'
 import { launch1220Room } from '@/lib/online-1220'
@@ -49,6 +50,9 @@ export async function resetRoomToWaitingLobby(roomId: string) {
     where: { roomId },
     data: { isReady: false },
   })
+  // La table repasse 'waiting' : elle réapparaît dans `lobbies` du guichet,
+  // quel que soit l'appelant.
+  invalidateLobbiesCache()
 }
 
 /**
@@ -161,6 +165,9 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
   // écrit l'état, et donc les bots — ils ne sont pas membres de la salle.
   // Même règle que l'historique ci-dessus : ne lève jamais.
   await recordGameSessionStart(roomId)
+  // Alimente `recentLaunches` du guichet — couvre d'un coup briefing-ack et
+  // rematch, les deux chemins qui passent ici.
+  invalidateLobbiesCache()
 }
 
 /**

@@ -11,8 +11,9 @@ const { sessionMock, userMock, cookieJar } = vi.hoisted(() => ({
     delete: vi.fn(),
     updateMany: vi.fn(),
   },
-  // Lu par clearExpiredBanIfNeeded (ban-server) : aucun ban à lever.
-  userMock: { findUnique: vi.fn() },
+  // clearExpiredBanIfNeeded (ban-server) reçoit le compte chargé avec la
+  // session : jamais de findUnique ici, update seulement pour lever un ban échu.
+  userMock: { findUnique: vi.fn(), update: vi.fn() },
   cookieJar: new Map<string, string>(),
 }))
 vi.mock('@/lib/prisma', () => ({ prisma: { session: sessionMock, user: userMock } }))
@@ -75,6 +76,8 @@ beforeEach(() => {
   sessionMock.updateMany.mockResolvedValue({ count: 1 })
   userMock.findUnique.mockReset()
   userMock.findUnique.mockResolvedValue(null)
+  userMock.update.mockReset()
+  userMock.update.mockResolvedValue({})
   cookieJar.clear()
 })
 
@@ -227,36 +230,75 @@ describe('session glissante : seuil de renouvellement', () => {
 })
 
 describe('lecture de session', () => {
+  /** Ligne User telle que Prisma la joint à la session (`include: { user }`). */
+  function storedUser(ban: { banType: string | null; bannedUntil: Date | null } = { banType: null, bannedUntil: null }) {
+    return {
+      id: 'guest-1',
+      email: null,
+      isGuest: true,
+      displayName: 'Invité',
+      name: 'Invité',
+      accountCode: 'LP-GUEST1',
+      role: 'user',
+      locale: 'fr',
+      playMode: 'online',
+      ambianceMode: 'alcool',
+      onlineXp: 0,
+      onlinePreferencesJson: null,
+      banComment: null,
+      bannedAt: null,
+      ...ban,
+    }
+  }
+
   it('expose l échéance lue et le jeton brut, sans aucune écriture', async () => {
     const expiresAt = new Date(Date.now() + 10 * DAY_MS)
-    sessionMock.findUnique.mockResolvedValue({
-      id: 'session-1',
-      expiresAt,
-      user: {
-        id: 'guest-1',
-        email: null,
-        isGuest: true,
-        displayName: 'Invité',
-        name: 'Invité',
-        accountCode: 'LP-GUEST1',
-        role: 'user',
-        locale: 'fr',
-        playMode: 'online',
-        ambianceMode: 'alcool',
-        onlineXp: 0,
-        onlinePreferencesJson: null,
-        banType: null,
-        bannedUntil: null,
-        banComment: null,
-        bannedAt: null,
-      },
-    })
+    sessionMock.findUnique.mockResolvedValue({ id: 'session-1', expiresAt, user: storedUser() })
     const session = await getSessionFromToken('jeton-brut')
     expect(session?.token).toBe('jeton-brut')
     expect(session?.expiresAt).toBe(expiresAt)
     expect(session?.user.isGuest).toBe(true)
     expect(sessionMock.findUnique).toHaveBeenCalledTimes(1)
     expect(sessionMock.updateMany).not.toHaveBeenCalled()
+    expect(userMock.update).not.toHaveBeenCalled()
+  })
+
+  it('une seule lecture par requête : le ban est vérifié sur la ligne jointe, jamais relue', async () => {
+    sessionMock.findUnique.mockResolvedValue({
+      id: 'session-1',
+      expiresAt: new Date(Date.now() + 10 * DAY_MS),
+      user: storedUser(),
+    })
+    await getSessionFromToken('jeton-brut')
+    expect(userMock.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('ban temporaire échu : levé en base sans relecture, la session est servie', async () => {
+    sessionMock.findUnique.mockResolvedValue({
+      id: 'session-1',
+      expiresAt: new Date(Date.now() + 10 * DAY_MS),
+      user: storedUser({ banType: 'temporary', bannedUntil: new Date(Date.now() - DAY_MS) }),
+    })
+    const session = await getSessionFromToken('jeton-brut')
+    expect(session?.user.id).toBe('guest-1')
+    expect(userMock.findUnique).not.toHaveBeenCalled()
+    expect(userMock.update).toHaveBeenCalledTimes(1)
+    expect(userMock.update.mock.calls[0][0].where).toEqual({ id: 'guest-1' })
+    expect(userMock.update.mock.calls[0][0].data.banType).toBeNull()
+    expect(sessionMock.delete).not.toHaveBeenCalled()
+  })
+
+  it('ban temporaire en cours : session supprimée, rien à lever', async () => {
+    sessionMock.findUnique.mockResolvedValue({
+      id: 'session-1',
+      expiresAt: new Date(Date.now() + 10 * DAY_MS),
+      user: storedUser({ banType: 'temporary', bannedUntil: new Date(Date.now() + DAY_MS) }),
+    })
+    sessionMock.delete.mockResolvedValue({})
+    expect(await getSessionFromToken('jeton-brut')).toBeNull()
+    expect(userMock.findUnique).not.toHaveBeenCalled()
+    expect(userMock.update).not.toHaveBeenCalled()
+    expect(sessionMock.delete.mock.calls[0][0].where).toEqual({ id: 'session-1' })
   })
 })
 

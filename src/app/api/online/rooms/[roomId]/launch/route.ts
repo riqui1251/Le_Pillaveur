@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { serializeBriefing } from '@/lib/online/briefing'
 import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
@@ -135,6 +136,8 @@ export async function POST(_request: Request, { params }: Params) {
       briefingJson: serializeBriefing({ startedAt: Date.now(), acks: [] }),
     },
   })
+  // La table quitte `lobbies` et entre dans `liveGames` du guichet.
+  invalidateLobbiesCache()
 
   publishRoomChanged(roomId, { type: 'changed' })
 

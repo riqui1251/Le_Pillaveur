@@ -4,15 +4,22 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Loader2, ShieldOff, UserPlus, Users, X } from 'lucide-react'
-import { FriendsManager } from '@/components/friends/FriendsManager'
+import { FriendsManager, type FriendsManagerState } from '@/components/friends/FriendsManager'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { useFriends } from '@/hooks/useFriends'
+import type { Friend } from '@/hooks/useFriends'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { cn } from '@/lib/utils'
 
 interface FriendsPanelProps {
   open: boolean
   onClose: () => void
+  /**
+   * État d'amis chargé par la barre à la première ouverture et partagé avec
+   * le chat — le panneau n'a plus le sien, le gestionnaire non plus : ses
+   * mutations passent par ce même état, donc le chat et « Inviter à ma
+   * table » les voient sans relecture (deux requêtes de moins par ouverture).
+   */
+  friendsState: FriendsManagerState
 }
 
 type BlockedUser = {
@@ -23,7 +30,7 @@ type BlockedUser = {
 }
 
 /** Panneau amis (ajout, demandes, liste + statut en ligne) ouvert depuis le bouton du header, à côté du menu. */
-export function FriendsPanel({ open, onClose }: FriendsPanelProps) {
+export function FriendsPanel({ open, onClose, friendsState }: FriendsPanelProps) {
   const tFriends = useTranslations('account.friends')
   const tNav = useTranslations('nav')
 
@@ -65,8 +72,8 @@ export function FriendsPanel({ open, onClose }: FriendsPanelProps) {
             </div>
 
             <div className="max-h-[70vh] space-y-3 overflow-y-auto p-3">
-              <InviteToTable />
-              <FriendsManager compact />
+              <InviteToTable friends={friendsState.friends} />
+              <FriendsManager compact state={friendsState} />
               <BlockedList open={open} />
             </div>
           </motion.div>
@@ -82,11 +89,10 @@ export function FriendsPanel({ open, onClose }: FriendsPanelProps) {
  * que quand l'invitation a un sens : on est l'hôte d'une table encore en
  * attente et fermée (une table publique se rejoint par son code, sans invite).
  */
-function InviteToTable() {
+function InviteToTable({ friends }: { friends: Friend[] }) {
   const tFriends = useTranslations('account.friends')
   const { user } = useAuth()
   const { room, inviteFriend } = useOnlineRoom()
-  const { friends } = useFriends()
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
 

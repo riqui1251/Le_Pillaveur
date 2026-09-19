@@ -8,21 +8,18 @@ import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePagePresence } from '@/hooks/usePagePresence'
+import {
+  DEFERRED_REFRESH_MAX_MS,
+  mergePolledState,
+  mergeServerView,
+  pollDelayMs,
+  roomEventDecision,
+  STREAM_WATCHDOG_MS,
+  type ServerView,
+} from '@/hooks/online-room-polling'
 
-/**
- * AUCUNE salle : il n'y a rien à surveiller, seulement à découvrir qu'un autre
- * appareil (ou une invitation acceptée ailleurs) nous a mis à table. Sonder
- * `/rooms/me` toutes les 2 s pour ça, c'était 43 000 requêtes par jour et par
- * compte resté ouvert sur le hub, pour un événement qui n'arrive presque
- * jamais — et sans le moindre flux SSE à alimenter, faute de salle.
- */
-const POLL_IDLE_MS = 10_000
-/** Lobby en attente */
-const POLL_LOBBY_MS = 2000
-/** Partie en cours — en attente du tour adverse (filet de secours ; le SSE assure la réactivité) */
-const POLL_PLAYING_WAIT_MS = 1500
-/** Partie en cours — c'est notre tour (secours si push raté) */
-const POLL_PLAYING_ACTIVE_MS = 1500
+// Cadences de sondage, tri des événements SSE et garde de version : logique
+// pure dans ./online-room-polling.ts (testée sans React ni réseau).
 
 /**
  * TOUTE la logique salon (état, polling, SSE, actions) vit dans CE hook, mais
@@ -49,9 +46,49 @@ export function useOnlineRoomState() {
    * rafraîchie de la session.
    */
   const leavingRoomIdRef = useRef<string | null>(null)
+  /**
+   * Le flux SSE est-il VIVANT (événement `ready` reçu, aucune erreur depuis) ?
+   * C'est lui qui décide de la cadence du sondage : filet lâche tant qu'il
+   * porte le temps réel, cadence serrée dès qu'il tombe (cf. pollDelayMs).
+   */
+  const streamAliveRef = useRef(false)
+  /**
+   * Le sondage est-il autorisé (mode online ET page visible) ? Les handlers
+   * du flux replanifient le sondage à chaque bascule vivant/mort : sans ce
+   * verrou, une reconnexion SSE relancerait la boucle sur un onglet caché.
+   */
+  const pollEnabledRef = useRef(false)
+  /**
+   * Version d'état connue, tenue à jour de façon SYNCHRONE — `room` ne l'est
+   * qu'au rendu suivant. L'écho SSE d'une action et la réponse de cette action
+   * arrivent à quelques millisecondes d'écart : comparer à l'état rendu, c'est
+   * redemander un état qu'on vient d'appliquer.
+   */
+  const knownVersionRef = useRef<number | null>(null)
+  /** Actions joueur en vol (POST /action), cf. beginGameAction/endGameAction. */
+  const actionsInFlightRef = useRef(0)
+  /**
+   * `changed` reçu pendant une action en vol : rafraîchissement mis en attente
+   * de la réponse (qui porte la vue), borné par DEFERRED_REFRESH_MAX_MS.
+   */
+  const deferredRefreshRef = useRef<{
+    stateVersion: number
+    timer: ReturnType<typeof setTimeout>
+  } | null>(null)
+  /**
+   * Numéros de séquence de refreshRoom : le dernier PARTI et le dernier
+   * APPLIQUÉ. Un GET /rooms/{id} parti avant une relance et revenu après
+   * celui que son `changed` a déclenché réécrivait la partie terminée (v9)
+   * par-dessus la nouvelle (v1) — et le tick qui corrigeait ça est passé de
+   * 1,5 s à 15 s. Comparer les versions ne suffit pas : la relance repart à
+   * 1, le DTO périmé porte la version la plus GRANDE. Dernier parti gagne.
+   */
+  const roomRefreshSeqRef = useRef(0)
+  const roomRefreshAppliedRef = useRef(0)
 
   roomRef.current = room
   userIdRef.current = user?.id
+  knownVersionRef.current = room?.stateVersion ?? null
 
   /** Traduit le code d'erreur renvoyé par l'API (onlineLobby.errors) ;
    *  texte brut si valeur inconnue, clé de secours si champ absent.
@@ -119,14 +156,24 @@ export function useOnlineRoomState() {
 
   const refreshRoom = useCallback(async (roomId: string) => {
     if (leavingRoomIdRef.current === roomId) return null
+    const seq = ++roomRefreshSeqRef.current
+    /** Un refreshRoom plus récent a déjà répondu : cette réponse est périmée. */
+    const superseded = () => seq < roomRefreshAppliedRef.current
     try {
       const res = await fetch(`/api/online/rooms/${roomId}`, { credentials: 'include' })
       if (leavingRoomIdRef.current === roomId) return null
+      if (superseded()) return null
       if (!res.ok) {
-        if (res.status === 403 || res.status === 404) handleRoomGone(res.status)
+        if (res.status === 403 || res.status === 404) {
+          roomRefreshAppliedRef.current = seq
+          handleRoomGone(res.status)
+        }
         return null
       }
       const data = await parseApiJson<{ room?: RoomDto }>(res)
+      // Relu après la lecture du corps : un plus récent a pu répondre entre-temps.
+      if (superseded()) return null
+      roomRefreshAppliedRef.current = seq
       setRoom(data.room ?? null)
       return data.room as RoomDto | null
     } catch {
@@ -137,6 +184,9 @@ export function useOnlineRoomState() {
   /** Polling léger — uniquement l'état de partie (plus rapide qu'un refresh complet) */
   const refreshGameState = useCallback(async (roomId: string) => {
     if (leavingRoomIdRef.current === roomId) return null
+    // Version connue AU DÉPART de la requête : si elle a bougé à l'arrivée,
+    // la réponse a pu se faire doubler (cf. mergePolledState).
+    const knownAtRequest = knownVersionRef.current
     try {
       const res = await fetch(`/api/online/rooms/${roomId}/state`, { credentials: 'include' })
       if (leavingRoomIdRef.current === roomId) return null
@@ -149,37 +199,17 @@ export function useOnlineRoomState() {
         currentTurnUserId: string | null
         gameStateJson: string | null
       }>(res)
-      setRoom((prev) => {
-        if (!prev || prev.id !== roomId) return prev
-        if (
-          prev.stateVersion === data.stateVersion &&
-          prev.gameStateJson === data.gameStateJson &&
-          prev.currentTurnUserId === data.currentTurnUserId
-        ) {
-          return prev
-        }
-        return {
-          ...prev,
-          stateVersion: data.stateVersion,
-          gameStateJson: data.gameStateJson,
-          currentTurnUserId: data.currentTurnUserId,
-        }
-      })
+      // La version connue suit tout de suite (sans attendre le rendu) : la
+      // trame SSE de cet état peut arriver juste derrière la réponse.
+      if (mergePolledState(roomRef.current, roomId, data, knownAtRequest) !== roomRef.current) {
+        knownVersionRef.current = data.stateVersion
+      }
+      setRoom((prev) => mergePolledState(prev, roomId, data, knownAtRequest))
       return data
     } catch {
       return null
     }
   }, [handleRoomGone])
-
-  const getPollDelay = useCallback((r: RoomDto | null) => {
-    if (!r) return POLL_IDLE_MS
-    if (r.status !== 'playing') return POLL_LOBBY_MS
-    const uid = userIdRef.current
-    if (uid && r.currentTurnUserId && r.currentTurnUserId !== uid) {
-      return POLL_PLAYING_WAIT_MS
-    }
-    return POLL_PLAYING_ACTIVE_MS
-  }, [])
 
   const pollTick = useCallback(async () => {
     const r = roomRef.current
@@ -199,9 +229,29 @@ export function useOnlineRoomState() {
     }
   }, [fetchRoom, refreshRoom, refreshGameState])
 
+  /**
+   * Sondage déclenché par un ÉVÉNEMENT (flux SSE, attente soldée) — jamais
+   * sur un onglet caché : le sondage y est suspendu (pollEnabledRef), et le
+   * retour au premier plan refait un fetchRoom complet qui rattrape tout.
+   * Sans ce verrou, chaque coup de bot poussé par le flux coûtait un GET à
+   * un téléphone dans la poche — celui-là même que la boucle suspendue
+   * économisait.
+   */
+  const pollTickIfVisible = useCallback(() => {
+    if (!pollEnabledRef.current) return
+    void pollTick()
+  }, [pollTick])
+
+  /**
+   * (Re)planifie le prochain tick. Appelé à chaque changement de salle, de
+   * tour, de version — et à chaque bascule du flux SSE : la cadence est relue
+   * ICI, donc un flux qui tombe ramène le sondage à 1,5 s tout de suite, sans
+   * attendre la fin d'un délai de 15 s.
+   */
   const schedulePoll = useCallback(() => {
     if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
-    const delay = getPollDelay(roomRef.current)
+    if (!pollEnabledRef.current) return
+    const delay = pollDelayMs(roomRef.current, userIdRef.current, streamAliveRef.current)
     pollTimerRef.current = setTimeout(async () => {
       // Un raté réseau ponctuel (Wi-Fi qui coupe, onglet mis en veille…) ne
       // doit JAMAIS arrêter la boucle : sans ce filet, une seule requête en
@@ -215,7 +265,53 @@ export function useOnlineRoomState() {
         schedulePoll()
       }
     }, delay)
-  }, [getPollDelay, pollTick])
+  }, [pollTick])
+
+  /**
+   * Rafraîchissement mis en attente pendant une action : on le solde — par un
+   * sondage si la version annoncée n'est toujours pas celle qu'on connaît
+   * (l'événement n'était pas l'écho de notre action), par rien sinon.
+   */
+  const resolveDeferredRefresh = useCallback(() => {
+    const deferred = deferredRefreshRef.current
+    if (!deferred) return
+    clearTimeout(deferred.timer)
+    deferredRefreshRef.current = null
+    if (deferred.stateVersion !== knownVersionRef.current) pollTickIfVisible()
+  }, [pollTickIfVisible])
+
+  /**
+   * Applique une vue renvoyée par le serveur (réponse de POST /action), sans
+   * repasser par GET /state. Même garde de version que le sondage : jamais de
+   * retour en arrière (cf. mergeServerView). La version connue est relevée
+   * tout de suite pour que l'écho SSE de cette action soit reconnu comme tel.
+   */
+  const applyServerView = useCallback((view: ServerView) => {
+    if (leavingRoomIdRef.current === view.roomId) return
+    if (mergeServerView(roomRef.current, view) !== roomRef.current) {
+      knownVersionRef.current = view.stateVersion
+    }
+    setRoom((prev) => mergeServerView(prev, view))
+  }, [])
+
+  /**
+   * Encadrement d'une action joueur (useGameAction). Entre les deux appels,
+   * un `changed` du flux n'est pas sondé mais mis en attente : c'est presque
+   * toujours l'écho de l'action, et sa réponse apporte la vue. À la fin, la
+   * vue est appliquée (si la réponse en porte une) et l'attente est soldée.
+   */
+  const beginGameAction = useCallback(() => {
+    actionsInFlightRef.current += 1
+  }, [])
+
+  const endGameAction = useCallback(
+    (view: ServerView | null) => {
+      actionsInFlightRef.current = Math.max(0, actionsInFlightRef.current - 1)
+      if (view) applyServerView(view)
+      if (actionsInFlightRef.current === 0) resolveDeferredRefresh()
+    },
+    [applyServerView, resolveDeferredRefresh]
+  )
 
   const createRoom = useCallback(
     async (gameId: string, options?: { visibility?: 'public' | 'private' }) => {
@@ -496,13 +592,18 @@ export function useOnlineRoomState() {
   useEffect(() => {
     if (!user || user.playMode !== 'online' || !visible) {
       if (!user || user.playMode !== 'online') setRoom(null)
+      pollEnabledRef.current = false
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
       return
     }
 
+    pollEnabledRef.current = true
     void fetchRoom().then(() => schedulePoll())
 
     return () => {
+      // Le verrou tombe AVANT le timer : un fetchRoom encore en vol ne doit
+      // pas replanifier un tick sur un onglet passé en arrière-plan.
+      pollEnabledRef.current = false
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
     }
   }, [user, user?.playMode, visible, fetchRoom, schedulePoll])
@@ -513,24 +614,128 @@ export function useOnlineRoomState() {
     schedulePoll()
   }, [room?.status, room?.currentTurnUserId, room?.stateVersion, user, user?.playMode, visible, schedulePoll])
 
-  /** Temps réel : SSE pousse les changements ; on rafraîchit immédiatement (polling = secours) */
+  /**
+   * Temps réel : SSE pousse les changements ; on rafraîchit immédiatement
+   * (polling = secours). La route émet `ready` en premier, puis `changed` /
+   * `lobby` / `finished` (data = RoomEvent en JSON), et un événement `ping`
+   * toutes les STREAM_HEARTBEAT_MS (cf. api/online/rooms/[roomId]/stream).
+   * Onglet caché, aucun handler ne sonde (cf. pollTickIfVisible).
+   */
   useEffect(() => {
     const roomId = room?.id
     if (!roomId || !user || user.playMode !== 'online') return
     if (typeof window === 'undefined' || typeof EventSource === 'undefined') return
 
     const es = new EventSource(`/api/online/rooms/${roomId}/stream`)
-    const onEvent = () => {
-      void pollTick()
+    // Le flux a-t-il été perdu depuis la dernière ouverture ? Une reconnexion
+    // n'a pas de rattrapage côté serveur (pas de Last-Event-ID) : ce qui a
+    // bougé entre le dernier sondage serré et le `ready` serait perdu.
+    let lost = false
+    // Chien de garde : un flux « zombie » (Wi-Fi → 4G, coupure TCP que l'OS
+    // met des minutes à voir) ne produit ni `error` ni événement. Passé
+    // STREAM_WATCHDOG_MS sans rien recevoir — le `ping` serveur compris —, on
+    // le tient pour mort : la cadence serrée reprend en ~50 s au lieu de
+    // dépendre de l'OS. Le prochain événement reçu (ping, ou `ready` de la
+    // reconnexion) le ramène à la cadence longue.
+    let watchdog: ReturnType<typeof setTimeout> | null = null
+    const armWatchdog = () => {
+      if (watchdog) clearTimeout(watchdog)
+      watchdog = setTimeout(() => {
+        watchdog = null
+        if (!streamAliveRef.current) return
+        streamAliveRef.current = false
+        schedulePoll()
+      }, STREAM_WATCHDOG_MS)
     }
-    es.addEventListener('changed', onEvent)
-    es.addEventListener('lobby', onEvent)
-    es.addEventListener('finished', onEvent)
+    // Un événement, quel qu'il soit, prouve que le flux vit : cadence longue.
+    const markAlive = () => {
+      armWatchdog()
+      if (streamAliveRef.current) return
+      streamAliveRef.current = true
+      schedulePoll()
+    }
+    // `ready` est le premier message du serveur : il prouve que le flux est
+    // bel et bien établi (l'événement `open` de l'EventSource peut précéder
+    // un proxy qui coupe juste après). Le sondage passe à la cadence longue
+    // tout de suite. Le rattrapage attend un onglet visible — `lost` reste
+    // armé jusque-là (le retour au premier plan refait de toute façon un
+    // fetchRoom complet).
+    const onReady = () => {
+      markAlive()
+      if (lost && pollEnabledRef.current) {
+        lost = false
+        void pollTick()
+      }
+    }
+    // L'EventSource se reconnecte tout seul ; en attendant, le sondage
+    // reprend sa cadence serrée — sans attendre la fin du délai en cours.
+    const onError = () => {
+      lost = true
+      if (watchdog) clearTimeout(watchdog)
+      watchdog = null
+      if (!streamAliveRef.current) return
+      streamAliveRef.current = false
+      schedulePoll()
+    }
+    const onChanged = (e: Event) => {
+      markAlive()
+      const decision = roomEventDecision({
+        type: 'changed',
+        data: (e as MessageEvent).data,
+        knownVersion: knownVersionRef.current,
+        actionInFlight: actionsInFlightRef.current > 0,
+      })
+      if (decision.kind === 'ignore') return
+      if (decision.kind === 'defer') {
+        if (deferredRefreshRef.current) clearTimeout(deferredRefreshRef.current.timer)
+        deferredRefreshRef.current = {
+          stateVersion: decision.stateVersion,
+          timer: setTimeout(resolveDeferredRefresh, DEFERRED_REFRESH_MAX_MS),
+        }
+        return
+      }
+      pollTickIfVisible()
+    }
+    const onLobby = () => {
+      markAlive()
+      pollTickIfVisible()
+    }
+    // Fin de partie : le DTO COMPLET tout de suite — il porte les niveaux et
+    // l'XP des membres que recordMatchResults vient d'écrire (OnlinePlayerTag
+    // les lit dans room.members). pollTick, lui, ne prend la branche complète
+    // qu'une fois la vue LOCALE finie, c'est-à-dire au tick suivant : 15 s
+    // flux vivant, là où c'était 1,5 s avant le chantier.
+    const onFinished = () => {
+      markAlive()
+      if (!pollEnabledRef.current) return
+      void refreshRoom(roomId)
+    }
+    es.addEventListener('ready', onReady)
+    es.addEventListener('ping', markAlive)
+    es.addEventListener('changed', onChanged)
+    es.addEventListener('lobby', onLobby)
+    es.addEventListener('finished', onFinished)
+    es.addEventListener('error', onError)
 
     return () => {
+      streamAliveRef.current = false
+      if (watchdog) clearTimeout(watchdog)
+      if (deferredRefreshRef.current) {
+        clearTimeout(deferredRefreshRef.current.timer)
+        deferredRefreshRef.current = null
+      }
       es.close()
     }
-  }, [room?.id, user, user?.playMode, pollTick])
+  }, [
+    room?.id,
+    user,
+    user?.playMode,
+    pollTick,
+    pollTickIfVisible,
+    refreshRoom,
+    schedulePoll,
+    resolveDeferredRefresh,
+  ])
 
   return {
     room,
@@ -550,6 +755,9 @@ export function useOnlineRoomState() {
     fetchRoom,
     refreshRoom,
     refreshGameState,
+    applyServerView,
+    beginGameAction,
+    endGameAction,
   }
 }
 

@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
 
@@ -160,6 +161,8 @@ export async function PUT(request: Request, { params }: Params) {
     where: { id: roomId },
     data: { settingsJson: JSON.stringify(next), ...visibilityUpdate },
   })
+  // Un passage public ↔ privé/invitation change ce que le guichet liste.
+  invalidateLobbiesCache()
 
   publishRoomChanged(roomId, { type: 'lobby' })
 

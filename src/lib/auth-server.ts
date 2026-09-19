@@ -173,7 +173,10 @@ export async function getSessionFromToken(token: string | undefined): Promise<Va
   // Seuls les enregistrements legacy sans email ni statut invité sont rejetés.
   if (!user.isGuest && !user.email) return null
 
-  await clearExpiredBanIfNeeded(user.id)
+  // La ligne User est déjà chargée avec la session : on la passe telle quelle,
+  // sans relecture. Un ban temporaire échu est levé en base, et getBanState
+  // sur la ligne lue le voit déjà comme échu (échéance dépassée).
+  await clearExpiredBanIfNeeded(user)
   const ban = getBanState(user)
   if (ban.banned) {
     await prisma.session.delete({ where: { id: session.id } }).catch(() => {})

@@ -31,6 +31,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
+import { usePagePresence } from '@/hooks/usePagePresence'
+import { chatCursorQuery, mergeMessages } from '@/lib/chat-delta'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { Button } from '@/components/ui/button'
 import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
@@ -174,6 +176,7 @@ function TargetGrid({
   )
 }
 
+/** Cadence conservée : une relève en delta ne coûte presque rien au repos. */
 const GAME_CHAT_POLL_MS = 3000
 
 type GameChatMessage = {
@@ -194,6 +197,9 @@ type GameChatMessage = {
  *    même canal que le chat de salle du header. `canWrite=false` pour les
  *    fantômes (vue omnisciente : lecture seule, pas de spoil).
  * Le composant se fie au serveur (404/403 = rien ne s'affiche).
+ * Sondé déplié ET onglet au premier plan seulement ; chaque relève ne demande
+ * que le delta derrière le dernier message connu. `scope` est fixe par point
+ * de montage (la liste tenue en état n'est pas remise à zéro s'il changeait).
  */
 function GameChatPanel({
   open,
@@ -209,37 +215,46 @@ function GameChatPanel({
   canWrite?: boolean
 }) {
   const tChat = useTranslations('chat')
+  const visible = usePagePresence()
   const [messages, setMessages] = useState<GameChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
   const inFlightRef = useRef(false)
-  const lastIdRef = useRef<string | null>(null)
+  // Miroir de `messages` : le curseur se lit au moment de la requête sans
+  // recréer `fetchMessages` (et relancer l'intervalle) à chaque message.
+  const messagesRef = useRef<GameChatMessage[]>([])
 
   const fetchMessages = useCallback(async () => {
     if (inFlightRef.current) return
     inFlightRef.current = true
     try {
-      const res = await fetch(`/api/chat/messages?scope=${scope}`, { credentials: 'include' })
+      const res = await fetch(`/api/chat/messages?scope=${scope}${chatCursorQuery(messagesRef.current)}`, {
+        credentials: 'include',
+      })
       if (!res.ok) return
       const data = await res.json()
-      const next: GameChatMessage[] = Array.isArray(data?.messages) ? data.messages : []
-      const nextLastId = next[next.length - 1]?.id ?? null
-      if (nextLastId !== lastIdRef.current) {
-        lastIdRef.current = nextLastId
-        setMessages(next)
-      }
+      const incoming: GameChatMessage[] = Array.isArray(data?.messages) ? data.messages : []
+      // Rien de neuf : pas de rendu — le cas courant d'une relève.
+      if (incoming.length === 0) return
+      const merged = mergeMessages(messagesRef.current, incoming)
+      // Tout déjà connu (recouvrement du curseur, cf. la route) : idem.
+      if (merged === messagesRef.current) return
+      messagesRef.current = merged
+      setMessages(merged)
     } finally {
       inFlightRef.current = false
     }
   }, [scope])
 
   useEffect(() => {
-    if (!open) return
+    // Replié ou onglet caché : pas de sondage. Au retour, relève immédiate
+    // qui ne coûte que le delta accumulé pendant l'absence (voir usePagePresence).
+    if (!open || !visible) return
     void fetchMessages()
     const timer = setInterval(fetchMessages, GAME_CHAT_POLL_MS)
     return () => clearInterval(timer)
-  }, [open, fetchMessages])
+  }, [open, visible, fetchMessages])
 
   useEffect(() => {
     const el = listRef.current

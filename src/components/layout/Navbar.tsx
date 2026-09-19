@@ -1,24 +1,86 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, ShieldAlert, Star } from 'lucide-react'
-import { useState, useEffect, useMemo } from 'react'
+import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, ShieldAlert, Star, Loader2 } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
-import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { isCapacitorApp } from '@/lib/native-app'
-import { useFriends } from '@/hooks/useFriends'
-import { useChatUnread } from '@/hooks/useChatUnread'
+import { useFriends, type Friend } from '@/hooks/useFriends'
+import { useNavBadges } from '@/hooks/useNavBadges'
+import type { ChatUnread } from '@/hooks/useChatUnread'
 import { canAccessSupervision } from '@/lib/roles'
 import { usePageMeta } from '@/lib/nav-meta'
 import { useFullscreen } from '@/hooks/useFullscreen'
-import { FeedbackDialog, FeedbackMenuButton } from '@/components/feedback/FeedbackDialog'
+import { FeedbackMenuButton } from '@/components/feedback/FeedbackMenuButton'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
-import { FriendsPanel } from '@/components/layout/FriendsPanel'
-import { ChatPanel } from '@/components/chat/ChatPanel'
 import { BrandMark } from '@/components/brand/BrandLogo'
 import { openAnalyticsConsent } from '@/components/legal/AgeGate'
 import { cn } from '@/lib/utils'
+
+/**
+ * Panneaux amis / chat et dialogue de retour — chargés À LA DEMANDE.
+ *
+ * La barre est dans le layout, donc sur TOUTES les pages (vitrine, règles,
+ * compte) : importés en dur, les deux panneaux embarquaient framer-motion,
+ * le gestionnaire d'amis et le dialogue de signalement dans le premier
+ * chargement de chaque visiteur, pour des surcouches qu'il n'ouvrira peut-être
+ * jamais. En morceaux séparés, ils ne sont réclamés qu'à la première
+ * ouverture (voir SocialPanels, même style que VoiceDock dans games/layout).
+ *
+ * `ssr: false` : surcouches flottantes fermées au premier rendu — aucun
+ * contenu serveur à préserver, rien ne peut sauter.
+ */
+
+/**
+ * Voile affiché le temps de télécharger un panneau, à sa PREMIÈRE ouverture :
+ * sur mobile, le tiroir se referme avant que le morceau n'arrive et, sans ce
+ * voile, rien ne répondait au tap tant que le réseau n'avait pas livré (sur
+ * desktop, le bouton de la barre passe en style actif ; pas dans le tiroir).
+ * Sans framer-motion, sur le même plan que les surcouches des panneaux.
+ */
+function PanelLoading() {
+  const t = useTranslations('nav')
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={t('loading')}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+    >
+      <Loader2 className="h-6 w-6 animate-spin text-white/70" aria-hidden />
+    </div>
+  )
+}
+
+const FriendsPanel = dynamic(
+  () => import('@/components/layout/FriendsPanel').then((m) => m.FriendsPanel),
+  { ssr: false, loading: PanelLoading }
+)
+const FeedbackDialog = dynamic(
+  () => import('@/components/feedback/FeedbackDialog').then((m) => m.FeedbackDialog),
+  { ssr: false, loading: PanelLoading }
+)
+
+/**
+ * Contrat avec ChatPanel (chantier « chat en delta ») : il ne charge plus sa
+ * liste d'amis lui-même — la barre lui passe la sienne, celle du panneau
+ * amis, et de quoi la relire. Le type est déclaré ici pour que la barre
+ * compile des deux côtés du chantier ; tsc signale toute divergence.
+ */
+type ChatPanelProps = {
+  open: boolean
+  onClose: () => void
+  unread: ChatUnread
+  onRead: () => void
+  friends: Friend[]
+  refreshFriends: () => Promise<void> | void
+}
+const ChatPanel = dynamic<ChatPanelProps>(
+  () => import('@/components/chat/ChatPanel').then((m) => m.ChatPanel),
+  { ssr: false, loading: PanelLoading }
+)
 
 const NAV_LINK_KEYS = [
   { href: '/joueurs', key: 'joueurs', icon: User },
@@ -48,12 +110,16 @@ export default function Navbar() {
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const { user } = useAuth()
-  // Progression visible en navigation : un fetch léger au montage (silencieux
-  // en erreur — la pastille ne s'affiche alors pas), rien pour les visiteurs.
-  const { progression } = useOnlineProgression()
-  const { friends, refresh: refreshFriendsBadge } = useFriends()
-  const { unread, refresh: refreshUnread } = useChatUnread()
-  const onlineFriendsCount = friends.filter((f) => f.isOnline).length
+  // Tout ce que la barre affiche (non-lus, amis en ligne, niveau, joueurs
+  // actifs) arrive en UNE requête, sondée à 60 s onglet visible seulement ;
+  // silencieux en erreur — la pastille ne s'affiche alors pas.
+  const {
+    unread,
+    friendsOnline: onlineFriendsCount,
+    progression,
+    presenceCount: activeCount,
+    refresh: refreshBadges,
+  } = useNavBadges()
   const pathname = usePathname()
   const pageMeta = usePageMeta(pathname)
   const { isFullscreen, isSupported: fsSupported, toggleFullscreen } = useFullscreen()
@@ -63,28 +129,22 @@ export default function Navbar() {
     setInApp(isCapacitorApp())
   }, [])
 
-  // Joueurs actifs sur le site (fenêtre 2 min, cache serveur 15 s) : un fetch
-  // au montage puis toutes les 60 s, silencieux en erreur.
-  const [activeCount, setActiveCount] = useState<number | null>(null)
+  // Chaque panneau (et le dialogue) est monté à SA première ouverture
+  // seulement — son code n'est pas même téléchargé avant, et ouvrir le chat
+  // ne doit pas télécharger le panneau amis —, puis laissé en place : il
+  // garde son état (conversation ouverte, brouillon) d'une fois à l'autre.
+  const [friendsMounted, setFriendsMounted] = useState(false)
   useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      try {
-        const res = await fetch('/api/presence/count', { credentials: 'include' })
-        if (!res.ok) return
-        const json = (await res.json()) as { count?: number }
-        if (!cancelled && typeof json.count === 'number') setActiveCount(json.count)
-      } catch {
-        // réseau : on garde la dernière valeur
-      }
-    }
-    void load()
-    const timer = setInterval(load, 60_000)
-    return () => {
-      cancelled = true
-      clearInterval(timer)
-    }
-  }, [])
+    if (friendsOpen) setFriendsMounted(true)
+  }, [friendsOpen])
+  const [chatMounted, setChatMounted] = useState(false)
+  useEffect(() => {
+    if (chatOpen) setChatMounted(true)
+  }, [chatOpen])
+  const [feedbackMounted, setFeedbackMounted] = useState(false)
+  useEffect(() => {
+    if (feedbackOpen) setFeedbackMounted(true)
+  }, [feedbackOpen])
 
   const links = useMemo((): NavLinkItem[] => {
     const base: NavLinkItem[] = NAV_LINK_KEYS.filter(
@@ -171,7 +231,7 @@ export default function Navbar() {
               aria-label={t('manageFriends')}
               onClick={() => {
                 setFriendsOpen((v) => {
-                  if (v) void refreshFriendsBadge()
+                  if (v) void refreshBadges()
                   return !v
                 })
               }}
@@ -472,27 +532,90 @@ export default function Navbar() {
         </div>
       </aside>
 
-      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+      {feedbackMounted && <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />}
 
-      {user && (
-        <FriendsPanel
-          open={friendsOpen}
-          onClose={() => {
+      {user && (friendsMounted || chatMounted) && (
+        <SocialPanels
+          friendsMounted={friendsMounted}
+          chatMounted={chatMounted}
+          friendsOpen={friendsOpen}
+          chatOpen={chatOpen}
+          onCloseFriends={() => {
             setFriendsOpen(false)
-            void refreshFriendsBadge()
+            void refreshBadges()
           }}
-        />
-      )}
-
-      {user && (
-        <ChatPanel
-          open={chatOpen}
-          onClose={() => {
+          onCloseChat={() => {
             setChatOpen(false)
-            void refreshUnread()
+            void refreshBadges()
           }}
           unread={unread}
-          onRead={refreshUnread}
+          onRead={refreshBadges}
+        />
+      )}
+    </>
+  )
+}
+
+/**
+ * Panneaux amis + chat, et la SEULE liste d'amis de la barre. Elle vivait à
+ * la racine de la barre — donc chargée sur chaque page, pour un compte que
+ * /api/me/nav sert déjà — et le chat en rechargeait une deuxième à lui. Ici,
+ * elle ne part qu'à la première ouverture d'un des deux panneaux, et les deux
+ * lisent la même. Chaque panneau n'est rendu (donc téléchargé) qu'une fois
+ * ouvert au moins une fois — `friendsMounted` / `chatMounted`.
+ */
+function SocialPanels({
+  friendsMounted,
+  chatMounted,
+  friendsOpen,
+  chatOpen,
+  onCloseFriends,
+  onCloseChat,
+  unread,
+  onRead,
+}: {
+  friendsMounted: boolean
+  chatMounted: boolean
+  friendsOpen: boolean
+  chatOpen: boolean
+  onCloseFriends: () => void
+  onCloseChat: () => void
+  unread: ChatUnread
+  onRead: () => void
+}) {
+  // Un seul état d'amis pour le panneau amis (gestionnaire compris), le chat
+  // et « Inviter à ma table » : une mutation dans le gestionnaire se voit
+  // partout sans relecture.
+  const friendsState = useFriends()
+  const { friends, refresh: refreshFriends } = friendsState
+
+  // Liste relue à chaque réouverture (pas à la première : le hook vient de la
+  // charger) — les amis ne sont pas sondés, c'est le seul moment où un statut
+  // en ligne ou une demande reçue entre-temps peut se rafraîchir.
+  const anyOpen = friendsOpen || chatOpen
+  const firstOpenRef = useRef(true)
+  useEffect(() => {
+    if (!anyOpen) return
+    if (firstOpenRef.current) {
+      firstOpenRef.current = false
+      return
+    }
+    void refreshFriends()
+  }, [anyOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <>
+      {friendsMounted && (
+        <FriendsPanel open={friendsOpen} onClose={onCloseFriends} friendsState={friendsState} />
+      )}
+      {chatMounted && (
+        <ChatPanel
+          open={chatOpen}
+          onClose={onCloseChat}
+          unread={unread}
+          onRead={onRead}
+          friends={friends}
+          refreshFriends={refreshFriends}
         />
       )}
     </>

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto, deleteRoomIfEmpty } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { canJoinInviteRoom } from '@/lib/online/room-invites'
 import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
           where: { id: room.id },
           data: { gameStateJson: rejoinedJson, stateVersion: room.stateVersion + 1 },
         })
+        // L'effectif de la partie en cours (liveGames) vient de changer.
+        invalidateLobbiesCache()
         publishRoomChanged(room.id, { type: 'changed', stateVersion: room.stateVersion + 1 })
         const dto = await buildRoomDto(room.id, user.id)
         return NextResponse.json({ room: dto })
@@ -101,6 +104,8 @@ export async function POST(request: Request) {
     })
   }
 
+  // Effectif et liste des membres (isReady) sont affichés au guichet.
+  invalidateLobbiesCache()
   publishRoomChanged(room.id, { type: 'lobby' })
 
   const dto = await buildRoomDto(room.id, user.id)

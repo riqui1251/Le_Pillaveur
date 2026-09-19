@@ -7,9 +7,25 @@ import { Input } from '@/components/ui/input'
 import { useFriends } from '@/hooks/useFriends'
 import { cn } from '@/lib/utils'
 
+/**
+ * Ce que le gestionnaire consomme de useFriends — pour qu'un parent qui
+ * possède déjà cet état (le panneau de la barre le partage avec le chat et
+ * « Inviter à ma table ») le lui passe au lieu d'en charger un second.
+ */
+export type FriendsManagerState = Pick<
+  ReturnType<typeof useFriends>,
+  'friends' | 'incoming' | 'outgoing' | 'error' | 'sendRequest' | 'acceptRequest' | 'declineRequest' | 'removeFriend'
+>
+
 interface FriendsManagerProps {
   /** Espacements resserrés pour un usage dans une fenêtre/popover plutôt que la page Compte. */
   compact?: boolean
+  /**
+   * État d'amis fourni par le parent. Absent, le gestionnaire charge le sien
+   * (page Compte). Présent, plus de doublon : ouvrir le panneau amis lançait
+   * /api/friends et /api/friends/requests deux fois, une par hook.
+   */
+  state?: FriendsManagerState
 }
 
 /**
@@ -17,10 +33,47 @@ interface FriendsManagerProps {
  * composant partagé entre la page Compte et le panneau Amis du header,
  * pour éviter de dupliquer la même logique à deux endroits.
  */
-export function FriendsManager({ compact = false }: FriendsManagerProps) {
+export function FriendsManager({ compact = false, state }: FriendsManagerProps) {
+  // Un hook ne s'appelle pas sous condition : la variante autonome vit dans
+  // son propre composant.
+  return state ? (
+    <FriendsManagerView compact={compact} {...state} />
+  ) : (
+    <OwnedFriendsManager compact={compact} />
+  )
+}
+
+/** Variante autonome : son état vient de son propre useFriends. */
+function OwnedFriendsManager({ compact }: { compact: boolean }) {
+  const { friends, incoming, outgoing, error, sendRequest, acceptRequest, declineRequest, removeFriend } = useFriends()
+  return (
+    <FriendsManagerView
+      compact={compact}
+      friends={friends}
+      incoming={incoming}
+      outgoing={outgoing}
+      error={error}
+      sendRequest={sendRequest}
+      acceptRequest={acceptRequest}
+      declineRequest={declineRequest}
+      removeFriend={removeFriend}
+    />
+  )
+}
+
+function FriendsManagerView({
+  compact,
+  friends,
+  incoming,
+  outgoing,
+  error,
+  sendRequest,
+  acceptRequest,
+  declineRequest,
+  removeFriend,
+}: FriendsManagerState & { compact: boolean }) {
   const tFriends = useTranslations('account.friends')
   const tCommon = useTranslations('common')
-  const { friends, incoming, outgoing, error, sendRequest, acceptRequest, declineRequest, removeFriend } = useFriends()
   const [codeInput, setCodeInput] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)

@@ -8,7 +8,19 @@ import { usePagePresence } from '@/hooks/usePagePresence'
 
 const POLL_MS = 4000
 
-export function useOpenLobbies() {
+type OpenLobbiesOptions = {
+  /**
+   * Cadence du sondage de /api/online/lobbies. 4 s par défaut : le guichet
+   * (OpenLobbiesList), où le joueur choisit sa table. Un écran qui sonde déjà
+   * sa propre table à part (le lobby d'un jeu : /rooms/[id] toutes les 25 s
+   * flux SSE vivant, 2 s flux mort) n'a pas besoin de cette fraîcheur pour
+   * ses compteurs « N tables ailleurs » et espace le sondage (15 s) — un
+   * joueur qui attend ses amis ne doit pas coûter deux requêtes en une.
+   */
+  pollMs?: number
+}
+
+export function useOpenLobbies({ pollMs = POLL_MS }: OpenLobbiesOptions = {}) {
   const { user } = useAuth()
   // Le sondage ne dépend que de l'identité et du mode de jeu : l'objet `user`
   // change de référence à chaque rafraîchissement de session, pas ces deux-là.
@@ -52,7 +64,7 @@ export function useOpenLobbies() {
             return prevJson === nextJson ? prev : next
           })
           // Même garde d'identité que pour les lobbys : le poll tourne toutes
-          // les 4 s, on évite de re-rendre le guichet quand rien n'a bougé.
+          // les 4 s au guichet, on évite de le re-rendre quand rien n'a bougé.
           const nextLive = Array.isArray(data?.liveGames) ? data.liveGames : []
           setLiveGames((prev) => (JSON.stringify(prev) === JSON.stringify(nextLive) ? prev : nextLive))
           setLiveGamesTotal(typeof data?.liveGamesTotal === 'number' ? data.liveGamesTotal : 0)
@@ -86,11 +98,11 @@ export function useOpenLobbies() {
     if (!visible) return
 
     void fetchLobbies()
-    pollRef.current = setInterval(fetchLobbies, POLL_MS)
+    pollRef.current = setInterval(fetchLobbies, pollMs)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [userId, playMode, visible])
+  }, [userId, playMode, visible, pollMs])
 
   const refresh = async () => {
     if (!userId || playMode !== 'online' || inFlightRef.current) return

@@ -1,16 +1,18 @@
 import { getCurrentUser } from '@/lib/auth-server'
 import { prisma } from '@/lib/prisma'
 import { subscribeRoom, subscribeRtc } from '@/lib/online/room-bus'
+import { STREAM_HEARTBEAT_MS } from '@/hooks/online-room-polling'
 
 export const dynamic = 'force-dynamic'
 
 type Params = { params: Promise<{ roomId: string }> }
 
-const HEARTBEAT_MS = 25_000
-
 /**
  * Flux SSE des changements d'une salle. Pousse un événement `changed` à chaque
- * mutation d'état, plus un commentaire keep-alive régulier. Le client (EventSource)
+ * mutation d'état, plus un événement `ping` régulier — un VRAI événement, pas
+ * un commentaire SSE : l'API EventSource ne remonte jamais un commentaire au
+ * script, et le client s'en sert de chien de garde pour repérer un flux mort
+ * en silence (cf. STREAM_WATCHDOG_MS, useOnlineRoom). Le client (EventSource)
  * se ré-abonne automatiquement en cas de coupure ; un polling de secours reste actif.
  */
 export async function GET(request: Request, { params }: Params) {
@@ -55,8 +57,8 @@ export async function GET(request: Request, { params }: Params) {
       })
 
       const heartbeat = setInterval(() => {
-        safeEnqueue(`: ping ${Date.now()}\n\n`)
-      }, HEARTBEAT_MS)
+        safeEnqueue('event: ping\ndata: {}\n\n')
+      }, STREAM_HEARTBEAT_MS)
 
       const cleanup = () => {
         if (closed) return

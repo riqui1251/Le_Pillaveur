@@ -14,7 +14,12 @@ export type ChatUnread = {
 
 const EMPTY: ChatUnread = { total: 0, room: 0, friends: {} }
 
-/** Compteur de messages de chat non lus (badge du header) — poll léger. */
+/**
+ * Compteur de messages de chat non lus — poll léger. Le badge de la barre ne
+ * passe plus par ici (useNavBadges reçoit les mêmes compteurs dans sa seule
+ * requête) ; le hook reste pour un écran qui ne voudrait que ça, et le type
+ * `ChatUnread` pour le panneau de chat.
+ */
 export function useChatUnread() {
   const { user } = useAuth()
   const visible = usePagePresence()

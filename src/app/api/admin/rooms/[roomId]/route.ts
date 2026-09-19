@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { canManageUsers } from '@/lib/roles'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { closeGameSessionBeforeRoomDelete } from '@/lib/online-room'
 import { logStaffAction } from '@/lib/supervision-overview-server'
 import { adminErrorResponse, requireRole } from '../../_guard'
@@ -39,6 +40,8 @@ export async function DELETE(
     // AVANT la suppression ; un échec du journal n'empêche pas de fermer la table.
     await closeGameSessionBeforeRoomDelete(room, 'staff')
     await prisma.onlineRoom.delete({ where: { id: roomId } })
+    // Une table ouverte vient de disparaître : le guichet en cache l'oublie.
+    invalidateLobbiesCache()
     // Le chat de salle n'a pas de FK vers la room : purge explicite.
     await prisma.chatMessage.deleteMany({ where: { channel: `room:${roomId}` } })
     publishRoomChanged(roomId, { type: 'lobby' })

@@ -248,22 +248,6 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
   )
 }
 
-export function FeedbackMenuButton({ onClick }: { onClick: () => void }) {
-  const t = useTranslations('feedback')
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
-    >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
-        <MessageCircle className="h-4 w-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium leading-none">{t('menuTitle')}</p>
-        <p className="mt-0.5 truncate text-[11px] opacity-50">{t('menuSubtitle')}</p>
-      </div>
-    </button>
-  )
-}
+// Le bouton du tiroir (FeedbackMenuButton) vit dans son propre fichier : la
+// barre l'importe en dur, et ce module ne doit être téléchargé qu'à la
+// première ouverture du dialogue (cf. Navbar).

@@ -411,7 +411,14 @@ const petitBuveurAdapter: GameAdapter = {
   currentActorId: (state) => currentPlayerId(state as EngineState),
   clientViewJson: (state) => JSON.stringify(toClientView(state as EngineState)),
   spectatorViewJson: (state) => JSON.stringify(toClientView(state as EngineState)),
-  actionResponse: (state) => ({ view: toClientView(state as EngineState) }),
+  // `viewJson` en plus de `view` : c'est la chaîne (identique à
+  // clientViewJson) que le client applique sans GET /state — sans elle le
+  // Petit Buveur restait sur le chemin sondage. `view` reste pour ses écrans,
+  // qui lisent l'objet directement.
+  actionResponse: (state) => {
+    const view = toClientView(state as EngineState)
+    return { view, viewJson: JSON.stringify(view) }
+  },
   markLeft: (state, userId, at) => markPlayerLeft(state as EngineState, userId, at),
   rejoin: (state, userId) => rejoinPlayer(state as EngineState, userId),
 }

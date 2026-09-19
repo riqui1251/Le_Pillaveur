@@ -6,11 +6,14 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Flag, Gamepad2, MessageCircle, Send, UserX, Users, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
-import { useFriends } from '@/hooks/useFriends'
+import type { Friend } from '@/hooks/useFriends'
+import { usePagePresence } from '@/hooks/usePagePresence'
 import type { ChatUnread } from '@/hooks/useChatUnread'
 import { ReportDialog, type ReportTarget } from '@/components/chat/ReportDialog'
+import { chatCursorQuery, mergeMessages } from '@/lib/chat-delta'
 import { cn } from '@/lib/utils'
 
+/** Cadence conservée : une relève en delta ne coûte presque rien au repos. */
 const POLL_MS = 3000
 
 type ChatMessage = {
@@ -25,7 +28,13 @@ type ChatMessage = {
 
 type ChatScope = { scope: 'room' } | { scope: 'friend'; friendUserId: string }
 
-/** Conversation (partie ou ami) : polling léger tant qu'elle est affichée. */
+/**
+ * Conversation (partie ou ami) : sondage léger tant qu'elle est affichée ET
+ * que l'onglet est au premier plan. Chaque relève ne demande que le delta
+ * derrière le dernier message connu, fondu dans la liste tenue en état.
+ * À monter avec une `key` par cible : changer de conversation remonte le
+ * composant, qui repart d'une liste vide et d'un chargement complet.
+ */
 function ChatConversation({
   target,
   onRead,
@@ -36,6 +45,7 @@ function ChatConversation({
   onReport: (report: ReportTarget) => void
 }) {
   const t = useTranslations('chat')
+  const visible = usePagePresence()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [noRoom, setNoRoom] = useState(false)
   const [draft, setDraft] = useState('')
@@ -45,7 +55,9 @@ function ChatConversation({
   const [sendError, setSendError] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
   const inFlightRef = useRef(false)
-  const lastIdRef = useRef<string | null>(null)
+  // Miroir de `messages` : le curseur se lit au moment de la requête sans
+  // recréer `fetchMessages` (et relancer l'intervalle) à chaque message.
+  const messagesRef = useRef<ChatMessage[]>([])
 
   const query =
     target.scope === 'room' ? 'scope=room' : `scope=friend&friend=${encodeURIComponent(target.friendUserId)}`
@@ -54,23 +66,28 @@ function ChatConversation({
     if (inFlightRef.current) return
     inFlightRef.current = true
     try {
-      const res = await fetch(`/api/chat/messages?${query}`, { credentials: 'include' })
+      const res = await fetch(`/api/chat/messages?${query}${chatCursorQuery(messagesRef.current)}`, {
+        credentials: 'include',
+      })
       if (res.status === 404) {
         setNoRoom(true)
+        messagesRef.current = []
         setMessages([])
         return
       }
       if (!res.ok) return
       setNoRoom(false)
       const data = await res.json()
-      const next: ChatMessage[] = Array.isArray(data?.messages) ? data.messages : []
-      const nextLastId = next[next.length - 1]?.id ?? null
-      if (nextLastId !== lastIdRef.current) {
-        lastIdRef.current = nextLastId
-        setMessages(next)
-        // Le serveur vient de marquer la conversation lue → rafraîchit le badge.
-        onRead?.()
-      }
+      const incoming: ChatMessage[] = Array.isArray(data?.messages) ? data.messages : []
+      // Rien de neuf : ni rendu, ni badge — le cas courant d'une relève.
+      if (incoming.length === 0) return
+      const merged = mergeMessages(messagesRef.current, incoming)
+      // Tout déjà connu (recouvrement du curseur, cf. la route) : idem.
+      if (merged === messagesRef.current) return
+      messagesRef.current = merged
+      setMessages(merged)
+      // Le serveur vient de marquer la conversation lue → rafraîchit le badge.
+      onRead?.()
     } finally {
       inFlightRef.current = false
     }
@@ -78,14 +95,14 @@ function ChatConversation({
   }, [query])
 
   useEffect(() => {
-    lastIdRef.current = null
-    setMessages([])
-    setNoRoom(false)
-    setSendError(null)
+    // Onglet caché : sondage suspendu, repris avec une relève immédiate au
+    // retour au premier plan (voir usePagePresence) — le curseur fait que
+    // cette relève ne coûte que le delta accumulé pendant l'absence.
+    if (!visible) return
     void fetchMessages()
     const timer = setInterval(fetchMessages, POLL_MS)
     return () => clearInterval(timer)
-  }, [fetchMessages])
+  }, [fetchMessages, visible])
 
   // Colle la liste en bas à chaque nouveau message.
   useEffect(() => {
@@ -228,15 +245,21 @@ interface ChatPanelProps {
   onClose: () => void
   unread?: ChatUnread
   onRead?: () => void
+  /**
+   * Liste d'amis et son rafraîchissement, fournis par la Navbar : elle tient
+   * déjà `useFriends()` pour son badge, un second abonnement ici doublait les
+   * requêtes /api/friends au montage de chaque page.
+   */
+  friends: Friend[]
+  refreshFriends: () => Promise<void> | void
 }
 
 /** Panneau de chat (bouton header) : onglet Partie (salle en cours) + onglet Amis (conversations privées). */
-export function ChatPanel({ open, onClose, unread, onRead }: ChatPanelProps) {
+export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFriends }: ChatPanelProps) {
   const t = useTranslations('chat')
   const tNav = useTranslations('nav')
   const { user } = useAuth()
   const tCommon = useTranslations('common')
-  const { friends, refresh: refreshFriends } = useFriends()
   const [tab, setTab] = useState<'game' | 'friends'>('game')
   const [friendId, setFriendId] = useState<string | null>(null)
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null)
@@ -407,14 +430,23 @@ export function ChatPanel({ open, onClose, unread, onRead }: ChatPanelProps) {
               </div>
             )}
 
+            {/* `key` par cible : les deux conversations occupent le même
+                emplacement, sans elle React réutiliserait l'instance (et sa
+                liste) en passant d'un ami à la partie. */}
             {activeFriend ? (
               <ChatConversation
+                key={`friend:${activeFriend.userId}`}
                 target={{ scope: 'friend', friendUserId: activeFriend.userId }}
                 onRead={onRead}
                 onReport={setReportTarget}
               />
             ) : tab === 'game' ? (
-              <ChatConversation target={{ scope: 'room' }} onRead={onRead} onReport={setReportTarget} />
+              <ChatConversation
+                key="room"
+                target={{ scope: 'room' }}
+                onRead={onRead}
+                onReport={setReportTarget}
+              />
             ) : friends.length === 0 ? (
               <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-white/40">
                 {t('noFriends')}

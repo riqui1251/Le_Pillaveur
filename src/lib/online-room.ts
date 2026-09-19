@@ -8,6 +8,7 @@ import { levelForXp } from '@/lib/online/cosmetics'
 import { parseBriefing, type RoomBriefing } from '@/lib/online/briefing'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { closeGameSession, closeGameSessionsOfPurgedRooms } from '@/lib/online/game-sessions'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 
 const ROOM_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 const ROOM_CODE_LENGTH = 6
@@ -219,6 +220,20 @@ export function stripEngineSecretForSpectator(gameId: string | null, json: strin
   return stripEngineSecret(json)
 }
 
+/**
+ * Ce qu'un DTO de salle lit d'un compte — et rien d'autre. `include: { user:
+ * true }` chargeait la ligne User ENTIÈRE de chaque membre (passwordHash,
+ * email, lastIp, bannissement…) à chaque sondage (alors toutes les 1,5-2 s
+ * par joueur) pour n'en garder que quatre champs : des données sensibles qui
+ * sortaient de la base pour rien. Toute nouvelle lecture s'ajoute ICI.
+ */
+const ROOM_MEMBER_USER_SELECT = {
+  displayName: true,
+  onlinePreferencesJson: true,
+  onlineXp: true,
+  role: true,
+} as const
+
 /** DTO minimal en LECTURE SEULE pour l'écran TV — pas de notion de « soi ». */
 export type TvRoomDto = {
   code: string
@@ -248,7 +263,7 @@ export async function buildTvRoomDto(code: string): Promise<TvRoomDto | null> {
   const room = await prisma.onlineRoom.findUnique({
     where: { code },
     include: {
-      members: { include: { user: true }, orderBy: { joinedAt: 'asc' } },
+      members: { include: { user: { select: ROOM_MEMBER_USER_SELECT } }, orderBy: { joinedAt: 'asc' } },
     },
   })
   if (!room) return null
@@ -279,7 +294,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     where: { id: roomId },
     include: {
       members: {
-        include: { user: true },
+        include: { user: { select: ROOM_MEMBER_USER_SELECT } },
         orderBy: { joinedAt: 'asc' },
       },
     },
@@ -342,10 +357,13 @@ export async function cleanupStaleWaitingRooms(): Promise<void> {
       // rafraîchissement de présence n'écrivent QUE sur OnlineRoomMember.
       // Un groupe qui met 6-8 min à se rassembler voyait donc sa table purgée
       // sous ses yeux dès qu'un visiteur ouvrait le hub (buildLobbyList).
-      // `lastSeenAt` est réécrit à chaque GET /rooms/[roomId] (poll ~2 s en
-      // lobby), /join et /ready : un seul onglet ouvert suffit à garder la
-      // table en vie. `none` couvre aussi le cas « aucun membre du tout »
-      // (salle vide → supprimée immédiatement, comme avant).
+      // `lastSeenAt` est rafraîchi par GET /rooms/[roomId] (au plus toutes
+      // les PRESENCE_WRITE_INTERVAL_MS, soit 30 s — sous le sondage de 25 s
+      // d'un lobby au flux SSE vivant, une réécriture toutes les ~50 s),
+      // /join et /ready : un seul onglet ouvert suffit à garder la table en
+      // vie, avec une marge de 4 min sous ce seuil. `none` couvre aussi le
+      // cas « aucun membre du tout » (salle vide → supprimée immédiatement,
+      // comme avant).
       members: { none: { lastSeenAt: { gte: cutoff } } },
     },
     select: { id: true, updatedAt: true },
@@ -359,6 +377,9 @@ export async function cleanupStaleWaitingRooms(): Promise<void> {
   // arrive).
   await closeGameSessionsOfPurgedRooms(prisma, stale)
   await prisma.onlineRoom.deleteMany({ where: { id: { in: ids } } })
+  // Des tables ouvertes viennent de disparaître : le guichet en cache doit
+  // les oublier avant son prochain lecteur.
+  invalidateLobbiesCache()
   // Notifie tout client encore branché en SSE sur une de ces salles (l'hôte
   // resté dans son lobby, par ex.) : il retombera aussitôt sur le Guichet.
   for (const id of ids) publishRoomChanged(id, { type: 'lobby' })
@@ -386,7 +407,9 @@ export async function cleanupStaleActiveRooms(): Promise<void> {
       // pendant une partie le poll client interroge GET /state, qui ne
       // rafraîchit PAS `lastSeenAt` — la présence seule sous-estimerait la vie
       // de la salle. `updatedAt`, lui, bouge à chaque coup joué. On exige donc
-      // les deux : aucune écriture d'état ET plus personne vu depuis 60 min.
+      // les deux : aucune écriture d'état ET plus personne vu depuis 60 min
+      // (la présence s'écrit au plus toutes les 30 s, PRESENCE_WRITE_INTERVAL_MS :
+      // sans conséquence à cette échelle).
       members: { none: { lastSeenAt: { gte: cutoff } } },
     },
     select: { id: true, updatedAt: true },
@@ -399,6 +422,8 @@ export async function cleanupStaleActiveRooms(): Promise<void> {
   // suppression, sans jamais faire échouer celle-ci.
   await closeGameSessionsOfPurgedRooms(prisma, stale)
   await prisma.onlineRoom.deleteMany({ where: { id: { in: ids } } })
+  // Le compteur de parties en cours du guichet vient de changer.
+  invalidateLobbiesCache()
   for (const id of ids) publishRoomChanged(id, { type: 'lobby' })
 }
 
@@ -496,10 +521,46 @@ export async function createUniqueRoomCode(): Promise<string> {
   throw new Error('Impossible de générer un code de salle')
 }
 
-export async function touchMemberPresence(roomId: string, userId: string): Promise<void> {
+/**
+ * Granularité d'écriture de la présence d'un membre (`lastSeenAt`).
+ *
+ * GET /rooms/[roomId] est sondé toutes les 25 s en lobby quand le flux SSE
+ * est vivant, toutes les 2 s quand il est mort (1,5 s en partie — cf.
+ * hooks/online-room-polling.ts) : réécrire `lastSeenAt` à chaque sondage
+ * faisait, aux cadences serrées, 5 transactions d'écriture SQLite par seconde
+ * pour 10 joueurs qui ne font qu'attendre. La présence ne sert qu'à des
+ * seuils de MINUTES — purge des tables ouvertes (5 min,
+ * cleanupStaleWaitingRooms), purge des parties (60 min,
+ * cleanupStaleActiveRooms), tables « figées » de Supervision (3/5/10 min,
+ * STALLED_MS) — et l'AFK se mesure sur `updatedAt` de la salle, pas ici.
+ * Retard maximal de `lastSeenAt` : 30 s + un sondage, soit au pire ~55 s en
+ * lobby flux vivant (le filtre ne laisse passer qu'un sondage de 25 s sur
+ * deux, donc une écriture toutes les ~50 s ; Supervision peut afficher
+ * jusqu'à ~55 s d'inactivité sur un lobby bien vivant). Le seuil le plus
+ * court (3 min) garde une marge de 2 min. Tout nouveau seuil lu sur
+ * `lastSeenAt` doit rester nettement au-dessus de cette valeur.
+ */
+export const PRESENCE_WRITE_INTERVAL_MS = 30 * 1000
+
+/**
+ * Rafraîchit la présence du membre — en base seulement si sa dernière trace
+ * date de plus de PRESENCE_WRITE_INTERVAL_MS. Le filtre est dans le `where` :
+ * un sondage qui n'a rien à écrire émet un UPDATE sans ligne touchée — un
+ * verrou d'écriture SQLite bref, mais aucune page écrite ni fsync. Ce n'est
+ * pas « aucune transaction » : ces UPDATE vides se sérialisent avec les
+ * vraies écritures (coups, chat). Si la contention des écrivains apparaissait
+ * sur le VPS, lire `lastSeenAt` d'abord (findUnique sur roomId_userId, index
+ * existant) et n'émettre l'UPDATE que si la trace a plus de 30 s. `now` est
+ * injectable pour les tests.
+ */
+export async function touchMemberPresence(
+  roomId: string,
+  userId: string,
+  now: number = Date.now()
+): Promise<void> {
   await prisma.onlineRoomMember.updateMany({
-    where: { roomId, userId },
-    data: { lastSeenAt: new Date() },
+    where: { roomId, userId, lastSeenAt: { lt: new Date(now - PRESENCE_WRITE_INTERVAL_MS) } },
+    data: { lastSeenAt: new Date(now) },
   })
 }
 
@@ -565,5 +626,6 @@ export async function deleteRoomIfEmpty(roomId: string): Promise<void> {
     // écriture si elle était déjà abandonnée.
     await closeGameSessionBeforeRoomDelete(room, 'left')
     await prisma.onlineRoom.delete({ where: { id: roomId } }).catch(() => {})
+    invalidateLobbiesCache()
   }
 }

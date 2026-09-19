@@ -1,11 +1,20 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // `summarizeLiveGames` est pure, mais le module importe prisma (et sa chaîne
 // d'adaptateurs) au chargement : on le neutralise pour tester la seule règle
 // métier — ce qui a le droit de sortir du serveur, et ce qui ne compte que.
-vi.mock('@/lib/prisma', () => ({ prisma: {} }))
+// La présence, elle, s'observe par l'écriture demandée à la base.
+const { memberMock } = vi.hoisted(() => ({
+  memberMock: { updateMany: vi.fn() },
+}))
+vi.mock('@/lib/prisma', () => ({ prisma: { onlineRoomMember: memberMock } }))
 
-import { summarizeLiveGames, type LiveRoomRow } from '@/lib/online-room'
+import {
+  PRESENCE_WRITE_INTERVAL_MS,
+  summarizeLiveGames,
+  touchMemberPresence,
+  type LiveRoomRow,
+} from '@/lib/online-room'
 
 const NOW = new Date('2026-09-10T12:00:00Z').getTime()
 const minutesAgo = (m: number) => new Date(NOW - m * 60_000)
@@ -104,5 +113,38 @@ describe('summarizeLiveGames', () => {
     const { liveGames, liveGamesTotal } = summarizeLiveGames(rows, NOW)
     expect(liveGamesTotal).toBe(2)
     expect(liveGames.map((g) => g.id).sort()).toEqual(['pleine', 'vide'])
+  })
+})
+
+describe('touchMemberPresence', () => {
+  beforeEach(() => {
+    memberMock.updateMany.mockReset()
+    memberMock.updateMany.mockResolvedValue({ count: 0 })
+  })
+
+  it('ne réécrit la présence que si elle date de plus de 30 s — le filtre est dans le where', async () => {
+    // Sondage jusqu'à toutes les 1,5-2 s (flux SSE mort) : sans ce filtre,
+    // dix joueurs qui attendent font cinq transactions d'écriture par seconde
+    // pour rien. La base tranche elle-même (un UPDATE sans ligne touchée,
+    // aucune page écrite) : aucun aller-retour de plus.
+    await touchMemberPresence('room-1', 'user-1', NOW)
+
+    expect(PRESENCE_WRITE_INTERVAL_MS).toBe(30_000)
+    expect(memberMock.updateMany).toHaveBeenCalledTimes(1)
+    expect(memberMock.updateMany).toHaveBeenCalledWith({
+      where: {
+        roomId: 'room-1',
+        userId: 'user-1',
+        lastSeenAt: { lt: new Date(NOW - PRESENCE_WRITE_INTERVAL_MS) },
+      },
+      data: { lastSeenAt: new Date(NOW) },
+    })
+  })
+
+  it('reste bien sous le seuil de purge le plus court lu sur lastSeenAt', () => {
+    // Le plus court est celui des tables « figées » de Supervision (3 min, en
+    // attente) ; la purge des tables ouvertes est à 5 min. Une présence en
+    // retard d'au plus 30 s + un sondage ne doit jamais déclencher l'un ni l'autre.
+    expect(PRESENCE_WRITE_INTERVAL_MS).toBeLessThan(3 * 60_000 / 2)
   })
 })

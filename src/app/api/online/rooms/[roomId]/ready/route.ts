@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { onlineErrorBody } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
@@ -26,6 +27,9 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json(onlineErrorBody('not_a_member'), { status: 403 })
   }
 
+  // `lobbies[].members[].isReady` est affiché au guichet : bon marché, et
+  // évite jusqu'à 3 s de retard sur la coche.
+  invalidateLobbiesCache()
   publishRoomChanged(roomId, { type: 'lobby' })
 
   const dto = await buildRoomDto(roomId, user.id)

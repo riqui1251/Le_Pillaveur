@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { recordMatchResults } from '@/lib/online/match-results'
@@ -45,6 +46,8 @@ async function kickMember(roomId: string, hostUserId: string, kickedUserId: stri
       })
     }
   }
+  // L'effectif d'une partie en cours est affiché au guichet (liveGames).
+  invalidateLobbiesCache()
 }
 
 /**
@@ -135,6 +138,8 @@ export async function POST(request: Request, { params }: Params) {
   const nextVersion = room.stateVersion + 1
   const finished = adapter.isFinished(next)
   const wasFinished = adapter.isFinished(state)
+  // Calculé une fois : écrit en base ET renvoyé au client, à l'identique.
+  const currentTurnUserId = finished ? null : adapter.currentActorId(next)
 
   // Compare-and-swap sur stateVersion : si deux actions concurrentes ont lu
   // la même version (ex. ticks « advance » envoyés par tous les clients),
@@ -146,7 +151,7 @@ export async function POST(request: Request, { params }: Params) {
     data: {
       gameStateJson: adapter.serialize(next),
       stateVersion: nextVersion,
-      currentTurnUserId: finished ? null : adapter.currentActorId(next),
+      currentTurnUserId,
     },
   })
   if (updated.count === 0) {
@@ -169,9 +174,14 @@ export async function POST(request: Request, { params }: Params) {
     stateVersion: nextVersion,
   })
 
+  // La réponse porte tout ce que GET /state renverrait (version, vue, tour) :
+  // le client l'applique telle quelle et l'écho SSE de son propre coup ne
+  // déclenche plus de GET (serverViewFromActionResponse, useGameAction.ts).
+  // Un POST par coup, zéro GET.
   return NextResponse.json({
     ok: true,
     stateVersion: nextVersion,
     ...adapter.actionResponse(next, user.id),
+    currentTurnUserId,
   })
 }

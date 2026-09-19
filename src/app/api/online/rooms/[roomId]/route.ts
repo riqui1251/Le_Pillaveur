@@ -5,6 +5,7 @@ import { buildRoomDto, closeGameSessionBeforeRoomDelete, touchMemberPresence } f
 import { resetRoomToWaitingLobby } from '@/lib/online-petit-buveur'
 import { parsePetitBuveurState } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { onlineErrorBody } from '@/lib/online-errors'
 
@@ -24,6 +25,9 @@ export async function GET(_request: Request, { params }: Params) {
     return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
   }
 
+  // Sondé toutes les 25 s (lobby, flux SSE vivant) à 2 s (flux mort) : la
+  // présence n'écrit en base qu'au plus toutes les 30 s
+  // (PRESENCE_WRITE_INTERVAL_MS), le reste du temps l'UPDATE ne touche rien.
   await touchMemberPresence(roomId, user.id)
   const dto = await buildRoomDto(roomId, user.id)
   if (!dto) {
@@ -63,6 +67,7 @@ export async function DELETE(_request: Request, { params }: Params) {
     // du journal ne doit pas empêcher de sortir.
     await closeGameSessionBeforeRoomDelete(room, 'left')
     await prisma.onlineRoom.delete({ where: { id: roomId } }).catch(() => {})
+    invalidateLobbiesCache()
     return NextResponse.json({ ok: true })
   }
 
@@ -108,6 +113,10 @@ export async function DELETE(_request: Request, { params }: Params) {
       })
     }
   }
+
+  // Le guichet montre l'effectif, l'hôte et le statut de la table : tout ce
+  // qui vient de bouger. Après la DERNIÈRE écriture, pour ne rien rater.
+  invalidateLobbiesCache()
 
   // Un SEUL événement temps réel : `changed` (avec la version) quand la partie
   // a bougé — c'est ce que les clients en jeu attendent —, `lobby` sinon.

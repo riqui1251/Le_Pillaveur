@@ -7,6 +7,7 @@ import { GAMES } from '@/lib/games'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { awardAchievement } from '@/lib/online/achievements'
+import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 
 const ROOM_LANGS = new Set(['fr', 'en', 'es', 'it'])
 
@@ -60,6 +61,9 @@ export async function POST(request: Request) {
         },
       },
     })
+    // Le guichet en cache ignore cette table : sans invalidation, une table
+    // publique fraîchement créée mettait jusqu'à 3 s à y apparaître.
+    invalidateLobbiesCache()
 
     // Succès « première table créée » — jamais bloquant.
     await awardAchievement(prisma, user.id, 'first_room')

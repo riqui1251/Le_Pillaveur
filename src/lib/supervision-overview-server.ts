@@ -34,7 +34,8 @@ const STALE_CAST_ROOM_MS = 2 * 60 * 60 * 1000
 /**
  * Seuil d'INACTIVITÉ au-delà duquel une table est signalée « figée » (F46) :
  * une partie vivante réécrit son état à chaque coup, un lobby vivant réécrit
- * la présence de ses membres toutes les 2 s. Volontairement bien en deçà des
+ * la présence de ses membres au plus toutes les 30 s
+ * (PRESENCE_WRITE_INTERVAL_MS, online-room.ts). Volontairement bien en deçà des
  * seuils de purge (5 min en attente, 60 min en jeu) pour que l'exploitant
  * voie le blocage AVANT que la salle ne disparaisse toute seule.
  */
