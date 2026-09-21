@@ -14,6 +14,7 @@ import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
 import { cookies } from 'next/headers'
 import { linkVisitorNameModerationAttempts } from '@/lib/name-moderation-attempts-server'
@@ -22,43 +23,39 @@ import { readConsentedVisitorId } from '@/lib/auth-cookies'
 const LOGIN_LIMIT = 10
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('auth/login POST', async (request: Request) => {
   try {
-    const body = await request.json()
+    const parsed = await readApiJson<{ email?: unknown; password?: unknown }>(request)
+    if (!parsed.ok) return parsed.response
+    const body = parsed.body
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const password = typeof body.password === 'string' ? body.password : ''
 
     const rate = checkRateLimit(rateLimitKey(request, 'login', email), LOGIN_LIMIT, LOGIN_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
-    if (!isValidEmail(email) || !password) {
-      return NextResponse.json({ error: 'Email ou mot de passe incorrect' }, { status: 401 })
-    }
+    // MÊME refus pour les trois cas (adresse mal formée, compte inconnu, mot
+    // de passe faux) : distinguer reviendrait à dire quelles adresses ont un
+    // compte chez nous.
+    if (!isValidEmail(email) || !password) return apiError('invalid_credentials', 401)
 
     const user = await prisma.user.findUnique({ where: { email } })
-    if (!user?.passwordHash) {
-      return NextResponse.json({ error: 'Email ou mot de passe incorrect' }, { status: 401 })
-    }
+    if (!user?.passwordHash) return apiError('invalid_credentials', 401)
 
     const valid = await verifyPassword(password, user.passwordHash)
-    if (!valid) {
-      return NextResponse.json({ error: 'Email ou mot de passe incorrect' }, { status: 401 })
-    }
+    if (!valid) return apiError('invalid_credentials', 401)
 
     await clearExpiredBanIfNeeded(user.id)
     const freshUser = await prisma.user.findUnique({ where: { id: user.id } })
     const ban = getBanState(freshUser ?? user)
     if (ban.banned) {
-      const until =
-        ban.banType === 'temporary' && ban.bannedUntil
-          ? ` jusqu'au ${ban.bannedUntil.toLocaleString('fr-FR')}`
-          : ''
-      return NextResponse.json(
-        {
-          error: `Compte suspendu${until}.${ban.banComment ? ` Motif : ${ban.banComment}` : ''}`,
-        },
-        { status: 403 }
-      )
+      // La phrase française composée ici n'était lisible que par un joueur FR.
+      // Le code se traduit ; l'échéance et le motif voyagent à part, pour que
+      // l'écran les remette en forme dans SA langue quand il les affiche.
+      return apiError('account_suspended', 403, {
+        bannedUntil: ban.banType === 'temporary' && ban.bannedUntil ? ban.bannedUntil.toISOString() : null,
+        banComment: ban.banComment ?? null,
+      })
     }
 
     const now = new Date()
@@ -115,10 +112,9 @@ export async function POST(request: Request) {
     response.cookies.set(localeCookieOptions(userLocale))
     return response
   } catch (error) {
-    console.error('login error:', error)
-    return NextResponse.json(
-      { error: 'Service momentanément indisponible. Réessaie dans quelques instants.', code: 'service_unavailable' },
-      { status: 503 }
-    )
+    // 503 conservé : une panne de base ou de session ici n'est pas la faute du
+    // joueur, et l'écran de connexion le dit autrement qu'un 500 sec.
+    console.error('[api] auth/login POST', error instanceof Error ? error.name : typeof error)
+    return apiError('service_unavailable', 503)
   }
-}
+})

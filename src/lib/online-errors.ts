@@ -1,9 +1,15 @@
 /**
- * Codes d'erreur stables des routes /api/online.
+ * Codes d'erreur stables des routes /api (online, puis auth et amis).
  * Le champ `error` des réponses porte le code ; le champ `message` garde le
  * texte FR pour compat. Côté client, les codes sont traduits via le namespace
  * i18n `onlineLobby.errors` (messages/{fr,en,es,it}.json), avec le texte brut
  * en fallback pour les valeurs inconnues.
+ *
+ * Un SEUL registre pour tout le site : les routes auth et amis renvoyaient du
+ * français brut (« Non connecté », « Joueur introuvable »), affiché tel quel à
+ * un joueur EN/ES/IT. Elles rejoignent ce mécanisme plutôt qu'un namespace
+ * parallèle, pour que l'invariant « chaque code a ses 4 traductions » (voir
+ * online-errors.test.ts) les couvre elles aussi.
  */
 export const ONLINE_ERROR_CODES = [
   'auth_required',
@@ -70,6 +76,55 @@ export const ONLINE_ERROR_CODES = [
   'contest_needs_more_players',
   // Refus du moteur sans code dédié — filet générique, jamais de texte brut
   'action_failed',
+
+  // ── Filets communs à toutes les routes (withApiRoute, lecture bornée) ──
+  // Une panne d'écriture ne doit plus sortir en page HTML de Next : ces trois
+  // codes sont ceux que l'enveloppe pose elle-même quand le handler lève.
+  'conflict',
+  'not_found',
+  'payload_too_large',
+  // Quota atteint : `rateLimitResponse` pose déjà ce code, il lui manquait
+  // seulement sa traduction (son champ `error`, lui, reste une phrase FR —
+  // ce module ne s'importe pas dans rate-limit.ts, qui tire geoip-lite).
+  'rate_limited',
+  // Panne d'un service tiers (envoi d'e-mail, vérification Google) : 503, déjà
+  // posé par les routes auth, sans traduction jusqu'ici.
+  'service_unavailable',
+
+  // ── Comptes (/api/auth) ──
+  'invalid_mode',
+  'invalid_locale',
+  'invalid_credentials',
+  'invalid_email',
+  'invalid_password',
+  'account_suspended',
+  'google_credential_required',
+  'google_invalid',
+  'wrong_password',
+  'google_confirmation_required',
+  'founder_protected',
+  'not_guest',
+  'email_taken',
+  'registration_refused',
+  'invalid_reset_token',
+  // Porte d'âge : déjà renvoyé tel quel par /api/auth/guest, JoinGate et
+  // TryBotsGate le reconnaissent — déclaré ici pour qu'il soit traduit aussi.
+  'age_gate_required',
+
+  // ── Amis (/api/friends) ──
+  'user_required',
+  'cannot_block_self',
+  'user_not_found',
+  'invalid_account_code',
+  'account_code_not_found',
+  'self_request',
+  // Banni OU blocage mutuel : MÊME code des deux côtés, à dessein — dire
+  // lequel des deux révélerait qui a bloqué qui.
+  'cannot_add_player',
+  'friend_request_cooldown',
+  'request_not_found',
+  'request_already_handled',
+  'request_already_declined',
 ] as const
 
 export type OnlineErrorCode = (typeof ONLINE_ERROR_CODES)[number]
@@ -163,6 +218,46 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   incomplete_stop: 'Remplissez toutes les cases avant de crier STOP',
   contest_needs_more_players: 'Pas assez de joueurs pour contester une réponse',
   action_failed: 'Action impossible',
+
+  conflict: 'Conflit, réessayez',
+  not_found: 'Introuvable',
+  payload_too_large: 'Requête trop volumineuse',
+  // Sans trou {seconds} : n'importe quel écran doit pouvoir l'afficher sans
+  // paramètre. Ceux qui veulent le décompte ont déjà leur propre clé, nourrie
+  // par `retryAfterSec` (JoinGate, TryBotsGate).
+  rate_limited: 'Trop de tentatives, réessayez dans un instant',
+  service_unavailable: 'Service momentanément indisponible, réessayez',
+
+  invalid_mode: 'Mode invalide',
+  invalid_locale: 'Langue invalide',
+  invalid_credentials: 'Email ou mot de passe incorrect',
+  invalid_email: 'Email invalide',
+  invalid_password: '8 caractères minimum, avec au moins une lettre et un chiffre',
+  account_suspended: 'Compte suspendu',
+  google_credential_required: 'Connexion Google invalide',
+  google_invalid: 'Connexion Google invalide ou expirée',
+  wrong_password: 'Mot de passe incorrect',
+  google_confirmation_required: 'Confirmation Google requise',
+  founder_protected: 'Ce compte ne peut pas être supprimé ici',
+  not_guest: 'Ce compte est déjà enregistré',
+  email_taken:
+    'Impossible avec ces informations. Si vous avez déjà un compte, connectez-vous dessus',
+  registration_refused:
+    'Inscription impossible avec ces informations. Si vous avez déjà un compte, connectez-vous ou utilisez « Mot de passe oublié »',
+  invalid_reset_token: 'Lien invalide ou expiré',
+  age_gate_required: 'Déclaration 18+ requise',
+
+  user_required: 'Joueur requis',
+  cannot_block_self: 'Impossible de se bloquer soi-même',
+  user_not_found: 'Joueur introuvable',
+  invalid_account_code: 'Code invalide',
+  account_code_not_found: 'Aucun compte avec ce code',
+  self_request: "Impossible de s'ajouter soi-même",
+  cannot_add_player: 'Ce joueur ne peut pas être ajouté',
+  friend_request_cooldown: 'Ce joueur a refusé votre demande récemment',
+  request_not_found: 'Demande introuvable',
+  request_already_handled: 'Cette demande a déjà été traitée',
+  request_already_declined: 'Demande déjà refusée',
 }
 
 /** Paramètres d'un code à trou (bornes de joueurs) — repris tel quel côté i18n. */

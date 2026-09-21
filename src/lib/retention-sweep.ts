@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { errorTrace } from '@/lib/error-trace'
 import { ANALYTICS_CONSENT_GRANTED } from '@/lib/auth-cookies'
 import { deleteUserAccount } from '@/lib/user-activity-server'
 import {
@@ -7,10 +8,18 @@ import {
 } from '@/lib/account-kind'
 
 /**
- * Purges RGPD « au passage » : le projet n'a aucun cron serveur (tout est
- * déclenché par le trafic, même principe que cleanupAbandonedRooms), donc les
- * durées de conservation annoncées dans la politique de confidentialité sont
- * appliquées ici, au plus une fois par SWEEP_INTERVAL_MS par processus.
+ * Purges RGPD : les durées de conservation annoncées dans la politique de
+ * confidentialité sont appliquées ici.
+ *
+ * Deux chemins, un seul balayage :
+ *  - NOMINAL — le planificateur (src/lib/scheduler.ts) appelle ce balayage
+ *    chaque nuit à 4 h 30, heure de Paris, avec `force` : c'est la cadence
+ *    voulue, au creux du trafic. Les suppressions de comptes ne tombent plus
+ *    en pleine soirée du simple fait qu'on a déployé à 21 h ;
+ *  - FILET — l'appel depuis /api/analytics/ping, sans `force`, donc au plus
+ *    une fois par SWEEP_INTERVAL_MS et par processus. Il ne sert plus que si
+ *    le planificateur ne s'est pas posé (ancien conteneur, runtime sans
+ *    instrumentation) : les durées annoncées restent tenues sans lui.
  *
  * Durées (doivent rester alignées avec docs/legal/<langue>/confidentialite.md §7) :
  * - IpSeenLog / SitePresence : 6 mois après la dernière activité ;
@@ -199,7 +208,22 @@ function affectedRows(result: unknown): number {
   return 0
 }
 
-let lastSweepAt = 0
+/**
+ * Dernier passage du FILET (l'appel sans `force` depuis /api/analytics/ping).
+ *
+ * Initialisé à `Date.now()` et non à 0 : à 0, le tout premier ping suivant un
+ * déploiement passait la garde des 6 h et déclenchait un balayage complet
+ * IMMÉDIATEMENT, à l'heure du déploiement — c'est-à-dire, en pratique, au
+ * premier visiteur d'une soirée. Tout l'objet du passage au planificateur
+ * (4 h 30, heure de Paris) était perdu : jusqu'à 100 suppressions de comptes
+ * retombaient dans le pic d'usage, au premier visiteur venu.
+ *
+ * Variable de module, donc remise à l'heure de démarrage à CHAQUE processus :
+ * le filet ne peut se déclencher qu'après 6 h de fonctionnement continu, ce
+ * qui laisse au planificateur son tour de la nuit. Le chemin `force: true` du
+ * planificateur, lui, ignore cette garde et n'est pas concerné.
+ */
+let lastSweepAt = Date.now()
 
 function dateStringParis(msAgo: number): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -230,15 +254,25 @@ async function deleteAccounts(
       deleted += 1
     } catch (error) {
       failures += 1
-      console.error(`retention sweep error (${label}, user ${id}):`, error)
+      console.error(`retention sweep error (${label}, user ${id}):`, errorTrace(error))
     }
   }
   return { deleted, failures }
 }
 
-export async function runRetentionSweep(): Promise<void> {
+/**
+ * Options du balayage.
+ * `force` : passer outre la garde des 6 h. Réservé au planificateur, qui a
+ * déjà sa propre cadence (une fois par nuit) — sans quoi un redéploiement en
+ * soirée, suivi d'un ping, lui ferait sauter son tour de la nuit suivante.
+ */
+export type RetentionSweepOptions = { force?: boolean }
+
+export async function runRetentionSweep({ force = false }: RetentionSweepOptions = {}): Promise<void> {
   const now = Date.now()
-  if (now - lastSweepAt < SWEEP_INTERVAL_MS) return
+  if (!force && now - lastSweepAt < SWEEP_INTERVAL_MS) return
+  // Le témoin est repoussé même quand `force` a court-circuité la garde : le
+  // filet du ping n'a aucune raison de refaire le travail dans les 6 h.
   lastSweepAt = now
 
   const nowDate = new Date(now)
@@ -372,7 +406,7 @@ export async function runRetentionSweep(): Promise<void> {
       const block = purges[index][0]
       if (result.status === 'rejected') {
         failed.push(block)
-        console.error(`retention sweep error (${block}):`, result.reason)
+        console.error(`retention sweep error (${block}):`, errorTrace(result.reason))
       } else {
         counts[block] = affectedRows(result.value)
       }
@@ -381,7 +415,7 @@ export async function runRetentionSweep(): Promise<void> {
     // Filet : une purge qui lèverait avant même d'être lancée ne doit pas
     // remonter en rejet non géré (appel sans await depuis le ping).
     failed.push(SIMPLE_PURGES_BLOCK)
-    console.error('retention sweep error:', error)
+    console.error('retention sweep error:', errorTrace(error))
   }
 
   // Invités orphelins : aucune session valide, donc irrécupérables. Try à
@@ -407,7 +441,7 @@ export async function runRetentionSweep(): Promise<void> {
     if (failures > 0) failed.push(ORPHAN_GUESTS_BLOCK)
   } catch (error) {
     failed.push(ORPHAN_GUESTS_BLOCK)
-    console.error('retention sweep error (orphan guests):', error)
+    console.error('retention sweep error (orphan guests):', errorTrace(error))
   }
 
   // Invités inactifs : suppression via la routine complète, par petits lots
@@ -439,7 +473,7 @@ export async function runRetentionSweep(): Promise<void> {
     if (failures > 0) failed.push(STALE_GUESTS_BLOCK)
   } catch (error) {
     failed.push(STALE_GUESTS_BLOCK)
-    console.error('retention sweep error (stale guests):', error)
+    console.error('retention sweep error (stale guests):', errorTrace(error))
   }
 
   // Témoin écrit en dernier, que les blocs aient abouti ou non : c'est
@@ -454,6 +488,6 @@ export async function runRetentionSweep(): Promise<void> {
       update: { value },
     })
   } catch (error) {
-    console.error('retention sweep error (lastRun):', error)
+    console.error('retention sweep error (lastRun):', errorTrace(error))
   }
 }

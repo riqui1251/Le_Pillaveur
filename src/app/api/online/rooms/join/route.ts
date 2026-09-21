@@ -9,6 +9,26 @@ import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { onlineErrorBody } from '@/lib/online-errors'
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  readJsonBodyLimited,
+  userRateLimitKey,
+} from '@/lib/rate-limit'
+
+/**
+ * Rejoindre lit la salle, purge les absents, quitte les autres tables puis
+ * écrit un siège : rien ne le bornait. Vingt par minute laisse passer le
+ * va-et-vient d'une soirée (code mal tapé, retour en partie, changement de
+ * table) et coupe la boucle d'un client cassé.
+ * Quota par COMPTE et jamais par IP : une tablée partage le Wi-Fi du salon, et
+ * un opérateur mobile met des centaines d'abonnés derrière une même IPv4.
+ */
+const JOIN_LIMIT = 20
+const JOIN_WINDOW_MS = 60_000
+
+/** Un code de 6 caractères ou un identifiant de salle : 8 Ko est très large. */
+const MAX_JOIN_BODY_BYTES = 8 * 1024
 
 /**
  * Nombre de sièges qu'un HUMAIN peut occuper à cette table. Toucher-Coulé
@@ -33,7 +53,27 @@ export async function POST(request: Request) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
-  const body = await request.json()
+  const rate = checkRateLimit(userRateLimitKey('room-join', user.id), JOIN_LIMIT, JOIN_WINDOW_MS)
+  if (!rate.ok) {
+    return rateLimitResponse(rate.retryAfterSec)
+  }
+
+  // Refus de corps trop gros : `payload_too_large`, le code générique que
+  // withApiRoute/readApiJson posent déjà partout ailleurs (il est traduit dans
+  // les 4 langues). Surtout pas `signal_too_large`, réservé au vocal WebRTC :
+  // parler de « signal » à qui crée une table n'a aucun sens.
+  const parsed = await readJsonBodyLimited<Record<string, unknown> | null>(
+    request,
+    MAX_JOIN_BODY_BYTES
+  )
+  if (!parsed.ok) {
+    return parsed.reason === 'too_large'
+      ? NextResponse.json(onlineErrorBody('payload_too_large'), { status: 413 })
+      : NextResponse.json(onlineErrorBody('invalid_json'), { status: 400 })
+  }
+  // `?? {}` : un corps JSON `null` est valide et ferait planter les lectures.
+  const body = parsed.body ?? {}
+
   const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : ''
   const roomId = typeof body.roomId === 'string' ? body.roomId.trim() : ''
 

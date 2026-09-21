@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { DEFAULT_ONLINE_ICON, isCosmeticUnlocked, type UnlockContext } from '@/lib/online/cosmetics'
 import { loadGrantedKeys } from '@/lib/online/progression-server'
 import { sanitizeOnlinePreferences, type OnlinePreferences } from '@/lib/online-preferences'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 
 /**
  * Personnalisation du joueur en ligne (icône, effet de pseudo, cadre).
@@ -13,12 +14,13 @@ import { sanitizeOnlinePreferences, type OnlinePreferences } from '@/lib/online-
  * (l'icône retombe sur le défaut plutôt que l'équipement précédent, car elle
  * n'a jamais pu être invalide avant équipement — toujours une valeur connue).
  */
-export async function PATCH(request: Request) {
+export const PATCH = withApiRoute('auth/online-preferences PATCH', async (request: Request) => {
   const user = await getCurrentUser()
-  if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+  if (!user) return apiError('auth_required', 401)
 
-  const body = await request.json().catch(() => ({}))
-  const sanitized = sanitizeOnlinePreferences(body as Partial<OnlinePreferences>)
+  const parsed = await readApiJson<Partial<OnlinePreferences>>(request)
+  if (!parsed.ok) return parsed.response
+  const sanitized = sanitizeOnlinePreferences(parsed.body)
 
   const grantedKeys = await loadGrantedKeys(user.id)
   const ctx: UnlockContext = { xp: user.onlineXp, role: user.role, grantedKeys }
@@ -44,4 +46,4 @@ export async function PATCH(request: Request) {
   })
 
   return NextResponse.json({ ok: true, onlinePreferences: next })
-}
+})

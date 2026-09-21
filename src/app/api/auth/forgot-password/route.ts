@@ -7,22 +7,23 @@ import {
 } from '@/lib/auth-server'
 import { sendPasswordResetEmail } from '@/lib/email'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 
 const RESET_HOURS = 1
 const FORGOT_LIMIT = 5
 const FORGOT_WINDOW_MS = 60 * 60 * 1000
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('auth/forgot-password POST', async (request: Request) => {
   try {
-    const body = await request.json()
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+    const parsed = await readApiJson<{ email?: unknown }>(request)
+    if (!parsed.ok) return parsed.response
+    const email =
+      typeof parsed.body.email === 'string' ? parsed.body.email.trim().toLowerCase() : ''
 
     const rate = checkRateLimit(rateLimitKey(request, 'forgot-password', email), FORGOT_LIMIT, FORGOT_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
-    if (!isValidEmail(email)) {
-      return NextResponse.json({ error: 'Email invalide' }, { status: 400 })
-    }
+    if (!isValidEmail(email)) return apiError('invalid_email', 400)
 
     const user = await prisma.user.findUnique({ where: { email } })
 
@@ -47,16 +48,17 @@ export async function POST(request: Request) {
       try {
         await sendPasswordResetEmail(email, token)
       } catch (err) {
-        console.error('forgot-password email error:', err)
+        // L'envoi d'e-mail n'est jamais bloquant : le jeton existe, le joueur
+        // peut redemander. Le journal ne garde que le nom de l'erreur — un
+        // message d'envoi recopierait l'adresse du destinataire (RGPD).
+        console.error('[api] auth/forgot-password mail', err instanceof Error ? err.name : typeof err)
       }
     }
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('forgot-password error:', error)
-    return NextResponse.json(
-      { error: 'Service momentanément indisponible. Réessaie dans quelques instants.', code: 'service_unavailable' },
-      { status: 503 }
-    )
+    // 503 conservé : la boîte d'envoi ou la base a flanché, pas la demande.
+    console.error('[api] auth/forgot-password POST', error instanceof Error ? error.name : typeof error)
+    return apiError('service_unavailable', 503)
   }
-}
+})

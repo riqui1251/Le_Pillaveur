@@ -370,6 +370,11 @@ export function orphanSessionEnd(
  * pas être notifié de la disparition d'une salle (aucune clé étrangère, c'est
  * voulu), donc on rapproche les deux tables au moment de lire le journal —
  * mais la date écrite ne dépend JAMAIS de ce moment (voir orphanSessionEnd).
+ *
+ * Deux déclencheurs depuis le 19/09/2026 : chaque lecture de la Supervision
+ * (comme avant) ET le planificateur, toutes les 5 minutes
+ * (src/lib/scheduler.ts). Une partie ne reste donc plus « en cours » jusqu'à
+ * ce que quelqu'un ouvre la Supervision.
  */
 export async function closeOrphanGameSessions(): Promise<number> {
   const open = await prisma.onlineGameSession.findMany({

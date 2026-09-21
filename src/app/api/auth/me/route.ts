@@ -8,8 +8,9 @@ import {
   renewSessionIfStale,
   sessionCookieOptions,
 } from '@/lib/auth-server'
+import { withApiRoute } from '@/lib/api-route'
 
-export async function GET() {
+export const GET = withApiRoute('auth/me GET', async () => {
   const session = await getCurrentSession()
   if (!session) {
     const response = NextResponse.json({ user: null }, { status: 401 })
@@ -37,4 +38,4 @@ export async function GET() {
     if (aligned) response.cookies.set(aligned)
   }
   return response
-}
+})

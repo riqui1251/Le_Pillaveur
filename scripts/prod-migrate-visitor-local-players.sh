@@ -2,8 +2,32 @@
 set -euo pipefail
 APP_DIR="${APP_DIR:-/opt/le-pillaveur}"
 MIG=20250613140000_visitor_local_players
+# UID/GID du conteneur applicatif (Dockerfile : nextjs 1001). La base est en
+# WAL : toute ouverture — meme une simple lecture — cree prod.db-wal et
+# prod.db-shm a cote du fichier. Les laisser a root rend la base inouvrable
+# par l'application, qui tourne en 1001. Lance depuis prod-deploy.sh le probleme
+# se reparait tout seul (l'etape « DB permissions » qui suit fait le chown) ;
+# lance A LA MAIN, il couchait le site. sqlite3 descend donc a cet UID.
+DB_UID="${DB_UID:-1001}"
 
-applied=$(docker run --rm -v le-pillaveur-db:/data alpine sh -c "apk add sqlite >/dev/null 2>&1; sqlite3 /data/prod.db \"SELECT 1 FROM _prisma_migrations WHERE migration_name='$MIG' LIMIT 1;\"" || true)
+# Sonde « deja appliquee ? ». Le code de sortie est CAPTURE, et stderr tenu a
+# part : sans cela, un echec d OUVERTURE de la base (droits du volume, -wal
+# laisse par root) rendait une sortie vide, indiscernable d une migration non
+# appliquee — on repartait alors rejouer un `db execute` DEJA applique, qui
+# echoue et coupe le script. « Je ne sais pas » doit s arreter avec un message.
+PROBE_LOG="/tmp/.migrate-probe-$MIG.log"
+set +e
+applied=$(docker run --rm -v le-pillaveur-db:/data alpine sh -c "apk add --no-cache sqlite su-exec >/dev/null 2>&1; su-exec $DB_UID:$DB_UID sqlite3 /data/prod.db \"SELECT 1 FROM _prisma_migrations WHERE migration_name='$MIG' LIMIT 1;\"" 2>"$PROBE_LOG")
+applied_status=$?
+set -e
+if [ "$applied_status" -ne 0 ]; then
+  echo "ECHEC : impossible de lire _prisma_migrations (la sonde a rendu $applied_status)"
+  echo "Derniere erreur : $(cat "$PROBE_LOG" 2>/dev/null || echo '(vide)')"
+  echo "Reparer les droits du volume (bash \"$(dirname "$0")/prod-fix-db-perms.sh\") puis relancer."
+  rm -f "$PROBE_LOG"
+  exit 1
+fi
+rm -f "$PROBE_LOG"
 
 if echo "$applied" | grep -q 1; then
   echo "Migration $MIG deja appliquee"
@@ -25,4 +49,9 @@ else
   echo "Migration $MIG OK"
 fi
 
-docker run --rm -v le-pillaveur-db:/data alpine sh -c 'apk add sqlite >/dev/null 2>&1; sqlite3 /data/prod.db "PRAGMA table_info(SitePresence);" | grep localPlayer'
+# Verification finale : de l AFFICHAGE, pas une etape bloquante. Elle est
+# tolerante a l echec (`|| echo`) parce que ce script est enchaine par
+# prod-deploy.sh ENTRE la migration et le redemarrage du conteneur : un grep
+# sans resultat, ou un su-exec absent, y couperait le deploiement dans le pire
+# etat possible — nouveau schema en base, ancien code en service.
+docker run --rm -e DB_UID="$DB_UID" -v le-pillaveur-db:/data alpine sh -c 'apk add --no-cache sqlite su-exec >/dev/null 2>&1; su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db "PRAGMA table_info(SitePresence);" | grep localPlayer' || echo "colonnes localPlayer non retrouvees"

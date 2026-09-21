@@ -15,6 +15,7 @@ import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { recordIpSeen } from '@/lib/ip-history-server'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
 import { getDisplayNameValidationError, isDisplayNameTaken, DISPLAY_NAME_MAX_LENGTH } from '@/lib/display-name'
@@ -52,22 +53,20 @@ async function pickAvailableDisplayName(preferred: string): Promise<string> {
   return `Joueur${Date.now() % 100000}`
 }
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('auth/google POST', async (request: Request) => {
   try {
-    const body = await request.json()
+    const parsed = await readApiJson<{ credential?: unknown; locale?: unknown }>(request)
+    if (!parsed.ok) return parsed.response
+    const body = parsed.body
     const credential = typeof body.credential === 'string' ? body.credential : ''
 
     const rate = checkRateLimit(rateLimitKey(request, 'google-auth'), GOOGLE_LIMIT, GOOGLE_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
-    if (!credential) {
-      return NextResponse.json({ error: 'Connexion Google invalide' }, { status: 400 })
-    }
+    if (!credential) return apiError('google_credential_required', 400)
 
     const claims = await verifyGoogleIdToken(credential)
-    if (!claims?.email) {
-      return NextResponse.json({ error: 'Connexion Google invalide ou expirée' }, { status: 401 })
-    }
+    if (!claims?.email) return apiError('google_invalid', 401)
     const email = claims.email.trim().toLowerCase()
 
     const cookieStore = await cookies()
@@ -120,7 +119,7 @@ export async function POST(request: Request) {
         })
         await recordIpSeen(user.id, '', ip, country)
       } catch (error) {
-        console.error('google auth network trace error:', error)
+        console.error('[api] auth/google trace', error instanceof Error ? error.name : typeof error)
       }
     }
 
@@ -128,16 +127,12 @@ export async function POST(request: Request) {
     const freshUser = await prisma.user.findUnique({ where: { id: user.id } })
     const ban = getBanState(freshUser ?? user)
     if (ban.banned) {
-      const until =
-        ban.banType === 'temporary' && ban.bannedUntil
-          ? ` jusqu'au ${ban.bannedUntil.toLocaleString('fr-FR')}`
-          : ''
-      return NextResponse.json(
-        {
-          error: `Compte suspendu${until}.${ban.banComment ? ` Motif : ${ban.banComment}` : ''}`,
-        },
-        { status: 403 }
-      )
+      // Même refus qu'à la connexion par mot de passe : un code traduisible,
+      // l'échéance et le motif à part plutôt qu'une phrase française cousue.
+      return apiError('account_suspended', 403, {
+        bannedUntil: ban.banType === 'temporary' && ban.bannedUntil ? ban.bannedUntil.toISOString() : null,
+        banComment: ban.banComment ?? null,
+      })
     }
 
     if (!createdNow) {
@@ -196,10 +191,8 @@ export async function POST(request: Request) {
     response.cookies.set(localeCookieOptions(userLocale))
     return response
   } catch (error) {
-    console.error('google auth error:', error)
-    return NextResponse.json(
-      { error: 'Service momentanément indisponible. Réessaie dans quelques instants.', code: 'service_unavailable' },
-      { status: 503 }
-    )
+    // 503 conservé : la vérification du jeton dépend d'un service tiers.
+    console.error('[api] auth/google POST', error instanceof Error ? error.name : typeof error)
+    return apiError('service_unavailable', 503)
   }
-}
+})

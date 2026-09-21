@@ -82,6 +82,10 @@ model User {
   abuseReportsReviewed  AbuseReport[]      @relation("AbuseReportReviewer")
   blocksMade            UserBlock[]        @relation("UserBlockBlocker")
   blocksReceived        UserBlock[]        @relation("UserBlockBlocked")
+
+  // Balayage des invités (retention-sweep) : isGuest puis borne sur
+  // lastSeenAt. Sans index, chaque passage lisait la table entière.
+  @@index([isGuest, lastSeenAt])
 }
 
 model ChatRead {
@@ -104,6 +108,9 @@ model ChatMessage {
   createdAt DateTime @default(now())
 
   @@index([channel, createdAt])
+  // SQLite n'indexe pas les clés étrangères : la cascade d'une suppression
+  // de compte scannait 12 mois de messages pour trouver ceux de l'auteur.
+  @@index([senderId])
 }
 
 model OnlineRoom {
@@ -127,6 +134,9 @@ model OnlineRoom {
   invites               OnlineRoomInvite[]
 
   @@index([status, visibility, gameId])
+  // « Ma salle » (hôte) et cascade de suppression de compte : clé étrangère
+  // non indexée par SQLite.
+  @@index([hostUserId])
 }
 
 model OnlineRoomInvite {
@@ -171,6 +181,9 @@ model OnlineRoomMember {
   lastSeenAt DateTime   @default(now())
 
   @@unique([roomId, userId])
+  // L'unique ci-dessus commence par roomId : il ne sert ni à « dans quelle
+  // salle suis-je » ni à la cascade de suppression de compte.
+  @@index([userId])
 }
 
 // Résultat d'une partie EN LIGNE terminée : une ligne par COMPTE humain.
@@ -370,6 +383,12 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  // `sessions: { none }` du balayage des invités et cascade de suppression
+  // de compte : clé étrangère non indexée par SQLite.
+  @@index([userId])
+  // Purge des sessions échues (retention-sweep) et « session encore valide ».
+  @@index([expiresAt])
 }
 
 // VISITE d'un compte : suite de battements (page visible et utilisée) séparés

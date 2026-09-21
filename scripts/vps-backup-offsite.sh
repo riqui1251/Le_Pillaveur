@@ -27,6 +27,20 @@ if [ -z "$LATEST" ]; then
   exit 0
 fi
 
+# Refus si la derniere copie locale est FIGEE. Sans ce garde-fou, une
+# sauvegarde nocturne en panne (cron casse, `.backup` en echec) restait
+# invisible : `ls -t` rendait toujours le meme fichier, rclone le re-televersait
+# a l'identique et le journal affichait « offsite OK » chaque nuit. Le tableau
+# de bord restait vert pendant que plus rien n'etait sauvegarde.
+# 26 h : le cron passe toutes les 24 h, deux heures absorbent un decalage
+# (changement d'heure, VPS occupe) sans masquer une nuit manquee.
+MAX_AGE_MIN=$((26 * 60))
+if [ -n "$(find "$LATEST" -mmin +"$MAX_AGE_MIN" -print -quit 2>/dev/null)" ]; then
+  echo "[$(date -Is)] offsite ECHEC: derniere sauvegarde locale trop ancienne (>26 h): $(basename "$LATEST")" >> "$LOG"
+  echo "[$(date -Is)] offsite ECHEC: verifier le cron de 03:00 et /var/log/le-pillaveur-backup.log" >> "$LOG"
+  exit 1
+fi
+
 RETENTION_DAYS="${OFFSITE_RETENTION_DAYS:-30}"
 
 rclone copy "$LATEST" "${RCLONE_REMOTE}:${R2_BUCKET}/" \

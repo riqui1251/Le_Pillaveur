@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import fr from '../../messages/fr.json'
 import en from '../../messages/en.json'
@@ -15,6 +17,15 @@ const LANGUES = { fr, en, es, it: itMessages } as Record<
   string,
   { onlineLobby: { errors: Record<string, string> } }
 >
+
+/** Tous les fichiers de route sous un dossier d'API, récursivement. */
+function routeFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) return routeFiles(full)
+    return entry.name === 'route.ts' ? [full] : []
+  })
+}
 
 describe('codes d’erreur online', () => {
   for (const [langue, messages] of Object.entries(LANGUES)) {
@@ -36,6 +47,31 @@ describe('codes d’erreur online', () => {
       })
       expect({ langue, recopiees }).toEqual({ langue, recopiees: [] })
     }
+  })
+
+  /**
+   * Les routes auth et amis ne renvoient plus de phrase française mais un
+   * code, passé à `apiError`. Un code inventé dans une route et jamais déclaré
+   * ici échapperait à l'invariant de traduction au-dessus : le joueur lirait
+   * « user_not_fond » à l'écran. Ce test relit les routes et refuse l'écart.
+   */
+  it('les routes auth et amis n’emploient que des codes déclarés', () => {
+    const fichiers = [
+      ...routeFiles(join(process.cwd(), 'src', 'app', 'api', 'auth')),
+      ...routeFiles(join(process.cwd(), 'src', 'app', 'api', 'friends')),
+    ]
+    expect(fichiers.length).toBeGreaterThan(0)
+
+    const inconnus = new Set<string>()
+    for (const fichier of fichiers) {
+      const source = readFileSync(fichier, 'utf8')
+      for (const found of source.matchAll(/apiError\(\s*'([a-z0-9_]+)'/g)) {
+        if (!ONLINE_ERROR_CODES.includes(found[1] as (typeof ONLINE_ERROR_CODES)[number])) {
+          inconnus.add(found[1])
+        }
+      }
+    }
+    expect([...inconnus]).toEqual([])
   })
 
   it('résout les alias hérités et rejette l’inconnu', () => {

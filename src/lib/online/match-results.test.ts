@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PrismaClient } from '@prisma/client'
 import { XP_LOSS, XP_WIN } from '@/lib/online/cosmetics'
 import { clearXpGains, recallXpGain } from '@/lib/online/xp'
@@ -426,5 +426,198 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     expect(userUpdates[0].id).toBe('u1')
     expect(userUpdates[0].data.streakCount).toBe(4)
     expect(userUpdates[0].data.onlineXp).toEqual({ increment: 40 })
+  })
+})
+
+
+// ─── Fin de partie : tout ou rien ────────────────────────────────────────────
+// L'enregistrement écrit le journal, le classement, les séries, l'XP et les
+// succès : hors transaction, un échec au milieu laisse un joueur classé sans
+// son XP. Deux garanties à tenir, et elles vont ensemble — la route doit
+// OUVRIR une transaction, et recordMatchResults ne doit utiliser QUE le client
+// reçu (avec connection_limit=1, un `prisma.` global dans le callback
+// interbloquerait la route).
+
+/** Client Prisma GLOBAL des modules sous test, réinstallé par chaque test. */
+let prismaStub: Record<string, unknown> = {}
+
+vi.mock('@/lib/prisma', () => ({
+  prisma: new Proxy({} as Record<string, unknown>, {
+    get: (_target, prop: string | symbol) => prismaStub[prop as string],
+  }),
+}))
+
+vi.mock('@/lib/auth-server', () => ({
+  getCurrentUser: async () => ({ id: 'u1' }),
+}))
+
+vi.mock('@/lib/online-room', () => ({
+  kickMember: async () => {},
+}))
+
+vi.mock('@/lib/online/room-bus', () => ({
+  publishRoomChanged: () => {},
+}))
+
+/** Un jeu quelconque : seule compte la transition « pas fini » → « fini ». */
+vi.mock('@/lib/online/game-adapters', () => ({
+  getGameAdapter: () => ({
+    maxPlayers: 8,
+    parse: (json: string | null) => (json ? JSON.parse(json) : null),
+    serialize: (state: unknown) => JSON.stringify(state),
+    applyAction: () => ({
+      ok: true,
+      state: {
+        finished: true,
+        players: [
+          { id: 'u1', isBot: false },
+          { id: 'u2', isBot: false },
+        ],
+        winner: 'u1',
+      },
+    }),
+    isFinished: (state: unknown) => Boolean((state as { finished?: boolean }).finished),
+    currentActorId: () => null,
+    actionResponse: () => ({}),
+    convertToBot: () => null,
+    rejoin: () => null,
+  }),
+}))
+
+/** Client transactionnel minimal : mémorise ce qui a été écrit à travers lui. */
+function fakeTx() {
+  const writes: string[] = []
+  const client = {
+    onlineGameSession: {
+      updateMany: async () => {
+        writes.push('session')
+        return { count: 1 }
+      },
+    },
+    onlineMatchResult: {
+      createMany: async ({ data }: { data: unknown[] }) => {
+        writes.push('classement')
+        return { count: data.length }
+      },
+      findMany: async () => [],
+    },
+    achievement: {
+      findMany: async () => [],
+      create: async () => {
+        writes.push('succes')
+        return {}
+      },
+    },
+    user: {
+      findMany: async ({ where }: { where: { id: { in: string[] } } }) =>
+        where.id.in.map((id) => ({ id, streakCount: 0, streakLastDay: null, onlineXp: 0 })),
+      findUnique: async () => ({ onlineXp: 0 }),
+      update: async () => {
+        writes.push('serie')
+        return {}
+      },
+      updateMany: async ({ where }: { where: { id: { in: string[] } } }) => {
+        writes.push('xp')
+        return { count: where.id.in.length }
+      },
+    },
+  }
+  return { client: client as unknown as PrismaClient, writes }
+}
+
+describe('recordMatchResults : aucun client Prisma global', () => {
+  beforeEach(() => {
+    clearXpGains()
+  })
+
+  it('n’écrit qu’à travers le client reçu (sinon : interblocage en transaction)', async () => {
+    // Le moindre accès au client global casse le test, y compris depuis les
+    // fonctions appelées (closeGameSession, checkMatchAchievements).
+    prismaStub = new Proxy({} as Record<string, unknown>, {
+      get: (_target, prop: string | symbol) => {
+        throw new Error(`client Prisma global utilisé : prisma.${String(prop)}`)
+      },
+    })
+    const { client, writes } = fakeTx()
+    const state = {
+      players: [
+        { id: 'u1', isBot: false },
+        { id: 'u2', isBot: false },
+      ],
+      winner: 'u1',
+    }
+
+    await expect(
+      recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
+    ).resolves.toBe(2)
+    expect(writes).toContain('session')
+    expect(writes).toContain('classement')
+    expect(writes).toContain('xp')
+  })
+})
+
+describe('POST /api/online/rooms/[roomId]/action : fin de partie sous transaction', () => {
+  beforeEach(() => {
+    clearXpGains()
+  })
+
+  it('enregistre les résultats avec le client TRANSACTIONNEL, pas le global', async () => {
+    const tx = fakeTx()
+    const transactions: { timeout?: number }[] = []
+    let globalClassementWrites = 0
+
+    prismaStub = {
+      onlineRoom: {
+        findUnique: async () => ({
+          id: 'r1',
+          hostUserId: 'u1',
+          currentTurnUserId: 'u1',
+          updatedAt: new Date(),
+          stateVersion: 3,
+          status: 'playing',
+          gameId: 'petit-buveur',
+          gameStateJson: JSON.stringify({
+            finished: false,
+            players: [{ id: 'u1' }, { id: 'u2' }],
+          }),
+          members: [{ userId: 'u1' }, { userId: 'u2' }],
+        }),
+        updateMany: async () => ({ count: 1 }),
+      },
+      // Filet : si l'enregistrement passait par le client global, il écrirait ici.
+      onlineMatchResult: {
+        createMany: async () => {
+          globalClassementWrites += 1
+          return { count: 0 }
+        },
+      },
+      $transaction: async (
+        run: (client: PrismaClient) => Promise<unknown>,
+        options?: { maxWait?: number; timeout?: number }
+      ) => {
+        transactions.push(options ?? {})
+        return run(tx.client)
+      },
+    }
+
+    const { POST } = await import('@/app/api/online/rooms/[roomId]/action/route')
+    const request = new Request('https://example.test/api/online/rooms/r1/action', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'play', expectedVersion: 3 }),
+    })
+    const response = await POST(request, { params: Promise.resolve({ roomId: 'r1' }) })
+
+    expect(response.status).toBe(200)
+    // Une transaction ouverte, avec le délai laissé à SQLite ET l'attente d'une
+    // connexion libre : `maxWait` vaut 2 s par défaut, or connection_limit=1
+    // (src/lib/prisma.ts) oblige la fin de partie à attendre son tour. Sans
+    // cette borne explicite, deux tables qui finissent à la même minute
+    // perdaient tout leur enregistrement sur un P2028 avalé.
+    expect(transactions).toEqual([{ maxWait: 10_000, timeout: 10_000 }])
+    // Les écritures de fin de partie sont passées par le client transactionnel.
+    expect(tx.writes).toContain('classement')
+    expect(tx.writes).toContain('xp')
+    expect(globalClassementWrites).toBe(0)
   })
 })

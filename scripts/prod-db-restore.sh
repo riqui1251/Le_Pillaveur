@@ -35,6 +35,13 @@ PAGE_URL="${PAGE_URL:-http://127.0.0.1:3000/}"
 HEALTH_TRIES="${HEALTH_TRIES:-10}"
 HEALTH_DELAY="${HEALTH_DELAY:-3}"
 RESTART_IMAGE="${RESTART_IMAGE:-le-pillaveur:latest}"
+# UID/GID du conteneur applicatif (Dockerfile : nextjs 1001). La base de prod
+# est en WAL : l'ouvrir cree prod.db-wal et prod.db-shm a cote du fichier. Tout
+# conteneur qui lance sqlite3 SUR LE VOLUME DE PROD descend donc a cet UID,
+# sinon il laisse des fichiers annexes appartenant a root et l'application ne
+# peut plus ouvrir sa base. (Les conteneurs qui n'ouvrent que la copie de
+# travail dans /tmp restent en root : ce repertoire est detruit a la sortie.)
+DB_UID="${DB_UID:-1001}"
 
 # L'aide est l'en-tete du fichier : une seule source a maintenir.
 usage() {
@@ -161,8 +168,11 @@ fi
 echo
 echo "===== 3) CONFIRMATION ====="
 if [ "$RESTORE_DATA" = "1" ]; then
-  CURRENT_USERS=$(docker run --rm -v "$DB_VOLUME:/data:ro" alpine sh -c \
-    'apk add --no-cache sqlite >/dev/null && sqlite3 /data/prod.db "SELECT COUNT(*) FROM User;" 2>/dev/null' | tr -d '\r' || true)
+  # Volume en lecture-ECRITURE : en WAL, SQLite a besoin de creer le fichier de
+  # memoire partagee -shm ne serait-ce que pour LIRE. Monte `:ro`, ce simple
+  # comptage echouerait et on annoncerait « ? comptes » avant une restauration.
+  CURRENT_USERS=$(docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c \
+    'apk add --no-cache sqlite su-exec >/dev/null && su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db "SELECT COUNT(*) FROM User;" 2>/dev/null' | tr -d '\r' || true)
   echo "Base actuelle  : volume $DB_VOLUME (${CURRENT_USERS:-?} comptes)"
   echo "Sera remplacee : $SNAPSHOT (${USERS:-?} comptes)"
   echo "Tout ce qui a ete ecrit depuis l'instantane sera PERDU."
@@ -188,11 +198,19 @@ if [ "$RESTORE_DATA" = "1" ]; then
   echo
   echo "===== 4) SAUVEGARDE DE LA BASE ACTUELLE ====="
   # La restauration est elle-meme destructrice : on garde de quoi revenir en
-  # arriere si on s'est trompe d'instantane.
+  # arriere si on s'est trompe d'instantane. Volume en lecture-ECRITURE (WAL
+  # exige de pouvoir creer -shm), sqlite3 sous $DB_UID, et copie via /tmp car
+  # $BACKUP_DIR est en 700 cote hote : l'UID $DB_UID ne peut y ecrire ni le
+  # fichier, ni le journal que sqlite3 cree a cote de la destination.
   docker run --rm \
-    -v "$DB_VOLUME:/data:ro" \
+    -v "$DB_VOLUME:/data" \
     -v "$BACKUP_DIR:/backup" \
-    alpine sh -c "apk add --no-cache sqlite >/dev/null && sqlite3 /data/prod.db \".backup /backup/prod-prerestore-${STAMP}.db\""
+    alpine sh -c "
+      set -e
+      apk add --no-cache sqlite su-exec >/dev/null
+      su-exec $DB_UID:$DB_UID sqlite3 /data/prod.db \".backup /tmp/prerestore.db\"
+      mv /tmp/prerestore.db /backup/prod-prerestore-${STAMP}.db
+    "
   sudo gzip -f "$BACKUP_DIR/prod-prerestore-${STAMP}.db"
   echo "Base actuelle sauvegardee : $BACKUP_DIR/prod-prerestore-${STAMP}.db.gz"
 fi
@@ -210,11 +228,17 @@ if [ "$RESTORE_DATA" = "1" ]; then
   # permissions » du deploiement : proprietaire 1001 (l'utilisateur du
   # conteneur) et ecriture pour le groupe. Le 640 pose ici divergeait de cette
   # convention (SQLite a besoin d'ecrire aussi ses fichiers annexes).
-  docker run --rm -v "$DB_VOLUME:/data" -v "$WORK:/restore:ro" alpine sh -c '
+  #
+  # L'effacement des fichiers annexes est fait AVANT la copie, et il n'est pas
+  # cosmetique : en WAL, un prod.db-wal survivant appartient a l'ANCIENNE base.
+  # SQLite le rejouerait par-dessus le fichier restaure — on reecrirait des
+  # pages de la base qu'on vient justement de remplacer. Le conteneur applicatif
+  # a ete arrete a l'etape 5 : plus personne ne tient ces fichiers.
+  docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" -v "$WORK:/restore:ro" alpine sh -c '
     set -e
     rm -f /data/prod.db-journal /data/prod.db-wal /data/prod.db-shm
     cp /restore/restore.db /data/prod.db
-    chown -R 1001:1001 /data
+    chown -R "$DB_UID:$DB_UID" /data
     chmod -R u+rwX,g+rwX /data
     ls -l /data/prod.db
   '
@@ -227,6 +251,9 @@ ENV_ARGS=()
 if [ -f "$ENV_FILE" ]; then
   ENV_ARGS=(--env-file "$ENV_FILE")
 fi
+# DATABASE_URL reste NUE ici, comme dans scripts/prod-deploy.sh : les
+# parametres de connexion (?connection_limit=1&socket_timeout=15) sont ajoutes
+# par l'application, dans src/lib/prisma.ts — source de verite unique.
 docker run -d \
   --name le-pillaveur \
   --restart always \

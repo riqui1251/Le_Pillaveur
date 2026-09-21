@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { apiErrorMessage } from '@/lib/api-response'
 
 function ResetPasswordForm() {
   const router = useRouter()
@@ -14,6 +15,10 @@ function ResetPasswordForm() {
   const t = useTranslations('account.reset')
   const tCommon = useTranslations('common')
   const tErrors = useTranslations('errors')
+  // /api/auth/reset-password ne renvoie plus de phrase française mais un CODE
+  // stable (`invalid_reset_token`, `invalid_password`) : c'est ici qu'il
+  // redevient une phrase, dans la langue du visiteur.
+  const tApiErrors = useTranslations('onlineLobby.errors')
 
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -46,7 +51,9 @@ function ResetPasswordForm() {
         body: JSON.stringify({ token, password }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? tErrors('generic'))
+      if (!res.ok) {
+        throw new Error(apiErrorMessage(data.code ?? data.error, tApiErrors, tErrors('generic')))
+      }
       setSuccess(true)
       setTimeout(() => router.push('/compte?reset=success'), 2000)
     } catch (err) {

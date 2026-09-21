@@ -6,6 +6,7 @@ import { Check, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { apiErrorMessage } from '@/lib/api-response'
 import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
 import { isNativeGoogleAvailable } from '@/lib/native-google-login'
@@ -19,6 +20,10 @@ import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
  */
 export function GuestUpgradeCard() {
   const t = useTranslations('account.guestUpgrade')
+  // La route /api/auth/guest/upgrade ne renvoie plus de phrase française mais
+  // un CODE stable : c'est ici qu'il redevient une phrase, dans la langue du
+  // visiteur. Sans ça, le joueur lisait « not_guest » ou « email_taken ».
+  const tApiErrors = useTranslations('onlineLobby.errors')
   const locale = useLocale()
   const { user, refresh } = useAuth()
   // Le capital concret de l'invité (niveau, XP, cosmétiques) : montrer ce
@@ -42,7 +47,8 @@ export function GuestUpgradeCard() {
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) {
-        setError((data as { error?: string } | null)?.error ?? t('genericError'))
+        const refus = data as { error?: string; code?: string } | null
+        setError(apiErrorMessage(refus?.code ?? refus?.error, tApiErrors, t('genericError')))
         return
       }
       setSaved(true)

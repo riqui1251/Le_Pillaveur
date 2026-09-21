@@ -14,6 +14,7 @@ import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
 import { LogIn, UserPlus, Gamepad2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
+import { apiErrorMessage } from '@/lib/api-response'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import {
   Dialog,
@@ -55,6 +56,9 @@ function safeRedirect(path: string | null): string {
 export function AuthForm() {
   const t = useTranslations('auth')
   const tCommon = useTranslations('common')
+  // Les routes /api/auth ne renvoient plus de phrase française mais un CODE
+  // stable : c'est ici qu'il redevient une phrase, dans la langue du visiteur.
+  const tApiErrors = useTranslations('onlineLobby.errors')
   const locale = useLocale()
   const tNav = useTranslations('nav.legal')
   const { login, register, refresh, setPlayMode } = useAuth()
@@ -140,7 +144,7 @@ export function AuthForm() {
         ? await login(email, password)
         : await register(email, password, displayName, locale)
       if (err) {
-        setError(err)
+        setError(apiErrorMessage(err, tApiErrors, t('errors.generic')))
       } else {
         if (mode === 'register') await applyIntendedPlayMode()
         rememberHasLoggedIn()
@@ -178,7 +182,8 @@ export function AuthForm() {
         })
         const data = await res.json().catch(() => null)
         if (!res.ok) {
-          setError(data?.error ?? t('errors.generic'))
+          // `code` d'abord : le 429 du quota garde une phrase dans `error`.
+          setError(apiErrorMessage(data?.code ?? data?.error, tApiErrors, t('errors.generic')))
           return
         }
         // `created` distingue l'inscription de la reconnexion : on ne
@@ -270,7 +275,7 @@ export function AuthForm() {
       }
       if (!res.ok) {
         const data = await res.json().catch(() => null)
-        setForgotError(data?.error ?? t('errors.generic'))
+        setForgotError(apiErrorMessage(data?.code ?? data?.error, tApiErrors, t('errors.generic')))
         return
       }
       setForgotMessage(t('forgot.success'))

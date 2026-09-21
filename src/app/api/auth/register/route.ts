@@ -8,7 +8,6 @@ import {
   hashPassword,
   isValidEmail,
   isValidPassword,
-  passwordRequirementsHint,
   sessionCookieOptions,
 } from '@/lib/auth-server'
 import { createUniqueAccountCode } from '@/lib/account-code'
@@ -27,15 +26,23 @@ import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { recordIpSeen } from '@/lib/ip-history-server'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
 
 const REGISTER_LIMIT = 5
 const REGISTER_WINDOW_MS = 60 * 60 * 1000
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('auth/register POST', async (request: Request) => {
   try {
-    const body = await request.json()
+    const parsed = await readApiJson<{
+      email?: unknown
+      password?: unknown
+      displayName?: unknown
+      locale?: unknown
+    }>(request)
+    if (!parsed.ok) return parsed.response
+    const body = parsed.body
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const password = typeof body.password === 'string' ? body.password : ''
     const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : ''
@@ -52,15 +59,10 @@ export async function POST(request: Request) {
     })
     const initialLocale = normalizeAppLocale(bodyLocale ?? cookieLocale)
 
-    if (!isValidEmail(email)) {
-      return NextResponse.json({ error: 'Email invalide' }, { status: 400 })
-    }
-    if (!isValidPassword(password)) {
-      return NextResponse.json(
-        { error: passwordRequirementsHint() },
-        { status: 400 }
-      )
-    }
+    if (!isValidEmail(email)) return apiError('invalid_email', 400)
+    // Les exigences de mot de passe sont les mêmes pour tous : la phrase qui
+    // les rappelle vit désormais côté traductions (invalid_password).
+    if (!isValidPassword(password)) return apiError('invalid_password', 400)
     await ensureServerModerationTermsLoaded()
 
     const displayNameError = getDisplayNameValidationError(displayName)
@@ -72,6 +74,10 @@ export async function POST(request: Request) {
           context: 'register',
         })
       }
+      // Seul refus qui garde une phrase dans `error` : elle est déjà rendue
+      // dans la langue de la requête (requestLocale) et dit CE QUI cloche
+      // dans le pseudo — un code générique perdrait ce détail. `code` porte
+      // la raison pour les écrans qui traduisent eux-mêmes.
       return NextResponse.json(
         {
           error: displayNameValidationMessage(displayName, requestLocale),
@@ -88,16 +94,7 @@ export async function POST(request: Request) {
     // Message volontairement neutre : il ne distingue pas un email pris d'un
     // email libre (pas d'énumération d'adresses).
     const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } })
-    if (existing) {
-      return NextResponse.json(
-        {
-          error:
-            "Inscription impossible avec ces informations. Si tu as déjà un compte, connecte-toi ou utilise « Mot de passe oublié ».",
-          code: 'registration_refused',
-        },
-        { status: 409 }
-      )
-    }
+    if (existing) return apiError('registration_refused', 409)
 
     if (await isDisplayNameTaken(displayName)) {
       return NextResponse.json(
@@ -142,7 +139,7 @@ export async function POST(request: Request) {
       })
       await recordIpSeen(user.id, '', ip, country)
     } catch (error) {
-      console.error('register network trace error:', error)
+      console.error('[api] auth/register trace', error instanceof Error ? error.name : typeof error)
     }
 
     // Tentatives de pseudo du navigateur : lp_vid sous l'accord courant seulement.
@@ -178,10 +175,9 @@ export async function POST(request: Request) {
     response.cookies.set(localeCookieOptions(userLocale))
     return response
   } catch (error) {
-    console.error('register error:', error)
-    return NextResponse.json(
-      { error: 'Service momentanément indisponible. Réessaie dans quelques instants.', code: 'service_unavailable' },
-      { status: 503 }
-    )
+    // 503 conservé : la création a pu échouer sur une panne de base, pas sur
+    // une saisie du visiteur.
+    console.error('[api] auth/register POST', error instanceof Error ? error.name : typeof error)
+    return apiError('service_unavailable', 503)
   }
-}
+})

@@ -45,47 +45,82 @@ export async function GET(request: Request, { params }: Params) {
 
   const encoder = new TextEncoder()
 
+  // Assigné par `start` (appelé dès la construction du flux) : `cancel` doit
+  // pouvoir nettoyer même si le consommateur lâche le flux avant.
+  let dispose = () => {}
+
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
-      let closed = false
-      const safeEnqueue = (chunk: string) => {
-        if (closed) return
-        try {
-          controller.enqueue(encoder.encode(chunk))
-        } catch {
-          closed = true
-        }
-      }
+      let disposed = false
+      // Tout ce qui doit être relâché, dans l'ordre d'acquisition — une liste
+      // plutôt que des variables : le nettoyage peut partir AVANT que la
+      // dernière ressource existe (un enqueue qui échoue dès `ready`).
+      const disposers: (() => void)[] = []
 
-      safeEnqueue('event: ready\ndata: {}\n\n')
-
-      const unsubscribe = subscribeRoom(room.id, (event) => {
-        safeEnqueue(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
-      })
-
-      // Trames de bille (cast d'un jeu local) : relayées telles quelles.
-      const unsubscribeFrame = subscribeCastFrame(room.id, (frame) => {
-        safeEnqueue(`event: castframe\ndata: ${JSON.stringify(frame)}\n\n`)
-      })
-
-      const heartbeat = setInterval(() => {
-        safeEnqueue(`: ping ${Date.now()}\n\n`)
-      }, HEARTBEAT_MS)
-
+      /**
+       * Nettoyage idempotent, appelé par l'abort de la requête, par un enqueue
+       * qui échoue et par le `cancel` du flux. Avant, un enqueue en échec
+       * posait `closed = true` et le nettoyage commençait par `if (closed)
+       * return` : le keep-alive et les abonnements au bus survivaient jusqu'au
+       * redémarrage du conteneur — une TV débranchée coûtait pour toujours.
+       */
       const cleanup = () => {
-        if (closed) return
-        closed = true
-        clearInterval(heartbeat)
-        unsubscribe()
-        unsubscribeFrame()
+        if (disposed) return
+        disposed = true
+        request.signal.removeEventListener('abort', cleanup)
+        for (const off of disposers.splice(0)) {
+          try {
+            off()
+          } catch {
+            /* un désabonnement raté ne doit pas empêcher les suivants */
+          }
+        }
         try {
           controller.close()
         } catch {
           /* déjà fermé */
         }
       }
+      dispose = cleanup
+
+      const safeEnqueue = (chunk: string) => {
+        if (disposed) return
+        try {
+          controller.enqueue(encoder.encode(chunk))
+        } catch {
+          // La TV a été éteinte sans qu'aucun `abort` ne nous parvienne : le
+          // keep-alive ci-dessous est ce qui finit par s'en apercevoir.
+          cleanup()
+        }
+      }
+
+      safeEnqueue('event: ready\ndata: {}\n\n')
+
+      disposers.push(
+        subscribeRoom(room.id, (event) => {
+          safeEnqueue(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
+        })
+      )
+
+      // Trames de bille (cast d'un jeu local) : relayées telles quelles.
+      disposers.push(
+        subscribeCastFrame(room.id, (frame) => {
+          safeEnqueue(`event: castframe\ndata: ${JSON.stringify(frame)}\n\n`)
+        })
+      )
+
+      const heartbeat = setInterval(() => {
+        safeEnqueue(`: ping ${Date.now()}\n\n`)
+      }, HEARTBEAT_MS)
+      disposers.push(() => clearInterval(heartbeat))
 
       request.signal.addEventListener('abort', cleanup)
+      // Requête déjà annulée pendant la lecture de la salle : l'écouteur ne se
+      // déclencherait plus jamais.
+      if (request.signal.aborted) cleanup()
+    },
+    cancel() {
+      dispose()
     },
   })
 

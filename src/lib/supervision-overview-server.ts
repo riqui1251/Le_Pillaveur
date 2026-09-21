@@ -319,7 +319,12 @@ async function getDailySeries(days: number): Promise<DailyPoint[]> {
   }))
 }
 
-/** Purge des salles de cast abandonnées (G5). */
+/**
+ * Purge des salles de cast abandonnées (G5). Appelée à chaque lecture de la
+ * Supervision, et désormais TOUTES LES 5 MINUTES par le planificateur
+ * (src/lib/scheduler.ts) : une salle de cast fantôme ne survit plus à un lundi
+ * sans visiteur.
+ */
 export async function cleanupStaleCastRooms(): Promise<void> {
   const cutoff = new Date(Date.now() - STALE_CAST_ROOM_MS)
   const stale = await prisma.onlineRoom.findMany({

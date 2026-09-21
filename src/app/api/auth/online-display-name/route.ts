@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import {
+  displayNameTakenMessage,
   displayNameValidationMessage,
   getDisplayNameValidationError,
   isDisplayNameTaken,
@@ -9,15 +10,18 @@ import {
 import { resolveRequestLocale } from '@/lib/name-moderation/request-locale'
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 
-export async function PATCH(request: Request) {
+export const PATCH = withApiRoute('auth/online-display-name PATCH', async (request: Request) => {
   const user = await getCurrentUser()
-  if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
+  if (!user) return apiError('auth_required', 401)
 
   await ensureServerModerationTermsLoaded()
   const requestLocale = await resolveRequestLocale({ userLocale: user.locale })
-  const body = await request.json().catch(() => ({}))
-  const onlineDisplayName = typeof body.onlineDisplayName === 'string' ? body.onlineDisplayName.trim() : ''
+  const parsed = await readApiJson<{ onlineDisplayName?: unknown }>(request)
+  if (!parsed.ok) return parsed.response
+  const onlineDisplayName =
+    typeof parsed.body.onlineDisplayName === 'string' ? parsed.body.onlineDisplayName.trim() : ''
 
   const errorCode = getDisplayNameValidationError(onlineDisplayName)
   if (errorCode) {
@@ -29,6 +33,8 @@ export async function PATCH(request: Request) {
         userId: user.id,
       })
     }
+    // Refus de pseudo : `error` garde une phrase, DÉJÀ rendue dans la langue
+    // de la requête et détaillant ce qui cloche. `code` porte la raison.
     return NextResponse.json(
       { error: displayNameValidationMessage(onlineDisplayName, requestLocale), code: errorCode },
       { status: 400 }
@@ -36,8 +42,10 @@ export async function PATCH(request: Request) {
   }
 
   if (await isDisplayNameTaken(onlineDisplayName, user.id)) {
+    // Seule phrase française brute de cette route : remplacée par le message
+    // déjà traduit du refus de pseudo à l'inscription, même situation.
     return NextResponse.json(
-      { error: 'Ce pseudo online est déjà pris', code: 'display_name_taken' },
+      { error: displayNameTakenMessage(requestLocale), code: 'display_name_taken' },
       { status: 409 }
     )
   }
@@ -48,4 +56,4 @@ export async function PATCH(request: Request) {
   })
 
   return NextResponse.json({ ok: true, onlineDisplayName })
-}
+})

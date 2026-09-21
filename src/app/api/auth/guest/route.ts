@@ -22,6 +22,7 @@ import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-t
 import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { linkVisitorNameModerationAttempts } from '@/lib/name-moderation-attempts-server'
 import { checkRateLimit, networkRateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { AGE_VERIFIED_COOKIE, readConsentedVisitorId } from '@/lib/auth-cookies'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
@@ -51,9 +52,11 @@ const GUEST_WINDOW_MS = 60 * 60 * 1000
  * Session et cookie de 91 jours glissants (GUEST_SESSION_DAYS) : le cookie est
  * la seule clé du compte.
  */
-export async function POST(request: Request) {
+export const POST = withApiRoute('auth/guest POST', async (request: Request) => {
   try {
-    const body = await request.json()
+    const parsed = await readApiJson<{ displayName?: unknown; locale?: unknown }>(request)
+    if (!parsed.ok) return parsed.response
+    const body = parsed.body
     const requested = typeof body.displayName === 'string' ? body.displayName.trim() : ''
 
     const rate = checkRateLimit(networkRateLimitKey(request, 'guest'), GUEST_LIMIT, GUEST_WINDOW_MS)
@@ -65,12 +68,9 @@ export async function POST(request: Request) {
     // 18+ (cookie posé par /api/legal/accept-age, portail et bandeau). Les
     // pages de lecture (/regles) n'affichent pas le portail : c'est au client
     // de le présenter sur ce code, puis de réessayer.
-    if (!cookieStore.has(AGE_VERIFIED_COOKIE)) {
-      return NextResponse.json(
-        { error: 'age_gate_required', code: 'age_gate_required' },
-        { status: 403 }
-      )
-    }
+    // Forme inchangée (`error` ET `code` valent age_gate_required) : JoinGate
+    // et TryBotsGate la reconnaissent pour ouvrir le portail sur place.
+    if (!cookieStore.has(AGE_VERIFIED_COOKIE)) return apiError('age_gate_required', 403)
 
     // Déjà une session valide (incident passager de /me côté client, double
     // clic) : pas de second compte, qui rendrait le premier orphelin. On
@@ -99,6 +99,9 @@ export async function POST(request: Request) {
           context: 'guest',
         })
       }
+      // Refus de pseudo : `error` garde une phrase, mais elle est DÉJÀ rendue
+      // dans la langue de la requête (requestLocale) et dit ce qui cloche —
+      // un code générique perdrait ce détail. `code` porte la raison.
       return NextResponse.json(
         {
           error: displayNameValidationMessage(requested, requestLocale),
@@ -162,7 +165,7 @@ export async function POST(request: Request) {
       })
       await recordIpSeen(user.id, '', ip, country)
     } catch (error) {
-      console.error('guest auth network trace error:', error)
+      console.error('[api] auth/guest trace', error instanceof Error ? error.name : typeof error)
     }
 
     // Tentatives de pseudo du navigateur : lp_vid sous l'accord courant seulement.
@@ -194,10 +197,9 @@ export async function POST(request: Request) {
     response.cookies.set(localeCookieOptions(initialLocale))
     return response
   } catch (error) {
-    console.error('guest auth error:', error)
-    return NextResponse.json(
-      { error: 'Service momentanément indisponible. Réessaie dans quelques instants.', code: 'service_unavailable' },
-      { status: 503 }
-    )
+    // 503 conservé : la porte d'entrée sans inscription doit dire « réessaie »,
+    // pas « erreur serveur ».
+    console.error('[api] auth/guest POST', error instanceof Error ? error.name : typeof error)
+    return apiError('service_unavailable', 503)
   }
-}
+})

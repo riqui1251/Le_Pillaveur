@@ -7,8 +7,33 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { recordMatchResults } from '@/lib/online/match-results'
 import { onlineErrorBody, resolveOnlineErrorCode } from '@/lib/online-errors'
+import { readJsonBodyLimited } from '@/lib/rate-limit'
 
 type Params = { params: Promise<{ roomId: string }> }
+
+/**
+ * Une intention de jeu ordinaire tient en quelques champs (un identifiant, un
+ * index, un mot) : 8 Ko est déjà très large.
+ */
+const MAX_ACTION_BODY_BYTES = 8 * 1024
+
+/**
+ * Sauf pour les jeux de dessin, où l'action PORTE le dessin. Le calcul, au
+ * pire du pire (PartyCanvas envoie les coordonnées normalisées SANS arrondi,
+ * soit ~20 octets par nombre, séparateur compris) :
+ *  - Crobard : une action = UN trait, plafonné à CANVAS_MAX_POINTS_PER_STROKE
+ *    = 2 000 nombres, soit ~40 Ko ;
+ *  - Téléphone Dessiné : l'action `submit` porte le dessin ENTIER, accumulé
+ *    pendant TELEPHONE_DRAW_MS = 80 s. Un écran à 120 Hz dont le doigt ne se
+ *    lèverait jamais produit 9 600 points = 19 200 nombres, soit ~384 Ko.
+ * D'où 512 Ko : de la marge au-dessus d'un dessin humainement possible, très
+ * loin en dessous des 16 Mo que le plafond de traits du moteur
+ * (CANVAS_MAX_STROKES × CANVAS_MAX_POINTS_PER_STROKE) autoriserait en théorie
+ * — et surtout, sanitizeStroke ne tronque qu'APRÈS le parse : sans ce plafond,
+ * ces mégaoctets étaient d'abord matérialisés en mémoire.
+ */
+const MAX_DRAWING_ACTION_BODY_BYTES = 512 * 1024
+const DRAWING_GAMES = new Set(['crobard', 'telephone-dessine'])
 
 type RoomRow = {
   id: string
@@ -67,7 +92,25 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json(onlineErrorBody('replaced_by_bot'), { status: 403 })
   }
 
-  const body = await request.json().catch(() => ({}))
+  // Le plafond dépend du jeu de la salle, connue avant d'avoir lu le corps :
+  // seul un jeu de dessin a le droit d'envoyer plus que quelques champs.
+  // Refus de corps trop gros : `payload_too_large`, le code générique que
+  // withApiRoute/readApiJson posent déjà partout ailleurs (il est traduit dans
+  // les 4 langues). Surtout pas `signal_too_large`, réservé au vocal WebRTC :
+  // parler de « signal » à qui crée une table n'a aucun sens.
+  const parsed = await readJsonBodyLimited<Record<string, unknown> | null>(
+    request,
+    DRAWING_GAMES.has(room.gameId ?? '')
+      ? MAX_DRAWING_ACTION_BODY_BYTES
+      : MAX_ACTION_BODY_BYTES
+  )
+  if (!parsed.ok && parsed.reason === 'too_large') {
+    return NextResponse.json(onlineErrorBody('payload_too_large'), { status: 413 })
+  }
+  // Corps absent ou illisible : comme avant, on continue avec un objet vide —
+  // plusieurs ticks (`advance`, `bot`) n'envoient rien du tout, et le moteur
+  // refusera lui-même une intention qui n'a pas de sens.
+  const body = (parsed.ok ? parsed.body : null) ?? {}
 
   // Concurrence optimiste : évite les actions basées sur un état périmé.
   const expectedVersion =
@@ -141,12 +184,37 @@ export async function POST(request: Request, { params }: Params) {
   if (kickedUserId) await kickMember(roomId, room.hostUserId, kickedUserId)
 
   // Partie qui VIENT de se terminer → résultats du classement en ligne.
-  if (finished && !wasFinished && room.gameId) {
+  // Le jeu est recopié dans une constante : le narrowing d'une propriété ne
+  // traverse pas le callback de la transaction.
+  const finishedGameId = room.gameId
+  if (finished && !wasFinished && finishedGameId) {
     try {
-      await recordMatchResults(prisma, { roomId, gameId: room.gameId, state: next })
+      // TOUT ou RIEN : l'enregistrement écrit le journal, les lignes de
+      // classement, les séries, l'XP et les succès. Hors transaction, un échec
+      // au milieu laissait un joueur classé sans son XP, ou une série avancée
+      // sans partie enregistrée — un écart que rien ne rattrape ensuite.
+      // recordMatchResults n'utilise QUE le client reçu (lui et tout ce qu'il
+      // appelle : closeGameSession, checkMatchAchievements, awardAchievement) :
+      // un `prisma.` global dans ce callback INTERBLOQUERAIT la route, la
+      // connexion unique du pool étant déjà prise par la transaction.
+      //
+      // `maxWait` EXPLICITE, et pas seulement `timeout` : maxWait borne
+      // l'attente d'une connexion libre pour DÉMARRER la transaction, et il
+      // vaut 2 s par défaut. Avec connection_limit=1 (src/lib/prisma.ts), la
+      // fin de partie doit attendre que l'unique connexion se libère — deux
+      // tables qui finissent à la même minute dépassaient 2 s et récoltaient un
+      // P2028, avalé par le catch ci-dessous : classement, XP, séries, succès
+      // et clôture de la session perdus en silence. Les deux bornes restent
+      // sous socket_timeout=15 s, pour qu'une requête pendue échoue franchement.
+      await prisma.$transaction(
+        (tx) => recordMatchResults(tx, { roomId, gameId: finishedGameId, state: next }),
+        { maxWait: 10_000, timeout: 10_000 }
+      )
     } catch (e) {
       // Le classement ne doit jamais casser la fin de partie côté joueurs.
-      console.error('[match-results] enregistrement échoué', e)
+      // RGPD : seul le NOM de la classe d'erreur part dans les journaux du
+      // conteneur — un message Prisma recopie la ligne fautive, donc un pseudo.
+      console.error('[match-results] enregistrement échoué', e instanceof Error ? e.name : typeof e)
     }
   }
 

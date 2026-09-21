@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 
-export async function PUT(request: Request) {
+export const PUT = withApiRoute('auth/mode PUT', async (request: Request) => {
   const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
-  }
+  if (!user) return apiError('auth_required', 401)
 
-  const body = await request.json().catch(() => ({}))
-  const mode = body.mode
-  if (mode !== 'local' && mode !== 'online') {
-    return NextResponse.json({ error: 'Mode invalide' }, { status: 400 })
-  }
+  const parsed = await readApiJson<{ mode?: unknown }>(request)
+  if (!parsed.ok) return parsed.response
+
+  const mode = parsed.body?.mode
+  if (mode !== 'local' && mode !== 'online') return apiError('invalid_mode', 400)
 
   const updated = await prisma.user.update({
     where: { id: user.id },
@@ -21,4 +20,4 @@ export async function PUT(request: Request) {
   })
 
   return NextResponse.json({ playMode: updated.playMode })
-}
+})

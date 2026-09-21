@@ -49,17 +49,17 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json(onlineErrorBody('host_only_settings'), { status: 403 })
   }
 
-  // ONLINE_ERROR_CODES n'a aucun code générique « corps trop gros » :
-  // `signal_too_large` (vocabulaire du vocal WebRTC) est le seul déjà traduit
-  // dans onlineLobby.errors, donc réutilisé ici par défaut. À remplacer par un
-  // code dédié (ex. `body_too_large`) le jour où online-errors.ts en gagne un.
+  // Refus de corps trop gros : `payload_too_large`, le code générique que
+  // withApiRoute/readApiJson posent déjà partout ailleurs (il est traduit dans
+  // les 4 langues). Surtout pas `signal_too_large`, réservé au vocal WebRTC :
+  // parler de « signal » à qui règle sa table n'a aucun sens.
   const parsed = await readJsonBodyLimited<Record<string, unknown>>(
     request,
     MAX_SETTINGS_BODY_BYTES
   )
   if (!parsed.ok) {
     return parsed.reason === 'too_large'
-      ? NextResponse.json(onlineErrorBody('signal_too_large'), { status: 413 })
+      ? NextResponse.json(onlineErrorBody('payload_too_large'), { status: 413 })
       : NextResponse.json(onlineErrorBody('invalid_json'), { status: 400 })
   }
   // Forme libre comme avant : chaque réglage est validé un à un ci-dessous.

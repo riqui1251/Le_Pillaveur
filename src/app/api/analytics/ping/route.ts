@@ -23,20 +23,37 @@ import { parsePingBody, planPing } from '@/lib/analytics-ping'
 import { recordAccountBeat } from '@/lib/account-visits-server'
 import { recordIpSeen } from '@/lib/ip-history-server'
 import { runRetentionSweep } from '@/lib/retention-sweep'
+import { readJsonBodyLimited } from '@/lib/rate-limit'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 
 export const runtime = 'nodejs'
 
-/** Corps JSON, ou null s'il est absent, invalide ou d'un autre type. */
+/**
+ * Plafond du corps du ping. La route est PUBLIQUE — ni session exigée, ni
+ * quota — et c'est la plus appelée du site : un `request.json()` à cru y
+ * matérialisait en mémoire n'importe quel corps, de n'importe qui. Le bornage
+ * des pseudos (MAX_VISITOR_LOCAL_PLAYER_NAMES, visitor-local-players.ts)
+ * arrive APRÈS le parse, donc trop tard. Avec connection_limit=1
+ * (src/lib/prisma.ts), un pic mémoire sur ce chemin pénalise tout le
+ * processus, pas seulement l'appelant.
+ *
+ * 8 Ko : le corps se réduit à `{ view, beat, active, inGame, localPlayers,
+ * localPlayerNames[] }`, la liste étant elle-même bornée à quelques pseudos.
+ * Même plafond que les routes auth (API_BODY_MAX_BYTES).
+ */
+const PING_BODY_MAX_BYTES = 8 * 1024
+
+/**
+ * Corps JSON, ou null s'il est absent, invalide, trop gros ou d'un autre type.
+ * Contrat inchangé pour l'appelant : `parsePingBody(null)` rend déjà un corps
+ * vide, un ping hors gabarit n'écrit donc simplement rien.
+ */
 async function readJsonBody(request: Request): Promise<unknown> {
   const contentType = request.headers.get('content-type') ?? ''
   if (!contentType.includes('application/json')) return null
-  try {
-    return await request.json()
-  } catch {
-    return null /* corps vide ou invalide */
-  }
+  const parsed = await readJsonBodyLimited<unknown>(request, PING_BODY_MAX_BYTES)
+  return parsed.ok ? parsed.body : null /* corps vide, invalide ou trop gros */
 }
 
 export async function POST(request: Request) {
@@ -72,8 +89,11 @@ export async function POST(request: Request) {
     const session = await getCurrentSession()
     const currentUser = session?.user ?? null
 
-    // Ménage RGPD au passage (throttlé) : purge des données au-delà des
-    // durées annoncées dans la politique de confidentialité.
+    // Ménage RGPD au passage (throttlé), désormais en FILET : le chemin
+    // nominal est le planificateur (src/lib/scheduler.ts), qui balaie chaque
+    // nuit à 4 h 30 heure de Paris. Sans `force`, cet appel ne repasse qu'au
+    // plus une fois toutes les 6 h — il ne sert que si le planificateur ne
+    // s'est pas posé (ancien conteneur, runtime sans instrumentation).
     void runRetentionSweep()
 
     // Corps lu AVANT tout branchement sur le consentement : c'est lui qui dit

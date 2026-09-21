@@ -6,12 +6,18 @@ ARCHIVE="${1:-/tmp/le-pillaveur-deploy.tar}"
 # scripts/vps-secure-max.sh, pour que scripts/prod-db-restore.sh voie d'un seul
 # coup d'oeil les instantanes quotidiens et ceux pris avant migration.
 BACKUP_DIR="${BACKUP_DIR:-/opt/le-pillaveur-backups}"
-BACKUP_SCRIPT="${BACKUP_SCRIPT:-/usr/local/bin/le-pillaveur-db-backup.sh}"
 DB_VOLUME="${DB_VOLUME:-le-pillaveur-db}"
 # Tag ou l'on met de cote l'image qui tourne avant de reconstruire : sans lui,
 # `docker build -t le-pillaveur:latest` ecrase le seul code deployable et un
 # retour arriere ne restaure que les DONNEES (nouveau code sur ancien schema).
 ROLLBACK_TAG="${ROLLBACK_TAG:-le-pillaveur:previous}"
+# UID/GID du proprietaire de prod.db : l'utilisateur `nextjs` du Dockerfile
+# (addgroup --gid 1001 nodejs / adduser --uid 1001 nextjs). La base est en WAL :
+# SQLite cree prod.db-wal et prod.db-shm A COTE du fichier des qu'on l'ouvre.
+# Tout conteneur de maintenance qui ouvre la base doit donc le faire SOUS CET
+# UID, sinon il laisse un -wal appartenant a root et l'application, qui tourne
+# en 1001, ne peut plus ouvrir sa propre base.
+DB_UID="${DB_UID:-1001}"
 SNAPSHOT=""
 ROLLBACK_IMAGE=""
 
@@ -71,6 +77,9 @@ echo "=== Instantane DB avant migration ==="
 #   *   -> panne docker (125/126/127...) : on ne sait rien, on s'arrete
 DB_PROBE_LOG=/tmp/.deploy-db-probe.log
 set +e
+# Seul conteneur qui garde `:ro` : `test -f` regarde le repertoire, il n'OUVRE
+# jamais la base et ne peut donc pas creer de -wal/-shm. Partout ailleurs dans
+# ce script, un conteneur qui lance sqlite3 monte le volume en lecture-ecriture.
 docker run --rm -v "$DB_VOLUME:/data:ro" alpine test -f /data/prod.db 2>"$DB_PROBE_LOG"
 DB_PROBE=$?
 set -e
@@ -86,32 +95,46 @@ elif [ "$DB_PROBE" -ne 0 ]; then
 else
   rm -f "$DB_PROBE_LOG"
   STAMP=$(date +%Y%m%d-%H%M%S)
-  if [ -x "$BACKUP_SCRIPT" ]; then
-    # Script pose par vps-secure-max.sh (sqlite3 .backup + gzip + purge a 14
-    # jours) : on le rejoue tel quel plutot que de dupliquer sa logique.
-    BEFORE=$(sudo sh -c "ls -t '$BACKUP_DIR'/prod-*.db.gz 2>/dev/null | head -1" || true)
-    sudo "$BACKUP_SCRIPT"
-    SNAPSHOT=$(sudo sh -c "ls -t '$BACKUP_DIR'/prod-*.db.gz 2>/dev/null | head -1" || true)
-    # Le script cron n'annonce pas le fichier qu'il ecrit : on exige qu'il en
-    # ait produit un NOUVEAU, sinon `ls -t` nous rendrait la sauvegarde de la
-    # veille et on migrerait sans filet en croyant en avoir un.
-    if [ "$SNAPSHOT" = "$BEFORE" ]; then
-      SNAPSHOT=""
-    fi
-  else
-    # Repli autonome : le script cron n'est pas garanti present (VPS reinstalle,
-    # vps-secure-max.sh jamais joue). Meme mecanisme sqlite `.backup`, qui prend
-    # une copie coherente meme si le conteneur ecrit pendant la copie ; le
-    # prefixe reste `prod-` pour rester dans la purge a 14 jours du cron.
-    sudo mkdir -p "$BACKUP_DIR"
-    sudo chmod 700 "$BACKUP_DIR"
-    docker run --rm \
-      -v "$DB_VOLUME:/data:ro" \
-      -v "$BACKUP_DIR:/backup" \
-      alpine sh -c "apk add --no-cache sqlite >/dev/null && sqlite3 /data/prod.db \".backup /backup/prod-predeploy-${STAMP}.db\""
-    sudo gzip -f "$BACKUP_DIR/prod-predeploy-${STAMP}.db"
-    SNAPSHOT="$BACKUP_DIR/prod-predeploy-${STAMP}.db.gz"
-  fi
+  # Instantane pris ICI, toujours, sans jamais rejouer le script de sauvegarde
+  # installe par vps-secure-max.sh. Deux raisons :
+  #   - ce deploiement tourne sous `ubuntu` (il appelle `sudo` partout), or ce
+  #     script est en 750 root:root : le `[ -x ]` qui le testait etait FAUX en
+  #     pratique, la branche n'a jamais servi ;
+  #   - la version INSTALLEE sur le VPS peut dater d'avant le passage en WAL
+  #     (volume monte `:ro`, sqlite3 en root) : la rejouer echouerait sur une
+  #     base WAL et couperait le deploiement sans message clair.
+  # Meme mecanisme sqlite `.backup`, qui prend une copie coherente meme si le
+  # conteneur ecrit pendant la copie ; le prefixe reste `prod-` pour rester dans
+  # la purge a 14 jours du cron de 03:00 — qui reste le SEUL a purger.
+  #
+  # Le volume est monte en lecture-ECRITURE : en WAL, ouvrir la base cree
+  # prod.db-shm (memoire partagee) et peut rejouer le -wal. Monte `:ro`, la
+  # sauvegarde echouerait purement et simplement des que ces fichiers
+  # manquent. sqlite3 est donc lance sous $DB_UID (su-exec), pour que les
+  # fichiers annexes restent la propriete de l'application.
+  sudo mkdir -p "$BACKUP_DIR"
+  sudo chmod 700 "$BACKUP_DIR"
+  docker run --rm \
+    -v "$DB_VOLUME:/data" \
+    -v "$BACKUP_DIR:/backup" \
+    alpine sh -c "
+      set -e
+      # apk exige root : on installe d'abord, on redescend en $DB_UID ensuite.
+      apk add --no-cache sqlite su-exec >/dev/null
+      # La copie passe par /tmp (inscriptible par tous dans l'image) : le
+      # dossier de sauvegarde de l'hote est en 700 root/ubuntu, l'UID $DB_UID
+      # ne peut pas y ecrire — ni le fichier, ni le journal que sqlite3 cree
+      # a cote de la destination pendant le .backup.
+      su-exec $DB_UID:$DB_UID sqlite3 /data/prod.db \".backup /tmp/snapshot.db\"
+      # Le -wal a pu grossir depuis le dernier point de controle : on le replie
+      # dans le fichier principal maintenant que la copie est prise. Tolerant
+      # a l echec (un lecteur en cours rend « busy ») : la sauvegarde, elle,
+      # est deja faite, et c est elle qui conditionne la migration.
+      su-exec $DB_UID:$DB_UID sqlite3 /data/prod.db \"PRAGMA wal_checkpoint(TRUNCATE);\" >/dev/null || true
+      mv /tmp/snapshot.db /backup/prod-predeploy-${STAMP}.db
+    "
+  sudo gzip -f "$BACKUP_DIR/prod-predeploy-${STAMP}.db"
+  SNAPSHOT="$BACKUP_DIR/prod-predeploy-${STAMP}.db.gz"
   if [ -z "$SNAPSHOT" ] || ! sudo test -s "$SNAPSHOT"; then
     echo "ECHEC DEPLOY : instantane de la base impossible, migration annulee"
     exit 1
@@ -128,9 +151,52 @@ docker run --rm \
   le-pillaveur:builder \
   npx prisma migrate deploy
 
+echo "=== Droits DB apres le CLI Prisma ==="
+# `prisma migrate deploy` vient de tourner en ROOT dans l'image builder : en
+# WAL, il laisse un prod.db-wal / prod.db-shm appartenant a root. Or TOUTES les
+# sondes sqlite3 qui suivent tournent sous $DB_UID, et en WAL meme un simple
+# SELECT doit pouvoir ECRIRE le fichier -shm. Sans ce chown intercale ici, la
+# sonde « migration deja appliquee ? » echouerait a ouvrir la base, sa sortie
+# vide serait lue comme « non appliquee », et on rejouerait un `db execute`
+# deja applique : il echoue, et set -e coupe le deploiement APRES la migration
+# mais AVANT le redemarrage — le pire des etats d'arret. L'etape « DB
+# permissions » plus bas reste en place : elle couvre ce que les scripts de
+# migration appeles entre-temps auront pu laisser.
+docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c '
+  set -e
+  chown -R "$DB_UID:$DB_UID" /data
+  chmod -R u+rwX /data
+'
+
 echo "=== Migration user_activity ==="
 MIG=20250712154207_user_activity
-if docker run --rm -v "$DB_VOLUME:/data" alpine sh -c "apk add sqlite >/dev/null 2>&1; sqlite3 /data/prod.db \"SELECT 1 FROM _prisma_migrations WHERE migration_name='$MIG' LIMIT 1;\"" | grep -q 1; then
+# Meme regle que partout : sqlite3 tourne sous $DB_UID, jamais en root, pour ne
+# pas laisser de prod.db-wal / prod.db-shm appartenant a root dans le volume.
+#
+# Le code de sortie est CAPTURE, et non consomme par un `| grep -q 1` : un
+# echec d'ouverture de la base (droits, volume) rendait la meme chose qu'une
+# migration non appliquee, et on partait rejouer du SQL deja applique. Ici,
+# « je ne sais pas » arrete le deploiement avec un message, au lieu de le
+# casser une etape plus loin.
+#
+# stderr tenu A PART (et non fusionne dans la sortie) : un avertissement de
+# docker ou de sqlite3 contenant un « 1 » ferait conclure « deja appliquee » et
+# SAUTER la migration.
+MIG_PROBE_LOG=/tmp/.deploy-mig-probe.log
+set +e
+MIG_PROBE=$(docker run --rm -v "$DB_VOLUME:/data" alpine sh -c "apk add --no-cache sqlite su-exec >/dev/null 2>&1; su-exec $DB_UID:$DB_UID sqlite3 /data/prod.db \"SELECT 1 FROM _prisma_migrations WHERE migration_name='$MIG' LIMIT 1;\"" 2>"$MIG_PROBE_LOG")
+MIG_PROBE_STATUS=$?
+set -e
+if [ "$MIG_PROBE_STATUS" -ne 0 ]; then
+  echo "ECHEC DEPLOY : impossible de lire _prisma_migrations (la sonde a rendu $MIG_PROBE_STATUS)"
+  echo "Derniere erreur : $(cat "$MIG_PROBE_LOG" 2>/dev/null || echo '(vide)')"
+  echo "La base a ete migree mais l'ancien conteneur tourne toujours : ne pas redemarrer a l'aveugle."
+  echo "Verifier les droits du volume (bash $APP_DIR/scripts/prod-fix-db-perms.sh) puis relancer ce deploiement."
+  rm -f "$MIG_PROBE_LOG"
+  exit 1
+fi
+rm -f "$MIG_PROBE_LOG"
+if echo "$MIG_PROBE" | grep -q 1; then
   echo "Migration deja appliquee"
 else
   docker run --rm \
@@ -199,7 +265,7 @@ echo "=== Purge unique des sessions (jetons desormais haches) ==="
 # sans le fichier .session-purge-hashed-tokens.done), il ne ferait que
 # deconnecter les comptes email/Google, jamais perdre un invite. Recreer quand
 # meme le temoin AVANT de deployer sur un volume neuf.
-docker run --rm -v "$DB_VOLUME:/data" alpine sh -c '
+docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c '
   set -e
   MARKER=/data/.session-purge-hashed-tokens.done
   if [ -f "$MARKER" ]; then
@@ -210,24 +276,44 @@ docker run --rm -v "$DB_VOLUME:/data" alpine sh -c '
     echo "Pas de base : rien a purger"
     exit 0
   fi
-  apk add --no-cache sqlite >/dev/null 2>&1
-  COUNT=$(sqlite3 /data/prod.db "SELECT COUNT(*) FROM Session WHERE userId NOT IN (SELECT id FROM User WHERE isGuest = 1);") || {
+  # apk exige root ; sqlite3 tourne ensuite sous DB_UID pour que les fichiers
+  # WAL crees a l ouverture restent la propriete de l application.
+  apk add --no-cache sqlite su-exec >/dev/null 2>&1
+  COUNT=$(su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db "SELECT COUNT(*) FROM Session WHERE userId NOT IN (SELECT id FROM User WHERE isGuest = 1);") || {
     echo "ECHEC : table Session illisible (schema non migre ?), purge impossible"
     exit 1
   }
-  sqlite3 /data/prod.db "DELETE FROM Session WHERE userId NOT IN (SELECT id FROM User WHERE isGuest = 1);"
+  su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db "DELETE FROM Session WHERE userId NOT IN (SELECT id FROM User WHERE isGuest = 1);"
   echo "$COUNT session(s) de compte email/Google supprimee(s) : ces comptes devront se reconnecter. Sessions d invites epargnees."
   : > "$MARKER"
+  chown "$DB_UID:$DB_UID" "$MARKER"
 '
 
 echo "=== DB permissions ==="
-docker run --rm -v "$DB_VOLUME:/data" alpine sh -c '
-  apk add sqlite >/dev/null 2>&1
-  chown -R 1001:1001 /data
-  chmod -R u+rwX,g+rwX /data
-  if [ -f /data/prod.db-journal ]; then
-    sqlite3 /data/prod.db "PRAGMA journal_mode=DELETE;"
-    rm -f /data/prod.db-journal
+# Dernier filet AVANT le redemarrage : `prisma migrate deploy` tourne en root
+# dans l'image builder et laisse donc, en WAL, un prod.db-wal / prod.db-shm
+# appartenant a root. L'application demarre en 1001 : sans ce chown elle ne
+# pourrait plus ouvrir sa propre base. On ne force plus journal_mode=DELETE
+# (c'est l'application qui pose WAL au demarrage, cf. src/lib/db-setup.ts) et
+# on ne supprime plus prod.db-journal a la main : un journal present est un
+# journal CHAUD, que seule l'ouverture de la base par sqlite peut rejouer sans
+# risque. L'ouverture ci-dessous s'en charge et affiche le mode obtenu.
+docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c '
+  set -e
+  # Le chown/chmod passe AVANT tout apk : c est la seule partie indispensable au
+  # redemarrage, et elle ne doit pas dependre de la joignabilite du depot alpine
+  # (filtre d egress). Le releve du mode de journal, lui, est du confort : il
+  # est tolerant a l echec.
+  chown -R "$DB_UID:$DB_UID" /data
+  # u+rwX seulement : le chown ci-dessus vient de rendre TOUT le volume
+  # proprietaire de $DB_UID, et l application tourne sous cet UID. Le bit
+  # d ecriture du GROUPE n etait requis par rien et elargissait gratuitement
+  # les droits du seul fichier qui porte les comptes des joueurs.
+  chmod -R u+rwX /data
+  if [ -f /data/prod.db ] && apk add --no-cache sqlite su-exec >/dev/null 2>&1; then
+    echo "journal SQLite : $(su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db "PRAGMA journal_mode;" 2>/dev/null || echo inconnu)"
+    # Relance du chown : l ouverture ci-dessus a pu creer -wal/-shm.
+    chown -R "$DB_UID:$DB_UID" /data
   fi
 '
 
@@ -238,6 +324,11 @@ ENV_ARGS=()
 if [ -f "$ENV_FILE" ]; then
   ENV_ARGS=(--env-file "$ENV_FILE")
 fi
+# DATABASE_URL reste NUE ici, volontairement : les parametres de connexion
+# (?connection_limit=1&socket_timeout=15) sont ajoutes par l'application, dans
+# src/lib/prisma.ts — source de verite unique. Les repeter ici les ferait aussi
+# arriver au CLI Prisma des conteneurs de migration, ou brider le pool n'a
+# aucun sens, et il faudrait penser a les changer a deux endroits.
 docker run -d \
   --name le-pillaveur \
   --restart always \

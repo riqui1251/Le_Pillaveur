@@ -57,12 +57,16 @@ function findManyCall(predicate: (args: FindManyArgs) => boolean): FindManyArgs 
     .find(predicate)
 }
 
+const SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000
+
 async function runSweep() {
-  // Le balayage est limité à un passage par processus toutes les 6 h : un
-  // module neuf par test remet ce compteur à zéro.
+  // `force`, comme le planificateur : ces tests portent sur CE QUE fait le
+  // balayage, pas sur QUAND il part. La garde des 6 h, elle, est vérifiée à
+  // part plus bas — et elle démarre désormais à l'heure du processus, donc un
+  // module tout neuf est justement dans sa fenêtre de silence.
   vi.resetModules()
   const { runRetentionSweep } = await import('@/lib/retention-sweep')
-  await runRetentionSweep()
+  await runRetentionSweep({ force: true })
 }
 
 describe('balayage de conservation', () => {
@@ -135,7 +139,7 @@ describe('balayage de conservation', () => {
     expect(prismaMock.sitePresence.deleteMany).toHaveBeenCalled()
     expect(prismaMock.session.deleteMany).toHaveBeenCalled()
     expect(deleteUserAccountMock).toHaveBeenCalledWith('guest-a')
-    expect(console.error).toHaveBeenCalledWith('retention sweep error (AccountVisit):', expect.any(Error))
+    expect(console.error).toHaveBeenCalledWith('retention sweep error (AccountVisit):', 'Error')
   })
 
   it("rattrape ce que l'ancien accord '1' a pu réécrire pendant un déploiement", async () => {
@@ -297,15 +301,44 @@ describe('balayage de conservation', () => {
     it("un témoin impossible à écrire ne fait que se journaliser", async () => {
       prismaMock.siteSetting.upsert.mockRejectedValue(new Error('base verrouillée'))
       await expect(runSweep()).resolves.toBeUndefined()
-      expect(console.error).toHaveBeenCalledWith('retention sweep error (lastRun):', expect.any(Error))
+      expect(console.error).toHaveBeenCalledWith('retention sweep error (lastRun):', 'Error')
+    })
+
+    it("le filet ne part PAS au premier visiteur qui suit un déploiement", async () => {
+      // Régression : la garde partait de 0, donc le tout premier ping suivant
+      // un démarrage passait — c'est-à-dire, en pratique, un balayage complet
+      // (jusqu'à 100 suppressions de comptes) à l'heure du déploiement, au
+      // beau milieu de la soirée. Elle part maintenant de l'heure du
+      // processus : le filet attend 6 h, le planificateur garde son tour.
+      vi.resetModules()
+      const { runRetentionSweep } = await import('@/lib/retention-sweep')
+      await runRetentionSweep()
+      expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+      expect(deleteUserAccountMock).not.toHaveBeenCalled()
     })
 
     it("n'est écrit qu'une fois par intervalle de balayage", async () => {
       vi.resetModules()
       const { runRetentionSweep } = await import('@/lib/retention-sweep')
+      // Six heures de fonctionnement : le filet a le droit de passer, une fois.
+      vi.setSystemTime(NOW + SWEEP_INTERVAL_MS)
       await runRetentionSweep()
       await runRetentionSweep()
       expect(prismaMock.siteSetting.upsert).toHaveBeenCalledTimes(1)
+    })
+
+    it('mais le planificateur passe outre la garde, et la repousse pour le filet', async () => {
+      vi.resetModules()
+      const { runRetentionSweep } = await import('@/lib/retention-sweep')
+      vi.setSystemTime(NOW + SWEEP_INTERVAL_MS)
+      await runRetentionSweep()
+      // Chemin nominal (scheduler.ts) : sa cadence est la bonne, la garde des
+      // 6 h ne doit pas lui faire sauter son tour de la nuit.
+      await runRetentionSweep({ force: true })
+      expect(prismaMock.siteSetting.upsert).toHaveBeenCalledTimes(2)
+      // Et le filet du ping ne refait pas le travail dans la foulée.
+      await runRetentionSweep()
+      expect(prismaMock.siteSetting.upsert).toHaveBeenCalledTimes(2)
     })
   })
 })

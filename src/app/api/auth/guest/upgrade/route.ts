@@ -7,13 +7,13 @@ import {
   hashPassword,
   isValidEmail,
   isValidPassword,
-  passwordRequirementsHint,
   sessionCookieOptions,
 } from '@/lib/auth-server'
 import { verifyGoogleIdToken } from '@/lib/google-auth-server'
 import { normalizeRole } from '@/lib/roles'
 import { normalizeAppLocale } from '@/lib/locale-server'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 
 const UPGRADE_LIMIT = 8
 const UPGRADE_WINDOW_MS = 60 * 60 * 1000
@@ -26,23 +26,22 @@ const UPGRADE_WINDOW_MS = 60 * 60 * 1000
  * POST { email, password }  → email + mot de passe classiques
  * POST { credential }       → liaison Google (ID token GIS)
  */
-export async function POST(request: Request) {
+export const POST = withApiRoute('auth/guest/upgrade POST', async (request: Request) => {
   try {
     const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
-    }
-    if (!user.isGuest) {
-      return NextResponse.json(
-        { error: 'Ce compte est déjà enregistré', code: 'not_guest' },
-        { status: 400 }
-      )
-    }
+    if (!user) return apiError('auth_required', 401)
+    if (!user.isGuest) return apiError('not_guest', 400)
 
     const rate = checkRateLimit(rateLimitKey(request, 'guest-upgrade', user.id), UPGRADE_LIMIT, UPGRADE_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
-    const body = await request.json().catch(() => ({}))
+    const parsed = await readApiJson<{
+      credential?: unknown
+      email?: unknown
+      password?: unknown
+    }>(request)
+    if (!parsed.ok) return parsed.response
+    const body = parsed.body
     const credential = typeof body.credential === 'string' ? body.credential : ''
 
     let email = ''
@@ -51,9 +50,7 @@ export async function POST(request: Request) {
     if (credential) {
       // ── Liaison Google ────────────────────────────────────────────────────
       const claims = await verifyGoogleIdToken(credential)
-      if (!claims?.email) {
-        return NextResponse.json({ error: 'Connexion Google invalide ou expirée' }, { status: 401 })
-      }
+      if (!claims?.email) return apiError('google_invalid', 401)
       email = claims.email.trim().toLowerCase()
       // Pas de mot de passe : la connexion passera par Google (définissable
       // plus tard via « mot de passe oublié »).
@@ -62,12 +59,8 @@ export async function POST(request: Request) {
       // ── Email + mot de passe ──────────────────────────────────────────────
       email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
       const password = typeof body.password === 'string' ? body.password : ''
-      if (!isValidEmail(email)) {
-        return NextResponse.json({ error: 'Email invalide' }, { status: 400 })
-      }
-      if (!isValidPassword(password)) {
-        return NextResponse.json({ error: passwordRequirementsHint() }, { status: 400 })
-      }
+      if (!isValidEmail(email)) return apiError('invalid_email', 400)
+      if (!isValidPassword(password)) return apiError('invalid_password', 400)
       passwordHash = await hashPassword(password)
     }
 
@@ -77,16 +70,7 @@ export async function POST(request: Request) {
     // compte Google au passwordHash vide) en le « pérennisant » depuis un
     // invité. Message neutre : il ne dit pas si l'adresse est déjà prise.
     const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } })
-    if (existing && existing.id !== user.id) {
-      return NextResponse.json(
-        {
-          error:
-            "Impossible de pérenniser ce compte avec ces informations. Si tu as déjà un compte, connecte-toi dessus.",
-          code: 'email_taken',
-        },
-        { status: 409 }
-      )
-    }
+    if (existing && existing.id !== user.id) return apiError('email_taken', 409)
 
     const updated = await prisma.user.update({
       where: { id: user.id },
@@ -113,7 +97,7 @@ export async function POST(request: Request) {
       token = await createSession(updated.id)
       await deleteIncomingSession()
     } catch (error) {
-      console.error('guest upgrade session rotate error:', error)
+      console.error('[api] auth/guest/upgrade rotate', error instanceof Error ? error.name : typeof error)
     }
 
     const response = NextResponse.json({
@@ -139,10 +123,8 @@ export async function POST(request: Request) {
     if (token) response.cookies.set(sessionCookieOptions(token))
     return response
   } catch (error) {
-    console.error('guest upgrade error:', error)
-    return NextResponse.json(
-      { error: 'Service momentanément indisponible. Réessaie dans quelques instants.', code: 'service_unavailable' },
-      { status: 503 }
-    )
+    // 503 conservé : le compte invité est intact, le joueur peut réessayer.
+    console.error('[api] auth/guest/upgrade POST', error instanceof Error ? error.name : typeof error)
+    return apiError('service_unavailable', 503)
   }
-}
+})

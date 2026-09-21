@@ -4,6 +4,7 @@ import { clearSessionCookieOptions, getCurrentUser, verifyPassword } from '@/lib
 import { verifyGoogleIdToken } from '@/lib/google-auth-server'
 import { deleteUserAccount } from '@/lib/user-activity-server'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 
 const DELETE_LIMIT = 5
 const DELETE_WINDOW_MS = 60 * 60 * 1000
@@ -39,55 +40,46 @@ function confirmationMethod(user: {
  * d'un mot de passe. Cette sonde ne révèle rien de plus au titulaire de la
  * session que ce qu'il sait déjà de son propre compte.
  */
-export async function GET() {
+export const GET = withApiRoute('auth/delete-account GET', async () => {
   const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
-  }
+  if (!user) return apiError('auth_required', 401)
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { passwordHash: true, email: true, isGuest: true },
   })
-  if (!dbUser) {
-    return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
-  }
+  if (!dbUser) return apiError('auth_required', 401)
   return NextResponse.json({ method: confirmationMethod(dbUser) })
-}
+})
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('auth/delete-account POST', async (request: Request) => {
   try {
     const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
-    }
+    if (!user) return apiError('auth_required', 401)
 
     const rate = checkRateLimit(rateLimitKey(request, 'delete-account', user.id), DELETE_LIMIT, DELETE_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
     // Le compte fondateur ne se supprime pas depuis l'interface : c'est lui
     // qui porte l'administration du site (garde-fou contre une fausse manip).
-    if (user.role === 'fondateur') {
-      return NextResponse.json({ error: 'founder_protected', code: 'founder_protected' }, { status: 403 })
-    }
+    if (user.role === 'fondateur') return apiError('founder_protected', 403)
 
-    const body = await request.json().catch(() => ({}))
-    const password = typeof body.password === 'string' ? body.password : ''
-    const credential = typeof body.credential === 'string' ? body.credential : ''
+    const parsed = await readApiJson<{ password?: unknown; credential?: unknown }>(request)
+    if (!parsed.ok) return parsed.response
+    const password = typeof parsed.body.password === 'string' ? parsed.body.password : ''
+    const credential = typeof parsed.body.credential === 'string' ? parsed.body.credential : ''
 
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
       select: { passwordHash: true, email: true, isGuest: true },
     })
-    if (!dbUser) {
-      return NextResponse.json({ error: 'wrong_password', code: 'wrong_password' }, { status: 403 })
-    }
+    if (!dbUser) return apiError('wrong_password', 403)
 
     // Même règle que la sonde GET : le client sait donc toujours quelle
     // preuve poster, et les deux ne peuvent pas diverger.
     const method = confirmationMethod(dbUser)
     if (method === 'password') {
       if (!(await verifyPassword(password, dbUser.passwordHash))) {
-        return NextResponse.json({ error: 'wrong_password', code: 'wrong_password' }, { status: 403 })
+        return apiError('wrong_password', 403)
       }
     } else if (method === 'google') {
       // Compte Google (passwordHash vide) : la confirmation passe par un jeton
@@ -98,10 +90,7 @@ export async function POST(request: Request) {
       const claims = credential ? await verifyGoogleIdToken(credential) : null
       const tokenEmail = claims?.email?.trim().toLowerCase() ?? ''
       if (!tokenEmail || tokenEmail !== (dbUser.email ?? '').trim().toLowerCase()) {
-        return NextResponse.json(
-          { error: 'google_confirmation_required', code: 'google_confirmation_required' },
-          { status: 403 }
-        )
+        return apiError('google_confirmation_required', 403)
       }
     }
 
@@ -111,7 +100,10 @@ export async function POST(request: Request) {
     response.cookies.set(clearSessionCookieOptions())
     return response
   } catch (error) {
-    console.error('delete account error:', error)
-    return NextResponse.json({ error: 'Service momentanément indisponible' }, { status: 503 })
+    // 503 conservé : l'effacement touche beaucoup de tables, une panne en
+    // cours de route se retente. Le journal ne garde que le nom de l'erreur —
+    // un message Prisma recopierait l'e-mail de la ligne fautive (RGPD).
+    console.error('[api] auth/delete-account POST', error instanceof Error ? error.name : typeof error)
+    return apiError('service_unavailable', 503)
   }
-}
+})

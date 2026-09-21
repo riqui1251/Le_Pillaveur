@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-server'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import {
   isAppLocale,
   localeCookieOptions,
@@ -7,34 +8,27 @@ import {
   updateUserLocale,
 } from '@/lib/locale-server'
 
-export async function PATCH(request: Request) {
+export const PATCH = withApiRoute('auth/locale PATCH', async (request: Request) => {
   const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-  }
+  if (!user) return apiError('auth_required', 401)
 
-  try {
-    const body = await request.json()
-    const raw = typeof body.locale === 'string' ? body.locale : ''
-    if (!isAppLocale(raw)) {
-      return NextResponse.json({ error: 'Locale invalide' }, { status: 400 })
-    }
+  const parsed = await readApiJson<{ locale?: unknown }>(request)
+  if (!parsed.ok) return parsed.response
 
-    await updateUserLocale(user.id, raw)
+  const raw = typeof parsed.body?.locale === 'string' ? parsed.body.locale : ''
+  if (!isAppLocale(raw)) return apiError('invalid_locale', 400)
 
-    const response = NextResponse.json({ locale: raw })
-    response.cookies.set(localeCookieOptions(raw))
-    return response
-  } catch (error) {
-    console.error('locale update error:', error)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
-  }
-}
+  await updateUserLocale(user.id, raw)
 
-export async function GET() {
+  const response = NextResponse.json({ locale: raw })
+  response.cookies.set(localeCookieOptions(raw))
+  return response
+})
+
+export const GET = withApiRoute('auth/locale GET', async () => {
   const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json({ locale: null }, { status: 401 })
-  }
+  // Pas de session : 401 SANS champ `error` — le sélecteur de langue lit
+  // `locale`, pas un message. Forme inchangée.
+  if (!user) return NextResponse.json({ locale: null }, { status: 401 })
   return NextResponse.json({ locale: normalizeAppLocale(user.locale) })
-}
+})

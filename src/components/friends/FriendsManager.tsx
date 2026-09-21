@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Trash2, UserPlus, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useFriends } from '@/hooks/useFriends'
+import { apiErrorMessage } from '@/lib/api-response'
 import { cn } from '@/lib/utils'
 
 /**
@@ -74,6 +75,10 @@ function FriendsManagerView({
 }: FriendsManagerState & { compact: boolean }) {
   const tFriends = useTranslations('account.friends')
   const tCommon = useTranslations('common')
+  // Les routes /api/friends renvoient un CODE stable (« user_not_found »,
+  // « self_request »…) : sans cette traduction, un joueur EN/ES/IT lirait le
+  // code brut — et avant elles, une phrase française qu'il ne lisait pas mieux.
+  const tApiErrors = useTranslations('onlineLobby.errors')
   const [codeInput, setCodeInput] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
@@ -125,7 +130,11 @@ function FriendsManagerView({
           {tFriends('add')}
         </button>
       </div>
-      {error && <p className="text-xs text-orange-300">{error}</p>}
+      {error && (
+        <p className="text-xs text-orange-300">
+          {apiErrorMessage(error, tApiErrors, tCommon('error'))}
+        </p>
+      )}
       {feedback && <p className="text-xs text-emerald-300">{feedback}</p>}
 
       {incoming.length > 0 && (

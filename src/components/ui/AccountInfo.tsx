@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { PlayingCard } from '@/components/ui/PlayingCard'
+import { apiErrorMessage } from '@/lib/api-response'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineProgression } from '@/hooks/useOnlineProgression'
@@ -73,6 +74,7 @@ export function AccountInfo() {
   const t = useTranslations('account')
   const tCommon = useTranslations('common')
   const tAuthErrors = useTranslations('auth.errors')
+  const tApiErrors = useTranslations('onlineLobby.errors')
   const tNameValidation = useTranslations('common.nameValidation')
   const locale = useLocale()
   const games = useLocalizedGames()
@@ -392,7 +394,13 @@ export function AccountInfo() {
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok) {
-      setOnlineNameError(data.error ?? 'Impossible d’enregistrer le pseudo online')
+      // `error` porte un CODE quand le refus vient de l'enveloppe des routes
+      // (401 auth_required, 500 server_error) : l'afficher brut montrait un
+      // identifiant snake_case. Les refus de pseudo, eux, y mettent une phrase
+      // DÉJÀ traduite par le serveur, qu'apiErrorMessage laisse passer telle
+      // quelle — d'où `data.error` et non `data.code`, qui vaudrait
+      // « profanity » ou « display_name_taken », sans traduction.
+      setOnlineNameError(apiErrorMessage(data?.error, tApiErrors, tApiErrors('server_error')))
       return
     }
     setOnlineName(value)

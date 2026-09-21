@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { LogIn, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { apiErrorMessage } from '@/lib/api-response'
 import { useAuth } from '@/hooks/useAuth'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
@@ -21,6 +22,7 @@ import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => void }) {
   const t = useTranslations('joinGate')
   const tCommon = useTranslations('common')
+  const tApiErrors = useTranslations('onlineLobby.errors')
   const locale = useLocale()
   const router = useRouter()
   const { refresh } = useAuth()
@@ -63,7 +65,14 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
         return
       }
       if (!res.ok) {
-        setError(data?.error ?? t('error'))
+        // `error` PORTE désormais un code (« service_unavailable » sur le 503
+        // de la route, par exemple) : l'afficher brut montrait au visiteur un
+        // identifiant snake_case là où il lisait une phrase. `data.error` et
+        // pas `data.code` : les refus de pseudo y mettent une phrase DÉJÀ
+        // traduite par le serveur (elle dit ce qui cloche), qu'apiErrorMessage
+        // laisse passer telle quelle faute de code connu — alors que leur
+        // `code` (« profanity ») n'a, lui, pas de traduction.
+        setError(apiErrorMessage(data?.error, tApiErrors, t('error')))
         return
       }
       // La session existe — invité tout juste créé, ou compte déjà connecté

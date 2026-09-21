@@ -10,6 +10,7 @@ Deux systèmes online parallèles, aucun pleinement fonctionnel :
 - Modèles `OnlineRoom` / `OnlineRoomMember`, API `/api/online/rooms/*`, hooks `useOnlineRoom` / `useOnlineGameSync`, UI `GameOnlineLobby` / `OpenLobbiesList`.
 - Le lobby fonctionne (créer / rejoindre / prêt / lancer), polling adaptatif, concurrence optimiste par version.
 - **Problèmes** : état autoritaire **côté client** (trichable) ; `useOnlineGameSync` **n'est branché par aucun jeu** → aucun jeu ne se joue réellement en ligne ; UI hardcodée en français (pas de next-intl).
+  - **RÉSOLU (2026-09-19)** : l'état est passé côté serveur (adaptateurs + `POST /rooms/[roomId]/action`, `GET /state` en lecture seule). Les hooks `useOnlineGameSync` et `useSyncedOnlineGame`, jamais branchés, ont été **supprimés** avec le `PUT /state` qui les servait ; l'UI passe par next-intl. Les lignes ci-dessus décrivent l'audit d'origine, pas le code d'aujourd'hui.
 
 ### Système B — « Lobbies » (code mort) — À SUPPRIMER
 - Modèles `OnlineLobby` / `OnlineLobbyPlayer`, `lib/online/engine.ts`, `server.ts`, **Socket.IO** (`pages/api/online/socket.ts` + `ws-bus.ts`).

@@ -37,6 +37,22 @@ import { connectionStatus, serverReached, type ConnectionStatus } from '@/hooks/
 const STREAM_REOPEN_MS = 5_000
 
 /**
+ * Plafond de l'attente entre deux réouvertures refusées d'affilée.
+ *
+ * Un EventSource ne sait pas lire le STATUT qui l'a fait tomber : un 429 du
+ * plafond de flux par compte (stream-registry.ts) le met CLOSED exactement
+ * comme un 502 de redéploiement. À cadence fixe, l'onglet au plafond rejouait
+ * donc /stream toutes les 5 s indéfiniment — douze requêtes par minute, chacune
+ * avec sa lecture de session et de membre — et le refus ne peut PAS se lever
+ * tout seul en cinq secondes : une place de flux ne se libère qu'à la mort
+ * d'une connexion. On double l'attente à chaque échec consécutif jusqu'à une
+ * minute ; le premier événement reçu (`ready`, `ping`…) remet le compteur à
+ * zéro. Pendant ce temps le sondage de secours continue : la table reste à
+ * jour, elle perd seulement le temps réel.
+ */
+const STREAM_REOPEN_MAX_MS = 60_000
+
+/**
  * Quoi dire au joueur qui découvre qu'il n'est plus membre de sa table. Le
  * serveur ne dit pas encore POURQUOI (siège purgé pour absence, expulsion,
  * lancement forcé, relance sans lui, remplacement par un bot) : on le déduit
@@ -676,32 +692,6 @@ export function useOnlineRoomState() {
     [room, apiError, t, refreshRoom]
   )
 
-  const pushGameState = useCallback(
-    async (gameStateJson: string, expectedVersion: number) => {
-      if (!room) return false
-      const res = await fetch(`/api/online/rooms/${room.id}/state`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          gameStateJson,
-          expectedVersion,
-          pushedByUserId: room.members.find((m) => m.isSelf)?.userId,
-        }),
-      })
-      const data = await parseApiJson<{ room?: RoomDto }>(res)
-      if (res.ok) {
-        setRoom(data.room ?? null)
-        return true
-      }
-      if (res.status === 409) {
-        await refreshGameState(room.id)
-      }
-      return false
-    },
-    [room, refreshGameState]
-  )
-
   /**
    * Onglet en arrière-plan (ou téléphone dans la poche) : le sondage est
    * SUSPENDU. Personne ne regarde, et le SSE — qui reste ouvert — rattrapera
@@ -763,6 +753,9 @@ export function useOnlineRoomState() {
     // n'a pas de rattrapage côté serveur (pas de Last-Event-ID) : ce qui a
     // bougé entre le dernier sondage serré et le `ready` serait perdu.
     let lost = false
+    // Réouvertures ABANDONNÉES d'affilée, sans le moindre événement entre
+    // elles : le compteur du recul exponentiel (cf. STREAM_REOPEN_MAX_MS).
+    let refusals = 0
     /**
      * Ferme le flux courant et en ouvre un autre après `delay`. Un seul
      * minuteur à la fois : deux causes rapprochées (chien de garde puis
@@ -808,6 +801,9 @@ export function useOnlineRoomState() {
     // Un événement, quel qu'il soit, prouve que le flux vit : cadence longue.
     const markAlive = () => {
       armWatchdog()
+      // Le serveur nous a répondu : le flux suivant repart sans le recul
+      // accumulé par une série de refus.
+      refusals = 0
       if (streamAliveRef.current) return
       streamAliveRef.current = true
       streamErroredRef.current = false
@@ -845,7 +841,13 @@ export function useOnlineRoomState() {
       streamAliveRef.current = false
       syncConnection()
       if (wasAlive) schedulePoll()
-      if (es?.readyState === EventSource.CLOSED) reopen(STREAM_REOPEN_MS)
+      if (es?.readyState === EventSource.CLOSED) {
+        // Recul exponentiel, plafonné : le refus peut être un 429 du plafond
+        // de flux, que le navigateur nous cache et qui ne se lèvera pas en
+        // cinq secondes (cf. STREAM_REOPEN_MAX_MS).
+        refusals += 1
+        reopen(Math.min(STREAM_REOPEN_MS * 2 ** (refusals - 1), STREAM_REOPEN_MAX_MS))
+      }
     }
     const onChanged = (e: Event) => {
       markAlive()
@@ -969,7 +971,6 @@ export function useOnlineRoomState() {
     setTeam,
     inviteFriend,
     kickMember,
-    pushGameState,
     fetchRoom,
     refreshRoom,
     refreshGameState,

@@ -3,10 +3,6 @@ import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { launchPetitBuveurRoom } from '@/lib/online-petit-buveur'
 import { launchPurpleRoom } from '@/lib/online-purple'
 import { launch1220Room } from '@/lib/online-1220'
-import { launchHiLoRoom } from '@/lib/online-hi-lo'
-import { launchMonsieur3Room } from '@/lib/online-monsieur-3'
-import { launchPmuRoom } from '@/lib/online-pmu'
-import { launchPlinkoRoom } from '@/lib/online-plinko'
 import { launchToucherCouleRoom } from '@/lib/online-toucher-coule'
 import { launchMenteurRoom } from '@/lib/online-menteur'
 import { launchImposteurRoom } from '@/lib/online-imposteur'
@@ -92,18 +88,6 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
     case '1220':
       await launch1220Room(roomId, room)
       break
-    case 'hi-lo':
-      await launchHiLoRoom(roomId, room)
-      break
-    case 'monsieur-3':
-      await launchMonsieur3Room(roomId, room)
-      break
-    case 'pmu':
-      await launchPmuRoom(roomId, room)
-      break
-    case 'plinko':
-      await launchPlinkoRoom(roomId, room)
-      break
     case 'toucher-coule':
       await launchToucherCouleRoom(roomId, room)
       break
@@ -150,6 +134,12 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
       await launchPresidentRoom(roomId, room)
       break
     default: {
+      // Aucun lanceur pour ce jeu : la salle part « playing » sans état, et
+      // c'est POST /action qui fera foi. Les quatre jeux client-autoritaires
+      // (hi-lo, monsieur-3, pmu, plinko) tombaient ici depuis le retrait de
+      // leurs lanceurs — ils ne sont plus `onlineReady`, donc POST /rooms
+      // refuse de leur ouvrir une table ; seule une salle héritée en base
+      // pourrait encore passer par là.
       const memberUserIds = room.members.map((m) => m.userId)
       await prisma.onlineRoom.update({
         where: { id: roomId },
