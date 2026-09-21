@@ -12,15 +12,24 @@ DB_VOLUME="${DB_VOLUME:-le-pillaveur-db}"
 # prod-fix-db-perms.sh. sqlite3 descend donc a cet UID.
 DB_UID="${DB_UID:-1001}"
 
-docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c "
-  set -e
-  # apk exige root ; sqlite3 redescend ensuite en DB_UID (su-exec). Sans eux,
-  # il n y a rien a faire ici : on s arrete avec un message plutot qu avec un
-  # code 1 muet (set -e + le 2>&1 ci-dessus avalent la sortie d apk).
-  apk add --no-cache sqlite su-exec >/dev/null 2>&1 || {
-    echo 'ECHEC : sqlite/su-exec non installables (depot alpine injoignable ?)'
+# Image d'outils SQLite (sqlite3 + su-exec deja installes, scripts/
+# sqlite-tools.Dockerfile), construite par prod-deploy.sh : plus d'`apk add`
+# — donc plus de reseau — ici. Si elle manque (VPS pas encore redeploye
+# depuis son introduction), on la construit a partir du meme Dockerfile, a
+# cote de ce script ; sans elle il n'y a rien a faire.
+SQLITE_IMAGE="${SQLITE_IMAGE:-le-pillaveur-sqlite}"
+if ! docker image inspect "$SQLITE_IMAGE" >/dev/null 2>&1; then
+  echo "Image $SQLITE_IMAGE absente : construction depuis scripts/sqlite-tools.Dockerfile"
+  docker build -q -t "$SQLITE_IMAGE" -f "$(dirname "$0")/sqlite-tools.Dockerfile" "$(dirname "$0")" >/dev/null || {
+    echo "ECHEC : image d'outils SQLite non constructible (reseau ?)"
     exit 1
   }
+fi
+
+docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" "$SQLITE_IMAGE" sh -c "
+  set -e
+  # sqlite3 tourne sous DB_UID (su-exec) : ce script ECRIT, les fichiers
+  # -wal/-shm qu il cree doivent rester la propriete de l application.
   id=\$(su-exec \"\$DB_UID:\$DB_UID\" sqlite3 /data/prod.db \"SELECT id FROM User WHERE lower(email) = lower('$EMAIL_LC') AND passwordHash != '' LIMIT 1;\")
   if [ -z \"\$id\" ]; then
     echo \"Compte introuvable pour $EMAIL_LC — cree-le d'abord sur /compte\"

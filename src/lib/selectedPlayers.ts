@@ -21,7 +21,9 @@ export function setSelectedPlayerIds(ids: string[]): void {
 	try {
 		const unique = Array.from(new Set(ids.filter(Boolean)));
 		storage.setItem(STORAGE_KEY, JSON.stringify(unique));
-	} catch {}
+	} catch {
+		// Quota ou mode privé : la sélection vit alors en mémoire seulement.
+	}
 }
 
 export function clearSelectedPlayerIds(): void {
@@ -29,7 +31,9 @@ export function clearSelectedPlayerIds(): void {
 	if (!storage) return;
 	try {
 		storage.removeItem(STORAGE_KEY);
-	} catch {}
+	} catch {
+		// Même cause : rien à effacer si l'écriture avait déjà échoué.
+	}
 }
 
 

@@ -4,6 +4,7 @@ import { runRetentionSweep } from '@/lib/retention-sweep'
 import { cleanupAbandonedRooms } from '@/lib/online-room'
 import { cleanupStaleCastRooms } from '@/lib/supervision-overview-server'
 import { closeOrphanGameSessions } from '@/lib/online/game-sessions'
+import { CLIENT_ERROR_RETENTION_DAYS, purgeOldClientErrors } from '@/lib/client-errors-server'
 
 /**
  * PLANIFICATEUR DU SERVEUR — les ménages qui ne dépendent plus du trafic.
@@ -64,7 +65,10 @@ async function runStep(job: string, label: string, run: () => Promise<unknown>):
  *     parties qu'elles portaient, à la date du dernier coup) ;
  *  2. les salles de cast TV dépassées partent à leur tour ;
  *  3. la réconciliation ferme ce qui reste ouvert sans salle — donc APRÈS les
- *     suppressions, sinon elle ne verrait pas le travail du même tour.
+ *     suppressions, sinon elle ne verrait pas le travail du même tour ;
+ *  4. les plantages côté joueur de plus de 30 jours partent en dernier : sans
+ *     lien avec les tables, l'étape est là parce que cette cadence existe déjà
+ *     et que la purge ne coûte rien quand il n'y a rien à supprimer.
  * En série et non en parallèle : la base est un SQLite à écrivain unique, et
  * l'ordre ci-dessus fait gagner un tour à la réconciliation.
  */
@@ -76,6 +80,14 @@ async function cleanupTables(): Promise<void> {
     // Journalisé seulement quand il y a eu quelque chose à fermer : 288 tours
     // par jour, on ne remplit pas les journaux de « rien à faire ».
     if (closed > 0) console.log(`[scheduler] tables — ${closed} partie(s) orpheline(s) close(s)`)
+  })
+  await runStep('tables', 'plantages anciens', async () => {
+    const purged = await purgeOldClientErrors()
+    if (purged > 0) {
+      console.log(
+        `[scheduler] tables — ${purged} plantage(s) joueur de plus de ${CLIENT_ERROR_RETENTION_DAYS} j purgé(s)`
+      )
+    }
   })
 }
 

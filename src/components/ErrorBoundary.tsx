@@ -4,6 +4,7 @@ import React from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
+import { reportClientError } from '@/lib/client-error-report'
 
 interface Props {
   children: React.ReactNode
@@ -52,6 +53,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo)
+    // En plus de la console : le plantage remonte au serveur (Supervision).
+    // Pas de digest ici, Next n'en calcule que pour ses propres écrans.
+    reportClientError(error)
   }
 
   render() {

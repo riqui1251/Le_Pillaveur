@@ -11,16 +11,24 @@ DB_VOLUME="${DB_VOLUME:-le-pillaveur-db}"
 # Une inspection ne doit jamais coucher le site : sqlite3 descend a cet UID.
 DB_UID="${DB_UID:-1001}"
 
-docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c '
-  set -e
-  # apk exige root ; sqlite3 redescend ensuite en DB_UID (su-exec). Rien a
-  # proteger ici (script en LECTURE SEULE, il n ecrit aucun droit) : sans
-  # sqlite3 il n y a tout simplement rien a inspecter. On le dit, au lieu de
-  # sortir en 1 sans un mot a cause de set -e et du 2>&1 ci-dessus.
-  apk add --no-cache sqlite su-exec >/dev/null 2>&1 || {
-    echo "ECHEC : sqlite/su-exec non installables (depot alpine injoignable ?) — inspection impossible"
+# Image d'outils SQLite (sqlite3 + su-exec deja installes, scripts/
+# sqlite-tools.Dockerfile), construite par prod-deploy.sh : plus d'`apk add`
+# — donc plus de reseau — pour une simple inspection. Si elle manque (VPS pas
+# encore redeploye depuis son introduction), on la construit ici, a partir du
+# meme Dockerfile, a cote de ce script ; sans elle il n'y a rien a inspecter.
+SQLITE_IMAGE="${SQLITE_IMAGE:-le-pillaveur-sqlite}"
+if ! docker image inspect "$SQLITE_IMAGE" >/dev/null 2>&1; then
+  echo "Image $SQLITE_IMAGE absente : construction depuis scripts/sqlite-tools.Dockerfile"
+  docker build -q -t "$SQLITE_IMAGE" -f "$(dirname "$0")/sqlite-tools.Dockerfile" "$(dirname "$0")" >/dev/null || {
+    echo "ECHEC : image d'outils SQLite non constructible (reseau ?) — inspection impossible"
     exit 1
   }
+fi
+
+docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" "$SQLITE_IMAGE" sh -c '
+  set -e
+  # sqlite3 tourne sous DB_UID (su-exec) : lecture seule, mais en WAL meme un
+  # SELECT cree -wal/-shm, qui doivent rester la propriete de l application.
   echo "=== TABLES ==="
   su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db ".tables"
   echo "=== USER COLUMNS ==="

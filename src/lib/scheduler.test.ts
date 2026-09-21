@@ -10,12 +10,14 @@ const {
   cleanupAbandonedRoomsMock,
   cleanupStaleCastRoomsMock,
   closeOrphanGameSessionsMock,
+  purgeOldClientErrorsMock,
 } = vi.hoisted(() => ({
   scheduleMock: vi.fn(),
   runRetentionSweepMock: vi.fn(),
   cleanupAbandonedRoomsMock: vi.fn(),
   cleanupStaleCastRoomsMock: vi.fn(),
   closeOrphanGameSessionsMock: vi.fn(),
+  purgeOldClientErrorsMock: vi.fn(),
 }))
 
 vi.mock('node-cron', async (importOriginal) => {
@@ -29,6 +31,12 @@ vi.mock('@/lib/supervision-overview-server', () => ({
 }))
 vi.mock('@/lib/online/game-sessions', () => ({
   closeOrphanGameSessions: closeOrphanGameSessionsMock,
+}))
+// Sans ce remplacement, l'étape « plantages anciens » ouvrait le VRAI client
+// Prisma (deleteMany sur la base locale), son échec avalé par runStep.
+vi.mock('@/lib/client-errors-server', () => ({
+  purgeOldClientErrors: purgeOldClientErrorsMock,
+  CLIENT_ERROR_RETENTION_DAYS: 30,
 }))
 
 import { validate } from 'node-cron'
@@ -69,6 +77,7 @@ beforeEach(() => {
   cleanupAbandonedRoomsMock.mockReset().mockResolvedValue(undefined)
   cleanupStaleCastRoomsMock.mockReset().mockResolvedValue(undefined)
   closeOrphanGameSessionsMock.mockReset().mockResolvedValue(0)
+  purgeOldClientErrorsMock.mockReset().mockResolvedValue(0)
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -164,7 +173,7 @@ describe('exécution des tâches', () => {
     expect(runRetentionSweepMock).toHaveBeenCalledWith({ force: true })
   })
 
-  it('« tables » purge les salles, puis les salles de cast, puis réconcilie', async () => {
+  it('« tables » purge les salles, puis les salles de cast, réconcilie, puis purge les plantages', async () => {
     const order: string[] = []
     cleanupAbandonedRoomsMock.mockImplementation(async () => {
       order.push('salles')
@@ -176,9 +185,13 @@ describe('exécution des tâches', () => {
       order.push('orphelines')
       return 0
     })
+    purgeOldClientErrorsMock.mockImplementation(async () => {
+      order.push('plantages')
+      return 0
+    })
 
     await expect(runScheduledJob('tables')).resolves.toBe('done')
-    expect(order).toEqual(['salles', 'cast', 'orphelines'])
+    expect(order).toEqual(['salles', 'cast', 'orphelines', 'plantages'])
   })
 
   it('« tables » : une étape en échec ne prive pas les suivantes de leur tour', async () => {
@@ -186,6 +199,7 @@ describe('exécution des tâches', () => {
     await expect(runScheduledJob('tables')).resolves.toBe('done')
     expect(cleanupStaleCastRoomsMock).toHaveBeenCalledTimes(1)
     expect(closeOrphanGameSessionsMock).toHaveBeenCalledTimes(1)
+    expect(purgeOldClientErrorsMock).toHaveBeenCalledTimes(1)
   })
 
   it('ne lève pas sur un nom inconnu', async () => {

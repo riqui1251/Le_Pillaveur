@@ -85,8 +85,16 @@ install -m 750 /opt/le-pillaveur/scripts/vps-backup-offsite.sh "$OFFSITE_BACKUP"
 
 CRON_LOCAL="0 3 * * * $LOCAL_BACKUP >> /var/log/le-pillaveur-backup.log 2>&1"
 CRON_OFFSITE="15 3 * * * $OFFSITE_BACKUP >> /var/log/le-pillaveur-backup-offsite.log 2>&1"
+# Seules les lignes off-site sont remplacees. Les lignes du script LOCAL (03:00
+# et l'horaire du soir) appartiennent a vps-secure-max.sh : on ne les filtre
+# pas, et on n'ajoute la ligne de 03:00 QUE si aucune ne cite deja ce script —
+# sinon chaque passage ici en posait un doublon (deux sauvegardes a 03:00).
 EXISTING=$(crontab -l 2>/dev/null | grep -Fv "$OFFSITE_BACKUP" | grep -Fv "le-pillaveur-db-backup-offsite" || true)
-printf '%s\n%s\n%s\n' "$EXISTING" "$CRON_LOCAL" "$CRON_OFFSITE" | crontab -
+if printf '%s\n' "$EXISTING" | grep -qF "$LOCAL_BACKUP"; then
+  printf '%s\n%s\n' "$EXISTING" "$CRON_OFFSITE" | crontab -
+else
+  printf '%s\n%s\n%s\n' "$EXISTING" "$CRON_LOCAL" "$CRON_OFFSITE" | crontab -
+fi
 
 echo "=== Test upload (dernier backup local) ==="
 bash "$OFFSITE_BACKUP"

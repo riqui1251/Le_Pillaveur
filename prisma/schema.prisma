@@ -593,3 +593,27 @@ model UserBlock {
   @@unique([blockerId, blockedId])
   @@index([blockedId])
 }
+
+/// Plantage CÔTÉ JOUEUR : ce qu'un écran d'erreur React (ErrorBoundary,
+/// error.tsx, global-error.tsx) a attrapé dans le navigateur, remonté par
+/// POST /api/client-error. Une ligne par (name, message, path, buildSha) et
+/// par fenêtre de 10 min : les répétitions incrémentent `count` au lieu de
+/// s'empiler. Purgé à 30 jours par le planificateur.
+/// RGPD : AUCUNE donnée personnelle — ni IP, ni compte, ni UA brut (`device`
+/// est une famille : mobile / tablet / desktop), ni query string (`path` est
+/// le chemin seul : un ?join=CODE ou ?token= n'y entre jamais).
+model ClientError {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  name      String
+  message   String
+  digest    String?
+  path      String
+  buildSha  String?
+  device    String
+  locale    String
+  count     Int      @default(1)
+
+  @@index([createdAt])
+  @@index([name, path])
+}

@@ -1,10 +1,8 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-// Utilisation directe de l'interface HTMLInputElement pour éviter l'erreur d'interface vide
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  // Vous pouvez ajouter des propriétés supplémentaires spécifiques à votre composant ici
-}
+// Aucune propriété propre : un alias suffit (une interface vide ne dit rien de plus).
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement>
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {

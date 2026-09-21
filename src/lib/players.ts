@@ -149,7 +149,7 @@ export function sanitizePlayerName(name: string): string {
   if (typeof name !== 'string') return '';
   return name
     .replace(/[<>]/g, '')        // empêche l'ouverture/fermeture de balises
-    .replace(/[\u0000-\u001F\u007F]/g, '') // supprime les caractères de contrôle
+    .replace(/\p{Cc}/gu, '') // supprime les caractères de contrôle (C0, DEL et C1)
     .trim()
     .slice(0, PLAYER_NAME_MAX_LENGTH);
 }
@@ -186,7 +186,11 @@ export function getStoredPlayers(): Player[] {
     });
     const deduped = dedupePlayersById(sanitized);
     if (changed || deduped.length !== sanitized.length) {
-      try { savePlayers(deduped); } catch {}
+      try {
+        savePlayers(deduped);
+      } catch {
+        // Stockage plein ou en lecture seule : la liste nettoyée sert quand même.
+      }
     }
     return deduped;
   } catch {
@@ -206,7 +210,9 @@ export function generatePlayerId(): string {
     if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
       return `player-${(crypto as unknown as { randomUUID: () => string }).randomUUID()}`;
     }
-  } catch {}
+  } catch {
+    // crypto indisponible (contexte non sécurisé) : on passe au repli.
+  }
   // Fallback robuste: timestamp + aléatoire
   return `player-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }

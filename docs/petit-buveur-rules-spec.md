@@ -22,9 +22,11 @@ Priorité canonique (web):
 - `src/app/[locale]/games/petit-buveur/case-notification.ts`
 - `messages/fr.json`
 
-Références secondaires (legacy, non canoniques):
-- `lib/games/petit_buveur/game_logic.dart`
-- `lib/games/petit_buveur/game_screen.dart`
+Références secondaires (moteur partagé avec le mode en ligne) :
+- `src/lib/petit-buveur/engine.ts`
+- `src/app/[locale]/games/petit-buveur/components/game.tsx`
+
+(Les anciens écrans Flutter `lib/games/petit_buveur/*.dart` ont quitté le dépôt.)
 
 ## 3) Règles fonctionnelles consolidées
 

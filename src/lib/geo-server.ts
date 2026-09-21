@@ -1,5 +1,3 @@
-import geoip from 'geoip-lite'
-
 /** Code pays ISO 3166-1 alpha-2, tel que Cloudflare l'écrit (majuscules). */
 const COUNTRY_CODE = /^[A-Z]{2}$/
 
@@ -11,8 +9,12 @@ const COUNTRY_CODE = /^[A-Z]{2}$/
  * lu AVANT celui de Cloudflare.
  *
  * Seul un code de deux lettres majuscules est accepté : XX (pays inconnu de
- * Cloudflare) et T1 (réseau Tor) donnent null, comme toute valeur hors format,
- * et resolveGeoFromRequest se rabat alors sur geoip-lite.
+ * Cloudflare) et T1 (réseau Tor) donnent null, comme toute valeur hors format.
+ * Aucune base de géolocalisation locale ne prend le relais : toute requête
+ * passe par Cloudflare (voir getClientIpFromRequest), l'en-tête est donc
+ * toujours là, et quand Cloudflare lui-même ne sait pas, « inconnu » est la
+ * réponse honnête — la Supervision l'affiche telle quelle. Le repli geoip-lite
+ * qui existait pesait 111 Mo dans l'image pour ne servir que ces cas-là.
  */
 export function getCountryFromRequest(request: Request): string | null {
   const code = request.headers.get('cf-ipcountry')?.trim()
@@ -56,30 +58,9 @@ function normalizeIp(ip: string): string {
   return ip
 }
 
-function isPrivateIp(ip: string): boolean {
-  if (ip === '::1' || ip === '127.0.0.1' || ip.startsWith('127.')) return true
-  if (ip.startsWith('10.')) return true
-  if (ip.startsWith('192.168.')) return true
-  if (ip.startsWith('169.254.')) return true
-  if (ip.startsWith('172.')) {
-    const second = Number.parseInt(ip.split('.')[1] ?? '', 10)
-    if (second >= 16 && second <= 31) return true
-  }
-  return false
-}
-
-export function lookupCountryFromIp(ip: string | null | undefined): string | null {
-  if (!ip || isPrivateIp(ip)) return null
-  const geo = geoip.lookup(ip)
-  if (!geo?.country) return null
-  return geo.country.toUpperCase()
-}
-
 export function resolveGeoFromRequest(request: Request): {
   country: string | null
   ip: string | null
 } {
-  const ip = getClientIpFromRequest(request)
-  const country = getCountryFromRequest(request) ?? lookupCountryFromIp(ip)
-  return { country, ip }
+  return { country: getCountryFromRequest(request), ip: getClientIpFromRequest(request) }
 }

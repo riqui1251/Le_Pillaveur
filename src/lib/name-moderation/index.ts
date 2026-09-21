@@ -20,7 +20,7 @@ export type NameModerationResult =
 const ACCOUNT_CHARS_RE = /^[\p{L}\p{N}\s]+$/u
 
 /** Joueurs locaux : lettres, chiffres, espaces, tiret, apostrophe. */
-const PLAYER_CHARS_RE = /^[\p{L}\p{N}\s'\-]+$/u
+const PLAYER_CHARS_RE = /^[\p{L}\p{N}\s'-]+$/u
 
 export function containsProfanity(name: string): boolean {
   const tokens = tokenizeForModeration(name)

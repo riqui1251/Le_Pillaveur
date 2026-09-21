@@ -4638,6 +4638,7 @@
       "revokeAll": "Quitar todo"
     },
     "kicker": "Le Pillaveur",
+    "buildStamp": "Versión desplegada",
     "header": {
       "onlineCount": "{count} en línea",
       "refresh": "Actualizar"
@@ -4673,6 +4674,26 @@
         "estimatedHint": "Mesa abandonada por sus jugadores, cerrada por el equipo o inactiva: final estimado, la mesa pudo vaciarse antes.",
         "unknown": "Fiabilidad desconocida",
         "unknownHint": "Final no registrado: esta duración no entra en ningún total."
+      }
+    },
+    "clientErrors": {
+      "title": "Fallos del lado del jugador",
+      "desc": "Lo que las pantallas de error capturaron en los navegadores, agrupado por error, página, versión y dispositivo. Sin datos personales; se conserva 30 días.",
+      "last24h": "{count, plural, =0 {Ningún fallo} one {# fallo} other {# fallos}} en las últimas 24 h",
+      "loadError": "No se pudieron cargar los fallos.",
+      "empty": "Ningún fallo registrado.",
+      "emptyHint": "Los errores capturados por las pantallas de error aparecen aquí desde el primer envío.",
+      "colError": "Error",
+      "colPage": "Página",
+      "colCount": "Ocurrencias",
+      "colLastSeen": "Última vez",
+      "colBuild": "Versión",
+      "colDevice": "Dispositivo",
+      "lastSeenHint": "Inicio de la última serie: las repeticiones en 10 minutos se suman sin cambiar la fecha.",
+      "device": {
+        "mobile": "Móvil",
+        "tablet": "Tableta",
+        "desktop": "Ordenador"
       }
     },
     "states": {

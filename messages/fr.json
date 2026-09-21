@@ -4638,6 +4638,7 @@
       "revokeAll": "Tout retirer"
     },
     "kicker": "Le Pillaveur",
+    "buildStamp": "Version déployée",
     "header": {
       "onlineCount": "{count} en ligne",
       "refresh": "Actualiser"
@@ -4673,6 +4674,26 @@
         "estimatedHint": "Table quittée, fermée par l'équipe ou abandonnée : fin estimée, la table a pu se vider avant.",
         "unknown": "Fiabilité inconnue",
         "unknownHint": "Fin non enregistrée : cette durée n'entre dans aucun total."
+      }
+    },
+    "clientErrors": {
+      "title": "Plantages côté joueur",
+      "desc": "Ce que les écrans d'erreur ont attrapé dans les navigateurs, regroupé par erreur, page, version et appareil. Aucune donnée personnelle ; conservé 30 jours.",
+      "last24h": "{count, plural, =0 {Aucun plantage} one {# plantage} other {# plantages}} ces 24 h",
+      "loadError": "Impossible de charger les plantages.",
+      "empty": "Aucun plantage remonté.",
+      "emptyHint": "Les erreurs attrapées par les écrans d'erreur apparaissent ici dès leur première remontée.",
+      "colError": "Erreur",
+      "colPage": "Page",
+      "colCount": "Occurrences",
+      "colLastSeen": "Dernière fois",
+      "colBuild": "Version",
+      "colDevice": "Appareil",
+      "lastSeenHint": "Début de la dernière série : les répétitions dans les 10 minutes s'additionnent sans changer la date.",
+      "device": {
+        "mobile": "Mobile",
+        "tablet": "Tablette",
+        "desktop": "Ordinateur"
       }
     },
     "states": {

@@ -176,9 +176,7 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
             }
             return newPawns
           })
-        } else {
         }
-      } else {
       }
     }
 

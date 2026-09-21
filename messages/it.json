@@ -4638,6 +4638,7 @@
       "revokeAll": "Rimuovi tutto"
     },
     "kicker": "Le Pillaveur",
+    "buildStamp": "Versione in produzione",
     "header": {
       "onlineCount": "{count} online",
       "refresh": "Aggiorna"
@@ -4673,6 +4674,26 @@
         "estimatedHint": "Tavolo lasciato, chiuso dallo staff o abbandonato: fine stimata, il tavolo potrebbe essersi svuotato prima.",
         "unknown": "Affidabilità sconosciuta",
         "unknownHint": "Fine non registrata: questa durata non rientra in alcun totale."
+      }
+    },
+    "clientErrors": {
+      "title": "Crash lato giocatore",
+      "desc": "Ciò che le schermate di errore hanno intercettato nei browser, raggruppato per errore, pagina, versione e dispositivo. Nessun dato personale; conservato 30 giorni.",
+      "last24h": "{count, plural, =0 {Nessun crash} one {# crash} other {# crash}} nelle ultime 24 h",
+      "loadError": "Impossibile caricare i crash.",
+      "empty": "Nessun crash segnalato.",
+      "emptyHint": "Gli errori intercettati dalle schermate di errore compaiono qui fin dalla prima segnalazione.",
+      "colError": "Errore",
+      "colPage": "Pagina",
+      "colCount": "Occorrenze",
+      "colLastSeen": "Ultima volta",
+      "colBuild": "Versione",
+      "colDevice": "Dispositivo",
+      "lastSeenHint": "Inizio dell'ultima serie: le ripetizioni entro 10 minuti si sommano senza cambiare la data.",
+      "device": {
+        "mobile": "Mobile",
+        "tablet": "Tablet",
+        "desktop": "Computer"
       }
     },
     "states": {

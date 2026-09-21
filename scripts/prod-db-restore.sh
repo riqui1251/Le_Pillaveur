@@ -42,6 +42,11 @@ RESTART_IMAGE="${RESTART_IMAGE:-le-pillaveur:latest}"
 # peut plus ouvrir sa base. (Les conteneurs qui n'ouvrent que la copie de
 # travail dans /tmp restent en root : ce repertoire est detruit a la sortie.)
 DB_UID="${DB_UID:-1001}"
+# Image d'outils SQLite (sqlite3 + su-exec deja installes, scripts/
+# sqlite-tools.Dockerfile) : plus d'`apk add` — donc plus de reseau — en
+# pleine restauration. Verifiee/construite plus bas, AVANT de toucher a quoi
+# que ce soit, au meme endroit que l'image de redemarrage.
+SQLITE_IMAGE="${SQLITE_IMAGE:-le-pillaveur-sqlite}"
 
 # L'aide est l'en-tete du fichier : une seule source a maintenir.
 usage() {
@@ -127,6 +132,15 @@ if ! docker image inspect "$RESTART_IMAGE" >/dev/null 2>&1; then
   exit 1
 fi
 
+# Meme logique pour l'image d'outils : construite par prod-deploy.sh, elle
+# manque sur un VPS qui n'a pas encore rejoue un deploiement depuis son
+# introduction. On la construit alors ici (2 s, meme Dockerfile, a cote de ce
+# script) — et un echec (reseau) arrete tout AVANT la moindre modification.
+if ! docker image inspect "$SQLITE_IMAGE" >/dev/null 2>&1; then
+  echo "Image $SQLITE_IMAGE absente : construction depuis scripts/sqlite-tools.Dockerfile"
+  docker build -q -t "$SQLITE_IMAGE" -f "$(dirname "$0")/sqlite-tools.Dockerfile" "$(dirname "$0")" >/dev/null
+fi
+
 if [ "$RESTORE_DATA" = "1" ]; then
   # Un nom nu est cherche dans BACKUP_DIR, un chemin absolu est pris tel quel.
   case "$SNAPSHOT" in
@@ -153,14 +167,14 @@ if [ "$RESTORE_DATA" = "1" ]; then
 
   # Restaurer une archive corrompue detruirait la prod sans retour utile : on
   # ouvre la copie hors ligne avant de toucher au volume.
-  INTEGRITY=$(docker run --rm -v "$WORK:/restore" alpine sh -c \
-    'apk add --no-cache sqlite >/dev/null && sqlite3 /restore/restore.db "PRAGMA integrity_check;"' | tr -d '\r')
+  INTEGRITY=$(docker run --rm -v "$WORK:/restore" "$SQLITE_IMAGE" \
+    sqlite3 /restore/restore.db "PRAGMA integrity_check;" | tr -d '\r')
   if [ "$INTEGRITY" != "ok" ]; then
     echo "ECHEC : integrite SQLite refusee ($INTEGRITY)"
     exit 1
   fi
-  USERS=$(docker run --rm -v "$WORK:/restore" alpine sh -c \
-    'apk add --no-cache sqlite >/dev/null && sqlite3 /restore/restore.db "SELECT COUNT(*) FROM User;" 2>/dev/null' | tr -d '\r' || true)
+  USERS=$(docker run --rm -v "$WORK:/restore" "$SQLITE_IMAGE" \
+    sqlite3 /restore/restore.db "SELECT COUNT(*) FROM User;" 2>/dev/null | tr -d '\r' || true)
   echo "Integrite : ok"
   echo "Comptes dans l'instantane : $USERS"
 fi
@@ -171,8 +185,8 @@ if [ "$RESTORE_DATA" = "1" ]; then
   # Volume en lecture-ECRITURE : en WAL, SQLite a besoin de creer le fichier de
   # memoire partagee -shm ne serait-ce que pour LIRE. Monte `:ro`, ce simple
   # comptage echouerait et on annoncerait « ? comptes » avant une restauration.
-  CURRENT_USERS=$(docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c \
-    'apk add --no-cache sqlite su-exec >/dev/null && su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db "SELECT COUNT(*) FROM User;" 2>/dev/null' | tr -d '\r' || true)
+  CURRENT_USERS=$(docker run --rm -v "$DB_VOLUME:/data" "$SQLITE_IMAGE" \
+    su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db "SELECT COUNT(*) FROM User;" 2>/dev/null | tr -d '\r' || true)
   echo "Base actuelle  : volume $DB_VOLUME (${CURRENT_USERS:-?} comptes)"
   echo "Sera remplacee : $SNAPSHOT (${USERS:-?} comptes)"
   echo "Tout ce qui a ete ecrit depuis l'instantane sera PERDU."
@@ -205,9 +219,8 @@ if [ "$RESTORE_DATA" = "1" ]; then
   docker run --rm \
     -v "$DB_VOLUME:/data" \
     -v "$BACKUP_DIR:/backup" \
-    alpine sh -c "
+    "$SQLITE_IMAGE" sh -c "
       set -e
-      apk add --no-cache sqlite su-exec >/dev/null
       su-exec $DB_UID:$DB_UID sqlite3 /data/prod.db \".backup /tmp/prerestore.db\"
       mv /tmp/prerestore.db /backup/prod-prerestore-${STAMP}.db
     "
@@ -225,9 +238,11 @@ if [ "$RESTORE_DATA" = "1" ]; then
   echo
   echo "===== 6) RESTAURATION ====="
   # Droits identiques a scripts/prod-fix-db-perms.sh et a l'etape « DB
-  # permissions » du deploiement : proprietaire 1001 (l'utilisateur du
-  # conteneur) et ecriture pour le groupe. Le 640 pose ici divergeait de cette
-  # convention (SQLite a besoin d'ecrire aussi ses fichiers annexes).
+  # permissions » du deploiement : proprietaire $DB_UID (l'utilisateur du
+  # conteneur) et u+rwX SEULEMENT — l'application tourne sous cet UID, le bit
+  # d'ecriture du groupe n'est requis par rien, et une restauration ne doit pas
+  # re-elargir des droits que le deploiement suivant resserre. (SQLite ecrit
+  # ses fichiers annexes -wal/-shm sous le meme UID : le proprietaire suffit.)
   #
   # L'effacement des fichiers annexes est fait AVANT la copie, et il n'est pas
   # cosmetique : en WAL, un prod.db-wal survivant appartient a l'ANCIENNE base.
@@ -239,7 +254,7 @@ if [ "$RESTORE_DATA" = "1" ]; then
     rm -f /data/prod.db-journal /data/prod.db-wal /data/prod.db-shm
     cp /restore/restore.db /data/prod.db
     chown -R "$DB_UID:$DB_UID" /data
-    chmod -R u+rwX,g+rwX /data
+    chmod -R u+rwX /data
     ls -l /data/prod.db
   '
 fi
@@ -254,9 +269,20 @@ fi
 # DATABASE_URL reste NUE ici, comme dans scripts/prod-deploy.sh : les
 # parametres de connexion (?connection_limit=1&socket_timeout=15) sont ajoutes
 # par l'application, dans src/lib/prisma.ts — source de verite unique.
+#
+# Garde-fous de ressources : les MEMES que ceux de prod-deploy.sh (etape
+# « Restart container »), a garder identiques. Un retour arriere est
+# precisement le chemin que le deploiement propose quand il echoue : sans ces
+# options, le conteneur tournerait sans plafond memoire ni rotation de
+# journaux jusqu'au deploiement suivant. --memory=1g est un plafond de
+# securite (283 Mio mesures le 21/09/2026), pas de swap, 512 pids, journaux
+# json-file en 5 x 20 Mo.
 docker run -d \
   --name le-pillaveur \
   --restart always \
+  --memory=1g --memory-swap=1g \
+  --pids-limit=512 \
+  --log-opt max-size=20m --log-opt max-file=5 \
   -p 127.0.0.1:3000:3000 \
   -v "$DB_VOLUME:/app/prisma" \
   "${ENV_ARGS[@]}" \

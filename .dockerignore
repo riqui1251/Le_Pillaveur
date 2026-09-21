@@ -8,3 +8,11 @@ Le_Pillaveur
 deploy
 *.md
 !README.md
+# Reliquats hors Next.js : lib/ = anciens ecrans Flutter (Dart), mobile/ =
+# coquille Capacitor (avec son propre node_modules, 240 Mo en local). Rien de
+# tout cela n'entre dans le build, mais tout partait dans le contexte docker a
+# chaque deploiement. docs/ doit RESTER dans le contexte : docs/legal et
+# docs/rules sont lus par le build (pages legales et regles). Le `*.md` plus
+# haut ne vise que la racine (pas de `**`), il ne les touche pas.
+lib
+mobile

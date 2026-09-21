@@ -1,19 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-// geoip-lite remplacé : on teste l'ordre de lecture des en-têtes et le repli,
-// pas la base de géolocalisation (lourde à charger).
-const { lookupMock } = vi.hoisted(() => ({ lookupMock: vi.fn() }))
-vi.mock('geoip-lite', () => ({ default: { lookup: lookupMock } }))
+import { describe, expect, it } from 'vitest'
 
 import { getClientIpFromRequest, getCountryFromRequest, resolveGeoFromRequest } from '@/lib/geo-server'
 
 function requestWith(headers: Record<string, string>): Request {
   return new Request('https://example.test/api', { headers })
 }
-
-beforeEach(() => {
-  lookupMock.mockReset().mockReturnValue(null)
-})
 
 describe('getCountryFromRequest', () => {
   it('lit le pays posé par Cloudflare', () => {
@@ -70,28 +61,29 @@ describe('getClientIpFromRequest', () => {
 })
 
 describe('resolveGeoFromRequest', () => {
-  it('garde le pays de Cloudflare sans interroger geoip-lite', () => {
+  it("rend le pays et l'adresse posés par Cloudflare", () => {
     expect(
       resolveGeoFromRequest(requestWith({ 'cf-connecting-ip': '203.0.113.7', 'cf-ipcountry': 'FR' }))
     ).toEqual({ ip: '203.0.113.7', country: 'FR' })
-    expect(lookupMock).not.toHaveBeenCalled()
   })
 
-  it("se rabat sur geoip-lite quand Cloudflare ne donne pas de pays, jamais sur un en-tête falsifiable", () => {
-    lookupMock.mockReturnValue({ country: 'de' })
+  it('ne devine plus le pays quand Cloudflare ne le donne pas : null, jamais un en-tête falsifiable', () => {
+    // XX (inconnu de Cloudflare) : plus de base locale pour trancher, et
+    // x-vercel-ip-country, que n'importe quel client peut écrire, reste ignoré.
     expect(
       resolveGeoFromRequest(
         requestWith({ 'cf-connecting-ip': '203.0.113.7', 'cf-ipcountry': 'XX', 'x-vercel-ip-country': 'US' })
       )
-    ).toEqual({ ip: '203.0.113.7', country: 'DE' })
-    expect(lookupMock).toHaveBeenCalledWith('203.0.113.7')
+    ).toEqual({ ip: '203.0.113.7', country: null })
+    expect(
+      resolveGeoFromRequest(requestWith({ 'cf-connecting-ip': '203.0.113.7', 'cf-ipcountry': 'T1' }))
+    ).toEqual({ ip: '203.0.113.7', country: null })
   })
 
-  it("n'interroge pas geoip-lite pour une adresse privée", () => {
+  it("sans en-tête Cloudflare (accès direct en développement), l'adresse est lue et le pays reste inconnu", () => {
     expect(resolveGeoFromRequest(requestWith({ 'x-forwarded-for': '192.168.1.10' }))).toEqual({
       ip: '192.168.1.10',
       country: null,
     })
-    expect(lookupMock).not.toHaveBeenCalled()
   })
 })

@@ -922,7 +922,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     let roundDrinksIncrement = 0;
 
                     switch (sPin.type) {
-                        case 'addBall':
+                        case 'addBall': {
                             // Vérifier si cette balle a déjà activé un addBall
                             const hasAlreadyAddedBall = (ballData.effects.hitCountPerPin.get('addBall') ?? 0) > 0;
                             if (!hasAlreadyAddedBall) {
@@ -939,9 +939,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                                 newlyAddedBalls.push(newExtraBallData);
                                 // Marquer que cette balle a activé un addBall
                                 ballData.effects.hitCountPerPin.set('addBall', 1);
-                            } else {
                             }
                             break;
+                        }
                         case 'gravityFlip': {
                             const durationMs = 900;
                             const now = performance.now();
@@ -1007,7 +1007,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                             ballData.effects.effectsReset = true;
                             // ballData.effectLog.push(...); // SUPPRIMÉ
                             break;
-                        case 'colorSwap':
+                        case 'colorSwap': {
                             // Inverser la couleur
                             ballData.color = ballData.color === 'red' ? 'green' : 'red';
                             // Inverser la fonction donner/recevoir en échangeant les effets addSip et subtractSip
@@ -1015,7 +1015,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                             ballData.effects.sipsToAdd = ballData.effects.sipsToSubtract;
                             ballData.effects.sipsToSubtract = tempAdd;
                             break;
-                        case 'mystery':
+                        }
+                        case 'mystery': {
                             const possibleEffects: SpecialPinType[] = ['multiplier', 'addBall', 'addSip', 'subtractSip', 'cancellation', 'colorSwap', 'shake', 'roundDrinks', 'jackpot', 'teleportation'];
                             const filteredPossibleEffects = possibleEffects.filter(type => type !== 'mystery'); 
                             const randomEffectIndex = Math.floor(Math.random() * filteredPossibleEffects.length);
@@ -1049,13 +1050,15 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                                 } 
                                 // Ajouter d'autres cas pour mystery si nécessaire
                             }
-                            break; 
-                        case 'shake':
+                            break;
+                        }
+                        case 'shake': {
                             const { min, max } = DIFFICULTY_SETTINGS[difficulty].range;
                             newSlotValuesForShake = Array.from({ length: TARGET_NUM_SLOTS }, () => Math.floor(Math.random() * (max - min + 1)) + min );
                             needsGlobalStateUpdate = true;
                             // ballData.effectLog.push(...); // SUPPRIMÉ
                             break;
+                        }
                         case 'roundDrinks':
                             roundDrinksIncrement++;
                             needsGlobalStateUpdate = true;
@@ -1065,7 +1068,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                             ballData.effects.jackpotHit = true;
                             // ballData.effectLog.push(...); // SUPPRIMÉ
                             break;
-                        case 'teleportation':
+                        case 'teleportation': {
                             // Téléporter la balle aléatoirement tout en haut du plateau
                             const randomX = Math.random() * (DROP_START_X_MAX - DROP_START_X_MIN) + DROP_START_X_MIN;
                             ballData.x = randomX;
@@ -1073,7 +1076,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                             ballData.velocityY = INITIAL_VELOCITY_Y; // Réinitialiser la vitesse verticale
                             ballData.velocityX = (Math.random() - 0.5) * 2; // Légère vitesse horizontale aléatoire
                             break;
-                    } 
+                        }
+                    }
 
 
                     // Mise à jour de l'état global (si nécessaire) ET de l'état du pin touché
@@ -1183,13 +1187,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                         color: ballData.color
                     });
 
-                } else { // shouldTriggerEffect est faux
-                    if (!isCumulativeMode) {
-                    } 
-                    // En mode cumulatif, cette condition ne devrait pas être atteinte, mais on log au cas où
-                    else {
-                    }
                 }
+                // shouldTriggerEffect faux : effet déjà consommé ce tour, rien à faire.
             } // Fin du if (specialCollisionPin)
             // --- FIN REFACTORISATION ---
         } // Fin du if (!collisionOccurred pour les pins normaux)

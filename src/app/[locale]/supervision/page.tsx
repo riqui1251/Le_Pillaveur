@@ -96,6 +96,7 @@ import { ModerationTermsPanel } from '@/components/supervision/ModerationTermsPa
 import { NameModerationAttemptsPanel } from '@/components/supervision/NameModerationAttemptsPanel'
 import { CosmeticGrantsDialog } from '@/components/supervision/CosmeticGrantsDialog'
 import { GameSessionsPanel } from '@/components/supervision/GameSessionsPanel'
+import { ClientErrorsPanel } from '@/components/supervision/ClientErrorsPanel'
 import { ACCOUNT_KIND_BADGES, AccountKindBadge } from '@/components/supervision/AccountKindBadge'
 import {
   SupervisionShell,
@@ -3725,6 +3726,10 @@ export default function SupervisionPage() {
             )}
             <GameSessionsPanel userId={journalUserId} />
           </div>
+
+          {/* Plantages côté joueur : même parti pris, panneau autonome chargé
+              à l'ouverture de l'onglet (route /api/admin/client-errors). */}
+          <ClientErrorsPanel />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <SectionCard icon={ScrollText} title={t('room.journalTitle')} description={t('room.journalDesc')}>

@@ -84,7 +84,6 @@ const nextConfig = {
   },
   // Compression pour améliorer les performances
   compress: true,
-  serverExternalPackages: ['geoip-lite'],
   // Optimiser pour les appareils mobiles
   experimental: {
     // Désactivation de l'optimisation CSS qui requiert le module 'critters'

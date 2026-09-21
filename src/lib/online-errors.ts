@@ -85,7 +85,8 @@ export const ONLINE_ERROR_CODES = [
   'payload_too_large',
   // Quota atteint : `rateLimitResponse` pose déjà ce code, il lui manquait
   // seulement sa traduction (son champ `error`, lui, reste une phrase FR —
-  // ce module ne s'importe pas dans rate-limit.ts, qui tire geoip-lite).
+  // ce module ne s'importe pas dans rate-limit.ts, module serveur qui lit
+  // la base et les en-têtes de requête).
   'rate_limited',
   // Panne d'un service tiers (envoi d'e-mail, vérification Google) : 503, déjà
   // posé par les routes auth, sans traduction jusqu'ici.

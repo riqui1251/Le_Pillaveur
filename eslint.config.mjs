@@ -1,65 +1,101 @@
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import js from "@eslint/js";
 import { FlatCompat } from "@eslint/eslintrc";
 import tseslint from "@typescript-eslint/eslint-plugin";
-import tsParser from "@typescript-eslint/parser";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// eslint-config-next 15 n'est publié qu'au format .eslintrc : FlatCompat le
+// traduit. C'est lui qui pose react/recommended, react-hooks/recommended
+// (rules-of-hooks en erreur, exhaustive-deps en avertissement) et
+// @next/next/core-web-vitals (no-img-element en avertissement) — ces règles ne
+// sont donc PAS redéclarées plus bas.
 const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
+// Fichiers TypeScript seuls : le parser et les règles @typescript-eslint n'ont
+// rien à dire aux .js de configuration (next.config.js, tailwind.config.js,
+// scripts/*.js), qui vivent en CommonJS et déclencheraient no-require-imports.
+const TS_FILES = ["**/*.{ts,tsx,mts,cts}"];
+
 const eslintConfig = [
   {
     ignores: [
-      // Build output
-      'html/**',
-      '.next/**',
-      'out/**',
-      
-      // Dependencies
-      'node_modules/**',
-      
-      // Backups and temporary files
-      '**/*.bak',
-      '**/*.temp',
-      '**/*.tmp',
-      
-      // Compiled output
-      '**/*.min.js',
-      '**/*.bundle.js',
-      
-      // Specific files that peuvent causer des problèmes spécifiques
-      'src/app/games/petit-buveur/components/game.tsx.bak',
-      'src/app/games/petit-buveur/components/game.tsx.temp'
-    ]
-  },
-  // Activer le parser et le plugin TypeScript pour que les règles @typescript-eslint
-  // référencées dans les fichiers (via /* eslint-disable */) soient reconnues
-  {
-    files: ["**/*.{ts,tsx}"],
-    languageOptions: {
-      parser: tsParser,
-    },
-    plugins: {
-      "@typescript-eslint": tseslint,
-    },
-  },
-  ...compat.extends("next/core-web-vitals"),
-  {
-    rules: {
-      // Évite les faux positifs de react-hooks dans l'App Router (API routes, server files)
-      'react-hooks/rules-of-hooks': 'off',
-    },
-    files: [
-      'src/app/api/**/*.{ts,tsx}',
-      'src/app/**/route.ts',
-      'src/app/**/middleware.ts',
-      'src/app/**/layout.tsx',
-      'src/app/**/page.tsx',
+      // Sorties de build
+      ".next/**",
+      "out/**",
+
+      // Dépendances
+      "node_modules/**",
+
+      // Coquille Capacitor : projet Android autonome, pas du code du site
+      "mobile/**",
+
+      // Sauvegardes et fichiers temporaires
+      "**/*.bak",
+      "**/*.temp",
+      "**/*.tmp",
+
+      // Sorties compilées
+      "**/*.min.js",
+      "**/*.bundle.js",
     ],
+  },
+  // Socle JavaScript (eslint:recommended) : erreurs de logique que TypeScript
+  // ne voit pas (no-fallthrough, no-cond-assign, no-self-assign, use-isnan…).
+  js.configs.recommended,
+  ...compat.extends("next/core-web-vitals"),
+  // Socle TypeScript : parser + règles recommandées, restreints aux .ts/.tsx.
+  // `flat/eslint-recommended` y coupe les règles JS que le compilateur rend
+  // redondantes (no-undef, no-redeclare, no-dupe-keys…).
+  ...tseslint.configs["flat/recommended"].map((config) => ({
+    ...config,
+    files: TS_FILES,
+  })),
+  {
+    // Règles de qualité reprises de l'ancien .eslintrc.json (ignoré par
+    // ESLint 9, elles étaient inertes). En avertissement d'abord : le code
+    // existant en produit des centaines, on les résorbe au fil des chantiers
+    // sans bloquer le build (next build lance ce lint).
+    rules: {
+      // Le journal du conteneur ne doit recevoir que ce qu'un exploitant lit :
+      // console.warn / console.error passent, console.log est un oubli.
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "prefer-const": "warn",
+      "no-duplicate-imports": "warn",
+      // Les apostrophes du français dans le JSX (« l'hôte », « n'a pas ») :
+      // l'ancien réglage les tolérait, on ne rouvre pas ce front.
+      "react/no-unescaped-entities": "off",
+    },
+  },
+  {
+    files: TS_FILES,
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          // Le préfixe _ dit « volontairement inutilisé » (argument imposé par
+          // une signature, variable de déstructuration écartée, erreur avalée).
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+  {
+    // rules-of-hooks ne s'applique qu'aux composants et aux hooks : dans les
+    // routes API et le middleware, une fonction `useXxx` importée d'un module
+    // serveur n'est pas un hook React, la règle y produirait de faux positifs.
+    // Les page.tsx et layout.tsx SONT des composants React : la règle y reste.
+    files: ["src/app/api/**/*.{ts,tsx}", "src/middleware.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
   },
 ];
 

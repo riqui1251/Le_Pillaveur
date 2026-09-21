@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from '@/i18n/navigation'
 import { getCurrentUser } from '@/lib/auth-server'
 import { canAccessSupervision } from '@/lib/roles'
+import BuildStamp from '@/components/supervision/BuildStamp'
 
 // Espace staff : à ne pas indexer par les moteurs.
 export const metadata: Metadata = {
@@ -21,5 +22,12 @@ export default async function SupervisionLayout({
     redirect({ href: '/compte', locale })
   }
 
-  return children
+  // Pied commun à toutes les pages de la supervision : la révision qui tourne,
+  // pour savoir d'un coup d'œil si le dernier déploiement est bien en ligne.
+  return (
+    <>
+      {children}
+      <BuildStamp locale={locale} />
+    </>
+  )
 }

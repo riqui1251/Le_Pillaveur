@@ -163,8 +163,8 @@ async function readBodyLimited(
  * écrans l'affichent encore telle quelle. `code` et `retryAfterSec` (le même
  * délai que l'en-tête Retry-After) permettent à un client de traduire et de
  * dire au joueur combien de temps attendre, dans sa langue. Le code reste un
- * littéral côté client (JoinGate, TryBotsGate) : ce module tire geoip-lite,
- * il ne s'importe pas dans un composant.
+ * littéral côté client (JoinGate, TryBotsGate) : ce module lit la base et les
+ * en-têtes de requête serveur, il ne s'importe pas dans un composant.
  */
 export function rateLimitResponse(retryAfterSec: number): Response {
   return new Response(

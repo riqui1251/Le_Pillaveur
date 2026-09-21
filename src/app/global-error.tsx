@@ -7,6 +7,9 @@
 'use client'
 
 import { useEffect } from 'react'
+// Sans dépendance, volontairement : ce module est le seul import qu'on
+// s'autorise ici (voir l'en-tête ci-dessous).
+import { reportClientError } from '@/lib/client-error-report'
 
 /**
  * Dernier filet : erreur survenue DANS le layout racine (ou dans un rendu
@@ -35,6 +38,9 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error('Erreur globale :', error)
+    // En plus de la console : le plantage remonte au serveur (Supervision),
+    // avec le digest que le joueur voit à l'écran pour le retrouver.
+    reportClientError(error, { digest: error?.digest })
   }, [error])
 
   return (

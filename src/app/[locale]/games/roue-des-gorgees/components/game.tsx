@@ -70,7 +70,11 @@ export default function Game({ players, onGameEnd, updatePlayerStats, riskLevel,
       }
     }
     if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-      try { await audioCtxRef.current.resume() } catch {}
+      try {
+        await audioCtxRef.current.resume()
+      } catch {
+        // Reprise refusée (le navigateur exige un geste) : le son reviendra au prochain tap.
+      }
     }
   }
 

@@ -19,7 +19,7 @@
     "db:migrate:local": "prisma db execute --file prisma/migrations/20250613120000_ip_history/migration.sql && prisma migrate resolve --applied 20250613120000_ip_history",
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "accounts:backfill-codes": "node scripts/backfill-account-codes.mjs",
-    "deploy:prepare": "node deploy-ftp.js",
+    "deploy": "bash scripts/deploy-from-local.sh",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -27,7 +27,6 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.4.1",
     "@radix-ui/react-alert-dialog": "^1.1.6",
     "@radix-ui/react-avatar": "^1.1.3",
@@ -47,8 +46,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.6.2",
-    "geoip-lite": "^2.0.2",
-    "konva": "^9.3.20",
     "lucide-react": "^0.476.0",
     "next": "^15.5.19",
     "next-intl": "^4.13.0",
@@ -58,16 +55,15 @@
     "react": "18.3.1",
     "react-confetti": "^6.4.0",
     "react-dom": "18.3.1",
-    "react-konva": "^19.0.3",
     "resend": "^6.12.4",
     "tailwind-merge": "^3.2.0",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@eslint/js": "^9.39.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/canvas-confetti": "^1.9.0",
-    "@types/geoip-lite": "^1.4.4",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

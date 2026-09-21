@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Home, LayoutGrid, RotateCcw } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
+import { reportClientError } from '@/lib/client-error-report'
 
 export default function Error({
   error,
@@ -16,6 +17,12 @@ export default function Error({
 
   useEffect(() => {
     console.error(t('logPrefix'), error)
+    // En plus de la console : le plantage remonte au serveur (Supervision),
+    // avec le digest affiché au joueur. Déclaré AVANT l'effet de rechargement
+    // ci-dessous : sur un chunk périmé, le rapport part (sendBeacon survit au
+    // rechargement) et dit à l'exploitant combien de joueurs un déploiement a
+    // coupés.
+    reportClientError(error, { digest: error?.digest })
   }, [error, t])
 
   // Chunk périmé après un redéploiement : le navigateur avait l'ancienne

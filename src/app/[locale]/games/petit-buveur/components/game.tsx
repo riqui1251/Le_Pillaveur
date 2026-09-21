@@ -495,18 +495,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
   }, [winner]);
 
-  // Debug: Surveiller l'état de la fenêtre de sélection
-  useEffect(() => {
-    if (showTargetDialog) {
-    }
-  }, [showTargetDialog, players.length]);
-
-  // Debug: Surveiller l'état du traitement du tour
-  useEffect(() => {
-    if (isProcessingTurn && !isDiceRolling) {
-    }
-  }, [isProcessingTurn, isDiceRolling, pendingCase, showTargetDialog, showWheel, showDuelDialog, showChanceDialog, showExchangeDialog, showChainDialog]);
-
   // Notification orpheline (showNotification sans caseNotification) → barre bloquée sans modal
   useEffect(() => {
     if (!showNotification || caseNotification) return
@@ -600,7 +588,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       if (saveData) {
         const parsed = JSON.parse(saveData) as GameSave;
         return parsed;
-      } else {
       }
     } catch (error) {
       console.error('loadGame: Erreur lors du chargement:', error);
@@ -643,7 +630,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setGameStarted(saveData.gameStarted);
       setWinner(saveData.winner);
       setShowSaveDialog(false);
-    } else {
     }
   };
 
@@ -2559,7 +2545,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       }
     }
     if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-      try { await audioCtxRef.current.resume() } catch {}
+      try {
+        await audioCtxRef.current.resume()
+      } catch {
+        // Reprise refusée (le navigateur exige un geste) : le son reviendra au prochain tap.
+      }
     }
   }
 

@@ -50,9 +50,6 @@ prisma/**/*.db-journal
 # vercel
 .vercel
 
-# Artefact de déploiement FTP généré par deploy-ftp.js
-/deploy/
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts

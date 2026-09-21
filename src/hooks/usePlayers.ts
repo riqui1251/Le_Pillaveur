@@ -78,7 +78,9 @@ export function usePlayers() {
             setLoading(false);
             return;
           }
-        } catch {}
+        } catch {
+          // Nuage injoignable : on continue avec la liste locale, sans bruit.
+        }
       }
 
       if (!cancelled) {

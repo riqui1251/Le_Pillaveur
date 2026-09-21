@@ -27,7 +27,9 @@ export async function GET() {
     try {
       const parsed = JSON.parse(dbUser.localPlayersJson)
       if (Array.isArray(parsed)) players = parsed
-    } catch {}
+    } catch {
+      // Colonne illisible (JSON tronqué ou corrompu) : liste vide plutôt qu'une 500.
+    }
   }
 
   return NextResponse.json({
