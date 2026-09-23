@@ -9,7 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Player as BasePlayer, PlayerPreferences } from '@/lib/players'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { PlayerName, isSpecialPlayer } from '@/components/ui/PlayerName'
-import ReactConfetti from 'react-confetti'
+import { EndConfetti } from '@/components/online/EndConfetti'
 import { RefreshCw, Trophy, Home, Skull, Heart, Star, Clock } from 'lucide-react'
 
 interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
@@ -922,8 +922,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-b ${theme.background} text-white`}>
-      {showConfetti && <ReactConfetti />}
+    <div className={`relative min-h-screen bg-gradient-to-b ${theme.background} text-white`}>
+      {/* Rideau de fin (200 pièces recyclées, l'ancien défaut) ; z-[2] : au-dessus
+          des cartes positionnées, comme le posait react-confetti. `relative` sur
+          la racine : le canevas se borne au jeu au lieu de s'ancrer sur la page
+          entière (et de grandir avec elle). */}
+      {showConfetti && <EndConfetti rain pieces={200} className="z-[2]" />}
       
       <div className="container mx-auto max-w-6xl px-2 py-4 space-y-4 md:space-y-6 md:px-4">
         {/* Header - Responsive */}

@@ -1,12 +1,12 @@
 "use client"
 
 import { KeyRound, Trophy } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { MCClientView, MCTeam } from '@/lib/mots-codes/engine'
 import { MC_CLUE_MS, MC_GUESS_MS } from '@/lib/mots-codes/engine'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayingCardBack } from '@/components/ui/PlayingCard'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
@@ -17,16 +17,7 @@ import { TvBigCountdown, TvTimeBar } from './tv-shared'
 export function TvMotsCodes({ room, state }: { room: TvRoomDto; state: MCClientView }) {
   void room
   const t = useTranslations('games.mots-codes.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phaseEndsAt === null || state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phaseEndsAt, state.phase])
-
   const finished = state.phase === 'finished'
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const totalPhaseMs = state.phase === 'clue' ? MC_CLUE_MS : MC_GUESS_MS
   const teamName = (team: MCTeam) => (team === 'gold' ? t('teamGold') : t('teamRed'))
 
@@ -38,11 +29,12 @@ export function TvMotsCodes({ room, state }: { room: TvRoomDto; state: MCClientV
   }
 
   if (state.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-3xl font-black uppercase tracking-widest text-amber-300/80">{t('countdown.title')}</p>
-        <TvBigCountdown seconds={secondsLeft} colorClass="text-amber-200" />
+        <PhaseCountdown endsAt={state.phaseEndsAt}>
+          {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-amber-200" />}
+        </PhaseCountdown>
       </div>
     )
   }
@@ -67,8 +59,10 @@ export function TvMotsCodes({ room, state }: { room: TvRoomDto; state: MCClientV
         <span className="text-2xl font-black text-red-300">{state.remaining.red} · {t('teamRed')} ◆</span>
       </div>
 
-      {!finished && timeLeftMs !== null && (
-        <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={15_000} colorClass="bg-gold" dangerClass="bg-suit-red" />
+      {!finished && state.phaseEndsAt !== null && (
+        <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={400}>
+          {({ leftMs }) => <TvTimeBar timeLeftMs={leftMs} totalMs={totalPhaseMs} dangerMs={15_000} colorClass="bg-gold" dangerClass="bg-suit-red" />}
+        </PhaseCountdown>
       )}
 
       {/* Indice */}

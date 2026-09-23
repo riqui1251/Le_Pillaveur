@@ -1,13 +1,13 @@
 "use client"
 
 import { Trophy } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { QuizClientView } from '@/lib/quiz/engine'
 import { QUIZ_QUESTION_MS, QUIZ_REVEAL_MS } from '@/lib/quiz/engine'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { MedalDot } from '@/components/online/MedalDot'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
@@ -29,17 +29,8 @@ const CHOICE_STYLE = [
 export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView }) {
   const t = useTranslations('tv')
   const tQ = useTranslations('games.quiz.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phaseEndsAt === null) return
-    const timer = setInterval(() => setClock(Date.now()), 250)
-    return () => clearInterval(timer)
-  }, [state.phaseEndsAt])
-
   const question = state.currentQuestion
   const result = state.lastResult
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const totalPhaseMs = state.phase === 'question' ? QUIZ_QUESTION_MS : QUIZ_REVEAL_MS
   const ranking = [...state.players].sort((a, b) => b.score - a.score)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
@@ -83,13 +74,14 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
 
   // ── Compte à rebours de lancement ────────────────────────────────────────
   if (state.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-3xl font-black uppercase tracking-widest text-cyan-300/80">
           {tQ('countdown.title')}
         </p>
-        <TvBigCountdown seconds={secondsLeft} colorClass="text-cyan-200" />
+        <PhaseCountdown endsAt={state.phaseEndsAt}>
+          {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-cyan-200" />}
+        </PhaseCountdown>
         <p className="text-xl text-white/50">{t('answerOnPhone')}</p>
       </div>
     )
@@ -102,8 +94,10 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
         <span className="text-xl font-black text-white/80">
           {tQ('progress', { n: state.qIdx + 1, total: state.questionCount })}
         </span>
-        {timeLeftMs !== null && (
-          <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={5000} colorClass="bg-cyan-400" dangerClass="bg-red-400" />
+        {state.phaseEndsAt !== null && (
+          <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={250}>
+            {({ leftMs }) => <TvTimeBar timeLeftMs={leftMs} totalMs={totalPhaseMs} dangerMs={5000} colorClass="bg-cyan-400" dangerClass="bg-red-400" />}
+          </PhaseCountdown>
         )}
       </div>
 

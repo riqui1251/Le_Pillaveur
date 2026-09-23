@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { Home, Send, Sparkles } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { PartyCanvas, type Stroke } from './PartyCanvas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +18,7 @@ import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
+import { useDeadline } from '@/hooks/useDeadline'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -37,6 +40,9 @@ function parseView(json: string | null | undefined): TelephoneClientView | null 
     return null
   }
 }
+
+/** Nouvel essai du dépôt automatique après un raté réseau — l'ancienne cadence d'horloge. */
+const AUTO_SUBMIT_RETRY_MS = 400
 
 export function TelephoneDessineOnline() {
   const { user } = useAuth()
@@ -60,13 +66,6 @@ export function TelephoneDessineOnline() {
   const tutorial = useGameTutorial('telephone-dessine', inGame)
   const cosmetics = useMemberCosmetics(room)
 
-  const [clock, setClock] = useState(() => Date.now())
-  useEffect(() => {
-    if (!view || view.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [view])
-
   useEffect(() => {
     setText('')
     setMyStrokes([])
@@ -86,14 +85,22 @@ export function TelephoneDessineOnline() {
   // Dépôt AUTOMATIQUE du brouillon 2 s avant l'échéance (phrase OU dessin) :
   // sans lui, un maillon non « Envoyé » partait blanc au timeout. Sans verrou
   // de version, retenté à chaque version serveur tant que le dépôt n'est pas
-  // confirmé (même filet que le flush du Petit Bac).
+  // confirmé (même filet que le flush du Petit Bac). Le réveil à T-2 s vient
+  // de useDeadline : un seul re-rendu, pas d'horloge à 400 ms.
+  const autoSubmitDue = useDeadline(view && view.phaseEndsAt !== null ? view.phaseEndsAt - 2_000 : null)
   const autoSubmitRef = useRef<string | null>(null)
+  // Raté réseau : l'effet ne se relance que sur une version serveur, et rien
+  // ne garantit qu'il en arrive une dans les deux dernières secondes. Ce
+  // compteur le réveille 400 ms plus tard tant que la phase n'est pas close —
+  // un rendu par nouvel essai, en cas d'échec seulement.
+  const [autoSubmitRetry, retryAutoSubmit] = useReducer((n: number) => n + 1, 0)
   useEffect(() => {
     if (!view || !room || !user) return
     if (view.phase !== 'contributing' || view.haveISubmitted) return
     const me = view.players.find((p) => p.id === user.id)
     if (!me || me.leftAt) return
-    if (view.phaseEndsAt === null || clock < view.phaseEndsAt - 2_000) return
+    if (view.phaseEndsAt === null || !autoSubmitDue) return
+    const phaseEndsAt = view.phaseEndsAt
     const key = `${view.round}:${view.phaseSeq}:${room.stateVersion}`
     if (autoSubmitRef.current === key) return
     autoSubmitRef.current = key
@@ -101,6 +108,7 @@ export function TelephoneDessineOnline() {
       view.actionType === 'draw'
         ? { action: 'submit', strokes: strokesRef.current }
         : { action: 'write', text: textRef.current.trim() }
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
     void fetch(`/api/online/rooms/${room.id}/action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -108,8 +116,10 @@ export function TelephoneDessineOnline() {
       body: JSON.stringify(body),
     }).catch(() => {
       autoSubmitRef.current = null
+      if (Date.now() < phaseEndsAt) retryTimer = setTimeout(retryAutoSubmit, AUTO_SUBMIT_RETRY_MS)
     })
-  }, [view, room, user, clock])
+    return () => clearTimeout(retryTimer)
+  }, [view, room, user, autoSubmitDue, autoSubmitRetry])
 
   // Ticks « arbitre » (bots + remplacement), avec secours par rang.
   const pendingBot =
@@ -148,7 +158,6 @@ export function TelephoneDessineOnline() {
   }
 
   const finished = view.phase === 'finished'
-  const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
@@ -181,22 +190,10 @@ export function TelephoneDessineOnline() {
 
   // ── Compte à rebours de lancement ────────────────────────────────────────
   if (view.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
         <p className="text-sm font-bold uppercase tracking-widest text-teal-300/80">{t('countdown.title')}</p>
-        <AnimatePresence mode="popLayout">
-          <motion.span
-            key={secondsLeft}
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.6, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="text-8xl font-black tabular-nums text-teal-200"
-          >
-            {secondsLeft}
-          </motion.span>
-        </AnimatePresence>
+        <PhaseCountdownLaunch endsAt={view.phaseEndsAt} className="text-8xl font-black tabular-nums text-teal-200" />
         <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
       </div>
     )
@@ -277,16 +274,15 @@ export function TelephoneDessineOnline() {
           </span>
           <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
         </div>
-        {timeLeftMs !== null && (
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 15_000 ? 'bg-red-400' : 'bg-teal-400'
-              )}
-              style={{ width: `${Math.min(100, (timeLeftMs / totalMs) * 100)}%` }}
-            />
-          </div>
+        {view.phaseEndsAt !== null && (
+          <PhaseCountdown
+            variant="bar"
+            endsAt={view.phaseEndsAt}
+            total={totalMs}
+            dangerMs={15_000}
+            colorClassName="bg-teal-400"
+            dangerClassName="bg-red-400"
+          />
         )}
       </div>
 
@@ -298,10 +294,9 @@ export function TelephoneDessineOnline() {
       )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          {t('waitingReturn', {
-            name: leftPlayer.name,
-            seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-          })}
+          <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
+          </PhaseCountdown>
         </div>
       )}
 

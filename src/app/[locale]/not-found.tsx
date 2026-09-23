@@ -9,6 +9,11 @@ import { Link } from '@/i18n/navigation'
  * aucun moyen de repartir).
  * Pas d'export `metadata` ici : Next ne l'appelle pas sur une page not-found,
  * et le statut 404 suffit à écarter la page des moteurs.
+ * Pas de setRequestLocale non plus : une page not-found ne reçoit pas de
+ * params. Sa langue vient soit de la page qui a levé notFound() et l'avait
+ * posée (règles, mentions légales), soit — sous l'attrape-tout [...rest],
+ * rendu à la demande — de l'en-tête que le middleware next-intl ajoute à la
+ * requête. Elle n'est jamais rendue au build, rien à figer ici.
  */
 export default async function LocaleNotFound() {
   const t = await getTranslations('errors.notFound')

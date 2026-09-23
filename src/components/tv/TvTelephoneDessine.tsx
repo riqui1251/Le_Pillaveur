@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
@@ -8,6 +7,7 @@ import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
 import { PartyCanvas } from '@/components/online/PartyCanvas'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown } from './tv-shared'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 
 /**
  * TÉLÉPHONE DESSINÉ sur grand écran : pendant le jeu, juste « X/Y ont
@@ -16,16 +16,7 @@ import { TvBigCountdown } from './tv-shared'
  */
 export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: TelephoneClientView }) {
   const t = useTranslations('games.telephone-dessine.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phase])
-
   const finished = state.phase === 'finished'
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
@@ -39,11 +30,12 @@ export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: Te
   }
 
   if (state.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-3xl font-black uppercase tracking-widest text-teal-300/80">{t('countdown.title')}</p>
-        <TvBigCountdown seconds={secondsLeft} colorClass="text-teal-200" />
+        <PhaseCountdown endsAt={state.phaseEndsAt}>
+          {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-teal-200" />}
+        </PhaseCountdown>
       </div>
     )
   }

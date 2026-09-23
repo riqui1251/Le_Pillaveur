@@ -1,13 +1,13 @@
 "use client"
 
 import { Trophy } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { PbcClientView } from '@/lib/petit-bac/engine'
 import { PBC_WRITE_MS } from '@/lib/petit-bac/engine'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
@@ -18,15 +18,6 @@ import { TvBigCountdown, TvTimeBar } from './tv-shared'
  */
 export function TvPetitBac({ room, state }: { room: TvRoomDto; state: PbcClientView }) {
   const t = useTranslations('games.petit-bac.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phaseEndsAt === null || state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phaseEndsAt, state.phase])
-
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
@@ -34,7 +25,6 @@ export function TvPetitBac({ room, state }: { room: TvRoomDto; state: PbcClientV
   const activeCount = state.players.filter((p) => !p.leftAt).length
 
   if (state.phase === 'countdown' || state.phase === 'finished') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     const podium = [...state.players].sort((a, b) => b.total - a.total)
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
@@ -61,7 +51,9 @@ export function TvPetitBac({ room, state }: { room: TvRoomDto; state: PbcClientV
         ) : (
           <>
             <p className="text-3xl font-black uppercase tracking-widest text-sky-300/80">{t('countdown.title')}</p>
-            <TvBigCountdown seconds={secondsLeft} colorClass="text-sky-200" />
+            <PhaseCountdown endsAt={state.phaseEndsAt}>
+              {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-sky-200" />}
+            </PhaseCountdown>
           </>
         )}
       </div>
@@ -79,8 +71,10 @@ export function TvPetitBac({ room, state }: { room: TvRoomDto; state: PbcClientV
         </span>
       </div>
 
-      {timeLeftMs !== null && state.phase === 'write' && (
-        <TvTimeBar timeLeftMs={timeLeftMs} totalMs={PBC_WRITE_MS} dangerMs={15_000} />
+      {state.phaseEndsAt !== null && state.phase === 'write' && (
+        <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={400}>
+          {({ leftMs }) => <TvTimeBar timeLeftMs={leftMs} totalMs={PBC_WRITE_MS} dangerMs={15_000} />}
+        </PhaseCountdown>
       )}
 
       {(state.phase === 'write' || state.phase === 'flush') && (

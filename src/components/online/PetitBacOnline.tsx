@@ -7,6 +7,8 @@ import { Home, RefreshCw, Trophy, Hand, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { pbcIsValid, PBC_WRITE_MS, type PbcClientView } from '@/lib/petit-bac/engine'
@@ -14,6 +16,7 @@ import { botEmojiFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
+import { useDeadline } from '@/hooks/useDeadline'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -57,12 +60,14 @@ export function PetitBacOnline() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roundKey, inGame])
 
-  const [clock, setClock] = useState(() => Date.now())
-  useEffect(() => {
-    if (!view || view.phaseEndsAt === null || view.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 500)
-    return () => clearInterval(timer)
-  }, [view])
+  // Verrous serveur (F32 : STOP pas avant un délai d'écriture ; F33 : manche
+  // suivante pas avant le temps de lecture) et fenêtre de retour du parti :
+  // trois questions binaires, un seul re-rendu chacune au franchissement —
+  // le chrono affiché, lui, vit dans PhaseCountdown.
+  const stopUnlocked = useDeadline(view?.stopAt ?? null)
+  const continueUnlocked = useDeadline(view?.continueAt ?? null)
+  const goneAt = view?.players.find((p) => !p.isBot && p.leftAt)?.leftAt ?? null
+  const returnWindowClosed = useDeadline(goneAt === null ? null : goneAt + ONLINE_REPLACE_GRACE_MS)
 
   // Tick « advance » à l'échéance, arbitré par rang (cf. useAdvanceTick).
   useAdvanceTick({
@@ -137,7 +142,6 @@ export function PetitBacOnline() {
       ? botEmojiFromName(p.name)
       : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
-  const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const me = view.players.find((p) => p.id === user.id)
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const catLabel = (id: string) => t(`categories.${id}`)
@@ -213,22 +217,10 @@ export function PetitBacOnline() {
 
   // ── Compte à rebours ─────────────────────────────────────────────────────
   if (view.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
         <p className="text-sm font-bold uppercase tracking-widest text-sky-300/80">{t('countdown.title')}</p>
-        <AnimatePresence mode="popLayout">
-          <motion.span
-            key={secondsLeft}
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.6, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="text-8xl font-black tabular-nums text-sky-200"
-          >
-            {secondsLeft}
-          </motion.span>
-        </AnimatePresence>
+        <PhaseCountdownLaunch endsAt={view.phaseEndsAt} className="text-8xl font-black tabular-nums text-sky-200" />
         <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
       </div>
     )
@@ -239,10 +231,10 @@ export function PetitBacOnline() {
   // remplies (bonne lettre, 2 caractères au moins) ET un délai d'écriture
   // minimal, pour qu'on ne gèle plus la table à l'instant zéro (F32).
   const stopFilled = draft.every((a) => pbcIsValid(a, view.letter))
-  const stopWaitMs = view.stopAt === null ? 0 : Math.max(0, view.stopAt - clock)
+  const stopLocked = view.stopAt !== null && !stopUnlocked
   const canStop =
-    view.phase === 'write' && !me?.hasSubmitted && stopFilled && stopWaitMs === 0
-  const continueWaitMs = view.continueAt === null ? 0 : Math.max(0, view.continueAt - clock)
+    view.phase === 'write' && !me?.hasSubmitted && stopFilled && !stopLocked
+  const continueLocked = view.continueAt !== null && !continueUnlocked
   const submittedCount = view.players.filter((p) => p.hasSubmitted && !p.leftAt).length
   const activeCount = view.players.filter((p) => !p.leftAt).length
 
@@ -262,13 +254,15 @@ export function PetitBacOnline() {
             <TutorialReopenButton onClick={tutorial.reopen} className="touch-target h-7 w-7" />
           </span>
         </div>
-        {timeLeftMs !== null && view.phase === 'write' && (
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn('h-full rounded-full transition-[width] duration-500 ease-linear', timeLeftMs < 15_000 ? 'bg-suit-red' : 'bg-gold')}
-              style={{ width: `${Math.min(100, (timeLeftMs / PBC_WRITE_MS) * 100)}%` }}
-            />
-          </div>
+        {view.phaseEndsAt !== null && view.phase === 'write' && (
+          <PhaseCountdown
+            variant="bar"
+            endsAt={view.phaseEndsAt}
+            total={PBC_WRITE_MS}
+            dangerMs={15_000}
+            colorClassName="bg-gold"
+            dangerClassName="bg-suit-red"
+          />
         )}
       </div>
 
@@ -280,7 +274,7 @@ export function PetitBacOnline() {
       )}
       {/* Bandeau limité à la fenêtre de retour probable — un parti reste
           simplement écarté (jamais converti en bot au Petit Bac). */}
-      {leftPlayer?.leftAt && clock - leftPlayer.leftAt < ONLINE_REPLACE_GRACE_MS && (
+      {leftPlayer?.leftAt && !returnWindowClosed && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
           {t('leftTable', { name: leftPlayer.name })}
         </div>
@@ -338,9 +332,11 @@ export function PetitBacOnline() {
                 className="w-full rounded-2xl bg-gradient-to-r from-sky-700 to-amber-600 py-5 text-base font-black tracking-wide disabled:opacity-50"
               >
                 <Hand className="mr-2 h-5 w-5" />{' '}
-                {stopWaitMs > 0
-                  ? t('stopLocked', { seconds: Math.ceil(stopWaitMs / 1000) })
-                  : t('stop')}
+                {stopLocked ? (
+                  <PhaseCountdown endsAt={view.stopAt}>{({ seconds }) => t('stopLocked', { seconds })}</PhaseCountdown>
+                ) : (
+                  t('stop')
+                )}
               </Button>
             )
           ) : (
@@ -469,14 +465,18 @@ export function PetitBacOnline() {
               le bouton le dit au lieu de se faire rejeter. */}
           <Button
             onClick={() => void sendAction({ action: 'continue' })}
-            disabled={busy || continueWaitMs > 0}
+            disabled={busy || continueLocked}
             className="w-full rounded-2xl bg-gradient-to-r from-sky-700 to-amber-600 py-4 text-sm font-bold disabled:opacity-50"
           >
-            {continueWaitMs > 0
-              ? t('nextRoundLocked', { seconds: Math.ceil(continueWaitMs / 1000) })
-              : view.round + 1 >= view.totalRounds
-                ? t('seeEnd')
-                : t('nextRound')}
+            {continueLocked ? (
+              <PhaseCountdown endsAt={view.continueAt}>
+                {({ seconds }) => t('nextRoundLocked', { seconds })}
+              </PhaseCountdown>
+            ) : view.round + 1 >= view.totalRounds ? (
+              t('seeEnd')
+            ) : (
+              t('nextRound')
+            )}
           </Button>
         </div>
       )}

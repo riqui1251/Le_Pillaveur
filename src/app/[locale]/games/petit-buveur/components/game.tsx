@@ -23,7 +23,10 @@ import { PlayerName, isSpecialPlayer } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { formatPlayerNameHtml } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
-import ReactConfetti from 'react-confetti'
+import { EndConfetti } from '@/components/online/EndConfetti'
+// Plateau (grille, cases, pions) : la feuille suit le composant — servie avec
+// ce morceau seulement, pas avec chaque page de /games (idem PetitBuveurOnline).
+import '@/styles/petit-buveur-board.css'
 import {
   type Case,
   type CaseType,
@@ -380,7 +383,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [showTargetDialog, setShowTargetDialog] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [showVictoryScreen, setShowVictoryScreen] = useState(false);
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
   // Pions animés case par case + feedback gorgées (composants partagés petit-buveur).
   const positionsById = useMemo(() => {
@@ -467,23 +469,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     if (typeof window !== 'undefined') {
       setBrowserCapabilities(detectBrowserCapabilities());
     }
-  }, []);
-
-  // Mettre à jour la taille de la fenêtre pour les confettis
-  useEffect(() => {
-    const updateWindowSize = () => {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
-    };
-
-    // Définir la taille initiale
-    updateWindowSize();
-
-    // Mettre à jour la taille lors du redimensionnement
-    window.addEventListener('resize', updateWindowSize);
-    return () => window.removeEventListener('resize', updateWindowSize);
   }, []);
 
   // Montrer l'écran de victoire quand il y a un gagnant
@@ -3854,15 +3839,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
           >
-            {windowSize.width > 0 && windowSize.height > 0 && (
-              <ReactConfetti
-                width={windowSize.width}
-                height={windowSize.height}
-                recycle={true}
-                numberOfPieces={200}
-                gravity={0.15}
-              />
-            )}
+            {/* z-[2] : le rideau reste au-dessus de la carte animée, comme avec react-confetti. */}
+            <EndConfetti rain pieces={200} className="z-[2]" />
             <motion.div
               initial={{ scale: 0.85, y: 30 }}
               animate={{ scale: 1, y: 0 }}

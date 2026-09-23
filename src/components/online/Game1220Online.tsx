@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Home, RefreshCw, Dices } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
@@ -93,15 +94,6 @@ export function Game1220Online() {
         ? { phaseKey: view.phaseKey, dueAt: phaseEndsAt, retryMs: 5000 }
         : null,
   })
-
-  const [clock, setClock] = useState(() => Date.now())
-  const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
-  const setupCountdown = view?.phase === 'setup' && phaseEndsAt !== null
-  useEffect(() => {
-    if (!someoneLeft && !setupCountdown) return
-    const timer = setInterval(() => setClock(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [someoneLeft, setupCountdown])
 
   if (!inGame) {
     return <GameOnlineLobby gameId="1220" />
@@ -201,9 +193,9 @@ export function Game1220Online() {
 
         {phaseEndsAt !== null && (
           <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-            {t('online.setupDeadline', {
-              seconds: Math.max(0, Math.ceil((phaseEndsAt - clock) / 1000)),
-            })}
+            <PhaseCountdown endsAt={phaseEndsAt}>
+              {({ seconds }) => t('online.setupDeadline', { seconds })}
+            </PhaseCountdown>
           </div>
         )}
 
@@ -344,10 +336,9 @@ export function Game1220Online() {
       )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          {t('online.waitingReturn', {
-            name: leftPlayer.name,
-            seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-          })}
+          <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) => t('online.waitingReturn', { name: leftPlayer.name, seconds })}
+          </PhaseCountdown>
         </div>
       )}
 

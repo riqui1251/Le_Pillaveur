@@ -5,13 +5,13 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server'
 import '../globals.css'
 import '../fullscreen.css'
-import '../../styles/player-effects.css'
 import { Providers } from '../providers'
 import Navbar from '@/components/layout/Navbar'
 import { LocaleSync } from '@/components/layout/LocaleSync'
 import { FullscreenLayoutProvider } from '@/components/providers/FullscreenLayoutProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { routing } from '@/i18n/routing'
+import { coreMessages } from '@/i18n/messages-slices'
 import { SITE_URL } from '@/lib/site'
 
 // Identité « Cartes sur Table » : Source Sans 3 (texte) + Playfair Display (voix du croupier).
@@ -33,7 +33,19 @@ export const viewport: Viewport = {
   ],
 }
 
-export const dynamic = 'force-dynamic'
+/**
+ * Les quatre langues sont connues d'avance : chaque page qui n'a besoin ni
+ * d'un cookie ni de l'URL exacte (règles, mentions légales, application, hub,
+ * pages de jeu) est rendue UNE fois au build, par langue, puis servie telle
+ * quelle — plus de lecture disque ni de markdown à chaque visite, et le
+ * prefetch des <Link> porte sur du HTML déjà prêt. Le `force-dynamic` qui
+ * vivait ici (b12b5ce, posé pour faire passer le build) empêchait tout ça :
+ * ce que le build réclamait vraiment, c'était setRequestLocale dans chaque
+ * page et une frontière Suspense autour de useSearchParams.
+ */
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }))
+}
 
 export async function generateMetadata({
   params,
@@ -92,7 +104,12 @@ export default async function LocaleLayout({
   }
 
   setRequestLocale(locale)
-  const messages = await getMessages()
+  // Le SOCLE seulement : le catalogue entier (183 Ko minifiés) partait dans le
+  // HTML de chaque page, règles et landing comprises, alors que les textes des
+  // jeux et de la supervision ne servent qu'à leurs pages — leurs layouts
+  // ajoutent leur tranche (src/i18n/messages-slices.ts). Les composants
+  // serveur (getTranslations) lisent toujours le catalogue complet.
+  const messages = coreMessages(await getMessages())
   const tMeta = await getTranslations({ locale, namespace: 'metadata' })
 
   // Données structurées schema.org : aide les moteurs à comprendre le site

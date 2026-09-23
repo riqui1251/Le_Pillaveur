@@ -14,6 +14,10 @@ import {
   CROBARD_POINTS_FIRST,
   CROBARD_POINTS_SECOND,
   CROBARD_DRAWER_POINTS_PER_GUESSER,
+  CANVAS_MAX_POINTS_PER_STROKE,
+  CANVAS_MAX_STROKES,
+  sanitizeStroke,
+  sanitizeStrokes,
   type CrobardState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
@@ -325,5 +329,42 @@ describe('vues anti-triche', () => {
     expect(view).not.toHaveProperty('allWords')
     expect(view).not.toHaveProperty('remainingWords')
     expect(view).not.toHaveProperty('rngState')
+  })
+})
+
+describe('sanitizeStroke / sanitizeStrokes — défense serveur', () => {
+  it('borne dans [0,1] ET arrondit à 3 décimales (un client tricheur ne gonfle plus l\'état)', () => {
+    const s = sanitizeStroke({ points: [5, -2, 0.123456789, 0.98765432], color: '#000', width: 3 })!
+    expect(s.points).toEqual([1, 0, 0.123, 0.988])
+    expect(JSON.stringify(s.points)).toBe('[1,0,0.123,0.988]')
+  })
+
+  it('plafonne à CANVAS_MAX_POINTS_PER_STROKE points (x, y), soit le double en nombres', () => {
+    const overflow = Array.from(
+      { length: (CANVAS_MAX_POINTS_PER_STROKE + 50) * 2 },
+      (_, i) => (i % 2 === 0 ? 0.5 : 0.25)
+    )
+    const s = sanitizeStroke({ points: overflow, color: '#000', width: 3 })!
+    expect(s.points).toHaveLength(CANVAS_MAX_POINTS_PER_STROKE * 2)
+    // Un trait juste sous le plafond passe entier.
+    const under = Array.from({ length: CANVAS_MAX_POINTS_PER_STROKE * 2 }, (_, i) => (i % 2 === 0 ? 0.5 : 0.25))
+    expect(sanitizeStroke({ points: under, color: '#000', width: 3 })!.points).toHaveLength(under.length)
+  })
+
+  it('écarte les traits inexploitables (trop court, non numérique, sans points)', () => {
+    expect(sanitizeStroke({ points: [0.3, 0.3], color: '#000', width: 3 })).toBeNull()
+    expect(sanitizeStroke({ points: ['a', 'b', NaN, 1], color: '#000', width: 3 })).toBeNull()
+    expect(sanitizeStroke({ color: '#000', width: 3 })).toBeNull()
+    expect(sanitizeStroke(null)).toBeNull()
+  })
+
+  it('sanitizeStrokes plafonne le nombre de traits et écarte les invalides', () => {
+    const many = Array.from({ length: CANVAS_MAX_STROKES + 10 }, () => ({
+      points: [0, 0, 1, 1],
+      color: '#000',
+      width: 3,
+    }))
+    expect(sanitizeStrokes(many)).toHaveLength(CANVAS_MAX_STROKES)
+    expect(sanitizeStrokes([{ points: [0, 0] }, 'nimp', { points: [0, 0, 0.5, 0.5] }])).toHaveLength(1)
   })
 })

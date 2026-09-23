@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useTranslations } from 'next-intl'
 import { usePlayers } from "@/hooks/usePlayers"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
@@ -9,8 +10,21 @@ import { PlayerName } from "@/components/ui/PlayerName"
 import { Link } from "@/i18n/navigation"
 import { ArrowLeft } from "lucide-react"
 import { useAuth } from '@/components/providers/AuthProvider'
-import { Game1220Online } from '@/components/online/Game1220Online'
-import Game from "./components/game"
+import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
+
+// Les deux moteurs — le jeu local (un téléphone qui tourne autour de la
+// table) et sa version en ligne (lobby, briefing, bibliothèque d'animation) —
+// sont chargés À LA DEMANDE selon le mode : la page livrait les deux et n'en
+// montrait qu'un. Pas de `ssr: false` : le serveur ne rend ni l'un ni l'autre
+// (session inconnue, aucun joueur en mémoire), et le même squelette — en-tête
+// du catalogue, zone qui pulse — tient la place le temps que le morceau arrive.
+const Game1220Online = dynamic(
+  () => import('@/components/online/Game1220Online').then((m) => m.Game1220Online),
+  { loading: () => <OnlineGameSkeleton gameId="1220" /> }
+)
+const Game = dynamic(() => import('./components/game'), {
+  loading: () => <OnlineGameSkeleton gameId="1220" />,
+})
 
 export default function Game1220Page() {
   const t = useTranslations('games.1220')

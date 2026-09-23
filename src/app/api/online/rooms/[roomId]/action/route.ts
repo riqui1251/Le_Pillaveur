@@ -18,19 +18,20 @@ type Params = { params: Promise<{ roomId: string }> }
 const MAX_ACTION_BODY_BYTES = 8 * 1024
 
 /**
- * Sauf pour les jeux de dessin, où l'action PORTE le dessin. Le calcul, au
- * pire du pire (PartyCanvas envoie les coordonnées normalisées SANS arrondi,
- * soit ~20 octets par nombre, séparateur compris) :
- *  - Crobard : une action = UN trait, plafonné à CANVAS_MAX_POINTS_PER_STROKE
- *    = 2 000 nombres, soit ~40 Ko ;
+ * Sauf pour les jeux de dessin, où l'action PORTE le dessin. Un client honnête
+ * envoie chaque trait simplifié et arrondi à 3 décimales (lib/crobard/
+ * simplify.ts) : ~6 octets par nombre, séparateur compris, et un trait humain
+ * tient en quelques dizaines de points. Au pire, sur le plafond du moteur
+ * (CANVAS_MAX_POINTS_PER_STROKE = 300 points = 600 nombres ≈ 3,6 Ko par trait) :
+ *  - Crobard : une action = UN trait, donc ~3,6 Ko ;
  *  - Téléphone Dessiné : l'action `submit` porte le dessin ENTIER, accumulé
- *    pendant TELEPHONE_DRAW_MS = 80 s. Un écran à 120 Hz dont le doigt ne se
- *    lèverait jamais produit 9 600 points = 19 200 nombres, soit ~384 Ko.
- * D'où 512 Ko : de la marge au-dessus d'un dessin humainement possible, très
- * loin en dessous des 16 Mo que le plafond de traits du moteur
- * (CANVAS_MAX_STROKES × CANVAS_MAX_POINTS_PER_STROKE) autoriserait en théorie
- * — et surtout, sanitizeStroke ne tronque qu'APRÈS le parse : sans ce plafond,
- * ces mégaoctets étaient d'abord matérialisés en mémoire.
+ *    pendant TELEPHONE_DRAW_MS = 80 s — CANVAS_MAX_STROKES = 400 traits pleins
+ *    feraient ~1,4 Mo en théorie, mais 400 hachures de 300 points en 80 s,
+ *    ça n'existe pas : un dessin humain simplifié pèse quelques kilo-octets.
+ * D'où 512 Ko : de la marge au-dessus d'un dessin humainement possible, et
+ * surtout un plafond AVANT le parse — sanitizeStroke ne tronque qu'APRÈS :
+ * sans lui, un corps de plusieurs mégaoctets (coordonnées brutes à 17
+ * caractères, traits sans fin) était d'abord matérialisé en mémoire.
  */
 const MAX_DRAWING_ACTION_BODY_BYTES = 512 * 1024
 const DRAWING_GAMES = new Set(['crobard', 'telephone-dessine'])

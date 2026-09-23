@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import ReactConfetti from 'react-confetti'
 import {
   Beer,
   Bird,
@@ -34,6 +33,8 @@ import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { usePagePresence } from '@/hooks/usePagePresence'
 import { chatCursorQuery, mergeMessages } from '@/lib/chat-delta'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { EndConfetti } from './EndConfetti'
+import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
 import { WolfIcon } from '@/components/icons/GameIcons'
@@ -389,14 +390,6 @@ export function LoupGarouOnline() {
   const [showWolfChat, setShowWolfChat] = useState(false)
   const [showDayChat, setShowDayChat] = useState(false)
   const [witchKillMode, setWitchKillMode] = useState(false)
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
-
-  useEffect(() => {
-    const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [])
 
   const inGame = room?.gameId === 'loup-garou' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
@@ -404,13 +397,7 @@ export function LoupGarouOnline() {
   const tutorial = useGameTutorial('loup-garou', inGame)
   const cosmetics = useMemberCosmetics(room)
 
-  // Horloge locale (le serveur seul fait foi) + reset du mode potion.
-  const [clock, setClock] = useState(() => Date.now())
-  useEffect(() => {
-    if (!view || view.phaseEndsAt === null || view.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [view])
+  // Reset du mode potion à chaque nouvel état serveur.
   useEffect(() => {
     setWitchKillMode(false)
   }, [stateVersion])
@@ -502,7 +489,6 @@ export function LoupGarouOnline() {
     }
   }
 
-  const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const totalPhaseMs =
     view.phase === 'day-debate' ? view.debateMs : PHASE_TOTAL_MS[view.phase] ?? 60_000
 
@@ -526,9 +512,7 @@ export function LoupGarouOnline() {
     const villageWon = view.winnerTeam === 'village'
     return (
       <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-white">
-        {windowSize.width > 0 && (
-          <ReactConfetti width={windowSize.width} height={windowSize.height} numberOfPieces={180} recycle={false} />
-        )}
+        <EndConfetti />
         <motion.div
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -689,16 +673,15 @@ export function LoupGarouOnline() {
             <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
           </span>
         </div>
-        {timeLeftMs !== null && (
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 10_000 ? 'bg-suit-red' : 'bg-gold'
-              )}
-              style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
-            />
-          </div>
+        {view.phaseEndsAt !== null && (
+          <PhaseCountdown
+            variant="bar"
+            endsAt={view.phaseEndsAt}
+            total={totalPhaseMs}
+            dangerMs={10_000}
+            colorClassName="bg-gold"
+            dangerClassName="bg-suit-red"
+          />
         )}
       </div>
 

@@ -1,13 +1,13 @@
 "use client"
 
 import { Trophy } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { CrobardClientView } from '@/lib/crobard/engine'
 import { CROBARD_CHOOSING_MS, CROBARD_DRAWING_MS } from '@/lib/crobard/engine'
 import { PartyCanvas } from '@/components/online/PartyCanvas'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
@@ -17,16 +17,7 @@ import { TvBigCountdown, TvTimeBar } from './tv-shared'
  */
 export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClientView }) {
   const t = useTranslations('games.crobard.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phase])
-
   const finished = state.phase === 'finished'
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const totalPhaseMs = state.phase === 'choosing' ? CROBARD_CHOOSING_MS : CROBARD_DRAWING_MS
   const ranking = [...state.players].sort((a, b) => b.score - a.score)
   const nameOf = (id: string | null | undefined) => state.players.find((p) => p.id === id)?.name ?? '—'
@@ -49,11 +40,12 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
   }
 
   if (state.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-3xl font-black uppercase tracking-widest text-amber-300/80">{t('countdown.title')}</p>
-        <TvBigCountdown seconds={secondsLeft} colorClass="text-gold" />
+        <PhaseCountdown endsAt={state.phaseEndsAt}>
+          {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-gold" />}
+        </PhaseCountdown>
       </div>
     )
   }
@@ -95,8 +87,10 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
             {t('round', { round: state.round, total: state.totalRounds })}
           </span>
           <span className="text-lg font-semibold text-amber-300">{drawer?.name}</span>
-          {timeLeftMs !== null && (
-            <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={15_000} colorClass="bg-gold" dangerClass="bg-red-400" />
+          {state.phaseEndsAt !== null && (
+            <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={400}>
+              {({ leftMs }) => <TvTimeBar timeLeftMs={leftMs} totalMs={totalPhaseMs} dangerMs={15_000} colorClass="bg-gold" dangerClass="bg-red-400" />}
+            </PhaseCountdown>
           )}
         </div>
         <PartyCanvas strokes={state.strokes} readOnly className="flex-1" />

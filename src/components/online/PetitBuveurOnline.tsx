@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import ReactConfetti from 'react-confetti'
 import { Dice6, ArrowLeft, RefreshCw, Home, Beer, Trophy, Sparkles, Target, Shuffle, User, HelpCircle, History, X, Volume2, VolumeX } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { EndConfetti } from './EndConfetti'
+import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PLAYER_ICONS } from '@/lib/players'
@@ -92,7 +93,6 @@ export function PetitBuveurOnline() {
   const [rolling, setRolling] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
   const [diceOverlay, setDiceOverlay] = useState<DiceOverlayState | null>(null)
   const diceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** « Toucher pour passer » : écourte le maintien du résultat. */
@@ -104,13 +104,6 @@ export function PetitBuveurOnline() {
     return () => {
       if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
     }
-  }, [])
-
-  useEffect(() => {
-    const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
   }, [])
 
   const inGame = room?.gameId === 'petit-buveur' && room.status === 'playing'
@@ -168,14 +161,7 @@ export function PetitBuveurOnline() {
     return () => clearTimeout(timer)
   }, [stateVersion, afkWatchable])
 
-  // Horloge locale 1s pour les comptes à rebours (retour d'un parti / AFK).
   const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
-  const [clock, setClock] = useState(() => Date.now())
-  useEffect(() => {
-    if (!someoneLeft && !afkWatch) return
-    const timer = setInterval(() => setClock(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [someoneLeft, afkWatch])
 
   // Pions animés case par case + feedback gorgées (voir src/components/petit-buveur/).
   const positionsById = useMemo(() => {
@@ -495,17 +481,13 @@ export function PetitBuveurOnline() {
             <div className="space-y-0.5 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-center">
               {view.players
                 .filter((p) => !p.isBot && p.leftAt)
-                .map((p) => {
-                  const remaining = Math.max(
-                    0,
-                    Math.ceil(((p.leftAt ?? 0) + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
-                  )
-                  return (
-                    <p key={p.id} className="text-xs font-semibold text-amber-100">
-                      {t('waitingReturn', { name: p.name, seconds: remaining })}
-                    </p>
-                  )
-                })}
+                .map((p) => (
+                  <p key={p.id} className="text-xs font-semibold text-amber-100">
+                    <PhaseCountdown endsAt={(p.leftAt ?? 0) + ONLINE_REPLACE_GRACE_MS}>
+                      {({ seconds }) => t('waitingReturn', { name: p.name, seconds })}
+                    </PhaseCountdown>
+                  </p>
+                ))}
             </div>
           )}
 
@@ -521,15 +503,13 @@ export function PetitBuveurOnline() {
           {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
             <div className="rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center">
               <p className="text-xs font-semibold text-red-100">
-                {(() => {
-                  const seconds = Math.max(
-                    0,
-                    Math.ceil((turnStartedAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
-                  )
-                  return afkTarget.id === user.id
-                    ? t('afkWarningSelf', { seconds })
-                    : t('afkWarning', { name: afkTarget.name, seconds })
-                })()}
+                <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
+                  {({ seconds }) =>
+                    afkTarget.id === user.id
+                      ? t('afkWarningSelf', { seconds })
+                      : t('afkWarning', { name: afkTarget.name, seconds })
+                  }
+                </PhaseCountdown>
               </p>
             </div>
           )}
@@ -820,15 +800,7 @@ export function PetitBuveurOnline() {
             aria-label={tGame('victory.winner')}
             className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
           >
-            {windowSize.width > 0 && windowSize.height > 0 && (
-              <ReactConfetti
-                width={windowSize.width}
-                height={windowSize.height}
-                recycle={true}
-                numberOfPieces={200}
-                gravity={0.15}
-              />
-            )}
+            <EndConfetti rain pieces={200} />
             <motion.div
               initial={{ scale: 0.85, y: 30 }}
               animate={{ scale: 1, y: 0 }}

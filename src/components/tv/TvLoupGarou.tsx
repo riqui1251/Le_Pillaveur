@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, type ComponentType } from 'react'
+import { type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
 import { Beer, Bird, FlaskConical, Hourglass, Medal, Moon, Shield, Skull, Sparkles, Sun, Target, Trophy, Wheat } from 'lucide-react'
 import type { TvRoomDto } from '@/lib/online-room'
@@ -9,6 +9,7 @@ import type { LGClientView, LGRole } from '@/lib/loup-garou/engine'
 import { WolfIcon } from '@/components/icons/GameIcons'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 
 /**
  * LOUP-GAROU sur grand écran : la table vue du dessus — les joueurs sont des
@@ -53,17 +54,8 @@ const NIGHT_PHASES = new Set([
 
 export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientView }) {
   const t = useTranslations('games.loup-garou.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phaseEndsAt === null || state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phaseEndsAt, state.phase])
-
   const finished = state.phase === 'finished'
   const isNight = NIGHT_PHASES.has(state.phase)
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const totalPhaseMs =
     state.phase === 'day-debate' ? state.debateMs : PHASE_TOTAL_MS[state.phase] ?? 60_000
   const alive = state.players.filter((p) => p.alive)
@@ -142,16 +134,17 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
         <span className="font-display text-xl font-semibold uppercase tracking-widest text-gold">
           {t(`phases.${state.phase}`)}
         </span>
-        {timeLeftMs !== null && (
-          <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-300 ease-linear',
-                timeLeftMs < 10_000 ? 'bg-suit-red' : 'bg-gold'
-              )}
-              style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
-            />
-          </div>
+        {state.phaseEndsAt !== null && (
+          <PhaseCountdown
+            variant="bar"
+            endsAt={state.phaseEndsAt}
+            total={totalPhaseMs}
+            dangerMs={10_000}
+            className="h-3 flex-1 overflow-hidden rounded-full bg-white/10"
+            barClassName="h-full rounded-full"
+            colorClassName="bg-gold"
+            dangerClassName="bg-suit-red"
+          />
         )}
       </div>
 

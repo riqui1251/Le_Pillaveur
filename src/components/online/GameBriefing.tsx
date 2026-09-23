@@ -13,6 +13,7 @@ import { TUTORIAL_VISUALS } from '@/lib/online/tutorial-visuals'
 import type { RoomDto } from '@/lib/online-room'
 import { markGameTutorialSeen, type TutorialStep } from './GameTutorialModal'
 import { OnlinePlayerIcon } from './OnlinePlayerTag'
+import { PhaseCountdown } from './PhaseCountdown'
 import { cn } from '@/lib/utils'
 
 /**
@@ -39,14 +40,12 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
   const visuals = TUTORIAL_VISUALS[gameId]
   const [idx, setIdx] = useState(0)
   const [sending, setSending] = useState(false)
-  const [clock, setClock] = useState(() => Date.now())
   const timeoutSentRef = useRef(false)
 
   const acks = room.briefing?.acks ?? []
   const startedAt = room.briefing?.startedAt ?? Date.now()
   const hasAcked = Boolean(user && acks.includes(user.id))
   const deadline = startedAt + BRIEFING_TIMEOUT_MS
-  const timeLeftMs = Math.max(0, deadline - clock)
 
   const postAck = useCallback(
     async (timeout: boolean) => {
@@ -71,12 +70,9 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
     [room.id, refreshRoom, sending, gameId]
   )
 
-  // Barre de temps + tick timeout (tous les clients l'envoient, le serveur
-  // vérifie l'échéance — la partie démarre même si un joueur reste AFK).
-  useEffect(() => {
-    const timer = setInterval(() => setClock(Date.now()), 500)
-    return () => clearInterval(timer)
-  }, [])
+  // Tick timeout (tous les clients l'envoient, le serveur vérifie l'échéance
+  // — la partie démarre même si un joueur reste AFK). La barre et le
+  // décompte affichés vivent dans PhaseCountdown, sans horloge ici.
   useEffect(() => {
     const delay = Math.max(250, deadline - Date.now() + 300 + Math.random() * 700)
     const timer = setTimeout(() => {
@@ -113,17 +109,17 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
               alarmante seulement dans les 5 dernières secondes (le rouge vif
               sur fond sombre stressait dès 15 s, avant même d'avoir lu). */}
           <div className="mb-4">
-            <div className="h-1.5 overflow-hidden rounded-full bg-[#24201A]/10">
-              <div
-                className={cn(
-                  'h-full rounded-full transition-[width] duration-500 ease-linear',
-                  timeLeftMs < 5_000 ? 'bg-suit-red' : 'bg-gold'
-                )}
-                style={{ width: `${Math.min(100, (timeLeftMs / BRIEFING_TIMEOUT_MS) * 100)}%` }}
-              />
-            </div>
+            <PhaseCountdown
+              variant="bar"
+              endsAt={deadline}
+              total={BRIEFING_TIMEOUT_MS}
+              dangerMs={5_000}
+              className="h-1.5 overflow-hidden rounded-full bg-[#24201A]/10"
+              colorClassName="bg-gold"
+              dangerClassName="bg-suit-red"
+            />
             <p className="mt-1 text-right text-[10px] text-[#6B6455]">
-              {t('autoStart', { s: Math.ceil(timeLeftMs / 1000) })}
+              <PhaseCountdown endsAt={deadline}>{({ seconds }) => t('autoStart', { s: seconds })}</PhaseCountdown>
             </p>
           </div>
 

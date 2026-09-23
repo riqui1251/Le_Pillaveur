@@ -16,6 +16,10 @@ import { useLocalizedGame } from '@/lib/games-i18n'
  * vitrine « essayer avec des bots ») prend le relais. Seule la zone du
  * dessous pulse — sobre, `motion-safe` pour qui a coupé les animations.
  *
+ * Il tient aussi la place des morceaux chargés à la demande par les pages de
+ * jeu (composant en ligne, et jeu local pour 1220, Petit Buveur et Purple) :
+ * même en-tête, même pulsation, rien ne saute quand le morceau arrive.
+ *
  * Le layout parent (games/layout.tsx) fournit la coquille feutre + filet
  * or : ni fond ni min-h-screen ici, ça déborderait sous l'en-tête du site.
  */

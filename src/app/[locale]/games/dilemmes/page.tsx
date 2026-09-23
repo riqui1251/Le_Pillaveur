@@ -1,13 +1,22 @@
 "use client"
 
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { Globe } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { DilemmesOnline } from '@/components/online/DilemmesOnline'
 import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
 import { TryBotsGate } from '@/components/online/TryBotsGate'
+
+// Composant en ligne chargé À LA DEMANDE : le visiteur qui ne voit que la
+// vitrine « essayer avec des bots » n'a pas à télécharger le lobby, le
+// briefing et la bibliothèque d'animation. Pas de `ssr: false` : le squelette
+// (en-tête indexable) reste dans le HTML, et tient aussi la place du morceau.
+const DilemmesOnline = dynamic(
+  () => import('@/components/online/DilemmesOnline').then((m) => m.DilemmesOnline),
+  { loading: () => <OnlineGameSkeleton gameId="dilemmes" /> }
+)
 
 /**
  * Dilemmes — jeu EN LIGNE uniquement : les votes restent secrets jusqu'à la

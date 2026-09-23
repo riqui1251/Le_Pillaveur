@@ -1,4 +1,4 @@
-import { getLocale, getTranslations } from 'next-intl/server'
+import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { loadLegalDoc, type LegalDocId } from '@/lib/legal/load-legal-doc'
@@ -12,12 +12,19 @@ const DOC_TITLE_KEYS: Record<LegalDocId, 'cgu' | 'confidentialite' | 'mentionsLe
 
 interface LegalPageProps {
   docId: LegalDocId
+  /**
+   * Langue du segment, reçue de la page (ses `params`). Elle était devinée
+   * avec getLocale(), qui lit les en-têtes de la requête quand aucune page
+   * n'a posé setRequestLocale : ça suffisait à rendre les trois pages légales
+   * dynamiques — markdown relu à chaque visite. Explicite, elle permet le
+   * rendu au build.
+   */
+  locale: string
 }
 
-export async function LegalPage({ docId }: LegalPageProps) {
-  const locale = await getLocale()
-  const t = await getTranslations('legal.pages')
-  const tNav = await getTranslations('nav.legal')
+export async function LegalPage({ docId, locale }: LegalPageProps) {
+  const t = await getTranslations({ locale, namespace: 'legal.pages' })
+  const tNav = await getTranslations({ locale, namespace: 'nav.legal' })
   const content = loadLegalDoc(docId, locale)
   const titleKey = DOC_TITLE_KEYS[docId]
 

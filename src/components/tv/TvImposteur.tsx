@@ -1,13 +1,13 @@
 "use client"
 
 import { Pencil, Skull, Trophy } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { ImposteurClientView } from '@/lib/imposteur/engine'
 import { IMPOSTEUR_CLUE_MS, IMPOSTEUR_VOTE_MS } from '@/lib/imposteur/engine'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
@@ -18,19 +18,10 @@ import { TvBigCountdown, TvTimeBar } from './tv-shared'
  */
 export function TvImposteur({ room, state }: { room: TvRoomDto; state: ImposteurClientView }) {
   const t = useTranslations('games.imposteur.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phaseEndsAt === null || state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phaseEndsAt, state.phase])
-
   const finished = state.phase === 'finished'
   const reveal = state.lastReveal
   const activeId = state.phase === 'clue' ? state.clueOrder[state.clueTurnIdx] : null
   const currentClues = state.clues.filter((c) => c.round === state.round)
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const totalPhaseMs = state.phase === 'clue' ? IMPOSTEUR_CLUE_MS : IMPOSTEUR_VOTE_MS
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
@@ -83,13 +74,14 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
 
   // ── Compte à rebours de lancement ────────────────────────────────────────
   if (state.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-3xl font-black uppercase tracking-widest text-gold/80">
           {t('countdown.title')}
         </p>
-        <TvBigCountdown seconds={secondsLeft} colorClass="text-gold" />
+        <PhaseCountdown endsAt={state.phaseEndsAt}>
+          {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-gold" />}
+        </PhaseCountdown>
         <p className="text-xl text-white/50">{t('countdown.hint')}</p>
       </div>
     )
@@ -105,8 +97,10 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
           {state.phase === 'vote' && t('phaseVote')}
           {state.phase === 'reveal' && t('phaseReveal')}
         </span>
-        {timeLeftMs !== null && (
-          <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={10_000} colorClass="bg-gold" dangerClass="bg-red-400" />
+        {state.phaseEndsAt !== null && (
+          <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={400}>
+            {({ leftMs }) => <TvTimeBar timeLeftMs={leftMs} totalMs={totalPhaseMs} dangerMs={10_000} colorClass="bg-gold" dangerClass="bg-red-400" />}
+          </PhaseCountdown>
         )}
       </div>
 

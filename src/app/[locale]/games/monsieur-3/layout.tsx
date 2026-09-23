@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
+import { getMessages } from 'next-intl/server'
 import { buildGameMetadata, GameSeo } from '@/lib/seo/game-seo'
+import { ClientMessages } from '@/components/i18n/ClientMessages'
+import { gameSlice } from '@/i18n/messages-slices'
 
 /** SEO de la page (client) du jeu — voir src/lib/seo/game-seo.tsx. */
 
@@ -24,7 +27,11 @@ export default async function GameSeoLayout({
   const { locale } = await params
   return (
     <GameSeo locale={locale} gameId={GAME_ID}>
-      <div className="container mx-auto py-4">{children}</div>
+      {/* Les textes de CE jeu seulement : le layout de langue n'embarque plus
+          games.<id> — voir src/i18n/messages-slices.ts. */}
+      <ClientMessages messages={gameSlice(await getMessages({ locale }), GAME_ID)}>
+        <div className="container mx-auto py-4">{children}</div>
+      </ClientMessages>
     </GameSeo>
   )
 }

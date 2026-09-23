@@ -7,6 +7,8 @@ import { Home, RefreshCw, Crown } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -113,13 +115,6 @@ export function PresidentOnline() {
     setSelected([])
   }, [turnKey])
 
-  const [clock, setClock] = useState(() => Date.now())
-  useEffect(() => {
-    if (!view || view.phaseEndsAt === null || view.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 500)
-    return () => clearInterval(timer)
-  }, [view])
-
   // Tick « advance » à l'échéance, arbitré par rang (cf. useAdvanceTick).
   useAdvanceTick({
     roomId: room?.id,
@@ -204,7 +199,6 @@ export function PresidentOnline() {
   }
   const trickHistory = view.trickHistory ?? []
 
-  const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const me = view.players.find((p) => p.id === user.id)
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const myTurn = view.phase === 'playing' && view.currentTurnId === user.id
@@ -353,22 +347,10 @@ export function PresidentOnline() {
 
   // ── Compte à rebours ─────────────────────────────────────────────────────
   if (view.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
         <p className="text-sm font-bold uppercase tracking-widest text-emerald-300/80">{t('countdown.title')}</p>
-        <AnimatePresence mode="popLayout">
-          <motion.span
-            key={secondsLeft}
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.6, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="text-8xl font-black tabular-nums text-emerald-200"
-          >
-            {secondsLeft}
-          </motion.span>
-        </AnimatePresence>
+        <PhaseCountdownLaunch endsAt={view.phaseEndsAt} className="text-8xl font-black tabular-nums text-emerald-200" />
         <p className="text-xs font-semibold text-white/75">{t('countdown.hint')}</p>
       </div>
     )
@@ -416,7 +398,9 @@ export function PresidentOnline() {
           className="w-full max-w-sm rounded-2xl bg-gradient-to-r from-emerald-800 to-amber-600 py-4 text-sm font-bold"
         >
           {t('nextManche')}
-          {timeLeftMs !== null && ` (${Math.max(0, Math.ceil(timeLeftMs / 1000))}s)`}
+          {view.phaseEndsAt !== null && (
+            <PhaseCountdown endsAt={view.phaseEndsAt}>{({ seconds }) => ` (${seconds}s)`}</PhaseCountdown>
+          )}
         </Button>
       </div>
       <AnimatePresence>
@@ -458,22 +442,23 @@ export function PresidentOnline() {
             <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
           </span>
         </div>
-        {timeLeftMs !== null && (
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn('h-full rounded-full transition-[width] duration-500 ease-linear', timeLeftMs < 8_000 ? 'bg-suit-red' : 'bg-gold')}
-              style={{ width: `${Math.min(100, (timeLeftMs / PRE_TURN_MS) * 100)}%` }}
-            />
-          </div>
+        {view.phaseEndsAt !== null && (
+          <PhaseCountdown
+            variant="bar"
+            endsAt={view.phaseEndsAt}
+            total={PRE_TURN_MS}
+            dangerMs={8_000}
+            colorClassName="bg-gold"
+            dangerClassName="bg-suit-red"
+          />
         )}
       </div>
 
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          {t('waitingReturn', {
-            name: leftPlayer.name,
-            seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-          })}
+          <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
+          </PhaseCountdown>
         </div>
       )}
 

@@ -1,13 +1,15 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import ReactConfetti from 'react-confetti'
 import { Crown, Home, RefreshCw, Trophy } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { EndConfetti } from './EndConfetti'
+import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { SF_JUDGE_MS, SF_SUBMIT_MS, type SFClientView } from '@/lib/sans-filtre/engine'
@@ -42,27 +44,11 @@ export function SansFiltreOnline() {
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.sans-filtre.game')
   const { busy, actionError, sendAction } = useGameAction(room?.id)
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
-
-  useEffect(() => {
-    const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [])
 
   const inGame = room?.gameId === 'sans-filtre' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const tutorial = useGameTutorial('sans-filtre', inGame)
   const cosmetics = useMemberCosmetics(room)
-
-  // Horloge locale pour le compte à rebours de phase (décoratif).
-  const [clock, setClock] = useState(() => Date.now())
-  useEffect(() => {
-    if (!view || view.phaseEndsAt === null || view.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 500)
-    return () => clearInterval(timer)
-  }, [view])
 
   // ÉCHÉANCE DE PHASE : tick « advance » arbitré par rang (cf. useAdvanceTick)
   // — le rang 0 tire à l'échéance, le suivant prend le relais 4 s plus tard si
@@ -130,7 +116,6 @@ export function SansFiltreOnline() {
       ? botEmojiFromName(p.name)
       : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
-  const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const totalPhaseMs = view.phase === 'judging' ? SF_JUDGE_MS : SF_SUBMIT_MS
   const playersInRound = view.players.filter((p) => !p.isJudge && !p.leftAt)
   const playedCount = playersInRound.filter((p) => p.hasPlayed).length
@@ -141,9 +126,7 @@ export function SansFiltreOnline() {
     const won = view.winnerId === user.id
     return (
       <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-white">
-        {windowSize.width > 0 && (
-          <ReactConfetti width={windowSize.width} height={windowSize.height} numberOfPieces={180} recycle={false} />
-        )}
+        <EndConfetti />
         <motion.div
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -209,22 +192,10 @@ export function SansFiltreOnline() {
 
   // ── Compte à rebours de lancement ────────────────────────────────────────
   if (view.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
         <p className="text-sm font-bold uppercase tracking-widest text-amber-300/80">{t('countdown.title')}</p>
-        <AnimatePresence mode="popLayout">
-          <motion.span
-            key={secondsLeft}
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.6, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="text-8xl font-black tabular-nums text-amber-200"
-          >
-            {secondsLeft}
-          </motion.span>
-        </AnimatePresence>
+        <PhaseCountdownLaunch endsAt={view.phaseEndsAt} className="text-8xl font-black tabular-nums text-amber-200" />
         <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
       </div>
     )
@@ -254,16 +225,15 @@ export function SansFiltreOnline() {
           <Crown className="h-3 w-3 text-amber-300" />
           {iAmJudge ? t('youAreJudge') : t('judgeIs', { name: judge?.name ?? '—' })}
         </p>
-        {timeLeftMs !== null && (
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 10_000 ? 'bg-suit-red' : 'bg-gold'
-              )}
-              style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
-            />
-          </div>
+        {view.phaseEndsAt !== null && (
+          <PhaseCountdown
+            variant="bar"
+            endsAt={view.phaseEndsAt}
+            total={totalPhaseMs}
+            dangerMs={10_000}
+            colorClassName="bg-gold"
+            dangerClassName="bg-suit-red"
+          />
         )}
       </div>
 
@@ -276,10 +246,9 @@ export function SansFiltreOnline() {
       {/* Bannière retour */}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          {t('waitingReturn', {
-            name: leftPlayer.name,
-            seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-          })}
+          <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
+          </PhaseCountdown>
         </div>
       )}
 

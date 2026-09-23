@@ -1,13 +1,12 @@
 "use client"
 
+import dynamic from 'next/dynamic'
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { usePlayers } from '@/hooks/usePlayers'
-import Game from './components/game'
 import { Home, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
-import { motion, AnimatePresence } from 'framer-motion'
 import { getSafeStorage } from '@/lib/storage'
 import type { Difficulty } from './case-config'
 import {
@@ -21,8 +20,21 @@ import { resolveAmbianceMode, withAmbiance } from './ambiance'
 import type { PetitBuveurT } from './case-config'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
-import { PetitBuveurOnline } from '@/components/online/PetitBuveurOnline'
 import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
+
+// Les deux moteurs — le plateau local (le plus gros morceau du site, avec ses
+// cases, sa pièce et ses dés) et sa version en ligne (lobby, briefing) — sont
+// chargés À LA DEMANDE selon le mode : la page livrait les deux et n'en
+// montrait qu'un. Pas de `ssr: false` : le serveur ne rend ni l'un ni l'autre
+// (session inconnue, sauvegarde pas encore lue), et le même squelette — celui
+// de `sessionChecked` — tient la place le temps que le morceau arrive.
+const PetitBuveurOnline = dynamic(
+  () => import('@/components/online/PetitBuveurOnline').then((m) => m.PetitBuveurOnline),
+  { loading: () => <OnlineGameSkeleton gameId="petit-buveur" /> }
+)
+const Game = dynamic(() => import('./components/game'), {
+  loading: () => <OnlineGameSkeleton gameId="petit-buveur" />,
+})
 
 const GAME_ID = 'petit-buveur'
 const SAVE_KEY = 'petit-buveur-save'
@@ -236,25 +248,28 @@ export default function PetitBuveurPage() {
             <span>{t('rulesTitle')}</span>
             {showRules ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
-          <AnimatePresence>
-            {showRules && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="space-y-1.5 border-t border-white/10 px-4 py-3 text-sm text-white/55">
-                  {rules.map((rule, i) => (
-                    <p key={i} className={i === rules.length - 1 ? 'pt-1 text-xs text-white/30' : undefined}>
-                      {rule}
-                    </p>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Dépliage en CSS pur (grille 0fr → 1fr, 0,2 s) : l'accordéon était
+              le SEUL usage de framer-motion sur cette page, qui embarquait
+              40 Ko gz d'animation pour dérouler les règles — les deux moteurs
+              sont chargés à la demande, elle n'avait plus que ça à payer.
+              Replié, le contenu reste dans le DOM à hauteur nulle, masqué aux
+              lecteurs d'écran. */}
+          <div
+            aria-hidden={!showRules}
+            className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
+              showRules ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-1.5 border-t border-white/10 px-4 py-3 text-sm text-white/55">
+                {rules.map((rule, i) => (
+                  <p key={i} className={i === rules.length - 1 ? 'pt-1 text-xs text-white/30' : undefined}>
+                    {rule}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {selectedPlayers.length < 2 && (

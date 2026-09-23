@@ -95,8 +95,18 @@ export function GameCard({ game, icon }: GameCardProps) {
 
   // `touch-manipulation` : ni délai de 300 ms ni zoom sur un double tap — le
   // doigt impatient ne doit rien déclencher d'autre que la navigation.
+  //
+  // `prefetch={false}` : les pages de jeu sont rendues au build, et pour une
+  // route statique Next précharge le .rsc ENTIER de chaque carte qui entre
+  // dans l'écran (sans PPR, pas de version « jusqu'au loading.tsx ») — les
+  // 22 cartes ≈ 555 Ko gz, aux deux tiers des messages que le navigateur a
+  // déjà, à retélécharger toutes les 5 min (cache de préchargement) sur la
+  // page ouverte entre chaque partie. Le tap paie donc son seul .rsc (~25 Ko
+  // gz) derrière le voile ci-dessous puis games/loading.tsx — le coût des
+  // pages dynamiques d'avant, sans la rafale. En Next 15 ce réglage coupe
+  // aussi le préchargement au survol/toucher : assumé, un doigt ne survole pas.
   return (
-    <Link href={game.path} onClick={handleClick} className="group block h-full touch-manipulation" title={game.description}>
+    <Link href={game.path} prefetch={false} onClick={handleClick} className="group block h-full touch-manipulation" title={game.description}>
       <PlayingCard
         suit={game.suit}
         rank={game.rank}

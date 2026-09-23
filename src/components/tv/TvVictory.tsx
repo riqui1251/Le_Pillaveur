@@ -1,24 +1,12 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import Confetti from 'react-confetti'
 import { Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import type { TCClientView } from '@/lib/toucher-coule/engine'
+import { EndConfetti } from '@/components/online/EndConfetti'
 import { TvAvatar } from './tv-shared'
-
-function useWindowSize() {
-  const [size, setSize] = useState({ width: 1280, height: 720 })
-  useEffect(() => {
-    const update = () => setSize({ width: window.innerWidth, height: window.innerHeight })
-    update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
-  }, [])
-  return size
-}
 
 type Standing = { name: string; sub: string; index: number }
 
@@ -33,7 +21,6 @@ export function TvVictory({
   state: EngineState | TCClientView
 }) {
   const t = useTranslations('tv')
-  const { width, height } = useWindowSize()
   void room
 
   let winnerLabel = '—'
@@ -62,7 +49,7 @@ export function TvVictory({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-8 py-10">
-      <Confetti width={width} height={height} numberOfPieces={220} recycle={false} gravity={0.25} />
+      <EndConfetti pieces={220} />
       <div className="flex flex-col items-center text-center">
         <Trophy aria-hidden className="h-12 w-12 text-gold" />
         <p className="mt-1 text-sm font-semibold uppercase tracking-[0.3em] text-gold/70">

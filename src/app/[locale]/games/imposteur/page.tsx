@@ -1,13 +1,22 @@
 "use client"
 
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { Globe } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { ImposteurOnline } from '@/components/online/ImposteurOnline'
 import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
 import { TryBotsGate } from '@/components/online/TryBotsGate'
+
+// Composant en ligne chargé À LA DEMANDE : le visiteur qui ne voit que la
+// vitrine « essayer avec des bots » n'a pas à télécharger le lobby, le
+// briefing et la bibliothèque d'animation. Pas de `ssr: false` : le squelette
+// (en-tête indexable) reste dans le HTML, et tient aussi la place du morceau.
+const ImposteurOnline = dynamic(
+  () => import('@/components/online/ImposteurOnline').then((m) => m.ImposteurOnline),
+  { loading: () => <OnlineGameSkeleton gameId="imposteur" /> }
+)
 
 /**
  * L'Imposteur — jeu EN LIGNE uniquement : chacun reçoit un mot secret sur

@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import ReactConfetti from 'react-confetti'
 import { Eye, EyeOff, Home, Pencil, RefreshCw, Send, Skull, Trophy, UserX } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { EndConfetti } from './EndConfetti'
+import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
 import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
 import { cn } from '@/lib/utils'
@@ -54,28 +56,12 @@ export function ImposteurOnline() {
   const [hideWord, setHideWord] = useState(false)
   const reducedMotion = useReducedMotion()
   const [clueInput, setClueInput] = useState('')
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
-
-  useEffect(() => {
-    const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [])
 
   const inGame = room?.gameId === 'imposteur' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const stateVersion = room?.stateVersion ?? -1
   const tutorial = useGameTutorial('imposteur', inGame)
   const cosmetics = useMemberCosmetics(room)
-
-  // Horloge locale pour le compte à rebours de phase (décoratif).
-  const [clock, setClock] = useState(() => Date.now())
-  useEffect(() => {
-    if (!view || view.phaseEndsAt === null || view.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 500)
-    return () => clearInterval(timer)
-  }, [view])
 
   // ÉCHÉANCE DE PHASE : tick « advance » arbitré par rang (cf. useAdvanceTick)
   // — le rang 0 tire à l'échéance, le suivant prend le relais 4 s plus tard si
@@ -178,7 +164,6 @@ export function ImposteurOnline() {
 
   const clueTrimmed = clueInput.trim()
   const clueOk = me ? isValidClue(clueTrimmed, me.word) && clueTrimmed !== '…' : false
-  const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const totalPhaseMs = view.phase === 'clue' ? 45_000 : 60_000
   const currentRoundClues = view.clues.filter((c) => c.round === view.round)
   const pastClues = view.clues.filter((c) => c.round < view.round)
@@ -188,9 +173,7 @@ export function ImposteurOnline() {
     const civilWon = view.winnerTeam === 'civil'
     return (
       <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-white">
-        {windowSize.width > 0 && (
-          <ReactConfetti width={windowSize.width} height={windowSize.height} numberOfPieces={180} recycle={false} />
-        )}
+        <EndConfetti />
         <motion.div
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -278,24 +261,12 @@ export function ImposteurOnline() {
 
   // ── Compte à rebours de lancement ────────────────────────────────────────
   if (view.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
         <p className="font-display text-sm font-bold uppercase tracking-widest text-gold/80">
           {t('countdown.title')}
         </p>
-        <AnimatePresence mode="popLayout">
-          <motion.span
-            key={secondsLeft}
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.6, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="font-display text-8xl font-bold tabular-nums text-gold"
-          >
-            {secondsLeft}
-          </motion.span>
-        </AnimatePresence>
+        <PhaseCountdownLaunch endsAt={view.phaseEndsAt} className="font-display text-8xl font-bold tabular-nums text-gold" />
         {me && (
           <PlayingCard suit="spade" rank="K" className="w-full max-w-xs">
             <div className="px-6 py-3 text-center">
@@ -331,16 +302,15 @@ export function ImposteurOnline() {
             <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
           </span>
         </div>
-        {timeLeftMs !== null && (
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 10_000 ? 'bg-suit-red' : 'bg-gold'
-              )}
-              style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
-            />
-          </div>
+        {view.phaseEndsAt !== null && (
+          <PhaseCountdown
+            variant="bar"
+            endsAt={view.phaseEndsAt}
+            total={totalPhaseMs}
+            dangerMs={10_000}
+            colorClassName="bg-gold"
+            dangerClassName="bg-suit-red"
+          />
         )}
       </div>
 
@@ -353,22 +323,20 @@ export function ImposteurOnline() {
       {/* Bannières retour / AFK */}
       {leftPlayer?.leftAt && view.phase !== 'finished' && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          {t('waitingReturn', {
-            name: leftPlayer.name,
-            seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-          })}
+          <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
+          </PhaseCountdown>
         </div>
       )}
       {afkWatch && afkTarget && (
         <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
-          {afkTarget.id === user.id
-            ? t('afkWarningSelf', {
-                seconds: Math.max(0, Math.ceil((turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-              })
-            : t('afkWarning', {
-                name: afkTarget.name,
-                seconds: Math.max(0, Math.ceil((turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-              })}
+          <PhaseCountdown endsAt={turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) =>
+              afkTarget.id === user.id
+                ? t('afkWarningSelf', { seconds })
+                : t('afkWarning', { name: afkTarget.name, seconds })
+            }
+          </PhaseCountdown>
         </div>
       )}
 

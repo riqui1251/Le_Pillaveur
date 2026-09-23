@@ -1,13 +1,13 @@
 "use client"
 
 import { Crown } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { PreClientView } from '@/lib/president/engine'
 import { preRankOf, preSuitOf, PRE_RANKS, PRE_SUITS, PRE_TURN_MS } from '@/lib/president/engine'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
@@ -17,15 +17,6 @@ import { TvBigCountdown, TvTimeBar } from './tv-shared'
  */
 export function TvPresident({ room, state }: { room: TvRoomDto; state: PreClientView }) {
   const t = useTranslations('games.president.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phaseEndsAt === null || state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phaseEndsAt, state.phase])
-
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const nameOf = (id: string | null) => state.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
@@ -49,14 +40,15 @@ export function TvPresident({ room, state }: { room: TvRoomDto; state: PreClient
   }
 
   if (state.phase === 'countdown' || state.phase === 'finished' || state.phase === 'interlude') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     const ranking = state.lastRanking ?? []
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         {state.phase === 'countdown' ? (
           <>
             <p className="text-3xl font-black uppercase tracking-widest text-emerald-300/80">{t('countdown.title')}</p>
-            <TvBigCountdown seconds={secondsLeft} colorClass="text-emerald-200" />
+            <PhaseCountdown endsAt={state.phaseEndsAt}>
+              {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-emerald-200" />}
+            </PhaseCountdown>
           </>
         ) : (
           <>
@@ -108,7 +100,11 @@ export function TvPresident({ room, state }: { room: TvRoomDto; state: PreClient
         </p>
       </div>
 
-      {timeLeftMs !== null && <TvTimeBar timeLeftMs={timeLeftMs} totalMs={PRE_TURN_MS} dangerMs={8_000} />}
+      {state.phaseEndsAt !== null && (
+        <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={400}>
+          {({ leftMs }) => <TvTimeBar timeLeftMs={leftMs} totalMs={PRE_TURN_MS} dangerMs={8_000} />}
+        </PhaseCountdown>
+      )}
 
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
         {state.lastPlay ? (

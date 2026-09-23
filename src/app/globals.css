@@ -2,11 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import des styles pour les effets spéciaux des joueurs */
+/* Styles des joueurs LOCAUX, servis partout (hub, /joueurs, /compte, jeux) :
+   effets de pseudo (PlayerName) et cadres d'icône (PlayerIcon en dépend pour
+   son anneau et son centre à 60 %). Les cosmétiques EN LIGNE
+   (online-cosmetics.css, 21 Ko) et le plateau du Petit Buveur ne servent que
+   dans les salles, sur la TV et dans la fiche compte : ils sont importés par
+   les layouts de ces segments, jamais ici — la vitrine et les pages de
+   règles n'en téléchargent plus un octet. */
 @import '../styles/player-effects.css';
 @import '../styles/player-icon-frames.css';
-@import '../styles/online-cosmetics.css';
-@import '../styles/petit-buveur-board.css';
 
 /* Styles de centrage pour le mode plein écran */
 :fullscreen .fullscreen-container,

@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { usePlayers } from '@/hooks/usePlayers'
@@ -9,8 +10,21 @@ import { PlayerName } from '@/components/ui/PlayerName'
 import { Link } from '@/i18n/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { PurpleOnline } from '@/components/online/PurpleOnline'
-import Game from './components/game'
+import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
+
+// Les deux moteurs — le jeu local (un téléphone qui tourne autour de la
+// table) et sa version en ligne (lobby, briefing, bibliothèque d'animation) —
+// sont chargés À LA DEMANDE selon le mode : la page livrait les deux et n'en
+// montrait qu'un. Pas de `ssr: false` : le serveur ne rend ni l'un ni l'autre
+// (session inconnue, aucun joueur en mémoire), et le même squelette — en-tête
+// du catalogue, zone qui pulse — tient la place le temps que le morceau arrive.
+const PurpleOnline = dynamic(
+  () => import('@/components/online/PurpleOnline').then((m) => m.PurpleOnline),
+  { loading: () => <OnlineGameSkeleton gameId="purple" /> }
+)
+const Game = dynamic(() => import('./components/game'), {
+  loading: () => <OnlineGameSkeleton gameId="purple" />,
+})
 
 export type GameMode = 'standard' | 'traversee'
 

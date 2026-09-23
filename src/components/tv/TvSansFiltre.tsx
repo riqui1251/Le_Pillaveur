@@ -1,13 +1,13 @@
 "use client"
 
 import { Crown, Trophy } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { SFClientView } from '@/lib/sans-filtre/engine'
 import { SF_JUDGE_MS, SF_SUBMIT_MS } from '@/lib/sans-filtre/engine'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
@@ -18,16 +18,7 @@ import { TvBigCountdown, TvTimeBar } from './tv-shared'
  */
 export function TvSansFiltre({ room, state }: { room: TvRoomDto; state: SFClientView }) {
   const t = useTranslations('games.sans-filtre.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phaseEndsAt === null || state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phaseEndsAt, state.phase])
-
   const finished = state.phase === 'finished'
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const totalPhaseMs = state.phase === 'judging' ? SF_JUDGE_MS : SF_SUBMIT_MS
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
@@ -72,11 +63,12 @@ export function TvSansFiltre({ room, state }: { room: TvRoomDto; state: SFClient
 
   // ── Compte à rebours de lancement ────────────────────────────────────────
   if (state.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-3xl font-black uppercase tracking-widest text-amber-300/80">{t('countdown.title')}</p>
-        <TvBigCountdown seconds={secondsLeft} colorClass="text-amber-200" />
+        <PhaseCountdown endsAt={state.phaseEndsAt}>
+          {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-amber-200" />}
+        </PhaseCountdown>
         <p className="text-xl text-white/50">{t('countdown.hint')}</p>
       </div>
     )
@@ -97,8 +89,10 @@ export function TvSansFiltre({ room, state }: { room: TvRoomDto; state: SFClient
         <span className="inline-flex items-center gap-1.5 text-lg text-white/50">
           <Crown className="h-5 w-5 text-amber-300" /> {judge?.name ?? '—'}
         </span>
-        {timeLeftMs !== null && (
-          <TvTimeBar timeLeftMs={timeLeftMs} totalMs={totalPhaseMs} dangerMs={10_000} colorClass="bg-gold" dangerClass="bg-suit-red" />
+        {state.phaseEndsAt !== null && (
+          <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={400}>
+            {({ leftMs }) => <TvTimeBar timeLeftMs={leftMs} totalMs={totalPhaseMs} dangerMs={10_000} colorClass="bg-gold" dangerClass="bg-suit-red" />}
+          </PhaseCountdown>
         )}
       </div>
 

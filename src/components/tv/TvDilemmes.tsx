@@ -1,12 +1,12 @@
 "use client"
 
 import { Scale } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { DilClientView } from '@/lib/dilemmes/engine'
 import { DIL_VOTE_MS } from '@/lib/dilemmes/engine'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
@@ -15,15 +15,6 @@ import { TvBigCountdown, TvTimeBar } from './tv-shared'
  */
 export function TvDilemmes({ state }: { room: TvRoomDto; state: DilClientView }) {
   const t = useTranslations('games.dilemmes.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phaseEndsAt === null || state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phaseEndsAt, state.phase])
-
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const card = state.card
   const reveal = state.lastReveal
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '—'
@@ -31,7 +22,6 @@ export function TvDilemmes({ state }: { room: TvRoomDto; state: DilClientView })
   const activeCount = state.players.filter((p) => !p.leftAt).length
 
   if (state.phase === 'countdown' || state.phase === 'finished') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         {state.phase === 'finished' ? (
@@ -42,7 +32,9 @@ export function TvDilemmes({ state }: { room: TvRoomDto; state: DilClientView })
         ) : (
           <>
             <p className="text-3xl font-black uppercase tracking-widest text-rose-300/80">{t('countdown.title')}</p>
-            <TvBigCountdown seconds={secondsLeft} colorClass="text-rose-200" />
+            <PhaseCountdown endsAt={state.phaseEndsAt}>
+              {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-rose-200" />}
+            </PhaseCountdown>
           </>
         )}
       </div>
@@ -86,8 +78,10 @@ export function TvDilemmes({ state }: { room: TvRoomDto; state: DilClientView })
         <span className="text-lg font-semibold uppercase tracking-widest text-rose-300">
           {state.phase === 'vote' ? t('votePrompt') : t('phaseReveal')}
         </span>
-        {timeLeftMs !== null && state.phase === 'vote' && (
-          <TvTimeBar timeLeftMs={timeLeftMs} totalMs={DIL_VOTE_MS} dangerMs={8_000} colorClass="bg-gold" dangerClass="bg-suit-red" />
+        {state.phaseEndsAt !== null && state.phase === 'vote' && (
+          <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={400}>
+            {({ leftMs }) => <TvTimeBar timeLeftMs={leftMs} totalMs={DIL_VOTE_MS} dangerMs={8_000} colorClass="bg-gold" dangerClass="bg-suit-red" />}
+          </PhaseCountdown>
         )}
       </div>
 

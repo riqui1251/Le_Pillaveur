@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
@@ -2419,7 +2419,23 @@ function ActiveAccountsBody({ stats }: { stats: ActiveAccountsStats }) {
   )
 }
 
+/**
+ * Le tableau de bord lit l'URL (?tab=, ?userId=) dès sa racine : il vit sous
+ * sa propre frontière Suspense, condition que Next pose à useSearchParams
+ * depuis que le site n'est plus forcé en rendu dynamique. La page reste de
+ * fait rendue à la demande (son layout lit le cookie de session pour filtrer
+ * l'accès), donc le repli ne s'affiche jamais — la frontière est là pour que
+ * le build ne dépende pas de ce détail du layout.
+ */
 export default function SupervisionPage() {
+  return (
+    <Suspense fallback={null}>
+      <SupervisionDashboard />
+    </Suspense>
+  )
+}
+
+function SupervisionDashboard() {
   const t = useTranslations('supervision')
   const tCommon = useTranslations('common')
   const tErrors = useTranslations('errors')

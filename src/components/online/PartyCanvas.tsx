@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Eraser } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { compactStroke } from '@/lib/crobard/simplify'
 
 /**
  * Canvas de dessin partagé (Crobard, Téléphone Dessiné). Rendu « par traits
@@ -14,7 +15,10 @@ import { cn } from '@/lib/utils'
  *
  * Coordonnées des points NORMALISÉES [0,1] (indépendantes de la résolution)
  * pour rester cohérentes entre l'écran du dessinateur et celui des autres
- * (mobile, TV…).
+ * (mobile, TV…). Le trait EN COURS est dessiné brut, point par point ; le
+ * trait TERMINÉ part simplifié et arrondi (cf. lib/crobard/simplify.ts) :
+ * c'est lui qui est réécrit dans l'état de la salle et retéléchargé par
+ * chaque téléphone à chaque nouveau trait.
  */
 
 export type Stroke = {
@@ -126,7 +130,12 @@ export function PartyCanvas({
     if (readOnly || !drawingRef.current) return
     const points = drawingRef.current
     drawingRef.current = null
-    if (points.length >= 4) onStrokeComplete?.({ points, color, width })
+    // Simplifié + arrondi ICI et pas au fil du tracé : le doigt en cours
+    // garde sa fluidité, et seul ce qui part sur le réseau est allégé (un
+    // trait de 300 points bruts pèse ~10 Ko, ~300 octets une fois compacté).
+    // Le premier et le dernier point sont toujours gardés : un trait de
+    // 2 points le reste, le seuil d'envoi ne change pas.
+    if (points.length >= 4) onStrokeComplete?.({ points: compactStroke(points), color, width })
     redraw()
   }
 

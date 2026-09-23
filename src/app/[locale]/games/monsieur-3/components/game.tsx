@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RotateCcw, ArrowLeft } from 'lucide-react'
-import confetti from 'canvas-confetti'
+import { fireConfetti, preloadConfetti } from '@/components/online/EndConfetti'
 import { Player as BasePlayer, PlayerPreferences } from '@/lib/players'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
@@ -126,6 +126,11 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
   const { updatePlayerStats } = usePlayers()
 
   const confettiRef = useRef<HTMLDivElement>(null)
+  // La bibliothèque arrive par import dynamique : on la précharge au montage
+  // pour que la première salve parte avec le lancer, pas une requête après.
+  useEffect(() => {
+    preloadConfetti()
+  }, [])
 
   const launchConfetti = () => {
     if (!confettiRef.current) return
@@ -134,9 +139,9 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
       x: rect.left / window.innerWidth + rect.width / window.innerWidth / 2,
       y: rect.top / window.innerHeight + 0.1,
     }
-    confetti({ particleCount: 60, spread: 80, origin, colors: ['#ef4444', '#f97316', '#facc15', '#a78bfa'] })
-    setTimeout(() => confetti({ particleCount: 40, angle: 60, spread: 55, origin, colors: ['#ef4444', '#f97316'] }), 300)
-    setTimeout(() => confetti({ particleCount: 40, angle: 120, spread: 55, origin, colors: ['#facc15', '#a78bfa'] }), 500)
+    fireConfetti({ particleCount: 60, spread: 80, origin, colors: ['#ef4444', '#f97316', '#facc15', '#a78bfa'] })
+    setTimeout(() => fireConfetti({ particleCount: 40, angle: 60, spread: 55, origin, colors: ['#ef4444', '#f97316'] }), 300)
+    setTimeout(() => fireConfetti({ particleCount: 40, angle: 120, spread: 55, origin, colors: ['#facc15', '#a78bfa'] }), 500)
   }
 
   const rollDie = () => Math.floor(Math.random() * 6) + 1

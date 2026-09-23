@@ -2,11 +2,16 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 // Politique de sécurité du contenu : restreint les sources autorisées tout en
 // restant compatible avec le runtime Next.js, Tailwind (styles inline),
-// canvas/confetti (blob/data), le HMR en développement (ws/wss) et
+// canvas/confetti (blob/data en images et médias, worker blob: pour le rendu
+// hors thread principal), le HMR en développement (ws/wss) et
 // Google Identity Services (script + iframe + XHR vers accounts.google.com).
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com",
+  // Sans worker-src, un Worker retombe sur script-src, où 'self' ne couvre
+  // jamais blob: — canvas-confetti (new Worker(blob)) échouait en silence à
+  // CHAQUE écran de fin et dessinait sur le thread principal.
+  "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",

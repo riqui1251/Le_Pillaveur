@@ -7,16 +7,18 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { usePagePresence } from '@/hooks/usePagePresence'
 import { Button } from '@/components/ui/button'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { PhaseCountdown } from './PhaseCountdown'
 
 /**
  * Cadence du sondage. Il tournait à 5 s pour une seule raison : le serveur ne
  * renvoie que les millisecondes restantes, et rien ne les faisait défiler
  * entre deux réponses — le rebours affiché n'avançait qu'au rythme des
- * requêtes. Il est maintenant tenu en local (échéance mémorisée, tick d'une
- * seconde tant que la bannière est affichée) : le serveur n'est plus relu que
- * pour savoir si la place existe encore, et 15 s suffisent sur une grâce de
- * 3 min (ONLINE_REPLACE_GRACE_MS). Trois fois moins de requêtes, sur une
- * page « jeux » que tous les joueurs en ligne gardent ouverte.
+ * requêtes. Il est maintenant tenu en local (échéance mémorisée, secondes
+ * défilées par PhaseCountdown — une feuille qui se réveille seule à chaque
+ * changement de seconde, sans re-rendre la bannière) : le serveur n'est plus
+ * relu que pour savoir si la place existe encore, et 15 s suffisent sur une
+ * grâce de 3 min (ONLINE_REPLACE_GRACE_MS). Trois fois moins de requêtes, sur
+ * une page « jeux » que tous les joueurs en ligne gardent ouverte.
  */
 const POLL_MS = 15_000
 
@@ -43,7 +45,6 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
   const playMode = user?.playMode
   const visible = usePagePresence()
   const [rejoinable, setRejoinable] = useState<Rejoinable | null>(null)
-  const [now, setNow] = useState(() => Date.now())
   const inFlightRef = useRef(false)
 
   const fetchRejoinable = useCallback(async () => {
@@ -65,7 +66,6 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
               }
             : null
         )
-        setNow(receivedAt)
       }
     } finally {
       inFlightRef.current = false
@@ -86,22 +86,7 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
     return () => clearInterval(timer)
   }, [userId, playMode, visible, fetchRejoinable])
 
-  // Rebours local, une seconde à la fois, seulement tant qu'il y a une place
-  // à reprendre. Arrivé à zéro il s'arrête : c'est le serveur qui remplace,
-  // à son rythme, et le prochain sondage retirera la bannière.
-  useEffect(() => {
-    if (!rejoinable) return
-    const tick = setInterval(() => {
-      const at = Date.now()
-      setNow(at)
-      if (at >= rejoinable.deadlineAt) clearInterval(tick)
-    }, 1000)
-    return () => clearInterval(tick)
-  }, [rejoinable])
-
   if (!rejoinable) return null
-
-  const secondsLeft = Math.max(0, Math.ceil((rejoinable.deadlineAt - now) / 1000))
 
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/35 bg-emerald-500/10 px-4 py-3 backdrop-blur-md">
@@ -111,8 +96,13 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-emerald-100">{t('title')}</p>
+          {/* Rebours local : la feuille se réveille seule au changement de
+              seconde et s'arrête à l'échéance — c'est le serveur qui remplace,
+              à son rythme, et le prochain sondage retirera la bannière. */}
           <p className="text-[11px] text-emerald-200/60">
-            {t('botCountdown', { seconds: secondsLeft })}
+            <PhaseCountdown endsAt={rejoinable.deadlineAt}>
+              {({ seconds }) => t('botCountdown', { seconds })}
+            </PhaseCountdown>
           </p>
         </div>
       </div>

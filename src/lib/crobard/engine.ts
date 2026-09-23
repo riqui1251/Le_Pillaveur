@@ -1,5 +1,6 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import { roundCoord } from './simplify'
 
 /**
  * CROBARD (Pictionary apéro) — moteur PUR, serveur-autoritaire.
@@ -45,19 +46,31 @@ export type Stroke = {
 
 /** Plafonds anti-abus d'un dessin (partagés Crobard / Téléphone Dessiné). */
 export const CANVAS_MAX_STROKES = 400
-export const CANVAS_MAX_POINTS_PER_STROKE = 2_000
+/**
+ * Points (x, y) par trait — un point = DEUX nombres du tableau plat. Le
+ * client envoie un trait déjà simplifié (Ramer-Douglas-Peucker, cf.
+ * simplify.ts) : un trait humain tient en quelques dizaines de points, 300
+ * c'est déjà une hachure serrée de plusieurs secondes. L'ancien plafond
+ * (2 000 nombres, soit 1 000 points bruts) laissait passer 40 Ko par trait.
+ */
+export const CANVAS_MAX_POINTS_PER_STROKE = 300
 
-/** Valide/normalise UN trait venu du client — null si inexploitable. */
+/**
+ * Valide/normalise UN trait venu du client — null si inexploitable. Borne
+ * ET arrondit chaque coordonnée à 3 décimales : le client honnête l'a déjà
+ * fait, mais c'est l'état de la salle (persisté, rediffusé à chacun) qu'on
+ * protège d'un flottant à 17 caractères.
+ */
 export function sanitizeStroke(raw: unknown): Stroke | null {
   const s = raw as Partial<Stroke> | null
   if (!s || !Array.isArray(s.points)) return null
   const points: number[] = []
-  const max = Math.min(s.points.length, CANVAS_MAX_POINTS_PER_STROKE)
+  const max = Math.min(s.points.length, CANVAS_MAX_POINTS_PER_STROKE * 2)
   for (let i = 0; i + 1 < max; i += 2) {
     const x = Number(s.points[i])
     const y = Number(s.points[i + 1])
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue
-    points.push(Math.min(1, Math.max(0, x)), Math.min(1, Math.max(0, y)))
+    points.push(roundCoord(Math.min(1, Math.max(0, x))), roundCoord(Math.min(1, Math.max(0, y))))
   }
   if (points.length < 4) return null
   const width = Number(s.width)

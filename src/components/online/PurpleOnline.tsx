@@ -7,6 +7,7 @@ import { Home, RefreshCw, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { parsePurpleState, type PurpleSyncedState, type SerializedCard } from '@/lib/online-game-state'
@@ -148,14 +149,6 @@ export function PurpleOnline() {
     return () => clearTimeout(timer)
   }, [stateVersion, afkWatchable])
 
-  const [clock, setClock] = useState(() => Date.now())
-  const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
-  useEffect(() => {
-    if (!someoneLeft && !afkWatch) return
-    const timer = setInterval(() => setClock(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [someoneLeft, afkWatch])
-
   if (!inGame) {
     return <GameOnlineLobby gameId="purple" />
   }
@@ -259,23 +252,21 @@ export function PurpleOnline() {
       )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          {t('online.waitingReturn', {
-            name: leftPlayer.name,
-            seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-          })}
+          <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) => t('online.waitingReturn', { name: leftPlayer.name, seconds })}
+          </PhaseCountdown>
         </div>
       )}
 
       {afkWatch && afkTarget && (
         <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
-          {afkTarget.id === user.id
-            ? t('online.afkWarningSelf', {
-                seconds: Math.max(0, Math.ceil((turnStartedAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-              })
-            : t('online.afkWarning', {
-                name: afkTarget.name,
-                seconds: Math.max(0, Math.ceil((turnStartedAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-              })}
+          <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) =>
+              afkTarget.id === user.id
+                ? t('online.afkWarningSelf', { seconds })
+                : t('online.afkWarning', { name: afkTarget.name, seconds })
+            }
+          </PhaseCountdown>
         </div>
       )}
 

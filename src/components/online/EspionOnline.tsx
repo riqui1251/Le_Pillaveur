@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import ReactConfetti from 'react-confetti'
 import { Home, RefreshCw, Siren, Trophy } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { EndConfetti } from './EndConfetti'
+import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
 import { PlayingCard } from '@/components/ui/PlayingCard'
 import { cn } from '@/lib/utils'
@@ -46,29 +48,13 @@ export function EspionOnline() {
   const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
   const [showAccuseGrid, setShowAccuseGrid] = useState(false)
   const [showGuessGrid, setShowGuessGrid] = useState(false)
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
   const locations = useMemo(() => getEspionLocations(user?.locale ?? 'fr'), [user?.locale])
-
-  useEffect(() => {
-    const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [])
 
   const inGame = room?.gameId === 'espion' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const stateVersion = room?.stateVersion ?? -1
   const tutorial = useGameTutorial('espion', inGame)
   const cosmetics = useMemberCosmetics(room)
-
-  // Horloge locale (décorative) pour le timer principal ET la fenêtre d'accusation.
-  const [clock, setClock] = useState(() => Date.now())
-  useEffect(() => {
-    if (!view || view.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 500)
-    return () => clearInterval(timer)
-  }, [view])
 
   // ÉCHÉANCE DE PHASE : tick « advance » générique (résout aussi une
   // accusation expirée en priorité, cf. moteur). Se recale sur la PLUS
@@ -148,11 +134,7 @@ export function EspionOnline() {
   const sendAction = (body: Record<string, unknown>) =>
     postAction({ ...body, expectedVersion: room.stateVersion })
 
-  const timeLeftMs = view.phaseEndsAt === null ? null : Math.max(0, view.phaseEndsAt - clock)
   const totalPhaseMs = view.discussionMs
-  const accusationTimeLeftMs = view.activeAccusation
-    ? Math.max(0, view.activeAccusation.endsAt - clock)
-    : null
   const iSupported = view.activeAccusation?.supporters.includes(user.id) ?? false
   const iAmAccused = view.activeAccusation?.targetId === user.id
 
@@ -162,9 +144,7 @@ export function EspionOnline() {
     const won = me?.role === view.winnerTeam
     return (
       <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-white">
-        {windowSize.width > 0 && (
-          <ReactConfetti width={windowSize.width} height={windowSize.height} numberOfPieces={180} recycle={false} />
-        )}
+        <EndConfetti />
         <motion.div
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -207,22 +187,10 @@ export function EspionOnline() {
 
   // ── Compte à rebours de lancement ────────────────────────────────────────
   if (view.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
         <p className="font-display text-sm font-bold uppercase tracking-widest text-gold/80">{t('countdown.title')}</p>
-        <AnimatePresence mode="popLayout">
-          <motion.span
-            key={secondsLeft}
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.6, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="font-display text-8xl font-bold tabular-nums text-gold"
-          >
-            {secondsLeft}
-          </motion.span>
-        </AnimatePresence>
+        <PhaseCountdownLaunch endsAt={view.phaseEndsAt} className="font-display text-8xl font-bold tabular-nums text-gold" />
         {view.location ? (
           <PlayingCard suit="spade" rank="Q" className="w-full max-w-xs">
             <div className="px-6 py-3 text-center">
@@ -290,16 +258,15 @@ export function EspionOnline() {
             <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
           </span>
         </div>
-        {timeLeftMs !== null && (
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-500 ease-linear',
-                timeLeftMs < 30_000 ? 'bg-suit-red' : 'bg-gold'
-              )}
-              style={{ width: `${Math.min(100, (timeLeftMs / totalPhaseMs) * 100)}%` }}
-            />
-          </div>
+        {view.phaseEndsAt !== null && (
+          <PhaseCountdown
+            variant="bar"
+            endsAt={view.phaseEndsAt}
+            total={totalPhaseMs}
+            dangerMs={30_000}
+            colorClassName="bg-gold"
+            dangerClassName="bg-suit-red"
+          />
         )}
       </div>
 
@@ -311,10 +278,9 @@ export function EspionOnline() {
       )}
       {leftPlayer?.leftAt && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          {t('waitingReturn', {
-            name: leftPlayer.name,
-            seconds: Math.max(0, Math.ceil((leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)),
-          })}
+          <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
+          </PhaseCountdown>
         </div>
       )}
 
@@ -348,14 +314,13 @@ export function EspionOnline() {
             <p className="text-xs text-white/60">
               {t('accusation.support', { count: view.activeAccusation.supporters.length, needed: majorityNeeded })}
             </p>
-            {accusationTimeLeftMs !== null && (
-              <div className="mx-auto h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-red-400 transition-[width] duration-500 ease-linear"
-                  style={{ width: `${Math.min(100, (accusationTimeLeftMs / 15_000) * 100)}%` }}
-                />
-              </div>
-            )}
+            <PhaseCountdown
+              variant="bar"
+              endsAt={view.activeAccusation.endsAt}
+              total={15_000}
+              className="mx-auto h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-white/10"
+              barClassName="h-full rounded-full bg-red-400"
+            />
             {!iSupported && !iAmAccused && (
               <Button
                 onClick={() => void sendAction({ action: 'support' })}

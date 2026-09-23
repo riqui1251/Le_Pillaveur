@@ -5,6 +5,14 @@ import { useRequireSelectedPlayers } from "@/hooks/useRequireSelectedPlayers"
 import { useAuth } from "@/components/providers/AuthProvider"
 import { useKeepScreenAwake } from "@/components/tv/use-keep-screen-awake"
 import { ConnectionBanner, ConnectionLiveRegion } from "@/components/online/ConnectionBanner"
+// Feuille servie SEULEMENT sous /games (App Router : un import CSS dans un
+// layout imbriqué ne part qu'avec ses routes). Elle était dans globals.css,
+// donc téléchargée par la vitrine et les 13 pages de règles qui n'en
+// affichent pas un pixel : les cosmétiques en ligne (pseudos animés, cadres,
+// écussons d'OnlinePlayerTag — 21 Ko). Le plateau du Petit Buveur, lui, suit
+// ses deux composants (le jeu local et PetitBuveurOnline importent la
+// feuille) : il ne part qu'avec leur morceau, pas avec chaque page de jeu.
+import "@/styles/online-cosmetics.css"
 
 /**
  * Vocal de salle — chargé À LA DEMANDE.

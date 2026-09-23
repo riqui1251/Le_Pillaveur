@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import ReactConfetti from 'react-confetti'
 import { Anchor, ArrowLeft, Crosshair, Home, RefreshCw, Trophy, Waves } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
+import { EndConfetti } from './EndConfetti'
+import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
@@ -56,7 +57,6 @@ export function ToucherCouleOnline() {
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.toucher-coule.game')
   const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
   // Placement local (avant validation serveur).
   const [placedShips, setPlacedShips] = useState<number[][]>([])
@@ -64,13 +64,6 @@ export function ToucherCouleOnline() {
   const [horizontal, setHorizontal] = useState(true)
   // Bombe (power-up) armée : le prochain tir touche un carré 2×2 au lieu d'une case.
   const [bombArmed, setBombArmed] = useState(false)
-
-  useEffect(() => {
-    const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [])
 
   const inGame = room?.gameId === 'toucher-coule' && room.status === 'playing'
   const tutorial = useGameTutorial('toucher-coule', inGame)
@@ -138,14 +131,7 @@ export function ToucherCouleOnline() {
     return () => clearTimeout(timer)
   }, [stateVersion, afkWatchable])
 
-  // Horloge locale pour les comptes à rebours (retour d'un parti / AFK).
   const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
-  const [clock, setClock] = useState(() => Date.now())
-  useEffect(() => {
-    if (!someoneLeft && !afkWatch) return
-    const timer = setInterval(() => setClock(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [someoneLeft, afkWatch])
 
   if (!inGame) {
     return <GameOnlineLobby gameId="toucher-coule" />
@@ -391,17 +377,13 @@ export function ToucherCouleOnline() {
           <div className="mb-3 space-y-0.5 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-center">
             {view.players
               .filter((p) => !p.isBot && p.leftAt)
-              .map((p) => {
-                const remaining = Math.max(
-                  0,
-                  Math.ceil(((p.leftAt ?? 0) + TC_REJOIN_GRACE_MS - clock) / 1000)
-                )
-                return (
-                  <p key={p.id} className="text-xs font-semibold text-amber-100">
-                    {t('waitingReturn', { name: p.name, seconds: remaining })}
-                  </p>
-                )
-              })}
+              .map((p) => (
+                <p key={p.id} className="text-xs font-semibold text-amber-100">
+                  <PhaseCountdown endsAt={(p.leftAt ?? 0) + TC_REJOIN_GRACE_MS}>
+                    {({ seconds }) => t('waitingReturn', { name: p.name, seconds })}
+                  </PhaseCountdown>
+                </p>
+              ))}
           </div>
         )}
 
@@ -410,15 +392,13 @@ export function ToucherCouleOnline() {
         {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
           <div className="mb-3 rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center">
             <p className="text-xs font-semibold text-red-100">
-              {(() => {
-                const seconds = Math.max(
-                  0,
-                  Math.ceil((turnStartedAt + ONLINE_REPLACE_GRACE_MS - clock) / 1000)
-                )
-                return afkTarget.id === user.id
-                  ? t('afkWarningSelf', { seconds })
-                  : t('afkWarning', { name: afkTarget.name, seconds })
-              })()}
+              <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
+                {({ seconds }) =>
+                  afkTarget.id === user.id
+                    ? t('afkWarningSelf', { seconds })
+                    : t('afkWarning', { name: afkTarget.name, seconds })
+                }
+              </PhaseCountdown>
             </p>
           </div>
         )}
@@ -734,15 +714,7 @@ export function ToucherCouleOnline() {
             aria-label={t('victoryTitle', { team: TEAM_LABEL[winner] })}
             className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
           >
-            {windowSize.width > 0 && windowSize.height > 0 && myTeam === winner && (
-              <ReactConfetti
-                width={windowSize.width}
-                height={windowSize.height}
-                recycle
-                numberOfPieces={200}
-                gravity={0.15}
-              />
-            )}
+            {myTeam === winner && <EndConfetti rain pieces={200} />}
             <motion.div
               initial={{ scale: 0.85, y: 30 }}
               animate={{ scale: 1, y: 0 }}

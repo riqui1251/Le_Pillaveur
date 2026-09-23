@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { ArrowLeft, Play } from 'lucide-react'
 import { renderMarkdown } from '@/lib/legal/render-markdown'
@@ -15,8 +16,9 @@ import { SITE_URL } from '@/lib/site'
 
 /**
  * Pages « règles » SEO — un article par jeu en ligne (contenu français,
- * voir docs/rules/fr/). Rendu 100 % serveur, liées depuis la landing et le
- * sitemap : c'est le maillage long-tail (« règles loup garou en ligne »…).
+ * voir docs/rules/fr/). Rendues UNE fois au build (un HTML par jeu et par
+ * langue, croisement avec les langues du layout), liées depuis la landing et
+ * le sitemap : c'est le maillage long-tail (« règles loup garou en ligne »…).
  */
 
 export function generateStaticParams() {
@@ -52,9 +54,13 @@ export async function generateMetadata({
 export default async function RulesPage({
   params,
 }: {
-  params: Promise<{ gameId: string }>
+  params: Promise<{ locale: string; gameId: string }>
 }) {
-  const { gameId } = await params
+  const { locale, gameId } = await params
+  // AVANT toute sortie : les <Link> serveur ci-dessous (et la 404 localisée,
+  // si notFound() part d'ici) lisent la langue posée là, pas les en-têtes de
+  // la requête — condition du rendu au build.
+  setRequestLocale(locale)
   if (!isRulesGameId(gameId)) notFound()
   const content = loadRulesDoc(gameId)
   if (!content) notFound()

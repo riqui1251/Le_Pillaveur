@@ -1,12 +1,12 @@
 "use client"
 
 import { Trophy } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { EspionClientView } from '@/lib/espion/engine'
 import { cn } from '@/lib/utils'
+import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
@@ -17,17 +17,8 @@ import { TvBigCountdown, TvTimeBar } from './tv-shared'
  */
 export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClientView }) {
   const t = useTranslations('games.espion.game')
-  const [clock, setClock] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (state.phase === 'finished') return
-    const timer = setInterval(() => setClock(Date.now()), 400)
-    return () => clearInterval(timer)
-  }, [state.phase])
-
   const finished = state.phase === 'finished'
   const reveal = state.lastReveal
-  const timeLeftMs = state.phaseEndsAt === null ? null : Math.max(0, state.phaseEndsAt - clock)
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
@@ -50,11 +41,12 @@ export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClient
 
   // ── Compte à rebours de lancement ────────────────────────────────────────
   if (state.phase === 'countdown') {
-    const secondsLeft = Math.max(1, Math.ceil((timeLeftMs ?? 0) / 1000))
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6">
         <p className="text-3xl font-black uppercase tracking-widest text-cyan-300/80">{t('countdown.title')}</p>
-        <TvBigCountdown seconds={secondsLeft} colorClass="text-cyan-200" />
+        <PhaseCountdown endsAt={state.phaseEndsAt}>
+          {({ seconds }) => <TvBigCountdown seconds={Math.max(1, seconds)} colorClass="text-cyan-200" />}
+        </PhaseCountdown>
         <p className="text-xl text-white/50">{t('countdown.hint')}</p>
       </div>
     )
@@ -82,8 +74,10 @@ export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClient
         <span className="text-lg font-semibold uppercase tracking-widest text-cyan-300">
           {t('phaseDiscussion')}
         </span>
-        {timeLeftMs !== null && (
-          <TvTimeBar timeLeftMs={timeLeftMs} totalMs={state.discussionMs} dangerMs={30_000} colorClass="bg-cyan-400" dangerClass="bg-red-400" />
+        {state.phaseEndsAt !== null && (
+          <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={400}>
+            {({ leftMs }) => <TvTimeBar timeLeftMs={leftMs} totalMs={state.discussionMs} dangerMs={30_000} colorClass="bg-cyan-400" dangerClass="bg-red-400" />}
+          </PhaseCountdown>
         )}
       </div>
 
