@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { locales } from '@/i18n/routing'
+import { buildAlternates, pageOpenGraph, siteOgImage } from '@/lib/seo/alternates'
 
 /**
  * SEO du hub /jeux (page client) : metadata dédiée — la page partageait
  * title/description avec la home (duplicate parfait, priorité 1.0 du
- * sitemap) — + canonical/hreflang.
+ * sitemap) — + canonical/hreflang, et la carte de partage de marque (la page
+ * en priorité 1.0 n'avait aucune image : lien nu sur WhatsApp et Discord).
  */
 export async function generateMetadata({
   params,
@@ -14,15 +15,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'games.meta.hub' })
-  const languages: Record<string, string> = { 'x-default': '/fr/jeux' }
-  for (const l of locales) {
-    languages[l] = `/${l}/jeux`
-  }
+  const title = t('title')
+  const description = t('description')
+  const ogImage = siteOgImage(locale)
   return {
-    title: { absolute: t('title') },
-    description: t('description'),
-    alternates: { canonical: `/${locale}/jeux`, languages },
-    openGraph: { title: t('title'), description: t('description'), url: `/${locale}/jeux` },
+    title: { absolute: title },
+    description,
+    alternates: buildAlternates('/jeux', locale),
+    openGraph: pageOpenGraph(locale, { title, description, url: `/${locale}/jeux` }),
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
   }
 }
 

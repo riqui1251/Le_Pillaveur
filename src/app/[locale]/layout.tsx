@@ -12,6 +12,8 @@ import { FullscreenLayoutProvider } from '@/components/providers/FullscreenLayou
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { routing } from '@/i18n/routing'
 import { coreMessages } from '@/i18n/messages-slices'
+import { INSTALL_PROMPT_CAPTURE } from '@/lib/pwa-install'
+import { buildOpenGraphLocale } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
 
 // Identité « Cartes sur Table » : Source Sans 3 (texte) + Playfair Display (voix du croupier).
@@ -68,7 +70,9 @@ export async function generateMetadata({
     openGraph: {
       type: 'website',
       siteName: t('title'),
-      locale,
+      // fr_FR, en_GB… + les trois autres langues : la locale nue (« fr »)
+      // n'est pas un og:locale valide pour Facebook.
+      ...buildOpenGraphLocale(locale),
       title: t('titleFull'),
       description: t('description'),
     },
@@ -82,6 +86,11 @@ export async function generateMetadata({
       statusBarStyle: 'default',
       title: t('title'),
     },
+    // Un seul manifeste, statique et FRANÇAIS (`lang: fr`) pour les quatre
+    // langues — nom, description et raccourcis compris : l'app installée
+    // n'a qu'une identité (`id: /`). Limite assumée ; des libellés traduits
+    // demanderaient un manifeste par langue (src/app/manifest.ts ne sait en
+    // servir qu'un).
     manifest: '/manifest.json',
     applicationName: t('title'),
     formatDetection: {
@@ -125,6 +134,9 @@ export default async function LocaleLayout({
       '@type': 'Organization',
       name: tMeta('title'),
       url: SITE_URL,
+      // Le logo que Google associe à l'éditeur (fiche de marque, résultats
+      // enrichis) : la plus grande icône du manifeste, carrée et déjà servie.
+      logo: `${SITE_URL}/icons/icon-512x512.png`,
     },
   }
 
@@ -136,6 +148,10 @@ export default async function LocaleLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        {/* Retient `beforeinstallprompt`, levé une seule fois par document et
+            souvent avant tout bundle : la carte d'installation de
+            /application, atteinte par navigation client, le retrouve ici. */}
+        <script dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_CAPTURE }} />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ErrorBoundary>
             <Providers>

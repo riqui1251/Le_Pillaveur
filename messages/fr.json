@@ -7,11 +7,31 @@
     "appStore": "App Store",
     "soon": "Bientôt",
     "note": "Les applications sont en préparation — reviens vite. En attendant, tout fonctionne déjà ici, dans ton navigateur.",
-    "alreadyInApp": "Tu es déjà dans l'application — rien à installer ici. Cette page sert aux visiteurs du site à télécharger l'app."
+    "alreadyInApp": "Tu es déjà dans l'application — rien à installer ici. Cette page sert aux visiteurs du site à télécharger l'app.",
+    "benefits": {
+      "title": "Ce que l'installation apporte",
+      "fullscreen": "Plein écran",
+      "fullscreenDesc": "Sans barre d'adresse : la table prend tout l'écran, comme une vraie app.",
+      "icon": "Une icône sur l'écran d'accueil",
+      "iconDesc": "Le Pillaveur à côté de tes autres apps, sans passer par le navigateur.",
+      "quick": "Retour rapide à la table",
+      "quickDesc": "L'icône ouvre directement le hub des jeux, et le site se met à jour tout seul : rien à télécharger."
+    },
+    "stores": {
+      "title": "Sur les stores"
+    },
+    "install": {
+      "title": "Ajouter à l'écran d'accueil",
+      "hint": "Gratuit, sans passer par un store : le site s'installe depuis ton navigateur, en deux gestes.",
+      "button": "Installer Le Pillaveur",
+      "iosStep1": "Touche le bouton Partager de Safari (le carré avec la flèche, en bas de l'écran).",
+      "iosStep2": "Choisis « Sur l'écran d'accueil », puis « Ajouter ».",
+      "done": "C'est installé : Le Pillaveur est sur ton écran d'accueil."
+    }
   },
   "metadata": {
     "title": "Le Pillaveur",
-    "titleFull": "Le Pillaveur — Jeux de soirée entre amis, en ligne et gratuits",
+    "titleFull": "Le Pillaveur — Jeux de soirée entre amis, en ligne, gratuits",
     "description": "Des jeux de soirée gratuits, sans installation : Loup-Garou, quiz, dessin, bluff. Entre amis avec chat vocal et mode TV — ou en solo avec des bots.",
     "descriptionCount": "{count} jeux de soirée gratuits, sans installation : Loup-Garou, quiz, dessin, bluff. Entre amis avec chat vocal et mode TV — ou en solo avec des bots.",
     "ranking": {
@@ -59,6 +79,10 @@
       "supervision": {
         "label": "Supervision",
         "description": "Dashboard admin"
+      },
+      "regles": {
+        "label": "Règles",
+        "description": "Les règles de chaque jeu"
       }
     },
     "legal": {
@@ -100,6 +124,10 @@
       "stats": {
         "title": "Statistiques",
         "subtitle": "Historique"
+      },
+      "regles": {
+        "title": "Règles",
+        "subtitle": "Les règles de chaque jeu"
       },
       "gameInProgress": {
         "subtitle": "Partie en cours"
@@ -262,6 +290,47 @@
         "title": "Le plus sage",
         "detail": "{names} — {count, plural, =0 {pas une seule gorgée} one {# gorgée seulement} other {# gorgées seulement}}"
       }
+    },
+    "collections": {
+      "chipsLabel": "Trouver un jeu selon la soirée",
+      "a-2-joueurs": {
+        "chip": "À 2 joueurs"
+      },
+      "sans-alcool": {
+        "chip": "Sans alcool"
+      },
+      "seul-avec-des-bots": {
+        "chip": "Seul avec des bots"
+      },
+      "en-grand-groupe": {
+        "chip": "En grand groupe"
+      }
+    }
+  },
+  "collections": {
+    "kicker": "Collection",
+    "playersOnline": "{min} à {max} joueurs en ligne",
+    "playersOnlineOpen": "Dès {min} joueurs en ligne",
+    "playersLocal": "Dès {min} joueurs, un seul téléphone",
+    "a-2-joueurs": {
+      "title": "Jeux de soirée à 2 joueurs",
+      "description": "Les jeux qui se lancent à deux : dés et cartes sur un téléphone, ou en ligne avec un code — Menteur, quiz, Purple, Petit Bac… Gratuits, sans installation.",
+      "intro": "Deux personnes, un canapé, et pas envie d'attendre que la bande arrive : ces jeux se lancent dès deux joueurs. Une partie de la sélection se joue sur un seul téléphone qui passe de main en main. Monsieur 3, la Course PMU, Hi/Lo, Pyramide et Plinko sont des jeux de dés, de cartes et de paris où chaque manche se règle en gorgées : rapides, sans règles à apprendre, parfaits pour ouvrir la soirée. Le Petit Buveur, le plateau de l'apéro, se joue aussi bien autour de la table qu'en ligne. L'autre partie se joue en ligne, chacun sur son téléphone, même à distance : ouvrez une table, partagez le code, et c'est parti. Le Menteur oppose deux joueurs aux dés cachés ; le Grand Pillaveur transforme vos téléphones en buzzers de quiz ; Purple et 1220 sont des paris de comptoir sur les cartes et les dés ; le Petit Bac fait tourner les lettres et les catégories ; Toucher-Coulé rejoue la bataille navale. Et si vous voulez une table plus garnie sans attendre personne, plusieurs de ces jeux en ligne acceptent des bots pour compléter. Tout est gratuit, sans rien installer."
+    },
+    "sans-alcool": {
+      "title": "Jeux de soirée sans alcool",
+      "description": "Jeux de soirée sans une goutte : en ambiance « Sans alcool », les gorgées deviennent des gages. Loup-Garou, quiz, dessin, bluff… Gratuits, en ligne.",
+      "intro": "Toute la table ne boit pas, ou personne ce soir : Le Pillaveur a une ambiance « Sans alcool », à activer depuis le hub des jeux, dans le réglage « Ambiance des jeux ». Une fois choisie, les gorgées et les cul-secs de ces jeux en ligne deviennent des gages, et le site passe en bleu nuit pour que tout le monde voie que la soirée est soft. Les règles, les rôles et les scores ne bougent pas : le Loup-Garou garde ses loups et sa voyante, le Grand Pillaveur reste un quiz à buzzers, Crobard un jeu de dessin en direct, Sans Filtre un concours de mauvaise foi, et Mots Codés, le Petit Bac ou le Président se jouent exactement comme d'habitude. Le Menteur, L'Imposteur, Qui est l'Espion ?, le Grand Bluff, Dilemmes, Toucher-Coulé et le Téléphone Dessiné complètent la sélection. Cette ambiance vaut pour les jeux en ligne de cette sélection, chacun sur son téléphone avec un code de table ; Purple, 1220 et le Petit Buveur restent en ambiance apéro, comme les jeux de dés qui tournent sur un seul téléphone (Monsieur 3, Pyramide…). Et comme la plupart de ces jeux acceptent des bots, une soirée sans alcool peut aussi se jouer à deux, ou même seul."
+    },
+    "seul-avec-des-bots": {
+      "title": "Jouer seul : les jeux avec des bots",
+      "description": "Pas de monde ce soir ? Ouvrez une table, les bots complètent : Loup-Garou, quiz, Menteur, bluff, Président… Gratuit, en ligne, seul ou à deux.",
+      "intro": "Personne de disponible, ou l'envie de s'entraîner avant la prochaine soirée : sur ces jeux, l'hôte de la table peut « compléter avec des bots » depuis le lobby, et la partie se lance même sous le minimum de joueurs — tout seul, donc. Les bots ont chacun leur nom et leur personnalité, et ils tiennent leur siège : ils enchérissent et accusent au Menteur, bluffent au Grand Bluff, répondent au Grand Pillaveur, le quiz à buzzers, parient à Purple et au 1220, jouent leurs cartes au Président, votent et accusent au Loup-Garou. Ce sont les jeux qui se jouent vraiment seul. À L'Imposteur, à Qui est l'Espion ?, au Crobard, à Sans Filtre ou à Dilemmes, les bots complètent une table sans la faire vivre : un bot n'y dessine pas, n'y raconte rien et n'y mène pas l'enquête, ces jeux-là veulent de vrais joueurs. Si quelqu'un décroche en cours de partie, un bot le remplace pour que la table continue. C'est la même liste que le raccourci « Jouer seul avec les bots » de la vitrine. Tout se passe en ligne, sur votre téléphone, et une fois un jeu pris en main, il suffit de partager le code de la table pour que vos amis prennent les sièges à leur tour."
+    },
+    "en-grand-groupe": {
+      "title": "Jeux de soirée en grand groupe",
+      "description": "Dix, douze, seize joueurs : les jeux en ligne pour une grande tablée — Loup-Garou, quiz, dessin, bluff, Petit Bac… Un code, et tout le monde joue.",
+      "intro": "Une grande tablée, un anniversaire, la colocation au complet : ces jeux acceptent au moins dix joueurs en ligne, et la plupart montent jusqu'à seize — le Petit Buveur, lui, accueille pratiquement toute la fête. Chacun joue sur son téléphone : l'hôte ouvre une table, partage le code, le lien ou le QR, et tout le monde se retrouve au lobby avant le lancement. Le mode TV affiche la partie en grand sur un écran, et le chat vocal intégré évite de sortir Discord. Côté jeux : le Loup-Garou jusqu'à douze, avec ses rôles cachés et ses débats ; le Grand Pillaveur, un quiz où chaque téléphone est un buzzer ; Crobard et ses dessins en direct ; le Grand Bluff, Sans Filtre et Dilemmes pour faire parler la table ; L'Imposteur et Qui est l'Espion ? pour la démasquer ; Mots Codés en deux équipes ; le Petit Bac et ses lettres ; Purple et 1220 pour parier. Tous sont gratuits, et s'il manque deux ou trois personnes à l'appel, les bots peuvent compléter la plupart de ces tables."
     }
   },
   "onlineXp": {
@@ -540,6 +609,15 @@
       "request_not_found": "Demande introuvable.",
       "request_already_handled": "Cette demande a déjà été traitée.",
       "request_already_declined": "Demande déjà refusée."
+    },
+    "showcase": {
+      "players": "{min} à {max} joueurs",
+      "bots": "Jouable seul avec des bots",
+      "voice": "Chat vocal intégré",
+      "free": "Gratuit, sans installation",
+      "howTitle": "Comment ça se joue",
+      "rulesLink": "Règles complètes",
+      "pending": "Jouer"
     }
   },
   "chat": {
@@ -766,6 +844,17 @@
       "cgu": "Conditions Générales d'Utilisation",
       "confidentialite": "Politique de confidentialité",
       "mentionsLegales": "Mentions légales"
+    },
+    "meta": {
+      "cgu": {
+        "description": "CGU du Pillaveur : accès réservé aux majeurs, gorgées purement ludiques, consommation responsable, compte et mode local, règles de conduite, résiliation."
+      },
+      "confidentialite": {
+        "description": "Politique de confidentialité du Pillaveur : données collectées (compte, jeu, chat vocal), finalités, base légale, conservation, vos droits RGPD et cookies."
+      },
+      "mentionsLegales": {
+        "description": "Mentions légales du Pillaveur : éditeur, hébergeur, objet du site (jeux festifs, aucune vente d'alcool), propriété intellectuelle et données personnelles."
+      }
     }
   },
   "players": {
@@ -922,11 +1011,16 @@
         "backToMenu": "Retour au menu",
         "waitingReturn": "{name} est parti — remplacement dans {seconds}s si pas de retour",
         "setupDeadline": "Mise en place : {seconds}s — passé ce délai, les retardataires sont déclarés prêts"
+      },
+      "about": {
+        "p1": "Un dé à 12 faces, un dé à 20 faces, et quatre paris à régler sur ton téléphone avant chaque lancer : la parité de la somme, sa plage (2-10, 11-20 ou 21-30), un chiffre « fait boire » et un chiffre « donne à boire ». Le 1220, c'est le jeu de dés mathématiquement fourbe de l'apéro, et il n'a besoin d'aucun meneur.",
+        "p2": "N'importe qui lance les deux dés et le résultat s'affiche chez tout le monde. Le serveur fait les comptes : somme égale à ton « fait boire », tu bois ; égale à ton « donne à boire », tu distribues ; bonne parité ou bonne plage, tu distribues aussi. Un chiffre présent sur un seul dé compte à moitié. Puis chacun ajuste ses paris et on relance.",
+        "p3": "Pas de podium : le 1220 est un jeu d'ambiance, et la partie s'arrête quand la table le décide, après dix ou vingt minutes de combos qui font hurler. La somme tombe le plus souvent autour de 16 ou 17 : place tes plages en connaissance de cause. À deux ça marche, mais c'est à partir de quatre ou cinq paris différents sur le même lancer que la table s'arrose vraiment."
       }
     },
     "meta": {
       "hub": {
-        "title": "Jeux de soirée gratuits en ligne — entre amis ou avec des bots",
+        "title": "Jeux de soirée gratuits en ligne — amis ou bots",
         "description": "Loup-Garou, quiz, dessin, bluff, jeux d'apéro : ouvre une table gratuite, invite tes amis par lien ou QR — ou joue seul, les bots complètent."
       },
       "purple": {
@@ -1207,6 +1301,11 @@
         "waitingReturn": "{name} est parti — remplacement dans {seconds}s si pas de retour",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
         "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
+      },
+      "about": {
+        "p1": "À ton tour, tu paries sur la couleur des prochaines cartes du paquet. Rouge ou noir, une carte : la cagnotte de gorgées prend 1. Double rouge ou double noir, deux cartes : elle prend 2. Purple, une rouge et une noire dans n'importe quel ordre : 2 aussi. Double purple, quatre cartes en deux paires dépareillées : 4. Bonne pioche, la cagnotte grossit ; mauvaise pioche, tu la bois entière.",
+        "p2": "Le joueur actif choisit son pari sur son téléphone, et les cartes se retournent chez tout le monde en même temps. Bonne pioche : tu continues, nouveau pari, même cagnotte, ou tu passes la main, et la cagnotte suit le joueur suivant, façon patate chaude. Mauvaise pioche : tu bois toute la cagnotte, pari compris, elle retombe à zéro et le tour passe. Pas de podium : la table s'arrête quand elle veut.",
+        "p3": "Les cartes n'ont pas de mémoire : la série de rouges ne rend pas le noir plus probable. Passe la main quand la cagnotte devient lourde ; tente le purple sur une cagnotte vide, pas sur une cagnotte de six. Un bot parie, continue et passe la main comme un joueur. À deux, passer la main devient un vrai coup de poker ; à seize, gare à celui qui la reçoit pleine."
       }
     },
     "roue-des-gorgees": {
@@ -2073,6 +2172,11 @@
             "body": "Perdre un navire ou se faire tirer dessus coûte des gorgées. La partie se termine quand une flotte est entièrement coulée."
           }
         ]
+      },
+      "about": {
+        "p1": "La bataille navale, revisitée en équipes : deux camps placent leurs navires en secret sur leur grille, puis se tirent dessus à tour de rôle. Touché… coulé ! L'hôte choisit le mode : 1v1 sur une grille de 8×8, 2v2 en 10×10, 3v3 en 12×12 ou 4v4 en 14×14. Les équipes se choisissent au lobby, les indécis sont répartis, et les bots comblent les places vides.",
+        "p2": "Chaque joueur dispose ses navires, horizontaux ou verticaux, sans chevauchement, vérifié par le serveur : de 4, 3 et 2 cases en 1v1, un de 4 et un de 3 à partir du 2v2. Puis les équipes tirent alternativement en désignant une case adverse, et chaque tir est annoncé à tous : touché, à l'eau ou coulé. Toucher fait rejouer. La première équipe qui coule toute la flotte adverse gagne.",
+        "p3": "Coordonne tes tirs au chat vocal : quadriller intelligemment vaut mieux que tirer au hasard. Après un touché, teste les quatre cases adjacentes ; espace tes tirs de recherche en damier ; ne colle pas tes navires, un coulé n'en révélera pas un deuxième. Seul à la table, un bot tient la flotte adverse. En mode apéro, un navire coulé ça s'arrose. Cinq à dix minutes en 1v1, vingt à trente en 4v4."
       }
     },
     "menteur": {
@@ -2149,6 +2253,11 @@
             "body": "Les dés sont comptés : le perdant du pari boit des gorgées selon l’écart. Les dés sont relancés et la partie continue."
           }
         ]
+      },
+      "about": {
+        "p1": "Chaque joueur secoue ses dés cachés sous son gobelet : lui seul les voit, sur son téléphone. À tour de rôle, on enchérit sur ce que contient la table entière, « il y a au moins quatre 3 », et chacun doit surenchérir, plus de dés ou une valeur plus haute, ou accuser le précédent. Tu n'y crois pas ? Crie « Menteur ! ».",
+        "p2": "Au « Menteur ! », tous les gobelets se lèvent. Enchère tenue, l'accusateur perd un dé ; sinon, c'est le menteur qui en perd un. Le verdict s'affiche quelques secondes, puis on relance. Un joueur sans dés est éliminé, le dernier qui en a remporte la table. Deux variantes incluses : Palifico, la manche à valeur fixe à un seul dé, et Calza, parier l'enchère exacte pour regagner un dé.",
+        "p3": "Tes propres dés sont ta seule certitude : enchéris autour de ce que tu tiens. Sur vingt dés, chaque face sort en moyenne un peu plus de trois fois, et les 1, jokers, s'y ajoutent : compte six ou sept dés pour une face de 2 à 6 (hors Palifico). En mode apéro, l'addition grimpe : tu bois autant de gorgées que tu as déjà perdu de dés. À deux c'est un duel de cinq minutes ; à quatre, cinq ou six, les statistiques mentent le mieux."
       }
     },
     "imposteur": {
@@ -2228,6 +2337,11 @@
             "body": "Après les indices, votez pour éliminer un suspect. Le village gagne en démasquant tous les imposteurs ; les imposteurs gagnent en survivant jusqu’à égalité."
           }
         ]
+      },
+      "about": {
+        "p1": "Le jeu tire une paire de mots proches, plage et piscine, café et thé. La majorité de la table reçoit l'un des deux sur son téléphone ; le ou les imposteurs reçoivent l'autre. La grande méchanceté du jeu : personne ne sait dans quel camp il est. Tu vois ton mot, un point c'est tout, et ce « soleil » que tout le monde décrit est peut-être le tien… ou pas.",
+        "p2": "À tour de rôle, chacun écrit un indice court en 45 secondes ; ton propre mot est refusé. Puis on vote en secret pour le joueur le plus suspect, 60 secondes. L'éliminé sort mot et camp découverts ; à égalité, personne ne sort et on repart entre survivants. Le village gagne quand tous les imposteurs sont tombés, les imposteurs gagnent à trois survivants ou dès qu'ils ne sont plus minoritaires.",
+        "p3": "Le doute des autres est aussi le tien : un indice trop précis te démasque si tu es l'intrus, un indice trop vague te fait passer pour coupable. Deux imposteurs à partir de sept joueurs, jusqu'à trois. En mode apéro, un innocent éliminé à tort boit trois gorgées. Les mots existent en quatre langues ; les bots votent au hasard, parfaits pour apprendre."
       }
     },
     "bluff": {
@@ -2285,6 +2399,11 @@
             "body": "Trouve la vraie réponse pour gagner des points. Et si quelqu'un vote pour TON bluff, tu marques aussi des points — plus tu trompes de monde, plus tu gagnes !"
           }
         ]
+      },
+      "about": {
+        "p1": "Une question de quiz s'affiche, sans ses choix de réponse : souvent, personne n'est sûr de la bonne. Alors chacun en invente une, aussi crédible que possible. Toutes les réponses, les fausses et la vraie, sont ensuite mélangées par le serveur, et chacun vote pour celle qu'il croit juste. Trouver la vraie rapporte ; piéger les autres avec ton bluff rapporte tout autant.",
+        "p2": "Chaque question suit le même rythme : 45 secondes pour inventer ta fausse réponse en secret sur ton téléphone, 60 secondes pour voter parmi les propositions mélangées, puis la révélation. 1 000 points à ceux qui ont trouvé la vraie réponse, 500 points par joueur piégé pour chaque auteur de bluff. L'hôte choisit 6, 8 ou 10 questions, soit douze à vingt minutes.",
+        "p3": "Le bon bluff est plausible : imite le style des vraies réponses, chiffres précis, formulation sobre. Trop drôle, il est repéré ; trop plat, personne ne le choisit. Et méfie-toi de la réponse qui sonne trop bien, c'est souvent un piège. Les questions sont tirées du quiz du site, en quatre langues ; les bots inventent et votent comme tout le monde, et le mode sans alcool joue aux points."
       }
     },
     "espion": {
@@ -2358,6 +2477,11 @@
             "body": "De son côté, l'espion peut tenter de deviner le lieu à tout moment pour gagner directement. S'il se trompe, l'équipe gagne la manche !"
           }
         ]
+      },
+      "about": {
+        "p1": "Tout le monde reçoit le même lieu secret sur son téléphone… sauf une personne, qui lit seulement « Tu es l'espion ». En vous posant des questions les uns aux autres, vous cherchez l'intrus, pendant que l'espion essaie de deviner où vous êtes à partir des réponses. Le groupe gagne en le démasquant ; l'espion gagne s'il reste caché ou s'il devine le lieu.",
+        "p2": "Les questions se posent à voix haute au chat vocal : « Tu y vas souvent ? », « On y mange bien ? ». Convaincu, tu accuses publiquement : la table a 15 secondes pour te rallier, et la majorité déclenche la révélation. Démasqué, l'espion peut encore deviner le lieu ; chrono écoulé sans accusation, la manche est à lui. L'hôte règle 3, 5 ou 7 minutes par manche, et 3, 5 ou 7 manches à gagner.",
+        "p3": "Toute la tension tient dans la question : assez précise pour tester, assez floue pour ne pas vendre le lieu. Réponds du tac au tac, l'hésitation trahit ; espion, recycle les mots des autres. À trois ça tourne, à huit et plus l'intrus se fond dans la masse. Les lieux existent en quatre langues. Les bots complètent une table, mais ne discutent pas : il faut de vraies voix."
       }
     },
     "tabou": {
@@ -2483,6 +2607,11 @@
             "body": "Dès que tout le monde a trouvé, la manche s'arrête. Sinon, le temps s'écoule et le mot est révélé pour tous."
           }
         ]
+      },
+      "about": {
+        "p1": "À chaque manche, un joueur reçoit un mot secret et le dessine en direct sur son téléphone, du bout du doigt. Les autres voient le trait apparaître en temps réel, et sur la TV si elle est branchée, et proposent des réponses : les plus rapides marquent le plus de points, et le dessinateur marque aussi quand son œuvre est devinée.",
+        "p2": "Le dessinateur a 10 secondes pour choisir parmi trois mots, puis 80 secondes pour dessiner, moins si tout le monde a trouvé. Les propositions fusent, le serveur valide les bonnes réponses et compte les points, chaque tentative est gratuite. Puis le pinceau tourne : un dessinateur par manche, donc si la table compte plus de joueurs que de manches, certains ne dessinent pas. L'hôte choisit 6, 8 ou 10 manches ; compte dix à quinze minutes.",
+        "p3": "Dessine le concept avant les détails : une silhouette reconnaissable en cinq secondes bat un chef-d'œuvre en soixante. Les flèches et les découpages en scènes sont tes amis. En mode apéro, la tradition veut que le dessinateur dont personne ne devine l'œuvre trinque, et parfois il le mérite : le jeu, lui, ne compte que des points. Les mots existent en quatre langues ; les bots complètent une petite table, mais ne dessinent pas : le Crobard veut de vrais yeux."
       }
     },
     "telephone-dessine": {
@@ -2535,6 +2664,11 @@
             "body": "Une fois toutes les manches jouées, chaque chaîne complète est révélée du début à la fin — préparez-vous à rigoler !"
           }
         ]
+      },
+      "about": {
+        "p1": "Le téléphone arabe version dessin. Chaque joueur démarre une chaîne avec une phrase de son cru, puis les chaînes circulent de téléphone en téléphone en alternant : tu dessines la phrase reçue, le suivant décrit ton dessin, le suivant dessine sa description… jusqu'à ce que chaque chaîne ait fait le tour de la table. À l'arrivée, plus personne ne reconnaît rien.",
+        "p2": "Soixante secondes pour écrire ta phrase de départ, quatre-vingts pour dessiner, sans texte, puis tu décris ce que tu vois sur le dessin reçu, et on alterne, autant d'étapes que de joueurs. Vient la révélation, LE moment du jeu : chaque chaîne est rejouée du début à la fin. Un meneur fait défiler, et si personne ne touche à rien, la suivante s'affiche au bout de 45 secondes.",
+        "p3": "Officiellement, personne ne gagne ; officieusement, celui dont la chaîne a le plus dérapé a gagné la soirée. Une bonne phrase de départ, c'est une action et un sujet inattendu, « un pingouin braque une boulangerie » ; dessine l'action, pas seulement les personnages, et décris ce que tu vois, pas ce que tu supposes. Pas de bots, chaque maillon est un humain. Aucune gorgée, seulement des fous rires."
       }
     },
     "petit-buveur": {
@@ -3288,6 +3422,11 @@
             ]
           }
         }
+      },
+      "about": {
+        "p1": "Le jeu de plateau de l'apéro : un dé, des pions, trente cases à effets et des défis. Chacun avance au rythme du dé, et chaque case a son caractère : défis à réaliser, gorgées données ou reçues, événements collectifs, cases spéciales qui visent un joueur précis. Le premier arrivé au bout du plateau gagne, et en ligne, la victoire compte pour le classement du site.",
+        "p2": "À ton tour, lance le dé : ton pion avance case par case et la case se révèle. Applique son effet, défi, échange, événement… La table juge si le défi est réussi, personne ne tient la règle. Certains passages déclenchent des mini-moments : roue de la fortune, pile ou face, dé de la honte. L'hôte règle la difficulté au lobby, de facile à extrême, et le chat vocal sert pour les défis.",
+        "p3": "Les défis refusés coûtent plus cher que les défis tentés, et certaines cases permettent de cibler les pions adverses : garde un œil dessus. Un joueur qui quitte est remplacé par un bot au bout de trois minutes. Jusqu'à 99 en ligne en théorie ; au-delà de huit, on attend longtemps son tour, fais deux tables. Le Petit Buveur se joue aussi en local, sur un seul téléphone."
       }
     },
     "quiz": {
@@ -3340,6 +3479,11 @@
             "body": "À la fin de toutes les questions, le classement s’affiche — et le dernier du podium termine son verre."
           }
         ]
+      },
+      "about": {
+        "p1": "Une question et quatre réponses s'affichent en même temps sur tous les téléphones, quinze secondes au chrono. Chacun buzze sa réponse, une seule, horodatée par le serveur : impossible de tricher sur la vitesse. Plus tu réponds vite et juste, plus tu marques. Des centaines de questions, culture générale, sport, musique, ciné et séries, bouffe et questions de soirée, en trois niveaux de difficulté et quatre langues.",
+        "p2": "Bonne réponse : 100 points, plus un bonus de vitesse jusqu'à 100 points qui fond au fil des quinze secondes. Mauvaise réponse, ou pas de réponse : zéro. La révélation montre la bonne réponse et le classement pendant six secondes, puis on enchaîne, 10, 15 ou 20 questions selon l'hôte, soit quatre à huit minutes. Le meilleur total gagne sa place au classement du site.",
+        "p3": "Une intuition rapide bat souvent une réflexion lente, mais buzzer au hasard ne pardonne pas sur la longueur. En mode apéro, chaque mauvaise réponse coûte deux gorgées, ne pas répondre compte comme une erreur, et le dernier du podium finit son verre. En mode sans alcool, le jeu s'appelle Quiz Party, mêmes questions, aucun compteur. Les bots répondent et se trompent comme des joueurs."
       }
     },
     "loup-garou": {
@@ -3497,6 +3641,11 @@
             "body": "Le village gagne en éliminant tous les loups ; les loups gagnent s’ils sont aussi nombreux (ou plus) que le reste du village. Les morts deviennent fantômes 👻 et regardent la suite."
           }
         ]
+      },
+      "about": {
+        "p1": "Le grand classique des soirées, sans meneur : l'application distribue les rôles secrets sur chaque téléphone, réveille chaque rôle à son tour pendant la nuit, annonce les morts à l'aube et dépouille les votes. Les loups frappent la nuit, le village débat et vote le jour, au chat vocal ou au chat écrit. Personne n'est exclu du jeu pour tenir la table.",
+        "p2": "La nuit, le Salvateur protège, la Voyante sonde un joueur, le Corbeau marque, les loups choisissent leur victime dans leur chat privé, la Sorcière potionne. À l'aube, les morts sont annoncés, rôle révélé. Le premier jour, le village élit un maire dont la voix compte double, puis débat (trois minutes par défaut, l'hôte règle de une à cinq) et vote. Égalité ? Revote entre les ex-aequo. Et la nuit retombe.",
+        "p3": "La Voyante est toujours en jeu ; Sorcière, Chasseur, Salvateur, Corbeau et Ancien tournent d'une partie à l'autre. Un loup en dessous de six joueurs, deux de six à dix, trois à onze ou douze. Le village gagne quand plus aucun loup ne respire ; les loups gagnent quand ils sont aussi nombreux que les autres. Les bots accusent et se défendent aussi. Compte quinze à trente minutes à six ou huit."
       }
     },
     "sans-filtre": {
@@ -3564,6 +3713,11 @@
       "lobby": {
         "roundsCount": "Nombre de manches",
         "rounds": "manches"
+      },
+      "about": {
+        "p1": "Une carte noire à trou s'affiche pour toute la table : « Ce soir, tout a dérapé à cause de ___. » Chaque joueur, sauf le juge du tour, choisit dans sa main de sept cartes réponse celle qui complète la phrase de la façon la plus drôle, ou la plus gênante. Les réponses sont anonymes : personne ne sait qui a joué quoi avant le couronnement.",
+        "p2": "Soixante secondes pour abattre ta carte. Le juge, un rôle qui tourne à chaque manche, découvre les réponses, les lit à voix haute au chat vocal, c'est là que la table explose de rire, puis couronne sa préférée. L'auteur est révélé et gagne une couronne ; tout le monde repioche pour rester à sept cartes. L'hôte choisit 5, 8 ou 12 manches, et le joueur le plus couronné gagne la partie.",
+        "p3": "Bien jouer, c'est moins être drôle dans l'absolu que viser le sens de l'humour du juge. À quatre, l'anonymat tient mal, on repère vite le style de chacun ; de six à dix, c'est le format de croisière. Les cartes sont en français, grivoises par sous-entendu, jamais dégradantes. En mode Soft, seules les cartes sages sont distribuées. Les bots jouent des cartes ; dès que la table compte deux humains, ils ne sont jamais juges — seul face à eux, ils entrent dans la rotation."
       }
     },
     "mots-codes": {
@@ -3630,6 +3784,11 @@
             "body": "Une tuile cache l’assassin (dos de carte) : la toucher fait perdre immédiatement. Première équipe à tout révéler : victoire !"
           }
         ]
+      },
+      "about": {
+        "p1": "Une grille de 25 mots, deux équipes, Or et Rouge, et un Maître-mot par camp, seul à voir les couleurs : neuf mots pour l'équipe qui commence, huit pour l'autre, sept neutres et un assassin. Pour tous les autres, la grille reste crème tant que rien n'est révélé. Le Maître-mot fait deviner plusieurs mots d'un seul indice.",
+        "p2": "À son tour, le Maître-mot a 90 secondes pour donner un indice, un seul mot et un nombre, « VIGNOBLE · 3 », dit au chat vocal et figé dans l'application. Son équipe débat, puis touche les tuiles une par une, deux minutes : sa couleur, on continue, jusqu'à l'indice plus un ; neutre ou couleur adverse, la main passe ; l'assassin, défaite immédiate. La première équipe dont tous les mots sont révélés gagne.",
+        "p3": "Le sel du jeu, c'est le débat d'équipe pendant que le Maître-mot souffre en silence, et les mots à double sens qui relient trois tuiles… ou mènent droit à l'assassin. Quatre joueurs minimum, deux par équipe ; le premier de chaque camp au lobby devient Maître-mot. Pas de bots au lancement, un bot ne sait pas donner d'indice. Aucune gorgée, seulement l'honneur de l'équipe."
       }
     },
     "dilemmes": {
@@ -3693,6 +3852,11 @@
             "body": "En mode Apéro, le camp minoritaire trinque. Puis carte suivante — les débats font le jeu."
           }
         ]
+      },
+      "about": {
+        "p1": "Dilemmes, c'est le brise-glace de la soirée : « Tu préfères… », « Je n'ai jamais… » et « Qui de la table… », en votes secrets depuis ton téléphone. Personne ne voit rien tant que tout le monde n'a pas voté, puis tout s'affiche d'un coup : les camps, les pourcentages, et qui a voté quoi. Le camp minoritaire trinque.",
+        "p2": "L'hôte choisit 10, 15 ou 20 cartes et lance la table. À chaque carte, 30 secondes pour voter : deux options pour « Tu préfères », « Je l'ai fait » ou « Jamais de la vie » pour « Je n'ai jamais », et un joueur (jamais toi) pour « Qui de la table ». La révélation tombe dès que tout le monde a voté, puis on débat. Après la dernière carte, la partie s'arrête, sans gagnant ni classement.",
+        "p3": "Dilemmes est fait pour les discussions qu'il déclenche, pas pour le score : découvrir qui a vraiment déjà dormi au travail vaut tous les podiums. Plus vous êtes nombreux, meilleures sont les révélations ; à partir de huit, les pourcentages parlent vraiment. Les cartes sont en français. En mode Soft, on joue les mêmes cartes sages sans gorgées. Compte cinq à quinze minutes."
       }
     },
     "petit-bac": {
@@ -3773,6 +3937,11 @@
             "body": "Réponse unique : 2 pts. En doublon : 1 pt. Vide ou mauvaise lettre : 0. Une réponse douteuse ? Contestez — la majorité tranche."
           }
         ]
+      },
+      "about": {
+        "p1": "Une lettre, tirée en écartant les impossibles comme K, W ou X, et cinq catégories parmi vingt-quatre, Prénom, Animal, Boisson, Personnage de fiction, Monument… différentes à chaque manche. Tout le monde écrit en même temps, en secret, sur son téléphone : fini le tricheur qui louche sur la feuille du voisin. Le premier qui a rempli ses cinq cases pour de bon crie STOP.",
+        "p2": "Deux minutes d'écriture par manche, mais le STOP gèle la table : les cinq réponses doivent commencer par la bonne lettre et la manche avoir tourné vingt secondes, vérifié par le serveur. Comptage automatique : réponse unique 2 points, doublon 1 point, case vide 0. Puis 90 secondes de lecture et de contestation : si la majorité des autres conteste aussi, la réponse passe à zéro. L'hôte choisit 3, 5 ou 8 manches.",
+        "p3": "« Zorglub, c'est un prénom ça ? » Toute la partie se joue à la révélation, quand quelqu'un sort un fruit en U sans sourciller et que la table tranche, sans arbitre. Le comptage unique ou doublon devient vraiment drôle à partir de quatre. Pas de bots : le Petit Bac repose sur de vraies réponses tapées. Aucune gorgée, seulement des points, et les catégories existent dans les quatre langues du site."
       }
     },
     "president": {
@@ -3841,6 +4010,11 @@
             "body": "Premier sorti = Président, et personne ne joue après lui : le pli est brûlé. Dernier = Trou. Entre les manches, le Trou donne ses 2 meilleures cartes au Président, le Vice-Trou sa meilleure au Vice-Président."
           }
         ]
+      },
+      "about": {
+        "p1": "Les 54 cartes, jokers compris, sont distribuées, et chacun ne voit que sa main, sur son téléphone. Le premier pose une carte seule, une paire, un brelan ou un carré ; les suivants posent autant de cartes, d'un rang supérieur ou égal, ou passent. L'ordre va du 3, la plus faible, à l'As, puis au 2, la carte suprême : il remporte le pli sur-le-champ.",
+        "p2": "Le premier à vider sa main devient Président, le dernier Trou, avec le Vice-Président et le Vice-Trou entre les deux. Avant la manche suivante, les échanges se font tout seuls : le Trou donne ses deux meilleures cartes au Président, qui lui rend ses deux pires. Les règles de la maison sont actives : « … ou rien » après une pose égale, fermeture de carré hors de son tour, jokers caméléons. L'hôte choisit 1, 3 ou 5 manches, avec 30 secondes par tour.",
+        "p3": "Garde tes 2 pour couper au bon moment, et ne casse pas un brelan pour une carte seule. À quatre, les mains sont longues et les échanges pèsent lourd ; à sept ou huit, les manches filent et un joker bien gardé décide de la couronne. Il faut quatre joueurs : les bots complètent la table, chacun avec son tempérament. En mode apéro, le Trou boit ; en mode sans alcool, il ne perd que son honneur."
       }
     }
   },
@@ -3941,7 +4115,9 @@
       "loadingMore": "Chargement…",
       "periodAll": "Général",
       "periodWeek": "Cette semaine",
-      "periodWeekHint": "Compte les parties terminées depuis lundi 00 h (heure de Paris). Remis à zéro chaque lundi — pour l'honneur, aucune récompense à la clé."
+      "periodWeekHint": "Compte les parties terminées depuis lundi 00 h (heure de Paris). Remis à zéro chaque lundi — pour l'honneur, aucune récompense à la clé.",
+      "hiddenName": "Joueur classé",
+      "loginForNames": "Connectez-vous pour voir les pseudos, votre position et le classement de la semaine."
     }
   },
   "feedback": {
@@ -4820,7 +4996,9 @@
       "ctaPlay": "Ouvrir une table entre potes",
       "ctaSolo": "Jouer seul avec les bots",
       "trust": "100 % gratuit · zéro installation · zéro inscription — un pseudo et la table est à toi",
-      "live": "{count, plural, one {# joueur en ligne en ce moment} other {# joueurs en ligne en ce moment}}"
+      "live": "{count, plural, one {# joueur en ligne en ce moment} other {# joueurs en ligne en ce moment}}",
+      "launchesWeek": "{count, plural, one {# partie lancée cette semaine} other {# parties lancées cette semaine}}",
+      "launchesTotal": "Plus de {count} parties lancées depuis l'ouverture"
     },
     "preview": {
       "title": "À quoi ça ressemble",
@@ -4881,7 +5059,43 @@
     "finalCta": {
       "title": "La table est ouverte.",
       "cta": "Jouer maintenant"
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "q1": "Le Pillaveur est-il gratuit ?",
+      "a1": "Oui, entièrement : tous les jeux, en local comme en ligne, sans achat ni abonnement. Pour jouer en ligne, un pseudo suffit — le compte invité est gratuit, et un compte avec email garde tes joueurs et tes stats d'une soirée à l'autre.",
+      "q2": "Faut-il installer quelque chose ?",
+      "a2": "Non : tout tourne dans le navigateur, sur mobile comme sur PC. Pour l'avoir en plein écran avec une icône, ajoute le site à ton écran d'accueil depuis la page Application mobile ; les applications Android et iOS sont en préparation.",
+      "q3": "Peut-on jouer sans alcool ?",
+      "a3": "Oui : dans le hub des jeux, l'ambiance « Sans alcool » remplace les gorgées par des gages sur la plupart des jeux en ligne — Loup-Garou, quiz, dessin, bluff… Purple, 1220 et le Petit Buveur restent en ambiance apéro, comme les jeux de dés sur un seul téléphone.",
+      "q4": "Peut-on jouer à distance ?",
+      "a4": "Oui : en ligne, chacun joue sur son téléphone, où qu'il soit. L'hôte ouvre une table et partage un code, un lien ou un QR ; le chat vocal est intégré, et le mode TV affiche la partie en grand sur un écran.",
+      "q5": "Combien de joueurs faut-il ?",
+      "a5": "Dès deux, et jusqu'à seize en ligne selon le jeu (douze au Loup-Garou, toute la fête au Petit Buveur). Sur un seul téléphone qui tourne, pas de limite. Et sur une douzaine de jeux, les bots complètent la table : tu peux jouer seul."
     }
+  },
+  "rules": {
+    "meta": {
+      "title": "Règles des jeux de soirée",
+      "description": "Règles des jeux de soirée du Pillaveur : Loup-Garou, Imposteur, Président, Petit Bac… Effectif, déroulement et FAQ. Gratuit, en ligne, sans installation."
+    },
+    "kicker": "Cartes sur table",
+    "title": "Règles des jeux de soirée",
+    "intro": "Chaque jeu en ligne du Pillaveur expliqué en deux minutes : le principe, le déroulement, comment on gagne, les gorgées quand il y en a, et les questions qu'on nous pose le plus. L'effectif affiché est celui de la table en ligne — et quand un jeu se joue seul avec des bots, c'est écrit.",
+    "count": "{count, plural, one {# jeu expliqué} other {# jeux expliqués}}",
+    "players": "{min} à {max} joueurs",
+    "botsBadge": "Jouable avec des bots",
+    "readRules": "Lire les règles",
+    "allGames": "Voir tous les jeux",
+    "breadcrumb": {
+      "home": "Accueil",
+      "rules": "Règles"
+    },
+    "backToRules": "Toutes les règles",
+    "showcaseFacts": "gratuit · sans installation",
+    "voiceChat": "chat vocal",
+    "playNow": "Jouer maintenant — c'est gratuit",
+    "otherRules": "Les règles des autres jeux"
   },
   "tryBots": {
     "play": "Jouer maintenant",

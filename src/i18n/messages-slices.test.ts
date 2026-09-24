@@ -5,10 +5,12 @@ import type { AbstractIntlMessages } from 'next-intl'
 import { GAMES } from '@/lib/games'
 import {
   GAME_IDS,
+  SERVER_ONLY_PATHS,
   coreMessages,
   gameMessages,
   gameSlice,
   mergeMessages,
+  serverOnlySlice,
   supervisionMessages,
   supervisionSlice,
   tvMessages,
@@ -62,6 +64,19 @@ describe('coreMessages', () => {
     const all = miniature()
     ;(all.games as AbstractIntlMessages).futur = { title: 'Pas encore dans GAMES' }
     expect((coreMessages(all).games as AbstractIntlMessages).futur).toEqual({ title: 'Pas encore dans GAMES' })
+  })
+
+  it('retire les sous-arbres réservés au serveur, en gardant leurs voisins par référence', () => {
+    const all = miniature()
+    const landing = { hero: { title: 'La table' }, faq: { q1: 'Gratuit ?' } }
+    Object.assign(all, { landing, rules: { title: 'Règles' } })
+    const core = coreMessages(all)
+    expect(core.rules).toBeUndefined()
+    expect(core.landing).toEqual({ hero: { title: 'La table' } })
+    // Le voisin n'est pas recopié : c'est le nœud du catalogue, lisible en entier.
+    expect((core.landing as AbstractIntlMessages).hero).toBe(landing.hero)
+    expect(core.hub).toBe(all.hub)
+    expect(serverOnlySlice(all)).toEqual({ landing: { faq: { q1: 'Gratuit ?' } }, rules: { title: 'Règles' } })
   })
 
   it('ne modifie pas le catalogue reçu', () => {
@@ -167,6 +182,18 @@ describe('sur le vrai catalogue français', () => {
     expect(inconnus).toEqual([])
   })
 
+  it('chaque chemin réservé au serveur existe, et le socle ne le porte plus', () => {
+    // Un chemin renommé dans les messages sans être renommé ici repartirait en
+    // silence dans le HTML de toutes les pages.
+    const core = coreMessages(FR)
+    const at = (node: AbstractIntlMessages, path: string) =>
+      path.split('.').reduce<unknown>((value, part) => (value as AbstractIntlMessages | undefined)?.[part], node)
+    for (const path of SERVER_ONLY_PATHS) {
+      expect(at(FR, path), path).toBeDefined()
+      expect(at(core, path), path).toBeUndefined()
+    }
+  })
+
   it('le socle pèse moins du tiers du catalogue', () => {
     const all = JSON.stringify(FR).length
     const core = JSON.stringify(coreMessages(FR)).length
@@ -180,9 +207,10 @@ describe('sur le vrai catalogue français', () => {
     }
   })
 
-  it('socle + tranche TV + supervision = le catalogue entier', () => {
-    // Rien ne tombe entre les tranches : tout ce qui existe est servi quelque part.
-    const rebuilt = mergeMessages(tvMessages(FR), supervisionSlice(FR))
+  it('socle + tranche TV + supervision + textes serveur = le catalogue entier', () => {
+    // Rien ne tombe entre les tranches : tout ce qui existe est servi quelque
+    // part — les textes serveur, par les pages qui les rendent.
+    const rebuilt = mergeMessages(mergeMessages(tvMessages(FR), supervisionSlice(FR)), serverOnlySlice(FR))
     expect(rebuilt).toEqual(FR)
   })
 })

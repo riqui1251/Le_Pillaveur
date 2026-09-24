@@ -234,7 +234,12 @@ export async function GET(request: Request) {
         width: WIDTH,
         height: HEIGHT,
         // Une table est éphémère : on laisse les aperçus se rafraîchir vite.
-        headers: { 'cache-control': 'public, max-age=300' },
+        // noindex : robots.txt laisse passer tout /api/og (cartes de jeu et de
+        // marque), cette carte comprise — or son URL porte le pseudo de l'hôte
+        // (`host=`). Les robots d'aperçu (WhatsApp, Discord, X, Facebook)
+        // ignorent l'en-tête : le partage ne change pas, Google Images ne la
+        // garde pas.
+        headers: { 'cache-control': 'public, max-age=300', 'x-robots-tag': 'noindex' },
       }
     )
   }

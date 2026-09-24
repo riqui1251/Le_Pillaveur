@@ -102,8 +102,10 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
   },
   president: {
     title: 'Règles du Président en ligne — combos, coupe au 2 et Trou',
+    // Raccourcie sous 160 caractères (193 avant : Google tronquait l'extrait
+    // avant l'effectif et la gratuité) — même style que les autres entrées.
     description:
-      'Le Président en ligne : combos strictement plus forts, le 2 coupe le pli, premier sorti = Président, dernier = Trou. Échange automatique entre manches. Règles complètes, 4 à 8 joueurs, gratuit.',
+      'Combos, coupe au 2, Président et Trou, échange automatique : règles éclair. Puis joues-y gratuitement : 4 à 8 joueurs, chat vocal — ou seul avec des bots.',
   },
 }
 

@@ -1,9 +1,11 @@
 import { getTranslations } from 'next-intl/server'
-import { Bot, Droplets, Globe2, Mic, Tv, Zap } from 'lucide-react'
+import { Bot, Dice5, Droplets, Globe2, Mic, Tv, Zap } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { BrandLogo } from '@/components/brand/BrandLogo'
 import { AnalyticsConsentButton } from '@/components/legal/AgeGate'
+import { COLLECTION_SLUGS } from '@/lib/collections'
 import { GAMES, type GameSuit } from '@/lib/games'
+import { readLandingLaunchesStat } from '@/lib/landing-stats-server'
 import { RULES_GAME_IDS } from '@/lib/rules/rules-ids'
 import { SITE_URL } from '@/lib/site'
 import { GET as getPresenceCount } from '@/app/api/presence/count/route'
@@ -59,6 +61,8 @@ export async function LandingPage({ locale }: { locale: string }) {
   const tCatalog = await getTranslations({ locale, namespace: 'games.catalog' })
   const tMeta = await getTranslations({ locale, namespace: 'metadata' })
   const tNavLegal = await getTranslations({ locale, namespace: 'nav.legal' })
+  const tCollections = await getTranslations({ locale, namespace: 'hub.collections' })
+  const tRules = await getTranslations({ locale, namespace: 'rules' })
 
   const visibleGames = GAMES.filter((g) => !g.hidden)
   // Les jeux phares ouvrent la grille : le héros promet « Loup-Garou, quiz,
@@ -70,7 +74,24 @@ export async function LandingPage({ locale }: { locale: string }) {
   ]
 
   const playersOnline = await readPlayersOnline()
+  // Parties lancées (journal anonyme, cache 15 min, seuils d'affichage —
+  // voir landing-stats-server.ts) : null, et la vitrine n'en dit rien.
+  const launches = await readLandingLaunchesStat()
   const previewGameTitle = tCatalog(`${PREVIEW_GAME_ID}.title`)
+
+  // FAQ courte : cinq questions qu'un visiteur pose avant de cliquer, avec
+  // leurs réponses telles que le produit les tient aujourd'hui — et le même
+  // texte en données structurées FAQPage.
+  const faq = [1, 2, 3, 4, 5].map((n) => ({ question: t(`faq.q${n}`), answer: t(`faq.a${n}`) }))
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map(({ question, answer }) => ({
+      '@type': 'Question',
+      name: question,
+      acceptedAnswer: { '@type': 'Answer', text: answer },
+    })),
+  }
   const previewSeats = [
     t('preview.seat1'),
     t('preview.seat2'),
@@ -119,13 +140,26 @@ export async function LandingPage({ locale }: { locale: string }) {
             {t('hero.ctaSolo')}
           </Link>
         </div>
-        {/* Preuve sociale : le compteur de présence réel, jamais un chiffre
-            inventé. Personne en ligne → rien du tout, plutôt que « 0 joueur ». */}
-        {playersOnline > 0 && (
-          <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            {t('hero.live', { count: playersOnline })}
-          </p>
+        {/* Preuve sociale : le compteur de présence réel et les parties
+            lancées, jamais un chiffre inventé. Personne en ligne → rien du
+            tout, plutôt que « 0 joueur » ; trop peu de parties → rien non plus. */}
+        {(playersOnline > 0 || launches) && (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {playersOnline > 0 && (
+              <p className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                {t('hero.live', { count: playersOnline })}
+              </p>
+            )}
+            {launches && (
+              <p className="inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-3 py-1 text-xs font-semibold text-amber-100">
+                <Dice5 aria-hidden className="h-3.5 w-3.5 text-gold" />
+                {launches.period === 'week'
+                  ? t('hero.launchesWeek', { count: launches.count })
+                  : t('hero.launchesTotal', { count: launches.count })}
+              </p>
+            )}
+          </div>
         )}
         <p className="mt-4 text-xs text-white/40">{t('hero.trust')}</p>
       </section>
@@ -353,9 +387,54 @@ export async function LandingPage({ locale }: { locale: string }) {
                 </Link>
               </li>
             ))}
+            {/* L'index /regles : sans ce lien, la page mère des articles ne
+                recevait aucun lien interne depuis la vitrine. */}
+            <li>
+              <Link
+                href="/regles"
+                className="inline-flex rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold transition-colors hover:border-gold hover:text-cream"
+              >
+                {tRules('backToRules')}
+              </Link>
+            </li>
           </ul>
         </section>
       )}
+
+      {/* ── FAQ (SSR) ──
+          Cinq réponses courtes, vraies, dans le HTML : c'est ce qu'un visiteur
+          cherche avant de cliquer, et ce que Google peut citer. Les quatre
+          collections en dessous : la suite naturelle de « combien de joueurs ». */}
+      <section aria-labelledby="landing-faq" className="py-8">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+        <h2 id="landing-faq" className="text-center font-display text-xl font-bold text-gold sm:text-2xl">
+          {t('faq.title')}
+        </h2>
+        <dl className="mx-auto mt-5 max-w-2xl space-y-3">
+          {faq.map(({ question, answer }) => (
+            <div key={question} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+              <dt className="font-display text-base font-bold text-cream">{question}</dt>
+              <dd className="mt-1 text-sm leading-relaxed text-white/65">{answer}</dd>
+            </div>
+          ))}
+        </dl>
+        <ul className="mt-5 flex flex-wrap justify-center gap-2">
+          {COLLECTION_SLUGS.map((slug) => (
+            <li key={slug}>
+              <Link
+                href={`/jeux/${slug}`}
+                prefetch={false}
+                className="inline-flex rounded-full border border-gold/25 px-3 py-1.5 text-xs font-semibold text-cream/75 transition-colors hover:border-gold/50 hover:text-cream"
+              >
+                {tCollections(`${slug}.chip`)}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {/* ── CTA final ── */}
       <section className="py-10 text-center">

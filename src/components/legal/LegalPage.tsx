@@ -30,8 +30,11 @@ export async function LegalPage({ docId, locale }: LegalPageProps) {
 
   return (
     <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 pb-24 sm:px-6">
+      {/* Retour vers la vitrine, pas vers /compte : un visiteur arrivé d'un
+          moteur n'a pas de compte, et la page est noindex — lien mort pour
+          lui, et un maillage interne qui pointait sur une page interdite. */}
       <Link
-        href="/compte"
+        href="/"
         className="mb-6 inline-flex items-center gap-2 text-sm text-white/50 transition-colors hover:text-white/80"
       >
         <ArrowLeft className="h-4 w-4" />

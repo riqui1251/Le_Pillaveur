@@ -12,8 +12,10 @@ import { GAMES, getGameById } from '@/lib/games'
  * d'analyse pour rien.
  *
  * Ce module découpe le catalogue, sans rien traduire ni rien inventer :
- * - le SOCLE (`coreMessages`) : tout sauf les textes des jeux et la
- *   supervision — c'est ce que le layout de langue fournit à toutes les pages ;
+ * - le SOCLE (`coreMessages`) : tout sauf les textes des jeux, la
+ *   supervision et les textes que seules des pages serveur lisent
+ *   (`SERVER_ONLY_PATHS`) — c'est ce que le layout de langue fournit à toutes
+ *   les pages ;
  * - une TRANCHE par segment (`gameSlice`, `supervisionSlice`, `tvSlice`) : le
  *   supplément que le layout du segment ajoute au socle (voir
  *   src/components/i18n/ClientMessages.tsx pour la fusion côté client) ;
@@ -55,6 +57,22 @@ const BORROWED_GAMES: Readonly<Record<string, readonly string[]>> = {
   purple: ['1220'],
 }
 
+/**
+ * Sous-arbres lus UNIQUEMENT par des composants serveur (getTranslations) :
+ * intros des pages collections, FAQ de la landing, index et enveloppe des
+ * règles, extraits des pages légales. Ils partent dans le HTML de LEUR page,
+ * rendu côté serveur à partir du catalogue complet (src/i18n/request.ts) ;
+ * sérialisés dans le socle, ils voyageaient en plus dans le HTML de toutes
+ * les autres pages (≈ 8 Ko en français) sans qu'aucun composant client ne
+ * les lise. Un composant client qui en lirait un n'aurait qu'une clé brute :
+ * src/i18n/messages-coverage.test.ts le refuse, et un ancêtre de ces chemins
+ * (`landing`, `legal`) n'est plus le même nœud que dans le catalogue, donc
+ * illisible en entier côté client — le même test le signale.
+ *
+ * Ajouter un chemin ici : seulement s'il n'a AUCUN lecteur client.
+ */
+export const SERVER_ONLY_PATHS: readonly string[] = ['collections', 'landing.faq', 'rules', 'legal.meta']
+
 /** Un nœud du catalogue (objet imbriqué) — les tableaux (étapes de tutoriel) sont des feuilles. */
 function isNode(value: unknown): value is AbstractIntlMessages {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -79,6 +97,38 @@ function pick(node: AbstractIntlMessages, children: readonly string[]): Abstract
 }
 
 /**
+ * Le catalogue sans le sous-arbre `path` (notation pointée). Seuls les nœuds
+ * du chemin sont recopiés ; tout le reste est partagé par référence. Chemin
+ * absent : le catalogue reçu, tel quel.
+ */
+function omitPath(node: AbstractIntlMessages, path: readonly string[]): AbstractIntlMessages {
+  const [head, ...rest] = path
+  if (!(head in node)) return node
+  if (rest.length === 0) {
+    const { [head]: _omitted, ...kept } = node
+    void _omitted
+    return kept
+  }
+  const child = node[head]
+  if (!isNode(child)) return node
+  return { ...node, [head]: omitPath(child, rest) }
+}
+
+/** Les sous-arbres de SERVER_ONLY_PATHS présents dans le catalogue, seuls — ce que le socle retire. */
+export function serverOnlySlice(all: AbstractIntlMessages): AbstractIntlMessages {
+  let out: AbstractIntlMessages = {}
+  for (const path of SERVER_ONLY_PATHS) {
+    const parts = path.split('.')
+    let value: unknown = all
+    for (const part of parts) value = isNode(value) ? value[part] : undefined
+    if (value === undefined) continue
+    const wrapped = parts.reduceRight<unknown>((inner, part) => ({ [part]: inner }), value)
+    out = mergeMessages(out, wrapped as AbstractIntlMessages)
+  }
+  return out
+}
+
+/**
  * Fusion de deux catalogues, nœud par nœud : `extra` l'emporte sur `base` aux
  * feuilles, les objets se combinent, les tableaux se remplacent. Ni `base` ni
  * `extra` ne sont modifiés.
@@ -93,13 +143,15 @@ export function mergeMessages(base: AbstractIntlMessages, extra: AbstractIntlMes
 }
 
 /**
- * Le socle : tout le catalogue SAUF `supervision` et SAUF les `games.<id>` des
- * jeux. `games.catalog`, `games.meta` et tout autre enfant de `games` qui
- * n'est pas un identifiant de jeu restent : le hub, la navbar et les pages
- * serveur en lisent les titres.
+ * Le socle : tout le catalogue SAUF `supervision`, SAUF les `games.<id>` des
+ * jeux et SAUF les SERVER_ONLY_PATHS. `games.catalog`, `games.meta` et tout
+ * autre enfant de `games` qui n'est pas un identifiant de jeu restent : le
+ * hub, la navbar et les pages serveur en lisent les titres.
  */
 export function coreMessages(all: AbstractIntlMessages): AbstractIntlMessages {
-  const { supervision: _supervision, games, ...rest } = all
+  let trimmed = all
+  for (const path of SERVER_ONLY_PATHS) trimmed = omitPath(trimmed, path.split('.'))
+  const { supervision: _supervision, games, ...rest } = trimmed
   void _supervision
   if (!isNode(games)) return rest
   const shared: AbstractIntlMessages = {}

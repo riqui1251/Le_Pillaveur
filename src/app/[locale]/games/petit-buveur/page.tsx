@@ -21,6 +21,7 @@ import type { PetitBuveurT } from './case-config'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
+import { GameShowcase } from '@/components/online/GameShowcase'
 
 // Les deux moteurs — le plateau local (le plus gros morceau du site, avec ses
 // cases, sa pièce et ses dés) et sa version en ligne (lobby, briefing) — sont
@@ -38,6 +39,10 @@ const Game = dynamic(() => import('./components/game'), {
 
 const GAME_ID = 'petit-buveur'
 const SAVE_KEY = 'petit-buveur-save'
+
+/** Dégradé du jeu sur le bouton principal de la vitrine en attente — celui de « Commencer la partie ». */
+const ACCENT =
+  'w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-5 text-base font-bold text-white shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500'
 
 const difficultyKeys: Difficulty[] = ['facile', 'normal', 'difficile', 'extreme']
 
@@ -86,7 +91,7 @@ export default function PetitBuveurPage() {
   const [difficulty, setDifficulty] = useState<Difficulty>('normal')
   const [showRules, setShowRules] = useState(false)
   const [hasActiveSave, setHasActiveSave] = useState(false)
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   // Même règle que dans la partie : en Soft, règles et niveaux se lisent en
   // gages. L'ambiance vient de useAmbianceMode : sans compte (le cas d'une
   // table locale), le réglage de l'appareil comptait pour rien.
@@ -140,8 +145,12 @@ export default function PetitBuveurPage() {
     setGameStarted(true)
   }
 
-  if (!sessionChecked) {
-    return <OnlineGameSkeleton gameId="petit-buveur" />
+  // Sauvegarde pas encore lue, ou compte pas encore connu : la vitrine du jeu,
+  // bouton principal désactivé — c'est le HTML rendu au build, celui que lit
+  // Googlebot (le plateau local, lui, attend ses joueurs). Attendre aussi la
+  // session évite à un compte en ligne de voir l'écran local une seconde.
+  if (!sessionChecked || loading) {
+    return <GameShowcase gameId="petit-buveur" accentClassName={ACCENT} pending />
   }
 
   // Mode en ligne : lobby + partie serveur-autoritaire (indépendant du flux local).

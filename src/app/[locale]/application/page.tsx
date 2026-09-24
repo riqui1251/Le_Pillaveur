@@ -1,17 +1,43 @@
-"use client"
-
-import { useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
-import { Apple, Play, Smartphone, Sparkles } from 'lucide-react'
-import { isCapacitorApp } from '@/lib/native-app'
+import type { Metadata } from 'next'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { Apple, Maximize2, Play, Smartphone, Zap } from 'lucide-react'
+import { HiddenInApp } from '@/components/pwa/HiddenInApp'
+import { InstallButton } from '@/components/pwa/InstallButton'
+import { buildAlternates, pageOpenGraph, pageTwitter } from '@/lib/seo/alternates'
 
 /**
- * Page « Application mobile » — visible depuis le NAVIGATEUR uniquement
- * (l'entrée de menu est masquée dans la coquille Capacitor, et la page
- * elle-même affiche un message si on l'ouvre depuis l'app).
- * Les boutons stores sont des emplacements : les liens Google Play /
- * App Store seront branchés à la publication.
+ * Page « Application » — visible depuis le NAVIGATEUR (l'entrée de menu est
+ * masquée dans la coquille Capacitor ; ouverte quand même, la page n'y montre
+ * que le mot de la carte d'installation — voir HiddenInApp).
+ *
+ * Composant SERVEUR, rendu au build par langue : la page était un composant
+ * client sans metadata — elle héritait du titre et de la description de
+ * l'accueil alors qu'elle est au sitemap. Ce qu'elle promet est vrai
+ * aujourd'hui : le site s'ajoute à l'écran d'accueil depuis le navigateur
+ * (manifeste PWA) — c'est l'installation qu'on propose en premier. Les
+ * boutons stores restent des emplacements « bientôt », en second : les liens
+ * Google Play / App Store seront branchés à la publication.
  */
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'metadata.mobileApp' })
+  const title = t('title')
+  const description = t('description')
+  return {
+    title,
+    description,
+    alternates: buildAlternates('/application', locale),
+    // Un openGraph de page remplace celui du layout de langue en entier :
+    // pageOpenGraph reporte type, nom du site, locale et carte de partage.
+    openGraph: pageOpenGraph(locale, { title, description, url: `/${locale}/application` }),
+    twitter: pageTwitter(locale, { title, description }),
+  }
+}
 
 function StoreRow({
   icon,
@@ -37,15 +63,22 @@ function StoreRow({
   )
 }
 
-export default function ApplicationPage() {
-  const t = useTranslations('mobileApp')
-  const tNav = useTranslations('nav')
+export default async function ApplicationPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
+  // Rendue au build : la langue vient des params, jamais des en-têtes.
+  setRequestLocale(locale)
+  const t = await getTranslations({ locale, namespace: 'mobileApp' })
+  const tNav = await getTranslations({ locale, namespace: 'nav' })
 
-  // Dans la coquille, la page n'a pas de sens : message à la place des stores.
-  const [inApp, setInApp] = useState(false)
-  useEffect(() => {
-    setInApp(isCapacitorApp())
-  }, [])
+  const benefits = [
+    { Icon: Maximize2, title: t('benefits.fullscreen'), desc: t('benefits.fullscreenDesc') },
+    { Icon: Smartphone, title: t('benefits.icon'), desc: t('benefits.iconDesc') },
+    { Icon: Zap, title: t('benefits.quick'), desc: t('benefits.quickDesc') },
+  ]
 
   return (
     <main className="relative min-h-screen overflow-hidden text-white">
@@ -65,36 +98,50 @@ export default function ApplicationPage() {
           <p className="mt-2 text-sm text-white/50">{t('subtitle')}</p>
         </header>
 
-        {inApp ? (
-          <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
-            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
-            <p>{t('alreadyInApp')}</p>
-          </div>
-        ) : (
-          <>
-            <div className="rounded-3xl border border-gold/20 bg-white/[0.03] p-5 sm:p-6">
-              <div className="mb-5 flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
-                  <Smartphone className="h-5 w-5" />
-                </span>
-                <p className="text-sm leading-relaxed text-white/70">{t('pitch')}</p>
-              </div>
-              <div className="space-y-3">
-                <StoreRow
-                  icon={<Play className="h-5 w-5" />}
-                  store={t('googlePlay')}
-                  soonLabel={t('soon')}
-                />
-                <StoreRow
-                  icon={<Apple className="h-5 w-5" />}
-                  store={t('appStore')}
-                  soonLabel={t('soon')}
-                />
-              </div>
+        {/* Ce que l'installation apporte — dans le HTML, pour tout le monde ;
+            masqué dans la coquille, où il n'y a rien à installer. */}
+        <HiddenInApp>
+          <section aria-labelledby="app-benefits" className="mb-6">
+            <h2 id="app-benefits" className="sr-only">
+              {t('benefits.title')}
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {benefits.map(({ Icon, title, desc }) => (
+                <div key={title} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                  <Icon aria-hidden className="h-5 w-5 text-amber-300" />
+                  <h3 className="mt-2 text-sm font-bold text-white/90">{title}</h3>
+                  <p className="mt-0.5 text-xs leading-snug text-white/50">{desc}</p>
+                </div>
+              ))}
             </div>
-            <p className="mt-5 text-center text-xs leading-relaxed text-white/40">{t('note')}</p>
-          </>
-        )}
+          </section>
+        </HiddenInApp>
+
+        {/* La proposition qui marche AUJOURD'HUI : bouton natif, guide Safari,
+            ou rien — selon le navigateur (composant client). */}
+        <div className="mb-6">
+          <InstallButton />
+        </div>
+
+        {/* Les stores, en second : des emplacements tant que rien n'est
+            publié. Dans la coquille, ni stores ni note : le mot
+            d'InstallButton suffit (comme avant). */}
+        <HiddenInApp>
+          <section className="rounded-3xl border border-gold/20 bg-white/[0.03] p-5 sm:p-6">
+            <h2 className="font-display text-lg font-bold text-cream">{t('stores.title')}</h2>
+            <div className="mb-5 mt-3 flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
+                <Smartphone className="h-5 w-5" aria-hidden />
+              </span>
+              <p className="text-sm leading-relaxed text-white/70">{t('pitch')}</p>
+            </div>
+            <div className="space-y-3">
+              <StoreRow icon={<Play className="h-5 w-5" aria-hidden />} store={t('googlePlay')} soonLabel={t('soon')} />
+              <StoreRow icon={<Apple className="h-5 w-5" aria-hidden />} store={t('appStore')} soonLabel={t('soon')} />
+            </div>
+          </section>
+          <p className="mt-5 text-center text-xs leading-relaxed text-white/40">{t('note')}</p>
+        </HiddenInApp>
       </div>
     </main>
   )

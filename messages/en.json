@@ -7,7 +7,27 @@
     "appStore": "App Store",
     "soon": "Soon",
     "note": "The apps are on their way — check back soon. In the meantime, everything already works right here in your browser.",
-    "alreadyInApp": "You're already in the app — nothing to install here. This page lets website visitors download the app."
+    "alreadyInApp": "You're already in the app — nothing to install here. This page lets website visitors download the app.",
+    "benefits": {
+      "title": "What installing brings",
+      "fullscreen": "Full screen",
+      "fullscreenDesc": "No address bar: the table fills the whole screen, like a real app.",
+      "icon": "An icon on your home screen",
+      "iconDesc": "Le Pillaveur next to your other apps, without going through the browser.",
+      "quick": "Straight back to the table",
+      "quickDesc": "The icon opens the games hub directly, and the site updates itself: nothing to download."
+    },
+    "stores": {
+      "title": "On the app stores"
+    },
+    "install": {
+      "title": "Add to Home Screen",
+      "hint": "Free, no store needed: the site installs from your browser in two taps.",
+      "button": "Install Le Pillaveur",
+      "iosStep1": "Tap Safari's Share button (the square with the arrow, at the bottom of the screen).",
+      "iosStep2": "Choose “Add to Home Screen”, then “Add”.",
+      "done": "Installed: Le Pillaveur is on your home screen."
+    }
   },
   "metadata": {
     "title": "Le Pillaveur",
@@ -59,6 +79,10 @@
       "supervision": {
         "label": "Supervision",
         "description": "Dashboard admin"
+      },
+      "regles": {
+        "label": "Rules",
+        "description": "The rules of every game"
       }
     },
     "legal": {
@@ -100,6 +124,10 @@
       "stats": {
         "title": "Statistics",
         "subtitle": "History"
+      },
+      "regles": {
+        "title": "Rules",
+        "subtitle": "The rules of every game"
       },
       "gameInProgress": {
         "subtitle": "Game in progress"
@@ -262,6 +290,47 @@
         "title": "The wise one",
         "detail": "{names} — {count, plural, =0 {not a single sip} one {just # sip} other {just # sips}}"
       }
+    },
+    "collections": {
+      "chipsLabel": "Find a game for your night",
+      "a-2-joueurs": {
+        "chip": "For 2 players"
+      },
+      "sans-alcool": {
+        "chip": "Alcohol-free"
+      },
+      "seul-avec-des-bots": {
+        "chip": "Solo with bots"
+      },
+      "en-grand-groupe": {
+        "chip": "For big groups"
+      }
+    }
+  },
+  "collections": {
+    "kicker": "Collection",
+    "playersOnline": "{min} to {max} players online",
+    "playersOnlineOpen": "From {min} players online",
+    "playersLocal": "From {min} players, one phone",
+    "a-2-joueurs": {
+      "title": "Party games for 2 players",
+      "description": "Games that start with just two: dice and cards on one phone, or online with a table code — Liar's Dice, quiz, Purple, Petit Bac… Free, nothing to install.",
+      "intro": "Two people, one sofa, and no wish to wait for the rest of the gang: these games start with just two players. Part of the selection is played on a single phone passed from hand to hand. Monsieur 3, PMU Race, Hi/Lo, Pyramid and Plinko are dice, card and betting games where every round is settled in sips: quick, no rules to learn, perfect for opening the night. The Little Drinker, the party board game, plays just as well around the table as online. The rest is played online, everyone on their own phone, even from afar: open a table, share the code, and you're off. Liar's Dice pits two players against each other with hidden dice; The Big Pillaveur Quiz turns your phones into buzzers; Purple and 1220 are bar bets on cards and dice; Petit Bac spins letters and categories; Hit & Sunk replays battleship. And if you want a fuller table without waiting for anyone, several of these online games accept bots to fill the seats. Everything is free, with nothing to install."
+    },
+    "sans-alcool": {
+      "title": "Alcohol-free party games",
+      "description": "Party games without a drop: with the alcohol-free setting, sips become dares. Werewolf, quiz, drawing, bluffing… Free, with friends or with bots.",
+      "intro": "Not everyone at the table drinks, or nobody does tonight: Le Pillaveur has an alcohol-free setting, switched on from the games hub. Once chosen, the sips and chugs of these online games become dares, and the site turns midnight blue so everyone can see the night is soft. Rules, roles and scores stay the same: Werewolf keeps its wolves and its seer, The Big Pillaveur Quiz is still a buzzer quiz, Crobard a live drawing game, Sans Filtre a contest of bad faith, and Mots Codés, Petit Bac or Président play exactly as usual. Liar's Dice, The Impostor, Who's the Spy?, The Big Bluff, Dilemmes, Hit & Sunk and Drawn Telephone round out the selection. This setting applies to the online games in this selection, everyone on their own phone with a table code; Purple, 1220 and The Little Drinker stay in drinking mode, like the dice games that run on a single phone (Monsieur 3, Pyramid…). And since most of these games accept bots, an alcohol-free night can also be played by two, or even alone."
+    },
+    "seul-avec-des-bots": {
+      "title": "Play solo: games with bots",
+      "description": "Nobody around tonight? Open a table and the bots fill the seats: Werewolf, quiz, Liar's Dice, bluffing, Président… Free, online, alone or as a pair.",
+      "intro": "Nobody free, or just the wish to practise before the next party: on these games the table host can fill the empty seats with bots from the lobby, and the game starts even below the minimum player count — on your own, then. Each bot has its own name and personality, and they hold their seat: they bid and call bluffs at Liar's Dice, bluff at The Big Bluff, answer at The Big Pillaveur Quiz, the buzzer quiz, bet at Purple and 1220, play their cards at Président, vote and accuse at Werewolf. Those are the games you can truly play alone. At The Impostor, Who's the Spy?, Crobard, Sans Filtre or Dilemmes, bots fill a table without bringing it to life: a bot doesn't draw, tells no stories and leads no investigation, so those games want real players. If someone drops out mid-game, a bot steps in so the table keeps going. It is the same list as the “Play solo with bots” shortcut on the home page. Everything happens online, on your phone, and once you have the hang of a game, sharing the table code is all it takes for your friends to take the seats in turn."
+    },
+    "en-grand-groupe": {
+      "title": "Party games for big groups",
+      "description": "Ten, twelve, sixteen players: online games for a big table — Werewolf, quiz, drawing, bluffing, Petit Bac… One code, and everyone plays.",
+      "intro": "A big table, a birthday, the whole flatshare: these games take at least ten players online, and most go up to sixteen — The Little Drinker welcomes practically the whole party. Everyone plays on their own phone: the host opens a table, shares the code, the link or the QR, and everybody gathers in the lobby before launch. TV mode shows the game large on a screen, and the built-in voice chat saves you from opening Discord. As for the games: Werewolf up to twelve, with its hidden roles and its debates; The Big Pillaveur Quiz, where every phone is a buzzer; Crobard and its live drawings; The Big Bluff, Sans Filtre and Dilemmes to get the table talking; The Impostor and Who's the Spy? to unmask it; Mots Codés in two teams; Petit Bac and its letters; Purple and 1220 for betting. All of them are free, and if two or three people are missing, bots can fill most of these tables."
     }
   },
   "onlineXp": {
@@ -540,6 +609,15 @@
       "request_not_found": "Request not found.",
       "request_already_handled": "This request has already been handled.",
       "request_already_declined": "Request already declined."
+    },
+    "showcase": {
+      "players": "{min} to {max} players",
+      "bots": "Playable solo with bots",
+      "voice": "Built-in voice chat",
+      "free": "Free, no install",
+      "howTitle": "How to play",
+      "rulesLink": "Full rules",
+      "pending": "Play"
     }
   },
   "chat": {
@@ -766,6 +844,17 @@
       "cgu": "General Conditions of Use",
       "confidentialite": "Privacy Policy",
       "mentionsLegales": "Legal notices"
+    },
+    "meta": {
+      "cgu": {
+        "description": "Le Pillaveur's terms of use: adults only, sips as purely playful units, responsible drinking, account and local mode, rules of conduct, termination."
+      },
+      "confidentialite": {
+        "description": "Le Pillaveur's privacy policy: data collected (account, gameplay, voice chat), purposes, legal basis, retention, your GDPR rights and cookies."
+      },
+      "mentionsLegales": {
+        "description": "Le Pillaveur's legal notice: publisher, hosting provider, purpose of the site (party games, no alcohol sold), intellectual property and personal data."
+      }
     }
   },
   "players": {
@@ -922,6 +1011,11 @@
         "backToMenu": "Back to menu",
         "waitingReturn": "{name} left — replaced in {seconds}s if they don't return",
         "setupDeadline": "Setup: {seconds}s — after that, anyone not ready is marked ready"
+      },
+      "about": {
+        "p1": "A 12-sided die, a 20-sided die, and four bets to set on your phone before every roll: the parity of the sum, its range (2–10, 11–20 or 21–30), a “makes you drink” number and a “hand out drinks” number. 1220 is the apéro dice game with a sneaky bit of maths in it, and it needs no game master.",
+        "p2": "Anyone rolls both dice and the result appears on every phone. The server does the sums: if the total equals your “makes you drink” number, you drink; if it equals your “hand out” number, you hand out sips; right parity or right range, you hand out as well. A number showing on only one die counts half. Then everyone adjusts their bets and you roll again.",
+        "p3": "No podium here: 1220 is a pure party game, and the session ends when the table says so, after ten or twenty minutes of combos that make everyone shout. The total lands most often around 16 or 17, so place your ranges accordingly. Two players works, but the table really gets soaked from four or five different bets on the same roll."
       }
     },
     "meta": {
@@ -1207,6 +1301,11 @@
         "waitingReturn": "{name} left — replaced in {seconds}s if not back",
         "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
         "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
+      },
+      "about": {
+        "p1": "On your turn, you bet on the colour of the next cards in the deck. Red or black, one card: the pot of sips takes 1. Double red or double black, two cards: it takes 2. Purple, one red and one black in any order: 2 as well. Double purple, four cards in two mismatched pairs: 4. Right call, the pot grows; wrong call, you drink the whole thing.",
+        "p2": "The active player picks a bet on their phone, and the cards flip on every screen at once. Right call: you keep going, new bet, same pot, or you pass the hand, and the pot follows the next player like a hot potato. Wrong call: you drink the entire pot, bet included, it drops back to zero and the turn moves on. No podium: the table stops whenever it likes.",
+        "p3": "Cards have no memory: a run of reds does not make black any likelier. Pass the hand when the pot gets heavy; try purple on an empty pot, not on a pot of six. A bot bets, keeps going and passes like a player. With two, passing becomes a real poker move; with sixteen, pity whoever receives it full."
       }
     },
     "roue-des-gorgees": {
@@ -2073,6 +2172,11 @@
             "body": "Losing a ship or getting hit costs sips. The game ends when one fleet is completely sunk."
           }
         ]
+      },
+      "about": {
+        "p1": "Battleship, reworked for teams: two sides place their ships in secret on their grid, then take turns firing at each other. Hit… sunk! The host picks the mode: 1v1 on an 8×8 grid, 2v2 on 10×10, 3v3 on 12×12 or 4v4 on 14×14. Teams are chosen in the lobby, the undecided get assigned, and bots fill the empty seats.",
+        "p2": "Each player lays out their ships, horizontal or vertical, no overlap, checked by the server: 4, 3 and 2 cells long in 1v1, one of 4 and one of 3 from 2v2 up. Then the teams fire alternately by naming an enemy cell, and every shot is announced to all: hit, miss or sunk. A hit lets you fire again. The first team to sink the entire enemy fleet wins.",
+        "p3": "Coordinate your shots over voice chat: a smart search grid beats random fire. After a hit, test the four adjacent cells; search in a checkerboard; don't place ships side by side, one sunk ship never reveals a second. Alone at the table, a bot handles the enemy fleet. In drinking mode, a sunk ship calls for a toast. Five to ten minutes in 1v1, twenty to thirty in 4v4."
       }
     },
     "menteur": {
@@ -2149,6 +2253,11 @@
             "body": "The dice get revealed: the loser of the bet drinks based on the gap. Dice are re-rolled and the game goes on."
           }
         ]
+      },
+      "about": {
+        "p1": "Every player shakes their dice hidden under a cup: only they can see them, on their own phone. In turn, you bid on what the whole table holds, “at least four 3s”, and each player must raise, more dice or a higher value, or call out the previous bidder. Don't buy it? Shout “Liar!”.",
+        "p2": "On “Liar!”, every cup lifts. If the bid held, the accuser loses a die; if not, the liar does. The verdict stays on screen a few seconds, then everyone rerolls. A player with no dice left is out, the last one holding dice wins the table. Two variants included: Palifico, a fixed-value round at a single die, and Calza, calling the bid exactly right to win a die back.",
+        "p3": "Your own dice are your only certainty: bid around what you hold. On twenty dice, each face shows up a little over three times on average, and the 1s, which are wild, add to it: expect six or seven dice for a face from 2 to 6 (outside Palifico). In drinking mode the bill climbs: you drink as many sips as dice you have already lost. Two players makes a five-minute duel; at four, five or six the statistics lie best."
       }
     },
     "imposteur": {
@@ -2228,6 +2337,11 @@
             "body": "After the clues, vote to eliminate a suspect. The village wins by unmasking every impostor; the impostors win by surviving until they’re tied with the rest."
           }
         ]
+      },
+      "about": {
+        "p1": "The game draws a pair of close words, beach and pool, coffee and tea. Most of the table gets one of them on their phone; the impostor, or impostors, get the other. The game's real cruelty: nobody knows which side they are on. You see your word, full stop, and that “sun” everyone keeps describing may be yours… or not.",
+        "p2": "In turn, each player types a short clue within 45 seconds; your own word is refused. Then everyone votes in secret for the most suspicious player, 60 seconds. The eliminated player leaves with word and side revealed; on a tie nobody leaves and the survivors go again. The village wins once every impostor is out; the impostors win at three survivors, or once they are no longer a minority.",
+        "p3": "The others' doubt is yours too: a clue too precise unmasks you if you are the intruder, one too vague makes you look guilty. Two impostors from seven players, up to three. In drinking mode, an innocent wrongly voted out drinks three sips. Words come in four languages; bots vote at random, perfect for learning."
       }
     },
     "bluff": {
@@ -2285,6 +2399,11 @@
             "body": "Find the real answer to score points. And if someone votes for YOUR bluff, you score too — the more people you fool, the more you win!"
           }
         ]
+      },
+      "about": {
+        "p1": "A quiz question appears, without its answer choices: often nobody is sure of the right one. So everyone makes one up, as believable as they can. All the answers, the fakes and the real one, are then shuffled by the server, and everyone votes for the one they think is true. Finding the real answer scores; trapping the others with your bluff scores just as well.",
+        "p2": "Every question follows the same beat: 45 seconds to type your fake answer in secret on your phone, 60 seconds to vote among the shuffled proposals, then the reveal. 1,000 points to those who found the real answer, 500 points per fooled player for every bluffer. The host picks 6, 8 or 10 questions, which is twelve to twenty minutes.",
+        "p3": "A good bluff is plausible: copy the style of real answers, precise figures, sober wording. Too funny and it gets spotted; too flat and nobody picks it. And beware the answer that sounds too good, it is often a trap. Questions come from the site's quiz pool, in four languages; bots invent and vote like everyone else, and the alcohol-free mode plays for points."
       }
     },
     "espion": {
@@ -2358,6 +2477,11 @@
             "body": "Meanwhile, the spy can try to guess the location at any time to win instantly. If they're wrong, the crew wins the round!"
           }
         ]
+      },
+      "about": {
+        "p1": "Everyone gets the same secret location on their phone… except one person, who only reads “You are the spy”. By asking each other questions you hunt for the intruder, while the spy tries to work out where you are from the answers. The group wins by unmasking the spy; the spy wins by staying hidden or by guessing the location.",
+        "p2": "Questions are asked out loud over voice chat: “Do you go there often?”, “Is the food good?”. Once convinced, you accuse in public: the table has 15 seconds to back you, a majority triggers the reveal. An unmasked spy can still guess the location; time out with no accusation, the round is theirs. The host sets 3, 5 or 7 minutes per round, and as many rounds to win.",
+        "p3": "All the tension lives in the question: precise enough to test, vague enough not to give the place away. Answer on the spot, hesitation betrays you; as the spy, recycle other players' words. Three players works, from eight the intruder melts into the crowd. Locations come in four languages. Bots can fill a table but do not talk: you need real voices."
       }
     },
     "tabou": {
@@ -2483,6 +2607,11 @@
             "body": "As soon as everyone has guessed, the round ends. Otherwise, time runs out and the word is revealed to everyone."
           }
         ]
+      },
+      "about": {
+        "p1": "Each round, one player gets a secret word and draws it live on their phone, with a fingertip. The others watch the stroke appear in real time, on the TV too if one is connected, and shout out guesses: the fastest score the most, and the artist scores as well when their work gets guessed.",
+        "p2": "The artist has 10 seconds to pick one of three words, then 80 seconds to draw, less if everyone has found it. Guesses fly, the server validates the right answers and keeps score, every attempt is free. Then the pen moves on: one artist per round, so if the table has more players than rounds, some never get to draw. The host picks 6, 8 or 10 rounds; allow ten to fifteen minutes.",
+        "p3": "Draw the concept before the details: a silhouette recognisable in five seconds beats a masterpiece in sixty. Arrows and scene-by-scene panels are your friends. In drinking mode, tradition says an artist whose work nobody guesses drinks, and sometimes deserves it: the game itself only counts points. Words come in four languages; bots can fill a small table but do not draw: Crobard wants real eyes."
       }
     },
     "telephone-dessine": {
@@ -2535,6 +2664,11 @@
             "body": "Once every round is played, each complete chain is revealed from start to finish — get ready to laugh!"
           }
         ]
+      },
+      "about": {
+        "p1": "Telephone, the drawing edition. Every player starts a chain with a sentence of their own, then the chains travel from phone to phone, alternating: you draw the sentence you received, the next player describes your drawing, the next draws that description… until every chain has gone round the table. By the end, nobody recognises anything.",
+        "p2": "Sixty seconds to write your opening sentence, eighty to draw, no text allowed, then you describe what you see in the drawing you received, and so on, as many steps as players. Then comes the reveal, THE moment of the game: every chain is replayed from start to finish. One person scrolls through, and if nobody touches anything the next chain shows after 45 seconds.",
+        "p3": "Officially, nobody wins; unofficially, whoever's chain derailed the most won the evening. A good opening sentence is an action plus an unexpected subject, “a penguin robs a bakery”; draw the action, not just the characters, and describe what you see, not what you assume. No bots, every link is a human. No sips, only fits of laughter."
       }
     },
     "petit-buveur": {
@@ -3288,6 +3422,11 @@
             ]
           }
         }
+      },
+      "about": {
+        "p1": "The party board game: one die, pawns, thirty squares with effects and dares. Everyone moves at the die's pace, and every square has its character: dares to perform, sips given or received, table-wide events, special squares aimed at one particular player. The first to reach the end of the board wins, and online, the win counts towards the site's ranking.",
+        "p2": "On your turn, roll the die: your pawn moves square by square and the square reveals itself. Apply its effect, dare, swap, event… The table judges whether the dare is done, nobody has to hold the rulebook. Some spots trigger mini-moments: wheel of fortune, coin toss, die of shame. The host sets the difficulty in the lobby, from easy to extreme, and voice chat carries the dares.",
+        "p3": "Refused dares cost more than attempted ones, and some squares let you target opponents' pawns: keep an eye on them. A player who leaves is replaced by a bot after three minutes. Up to 99 online in theory; beyond eight, you wait a long time for your turn, so open two tables. The Little Drinker also plays locally, on a single phone."
       }
     },
     "quiz": {
@@ -3340,6 +3479,11 @@
             "body": "After all the questions, the final ranking appears — and whoever’s last finishes their drink."
           }
         ]
+      },
+      "about": {
+        "p1": "A question and four answers appear at the same moment on every phone, fifteen seconds on the clock. Everyone buzzes one answer, a single one, timestamped by the server: no cheating on speed. The faster you answer correctly, the more you score. Hundreds of questions, general knowledge, sport, music, film and TV, food and drink, and party questions, in three difficulty levels and four languages.",
+        "p2": "Right answer: 100 points, plus a speed bonus of up to 100 points that melts away over the fifteen seconds. Wrong answer, or no answer: zero. The reveal shows the right answer and the standings for six seconds, then on to the next, 10, 15 or 20 questions as the host decides, four to eight minutes. The best total earns its spot in the site's ranking.",
+        "p3": "A quick hunch often beats slow thinking, but buzzing at random does not pay off over the long run. In drinking mode, every wrong answer costs two sips, not answering counts as a miss, and the last one on the podium finishes their glass. In alcohol-free mode the game is called Quiz Party, same questions, no counter. Bots answer and get things wrong like players."
       }
     },
     "loup-garou": {
@@ -3497,6 +3641,11 @@
             "body": "The village wins by eliminating every wolf; the wolves win once they equal (or outnumber) the rest of the village. The dead become ghosts 👻 and watch the rest of the game."
           }
         ]
+      },
+      "about": {
+        "p1": "The great party classic, with no narrator needed: the app deals the secret roles to every phone, wakes each role in turn during the night, announces the dead at dawn and counts the votes. The wolves strike at night, the village debates and votes by day, over voice chat or the written chat. Nobody has to sit out to run the table.",
+        "p2": "At night, the Bodyguard protects, the Seer probes one player, the Raven marks, the wolves pick their victim in their private chat, the Witch uses her potions. At dawn the dead are announced, role revealed. On the first day the village elects a mayor whose vote counts double, then debates (the host sets one to five minutes) and votes. A tie? Revote among the tied. And night falls again.",
+        "p3": "The Seer is always in play; Witch, Hunter, Bodyguard, Raven and Elder rotate from one game to the next. One wolf under six players, two from six to ten, three at eleven or twelve. The village wins when no wolf is left breathing; the wolves win once they equal the other survivors. Bots accuse and defend themselves too. Allow fifteen to thirty minutes at six to eight players."
       }
     },
     "sans-filtre": {
@@ -3564,6 +3713,11 @@
       "lobby": {
         "roundsCount": "Number of rounds",
         "rounds": "rounds"
+      },
+      "about": {
+        "p1": "A black fill-in-the-blank card appears for the whole table: “Tonight, everything went sideways because of ___.” Every player except the round's judge picks, from a hand of seven answer cards, the one that completes the sentence in the funniest, or most awkward, way. Answers are anonymous: nobody knows who played what until the crowning.",
+        "p2": "Sixty seconds to play your card. The judge, a role that rotates every round, uncovers the answers, reads them out loud over voice chat, which is where the table falls apart laughing, then crowns a favourite. The author is revealed and earns a crown; everyone draws back up to seven cards. The host picks 5, 8 or 12 rounds, and the most crowned player wins the game.",
+        "p3": "Playing well is less about being funny in the abstract than about aiming for the judge's sense of humour. With four, anonymity barely holds, everyone's style shows fast; six to ten is cruising speed. The cards are in French, cheeky by innuendo, never degrading. In Soft mode only the tame cards are dealt. Bots play cards; once the table has two humans they are never judges — alone against them, they join the rotation."
       }
     },
     "mots-codes": {
@@ -3630,6 +3784,11 @@
             "body": "One tile hides the assassin (card back): tapping it loses instantly. First team to reveal all their words wins!"
           }
         ]
+      },
+      "about": {
+        "p1": "A grid of 25 words, two teams, Gold and Red, and one Spymaster per side, the only one who sees the colours: nine words for the team that starts, eight for the other, seven neutrals and one assassin. For everyone else the grid stays cream until something is revealed. The Spymaster has to get several words guessed with a single clue.",
+        "p2": "On their turn, the Spymaster has 90 seconds to give a clue, one word and a number, “VINEYARD · 3”, spoken over voice chat and locked into the app. Their team debates, then taps tiles one at a time, two minutes: their colour, keep going, up to the clue plus one; neutral or enemy colour, the hand passes; the assassin, instant defeat. The first team with all its words revealed wins.",
+        "p3": "The salt of the game is the team debate while the Spymaster suffers in silence, and the double-meaning words that link three tiles… or lead straight to the assassin. Four players minimum, two per team; the first of each side in the lobby becomes Spymaster. No bots at launch, a bot cannot give a clue. No sips at all, only the team's honour. Word banks come in four languages."
       }
     },
     "dilemmes": {
@@ -3693,6 +3852,11 @@
             "body": "In Apéro mode, the minority side drinks. Then next card — the debates are the game."
           }
         ]
+      },
+      "about": {
+        "p1": "Dilemmes is the night's icebreaker: “Would you rather…”, “Never have I ever…” and “Who at the table…”, all voted in secret from your phone. Nobody sees a thing until everyone has voted, then it all shows at once: the sides, the percentages, and who voted for what. The minority side drinks.",
+        "p2": "The host picks 10, 15 or 20 cards. Each card gives you 30 seconds to vote: two options for “Would you rather”, “Done it” or “Never in my life” for “Never have I ever”, and one player (never yourself) for “Who at the table”. The reveal drops as soon as everyone has voted, then you argue. After the last card the game ends, no winner, no ranking.",
+        "p3": "Dilemmes exists for the conversations it starts, not for the score: finding out who has actually slept at work beats any podium. The more of you there are, the better the reveals; from eight players the percentages really speak. The cards are written in French. In Soft mode you play the same tame cards without sips. Allow five to fifteen minutes."
       }
     },
     "petit-bac": {
@@ -3773,6 +3937,11 @@
             "body": "Unique answer: 2 pts. Duplicate: 1 pt. Empty or wrong letter: 0. Dubious answer? Contest it — majority rules."
           }
         ]
+      },
+      "about": {
+        "p1": "One letter, drawn while skipping impossible ones like K, W or X, and five categories out of twenty-four, First name, Animal, Drink, Fictional character, Monument… different every round. Everyone writes at the same time, in secret, on their own phone: no more cheat squinting at the neighbour's sheet. The first to genuinely fill their five boxes yells STOP.",
+        "p2": "Two minutes of writing per round, but STOP freezes the table: five answers must start with the right letter and the round has run twenty seconds, checked by the server. Automatic scoring: unique answer 2 points, duplicate 1 point, empty box 0. Then 90 seconds of reading and contesting: if a majority of the others contest too, the answer drops to zero. The host picks 3, 5 or 8 rounds.",
+        "p3": "“Zorglub, is that a first name?” The whole game happens at the reveal, when someone drops a fruit starting with U without blinking and the table rules, no referee. Unique-or-duplicate scoring gets really funny from four players. No bots: Petit Bac runs on real typed answers. No sips, only points, and the categories exist in the site's four languages."
       }
     },
     "president": {
@@ -3841,6 +4010,11 @@
             "body": "First out = President, and nobody plays after them: the trick is burnt. Last = Trou. Between rounds, the Trou gives their 2 best cards to the President, the Vice-Trou their best to the Vice-President."
           }
         ]
+      },
+      "about": {
+        "p1": "All 54 cards, jokers included, are dealt, and each player sees only their own hand, on their phone. The first player lays a single card, a pair, three or four of a kind; the next ones lay as many cards, of an equal or higher rank, or pass. The order runs from the 3, the weakest, up to the ace, then the 2, the top card: it wins the trick on the spot.",
+        "p2": "The first to empty their hand becomes President, the last one the Trou, with the Vice-President and the Vice-Trou in between. Before the next round the swaps happen by themselves: the Trou hands their two best cards to the President, who gives back their two worst. The house rules are on: “… or nothing” after an equal play, closing a four of a kind out of turn, chameleon jokers. The host picks 1, 3 or 5 rounds, with 30 seconds per turn.",
+        "p3": "Keep your 2s to cut at the right moment, and don't break three of a kind for a single card. With four players the hands are long and the swaps weigh heavily; with seven or eight the rounds fly by and a well-kept joker decides the crown. You need four players: bots fill the table, each with its own temper. In drinking mode the Trou drinks; in alcohol-free mode they only lose their pride."
       }
     }
   },
@@ -3941,7 +4115,9 @@
       "loadingMore": "Loading…",
       "periodAll": "All-time",
       "periodWeek": "This week",
-      "periodWeekHint": "Counts games finished since Monday 00:00 (Paris time). Resets every Monday — for bragging rights only, no prize."
+      "periodWeekHint": "Counts games finished since Monday 00:00 (Paris time). Resets every Monday — for bragging rights only, no prize.",
+      "hiddenName": "Ranked player",
+      "loginForNames": "Log in to see nicknames, your position and this week's leaderboard."
     }
   },
   "feedback": {
@@ -4820,7 +4996,9 @@
       "ctaPlay": "Open a table with friends",
       "ctaSolo": "Play solo with bots",
       "trust": "100% free · nothing to install · no sign-up — pick a nickname and the table is yours",
-      "live": "{count, plural, one {# player online right now} other {# players online right now}}"
+      "live": "{count, plural, one {# player online right now} other {# players online right now}}",
+      "launchesWeek": "{count, plural, one {# game started this week} other {# games started this week}}",
+      "launchesTotal": "Over {count} games started since we opened"
     },
     "preview": {
       "title": "What it looks like",
@@ -4881,7 +5059,43 @@
     "finalCta": {
       "title": "The table is open.",
       "cta": "Play now"
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "q1": "Is Le Pillaveur free?",
+      "a1": "Yes, entirely: every game, locally or online, with no purchase or subscription. To play online, a nickname is enough — the guest account is free, and an account with an email keeps your players and stats from one night to the next.",
+      "q2": "Do I need to install anything?",
+      "a2": "No: everything runs in the browser, on mobile and on PC alike. For full screen with an icon, add the site to your home screen from the app page; the Android and iOS apps are in the works.",
+      "q3": "Can we play without alcohol?",
+      "a3": "Yes: in the games hub, the alcohol-free setting swaps sips for dares on most online games — Werewolf, quiz, drawing, bluffing… Purple, 1220 and The Little Drinker stay in drinking mode, like the dice games played on a single phone.",
+      "q4": "Can we play remotely?",
+      "a4": "Yes: online, everyone plays on their own phone, wherever they are. The host opens a table and shares a code, a link or a QR; voice chat is built in, and TV mode shows the game large on a screen.",
+      "q5": "How many players do you need?",
+      "a5": "From two, and up to sixteen online depending on the game (twelve for Werewolf, the whole party for The Little Drinker). On a single phone passed around, no limit. And on a dozen games, bots fill the table: you can play alone."
     }
+  },
+  "rules": {
+    "meta": {
+      "title": "Party game rules",
+      "description": "Rules of Le Pillaveur's party games: Werewolf, Impostor, President, Categories… Player counts, how to play and FAQ. Free, online, nothing to install."
+    },
+    "kicker": "Cards on the table",
+    "title": "Party game rules",
+    "intro": "Every Le Pillaveur online game explained in two minutes: the idea, how a round goes, how you win, the sips when there are any, and the questions we get asked most. The player count shown is the online table's — and when a game can be played solo with bots, it says so.",
+    "count": "{count, plural, one {# game explained} other {# games explained}}",
+    "players": "{min} to {max} players",
+    "botsBadge": "Playable with bots",
+    "readRules": "Read the rules",
+    "allGames": "See all games",
+    "breadcrumb": {
+      "home": "Home",
+      "rules": "Rules"
+    },
+    "backToRules": "All the rules",
+    "showcaseFacts": "free · nothing to install",
+    "voiceChat": "voice chat",
+    "playNow": "Play now — it's free",
+    "otherRules": "Rules of the other games"
   },
   "tryBots": {
     "play": "Play now",

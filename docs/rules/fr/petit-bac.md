@@ -1,6 +1,6 @@
 # Règles du Petit Bac en ligne — lettre, STOP et comptage
 
-Le **Petit Bac** (ou baccalauréat) du Pillaveur : une lettre, cinq catégories,
+Le **Petit Bac** (ou baccalauréat) du Pillaveur : une lettre, cinq catégories,
 et le premier qui remplit sa copie crie **STOP**. Gratuit, de 2 à 16 joueurs,
 chacun sur son téléphone — plus de tricheur qui louche sur la feuille du
 voisin.
@@ -12,33 +12,33 @@ voisin.
    Personnage de fiction, Monument… tirées parmi vingt-quatre, différentes à
    chaque manche.
 2. Tout le monde écrit **en même temps**, en secret, sur son téléphone.
-3. Le premier joueur qui a rempli ses cinq cases **pour de bon** crie **STOP** :
+3. Le premier joueur qui a rempli ses cinq cases **pour de bon** crie **STOP** :
    la table est gelée, les autres rendent leur copie telle quelle. Le STOP a
    deux conditions, vérifiées par le serveur — les cinq réponses doivent
    **commencer par la bonne lettre** et faire au moins deux caractères, et la
-   manche doit avoir tourné **au moins 20 secondes** : pas de STOP à l'instant
-   zéro avec cinq « aaaaa ».
+   manche doit avoir tourné **au moins 20 secondes** : pas de STOP à l'instant
+   zéro avec cinq « aaaaa ».
 
 ## Le comptage (automatique)
 
-- Réponse **unique** et valable : **2 points**.
+- Réponse **unique** et valable : **2 points**.
 - Réponse **en doublon** (deux joueurs ont écrit la même chose, accents et
-  majuscules ignorés) : **1 point** chacun.
-- Case **vide** ou réponse qui ne commence pas par la bonne lettre :
+  majuscules ignorés) : **1 point** chacun.
+- Case **vide** ou réponse qui ne commence pas par la bonne lettre :
   **0 point**.
 
 ## La contestation
 
-« *Zorglub*, c'est un prénom ça ? » — à la révélation, chaque joueur peut
+« *Zorglub*, c'est un prénom ça ? » — à la révélation, chaque joueur peut
 **contester** une réponse qu'il juge inventée. Si la **majorité des autres
 joueurs** conteste aussi, la réponse est invalidée et passe à 0. Pas
-d'arbitre : la table tranche.
+d'arbitre : la table tranche.
 
-**Il faut toujours au moins deux voix** : sur une table de deux (ou quand il ne
+**Il faut toujours au moins deux voix** : sur une table de deux (ou quand il ne
 reste qu'un seul adversaire en jeu), personne ne peut rayer seul la copie de
 l'autre — le bouton de contestation est alors simplement indisponible.
 
-La grille de comptage reste affichée le temps que tout le monde la lise : le
+La grille de comptage reste affichée le temps que tout le monde la lise : le
 premier impatient ne peut pas enchaîner la manche suivante avant les autres.
 
 ## Déroulé d'une partie
@@ -53,13 +53,48 @@ premier impatient ne peut pas enchaîner la manche suivante avant les autres.
 
 - **2 joueurs minimum**, jusqu'à 16 — le comptage doublon/unique devient
   vraiment drôle à partir de 4.
-- Pas de bots : le Petit Bac repose sur de vraies réponses tapées (un joueur
+- Pas de bots : le Petit Bac repose sur de vraies réponses tapées (un joueur
   qui quitte est remplacé par une copie blanche).
 - Le mode TV affiche la lettre en géant, la progression des copies, puis la
   grille de comptage.
 - Jouable dans les quatre langues du site (catégories traduites).
 
+## Questions fréquentes
+
+### Peut-on jouer sans meneur ?
+
+Oui. La lettre est tirée par le jeu, le STOP vérifié par le serveur, le
+comptage automatique, et les contestations se tranchent à la majorité. Personne
+ne relit les copies à voix haute.
+
+### Peut-on jouer à distance ?
+
+Oui, et seulement en ligne : chacun remplit sa copie sur son téléphone, la
+révélation tombe en même temps chez tout le monde.
+
+### Peut-on jouer sans alcool ?
+
+Oui — il n'y a aucune gorgée au Petit Bac, seulement des points. Le jeu fait
+partie du mode sans alcool du site.
+
+### Peut-on jouer seul, avec des bots ?
+
+Non : pas de bots, il faut deux joueurs au minimum. Un bot ne sait pas trouver
+un « fruit en U ».
+
+### Combien de temps dure une partie ?
+
+2 minutes d'écriture au plus par manche (souvent moins, un STOP tombe vite),
+puis 90 secondes de lecture et de contestation. Avec 3, 5 ou 8 manches, comptez
+10 à 30 minutes.
+
+### À 2 joueurs, ça marche ?
+
+Oui, mais sans contestation possible (il faut deux voix pour rayer une
+réponse) : chacun est sur l'honneur. Le comptage unique/doublon devient drôle
+à partir de 4, et la table tient jusqu'à 16.
+
 ## Jouer au Petit Bac en ligne
 
 Créez une table sur Le Pillaveur, partagez le code ou le QR, et découvrez qui
-sort un « fruit en Q » sans sourciller.
+sort un « fruit en U » sans sourciller.

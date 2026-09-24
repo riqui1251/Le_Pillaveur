@@ -5,13 +5,18 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { LOCAL_PLAY_COOKIE, SESSION_COOKIE } from '@/lib/auth-cookies'
 import { LandingPage } from '@/components/landing/LandingPage'
 import { GAMES } from '@/lib/games'
+import { buildAlternates, buildOpenGraphLocale, siteOgImage } from '@/lib/seo/alternates'
 
 /**
- * Description de la vitrine : le nombre de jeux est DÉRIVÉ du catalogue, il
+ * Metadata de la vitrine. Le nombre de jeux est DÉRIVÉ du catalogue, il
  * n'est plus recopié à la main dans les 4 langues (les metadata annonçaient
- * 21 jeux quand la grille en affichait 22). Seule la `description` est
- * redéfinie ici — le reste (titre, OG, Twitter) est hérité du layout, qui
- * garde une formulation sans chiffre pour ne jamais se contredire.
+ * 21 jeux quand la grille en affichait 22) — il ne peut donc pas se
+ * contredire, et sert aussi aux aperçus de partage.
+ *
+ * Canonical + hreflang (la vitrine n'en avait pas : quatre URL pour un même
+ * contenu, sans lien entre elles) et carte de partage de marque. `openGraph`
+ * ne se FUSIONNE pas avec celui du layout — Next remplace l'objet entier dès
+ * qu'une page le pose — d'où titre, langue et url redonnés ici en entier.
  */
 export async function generateMetadata({
   params,
@@ -20,8 +25,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'metadata' })
+  const title = t('titleFull')
+  const description = t('descriptionCount', { count: GAMES.filter((g) => !g.hidden).length })
+  const ogImage = siteOgImage(locale)
   return {
-    description: t('descriptionCount', { count: GAMES.filter((g) => !g.hidden).length }),
+    description,
+    alternates: buildAlternates('', locale),
+    openGraph: {
+      type: 'website',
+      siteName: t('title'),
+      ...buildOpenGraphLocale(locale),
+      title,
+      description,
+      url: `/${locale}`,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
   }
 }
 

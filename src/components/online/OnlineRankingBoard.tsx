@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Beer, ChevronDown, Trophy } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -65,7 +65,12 @@ type RankingBoard = {
   totalPlayers: number
 }
 
-type OverviewResponse = {
+/**
+ * La vue d'ensemble telle que /api/online/rankings/overview la rend — et
+ * telle que la page serveur la passe en `initialOverview` (pseudos masqués,
+ * voir src/app/[locale]/classement/page.tsx).
+ */
+export type OverviewResponse = {
   general: RankingBoard
   perGame: RankingBoard[]
   minGamesForRate: number
@@ -134,6 +139,7 @@ function BoardCard({
   minGames,
   viewerId,
   highlight,
+  locked = false,
 }: {
   icon: React.ReactNode
   title: string
@@ -145,6 +151,8 @@ function BoardCard({
   minGames: number
   viewerId: string | undefined
   highlight?: boolean
+  /** Sans session : le classement complet (API sous session) n'est pas proposé. */
+  locked?: boolean
 }) {
   const t = useTranslations('ranking.online')
   const [expanded, setExpanded] = useState(false)
@@ -220,7 +228,7 @@ function BoardCard({
               </>
             )}
           </div>
-          {canExpand && (
+          {canExpand && !locked && (
             <button
               onClick={() => void toggleExpanded()}
               disabled={loadingFull}
@@ -242,19 +250,32 @@ function BoardCard({
   )
 }
 
-export function OnlineRankingBoard() {
+export function OnlineRankingBoard({
+  initialOverview = null,
+}: {
+  /**
+   * L'aperçu rendu par la page serveur (période générale, pseudos masqués) :
+   * affiché dès le premier rendu — dans le HTML — au lieu de la roue
+   * d'attente, puis remplacé par la réponse personnalisée du fetch.
+   */
+  initialOverview?: OverviewResponse | null
+}) {
   const t = useTranslations('ranking.online')
   const { user } = useAuth()
   const games = useLocalizedGames()
-  const [data, setData] = useState<OverviewResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<OverviewResponse | null>(initialOverview)
+  const [loading, setLoading] = useState(initialOverview === null)
   const [needsLogin, setNeedsLogin] = useState(false)
   const [filter, setFilter] = useState<'all' | (typeof RANKED_GAME_IDS)[number]>('all')
   const [period, setPeriod] = useState<RankingPeriod>('all')
+  // Vrai tant que l'écran montre l'aperçu serveur : la première réponse le
+  // remplace SANS passer par la roue d'attente — il est déjà là, autant le
+  // laisser. Un changement de période, lui, repasse par la roue comme avant.
+  const snapshotRef = useRef(initialOverview !== null)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    if (!snapshotRef.current) setLoading(true)
     void (async () => {
       try {
         const res = await fetch(`/api/online/rankings/overview?period=${period}`, {
@@ -270,7 +291,10 @@ export function OnlineRankingBoard() {
       } catch {
         // Réseau : on reste sur l'état vide.
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          snapshotRef.current = false
+          setLoading(false)
+        }
       }
     })()
     return () => {
@@ -278,7 +302,10 @@ export function OnlineRankingBoard() {
     }
   }, [period])
 
-  if (needsLogin) {
+  // Sans session ET sans aperçu serveur : rien à montrer que l'invitation.
+  // Avec l'aperçu, le visiteur garde les podiums (rangs et chiffres) ; seuls
+  // les pseudos et sa propre ligne attendent la connexion — voir plus bas.
+  if (needsLogin && !data) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-10 text-center text-sm text-white/50">
         {t('loginRequired')}
@@ -290,15 +317,27 @@ export function OnlineRankingBoard() {
   const noneRecorded = !data || data.general.totalPlayers === 0
 
   // Onglets de période — toujours visibles (même sur un hebdo vide, pour
-  // pouvoir revenir au général).
-  const periodTabs = (
+  // pouvoir revenir au général). Sans session, ils cèdent la place au mot
+  // qui dit ce que la connexion débloque : l'API répondrait 401 au hebdo.
+  const periodTabs = needsLogin ? (
+    <p className="rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-3 py-2 text-xs leading-snug text-amber-100/85">
+      {t('loginForNames')}
+    </p>
+  ) : (
     <div className="inline-flex rounded-full border border-gold/25 bg-white/[0.03] p-0.5">
       {(['all', 'week'] as const).map((p) => (
         <button
           key={p}
           type="button"
           aria-pressed={period === p}
-          onClick={() => setPeriod(p)}
+          onClick={() => {
+            // Un changement de période quitte l'aperçu serveur, même si sa
+            // première réponse n'est jamais arrivée (effet annulé avant) :
+            // sans ça, la roue ne tournait pas et l'aperçu « général »
+            // restait sous l'onglet « Cette semaine » jusqu'à la réponse.
+            if (p !== period) snapshotRef.current = false
+            setPeriod(p)
+          }}
           className={cn(
             'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
@@ -411,6 +450,7 @@ export function OnlineRankingBoard() {
           minGames={minGames}
           viewerId={user?.id}
           highlight
+          locked={needsLogin}
         />
       )}
 
@@ -430,6 +470,7 @@ export function OnlineRankingBoard() {
               youLabel={t('you')}
               minGames={minGames}
               viewerId={user?.id}
+              locked={needsLogin}
             />
           )
         })}

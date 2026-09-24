@@ -20,6 +20,7 @@ type StaticPageKey =
   | 'achievements'
   | 'stats'
   | 'application'
+  | 'regles'
 
 const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
   '/joueurs': 'joueurs',
@@ -30,7 +31,17 @@ const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
   '/achievements': 'achievements',
   '/stats': 'stats',
   '/application': 'application',
+  '/regles': 'regles',
 }
+
+/**
+ * Sections dont les sous-pages gardent le titre de la section : un article
+ * /regles/<id> appartient à l'index des règles (sans ça, le header affichait
+ * le titre de marque et « Jeux à boire entre amis »).
+ */
+const SECTION_PREFIXES: ReadonlyArray<readonly [prefix: string, key: StaticPageKey]> = [
+  ['/regles/', 'regles'],
+]
 
 /** Resolve page title/subtitle for the navbar from a pathname (with or without locale prefix). */
 export function usePageMeta(pathname: string): PageMeta {
@@ -41,7 +52,8 @@ export function usePageMeta(pathname: string): PageMeta {
 
   return useMemo(() => {
     const path = stripLocalePrefix(pathname)
-    const pageKey = STATIC_PAGE_KEYS[path]
+    const pageKey =
+      STATIC_PAGE_KEYS[path] ?? SECTION_PREFIXES.find(([prefix]) => path.startsWith(prefix))?.[1]
 
     if (pageKey) {
       // « Connexion et profil » n'a de sens que déconnecté.

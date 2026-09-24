@@ -1,8 +1,11 @@
 {
+  "id": "/",
   "name": "Le Pillaveur — La maison des jeux de soirée",
   "short_name": "Pillaveur",
   "description": "Party games multijoueurs entre amis : Loup-Garou, quiz, dessin… du mobile à la TV.",
-  "start_url": "/",
+  "lang": "fr",
+  "start_url": "/jeux",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0A2C22",
   "theme_color": "#0E3B2E",
@@ -56,5 +59,33 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Jeux",
+      "short_name": "Jeux",
+      "description": "Choisir un jeu",
+      "url": "/jeux",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Joueurs",
+      "short_name": "Joueurs",
+      "description": "Gérer les joueurs",
+      "url": "/joueurs",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
-} 
+}

@@ -34,6 +34,16 @@ export type GameMeta = {
    */
   minPlayers?: number;
   maxPlayers?: number;
+  /**
+   * Bornes de joueurs EN LOCAL (un téléphone qui tourne autour de la table),
+   * pour les jeux sans version en ligne : le minimum est celui que la page du
+   * jeu exige avant de lancer (`selectedPlayers.length >= n`). Pas de
+   * `localMaxPlayers` tant qu'aucun moteur local n'impose de plafond — la
+   * sélection de joueurs n'en a pas, et Pyramide n'est borné que par son
+   * paquet en mode classique. Lu par src/lib/collections.ts (« à 2 joueurs »).
+   */
+  localMinPlayers?: number;
+  localMaxPlayers?: number;
   /** L'hôte peut activer « compléter avec des bots » au lobby (lancer sous le minimum). */
   botsFillable?: boolean;
   /** Proposé en mode Soft (sans gorgées) — sous-ensemble des jeux onlineReady. */
@@ -60,6 +70,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#0ea5e9',
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
+    localMinPlayers: 2,
   },
   {
     id: 'pmu',
@@ -73,6 +84,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#c026d3',
     colorTo: '#6d28d9',
     fallbackColor: '#6366f1',
+    localMinPlayers: 2,
   },
   {
     id: 'petit-buveur',
@@ -198,6 +210,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#f43f5e',
     colorTo: '#d946ef',
     fallbackColor: '#f97316',
+    localMinPlayers: 2,
   },
   {
     id: 'purple',
@@ -228,6 +241,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#d97706',
     colorTo: '#facc15',
     fallbackColor: '#eab308',
+    localMinPlayers: 2,
   },
   {
     id: 'plinko',
@@ -241,6 +255,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#10b981',
     colorTo: '#a3e635',
     fallbackColor: '#22c55e',
+    localMinPlayers: 2,
   },
   {
     id: 'roue-des-gorgees',

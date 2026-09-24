@@ -11,6 +11,7 @@ import { Link } from '@/i18n/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
+import { GameShowcase } from '@/components/online/GameShowcase'
 
 // Les deux moteurs — le jeu local (un téléphone qui tourne autour de la
 // table) et sa version en ligne (lobby, briefing, bibliothèque d'animation) —
@@ -28,19 +29,31 @@ const Game = dynamic(() => import('./components/game'), {
 
 export type GameMode = 'standard' | 'traversee'
 
+/** Dégradé du jeu sur le bouton principal de la vitrine en attente — celui de « Commencer ». */
+const ACCENT =
+  'w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-5 text-base font-bold text-white shadow-lg hover:from-violet-500 hover:to-purple-600'
+
 export default function PurplePage() {
   const t = useTranslations('games.purple')
   const tCatalog = useTranslations('games.catalog')
   const tPlayers = useTranslations('players')
   const tCommon = useTranslations('common')
   const tNav = useTranslations('games.1220')
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const { players, updatePlayerStats } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
   const [gameStarted, setGameStarted] = useState(false)
 
   const selectedPlayers = players.filter(p => selectedIds.includes(p.id))
   const canStart = selectedPlayers.length >= 2
+
+  // Compte pas encore connu : la vitrine du jeu, bouton principal désactivé —
+  // c'est le HTML rendu au build, celui que lit Googlebot (l'écran local, lui,
+  // attend ses joueurs). Un compte en ligne ne voit plus l'écran local le
+  // temps que la session réponde.
+  if (loading) {
+    return <GameShowcase gameId="purple" accentClassName={ACCENT} pending />
+  }
 
   // Mode en ligne : lobby + partie serveur-autoritaire (indépendant du flux local).
   if (user?.playMode === 'online') {

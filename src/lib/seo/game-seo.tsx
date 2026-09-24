@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { GAMES } from '@/lib/games'
-import { locales } from '@/i18n/routing'
+import { buildAlternates, pageOpenGraph } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
 
 /**
@@ -32,18 +32,14 @@ export async function buildGameMetadata(locale: string, gameId: string): Promise
   const title = t(`${gameId}.title`)
   const description = t(`${gameId}.description`)
   const path = `/games/${gameId}`
-  const languages: Record<string, string> = { 'x-default': `/fr${path}` }
-  for (const l of locales) {
-    languages[l] = `/${l}${path}`
-  }
   // Carte de partage peinte pour CE jeu, dans la langue du lien.
   const ogImage = `/api/og?type=game&game=${encodeURIComponent(gameId)}&locale=${locale}`
   const images = [{ url: ogImage, width: 1200, height: 630, alt: title }]
   return {
     title: { absolute: title },
     description,
-    alternates: { canonical: `/${locale}${path}`, languages },
-    openGraph: { title, description, url: `/${locale}${path}`, images },
+    alternates: buildAlternates(path, locale),
+    openGraph: pageOpenGraph(locale, { title, description, url: `/${locale}${path}`, images }),
     twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
   }
 }

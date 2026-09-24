@@ -17,6 +17,8 @@ import { requestAgeVerification } from '@/components/legal/AgeGate'
 import { useRequireSelectedPlayers } from '@/hooks/useRequireSelectedPlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
+import { Link } from '@/i18n/navigation'
+import { COLLECTION_SLUGS } from '@/lib/collections'
 import { GAMES } from '@/lib/games'
 import { cn } from '@/lib/utils'
 
@@ -32,6 +34,7 @@ import { cn } from '@/lib/utils'
 export default function GamesHubPage() {
   const t = useTranslations('hub.jeux')
   const tOnline = useTranslations('hub.jeuxOnline')
+  const tCollections = useTranslations('hub.collections')
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const { joinRoom, loading: joining } = useOnlineRoom()
@@ -90,6 +93,28 @@ export default function GamesHubPage() {
               {isOnline ? (user.onlineDisplayName ?? user.displayName) : user.displayName}
             </p>
           )}
+          {/* Quatre portes par intention (« à 2 », « sans alcool »…) : des
+              pages serveur indexables (/jeux/<collection>), liées d'ici pour
+              le maillage — et pour le joueur qui sait déjà ce qu'il cherche.
+              Sans condition : elles partent dans le HTML, session ou pas.
+              Sans préchargement, comme les cartes de la grille (GameCard) :
+              une page statique se précharge ENTIÈRE (≈ 30 Ko compressés par
+              collection), et ces puces sont toujours à l'écran. */}
+          <nav
+            aria-label={tCollections('chipsLabel')}
+            className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {COLLECTION_SLUGS.map((slug) => (
+              <Link
+                key={slug}
+                href={`/jeux/${slug}`}
+                prefetch={false}
+                className="shrink-0 whitespace-nowrap rounded-full border border-gold/25 px-3 py-1.5 text-xs font-semibold text-cream/70 transition-colors hover:border-gold/50 hover:text-cream"
+              >
+                {tCollections(`${slug}.chip`)}
+              </Link>
+            ))}
+          </nav>
         </div>
       }
     >
