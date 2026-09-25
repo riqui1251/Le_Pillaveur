@@ -265,13 +265,66 @@ echo "=== Prisma migrate deploy ==="
 # ici : verifiees ENREGISTREES ET TERMINEES dans _prisma_migrations de prod le
 # 21/09/2026, elles etaient sondees puis sautees a chaque deploiement, au prix
 # de six conteneurs et d'autant d'`apk add` par le reseau.
-docker run --rm \
-  -v "$DB_VOLUME:/app/prisma" \
-  -v "$APP_DIR/prisma/migrations:/app/prisma/migrations:ro" \
-  -v "$APP_DIR/prisma/schema.prisma:/app/prisma/schema.prisma:ro" \
-  -e DATABASE_URL=file:/app/prisma/prod.db \
-  le-pillaveur:builder \
-  npx prisma migrate deploy
+#
+# /!\ LE SITE DOIT ETRE ARRETE PENDANT UNE MIGRATION (base en WAL). Le CLI
+# Prisma pose `locking_mode=EXCLUSIVE` sur SQLite avant de migrer. En WAL,
+# chaque connexion OUVERTE garde un verrou partage sur prod.db tant qu'elle
+# vit — celle de l'application aussi, en permanence : le verrou exclusif est
+# donc impossible et le CLI rend « database is locked » apres 5 s, a coup sur
+# (vecu le 25/09/2026, trois essais sur trois ; le deploiement precedent
+# n'etait passe que parce que l'ancienne application tournait encore en
+# journal classique, qui ne garde aucun verrou entre deux requetes).
+# On ne coupe donc le site QUE s'il y a quelque chose a migrer : la liste des
+# migrations deja terminees est lue par sqlite3 (qui, lui, cohabite avec
+# l'application) et comparee aux dossiers de prisma/migrations.
+MIGRATIONS_APPLIED=$(mktemp)
+if [ "$DB_PROBE" -eq 0 ]; then
+  # Un echec de lecture (table absente, base illisible) laisse la liste vide :
+  # tout parait alors « en attente » et l'on passe par le chemin prudent
+  # (site arrete, CLI Prisma qui tranchera lui-meme).
+  docker run --rm -v "$DB_VOLUME:/data" "$SQLITE_IMAGE" \
+    su-exec "$DB_UID:$DB_UID" sqlite3 -cmd ".timeout 15000" /data/prod.db \
+    "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL;" \
+    > "$MIGRATIONS_APPLIED" 2>/dev/null || true
+fi
+MIGRATIONS_PENDING=""
+for migration_dir in "$APP_DIR"/prisma/migrations/*/; do
+  [ -f "${migration_dir}migration.sql" ] || continue
+  migration_name=$(basename "$migration_dir")
+  grep -qxF "$migration_name" "$MIGRATIONS_APPLIED" || MIGRATIONS_PENDING="$MIGRATIONS_PENDING $migration_name"
+done
+rm -f "$MIGRATIONS_APPLIED"
+
+# Lu plus bas par la sonde `docker create` : un echec a ce stade ne doit pas
+# laisser a terre un site qu'on a arrete pour migrer.
+APP_STOPPED_FOR_MIGRATION=0
+if [ -z "$MIGRATIONS_PENDING" ]; then
+  echo "Aucune migration en attente : base deja a jour, le site reste en ligne"
+else
+  echo "Migrations en attente :$MIGRATIONS_PENDING"
+  if [ -n "$(docker ps -q --filter 'name=^le-pillaveur$')" ]; then
+    echo "Arret du site le temps de la migration (verrou exclusif du CLI Prisma)"
+    docker stop -t 20 le-pillaveur >/dev/null
+    APP_STOPPED_FOR_MIGRATION=1
+  fi
+  if ! docker run --rm \
+    -v "$DB_VOLUME:/app/prisma" \
+    -v "$APP_DIR/prisma/migrations:/app/prisma/migrations:ro" \
+    -v "$APP_DIR/prisma/schema.prisma:/app/prisma/schema.prisma:ro" \
+    -e DATABASE_URL=file:/app/prisma/prod.db \
+    le-pillaveur:builder \
+    npx prisma migrate deploy; then
+    echo "ECHEC DEPLOY : prisma migrate deploy a echoue (message ci-dessus)."
+    # Le site ne reste pas a terre : l'ancien conteneur (ancien code) repart.
+    # Une migration SQLite a moitie passee peut laisser un schema que l'ancien
+    # code ne connait pas : l'instantane pris juste avant est le retour sur.
+    if [ "$APP_STOPPED_FOR_MIGRATION" = 1 ]; then
+      docker start le-pillaveur >/dev/null && echo "Ancien conteneur relance (ancien code)."
+    fi
+    [ -n "$SNAPSHOT" ] && echo "Instantane d'avant migration : $SNAPSHOT (scripts/prod-db-restore.sh)"
+    exit 1
+  fi
+fi
 
 echo "=== Droits DB apres le CLI Prisma ==="
 # `prisma migrate deploy` vient de tourner en ROOT dans l'image builder : en
@@ -386,6 +439,11 @@ fi
 #     un redemarrage net qu'un site qui rame en swappant.
 #   --pids-limit=512 : borne une fuite de processus/threads (15 pids en
 #     fonctionnement normal).
+#   --oom-score-adj=-500 : le build (`docker build`, next build) tourne sur le
+#     MEME hote, sans swap. Le 25/09/2026, il a epuise la RAM et l'OOM killer
+#     GLOBAL a choisi… le serveur de prod (coupure, relance par --restart).
+#     Avec ce reglage, c'est le build qui saute : le deploiement echoue
+#     proprement, le site reste en ligne.
 #   --log-opt : les journaux json-file n'avaient AUCUNE rotation et
 #     grossissaient sans fin sur un disque deja a 79 % ; 5 x 20 Mo suffisent
 #     a relire les derniers jours avec `docker logs`. Ces deux options ne sont
@@ -397,6 +455,7 @@ RUN_ARGS=(
   --restart always
   --memory=1g --memory-swap=1g
   --pids-limit=512
+  --oom-score-adj=-500
   --log-opt max-size=20m --log-opt max-file=5
   -p 127.0.0.1:3000:3000
   -v "$DB_VOLUME:/app/prisma"
@@ -416,6 +475,9 @@ if ! docker create --name le-pillaveur-probe "${RUN_ARGS[@]}" le-pillaveur:lates
   echo "ECHEC DEPLOY : le demon docker refuse les options du conteneur (message ci-dessus)."
   echo "L'ancien conteneur n'a PAS ete coupe (base deja migree). Verifier par exemple le pilote de journaux :"
   echo "  docker info --format '{{.LoggingDriver}}'   # attendu : json-file ou local"
+  if [ "$APP_STOPPED_FOR_MIGRATION" = 1 ]; then
+    docker start le-pillaveur >/dev/null && echo "Ancien conteneur (arrete pour la migration) relance."
+  fi
   exit 1
 fi
 docker rm le-pillaveur-probe >/dev/null

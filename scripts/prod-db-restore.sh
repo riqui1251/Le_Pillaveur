@@ -282,6 +282,7 @@ docker run -d \
   --restart always \
   --memory=1g --memory-swap=1g \
   --pids-limit=512 \
+  --oom-score-adj=-500 \
   --log-opt max-size=20m --log-opt max-file=5 \
   -p 127.0.0.1:3000:3000 \
   -v "$DB_VOLUME:/app/prisma" \

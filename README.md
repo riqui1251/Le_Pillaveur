@@ -42,6 +42,9 @@ Jamais `prisma migrate dev`. Créer `prisma/migrations/<AAAAMMJJHHMMSS>_<nom>/mi
     npx prisma generate
 
 En production, `scripts/prod-deploy.sh` prend un instantané de la base puis applique les migrations en attente.
+**Le site est arrêté le temps de la migration**, et seulement s'il y en a une : la base est en WAL, et le CLI
+Prisma exige un verrou exclusif que l'application ouverte rend impossible (« database is locked »). Même règle
+pour toute commande Prisma lancée à la main sur la base de prod : conteneur `le-pillaveur` arrêté d'abord.
 
 ## Déploiement
 
