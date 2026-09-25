@@ -3,11 +3,11 @@
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Beer, Check, Home, RefreshCw, Trophy, Zap } from 'lucide-react'
+import { Beer, Check, Trophy, Zap } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
-import { EndConfetti } from './EndConfetti'
+import { OnlineEndScreen } from './OnlineEndScreen'
 import { PhaseCountdown } from './PhaseCountdown'
 import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
@@ -108,9 +108,6 @@ export function QuizOnline() {
   const finished = view.phase === 'finished'
   const question = view.currentQuestion
   const result = view.lastResult
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
   const ranking = [...view.players].sort((a, b) => b.score - a.score)
 
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
@@ -126,84 +123,63 @@ export function QuizOnline() {
   // ── Podium final ─────────────────────────────────────────────────────────
   if (finished) {
     const last = ranking[ranking.length - 1]
+    const won =
+      ranking.length > 0 &&
+      ranking.find((p) => p.id === user?.id)?.score === ranking[0].score
     return (
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-white">
-        <EndConfetti />
-        <motion.div
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-          className="flex flex-col items-center gap-2 text-center"
-        >
-          <Trophy className="h-14 w-14 text-amber-400" />
-          <h2 className="font-display text-3xl font-bold text-gold">{t('victoryTitle', { name: ranking[0]?.name ?? '—' })}</h2>
-          {!isSoft && last && <p className="text-sm text-amber-200">{t('lastDrinks', { name: last.name })}</p>}
-        </motion.div>
-
-        <XpGainBanner
-          won={
-            ranking.length > 0 &&
-            ranking.find((p) => p.id === user?.id)?.score === ranking[0].score
-          }
-          playerIds={view.players.map((p) => p.id)}
-          className="w-full max-w-sm"
-        />
-
-        <div className="w-full max-w-sm space-y-2">
-          {ranking.map((p, idx) => (
-            <div
-              key={p.id}
-              className={cn(
-                'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
-                idx === 0 ? 'border-amber-400/40 bg-amber-500/10' : 'border-white/10 bg-white/5'
-              )}
-            >
-              <span className="flex w-7 items-center justify-center">
-                {idx < 3 ? (
-                  <MedalDot position={idx + 1} />
-                ) : (
-                  <span className="text-sm font-black tabular-nums text-white/50">{idx + 1}</span>
+      <OnlineEndScreen
+        confetti
+        won={won}
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        // Actions fixes en zone pouce (emprunt direction C).
+        fixedActions
+        rematchClassName="from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500"
+        header={
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="flex flex-col items-center gap-2 text-center"
+          >
+            <Trophy className="h-14 w-14 text-amber-400" />
+            <h2 className="font-display text-3xl font-bold text-gold">{t('victoryTitle', { name: ranking[0]?.name ?? '—' })}</h2>
+            {!isSoft && last && <p className="text-sm text-amber-200">{t('lastDrinks', { name: last.name })}</p>}
+          </motion.div>
+        }
+        ranking={
+          <div className="w-full max-w-sm space-y-2">
+            {ranking.map((p, idx) => (
+              <div
+                key={p.id}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
+                  idx === 0 ? 'border-amber-400/40 bg-amber-500/10' : 'border-white/10 bg-white/5'
                 )}
-              </span>
-              <RankCrest role={cosmetics.get(p.id)?.role} />
-              <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-              <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
-              <span className="text-sm font-black tabular-nums text-cyan-200">{p.score}</span>
-              {!isSoft && (
-                <span className="flex items-center gap-1 text-xs text-white/50">
-                  <Beer className="h-3.5 w-3.5 text-amber-300" /> {p.sips}
+              >
+                <span className="flex w-7 items-center justify-center">
+                  {idx < 3 ? (
+                    <MedalDot position={idx + 1} />
+                  ) : (
+                    <span className="text-sm font-black tabular-nums text-white/50">{idx + 1}</span>
+                  )}
                 </span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Espace pour la barre fixe. */}
-        <div aria-hidden className="h-16" />
-
-        {/* Rejouer / Quitter : fixes en zone pouce (emprunt direction C). */}
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
-          <div className="mx-auto flex w-full max-w-sm items-center gap-3">
-            <Button
-              onClick={() => void leaveRoom()}
-              variant="outline"
-              className="h-12 flex-[0.8] rounded-2xl border-white/15 bg-white/5 text-sm font-semibold text-white/80 hover:bg-white/10"
-            >
-              <Home className="mr-1.5 h-4 w-4" /> {t('backToMenu')}
-            </Button>
-            <Button
-              onClick={() => void voteRematch()}
-              disabled={iVotedRematch && humanCount > 1}
-              className="h-12 flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500"
-            >
-              <RefreshCw className="mr-1.5 h-4 w-4" />
-              {iVotedRematch && humanCount > 1
-                ? t('rematchWaiting', { count: rematchVotes.length, total: humanCount })
-                : t('replay')}
-            </Button>
+                <RankCrest role={cosmetics.get(p.id)?.role} />
+                <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
+                <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
+                <span className="text-sm font-black tabular-nums text-cyan-200">{p.score}</span>
+                {!isSoft && (
+                  <span className="flex items-center gap-1 text-xs text-white/50">
+                    <Beer className="h-3.5 w-3.5 text-amber-300" /> {p.sips}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
-      </div>
+        }
+        xp={<XpGainBanner won={won} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 

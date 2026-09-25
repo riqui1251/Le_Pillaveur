@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, RefreshCw, Scale } from 'lucide-react'
+import { Scale } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -20,6 +20,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
+import { OnlineEndScreen } from './OnlineEndScreen'
 
 /**
  * DILEMMES en ligne (serveur-autoritaire). Votes SECRETS pendant la manche
@@ -98,9 +99,6 @@ export function DilemmesOnline() {
   }
 
   const finished = view.phase === 'finished'
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
   const card = view.card
   const nameOf = (id: string) => view.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
@@ -123,41 +121,26 @@ export function DilemmesOnline() {
   // ── Fin de partie ────────────────────────────────────────────────────────
   if (finished) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-white">
-        <motion.div
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-          className="flex flex-col items-center gap-2 text-center"
-        >
-          <Scale className="h-14 w-14 text-rose-300" />
-          <h2 className="font-display text-3xl font-bold text-gold">{t('finished.title')}</h2>
-          <p className="max-w-xs text-sm text-white/60">{t('finished.subtitle')}</p>
-        </motion.div>
-
-        {/* XP de participation (jeu sans gagnant) — won:false → +20. */}
-        <XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
-
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          <Button
-            onClick={() => void voteRematch()}
-            disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-rose-700 to-amber-600 py-5 text-base font-bold"
+      <OnlineEndScreen
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        rematchClassName="from-rose-700 to-amber-600"
+        header={
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="flex flex-col items-center gap-2 text-center"
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {iVotedRematch && humanCount > 1
-              ? t('finished.rematchWaiting', { count: rematchVotes.length, total: humanCount })
-              : t('finished.replay')}
-          </Button>
-          <Button
-            onClick={() => void leaveRoom()}
-            variant="outline"
-            className="w-full rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
-          >
-            <Home className="mr-2 h-4 w-4" /> {t('finished.backToMenu')}
-          </Button>
-        </div>
-      </div>
+            <Scale className="h-14 w-14 text-rose-300" />
+            <h2 className="font-display text-3xl font-bold text-gold">{t('finished.title')}</h2>
+            <p className="max-w-xs text-sm text-white/60">{t('finished.subtitle')}</p>
+          </motion.div>
+        }
+        // XP de participation (jeu sans gagnant) — won:false → +20.
+        xp={<XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 

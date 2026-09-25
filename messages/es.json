@@ -473,6 +473,14 @@
       "title": "Ajustes",
       "botsSummary": "{count, plural, one {# bot} other {# bots}}"
     },
+    "gameSwitch": {
+      "cta": "Cambiar de juego",
+      "hint": "Misma mesa, mismo código: todos te siguen. Los ajustes vuelven a cero y cada uno se vuelve a poner listo.",
+      "current": "Actual",
+      "tooMany": "Demasiados jugadores en la mesa (máx. {count})",
+      "moving": "La mesa pasa a {game}…",
+      "goToTable": "Ir a la mesa"
+    },
     "readyButton": {
       "on": "✓ Listo",
       "off": "Estoy listo"
@@ -484,6 +492,15 @@
       "withBots": "Lanzar con bots",
       "force": "Lanzar sin {count, plural, one {el rezagado} other {los # rezagados}}",
       "forceBlocked": "No hay suficientes jugadores listos: {count, plural, one {falta #} other {faltan #}}"
+    },
+    "end": {
+      "rematch": "Jugar de nuevo",
+      "rematchWaiting": "Esperando a los demás ({count}/{total})",
+      "rematchStatus": "Jugar de nuevo: {count} de {total}",
+      "backToTable": "Volver a la mesa",
+      "leave": "Salir de la mesa",
+      "shareWon": "¡Acabo de ganar una partida de «{game}» en Le Pillaveur! Ven a retarme.",
+      "sharePlayed": "Acabo de jugar a «{game}» en Le Pillaveur. ¡Ven a jugar con nosotros!"
     },
     "list": {
       "empty": "Ninguna sala abierta — elige un juego abajo para crear una.",
@@ -520,6 +537,8 @@
       "rematchFailed": "No se pudo votar la revancha",
       "inviteFailed": "No se pudo invitar a este amigo",
       "kickFailed": "No se pudo quitar a este jugador",
+      "backToTableFailed": "No se pudo volver a la mesa",
+      "changeGameFailed": "No se pudo cambiar de juego",
       "wrongGameRoom": "Estás en una sala de otro juego. Sal de ella para continuar.",
       "inOtherLobby": "Estás en la sala «{game}».",
       "auth_required": "Inicia sesión para jugar en línea.",
@@ -573,6 +592,9 @@
       "replaced_by_bot": "Un bot te ha reemplazado.",
       "roomClosed": "La mesa ha sido cerrada.",
       "roomLeft": "Ya no estás en esta mesa.",
+      "left_kicked": "El anfitrión te ha quitado de la mesa.",
+      "left_absent": "Tu sitio quedó libre porque no estabas en la mesa. Con el código de la mesa puedes volver.",
+      "left_rematched": "La mesa empezó otra partida sin ti mientras no estabas.",
       "reading_time": "Deja a los demás tiempo para leer, sigue en un momento.",
       "stop_too_early": "Demasiado pronto para gritar STOP: deja que arranque la ronda.",
       "incomplete_stop": "Rellena las cinco casillas con la letra correcta antes de gritar STOP.",
@@ -721,6 +743,29 @@
     },
     "onlineSection": {
       "title": "Cuenta en línea"
+    },
+    "tables": {
+      "title": "Mis últimas mesas",
+      "loading": "Cargando tus últimas mesas…",
+      "error": "No se han podido cargar tus últimas mesas.",
+      "retry": "Reintentar",
+      "empty": "Aún no hay partidas en línea clasificadas. Tus partidas con 2+ cuentas aparecerán aquí, listas para la revancha.",
+      "win": "Victoria",
+      "loss": "Derrota",
+      "rank": "{rank}.º",
+      "players": "{count, plural, one {# jugador} other {# jugadores}}",
+      "bots": "{count, plural, one {incl. # bot} other {incl. # bots}}",
+      "partners": "Compañeros: {names}",
+      "friendMark": "{name} (amigo)",
+      "more": "+{count}",
+      "rematch": "Revancha",
+      "rematching": "Creando…",
+      "rematchLabel": "Revancha: nueva mesa de {game}",
+      "inviteAll": "{count, plural, one {Tu amigo recibirá una invitación.} other {Tus # amigos recibirán una invitación.}}",
+      "inviteSome": "{count, plural, one {Solo se invita a tu amigo; los demás entran con el código de la mesa.} other {Solo se invita a tus # amigos; los demás entran con el código de la mesa.}}",
+      "inviteNone": "Las invitaciones son solo para amigos: da el código de la mesa a los demás jugadores.",
+      "inRoom": "Ya estás en una mesa: sal de ella para lanzar una revancha.",
+      "rematchFailed": "No se ha podido crear la mesa. Inténtalo de nuevo."
     },
     "localSection": {
       "title": "Juegos locales (este dispositivo)"

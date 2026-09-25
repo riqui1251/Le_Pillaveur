@@ -243,3 +243,37 @@ export function startScheduledJobs(): void {
   }
   console.log(`[scheduler] ${JOBS.length} tâches planifiées (${TIMEZONE})`)
 }
+
+/** Garde d'idempotence du réarmement des parties — même principe que SCHEDULER_GUARD. */
+export const TICKER_REARM_GUARD: unique symbol = Symbol.for('lepillaveur.roomTicker.rearmed')
+
+type TickerRearmGlobal = typeof globalThis & { [TICKER_REARM_GUARD]?: true }
+
+/**
+ * Réarme UNE fois, au démarrage, les minuteurs de service des parties restées
+ * « playing » (src/lib/online/room-ticker.ts) : ils vivaient dans le processus
+ * précédent, et une nuit de Loup-Garou surprise par un redéploiement restait
+ * figée jusqu'au prochain geste d'un joueur. Une échéance passée pendant la
+ * coupure part aussitôt.
+ *
+ * Appelée par instrumentation.ts À CÔTÉ de startScheduledJobs, pas dedans :
+ * le test du planificateur pose ses tâches dans un environnement
+ * « production », et il ne doit ni lire la base ni armer de minuteur. Mêmes
+ * gardes que les tâches (ni build, ni vitest) ; ne lève jamais et ne retient
+ * pas le démarrage — le module du minuteur n'est chargé qu'ici.
+ */
+export function rearmRoomTickersAtStartup(): void {
+  if (!shouldStartScheduler(process.env)) return
+  const globalWithGuard = globalThis as TickerRearmGlobal
+  if (globalWithGuard[TICKER_REARM_GUARD]) return
+  globalWithGuard[TICKER_REARM_GUARD] = true
+
+  void import('@/lib/online/room-ticker')
+    .then(({ rearmPlayingRooms }) => rearmPlayingRooms())
+    .then((armed) => {
+      if (armed > 0) console.log(`[scheduler] ${armed} partie(s) en cours réarmée(s)`)
+    })
+    .catch((error) => {
+      console.error('[scheduler] réarmement des parties en cours en échec :', errorTrace(error))
+    })
+}

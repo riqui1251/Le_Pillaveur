@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, RefreshCw, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -19,6 +19,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
+import { OnlineEndScreen } from './OnlineEndScreen'
 
 /** Purple en ligne : jeu tour par tour, cagnotte « patate chaude ». Aucune
  * info cachée (tirage public dès qu'il a lieu). */
@@ -169,70 +170,43 @@ export function PurpleOnline() {
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const finished = view.phase === 'finished'
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
   const currentActor = view.players[view.currentPlayer]
   const isMyTurn = currentActor?.id === user.id
 
   // ── Écran de fin ──────────────────────────────────────────────────────────
   if (finished) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-white">
-        <motion.div
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-          className="flex flex-col items-center gap-2 text-center"
-        >
-          <span className="text-5xl">🟣</span>
-          <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
-          <p className="text-sm text-white/60">{t('online.totalCards', { count: view.totalCardsDrawn })}</p>
-        </motion.div>
-
-        <div className="grid w-full max-w-sm grid-cols-1 gap-2">
-          {view.players.map((p) => (
-            <div key={p.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-              <RankCrest role={cosmetics.get(p.id)?.role} size="sm" />
-              <span className="text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-              <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate text-xs font-semibold" />
-              <span className="text-xs font-bold text-amber-300">{view.gameResults[p.id] ?? 0} 🍺</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Aucune progression n'existait sur ce jeu : XP de participation. */}
-        <XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
-
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          {humanCount > 1 ? (
-            <Button
-              onClick={() => void voteRematch()}
-              disabled={iVotedRematch}
-              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {iVotedRematch
-                ? t('online.rematchWaiting', { count: rematchVotes.length, total: humanCount })
-                : t('online.replay')}
-            </Button>
-          ) : (
-            <Button
-              onClick={() => void voteRematch()}
-              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" /> {t('online.replay')}
-            </Button>
-          )}
-          <Button
-            onClick={() => void leaveRoom()}
-            variant="outline"
-            className="w-full rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
+      <OnlineEndScreen
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        header={
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="flex flex-col items-center gap-2 text-center"
           >
-            <Home className="mr-2 h-4 w-4" /> {t('online.backToMenu')}
-          </Button>
-        </div>
-      </div>
+            <span className="text-5xl">🟣</span>
+            <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
+            <p className="text-sm text-white/60">{t('online.totalCards', { count: view.totalCardsDrawn })}</p>
+          </motion.div>
+        }
+        ranking={
+          <div className="grid w-full max-w-sm grid-cols-1 gap-2">
+            {view.players.map((p) => (
+              <div key={p.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+                <RankCrest role={cosmetics.get(p.id)?.role} size="sm" />
+                <span className="text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
+                <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate text-xs font-semibold" />
+                <span className="text-xs font-bold text-amber-300">{view.gameResults[p.id] ?? 0} 🍺</span>
+              </div>
+            ))}
+          </div>
+        }
+        // Aucune progression n'existait sur ce jeu : XP de participation.
+        xp={<XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 

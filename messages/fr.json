@@ -473,6 +473,14 @@
       "title": "Réglages",
       "botsSummary": "{count, plural, one {# bot} other {# bots}}"
     },
+    "gameSwitch": {
+      "cta": "Changer de jeu",
+      "hint": "Même table, même code : tout le monde suit. Les réglages repartent de zéro et chacun se remet prêt.",
+      "current": "En cours",
+      "tooMany": "Trop de joueurs à table (max {count})",
+      "moving": "La table passe à {game}…",
+      "goToTable": "Aller à la table"
+    },
     "readyButton": {
       "on": "✓ Prêt",
       "off": "Me déclarer prêt"
@@ -484,6 +492,15 @@
       "withBots": "Lancer avec les bots",
       "force": "Lancer sans {count, plural, one {le retardataire} other {les # retardataires}}",
       "forceBlocked": "Pas assez de joueurs prêts : il en manque {count}"
+    },
+    "end": {
+      "rematch": "Rejouer",
+      "rematchWaiting": "En attente des autres ({count}/{total})",
+      "rematchStatus": "Rejouer : {count} sur {total}",
+      "backToTable": "Retour à la table",
+      "leave": "Quitter la table",
+      "shareWon": "J'ai gagné une partie de « {game} » sur Le Pillaveur ! Viens me défier.",
+      "sharePlayed": "Je viens de jouer à « {game} » sur Le Pillaveur. Viens jouer avec nous !"
     },
     "list": {
       "empty": "Aucun lobby ouvert — choisis un jeu ci-dessous pour en créer un.",
@@ -520,6 +537,8 @@
       "rematchFailed": "Impossible de voter pour rejouer",
       "inviteFailed": "Impossible d'inviter cet ami",
       "kickFailed": "Impossible de retirer ce joueur",
+      "backToTableFailed": "Impossible de revenir à la table",
+      "changeGameFailed": "Impossible de changer de jeu",
       "wrongGameRoom": "Tu es dans un lobby pour un autre jeu. Quitte-le pour continuer.",
       "inOtherLobby": "Tu es dans le lobby « {game} ».",
       "auth_required": "Connecte-toi pour jouer en ligne.",
@@ -573,6 +592,9 @@
       "replaced_by_bot": "Tu as été remplacé par un bot.",
       "roomClosed": "La table a été fermée.",
       "roomLeft": "Tu n'es plus dans cette table.",
+      "left_kicked": "L'hôte t'a retiré de la table.",
+      "left_absent": "Ta place a été libérée faute de te voir à la table. Le code de la table te permet de revenir.",
+      "left_rematched": "La table a relancé une partie sans toi pendant ton absence.",
       "reading_time": "Laisse aux autres le temps de lire, ça repart dans un instant.",
       "stop_too_early": "Trop tôt pour crier STOP : laisse la manche démarrer.",
       "incomplete_stop": "Remplis les cinq cases avec la bonne lettre avant de crier STOP.",
@@ -721,6 +743,29 @@
     },
     "onlineSection": {
       "title": "Compte en ligne"
+    },
+    "tables": {
+      "title": "Mes dernières tables",
+      "loading": "Chargement de tes dernières tables…",
+      "error": "Impossible de charger tes dernières tables.",
+      "retry": "Réessayer",
+      "empty": "Aucune partie en ligne classée pour l'instant. Tes parties à 2 comptes ou plus apparaîtront ici, prêtes pour une revanche.",
+      "win": "Victoire",
+      "loss": "Défaite",
+      "rank": "{rank, selectordinal, one {#er} other {#e}}",
+      "players": "{count, plural, one {# joueur} other {# joueurs}}",
+      "bots": "{count, plural, one {dont # bot} other {dont # bots}}",
+      "partners": "Partenaires : {names}",
+      "friendMark": "{name} (ami)",
+      "more": "+{count}",
+      "rematch": "Revanche",
+      "rematching": "Création…",
+      "rematchLabel": "Revanche : nouvelle table de {game}",
+      "inviteAll": "{count, plural, one {Ton ami sera invité.} other {Tes # amis seront invités.}}",
+      "inviteSome": "{count, plural, one {Seul ton ami est invité ; les autres rejoignent avec le code de la table.} other {Seuls tes # amis sont invités ; les autres rejoignent avec le code de la table.}}",
+      "inviteNone": "Invitations réservées aux amis : donne le code de la table aux autres joueurs.",
+      "inRoom": "Tu es déjà à une table : quitte-la pour lancer une revanche.",
+      "rematchFailed": "La table n'a pas pu être créée. Réessaie."
     },
     "localSection": {
       "title": "Jeux locaux (cet appareil)"

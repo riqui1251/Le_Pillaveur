@@ -8,6 +8,8 @@ import { publishRoomChanged } from '@/lib/online/room-bus'
 import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { onlineErrorBody } from '@/lib/online-errors'
+import { takeDeparture } from '@/lib/online/departures'
+import { armRoomTicker } from '@/lib/online/room-ticker'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -22,7 +24,15 @@ export async function GET(_request: Request, { params }: Params) {
     where: { roomId_userId: { roomId, userId: user.id } },
   })
   if (!member) {
-    return NextResponse.json(onlineErrorBody('forbidden'), { status: 403 })
+    // Départ FORCÉ (expulsion, siège d'absent libéré, relance sans lui,
+    // remplacement par un bot) : le 403 dit pourquoi, une fois — la raison est
+    // consommée, le sondage suivant retombe sur le message générique côté
+    // client (voir online/departures.ts).
+    const reason = takeDeparture(user.id, roomId)
+    return NextResponse.json(
+      reason ? { ...onlineErrorBody('forbidden'), reason } : onlineErrorBody('forbidden'),
+      { status: 403 }
+    )
   }
 
   // Sondé toutes les 25 s (lobby, flux SSE vivant) à 2 s (flux mort) : la
@@ -111,6 +121,10 @@ export async function DELETE(_request: Request, { params }: Params) {
           currentTurnUserId: adapter.isFinished(next) ? null : adapter.currentActorId(next),
         },
       })
+      // Le tour a pu passer à un bot, ou le dernier humain partir : le
+      // minuteur de service se recale sur l'état écrit (online/room-ticker.ts)
+      // — sans lui, rien ne le réarmait s'il n'y avait aucun minuteur posé.
+      await armRoomTicker(roomId)
     }
   }
 

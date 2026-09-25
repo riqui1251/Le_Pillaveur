@@ -25,6 +25,7 @@ import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
 import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
 import { isNativeGoogleAvailable } from '@/lib/native-google-login'
 import { MyOnlineStats } from '@/components/online/MyOnlineStats'
+import { RecentTables } from '@/components/online/RecentTables'
 import { canAccessSupervision } from '@/lib/roles'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
@@ -718,6 +719,8 @@ export function AccountInfo() {
             {onlineNameError && <p className="mt-2 text-xs text-orange-300">{onlineNameError}</p>}
             {onlineNameSaved && <p className="mt-2 text-xs text-emerald-300">Pseudo online enregistré.</p>}
           </div>
+
+          <RecentTables />
 
           <MyOnlineStats />
         </div>

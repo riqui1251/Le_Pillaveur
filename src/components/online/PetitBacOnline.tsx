@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, RefreshCw, Trophy, Hand, AlertTriangle } from 'lucide-react'
+import { Trophy, Hand, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -21,6 +21,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
+import { OnlineEndScreen } from './OnlineEndScreen'
 
 /**
  * PETIT BAC en ligne (serveur-autoritaire). Chacun tape ses cinq réponses en
@@ -133,9 +134,6 @@ export function PetitBacOnline() {
   }
 
   const finished = view.phase === 'finished'
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
   const nameOf = (id: string) => view.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot
@@ -150,68 +148,52 @@ export function PetitBacOnline() {
   if (finished) {
     const podium = [...view.players].sort((a, b) => b.total - a.total)
     const best = podium[0]?.total ?? 0
+    // Même règle que le serveur : victoire = meilleur score (ex æquo inclus).
+    const won = best > 0 && (view.players.find((p) => p.id === user.id)?.total ?? 0) === best
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-white">
-        <motion.div
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-          className="flex flex-col items-center gap-2 text-center"
-        >
-          <Trophy className="h-14 w-14 text-gold" />
-          <h2 className="font-display text-3xl font-bold text-gold">{t('finished.title')}</h2>
-          <p className="max-w-xs text-sm text-white/60">{t('finished.subtitle')}</p>
-        </motion.div>
-
-        <div className="w-full max-w-sm space-y-1.5">
-          {podium.map((p, i) => (
-            <div
-              key={p.id}
-              className={cn(
-                'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
-                p.total === best && best > 0
-                  ? 'border-gold/50 bg-gold/10'
-                  : 'border-white/10 bg-white/5'
-              )}
-            >
-              <span className="w-5 text-center font-display text-sm font-black text-white/50">{i + 1}</span>
-              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-              <span className={cn('flex-1 truncate text-sm font-bold', p.id === user.id && 'text-gold')}>
-                {p.name}
-              </span>
-              <span className="font-display text-lg font-black tabular-nums text-cream">{p.total}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* L'XP était déjà créditée côté serveur — elle est enfin AFFICHÉE.
-            Même règle que le serveur : victoire = meilleur score (ex æquo inclus). */}
-        <XpGainBanner
-          won={best > 0 && (view.players.find((p) => p.id === user.id)?.total ?? 0) === best}
-          playerIds={view.players.map((p) => p.id)}
-          className="w-full max-w-sm"
-        />
-
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          <Button
-            onClick={() => void voteRematch()}
-            disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-sky-700 to-amber-600 py-5 text-base font-bold"
+      <OnlineEndScreen
+        won={won}
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        rematchClassName="from-sky-700 to-amber-600"
+        header={
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="flex flex-col items-center gap-2 text-center"
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {iVotedRematch && humanCount > 1
-              ? t('finished.rematchWaiting', { count: rematchVotes.length, total: humanCount })
-              : t('finished.replay')}
-          </Button>
-          <Button
-            onClick={() => void leaveRoom()}
-            variant="outline"
-            className="w-full rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
-          >
-            <Home className="mr-2 h-4 w-4" /> {t('finished.backToMenu')}
-          </Button>
-        </div>
-      </div>
+            <Trophy className="h-14 w-14 text-gold" />
+            <h2 className="font-display text-3xl font-bold text-gold">{t('finished.title')}</h2>
+            <p className="max-w-xs text-sm text-white/60">{t('finished.subtitle')}</p>
+          </motion.div>
+        }
+        ranking={
+          <div className="w-full max-w-sm space-y-1.5">
+            {podium.map((p, i) => (
+              <div
+                key={p.id}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
+                  p.total === best && best > 0
+                    ? 'border-gold/50 bg-gold/10'
+                    : 'border-white/10 bg-white/5'
+                )}
+              >
+                <span className="w-5 text-center font-display text-sm font-black text-white/50">{i + 1}</span>
+                <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
+                <span className={cn('flex-1 truncate text-sm font-bold', p.id === user.id && 'text-gold')}>
+                  {p.name}
+                </span>
+                <span className="font-display text-lg font-black tabular-nums text-cream">{p.total}</span>
+              </div>
+            ))}
+          </div>
+        }
+        // L'XP était déjà créditée côté serveur — elle est enfin AFFICHÉE.
+        xp={<XpGainBanner won={won} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 

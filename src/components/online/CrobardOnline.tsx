@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, RefreshCw, Send, Trophy } from 'lucide-react'
+import { Send, Trophy } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
-import { EndConfetti } from './EndConfetti'
+import { OnlineEndScreen } from './OnlineEndScreen'
 import { PhaseCountdown } from './PhaseCountdown'
 import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { PartyCanvas, type Stroke } from './PartyCanvas'
@@ -110,9 +110,6 @@ export function CrobardOnline() {
   }
 
   const finished = view.phase === 'finished'
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
   const won = finished && view.winnerId === user.id
   const ranking = [...view.players].sort((a, b) => b.score - a.score)
 
@@ -173,59 +170,45 @@ export function CrobardOnline() {
   // ── Écran de fin ─────────────────────────────────────────────────────────
   if (finished) {
     return (
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-white">
-        <EndConfetti />
-        <motion.div
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-          className="flex flex-col items-center gap-2 text-center"
-        >
-          <Trophy className="h-14 w-14 text-gold" />
-          <h2 className="font-display text-3xl font-bold text-gold">{t('victory.title', { name: nameOf(view.winnerId) })}</h2>
-        </motion.div>
-
-        <div className="flex w-full max-w-sm flex-col gap-1.5">
-          {ranking.map((p, i) => (
-            <div
-              key={p.id}
-              className={cn(
-                'flex items-center gap-2 rounded-xl border px-3 py-2',
-                i === 0 ? 'border-amber-400/40 bg-amber-500/10' : 'border-white/10 bg-white/5'
-              )}
-            >
-              <span className="w-5 text-center text-xs font-black text-white/50">{i + 1}</span>
-              <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-              <span className="min-w-0 flex-1 truncate text-sm font-bold">
-                <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-              </span>
-              <span className="text-sm font-black text-amber-300">{p.score}</span>
-            </div>
-          ))}
-        </div>
-
-        <XpGainBanner won={Boolean(won)} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
-
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          <Button
-            onClick={() => void voteRematch()}
-            disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold"
+      <OnlineEndScreen
+        confetti
+        won={Boolean(won)}
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        header={
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="flex flex-col items-center gap-2 text-center"
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {iVotedRematch && humanCount > 1
-              ? t('victory.rematchWaiting', { count: rematchVotes.length, total: humanCount })
-              : t('victory.replay')}
-          </Button>
-          <Button
-            onClick={() => void leaveRoom()}
-            variant="outline"
-            className="w-full rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
-          >
-            <Home className="mr-2 h-4 w-4" /> {t('victory.backToMenu')}
-          </Button>
-        </div>
-      </div>
+            <Trophy className="h-14 w-14 text-gold" />
+            <h2 className="font-display text-3xl font-bold text-gold">{t('victory.title', { name: nameOf(view.winnerId) })}</h2>
+          </motion.div>
+        }
+        ranking={
+          <div className="flex w-full max-w-sm flex-col gap-1.5">
+            {ranking.map((p, i) => (
+              <div
+                key={p.id}
+                className={cn(
+                  'flex items-center gap-2 rounded-xl border px-3 py-2',
+                  i === 0 ? 'border-amber-400/40 bg-amber-500/10' : 'border-white/10 bg-white/5'
+                )}
+              >
+                <span className="w-5 text-center text-xs font-black text-white/50">{i + 1}</span>
+                <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
+                <span className="min-w-0 flex-1 truncate text-sm font-bold">
+                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
+                </span>
+                <span className="text-sm font-black text-amber-300">{p.score}</span>
+              </div>
+            ))}
+          </div>
+        }
+        xp={<XpGainBanner won={Boolean(won)} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 

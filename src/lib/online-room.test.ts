@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // ce qui ne compte que, et qui perd son siège. Les effets (présence,
 // expulsion, départ d'une partie) s'observent par les écritures demandées à
 // la base et les notifications émises.
-const { memberMock, roomMock, bus, cache, sessions, adapters } = vi.hoisted(() => ({
+const { memberMock, roomMock, bus, cache, sessions, adapters, ticker } = vi.hoisted(() => ({
   memberMock: {
     updateMany: vi.fn(),
     deleteMany: vi.fn(),
@@ -19,12 +19,14 @@ const { memberMock, roomMock, bus, cache, sessions, adapters } = vi.hoisted(() =
   cache: { invalidateLobbiesCache: vi.fn() },
   sessions: { closeGameSession: vi.fn(), closeGameSessionsOfPurgedRooms: vi.fn() },
   adapters: { getGameAdapter: vi.fn() },
+  ticker: { armRoomTicker: vi.fn() },
 }))
 vi.mock('@/lib/prisma', () => ({ prisma: { onlineRoomMember: memberMock, onlineRoom: roomMock } }))
 vi.mock('@/lib/online/room-bus', () => bus)
 vi.mock('@/lib/online/lobbies-cache', () => cache)
 vi.mock('@/lib/online/game-sessions', () => sessions)
 vi.mock('@/lib/online/game-adapters', () => adapters)
+vi.mock('@/lib/online/room-ticker', () => ticker)
 
 import {
   kickMember,
@@ -78,12 +80,26 @@ describe('summarizeLiveGames', () => {
     const { liveGames, liveGamesTotal } = summarizeLiveGames(rows, NOW)
 
     expect(liveGamesTotal).toBe(3)
-    expect(liveGames.map((g) => g.id).sort()).toEqual(['inv', 'priv', 'pub'])
     expect(liveGames.filter((g) => g.isPrivate).map((g) => g.gameId).sort()).toEqual([
       'president',
       'quiz',
     ])
-    expect(liveGames.find((g) => g.id === 'priv')).toMatchObject({ playerCount: 6 })
+    expect(liveGames.find((g) => g.gameId === 'president')).toMatchObject({ playerCount: 6 })
+  })
+
+  it('ne livre l’identifiant de salle que d’une table publique : /rooms/join l’accepte', () => {
+    const rows = [
+      room({ id: 'pub', visibility: 'public' }),
+      room({ id: 'priv', visibility: 'private', gameId: 'president' }),
+      room({ id: 'inv', visibility: 'invite', gameId: 'quiz' }),
+    ]
+    const ids = summarizeLiveGames(rows, NOW).liveGames.map((g) => g.id)
+
+    expect(ids).toContain('pub')
+    expect(ids).not.toContain('priv')
+    expect(ids).not.toContain('inv')
+    // Des clés distinctes quand même : le client s'en sert comme clés de liste.
+    expect(new Set(ids).size).toBe(3)
   })
 
   it('ne peut PAS livrer de pseudo : la sortie n’en porte aucun champ', () => {
@@ -465,6 +481,8 @@ describe('leaveOtherRooms', () => {
     )
     expect(memberMock.deleteMany).toHaveBeenCalledWith({ where: { roomId: 'partie', userId: 'bob' } })
     expect(bus.publishRoomChanged).toHaveBeenCalledWith('partie', { type: 'changed', stateVersion: 8 })
+    // Le tour a pu passer à un bot : le minuteur de service se recale.
+    expect(ticker.armRoomTicker).toHaveBeenCalledWith('partie')
   })
 
   it('sans autre table, ne lit qu’une fois et n’écrit rien', async () => {
@@ -488,6 +506,7 @@ describe('leaveOtherRooms', () => {
     expect(roomMock.updateMany).not.toHaveBeenCalled()
     expect(memberMock.deleteMany).toHaveBeenCalledWith({ where: { roomId: 'lobby', userId: 'bob' } })
     expect(bus.publishRoomChanged).toHaveBeenCalledWith('lobby', { type: 'lobby' })
+    expect(ticker.armRoomTicker).not.toHaveBeenCalled()
   })
 
   it('l’hôte qui part ailleurs passe la main : la table qu’il laisse reste déblocable', async () => {
@@ -519,5 +538,7 @@ describe('leaveOtherRooms', () => {
     // aux clients avec un `changed` : le remplacement AFK rattrapera le départ.
     expect(memberMock.deleteMany).toHaveBeenCalledWith({ where: { roomId: 'partie', userId: 'bob' } })
     expect(bus.publishRoomChanged).toHaveBeenCalledWith('partie', { type: 'lobby' })
+    // Rien d'écrit : le minuteur, s'il existe, tient déjà l'état en base.
+    expect(ticker.armRoomTicker).not.toHaveBeenCalled()
   })
 })

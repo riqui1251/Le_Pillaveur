@@ -60,8 +60,9 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   // L'hôte ne s'expulse jamais (vérifié ci-dessus) : aucun transfert d'hôte
-  // n'aura lieu ici. kickMember invalide déjà le cache du guichet.
-  await kickMember(roomId, room.hostUserId, targetUserId)
+  // n'aura lieu ici. kickMember invalide déjà le cache du guichet. La raison
+  // suit le retiré : son 403 dira que l'hôte l'a retiré (online/departures.ts).
+  await kickMember(roomId, room.hostUserId, targetUserId, 'kicked')
   publishRoomChanged(roomId, { type: 'lobby' })
 
   return NextResponse.json({ ok: true })

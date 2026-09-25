@@ -23,7 +23,7 @@ vi.mock('@/lib/prisma', () => ({
 }))
 vi.mock('@/lib/online-president', () => ({ launchPresidentRoom: launchPresidentMock }))
 
-import { processRematchVote, REMATCH_PRESENCE_MS } from '@/lib/online-room-launch'
+import { processRematchVote, REMATCH_PRESENCE_MS, resetRoomToWaitingLobby } from '@/lib/online-room-launch'
 
 const MEMBERS = ['u1', 'u2', 'u3']
 
@@ -261,5 +261,22 @@ describe('processRematchVote — présence', () => {
     expect(launchPresidentMock).toHaveBeenCalledTimes(1)
     expect(launchedMemberIds()).toEqual(['u1', 'u2', 'u3'])
     expect(memberMock.deleteMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('resetRoomToWaitingLobby', () => {
+  it('rend à chacun le délai de grâce du lobby : présence remise à maintenant, tous « pas prêts »', async () => {
+    // En partie, la trace d'un onglet caché date de son dernier coup : sans
+    // cette remise, le premier sondage du lobby le purgeait sur-le-champ.
+    const before = Date.now()
+
+    await resetRoomToWaitingLobby('room-1')
+
+    expect(memberMock.updateMany).toHaveBeenCalledWith({
+      where: { roomId: 'room-1' },
+      data: { isReady: false, lastSeenAt: expect.any(Date) },
+    })
+    const { data } = memberMock.updateMany.mock.calls[0][0] as { data: { lastSeenAt: Date } }
+    expect(data.lastSeenAt.getTime()).toBeGreaterThanOrEqual(before)
   })
 })

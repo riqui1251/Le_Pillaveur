@@ -310,6 +310,8 @@ import {
   type PreState,
 } from '@/lib/president/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import { botTickDelayMs } from '@/lib/online/bot-personas'
 
 /**
  * REGISTRE des jeux serveur-autoritaires.
@@ -369,6 +371,92 @@ export type GameAdapter = {
   markLeft(state: unknown, userId: string, at: number): unknown
   /** Retour d'un joueur parti (tant qu'un bot ne l'a pas remplacé). Null = impossible. */
   rejoin(state: unknown, userId: string): unknown
+  /**
+   * Tick de service que le SERVEUR s'applique lui-même si aucun client ne l'a
+   * envoyé (src/lib/online/room-ticker.ts) : le coup d'un bot, ou l'`advance`
+   * d'une phase échue. Recopie à l'identique ce que le composant client du
+   * jeu passe à useBotReferee / useAdvanceTick (délais compris). Null = rien
+   * à attendre. Optionnel : un jeu sans tick de service ne l'implémente pas.
+   */
+  serviceTick?(state: unknown, now: number, options?: ServiceTickOptions): ServiceTick | null
+}
+
+// ─── Ticks de service (filet serveur) ────────────────────────────────────────
+
+/**
+ * Tick de service : le corps d'action — le même que celui qu'enverrait un
+ * client (`bot` ou `advance`) — et l'instant, en horloge SERVEUR (epoch ms),
+ * où il devient dû.
+ */
+export type ServiceTick = { body: Record<string, unknown>; dueAt: number }
+
+export type ServiceTickOptions = {
+  /**
+   * Le tick `bot` de cette version d'état a déjà été refusé (tick « au cas
+   * où » du Loup-Garou sans bot concerné, soutien au hasard de l'Espion…) :
+   * seule l'échéance de phase reste à honorer. Le client, lui aussi, ne tente
+   * le bot qu'une fois par version.
+   */
+  skipBot?: boolean
+  /** Tirage des délais « au hasard » des bots (tests) — défaut : SERVICE_TEMPO. */
+  rand?: () => number
+}
+
+/**
+ * Le client tire le tempo d'un bot AU HASARD dans la fenêtre de son persona
+ * (botTickDelayMs, 2,5-7 s au Quiz…). Le serveur lit la MÊME fenêtre mais en
+ * prend la borne HAUTE : un client de rang 0 éveillé a donc toujours tiré
+ * avant lui. Le serveur n'est qu'un filet, jamais un concurrent — s'il tirait
+ * au hasard lui aussi, il devancerait le client une fois sur deux et
+ * accélérerait les bots.
+ */
+const SERVICE_TEMPO = (): number => 1
+
+/** Forme minimale d'un joueur pour les ticks (cf. contrat de replacement.ts). */
+type ServicePlayer = { id: string; name?: string; isBot?: boolean; leftAt?: number | null }
+
+/** Tick « advance » à l'échéance de la phase courante (null : phase sans chrono). */
+function advanceAt(
+  state: TimedPhaseState,
+  dueAt: number | null = state.phaseEndsAt
+): ServiceTick | null {
+  return dueAt === null ? null : { body: { action: 'advance', phaseKey: phaseKey(state) }, dueAt }
+}
+
+/** Le joueur dont l'id est donné (acteur courant), s'il existe. */
+function playerById<P extends ServicePlayer>(players: readonly P[], id: string | null): P | undefined {
+  return id === null ? undefined : players.find((p) => p.id === id)
+}
+
+/**
+ * Assemble le tick de service d'un jeu. Chez le client, useAdvanceTick
+ * (échéance) et useBotReferee (coup de bot) tournent EN PARALLÈLE ; le
+ * serveur n'a qu'un minuteur par salle et retient le PREMIER dû — l'autre est
+ * recalculé après l'écriture que provoque le premier. À échéance égale, le
+ * bot d'abord : il agit dans la phase avant qu'elle ne se ferme.
+ *
+ * Pas d'humain présent (tous partis) = pas d'arbitre côté client
+ * (botRefereeRank), donc rien côté serveur non plus : une table désertée ne
+ * se joue pas toute seule.
+ */
+function serviceTickOf(
+  players: readonly ServicePlayer[],
+  now: number,
+  options: ServiceTickOptions | undefined,
+  ticks: {
+    advance?: ServiceTick | null
+    /** Délai du coup de bot depuis l'écriture de l'état, ou null si aucun bot n'a la main. */
+    botDelayMs?: (rand: () => number) => number | null
+  }
+): ServiceTick | null {
+  if (!players.some((p) => !p.isBot && !p.leftAt)) return null
+  const advance = ticks.advance ?? null
+  const delayMs =
+    options?.skipBot || !ticks.botDelayMs ? null : ticks.botDelayMs(options?.rand ?? SERVICE_TEMPO)
+  const bot: ServiceTick | null =
+    delayMs === null ? null : { body: { action: 'bot' }, dueAt: now + delayMs }
+  if (!bot || !advance) return bot ?? advance
+  return bot.dueAt <= advance.dueAt ? bot : advance
 }
 
 // ─── Petit Buveur ────────────────────────────────────────────────────────────
@@ -421,6 +509,14 @@ const petitBuveurAdapter: GameAdapter = {
   },
   markLeft: (state, userId, at) => markPlayerLeft(state as EngineState, userId, at),
   rejoin: (state, userId) => rejoinPlayer(state as EngineState, userId),
+  // PetitBuveurOnline : tour d'un bot → un coup, au tempo de son persona.
+  serviceTick(rawState, now, options) {
+    const state = rawState as EngineState
+    const actor = state.players[state.currentPlayer]
+    return serviceTickOf(state.players, now, options, {
+      botDelayMs: (rand) => (actor?.isBot ? botTickDelayMs(actor.name, rand) : null),
+    })
+  },
 }
 
 // ─── Toucher-Coulé ───────────────────────────────────────────────────────────
@@ -470,6 +566,16 @@ const toucherCouleAdapter: GameAdapter = {
     const player = state.players.find((p) => p.id === userId && !p.isBot && p.leftAt)
     if (!player) return null
     return reduceTC(state, { type: 'REJOIN', playerId: userId })
+  },
+  // ToucherCouleOnline : tir du bot au tour, en bataille seulement (hors
+  // bataille, currentTCPlayerId rend null — le placement des bots est
+  // immédiat côté moteur).
+  serviceTick(rawState, now, options) {
+    const state = rawState as TCState
+    const actor = playerById(state.players, currentTCPlayerId(state))
+    return serviceTickOf(state.players, now, options, {
+      botDelayMs: (rand) => (actor?.isBot ? botTickDelayMs(actor.name, rand) : null),
+    })
   },
 }
 
@@ -524,6 +630,16 @@ const menteurAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markMenteurPlayerLeft(state as MenteurState, userId, at),
   rejoin: (state, userId) => rejoinMenteurPlayer(state as MenteurState, userId),
+  // MenteurOnline : bot au tour (enchère, ou « continuer » de la révélation
+  // après 2,6 s de lecture).
+  serviceTick(rawState, now, options) {
+    const state = rawState as MenteurState
+    const actor = playerById(state.players, currentMenteurActorId(state))
+    return serviceTickOf(state.players, now, options, {
+      botDelayMs: (rand) =>
+        !actor?.isBot ? null : state.phase === 'reveal' ? 2600 : botTickDelayMs(actor.name, rand),
+    })
+  },
 }
 
 // ─── L'Imposteur ─────────────────────────────────────────────────────────────
@@ -576,6 +692,25 @@ const imposteurAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markImposteurPlayerLeft(state as ImposteurState, userId, at),
   rejoin: (state, userId) => rejoinImposteurPlayer(state as ImposteurState, userId),
+  // ImposteurOnline : échéance de phase + bot au tour (indice, « continuer »
+  // après 3,2 s de révélation) ou bots retardataires au vote.
+  serviceTick(rawState, now, options) {
+    const state = rawState as ImposteurState
+    const actor = playerById(state.players, currentImposteurActorId(state))
+    const pendingVoteBot =
+      state.phase === 'vote'
+        ? state.players.find((p) => p.isBot && !p.eliminated && !state.pendingVotes[p.id])
+        : undefined
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) =>
+        !actor?.isBot && !pendingVoteBot
+          ? null
+          : state.phase === 'reveal'
+            ? 3200
+            : botTickDelayMs(actor?.isBot ? actor.name : pendingVoteBot?.name, rand),
+    })
+  },
 }
 
 // ─── Le Grand Pillaveur (quiz) ───────────────────────────────────────────────
@@ -624,6 +759,18 @@ const quizAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markQuizPlayerLeft(state as QuizState, userId, at),
   rejoin: (state, userId) => rejoinQuizPlayer(state as QuizState, userId),
+  // QuizOnline : échéance de la question / du reveal + réponse de TOUS les
+  // bots retardataires d'un coup, 2,5 à 7 s après la question.
+  serviceTick(rawState, now, options) {
+    const state = rawState as QuizState
+    const botsPending =
+      state.phase === 'question' &&
+      state.players.some((p) => p.isBot && !p.leftAt && !state.answers[p.id])
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) => (botsPending ? 2500 + rand() * 4500 : null),
+    })
+  },
 }
 
 // ─── Loup-Garou ──────────────────────────────────────────────────────────────
@@ -693,6 +840,18 @@ const loupGarouAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markLGPlayerLeft(state as LGState, userId, at),
   rejoin: (state, userId) => rejoinLGPlayer(state as LGState, userId),
+  // LoupGarouOnline : échéance de phase (nuit, débat, votes) + tick bot « au
+  // cas où » dès qu'un bot est à table, 2,5 à 5,5 s après l'état. Le moteur
+  // répond NOT_BOT_TURN si aucun bot n'a rien à faire : le minuteur retombe
+  // alors sur l'échéance (skipBot, room-ticker.ts).
+  serviceTick(rawState, now, options) {
+    const state = rawState as LGState
+    const hasBot = state.players.some((p) => p.isBot)
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) => (hasBot ? 2500 + rand() * 3000 : null),
+    })
+  },
 }
 
 // ─── 1220 ────────────────────────────────────────────────────────────────────
@@ -749,6 +908,13 @@ const game1220Adapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markGame1220PlayerLeft(state as Game1220State, userId, at),
   rejoin: (state, userId) => rejoinGame1220Player(state as Game1220State, userId),
+  // Game1220Online : l'échéance de mise en place seule (les bots sont prêts
+  // d'office, aucun tick bot). Le client la réarme toutes les 5 s faute de
+  // mieux ; le serveur, dont l'horloge fait foi, n'a pas à insister.
+  serviceTick(rawState, now, options) {
+    const state = rawState as Game1220State
+    return serviceTickOf(state.players, now, options, { advance: advanceAt(state) })
+  },
 }
 
 // ─── Purple ──────────────────────────────────────────────────────────────────
@@ -802,6 +968,20 @@ const purpleAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markPurplePlayerLeft(state as PurpleState, userId, at),
   rejoin: (state, userId) => rejoinPurplePlayer(state as PurpleState, userId),
+  // PurpleOnline : bot au tour ; 1,6 s seulement quand il n'a qu'à prendre
+  // acte (pioche ratée à accuser, bonne pioche à poursuivre ou passer).
+  serviceTick(rawState, now, options) {
+    const state = rawState as PurpleState
+    const actor = state.players[state.currentPlayer]
+    return serviceTickOf(state.players, now, options, {
+      botDelayMs: (rand) =>
+        !actor?.isBot
+          ? null
+          : state.pendingReveal || state.canContinue
+            ? 1600
+            : botTickDelayMs(actor.name, rand),
+    })
+  },
 }
 
 // ─── Le Grand Bluff ──────────────────────────────────────────────────────────
@@ -852,6 +1032,29 @@ const bluffAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markBluffPlayerLeft(state as BluffState, userId, at),
   rejoin: (state, userId) => rejoinBluffPlayer(state as BluffState, userId),
+  // BluffOnline : échéance de phase + bots en attente (bluff, vote) ou bot
+  // meneur du reveal (2,5 s de lecture).
+  serviceTick(rawState, now, options) {
+    const state = rawState as BluffState
+    const pendingBot =
+      state.phase === 'submit'
+        ? state.players.find((p) => p.isBot && !state.pendingFakes[p.id])
+        : state.phase === 'vote'
+          ? state.players.find((p) => p.isBot && !state.pendingVotes[p.id])
+          : undefined
+    const revealActorIsBot =
+      state.phase === 'reveal' &&
+      Boolean(playerById(state.players, currentBluffActorId(state))?.isBot)
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) =>
+        !pendingBot && !revealActorIsBot
+          ? null
+          : state.phase === 'reveal'
+            ? 2500
+            : botTickDelayMs(pendingBot?.name, rand),
+    })
+  },
 }
 
 // ─── Qui est l'Espion ? ──────────────────────────────────────────────────────
@@ -904,6 +1107,33 @@ const espionAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markEspionPlayerLeft(state as EspionState, userId, at),
   rejoin: (state, userId) => rejoinEspionPlayer(state as EspionState, userId),
+  // EspionOnline : `advance` à la PLUS PROCHE des deux échéances (accusation
+  // en cours ou chrono principal) + bot qui soutient une accusation (au
+  // hasard côté moteur : un refus retombe sur l'échéance) ou mène le reveal.
+  serviceTick(rawState, now, options) {
+    const state = rawState as EspionState
+    const accusation = state.activeAccusation
+    const dueAt =
+      state.phaseEndsAt === null
+        ? null
+        : accusation
+          ? Math.min(accusation.endsAt, state.phaseEndsAt)
+          : state.phaseEndsAt
+    const supportBot =
+      state.phase === 'discussion' && accusation ? state.players.find((p) => p.isBot) : undefined
+    const revealActorIsBot =
+      state.phase === 'reveal' &&
+      Boolean(playerById(state.players, currentEspionActorId(state))?.isBot)
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state, dueAt),
+      botDelayMs: (rand) =>
+        !supportBot && !revealActorIsBot
+          ? null
+          : state.phase === 'reveal'
+            ? 2500
+            : botTickDelayMs(supportBot?.name, rand),
+    })
+  },
 }
 
 // ─── Tabou Vocal ─────────────────────────────────────────────────────────────
@@ -957,6 +1187,17 @@ const tabouAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markTabouPlayerLeft(state as TabouState, userId, at),
   rejoin: (state, userId) => rejoinTabouPlayer(state as TabouState, userId),
+  // TabouOnline : échéance de phase + bot meneur du bilan de manche.
+  serviceTick(rawState, now, options) {
+    const state = rawState as TabouState
+    const roundEndActor =
+      state.phase === 'roundEnd' ? playerById(state.players, currentTabouActorId(state)) : undefined
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) =>
+        roundEndActor?.isBot ? botTickDelayMs(roundEndActor.name, rand) : null,
+    })
+  },
 }
 
 // ─── Crobard ─────────────────────────────────────────────────────────────────
@@ -1021,6 +1262,21 @@ const crobardAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markCrobardPlayerLeft(state as CrobardState, userId, at),
   rejoin: (state, userId) => rejoinCrobardPlayer(state as CrobardState, userId),
+  // CrobardOnline : échéance de phase (choix du mot, dessin, bilan) + bot
+  // meneur du bilan de manche. Un dessinateur bot n'a pas de tick : sa manche
+  // s'écourte d'elle-même côté moteur.
+  serviceTick(rawState, now, options) {
+    const state = rawState as CrobardState
+    const roundEndActor =
+      state.phase === 'roundEnd'
+        ? playerById(state.players, currentCrobardActorId(state))
+        : undefined
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) =>
+        roundEndActor?.isBot ? botTickDelayMs(roundEndActor.name, rand) : null,
+    })
+  },
 }
 
 // ─── Téléphone Dessiné ───────────────────────────────────────────────────────
@@ -1086,6 +1342,32 @@ const telephoneAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markTelephonePlayerLeft(state as TelephoneState, userId, at),
   rejoin: (state, userId) => rejoinTelephonePlayer(state as TelephoneState, userId),
+  // TelephoneDessineOnline : échéance de phase + maillons des bots (tous d'un
+  // coup) ou bot meneur du reveal (2,5 s). Seule adaptation : le client ne
+  // demande le coup des bots que tant que SON propre maillon n'est pas parti
+  // (`haveISubmitted`), une notion de « moi » que le serveur n'a pas — il le
+  // demande tant qu'un bot n'a pas rendu le sien, ce que le moteur exige de
+  // toute façon pour clore la manche. Le dépôt automatique des brouillons
+  // humains à T-2 s reste au client : le serveur n'a pas leurs brouillons.
+  serviceTick(rawState, now, options) {
+    const state = rawState as TelephoneState
+    const pendingBot =
+      state.phase === 'contributing'
+        ? state.players.find((p) => p.isBot && !p.leftAt && !state.submittedIds.includes(p.id))
+        : undefined
+    const revealActorIsBot =
+      state.phase === 'reveal' &&
+      Boolean(playerById(state.players, currentTelephoneActorId(state))?.isBot)
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) =>
+        !pendingBot && !revealActorIsBot
+          ? null
+          : state.phase === 'reveal'
+            ? 2500
+            : botTickDelayMs(pendingBot?.name, rand),
+    })
+  },
 }
 
 // ─── Sans Filtre ─────────────────────────────────────────────────────────────
@@ -1136,6 +1418,30 @@ const sansFiltreAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markSFPlayerLeft(state as SFState, userId, at),
   rejoin: (state, userId) => rejoinSFPlayer(state as SFState, userId),
+  // SansFiltreOnline : échéance de phase + prochain bot à agir — le PREMIER
+  // en attente en submit (un par tick), le juge bot, le meneur bot du reveal.
+  serviceTick(rawState, now, options) {
+    const state = rawState as SFState
+    const pendingBot =
+      state.phase === 'submit'
+        ? state.players.find(
+            (p) =>
+              p.isBot &&
+              p.id !== state.judgeId &&
+              !state.submissions.some((s) => s.playerId === p.id) &&
+              p.hand.length > 0 &&
+              !p.leftAt
+          )
+        : state.phase === 'judging'
+          ? state.players.find((p) => p.id === state.judgeId && p.isBot)
+          : state.phase === 'reveal'
+            ? state.players.find((p) => p.id === currentSFActorId(state) && p.isBot)
+            : undefined
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) => (pendingBot ? botTickDelayMs(pendingBot.name, rand) : null),
+    })
+  },
 }
 
 // ─── Mots Codés ──────────────────────────────────────────────────────────────
@@ -1185,6 +1491,30 @@ const motsCodesAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markMCPlayerLeft(state as MCState, userId, at),
   rejoin: (state, userId) => rejoinMCPlayer(state as MCState, userId),
+  // MotsCodesOnline : échéance de phase + maître-mot devenu bot, ou équipe
+  // dont tous les devineurs présents sont des bots. Comme chez le client,
+  // une équipe SANS devineur présent compte comme « tous bots » (`every`
+  // d'une liste vide) : le bot prend la main plutôt que de figer la manche.
+  serviceTick(rawState, now, options) {
+    const state = rawState as MCState
+    const clueMaster =
+      state.phase === 'clue'
+        ? state.players.find((p) => p.team === state.activeTeam && p.isSpymaster)
+        : undefined
+    const activeGuessers =
+      state.phase === 'guess'
+        ? state.players.filter((p) => p.team === state.activeTeam && !p.isSpymaster && !p.leftAt)
+        : null
+    const masterIsBot = Boolean(clueMaster?.isBot)
+    const guessersAllBots = activeGuessers !== null && activeGuessers.every((p) => p.isBot)
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) =>
+        masterIsBot || guessersAllBots
+          ? botTickDelayMs(masterIsBot ? clueMaster?.name : activeGuessers?.[0]?.name, rand)
+          : null,
+    })
+  },
 }
 
 // ─── Dilemmes ────────────────────────────────────────────────────────────────
@@ -1233,6 +1563,26 @@ const dilemmesAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markDilPlayerLeft(state as DilState, userId, at),
   rejoin: (state, userId) => rejoinDilPlayer(state as DilState, userId),
+  // DilemmesOnline : échéance de phase + votes des bots au tempo de leur
+  // persona, ou bot meneur du reveal (au moins 3,5 s de lecture).
+  serviceTick(rawState, now, options) {
+    const state = rawState as DilState
+    const pendingBot =
+      state.phase === 'vote'
+        ? state.players.find((p) => p.isBot && !state.votes[p.id] && !p.leftAt)
+        : undefined
+    const revealActor =
+      state.phase === 'reveal' ? playerById(state.players, currentDilActorId(state)) : undefined
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) =>
+        pendingBot
+          ? botTickDelayMs(pendingBot.name, rand)
+          : revealActor?.isBot
+            ? Math.max(3500, botTickDelayMs(revealActor.name, rand))
+            : null,
+    })
+  },
 }
 
 // ─── Petit Bac ───────────────────────────────────────────────────────────────
@@ -1288,6 +1638,19 @@ const petitBacAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markPbcPlayerLeft(state as PbcState, userId, at),
   rejoin: (state, userId) => rejoinPbcPlayer(state as PbcState, userId),
+  // PetitBacOnline : échéance de phase + bot meneur du reveal (5 s). Le
+  // dépôt des brouillons humains au flush reste au client : le serveur n'a
+  // pas leurs grilles.
+  serviceTick(rawState, now, options) {
+    const state = rawState as PbcState
+    const revealActorIsBot =
+      state.phase === 'reveal' &&
+      Boolean(playerById(state.players, currentPbcActorId(state))?.isBot)
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: () => (revealActorIsBot ? 5000 : null),
+    })
+  },
 }
 
 // ─── Président ───────────────────────────────────────────────────────────────
@@ -1340,6 +1703,34 @@ const presidentAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markPrePlayerLeft(state as PreState, userId, at),
   rejoin: (state, userId) => rejoinPrePlayer(state as PreState, userId),
+  // PresidentOnline : échéance de phase + bot au tour (pose, ou « continuer »
+  // de l'interlude après 5 s) ; sinon tick spéculatif de fermeture de carré
+  // hors tour, 0,9 à 2,1 s après la pose — NOT_BOT_TURN si aucun bot ne tient
+  // le complément, et le minuteur retombe sur l'échéance.
+  serviceTick(rawState, now, options) {
+    const state = rawState as PreState
+    const actor = playerById(state.players, currentPreActorId(state))
+    const run = state.trickRun ?? null
+    const closeChance =
+      state.phase === 'playing' &&
+      state.lastPlay !== null &&
+      run !== null &&
+      run.count >= 2 &&
+      run.count < 4 &&
+      4 - run.count === state.lastPlay.cards.length &&
+      state.players.some((p) => p.isBot && !p.leftAt)
+    return serviceTickOf(state.players, now, options, {
+      advance: advanceAt(state),
+      botDelayMs: (rand) =>
+        actor?.isBot && (state.phase === 'playing' || state.phase === 'interlude')
+          ? state.phase === 'interlude'
+            ? 5000
+            : botTickDelayMs(actor.name, rand)
+          : closeChance
+            ? 900 + rand() * 1200
+            : null,
+    })
+  },
 }
 
 // ─── Registre ────────────────────────────────────────────────────────────────

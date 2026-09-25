@@ -73,7 +73,21 @@ export const XP_GAIN_TTL_MS = 30 * 60 * 1000
 
 type Entry = { detail: XpGainDetail; at: number }
 
-const lastGains = new Map<string, Entry>()
+/**
+ * Les deux mémoires vivent sur globalThis, comme le bus temps réel et les
+ * départs (room-bus.ts, departures.ts) : une fin de partie peut être jouée
+ * par le minuteur de service réarmé AU DÉMARRAGE (room-ticker.ts), dans le
+ * graphe de modules d'instrumentation.ts — l'XP y est crédité en base, et
+ * /api/online/progression, chargé par les routes, doit relire le MÊME
+ * détail. Une Map de module ne serait pas la même des deux côtés.
+ */
+const globalForXp = globalThis as unknown as {
+  __lpXpGains?: Map<string, Entry>
+  __lpXpAnnounced?: Map<string, { types: Set<string>; at: number }>
+}
+
+const lastGains = globalForXp.__lpXpGains ?? new Map<string, Entry>()
+if (!globalForXp.__lpXpGains) globalForXp.__lpXpGains = lastGains
 
 /** Purge paresseuse : appelée à chaque écriture, aucun timer à entretenir. */
 function prune(now: number): void {
@@ -107,7 +121,9 @@ export function recallXpGain(userId: string, now = Date.now()): XpGainDetail | n
  */
 export const ANNOUNCED_TTL_MS = 24 * 60 * 60 * 1000
 
-const announced = new Map<string, { types: Set<string>; at: number }>()
+const announced =
+  globalForXp.__lpXpAnnounced ?? new Map<string, { types: Set<string>; at: number }>()
+if (!globalForXp.__lpXpAnnounced) globalForXp.__lpXpAnnounced = announced
 
 /** Retourne les succès encore JAMAIS annoncés, et les marque comme annoncés. */
 export function takeUnannouncedAchievements(

@@ -11,12 +11,10 @@ import {
   EyeOff,
   FlaskConical,
   Heart,
-  Home,
   Hourglass,
   Medal,
   MessageCircle,
   Moon,
-  RefreshCw,
   Send,
   Shield,
   Skull,
@@ -33,7 +31,7 @@ import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { usePagePresence } from '@/hooks/usePagePresence'
 import { chatCursorQuery, mergeMessages } from '@/lib/chat-delta'
 import { GameOnlineLobby } from './GameOnlineLobby'
-import { EndConfetti } from './EndConfetti'
+import { OnlineEndScreen } from './OnlineEndScreen'
 import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
@@ -467,9 +465,6 @@ export function LoupGarouOnline() {
   const isDayChatPhase =
     view.phase === 'day-debate' || view.phase === 'day-vote' || view.phase === 'day-revote'
   const alive = view.players.filter((p) => p.alive)
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
@@ -510,96 +505,78 @@ export function LoupGarouOnline() {
   // ── Écran de fin ─────────────────────────────────────────────────────────
   if (finished) {
     const villageWon = view.winnerTeam === 'village'
+    // Victoire du joueur local : son camp (celui de son rôle final) a gagné.
+    const meFinal = view.players.find((p) => p.id === user.id)
+    const won = Boolean(
+      meFinal?.role && view.winnerTeam !== null && lgTeamOf(meFinal.role) === view.winnerTeam
+    )
     return (
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-white">
-        <EndConfetti />
-        <motion.div
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-          className="flex flex-col items-center gap-2 text-center"
-        >
-          <Trophy className="h-14 w-14 text-gold" />
-          <h2 className={cn('font-display text-3xl font-bold', villageWon ? 'text-emerald-200' : 'text-red-200')}>
-            {villageWon ? t('victory.village') : t('victory.loups')}
-          </h2>
-          {!isSoft && (
-            <p className="text-sm text-white/60">
-              {villageWon ? t('victory.villageDrinks') : t('victory.loupsDrinks')}
+      <OnlineEndScreen
+        confetti
+        won={won}
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        header={
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="flex flex-col items-center gap-2 text-center"
+          >
+            <Trophy className="h-14 w-14 text-gold" />
+            <h2 className={cn('font-display text-3xl font-bold', villageWon ? 'text-emerald-200' : 'text-red-200')}>
+              {villageWon ? t('victory.village') : t('victory.loups')}
+            </h2>
+            {!isSoft && (
+              <p className="text-sm text-white/60">
+                {villageWon ? t('victory.villageDrinks') : t('victory.loupsDrinks')}
+              </p>
+            )}
+          </motion.div>
+        }
+        ranking={
+          <div className="w-full max-w-sm space-y-2">
+            <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-gold/60">
+              {t('victory.fullReveal')}
             </p>
-          )}
-        </motion.div>
-
-        <XpGainBanner
-          won={(() => {
-            const meFinal = view.players.find((p) => p.id === user.id)
-            return Boolean(
-              meFinal?.role && view.winnerTeam !== null && lgTeamOf(meFinal.role) === view.winnerTeam
-            )
-          })()}
-          playerIds={view.players.map((p) => p.id)}
-          className="w-full max-w-sm"
-        />
-
-        <div className="w-full max-w-sm space-y-2">
-          <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-gold/60">
-            {t('victory.fullReveal')}
-          </p>
-          {view.players.map((p) => (
-            <div
-              key={p.id}
-              className={cn(
-                'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
-                p.role === 'loup' ? 'border-suit-red/40 bg-suit-red/10' : 'border-gold/10 bg-felt-deep/60',
-                !p.alive && 'opacity-60'
-              )}
-            >
-              <RankCrest role={cosmetics.get(p.id)?.role} />
-              <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1 truncate text-sm font-bold">
-                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                  {!p.alive && <Skull aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/40" />}
-                </p>
-                {p.role && (
-                  <p className={cn('flex items-center gap-1 text-xs font-semibold', ROLE_META[p.role].color)}>
-                    {(() => {
-                      const RoleIcon = ROLE_META[p.role].Icon
-                      return <RoleIcon className="h-3.5 w-3.5 shrink-0" />
-                    })()}
-                    {roleName(p.role)}
+            {view.players.map((p) => (
+              <div
+                key={p.id}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
+                  p.role === 'loup' ? 'border-suit-red/40 bg-suit-red/10' : 'border-gold/10 bg-felt-deep/60',
+                  !p.alive && 'opacity-60'
+                )}
+              >
+                <RankCrest role={cosmetics.get(p.id)?.role} />
+                <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1 truncate text-sm font-bold">
+                    <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
+                    {!p.alive && <Skull aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/40" />}
                   </p>
+                  {p.role && (
+                    <p className={cn('flex items-center gap-1 text-xs font-semibold', ROLE_META[p.role].color)}>
+                      {(() => {
+                        const RoleIcon = ROLE_META[p.role].Icon
+                        return <RoleIcon className="h-3.5 w-3.5 shrink-0" />
+                      })()}
+                      {roleName(p.role)}
+                    </p>
+                  )}
+                </div>
+                {!isSoft && (
+                  <span className="flex items-center gap-1 text-xs text-white/50">
+                    <Beer className="h-3.5 w-3.5 text-amber-300" /> {p.sips}
+                  </span>
                 )}
               </div>
-              {!isSoft && (
-                <span className="flex items-center gap-1 text-xs text-white/50">
-                  <Beer className="h-3.5 w-3.5 text-amber-300" /> {p.sips}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          <Button
-            onClick={() => void voteRematch()}
-            disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {iVotedRematch && humanCount > 1
-              ? t('victory.rematchWaiting', { count: rematchVotes.length, total: humanCount })
-              : t('victory.replay')}
-          </Button>
-          <Button
-            onClick={() => void leaveRoom()}
-            variant="outline"
-            className="w-full rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
-          >
-            <Home className="mr-2 h-4 w-4" /> {t('victory.backToMenu')}
-          </Button>
-        </div>
-      </div>
+            ))}
+          </div>
+        }
+        xp={<XpGainBanner won={won} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 

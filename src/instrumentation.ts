@@ -50,8 +50,11 @@ export async function register() {
     // peut réellement manquer ici est node-cron, dont la présence dans
     // `.next/standalone` dépend du traçage de Next.
     try {
-      const { startScheduledJobs } = await import('@/lib/scheduler')
+      const { startScheduledJobs, rearmRoomTickersAtStartup } = await import('@/lib/scheduler')
       startScheduledJobs()
+      // Les parties en cours pendant un redéploiement repartent : leurs
+      // minuteurs de service (bots, fins de phase) sont réarmés une fois.
+      rearmRoomTickersAtStartup()
     } catch (error) {
       // Nom de la classe d'erreur seulement : aucune donnée personnelle dans
       // les journaux du conteneur, même au démarrage.

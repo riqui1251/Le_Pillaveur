@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, RefreshCw, Siren, Trophy } from 'lucide-react'
+import { Siren, Trophy } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
-import { EndConfetti } from './EndConfetti'
+import { OnlineEndScreen } from './OnlineEndScreen'
 import { PhaseCountdown } from './PhaseCountdown'
 import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
@@ -119,9 +119,6 @@ export function EspionOnline() {
   const me = view.players.find((p) => p.id === user.id)
   const finished = view.phase === 'finished'
   const reveal = view.lastReveal
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
   const activePlayers = view.players.filter((p) => !p.leftAt)
   const majorityNeeded = Math.floor(activePlayers.length / 2) + 1
 
@@ -143,45 +140,30 @@ export function EspionOnline() {
     const crewWon = view.winnerTeam === 'crew'
     const won = me?.role === view.winnerTeam
     return (
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-white">
-        <EndConfetti />
-        <motion.div
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-          className="flex flex-col items-center gap-2 text-center"
-        >
-          <Trophy className="h-14 w-14 text-gold" />
-          <h2 className={cn('font-display text-3xl font-bold', crewWon ? 'text-cyan-200' : 'text-slate-200')}>
-            {crewWon ? t('victory.crewWin') : t('victory.spyWin')}
-          </h2>
-          <p className="text-sm text-white/60">
-            {t('victory.score', { spy: view.roundWins.spy, crew: view.roundWins.crew })}
-          </p>
-        </motion.div>
-
-        <XpGainBanner won={Boolean(won)} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
-
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          <Button
-            onClick={() => void voteRematch()}
-            disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
+      <OnlineEndScreen
+        confetti
+        won={Boolean(won)}
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        header={
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="flex flex-col items-center gap-2 text-center"
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {iVotedRematch && humanCount > 1
-              ? t('victory.rematchWaiting', { count: rematchVotes.length, total: humanCount })
-              : t('victory.replay')}
-          </Button>
-          <Button
-            onClick={() => void leaveRoom()}
-            variant="outline"
-            className="w-full rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
-          >
-            <Home className="mr-2 h-4 w-4" /> {t('victory.backToMenu')}
-          </Button>
-        </div>
-      </div>
+            <Trophy className="h-14 w-14 text-gold" />
+            <h2 className={cn('font-display text-3xl font-bold', crewWon ? 'text-cyan-200' : 'text-slate-200')}>
+              {crewWon ? t('victory.crewWin') : t('victory.spyWin')}
+            </h2>
+            <p className="text-sm text-white/60">
+              {t('victory.score', { spy: view.roundWins.spy, crew: view.roundWins.crew })}
+            </p>
+          </motion.div>
+        }
+        xp={<XpGainBanner won={Boolean(won)} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 

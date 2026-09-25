@@ -261,6 +261,47 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   request_already_declined: 'Demande déjà refusée',
 }
 
+/**
+ * Pourquoi un joueur n'est plus à sa table, quand ce n'est pas lui qui l'a
+ * quittée. Le serveur la retient un moment (src/lib/online/departures.ts) et
+ * la rend avec le 403 de GET /rooms/[roomId] (`reason`) : le client n'a plus
+ * à la deviner d'après la table qu'il affichait.
+ * - `kicked` : retiré par l'hôte au lobby ;
+ * - `absent` : siège libéré au lobby après une absence (purge des absents) ;
+ * - `rematched_without_you` : la table a relancé pendant son absence ;
+ * - `replaced_by_bot` : remplacé en pleine partie pour inactivité.
+ * Ici et non dans departures.ts : le client en lit la liste et les clés, et
+ * ce module-là garde une Map serveur qui n'a rien à faire dans un bundle.
+ */
+export const DEPARTURE_REASONS = [
+  'kicked',
+  'absent',
+  'rematched_without_you',
+  'replaced_by_bot',
+] as const
+
+export type DepartureReason = (typeof DEPARTURE_REASONS)[number]
+
+const DEPARTURE_REASON_SET = new Set<string>(DEPARTURE_REASONS)
+
+/**
+ * Clé du namespace `onlineLobby.errors` qui le dit au joueur. `replaced_by_bot`
+ * garde la phrase qu'il avait déjà (c'est aussi un code d'erreur d'action).
+ */
+export const DEPARTURE_MESSAGE_KEYS = {
+  kicked: 'left_kicked',
+  absent: 'left_absent',
+  rematched_without_you: 'left_rematched',
+  replaced_by_bot: 'replaced_by_bot',
+} as const satisfies Record<DepartureReason, string>
+
+/** Valeur `reason` d'une réponse d'API → raison connue, ou null. */
+export function resolveDepartureReason(value: unknown): DepartureReason | null {
+  return typeof value === 'string' && DEPARTURE_REASON_SET.has(value)
+    ? (value as DepartureReason)
+    : null
+}
+
 /** Paramètres d'un code à trou (bornes de joueurs) — repris tel quel côté i18n. */
 export type OnlineErrorParams = { count?: number }
 

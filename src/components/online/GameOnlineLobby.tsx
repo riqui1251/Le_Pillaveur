@@ -1,8 +1,9 @@
 ﻿"use client"
 
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { usePathname } from '@/i18n/navigation'
+import { usePathname, useRouter } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { ArrowLeft, Check, ChevronDown, Copy, Crown, Globe, Lock, LogOut, Mail, Play, Plus, Settings, Share2, Trophy, Tv, UserPlus, Users, X } from 'lucide-react'
 import { useState } from 'react'
@@ -12,6 +13,8 @@ import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
 import { useFriends } from '@/hooks/useFriends'
 import { GAMES, type GameMeta } from '@/lib/games'
+import { useLocalizedGames } from '@/lib/games-i18n'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { GameBriefing } from '@/components/online/GameBriefing'
@@ -44,6 +47,181 @@ function LobbyShell({ children }: { children: React.ReactNode }) {
       </div>
       <div className="relative z-10 mx-auto w-full max-w-lg px-4 py-8 pb-12">{children}</div>
     </div>
+  )
+}
+
+/** Jeux qu'une table peut prendre : ceux qu'on peut ouvrir en ligne (même garde que POST /rooms). */
+const SWITCHABLE_GAMES = GAMES.filter((g) => g.onlineReady && !g.hidden)
+
+/**
+ * Feuille « Changer de jeu » (hôte, table en attente) : la liste des jeux en
+ * ligne, en zone pouce. Un jeu que la tablée dépasse déjà est grisé — le
+ * serveur le refuserait (max_players). En ambiance Soft, seuls les jeux prêts
+ * pour elle (softModeReady), comme la grille des jeux : les autres membres
+ * suivent la bascule sans rien choisir. Échap, le voile ou la croix ferment,
+ * sauf pendant la bascule. Modale au clavier : Tab tourne dans la feuille, et
+ * le focus revient à la fermeture sur ce qui l'avait (la puce du lobby).
+ */
+function GameSwitchSheet({
+  currentGameId,
+  humans,
+  pendingId,
+  error,
+  titleOf,
+  onPick,
+  onClose,
+}: {
+  currentGameId: string
+  humans: number
+  pendingId: string | null
+  error: string | null
+  titleOf: (id: string) => string
+  onPick: (game: GameMeta) => void
+  onClose: () => void
+}) {
+  const tOnline = useTranslations('onlineLobby')
+  const panelRef = useRef<HTMLDivElement>(null)
+  const busy = pendingId !== null
+  const { mode: ambiance } = useAmbianceMode()
+  const games =
+    ambiance === 'soft'
+      ? SWITCHABLE_GAMES.filter((g) => g.softModeReady || g.id === currentGameId)
+      : SWITCHABLE_GAMES
+
+  useEffect(() => {
+    // Le focus entre dans la feuille : clavier et lecteur d'écran y sont. Il
+    // revient, à la fermeture, sur ce qui l'avait — sinon on repartait du
+    // haut de la page.
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    panelRef.current?.focus()
+    return () => {
+      if (opener?.isConnected) opener.focus()
+    }
+  }, [])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) onClose()
+      if (e.key !== 'Tab') return
+      // Tab tourne DANS la feuille (aria-modal) : le lobby en dessous n'est
+      // plus atteignable tant qu'elle est ouverte.
+      const panel = panelRef.current
+      if (!panel) return
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')
+      )
+      const active = document.activeElement
+      const inside = active instanceof Node && panel.contains(active) && active !== panel
+      if (focusables.length === 0) {
+        e.preventDefault()
+        panel.focus()
+        return
+      }
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (e.shiftKey && (!inside || active === first)) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (!inside || active === last)) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [busy, onClose])
+
+  // Portée sur <body> : le contenu du lobby vit dans le contexte d'empilement
+  // de LobbyShell (z-10), sous le dock vocal (z-90) — une feuille modale doit
+  // passer au-dessus de tout. Montée seulement au toucher : `document` existe.
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+      {/* Le voile ferme au toucher ; au clavier, c'est la croix (hors tabulation). */}
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label={tOnline('close')}
+        disabled={busy}
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-sm"
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="game-switch-title"
+        tabIndex={-1}
+        className="relative flex max-h-[80dvh] w-full max-w-lg flex-col rounded-t-3xl border-x border-t border-gold/25 bg-felt-deep pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-18px_50px_-20px_rgba(0,0,0,0.9)] outline-none"
+      >
+        <div className="flex items-start gap-3 px-4 pb-2 pt-3">
+          <div className="min-w-0 flex-1 pt-1">
+            <h2 id="game-switch-title" className="font-display text-lg font-bold text-cream">
+              {tOnline('gameSwitch.cta')}
+            </h2>
+            <p className="mt-0.5 text-[11px] leading-snug text-white/50">{tOnline('gameSwitch.hint')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            aria-label={tOnline('close')}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/50 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        {error && (
+          <p role="alert" className="mx-4 mb-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+            {error}
+          </p>
+        )}
+        <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-4 pb-2">
+          {games.map((g) => {
+            const current = g.id === currentGameId
+            const tooMany = g.maxPlayers !== undefined && humans > g.maxPlayers
+            const pending = pendingId === g.id
+            const disabled = current || tooMany || busy
+            return (
+              <li key={g.id}>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  aria-current={current ? 'true' : undefined}
+                  onClick={() => onPick(g)}
+                  className={cn(
+                    'flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition-colors',
+                    current ? 'border-gold/40 bg-gold/10' : 'border-white/10 bg-white/5',
+                    !disabled && 'hover:border-amber-400/40 hover:bg-white/10',
+                    disabled && !current && !pending && 'opacity-45'
+                  )}
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#D8CCAE] bg-cream text-[#24201A]">
+                    <GameIconById id={g.id} className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-white">{titleOf(g.id)}</span>
+                    <span className="block truncate text-[11px] text-white/45">
+                      {tooMany
+                        ? tOnline('gameSwitch.tooMany', { count: g.maxPlayers ?? 0 })
+                        : g.maxPlayers && g.maxPlayers < 20
+                          ? tOnline('playersRange.bounded', { min: g.minPlayers ?? 2, max: g.maxPlayers })
+                          : tOnline('playersRange.open', { min: g.minPlayers ?? 2 })}
+                    </span>
+                  </span>
+                  {current ? (
+                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-gold">
+                      {tOnline('gameSwitch.current')}
+                    </span>
+                  ) : pending ? (
+                    <span aria-hidden className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
+                  ) : null}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    </div>,
+    document.body
   )
 }
 
@@ -90,7 +268,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
   const pathname = usePathname()
   const { user } = useAuth()
-  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend, kickMember } = useOnlineRoom()
+  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend, kickMember, changeGame } = useOnlineRoom()
+  const router = useRouter()
   const { lobbies, liveGames, liveGamesTotal } = useOpenLobbies({ pollMs: 15_000 }) // la table, elle, est sondée par useOnlineRoom
   const { friends, incoming, outgoing, sendRequestToUser, acceptRequest } = useFriends()
   const [copied, setCopied] = useState(false)
@@ -174,6 +353,15 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tTabou = useTranslations('games.tabou.lobby')
   const tCrobard = useTranslations('games.crobard.lobby')
   const tFriends = useTranslations('account.friends')
+  // Titres traduits des jeux (sélecteur « Changer de jeu », bascule de table,
+  // bandeau « tu es dans le lobby X ») : `games.catalog` est au socle, lisible
+  // depuis la page de n'importe quel jeu — et le titre adouci en ambiance Soft
+  // (useLocalizedGames), comme partout ailleurs.
+  const localizedGames = useLocalizedGames()
+  const catalogTitle = (id: string | null | undefined) => {
+    if (!id) return ''
+    return localizedGames.find((g) => g.id === id)?.title ?? id
+  }
 
   const gameLobbies = lobbies.filter((l) => l.gameId === gameId)
   // Parties EN COURS de ce jeu (tables publiques uniquement) : informatif, on
@@ -186,11 +374,53 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const selfMember = room?.members.find((m) => m.isSelf)
   const visibility = (room?.visibility ?? 'public') as Visibility
 
+  // Changer de jeu (hôte) : la table garde son id et change de gameId. Qui
+  // était assis ICI pour ce jeu suit vers la page du nouveau — sans passer
+  // par « mauvais lobby, quitte-le ». Qui arrive d'ailleurs (assis à une
+  // autre table, guichet d'un autre jeu) garde l'avertissement.
+  const [seatedRoomId, setSeatedRoomId] = useState<string | null>(null)
   useEffect(() => {
-    if (room && room.gameId !== gameId && room.status === 'waiting') {
+    const seatedHere = room && room.gameId === gameId ? room.id : null
+    if (seatedHere) setSeatedRoomId(seatedHere)
+    else if (!room) setSeatedRoomId(null)
+  }, [room, gameId])
+  const tableMoved = Boolean(
+    room && room.status === 'waiting' && room.gameId !== gameId && room.id === seatedRoomId
+  )
+  const movedGame = tableMoved ? GAMES.find((g) => g.id === room?.gameId) : undefined
+  // Jeu vers lequel l'hôte vient lui-même de basculer : c'est son geste qui
+  // navigue (handleSwitchGame), pas le suivi ci-dessous.
+  const selfSwitchRef = useRef<string | null>(null)
+  // Une seule navigation par bascule, quel que soit le nombre de relectures.
+  const followedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!room || !movedGame) return
+    const key = `${room.id}:${movedGame.id}`
+    if (selfSwitchRef.current === movedGame.id || followedRef.current === key) return
+    followedRef.current = key
+    router.replace(movedGame.path)
+  }, [room, movedGame, router])
+
+  const [showGameSwitch, setShowGameSwitch] = useState(false)
+  const [switchingTo, setSwitchingTo] = useState<string | null>(null)
+  const handleSwitchGame = async (target: GameMeta) => {
+    if (switchingTo || loading || target.id === gameId) return
+    setSwitchingTo(target.id)
+    selfSwitchRef.current = target.id
+    if (await changeGame(target.id)) {
+      // La page quitte l'écran : la feuille et son indicateur partent avec.
+      router.push(target.path)
+      return
+    }
+    selfSwitchRef.current = null
+    setSwitchingTo(null)
+  }
+
+  useEffect(() => {
+    if (room && room.gameId !== gameId && room.status === 'waiting' && !tableMoved) {
       setError(tOnline('errors.wrongGameRoom'))
     }
-  }, [room, gameId, setError, tOnline])
+  }, [room, gameId, setError, tOnline, tableMoved])
 
   // Badge « top 5 » : classement de CE jeu, pour repérer d'un coup d'œil les
   // meilleurs joueurs de la table avant de lancer.
@@ -264,9 +494,39 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     )
   }
 
+  // La table vient de changer de jeu : on part vers sa page (effet de suivi,
+  // ou geste de l'hôte). Un écran de passage plutôt que le guichet de
+  // l'ancien jeu et son « quitte ce lobby » ; le bouton couvre une navigation
+  // qui n'aboutirait pas.
+  if (tableMoved && movedGame) {
+    return (
+      <LobbyShell>
+        <div role="status" aria-live="polite" className="flex flex-col items-center gap-4 py-20 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#D8CCAE] bg-cream text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]">
+            <GameIconById id={movedGame.id} className="h-7 w-7" />
+          </span>
+          <p className="font-display text-base font-bold text-cream">
+            {tOnline('gameSwitch.moving', { game: catalogTitle(movedGame.id) })}
+          </p>
+          <span aria-hidden className="h-6 w-6 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
+          <Button
+            variant="ghost"
+            onClick={() => router.push(movedGame.path)}
+            className="min-h-[44px] text-sm text-gold/80 hover:bg-white/10 hover:text-gold"
+          >
+            {tOnline('gameSwitch.goToTable')}
+          </Button>
+        </div>
+      </LobbyShell>
+    )
+  }
+
   // Pas encore dans un lobby pour ce jeu
   if (!inThisGameRoom || room?.status !== 'waiting') {
     const wrongRoom = Boolean(room && room.gameId !== gameId)
+    // Table en cours ailleurs (autre jeu) : on propose d'y aller — bascule de
+    // jeu manquée onglet caché, ou simple détour par le guichet.
+    const otherRoomGame = wrongRoom ? GAMES.find((g) => g.id === room?.gameId) : undefined
 
     return (
       <LobbyShell>
@@ -301,10 +561,22 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
         {wrongRoom && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            <span>{tOnline('errors.inOtherLobby', { game: GAMES.find((g) => g.id === room?.gameId)?.title ?? '' })}</span>
-            <Button variant="ghost" size="sm" className="text-amber-200 hover:bg-amber-500/15 hover:text-amber-100" onClick={() => leaveRoom()}>
-              {tOnline('quit')}
-            </Button>
+            <span>{tOnline('errors.inOtherLobby', { game: catalogTitle(room?.gameId) })}</span>
+            <div className="flex items-center gap-1">
+              {otherRoomGame && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-[44px] font-semibold text-amber-100 hover:bg-amber-500/15"
+                  onClick={() => router.push(otherRoomGame.path)}
+                >
+                  {tOnline('gameSwitch.goToTable')}
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" className="min-h-[44px] text-amber-200 hover:bg-amber-500/15 hover:text-amber-100" onClick={() => leaveRoom()}>
+                {tOnline('quit')}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -593,18 +865,51 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   // Dans le lobby en attente
   return (
     <LobbyShell>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex items-center justify-between gap-2">
         <button
           onClick={() => leaveRoom()}
-          className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-red-300"
+          className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-red-300"
         >
           <LogOut className="h-4 w-4" />
           {tOnline('quit')}
         </button>
-        <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
+        {/* Changer de jeu (hôte) : même table, même code — tout le monde
+            suit. Le jeu en cours y est écrit, le geste en dessous. */}
+        {isHost && (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null)
+              setShowGameSwitch(true)
+            }}
+            aria-haspopup="dialog"
+            aria-expanded={showGameSwitch}
+            className="flex min-h-[44px] min-w-0 max-w-[13rem] flex-1 items-center gap-2 rounded-xl border border-gold/25 bg-felt-deep/70 px-2.5 text-left transition-colors hover:border-amber-400/40"
+          >
+            <GameIconById id={gameId} className="h-5 w-5 shrink-0 text-gold" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-bold text-white">{catalogTitle(gameId)}</span>
+              <span className="block truncate text-[10px] leading-tight text-gold/75">{tOnline('gameSwitch.cta')}</span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-white/40" />
+          </button>
+        )}
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
           <Globe className="h-3 w-3" /> {tOnline('onlineBadge')}
         </span>
       </div>
+
+      {isHost && showGameSwitch && (
+        <GameSwitchSheet
+          currentGameId={gameId}
+          humans={room.members.length}
+          pendingId={switchingTo}
+          error={error}
+          titleOf={catalogTitle}
+          onPick={(target) => void handleSwitchGame(target)}
+          onClose={() => setShowGameSwitch(false)}
+        />
+      )}
 
       {/* La Table Ronde : les joueurs sont assis autour du feutre (même
           langage que le mode TV), le code trône au centre — le toucher le

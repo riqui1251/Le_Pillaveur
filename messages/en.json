@@ -473,6 +473,14 @@
       "title": "Settings",
       "botsSummary": "{count, plural, one {# bot} other {# bots}}"
     },
+    "gameSwitch": {
+      "cta": "Change game",
+      "hint": "Same table, same code: everyone follows. Settings start over and everyone gets ready again.",
+      "current": "Current",
+      "tooMany": "Too many players at the table (max {count})",
+      "moving": "The table is moving to {game}…",
+      "goToTable": "Go to the table"
+    },
     "readyButton": {
       "on": "✓ Ready",
       "off": "I'm ready"
@@ -484,6 +492,15 @@
       "withBots": "Start with bots",
       "force": "Start without {count, plural, one {the latecomer} other {the # latecomers}}",
       "forceBlocked": "Not enough players ready: {count} more needed"
+    },
+    "end": {
+      "rematch": "Play again",
+      "rematchWaiting": "Waiting for the others ({count}/{total})",
+      "rematchStatus": "Play again: {count} of {total}",
+      "backToTable": "Back to the table",
+      "leave": "Leave the table",
+      "shareWon": "I just won a game of “{game}” on Le Pillaveur! Come and challenge me.",
+      "sharePlayed": "I just played “{game}” on Le Pillaveur. Come and play with us!"
     },
     "list": {
       "empty": "No open lobby — pick a game below to create one.",
@@ -520,6 +537,8 @@
       "rematchFailed": "Could not vote for a rematch",
       "inviteFailed": "Could not invite this friend",
       "kickFailed": "Could not remove this player",
+      "backToTableFailed": "Could not go back to the table",
+      "changeGameFailed": "Could not change the game",
       "wrongGameRoom": "You're in a lobby for another game. Leave it to continue.",
       "inOtherLobby": "You're in the “{game}” lobby.",
       "auth_required": "Sign in to play online.",
@@ -573,6 +592,9 @@
       "replaced_by_bot": "You were replaced by a bot.",
       "roomClosed": "The table has been closed.",
       "roomLeft": "You're no longer in this room.",
+      "left_kicked": "The host removed you from the table.",
+      "left_absent": "Your seat was freed because you were away from the table. The table code will get you back in.",
+      "left_rematched": "The table started a new game without you while you were away.",
       "reading_time": "Give the others a moment to read — it moves on shortly.",
       "stop_too_early": "Too early to call STOP — let the round get going.",
       "incomplete_stop": "Fill all five boxes with the right letter before calling STOP.",
@@ -721,6 +743,29 @@
     },
     "onlineSection": {
       "title": "Online account"
+    },
+    "tables": {
+      "title": "My latest tables",
+      "loading": "Loading your latest tables…",
+      "error": "Couldn't load your latest tables.",
+      "retry": "Try again",
+      "empty": "No ranked online games yet. Your games with 2+ accounts will show up here, ready for a rematch.",
+      "win": "Win",
+      "loss": "Loss",
+      "rank": "{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "players": "{count, plural, one {# player} other {# players}}",
+      "bots": "{count, plural, one {incl. # bot} other {incl. # bots}}",
+      "partners": "Played with: {names}",
+      "friendMark": "{name} (friend)",
+      "more": "+{count}",
+      "rematch": "Rematch",
+      "rematching": "Creating…",
+      "rematchLabel": "Rematch: new {game} table",
+      "inviteAll": "{count, plural, one {Your friend will be invited.} other {Your # friends will be invited.}}",
+      "inviteSome": "{count, plural, one {Only your friend gets an invite; the others join with the table code.} other {Only your # friends get an invite; the others join with the table code.}}",
+      "inviteNone": "Invites are for friends only: give the other players the table code.",
+      "inRoom": "You're already at a table: leave it to start a rematch.",
+      "rematchFailed": "The table couldn't be created. Please try again."
     },
     "localSection": {
       "title": "Local games (this device)"

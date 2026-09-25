@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Anchor, ArrowLeft, Crosshair, Home, RefreshCw, Trophy, Waves } from 'lucide-react'
+import { Anchor, ArrowLeft, Crosshair, Trophy, Waves } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -19,6 +19,7 @@ import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
+import { OnlineEndScreen } from './OnlineEndScreen'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 /**
@@ -155,9 +156,6 @@ export function ToucherCouleOnline() {
   const isMyTurn = activeId === user.id
   const finished = view.phase === 'finished'
   const winner = view.winner
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
 
   const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '—'
   /** Icône du joueur : emoji du persona pour les bots, icône personnalisée du compte pour les humains. */
@@ -721,111 +719,103 @@ export function ToucherCouleOnline() {
               transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
               className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-felt-deep/95 shadow-2xl backdrop-blur-md"
             >
-              <div
+              <OnlineEndScreen
+                variant="sheet"
                 className={cn(
                   'p-6',
                   winner === 'A'
                     ? 'bg-gradient-to-br from-sky-600/20 via-transparent to-cyan-600/10'
                     : 'bg-gradient-to-br from-rose-600/20 via-transparent to-red-600/10'
                 )}
-              >
-                <div className="mb-4 flex flex-col items-center gap-3">
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
-                    className={cn(
-                      'flex h-20 w-20 items-center justify-center rounded-2xl text-4xl shadow-xl',
-                      winner === 'A'
-                        ? 'bg-gradient-to-br from-sky-400 to-cyan-500 shadow-sky-500/40'
-                        : 'bg-gradient-to-br from-rose-400 to-red-500 shadow-rose-500/40'
-                    )}
-                  >
-                    <Trophy className="h-10 w-10 text-white" />
-                  </motion.div>
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold text-white">
-                      {t('victoryTitle', { team: TEAM_LABEL[winner] })}
-                    </h2>
-                    {!isSoft && (
-                      <p className="mt-1 text-sm text-white/50">
-                        {t('defeatDrinks', { team: TEAM_LABEL[otherTeam(winner)] })}
-                      </p>
-                    )}
+                won={me?.team === winner}
+                rematchVotes={view.rematchVotes ?? []}
+                onRematch={voteRematch}
+                onLeave={leaveRoom}
+                rematchClassName="from-sky-600 to-cyan-500 text-white shadow-lg shadow-sky-500/25 hover:from-sky-500 hover:to-cyan-400"
+                header={
+                  <div className="mb-4 flex flex-col items-center gap-3">
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                      className={cn(
+                        'flex h-20 w-20 items-center justify-center rounded-2xl text-4xl shadow-xl',
+                        winner === 'A'
+                          ? 'bg-gradient-to-br from-sky-400 to-cyan-500 shadow-sky-500/40'
+                          : 'bg-gradient-to-br from-rose-400 to-red-500 shadow-rose-500/40'
+                      )}
+                    >
+                      <Trophy className="h-10 w-10 text-white" />
+                    </motion.div>
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-white">
+                        {t('victoryTitle', { team: TEAM_LABEL[winner] })}
+                      </h2>
+                      {!isSoft && (
+                        <p className="mt-1 text-sm text-white/50">
+                          {t('defeatDrinks', { team: TEAM_LABEL[otherTeam(winner)] })}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                <XpGainBanner
-                  won={me?.team === winner}
-                  playerIds={view.players.map((p) => p.id)}
-                  className="mb-4"
-                />
-
-                <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="text-center">
-                    <p className="text-lg font-bold text-sky-300">{view.turnCount}</p>
-                    <p className="text-[10px] text-white/40">{t('statTurns')}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-lg font-bold text-sky-300">
-                      {me && me.shotsFired > 0 ? `${Math.round((me.shotsHit / me.shotsFired) * 100)}%` : '—'}
-                    </p>
-                    <p className="text-[10px] text-white/40">{t('statAccuracy')}</p>
-                  </div>
-                </div>
-
-                <div className="mb-5 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-white/40">
-                    {t('finalBoard')}
-                  </p>
-                  {[...view.players]
-                    .sort((a, b) =>
-                      isSoft
-                        ? (a.team === winner ? 0 : 1) - (b.team === winner ? 0 : 1) || a.name.localeCompare(b.name)
-                        : b.drinks - a.drinks
-                    )
-                    .map((p) => (
-                      <div
-                        key={p.id}
-                        className={cn(
-                          'flex items-center justify-between rounded-xl px-3 py-2',
-                          p.team === winner ? 'border border-white/10 bg-white/5' : 'bg-white/5 opacity-80'
-                        )}
-                      >
-                        <div className="flex min-w-0 items-center gap-2">
-                          <RankCrest role={cosmetics.get(p.id)?.role} />
-                          <span className={cn('shrink-0 text-[10px] font-bold', teamAccent(p.team))}>
-                            {TEAM_LABEL[p.team]}
-                          </span>
-                          <span className="truncate text-sm font-semibold text-white">
-                            <PlayerAvatarGlyph value={iconOf(p)} />{iconOf(p) ? ' ' : ''}
-                            <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                          </span>
-                          {p.team === winner && <Trophy aria-hidden className="inline h-4 w-4 text-gold" />}
-                        </div>
-                        {!isSoft && <span className="shrink-0 text-xs text-white/50">{p.drinks}🍺</span>}
+                }
+                ranking={
+                  <>
+                    <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                      <div className="text-center">
+                        <p className="text-lg font-bold text-sky-300">{view.turnCount}</p>
+                        <p className="text-[10px] text-white/40">{t('statTurns')}</p>
                       </div>
-                    ))}
-                </div>
+                      <div className="text-center">
+                        <p className="text-lg font-bold text-sky-300">
+                          {me && me.shotsFired > 0 ? `${Math.round((me.shotsHit / me.shotsFired) * 100)}%` : '—'}
+                        </p>
+                        <p className="text-[10px] text-white/40">{t('statAccuracy')}</p>
+                      </div>
+                    </div>
 
-                <div className="flex flex-col gap-2.5">
-                  <Button
-                    onClick={() => voteRematch()}
-                    disabled={iVotedRematch}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 py-3.5 font-bold text-white shadow-lg shadow-sky-500/25 transition-all hover:from-sky-500 hover:to-cyan-400 disabled:opacity-60"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    {iVotedRematch
-                      ? t('rematchWaiting', { count: rematchVotes.length, total: humanCount })
-                      : t('replay')}
-                  </Button>
-                  <button
-                    onClick={() => leaveRoom()}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
-                  >
-                    <Home className="h-4 w-4" /> {t('backToMenu')}
-                  </button>
-                </div>
-              </div>
+                    <div className="mb-5 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+                        {t('finalBoard')}
+                      </p>
+                      {[...view.players]
+                        .sort((a, b) =>
+                          isSoft
+                            ? (a.team === winner ? 0 : 1) - (b.team === winner ? 0 : 1) || a.name.localeCompare(b.name)
+                            : b.drinks - a.drinks
+                        )
+                        .map((p) => (
+                          <div
+                            key={p.id}
+                            className={cn(
+                              'flex items-center justify-between rounded-xl px-3 py-2',
+                              p.team === winner ? 'border border-white/10 bg-white/5' : 'bg-white/5 opacity-80'
+                            )}
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              <RankCrest role={cosmetics.get(p.id)?.role} />
+                              <span className={cn('shrink-0 text-[10px] font-bold', teamAccent(p.team))}>
+                                {TEAM_LABEL[p.team]}
+                              </span>
+                              <span className="truncate text-sm font-semibold text-white">
+                                <PlayerAvatarGlyph value={iconOf(p)} />{iconOf(p) ? ' ' : ''}
+                                <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
+                              </span>
+                              {p.team === winner && <Trophy aria-hidden className="inline h-4 w-4 text-gold" />}
+                            </div>
+                            {!isSoft && <span className="shrink-0 text-xs text-white/50">{p.drinks}🍺</span>}
+                          </div>
+                        ))}
+                    </div>
+                  </>
+                }
+                xp={
+                  <XpGainBanner
+                    won={me?.team === winner}
+                    playerIds={view.players.map((p) => p.id)}
+                    className="mb-4"
+                  />
+                }
+              />
             </motion.div>
           </motion.div>
         )}

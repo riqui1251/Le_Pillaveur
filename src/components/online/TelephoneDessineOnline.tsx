@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { AnimatePresence } from 'framer-motion'
-import { Home, Send, Sparkles } from 'lucide-react'
+import { Send, Sparkles } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -23,6 +23,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
+import { OnlineEndScreen } from './OnlineEndScreen'
 
 /**
  * TÉLÉPHONE DESSINÉ en ligne (serveur-autoritaire). Chaque joueur ne voit
@@ -46,7 +47,7 @@ const AUTO_SUBMIT_RETRY_MS = 400
 
 export function TelephoneDessineOnline() {
   const { user } = useAuth()
-  const { room, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.telephone-dessine.game')
   const { busy, actionError, sendAction } = useGameAction(room?.id)
   const [text, setText] = useState('')
@@ -170,21 +171,26 @@ export function TelephoneDessineOnline() {
   // ── Écran de fin ─────────────────────────────────────────────────────────
   if (finished) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-center text-white">
-        <Sparkles className="h-14 w-14 text-teal-300" />
-        <h2 className="font-display text-3xl font-bold text-gold">{t('victory.title')}</h2>
-        <p className="text-sm text-white/60">{t('victory.subtitle')}</p>
-        {/* Jeu vitrine par lequel arrivent les nouveaux : c'est le pire
-            endroit où laisser la boucle de progression muette. */}
-        <XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
-        <Button
-          onClick={() => void leaveRoom()}
-          variant="outline"
-          className="w-full max-w-sm rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
-        >
-          <Home className="mr-2 h-4 w-4" /> {t('victory.backToMenu')}
-        </Button>
-      </div>
+      <OnlineEndScreen
+        className="text-center"
+        // Le moteur tient ses votes « Rejouer » et la relance est celle de
+        // tous les jeux (processRematchVote) : l'écran de fin n'avait
+        // simplement jamais eu le bouton.
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        rematchClassName="from-teal-500 to-emerald-600"
+        header={
+          <>
+            <Sparkles className="h-14 w-14 text-teal-300" />
+            <h2 className="font-display text-3xl font-bold text-gold">{t('victory.title')}</h2>
+            <p className="text-sm text-white/60">{t('victory.subtitle')}</p>
+          </>
+        }
+        // Jeu vitrine par lequel arrivent les nouveaux : c'est le pire
+        // endroit où laisser la boucle de progression muette.
+        xp={<XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 

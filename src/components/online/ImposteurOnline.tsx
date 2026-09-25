@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Eye, EyeOff, Home, Pencil, RefreshCw, Send, Skull, Trophy, UserX } from 'lucide-react'
+import { Eye, EyeOff, Pencil, Send, Skull, Trophy, UserX } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
-import { EndConfetti } from './EndConfetti'
+import { OnlineEndScreen } from './OnlineEndScreen'
 import { PhaseCountdown } from './PhaseCountdown'
 import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
@@ -148,9 +148,6 @@ export function ImposteurOnline() {
   const isMyClueTurn = view.phase === 'clue' && activeId === user.id && iAmAlive
   const finished = view.phase === 'finished'
   const reveal = view.lastReveal
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
   const aliveCount = view.players.filter((p) => !p.eliminated).length
 
   const nameOf = (id: string | null | undefined) =>
@@ -171,91 +168,74 @@ export function ImposteurOnline() {
   // ── Écran de fin ─────────────────────────────────────────────────────────
   if (finished) {
     const civilWon = view.winnerTeam === 'civil'
+    const won = view.players.find((p) => p.id === user.id)?.team === view.winnerTeam
     return (
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-white">
-        <EndConfetti />
-        <motion.div
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-          className="flex flex-col items-center gap-2 text-center"
-        >
-          <Trophy className="h-14 w-14 text-gold" />
-          <h2 className={cn('font-display text-3xl font-bold', civilWon ? 'text-emerald-200' : 'text-red-200')}>
-            {civilWon ? t('victory.civilWin') : t('victory.imposteurWin')}
-          </h2>
-          {!isSoft && (
-            <p className="text-sm text-white/60">
-              {civilWon ? t('victory.civilDrinks') : t('victory.imposteurDrinks')}
+      <OnlineEndScreen
+        confetti
+        won={won}
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        header={
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="flex flex-col items-center gap-2 text-center"
+          >
+            <Trophy className="h-14 w-14 text-gold" />
+            <h2 className={cn('font-display text-3xl font-bold', civilWon ? 'text-emerald-200' : 'text-red-200')}>
+              {civilWon ? t('victory.civilWin') : t('victory.imposteurWin')}
+            </h2>
+            {!isSoft && (
+              <p className="text-sm text-white/60">
+                {civilWon ? t('victory.civilDrinks') : t('victory.imposteurDrinks')}
+              </p>
+            )}
+          </motion.div>
+        }
+        ranking={
+          // Révélation complète
+          <div className="w-full max-w-sm space-y-2">
+            <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-gold/60">
+              {t('victory.fullReveal')}
             </p>
-          )}
-        </motion.div>
-
-        <XpGainBanner
-          won={view.players.find((p) => p.id === user.id)?.team === view.winnerTeam}
-          playerIds={view.players.map((p) => p.id)}
-          className="w-full max-w-sm"
-        />
-
-        {/* Révélation complète */}
-        <div className="w-full max-w-sm space-y-2">
-          <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-gold/60">
-            {t('victory.fullReveal')}
-          </p>
-          {view.players.map((p) => (
-            <div
-              key={p.id}
-              className={cn(
-                'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
-                p.team === 'imposteur'
-                  ? 'border-suit-red/40 bg-suit-red/10'
-                  : 'border-gold/10 bg-felt-deep/60',
-                p.eliminated && 'opacity-60'
-              )}
-            >
-              <RankCrest role={cosmetics.get(p.id)?.role} />
-              <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1 truncate text-sm font-bold">
-                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                  {p.eliminated && <Skull aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/40" />}
-                </p>
-                <p className="text-xs text-white/50">« {p.word} »</p>
-              </div>
-              <span
+            {view.players.map((p) => (
+              <div
+                key={p.id}
                 className={cn(
-                  'rounded-full px-2 py-0.5 text-[10px] font-black uppercase',
+                  'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
                   p.team === 'imposteur'
-                    ? 'bg-suit-red/30 text-red-100'
-                    : 'bg-emerald-500/20 text-emerald-100'
+                    ? 'border-suit-red/40 bg-suit-red/10'
+                    : 'border-gold/10 bg-felt-deep/60',
+                  p.eliminated && 'opacity-60'
                 )}
               >
-                {p.team === 'imposteur' ? t('victory.teamImposteur') : t('victory.teamCivil')}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          <Button
-            onClick={() => void voteRematch()}
-            disabled={iVotedRematch && humanCount > 1}
-            className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold hover:from-amber-400 hover:to-amber-500"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {iVotedRematch && humanCount > 1
-              ? t('victory.rematchWaiting', { count: rematchVotes.length, total: humanCount })
-              : t('victory.replay')}
-          </Button>
-          <Button
-            onClick={() => void leaveRoom()}
-            variant="outline"
-            className="w-full rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
-          >
-            <Home className="mr-2 h-4 w-4" /> {t('victory.backToMenu')}
-          </Button>
-        </div>
-      </div>
+                <RankCrest role={cosmetics.get(p.id)?.role} />
+                <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1 truncate text-sm font-bold">
+                    <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
+                    {p.eliminated && <Skull aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/40" />}
+                  </p>
+                  <p className="text-xs text-white/50">« {p.word} »</p>
+                </div>
+                <span
+                  className={cn(
+                    'rounded-full px-2 py-0.5 text-[10px] font-black uppercase',
+                    p.team === 'imposteur'
+                      ? 'bg-suit-red/30 text-red-100'
+                      : 'bg-emerald-500/20 text-emerald-100'
+                  )}
+                >
+                  {p.team === 'imposteur' ? t('victory.teamImposteur') : t('victory.teamCivil')}
+                </span>
+              </div>
+            ))}
+          </div>
+        }
+        xp={<XpGainBanner won={won} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 

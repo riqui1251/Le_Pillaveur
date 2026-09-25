@@ -6,7 +6,13 @@ import en from '../../messages/en.json'
 import es from '../../messages/es.json'
 // `it` est déjà le nom du test runner : l'italien est importé sous un alias.
 import itMessages from '../../messages/it.json'
-import { ONLINE_ERROR_CODES, resolveOnlineErrorCode } from './online-errors'
+import {
+  DEPARTURE_MESSAGE_KEYS,
+  DEPARTURE_REASONS,
+  ONLINE_ERROR_CODES,
+  resolveDepartureReason,
+  resolveOnlineErrorCode,
+} from './online-errors'
 
 /**
  * Les routes online ne renvoient plus que des codes stables : si l'un d'eux
@@ -72,6 +78,27 @@ describe('codes d’erreur online', () => {
       }
     }
     expect([...inconnus]).toEqual([])
+  })
+
+  /**
+   * Le 403 d'un départ forcé porte sa raison (online/departures.ts) et le
+   * client en affiche la phrase : une raison sans traduction serait lue
+   * « left_kicked » à l'écran par le joueur qu'on vient de retirer.
+   */
+  for (const [langue, messages] of Object.entries(LANGUES)) {
+    it(`${langue} : chaque raison de départ forcé a sa phrase`, () => {
+      const manquantes = DEPARTURE_REASONS.filter(
+        (reason) => !messages.onlineLobby.errors[DEPARTURE_MESSAGE_KEYS[reason]]
+      )
+      expect(manquantes).toEqual([])
+    })
+  }
+
+  it('résout les raisons de départ connues et rejette le reste', () => {
+    for (const reason of DEPARTURE_REASONS) expect(resolveDepartureReason(reason)).toBe(reason)
+    expect(resolveDepartureReason('left')).toBeNull()
+    expect(resolveDepartureReason(42)).toBeNull()
+    expect(resolveDepartureReason(undefined)).toBeNull()
   })
 
   it('résout les alias hérités et rejette l’inconnu', () => {

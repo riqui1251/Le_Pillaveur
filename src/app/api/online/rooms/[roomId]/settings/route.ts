@@ -7,6 +7,8 @@ import { publishRoomChanged } from '@/lib/online/room-bus'
 import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
+import { GAMES } from '@/lib/games'
+import { getGameAdapter } from '@/lib/online/game-adapters'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -30,7 +32,37 @@ const VALID_VISIBILITIES = new Set(['public', 'private', 'invite'])
 // le jeu, qui gère bien le 4v4 (TC_MODES dans toucher-coule/engine.ts).
 const VALID_TC_MODES = new Set(['1v1', '2v2', '3v3', '4v4'])
 
-/** L'hôte met à jour les paramètres (difficulté, etc.) pendant le lobby */
+/**
+ * Réglages de la table quand elle change de jeu : ceux du jeu précédent
+ * repartent à zéro. Un format d'équipes de Toucher-Coulé, les équipes de Mots
+ * Codés ou un nombre de manches n'ont aucun sens pour le suivant — et, gardés
+ * en silence, ils ressortiraient le jour où la table revient à ce jeu, choisis
+ * par personne. Restent ceux de la TABLE : sa langue (contenu localisé
+ * serveur), la difficulté par défaut posée à la création, et les bots, bornés
+ * par le nouveau jeu (aucun s'il ne se complète pas, jamais plus que les
+ * sièges laissés par les humains).
+ */
+function settingsForGame(current: RoomSettings, gameId: string, humans: number): RoomSettings {
+  const next: RoomSettings = { difficulty: 'normal' }
+  if (current.lang) next.lang = current.lang
+  const adapter = getGameAdapter(gameId)
+  if (adapter?.botsFillable) {
+    const bots = Math.min(
+      Math.max(0, current.botsCount ?? 0),
+      Math.max(0, adapter.maxPlayers - humans)
+    )
+    if (bots > 0) next.botsCount = bots
+  }
+  return next
+}
+
+/**
+ * L'hôte met à jour les paramètres (difficulté, etc.) pendant le lobby — et
+ * peut changer de JEU (`gameId`) sans refaire de table : même code, mêmes
+ * joueurs, qui suivent vers la page du nouveau jeu (GameOnlineLobby). Refus :
+ * `invalid_game` (400) pour un jeu pas jouable en ligne, `max_players` (409,
+ * avec `count`) si la tablée dépasse déjà le nouveau jeu.
+ */
 export async function PUT(request: Request, { params }: Params) {
   const user = await getCurrentUser()
   if (!user) {
@@ -65,8 +97,32 @@ export async function PUT(request: Request, { params }: Params) {
   // Forme libre comme avant : chaque réglage est validé un à un ci-dessous.
   const body = parsed.body
 
+  // Changement de jeu : même garde qu'à la création (POST /rooms) — un jeu
+  // masqué ou purement local n'a pas d'écran en ligne à rendre. Le jeu
+  // actuel redemandé n'est pas un changement.
+  let nextGameId: string | null = null
+  let humans = 0
+  if (body.gameId !== undefined) {
+    const requested = typeof body.gameId === 'string' ? body.gameId.trim() : ''
+    const game = GAMES.find((g) => g.id === requested && !g.hidden && g.onlineReady)
+    if (!game) {
+      return NextResponse.json(onlineErrorBody('invalid_game'), { status: 400 })
+    }
+    if (game.id !== room.gameId) {
+      nextGameId = game.id
+      humans = await prisma.onlineRoomMember.count({ where: { roomId } })
+      // Une tablée déjà trop nombreuse pour le nouveau jeu ne pourrait plus
+      // être lancée : refusé ici, plutôt qu'une table qui bute sur
+      // max_players au lancement (même borne, même code, même `count`).
+      const max = getGameAdapter(game.id)?.maxPlayers ?? Number.MAX_SAFE_INTEGER
+      if (humans > max) {
+        return NextResponse.json(onlineErrorBody('max_players', { count: max }), { status: 409 })
+      }
+    }
+  }
+
   const current = parseRoomSettings(room.settingsJson)
-  const next: RoomSettings = { ...current }
+  const next: RoomSettings = nextGameId ? settingsForGame(current, nextGameId, humans) : { ...current }
 
   if (typeof body.difficulty === 'string' && VALID_DIFFICULTIES.has(body.difficulty)) {
     next.difficulty = body.difficulty as NonNullable<RoomSettings['difficulty']>
@@ -157,11 +213,25 @@ export async function PUT(request: Request, { params }: Params) {
       ? { visibility: body.visibility }
       : {}
 
-  await prisma.onlineRoom.update({
-    where: { id: roomId },
-    data: { settingsJson: JSON.stringify(next), ...visibilityUpdate },
-  })
-  // Un passage public ↔ privé/invitation change ce que le guichet liste.
+  if (nextGameId) {
+    // Nouveau jeu = nouvelle décision : chacun se remet « prêt » en
+    // connaissance de cause. Les deux écritures ensemble — une table au jeu
+    // changé mais aux joueurs encore « prêts » se lancerait d'un clic.
+    await prisma.$transaction([
+      prisma.onlineRoomMember.updateMany({ where: { roomId }, data: { isReady: false } }),
+      prisma.onlineRoom.update({
+        where: { id: roomId },
+        data: { gameId: nextGameId, settingsJson: JSON.stringify(next), ...visibilityUpdate },
+      }),
+    ])
+  } else {
+    await prisma.onlineRoom.update({
+      where: { id: roomId },
+      data: { settingsJson: JSON.stringify(next), ...visibilityUpdate },
+    })
+  }
+  // Un passage public ↔ privé/invitation change ce que le guichet liste — et
+  // un changement de jeu, le jeu affiché de la table.
   invalidateLobbiesCache()
 
   publishRoomChanged(roomId, { type: 'lobby' })

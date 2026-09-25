@@ -11,6 +11,7 @@ import { getGameAdapter } from '@/lib/online/game-adapters'
 import { mcTeamCounts } from '@/lib/mots-codes/server-adapter'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
+import { recordDeparture } from '@/lib/online/departures'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -133,6 +134,8 @@ export async function POST(request: Request, { params }: Params) {
     await prisma.onlineRoomMember.deleteMany({
       where: { roomId, userId: { in: laggards.map((m) => m.userId) } },
     })
+    // Départ forcé par l'hôte : leur 403 le dira (online/departures.ts).
+    for (const m of laggards) recordDeparture(m.userId, roomId, 'kicked')
     invalidateLobbiesCache()
     publishRoomChanged(roomId, { type: 'lobby' })
   }

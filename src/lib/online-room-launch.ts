@@ -20,6 +20,8 @@ import { launchPetitBacRoom } from '@/lib/online-petit-bac'
 import { launchPresidentRoom } from '@/lib/online-president'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 import { recordGameSessionStart } from '@/lib/online/game-sessions'
+import { armRoomTicker, cancelRoomTicker } from '@/lib/online/room-ticker'
+import { recordDeparture } from '@/lib/online/departures'
 
 export type RoomWithMembers = {
   id: string
@@ -42,10 +44,17 @@ export async function resetRoomToWaitingLobby(roomId: string) {
       currentTurnUserId: null,
     },
   })
+  // Présence remise à maintenant : la table d'attente purge qui n'a pas été
+  // vu depuis 2 min (purgeAbsentLobbyMembers), or en partie `lastSeenAt`
+  // n'avance qu'avec les coups joués — l'onglet caché au moment du retour
+  // aurait perdu son siège sur-le-champ, au premier sondage. Chacun reçoit
+  // donc le délai de grâce entier du lobby, pas une trace d'avant la partie.
   await prisma.onlineRoomMember.updateMany({
     where: { roomId },
-    data: { isReady: false },
+    data: { isReady: false, lastSeenAt: new Date() },
   })
+  // Plus de partie : le minuteur de service n'a plus rien à surveiller.
+  cancelRoomTicker(roomId)
   // La table repasse 'waiting' : elle réapparaît dans `lobbies` du guichet,
   // quel que soit l'appelant.
   invalidateLobbiesCache()
@@ -155,6 +164,10 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
   // écrit l'état, et donc les bots — ils ne sont pas membres de la salle.
   // Même règle que l'historique ci-dessus : ne lève jamais.
   await recordGameSessionStart(roomId)
+  // Premier tick de service de la partie (bot qui ouvre, compte à rebours
+  // d'entrée) : le serveur le tiendra si aucun téléphone ne l'envoie. Couvre
+  // briefing-ack et rematch, les deux chemins qui passent ici. Ne lève jamais.
+  await armRoomTicker(roomId)
   // Alimente `recentLaunches` du guichet — couvre d'un coup briefing-ack et
   // rematch, les deux chemins qui passent ici.
   invalidateLobbiesCache()
@@ -243,6 +256,9 @@ async function dropAbsentMembers(
   await prisma.onlineRoomMember.deleteMany({
     where: { roomId, userId: { in: absentUserIds } },
   })
+  // Son prochain 403 dira que la table a rejoué sans lui (online/departures.ts)
+  // plutôt qu'un « tu n'es plus à cette table » sans raison.
+  for (const userId of absentUserIds) recordDeparture(userId, roomId, 'rematched_without_you')
   let hostUserId = room.hostUserId
   if (absentUserIds.includes(hostUserId)) {
     // `members` arrive trié par joinedAt (la route) : le premier présent est

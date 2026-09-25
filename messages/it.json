@@ -473,6 +473,14 @@
       "title": "Impostazioni",
       "botsSummary": "{count, plural, one {# bot} other {# bot}}"
     },
+    "gameSwitch": {
+      "cta": "Cambia gioco",
+      "hint": "Stesso tavolo, stesso codice: tutti ti seguono. Le impostazioni ripartono da zero e ognuno torna a dirsi pronto.",
+      "current": "Attuale",
+      "tooMany": "Troppi giocatori al tavolo (max {count})",
+      "moving": "Il tavolo passa a {game}…",
+      "goToTable": "Vai al tavolo"
+    },
     "readyButton": {
       "on": "✓ Pronto",
       "off": "Sono pronto"
@@ -484,6 +492,15 @@
       "withBots": "Avvia con i bot",
       "force": "Avvia senza {count, plural, one {il ritardatario} other {i # ritardatari}}",
       "forceBlocked": "Non ci sono abbastanza giocatori pronti: {count, plural, one {ne manca #} other {ne mancano #}}"
+    },
+    "end": {
+      "rematch": "Rigioca",
+      "rematchWaiting": "In attesa degli altri ({count}/{total})",
+      "rematchStatus": "Rigioca: {count} su {total}",
+      "backToTable": "Torna al tavolo",
+      "leave": "Lascia il tavolo",
+      "shareWon": "Ho appena vinto una partita a «{game}» su Le Pillaveur! Vieni a sfidarmi.",
+      "sharePlayed": "Ho appena giocato a «{game}» su Le Pillaveur. Vieni a giocare con noi!"
     },
     "list": {
       "empty": "Nessuna lobby aperta — scegli un gioco qui sotto per crearne una.",
@@ -520,6 +537,8 @@
       "rematchFailed": "Impossibile votare per la rivincita",
       "inviteFailed": "Impossibile invitare questo amico",
       "kickFailed": "Impossibile togliere questo giocatore",
+      "backToTableFailed": "Impossibile tornare al tavolo",
+      "changeGameFailed": "Impossibile cambiare gioco",
       "wrongGameRoom": "Sei in una lobby di un altro gioco. Esci per continuare.",
       "inOtherLobby": "Sei nella lobby «{game}».",
       "auth_required": "Accedi per giocare online.",
@@ -573,6 +592,9 @@
       "replaced_by_bot": "Sei stato sostituito da un bot.",
       "roomClosed": "Il tavolo è stato chiuso.",
       "roomLeft": "Non sei più a questo tavolo.",
+      "left_kicked": "L'host ti ha tolto dal tavolo.",
+      "left_absent": "Il tuo posto è stato liberato perché non eri al tavolo. Con il codice del tavolo puoi rientrare.",
+      "left_rematched": "Il tavolo ha iniziato un'altra partita senza di te mentre eri via.",
       "reading_time": "Lascia agli altri il tempo di leggere, riparte tra un istante.",
       "stop_too_early": "Troppo presto per gridare STOP: lascia partire la manche.",
       "incomplete_stop": "Riempi tutte e cinque le caselle con la lettera giusta prima di gridare STOP.",
@@ -721,6 +743,29 @@
     },
     "onlineSection": {
       "title": "Account online"
+    },
+    "tables": {
+      "title": "I miei ultimi tavoli",
+      "loading": "Caricamento dei tuoi ultimi tavoli…",
+      "error": "Impossibile caricare i tuoi ultimi tavoli.",
+      "retry": "Riprova",
+      "empty": "Nessuna partita online in classifica per ora. Le tue partite con 2+ account appariranno qui, pronte per la rivincita.",
+      "win": "Vittoria",
+      "loss": "Sconfitta",
+      "rank": "{rank}º",
+      "players": "{count, plural, one {# giocatore} other {# giocatori}}",
+      "bots": "{count, plural, one {di cui # bot} other {di cui # bot}}",
+      "partners": "Compagni: {names}",
+      "friendMark": "{name} (amico)",
+      "more": "+{count}",
+      "rematch": "Rivincita",
+      "rematching": "Creazione…",
+      "rematchLabel": "Rivincita: nuovo tavolo di {game}",
+      "inviteAll": "{count, plural, one {Il tuo amico riceverà un invito.} other {I tuoi # amici riceveranno un invito.}}",
+      "inviteSome": "{count, plural, one {Solo il tuo amico riceve l’invito; gli altri entrano con il codice del tavolo.} other {Solo i tuoi # amici ricevono l’invito; gli altri entrano con il codice del tavolo.}}",
+      "inviteNone": "Gli inviti sono riservati agli amici: dai il codice del tavolo agli altri giocatori.",
+      "inRoom": "Sei già a un tavolo: lascialo per avviare una rivincita.",
+      "rematchFailed": "Non è stato possibile creare il tavolo. Riprova."
     },
     "localSection": {
       "title": "Giochi locali (questo dispositivo)"

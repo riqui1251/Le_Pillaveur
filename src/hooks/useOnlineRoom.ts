@@ -4,7 +4,12 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useTranslations } from 'next-intl'
 import type { RoomDto } from '@/lib/online-room'
 import { parseApiJson } from '@/lib/api-response'
-import { resolveOnlineErrorCode } from '@/lib/online-errors'
+import {
+  DEPARTURE_MESSAGE_KEYS,
+  resolveDepartureReason,
+  resolveOnlineErrorCode,
+  type DepartureReason,
+} from '@/lib/online-errors'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePagePresence } from '@/hooks/usePagePresence'
@@ -53,15 +58,22 @@ const STREAM_REOPEN_MS = 5_000
 const STREAM_REOPEN_MAX_MS = 60_000
 
 /**
- * Quoi dire au joueur qui découvre qu'il n'est plus membre de sa table. Le
- * serveur ne dit pas encore POURQUOI (siège purgé pour absence, expulsion,
- * lancement forcé, relance sans lui, remplacement par un bot) : on le déduit
- * de la table qu'on affichait. En pleine partie, c'est presque toujours le
- * remplacement pour inactivité — on le dit, sinon il revient au guichet sans
- * rien comprendre. Sur l'écran de fin (partie locale finie), c'est la relance
- * sans lui : « remplacé par un bot » serait faux, « tu n'es plus dans cette
- * table » reste juste. Reste le cas rare d'un départ déclenché depuis un autre
- * appareil, où le message est approximatif.
+ * Délai de la seconde relecture de la salle après le signal `finished` : le
+ * temps que chaque écran visible ait fait sa propre relecture (qui écrit sa
+ * présence). Voir onFinished.
+ */
+const FINISHED_RECHECK_MS = 2_500
+
+/**
+ * REPLI de ce qu'on dit au joueur qui découvre qu'il n'est plus membre de sa
+ * table. Le serveur dit POURQUOI quand il le sait (403 de GET /rooms/[roomId]
+ * avec `reason` : expulsion, siège d'absent libéré, relance sans lui,
+ * remplacement par un bot — voir readDepartureReason) ; sans raison (délai
+ * dépassé, redémarrage du serveur, départ déclenché depuis un autre
+ * appareil), on la déduit de la table qu'on affichait. En pleine partie,
+ * c'est presque toujours le remplacement pour inactivité. Sur l'écran de fin,
+ * c'est la relance sans lui : « remplacé par un bot » serait faux, « tu n'es
+ * plus dans cette table » reste juste.
  */
 function membershipLostKey(room: RoomDto): 'replaced_by_bot' | 'roomLeft' {
   if (room.status !== 'playing') return 'roomLeft'
@@ -69,6 +81,20 @@ function membershipLostKey(room: RoomDto): 'replaced_by_bot' | 'roomLeft' {
   const state = gameId ? parseOnlineGameState(gameId, room.gameStateJson) : null
   const finished = state ? isOnlineGameFinished(gameId, state) : false
   return finished ? 'roomLeft' : 'replaced_by_bot'
+}
+
+/**
+ * Raison d'un départ forcé portée par un 403 de GET /rooms/[roomId]
+ * (`reason`, online/departures.ts), ou null. Le serveur la CONSOMME en la
+ * rendant : seule la première lecture la voit.
+ */
+async function readDepartureReason(res: Response): Promise<DepartureReason | null> {
+  try {
+    const data = await parseApiJson<{ reason?: unknown }>(res)
+    return resolveDepartureReason(data.reason)
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -168,6 +194,18 @@ export function useOnlineRoomState() {
     [t]
   )
 
+  /**
+   * Ce qu'on dit au joueur retiré de sa table : la raison du serveur quand
+   * il l'a rendue, sinon la déduction d'après la table qu'on affichait.
+   */
+  const membershipLostMessage = useCallback(
+    (lost: RoomDto | null, reason: DepartureReason | null) => {
+      if (reason) return t(DEPARTURE_MESSAGE_KEYS[reason])
+      return t(lost ? membershipLostKey(lost) : 'roomLeft')
+    },
+    [t]
+  )
+
   /** Recalcule le verdict à partir des signaux ; React ne rend que s'il change. */
   const syncConnection = useCallback(() => {
     setConnection(
@@ -197,6 +235,30 @@ export function useOnlineRoomState() {
     [syncConnection]
   )
 
+  /**
+   * Adhésion perdue constatée par /rooms/me, qui ne dit pas pourquoi. Le 403
+   * de GET /rooms/[roomId] le sait (raison consommée à la lecture) : une
+   * requête de plus, seulement dans ce cas. Si le serveur nous y voit de
+   * nouveau membre (course avec un retour par le code), rien à annoncer.
+   */
+  const explainMembershipLost = useCallback(
+    async (lost: RoomDto) => {
+      let reason: DepartureReason | null = null
+      try {
+        const res = await fetch(`/api/online/rooms/${lost.id}`, { credentials: 'include' })
+        if (res.ok) return
+        if (res.status === 403) reason = await readDepartureReason(res)
+      } catch {
+        // Réseau : le repli (déduction) suffit.
+      }
+      // Entre-temps le joueur a pu s'asseoir ailleurs : ne pas lui annoncer
+      // l'ancienne table par-dessus la nouvelle.
+      if (roomRef.current) return
+      setError(membershipLostMessage(lost, reason))
+    },
+    [membershipLostMessage]
+  )
+
   const fetchRoom = useCallback(async () => {
     if (!user || user.playMode !== 'online') {
       setRoom(null)
@@ -219,19 +281,25 @@ export function useOnlineRoomState() {
       // cas où l'onglet était CACHÉ, donc ne sondait plus et n'a jamais vu le
       // 403 de GET /rooms/[roomId]. Au retour au premier plan, cette relecture
       // est la seule à passer, et elle rendait le joueur au guichet sans un
-      // mot. Départ volontaire exclu (verrou de départ).
+      // mot. Départ volontaire exclu (verrou de départ). La raison est
+      // demandée à part (explainMembershipLost) : la table disparaît tout de
+      // suite, le message suit.
       const current = roomRef.current
-      if (!data.room && current && leavingRoomIdRef.current !== current.id) {
-        setError(t(membershipLostKey(current)))
-      }
+      const lost = !data.room && current && leavingRoomIdRef.current !== current.id ? current : null
       setRoom(data.room ?? null)
+      if (lost) {
+        // roomRef suit au rendu : vidé ici pour que l'explication ne croie pas
+        // le joueur déjà assis ailleurs.
+        roomRef.current = null
+        void explainMembershipLost(lost)
+      }
       return data.room as RoomDto | null
     } catch {
       // Raté réseau ponctuel : on retentera au tick de polling suivant.
       notePollReach(false)
       return null
     }
-  }, [user, notePollReach, t])
+  }, [user, notePollReach, explainMembershipLost])
 
   /**
    * 403/404 sur la salle courante : on purge l'état, sinon le polling boucle
@@ -239,18 +307,28 @@ export function useOnlineRoomState() {
    * table disparaissait sans un mot et le joueur croyait à un bug. Les deux
    * codes ne racontent PAS la même histoire : 404 = la salle n'existe plus
    * (hôte parti, ménage des salles abandonnées), 403 = elle existe mais on n'en
-   * est plus membre — la raison est déduite de la table qu'on affichait (cf.
-   * membershipLostKey) ; annoncer « table fermée » dans ce cas-là serait faux.
+   * est plus membre — la raison vient du serveur quand il la connaît, sinon
+   * elle est déduite de la table qu'on affichait (cf. membershipLostMessage) ;
+   * annoncer « table fermée » dans ce cas-là serait faux.
    */
   const handleRoomGone = useCallback(
-    (status: number) => {
+    (status: number, reason: DepartureReason | null = null) => {
       const current = roomRef.current
+      // Départ DÉJÀ annoncé : deux relectures étaient en vol (403 de /state
+      // relu par le flux ET par le sondage), la seconde arrive sans raison —
+      // le serveur l'a consommée à la première. Elle ne remplace pas « L'hôte
+      // t'a retiré… » par le message déduit ; une raison, elle, passe toujours.
+      if (current === null && reason === null) {
+        setRoom(null)
+        return
+      }
+      // roomRef suit au rendu : vidé ici pour que la réponse suivante, dans
+      // la même image, sache la table déjà partie.
+      roomRef.current = null
       setRoom(null)
-      setError(
-        status === 404 ? t('roomClosed') : t(current ? membershipLostKey(current) : 'roomLeft')
-      )
+      setError(status === 404 ? t('roomClosed') : membershipLostMessage(current, reason))
     },
-    [t]
+    [t, membershipLostMessage]
   )
 
   const refreshRoom = useCallback(async (roomId: string) => {
@@ -265,8 +343,11 @@ export function useOnlineRoomState() {
       if (superseded()) return null
       if (!res.ok) {
         if (res.status === 403 || res.status === 404) {
+          // Le 403 d'un départ forcé porte sa raison (lue une seule fois).
+          const reason = res.status === 403 ? await readDepartureReason(res) : null
+          if (leavingRoomIdRef.current === roomId || superseded()) return null
           roomRefreshAppliedRef.current = seq
-          handleRoomGone(res.status)
+          handleRoomGone(res.status, reason)
         }
         return null
       }
@@ -293,7 +374,10 @@ export function useOnlineRoomState() {
       notePollReach(serverReached(res.status))
       if (leavingRoomIdRef.current === roomId) return null
       if (!res.ok) {
-        if (res.status === 403 || res.status === 404) handleRoomGone(res.status)
+        // 403 : /state ne dit pas pourquoi — la relecture de la salle, si
+        // (son 403 porte la raison d'un départ forcé, cf. refreshRoom).
+        if (res.status === 403) void refreshRoom(roomId)
+        else if (res.status === 404) handleRoomGone(res.status)
         return null
       }
       const data = await parseApiJson<{
@@ -301,6 +385,13 @@ export function useOnlineRoomState() {
         currentTurnUserId: string | null
         gameStateJson: string | null
       }>(res)
+      // État vidé sous une partie qu'on croyait en cours : la table a changé
+      // de statut (retour à la table d'attente, relance qui se distribue) —
+      // /state ne porte pas le statut, seule la salle complète le dit.
+      if (data.gameStateJson === null && roomRef.current?.status === 'playing') {
+        void refreshRoom(roomId)
+        return data
+      }
       // La version connue suit tout de suite (sans attendre le rendu) : la
       // trame SSE de cet état peut arriver juste derrière la réponse.
       if (mergePolledState(roomRef.current, roomId, data, knownAtRequest) !== roomRef.current) {
@@ -312,7 +403,7 @@ export function useOnlineRoomState() {
       notePollReach(false)
       return null
     }
-  }, [handleRoomGone, notePollReach])
+  }, [handleRoomGone, notePollReach, refreshRoom])
 
   const pollTick = useCallback(async () => {
     const r = roomRef.current
@@ -693,6 +784,83 @@ export function useOnlineRoomState() {
   )
 
   /**
+   * Applique un DTO complet rendu par une ÉCRITURE (retour à la table,
+   * changement de jeu) : une relecture partie avant elle répondrait l'état
+   * d'avant (partie finie, ancien jeu) — elle est déclarée périmée, comme
+   * entre deux refreshRoom (dernier parti gagne).
+   */
+  const applyWrittenRoom = useCallback((next: RoomDto | null) => {
+    roomRefreshAppliedRef.current = ++roomRefreshSeqRef.current
+    setRoom(next)
+  }, [])
+
+  /**
+   * Fin de partie → retour à la table d'attente : même salle, même code (hôte,
+   * ou n'importe quel présent si l'hôte s'est absenté — c'est le serveur qui
+   * tranche : not_host). Contrat de l'écran de fin : `true` quand la table est
+   * de nouveau en attente ; l'erreur traduite est posée sinon.
+   */
+  const backToTable = useCallback(async (): Promise<boolean> => {
+    if (!room) return false
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/online/rooms/${room.id}/back-to-lobby`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+      if (!res.ok) {
+        setError(apiError(data.error, 'backToTableFailed'))
+        return false
+      }
+      applyWrittenRoom(data.room ?? null)
+      return true
+    } catch {
+      setError(t('network'))
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [room, apiError, t, applyWrittenRoom])
+
+  /**
+   * L'hôte change le jeu de la table en attente (PUT /settings `gameId`) :
+   * même code, mêmes joueurs, réglages du jeu précédent remis à zéro, tout le
+   * monde « pas prêt ». La NAVIGATION vers la page du nouveau jeu revient à
+   * l'appelant (GameOnlineLobby) ; les autres membres suivent d'eux-mêmes.
+   * `count` accompagne max_players (tablée trop nombreuse pour ce jeu).
+   */
+  const changeGame = useCallback(
+    async (gameId: string): Promise<boolean> => {
+      if (!room) return false
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch(`/api/online/rooms/${room.id}/settings`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ gameId }),
+        })
+        const data = await parseApiJson<{ room?: RoomDto; error?: string; count?: number }>(res)
+        if (!res.ok) {
+          setError(apiError(data.error, 'changeGameFailed', data.count))
+          return false
+        }
+        applyWrittenRoom(data.room ?? null)
+        return true
+      } catch {
+        setError(t('network'))
+        return false
+      } finally {
+        setLoading(false)
+      }
+    },
+    [room, apiError, t, applyWrittenRoom]
+  )
+
+  /**
    * Onglet en arrière-plan (ou téléphone dans la poche) : le sondage est
    * SUSPENDU. Personne ne regarde, et le SSE — qui reste ouvert — rattrapera
    * de toute façon ce qui a bougé. Même mécanisme que les sondages du header
@@ -749,6 +917,8 @@ export function useOnlineRoomState() {
     let reopenTimer: ReturnType<typeof setTimeout> | null = null
     // L'effet est démonté (salle quittée, mode changé) : plus aucune réouverture.
     let unmounted = false
+    // Seconde relecture de fin de partie en attente (cf. onFinished).
+    let finishedRecheck: ReturnType<typeof setTimeout> | null = null
     // Le flux a-t-il été perdu depuis la dernière ouverture ? Une reconnexion
     // n'a pas de rattrapage côté serveur (pas de Last-Event-ID) : ce qui a
     // bougé entre le dernier sondage serré et le `ready` serait perdu.
@@ -881,6 +1051,16 @@ export function useOnlineRoomState() {
       markAlive()
       if (!pollEnabledRef.current) return
       void refreshRoom(roomId)
+      // Seconde relecture, une fois que chaque écran a fait la sienne : tous
+      // les onglets visibles relisent en même temps au signal, et la
+      // présence de l'hôte n'est écrite qu'à SA relecture. Lue avant, elle
+      // le disait absent — « Retour à la table » offert à tort (refusé
+      // not_host) et « Rejouer x/total » trop bas jusqu'au sondage suivant.
+      if (finishedRecheck) clearTimeout(finishedRecheck)
+      finishedRecheck = setTimeout(() => {
+        finishedRecheck = null
+        if (pollEnabledRef.current) void refreshRoom(roomId)
+      }, FINISHED_RECHECK_MS)
     }
     /** Ouvre le flux et y attache les handlers (première fois, et à chaque `reopen`). */
     function open() {
@@ -898,6 +1078,7 @@ export function useOnlineRoomState() {
     return () => {
       unmounted = true
       if (reopenTimer) clearTimeout(reopenTimer)
+      if (finishedRecheck) clearTimeout(finishedRecheck)
       streamAliveRef.current = false
       // L'erreur appartient à CE flux : la salle suivante repart sans dette
       // (le verdict est relu par l'effet « la salle change », plus bas).
@@ -971,6 +1152,8 @@ export function useOnlineRoomState() {
     setTeam,
     inviteFriend,
     kickMember,
+    backToTable,
+    changeGame,
     fetchRoom,
     refreshRoom,
     refreshGameState,

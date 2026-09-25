@@ -9,6 +9,8 @@ import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { onlineErrorBody } from '@/lib/online-errors'
+import { forgetDeparture } from '@/lib/online/departures'
+import { armRoomTicker } from '@/lib/online/room-ticker'
 import {
   checkRateLimit,
   rateLimitResponse,
@@ -98,6 +100,9 @@ export async function POST(request: Request) {
   if (!room) {
     return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   }
+  // Partie finie mais table pas encore revenue en attente : l'ami en retard
+  // s'assoit (plus bas) au lieu de buter sur game_already_started.
+  let finishedGame = false
   if (room.status !== 'waiting') {
     // Retour en partie : un joueur marqué « parti » peut reprendre sa place
     // tant qu'un bot ne l'a pas remplacé (voir src/lib/online/replacement.ts).
@@ -108,6 +113,10 @@ export async function POST(request: Request) {
         const state = adapter.parse(room.gameStateJson)
         const next = state ? adapter.rejoin(state, user.id) : null
         if (next) rejoinedJson = adapter.serialize(next)
+        // Partie terminée, hors reprise de siège — et hors version sentinelle
+        // de la relance (négative) : la nouvelle partie s'y distribue, l'état
+        // terminé n'y est plus qu'un reliquat.
+        finishedGame = !next && Boolean(state) && room.stateVersion > 0 && adapter.isFinished(state)
       }
       if (rejoinedJson) {
         // Une seule table à la fois : les autres sont quittées proprement
@@ -123,6 +132,10 @@ export async function POST(request: Request) {
           where: { id: room.id },
           data: { gameStateJson: rejoinedJson, stateVersion: room.stateVersion + 1 },
         })
+        // Un humain de retour à une table désertée : le minuteur de service,
+        // coupé faute d'humain présent, reprend sur l'état écrit.
+        await armRoomTicker(room.id)
+        forgetDeparture(user.id, room.id)
         // L'effectif de la partie en cours (liveGames) vient de changer.
         invalidateLobbiesCache()
         publishRoomChanged(room.id, { type: 'changed', stateVersion: room.stateVersion + 1 })
@@ -130,11 +143,33 @@ export async function POST(request: Request) {
         return NextResponse.json({ room: dto })
       }
     }
-    return NextResponse.json(onlineErrorBody('game_already_started'), { status: 409 })
+    // Une partie EN COURS ne s'ouvre toujours pas : on n'entre pas au milieu
+    // d'une donne. Une partie FINIE, si — la suite est commune avec le lobby.
+    if (!finishedGame) {
+      return NextResponse.json(onlineErrorBody('game_already_started'), { status: 409 })
+    }
   }
 
-  if (room.visibility === 'invite' && !(await canJoinInviteRoom(room.id, user.id))) {
-    return NextResponse.json(onlineErrorBody('invite_only'), { status: 403 })
+  // Retardataire d'une partie finie : il s'assoit « pas prêt », voit l'écran
+  // de fin, peut voter « Rejouer » — la relance distribue aux membres
+  // présents, il en est — ou attendre que la table revienne en attente
+  // (back-to-lobby). Mêmes gardes qu'au lobby : invitation, plafond de sièges
+  // humains. La purge des absents ne touche qu'aux tables ouvertes (no-op ici).
+
+  // Entrer par l'IDENTIFIANT (bandeaux Rejoindre / invitation d'ami) et non
+  // par le code : une table non publique n'ouvre alors qu'à ses membres et à
+  // ses invités. Une table « privée » se rejoint avec son code, et son id,
+  // lui, ne vaut pas le code — il a pu se lire ailleurs, et une partie finie
+  // (le retardataire ci-dessus, le retour à la table) le garde. Pour
+  // l'inconnu, la table n'existe pas. Le code seul, lui, suffit toujours à
+  // une table privée ; jamais à une table sur invitation.
+  const byIdOnly = Boolean(roomId)
+  const needsInvite =
+    room.visibility === 'invite' || (byIdOnly && room.visibility !== 'public')
+  if (needsInvite && !(await canJoinInviteRoom(room.id, user.id))) {
+    return room.visibility === 'invite'
+      ? NextResponse.json(onlineErrorBody('invite_only'), { status: 403 })
+      : NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   }
 
   // Les sièges des absents (onglet fermé sans /leave) se libèrent AVANT de
@@ -176,7 +211,13 @@ export async function POST(request: Request) {
     })
   }
 
-  // Effectif et liste des membres (isReady) sont affichés au guichet.
+  // De retour à cette table : la raison d'un départ forcé précédent ne vaut
+  // plus (online/departures.ts).
+  forgetDeparture(user.id, room.id)
+
+  // Effectif et liste des membres (isReady) sont affichés au guichet — et
+  // l'effectif d'une partie finie (liveGames). `lobby` : les écrans de fin
+  // relisent la salle complète, le nouveau venu y apparaît.
   invalidateLobbiesCache()
   publishRoomChanged(room.id, { type: 'lobby' })
 

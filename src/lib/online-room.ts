@@ -9,6 +9,7 @@ import { parseBriefing, type RoomBriefing } from '@/lib/online/briefing'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { closeGameSession, closeGameSessionsOfPurgedRooms } from '@/lib/online/game-sessions'
 import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
+import { recordDeparture, type DepartureReason } from '@/lib/online/departures'
 
 const ROOM_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
 const ROOM_CODE_LENGTH = 6
@@ -34,7 +35,22 @@ export type RoomMemberDto = {
   level: number
   /** Rôle brut du compte — sert à dériver l'écusson de rang (crestTierForRole). */
   role: string
+  /**
+   * Vu depuis moins de MEMBER_PRESENT_MS — la fenêtre du quorum « Rejouer »
+   * et du retour à la table (back-to-lobby) : le compteur de l'écran de fin
+   * compte ceux que la relance compte. Soi-même toujours présent.
+   */
+  present: boolean
 }
+
+/**
+ * Fenêtre de présence d'un membre À LA TABLE EN JEU : la même que le vote
+ * « Rejouer » (REMATCH_PRESENCE_MS, online-room-launch.ts — voir pourquoi
+ * 90 s), recopiée ici et non importée : ce module est la base que la relance
+ * importe (par le minuteur de service), l'import inverse bouclerait. Un test
+ * tient l'égalité (back-to-lobby/route.test.ts).
+ */
+export const MEMBER_PRESENT_MS = 90 * 1000
 
 export type RoomDto = {
   id: string
@@ -66,10 +82,17 @@ export type LobbyListItem = {
 /**
  * Une partie EN COURS montrée au guichet. Purement informative : on ne peut
  * pas rejoindre une salle lancée (POST /api/online/rooms/join répond
- * `game_already_started`, sauf reprise de siège d'un joueur déjà inscrit), donc
- * ce DTO ne porte VOLONTAIREMENT ni le code de la table ni son id de jointure.
+ * `game_already_started`, sauf reprise de siège d'un joueur déjà inscrit, ou
+ * partie déjà finie — le retardataire muni du code s'assoit), donc ce DTO ne
+ * porte VOLONTAIREMENT pas le code de la table.
  */
 export type LiveGameItem = {
+  /**
+   * Clé d'affichage. L'identifiant de salle pour une table PUBLIQUE (déjà au
+   * guichet quand elle attend) ; une clé opaque pour une table privée ou sur
+   * invitation : /rooms/join accepte un `roomId`, et une partie finie puis
+   * revenue en attente garde le même — son id ne doit pas sortir d'ici.
+   */
   id: string
   gameId: string
   /** Table privée ou sur invitation — signalée, mais montrée comme les autres. */
@@ -135,6 +158,9 @@ export function summarizeLiveGames(
     }))
     // La plus fraîche en tête : c'est celle qui donne le sentiment de vie.
     .sort((a, b) => a.openedAgoMinutes - b.openedAgoMinutes)
+    // Table non publique : clé opaque à la place de son identifiant (voir
+    // LiveGameItem.id). Le client ne s'en sert que comme clé de liste.
+    .map((item, index) => (item.isPrivate ? { ...item, id: `private-${index}` } : item))
 
   return { liveGames, liveGamesTotal: live.length }
 }
@@ -311,6 +337,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
   const hostUserId = purge.hostUserId
   const members = purged.size === 0 ? room.members : room.members.filter((m) => !purged.has(m.userId))
 
+  const presentSince = Date.now() - MEMBER_PRESENT_MS
   const memberDtos = members.map((m) => ({
     userId: m.userId,
     displayName: m.user.displayName,
@@ -320,6 +347,7 @@ export async function buildRoomDto(roomId: string, currentUserId: string): Promi
     preferences: parseOnlinePreferences(m.user.onlinePreferencesJson),
     level: levelForXp(m.user.onlineXp),
     role: m.user.role,
+    present: m.userId === currentUserId || m.lastSeenAt.getTime() >= presentSince,
   }))
 
   const settings = parseRoomSettings(room.settingsJson)
@@ -399,7 +427,9 @@ export async function cleanupStaleWaitingRooms(): Promise<void> {
  * les clients connectés (bots, horloge de phase, remplacement AFK — voir
  * online/replacement.ts) : dès que le dernier humain part sans passer par
  * /leave (crash, onglet fermé, connexion coupée), plus personne n'envoie
- * jamais rien et `updatedAt` se fige pour de bon. Sans ce ménage, la salle
+ * jamais rien et `updatedAt` se fige pour de bon — le minuteur de service
+ * aussi s'arrête, dix minutes après le dernier membre vu
+ * (SERVICE_ABANDONED_MS, online/room-ticker.ts). Sans ce ménage, la salle
  * reste « en jeu » indéfiniment (visible en Supervision des jours après).
  * Le seuil est volontairement large : une partie active reçoit des ticks en
  * continu, ce délai n'est atteint qu'après un abandon réel.
@@ -414,8 +444,9 @@ export async function cleanupStaleActiveRooms(): Promise<void> {
       updatedAt: { lt: cutoff },
       // Même garde de présence qu'en lobby, mais en ET et non en remplacement :
       // pendant une partie le poll client interroge GET /state, qui ne
-      // rafraîchit PAS `lastSeenAt` — la présence seule sous-estimerait la vie
-      // de la salle. `updatedAt`, lui, bouge à chaque coup joué. On exige donc
+      // rafraîchit PAS `lastSeenAt` (seuls les coups joués le font, route
+      // action) — la présence seule sous-estimerait la vie de la salle.
+      // `updatedAt`, lui, bouge à chaque écriture d'état. On exige donc
       // les deux : aucune écriture d'état ET plus personne vu depuis 60 min
       // (la présence s'écrit au plus toutes les 30 s, PRESENCE_WRITE_INTERVAL_MS :
       // sans conséquence à cette échelle).
@@ -647,9 +678,19 @@ export async function deleteRoomIfEmpty(roomId: string): Promise<void> {
  * lobby (DELETE /rooms/[roomId]/members/[userId]) et changement de table
  * (leaveOtherRooms) passent tous ici. Ne supprime pas une salle devenue vide :
  * c'est à l'appelant d'en décider (deleteRoomIfEmpty).
+ *
+ * `reason` : départ FORCÉ ('kicked' au lobby, 'replaced_by_bot' en partie),
+ * retenu pour que le 403 du retiré dise pourquoi (online/departures.ts).
+ * Absent pour un départ volontaire (leaveOtherRooms) : rien à expliquer.
  */
-export async function kickMember(roomId: string, hostUserId: string, kickedUserId: string): Promise<void> {
-  await prisma.onlineRoomMember.deleteMany({ where: { roomId, userId: kickedUserId } })
+export async function kickMember(
+  roomId: string,
+  hostUserId: string,
+  kickedUserId: string,
+  reason?: DepartureReason
+): Promise<void> {
+  const { count } = await prisma.onlineRoomMember.deleteMany({ where: { roomId, userId: kickedUserId } })
+  if (reason && count > 0) recordDeparture(kickedUserId, roomId, reason)
   if (hostUserId === kickedUserId) {
     const nextHost = await prisma.onlineRoomMember.findFirst({
       where: { roomId },
@@ -778,6 +819,12 @@ export async function purgeAbsentLobbyMembers(
   const { count } = await prisma.onlineRoomMember.deleteMany({
     where: { roomId: room.id, userId: { in: absent } },
   })
+  // Chaque absent saura, à son retour, que son siège a été libéré faute de le
+  // voir — pas qu'on l'a chassé : son 403 portera la raison. Un sondage
+  // concurrent qui n'efface rien (count 0) n'a rien à noter, l'autre l'a fait.
+  if (count > 0) {
+    for (const userId of absent) recordDeparture(userId, room.id, 'absent')
+  }
   if (count > 0 || hostUserId !== room.hostUserId) {
     // L'effectif (et l'hôte) de la table sont affichés au guichet ; les
     // clients encore branchés relisent la table (et l'absent y découvre son
@@ -843,6 +890,17 @@ export async function leaveOtherRooms(userId: string, exceptRoomId?: string): Pr
     }
     await kickMember(room.id, room.hostUserId, userId)
     await deleteRoomIfEmpty(room.id)
+    if (stateVersion !== null) {
+      // Le départ a pu passer la main à un bot, sur un état qui n'avait pas
+      // de minuteur de service (tour d'un humain au Menteur, au Purple…) :
+      // rien ne l'aurait réarmé, et le bot n'aurait joué que par un client
+      // éveillé. Même geste que DELETE /rooms/[roomId]. Import dynamique :
+      // room-ticker importe (par room-actions) ce module-ci. Ne lève jamais —
+      // le changement de table ne doit pas échouer à cause du filet.
+      await import('@/lib/online/room-ticker')
+        .then((ticker) => ticker.armRoomTicker(room.id))
+        .catch(() => {})
+    }
     publishRoomChanged(
       room.id,
       stateVersion === null ? { type: 'lobby' } : { type: 'changed', stateVersion }

@@ -453,6 +453,9 @@ vi.mock('@/lib/auth-server', () => ({
 
 vi.mock('@/lib/online-room', () => ({
   kickMember: async () => {},
+  // Présence du joueur (le coup vaut présence, route action).
+  PRESENCE_WRITE_INTERVAL_MS: 30_000,
+  touchMemberPresence: async () => {},
 }))
 
 vi.mock('@/lib/online/room-bus', () => ({
@@ -580,7 +583,11 @@ describe('POST /api/online/rooms/[roomId]/action : fin de partie sous transactio
             finished: false,
             players: [{ id: 'u1' }, { id: 'u2' }],
           }),
-          members: [{ userId: 'u1' }, { userId: 'u2' }],
+          // Présence fraîche (loadActionRoom la lit) : la route n'a rien à écrire.
+          members: [
+            { userId: 'u1', lastSeenAt: new Date() },
+            { userId: 'u2', lastSeenAt: new Date() },
+          ],
         }),
         updateMany: async () => ({ count: 1 }),
       },

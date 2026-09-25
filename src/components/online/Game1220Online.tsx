@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, RefreshCw, Dices } from 'lucide-react'
+import { Dices } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -22,6 +22,7 @@ import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerT
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
+import { OnlineEndScreen } from './OnlineEndScreen'
 
 /** 1220 en ligne : jeu simultané (pas de tour). Chaque joueur règle ses
  * paris en phase setup, puis n'importe qui déclenche un lancer partagé
@@ -115,9 +116,6 @@ export function Game1220Online() {
     p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const finished = view.phase === 'finished'
-  const rematchVotes = view.rematchVotes ?? []
-  const iVotedRematch = rematchVotes.includes(user.id)
-  const humanCount = view.players.filter((p) => !p.isBot).length
 
   const reasonLabel = (id: string, cfg: { band: Band1220; parity: Parity1220; giveNumber: number }) => {
     if (id === 'band') return t(`bands.${cfg.band}`)
@@ -129,50 +127,25 @@ export function Game1220Online() {
   // ── Écran de fin ──────────────────────────────────────────────────────────
   if (finished) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-white">
-        <motion.div
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-          className="flex flex-col items-center gap-2 text-center"
-        >
-          <Dices className="h-14 w-14 text-teal-400" />
-          <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
-          <p className="text-sm text-white/60">{t('online.totalRolls', { count: view.history.length })}</p>
-        </motion.div>
-
-        {/* Aucune progression n'existait sur ce jeu : XP de participation. */}
-        <XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />
-
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          {humanCount > 1 ? (
-            <Button
-              onClick={() => void voteRematch()}
-              disabled={iVotedRematch}
-              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {iVotedRematch
-                ? t('online.rematchWaiting', { count: rematchVotes.length, total: humanCount })
-                : t('online.replay')}
-            </Button>
-          ) : (
-            <Button
-              onClick={() => void voteRematch()}
-              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" /> {t('online.replay')}
-            </Button>
-          )}
-          <Button
-            onClick={() => void leaveRoom()}
-            variant="outline"
-            className="w-full rounded-2xl border-white/15 bg-white/5 py-5 text-base font-semibold text-white/80 hover:bg-white/10"
+      <OnlineEndScreen
+        rematchVotes={view.rematchVotes ?? []}
+        onRematch={voteRematch}
+        onLeave={leaveRoom}
+        header={
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="flex flex-col items-center gap-2 text-center"
           >
-            <Home className="mr-2 h-4 w-4" /> {t('online.backToMenu')}
-          </Button>
-        </div>
-      </div>
+            <Dices className="h-14 w-14 text-teal-400" />
+            <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
+            <p className="text-sm text-white/60">{t('online.totalRolls', { count: view.history.length })}</p>
+          </motion.div>
+        }
+        // Aucune progression n'existait sur ce jeu : XP de participation.
+        xp={<XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
+      />
     )
   }
 
