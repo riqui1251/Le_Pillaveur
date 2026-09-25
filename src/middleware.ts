@@ -127,6 +127,11 @@ export const config = {
     // icon/apple-icon/opengraph-image/robots.txt/sitemap.xml : routes de
     // métadonnées générées (favicon PWA, SEO…) — jamais localisées, hors
     // middleware i18n.
-    '/((?!api|_next/static|_next/image|icon|apple-icon|opengraph-image|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    // manifest.json : fichier de public/ que le navigateur lit pour
+    // « Installer l'application ». Dans le middleware, next-intl le
+    // redirigeait vers /fr/manifest.json (404) : aucun navigateur ne
+    // proposait l'installation. PUBLIC_PREFIXES ne suffit pas : pour un
+    // chemin public, on renvoie la réponse de next-intl, redirection comprise.
+    '/((?!api|_next/static|_next/image|icon|apple-icon|opengraph-image|robots\\.txt|sitemap\\.xml|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
