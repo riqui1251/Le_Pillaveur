@@ -168,7 +168,9 @@ export async function LandingPage({ locale }: { locale: string }) {
           Maquette HTML/CSS, pas une capture d'écran : le dépôt n'en héberge
           aucune. Elle reprend les tokens du produit (feutre, or, crème,
           Playfair) et la légende dit explicitement que c'est une illustration.
-          Purement décorative → aria-hidden, la légende porte le sens. */}
+          Purement décorative → aria-hidden, la légende porte le sens. Ses
+          textes miniatures tiennent donc au plancher décoratif de 11 px (le
+          téléphone ne fait que 136 px de large) ; la légende, elle, est à 12. */}
       <section className="py-8">
         <h2 className="text-center font-display text-xl font-bold text-gold sm:text-2xl">
           {t('preview.title')}
@@ -181,29 +183,29 @@ export async function LandingPage({ locale }: { locale: string }) {
           {/* Écran TV */}
           <div aria-hidden className="w-full max-w-sm sm:max-w-md">
             <div className="rounded-xl border-2 border-gold/35 bg-felt-deep p-3 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)] sm:p-4">
-              <div className="flex items-center justify-between gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-gold/70">
+              <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-gold/70">
                 <span className="truncate">{tMeta('title')}</span>
                 <span className="truncate text-cream/55">♠ {previewGameTitle}</span>
               </div>
               <div className="mt-3 rounded-lg border border-gold/20 bg-felt px-3 py-4 text-center">
-                <p className="font-display text-[10px] uppercase tracking-[0.2em] text-cream/55">
+                <p className="font-display text-xs uppercase tracking-[0.2em] text-cream/55">
                   {t('preview.tvJoin')}
                 </p>
                 <p className="mt-1 font-display text-2xl font-black tracking-[0.3em] text-gold sm:text-3xl">
                   {PREVIEW_CODE}
                 </p>
-                <p className="mt-1 text-[10px] tracking-wide text-cream/40">{SITE_HOST}</p>
+                <p className="mt-1 text-[11px] tracking-wide text-cream/40">{SITE_HOST}</p>
               </div>
               <ul className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
                 {previewSeats.map((name) => (
                   <li
                     key={name}
-                    className="rounded-full border border-gold/20 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-cream/80"
+                    className="rounded-full border border-gold/20 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-cream/80"
                   >
                     {name}
                   </li>
                 ))}
-                <li className="rounded-full border border-violet-400/30 bg-violet-500/15 px-2 py-0.5 text-[9px] font-semibold text-violet-100">
+                <li className="rounded-full border border-violet-400/30 bg-violet-500/15 px-2 py-0.5 text-[11px] font-semibold text-violet-100">
                   🤖 {t('preview.seatBot')}
                 </li>
               </ul>
@@ -215,11 +217,11 @@ export async function LandingPage({ locale }: { locale: string }) {
           <div aria-hidden className="w-[136px] shrink-0 sm:w-[150px]">
             <div className="rounded-[1.6rem] border-4 border-black/50 bg-felt-deep p-2 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)]">
               <div className="mx-auto mb-2 h-1 w-8 rounded-full bg-white/15" />
-              <p className="text-center text-[8px] font-bold uppercase tracking-[0.18em] text-gold/70">
+              <p className="text-center text-[11px] font-bold uppercase tracking-[0.12em] text-gold/70">
                 {t('preview.phoneLabel')}
               </p>
               <div className="mt-1.5 rounded-lg border border-[#D8CCAE] bg-cream px-2 pb-2 pt-1 text-[#24201A]">
-                <span className="font-display text-[9px] font-black leading-none">
+                <span className="font-display text-[11px] font-black leading-none">
                   A
                   <br />♠
                 </span>
@@ -228,14 +230,14 @@ export async function LandingPage({ locale }: { locale: string }) {
                   {previewGameTitle}
                 </p>
               </div>
-              <p className="mt-1.5 text-center text-[8px] leading-tight text-white/40">
+              <p className="mt-1.5 text-center text-[11px] leading-tight text-white/40">
                 {t('preview.phoneHint')}
               </p>
             </div>
           </div>
         </div>
 
-        <p className="mx-auto mt-4 max-w-xl text-center text-[11px] leading-snug text-white/35">
+        <p className="mx-auto mt-4 max-w-xl text-center text-xs leading-snug text-white/35">
           {t('preview.caption', { game: previewGameTitle })}
         </p>
       </section>
@@ -328,8 +330,11 @@ export async function LandingPage({ locale }: { locale: string }) {
                     {SUIT_GLYPH[game.suit]}
                   </span>
                 )}
+                {/* Pastille « incontournable » à 11 px (métadonnée : la
+                    bordure or dit déjà la mise en avant) — à 12 px, elle
+                    rejoindrait l'index de la carte sur une colonne de 165 px. */}
                 {game.featured && (
-                  <span className="absolute right-2 top-1.5 rounded-full bg-gold/25 px-1.5 py-0.5 text-[8px] font-black uppercase leading-tight tracking-tight text-[#6B4E0F]">
+                  <span className="absolute right-2 top-1.5 rounded-full bg-gold/25 px-1.5 py-0.5 text-[11px] font-black uppercase leading-tight tracking-tight text-[#6B4E0F]">
                     ★ {t('catalog.featured')}
                   </span>
                 )}
@@ -338,23 +343,23 @@ export async function LandingPage({ locale }: { locale: string }) {
                     {tCatalog(`${game.id}.title`)}
                   </h3>
                   {game.minPlayers && game.maxPlayers && (
-                    <p className="mt-0.5 text-[10px] text-[#6B6455]">
+                    <p className="mt-0.5 text-xs text-[#6B6455]">
                       {t('catalog.players', { min: game.minPlayers, max: game.maxPlayers })}
                     </p>
                   )}
                   {/* L'accroche traduite existait déjà mais n'était jamais rendue :
                       le catalogue n'annonçait que des titres. */}
-                  <p className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-[#4A443A]">
+                  <p className="mt-1.5 line-clamp-3 text-xs leading-snug text-[#4A443A]">
                     {tCatalog(`${game.id}.description`)}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
                     {game.onlineReady && (
-                      <span className="rounded-full bg-emerald-700/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-800">
+                      <span className="rounded-full bg-emerald-700/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-emerald-800">
                         {t('catalog.online')}
                       </span>
                     )}
                     {!game.onlineOnly && (
-                      <span className="rounded-full bg-[#24201A]/8 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#4A443A]">
+                      <span className="rounded-full bg-[#24201A]/8 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-[#4A443A]">
                         {t('catalog.local')}
                       </span>
                     )}

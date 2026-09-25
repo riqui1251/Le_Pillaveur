@@ -263,7 +263,7 @@ export function XpGainBanner({
         {/* Le détail du total : « dont +30 XP de série » — le chiffre annoncé
             et la barre disent enfin la même chose. */}
         {lastGain && lastGain.streakBonus > 0 && (
-          <p className="mt-1 text-center text-[10px] text-orange-200/70">
+          <p className="mt-1 text-center text-xs text-orange-200/70">
             {t('streakBonus', { xp: lastGain.streakBonus })}
           </p>
         )}
@@ -277,15 +277,15 @@ export function XpGainBanner({
             className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-300"
           />
         </div>
-        <p className="mt-1 text-center text-[10px] tabular-nums text-white/40">
+        <p className="mt-1 text-center text-xs tabular-nums text-white/40">
           {t('progress', { current: progress.current, required: progress.required })}
         </p>
         {nextLabel && next && (
-          <p className="mt-0.5 text-center text-[10px] text-amber-200/60">
+          <p className="mt-0.5 text-center text-xs text-amber-200/60">
             {t('nextUnlock', { level: next.level, name: nextLabel })}
           </p>
         )}
-        {isSolo && <p className="mt-1 text-center text-[10px] text-white/45">{t('soloHint')}</p>}
+        {isSolo && <p className="mt-1 text-center text-xs text-white/45">{t('soloHint')}</p>}
       </div>
       {achievementsCard}
       {guestCard}

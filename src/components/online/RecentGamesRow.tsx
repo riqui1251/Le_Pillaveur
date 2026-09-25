@@ -128,7 +128,7 @@ export function RecentGamesRow() {
 
   return (
     <div className="mb-4">
-      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-white/35">
+      <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-white/35">
         {t('title')}
       </p>
       <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -147,12 +147,12 @@ export function RecentGamesRow() {
               <span className="block max-w-[9rem] truncate text-xs font-semibold text-white">
                 {game.title}
               </span>
-              <span className="flex items-center gap-1 text-[10px] text-amber-300/80">
+              <span className="flex items-center gap-1 text-xs text-amber-300/80">
                 {replayingId === entry.gameId ? (
                   t('replaying')
                 ) : (
                   <>
-                    <RotateCcw className="h-2.5 w-2.5" />
+                    <RotateCcw className="h-3 w-3" />
                     {t('replay')}
                   </>
                 )}
@@ -167,8 +167,11 @@ export function RecentGamesRow() {
           <p className="text-xs font-semibold text-white">
             {t('inviteTitle', { game: proposal.gameTitle })}
           </p>
-          <p className="mt-0.5 text-[10px] leading-relaxed text-white/50">{t('inviteHint')}</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <p className="mt-0.5 text-xs leading-relaxed text-white/50">{t('inviteHint')}</p>
+          {/* Puces de 36 px, 44 au doigt (.touch-target) : les 8 px d'écart
+              font se rejoindre les zones invisibles sans qu'elles se
+              chevauchent d'une rangée à l'autre. */}
+          <div className="mt-2 flex flex-wrap gap-2">
             {proposal.mates.map((mate) => {
               const on = selectedIds.includes(mate.userId)
               return (
@@ -178,13 +181,13 @@ export function RecentGamesRow() {
                   aria-pressed={on}
                   disabled={busy}
                   onClick={() => toggleMate(mate.userId)}
-                  className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors disabled:opacity-60 ${
+                  className={`touch-target flex h-9 items-center gap-1 rounded-full border px-3 text-xs transition-colors disabled:opacity-60 ${
                     on
                       ? 'border-amber-400/50 bg-amber-500/15 text-amber-100'
                       : 'border-white/10 bg-white/[0.03] text-white/45'
                   }`}
                 >
-                  {on && <Check className="h-2.5 w-2.5" />}
+                  {on && <Check className="h-3 w-3" />}
                   <span className="max-w-[8rem] truncate">{mate.displayName}</span>
                 </button>
               )
@@ -195,7 +198,7 @@ export function RecentGamesRow() {
               type="button"
               disabled={busy}
               onClick={() => void startReplay(proposal.gameId, proposal.path, selectedIds)}
-              className="rounded-xl bg-amber-500/90 px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-amber-400 disabled:opacity-60"
+              className="h-11 rounded-xl bg-amber-500/90 px-4 text-xs font-semibold text-black transition-colors hover:bg-amber-400 disabled:opacity-60"
             >
               {replayingId
                 ? t('replaying')
@@ -207,7 +210,7 @@ export function RecentGamesRow() {
               type="button"
               disabled={busy}
               onClick={() => setProposal(null)}
-              className="rounded-xl border border-white/10 px-3 py-1.5 text-xs text-white/60 transition-colors hover:text-white disabled:opacity-60"
+              className="h-11 rounded-xl border border-white/10 px-4 text-xs text-white/60 transition-colors hover:text-white disabled:opacity-60"
             >
               {t('cancel')}
             </button>

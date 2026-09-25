@@ -37,7 +37,7 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
   'petit-buveur': {
     title: 'Règles du Petit Buveur — apprendre et jouer en ligne gratuit',
     description:
-      'Plateau, cases à effets, défis et gorgées : les règles en un clin d’œil. Puis joues-y gratuitement en ligne : 2 à 99 joueurs, chat vocal, sans installation.',
+      'Plateau, cases à effets, défis et gorgées : les règles en un clin d’œil. Puis joues-y gratuitement : 2 à 99 joueurs, chat vocal — ou seul avec des bots.',
   },
   'toucher-coule': {
     title: 'Règles du Toucher-Coulé — apprendre puis jouer gratuit',
@@ -54,12 +54,11 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Un lieu secret, des questions, une accusation : les règles en 2 minutes. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
-  // Tabou masqué pour l'instant — réactiver cette entrée avec l'id dans rules-ids.ts.
-  // tabou: {
-  //   title: 'Règles du Tabou Vocal — faire deviner sans les mots interdits',
-  //   description:
-  //     'Le Tabou du Pillaveur : faites deviner un mot au chat vocal sans prononcer les mots interdits, en équipes. Règles complètes, 4 à 12 joueurs.',
-  // },
+  tabou: {
+    title: 'Règles du Tabou Vocal — faire deviner sans mot interdit',
+    description:
+      'Faire deviner un mot au chat vocal sans dire les mots tabous, en équipes : les règles. Puis joues-y gratuitement : 4 à 16 joueurs, 2 par équipe, chat vocal.',
+  },
   crobard: {
     title: 'Règles du Crobard — apprendre et jouer en ligne gratuit',
     description:

@@ -193,7 +193,7 @@ function BoardCard({
         <span className={cn('text-base', highlight && 'text-amber-300')}>{icon}</span>
         <h2 className="text-sm font-semibold text-white/80">{title}</h2>
         {board && board.totalPlayers > 0 && (
-          <span className="ml-auto text-[10px] text-white/30">{board.totalPlayers}</span>
+          <span className="ml-auto text-xs text-white/30">{board.totalPlayers}</span>
         )}
       </div>
       {rows.length === 0 ? (
@@ -219,7 +219,7 @@ function BoardCard({
             ))}
             {me && !meInTop && (
               <>
-                <p className="text-center text-[10px] leading-none text-white/30">⋯</p>
+                <p className="text-center text-xs leading-none text-white/30">⋯</p>
                 {/* En liste complète, « toi » reste épinglé au bas du panneau
                     pendant le scroll — fond opaque pour couvrir les lignes. */}
                 <div className={cn(expanded && 'sticky bottom-0 rounded-xl bg-[#0F332A] shadow-[0_-6px_12px_-6px_rgba(0,0,0,0.6)]')}>
@@ -476,7 +476,7 @@ export function OnlineRankingBoard({
         })}
       </div>
 
-      <p className="px-1 text-[10px] text-white/30">
+      <p className="px-1 text-xs text-white/30">
         {t('legend')} — {t('minGamesHint', { min: minGames })}
       </p>
     </div>

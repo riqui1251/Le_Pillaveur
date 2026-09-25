@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GAMES, type GameMeta } from './games'
+import { GAMES, hasContentIn, type GameMeta } from './games'
 import { COLLECTION_SLUGS, LARGE_GROUP_MIN_PLAYERS, gamesInCollection, isCollectionSlug } from './collections'
 
 /**
@@ -47,6 +47,12 @@ describe('critères des collections (registre factice)', () => {
     expect(ids(gamesInCollection('seul-avec-des-bots', FAKE))).toEqual(['online-3-bots'])
   })
 
+  it('« seul avec des bots » : hors fr, pas de jeu dont les cartes n existent qu en français', () => {
+    const withFrOnly = [...FAKE, game({ id: 'bots-fr', onlineReady: true, botsFillable: true, contentLangs: ['fr'] })]
+    expect(ids(gamesInCollection('seul-avec-des-bots', withFrOnly, 'fr'))).toEqual(['online-3-bots', 'bots-fr'])
+    expect(ids(gamesInCollection('seul-avec-des-bots', withFrOnly, 'en'))).toEqual(['online-3-bots'])
+  })
+
   it(`« en grand groupe » : plafond en ligne ≥ ${LARGE_GROUP_MIN_PLAYERS}`, () => {
     expect(ids(gamesInCollection('en-grand-groupe', FAKE))).toEqual(['online-3-bots', 'grand-groupe'])
   })
@@ -89,9 +95,14 @@ describe('collections sur le vrai registre', () => {
   })
 
   it('« seul avec des bots » = exactement les jeux que le filtre ?solo=1 du hub affiche', () => {
-    // Même définition que GamesGrid (botsFillable && onlineReady, hors masqués) :
-    // la collection et le funnel « jouer seul » doivent promettre la même liste.
-    const expected = GAMES.filter((g) => !g.hidden && g.botsFillable && g.onlineReady).map((g) => g.id)
-    expect(ids(gamesInCollection('seul-avec-des-bots'))).toEqual(expected)
+    // Même définition que GamesGrid (botsFillable && onlineReady && cartes dans
+    // la langue de la page, hors masqués) : la collection et le funnel « jouer
+    // seul » doivent promettre la même liste, dans chaque langue.
+    for (const locale of ['fr', 'en', 'es', 'it']) {
+      const expected = GAMES.filter(
+        (g) => !g.hidden && g.botsFillable && g.onlineReady && hasContentIn(g, locale)
+      ).map((g) => g.id)
+      expect(ids(gamesInCollection('seul-avec-des-bots', GAMES, locale)), locale).toEqual(expected)
+    }
   })
 })

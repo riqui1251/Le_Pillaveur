@@ -72,7 +72,11 @@ import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } fro
 import { ACTIVE_WINDOW_MS, HONEST_PRESENCE_SINCE } from '@/lib/heartbeat'
 import { ANALYTICS_CONSENT_V2_SINCE } from '@/lib/auth-cookies'
 import { isOnline, ONLINE_WINDOW_MS } from '@/lib/presence'
-import { groupIpsByNetwork, type IpNetworkGroup } from '@/lib/ip-network'
+import { type IpNetworkGroup } from '@/lib/ip-network'
+import { idleLabel, rateLabel } from '@/lib/supervision/labels'
+import { networkGroupsOf } from '@/lib/supervision/ip-groups'
+import { parisDayToDate } from '@/lib/supervision/paris-day'
+import { RETENTION_RUN_STALE_MS, retentionRunStatus } from '@/lib/supervision/retention-run'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -149,19 +153,6 @@ function useHonestPresenceSince(): string {
     month: '2-digit',
     timeZone: PARIS_TIME_ZONE,
   })
-}
-
-/** Un taux non calculable (cohorte vide) s'affiche « — », jamais « 0 % ». */
-function rateLabel(rate: number | null): string {
-  return rate == null ? '—' : `${Math.round(rate * 100)} %`
-}
-
-/** Durée d'inactivité à partir de laquelle on parle de table figée (F46). */
-function idleLabel(seconds: number): string {
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${Math.max(1, minutes)} min`
-  const hours = Math.floor(minutes / 60)
-  return `${hours} h ${String(minutes % 60).padStart(2, '0')}`
 }
 
 type CountryRow = { country: string | null; count: number }
@@ -635,15 +626,6 @@ function DeviceBadge({ device, compact }: { device?: string | null; compact?: bo
 
 /** IP prête à regrouper : une entrée de repli (dernière IP seule) n'a pas de première vue. */
 type DatedIpEntry = IpEntry & { firstSeenAt: string }
-
-/**
- * Historique regroupé par réseau (/64 en IPv6, adresse entière en IPv4) : les
- * adresses temporaires d'une même box ne passent plus pour autant de lieux.
- * UN historique à la fois (compte OU navigateur), jamais les deux mêlés.
- */
-function networkGroupsOf(ips: IpEntry[]): IpNetworkGroup<DatedIpEntry>[] {
-  return groupIpsByNetwork(ips.map((entry) => ({ ...entry, firstSeenAt: entry.firstSeenAt ?? entry.lastSeenAt })))
-}
 
 /** Date ISO lisible ? Une IP de repli peut porter une date vide. */
 function isValidDate(iso: string | null | undefined): iso is string {
@@ -1458,14 +1440,6 @@ function replaceUrlParam(key: string, value: string | null) {
   window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
 }
 
-/**
- * Jour de Paris (AAAA-MM-JJ) → instant à MIDI UTC, loin de tout bord de jour :
- * formaté à l'heure de Paris, il retombe toujours sur ce même jour.
- */
-function parisDayToDate(day: string): Date {
-  return new Date(`${day}T12:00:00.000Z`)
-}
-
 /** Rayures des jours antérieurs au journal : « rien à compter », jamais un zéro. */
 const BEFORE_JOURNAL_HATCH = {
   backgroundImage: 'repeating-linear-gradient(135deg, rgb(255 255 255 / 0.08) 0 2px, transparent 2px 6px)',
@@ -1716,39 +1690,6 @@ function OnlinePlayersSection({
       </p>
     </SectionCard>
   )
-}
-
-/**
- * Délai sans passage du ménage au-delà duquel la ligne passe en alerte. Le
- * balayage n'a pas de cron : il ne tourne qu'avec du trafic (ping), au plus
- * toutes les 6 h. Au-delà d'une journée, les durées de conservation annoncées
- * ne sont plus garanties.
- */
-const RETENTION_RUN_STALE_MS = 24 * 60 * 60 * 1000
-
-/**
- * Lecture de la trace du dernier ménage : total et motifs d'alerte. Le total
- * additionne des natures différentes (lignes supprimées, lignes vidées ou
- * anonymisées, comptes invités supprimés avec leur contenu) : son libellé reste
- * donc neutre (« éléments »), le détail donne le volume de chaque bloc.
- * Une date illisible compte comme un passage trop ancien, jamais comme un
- * passage récent.
- */
-function retentionRunStatus(run: RetentionLastRun, now: number) {
-  const total = Object.values(run.counts).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0)
-  const at = new Date(run.at).getTime()
-  const stale = !Number.isFinite(at) || now - at > RETENTION_RUN_STALE_MS
-  const failed = run.failed ?? []
-  // Blocs du détail : ceux qui ont purgé, puis ceux qui ont échoué sans volume.
-  const blocks = [...Object.keys(run.counts), ...failed.filter((name) => !(name in run.counts))]
-  return {
-    total,
-    stale,
-    failed,
-    blocks,
-    errored: !run.ok,
-    alert: !run.ok || failed.length > 0 || stale,
-  }
 }
 
 /**

@@ -110,7 +110,7 @@ export function GameTutorialModal({
         className="relative w-full max-w-sm rounded-2xl border border-[#D8CCAE] bg-cream p-5 text-[#24201A] shadow-2xl"
       >
         <div className="flex items-center justify-between">
-          <span className="rounded-full border border-[#24201A]/12 bg-[#24201A]/5 px-2 py-0.5 font-display text-[10px] font-bold text-[#4A443A]">
+          <span className="rounded-full border border-[#24201A]/12 bg-[#24201A]/5 px-2 py-0.5 font-display text-xs font-bold text-[#4A443A]">
             {t('stepCounter', { n: idx + 1, total: steps.length })}
           </span>
           <button

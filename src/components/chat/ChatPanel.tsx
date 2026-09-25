@@ -406,7 +406,7 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                   <Gamepad2 className="h-3.5 w-3.5" />
                   {t('tabGame')}
                   {(unread?.room ?? 0) > 0 && (
-                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                    <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                       {unread!.room > 9 ? '9+' : unread!.room}
                     </span>
                   )}
@@ -467,7 +467,7 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                           {f.displayName}
                         </span>
                         {(unread?.friends?.[f.userId] ?? 0) > 0 ? (
-                          <span className="ml-auto flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                          <span className="ml-auto flex h-4 min-w-[1rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                             {unread!.friends[f.userId] > 9 ? '9+' : unread!.friends[f.userId]}
                           </span>
                         ) : (

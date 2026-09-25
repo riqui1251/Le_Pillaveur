@@ -7,6 +7,7 @@ import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
 import { useLocalizedGame } from '@/lib/games-i18n'
+import { hasContentIn } from '@/lib/games'
 import { isRulesGameId } from '@/lib/rules/rules-ids'
 
 /**
@@ -61,6 +62,8 @@ export function GameShowcase({
   children?: ReactNode
 }) {
   const t = useTranslations('onlineLobby.showcase')
+  // Badges « Bêta » et « FR » : les mêmes mots que sur la carte du hub.
+  const tHub = useTranslations('hub.jeux')
   const tAbout = useTranslations(`games.${gameId}.about`)
   const tCommon = useTranslations('common')
   const locale = useLocale()
@@ -81,6 +84,9 @@ export function GameShowcase({
   facts.push(t('free'))
 
   const rulesHref = locale === 'fr' && isRulesGameId(gameId) ? `/regles/${gameId}` : null
+  // Cartes absentes de la langue de la page : dit en clair à côté du badge,
+  // la table ne s'ouvrirait pas dans cette langue (content_lang_unavailable).
+  const frOnly = !hasContentIn(game, locale)
 
   return (
     <div className="flex w-full flex-1 flex-col items-center px-3 py-8 sm:py-12">
@@ -89,6 +95,31 @@ export function GameShowcase({
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-gold/30 bg-gold/10 text-gold">
             <GameIconById id={gameId} className="h-8 w-8" />
           </div>
+          {(game.beta || frOnly) && (
+            <p className="mb-2 flex flex-wrap items-center justify-center gap-1.5">
+              {/* Chaque badge est suivi de sa phrase, VISIBLE : un `title` ne
+                  s'atteint ni au doigt ni au lecteur d'écran. */}
+              {game.beta && (
+                <>
+                  <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-xs font-bold uppercase tracking-[0.15em] text-gold">
+                    {tHub('betaBadge')}
+                  </span>
+                  <span className="text-xs text-cream/70">{tHub('betaHint')}</span>
+                </>
+              )}
+              {frOnly && (
+                <>
+                  <span
+                    aria-hidden
+                    className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-xs font-bold tracking-[0.15em] text-gold"
+                  >
+                    {tHub('frOnlyBadge')}
+                  </span>
+                  <span className="text-xs text-cream/70">{tHub('frOnlyHint')}</span>
+                </>
+              )}
+            </p>
+          )}
           <h1 className="font-display text-3xl font-bold tracking-tight text-cream">{game.title}</h1>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-snug text-cream/70">{game.description}</p>
           <ul className="mt-4 flex flex-wrap justify-center gap-1.5">

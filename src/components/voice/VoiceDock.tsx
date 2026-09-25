@@ -149,13 +149,13 @@ export function VoiceDock() {
             <div className="mt-3 flex gap-2">
               <button
                 onClick={acceptPrompt}
-                className="flex-1 rounded-xl bg-emerald-600 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-500"
+                className="min-h-[44px] flex-1 rounded-xl bg-emerald-600 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-500"
               >
                 {t('prompt.enable')}
               </button>
               <button
                 onClick={dismissPrompt}
-                className="flex-1 rounded-xl border border-white/15 bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
+                className="min-h-[44px] flex-1 rounded-xl border border-white/15 bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
               >
                 {t('prompt.later')}
               </button>
@@ -186,7 +186,7 @@ export function VoiceDock() {
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
                 aria-label={t('close')}
               >
                 <X className="h-4 w-4" />
@@ -232,7 +232,7 @@ export function VoiceDock() {
                   </p>
                   <button
                     onClick={() => void voice.resumeMic()}
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-500/25 py-1.5 text-xs font-bold text-amber-50 transition-colors hover:bg-amber-500/40"
+                    className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg bg-amber-500/25 py-1.5 text-xs font-bold text-amber-50 transition-colors hover:bg-amber-500/40"
                   >
                     <MicVocal className="h-3.5 w-3.5" />
                     {t('resumeMic')}
@@ -247,7 +247,7 @@ export function VoiceDock() {
                   </p>
                   <button
                     onClick={() => void voice.reconnect()}
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-red-500/25 py-1.5 text-xs font-bold text-red-50 transition-colors hover:bg-red-500/40"
+                    className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg bg-red-500/25 py-1.5 text-xs font-bold text-red-50 transition-colors hover:bg-red-500/40"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     {t('reconnect')}
@@ -260,7 +260,7 @@ export function VoiceDock() {
                 <button
                   onClick={() => void voice.join()}
                   disabled={voice.joining || !voice.supported}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-500 disabled:opacity-50"
+                  className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-500 disabled:opacity-50"
                 >
                   {voice.joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
                   {voice.joining ? t('connecting') : t('join')}
@@ -270,7 +270,7 @@ export function VoiceDock() {
                   <button
                     onClick={voice.toggleMic}
                     className={cn(
-                      'flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold transition-all',
+                      'flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center text-xs font-semibold leading-tight transition-all',
                       voice.micMuted
                         ? 'border-red-400/40 bg-red-500/15 text-red-100'
                         : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10'
@@ -283,7 +283,7 @@ export function VoiceDock() {
                   <button
                     onClick={voice.toggleDeafen}
                     className={cn(
-                      'flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-semibold transition-all',
+                      'flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center text-xs font-semibold leading-tight transition-all',
                       voice.deafened
                         ? 'border-red-400/40 bg-red-500/15 text-red-100'
                         : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10'
@@ -295,7 +295,7 @@ export function VoiceDock() {
                   </button>
                   <button
                     onClick={voice.leave}
-                    className="flex flex-col items-center gap-1 rounded-xl border border-red-400/40 bg-red-500/15 py-2 text-[10px] font-semibold text-red-100 transition-all hover:bg-red-500/25"
+                    className="flex flex-col items-center gap-1 rounded-xl border border-red-400/40 bg-red-500/15 px-1 py-2 text-center text-xs font-semibold leading-tight text-red-100 transition-all hover:bg-red-500/25"
                     aria-label={t('leave')}
                   >
                     <PhoneOff className="h-4 w-4" />
@@ -309,7 +309,7 @@ export function VoiceDock() {
                 <button
                   onClick={voice.toggleSpeaker}
                   className={cn(
-                    'flex w-full items-center justify-between rounded-xl border px-3 py-2 text-xs font-semibold transition-all',
+                    'flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all',
                     voice.speaker
                       ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
                       : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
@@ -323,7 +323,7 @@ export function VoiceDock() {
                   </span>
                   <span
                     className={cn(
-                      'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                      'shrink-0 rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide',
                       voice.speaker ? 'bg-emerald-500/30 text-emerald-100' : 'bg-white/10 text-white/50'
                     )}
                   >
@@ -380,7 +380,7 @@ export function VoiceDock() {
                         {self && <span className="text-white/40"> {t('you')}</span>}
                       </span>
                       {peerState === 'connecting' && (
-                        <span className="flex shrink-0 items-center gap-1 text-[9px] uppercase tracking-wide text-white/40">
+                        <span className="flex shrink-0 items-center gap-1 text-xs uppercase tracking-wide text-white/40">
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           {t('connecting')}
                         </span>
@@ -393,13 +393,13 @@ export function VoiceDock() {
                         />
                       )}
                       {peerState === 'failed' && (
-                        <span className="flex shrink-0 items-center gap-1 text-[9px] uppercase tracking-wide text-red-300">
+                        <span className="flex shrink-0 items-center gap-1 text-xs uppercase tracking-wide text-red-300">
                           <span className="h-2 w-2 rounded-full bg-red-400" aria-hidden />
                           {t('peerFailed')}
                         </span>
                       )}
                       {peerState === 'absent' && (
-                        <span className="shrink-0 text-[9px] uppercase tracking-wide text-white/30">
+                        <span className="shrink-0 text-xs uppercase tracking-wide text-white/30">
                           {t('notInVoice')}
                         </span>
                       )}
@@ -407,7 +407,7 @@ export function VoiceDock() {
                         <button
                           onClick={() => voice.toggleMutePeer(m.userId)}
                           className={cn(
-                            'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-all',
+                            'touch-target flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-all',
                             isMuted
                               ? 'border-red-400/40 bg-red-500/15 text-red-200'
                               : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
@@ -422,7 +422,7 @@ export function VoiceDock() {
                   )
                 })}
               </ul>
-              {!voice.joined && <p className="text-[11px] text-white/40">{t('joinHint')}</p>}
+              {!voice.joined && <p className="text-xs text-white/40">{t('joinHint')}</p>}
             </div>
           </motion.div>
         )}
@@ -448,7 +448,7 @@ export function VoiceDock() {
       >
         {voice.joined && voice.micMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
         {voice.joined && voice.roster.size > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-gray-950 bg-emerald-500 px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-gray-950 bg-emerald-500 px-1 text-xs font-bold text-white">
             {voice.roster.size + 1}
           </span>
         )}

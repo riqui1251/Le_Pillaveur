@@ -327,7 +327,7 @@ export function Game1220Online() {
                   {p && <span className="text-xs" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>}
                   <OnlinePlayerName name={cfg.name} cosmetics={cosmetics.get(cfg.playerId)} className="truncate text-xs font-semibold" />
                 </div>
-                <div className="flex flex-wrap gap-1 text-[10px]">
+                <div className="flex flex-wrap gap-1 text-xs">
                   <span className="rounded border border-white/10 bg-white/[0.05] px-1.5 py-0.5 text-white/45">
                     {cfg.parity === 'pair' ? t('pair') : t('impair')}
                   </span>

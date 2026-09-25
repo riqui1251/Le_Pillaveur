@@ -1,7 +1,9 @@
 "use client"
 
 import dynamic from "next/dynamic"
+import { usePathname } from "@/i18n/navigation"
 import { useRequireSelectedPlayers } from "@/hooks/useRequireSelectedPlayers"
+import { useRecordRecentLocalGame } from "@/lib/recent-local-games"
 import { useAuth } from "@/components/providers/AuthProvider"
 import { useKeepScreenAwake } from "@/components/tv/use-keep-screen-awake"
 import { ConnectionBanner, ConnectionLiveRegion } from "@/components/online/ConnectionBanner"
@@ -41,8 +43,12 @@ export default function GamesLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user } = useAuth()
-  useRequireSelectedPlayers("/joueurs", { skipWhenOnline: true })
+  const { user, loading } = useAuth()
+  const { selectedIds, isOnline } = useRequireSelectedPlayers("/joueurs", { skipWhenOnline: true })
+  // « Vos derniers jeux » (hub) : l'ouverture d'un jeu LOCAL avec une table
+  // de joueurs tient lieu de lancement — noté sur l'appareil, rien d'autre.
+  const pathname = usePathname()
+  useRecordRecentLocalGame(pathname, !loading && !isOnline && selectedIds.length > 0)
   // Relâché après 15 min sans aucun geste : un écran de jeu oublié (lobby,
   // écran de fin, portail) retrouve sa mise en veille. Repris au geste suivant.
   useKeepScreenAwake({ idleReleaseMs: GAME_SCREEN_IDLE_RELEASE_MS })

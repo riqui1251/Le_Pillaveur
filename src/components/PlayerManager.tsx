@@ -275,11 +275,16 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
               >
                 <div className="flex items-start justify-between gap-1">
                   <PlayerIcon player={player} size="md" className="h-9 w-9 text-lg" />
-                  <div className="flex shrink-0 items-center">
+                  {/* Crayon et croix : 36 px visibles, 44 px au doigt
+                      (.touch-target). L'écart de 8 px n'est pas décoratif —
+                      sans lui, la zone invisible de la croix mordrait sur le
+                      bord du crayon, et un « personnaliser » raté retirerait
+                      le joueur. */}
+                  <div className="flex shrink-0 items-center gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-full"
+                      className="touch-target h-9 w-9 rounded-full"
                       onClick={(e) => {
                         e.stopPropagation();
                         setCustomizingPlayer(player);
@@ -292,12 +297,14 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 rounded-full"
+                        className="touch-target h-9 w-9 rounded-full"
                         onClick={(e) => {
                           e.stopPropagation();
                           removePlayer(player.id);
                           selectPlayerIds(selectedPlayerIds.filter((id) => id !== player.id));
                         }}
+                        aria-label={t('removePlayer', { name: player.name })}
+                        title={t('removePlayer', { name: player.name })}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -363,7 +370,7 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
           <Button
             onClick={handleStartGame}
             disabled={!canStart}
-            className="h-auto min-h-11 max-w-[60%] shrink-0 whitespace-normal bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2 text-center font-medium leading-tight text-white hover:from-amber-600 hover:to-orange-600 disabled:opacity-50"
+            className="h-auto min-h-[44px] max-w-[60%] shrink-0 whitespace-normal bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2 text-center font-medium leading-tight text-white hover:from-amber-600 hover:to-orange-600 disabled:opacity-50"
           >
             {startLabel ?? t('startGame')}
           </Button>

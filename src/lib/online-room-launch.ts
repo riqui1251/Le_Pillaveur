@@ -1,6 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
-import { launchPetitBuveurRoom } from '@/lib/online-petit-buveur'
+import { buildPetitBuveurEngineState, serializeEngineState } from '@/lib/petit-buveur/server-adapter'
+import { currentPlayerId } from '@/lib/petit-buveur/engine'
+import { randomSeed } from '@/lib/petit-buveur/rng'
+import type { Difficulty } from '@/lib/petit-buveur/types'
 import { launchPurpleRoom } from '@/lib/online-purple'
 import { launch1220Room } from '@/lib/online-1220'
 import { launchToucherCouleRoom } from '@/lib/online-toucher-coule'
@@ -10,7 +13,7 @@ import { launchQuizRoom } from '@/lib/online-quiz'
 import { launchLoupGarouRoom } from '@/lib/online-loup-garou'
 import { launchBluffRoom } from '@/lib/online-bluff'
 import { launchEspionRoom } from '@/lib/online-espion'
-import { launchTabouRoom } from '@/lib/online-tabou'
+import { launchTabouRoom, tabouHasTwoHumansPerTeam } from '@/lib/online-tabou'
 import { launchCrobardRoom } from '@/lib/online-crobard'
 import { launchTelephoneDessineRoom } from '@/lib/online-telephone-dessine'
 import { launchSansFiltreRoom } from '@/lib/online-sans-filtre'
@@ -18,7 +21,7 @@ import { launchMotsCodesRoom } from '@/lib/online-mots-codes'
 import { launchDilemmesRoom } from '@/lib/online-dilemmes'
 import { launchPetitBacRoom } from '@/lib/online-petit-bac'
 import { launchPresidentRoom } from '@/lib/online-president'
-import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
+import { isOnlineGameFinished, parseOnlineGameState, parseRoomSettings } from '@/lib/online-game-state'
 import { recordGameSessionStart } from '@/lib/online/game-sessions'
 import { armRoomTicker, cancelRoomTicker } from '@/lib/online/room-ticker'
 import { recordDeparture } from '@/lib/online/departures'
@@ -84,12 +87,39 @@ async function recordGameHistory(room: RoomWithMembers) {
   }
 }
 
+/**
+ * Lance (ou relance) une partie du Petit Buveur — SERVEUR-AUTORITAIRE, avec
+ * les bots choisis par l'hôte au lobby (settings.botsCount), assis après les
+ * humains. Tenu ici et non plus dans online-petit-buveur.ts, dont le lanceur
+ * ignorait ce réglage : depuis que le jeu se complète avec des bots
+ * (botsFillable), un hôte seul avec un bot y aurait ouvert une partie à UN
+ * joueur. Graine neuve à chaque lancement : chaque « Rejouer » rejoue une
+ * partie différente.
+ */
+async function launchPetitBuveurWithBots(roomId: string, room: RoomWithMembers) {
+  const settings = parseRoomSettings(room.settingsJson)
+  const difficulty = (settings.difficulty ?? 'normal') as Difficulty
+  const members = room.members.map((m) => ({ userId: m.userId, displayName: m.user.displayName }))
+  const state = buildPetitBuveurEngineState(members, difficulty, randomSeed(), settings.botsCount ?? 0)
+
+  await prisma.onlineRoom.update({
+    where: { id: roomId },
+    data: {
+      status: 'playing',
+      gameStateJson: serializeEngineState(state),
+      stateVersion: 1,
+      // Le premier humain : les bots sont assis après les membres.
+      currentTurnUserId: currentPlayerId(state),
+    },
+  })
+}
+
 /** Lance (ou relance) une partie avec état initial synchronisé selon le jeu */
 export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
   await recordGameHistory(room)
   switch (room.gameId ?? '') {
     case 'petit-buveur':
-      await launchPetitBuveurRoom(roomId, room)
+      await launchPetitBuveurWithBots(roomId, room)
       break
     case 'purple':
       await launchPurpleRoom(roomId, room)
@@ -338,6 +368,20 @@ export async function processRematchVote(roomId: string, room: RematchRoom, user
           // Les absents sortent AVANT le lancement, dans la même relance : la
           // nouvelle partie se distribue aux seuls présents.
           const relaunched = await dropAbsentMembers(roomId, room, presentMembers, absentUserIds)
+          // Tabou Vocal : la règle des 2 humains par équipe vaut aussi pour
+          // « Rejouer », qui ne passe pas par la route launch. Une table que les
+          // départs ont réduite ne repart pas avec des bots de complément (un
+          // bot ne décrit rien) : elle revient au lobby, qui affiche la règle.
+          if (
+            gameId === 'tabou' &&
+            !tabouHasTwoHumansPerTeam(
+              relaunched.members.map((m) => m.userId),
+              relaunched.settingsJson
+            )
+          ) {
+            await resetRoomToWaitingLobby(roomId)
+            return
+          }
           await launchOnlineRoom(roomId, relaunched)
         } catch (error) {
           // Relance ratée : sans ce retour en arrière la sentinelle figerait la

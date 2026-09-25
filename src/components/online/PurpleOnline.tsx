@@ -259,7 +259,7 @@ export function PurpleOnline() {
           </div>
           <div className="flex items-center gap-2">
             <div className="rounded-xl border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-center">
-              <p className="text-[10px] uppercase tracking-wide text-violet-400/70">{t('counter')}</p>
+              <p className="text-xs uppercase tracking-wide text-violet-400/70">{t('counter')}</p>
               <p className="text-lg font-extrabold text-violet-300">
                 {view.drinkCounter}<span className="ml-0.5 text-xs">🍺</span>
               </p>
@@ -267,7 +267,7 @@ export function PurpleOnline() {
             <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-center">
               <p className="text-sm font-bold text-white/60">{t('cardsLeft', { count: view.deck.length })}</p>
               {newDeckFlash && (
-                <p className="text-[10px] font-semibold text-violet-300">{t('newDeck')}</p>
+                <p className="text-xs font-semibold text-violet-300">{t('newDeck')}</p>
               )}
             </div>
           </div>
@@ -334,7 +334,7 @@ export function PurpleOnline() {
                   <div className="relative">
                     <p className="mb-1 text-lg leading-none">{cfg.emoji}</p>
                     <p className="text-xs font-bold">{t(`bets.${cfg.labelKey}` as 'bets.rouge')}</p>
-                    <p className="text-[10px] text-white/60">{tCommon('sipsCount', { count: cfg.gulps })}</p>
+                    <p className="text-xs text-white/60">{tCommon('sipsCount', { count: cfg.gulps })}</p>
                   </div>
                 </button>
               )

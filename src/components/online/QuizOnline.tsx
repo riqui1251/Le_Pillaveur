@@ -240,7 +240,7 @@ export function QuizOnline() {
       {/* Question */}
       {question && (
         <div className="rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-blue-600/15 to-transparent px-4 py-4 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-cyan-300/70">
+          <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300/70">
             {t(`cat.${question.cat}`)}
           </p>
           <p className="mt-1 text-lg font-black leading-snug">{question.q}</p>
@@ -348,7 +348,7 @@ export function QuizOnline() {
             <span
               key={p.id}
               className={cn(
-                'flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
+                'flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold',
                 p.hasAnswered
                   ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
                   : 'border-white/10 bg-white/5 text-white/40'

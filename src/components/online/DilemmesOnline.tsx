@@ -189,7 +189,7 @@ export function DilemmesOnline() {
               {revealVoters(choice).map((r) => (
                 <span
                   key={r.voterId}
-                  className="rounded-full border border-[#24201A]/15 bg-[#24201A]/5 px-1.5 py-0.5 text-[10px] font-semibold text-[#4A443A]"
+                  className="rounded-full border border-[#24201A]/15 bg-[#24201A]/5 px-1.5 py-0.5 text-xs font-semibold text-[#4A443A]"
                 >
                   {nameOf(r.voterId)}
                 </span>

@@ -164,7 +164,7 @@ export function RecentTables() {
           <button
             type="button"
             onClick={() => { void load() }}
-            className="min-h-11 shrink-0 rounded-lg px-3 text-xs font-semibold text-amber-300 transition-colors hover:bg-white/[0.06]"
+            className="min-h-[44px] shrink-0 rounded-lg px-3 text-xs font-semibold text-amber-300 transition-colors hover:bg-white/[0.06]"
           >
             {t('retry')}
           </button>
@@ -285,7 +285,7 @@ export function RecentTables() {
                           aria-label={busyKey === key ? undefined : t('rematchLabel', { game: title })}
                           aria-busy={busyKey === key || undefined}
                           aria-describedby={seated ? inRoomId : undefined}
-                          className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-amber-500/90 px-3 text-xs font-semibold text-black transition-colors hover:bg-amber-400 disabled:opacity-50"
+                          className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl bg-amber-500/90 px-3 text-xs font-semibold text-black transition-colors hover:bg-amber-400 disabled:opacity-50"
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
                           {busyKey === key ? t('rematching') : t('rematch')}

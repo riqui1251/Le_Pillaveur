@@ -38,6 +38,9 @@ export const ONLINE_ERROR_CODES = [
   'team_full',
   'room_full',
   'invite_only',
+  // Jeu dont les cartes n'existent pas dans la langue de la table (création,
+  // changement de jeu) — GameMeta.contentLangs
+  'content_lang_unavailable',
   // Expulsion au lobby par l'hôte (DELETE /rooms/[roomId]/members/[userId])
   'not_host',
   'cannot_kick_self',
@@ -191,6 +194,8 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   team_full: 'Cette équipe est complète',
   room_full: 'Ce lobby est complet pour ce format',
   invite_only: 'Ce lobby est sur invitation uniquement',
+  content_lang_unavailable:
+    "Les cartes de ce jeu n'existent qu'en français : ouvrez la table depuis le site en français",
   not_host: "Seul l'hôte de la table peut faire ça",
   cannot_kick_self: "Impossible de s'expulser soi-même",
   member_not_found: "Ce joueur n'est plus à la table",

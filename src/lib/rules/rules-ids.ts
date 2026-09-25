@@ -11,7 +11,7 @@ export const RULES_GAME_IDS = [
   'toucher-coule',
   'bluff',
   'espion',
-  // 'tabou' — jeu masqué du catalogue pour l'instant, page règles retirée avec lui.
+  'tabou',
   'crobard',
   'telephone-dessine',
   'purple',

@@ -264,6 +264,51 @@ describe('processRematchVote — présence', () => {
   })
 })
 
+// Tabou Vocal : 2 humains minimum par équipe, au lancement comme à la relance.
+// « Rejouer » ne passe pas par la route launch : sans ce contrôle, une table
+// réduite par les départs repartait avec des bots de complément, qui ne
+// décrivent rien.
+describe('processRematchVote — Tabou Vocal', () => {
+  const tabouRoom = (userIds: string[], row: Row) => ({
+    id: 'room-1',
+    gameId: 'tabou',
+    hostUserId: userIds[0],
+    settingsJson: JSON.stringify({ lang: 'fr' }),
+    members: userIds.map((userId) => ({ userId, user: { displayName: userId }, lastSeenAt: new Date() })),
+    gameStateJson: row.gameStateJson,
+    stateVersion: row.stateVersion,
+  })
+  const tabouFinished = (votes: string[]) =>
+    JSON.stringify({ version: 9, phase: 'finished', winnerTeam: 'A', rematchVotes: votes })
+  const lastRoomWrite = () => roomMock.update.mock.calls.at(-1)?.[0].data as Record<string, unknown>
+
+  it('renvoie au lobby une table qui ne compte plus 2 humains par équipe', async () => {
+    db = { gameStateJson: tabouFinished(['u2', 'u3']), stateVersion: 9 }
+
+    await processRematchVote('room-1', tabouRoom(['u1', 'u2', 'u3'], db), 'u1')
+
+    expect(lastRoomWrite()).toMatchObject({ status: 'waiting', gameStateJson: null, stateVersion: 0 })
+    expect(memberMock.updateMany).toHaveBeenCalledWith({
+      where: { roomId: 'room-1' },
+      data: { isReady: false, lastSeenAt: expect.any(Date) },
+    })
+  })
+
+  it('relance normalement à 2 contre 2 humains, sans bot', async () => {
+    db = { gameStateJson: tabouFinished(['u2', 'u3', 'u4']), stateVersion: 9 }
+
+    await processRematchVote('room-1', tabouRoom(['u1', 'u2', 'u3', 'u4'], db), 'u1')
+
+    const write = roomMock.update.mock.calls
+      .map((c) => c[0].data as { status?: string; gameStateJson?: string })
+      .find((d) => d.status === 'playing')
+    expect(write).toBeDefined()
+    const players = JSON.parse(write?.gameStateJson ?? '{}').players as { isBot: boolean }[]
+    expect(players).toHaveLength(4)
+    expect(players.some((p) => p.isBot)).toBe(false)
+  })
+})
+
 describe('resetRoomToWaitingLobby', () => {
   it('rend à chacun le délai de grâce du lobby : présence remise à maintenant, tous « pas prêts »', async () => {
     // En partie, la trace d'un onglet caché date de son dernier coup : sans

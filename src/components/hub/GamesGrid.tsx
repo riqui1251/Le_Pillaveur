@@ -1,10 +1,11 @@
 "use client"
 
 import { useMemo, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Globe, Search, Sparkles } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
+import { hasContentIn } from '@/lib/games'
 import { GameCard } from '@/components/hub/GameCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Input } from '@/components/ui/input'
@@ -40,6 +41,7 @@ function GamesCardGrid({ games }: { games: LocalizedGameMeta[] }) {
 export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const t = useTranslations('hub.jeux')
   const tCommon = useTranslations('common')
+  const locale = useLocale()
   const games = useLocalizedGames()
   const { user } = useAuth()
   const isOnline = user?.playMode === 'online'
@@ -70,11 +72,15 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
     () =>
       games.filter((g) => {
         if (g.hidden) return false
-        if (soloBots) return Boolean(g.botsFillable) && g.onlineReady && (!isSoft || g.softModeReady)
+        // Solo : seulement les jeux dont une table peut s'ouvrir dans cette
+        // langue (création refusée sinon, content_lang_unavailable).
+        if (soloBots) {
+          return Boolean(g.botsFillable) && g.onlineReady && (!isSoft || g.softModeReady) && hasContentIn(g, locale)
+        }
         if (isOnline) return Boolean(g.onlineReady) && (!isSoft || Boolean(g.softModeReady))
         return true
       }),
-    [games, isOnline, isSoft, soloBots]
+    [games, isOnline, isSoft, soloBots, locale]
   )
 
   const filtered = useMemo(() => {
@@ -103,10 +109,13 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   // Rangée « les incontournables » : les jeux qui montrent le mieux le produit,
   // en tête du hub. Ils restent aussi dans leur famille plus bas — c'est une
   // mise en avant, pas un déplacement. Rien à mettre en avant en mode local
-  // (les phares sont online) : la rangée disparaît alors d'elle-même.
+  // (les phares sont online) : la rangée disparaît alors d'elle-même. Hors
+  // français, un phare dont les cartes n'existent qu'en français (Sans
+  // Filtre) n'est pas mis en avant : sa table serait refusée dans cette
+  // langue — il reste dans sa famille, badge « FR » à l'appui.
   const featured = useMemo(
-    () => (query.trim() ? [] : localGames.filter((g) => g.featured)),
-    [localGames, query]
+    () => (query.trim() ? [] : localGames.filter((g) => g.featured && hasContentIn(g, locale))),
+    [localGames, query, locale]
   )
 
   // Sections par enseigne hors recherche — grille plate quand on cherche.

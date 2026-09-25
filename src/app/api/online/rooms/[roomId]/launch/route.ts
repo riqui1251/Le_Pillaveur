@@ -9,6 +9,7 @@ import { parseRoomSettings } from '@/lib/online-game-state'
 import { TC_MODES } from '@/lib/toucher-coule/engine'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { mcTeamCounts } from '@/lib/mots-codes/server-adapter'
+import { tabouHasTwoHumansPerTeam } from '@/lib/online-tabou'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
 import { recordDeparture } from '@/lib/online/departures'
@@ -119,6 +120,18 @@ export async function POST(request: Request, { params }: Params) {
     if (counts.gold < 2 || counts.red < 2) {
       return NextResponse.json(onlineErrorBody('team_min_players'), { status: 400 })
     }
+  }
+
+  // Tabou Vocal : 2 joueurs HUMAINS minimum par équipe — un bot ne décrit
+  // rien, ses manches tourneraient à vide (règle et raison dans online-tabou).
+  if (
+    room.gameId === 'tabou' &&
+    !tabouHasTwoHumansPerTeam(
+      members.map((m) => m.userId),
+      room.settingsJson
+    )
+  ) {
+    return NextResponse.json(onlineErrorBody('team_min_players'), { status: 400 })
   }
 
   // Avec `force`, il ne reste que des membres prêts et l'hôte — qui, en

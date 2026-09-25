@@ -318,7 +318,7 @@ function GameChatPanel({
                 {!m.self && (
                   <p
                     className={cn(
-                      'mb-0.5 flex items-center gap-1 text-[9px] font-semibold',
+                      'mb-0.5 flex items-center gap-1 text-xs font-semibold',
                       red ? 'text-red-300' : 'text-gold'
                     )}
                   >
@@ -537,7 +537,7 @@ export function LoupGarouOnline() {
         }
         ranking={
           <div className="w-full max-w-sm space-y-2">
-            <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-gold/60">
+            <p className="text-center text-xs font-semibold uppercase tracking-wide text-gold/60">
               {t('victory.fullReveal')}
             </p>
             {view.players.map((p) => (
@@ -705,7 +705,7 @@ export function LoupGarouOnline() {
                           <span className={cn('block text-xs font-bold', ROLE_META[role].color)}>
                             {roleName(role)}
                           </span>
-                          <span className="block text-[11px] leading-snug text-white/55">
+                          <span className="block text-xs leading-snug text-white/55">
                             {t(`roles.${role}.desc`)}
                           </span>
                         </span>
@@ -714,7 +714,7 @@ export function LoupGarouOnline() {
                   }
                 )}
               </ul>
-              <p className="text-[10px] text-white/40">{t('legend.hint')}</p>
+              <p className="text-xs text-white/40">{t('legend.hint')}</p>
             </div>
           </motion.div>
         )}
@@ -826,17 +826,17 @@ export function LoupGarouOnline() {
                     )
                   })()}
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#6B6455]">
                       {t('yourRole')}
                     </p>
                     <p className={cn('truncate font-display text-xl font-bold', ROLE_META[myRole].ink)}>
                       {roleName(myRole)}
                     </p>
-                    <p className="mt-0.5 text-[10px] leading-snug text-[#6B6455]">
+                    <p className="mt-0.5 text-xs leading-snug text-[#6B6455]">
                       {t(`roles.${myRole}.desc`)}
                     </p>
                     {myRole === 'loup' && wolves.length > 1 && (
-                      <p className="mt-1 text-[10px] font-semibold text-suit-red">
+                      <p className="mt-1 text-xs font-semibold text-suit-red">
                         {t('accomplices')} : {wolves.filter((w) => w.id !== user.id).map((w) => w.name).join(', ')}
                       </p>
                     )}
@@ -912,7 +912,7 @@ export function LoupGarouOnline() {
                         {p.id === user.id && <span className="text-[#6B6455]"> {t('you')}</span>}
                       </span>
                       {view.hasVotedMayor[p.id] && (
-                        <span className="shrink-0 text-[10px] font-bold text-emerald-700">✓</span>
+                        <span className="shrink-0 text-xs font-bold text-emerald-700">✓</span>
                       )}
                     </button>
                   )
@@ -942,7 +942,7 @@ export function LoupGarouOnline() {
                       selfId={user.id}
                     />
                     {view.guardLastProtectedId && (
-                      <p className="text-center text-[10px] text-white/45">
+                      <p className="text-center text-xs text-white/45">
                         {t('guardForbidden', { name: nameOf(view.guardLastProtectedId) })}
                       </p>
                     )}
@@ -1003,7 +1003,7 @@ export function LoupGarouOnline() {
                   selfId={user.id}
                 />
                 {view.wolfVotes && Object.keys(view.wolfVotes).length > 0 && (
-                  <p className="text-center text-[10px] text-red-200/70">
+                  <p className="text-center text-xs text-red-200/70">
                     {t('wolfPack')} :{' '}
                     {Object.entries(view.wolfVotes)
                       .map(([w, target]) => `${nameOf(w)} → ${nameOf(target)}`)
@@ -1170,7 +1170,7 @@ export function LoupGarouOnline() {
           {view.phase === 'day-debate' && (
             <div className="space-y-2.5 rounded-2xl border border-gold/15 bg-felt-deep/70 p-4">
               <p className="text-center text-sm font-bold">{t('debatePrompt')}</p>
-              <p className="text-center text-[11px] text-white/45">{t('debateHint')}</p>
+              <p className="text-center text-xs text-white/45">{t('debateHint')}</p>
               {view.ravenTargetId && (
                 <p className="rounded-xl bg-slate-500/15 px-3 py-1.5 text-center text-xs font-bold text-slate-200">
                   {t('ravenMarkBanner', { name: nameOf(view.ravenTargetId) })}
@@ -1256,7 +1256,7 @@ export function LoupGarouOnline() {
                         </span>
                         {view.ravenTargetId === p.id && view.phase === 'day-vote' && (
                           <span
-                            className="flex shrink-0 items-center gap-0.5 text-[10px] font-black text-slate-600"
+                            className="flex shrink-0 items-center gap-0.5 text-xs font-black text-slate-600"
                             title={t('ravenMarkBadge')}
                             aria-label={t('ravenMarkBadge')}
                           >
@@ -1265,7 +1265,7 @@ export function LoupGarouOnline() {
                           </span>
                         )}
                         {view.hasVoted[p.id] && (
-                          <span className="shrink-0 text-[10px] font-bold text-emerald-700">✓</span>
+                          <span className="shrink-0 text-xs font-bold text-emerald-700">✓</span>
                         )}
                       </button>
                     )
@@ -1279,7 +1279,7 @@ export function LoupGarouOnline() {
       {/* Le village : mini-cartes posées sur la table — crème pour les
           vivants, retournées côté feutre pour les morts. */}
       <div className="space-y-1.5 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-gold/60">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gold/60">
           {t('village', { alive: alive.length, total: view.players.length })}
         </p>
         <div className="grid grid-cols-2 gap-1.5">
@@ -1291,7 +1291,7 @@ export function LoupGarouOnline() {
                 className="flex items-center gap-1.5 rounded-lg border border-[#D8CCAE] bg-cream px-2 py-1.5 text-[#24201A] shadow-[0_4px_10px_-6px_rgba(0,0,0,0.5)]"
               >
                 <span className="text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-                <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
+                <span className="min-w-0 flex-1 truncate text-xs font-bold">
                   {p.name}
                   {p.id === user.id && <span className="text-[#6B6455]"> {t('you')}</span>}
                 </span>
@@ -1305,7 +1305,7 @@ export function LoupGarouOnline() {
                   />
                 )}
                 {!isSoft && p.sips > 0 && (
-                  <span className="flex shrink-0 items-center gap-0.5 text-[9px] font-semibold text-amber-700">
+                  <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold text-amber-700">
                     <Beer aria-hidden className="h-3 w-3" />
                     {p.sips}
                   </span>
@@ -1317,7 +1317,7 @@ export function LoupGarouOnline() {
                 className="flex items-center gap-1.5 rounded-lg border border-gold/25 bg-felt-deep px-2 py-1.5 opacity-80"
               >
                 <Skull aria-hidden className="h-3.5 w-3.5 shrink-0 text-cream/50" />
-                <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-cream/60">
+                <span className="min-w-0 flex-1 truncate text-xs font-bold text-cream/60">
                   {p.name}
                   {p.id === user.id && <span className="text-cream/40"> {t('you')}</span>}
                 </span>
@@ -1331,7 +1331,7 @@ export function LoupGarouOnline() {
                   />
                 )}
                 {!isSoft && p.sips > 0 && (
-                  <span className="flex shrink-0 items-center gap-0.5 text-[9px] font-semibold text-amber-200/80">
+                  <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold text-amber-200/80">
                     <Beer aria-hidden className="h-3 w-3" />
                     {p.sips}
                   </span>

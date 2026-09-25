@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { GAMES, getGameById } from './games'
+import { GAMES, getGameById, hasContentIn } from './games'
+import { locales } from '@/i18n/routing'
 
 /**
  * `games.ts` est la source unique du catalogue : le hub, la landing et le
@@ -57,6 +58,62 @@ describe('rangée « les incontournables » (featured)', () => {
     // disparaîtrait du hub dès qu'on cherche autre chose.
     for (const game of featured) {
       expect(game.suit, `enseigne de ${game.id}`).toBeTruthy()
+    }
+  })
+})
+
+describe('jeux en bêta', () => {
+  it('un jeu en bêta est publié : visible au hub et jouable en ligne', () => {
+    for (const game of GAMES.filter((g) => g.beta)) {
+      expect(game.hidden, `${game.id} est en bêta mais masqué`).toBeFalsy()
+      expect(game.onlineReady, `${game.id} devrait être jouable en ligne`).toBe(true)
+    }
+  })
+
+  it('Tabou Vocal est publié en bêta, sans complément par bots', () => {
+    const tabou = getGameById('tabou')
+    expect(tabou?.hidden).toBeFalsy()
+    expect(tabou?.beta).toBe(true)
+    expect(tabou?.botsFillable).toBeFalsy()
+  })
+})
+
+describe('langues du contenu (contentLangs)', () => {
+  it('absent : le contenu existe dans toutes les langues du site', () => {
+    const loupGarou = getGameById('loup-garou')!
+    expect(loupGarou.contentLangs).toBeUndefined()
+    for (const locale of locales) expect(hasContentIn(loupGarou, locale), locale).toBe(true)
+  })
+
+  it('Sans Filtre et Dilemmes : cartes en français seulement', () => {
+    for (const id of ['sans-filtre', 'dilemmes']) {
+      const game = getGameById(id)!
+      expect(game.contentLangs, id).toEqual(['fr'])
+      expect(hasContentIn(game, 'fr'), `${id} en fr`).toBe(true)
+      for (const locale of ['en', 'es', 'it']) expect(hasContentIn(game, locale), `${id} en ${locale}`).toBe(false)
+    }
+  })
+
+  it('une langue absente vaut le français (table ouverte sans cookie de langue)', () => {
+    const sansFiltre = getGameById('sans-filtre')!
+    expect(hasContentIn(sansFiltre, undefined)).toBe(true)
+    expect(hasContentIn(sansFiltre, null)).toBe(true)
+    expect(hasContentIn(sansFiltre, '')).toBe(true)
+  })
+
+  it('ne déclare que des langues du site, jamais une liste vide', () => {
+    for (const game of GAMES.filter((g) => g.contentLangs)) {
+      expect(game.contentLangs!.length, game.id).toBeGreaterThan(0)
+      for (const lang of game.contentLangs!) expect(locales as readonly string[], game.id).toContain(lang)
+    }
+  })
+
+  it('la rangée « incontournables » garde au moins un jeu dans chaque langue', () => {
+    // Hors fr, les phares dont les cartes n'existent qu'en français sortent
+    // de la rangée (GamesGrid) : elle ne doit pas se vider pour autant.
+    for (const locale of locales) {
+      const featured = GAMES.filter((g) => g.featured && hasContentIn(g, locale))
+      expect(featured.length, locale).toBeGreaterThan(0)
     }
   })
 })

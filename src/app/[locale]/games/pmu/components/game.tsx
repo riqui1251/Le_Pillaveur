@@ -737,9 +737,9 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-xs text-white/45">À qui ?</p>
+                  <p className="mb-2 text-xs text-white/45">{t('results.toWhom')}</p>
                   {allTargets.length === 0 ? (
-                    <p className="text-xs text-white/30">Tous les joueurs sont gagnants.</p>
+                    <p className="text-xs text-white/30">{t('results.allWinners')}</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {allTargets.map(target => {
@@ -818,7 +818,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                     <span className="text-amber-300 font-semibold">{bet * 2} 🍺</span>
                     {target && (
                       <>
-                        <span className="text-white/40">à</span>
+                        <span className="text-white/40">{t('results.giveTo')}</span>
                         <PlayerChip player={target} />
                       </>
                     )}

@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto, cleanupAbandonedRooms, createUniqueRoomCode, leaveOtherRooms } from '@/lib/online-room'
-import { GAMES } from '@/lib/games'
+import { GAMES, hasContentIn } from '@/lib/games'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { awardAchievement } from '@/lib/online/achievements'
@@ -75,16 +75,26 @@ export async function POST(request: Request) {
       return NextResponse.json(onlineErrorBody('invalid_game'), { status: 400 })
     }
 
+    // Langue de la SALLE (contenu localisé côté serveur, ex. mots de
+    // l'Imposteur) : celle du créateur au moment de la création — le cookie
+    // que le middleware pose à chaque page localisée visitée. Sans cookie, le
+    // français : un visiteur des pages /fr n'est donc jamais refusé ci-dessous.
+    const cookieLang = (await cookies()).get(LOCALE_COOKIE)?.value
+    const lang = cookieLang && ROOM_LANGS.has(cookieLang) ? cookieLang : 'fr'
+
+    // Jeu dont les cartes n'existent pas dans cette langue (Sans Filtre et
+    // Dilemmes : français seulement) : le lancement tirerait des cartes
+    // françaises à une table anglaise. Refusé AVANT de quitter les autres
+    // tables — un refus ne doit coûter à l'hôte aucune de ses places.
+    if (!hasContentIn(game, lang)) {
+      return NextResponse.json(onlineErrorBody('content_lang_unavailable'), { status: 400 })
+    }
+
     // Une seule table à la fois : les autres sont quittées proprement
     // (marqué « parti » si une partie y tourne, hôte transféré, salle vide
     // supprimée) — voir leaveOtherRooms.
     await leaveOtherRooms(user.id)
     await cleanupAbandonedRooms()
-
-    // Langue de la SALLE (contenu localisé côté serveur, ex. mots de
-    // l'Imposteur) : celle du créateur au moment de la création.
-    const cookieLang = (await cookies()).get(LOCALE_COOKIE)?.value
-    const lang = cookieLang && ROOM_LANGS.has(cookieLang) ? cookieLang : 'fr'
 
     // Visibilité choisie à la création (l'hôte peut la changer ensuite dans
     // les réglages du lobby) : 'public' = visible dans la liste des lobbies,

@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Player } from '@/lib/players'
 import { Button } from '@/components/ui/button'
@@ -12,28 +12,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { motion } from 'framer-motion'
 import useScreenSize from '@/hooks/useScreenSize'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
+import {
+  acknowledgeHiLoMiss,
+  advanceHiLoTurn,
+  currentHiLoPlayerId,
+  DECK_SIZE,
+  HI_LO_SAVE_ID,
+  HI_LO_SAVE_VERSION,
+  hiLoCardsPlayed,
+  resolveHiLoGuess,
+  restoreHiLoSave,
+  startHiLoGame,
+  toHiLoSave,
+  type HiLoEnd,
+  type HiLoGuess,
+  type HiLoSave,
+  type HiLoState,
+} from '@/lib/hi-lo/engine'
 import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
-
-// Types de cartes
-type CardValue = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'V' | 'D' | 'R' | 'A'
-type CardSuit = '♠' | '♥' | '♦' | '♣'
-
-// Valeurs des cartes pour la comparaison
-const cardValues: Record<CardValue, number> = {
-  '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
-  'V': 11, 'D': 12, 'R': 13, 'A': 14
-}
-
-// Couleurs des cartes
-const cardSuits: CardSuit[] = ['♠', '♥', '♦', '♣']
-
-// Interface pour une carte
-interface PlayingCard {
-  value: CardValue
-  suit: CardSuit
-  color: string // 'red' ou 'black'
-}
 
 // Propriétés du composant Game
 interface GameProps {
@@ -46,7 +43,7 @@ interface GameProps {
 // Fonction pour obtenir la classe CSS de l'effet spécial du joueur
 const getSpecialEffectClass = (effect: string | null | undefined): string => {
   if (!effect) return '';
-  
+
   switch (effect) {
     case 'red': return 'special-player-name-red';
     case 'blue': return 'special-player-name-blue';
@@ -61,44 +58,22 @@ const getSpecialEffectClass = (effect: string | null | undefined): string => {
 // Fonction pour vérifier si un joueur est spécial (Sim ou Riqui ou a l'effet spécial activé)
 const isSpecialPlayer = (player: any): boolean => {
   if (!player) return false;
-  
+
   // Si le joueur a explicitement activé l'effet spécial dans ses préférences
   if (player?.preferences?.specialEffect) {
     return true;
   }
-  
+
   // Sinon, vérifier si c'est un des noms spéciaux par défaut
-  const name = typeof player === 'string' 
-    ? player.toLowerCase() 
+  const name = typeof player === 'string'
+    ? player.toLowerCase()
     : player?.name?.toLowerCase();
   return name === 'sim' || name === 'riqui';
 }
 
-// Reprise de partie : paquet, carte visible et compteurs suffisent à reprendre
-// la main là où la table s'est arrêtée. Les états d'animation (retournement,
-// dialogues) repartent à zéro.
-const SAVE_ID = 'hi-lo'
-// Version 2 : la sauvegarde ne porte plus que des identifiants de joueurs
-// (plus aucun profil recopié), les anciennes entrées sont donc jetées.
-const SAVE_VERSION = 2
-
-type HiLoSave = {
-  gameMode: GameMode
-  /** Table de la sauvegarde : sans ce contrôle, on reprendrait la soirée d'hier. */
-  playerIds: string[]
-  deck: PlayingCard[]
-  currentCard: PlayingCard | null
-  currentPlayerIndex: number
-  drinkCounter: number
-  gameResults: Record<string, number>
-  sameCardCount: Record<string, number>
-  /** Uniquement des identifiants : une sauvegarde de partie n'a pas à recopier
-   *  les profils (nom, préférences, statistiques à vie) dans une seconde clé
-   *  de stockage. Les joueurs sont réhydratés depuis la prop `players`. */
-  activePlayerIds: string[]
-  correctGuessesInRow: number
-  targetGuesses: number
-}
+// Durée de l'animation de retournement, puis délai avant le tour suivant après une bonne réponse.
+const FLIP_MS = 600
+const AUTO_NEXT_MS = 1500
 
 export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }: GameProps) {
   const t = useTranslations('games.hi-lo')
@@ -108,50 +83,45 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
 
   // État pour vérifier si le composant est monté (côté client)
   const [isMounted, setIsMounted] = useState(false);
-  
-  // État du jeu
-  const [deck, setDeck] = useState<PlayingCard[]>([])
-  const [currentCard, setCurrentCard] = useState<PlayingCard | null>(null)
-  const [nextCard, setNextCard] = useState<PlayingCard | null>(null)
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
-  const [drinkCounter, setDrinkCounter] = useState(1)
-  const [gameOver, setGameOver] = useState(false)
-  const [showResult, setShowResult] = useState(false)
-  const [lastGuess, setLastGuess] = useState<'higher' | 'lower' | 'equal' | null>(null)
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null)
-  const [gameResults, setGameResults] = useState<Record<string, number>>({})
+
+  // La partie (paquet, mise, gorgées, tour, fin) vit dans le moteur pur
+  // src/lib/hi-lo/engine.ts ; ce composant ne garde que l'affichage, les
+  // fenêtres et les délais d'animation.
+  const [game, setGame] = useState<HiLoState | null>(null)
   const [showGameOver, setShowGameOver] = useState(false)
   const [showIncorrectDialog, setShowIncorrectDialog] = useState(false)
   const [isFlipping, setIsFlipping] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  // État pour suivre si on a une égalité non devinée
-  const [isUnguessedEqual, setIsUnguessedEqual] = useState(false)
   // Indices pour les messages aléatoires (pour éviter les problèmes d'hydratation)
   const [complimentIndex, setComplimentIndex] = useState(0)
   const [debMessageIndex, setDebMessageIndex] = useState(0)
-  // État pour suivre les cartes identiques
-  const [sameCardCount, setSameCardCount] = useState<Record<string, number>>({})
-  
-  // États spécifiques au mode Traversée
-  const [activePlayers, setActivePlayers] = useState<Player[]>([])
-  const [correctGuessesInRow, setCorrectGuessesInRow] = useState(0)
-  const [targetGuesses, setTargetGuesses] = useState(5) // Par défaut pour 2 joueurs
-  
+
   const { isMobile } = useScreenSize();
   const [started, setStarted] = useState(false)
-  const session = useResumableLocalGame<HiLoSave>(SAVE_ID, SAVE_VERSION, (s) =>
+  const session = useResumableLocalGame<HiLoSave>(HI_LO_SAVE_ID, HI_LO_SAVE_VERSION, (s) =>
     isSameLocalTable(s.playerIds, players)
   )
   /** Une partie ne doit être créditée qu'une fois : plusieurs chemins de fin
-   *  (5 cartes identiques, objectif atteint, table vidée) peuvent appeler
-   *  endGame dans le même cycle de rendu, avant que `gameOver` ne soit à jour. */
+   *  (5 cartes identiques, objectif atteint, table vidée) peuvent y mener. */
   const gameCountedRef = useRef(false)
+  /** Retournement en cours. Une relance pendant l'animation l'annule : sans
+   *  cela, le verdict de l'ancienne partie retombait sur la nouvelle. */
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Joueurs encore en jeu (traversée), réhydratés depuis la table : le moteur
+  // ne connaît que des identifiants.
+  const activePlayers = useMemo(
+    () =>
+      (game?.activePlayerIds ?? [])
+        .map(id => players.find(p => p.id === id))
+        .filter((p): p is Player => Boolean(p)),
+    [game?.activePlayerIds, players]
+  )
 
   // Vérifier si le composant est monté (côté client)
   useEffect(() => {
     setIsMounted(true);
-    
+
     // Initialiser les indices aléatoires une seule fois après le montage
     setComplimentIndex(Math.floor(Math.random() * compliments.length));
     setDebMessageIndex(Math.floor(Math.random() * debMessages.length));
@@ -167,21 +137,9 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
 
   // Sauvegarde continue : un onglet recyclé par le navigateur ne coûte plus la partie.
   useEffect(() => {
-    if (!started || gameOver) return
-    session.save({
-      gameMode,
-      playerIds: players.map(p => p.id),
-      deck,
-      currentCard,
-      currentPlayerIndex,
-      drinkCounter,
-      gameResults,
-      sameCardCount,
-      activePlayerIds: activePlayers.map(p => p.id),
-      correctGuessesInRow,
-      targetGuesses,
-    })
-  }, [started, gameOver, deck, currentCard, currentPlayerIndex, drinkCounter, gameResults, sameCardCount, activePlayers, correctGuessesInRow, targetGuesses]);
+    if (!started || !game || game.gameOver) return
+    session.save(toHiLoSave(game))
+  }, [started, game]);
 
   const resumeSavedGame = () => {
     const saved = session.accept()
@@ -194,26 +152,15 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
       return
     }
     // Réhydratation : les profils viennent de la prop, la sauvegarde ne
-    // connaît que des identifiants.
-    const savedActivePlayers = saved.activePlayerIds
-      .map(id => players.find(p => p.id === id))
-      .filter((p): p is Player => Boolean(p))
-    setDeck(saved.deck)
-    setCurrentCard(saved.currentCard)
-    setCurrentPlayerIndex(saved.currentPlayerIndex)
-    setDrinkCounter(saved.drinkCounter)
-    setGameResults(saved.gameResults)
-    setSameCardCount(saved.sameCardCount)
-    setActivePlayers(savedActivePlayers)
-    setCorrectGuessesInRow(saved.correctGuessesInRow)
-    setTargetGuesses(saved.targetGuesses)
-    setNextCard(null)
-    setGameOver(false)
-    setShowResult(false)
+    // connaît que des identifiants. Illisible → partie neuve, pas d'écran planté.
+    const restored = restoreHiLoSave(saved, players.map(p => p.id))
+    if (!restored) {
+      session.discard()
+      return
+    }
+    setGame(restored)
     setShowGameOver(false)
     setShowIncorrectDialog(false)
-    setLastGuess(null)
-    setIsCorrect(null)
     setIsFlipping(false)
     setIsProcessing(false)
     setStarted(true)
@@ -222,384 +169,93 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   // Effet pour passer automatiquement au tour suivant après un délai en cas de bonne réponse
   useEffect(() => {
     if (!isMounted) return;
-    
-    if (showResult && isCorrect && !isProcessing) {
+
+    if (game?.showResult && game.isCorrect && !isProcessing) {
       setIsProcessing(true)
       const timer = setTimeout(() => {
         nextTurn()
         setIsProcessing(false)
-      }, 1500) // Délai de 1.5 secondes
-      
+      }, AUTO_NEXT_MS)
+
       return () => clearTimeout(timer)
     }
-  }, [showResult, isCorrect, isMounted]);
+  }, [game?.showResult, game?.isCorrect, isMounted]);
+
+  const rollMessageIndices = () => {
+    setComplimentIndex(Math.floor(Math.random() * compliments.length));
+    setDebMessageIndex(Math.floor(Math.random() * debMessages.length));
+  }
+
+  const cancelReveal = () => {
+    if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current)
+      revealTimerRef.current = null
+    }
+  }
 
   // Initialiser le jeu
   const initializeGame = () => {
     // Nouvelle partie : elle a le droit d'être comptée à son tour.
     gameCountedRef.current = false
-    const newDeck = createDeck()
-    const shuffledDeck = shuffleDeck(newDeck)
-    setDeck(shuffledDeck)
-    
-    // Tirer la première carte
-    const firstCard = shuffledDeck[0]
-    const remainingDeck = shuffledDeck.slice(1)
-    
-    setCurrentCard(firstCard)
-    setDeck(remainingDeck)
-    setNextCard(null)
-    
-    // Sélection aléatoire du premier joueur en mode standard
-    if (gameMode === 'standard') {
-      const randomPlayerIndex = Math.floor(Math.random() * players.length);
-      setCurrentPlayerIndex(randomPlayerIndex);
-    } else {
-      // En mode traversée, on commence toujours par le premier joueur
-      setCurrentPlayerIndex(0);
-    }
-    
-    setDrinkCounter(1)
-    setGameOver(false)
-    setShowResult(false)
-    setLastGuess(null)
-    setIsCorrect(null)
-    setGameResults({})
+    cancelReveal()
+    setGame(startHiLoGame({ mode: gameMode, playerIds: players.map(p => p.id), previous: game }))
     setShowIncorrectDialog(false)
     setIsFlipping(false)
     setIsProcessing(false)
-    
-    // Initialisation pour le mode Traversée
-    if (gameMode === 'traversee') {
-      // Calcul de l'objectif basé sur le nombre de joueurs
-      // 5 pour 2 joueurs, +2 par joueur supplémentaire
-      const target = 5 + (Math.max(0, players.length - 2) * 2)
-      setTargetGuesses(target)
-      setCorrectGuessesInRow(0)
-      setActivePlayers([...players]) // Copie du tableau des joueurs
-    }
-    
+
     // Générer de nouveaux indices aléatoires pour les messages
-    if (isMounted) {
-      setComplimentIndex(Math.floor(Math.random() * compliments.length));
-      setDebMessageIndex(Math.floor(Math.random() * debMessages.length));
-    }
-  }
-
-  // Créer un jeu de cartes complet
-  const createDeck = (): PlayingCard[] => {
-    const values: CardValue[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R', 'A']
-    const deck: PlayingCard[] = []
-
-    // Ajouter les cartes standard
-    for (const suit of cardSuits) {
-      for (const value of values) {
-        deck.push({
-          value,
-          suit,
-          color: (suit === '♥' || suit === '♦') ? 'red' : 'black'
-        })
-      }
-    }
-
-    return deck
-  }
-
-  // Mélanger le jeu de cartes
-  const shuffleDeck = (deck: PlayingCard[]): PlayingCard[] => {
-    const shuffled = [...deck]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    return shuffled
-  }
-
-  // Régénérer le deck si nécessaire
-  const regenerateDeckIfNeeded = (): PlayingCard[] => {
-    if (deck.length < 2) {
-      const newDeck = createDeck();
-      return shuffleDeck(newDeck);
-    }
-    return deck;
+    if (isMounted) rollMessageIndices()
   }
 
   // Gérer la prédiction du joueur
-  const handleGuess = (guess: 'higher' | 'lower' | 'equal') => {
-    if (!currentCard || gameOver || isFlipping || isProcessing) return
+  const handleGuess = (guess: HiLoGuess) => {
+    if (!game || isFlipping || isProcessing) return
+    const outcome = resolveHiLoGuess(game, guess)
+    if (!outcome) return
 
-    // Régénérer le deck si nécessaire
-    const currentDeck = regenerateDeckIfNeeded();
-    
-    // Tirer la prochaine carte
-    const nextCardFromDeck = currentDeck[0]
-    const remainingDeck = currentDeck.slice(1)
-    setNextCard(nextCardFromDeck)
-    setDeck(remainingDeck)
-    setLastGuess(guess)
-    
-    // Démarrer l'animation de retournement
+    // Carte tirée face cachée, puis animation de retournement
+    setGame(outcome.drawn)
     setIsFlipping(true)
-    
-    // Vérifier si la prédiction est correcte
-    const currentValue = cardValues[currentCard.value]
-    const nextValue = cardValues[nextCardFromDeck.value]
-    
-    let correct = false
-    if (guess === 'higher' && nextValue > currentValue) {
-      correct = true
-    } else if (guess === 'lower' && nextValue < currentValue) {
-      correct = true
-    } else if (guess === 'equal' && nextValue === currentValue) {
-      correct = true
-    }
-
-    // Vérifier si c'est une égalité que personne n'a choisie (pour le mode traversée)
-    const unguessedEqual = nextValue === currentValue && guess !== 'equal';
-    setIsUnguessedEqual(unguessedEqual);
-
-    // Vérifier si on a plus de 4 cartes identiques
-    const cardKey = `${nextCardFromDeck.value}-${nextCardFromDeck.suit}`
-    const updatedSameCardCount = { ...sameCardCount }
-    updatedSameCardCount[cardKey] = (updatedSameCardCount[cardKey] || 0) + 1
-    setSameCardCount(updatedSameCardCount)
 
     // Attendre que l'animation soit terminée avant de montrer le résultat
-    setTimeout(() => {
-      setIsCorrect(correct)
-      setShowResult(true)
+    revealTimerRef.current = setTimeout(() => {
+      revealTimerRef.current = null
+      setGame(outcome.resolved)
       setIsFlipping(false)
-
-      // Vérifier si on a plus de 4 cartes identiques pour terminer le jeu
-      if (updatedSameCardCount[cardKey] > 4) {
-        // Le joueur actuel a perdu
-        const currentPlayer = getCurrentPlayer()
-        if (currentPlayer) {
-          setGameResults(prev => ({
-            ...prev,
-            [currentPlayer.id]: (prev[currentPlayer.id] || 0) + drinkCounter
-          }))
-        }
-        
-        // Terminer la partie car on a atteint 5 cartes identiques
-        endGame(true)
-        setShowIncorrectDialog(true)
-        return
-      }
-
-      if (gameMode === 'standard') {
-        // Mode standard - Comportement original
-        if (correct) {
-          // Augmenter le compteur de gorgées (bonus pour égalité correcte)
-          if (guess === 'equal') {
-            // Bonus pour avoir deviné l'égalité (plus difficile)
-            setDrinkCounter(prev => prev + 3)
-          } else {
-            setDrinkCounter(prev => prev + 1)
-          }
-        } else {
-          // Le joueur doit boire le cumul des gorgées
-          const currentPlayer = players[currentPlayerIndex]
-          setGameResults(prev => ({
-            ...prev,
-            [currentPlayer.id]: (prev[currentPlayer.id] || 0) + drinkCounter
-          }))
-          // Afficher la fenêtre de mauvais choix sans réinitialiser le compteur
-          setShowIncorrectDialog(true)
-          
-          // On ne réinitialise plus le compteur ici, mais dans closeIncorrectDialog
-        }
-      } else if (gameMode === 'traversee') {
-        // Mode traversée
-        if (correct) {
-          // Augmenter le compteur de bonnes réponses consécutives
-          setCorrectGuessesInRow(prev => prev + 1)
-          
-          // Augmenter le compteur de gorgées comme dans le mode standard
-          if (guess === 'equal') {
-            // Bonus pour avoir deviné l'égalité (plus difficile)
-            setDrinkCounter(prev => prev + 3)
-          } else {
-            setDrinkCounter(prev => prev + 1)
-          }
-          
-          // Si le joueur a deviné "égalité" correctement, il sort de la partie
-          if (guess === 'equal') {
-            const updatedPlayers = activePlayers.filter((_, index) => index !== currentPlayerIndex);
-            setActivePlayers(updatedPlayers);
-            
-            // Si plus aucun joueur, fin de la partie
-            if (updatedPlayers.length === 0) {
-              endGame();
-              return;
-            }
-          }
-          
-          // Si on a atteint l'objectif, fin de la partie
-          if (correctGuessesInRow + 1 >= targetGuesses) {
-            endGame();
-          }
-        } else if (isUnguessedEqual) {
-          // Cas spécial: égalité que personne n'a choisie
-          // Tous les joueurs boivent 1 gorgée, mais le cumul reste inchangé
-          activePlayers.forEach(player => {
-            setGameResults(prev => ({
-              ...prev,
-              [player.id]: (prev[player.id] || 0) + 1
-            }));
-          });
-          
-          // Afficher la fenêtre de mauvais choix spéciale pour égalité
-          setShowIncorrectDialog(true);
-          
-          // On ne modifie pas le compteur de gorgées ici
-        } else {
-          // Mauvaise réponse: tous les joueurs boivent
-          activePlayers.forEach(player => {
-            setGameResults(prev => ({
-              ...prev,
-              [player.id]: (prev[player.id] || 0) + drinkCounter
-            }));
-          });
-          
-          // Réinitialiser le compteur de bonnes réponses
-          setCorrectGuessesInRow(0);
-          
-          // Afficher la fenêtre de mauvais choix
-          setShowIncorrectDialog(true);
-          
-          // On ne réinitialise plus le compteur ici, mais dans closeIncorrectDialog
-        }
-      }
-    }, 600) // Durée de l'animation
+      if (outcome.end) endGame(outcome.end)
+      if (outcome.missDialog) setShowIncorrectDialog(true)
+    }, FLIP_MS)
   }
 
-  // Fermer la fenêtre de mauvais choix
+  // Fermer la fenêtre de mauvais choix : la mise repart à 1 (sauf égalité non
+  // annoncée en traversée, où le cumul est conservé)
   const closeIncorrectDialog = () => {
     setShowIncorrectDialog(false)
-    
-    // Réinitialiser le compteur à 1 seulement après avoir fermé la boîte de dialogue
-    // Si c'est une égalité non devinée en mode traversée, on ne réinitialise pas le compteur
-    if (!isCorrect && !(isUnguessedEqual && gameMode === 'traversee')) {
-      if (gameMode === 'standard') {
-        setDrinkCounter(1)
-      } else if (gameMode === 'traversee') {
-        setDrinkCounter(1)
-      }
-    }
+    if (game) setGame(acknowledgeHiLoMiss(game))
   }
 
   // Passer au tour suivant
   const nextTurn = () => {
-    if (gameOver) return
+    if (!game) return
+    const turn = advanceHiLoTurn(game, showIncorrectDialog)
+    if (turn.state !== game) setGame(turn.state)
+    if (turn.end) endGame(turn.end)
 
-    if (gameMode === 'standard') {
-      // Mode standard - comportement original
-      // Passer au joueur suivant, que la prédiction soit correcte ou non
-      const nextPlayerIndex = (currentPlayerIndex + 1) % players.length
-      setCurrentPlayerIndex(nextPlayerIndex)
-      
-      // Si la prédiction était incorrecte et que la boîte de dialogue a été fermée,
-      // réinitialiser le compteur à 1
-      if (!isCorrect && !showIncorrectDialog) {
-        setDrinkCounter(1)
-      }
-    } else if (gameMode === 'traversee') {
-      if (activePlayers.length === 0) {
-        endGame();
-        return;
-      }
-      
-      if (isCorrect) {
-        // Passer au joueur suivant en sautant les joueurs inactifs
-        const nextIndex = (currentPlayerIndex + 1) % activePlayers.length;
-        setCurrentPlayerIndex(nextIndex);
-        
-        // On garde le nombre de gorgées (il augmente progressivement)
-      } else {
-        // En cas d'erreur, on repart à 1 avec le joueur suivant
-        // Le joueur suivant celui qui s'est trompé
-        const nextIndex = (currentPlayerIndex + 1) % activePlayers.length;
-        setCurrentPlayerIndex(nextIndex);
-        
-        // On ne réinitialise plus le compteur ici, mais dans closeIncorrectDialog
-        // Si c'est une égalité non devinée, on ne réinitialise pas le compteur
-        if (!showIncorrectDialog && !isUnguessedEqual) {
-          setDrinkCounter(1);
-        }
-      }
-    }
-
-    // Préparer pour le prochain tour
-    setCurrentCard(nextCard)
-    setNextCard(null)
-    setShowResult(false)
-    setLastGuess(null)
-    setIsCorrect(null)
-    setIsUnguessedEqual(false)
-    
     // Générer de nouveaux indices aléatoires pour les messages
-    if (isMounted) {
-      setComplimentIndex(Math.floor(Math.random() * compliments.length));
-      setDebMessageIndex(Math.floor(Math.random() * debMessages.length));
-    }
+    if (turn.advanced && isMounted) rollMessageIndices()
   }
 
-  // Terminer le jeu
-  const endGame = (due5Cards = false) => {
-    setGameOver(true)
+  // Terminer le jeu : fenêtre de fin, statistiques (une seule fois), sauvegarde effacée
+  const endGame = (end: HiLoEnd) => {
     setShowGameOver(true)
     if (gameCountedRef.current) return
     gameCountedRef.current = true
 
-    // Déterminer le gagnant selon le mode de jeu
-    let winnerId = null;
-    
-    if (gameMode === 'standard') {
-      // Mode standard: le gagnant est celui qui a bu le moins de gorgées
-      let minDrinks = Infinity;
-      
-      // Trouver le joueur avec le moins de gorgées bues
-      for (const playerId in gameResults) {
-        if (gameResults[playerId] < minDrinks) {
-          minDrinks = gameResults[playerId];
-          winnerId = playerId;
-        }
-      }
-      
-      // Si tous les joueurs ont bu 0 gorgées (cas rare), le dernier joueur est le gagnant
-      if (winnerId === null && players.length > 0) {
-        winnerId = players[players.length - 1].id;
-      }
-    } else if (gameMode === 'traversee') {
-      // Mode Traversée: Si on arrive ici, c'est soit que l'objectif est atteint
-      // soit que tous les joueurs sont sortis (par égalité correcte)
-      
-      // Si on a atteint l'objectif, le dernier joueur à avoir joué est le gagnant
-      if (correctGuessesInRow >= targetGuesses) {
-        // Le joueur actuel est le gagnant car c'est lui qui a complété l'objectif
-        winnerId = activePlayers[currentPlayerIndex]?.id || null;
-      } else {
-        // Sinon, le gagnant est celui qui a bu le moins (comme dans le mode standard)
-        let minDrinks = Infinity;
-        
-        for (const playerId in gameResults) {
-          if (gameResults[playerId] < minDrinks) {
-            minDrinks = gameResults[playerId];
-            winnerId = playerId;
-          }
-        }
-      }
-    }
-
     // Mettre à jour les statistiques des joueurs
-    players.forEach(player => {
-      const drinks = gameResults[player.id] || 0
-      const isWinner = player.id === winnerId;
-      
-      updatePlayerStats(player.id, 'hi-lo', {
+    end.results.forEach(({ playerId, drinks, won }) => {
+      updatePlayerStats(playerId, 'hi-lo', {
         gamesPlayed: 1,
-        wins: isWinner ? 1 : 0,
+        wins: won ? 1 : 0,
         totalDrinks: drinks
       })
     })
@@ -612,41 +268,12 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   const restartGame = () => {
     // Fermer la fenêtre de fin de partie
     setShowGameOver(false)
-    // Réinitialiser l'état du jeu
-    setSameCardCount({})
     initializeGame()
   }
 
   // Quitter le jeu
   const quitGame = () => {
     onGameEnd()
-  }
-
-  // Obtenir le joueur actuel en mode Traversée
-  const getCurrentPlayer = (): Player | undefined => {
-    if (gameMode === 'traversee') {
-      return activePlayers[currentPlayerIndex];
-    } else {
-      return players[currentPlayerIndex];
-    }
-  }
-
-  // Fonction pour obtenir un message personnalisé pour le joueur actuel
-  const getPersonalizedMessage = (player: Player): string => {
-    if (!player || !player.name) return t('drinkMessageDefault', { name: tc('players'), count: drinkCounter });
-
-    const name = player.name.toLowerCase();
-
-    if (name === 'sim' || name === 'riqui') {
-      const compliment = compliments[complimentIndex];
-      return t('drinkMessageSpecial', { compliment, name: player.name, count: drinkCounter });
-    }
-    if (name === 'deb') {
-      const message = debMessages[debMessageIndex];
-      return t('drinkMessageDeb', { name: player.name, count: drinkCounter, message });
-    }
-
-    return t('drinkMessageDefault', { name: player.name, count: drinkCounter });
   }
 
   // Style de carte adapté au thème sombre
@@ -680,11 +307,51 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     );
   }
 
-  // Obtenir le joueur actuel
-  const currentPlayer = getCurrentPlayer();
+  // Première donne pas encore distribuée (un rendu, le temps de l'effet d'initialisation)
+  if (!game) {
+    return <div className="p-6 text-center">{t('loading')}</div>;
+  }
+
+  const {
+    deck,
+    currentCard,
+    nextCard,
+    currentPlayerIndex,
+    drinkCounter,
+    gameResults,
+    sameCardCount,
+    correctGuessesInRow,
+    targetGuesses,
+    gameOver,
+    showResult,
+    isCorrect,
+    isUnguessedEqual,
+  } = game
+
+  // Fonction pour obtenir un message personnalisé pour le joueur actuel
+  const getPersonalizedMessage = (player: Player): string => {
+    if (!player || !player.name) return t('drinkMessageDefault', { name: tc('players'), count: drinkCounter });
+
+    const name = player.name.toLowerCase();
+
+    if (name === 'sim' || name === 'riqui') {
+      const compliment = compliments[complimentIndex];
+      return t('drinkMessageSpecial', { compliment, name: player.name, count: drinkCounter });
+    }
+    if (name === 'deb') {
+      const message = debMessages[debMessageIndex];
+      return t('drinkMessageDeb', { name: player.name, count: drinkCounter, message });
+    }
+
+    return t('drinkMessageDefault', { name: player.name, count: drinkCounter });
+  }
+
+  // Obtenir le joueur actuel (toute la table en standard, joueurs encore en jeu en traversée)
+  const currentPlayerId = currentHiLoPlayerId(game)
+  const currentPlayer = currentPlayerId ? players.find(p => p.id === currentPlayerId) : undefined;
   const specialEffectClass = currentPlayer ? getSpecialEffectClass(currentPlayer?.preferences?.specialEffect) : '';
 
-  const cardsPlayed = 52 - deck.length - (currentCard ? 1 : 0) - (nextCard ? 1 : 0)
+  const cardsPlayed = hiLoCardsPlayed(game)
 
   const headerRight = (
     <div className="flex items-center gap-2">
@@ -833,13 +500,13 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
               <div 
                 className="h-full bg-blue-500 transition-all duration-300 ease-in-out"
                 style={{ 
-                  width: `${((52 - deck.length - (currentCard ? 1 : 0) - (nextCard ? 1 : 0)) / 52) * 100}%`,
+                  width: `${(cardsPlayed / DECK_SIZE) * 100}%`,
                   backgroundColor: deck.length < 10 ? '#f56565' : '#3b82f6' 
                 }}
               ></div>
             </div>
             <div className="flex justify-between text-xs mt-1 text-gray-500">
-              <span>{t('cardsPlayedLabel', { count: 52 - deck.length - (currentCard ? 1 : 0) - (nextCard ? 1 : 0) })}</span>
+              <span>{t('cardsPlayedLabel', { count: cardsPlayed })}</span>
               <span>{t('cardsLeftLabel', { count: deck.length + (nextCard ? 1 : 0) })}</span>
             </div>
           </div>

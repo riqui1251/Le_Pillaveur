@@ -214,6 +214,10 @@
       "emptyTitle": "No se encontraron juegos",
       "emptyHint": "Pruebe con otra palabra clave.",
       "botsBadge": "Se puede jugar con bots",
+      "betaBadge": "Beta",
+      "betaHint": "Juego nuevo, aún en rodaje",
+      "frOnlyBadge": "FR",
+      "frOnlyHint": "Cartas solo en francés",
       "h1": "Juegos de fiesta gratis, con amigos o con bots",
       "intro": "Elige un juego y empieza a jugar en segundos: todos en un solo móvil que gira por la mesa, o cada uno con el suyo usando un código de mesa.",
       "featured": "Imprescindibles",
@@ -227,6 +231,10 @@
         "hint": "Estos juegos necesitan un teléfono por jugador: abre una mesa en línea con una cuenta gratuita o pruébalos en solitario contra bots."
       },
       "opening": "Abriendo…"
+    },
+    "recentLocal": {
+      "title": "Tus últimos juegos",
+      "replay": "Volver a jugar"
     },
     "jeuxOnline": {
       "title": "Juegos en línea",
@@ -325,7 +333,7 @@
     "seul-avec-des-bots": {
       "title": "Jugar solo: los juegos con bots",
       "description": "¿No hay nadie esta noche? Abre una mesa y los bots la completan: Hombre Lobo, quiz, El Mentiroso, faroleo, Président… Gratis, en línea, solo o a dos.",
-      "intro": "Nadie disponible, o ganas de entrenar antes de la próxima fiesta: en estos juegos, el anfitrión de la mesa puede completar los asientos vacíos con bots desde la sala, y la partida arranca incluso por debajo del mínimo de jugadores — en solitario, pues. Los bots tienen cada uno su nombre y su personalidad, y cumplen en su asiento: pujan y acusan en El Mentiroso, farolean en El Gran Farol, responden en El Gran Pillaveur, el quiz con pulsadores, apuestan en Purple y 1220, juegan sus cartas en Président, votan y acusan en Hombre Lobo. Esos son los juegos que de verdad se juegan en solitario. En El Impostor, ¿Quién es el Espía?, Crobard, Sans Filtre o Dilemmes, los bots completan una mesa sin darle vida: un bot no dibuja, no cuenta nada ni dirige la investigación, así que esos juegos piden jugadores de verdad. Si alguien se desconecta a mitad de partida, un bot lo sustituye para que la mesa siga. Es la misma lista que el atajo «Jugar solo con bots» de la portada. Todo ocurre en línea, en tu móvil, y en cuanto le cojas el truco a un juego, basta con compartir el código de la mesa para que tus amigos ocupen los asientos."
+      "intro": "Nadie disponible, o ganas de entrenar antes de la próxima fiesta: en estos juegos, el anfitrión de la mesa puede completar los asientos vacíos con bots desde la sala, y la partida arranca incluso por debajo del mínimo de jugadores — en solitario, pues. Los bots tienen cada uno su nombre y su personalidad, y cumplen en su asiento: pujan y acusan en El Mentiroso, farolean en El Gran Farol, responden en El Gran Pillaveur, el quiz con pulsadores, apuestan en Purple y 1220, juegan sus cartas en Président, tiran el dado en El Pequeño Bebedor, votan y acusan en Hombre Lobo. Esos son los juegos que de verdad se juegan en solitario. En El Impostor, ¿Quién es el Espía? o Crobard, los bots completan una mesa sin darle vida: un bot no dibuja, no cuenta nada ni dirige la investigación, así que esos juegos piden jugadores de verdad. Si alguien se desconecta a mitad de partida, un bot lo sustituye para que la mesa siga. Es la misma lista que el atajo «Jugar solo con bots» de la portada. Todo ocurre en línea, en tu móvil, y en cuanto le cojas el truco a un juego, basta con compartir el código de la mesa para que tus amigos ocupen los asientos."
     },
     "en-grand-groupe": {
       "title": "Juegos de fiesta para grupos grandes",
@@ -566,6 +574,7 @@
       "team_full": "Este equipo está completo.",
       "room_full": "La sala está completa.",
       "invite_only": "Esta sala es solo por invitación.",
+      "content_lang_unavailable": "Las cartas de este juego solo existen en francés: abre la mesa desde la versión francesa del sitio.",
       "not_host": "Solo el anfitrión de la mesa puede hacer eso.",
       "cannot_kick_self": "No puedes expulsarte a ti mismo de la mesa.",
       "member_not_found": "Este jugador ya no está en la mesa.",
@@ -744,6 +753,12 @@
     "onlineSection": {
       "title": "Cuenta en línea"
     },
+    "onlineName": {
+      "title": "Apodo en línea (cuenta)",
+      "hint": "Este apodo se usa automáticamente en las partidas en línea (un jugador por cuenta). Se aplican las mismas restricciones de apodo.",
+      "placeholder": "Tu apodo en línea",
+      "saved": "Apodo en línea guardado."
+    },
     "tables": {
       "title": "Mis últimas mesas",
       "loading": "Cargando tus últimas mesas…",
@@ -907,6 +922,7 @@
     "addTitle": "Añadir un jugador",
     "namePlaceholder": "Nombre del jugador",
     "addButton": "Agregar",
+    "removePlayer": "Quitar a {name}",
     "selectTitle": "Seleccionar jugadores",
     "wins": "{count} victorias",
     "customize": "Personalizar",
@@ -1155,6 +1171,10 @@
       "telephone-dessine": {
         "title": "Juega al Teléfono Dibujado online gratis — risas seguras",
         "description": "Escribe una frase, el siguiente la dibuja, el tercero la adivina… y todo descarrila. De 3 a 8 jugadores, chat de voz, gratis y sin instalación."
+      },
+      "tabou": {
+        "title": "Juega a Tabú Vocal online gratis — descríbelo sin decirlo",
+        "description": "Describe una palabra por chat de voz sin decir sus 4 palabras tabú mientras tu equipo adivina a contrarreloj. De 4 a 16 jugadores, 2 por equipo, gratis."
       }
     },
     "catalog": {
@@ -1198,7 +1218,7 @@
       },
       "tabou": {
         "title": "Tabú Vocal",
-        "description": "Describe una palabra en voz alta sin decir las 4 palabras prohibidas: tu equipo adivina, los rivales están al acecho del fallo!"
+        "description": "Describe una palabra en voz alta sin decir las 4 palabras prohibidas: tu equipo adivina, ¡los rivales están al acecho del fallo!"
       },
       "crobard": {
         "title": "Crobard",
@@ -1364,7 +1384,21 @@
       "summary": "Resumen",
       "wheelInfo": "Rueda generada automáticamente: Riesgo: {risk}, Segmentos: {count}",
       "wheelHint": "Contenido: SAFE y sorbos 1 a 12, con repeticiones. Cuanto mayor sea el valor, más pequeño será el segmento.",
-      "segmentSips": "{count} sorbos"
+      "segmentSips": "{count} sorbos",
+      "settings": {
+        "tab": "Ajustes",
+        "gameTab": "Juego",
+        "title": "Ajustes de la rueda",
+        "riskLabel": "Nivel de riesgo",
+        "riskPlaceholder": "Elige un nivel de riesgo",
+        "risks": {
+          "faible": "Bajo (más SAFE y sorbos pequeños)",
+          "moyen": "Medio",
+          "eleve": "Alto (más sorbos grandes)"
+        },
+        "segments": "Número de segmentos",
+        "segmentsMin": "Mínimo {min}"
+      }
     },
     "monsieur-3": {
       "title": "Monsieur 3",
@@ -1451,6 +1485,9 @@
         "seeResults": "Ver los resultados",
         "distribute": "{name} distribuye {count} sorbos a {target}",
         "libreWin": "¡{name} gana! Distribuya {count} sorbos.",
+        "toWhom": "¿A quién?",
+        "allWinners": "Todos los jugadores son ganadores.",
+        "giveTo": "a",
         "replay": "Repetición",
         "menu": "Menú"
       }
@@ -2056,6 +2093,7 @@
         "yourTurn": "Te toca jugar",
         "categoryLabel": "Categoría: {category}",
         "errors": "Errores: {count}/{max}",
+        "robotError": "ERROR",
         "hint": "💡 Pista ({used}/{max})",
         "hintCost": "Coste: -10s",
         "wrongLetters": "Letras incorrectas: {letters}",
@@ -2539,8 +2577,8 @@
         "teamA": "Equipo A",
         "teamB": "Equipo B",
         "joinTeam": "Unirse",
-        "botSlot": "Bot",
-        "botsFill": "Las plazas vacías se completarán con bots.",
+        "openSeat": "Plaza libre",
+        "teamRule": "Mínimo dos jugadores por equipo. Un bot solo sustituye a un jugador que se va durante la partida.",
         "targetScore": "Puntuación objetivo",
         "points": "pts"
       },
@@ -2594,6 +2632,11 @@
             "body": "Si quien describe dice una palabra tabú, un rival que lo oiga pulsa ¡TABÚ! — la palabra se salta, sin punto para nadie."
           }
         ]
+      },
+      "about": {
+        "p1": "Dos equipos, A y B, y un descriptor que cambia en cada ronda, cada jugador por turno. Solo él ve en su teléfono la palabra que hay que hacer adivinar y sus cuatro palabras tabú, prohibidas en su boca. La describe en voz alta, por el chat de voz, mientras su equipo dispara propuestas.",
+        "p2": "Una ronda dura 60 segundos y en ella desfilan varias palabras: un compañero pulsa ACERTADO, +1 punto para el equipo y la siguiente palabra llega al instante; el descriptor puede pasar una palabra demasiado difícil, sin punto; un rival que oye una palabra tabú pulsa TABÚ, y la palabra salta sin punto para nadie. El resumen desvela la última palabra y el balance de la ronda. Gana el primer equipo que llega a la puntuación objetivo: 15, 20 o 25, a elección del anfitrión.",
+        "p3": "Los rivales no ven la tarjeta: escuchan, y el juego limpio de la mesa hace de árbitro. Describe por el uso cuando la definición es tabú y pasa rápido lo que se atasca: el reloj es el verdadero rival. Cuatro jugadores mínimo, dos por equipo, hasta dieciséis; sin bots al empezar, un bot no describe nada, solo sustituye a un jugador que se va. Las palabras existen en cuatro idiomas. El juego no cuenta tragos, solo puntos."
       }
     },
     "crobard": {

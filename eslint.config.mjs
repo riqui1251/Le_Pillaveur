@@ -97,6 +97,32 @@ const eslintConfig = [
       "react-hooks/rules-of-hooks": "off",
     },
   },
+  {
+    // Plancher de lisibilité : on joue en soirée, souvent un verre à la main —
+    // 8 et 9 px ne se lisent pas. Le texte qui porte une information est à
+    // 12 px (text-xs), 11 px est toléré pour une métadonnée décorative. La
+    // règle vise les classes littérales `text-[8px]` / `text-[9px]` (variantes
+    // `sm:` comprises), en chaîne comme en gabarit. En AVERTISSEMENT : il en
+    // reste dans des jeux locaux et la supervision, à résorber au fil des
+    // chantiers. Si une ligne doit vraiment garder 8 ou 9 px (glyphe dans une
+    // case de plateau), un eslint-disable-next-line qui dit pourquoi.
+    files: TS_FILES,
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "Literal[value=/text-\\[[89]px\\]/]",
+          message:
+            "Texte à 8 ou 9 px : illisible sur téléphone. 12 px (text-xs) pour une information, 11 px au plus bas pour une métadonnée décorative.",
+        },
+        {
+          selector: "TemplateElement[value.raw=/text-\\[[89]px\\]/]",
+          message:
+            "Texte à 8 ou 9 px : illisible sur téléphone. 12 px (text-xs) pour une information, 11 px au plus bas pour une métadonnée décorative.",
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

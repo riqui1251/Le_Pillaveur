@@ -197,7 +197,7 @@ export function ImposteurOnline() {
         ranking={
           // Révélation complète
           <div className="w-full max-w-sm space-y-2">
-            <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-gold/60">
+            <p className="text-center text-xs font-semibold uppercase tracking-wide text-gold/60">
               {t('victory.fullReveal')}
             </p>
             {view.players.map((p) => (
@@ -222,7 +222,7 @@ export function ImposteurOnline() {
                 </div>
                 <span
                   className={cn(
-                    'rounded-full px-2 py-0.5 text-[10px] font-black uppercase',
+                    'shrink-0 rounded-full px-2 py-0.5 text-xs font-black uppercase',
                     p.team === 'imposteur'
                       ? 'bg-suit-red/30 text-red-100'
                       : 'bg-emerald-500/20 text-emerald-100'
@@ -250,7 +250,7 @@ export function ImposteurOnline() {
         {me && (
           <PlayingCard suit="spade" rank="K" className="w-full max-w-xs">
             <div className="px-6 py-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#6B6455]">
                 {t('yourWord')}
               </p>
               <p className="truncate font-display text-2xl font-bold tracking-wide text-[#24201A]">
@@ -357,14 +357,14 @@ export function ImposteurOnline() {
                 className={cn('min-h-[5.25rem]', !iAmAlive && 'opacity-70')}
               >
                 <div className="min-w-0 py-3 pl-7 pr-12">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#6B6455]">
                     {iAmAlive ? t('yourWord') : t('eliminatedYou')}
                   </p>
                   <p className="truncate font-display text-xl font-bold tracking-wide text-[#24201A]">
                     « {me.word} »
                   </p>
                   {iAmAlive && (
-                    <p className="mt-0.5 text-[10px] leading-snug text-[#6B6455]">{t('wordHint')}</p>
+                    <p className="mt-0.5 text-xs leading-snug text-[#6B6455]">{t('wordHint')}</p>
                   )}
                 </div>
               </PlayingCard>
@@ -422,7 +422,7 @@ export function ImposteurOnline() {
             )}
             {/* Décompte public */}
             {Object.keys(reveal.tally).length > 0 && (
-              <div className="flex flex-wrap justify-center gap-1.5 text-[11px] text-white/60">
+              <div className="flex flex-wrap justify-center gap-1.5 text-xs text-white/60">
                 {Object.entries(reveal.tally)
                   .sort((a, b) => b[1] - a[1])
                   .map(([id, count]) => (
@@ -484,7 +484,7 @@ export function ImposteurOnline() {
                       {isMe && <span className="text-[#6B6455]"> {t('you')}</span>}
                     </span>
                     {p.hasVoted && (
-                      <span className="shrink-0 text-[10px] font-bold text-emerald-700">✓</span>
+                      <span className="shrink-0 text-xs font-bold text-emerald-700">✓</span>
                     )}
                   </button>
                 )
@@ -495,7 +495,7 @@ export function ImposteurOnline() {
 
       {/* Fil d'indices */}
       <div className="space-y-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-gold/60">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gold/60">
           {t('cluesTitle', { n: view.round })}
         </p>
         {view.phase === 'clue' && (
@@ -580,7 +580,7 @@ export function ImposteurOnline() {
             </Button>
           </div>
           {clueTrimmed.length > 0 && !clueOk && (
-            <p className="text-[10px] font-semibold text-red-300/80">{t('clueInvalid')}</p>
+            <p className="text-xs font-semibold text-red-300/80">{t('clueInvalid')}</p>
           )}
         </div>
       )}

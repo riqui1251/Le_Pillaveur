@@ -222,10 +222,10 @@ export function TabouOnline() {
 
       {view.isDescriber && view.currentWord ? (
         <div className="space-y-3 rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-600/15 to-transparent p-4 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">{t('yourWord')}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/40">{t('yourWord')}</p>
           <p className="text-3xl font-black tracking-wide">{view.currentWord.word}</p>
           <div>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-red-300/70">{t('tabooWords')}</p>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-red-300/70">{t('tabooWords')}</p>
             <div className="flex flex-wrap justify-center gap-1.5">
               {view.currentWord.taboo.map((w) => (
                 <span key={w} className="rounded-full border border-red-400/30 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-200">
@@ -278,7 +278,7 @@ export function TabouOnline() {
       <div className="grid grid-cols-2 gap-2">
         {(['A', 'B'] as const).map((team) => (
           <div key={team} className={cn('rounded-xl border p-2', TEAM_STYLES[team].card)}>
-            <p className={cn('mb-1.5 text-[10px] font-bold uppercase tracking-wide', TEAM_STYLES[team].text)}>
+            <p className={cn('mb-1.5 text-xs font-bold uppercase tracking-wide', TEAM_STYLES[team].text)}>
               {team === 'A' ? t('teamA') : t('teamB')}
             </p>
             <div className="flex flex-wrap gap-1">

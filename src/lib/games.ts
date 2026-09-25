@@ -54,6 +54,20 @@ export type GameMeta = {
    * rangée ne met plus rien en avant. Un jeu `hidden` n'y a pas sa place.
    */
   featured?: boolean;
+  /**
+   * Jeu publié en BÊTA : jouable et au catalogue, mais encore en rodage —
+   * un petit badge « Bêta » le dit sur sa carte du hub et sur sa vitrine,
+   * plutôt que de le laisser masqué jusqu'à la perfection.
+   */
+  beta?: boolean;
+  /**
+   * Langues dans lesquelles le CONTENU du jeu existe (cartes, questions…),
+   * quand il n'existe pas dans les quatre : Sans Filtre et Dilemmes n'ont que
+   * des cartes françaises. Absent = toutes les langues du site. Le serveur
+   * refuse une table dont la langue n'y est pas (content_lang_unavailable),
+   * le hub le signale par un badge « FR » — voir hasContentIn.
+   */
+  contentLangs?: readonly string[];
 };
 
 // Source unique de vérité pour les jeux
@@ -101,6 +115,7 @@ export const GAMES: GameMeta[] = [
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 99,
+    botsFillable: true,
   },
   {
     id: 'toucher-coule',
@@ -377,8 +392,9 @@ export const GAMES: GameMeta[] = [
   },
   {
     id: 'tabou',
-    // Masqué le temps de fiabiliser le jeu — retirer pour le publier.
-    hidden: true,
+    // Publié en bêta : le relais vocal (TURN) qui le rend jouable hors d'un
+    // même Wi-Fi est en service en production.
+    beta: true,
     title: 'Tabou Vocal',
     description:
       'Décris un mot à voix haute sans prononcer les 4 mots tabous : ton équipe devine, les adversaires guettent la faute !',
@@ -394,7 +410,11 @@ export const GAMES: GameMeta[] = [
     minPlayers: 4,
     maxPlayers: 16,
     onlineOnly: true,
-    botsFillable: true,
+    // Pas de bots au lancement : un bot ne décrit pas un mot à voix haute,
+    // ses manches de décrivant tourneraient à vide. Deux joueurs HUMAINS par
+    // équipe sont exigés au lancement comme à « Rejouer »
+    // (tabouHasTwoHumansPerTeam, online-tabou.ts) ; les bots ne font que
+    // remplacer un joueur parti en cours de partie.
     softModeReady: true,
   },
   {
@@ -438,6 +458,8 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     softModeReady: true,
     featured: true,
+    // Cartes écrites en français seulement (src/lib/sans-filtre/data/cards.fr.ts).
+    contentLangs: ['fr'],
   },
   {
     id: 'mots-codes',
@@ -477,6 +499,8 @@ export const GAMES: GameMeta[] = [
     onlineOnly: true,
     botsFillable: true,
     softModeReady: true,
+    // Cartes écrites en français seulement (src/lib/dilemmes/data/index.ts).
+    contentLangs: ['fr'],
   },
   {
     id: 'petit-bac',
@@ -540,6 +564,18 @@ export const GAMES: GameMeta[] = [
 
 export function getGameById(id: string): GameMeta | undefined {
   return GAMES.find(g => g.id === id);
+}
+
+/**
+ * Le contenu du jeu existe-t-il dans cette langue ? Vrai pour tout jeu sans
+ * `contentLangs`. Une langue absente vaut « fr » : c'est celle que prend une
+ * table ouverte sans cookie de langue (POST /api/online/rooms).
+ */
+export function hasContentIn(
+  game: Pick<GameMeta, 'contentLangs'>,
+  lang: string | null | undefined
+): boolean {
+  return !game.contentLangs || game.contentLangs.includes(lang || 'fr');
 }
 
 

@@ -458,11 +458,11 @@ export function PetitBuveurOnline() {
         <div className="mx-auto flex w-full max-w-3xl flex-col space-y-2 px-3 py-2.5 pb-4 sm:space-y-3 sm:px-4 sm:py-3">
           {/* HUD tour + joueur actif */}
           <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-md sm:px-4 sm:py-3">
-            <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300 sm:px-2.5 sm:py-1 sm:text-xs">
+            <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300 sm:px-2.5 sm:py-1">
               {t('turn', { count: view.turnCount })}
             </span>
             <div className="min-w-0 flex-1 text-center">
-              <p className="hidden text-[10px] uppercase tracking-widest text-white/40 sm:mb-0.5 sm:block">{tGame('turnOf')}</p>
+              <p className="hidden text-xs uppercase tracking-widest text-white/40 sm:mb-0.5 sm:block">{tGame('turnOf')}</p>
               <div className="flex items-center justify-center gap-1.5 truncate text-sm font-bold sm:text-base">
                 {active && <span aria-hidden><PlayerAvatarGlyph value={iconOf(active.id)} /></span>}
                 {active && (
@@ -522,7 +522,7 @@ export function PetitBuveurOnline() {
                   key={e.id}
                   title={`${e.playerName}${e.linkedName ? ` ↔ ${e.linkedName}` : ''} · ${e.title} — ${e.desc}`}
                   className={cn(
-                    'flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium text-white/90',
+                    'flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-white/90',
                     e.accent
                   )}
                 >
@@ -531,7 +531,7 @@ export function PetitBuveurOnline() {
                     {e.playerName}
                     {e.linkedName ? ` ↔ ${e.linkedName}` : ''}
                   </span>
-                  <span className="rounded-full bg-black/25 px-1 text-[9px] font-bold leading-4">{e.remaining}</span>
+                  <span className="rounded-full bg-black/25 px-1 text-xs font-bold leading-4">{e.remaining}</span>
                 </span>
               ))}
             </div>
@@ -642,10 +642,14 @@ export function PetitBuveurOnline() {
                             : ''
                     )}
                   >
+                    {/* Numéro de case : 11 px au téléphone, pas 12 — la case
+                        fait ~47 px et partage son coin avec jusqu'à quatre
+                        jetons ; le numéro reste lisible en clair dans le
+                        classement (« Case N »). */}
                     {!isFinish && (
                       <span
                         className={cn(
-                          'pb-board-case-num absolute left-0.5 top-0.5 z-[1] text-[8px] font-semibold sm:left-1 sm:top-1 sm:text-[9px]',
+                          'pb-board-case-num absolute left-0.5 top-0.5 z-[1] text-[11px] font-semibold sm:left-1 sm:top-1 sm:text-xs',
                           isStart ? 'text-emerald-400/70' : 'text-white/30'
                         )}
                       >
@@ -700,7 +704,7 @@ export function PetitBuveurOnline() {
                   <div
                     key={p.id}
                     className={cn(
-                      'relative flex w-[8.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:w-[9.5rem] sm:p-2.5',
+                      'relative flex w-[9.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:p-2.5',
                       isActive
                         ? 'border-emerald-400/60 bg-emerald-500/12 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.35)]'
                         : rankBorder(index)
@@ -709,7 +713,7 @@ export function PetitBuveurOnline() {
                     <FloatingDrinkBadge deltas={drinkDeltas.filter((d) => d.playerId === p.id)} />
                     <span
                       className={cn(
-                        'inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md border px-1.5 text-xs font-bold tabular-nums',
+                        'inline-flex h-6 min-w-[1.5rem] shrink-0 items-center justify-center rounded-md border px-1.5 text-xs font-bold tabular-nums',
                         index === 0
                           ? 'border-amber-400/45 bg-amber-500/20 text-amber-100'
                           : index === 1
@@ -726,7 +730,7 @@ export function PetitBuveurOnline() {
                         <span className="shrink-0 text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
                         <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 truncate text-xs font-semibold text-white/90" />
                       </div>
-                      <span className="flex items-center gap-1.5 text-[10px] font-medium text-white/40">
+                      <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-white/40">
                         {t('caseLabel')} {p.position + 1}
                         <Beer className="h-3 w-3" /> <PulsingCount value={p.drinks} />
                       </span>
@@ -749,7 +753,7 @@ export function PetitBuveurOnline() {
           <div className="mx-auto flex w-full max-w-lg items-stretch gap-2 sm:max-w-3xl sm:gap-3">
             {active && (
               <div className="flex shrink-0 flex-col justify-center gap-1.5 rounded-2xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2.5 sm:px-4 sm:py-3">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/80 sm:text-xs">
+                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-300/80">
                   {tGame('turnShort')}
                 </span>
                 <div className="flex items-center gap-2">
@@ -845,22 +849,22 @@ export function PetitBuveurOnline() {
                     <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
                       <div className="text-center">
                         <p className="text-lg font-bold text-amber-300">{view.turnCount}</p>
-                        <p className="text-[10px] text-white/40">{tGame('victory.turns')}</p>
+                        <p className="text-xs text-white/40">{tGame('victory.turns')}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-lg font-bold text-amber-300">{view.players.length}</p>
-                        <p className="text-[10px] text-white/40">{tGame('victory.players')}</p>
+                        <p className="text-xs text-white/40">{tGame('victory.players')}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xl leading-none" aria-hidden>{DIFFICULTY_EMOJI[difficulty]}</p>
                         <p className="mt-1 text-sm font-bold text-amber-300">{tDiff(difficulty)}</p>
-                        <p className="mt-0.5 text-[10px] text-white/40">{tGame('victory.difficulty')}</p>
+                        <p className="mt-0.5 text-xs text-white/40">{tGame('victory.difficulty')}</p>
                       </div>
                     </div>
 
                     {/* Classement final */}
                     <div className="mb-5 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/40">
                         {tGame('finalRanking')}
                       </p>
                       {ranking.map((p, index) => (
@@ -874,7 +878,7 @@ export function PetitBuveurOnline() {
                           <div className="flex min-w-0 items-center gap-2">
                             <span
                               className={cn(
-                                'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md border px-1 text-[10px] font-bold tabular-nums',
+                                'inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md border px-1 text-xs font-bold tabular-nums',
                                 index === 0
                                   ? 'border-amber-400/45 bg-amber-500/20 text-amber-100'
                                   : 'border-white/10 bg-white/5 text-white/50'
@@ -932,7 +936,7 @@ export function PetitBuveurOnline() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20 ring-1 ring-amber-400/30">
                     <Target className="h-6 w-6 text-amber-300" />
                   </div>
-                  <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-100">
+                  <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-0.5 text-xs font-semibold text-amber-100">
                     {caseLabel(view.pending.caseType)}
                   </span>
                   <h3 className="text-lg font-bold text-white">{tGame('target.title')}</h3>
@@ -948,7 +952,7 @@ export function PetitBuveurOnline() {
                 <div className="min-h-0 overflow-y-auto px-4 pb-4 pt-4">
                   {/* Classement compact */}
                   <div className="mb-4 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
                       {tGame('ranking')}
                     </p>
                     <ul className="space-y-1">
@@ -965,7 +969,7 @@ export function PetitBuveurOnline() {
                             <span className="flex min-w-0 items-center gap-2">
                               <span
                                 className={cn(
-                                  'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md border px-1 text-[10px] font-bold tabular-nums',
+                                  'inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md border px-1 text-xs font-bold tabular-nums',
                                   index === 0
                                     ? 'border-amber-400/45 bg-amber-500/20 text-amber-100'
                                     : 'border-white/10 bg-white/5 text-white/50'
@@ -980,7 +984,7 @@ export function PetitBuveurOnline() {
                                 className={cn('truncate font-medium text-white/90', isActive && 'text-emerald-300')}
                               />
                             </span>
-                            <span className="shrink-0 text-[10px] text-white/40">
+                            <span className="shrink-0 text-xs text-white/40">
                               {t('caseLabel')} {p.position + 1}
                             </span>
                           </li>
@@ -1007,7 +1011,7 @@ export function PetitBuveurOnline() {
                             cosmetics={cosmetics.get(p.id)}
                             className="max-w-full truncate text-center text-sm font-semibold text-white"
                           />
-                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/50">
+                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/50">
                             {t('caseLabel')} {p.position + 1}
                           </span>
                         </button>
@@ -1068,7 +1072,7 @@ export function PetitBuveurOnline() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20 ring-1 ring-amber-400/30">
                     <Target className="h-6 w-6 text-amber-300" />
                   </div>
-                  <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-100">
+                  <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-0.5 text-xs font-semibold text-amber-100">
                     {caseLabel(view.pending.caseType)}
                   </span>
                   <h3 className="text-lg font-bold text-white">{t('teleportPrompt')}</h3>
@@ -1192,7 +1196,7 @@ export function PetitBuveurOnline() {
                         className="rounded-xl border border-white/10 bg-white/5 px-3 py-2"
                       >
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="rounded-md border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white/60">
+                          <span className="rounded-md border border-white/15 bg-white/10 px-1.5 py-0.5 text-xs font-bold tabular-nums text-white/60">
                             T{entry.turn}
                           </span>
                           <span className="text-base leading-none" aria-hidden>
@@ -1202,11 +1206,11 @@ export function PetitBuveurOnline() {
                             {caseLabel(entry.caseType)}
                           </span>
                           {entry.dice != null && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-white/40">
+                            <span className="flex items-center gap-0.5 text-xs text-white/40">
                               <Dice6 className="h-3 w-3" /> {entry.dice}
                             </span>
                           )}
-                          <span className="ml-auto flex items-center gap-1 text-[11px] text-white/50">
+                          <span className="ml-auto flex items-center gap-1 text-xs text-white/50">
                             <span aria-hidden><PlayerAvatarGlyph value={iconOf(entry.actorId)} /></span>
                             {actor && (
                               <OnlinePlayerName name={actor.name} cosmetics={cosmetics.get(actor.id)} className="max-w-[5.5rem] truncate" />
@@ -1220,7 +1224,7 @@ export function PetitBuveurOnline() {
                               return (
                                 <span
                                   key={c.playerId}
-                                  className="flex items-center gap-1 rounded-full border border-white/15 bg-gray-950/60 px-2 py-0.5 text-[11px] font-semibold text-white/85"
+                                  className="flex items-center gap-1 rounded-full border border-white/15 bg-gray-950/60 px-2 py-0.5 text-xs font-semibold text-white/85"
                                 >
                                   <span aria-hidden><PlayerAvatarGlyph value={iconOf(c.playerId)} /></span>
                                   {p && (
@@ -1237,7 +1241,7 @@ export function PetitBuveurOnline() {
                             })}
                           </div>
                         ) : (
-                          <p className="mt-1 text-[11px] font-medium text-emerald-300/80">
+                          <p className="mt-1 text-xs font-medium text-emerald-300/80">
                             {t('outcomeNothing')}
                           </p>
                         )}

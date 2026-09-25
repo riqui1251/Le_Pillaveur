@@ -106,7 +106,7 @@ export default async function CollectionPage({
   const tCommon = await getTranslations({ locale, namespace: 'common' })
   const tNav = await getTranslations({ locale, namespace: 'nav.links' })
 
-  const games = gamesInCollection(collection)
+  const games = gamesInCollection(collection, undefined, locale)
   const url = `${SITE_URL}/${locale}/jeux/${collection}`
   const others = COLLECTION_SLUGS.filter((slug) => slug !== collection)
 

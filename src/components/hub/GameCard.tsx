@@ -2,9 +2,10 @@
 
 import { Link, useRouter } from "@/i18n/navigation"
 import { useLinkStatus } from "next/link"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { Loader2 } from "lucide-react"
 import { LocalizedGameMeta } from "@/lib/games-i18n"
+import { hasContentIn } from "@/lib/games"
 import { PlayingCard, suitIsRed } from "@/components/ui/PlayingCard"
 import { cn } from "@/lib/utils"
 import { ReactNode, useTransition } from "react"
@@ -62,6 +63,7 @@ function OpeningVeil({ forced, label }: { forced: boolean; label: string }) {
  */
 export function GameCard({ game, icon }: GameCardProps) {
   const t = useTranslations("hub.jeux")
+  const locale = useLocale()
   const router = useRouter()
   const { user } = useAuth()
   const { selectedIds } = useSelectedPlayers()
@@ -73,6 +75,9 @@ export function GameCard({ game, icon }: GameCardProps) {
   // Le nombre de joueurs concerne les salles EN LIGNE (en local, c'est libre).
   const players = isOnline ? playersLabel(game.minPlayers, game.maxPlayers) : null
   const red = game.suit ? suitIsRed(game.suit) : false
+  // Cartes du jeu absentes de la langue du site (Sans Filtre, Dilemmes hors
+  // fr) : dit AVANT le clic — la création de table serait refusée.
+  const frOnly = !hasContentIn(game, locale)
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (isOnline) return
@@ -116,16 +121,39 @@ export function GameCard({ game, icon }: GameCardProps) {
           "group-active:scale-[0.98]"
         )}
       >
-        {/* Badge 🤖 « jouable avec des bots » — coin haut-droit, libre sur la
-            mini-carte (le rang+enseigne occupe haut-gauche et bas-droite). */}
-        {game.botsFillable && (
-          <span
-            role="img"
-            aria-label={t("botsBadge")}
-            title={t("botsBadge")}
-            className="absolute right-1 top-0.5 select-none text-[10px] opacity-60 transition-opacity group-hover:opacity-90"
-          >
-            🤖
+        {/* Badges du coin haut-droit, libre sur la mini-carte (le rang+enseigne
+            occupe haut-gauche et bas-droite) : « Bêta », « FR » (cartes en
+            français seulement, hors fr) et 🤖 « jouable avec des bots ».
+            Encre sur crème, comme les coins : ils informent, ils ne crient pas. */}
+        {(game.beta || frOnly || game.botsFillable) && (
+          <span className="absolute right-1 top-0.5 flex items-center gap-0.5">
+            {game.beta && (
+              <span
+                title={t("betaHint")}
+                className="select-none rounded-sm border border-[#24201A]/25 px-[3px] font-display text-[11px] font-bold leading-[13px] text-[#24201A]/75"
+              >
+                {t("betaBadge")}
+              </span>
+            )}
+            {frOnly && (
+              <span
+                title={t("frOnlyHint")}
+                className="select-none rounded-sm border border-[#24201A]/25 px-[3px] font-display text-[11px] font-bold leading-[13px] text-[#24201A]/75"
+              >
+                <span aria-hidden>{t("frOnlyBadge")}</span>
+                <span className="sr-only">{t("frOnlyHint")}</span>
+              </span>
+            )}
+            {game.botsFillable && (
+              <span
+                role="img"
+                aria-label={t("botsBadge")}
+                title={t("botsBadge")}
+                className="select-none text-[10px] opacity-60 transition-opacity group-hover:opacity-90"
+              >
+                🤖
+              </span>
+            )}
           </span>
         )}
         <article className="flex h-full min-h-[7rem] flex-col items-center px-1.5 pb-1.5 pt-3 text-center sm:min-h-[7.5rem]">

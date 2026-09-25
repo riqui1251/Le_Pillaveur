@@ -3,14 +3,37 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Player as BasePlayer, PlayerPreferences } from '@/lib/players'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { PlayerName, isSpecialPlayer } from '@/components/ui/PlayerName'
+import { PlayerName } from '@/components/ui/PlayerName'
 import { EndConfetti } from '@/components/online/EndConfetti'
-import { RefreshCw, Trophy, Home, Skull, Heart, Star, Clock } from 'lucide-react'
+import { RefreshCw, Trophy, Home, Skull, Heart, Star } from 'lucide-react'
+import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
+import {
+  advancePenduGame,
+  applyPenduHint,
+  createPenduGame,
+  DIFFICULTY_CONFIG,
+  evaluatePenduRound,
+  expirePenduTimer,
+  guessPenduLetter,
+  HINT_COST_SECONDS,
+  MAX_HINTS,
+  PENDU_ALPHABET,
+  PENDU_SAVE_ID,
+  PENDU_SAVE_VERSION,
+  penduDisplayWord,
+  penduHangmanStage,
+  penduWinner,
+  restorePenduSave,
+  TIMEOUT_MARK,
+  toPenduSave,
+  type PenduDifficulty,
+  type PenduSave,
+  type PenduState,
+} from '@/lib/pendu/engine'
 
 interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
   score: number
@@ -31,96 +54,8 @@ interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
 interface GameProps {
   players: BasePlayer[]
   onGameEnd: () => void
-  difficulty?: Difficulty
+  difficulty?: PenduDifficulty
   updatePlayerStats?: (playerId: string, gameId: string, stats: { gamesPlayed: number; totalDrinks?: number; wins?: number }) => void
-}
-
-type Difficulty = 'facile' | 'normal' | 'difficile' | 'extreme'
-
-// Mots par catégorie et difficulté - 60 mots par catégorie (15 par niveau)
-const WORD_CATEGORIES = {
-  animaux: {
-    facile: ['CHAT', 'CHIEN', 'OURS', 'LION', 'TIGRE', 'LOUP', 'CERF', 'VACHE', 'PORC', 'LAPIN', 'SOURIS', 'POULE', 'CANARD', 'MOUTON', 'CHEVAL', 'OIE', 'DINDE', 'COQ', 'COCHON', 'AGNEAU', 'CHEVRE', 'ANE', 'MULE', 'CHAMELEON', 'GECKO', 'IGUANE', 'SERPENT', 'LIZARD', 'TORTUE', 'GRENOUILLE', 'CRAPAUD', 'POISSON', 'CARPE', 'TRUITE', 'SAUMON', 'THON', 'MAQUEREAU', 'SARDINE', 'ANCHOIS', 'HARENG', 'MORUE', 'CABILLAUD', 'SOLE', 'PLIE', 'RAIE', 'REQUIN', 'BALEINE', 'DAUPHIN', 'PHOQUE', 'OTARIE', 'LION-DE-MER', 'MORSE', 'BISON', 'ELAN', 'DAIM', 'SANGLIER', 'LIEVRE', 'ECUREUIL', 'HAMSTER', 'COCHON-DINDE', 'PERROQUET', 'CANARI', 'SERPENT', 'LIZARD', 'GECKO', 'IGUANE', 'TORTUE', 'GRENOUILLE', 'CRAPAUD', 'POISSON', 'CARPE', 'TRUITE', 'SAUMON', 'THON', 'MAQUEREAU', 'SARDINE', 'ANCHOIS', 'HARENG', 'MORUE', 'CABILLAUD', 'SOLE', 'PLIE', 'RAIE', 'REQUIN', 'BALEINE', 'DAUPHIN', 'PHOQUE', 'OTARIE', 'LION-DE-MER', 'MORSE', 'BISON', 'ELAN', 'DAIM', 'SANGLIER', 'LIEVRE', 'ECUREUIL', 'HAMSTER', 'COCHON-DINDE', 'PERROQUET', 'CANARI'],
-    normal: ['ELEPHANT', 'GIRAFE', 'CROCODILE', 'HIPPOPOTAME', 'KANGOUROU', 'LEOPARD', 'PINGOUIN', 'FLAMANT', 'CHAMEAU', 'ZEBRE', 'GORILLE', 'PANDA', 'KOALA', 'RENARD', 'CASTOR', 'ANTILOPE', 'GAZELLE', 'IMPALA', 'BONGO', 'NYALA', 'KUDU', 'ORYX', 'ADDAX', 'BOUQUETIN', 'MOUFLON', 'BIGHORN', 'ARGALI', 'TAKIN', 'GORAL', 'SEROW', 'ISARD', 'CHAMOIS', 'LYNX', 'JAGUAR', 'PUMA', 'OCELOT', 'SERVAL', 'CARACAL', 'MARGAY', 'JAGUARUNDI', 'KODKOD', 'ONCILLE', 'GUEPARD', 'LEOPARD-NEIGE', 'PANTHERE', 'TIGRE-BLANC', 'LION-BLANC', 'PUMA-NOIR', 'JAGUAR-NOIR', 'LEOPARD-NOIR'],
-    difficile: ['RHINOCEROS', 'CHAUVE-SOURIS', 'ORNITHORYNQUE', 'TATOU', 'CAMELEON', 'SALAMANDRE', 'CHINCHILLA', 'FOURMILIER', 'PARESSEUX', 'ORANG-OUTAN', 'CHIMPANZE', 'MANDRILL', 'TAPIR', 'WOMBAT', 'ECHIDNE', 'CAPYBARA', 'AGOUTI', 'PACA', 'CHINCHILLA', 'VISCACHE', 'OCTODON', 'HUTIA', 'COYPU', 'CASTOR-GEANT', 'LOUTRE-GEANTE', 'BELETTE', 'HERMINE', 'PUTOIS', 'FURET', 'MARTRE', 'FOUINE', 'ZIBELINE', 'VISON', 'GLOUTON', 'CARCAJOU', 'RATEL', 'BLAIREAU', 'TAUPE', 'MUSARAIGNE', 'HERISSON', 'TENREC', 'SOLENODONTE', 'DESMAN', 'CONDYLURE', 'SCALOPE', 'CHRYSOCHLORE', 'ORYCTÉROPE', 'PANGOLIN-GEANT', 'FOURMILIER-GEANT', 'TAMANDUA', 'MYRMECOPHAGIE', 'BRADYPE', 'UNAU', 'AI', 'MEGALONYX', 'GLYPTODON', 'DOEDICURUS', 'MACRAUCHENIA', 'TOXODON', 'PYROTHERIUM', 'UINTATHERIUM', 'CORYPHODON', 'PHENACODUS', 'HYRACOTHERIUM', 'MESOHIPPUS'],
-    extreme: ['AXOLOTL', 'QUETZAL', 'XENOPE', 'OKAPI', 'PANGOLIN', 'BINTURONG', 'FOSSA', 'NUMBAT', 'BILBY', 'DUNNART', 'POTOROO', 'BETTONG', 'BANDICOOT', 'ANTECHINUS', 'GLIDER', 'QUOLL', 'PLANIGALE', 'DASYURE', 'PHALANGER', 'CUSCUS', 'PADEMELON', 'QUOKKA', 'WALLABY', 'POSSUM', 'KOALA-GEANT', 'DIPROTODON', 'THYLACOLEO', 'MEGALANIA', 'PROCOPTODON', 'PALORCHESTES', 'ZYGOMATURUS', 'PHASCOLONUS', 'THYLACOSMILUS', 'BORHYAENA', 'ANDREWSARCHUS', 'ENTELODON', 'DAEODON', 'ARCHAEOTHERIUM', 'HYAENODON', 'SARKASTODON', 'PATRIOFELIS', 'OXYAENA', 'MESONYX', 'AMBULOCETUS', 'BASILOSAURUS', 'DORUDON', 'ZYGORHIZA', 'ARCHAEOCETE', 'PAKICETUS', 'RODHOCETUS', 'PROTOCETUS', 'GEORGIACETUS', 'INDOHYUS', 'DIACODEXIS', 'PHENACODUS', 'ECTOCION', 'CORYPHODON', 'UINTATHERIUM', 'EOBASILEUS', 'TETHEOPSIS', 'GOBIATHERIUM', 'MONGOLOTHERIUM', 'EMBOLOTHERIUM', 'BRONTOPS', 'TITANOTHERE']
-  },
-  objets: {
-    facile: ['TABLE', 'CHAISE', 'LAMPE', 'LIVRE', 'STYLO', 'VERRE', 'PORTE', 'CLEF', 'SACS', 'TASSE', 'PLAT', 'FOUR', 'LIT', 'MIROIR', 'HORLOGE', 'CRAYON', 'GOMME', 'REGLE', 'CISEAUX', 'COLLE', 'PAPIER', 'CAHIER', 'CARNET', 'AGENDA', 'CALENDRIER', 'PHOTO', 'CADRE', 'TABLEAU', 'POSTER', 'AFFICHE', 'CARTE', 'LETTRE', 'ENVELOPPE', 'TIMBRE', 'COLIS', 'PAQUET', 'BOITE', 'SAC', 'VALISE', 'CARTABLE', 'TROUSSE', 'ETUI', 'POCHETTE', 'PORTEFEUILLE', 'PORTE-MONNAIE', 'BOURSE', 'SACOCHE', 'BESACE', 'GIBECIERE', 'MUSETTE', 'HAVRESAC', 'BISSAC', 'CARNASSIERE', 'GIBERNE', 'FONTES', 'SACOCHES', 'ALFORJAS', 'CANTINES', 'GAMELLES', 'BIDONS', 'GOURDES', 'THERMOS', 'BOUTEILLES', 'FLACONS'],
-    normal: ['ORDINATEUR', 'TELEPHONE', 'TELEVISION', 'REFRIGERATEUR', 'ASPIRATEUR', 'MACHINE', 'GUITARE', 'PIANO', 'APPAREIL', 'CAMERA', 'MONTRE', 'LUNETTES', 'PARAPLUIE', 'VALISE', 'BOUTEILLE', 'IMPRIMANTE', 'SCANNER', 'PHOTOCOPIEUSE', 'FAX', 'PROJECTEUR', 'ECRAN', 'CLAVIER', 'SOURIS', 'CASQUE', 'MICROPHONE', 'HAUT-PARLEUR', 'AMPLIFICATEUR', 'MAGNETOPHONE', 'TOURNE-DISQUE', 'LECTEUR-CD', 'LECTEUR-DVD', 'CONSOLE', 'MANETTE', 'JOYSTICK', 'WEBCAM', 'TABLETTE', 'SMARTPHONE', 'CHARGEUR', 'BATTERIE', 'CABLE', 'ADAPTATEUR', 'MULTIPRISE', 'RALLONGE', 'INTERRUPTEUR', 'PRISE', 'AMPOULE', 'NEON', 'SPOT', 'LUSTRE', 'APPLIQUE', 'LAMPADAIRE', 'VEILLEUSE', 'TORCHE', 'LANTERNE', 'BOUGIE', 'CHANDELLE', 'CHANDELIER', 'CANDELABRE', 'FLAMBEAU', 'QUINQUET', 'LAMPION', 'FANAL', 'PHARE', 'PROJECTEUR'],
-    difficile: ['STETHOSCOPE', 'KALEIDOSCOPE', 'XYLOPHONE', 'MICROSCOPE', 'TELESCOPE', 'BAROMETER', 'THERMOMETRE', 'ACCELEROMETRE', 'MANOMETRE', 'HYGROMETRE', 'ANEMOMETRE', 'SEISMOGRAPHE', 'OSCILLOSCOPE', 'SPECTROMETRE', 'REFRACTOMETRE', 'CHRONOMETRE', 'TACHYMETRE', 'ALTIMETRE', 'PLUVIOMETRE', 'LUXMETRE', 'DECIBELMETRE', 'MULTIMETRE', 'VOLTMETRE', 'AMPEREMETRE', 'OHMMETRE', 'WATTMETRE', 'FREQUENCEMETRE', 'CAPACIMETRE', 'INDUCTANCEMETRE', 'IMPEDANCEMETRE', 'GALVANOMETRE', 'ELECTROMETRE', 'MAGNETOMETRE', 'GAUSSMETRE', 'TESLAMETER', 'FLUXMETRE', 'RADIOMETRE', 'PHOTOMETRE', 'COLORIMETRE', 'DENSITOMETRE', 'VISCOSIMETRE', 'RHEOMETRE', 'TENSIOMETRE', 'DYNAMOMETRE', 'ERGOMETRE', 'CALORIMETRE', 'PYROMETRE', 'CRYOMETRE', 'DILATOMETER', 'INTERFEROMETRE', 'POLARIMETRE', 'REFRACTOMETRE', 'GONIOMETRE', 'THEODOLITE', 'SEXTANT', 'ASTROLABE', 'QUADRANT', 'OCTANT', 'CLINOMETRE', 'INCLINOMETRE', 'NIVEAU', 'EQUERRE', 'COMPAS', 'RAPPORTEUR', 'PANTOGRAPHE'],
-    extreme: ['GYROSCOPE', 'CHRYSANTHEME', 'MNEMOTECHNIQUE', 'ONOMATOPEE', 'PNEUMATIQUE', 'PSYCHOLOGIQUE', 'PHYSIOLOGIQUE', 'PHENOMENOLOGIQUE', 'EPISTEMOLOGIQUE', 'METHODOLOGIQUE', 'ETYMOLOGIQUE', 'LEXICOGRAPHIQUE', 'CINEMATOGRAPHIQUE', 'CRYSTALLOGRAPHIQUE', 'ELECTROENCEPHALOGRAPHE', 'ELECTROCARDIOGRAPHE', 'ELECTROMYOGRAPHE', 'ELECTRORETINOGRAPHE', 'ELECTROOCULOGRAPHE', 'MAGNETOENCEPHALOGRAPHE', 'PNEUMOENCEPHALOGRAPHE', 'VENTRICULOGRAPHE', 'ARTERIOGRAPHE', 'PHLEBOGRAPHE', 'LYMPHOGRAPHE', 'SIALOGRAPHE', 'CHOLANGIOGRAPHE', 'UROGRAPHE', 'PYELOGRAPHE', 'CYSTOGRAPHE', 'HYSTEROSALPINGOGRAPHE', 'MAMMOGRAPHE', 'TOMOGRAPHE', 'SCANOGRAPHE', 'ECHOGRAPHE', 'DOPPLER', 'SCINTIGRAPHE', 'GAMMAGRAPHE', 'POSITOGRAPHE', 'CYCLOTRON', 'SYNCHROTRON', 'BETATRON', 'MICROTRON', 'SYNCHROCYCLOTRON', 'COSMOTRON', 'TEVATRON', 'COLLISIONNEUR', 'ACCELERATEUR', 'SPECTROGRAPHE', 'CHROMATOGRAPHE', 'ELECTROPHORESE', 'CENTRIFUGEUSE', 'ULTRACENTRIFUGEUSE', 'LYOPHILISATEUR', 'AUTOCLAVE', 'INCUBATEUR', 'ETUVE', 'DESSICCATEUR', 'EVAPORATEUR', 'DISTILLATEUR', 'SUBLIMATEUR', 'CRISTALLISOIR', 'PRECIPITATEUR', 'SEPARATEUR', 'PURIFICATEUR', 'CONCENTRATEUR']
-  },
-  nourriture: {
-    facile: ['PAIN', 'FROMAGE', 'POMME', 'BANANE', 'ORANGE', 'POIRE', 'LAIT', 'BEURRE', 'SUCRE', 'SEL', 'RIZ', 'PATES', 'VIANDE', 'POISSON', 'OEUF', 'CERISE', 'FRAISE', 'PECHE', 'PRUNE', 'RAISIN', 'MELON', 'PASTEQUE', 'ANANAS', 'KIWI', 'MANGUE', 'AVOCAT', 'CITRON', 'LIME', 'PAMPLEMOUSSE', 'MANDARINE', 'CLEMENTINE', 'TOMATE', 'CAROTTE', 'RADIS', 'NAVET', 'BETTERAVE', 'OIGNON', 'AIL', 'ECHALOTE', 'POIREAU', 'CELERI', 'FENOUIL', 'PERSIL', 'BASILIC', 'THYM', 'ROMARIN', 'SAUGE', 'ORIGAN', 'MENTHE', 'CIBOULETTE', 'ANETH', 'CORIANDRE', 'CUMIN', 'PAPRIKA', 'CURRY', 'GINGEMBRE', 'CANNELLE', 'VANILLE', 'CHOCOLAT', 'MIEL', 'CONFITURE', 'NUTELLA', 'YAOURT', 'CREME'],
-    normal: ['SPAGHETTI', 'HAMBURGER', 'SANDWICH', 'CHOCOLAT', 'BISCUIT', 'CROISSANT', 'BAGUETTE', 'CAMEMBERT', 'ROQUEFORT', 'SAUCISSON', 'JAMBON', 'SAUMON', 'CREVETTE', 'HOMARD', 'ESCARGOT', 'TAGLIATELLE', 'LINGUINE', 'PENNE', 'FUSILLI', 'RAVIOLI', 'TORTELLINI', 'GNOCCHI', 'RISOTTO', 'PAELLA', 'COUSCOUS', 'TABOULEH', 'HOUMOUS', 'FALAFEL', 'KEBAB', 'GYROS', 'MOUSSAKA', 'LASAGNE', 'CANNELLONI', 'PIZZA', 'CALZONE', 'FOCACCIA', 'BRUSCHETTA', 'ANTIPASTI', 'CARPACCIO', 'VITELLO', 'OSSO-BUCO', 'SALTIMBOCCA', 'PICCATA', 'SCALOPPINE', 'PARMIGIANA', 'CARBONARA', 'AMATRICIANA', 'PUTTANESCA', 'ARRABBIATA', 'AGLIO-OLIO', 'PESTO', 'ALFREDO', 'BOLOGNAISE', 'MARINARA', 'NAPOLETANA', 'QUATTRO-STAGIONI', 'MARGHERITA', 'CAPRICCIOSA', 'DIAVOLA', 'QUATTRO-FORMAGGI', 'PROSCIUTTO', 'FUNGHI', 'VEGETARIANA', 'MARINARA'],
-    difficile: ['RATATOUILLE', 'BOUILLABAISSE', 'CHOUCROUTE', 'QUENELLE', 'CASSOULET', 'BRANDADE', 'TAPENADE', 'BOURGUIGNON', 'COQ-AU-VIN', 'POT-AU-FEU', 'BLANQUETTE', 'FRICASSEE', 'CONFIT', 'MAGRET', 'FOIE-GRAS', 'BOEUF-BOURGUIGNON', 'DAUBE', 'GIGOT', 'ROTI', 'RAGOUT', 'STEW', 'CIVET', 'TERRINE', 'PATE', 'RILLETTES', 'CONFITURE', 'GELÉE', 'CHUTNEY', 'PICKLES', 'CORNICHONS', 'OLIVES', 'CAPRES', 'ANCHOIS', 'THON', 'SARDINES', 'MAQUEREAU', 'HARENG', 'SAUMON', 'TRUITE', 'BROCHET', 'PERCHE', 'CARPE', 'ANGUILLE', 'LAMPROIE', 'ESTURGEON', 'CAVIAR', 'HUITRE', 'MOULE', 'PALOURDE', 'COQUE', 'BIGORNEAU', 'BULOT', 'SEICHE', 'CALMAR', 'PIEUVRE', 'POULE', 'CANARD', 'OIE', 'DINDE', 'PIGEON', 'CAILLE', 'PERDRIX', 'FAISAN', 'BÉCASSE', 'BÉCASSINE', 'VANESSE', 'BÉCARD', 'BÉCASSEAU', 'BÉCASSE', 'BÉCASSINE', 'BÉCARD', 'BÉCASSEAU'],
-    extreme: ['CEVICHE', 'TZATZIKI', 'QUESADILLA', 'YAKITORI', 'BRUSCHETTA', 'CARPACCIO', 'ANTIPASTI', 'PROSCIUTTO', 'MOZZARELLA', 'GORGONZOLA', 'PARMIGIANO', 'MASCARPONE', 'TIRAMISU', 'ZABAGLIONE', 'CANNELLONI', 'OSSO-BUCO', 'SALTIMBOCCA', 'PICCATA', 'SCALOPPINE', 'PARMIGIANA', 'CARBONARA', 'AMATRICIANA', 'PUTTANESCA', 'ARRABBIATA', 'AGLIO-OLIO', 'PESTO', 'ALFREDO', 'BOLOGNAISE', 'MARINARA', 'NAPOLETANA', 'QUATTRO-STAGIONI', 'MARGHERITA', 'CAPRICCIOSA', 'DIAVOLA', 'QUATTRO-FORMAGGI', 'PROSCIUTTO', 'FUNGHI', 'VEGETARIANA', 'MARINARA', 'TAGLIATELLE', 'LINGUINE', 'PENNE', 'FUSILLI', 'RAVIOLI', 'TORTELLINI', 'GNOCCHI', 'RISOTTO', 'PAELLA', 'COUSCOUS', 'TABOULEH', 'HOUMOUS', 'FALAFEL', 'KEBAB', 'GYROS', 'MOUSSAKA', 'LASAGNE', 'CANNELLONI', 'PIZZA', 'CALZONE', 'FOCACCIA', 'BRUSCHETTA', 'ANTIPASTI', 'CARPACCIO', 'VITELLO', 'OSSO-BUCO', 'SALTIMBOCCA', 'PICCATA', 'SCALOPPINE', 'PARMIGIANA', 'CARBONARA', 'AMATRICIANA', 'PUTTANESCA', 'ARRABBIATA', 'AGLIO-OLIO', 'PESTO', 'ALFREDO', 'BOLOGNAISE', 'MARINARA', 'NAPOLETANA', 'QUATTRO-STAGIONI', 'MARGHERITA', 'CAPRICCIOSA', 'DIAVOLA', 'QUATTRO-FORMAGGI', 'PROSCIUTTO', 'FUNGHI', 'VEGETARIANA', 'MARINARA']
-  },
-  lieux: {
-    facile: ['PARIS', 'LYON', 'PLAGE', 'FORET', 'VILLE', 'MAISON', 'ECOLE', 'PARC', 'JARDIN', 'ROUTE', 'PONT', 'GARE', 'PORT', 'FERME', 'USINE', 'MARSEILLE', 'TOULOUSE', 'NICE', 'NANTES', 'STRASBOURG', 'MONTPELLIER', 'BORDEAUX', 'LILLE', 'RENNES', 'REIMS', 'SAINT-ETIENNE', 'LE-HAVRE', 'TOULON', 'GRENOBLE', 'DIJON', 'ANGERS', 'NIMES', 'VILLEURBANNE', 'SAINT-DENIS', 'LE-MANS', 'AIX-EN-PROVENCE', 'CLERMONT-FERRAND', 'BREST', 'TOURS', 'AMIENS', 'LIMOGES', 'ANNEcy', 'PERPIGNAN', 'BOULOGNE-BILLANCOURT', 'ORLEANS', 'MULHOUSE', 'ROUEN', 'CAEN', 'REIMS', 'NANCY', 'SAINT-DENIS', 'ARGENTEUIL', 'MONTPELLIER', 'NANTES', 'TOULOUSE', 'NICE', 'STRASBOURG', 'NIMES', 'TOULON', 'GRENOBLE', 'DIJON', 'ANGERS', 'VILLEURBANNE', 'LE-MANS', 'AIX-EN-PROVENCE', 'CLERMONT-FERRAND', 'BREST', 'TOURS', 'AMIENS', 'LIMOGES', 'ANNEcy', 'PERPIGNAN', 'BOULOGNE-BILLANCOURT', 'ORLEANS', 'MULHOUSE', 'ROUEN', 'CAEN', 'REIMS', 'NANCY', 'SAINT-DENIS', 'ARGENTEUIL'],
-    normal: ['RESTAURANT', 'BIBLIOTHEQUE', 'PHARMACIE', 'BOULANGERIE', 'BOUCHERIE', 'EPICERIE', 'LIBRAIRIE', 'CINEMA', 'THEATRE', 'MUSEE', 'GALERIE', 'HOPITAL', 'CLINIQUE', 'CABINET', 'BUREAU', 'SUPERMARCHE', 'HYPERMARCHE', 'MAGASIN', 'BOUTIQUE', 'CENTRE-COMMERCIAL', 'MARCHE', 'FOIRE', 'BAZAR', 'DEPOT', 'ENTREPOT', 'USINE', 'ATELIER', 'GARAGE', 'STATION-SERVICE', 'PARKING', 'AEROPORT', 'GARE', 'METRO', 'TRAMWAY', 'AUTOBUS', 'TAXI', 'HOTEL', 'AUBERGE', 'CAMPING', 'MOTEL', 'PENSION', 'RESIDENCE', 'APPARTEMENT', 'STUDIO', 'LOFT', 'VILLA', 'CHALET', 'CABANE', 'TENTE', 'CARAVANE', 'MOBILE-HOME', 'PISCINE', 'SAUNA', 'HAMMAM', 'SPA', 'GYMNASE', 'STADE', 'TERRAIN', 'COURT', 'PISTE', 'CIRCUIT', 'HIPPODROME', 'VELODROME', 'PATINOIRE', 'BOWLING', 'CASINO'],
-    difficile: ['ARCHIPEL', 'OBSERVATOIRE', 'PLANETARIUM', 'AQUARIUM', 'AUDITORIUM', 'CONSERVATOIRE', 'LABORATOIRE', 'AMBASSADE', 'CONSULAT', 'PREFECTURE', 'TRIBUNAL', 'PALAIS', 'CHATEAU', 'MONASTERE', 'CATHEDRALE', 'PENITENCIER', 'SANATORIUM', 'DISPENSAIRE', 'POLYCLINIQUE', 'MATERNITE', 'HOSPICE', 'ASILE', 'ORPHELINAT', 'PENSIONNAT', 'INTERNAT', 'SEMINAIRE', 'NOVICIAT', 'COUVENT', 'ABBAYE', 'PRIEURE', 'CHARTREUSE', 'ERMITAGE', 'SANCTUAIRE', 'TEMPLE', 'MOSQUEE', 'SYNAGOGUE', 'PAGODE', 'STUPA', 'ZIGGURAT', 'MAUSOLEE', 'NECROPOLE', 'CIMETIERE', 'COLUMBARIUM', 'CREMATORIUM', 'MORGUE', 'AMPHITHEATRE', 'HIPPODROME', 'VELODROME', 'AUTODROME', 'AERODROME', 'HELIPORT', 'SPACEPORT', 'COSMODROME', 'ASTROPORT', 'SPATIOPORT', 'TELEPORT', 'STARGATE', 'WORMHOLE', 'BLACKHOLE', 'QUASAR', 'PULSAR', 'NEBULA', 'GALAXY', 'UNIVERSE', 'MULTIVERSE', 'DIMENSION', 'CONTINUUM'],
-    extreme: ['MAUSOLEE', 'ZIGGOURAT', 'KREMLIN', 'ACROPOLE', 'COLISEE', 'PANTHEON', 'PARTHENON', 'HIPPODROME', 'AMPHITHEATRE', 'BASILIQUE', 'MINARETS', 'SYNAGOGUE', 'PAGODE', 'STUPAS', 'ZIGGURAT', 'PENITENCIER', 'SANATORIUM', 'DISPENSAIRE', 'POLYCLINIQUE', 'MATERNITE', 'HOSPICE', 'ASILE', 'ORPHELINAT', 'PENSIONNAT', 'INTERNAT', 'SEMINAIRE', 'NOVICIAT', 'COUVENT', 'ABBAYE', 'PRIEURE', 'CHARTREUSE', 'ERMITAGE', 'SANCTUAIRE', 'TEMPLE', 'MOSQUEE', 'SYNAGOGUE', 'PAGODE', 'STUPA', 'ZIGGURAT', 'MAUSOLEE', 'NECROPOLE', 'CIMETIERE', 'COLUMBARIUM', 'CREMATORIUM', 'MORGUE', 'AMPHITHEATRE', 'HIPPODROME', 'VELODROME', 'AUTODROME', 'AERODROME', 'HELIPORT', 'SPACEPORT', 'COSMODROME', 'ASTROPORT', 'SPATIOPORT', 'TELEPORT', 'STARGATE', 'WORMHOLE', 'BLACKHOLE', 'QUASAR', 'PULSAR', 'NEBULA', 'GALAXY', 'UNIVERSE', 'MULTIVERSE', 'DIMENSION', 'CONTINUUM']
-  },
-  metiers: {
-    facile: ['MEDECIN', 'PROF', 'CHEF', 'POLICE', 'POMPIER', 'GARDE', 'JUGE', 'MAIRE', 'PILOTE', 'GUIDE', 'COACH', 'NURSE', 'MACON', 'PEINTRE', 'PLOMBIER', 'BOULANGER', 'BOUCHER', 'EPICIER', 'COIFFEUR', 'BARBIER', 'TAILLEUR', 'COUTURIER', 'CORDONNIER', 'HORLOGER', 'BIJOUTIER', 'FLEURISTE', 'LIBRAIRE', 'VENDEUR', 'CAISSIER', 'SERVEUR', 'BARMAN', 'CUISINIER', 'PATISSIER', 'GLACIER', 'TRAITEUR', 'FERMIER', 'BERGER', 'VACHER', 'PORCHER', 'AVICULTEUR', 'APICULTEUR', 'VITICULTEUR', 'MARAICHER', 'JARDINIER', 'PAYSAGISTE', 'BUCHERON', 'FORESTIER', 'CHASSEUR', 'PECHEUR', 'MARIN', 'CAPITAINE', 'MATELOT', 'DOCKER', 'GRUTIER', 'CHAUFFEUR', 'ROUTIER', 'TAXIMAN', 'LIVREUR', 'FACTEUR', 'POSTIER', 'SECRETAIRE', 'EMPLOYE', 'OUVRIER', 'ARTISAN', 'APPRENTI'],
-    normal: ['AVOCAT', 'DENTISTE', 'PHARMACIEN', 'VETERINAIRE', 'ARCHITECTE', 'INGENIEUR', 'COMPTABLE', 'BANQUIER', 'JOURNALISTE', 'PHOTOGRAPHE', 'MUSICIEN', 'ACTEUR', 'DANSEUR', 'SCULPTEUR', 'DESIGNER', 'INFORMATICIEN', 'PROGRAMMEUR', 'DEVELOPPEUR', 'ANALYSTE', 'CONSULTANT', 'GESTIONNAIRE', 'DIRECTEUR', 'MANAGER', 'SUPERVISEUR', 'COORDINATEUR', 'ADMINISTRATEUR', 'ASSISTANT', 'TECHNICIEN', 'SPECIALISTE', 'EXPERT', 'CONSEILLER', 'FORMATEUR', 'INSTRUCTEUR', 'PROFESSEUR', 'ENSEIGNANT', 'EDUCATEUR', 'ANIMATEUR', 'MONITEUR', 'ENTRAINEUR', 'PREPARATEUR', 'THERAPEUTE', 'PRATICIEN', 'CLINICIEN', 'RADIOLOGUE', 'LABORANTIN', 'INFIRMIER', 'AIDE-SOIGNANT', 'AMBULANCIER', 'SECOURISTE', 'SAUVETEUR', 'POMPIER', 'GENDARME', 'POLICIER', 'DETECTIVE', 'ENQUETEUR', 'INSPECTEUR', 'COMMISSAIRE', 'PROCUREUR', 'NOTAIRE', 'HUISSIER', 'GREFFIER', 'CLERC', 'JURISTE', 'MAGISTRAT', 'ARBITRE', 'MEDIATEUR', 'NEGOCIATEUR'],
-    difficile: ['ANESTHESISTE', 'CARDIOLOGUE', 'DERMATOLOGUE', 'NEUROLOGUE', 'PSYCHIATRE', 'RADIOLOGUE', 'CHIRURGIEN', 'GYNECOLOGUE', 'PEDIATRE', 'OPHTALMOLOGUE', 'ORTHODONTISTE', 'KINESITHERAPEUTE', 'PSYCHOLOGUE', 'ORTHOPHONISTE', 'PODOLOGUE', 'EPIDEMIOLOGISTE', 'BACTERIOLOGISTE', 'VIROLOGISTE', 'PARASITOLOGUE', 'MYCOLOGISTE', 'IMMUNOLOGISTE', 'GENETICIEN', 'BIOCHIMISTE', 'BIOPHYSICIEN', 'BIOMEDICIEN', 'BIOTECHNOLOGUE', 'NANOTECHNOLOGUE', 'MICROBIOLOGISTE', 'PHARMACOLOGUE', 'TOXICOLOGUE', 'PATHOLOGISTE', 'ANATOMOPATHOLOGISTE', 'CYTOPATHOLOGISTE', 'HISTOPATHOLOGISTE', 'NEUROPATHOLOGISTE', 'PSYCHOPATHOLOGISTE', 'PHYSIOPATHOLOGISTE', 'ETIOPATHOLOGISTE', 'OSTEOPATHOLOGISTE', 'NATUROPATHOLOGISTE', 'HOMEOPATHOLOGISTE', 'ACUPUNCTEUR', 'REFLEXOLOGUE', 'MAGNETISEUR', 'HYPNOTISEUR', 'SOPHROLOGUE', 'RELAXOLOGUE', 'GESTALT-THERAPEUTE', 'PSYCHANALYSTE', 'PSYCHOTHERAPEUTE', 'NEUROPSYCHOLOGUE', 'PSYCHOMOTRICIEN', 'ERGOTHERAPEUTE', 'ORTHOPTISTE', 'AUDIOPROTHESISTE', 'PROTHESISTE', 'ORTHOPEDIE', 'PODOLOGIE', 'CHIROPRACTEUR', 'OSTEOPATHE', 'ETIOPATHE', 'NATUROPATHE', 'HOMEOPATHE', 'PHYTOTHERAPEUTE', 'AROMATHERAPEUTHE', 'GEMMOTHERAPEUTE'],
-    extreme: ['OTORHINOLARYNGOLOGUE', 'ANESTHESIOLOGISTE', 'GASTROENTEROLOGUE', 'ENDOCRINOLOGUE', 'RHUMATOLOGUE', 'PNEUMOLOGUE', 'NEPHROLOGUE', 'UROLOGUE', 'HEMATOLOGUE', 'ONCOLOGUE', 'IMMUNOLOGUE', 'INFECTIOLOGUE', 'GERIATRE', 'NEONATOLOGUE', 'TOXICOLOGUE', 'NEUROCHIRURGIEN', 'CARDIOCHIRURGIEN', 'THORACOCHIRURGIEN', 'ORTHOPEDISTE', 'TRAUMATOLOGUE', 'PLASTICIEN', 'MAXILLO-FACIAL', 'VASCULAIRE', 'DIGESTIF', 'HEPATO-BILIAIRE', 'PANCREATICO-DUODENAL', 'COLO-RECTAL', 'ENDO-UROLOGUE', 'ANDROLOGUE', 'SEXOLOGUE', 'FERTILITE', 'PROCREATION', 'PERINATOLOGIE', 'FOETO-PATHOLOGIE', 'GENETIQUE-MEDICALE', 'CYTOGENETIQUE', 'BIOLOGIE-MOLECULAIRE', 'IMMUNOGENETIQUE', 'PHARMACOGENETIQUE', 'TOXICOGENETIQUE', 'ECOTOXICOLOGIE', 'RADIOPROTECTION', 'MEDECINE-NUCLEAIRE', 'RADIOTHERAPIE', 'CURIETHERAPIE', 'HADRONTHERAPIE', 'PROTONTHERAPIE', 'NEUTRONTHERAPIE', 'PHOTODYNAMIQUE', 'CRYOTHERAPIE', 'THERMOTHERAPIE', 'ELECTROTHERAPIE', 'MAGNETOTHERAPIE', 'ULTRASONOTHERAPIE', 'LASERTHERAPIE', 'PHOTOTHERAPIE', 'CHROMOTHERAPIE', 'MUSICOTHERAPIE', 'ARTTHERAPIE', 'DANSETHERAPIE', 'DRAMATHERAPIE', 'BIBLIOTHERAPIE', 'LUDOTHERAPIE', 'ZOOTHERAPIE', 'HIPPOTHERAPIE', 'CANITHERAPIE', 'FELINTHERAPIE']
-  },
-  sports: {
-    facile: ['FOOT', 'TENNIS', 'BASKET', 'RUGBY', 'BOXE', 'JUDO', 'KARATE', 'VELO', 'COURSE', 'SAUT', 'NAGE', 'SKI', 'SURF', 'GOLF', 'PING-PONG'],
-    normal: ['FOOTBALL', 'VOLLEYBALL', 'HANDBALL', 'BADMINTON', 'NATATION', 'ATHLETISME', 'GYMNASTIQUE', 'ESCALADE', 'EQUITATION', 'ESCRIME', 'AVIRON', 'CANOE', 'VOILE', 'PLONGEE', 'PARACHUTE'],
-    difficile: ['TAEKWONDO', 'HALTEROPHILIE', 'PENTATHLON', 'DECATHLON', 'TRIATHLON', 'BIATHLON', 'MARATHON', 'STEEPLECHASE', 'TRAMPOLINE', 'BOBSLEIGH', 'SKELETON', 'CURLING', 'BIATHLON', 'SKELETON', 'LUGE'],
-    extreme: ['HEPTATHALON', 'OMNIUM', 'KEIRIN', 'MADISON', 'POURSUITE', 'KITESURFING', 'WINGSUIT', 'SLACKLINE', 'PARKOUR', 'FREERUNNING', 'CANYONING', 'SPELEOLOGIE', 'ALPINISME', 'PARAPENTE', 'DELTAPLANE']
-  },
-  pays: {
-    facile: ['FRANCE', 'ITALIE', 'ESPAGNE', 'SUISSE', 'BELGIQUE', 'CANADA', 'JAPON', 'CHINE', 'INDE', 'BRESIL', 'MEXIQUE', 'EGYPTE', 'MAROC', 'TUNISIE', 'ALGERIE'],
-    normal: ['ALLEMAGNE', 'ANGLETERRE', 'PORTUGAL', 'HOLLANDE', 'AUTRICHE', 'NORVEGE', 'FINLANDE', 'POLOGNE', 'HONGRIE', 'ROUMANIE', 'BULGARIE', 'CROATIE', 'SLOVENIE', 'SLOVAQUIE', 'TCHEQUE'],
-    difficile: ['AZERBAIDJAN', 'KAZAKHSTAN', 'OUZBEKISTAN', 'KIRGHIZISTAN', 'TADJIKISTAN', 'TURKMENISTAN', 'AFGHANISTAN', 'BANGLADESH', 'SRI-LANKA', 'BIRMANIE', 'CAMBODGE', 'LAOS', 'MONGOLIE', 'NEPAL', 'BHOUTAN'],
-    extreme: ['LIECHTENSTEIN', 'SAINT-MARIN', 'ANDORRE', 'MONACO', 'VATICAN', 'NAURU', 'TUVALU', 'PALAU', 'MARSHALL', 'MICRONÉSIE', 'KIRIBATI', 'VANUATU', 'SALOMON', 'FIDJI', 'TONGA']
-  },
-  couleurs: {
-    facile: ['ROUGE', 'BLEU', 'VERT', 'JAUNE', 'NOIR', 'BLANC', 'ROSE', 'VIOLET', 'ORANGE', 'GRIS', 'MARRON', 'BEIGE', 'DORE', 'ARGENT', 'BRONZE'],
-    normal: ['TURQUOISE', 'MAGENTA', 'CYAN', 'INDIGO', 'ECARLATE', 'CRAMOISIE', 'POURPRE', 'VERMILLON', 'BORDEAUX', 'MARINE', 'OLIVE', 'KAKI', 'SAUMON', 'CORAIL', 'FUCHSIA'],
-    difficile: ['CHARTREUSE', 'VERMILLION', 'CELADON', 'BISTRE', 'OCRE', 'SEPIA', 'OMBRE', 'SIENNA', 'ALIZARINE', 'GARANCE', 'CARMIN', 'LAQUE', 'COBALT', 'OUTREMER', 'MALACHITE'],
-    extreme: ['QUINACRIDONE', 'PHTHALOCYANINE', 'ANTHRAQUINONE', 'DIOXAZINE', 'ISOINDOLINE', 'PERYLENE', 'NAPHTHOL', 'BENZIMIDAZOLONE', 'DIKETOPYRROLOPYRROLE', 'QUINOPHTHALONE', 'PYRANTHRONE', 'FLAVANTHRONE', 'PERINONE', 'THIOINDIGO', 'CARBAZOLE']
-  },
-  emotions: {
-    facile: ['JOIE', 'PEUR', 'COLERE', 'HONTE', 'FIERTE', 'AMOUR', 'HAINE', 'ENVIE', 'GENE', 'STRESS', 'CALME', 'PAIX', 'RAGE', 'IRA', 'BONHEUR', 'PLAISIR', 'DOULEUR', 'SOUFFRANCE', 'MALAISE', 'BIEN-ETRE', 'CONFORT', 'INCONFORT', 'AISE', 'MALAISE', 'SATISFACTION', 'INSATISFACTION', 'CONTENTEMENT', 'MECONTENTEMENT', 'ALLEGRESSE', 'GAITE', 'HILARITE', 'RIRE', 'SOURIRE', 'GRIMACE', 'PLEURS', 'LARMES', 'SANGLOTS', 'SOUPIRS', 'GEMISSEMENTS', 'CRIS', 'HURLEMENT', 'EXCLAMATION', 'SURPRISE', 'ETONNEMENT', 'ADMIRATION', 'RESPECT', 'VENERATION', 'ADORATION', 'CULTE', 'DEVOTION', 'PASSION', 'ARDEUR', 'FERVEUR', 'ZELE', 'ENTHOUSIASME', 'EXALTATION', 'TRANSPORT', 'RAVISSEMENT', 'ENCHANTEMENT', 'CHARME', 'SEDUCTION', 'ATTRACTION', 'REPULSION', 'AVERSION', 'ANTIPATHIE', 'SYMPATHIE', 'EMPATHIE', 'COMPASSION', 'PITIE', 'MISERICORDE'],
-    normal: ['TRISTESSE', 'NOSTALGIE', 'MELANCOLIE', 'EUPHORIE', 'EXTASE', 'ANGOISSE', 'ANXIETE', 'PANIQUE', 'TERREUR', 'EFFROI', 'DEGOUT', 'MEPRIS', 'JALOUSIE', 'RANCUNE', 'REMORDS', 'CULPABILITE', 'INNOCENCE', 'PURETE', 'IMPURETE', 'NOBLESSE', 'BASSESSE', 'GRANDEUR', 'PETITESSE', 'GENEROSITE', 'AVARICE', 'CUPIDITE', 'DESINTERESSEMENT', 'ALTRUISME', 'EGOISME', 'NARCISSISME', 'HUMILITE', 'ORGUEIL', 'VANITE', 'MODESTIE', 'ARROGANCE', 'PRESOMPTION', 'SUFFISANCE', 'PRETENTION', 'SIMPLICITE', 'COMPLEXITE', 'FACILITE', 'DIFFICULTE', 'AISANCE', 'EMBARRAS', 'TROUBLE', 'CONFUSION', 'CLARTE', 'OBSCURITE', 'LUMIERE', 'TENEBRES', 'ESPOIR', 'DESESPOIR', 'OPTIMISME', 'PESSIMISME', 'CONFIANCE', 'DEFIANCE', 'ASSURANCE', 'INCERTITUDE', 'DOUTE', 'CERTITUDE', 'CONVICTION', 'HESITATION', 'DETERMINATION', 'INDECISION', 'RESOLUTION', 'IRRESOLUTION'],
-    difficile: ['EXASPERATION', 'INDIGNATION', 'RESSENTIMENT', 'AMERTUME', 'DESESPOIR', 'ACCABLEMENT', 'ABATTEMENT', 'PROSTRATION', 'STUPEFACTION', 'EBAHISSEMENT', 'PERPLEXITE', 'INCREDULITE', 'SCEPTICISME', 'DEFIANCE', 'SUSPICION', 'CIRCONSPECTION', 'PRECAUTION', 'PRUDENCE', 'IMPRUDENCE', 'TEMERAIRE', 'AUDACE', 'COURAGE', 'BRAVOURE', 'VAILLANCE', 'HEROISME', 'LACHETE', 'COUARDISE', 'POLTRONNERIE', 'PUSILLANIMITE', 'TIMIDITE', 'HARDIESSE', 'INTREPIDITE', 'IMPAVIDITE', 'STOICISME', 'IMPASSIBILITE', 'FLEGME', 'SANG-FROID', 'PLACIDITE', 'SERENITE', 'QUIETUDE', 'TRANQUILLITE', 'AGITATION', 'TURBULENCE', 'EFFERVESCENCE', 'EBULLITION', 'BOUILLONNEMENT', 'FERMENTATION', 'TUMULTE', 'VACARME', 'FRACAS', 'TAPAGE', 'SILENCE', 'MUTISME', 'TACITURNITE', 'LOQUACITE', 'VOLUBILITE', 'ELOQUENCE', 'FACONDE', 'VERVE', 'BRIO', 'PANACHE', 'PRESTANCE', 'DISTINCTION', 'ELEGANCE', 'RAFFINEMENT', 'GROSSIERETE', 'VULGARITE', 'TRIVIALITE'],
-    extreme: ['PUSILLANIMITE', 'MISANTHROPIE', 'ACRIMONIE', 'ANIMOSITE', 'RANCŒUR', 'ACERBITE', 'AIGREUR', 'AMERTUME', 'BILE', 'FIEL', 'VENIN', 'SPLEEN', 'CAFARD', 'BOURDON', 'NEURASTHENIE', 'HYPOCHONDRIE', 'MELANCOLIE', 'NOSTALGIE', 'SPLEEN', 'TAEDIUM-VITAE', 'WELTSCHMERZ', 'SAUDADE', 'HIRAETH', 'SEHNSUCHT', 'FERNWEH', 'WANDERLUST', 'GEMUTLICHKEIT', 'SCHADENFREUDE', 'ZEITGEIST', 'ANGST', 'WELTANSCHAUUNG', 'LEBENSMUDE', 'TODESSEHNSUCHT', 'LIEBESKUMMER', 'HERZSCHMERZ', 'KUMMERSPECK', 'VERSCHLIMMBESSERN', 'BACKPFEIFENGESICHT', 'OHRWURM', 'FREMDSCHAMEN', 'TORSCHLUSSPANIK', 'FERNWEH', 'HEIMWEH', 'WEHMUT', 'SCHWERMUT', 'TRUBSINN', 'MELANCHOLIE', 'HYPOCHONDRIE', 'NEURASTHENIE', 'PSYCHASTHENIE', 'DYSTHYMIE', 'CYCLOTHYMIE', 'ALEXITHYMIE', 'ANHEDONIE', 'APATHIE', 'ATARAXIE', 'ACEDIA', 'TAEDIUM', 'ENNUI', 'BLASEMENT', 'DESABUSEMENT', 'DESENCHANTEMENT', 'DESILLUSION', 'AMERTUME', 'ACRIMONIE', 'AIGREUR', 'BILE', 'FIEL', 'VENIN', 'RANCŒUR', 'RANCUNE', 'RESSENTIMENT', 'ANIMOSITE', 'HOSTILITE', 'AVERSION', 'ANTIPATHIE', 'REPUGNANCE', 'DEGOUT', 'NAUSEE', 'ECŒUREMENT', 'HAUT-LE-CŒUR']
-  }
-}
-
-// Configuration par difficulté
-const DIFFICULTY_CONFIG = {
-  facile: {
-    maxErrors: 8,
-    drinkMultiplier: 1,
-    bonusPoints: 10,
-    timerDuration: 60 // 60 secondes
-  },
-  normal: {
-    maxErrors: 6,
-    drinkMultiplier: 1.5,
-    bonusPoints: 15,
-    timerDuration: 50 // 50 secondes
-  },
-  difficile: {
-    maxErrors: 5,
-    drinkMultiplier: 2,
-    bonusPoints: 25,
-    timerDuration: 40 // 40 secondes
-  },
-  extreme: {
-    maxErrors: 4,
-    drinkMultiplier: 3,
-    bonusPoints: 40,
-    timerDuration: 30 // 30 secondes
-  }
 }
 
 // Types de styles de pendu
@@ -204,7 +139,16 @@ const COLOR_THEME_STYLES = {
 }
 
 // Composant SVG pour chaque étape du pendu
-const HangmanStage = ({ stage, style = 'classic' }: { stage: number; style?: HangmanStyle }) => {
+const HangmanStage = ({
+  stage,
+  style = 'classic',
+  errorLabel,
+}: {
+  stage: number
+  style?: HangmanStyle
+  /** Écran du robot à la mort (style moderne), traduit par l'appelant. */
+  errorLabel: string
+}) => {
   // Couleurs selon le style
   const getStyleColors = (style: HangmanStyle) => {
     switch (style) {
@@ -269,7 +213,7 @@ const HangmanStage = ({ stage, style = 'classic' }: { stage: number; style?: Han
               <>
                 <rect x="148" y="113" width="4" height="2" fill="#FF0000" />
                 <rect x="152" y="113" width="4" height="2" fill="#FF0000" />
-                <text x="155" y="125" fontSize="8" fill="#FF0000">ERROR</text>
+                <text x="155" y="125" fontSize="8" fill="#FF0000">{errorLabel}</text>
               </>
             )}
           </>
@@ -450,32 +394,58 @@ const HangmanStage = ({ stage, style = 'classic' }: { stage: number; style?: Han
   )
 }
 
-// Fonction pour calculer quelle étape du pendu afficher selon la difficulté
-const getHangmanStage = (errorCount: number, maxErrors: number): number => {
-  if (errorCount === 0) return 0
-  
-  // Calculer le pourcentage d'erreurs et le mapper sur les étapes du pendu (1-8)
-  const percentage = errorCount / maxErrors
-  const stage = Math.ceil(percentage * 8)
-  
-  // S'assurer que l'étape est dans les limites
-  return Math.min(Math.max(stage, 1), 8)
-}
-
 export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal', updatePlayerStats }: GameProps) {
   const t = useTranslations('games.pendu')
+  const tCommon = useTranslations('common')
   const simCompliments = t.raw('compliments') as string[]
   const debMessages = t.raw('debMessages') as string[]
   const statsFlushedRef = useRef(false)
-  const [players, setPlayers] = useState<GamePlayer[]>(
-    initialPlayers.map(p => ({ 
-      ...p, 
-      score: 0, 
-      drinks: 0, 
-      wins: 0,
-      preferences: p.preferences || { color: 'bg-blue-500', icon: '👤' }
-    }))
+  /** Fin de partie atteinte : plus rien à sauvegarder, même si le minuteur s'égare ensuite. */
+  const finishedRef = useRef(false)
+
+  // La partie (mot, lettres, points, gorgées, tours) vit dans le moteur pur
+  // src/lib/pendu/engine.ts ; ce composant garde l'affichage, le minuteur,
+  // les fenêtres et les thèmes.
+  const [game, setGame] = useState<PenduState | null>(null)
+  const [started, setStarted] = useState(false)
+  const session = useResumableLocalGame<PenduSave>(PENDU_SAVE_ID, PENDU_SAVE_VERSION, (s) =>
+    s.difficulty === difficulty && isSameLocalTable(s.playerIds, initialPlayers)
   )
+
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [showRoundDialog, setShowRoundDialog] = useState(false)
+  const [roundResult, setRoundResult] = useState('')
+  const [showEndDialog, setShowEndDialog] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(DIFFICULTY_CONFIG[difficulty].timerDuration)
+  const [isTimerActive, setIsTimerActive] = useState(false)
+  const [timerRef, setTimerRef] = useState<NodeJS.Timeout | null>(null)
+  const [hangmanStyle, setHangmanStyle] = useState<HangmanStyle>('classic')
+  const [colorTheme, setColorTheme] = useState<ColorTheme>('default')
+  const [showThemeMenu, setShowThemeMenu] = useState(false)
+
+  const config = DIFFICULTY_CONFIG[difficulty]
+  const theme = COLOR_THEME_STYLES[colorTheme]
+
+  // Profils de la table (prop) + compteurs de la partie (moteur), dans l'ordre du moteur
+  const players = useMemo<GamePlayer[]>(() => {
+    const scores = game?.players ?? initialPlayers.map(p => ({ id: p.id, score: 0, drinks: 0, wins: 0 }))
+    return scores.flatMap(({ id, score, drinks, wins }) => {
+      const profile = initialPlayers.find(p => p.id === id)
+      if (!profile) return []
+      return [{
+        ...profile,
+        score,
+        drinks,
+        wins,
+        preferences: profile.preferences || { color: 'bg-blue-500', icon: '👤' }
+      }]
+    })
+  }, [game?.players, initialPlayers])
+
+  const currentPlayerIndex = game?.currentPlayerIndex ?? 0
+  const currentPlayer = players[currentPlayerIndex]
+  const maxRounds = players.length // Un tour pour chaque joueur
+
   // Fin de partie : enregistre les stats (une seule fois) puis remonte au parent
   const handleFinish = () => {
     if (!statsFlushedRef.current) {
@@ -487,57 +457,32 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         })
       })
     }
+    // Statistiques créditées : la partie ne doit plus être proposée à la reprise.
+    session.clear()
     onGameEnd()
   }
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
-  const [currentWord, setCurrentWord] = useState('')
-  const [currentCategory, setCurrentCategory] = useState('')
-  const [guessedLetters, setGuessedLetters] = useState<string[]>([])
-  const [wrongLetters, setWrongLetters] = useState<string[]>([])
-  const [gameState, setGameState] = useState<'playing' | 'won' | 'lost' | 'ended'>('playing')
-  const [round, setRound] = useState(1)
-  const [showConfetti, setShowConfetti] = useState(false)
-  const [showRoundDialog, setShowRoundDialog] = useState(false)
-  const [roundResult, setRoundResult] = useState('')
-  const [showEndDialog, setShowEndDialog] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(DIFFICULTY_CONFIG[difficulty].timerDuration)
-  const [isTimerActive, setIsTimerActive] = useState(false)
-  const [timerRef, setTimerRef] = useState<NodeJS.Timeout | null>(null)
-  const [hintsUsed, setHintsUsed] = useState(0)
-  const [maxHints] = useState(3) // Maximum 3 indices par mot
-  const [hangmanStyle, setHangmanStyle] = useState<HangmanStyle>('classic')
-  const [drinksPenaltyApplied, setDrinksPenaltyApplied] = useState(false)
-  const [timeoutDrinksToAdd, setTimeoutDrinksToAdd] = useState(0)
-  const [colorTheme, setColorTheme] = useState<ColorTheme>('default')
-  const [showThemeMenu, setShowThemeMenu] = useState(false)
-  const [showCompleteHangman, setShowCompleteHangman] = useState(false)
-  
-  const config = DIFFICULTY_CONFIG[difficulty]
-  const currentPlayer = players[currentPlayerIndex]
-  const maxRounds = players.length // Un tour pour chaque joueur
-  const theme = COLOR_THEME_STYLES[colorTheme]
-  
+
   // Calculer les seuils de couleur proportionnels à la durée du minuteur
   const getTimerColor = (timeLeft: number) => {
     const redThreshold = Math.floor(config.timerDuration * 0.17) // ~17% du temps (10/60 = 0.17)
     const orangeThreshold = Math.floor(config.timerDuration * 0.33) // ~33% du temps (20/60 = 0.33)
-    
+
     if (timeLeft <= redThreshold) return 'text-red-500'
     if (timeLeft <= orangeThreshold) return 'text-orange-500'
     return 'text-green-500'
   }
-  
+
   const getTimerTextColor = (timeLeft: number) => {
     const redThreshold = Math.floor(config.timerDuration * 0.17)
     const orangeThreshold = Math.floor(config.timerDuration * 0.33)
-    
+
     if (timeLeft <= redThreshold) return 'text-red-400 animate-pulse'
     if (timeLeft <= orangeThreshold) return 'text-orange-400'
     return 'text-green-400'
   }
 
-  // Démarrer le minuteur
-  const startTimer = useCallback(() => {
+  // Démarrer le minuteur (plein, ou depuis le temps restant d'une partie reprise)
+  const startTimer = useCallback((from: number = config.timerDuration) => {
     // Nettoyer l'ancien minuteur s'il existe
     setTimerRef(prevTimer => {
       if (prevTimer) {
@@ -545,10 +490,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       }
       return null
     })
-    
-    setTimeLeft(config.timerDuration)
+
+    setTimeLeft(from)
     setIsTimerActive(true)
-    
+
     const newTimer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -556,27 +501,16 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           clearInterval(newTimer)
           setIsTimerActive(false)
           setTimerRef(null)
-          
-          // Temps écoulé - marquer pour attribution lors du clic
-          setGameState('lost')
-          setTimeoutDrinksToAdd(3) // Marquer 3 gorgées à ajouter plus tard
-          setShowCompleteHangman(true) // Afficher le pendu complet en fond
-          
-          // Ajouter seulement le symbole timeout
-          setWrongLetters(prevWrong => {
-            if (!prevWrong.includes('⏰')) {
-              return [...prevWrong, '⏰']
-            }
-            return prevWrong
-          })
-          
-          
+
+          // Temps écoulé : mot perdu, gorgées attribuées au passage au joueur suivant
+          setGame(g => (g ? expirePenduTimer(g) : g))
+
           return 0
         }
         return prev - 1
       })
     }, 1000)
-    
+
     setTimerRef(newTimer)
   }, [config])
 
@@ -591,149 +525,82 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setIsTimerActive(false)
   }, [])
 
-  // Générer un nouveau mot
-  const generateNewWord = useCallback(() => {
-    const categories = Object.keys(WORD_CATEGORIES)
-    const randomCategory = categories[Math.floor(Math.random() * categories.length)]
-    
-    // Déterminer les difficultés accessibles selon la difficulté actuelle
-    // Les joueurs ont accès aux mots de leur niveau ET des niveaux inférieurs
-    const availableDifficulties: Difficulty[] = []
-    if (difficulty === 'extreme') {
-      availableDifficulties.push('facile', 'normal', 'difficile', 'extreme')
-    } else if (difficulty === 'difficile') {
-      availableDifficulties.push('facile', 'normal', 'difficile')
-    } else if (difficulty === 'normal') {
-      availableDifficulties.push('facile', 'normal')
-    } else {
-      availableDifficulties.push('facile')
-    }
-    
-    // Collecter tous les mots des difficultés accessibles
-    const allAvailableWords: string[] = []
-    availableDifficulties.forEach(diff => {
-      const words = WORD_CATEGORIES[randomCategory as keyof typeof WORD_CATEGORIES][diff]
-      allAvailableWords.push(...words)
-    })
-    
-    const randomWord = allAvailableWords[Math.floor(Math.random() * allAvailableWords.length)]
-    
-    setCurrentWord(randomWord)
-    setCurrentCategory(randomCategory)
-    setGuessedLetters([])
-    setWrongLetters([])
-    setGameState('playing')
-    setHintsUsed(0) // Réinitialiser les indices pour le nouveau mot
-    setDrinksPenaltyApplied(false) // Réinitialiser le flag de pénalité
-    setTimeoutDrinksToAdd(0) // Réinitialiser les gorgées timeout en attente
-    setShowCompleteHangman(false) // Réinitialiser l'affichage du pendu complet
-    
-    // Démarrer le minuteur pour le nouveau mot
+  // Démarrer le minuteur du nouveau mot après 1 s, le temps que le joueur se prépare
+  const scheduleTimerStart = useCallback(() => {
     setTimeout(() => {
       startTimer()
-    }, 1000) // Délai d'1 seconde pour que le joueur se prépare
-  }, [difficulty, startTimer])
+    }, 1000)
+  }, [startTimer])
 
-  // Système d'indices
-  const useHint = useCallback(() => {
-    if (hintsUsed >= maxHints || gameState !== 'playing' || !currentWord) return
-
-    const hintCost = 10 // Coût en secondes
-    if (timeLeft <= hintCost) return // Pas assez de temps
-
-    // Réduire le temps
-    setTimeLeft(prev => Math.max(0, prev - hintCost))
-
-    // Types d'indices selon le nombre déjà utilisé
-    if (hintsUsed === 0) {
-      // Premier indice : révéler une voyelle
-      const vowels = ['A', 'E', 'I', 'O', 'U', 'Y']
-      const wordVowels = currentWord.split('').filter(letter => vowels.includes(letter))
-      const unusedVowels = wordVowels.filter(vowel => !guessedLetters.includes(vowel))
-      
-      if (unusedVowels.length > 0) {
-        const randomVowel = unusedVowels[Math.floor(Math.random() * unusedVowels.length)]
-        setGuessedLetters(prev => [...prev, randomVowel])
-      }
-    } else if (hintsUsed === 1) {
-      // Deuxième indice : révéler la première lettre
-      const firstLetter = currentWord[0]
-      if (!guessedLetters.includes(firstLetter)) {
-        setGuessedLetters(prev => [...prev, firstLetter])
-      }
-    } else if (hintsUsed === 2) {
-      // Troisième indice : révéler une consonne aléatoire
-      const consonants = currentWord.split('').filter(letter => 
-        !['A', 'E', 'I', 'O', 'U', 'Y'].includes(letter) && !guessedLetters.includes(letter)
-      )
-      
-      if (consonants.length > 0) {
-        const randomConsonant = consonants[Math.floor(Math.random() * consonants.length)]
-        setGuessedLetters(prev => [...prev, randomConsonant])
-      }
-    }
-
-    setHintsUsed(prev => prev + 1)
-  }, [hintsUsed, maxHints, gameState, currentWord, timeLeft, guessedLetters])
-
-  // Initialiser le premier mot
+  // Première donne — jamais tant qu'une reprise est proposée : le joueur tranche.
   useEffect(() => {
-    generateNewWord()
-  }, [generateNewWord])
+    if (!session.ready || session.pending || started) return
+    setGame(createPenduGame({ difficulty, playerIds: initialPlayers.map(p => p.id) }))
+    setStarted(true)
+    scheduleTimerStart()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.ready, session.pending, started])
 
-  // Vérifier l'état du jeu
-  const checkGameState = useCallback(() => {
-    if (!currentWord || gameState !== 'playing') return
+  // Sauvegarde continue (minuteur compris) : un onglet recyclé ne coûte plus la partie.
+  useEffect(() => {
+    if (!started || !game || game.gameState === 'ended' || finishedRef.current) return
+    session.save(toPenduSave(game, timeLeft))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, game, timeLeft])
 
-    const wordLetters = [...new Set(currentWord.split(''))]
-    const isWordGuessed = wordLetters.every(letter => guessedLetters.includes(letter))
-    
-    // Exclure le symbole timeout du calcul des erreurs réelles
-    const realWrongLetters = wrongLetters.filter(letter => letter !== '⏰')
-    const isGameLost = realWrongLetters.length >= config.maxErrors
-    
-    // Ne pas traiter les timeouts ici (ils sont gérés dans le minuteur)
-    const isTimeout = wrongLetters.includes('⏰')
+  const resumeSavedGame = () => {
+    const saved = session.accept()
+    if (!saved) return
+    // Autre niveau, autre table ou sauvegarde abîmée : partie neuve.
+    const restored =
+      saved.difficulty === difficulty && isSameLocalTable(saved.playerIds, initialPlayers)
+        ? restorePenduSave(saved, initialPlayers.map(p => p.id))
+        : null
+    if (!restored) {
+      session.discard()
+      return
+    }
+    setGame(restored.state)
+    setTimeLeft(restored.timeLeft)
+    setStarted(true)
+    // Mot en cours : le minuteur repart du temps restant, après la même seconde
+    // de préparation qu'un nouveau mot. Mot déjà joué : sa fenêtre de résultat
+    // se rouvre d'elle-même.
+    if (restored.state.gameState === 'playing') {
+      setTimeout(() => {
+        startTimer(restored.timeLeft)
+      }, 1000)
+    }
+  }
 
-    if (isWordGuessed) {
-      setGameState('won')
+  // Système d'indices (coût : du temps de minuteur)
+  const requestHint = () => {
+    if (!game) return
+    const hint = applyPenduHint(game, timeLeft)
+    if (!hint) return
+    setTimeLeft(prev => Math.max(0, prev - hint.timeCost))
+    setGame(hint.state)
+  }
+
+  // Vérifier l'état du mot après chaque changement
+  useEffect(() => {
+    if (!game) return
+    const { outcome } = evaluatePenduRound(game)
+    if (!outcome) return
+    setGame(g => (g ? evaluatePenduRound(g).state : g))
+    // Arrêter le minuteur
+    setTimerRef(prevTimer => {
+      if (prevTimer) {
+        clearInterval(prevTimer)
+      }
+      return null
+    })
+    setIsTimerActive(false)
+    if (outcome === 'won') {
       setShowConfetti(true)
-      // Arrêter le minuteur
-      setTimerRef(prevTimer => {
-        if (prevTimer) {
-          clearInterval(prevTimer)
-        }
-        return null
-      })
-      setIsTimerActive(false)
       setTimeout(() => setShowConfetti(false), 3000)
-      
-      // Mettre à jour les scores
-      setPlayers(prev => prev.map((p, i) => 
-        i === currentPlayerIndex 
-          ? { ...p, score: p.score + config.bonusPoints, wins: p.wins + 1 }
-          : p
-      ))
-    } else if (isGameLost && !isTimeout && !drinksPenaltyApplied) {
-      // Seulement pour pendu normal, PAS pour timeout - SANS ajouter de gorgées ici
-      setGameState('lost')
-      setDrinksPenaltyApplied(true)
-      
-      // Arrêter le minuteur
-      setTimerRef(prevTimer => {
-        if (prevTimer) {
-          clearInterval(prevTimer)
-        }
-        return null
-      })
-      setIsTimerActive(false)
-      
     }
-  }, [currentWord, guessedLetters, wrongLetters, config, currentPlayerIndex, gameState, drinksPenaltyApplied])
-
-  useEffect(() => {
-    checkGameState()
-  }, [checkGameState])
+  }, [game])
 
   // Nettoyer le minuteur au démontage du composant
   useEffect(() => {
@@ -749,20 +616,20 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   // Gérer la lettre devinée
   const handleLetterGuess = (letter: string) => {
-    if (guessedLetters.includes(letter) || wrongLetters.includes(letter) || gameState !== 'playing' || !isTimerActive) {
+    if (!game) return
+    const { gameState } = game
+    if (game.guessedLetters.includes(letter) || game.wrongLetters.includes(letter) || gameState !== 'playing' || !isTimerActive) {
       return
     }
 
     // Arrêter le minuteur actuel
     stopTimer()
 
-    if (currentWord.includes(letter)) {
-      setGuessedLetters(prev => [...prev, letter])
-    } else {
-      setWrongLetters(prev => [...prev, letter])
-    }
+    setGame(g => (g ? guessPenduLetter(g, letter) : g))
 
-    // Redémarrer le minuteur après un court délai
+    // Redémarrer le minuteur après un court délai. `gameState` est celui
+    // d'AVANT la lettre (toujours « playing » ici) : le minuteur repart même
+    // si la lettre vient de finir le mot — comportement historique conservé.
     setTimeout(() => {
       if (gameState === 'playing') {
         startTimer()
@@ -770,58 +637,26 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }, 500)
   }
 
-  // Passer au joueur suivant
+  // Passer au joueur suivant : gorgées du mot attribuées MAINTENANT, puis
+  // nouveau mot — ou fin de partie
   const nextPlayer = () => {
-    // Attribuer les gorgées MAINTENANT si nécessaire
-    if (timeoutDrinksToAdd > 0) {
-      // Attribution pour timeout
-      setPlayers(prevPlayers => {
-        const updatedPlayers = [...prevPlayers]
-        const oldDrinks = updatedPlayers[currentPlayerIndex].drinks
-        updatedPlayers[currentPlayerIndex] = {
-          ...updatedPlayers[currentPlayerIndex],
-          drinks: oldDrinks + timeoutDrinksToAdd
-        }
-        return updatedPlayers
-      })
-      setTimeoutDrinksToAdd(0) // Réinitialiser
-    } else if (gameState === 'lost' && !wrongLetters.includes('⏰')) {
-      // Attribution pour pendu normal
-      const realWrongLetters = wrongLetters.filter(letter => letter !== '⏰')
-      const drinks = Math.ceil(config.drinkMultiplier * (realWrongLetters.length - config.maxErrors + 2))
-      setPlayers(prevPlayers => {
-        const updatedPlayers = [...prevPlayers]
-        const oldDrinks = updatedPlayers[currentPlayerIndex].drinks
-        updatedPlayers[currentPlayerIndex] = {
-          ...updatedPlayers[currentPlayerIndex],
-          drinks: oldDrinks + drinks
-        }
-        return updatedPlayers
-      })
-    }
+    if (!game) return
+    const { state, ended } = advancePenduGame(game)
+    setGame(state)
 
-    const nextIndex = (currentPlayerIndex + 1) % players.length
-    
-    // Vérifier si on a fait un tour complet avant de passer au joueur suivant
-    const willCompleteRound = nextIndex === 0
-    const newRound = willCompleteRound ? round + 1 : round
-    
-    // Vérifier si on a fait tous les tours nécessaires
-    if (newRound >= maxRounds) {
-      // Fin de partie
-      setGameState('ended')
+    if (ended) {
+      // Fin de partie : une partie terminée ne doit rien laisser derrière elle.
+      finishedRef.current = true
+      session.clear()
       setShowEndDialog(true)
       return
     }
-    
-    setCurrentPlayerIndex(nextIndex)
-    
-    // Mettre à jour le round si nécessaire
-    if (willCompleteRound) {
-      setRound(newRound)
-    }
-    
-    generateNewWord()
+
+    // Temps plein posé AVEC le nouveau mot : la sauvegarde continue ne doit pas
+    // l'écrire avec le temps restant (parfois 0) du mot précédent pendant la
+    // seconde de préparation.
+    setTimeLeft(config.timerDuration)
+    scheduleTimerStart()
     setShowRoundDialog(false)
   }
 
@@ -833,13 +668,18 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     return null
   }
 
+  const gameStateNow = game?.gameState
+  const currentWordNow = game?.currentWord ?? ''
+  const wrongLettersNow = game?.wrongLetters
+
   // Afficher le résultat du round
   useEffect(() => {
-    if (gameState === 'won' || gameState === 'lost') {
-      const isWon = gameState === 'won'
+    if (!currentPlayer || !wrongLettersNow) return
+    if (gameStateNow === 'won' || gameStateNow === 'lost') {
+      const isWon = gameStateNow === 'won'
       const playerName = currentPlayer.name
       const specialType = getSpecialPlayerType(playerName)
-      
+
       let message = ''
       if (isWon) {
         if (specialType === 'sim') {
@@ -847,57 +687,53 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             compliment: simCompliments[Math.floor(Math.random() * simCompliments.length)],
           })
         } else {
-          message = t('game.roundResult.won', { name: playerName, word: currentWord })
+          message = t('game.roundResult.won', { name: playerName, word: currentWordNow })
         }
       } else {
-        const isTimeout = wrongLetters.includes('⏰')
+        const isTimeout = wrongLettersNow.includes(TIMEOUT_MARK)
         if (isTimeout) {
           if (specialType === 'deb') {
             message = t('game.roundResult.debTimeout', {
               message: debMessages[Math.floor(Math.random() * debMessages.length)],
-              word: currentWord,
+              word: currentWordNow,
             })
           } else {
-            message = t('game.roundResult.timeout', { name: playerName, word: currentWord })
+            message = t('game.roundResult.timeout', { name: playerName, word: currentWordNow })
           }
         } else {
           if (specialType === 'deb') {
             message = t('game.roundResult.debLost', {
               message: debMessages[Math.floor(Math.random() * debMessages.length)],
-              word: currentWord,
+              word: currentWordNow,
             })
           } else {
-            message = t('game.roundResult.lost', { name: playerName, word: currentWord })
+            message = t('game.roundResult.lost', { name: playerName, word: currentWordNow })
           }
         }
       }
-      
+
       setRoundResult(message)
       setTimeout(() => setShowRoundDialog(true), 1000)
     }
-  }, [gameState, currentPlayer.name, currentWord, wrongLetters, t, simCompliments, debMessages])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameStateNow, currentPlayer?.name, currentWordNow, wrongLettersNow, t, simCompliments, debMessages])
 
   // Afficher le mot avec les lettres devinées
-  const displayWord = useMemo(() => {
-    return currentWord
-      .split('')
-      .map(letter => guessedLetters.includes(letter) ? letter : '_')
-      .join(' ')
-  }, [currentWord, guessedLetters])
+  const displayWord = useMemo(
+    () => penduDisplayWord(currentWordNow, game?.guessedLetters ?? []),
+    [currentWordNow, game?.guessedLetters]
+  )
 
-  // Générer le clavier
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-  
-  // Calculer le gagnant
+  // Calculer le gagnant (le plus de points, le premier de la table à égalité)
   const winner = useMemo(() => {
-    if (gameState !== 'ended') return null
-    return players.reduce((prev, current) => 
-      (current.score > prev.score) ? current : prev
-    )
-  }, [players, gameState])
+    if (!game || game.gameState !== 'ended') return null
+    const best = penduWinner(game)
+    return best ? players.find(p => p.id === best.id) ?? null : null
+  }, [game, players])
 
   const restartGame = () => {
     statsFlushedRef.current = false
+    finishedRef.current = false
     // Arrêter le minuteur actuel
     setTimerRef(prevTimer => {
       if (prevTimer) {
@@ -906,20 +742,55 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       return null
     })
     setIsTimerActive(false)
-    setPlayers(
-      initialPlayers.map(p => ({ 
-        ...p, 
-        score: 0, 
-        drinks: 0, 
-        wins: 0,
-        preferences: p.preferences || { color: 'bg-blue-500', icon: '👤' }
-      }))
-    )
-    setCurrentPlayerIndex(0)
-    setRound(1)
+    setGame(createPenduGame({ difficulty, playerIds: initialPlayers.map(p => p.id) }))
+    // Même raison qu'au joueur suivant : la sauvegarde part avec le temps plein.
+    setTimeLeft(config.timerDuration)
     setShowEndDialog(false)
-    generateNewWord()
+    scheduleTimerStart()
   }
+
+  // Lecture du stockage en cours : rien à afficher encore
+  if (!session.ready) return null
+
+  if (session.pending) {
+    return (
+      <div className={`relative flex min-h-screen items-center justify-center bg-gradient-to-b ${theme.background} p-4 text-white`}>
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-white/15 bg-white/10 p-6 text-center">
+          <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
+          <p className="text-sm text-white/70">{tCommon('resumeGame.body')}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={resumeSavedGame}
+              className="min-h-[44px] w-full rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 py-3 text-sm font-bold text-black hover:from-yellow-400 hover:to-orange-400"
+            >
+              {tCommon('resumeGame.resume')}
+            </button>
+            <button
+              type="button"
+              onClick={session.discard}
+              className="min-h-[44px] w-full rounded-2xl border border-white/20 bg-white/5 py-3 text-sm font-semibold text-white/80 hover:bg-white/10"
+            >
+              {tCommon('resumeGame.newGame')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Première donne pas encore distribuée (un rendu, le temps de l'effet)
+  if (!game || !currentPlayer) return null
+
+  const {
+    round,
+    currentCategory,
+    wrongLetters,
+    guessedLetters,
+    gameState,
+    hintsUsed,
+    showCompleteHangman,
+  } = game
 
   return (
     <div className={`relative min-h-screen bg-gradient-to-b ${theme.background} text-white`}>
@@ -1079,6 +950,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                         <HangmanStage 
                           stage={8} // Pendu complet
                           style={hangmanStyle}
+                          errorLabel={t('game.robotError')}
                         />
                       </div>
                     </div>
@@ -1089,8 +961,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                 <div className={`bg-gradient-to-b ${theme.hangmanBg} rounded-lg p-3 md:p-6 shadow-lg border-2 ${theme.cardBorder} ${showCompleteHangman ? 'relative z-10' : ''}`}>
                   <div className="w-48 h-60 md:w-64 md:h-80">
                     <HangmanStage 
-                      stage={getHangmanStage(wrongLetters.length, config.maxErrors)} 
+                      stage={penduHangmanStage(wrongLetters.length, config.maxErrors)} 
                       style={hangmanStyle}
+                      errorLabel={t('game.robotError')}
                     />
                   </div>
                 </div>
@@ -1130,11 +1003,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                 {/* Système d'indices */}
                 <div className="flex items-center space-x-4">
                   <Button
-                    onClick={useHint}
-                    disabled={hintsUsed >= maxHints || gameState !== 'playing' || !isTimerActive || timeLeft <= 10}
+                    onClick={requestHint}
+                    disabled={hintsUsed >= MAX_HINTS || gameState !== 'playing' || !isTimerActive || timeLeft <= HINT_COST_SECONDS}
                     className="bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-all"
                   >
-                    {t('game.hint', { used: hintsUsed, max: maxHints })}
+                    {t('game.hint', { used: hintsUsed, max: MAX_HINTS })}
                   </Button>
                   <span className="text-yellow-400 text-sm">
                     {t('game.hintCost')}
@@ -1148,7 +1021,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                 <div className="text-red-400 text-sm md:text-lg px-2 text-center">
                   {t('game.wrongLetters', {
                     letters: wrongLetters.map(letter =>
-                      letter === '⏰' ? t('game.timeExpired') : letter
+                      letter === TIMEOUT_MARK ? t('game.timeExpired') : letter
                     ).join(', '),
                   })}
                 </div>
@@ -1162,7 +1035,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             <div className="max-w-4xl mx-auto">
               {/* Clavier mobile optimisé */}
               <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-13 gap-1 md:gap-2 justify-center">
-                {alphabet.map(letter => {
+                {PENDU_ALPHABET.map(letter => {
                   const isUsed = guessedLetters.includes(letter) || wrongLetters.includes(letter)
                   const isCorrect = guessedLetters.includes(letter)
                   const isWrong = wrongLetters.includes(letter)
@@ -1317,7 +1190,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             <div className="space-y-2">
               <h4 className="text-lg font-semibold">{t('game.endDialog.finalRanking')}</h4>
               <div className="space-y-2">
-                {players
+                {[...players]
                   .sort((a, b) => b.score - a.score)
                   .map((player, index) => (
                     <div key={player.id} className="flex items-center justify-between p-2 rounded bg-white/10">

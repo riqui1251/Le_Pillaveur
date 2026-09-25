@@ -330,47 +330,109 @@ export type PetitBuveurSyncedState = {
 
 
 
+// ─── Lecture défensive ───────────────────────────────────────────────────────
+// Un état lu en base ou reçu du serveur peut être absent, tronqué ou d'une autre
+// forme (autre jeu, ancienne version). Les parseurs ne LÈVENT JAMAIS : ils
+// rendent null, et l'écran affiche « rien » au lieu de planter sur un champ
+// manquant. Seul le SOCLE de chaque jeu est exigé (version, table, phase ou
+// tour) : il existe dans l'état complet (serveur) comme dans les vues joueur
+// et spectateur (client) — vérifié sur les états des moteurs dans
+// online-game-state.test.ts. Le reste de l'état n'est pas revalidé ici.
+
+type RawState = Record<string, unknown>
+
+type FieldKind = 'number' | 'string' | 'array'
+
+const FIELD_CHECKS: Record<FieldKind, (value: unknown) => boolean> = {
+  number: (value) => typeof value === 'number' && Number.isFinite(value),
+  string: (value) => typeof value === 'string',
+  array: (value) => Array.isArray(value),
+}
+
+function isPlainObject(value: unknown): value is RawState {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+/** JSON → objet simple, ou null (absent, illisible, tableau, scalaire, `null`). */
+function readJsonObject(json: string | null | undefined): RawState | null {
+  if (!json) return null
+  try {
+    const raw: unknown = JSON.parse(json)
+    return isPlainObject(raw) ? raw : null
+  } catch {
+    return null
+  }
+}
+
+/** Objet JSON portant chaque champ obligatoire avec le bon type, sinon null. */
+function readSyncedState(json: string | null | undefined, required: Record<string, FieldKind>): RawState | null {
+  const raw = readJsonObject(json)
+  if (!raw) return null
+  for (const [field, kind] of Object.entries(required)) {
+    if (!FIELD_CHECKS[kind](raw[field])) return null
+  }
+  return raw
+}
+
+/** Votes « Rejouer » : un tableau, sinon aucun vote (jamais un champ d'une autre forme). */
+function rematchVotesOf(raw: RawState): string[] {
+  return Array.isArray(raw.rematchVotes) ? (raw.rematchVotes as string[]) : []
+}
+
+/**
+ * Socle des jeux à phases : `version` et `phase`, présents dans l'état complet
+ * comme dans chaque vue, et seuls lus ici (isOnlineGameFinished, vote
+ * « Rejouer »). La table (`players`) n'est exigée que là où un écran la
+ * dessine à partir de ce parseur (Purple).
+ */
+const PHASED_STATE: Record<string, FieldKind> = { version: 'number', phase: 'string' }
+
+/** Parseur minimal d'un jeu à phases : socle vérifié, votes « Rejouer » normalisés. */
+function parsePhasedState<T>(json: string | null | undefined): T | null {
+  const raw = readSyncedState(json, PHASED_STATE)
+  return raw ? ({ ...raw, rematchVotes: rematchVotesOf(raw) } as T) : null
+}
+
+
+
+/**
+ * Réglages du lobby : JAMAIS null (les appelants lisent `settings.x` sans
+ * garde). Absents ou illisibles → réglages par défaut ; `difficulty` vaut
+ * toujours quelque chose.
+ */
 export function parseRoomSettings(json: string | null | undefined): RoomSettings {
 
-  if (!json) return { difficulty: 'normal' }
+  const p = readJsonObject(json)
 
-  try {
+  if (!p) return { difficulty: 'normal' }
 
-    const p = JSON.parse(json) as RoomSettings
+  const settings = p as RoomSettings
 
-    return { difficulty: p.difficulty ?? 'normal', ...p }
-
-  } catch {
-
-    return { difficulty: 'normal' }
-
-  }
+  return { ...settings, difficulty: settings.difficulty ?? 'normal' }
 
 }
 
 
 
+/**
+ * Petit Buveur : l'état réel est celui du moteur (src/lib/petit-buveur/engine.ts),
+ * le type ci-dessus en est la forme historique ; `players` et `version` sont
+ * communs aux deux. Lu aussi par la route DELETE d'une salle, quel qu'en soit
+ * le jeu (`winner`).
+ */
 export function parsePetitBuveurState(json: string | null | undefined): PetitBuveurSyncedState | null {
 
-  if (!json) return null
+  const raw = readSyncedState(json, { version: 'number', players: 'array' })
 
-  try {
+  if (!raw) return null
 
-    const raw = JSON.parse(json) as PetitBuveurSyncedState
+  return {
 
-    return {
+    ...(raw as unknown as PetitBuveurSyncedState),
 
-      ...raw,
+    view: isPlainObject(raw.view) ? (raw.view as unknown as SyncedViewState) : emptySyncedView(),
 
-      view: raw.view ?? emptySyncedView(),
-
-      rematchVotes: raw.rematchVotes ?? [],
-
-    }
-
-  } catch {
-
-    return null
+    rematchVotes: rematchVotesOf(raw),
 
   }
 
@@ -414,13 +476,9 @@ export type PurpleSyncedState = {
 }
 
 export function parsePurpleState(json: string | null | undefined): PurpleSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as PurpleSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  // PurpleOnline dessine directement joueurs, tour et phase : ils sont exigés.
+  const raw = readSyncedState(json, { ...PHASED_STATE, players: 'array', currentPlayer: 'number' })
+  return raw ? ({ ...raw, rematchVotes: rematchVotesOf(raw) } as unknown as PurpleSyncedState) : null
 }
 
 
@@ -470,12 +528,12 @@ export type Game1220SyncedState = {
 }
 
 export function parse1220State(json: string | null | undefined): Game1220SyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as Game1220SyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [], setupReady: raw.setupReady ?? [] }
-  } catch {
-    return null
+  const raw = readSyncedState(json, PHASED_STATE)
+  if (!raw) return null
+  return {
+    ...(raw as unknown as Game1220SyncedState),
+    rematchVotes: rematchVotesOf(raw),
+    setupReady: Array.isArray(raw.setupReady) ? (raw.setupReady as string[]) : [],
   }
 }
 
@@ -510,14 +568,16 @@ export type HiLoSyncedState = {
   pushedByUserId?: string
 }
 
+/**
+ * Formes historiques (Hi-Lo, Monsieur 3, PMU, Plinko) : états synchronisés
+ * poussés par un client, sans moteur serveur. Socle commun : la table
+ * (`memberUserIds`) et la version.
+ */
+const CLIENT_SYNCED_STATE: Record<string, FieldKind> = { version: 'number', memberUserIds: 'array' }
+
 export function parseHiLoState(json: string | null | undefined): HiLoSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as HiLoSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  const raw = readSyncedState(json, { ...CLIENT_SYNCED_STATE, currentPlayer: 'number' })
+  return raw ? ({ ...raw, rematchVotes: rematchVotesOf(raw) } as unknown as HiLoSyncedState) : null
 }
 
 
@@ -556,13 +616,8 @@ export type Monsieur3SyncedState = {
 }
 
 export function parseMonsieur3State(json: string | null | undefined): Monsieur3SyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as Monsieur3SyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  const raw = readSyncedState(json, { ...CLIENT_SYNCED_STATE, gamePhase: 'string', players: 'array' })
+  return raw ? ({ ...raw, rematchVotes: rematchVotesOf(raw) } as unknown as Monsieur3SyncedState) : null
 }
 
 
@@ -596,13 +651,8 @@ export type PmuSyncedState = {
 }
 
 export function parsePmuState(json: string | null | undefined): PmuSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as PmuSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  const raw = readSyncedState(json, { ...CLIENT_SYNCED_STATE, phase: 'string', horses: 'array' })
+  return raw ? ({ ...raw, rematchVotes: rematchVotesOf(raw) } as unknown as PmuSyncedState) : null
 }
 
 
@@ -640,12 +690,14 @@ export type PlinkoSyncedState = {
 }
 
 export function parsePlinkoState(json: string | null | undefined): PlinkoSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as PlinkoSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [], playerResults: raw.playerResults ?? {} }
-  } catch {
-    return null
+  const raw = readSyncedState(json, { ...CLIENT_SYNCED_STATE, currentPlayer: 'number' })
+  if (!raw) return null
+  return {
+    ...(raw as unknown as PlinkoSyncedState),
+    rematchVotes: rematchVotesOf(raw),
+    playerResults: isPlainObject(raw.playerResults)
+      ? (raw.playerResults as PlinkoSyncedState['playerResults'])
+      : {},
   }
 }
 
@@ -662,13 +714,7 @@ export type ToucherCouleSyncedState = {
 }
 
 export function parseToucherCouleState(json: string | null | undefined): ToucherCouleSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as ToucherCouleSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<ToucherCouleSyncedState>(json)
 }
 
 // ─── Le Menteur ──────────────────────────────────────────────────────────────
@@ -682,13 +728,7 @@ export type MenteurSyncedState = {
 }
 
 export function parseMenteurSyncedState(json: string | null | undefined): MenteurSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as MenteurSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<MenteurSyncedState>(json)
 }
 
 // ─── L'Imposteur ─────────────────────────────────────────────────────────────
@@ -704,13 +744,7 @@ export type ImposteurSyncedState = {
 export function parseImposteurSyncedState(
   json: string | null | undefined
 ): ImposteurSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as ImposteurSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<ImposteurSyncedState>(json)
 }
 
 // ─── Le Grand Pillaveur (quiz) ───────────────────────────────────────────────
@@ -723,13 +757,7 @@ export type QuizSyncedState = {
 }
 
 export function parseQuizSyncedState(json: string | null | undefined): QuizSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as QuizSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<QuizSyncedState>(json)
 }
 
 // ─── Loup-Garou ──────────────────────────────────────────────────────────────
@@ -745,13 +773,7 @@ export type LoupGarouSyncedState = {
 export function parseLoupGarouSyncedState(
   json: string | null | undefined
 ): LoupGarouSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as LoupGarouSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<LoupGarouSyncedState>(json)
 }
 
 // ─── Le Grand Bluff ──────────────────────────────────────────────────────────
@@ -765,13 +787,7 @@ export type BluffSyncedState = {
 }
 
 export function parseBluffSyncedState(json: string | null | undefined): BluffSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as BluffSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<BluffSyncedState>(json)
 }
 
 // ─── Qui est l'Espion ? ──────────────────────────────────────────────────────
@@ -785,13 +801,7 @@ export type EspionSyncedState = {
 }
 
 export function parseEspionSyncedState(json: string | null | undefined): EspionSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as EspionSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<EspionSyncedState>(json)
 }
 
 // ─── Tabou Vocal ─────────────────────────────────────────────────────────────
@@ -805,13 +815,7 @@ export type TabouSyncedState = {
 }
 
 export function parseTabouSyncedState(json: string | null | undefined): TabouSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as TabouSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<TabouSyncedState>(json)
 }
 
 // ─── Crobard ─────────────────────────────────────────────────────────────────
@@ -825,13 +829,7 @@ export type CrobardSyncedState = {
 }
 
 export function parseCrobardSyncedState(json: string | null | undefined): CrobardSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as CrobardSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<CrobardSyncedState>(json)
 }
 
 // ─── Téléphone Dessiné ───────────────────────────────────────────────────────
@@ -844,13 +842,7 @@ export type TelephoneSyncedState = {
 }
 
 export function parseTelephoneSyncedState(json: string | null | undefined): TelephoneSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as TelephoneSyncedState
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<TelephoneSyncedState>(json)
 }
 
 // ─── Sans Filtre / Mots Codés / Dilemmes / Petit Bac / Président ─────────────
@@ -865,14 +857,7 @@ export type SimplePhaseSyncedState = {
 export function parseSimplePhaseSyncedState(
   json: string | null | undefined
 ): SimplePhaseSyncedState | null {
-  if (!json) return null
-  try {
-    const raw = JSON.parse(json) as SimplePhaseSyncedState
-    if (!raw || typeof raw.phase !== 'string') return null
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
-  } catch {
-    return null
-  }
+  return parsePhasedState<SimplePhaseSyncedState>(json)
 }
 
 // ─── Parseur & fin de partie génériques ──────────────────────────────────────

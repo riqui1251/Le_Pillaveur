@@ -11,6 +11,7 @@ import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { JoinGate } from '@/components/online/JoinGate'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { RecentGamesRow } from '@/components/online/RecentGamesRow'
+import { RecentLocalGamesRow } from '@/components/hub/RecentLocalGamesRow'
 import { PlayModeToggle } from '@/components/auth/PlayModeToggle'
 import { AmbianceModeToggle } from '@/components/auth/AmbianceModeToggle'
 import { requestAgeVerification } from '@/components/legal/AgeGate'
@@ -123,6 +124,10 @@ export default function GamesHubPage() {
       {isOnline && <FriendInviteBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <RecentGamesRow />}
       {isOnline && <OpenLobbiesList />}
+      {/* Pendant local de « Vos dernières tables » : les derniers jeux ouverts
+          sur cet appareil. Même attente de l'auth que le bandeau de joueurs,
+          sinon un joueur en ligne la verrait passer le temps d'une réponse. */}
+      {!authLoading && !isOnline && <RecentLocalGamesRow />}
 
       {/* La grille ne dépend QUE du catalogue statique : elle est rendue sans
           condition, dès le rendu serveur. La page renvoyait `null` tant que

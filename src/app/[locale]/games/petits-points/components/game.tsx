@@ -9,6 +9,7 @@ import { Play, RotateCcw, Settings, ArrowLeft, Home } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { GameShell } from '@/components/game/GameShell'
+import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 
 interface GameProps {
   players: Player[]
@@ -30,6 +31,46 @@ interface Zone {
   y: number
   radius: number
   active: boolean
+}
+
+interface ZoneConfig {
+  zoneCount: number
+  zoneRadius: number
+  sipsPerZone: number
+  zoneDuration: number
+  spawnDelay: number
+}
+
+type GameState = 'placing' | 'config' | 'playing' | 'finished'
+
+// Reprise de partie : pions posés, réglages choisis, zones déjà tombées et
+// gorgées comptées disparaissaient au moindre retour arrière. Tout est du JSON
+// pur (positions en %, compteurs) : il suffit de le relire.
+const SAVE_ID = 'petits-points'
+const SAVE_VERSION = 1
+
+type PetitsPointsSave = {
+  /** Ordre de la table : pendant la pose, le pion n°i est celui du joueur n°i. */
+  playerIds: string[]
+  /** Jamais 'finished' : une partie terminée efface sa sauvegarde. */
+  gameState: Exclude<GameState, 'finished'>
+  pawns: Pawn[]
+  customConfig: ZoneConfig
+  currentZone: Zone | null
+  currentRound: number
+  playersInZone: string[]
+  totalSips: Record<string, number>
+}
+
+/**
+ * Même table ET même ordre : l'écran de pose associe le pion n°i au joueur
+ * n°i (couleur, « à toi de poser »), et on peut y revenir depuis les réglages.
+ * L'ordre est celui de la liste de joueurs de l'appareil, stable d'un
+ * rechargement à l'autre.
+ */
+function isResumableForTable(save: PetitsPointsSave, players: Player[]): boolean {
+  if (!isSameLocalTable(save.playerIds, players)) return false
+  return save.playerIds.every((id, index) => players[index]?.id === id)
 }
 
 // Configuration selon la difficulté
@@ -77,16 +118,20 @@ const playerColors = [
 
 export default function Game({ players, onGameEnd, difficulty, updatePlayerStats }: GameProps) {
   const t = useTranslations('games.petits-points')
-  const [gameState, setGameState] = useState<'placing' | 'config' | 'playing' | 'finished'>('placing')
+  const tCommon = useTranslations('common')
+  const [gameState, setGameState] = useState<GameState>('placing')
   const statsFlushedRef = useRef(false)
   const [pawns, setPawns] = useState<Pawn[]>([])
   const [currentZone, setCurrentZone] = useState<Zone | null>(null)
   const [currentRound, setCurrentRound] = useState(0)
   const [playersInZone, setPlayersInZone] = useState<string[]>([])
   const [totalSips, setTotalSips] = useState<Record<string, number>>({})
-  
+  const session = useResumableLocalGame<PetitsPointsSave>(SAVE_ID, SAVE_VERSION, (s) =>
+    isResumableForTable(s, players)
+  )
+
   // Configuration personnalisée
-  const [customConfig, setCustomConfig] = useState({
+  const [customConfig, setCustomConfig] = useState<ZoneConfig>({
     zoneCount: difficultyConfig[difficulty].zoneCount,
     zoneRadius: difficultyConfig[difficulty].zoneRadius,
     sipsPerZone: difficultyConfig[difficulty].sipsPerZone,
@@ -101,7 +146,12 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
   const boardRef = useRef<HTMLDivElement>(null)
   const config = customConfig
 
-  // Initialiser les pions
+  // Initialiser les pions — à chaque nouvelle TABLE, pas à chaque nouveau
+  // tableau : la page refiltre ses joueurs à chaque rendu, et la
+  // resynchronisation du nuage (retour sur l'onglet, écran rallumé) en livre
+  // un neuf aux mêmes identifiants. L'effet remettait alors tous les pions au
+  // centre et les gorgées à zéro en pleine partie.
+  const tableKey = players.map(player => player.id).join('|')
   useEffect(() => {
     const initialPawns: Pawn[] = players.map((player, index) => ({
       id: `pawn-${player.id}`,
@@ -118,7 +168,58 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
        initialTotalSips[player.id] = 0
      })
      setTotalSips(initialTotalSips)
-  }, [players])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableKey])
+
+  // Sauvegarde continue dès le premier pion posé (une pose vierge n'a rien à
+  // reprendre) et jusqu'à la fin de la partie — jamais pendant qu'une reprise
+  // est proposée : elle écraserait la sauvegarde qu'on propose.
+  useEffect(() => {
+    if (!session.ready || session.pending || gameState === 'finished') return
+    if (!pawns.some(pawn => pawn.x !== 50 || pawn.y !== 50)) return
+    session.save({
+      playerIds: players.map(player => player.id),
+      gameState,
+      pawns,
+      customConfig,
+      currentZone,
+      currentRound,
+      playersInZone,
+      totalSips,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.ready, session.pending, gameState, pawns, customConfig, currentZone, currentRound,
+      playersInZone, totalSips])
+
+  // Partie terminée : elle ne doit rien laisser derrière elle.
+  useEffect(() => {
+    if (gameState === 'finished') session.clear()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState])
+
+  const resumeSavedGame = () => {
+    const saved = session.accept()
+    if (!saved) return
+    // Table différente (ou rangée autrement) : les pions iraient à d'autres
+    // joueurs. On jette la sauvegarde et on repart d'une pose vierge.
+    if (!isResumableForTable(saved, players)) {
+      session.discard()
+      return
+    }
+    setPawns(saved.pawns)
+    setCustomConfig(saved.customConfig)
+    setCurrentZone(saved.currentZone)
+    setCurrentRound(saved.currentRound)
+    setPlayersInZone(saved.playersInZone)
+    setTotalSips(saved.totalSips)
+    setGameState(saved.gameState)
+  }
+
+  /** Quitter depuis le jeu clôt la partie : rien à proposer de reprendre ensuite. */
+  const quitGame = () => {
+    session.clear()
+    onGameEnd()
+  }
 
   // Enregistre les stats une fois la partie terminée (1 partie/joueur, gorgées, victoire au plus haut score)
   useEffect(() => {
@@ -259,6 +360,7 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
 
   // Recommencer
   const restartGame = () => {
+    session.clear()
     statsFlushedRef.current = false
     setGameState('placing')
     setCurrentRound(0)
@@ -280,6 +382,37 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
       zoneDuration: difficultyConfig[difficulty].zoneDuration,
       spawnDelay: difficultyConfig[difficulty].spawnDelay
     })
+  }
+
+  // Tant que le stockage n'est pas lu, rien : pas de plateau qui clignote
+  // avant l'écran de reprise.
+  if (!session.ready) return null
+
+  if (session.pending) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center p-4 text-white">
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-amber-500/20 bg-amber-950/20 p-6 text-center">
+          <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
+          <p className="text-sm text-white/55">{tCommon('resumeGame.body')}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={resumeSavedGame}
+              className="min-h-[44px] w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
+            >
+              {tCommon('resumeGame.resume')}
+            </button>
+            <button
+              type="button"
+              onClick={session.discard}
+              className="min-h-[44px] w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+            >
+              {tCommon('resumeGame.newGame')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (gameState === 'placing') {
@@ -642,7 +775,9 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
    }
 
            if (gameState === 'finished') {
-      const sortedPlayers = players.sort((a, b) => totalSips[b.id] - totalSips[a.id])
+      // Copie triée : trier la prop en place changerait l'ordre de la table,
+      // donc `tableKey`, et réinitialiserait pions et gorgées au rendu suivant.
+      const sortedPlayers = [...players].sort((a, b) => totalSips[b.id] - totalSips[a.id])
       const winner = sortedPlayers[0]
       const totalGorgées = Object.values(totalSips).reduce((sum, sips) => sum + sips, 0)
       const averageGorgées = Math.round(totalGorgées / players.length)
@@ -768,7 +903,7 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
              <RotateCcw className="h-4 w-4 mr-2" />
              {t('game.replay')}
            </Button>
-           <Button onClick={onGameEnd} className="px-6">
+           <Button onClick={quitGame} className="px-6">
              <Home className="h-4 w-4 mr-2" />
              {t('game.backToMenu')}
            </Button>
@@ -780,7 +915,7 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
   return (
     <GameShell
       title={t('game.title')}
-      onBack={onGameEnd}
+      onBack={quitGame}
       headerRight={<span className="text-sm font-semibold">{t('game.zoneProgress', { current: currentRound, total: config.zoneCount })}</span>}
       actionBar={
         <Button

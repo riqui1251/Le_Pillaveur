@@ -47,7 +47,7 @@ export function AmbianceModeToggle({ className, hint = true }: { className?: str
                 if (!active) setMode(id)
               }}
               className={cn(
-                'flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[13px] font-semibold transition-all sm:gap-2 sm:px-3 sm:text-sm',
+                'flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[13px] font-semibold transition-all sm:gap-2 sm:px-3 sm:text-sm',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#07060b]',
                 active
                   ? id === 'soft'

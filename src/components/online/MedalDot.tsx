@@ -1,6 +1,10 @@
 import { cn } from '@/lib/utils'
 
-/** Plaques du podium : or patiné, argent, bronze — pastille + chiffre. */
+/**
+ * Plaques du podium : or patiné, argent, bronze — pastille + chiffre.
+ * Le chiffre reste à 10 px (exception au plancher de 12) : c'est un jeton
+ * rond de 20 px dont la couleur porte déjà le rang, et l'aria-label le dit.
+ */
 const MEDAL_STYLES = [
   'bg-gradient-to-br from-[#E7C97D] to-[#B8862F] text-[#3D2B08]',
   'bg-gradient-to-br from-[#DDE3E8] to-[#9AA4AE] text-[#2C3238]',

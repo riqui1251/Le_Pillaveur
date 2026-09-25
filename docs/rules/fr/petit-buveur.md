@@ -46,7 +46,7 @@ En local, oui : l'ambiance Soft remplace les gorgées par des gages et des poin
 
 ### Peut-on jouer seul, avec des bots ?
 
-Non : pas de bots au lancement, il faut deux joueurs. Si quelqu'un quitte en cours de partie, un bot prend son pion au bout de 3 minutes — la partie ne se bloque jamais.
+Oui : au lobby, l'hôte complète la table avec des bots, ou lance seul avec eux. Si quelqu'un quitte en cours de partie, un bot prend son pion au bout de 3 minutes — la partie ne se bloque jamais.
 
 ### Combien de temps dure une partie ?
 

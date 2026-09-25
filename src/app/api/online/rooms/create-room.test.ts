@@ -12,20 +12,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * d'accord — un jeu qui perdrait `onlineReady` casserait ici.
  */
 
-const { userMock, roomCreateMock, roomDtoMock } = vi.hoisted(() => ({
+const { userMock, roomCreateMock, roomDtoMock, leaveOtherRoomsMock, cookieLang } = vi.hoisted(() => ({
   userMock: vi.fn(),
   roomCreateMock: vi.fn(),
   roomDtoMock: vi.fn(),
+  leaveOtherRoomsMock: vi.fn(),
+  /** Valeur du cookie de langue (lp_locale) de la requête ; undefined = pas de cookie. */
+  cookieLang: { value: undefined as string | undefined },
 }))
 
 vi.mock('@/lib/prisma', () => ({ prisma: { onlineRoom: { create: roomCreateMock } } }))
 vi.mock('@/lib/auth-server', () => ({ getCurrentUser: userMock }))
-vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
+vi.mock('next/headers', () => ({
+  cookies: async () => ({
+    get: (name: string) => (name === 'lp_locale' && cookieLang.value !== undefined ? { value: cookieLang.value } : undefined),
+  }),
+}))
 vi.mock('@/lib/online-room', () => ({
   buildRoomDto: roomDtoMock,
   cleanupAbandonedRooms: vi.fn(),
   createUniqueRoomCode: vi.fn(async () => 'ABCD'),
-  leaveOtherRooms: vi.fn(),
+  leaveOtherRooms: leaveOtherRoomsMock,
 }))
 vi.mock('@/lib/online/achievements', () => ({ awardAchievement: vi.fn() }))
 vi.mock('@/lib/online/lobbies-cache', () => ({ invalidateLobbiesCache: vi.fn() }))
@@ -52,6 +59,7 @@ const createRoom = (gameId: string) => {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  cookieLang.value = undefined
   roomCreateMock.mockResolvedValue({ id: 'room-1' })
   roomDtoMock.mockResolvedValue({ id: 'room-1' })
 })
@@ -101,5 +109,58 @@ describe('POST /api/online/rooms — jeu jouable en ligne', () => {
       gameId: 'loup-garou',
       hostUserId: (await userMock.mock.results[0].value).id,
     })
+  })
+})
+
+describe('POST /api/online/rooms — cartes dans la langue de la table', () => {
+  // La table prend la langue du cookie du créateur ; Sans Filtre et Dilemmes
+  // n'ont que des cartes françaises (GameMeta.contentLangs).
+  const FR_ONLY = GAMES.filter((g) => g.contentLangs && !g.contentLangs.includes('en')).map((g) => g.id)
+
+  it('les jeux aux cartes françaises seules sont bien Sans Filtre et Dilemmes', () => {
+    expect(FR_ONLY.sort()).toEqual(['dilemmes', 'sans-filtre'])
+  })
+
+  for (const gameId of ['sans-filtre', 'dilemmes']) {
+    for (const lang of ['en', 'es', 'it']) {
+      it(`refuse ${gameId} depuis le site en ${lang}, sans quitter ni créer de table`, async () => {
+        cookieLang.value = lang
+
+        const res = await createRoom(gameId)
+
+        expect(res.status).toBe(400)
+        expect((await res.json()).error).toBe('content_lang_unavailable')
+        // Refus AVANT leaveOtherRooms : l'hôte garde la place qu'il avait.
+        expect(leaveOtherRoomsMock).not.toHaveBeenCalled()
+        expect(roomCreateMock).not.toHaveBeenCalled()
+      })
+    }
+
+    // Français, pas de cookie (première visite, robot) ou cookie inconnu :
+    // la table est française, jamais refusée.
+    for (const [label, lang] of [
+      ['en fr', 'fr'],
+      ['sans cookie de langue', undefined],
+      ['avec un cookie de langue invalide', 'de'],
+    ] as const) {
+      it(`ouvre ${gameId} ${label}, table en français`, async () => {
+        cookieLang.value = lang
+
+        const res = await createRoom(gameId)
+
+        expect(res.status).toBe(200)
+        expect(roomCreateMock).toHaveBeenCalledTimes(1)
+        expect(JSON.parse(roomCreateMock.mock.calls[0][0].data.settingsJson).lang).toBe('fr')
+      })
+    }
+  }
+
+  it('un jeu aux cartes traduites s’ouvre dans la langue du cookie', async () => {
+    cookieLang.value = 'it'
+
+    const res = await createRoom('loup-garou')
+
+    expect(res.status).toBe(200)
+    expect(JSON.parse(roomCreateMock.mock.calls[0][0].data.settingsJson).lang).toBe('it')
   })
 })

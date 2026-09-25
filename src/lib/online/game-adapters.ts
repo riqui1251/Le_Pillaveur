@@ -462,10 +462,13 @@ function serviceTickOf(
 // ─── Petit Buveur ────────────────────────────────────────────────────────────
 
 const petitBuveurAdapter: GameAdapter = {
+  // 2 joueurs, bots compris : avec l'option bots du lobby, un joueur seul
+  // peut lancer (buildPetitBuveurEngineState ajoute les bots de l'hôte).
   minPlayers: 2,
   // Pas de plafond historique pour le Petit Buveur — on n'introduit pas de
   // régression : borne haute purement théorique.
   maxPlayers: 99,
+  botsFillable: true,
   parse: (json) => parseEngineState(json),
   serialize: (state) => serializeEngineState(state as EngineState),
   applyAction(rawState, userId, body) {
@@ -1139,12 +1142,13 @@ const espionAdapter: GameAdapter = {
 // ─── Tabou Vocal ─────────────────────────────────────────────────────────────
 
 const tabouAdapter: GameAdapter = {
-  // 1 humain suffit pour lancer : buildTabouPlayers comble chaque équipe
-  // jusqu'à 2 avec des bots (contrainte du moteur), + les bots choisis par
-  // l'hôte au-delà.
+  // Pas de complément par bots au lancement (botsFillable absent) : un bot
+  // ne décrit pas un mot à voix haute, ses manches de décrivant tourneraient
+  // à vide. Le lancement exige 2 joueurs HUMAINS par équipe (launch/route.ts,
+  // team_min_players) ; les bots ne viennent qu'en REMPLACEMENT d'un joueur
+  // parti (replace-left / replace-afk, indépendants de botsFillable).
   minPlayers: TABOU_MIN_PLAYERS,
   maxPlayers: TABOU_MAX_PLAYERS,
-  botsFillable: true,
   parse: (json) => parseTabouState(json),
   serialize: (state) => serializeTabouState(state as TabouState),
   applyAction(rawState, userId, body) {

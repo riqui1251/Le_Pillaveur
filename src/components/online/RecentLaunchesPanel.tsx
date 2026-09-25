@@ -36,7 +36,7 @@ export function RecentLaunchesPanel({ items }: { items: RecentLaunchItem[] }) {
 
   return (
     <section className="min-w-0">
-      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-white/35">
+      <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-white/35">
         {t('title')}
       </p>
       {/* Rangée défilante : `tabIndex` la rend atteignable au clavier — sans
@@ -60,7 +60,7 @@ export function RecentLaunchesPanel({ items }: { items: RecentLaunchItem[] }) {
                 <GameIconById id={item.gameId} className="h-3.5 w-3.5 text-amber-200/80" />
               </span>
               <span className="min-w-0">
-                <span className="flex max-w-[9rem] items-center gap-1 truncate text-[11px] font-semibold text-white/85">
+                <span className="flex max-w-[9rem] items-center gap-1 truncate text-xs font-semibold text-white/85">
                   <span className="truncate">{label}</span>
                   {/* Cadenas : table privée ou sur invitation. Le jeu est dit,
                       l'effectif et les pseudos ne le sont pas. */}
@@ -68,7 +68,7 @@ export function RecentLaunchesPanel({ items }: { items: RecentLaunchItem[] }) {
                     <Lock className="h-2.5 w-2.5 shrink-0 text-white/40" aria-label={t('privateTable')} />
                   )}
                 </span>
-                <span className="block text-[10px] text-white/40">
+                <span className="block text-xs text-white/40">
                   {ago(item.startedAgoMinutes)}
                   {item.playerCount !== null && ` · ${t('players', { count: item.playerCount })}`}
                 </span>

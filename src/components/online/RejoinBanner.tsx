@@ -99,7 +99,7 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
           {/* Rebours local : la feuille se réveille seule au changement de
               seconde et s'arrête à l'échéance — c'est le serveur qui remplace,
               à son rythme, et le prochain sondage retirera la bannière. */}
-          <p className="text-[11px] text-emerald-200/60">
+          <p className="text-xs text-emerald-200/70">
             <PhaseCountdown endsAt={rejoinable.deadlineAt}>
               {({ seconds }) => t('botCountdown', { seconds })}
             </PhaseCountdown>
@@ -110,7 +110,7 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
         size="sm"
         disabled={joining}
         onClick={() => onJoin(rejoinable.roomId)}
-        className="shrink-0 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500"
+        className="h-11 shrink-0 rounded-xl bg-emerald-600 px-4 text-white hover:bg-emerald-500"
       >
         <Play className="mr-1 h-3.5 w-3.5" />
         {t('cta')}

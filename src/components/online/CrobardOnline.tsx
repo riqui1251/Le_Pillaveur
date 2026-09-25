@@ -340,7 +340,7 @@ export function CrobardOnline() {
 
       {view.isDrawer && view.word && (
         <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-600/15 to-transparent px-4 py-2.5 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">{t('yourWord')}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/40">{t('yourWord')}</p>
           <p className="text-2xl font-black tracking-wide">{view.word}</p>
         </div>
       )}

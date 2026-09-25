@@ -109,7 +109,7 @@ export function SelectedPlayersBar() {
           variant="ghost"
           size="sm"
           onClick={isVisitor ? goToPlayers : undefined}
-          className="h-8 gap-1.5 border border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/10 hover:text-white"
+          className="h-11 gap-1.5 border border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/10 hover:text-white"
         >
           {isVisitor ? (
             <>
@@ -168,14 +168,14 @@ export function SelectedPlayersBar() {
           un bilan de soirée — sans quoi le panneau ment sur ce qu'il compte. */}
       {showAwards && nightSummary && (
         <div className="mt-3 border-t border-white/10 pt-2.5">
-          {/* `min-h-[40px]` (Tailwind 3.3 n'a pas d'échelle min-h numérique) :
+          {/* `min-h-[44px]` (Tailwind 3.3 n'a pas d'échelle min-h numérique) :
               cible tactile confortable, la barre se manipule au
               doigt et à une main au milieu d'une soirée. */}
           <button
             type="button"
             onClick={() => setAwardsOpen((open) => !open)}
             aria-expanded={awardsOpen}
-            className="flex min-h-[40px] w-full items-center gap-2 rounded-lg py-2 text-left text-xs text-white/55 transition-colors hover:text-white/85"
+            className="flex min-h-[44px] w-full items-center gap-2 rounded-lg py-2 text-left text-xs text-white/55 transition-colors hover:text-white/85"
           >
             <Trophy className="h-3.5 w-3.5 shrink-0 text-gold/70" aria-hidden />
             <span className="font-semibold">{tAwards('toggle')}</span>
@@ -196,7 +196,7 @@ export function SelectedPlayersBar() {
                 </li>
               ))}
               {nightSummary.topGame && (
-                <li className="pt-0.5 text-[11px] text-white/40">{nightSummary.topGame}</li>
+                <li className="pt-0.5 text-xs text-white/40">{nightSummary.topGame}</li>
               )}
             </ul>
           )}
@@ -209,7 +209,7 @@ export function SelectedPlayersBar() {
           constituée, refermable une bonne fois. */}
       {showBridge && (
         <div className="mt-3 flex items-center gap-1 border-t border-white/10 pt-2.5">
-          <p className="min-w-0 flex-1 text-[11px] leading-snug text-white/45">
+          <p className="min-w-0 flex-1 text-xs leading-snug text-white/45">
             {hasAccount ? t('bridge.memberText') : t('bridge.guestText')}{' '}
             {hasAccount ? (
               <button
@@ -233,7 +233,7 @@ export function SelectedPlayersBar() {
             onClick={dismissBridge}
             aria-label={t('bridge.dismiss')}
             title={t('bridge.dismiss')}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/35 transition-colors hover:bg-white/10 hover:text-white/70"
+            className="touch-target flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/35 transition-colors hover:bg-white/10 hover:text-white/70"
           >
             <X className="h-3.5 w-3.5" aria-hidden />
           </button>

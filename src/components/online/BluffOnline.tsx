@@ -156,7 +156,7 @@ export function BluffOnline() {
         }
         ranking={
           <div className="w-full max-w-sm space-y-2">
-            <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-white/40">
+            <p className="text-center text-xs font-semibold uppercase tracking-wide text-white/40">
               {t('victory.finalScore')}
             </p>
             {sorted.map((p, i) => (
@@ -245,7 +245,7 @@ export function BluffOnline() {
       {/* Question */}
       {view.prompt && (
         <div className="rounded-2xl border border-rose-400/30 bg-gradient-to-br from-rose-600/15 to-transparent px-4 py-3 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">{t('promptLabel')}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/40">{t('promptLabel')}</p>
           <p className="text-lg font-black">{view.prompt}</p>
         </div>
       )}
@@ -273,10 +273,10 @@ export function BluffOnline() {
                 >
                   <span className="min-w-0 flex-1 truncate text-sm font-bold">« {c.text} »</span>
                   {!c.isReal && c.authorId && (
-                    <span className="shrink-0 text-[10px] text-white/40">{nameOf(c.authorId)}</span>
+                    <span className="max-w-[35%] shrink-0 truncate text-xs text-white/40">{nameOf(c.authorId)}</span>
                   )}
                   {c.votes.length > 0 && (
-                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
+                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold text-white/70">
                       {c.votes.map((id) => {
                         const voter = view.players.find((p) => p.id === id)
                         return (

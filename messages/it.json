@@ -214,6 +214,10 @@
       "emptyTitle": "Nessun gioco trovato",
       "emptyHint": "Prova un'altra parola chiave.",
       "botsBadge": "Giocabile con i bot",
+      "betaBadge": "Beta",
+      "betaHint": "Gioco nuovo, ancora in rodaggio",
+      "frOnlyBadge": "FR",
+      "frOnlyHint": "Carte solo in francese",
       "h1": "Giochi da festa gratis, con gli amici o con i bot",
       "intro": "Scegli un gioco e inizia in pochi secondi: tutti su un solo telefono che gira intorno al tavolo, o ognuno sul proprio con un codice tavolo.",
       "featured": "Immancabili",
@@ -227,6 +231,10 @@
         "hint": "Questi giochi richiedono un telefono per giocatore: apri un tavolo online con un account gratuito, oppure provali da solo contro i bot."
       },
       "opening": "Apertura in corso…"
+    },
+    "recentLocal": {
+      "title": "I tuoi ultimi giochi",
+      "replay": "Rigioca"
     },
     "jeuxOnline": {
       "title": "Giochi online",
@@ -325,7 +333,7 @@
     "seul-avec-des-bots": {
       "title": "Giocare da solo: i giochi con i bot",
       "description": "Nessuno in giro stasera? Apri un tavolo e i bot completano: Lupo Mannaro, quiz, Il Bugiardo, bluff, Président… Gratis, online, da soli o in due.",
-      "intro": "Nessuno disponibile, o la voglia di allenarsi prima della prossima festa: in questi giochi chi apre il tavolo può riempire i posti vuoti con i bot dalla lobby, e la partita parte anche sotto il minimo di giocatori — da soli, quindi. I bot hanno ciascuno il proprio nome e la propria personalità, e tengono il loro posto: rilanciano e accusano al Bugiardo, bluffano al Grande Bluff, rispondono al Gran Pillaveur, il quiz coi pulsanti, scommettono a Purple e a 1220, giocano le loro carte a Président, votano e accusano a Lupo Mannaro. Sono i giochi che si giocano davvero da soli. All'Impostore, a Chi è la Spia?, a Crobard, a Sans Filtre o a Dilemmes i bot completano un tavolo senza animarlo: un bot non disegna, non racconta nulla e non conduce le indagini, e quei giochi vogliono giocatori veri. Se qualcuno molla a metà partita, un bot lo sostituisce perché il tavolo vada avanti. È la stessa lista della scorciatoia «Gioca da solo con i bot» della vetrina. Tutto avviene online, sul tuo telefono, e una volta presa la mano con un gioco, basta condividere il codice del tavolo perché gli amici prendano i posti a loro volta."
+      "intro": "Nessuno disponibile, o la voglia di allenarsi prima della prossima festa: in questi giochi chi apre il tavolo può riempire i posti vuoti con i bot dalla lobby, e la partita parte anche sotto il minimo di giocatori — da soli, quindi. I bot hanno ciascuno il proprio nome e la propria personalità, e tengono il loro posto: rilanciano e accusano al Bugiardo, bluffano al Grande Bluff, rispondono al Gran Pillaveur, il quiz coi pulsanti, scommettono a Purple e a 1220, giocano le loro carte a Président, tirano il dado al Piccolo Bevitore, votano e accusano a Lupo Mannaro. Sono i giochi che si giocano davvero da soli. All'Impostore, a Chi è la Spia? o a Crobard i bot completano un tavolo senza animarlo: un bot non disegna, non racconta nulla e non conduce le indagini, e quei giochi vogliono giocatori veri. Se qualcuno molla a metà partita, un bot lo sostituisce perché il tavolo vada avanti. È la stessa lista della scorciatoia «Gioca da solo con i bot» della vetrina. Tutto avviene online, sul tuo telefono, e una volta presa la mano con un gioco, basta condividere il codice del tavolo perché gli amici prendano i posti a loro volta."
     },
     "en-grand-groupe": {
       "title": "Giochi da festa per gruppi numerosi",
@@ -566,6 +574,7 @@
       "team_full": "Questa squadra è al completo.",
       "room_full": "La lobby è al completo.",
       "invite_only": "Questa lobby è solo su invito.",
+      "content_lang_unavailable": "Le carte di questo gioco esistono solo in francese: apri il tavolo dalla versione francese del sito.",
       "not_host": "Solo l'host del tavolo può farlo.",
       "cannot_kick_self": "Non puoi espellere te stesso dal tavolo.",
       "member_not_found": "Questo giocatore non è più al tavolo.",
@@ -744,6 +753,12 @@
     "onlineSection": {
       "title": "Account online"
     },
+    "onlineName": {
+      "title": "Nickname online (account)",
+      "hint": "Questo nickname viene usato automaticamente nelle partite online (un giocatore per account). Valgono le stesse restrizioni sui nickname.",
+      "placeholder": "Il tuo nickname online",
+      "saved": "Nickname online salvato."
+    },
     "tables": {
       "title": "I miei ultimi tavoli",
       "loading": "Caricamento dei tuoi ultimi tavoli…",
@@ -907,6 +922,7 @@
     "addTitle": "Aggiungi un giocatore",
     "namePlaceholder": "Nome del giocatore",
     "addButton": "Aggiungere",
+    "removePlayer": "Rimuovi {name}",
     "selectTitle": "Seleziona i giocatori",
     "wins": "{count} vittorie",
     "customize": "Personalizzare",
@@ -1155,6 +1171,10 @@
       "telephone-dessine": {
         "title": "Gioca al Telefono Disegnato online gratis — risate a catena",
         "description": "Scrivi una frase, il prossimo la disegna, il terzo la indovina… e tutto degenera. Da 3 a 8 giocatori, chat vocale, gratis e senza installazione."
+      },
+      "tabou": {
+        "title": "Gioca a Tabù Vocale online gratis — descrivi senza dirlo",
+        "description": "Descrivi una parola in chat vocale senza dire le 4 parole tabù mentre la tua squadra indovina contro il tempo. Da 4 a 16 giocatori, 2 per squadra, gratis."
       }
     },
     "catalog": {
@@ -1364,7 +1384,21 @@
       "summary": "Riepilogo",
       "wheelInfo": "Ruota generata automaticamente: rischio: {risk}, segmenti: {count}",
       "wheelHint": "Contenuto: SAFE e sorsi da 1 a 12, con ripetizioni. Maggiore è il valore, più piccolo è il segmento.",
-      "segmentSips": "{count} sorseggia"
+      "segmentSips": "{count} sorseggia",
+      "settings": {
+        "tab": "Impostazioni",
+        "gameTab": "Gioco",
+        "title": "Impostazioni della ruota",
+        "riskLabel": "Livello di rischio",
+        "riskPlaceholder": "Scegli un livello di rischio",
+        "risks": {
+          "faible": "Basso (più SAFE e sorsi piccoli)",
+          "moyen": "Medio",
+          "eleve": "Alto (più sorsi grandi)"
+        },
+        "segments": "Numero di segmenti",
+        "segmentsMin": "Minimo {min}"
+      }
     },
     "monsieur-3": {
       "title": "Monsieur 3",
@@ -1451,6 +1485,9 @@
         "seeResults": "Guarda i risultati",
         "distribute": "{name} distribuisce {count} sorsi a {target}",
         "libreWin": "{name} vince! Distribuire {count} sorsi.",
+        "toWhom": "A chi?",
+        "allWinners": "Tutti i giocatori sono vincitori.",
+        "giveTo": "a",
         "replay": "Rigiocare",
         "menu": "Menu"
       }
@@ -2056,6 +2093,7 @@
         "yourTurn": "Tocca a te",
         "categoryLabel": "Categoria: {category}",
         "errors": "Errori: {count}/{max}",
+        "robotError": "ERRORE",
         "hint": "💡 Indizio ({used}/{max})",
         "hintCost": "Costo: -10s",
         "wrongLetters": "Lettere sbagliate: {letters}",
@@ -2539,8 +2577,8 @@
         "teamA": "Squadra A",
         "teamB": "Squadra B",
         "joinTeam": "Unisciti",
-        "botSlot": "Bot",
-        "botsFill": "I posti vuoti saranno occupati da bot.",
+        "openSeat": "Posto libero",
+        "teamRule": "Minimo due giocatori per squadra. Un bot sostituisce solo un giocatore che esce durante la partita.",
         "targetScore": "Punteggio obiettivo",
         "points": "pt"
       },
@@ -2594,6 +2632,11 @@
             "body": "Se chi descrive dice una parola tabù, un avversario che la sente clicca TABÙ! — la parola viene saltata, nessun punto per nessuno."
           }
         ]
+      },
+      "about": {
+        "p1": "Due squadre, A e B, e un descrittore che cambia a ogni manche, ogni giocatore a turno. Solo lui vede sul telefono la parola da far indovinare e le sue quattro parole tabù, vietate sulle sue labbra. La descrive ad alta voce, in chat vocale, mentre la sua squadra spara proposte a raffica.",
+        "p2": "Una manche dura 60 secondi e ci passano più parole: un compagno tocca TROVATA, +1 punto per la squadra e la parola successiva arriva subito; il descrittore può passare una parola troppo difficile, senza punto; un avversario che sente una parola tabù tocca TABÙ, e la parola salta senza punti per nessuno. Il riepilogo svela l'ultima parola e il bilancio della manche. Vince la prima squadra che arriva al punteggio obiettivo: 15, 20 o 25, a scelta dell'host.",
+        "p3": "Gli avversari non vedono la carta: ascoltano, e a fare da arbitro è il fair play del tavolo. Descrivi l'uso quando la definizione è tabù e passa in fretta ciò che si blocca: il cronometro è il vero avversario. Quattro giocatori minimo, due per squadra, fino a sedici; niente bot all'avvio, un bot non descrive nulla, sostituisce solo un giocatore uscito. Le parole esistono in quattro lingue. Il gioco non conta sorsi, solo punti."
       }
     },
     "crobard": {

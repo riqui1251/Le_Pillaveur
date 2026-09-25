@@ -222,7 +222,7 @@ export function TelephoneDessineOnline() {
         <div className="flex flex-col gap-3">
           {view.revealChain.links.map((link, i) => (
             <div key={`${view.revealIdx}-${i}`} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
                 {t('reveal.step', { n: i + 1 })}
               </p>
               {link.type === 'text' ? (

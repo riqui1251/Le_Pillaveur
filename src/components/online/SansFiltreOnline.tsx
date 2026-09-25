@@ -144,7 +144,7 @@ export function SansFiltreOnline() {
         }
         ranking={
           <div className="w-full max-w-sm space-y-2">
-            <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-white/40">
+            <p className="text-center text-xs font-semibold uppercase tracking-wide text-white/40">
               {t('victory.finalScore')}
             </p>
             {sorted.map((p, i) => (
@@ -239,7 +239,7 @@ export function SansFiltreOnline() {
       {/* Carte noire */}
       {view.black && (
         <div className="rounded-2xl border border-gold/40 bg-[#1d1a14] px-4 py-4 text-center shadow-[0_10px_24px_-12px_rgba(0,0,0,0.8)]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold/60">{t('blackLabel')}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold/60">{t('blackLabel')}</p>
           <p className="mt-1.5 font-display text-lg font-bold leading-snug text-cream">{view.black}</p>
         </div>
       )}
@@ -258,6 +258,9 @@ export function SansFiltreOnline() {
                 <p className="flex items-center justify-center gap-1.5 font-display text-base font-bold text-gold">
                   <Crown className="h-4 w-4" /> {t('crowned.title')}
                 </p>
+                {/* Index de coin (ici et sur les cartes blanches) à 10 px,
+                    comme celui de PlayingCard : ornement aria-hidden, calé
+                    dans la marge de la carte — pas du texte à lire. */}
                 <div className="relative mx-auto max-w-xs rounded-xl border border-[#D8CCAE] bg-cream px-4 py-3 text-sm font-bold text-[#24201A] shadow-[0_8px_18px_-10px_rgba(0,0,0,0.65)]">
                   <span aria-hidden className="absolute left-2 top-1 font-display text-[10px] font-black leading-tight text-[#24201A]">J<br />♣</span>
                   {view.crowned.text}

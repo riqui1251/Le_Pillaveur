@@ -176,7 +176,7 @@ export function EspionOnline() {
         {view.location ? (
           <PlayingCard suit="spade" rank="Q" className="w-full max-w-xs">
             <div className="px-6 py-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">{t('yourLocation')}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#6B6455]">{t('yourLocation')}</p>
               <p className="truncate font-display text-2xl font-bold tracking-wide text-[#24201A]">{view.location}</p>
             </div>
           </PlayingCard>
@@ -270,14 +270,14 @@ export function EspionOnline() {
       {view.location ? (
         <PlayingCard suit="spade" rank="Q">
           <div className="px-6 py-3 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">{t('yourLocation')}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6B6455]">{t('yourLocation')}</p>
             <p className="font-display text-xl font-bold tracking-wide text-[#24201A]">{view.location}</p>
           </div>
         </PlayingCard>
       ) : (
         <div className="rounded-2xl border border-slate-400/30 bg-felt-deep/80 px-4 py-3 text-center">
           <p className="font-display text-sm font-bold text-slate-200">{t('youAreSpy')}</p>
-          <p className="mt-0.5 text-[10px] text-white/40">{t('spyHint')}</p>
+          <p className="mt-0.5 text-xs text-white/40">{t('spyHint')}</p>
         </div>
       )}
 

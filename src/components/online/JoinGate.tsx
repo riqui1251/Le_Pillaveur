@@ -116,12 +116,12 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
           <Button
             type="submit"
             disabled={loading || pseudo.trim().length === 0}
-            className="w-full bg-amber-500 text-black hover:bg-amber-400"
+            className="h-11 w-full bg-amber-500 text-black hover:bg-amber-400"
           >
             <UserPlus className="mr-2 h-4 w-4" />
             {loading ? tCommon('loading') : t('guestCta')}
           </Button>
-          <p className="text-center text-[11px] leading-snug text-white/40">{t('guestHintDevice')}</p>
+          <p className="text-center text-xs leading-snug text-white/40">{t('guestHintDevice')}</p>
         </form>
 
         <div className="mt-4 flex items-center gap-3" aria-hidden>
@@ -134,7 +134,7 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
           type="button"
           variant="outline"
           onClick={handleLogin}
-          className="mt-4 w-full border-white/15 bg-transparent text-white/80 hover:bg-white/[0.06] hover:text-white"
+          className="mt-4 h-11 w-full border-white/15 bg-transparent text-white/80 hover:bg-white/[0.06] hover:text-white"
         >
           <LogIn className="mr-2 h-4 w-4" />
           {t('loginCta')}
@@ -143,7 +143,7 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
         <button
           type="button"
           onClick={onDismiss}
-          className="mt-4 w-full text-center text-xs text-white/35 underline underline-offset-2 hover:text-white/60"
+          className="mt-2 min-h-[44px] w-full text-center text-xs text-white/35 underline underline-offset-2 hover:text-white/60"
         >
           {t('dismiss')}
         </button>

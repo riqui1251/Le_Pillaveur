@@ -319,7 +319,7 @@ export function ToucherCouleOnline() {
           <h1 className="min-w-0 flex-1 truncate text-center text-base font-bold sm:text-lg">
             🚢 {t('title')}
           </h1>
-          <span className="shrink-0 rounded-full border border-sky-400/30 bg-sky-500/15 px-2.5 py-1 text-[11px] font-semibold text-sky-200">
+          <span className="shrink-0 rounded-full border border-sky-400/30 bg-sky-500/15 px-2.5 py-1 text-xs font-semibold text-sky-200">
             {view.mode} · {size}×{size}
           </span>
           <TutorialReopenButton onClick={tutorial.reopen} />
@@ -364,7 +364,7 @@ export function ToucherCouleOnline() {
                     </span>
                   )}
                 </p>
-                {isMyTurn && <p className="mt-0.5 text-[11px] text-emerald-200/60">{t('hitReplay')}</p>}
+                {isMyTurn && <p className="mt-0.5 text-xs text-emerald-200/60">{t('hitReplay')}</p>}
               </>
             )}
           </div>
@@ -460,7 +460,7 @@ export function ToucherCouleOnline() {
                         )}
                       />
                     ))}
-                    <span className="ml-1 text-[10px]">{t('shipLabel', { size: shipSize })}</span>
+                    <span className="ml-1 text-xs">{t('shipLabel', { size: shipSize })}</span>
                   </button>
                 )
               })}
@@ -549,7 +549,7 @@ export function ToucherCouleOnline() {
                         onClick={() => setBombArmed((v) => !v)}
                         title={t('bombHint')}
                         className={cn(
-                          'rounded-full border px-2 py-0.5 text-[11px] font-bold transition-colors',
+                          'rounded-full border px-2 py-0.5 text-xs font-bold transition-colors',
                           bombArmed
                             ? 'border-rose-400 bg-rose-500/25 text-rose-100'
                             : 'border-white/15 bg-white/10 text-white/70 hover:bg-white/20'
@@ -558,7 +558,7 @@ export function ToucherCouleOnline() {
                         💣 {t('bombButton')}
                       </button>
                     )}
-                    <span className={cn('text-[11px] font-bold', teamAccent(enemy))}>
+                    <span className={cn('text-xs font-bold', teamAccent(enemy))}>
                       {t('team', { team: TEAM_LABEL[enemy] })}
                     </span>
                   </div>
@@ -571,6 +571,9 @@ export function ToucherCouleOnline() {
                       : 'border-white/10 bg-felt-deep/50'
                   )}
                 >
+                  {/* Glyphes de case (💥 💀 ·) à 11 px : ce ne sont pas du
+                      texte, et la grille 14×14 ne laisse que ~22 px par case
+                      au téléphone — 11 px y tient sans déformer la case. */}
                   <div className="grid gap-[2px]" style={gridStyle}>
                     {Array.from({ length: size * size }).map((_, cell) => {
                       const shot = enemyShots[cell]
@@ -582,7 +585,7 @@ export function ToucherCouleOnline() {
                           disabled={!isMyTurn || busy || finished || shot !== undefined}
                           onClick={() => fire(cell)}
                           className={cn(
-                            'game-grid-cell flex items-center justify-center rounded-[3px] text-[9px] leading-none transition-colors sm:text-[11px]',
+                            'game-grid-cell flex items-center justify-center rounded-[3px] text-[11px] leading-none transition-colors',
                             sunk
                               ? 'bg-red-800'
                               : shot === 'hit'
@@ -616,7 +619,7 @@ export function ToucherCouleOnline() {
                   <Waves className="h-3.5 w-3.5" />
                   {t('yourFleet')}
                 </p>
-                <span className={cn('text-[11px] font-bold', teamAccent(myTeam))}>
+                <span className={cn('text-xs font-bold', teamAccent(myTeam))}>
                   {t('team', { team: TEAM_LABEL[myTeam] })}
                 </span>
               </div>
@@ -630,7 +633,7 @@ export function ToucherCouleOnline() {
                       <div
                         key={cell}
                         className={cn(
-                          'game-grid-cell flex items-center justify-center rounded-[3px] text-[9px] leading-none sm:text-[11px]',
+                          'game-grid-cell flex items-center justify-center rounded-[3px] text-[11px] leading-none',
                           sunk
                             ? 'bg-red-800'
                             : isShip && shot === 'hit'
@@ -652,7 +655,7 @@ export function ToucherCouleOnline() {
             )}
 
             {/* Légende + équipes/gorgées */}
-            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] text-white/45">
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-white/45">
               <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[2px] bg-sky-500/80" /> {t('legendShip')}</span>
               <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[2px] bg-red-500/90" /> {t('legendHit')}</span>
               <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[2px] bg-sky-900" /> {t('legendMiss')}</span>
@@ -668,7 +671,7 @@ export function ToucherCouleOnline() {
                     team === 'A' ? 'border-sky-400/25 bg-sky-500/10' : 'border-rose-400/25 bg-rose-500/10'
                   )}
                 >
-                  <p className={cn('mb-1.5 text-[11px] font-bold', teamAccent(team))}>
+                  <p className={cn('mb-1.5 text-xs font-bold', teamAccent(team))}>
                     {t('team', { team: TEAM_LABEL[team] })}
                     {team === myTeam && ' ⭐'}
                   </p>
@@ -677,7 +680,7 @@ export function ToucherCouleOnline() {
                       <li
                         key={p.id}
                         className={cn(
-                          'flex items-center justify-between gap-1 rounded-md px-1.5 py-0.5 text-[11px]',
+                          'flex items-center justify-between gap-1 rounded-md px-1.5 py-0.5 text-xs',
                           p.id === activeId ? 'bg-emerald-500/15 text-emerald-200' : 'text-white/70'
                         )}
                       >
@@ -763,18 +766,18 @@ export function ToucherCouleOnline() {
                     <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
                       <div className="text-center">
                         <p className="text-lg font-bold text-sky-300">{view.turnCount}</p>
-                        <p className="text-[10px] text-white/40">{t('statTurns')}</p>
+                        <p className="text-xs text-white/40">{t('statTurns')}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-lg font-bold text-sky-300">
                           {me && me.shotsFired > 0 ? `${Math.round((me.shotsHit / me.shotsFired) * 100)}%` : '—'}
                         </p>
-                        <p className="text-[10px] text-white/40">{t('statAccuracy')}</p>
+                        <p className="text-xs text-white/40">{t('statAccuracy')}</p>
                       </div>
                     </div>
 
                     <div className="mb-5 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/40">
                         {t('finalBoard')}
                       </p>
                       {[...view.players]
@@ -793,7 +796,7 @@ export function ToucherCouleOnline() {
                           >
                             <div className="flex min-w-0 items-center gap-2">
                               <RankCrest role={cosmetics.get(p.id)?.role} />
-                              <span className={cn('shrink-0 text-[10px] font-bold', teamAccent(p.team))}>
+                              <span className={cn('shrink-0 text-xs font-bold', teamAccent(p.team))}>
                                 {TEAM_LABEL[p.team]}
                               </span>
                               <span className="truncate text-sm font-semibold text-white">

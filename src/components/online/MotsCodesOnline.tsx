@@ -181,7 +181,7 @@ export function MotsCodesOnline() {
                 <div
                   key={i}
                   className={cn(
-                    'flex aspect-[4/3] items-center justify-center rounded-md border px-0.5 text-center text-[8px] font-black uppercase leading-tight',
+                    'flex aspect-[4/3] items-center justify-center rounded-md border px-0.5 text-center text-[11px] font-black uppercase leading-tight hyphens-auto [overflow-wrap:anywhere]',
                     tileClass({ ...tile, revealed: true })
                   )}
                 >
@@ -268,7 +268,10 @@ export function MotsCodesOnline() {
         </div>
       )}
 
-      {/* Grille 5×5 */}
+      {/* Grille 5×5. Mots à 11 px au téléphone (12 dès sm) : une tuile ne
+          fait que ~60 px de large à 375 px et les banques montent à 12
+          lettres (« interruttore ») — la césure (hyphens + overflow-wrap)
+          coupe le mot proprement au lieu de le faire déborder. */}
       <div className="grid grid-cols-5 gap-1.5">
         {view.tiles.map((tile, i) => {
           const clickable = Boolean(iCanGuess && !tile.revealed && !busy)
@@ -286,7 +289,7 @@ export function MotsCodesOnline() {
               onClick={() => clickable && void sendAction({ action: 'guess', tile: i })}
               disabled={!clickable}
               className={cn(
-                'flex aspect-[4/3] items-center justify-center rounded-lg border px-0.5 text-center text-[9px] font-black uppercase leading-tight shadow-[0_4px_10px_-6px_rgba(0,0,0,0.6)] transition-all sm:text-[10px]',
+                'flex aspect-[4/3] items-center justify-center rounded-lg border px-0.5 text-center text-[11px] font-black uppercase leading-tight shadow-[0_4px_10px_-6px_rgba(0,0,0,0.6)] transition-all hyphens-auto [overflow-wrap:anywhere] sm:text-xs',
                 tileClass(tile),
                 isAssassinKnown && !tile.revealed && 'border-black bg-[#141210] text-cream',
                 tile.revealed && 'opacity-90',
@@ -299,7 +302,7 @@ export function MotsCodesOnline() {
         })}
       </div>
       {view.iSeeSolution && view.phase !== 'finished' && (
-        <p className="text-center text-[10px] text-white/40">{t('solutionHint')}</p>
+        <p className="text-center text-xs text-white/40">{t('solutionHint')}</p>
       )}
 
       {/* Zone d'action */}

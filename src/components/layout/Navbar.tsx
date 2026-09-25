@@ -249,7 +249,7 @@ export default function Navbar() {
             >
               <Users className="h-5 w-5" />
               {onlineFriendsCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold text-black">
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold text-black">
                   {onlineFriendsCount}
                 </span>
               )}
@@ -270,7 +270,7 @@ export default function Navbar() {
             >
               <MessageCircle className="h-5 w-5" />
               {unread.total > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                   {unread.total > 9 ? '9+' : unread.total}
                 </span>
               )}
@@ -463,7 +463,7 @@ export default function Navbar() {
                   </span>
                   <span className="flex-1 text-sm font-medium">{t('manageFriends')}</span>
                   {onlineFriendsCount > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-black">
+                    <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-black">
                       {onlineFriendsCount}
                     </span>
                   )}
@@ -481,7 +481,7 @@ export default function Navbar() {
                   </span>
                   <span className="flex-1 text-sm font-medium">{t('chat')}</span>
                   {unread.total > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                    <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
                       {unread.total > 9 ? '9+' : unread.total}
                     </span>
                   )}

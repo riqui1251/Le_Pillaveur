@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { PlayerName } from '@/components/ui/PlayerName'
 import { EndConfetti } from '@/components/online/EndConfetti'
 import { RefreshCw, Home, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 
 interface GamePlayer extends Omit<BasePlayer, 'stats' | 'createdAt'> {
   score: number
@@ -135,10 +136,50 @@ const CATEGORY_CONFIG: Record<ChallengeCategory, {
   }
 }
 
+type GameState = 'preparing' | 'playing' | 'completed' | 'failed'
+
+// Reprise de partie : six catégories à franchir par joueur, chacun son tour —
+// une course qui dure, et que le moindre retour arrière effaçait. L'état est du
+// JSON pur ; les profils n'y sont pas copiés (avatars compris) : la sauvegarde
+// ne porte que des identifiants et des gorgées, le reste revient de la table.
+const SAVE_ID = 'trial-poursuite'
+const SAVE_VERSION = 1
+
+type TrialSave = {
+  /** Difficulté de la partie sauvegardée : la reprise la garde, même si la page a été rechargée sur « normal ». */
+  difficulty: Difficulty
+  /** Ordre de passage de la partie : `currentPlayerIndex` s'y réfère. */
+  playerIds: string[]
+  drinksByPlayer: Record<string, number>
+  currentPlayerIndex: number
+  currentChallenge: string
+  currentCategory: ChallengeCategory
+  /** Secondes restantes au chrono : un rechargement n'offre pas de temps en plus. */
+  timeLeft: number
+  gameState: GameState
+  challengesCompleted: number
+  challengesFailed: number
+  playerTokens: Record<string, string[]>
+  playerProgress: Record<string, number>
+  /** Fenêtre de résultat ouverte : les gorgées d'un échec ne sont comptées qu'au « joueur suivant ». */
+  showResultDialog: boolean
+  resultMessage: string
+}
+
 export default function Game({ players: initialPlayers, onGameEnd, difficulty = 'normal', updatePlayerStats }: GameProps) {
   const t = useTranslations('games.trial-poursuite')
   const tc = useTranslations('common')
   const statsFlushedRef = useRef(false)
+  // La difficulté vient de la page, sauf reprise : la partie continue alors avec
+  // la sienne (la page, rechargée ou quittée pour l'onglet de configuration —
+  // qui démonte le jeu —, peut en afficher une autre).
+  const [activeDifficulty, setActiveDifficulty] = useState<Difficulty>(difficulty)
+  const [started, setStarted] = useState(false)
+  const session = useResumableLocalGame<TrialSave>(SAVE_ID, SAVE_VERSION, (s) =>
+    isSameLocalTable(s.playerIds, initialPlayers)
+  )
+  /** Chrono à reprendre au prochain démarrage du minuteur (reprise d'un défi en cours). */
+  const resumeTimeLeftRef = useRef<number | null>(null)
 
   const trialChallenges = useMemo(
     () => t.raw('challenges') as Record<ChallengeCategory, string[]>,
@@ -166,7 +207,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [isActive, setIsActive] = useState(false)
   const [challengesCompleted, setChallengesCompleted] = useState(0)
   const [challengesFailed, setChallengesFailed] = useState(0)
-  const [gameState, setGameState] = useState<'preparing' | 'playing' | 'completed' | 'failed'>('preparing')
+  const [gameState, setGameState] = useState<GameState>('preparing')
   const [round, setRound] = useState(1)
   const [showConfetti, setShowConfetti] = useState(false)
   const [showResultDialog, setShowResultDialog] = useState(false)
@@ -179,11 +220,14 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0)
   const [isAllCategoriesCompleted, setIsAllCategoriesCompleted] = useState(false)
 
-  const config = DIFFICULTY_CONFIG[difficulty]
+  const config = DIFFICULTY_CONFIG[activeDifficulty]
   const currentPlayer = players[currentPlayerIndex]
 
   const startTimer = useCallback(() => {
-    setTimeLeft(config.timePerChallenge)
+    // Reprise d'un défi en cours : le chrono repart d'où il s'était arrêté.
+    const resumedTimeLeft = resumeTimeLeftRef.current
+    resumeTimeLeftRef.current = null
+    setTimeLeft(resumedTimeLeft ?? config.timePerChallenge)
     setIsActive(true)
 
     const timer = setInterval(() => {
@@ -223,11 +267,18 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setGameState('playing')
   }, [currentPlayer.id, playerProgress, trialChallenges])
 
+  // Démarrage — jamais tant qu'une reprise est proposée : le joueur doit pouvoir
+  // dire non avant qu'un défi ne soit tiré et que le chrono ne tourne.
   useEffect(() => {
-    if (gameState === 'preparing') {
+    if (!session.ready || session.pending || started) return
+    setStarted(true)
+  }, [session.ready, session.pending, started])
+
+  useEffect(() => {
+    if (started && gameState === 'preparing') {
       generateNewChallenge()
     }
-  }, [gameState, generateNewChallenge])
+  }, [started, gameState, generateNewChallenge])
 
   useEffect(() => {
     if (gameState === 'playing') {
@@ -235,6 +286,82 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       return () => clearInterval(timer)
     }
   }, [gameState, startTimer])
+
+  // Sauvegarde continue tant que la course n'est pas gagnée (le chrono compris :
+  // une écriture par seconde pendant un défi, quelques centaines d'octets).
+  useEffect(() => {
+    if (!started || showEndDialog || isAllCategoriesCompleted) return
+    session.save({
+      difficulty: activeDifficulty,
+      playerIds: players.map(p => p.id),
+      drinksByPlayer: Object.fromEntries(players.map(p => [p.id, p.drinks])),
+      currentPlayerIndex,
+      currentChallenge,
+      currentCategory,
+      timeLeft,
+      gameState,
+      challengesCompleted,
+      challengesFailed,
+      playerTokens,
+      playerProgress,
+      showResultDialog,
+      resultMessage,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, showEndDialog, isAllCategoriesCompleted, activeDifficulty, players, currentPlayerIndex,
+      currentChallenge, currentCategory, timeLeft, gameState, challengesCompleted, challengesFailed,
+      playerTokens, playerProgress, showResultDialog, resultMessage])
+
+  // Course gagnée : une partie terminée ne doit rien laisser derrière elle.
+  useEffect(() => {
+    if (!started || !(showEndDialog || isAllCategoriesCompleted)) return
+    session.clear()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, showEndDialog, isAllCategoriesCompleted])
+
+  const resumeSavedGame = () => {
+    const saved = session.accept()
+    if (!saved) return
+    // Table différente : les jetons et les gorgées iraient à des gens qui n'ont
+    // pas joué cette course. On jette la sauvegarde, une partie neuve démarre.
+    if (!isSameLocalTable(saved.playerIds, initialPlayers)) {
+      session.discard()
+      return
+    }
+    // Réhydratation dans l'ordre de passage sauvegardé : les profils viennent
+    // de la table courante, la sauvegarde ne connaît que des identifiants.
+    const byId = new Map(initialPlayers.map(p => [p.id, p]))
+    const restoredPlayers: GamePlayer[] = saved.playerIds
+      .map(id => byId.get(id))
+      .filter((p): p is BasePlayer => Boolean(p))
+      .map(p => ({
+        ...p,
+        score: 0,
+        drinks: saved.drinksByPlayer[p.id] ?? 0,
+        wins: 0,
+        preferences: p.preferences || { color: 'bg-blue-500', icon: '👤' }
+      }))
+    const restoredIndex = Math.min(Math.max(0, saved.currentPlayerIndex), restoredPlayers.length - 1)
+    // Défi en cours : le chrono reprend là où il en était (sinon il repartirait plein).
+    resumeTimeLeftRef.current = saved.gameState === 'playing' && saved.timeLeft > 0 ? saved.timeLeft : null
+    setActiveDifficulty(saved.difficulty in DIFFICULTY_CONFIG ? saved.difficulty : activeDifficulty)
+    setPlayers(restoredPlayers)
+    setCurrentPlayerIndex(restoredIndex)
+    setCurrentChallenge(saved.currentChallenge)
+    setCurrentCategory(saved.currentCategory)
+    setTimeLeft(saved.timeLeft)
+    setIsActive(false)
+    setChallengesCompleted(saved.challengesCompleted)
+    setChallengesFailed(saved.challengesFailed)
+    setPlayerTokens(saved.playerTokens)
+    setPlayerProgress(saved.playerProgress)
+    setIsAllCategoriesCompleted(false)
+    setResultMessage(saved.resultMessage)
+    setShowResultDialog(saved.showResultDialog)
+    setShowEndDialog(false)
+    setGameState(saved.gameState)
+    setStarted(true)
+  }
 
   const completeChallenge = () => {
     setIsActive(false)
@@ -318,10 +445,13 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         })
       })
     }
+    // Quitter clôt la partie : rien à proposer de reprendre la prochaine fois.
+    session.clear()
     onGameEnd()
   }
 
   const restartGame = () => {
+    session.clear()
     statsFlushedRef.current = false
     setPlayers(
       initialPlayers.map(p => ({
@@ -366,7 +496,38 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
   const currentProgress = playerProgress[currentPlayer.id] || 0
   const categoryLabel = getCategoryLabel(currentCategory)
-  const difficultyLabel = t(`difficulties.${difficulty}`)
+  const difficultyLabel = t(`difficulties.${activeDifficulty}`)
+
+  // Tant que le stockage n'est pas lu, ni plateau ni proposition : pas de
+  // plateau qui clignote avant l'écran de reprise.
+  if (!session.ready) return null
+
+  if (session.pending) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center p-4 text-white">
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-amber-500/20 bg-amber-950/20 p-6 text-center">
+          <h2 className="text-xl font-extrabold">{tc('resumeGame.title')}</h2>
+          <p className="text-sm text-white/55">{tc('resumeGame.body')}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={resumeSavedGame}
+              className="min-h-[44px] w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
+            >
+              {tc('resumeGame.resume')}
+            </button>
+            <button
+              type="button"
+              onClick={session.discard}
+              className="min-h-[44px] w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+            >
+              {tc('resumeGame.newGame')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-red-900 via-orange-900 to-yellow-900 text-white">

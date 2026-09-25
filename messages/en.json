@@ -214,6 +214,10 @@
       "emptyTitle": "No games found",
       "emptyHint": "Try another keyword.",
       "botsBadge": "Playable with bots",
+      "betaBadge": "Beta",
+      "betaHint": "New game, still being fine-tuned",
+      "frOnlyBadge": "FR",
+      "frOnlyHint": "Cards in French only",
       "h1": "Free party games, with friends or with bots",
       "intro": "Pick a game and start playing in seconds: all on one phone passed around the table, or everyone on their own with a table code.",
       "featured": "Must-plays",
@@ -227,6 +231,10 @@
         "hint": "These games need one phone per player: open an online table with a free account, or try them solo against bots."
       },
       "opening": "Opening…"
+    },
+    "recentLocal": {
+      "title": "Your latest games",
+      "replay": "Play again"
     },
     "jeuxOnline": {
       "title": "Online games",
@@ -325,7 +333,7 @@
     "seul-avec-des-bots": {
       "title": "Play solo: games with bots",
       "description": "Nobody around tonight? Open a table and the bots fill the seats: Werewolf, quiz, Liar's Dice, bluffing, Président… Free, online, alone or as a pair.",
-      "intro": "Nobody free, or just the wish to practise before the next party: on these games the table host can fill the empty seats with bots from the lobby, and the game starts even below the minimum player count — on your own, then. Each bot has its own name and personality, and they hold their seat: they bid and call bluffs at Liar's Dice, bluff at The Big Bluff, answer at The Big Pillaveur Quiz, the buzzer quiz, bet at Purple and 1220, play their cards at Président, vote and accuse at Werewolf. Those are the games you can truly play alone. At The Impostor, Who's the Spy?, Crobard, Sans Filtre or Dilemmes, bots fill a table without bringing it to life: a bot doesn't draw, tells no stories and leads no investigation, so those games want real players. If someone drops out mid-game, a bot steps in so the table keeps going. It is the same list as the “Play solo with bots” shortcut on the home page. Everything happens online, on your phone, and once you have the hang of a game, sharing the table code is all it takes for your friends to take the seats in turn."
+      "intro": "Nobody free, or just the wish to practise before the next party: on these games the table host can fill the empty seats with bots from the lobby, and the game starts even below the minimum player count — on your own, then. Each bot has its own name and personality, and they hold their seat: they bid and call bluffs at Liar's Dice, bluff at The Big Bluff, answer at The Big Pillaveur Quiz, the buzzer quiz, bet at Purple and 1220, play their cards at Président, roll the dice at The Little Drinker, vote and accuse at Werewolf. Those are the games you can truly play alone. At The Impostor, Who's the Spy? or Crobard, bots fill a table without bringing it to life: a bot doesn't draw, tells no stories and leads no investigation, so those games want real players. If someone drops out mid-game, a bot steps in so the table keeps going. It is the same list as the “Play solo with bots” shortcut on the home page. Everything happens online, on your phone, and once you have the hang of a game, sharing the table code is all it takes for your friends to take the seats in turn."
     },
     "en-grand-groupe": {
       "title": "Party games for big groups",
@@ -566,6 +574,7 @@
       "team_full": "This team is full.",
       "room_full": "This lobby is full.",
       "invite_only": "This lobby is invite-only.",
+      "content_lang_unavailable": "This game's cards only exist in French: open the table from the French version of the site.",
       "not_host": "Only the host of the table can do that.",
       "cannot_kick_self": "You can't remove yourself from the table.",
       "member_not_found": "This player is no longer at the table.",
@@ -744,6 +753,12 @@
     "onlineSection": {
       "title": "Online account"
     },
+    "onlineName": {
+      "title": "Online nickname (account)",
+      "hint": "This nickname is used automatically in online games (one player per account). The same nickname rules apply.",
+      "placeholder": "Your online nickname",
+      "saved": "Online nickname saved."
+    },
     "tables": {
       "title": "My latest tables",
       "loading": "Loading your latest tables…",
@@ -907,6 +922,7 @@
     "addTitle": "Add a player",
     "namePlaceholder": "Player Name",
     "addButton": "Add",
+    "removePlayer": "Remove {name}",
     "selectTitle": "Select players",
     "wins": "{count} victories",
     "customize": "Personalize",
@@ -1155,6 +1171,10 @@
       "telephone-dessine": {
         "title": "Play Drawn Telephone online free — giggles guaranteed",
         "description": "Write a sentence, the next player draws it, the third one guesses… chaos ensues. 3–8 players, voice chat, free and no install."
+      },
+      "tabou": {
+        "title": "Play Taboo Voice online for free — describe, don't say it",
+        "description": "Describe a word over voice chat without saying its 4 taboo words while your team guesses against the clock. 4–16 players, 2 per team, free, no install."
       }
     },
     "catalog": {
@@ -1364,7 +1384,21 @@
       "summary": "Summary",
       "wheelInfo": "Auto-generated wheel — Risk: {risk}, Segments: {count}",
       "wheelHint": "Content: SAFE and sips 1 to 12, with repetitions. The higher the value, the smaller the segment.",
-      "segmentSips": "{count} sips"
+      "segmentSips": "{count} sips",
+      "settings": {
+        "tab": "Settings",
+        "gameTab": "Game",
+        "title": "Wheel settings",
+        "riskLabel": "Risk level",
+        "riskPlaceholder": "Choose a risk level",
+        "risks": {
+          "faible": "Low (more SAFE and small sips)",
+          "moyen": "Medium",
+          "eleve": "High (more big sips)"
+        },
+        "segments": "Number of segments",
+        "segmentsMin": "Minimum {min}"
+      }
     },
     "monsieur-3": {
       "title": "Monsieur 3",
@@ -1451,6 +1485,9 @@
         "seeResults": "See the results",
         "distribute": "{name} distributes {count} sips to {target}",
         "libreWin": "{name} wins! Distribute {count} sips.",
+        "toWhom": "To whom?",
+        "allWinners": "Every player is a winner.",
+        "giveTo": "to",
         "replay": "Replay",
         "menu": "Menu"
       }
@@ -2056,6 +2093,7 @@
         "yourTurn": "Your turn",
         "categoryLabel": "Category: {category}",
         "errors": "Errors: {count}/{max}",
+        "robotError": "ERROR",
         "hint": "💡 Hint ({used}/{max})",
         "hintCost": "Cost: -10s",
         "wrongLetters": "Wrong letters: {letters}",
@@ -2539,8 +2577,8 @@
         "teamA": "Team A",
         "teamB": "Team B",
         "joinTeam": "Join",
-        "botSlot": "Bot",
-        "botsFill": "Empty seats will be filled with bots.",
+        "openSeat": "Open seat",
+        "teamRule": "Two players minimum per team. A bot only replaces a player who leaves mid-game.",
         "targetScore": "Target score",
         "points": "pts"
       },
@@ -2594,6 +2632,11 @@
             "body": "If the describer says a taboo word, an opponent who hears it clicks TABOO! — the word is skipped, no point for anyone."
           }
         ]
+      },
+      "about": {
+        "p1": "Two teams, A and B, and a describer who changes every round, each player in turn. Only they see, on their phone, the word to get across and its four taboo words, banned from their lips. They describe it out loud over voice chat while their team fires off guesses.",
+        "p2": "A round lasts 60 seconds and several words go by: a teammate taps GOT IT, +1 point for the team and the next word appears at once; the describer can pass a word that is too hard, no point; an opponent who hears a taboo word taps TABOO, and the word is skipped with no point for anyone. The round summary reveals the last word and the round's tally. First team to the target score wins: 15, 20 or 25, set by the host.",
+        "p3": "Opponents do not see the card: they listen, and the table's fair play is the referee. Describe what it is used for when the definition is taboo, and pass fast on whatever sticks: the clock is the real enemy. Four players minimum, two per team, up to sixteen. Games can't start with bots: a bot can't describe anything, it only replaces a player who left. Words come in four languages. The game counts no sips, only points."
       }
     },
     "crobard": {

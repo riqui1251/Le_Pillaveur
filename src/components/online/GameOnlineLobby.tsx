@@ -12,7 +12,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
 import { useFriends } from '@/hooks/useFriends'
-import { GAMES, type GameMeta } from '@/lib/games'
+import { GAMES, hasContentIn, type GameMeta } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { GameIconById } from '@/components/hub/GameIconById'
@@ -56,7 +56,9 @@ const SWITCHABLE_GAMES = GAMES.filter((g) => g.onlineReady && !g.hidden)
 /**
  * Feuille « Changer de jeu » (hôte, table en attente) : la liste des jeux en
  * ligne, en zone pouce. Un jeu que la tablée dépasse déjà est grisé — le
- * serveur le refuserait (max_players). En ambiance Soft, seuls les jeux prêts
+ * serveur le refuserait (max_players) —, comme un jeu dont les cartes
+ * n'existent pas dans la langue de la table (content_lang_unavailable). En
+ * ambiance Soft, seuls les jeux prêts
  * pour elle (softModeReady), comme la grille des jeux : les autres membres
  * suivent la bascule sans rien choisir. Échap, le voile ou la croix ferment,
  * sauf pendant la bascule. Modale au clavier : Tab tourne dans la feuille, et
@@ -65,6 +67,7 @@ const SWITCHABLE_GAMES = GAMES.filter((g) => g.onlineReady && !g.hidden)
 function GameSwitchSheet({
   currentGameId,
   humans,
+  lang,
   pendingId,
   error,
   titleOf,
@@ -73,6 +76,8 @@ function GameSwitchSheet({
 }: {
   currentGameId: string
   humans: number
+  /** Langue de la table (RoomSettings.lang) : celle des cartes tirées. */
+  lang: string | undefined
   pendingId: string | null
   error: string | null
   titleOf: (id: string) => string
@@ -80,6 +85,8 @@ function GameSwitchSheet({
   onClose: () => void
 }) {
   const tOnline = useTranslations('onlineLobby')
+  // « Cartes en français uniquement » : les mots du badge du hub.
+  const tHub = useTranslations('hub.jeux')
   const panelRef = useRef<HTMLDivElement>(null)
   const busy = pendingId !== null
   const { mode: ambiance } = useAmbianceMode()
@@ -157,7 +164,7 @@ function GameSwitchSheet({
             <h2 id="game-switch-title" className="font-display text-lg font-bold text-cream">
               {tOnline('gameSwitch.cta')}
             </h2>
-            <p className="mt-0.5 text-[11px] leading-snug text-white/50">{tOnline('gameSwitch.hint')}</p>
+            <p className="mt-0.5 text-xs leading-snug text-white/50">{tOnline('gameSwitch.hint')}</p>
           </div>
           <button
             type="button"
@@ -178,8 +185,9 @@ function GameSwitchSheet({
           {games.map((g) => {
             const current = g.id === currentGameId
             const tooMany = g.maxPlayers !== undefined && humans > g.maxPlayers
+            const noContent = !current && !hasContentIn(g, lang)
             const pending = pendingId === g.id
-            const disabled = current || tooMany || busy
+            const disabled = current || tooMany || noContent || busy
             return (
               <li key={g.id}>
                 <button
@@ -199,16 +207,18 @@ function GameSwitchSheet({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-white">{titleOf(g.id)}</span>
-                    <span className="block truncate text-[11px] text-white/45">
+                    <span className="block truncate text-xs text-white/45">
                       {tooMany
                         ? tOnline('gameSwitch.tooMany', { count: g.maxPlayers ?? 0 })
-                        : g.maxPlayers && g.maxPlayers < 20
-                          ? tOnline('playersRange.bounded', { min: g.minPlayers ?? 2, max: g.maxPlayers })
-                          : tOnline('playersRange.open', { min: g.minPlayers ?? 2 })}
+                        : noContent
+                          ? tHub('frOnlyHint')
+                          : g.maxPlayers && g.maxPlayers < 20
+                            ? tOnline('playersRange.bounded', { min: g.minPlayers ?? 2, max: g.maxPlayers })
+                            : tOnline('playersRange.open', { min: g.minPlayers ?? 2 })}
                     </span>
                   </span>
                   {current ? (
-                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-gold">
+                    <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-gold">
                       {tOnline('gameSwitch.current')}
                     </span>
                   ) : pending ? (
@@ -533,7 +543,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/jeux"
-            className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-white"
+            className="flex min-h-[44px] items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             {tOnline('back')}
@@ -551,7 +561,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </span>
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-base font-bold leading-tight">{game?.title}</h1>
-            <p className="text-[11px] text-[#6B6455]">
+            <p className="text-xs text-[#6B6455]">
               {game?.maxPlayers && game.maxPlayers < 20
                 ? tOnline('playersRange.bounded', { min: game?.minPlayers ?? 2, max: game.maxPlayers })
                 : tOnline('playersRange.open', { min: game?.minPlayers ?? 2 })}
@@ -586,7 +596,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <FriendInviteBanner onJoin={(roomId) => joinRoom({ roomId })} joining={loading} />
 
             <div className="mb-5">
-              <p className="mb-2 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/75">
+              <p className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold/75">
                 {tOnline('joinByCode.label')}
                 <span aria-hidden className="h-px flex-1 bg-gold/15" />
               </p>
@@ -635,7 +645,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
         {gameLobbies.length > 0 && (
           <div className="mb-4">
-            <p className="mb-2 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/75">
+            <p className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold/75">
               {tOnline('openTables.title', { count: gameLobbies.length })}
               <span aria-hidden className="h-px flex-1 bg-gold/15" />
             </p>
@@ -660,7 +670,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     size="sm"
                     disabled={loading || wrongRoom}
                     onClick={() => joinRoom({ roomId: lobby.id })}
-                    className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
+                    className="h-11 shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
                   >
                     {tOnline('join')}
                   </Button>
@@ -676,7 +686,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             proposer « Rejoindre » serait promettre l'impossible. */}
         {liveHere.length > 0 && (
           <div className="mb-4">
-            <p className="mb-2 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/75">
+            <p className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold/75">
               <LiveDot />
               {tOnline('live.title', { count: liveHere.length })}
               <span aria-hidden className="h-px flex-1 bg-gold/15" />
@@ -704,7 +714,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         />
                       )}
                     </p>
-                    <p className="truncate text-[11px] text-white/40">
+                    <p className="truncate text-xs text-white/40">
                       {live.openedAgoMinutes < 1
                         ? tOnline('live.justOpened')
                         : tOnline('live.openedAgo', { minutes: live.openedAgoMinutes })}
@@ -713,12 +723,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-[11px] text-white/35">{tOnline('live.notJoinable')}</p>
+            <p className="mt-2 text-xs text-white/35">{tOnline('live.notJoinable')}</p>
           </div>
         )}
 
         {liveElsewhere > 0 && (
-          <p className="mb-4 flex items-center gap-2 rounded-xl border border-dashed border-gold/15 px-3 py-2 text-[11px] text-white/45">
+          <p className="mb-4 flex items-center gap-2 rounded-xl border border-dashed border-gold/15 px-3 py-2 text-xs text-white/45">
             <LiveDot />
             {tOnline('live.elsewhere', { count: liveElsewhere })}
           </p>
@@ -758,7 +768,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-200">
                           <Globe className="h-4 w-4" /> {tOnline('create.openLabel')}
                         </span>
-                        <span className="text-[10px] leading-tight text-white/45">
+                        <span className="text-xs leading-tight text-white/45">
                           {tOnline('create.openDesc')}
                         </span>
                       </button>
@@ -771,7 +781,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         <span className="flex items-center gap-1.5 text-sm font-bold text-amber-200">
                           <Lock className="h-4 w-4" /> {tOnline('create.privateLabel')}
                         </span>
-                        <span className="text-[10px] leading-tight text-white/45">
+                        <span className="text-xs leading-tight text-white/45">
                           {tOnline('create.privateDesc')}
                         </span>
                       </button>
@@ -780,7 +790,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       type="button"
                       onClick={() => setChoosingVisibility(false)}
                       disabled={loading}
-                      className="w-full py-1 text-center text-xs text-white/40 transition-colors hover:text-white/70"
+                      className="min-h-[44px] w-full py-1 text-center text-xs text-white/40 transition-colors hover:text-white/70"
                     >
                       {loading ? tOnline('create.creating') : tOnline('create.cancel')}
                     </button>
@@ -825,17 +835,21 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   // atteignent le minimum du jeu (logique pure, cf. lobby-launch.ts). Le
   // serveur retire les non-prêts puis lance — l'hôte est mis prêt avant,
   // pour ne jamais compter parmi eux.
+  // Équipes choisies au lobby : Mots Codés et Tabou Vocal les rangent sous
+  // leur propre clé, avec le même équilibrage des non-assignés au lancement.
+  const lobbyTeams = gameId === 'tabou' ? room.settings.tabouTeams : room.settings.mcTeams
   const forceLaunch = forceLaunchDecision({
     members: room.members.map((m) => ({
       isReady: m.isReady,
       isHost: m.isHost,
-      team: room.settings.mcTeams?.[m.userId] ?? null,
+      team: lobbyTeams?.[m.userId] ?? null,
     })),
     botCount: botSeatCount,
     minPlayers: game?.minPlayers ?? 2,
-    // Mots Codés : chaque équipe doit garder 2 joueurs une fois les
-    // retardataires retirés — la même borne que la route (team_min_players).
-    teamMinPlayers: gameId === 'mots-codes' ? MC_TEAM_MIN_PLAYERS : undefined,
+    // Mots Codés et Tabou : chaque équipe doit garder 2 joueurs (humains, le
+    // Tabou n'a pas de bots au lancement) une fois les retardataires retirés
+    // — la même borne que la route (team_min_players), 2 pour les deux jeux.
+    teamMinPlayers: gameId === 'mots-codes' || gameId === 'tabou' ? MC_TEAM_MIN_PLAYERS : undefined,
   })
   const showForceLaunch = isHost && !canLaunchSoloWithBots && forceLaunch.offered
   const launchWithoutLate = async () => {
@@ -889,7 +903,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <GameIconById id={gameId} className="h-5 w-5 shrink-0 text-gold" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs font-bold text-white">{catalogTitle(gameId)}</span>
-              <span className="block truncate text-[10px] leading-tight text-gold/75">{tOnline('gameSwitch.cta')}</span>
+              <span className="block truncate text-xs leading-tight text-gold/75">{tOnline('gameSwitch.cta')}</span>
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-white/40" />
           </button>
@@ -903,6 +917,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         <GameSwitchSheet
           currentGameId={gameId}
           humans={room.members.length}
+          lang={room.settings.lang}
           pendingId={switchingTo}
           error={error}
           titleOf={catalogTitle}
@@ -958,7 +973,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 </span>
                 <span
                   className={cn(
-                    'flex max-w-16 items-center gap-0.5 text-[10px] leading-tight',
+                    'flex max-w-[4rem] items-center gap-0.5 text-xs leading-tight',
                     armed ? 'font-bold text-red-300' : 'text-white/85'
                   )}
                 >
@@ -1016,7 +1031,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             >
               🤖
             </span>
-            <span className="max-w-16 truncate text-[10px] leading-tight text-white/45">
+            <span className="max-w-[4rem] truncate text-xs leading-tight text-white/45">
               {tOnline('seat.bot')}
             </span>
           </span>
@@ -1026,10 +1041,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           onClick={copyCode}
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[#D8CCAE] bg-cream px-4 py-1.5 text-center text-[#24201A] shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]"
         >
-          <span className="block text-[8px] font-bold uppercase tracking-[0.24em] text-[#6B6455]">{tOnline('table.label')}</span>
+          <span className="block text-xs font-bold uppercase tracking-[0.2em] text-[#6B6455]">{tOnline('table.label')}</span>
           <span className="block font-display text-xl font-black tracking-[0.16em]">{room.code}</span>
-          <span className="flex items-center justify-center gap-1 text-[9px] font-semibold text-[#6B6455]">
-            {copied ? <Check className="h-2.5 w-2.5 text-emerald-700" /> : <Copy className="h-2.5 w-2.5" />}
+          <span className="flex items-center justify-center gap-1 text-xs font-semibold text-[#6B6455]">
+            {copied ? <Check className="h-3 w-3 text-emerald-700" /> : <Copy className="h-3 w-3" />}
             {copied ? tOnline('table.copied') : tOnline('table.tapToCopy')}
           </span>
         </button>
@@ -1099,12 +1114,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <span className="text-xl" aria-hidden>🤖</span>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-white">{tOnline('botsCallout.title', { count: missing })}</p>
-              <p className="text-[11px] leading-snug text-white/50">{tOnline('botsCallout.hint')}</p>
+              <p className="text-xs leading-snug text-white/50">{tOnline('botsCallout.hint')}</p>
             </div>
             <button
               type="button"
               onClick={() => updateSettings({ botsCount: botsCount + missing })}
-              className="shrink-0 rounded-xl bg-violet-500/25 px-3 py-2 text-xs font-bold text-violet-100 transition-colors hover:bg-violet-500/40"
+              className="min-h-[44px] shrink-0 rounded-xl bg-violet-500/25 px-3 py-2 text-xs font-bold text-violet-100 transition-colors hover:bg-violet-500/40"
             >
               {tOnline('botsCallout.fill')}
             </button>
@@ -1116,7 +1131,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         <button
           type="button"
           onClick={() => void shareTableLink()}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20"
+          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20"
         >
           {linkShared ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
           {linkShared ? tOnline('share.linkCopied') : tOnline('share.cta')}
@@ -1125,7 +1140,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           type="button"
           onClick={() => setShowTv((v) => !v)}
           aria-expanded={showTv}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
+          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
         >
           <Tv className="h-3.5 w-3.5 text-amber-300" />
           {tTv('modeTv')}
@@ -1134,7 +1149,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           type="button"
           onClick={() => setShowInvite((v) => !v)}
           aria-expanded={showInvite}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
+          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
         >
           <Mail className="h-3.5 w-3.5 text-amber-300" />
           {tOnline('invites.inviteFriend')}
@@ -1159,18 +1174,18 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <Tv className="h-3.5 w-3.5" />
             {tTv('openTvScreen')}
           </a>
-          <p className="text-[11px] leading-relaxed text-white/40">{tTv('openTvScreenHint')}</p>
+          <p className="text-xs leading-relaxed text-white/40">{tTv('openTvScreenHint')}</p>
           <JoinQR
             url={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${room.code}`}
             size={128}
           />
-          <p className="text-[11px] text-white/40">{tTv('scanToJoin')}</p>
+          <p className="text-xs text-white/40">{tTv('scanToJoin')}</p>
         </div>
       )}
 
       {showInvite && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-300/70">
             {tOnline('invites.inviteFriend')}
           </p>
           {/* Le QR d'abord : le moyen le plus direct de faire entrer quelqu'un
@@ -1181,10 +1196,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               size={132}
             />
             <p className="font-mono text-lg font-black tracking-[0.25em] text-cream">{room.code}</p>
-            <p className="max-w-64 text-[11px] leading-relaxed text-white/45">{tOnline('invites.qrHint')}</p>
+            <p className="max-w-[16rem] text-xs leading-relaxed text-white/45">{tOnline('invites.qrHint')}</p>
           </div>
           {isHost && visibility !== 'public' && (
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-white/30">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/30">
               {tOnline('invites.friendsTitle')}
             </p>
           )}
@@ -1236,7 +1251,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         return (
           <>
             <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-sky-300/70">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-sky-300/70">
                 {tTc('mode')}
               </p>
               <div className="grid grid-cols-4 gap-2">
@@ -1258,7 +1273,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       )}
                     >
                       <span className="block text-sm font-bold">{tTc(`modes.${value}.label`)}</span>
-                      <span className={cn('mt-0.5 block text-[10px] leading-tight', active ? 'text-white/80' : 'text-white/35')}>
+                      <span className={cn('mt-0.5 block break-words text-xs leading-tight hyphens-auto', active ? 'text-white/80' : 'text-white/35')}>
                         {tTc(`modes.${value}.desc`)}
                       </span>
                     </button>
@@ -1268,7 +1283,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             </div>
 
             <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-sky-300/70">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-sky-300/70">
                 {tTc('teams')}
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -1330,11 +1345,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )
                 })}
               </div>
-              <p className="mt-2 text-[11px] text-white/40">{tTc('botsFill')}</p>
+              <p className="mt-2 text-xs text-white/40">{tTc('botsFill')}</p>
             </div>
 
             <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-sky-300/70">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-sky-300/70">
                 {tTc('variants')}
               </p>
               {(() => {
@@ -1353,7 +1368,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     )}
                   >
                     <span className="block text-sm font-black">💣 {tTc('powerups')}</span>
-                    <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                    <span className={cn('mt-0.5 block text-xs', active ? 'text-white/80' : 'text-white/35')}>
                       {tTc('powerupsHint')}
                     </span>
                   </button>
@@ -1386,7 +1401,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         <div className={cn('border-t border-white/10 p-4 pb-0', !showSettings && 'hidden')}>
 
       <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-300/70">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-300/70">
           {tOnline('visibility.title')}
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -1418,7 +1433,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'petit-buveur' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
             {tPb('difficulty')}
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -1458,7 +1473,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-bold text-white">🤖 {tOnline('botsFill.title')}</p>
-                <p className="mt-0.5 text-[11px] text-white/45">
+                <p className="mt-0.5 text-xs text-white/45">
                   {tOnline('botsFill.hint', { min: game.minPlayers ?? 2 })}
                 </p>
               </div>
@@ -1492,7 +1507,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'quiz' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-cyan-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-cyan-400/70">
             {tQuiz('questionCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1513,7 +1528,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                     {tQuiz('questions')}
                   </span>
                 </button>
@@ -1525,7 +1540,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'bluff' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-rose-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-rose-400/70">
             {tBluff('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1546,7 +1561,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                     {tBluff('rounds')}
                   </span>
                 </button>
@@ -1558,7 +1573,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'sans-filtre' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
             {tSf('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1579,7 +1594,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                     {tSf('rounds')}
                   </span>
                 </button>
@@ -1591,7 +1606,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'dilemmes' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-rose-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-rose-400/70">
             {tDil('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1612,7 +1627,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                     {tDil('rounds')}
                   </span>
                 </button>
@@ -1636,7 +1651,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               <span className="block text-sm font-black">{tDil('coquin')} 🌶️</span>
               <span
                 className={cn(
-                  'mt-0.5 block text-[10px]',
+                  'mt-0.5 block text-xs',
                   room.settings.dilCoquin ? 'text-white/80' : 'text-white/35'
                 )}
               >
@@ -1657,7 +1672,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'petit-bac' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-sky-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-sky-400/70">
             {tPbc('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1678,7 +1693,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                     {tPbc('rounds')}
                   </span>
                 </button>
@@ -1690,7 +1705,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'president' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-emerald-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-emerald-400/70">
             {tPre('manchesCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1711,7 +1726,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                     {tPre('manches')}
                   </span>
                 </button>
@@ -1724,7 +1739,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       {gameId === 'espion' && (
         <>
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-cyan-400/70">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-cyan-400/70">
               {tEspion('discussionMin')}
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -1745,7 +1760,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     )}
                   >
                     <span className="block text-lg font-black">{value}</span>
-                    <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                    <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                       {tEspion('minutes')}
                     </span>
                   </button>
@@ -1754,7 +1769,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             </div>
           </div>
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-cyan-400/70">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-cyan-400/70">
               {tEspion('roundsToWin')}
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -1775,7 +1790,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     )}
                   >
                     <span className="block text-lg font-black">{value}</span>
-                    <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                    <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                       {tEspion('rounds')}
                     </span>
                   </button>
@@ -1792,7 +1807,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         const myTeam = user ? teams[user.id] : undefined
         return (
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
               {tMc('teams')}
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -1841,7 +1856,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 )
               })}
             </div>
-            <p className="mt-2 text-[11px] text-white/40">{tMc('teamsHint')}</p>
+            <p className="mt-2 text-xs text-white/40">{tMc('teamsHint')}</p>
           </div>
         )
       })()}
@@ -1853,7 +1868,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         return (
           <>
             <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-emerald-400/70">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-emerald-400/70">
                 {tTabou('teams')}
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -1873,7 +1888,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       </p>
                       <ul className="mb-2 min-h-[1.75rem] space-y-1">
                         {inTeam.length === 0 && (
-                          <li className="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/35">{tTabou('botSlot')}</li>
+                          <li className="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/35">{tTabou('openSeat')}</li>
                         )}
                         {inTeam.map((member) => (
                           <li key={member.userId} className="truncate rounded-lg bg-black/25 px-2 py-1 text-xs font-medium text-white">
@@ -1902,11 +1917,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )
                 })}
               </div>
-              <p className="mt-2 text-[11px] text-white/40">{tTabou('botsFill')}</p>
+              <p className="mt-2 text-xs text-white/40">{tTabou('teamRule')}</p>
             </div>
 
             <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-emerald-400/70">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-emerald-400/70">
                 {tTabou('targetScore')}
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -1927,7 +1942,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       )}
                     >
                       <span className="block text-lg font-black">{value}</span>
-                      <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                      <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                         {tTabou('points')}
                       </span>
                     </button>
@@ -1941,7 +1956,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'crobard' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
             {tCrobard('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1962,7 +1977,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                     {tCrobard('rounds')}
                   </span>
                 </button>
@@ -1974,7 +1989,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'loup-garou' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
             {tLg('debate')}
           </p>
           <div className="grid grid-cols-5 gap-2">
@@ -1995,7 +2010,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block text-[9px]', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                     {tLg('minutes')}
                   </span>
                 </button>
@@ -2020,7 +2035,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               <span className="block text-sm font-black">{tLg('extraWolf')}</span>
               <span
                 className={cn(
-                  'mt-0.5 block text-[10px]',
+                  'mt-0.5 block text-xs',
                   room.settings.lgExtraWolf ? 'text-white/80' : 'text-white/35'
                 )}
               >
@@ -2033,7 +2048,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'menteur' && (
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-orange-400/70">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-orange-400/70">
             {tMenteur('variants')}
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -2059,7 +2074,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 >
                   <span className="block text-sm font-black">{label}</span>
-                  <span className={cn('mt-0.5 block text-[10px]', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block text-xs', active ? 'text-white/80' : 'text-white/35')}>
                     {hint}
                   </span>
                 </button>
@@ -2076,7 +2091,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         const options = Array.from({ length: maxCount }, (_, i) => i + 1)
         return (
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
               {tImposteur('count')}
             </p>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
@@ -2097,7 +2112,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     )}
                   >
                     <span className="block text-lg font-black">{value}</span>
-                    <span className={cn('mt-0.5 block text-[9px]', active ? 'text-white/80' : 'text-white/35')}>
+                    <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
                       {tImposteur(value > 1 ? 'imposteursPlural' : 'imposteurSingular')}
                     </span>
                   </button>
@@ -2207,7 +2222,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               {tOnline('launch.force', { count: forceLaunch.late })}
             </button>
             {!forceLaunch.allowed && (
-              <p className="mt-0.5 text-[11px] text-cream/70">
+              <p className="mt-0.5 text-xs text-cream/70">
                 {tOnline('launch.forceBlocked', { count: forceLaunch.missing })}
               </p>
             )}

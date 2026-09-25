@@ -54,7 +54,7 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
     <section className="rounded-2xl border border-gold/20 bg-felt-deep/60 p-4 backdrop-blur-md">
       <div className="mb-3 flex items-center gap-2">
         <LiveDot />
-        <p className="font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/80">
+        <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold/80">
           {t('live.title', { count: total })}
         </p>
         <span aria-hidden className="h-px flex-1 bg-gold/15" />
@@ -90,12 +90,12 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
                       />
                     )}
                     {items.length > 1 && (
-                      <span className="shrink-0 rounded-full border border-gold/20 bg-gold/10 px-1.5 py-px text-[10px] font-medium text-gold">
+                      <span className="shrink-0 rounded-full border border-gold/20 bg-gold/10 px-1.5 py-px text-xs font-medium text-gold">
                         {t('live.tables', { count: items.length })}
                       </span>
                     )}
                   </p>
-                  <p className="truncate text-[11px] text-white/45">
+                  <p className="truncate text-xs text-white/45">
                     {playerCount > 0 && `${t('playersCount', { count: playerCount })} · `}
                     {freshest < 1 ? t('live.justOpened') : t('live.openedAgo', { minutes: freshest })}
                   </p>
@@ -107,9 +107,9 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
       )}
 
       {hidden > 0 && (
-        <p className="mt-2 text-[11px] text-white/40">{t('live.more', { count: hidden })}</p>
+        <p className="mt-2 text-xs text-white/40">{t('live.more', { count: hidden })}</p>
       )}
-      <p className="mt-2 text-[11px] text-white/35">{t('live.notJoinable')}</p>
+      <p className="mt-2 text-xs text-white/35">{t('live.notJoinable')}</p>
     </section>
   )
 }
@@ -215,7 +215,7 @@ export function OpenLobbiesList() {
                           size="sm"
                           disabled={joining}
                           onClick={() => handleJoin(lobby.id, lobby.gameId)}
-                          className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
+                          className="h-11 shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
                         >
                           {t('join')}
                         </Button>

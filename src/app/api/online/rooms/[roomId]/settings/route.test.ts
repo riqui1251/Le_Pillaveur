@@ -179,3 +179,49 @@ describe('PUT /settings — réinitialisation au changement de jeu', () => {
     expect(settings).not.toHaveProperty('tcMode')
   })
 })
+
+describe('PUT /settings — cartes dans la langue de la table', () => {
+  /** Table ouverte sur Toucher-Coulé, dans la langue donnée (absente : table d'avant la langue). */
+  const roomIn = (lang?: string, over: Record<string, unknown> = {}) =>
+    waitingRoom({ settingsJson: JSON.stringify(lang ? { difficulty: 'normal', lang } : { difficulty: 'normal' }), ...over })
+
+  it('refuse de passer à un jeu aux cartes françaises seules depuis une table en/it (409, rien écrit)', async () => {
+    for (const lang of ['en', 'it']) {
+      roomMock.findUnique.mockResolvedValue(roomIn(lang))
+      for (const gameId of ['sans-filtre', 'dilemmes']) {
+        const res = await put({ gameId })
+        expect(res.status, `${gameId} depuis une table ${lang}`).toBe(409)
+        expect((await res.json()).error).toBe('content_lang_unavailable')
+      }
+    }
+    expect(transactionMock).not.toHaveBeenCalled()
+    expect(roomMock.update).not.toHaveBeenCalled()
+  })
+
+  it('accepte depuis une table française, ou sans langue (vaut le français)', async () => {
+    for (const lang of ['fr', undefined]) {
+      roomMock.update.mockClear()
+      roomMock.findUnique.mockResolvedValue(roomIn(lang))
+      const res = await put({ gameId: 'sans-filtre' })
+      expect(res.status, `table ${lang ?? 'sans langue'}`).toBe(200)
+      expect(writtenRoomData().gameId).toBe('sans-filtre')
+    }
+  })
+
+  it('une table déjà ouverte sur ce jeu dans une autre langue garde ses autres réglages', async () => {
+    // Table d'avant le contrôle : seul le CHANGEMENT de jeu est refusé.
+    roomMock.findUnique.mockResolvedValue(
+      waitingRoom({ gameId: 'sans-filtre', settingsJson: JSON.stringify({ difficulty: 'normal', lang: 'en', botsCount: 1 }) })
+    )
+
+    const res = await put({ gameId: 'sans-filtre', botsCount: 3 })
+
+    expect(res.status).toBe(200)
+    expect(transactionMock).not.toHaveBeenCalled()
+    expect(JSON.parse(writtenRoomData().settingsJson)).toMatchObject({ lang: 'en', botsCount: 3 })
+
+    const again = await put({ difficulty: 'difficile' })
+    expect(again.status).toBe(200)
+    expect(JSON.parse(writtenRoomData().settingsJson)).toMatchObject({ lang: 'en', difficulty: 'difficile' })
+  })
+})

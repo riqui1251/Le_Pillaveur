@@ -209,7 +209,7 @@ export function OnlineCollection({
                           <span className="flex items-center justify-between gap-1 text-sm">
                             <span className={cn('on-fx', `on-fx-${c.id}`)}>{tEffects(c.id)}</span>
                             {locked && (
-                              <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-white/40">
+                              <span className="flex shrink-0 items-center gap-0.5 text-xs text-white/40">
                                 <Lock className="h-3 w-3" />
                                 {t('unlockAt', { level: c.unlockLevel })}
                               </span>
@@ -238,7 +238,7 @@ export function OnlineCollection({
               )}
             >
               {frameSwatch(null)}
-              <span className="text-[10px] text-white/60">{tFrames('none')}</span>
+              <span className="text-center text-xs leading-tight text-white/60">{tFrames('none')}</span>
             </button>
             {LEVEL_FRAMES.map((c) => {
               const locked = !isUnlocked('frame', c.id)
@@ -255,7 +255,7 @@ export function OnlineCollection({
                   )}
                 >
                   {frameSwatch(c.id as PlayerIconFrame)}
-                  <span className="flex items-center gap-0.5 text-[10px] text-white/60">
+                  <span className="flex items-center gap-0.5 text-center text-xs leading-tight text-white/60">
                     {locked && <Lock className="h-3 w-3 text-white/40" />}
                     {locked ? t('unlockAt', { level: c.unlockLevel }) : tFrames(c.id)}
                   </span>
@@ -282,7 +282,7 @@ export function OnlineCollection({
                   )}
                 >
                   {frameSwatch(id as PlayerIconFrame)}
-                  <span className="text-[10px] text-white/60">{tFrames(id)}</span>
+                  <span className="text-center text-xs leading-tight text-white/60">{tFrames(id)}</span>
                 </button>
               ))}
             </div>
@@ -306,7 +306,7 @@ export function OnlineCollection({
                   )}
                 >
                   {frameSwatch(id as PlayerIconFrame)}
-                  <span className="text-[10px] text-white/60">{tFrames(id)}</span>
+                  <span className="text-center text-xs leading-tight text-white/60">{tFrames(id)}</span>
                 </button>
               ))}
             </div>

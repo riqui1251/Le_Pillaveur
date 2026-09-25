@@ -345,16 +345,21 @@ export function AgeGate() {
         tabIndex={-1}
         className="fixed inset-x-3 bottom-3 z-[100] mx-auto max-w-md rounded-2xl border border-gold/25 bg-felt-deep/95 p-3 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)] outline-none backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-gold/60"
       >
+        {/* Le span porte la position, le bouton la cible : `.touch-target`
+            pose `position: relative` au doigt, qui écraserait `absolute`
+            s'ils partageaient la même boîte. 32 px visibles, 44 au doigt. */}
         {canDismissBanner && (
-          <button
-            type="button"
-            onClick={() => setConsentRequested(false)}
-            disabled={loading}
-            aria-label={tCommon('close')}
-            className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
+          <span className="absolute right-1.5 top-1.5">
+            <button
+              type="button"
+              onClick={() => setConsentRequested(false)}
+              disabled={loading}
+              aria-label={tCommon('close')}
+              className="touch-target flex h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </span>
         )}
         {/* Contraste : /70 sur le feutre profond passait sous le seuil AA en
             12px — remonté à /85 (le texte porte l'information légale). Le
@@ -369,7 +374,7 @@ export function AgeGate() {
           </Link>
         </p>
         {consentRequested && currentChoice && (
-          <p className="mt-1.5 text-[11px] font-semibold text-cream/90">
+          <p className="mt-1.5 text-xs font-semibold text-cream/90">
             {currentChoice === 'granted' ? t('currentChoiceGranted') : t('currentChoiceRefused')}
           </p>
         )}
@@ -380,7 +385,7 @@ export function AgeGate() {
             onClick={() => void submit(true, true)}
             disabled={loading}
             variant="outline"
-            className="h-8 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/15 hover:text-cream"
+            className="h-11 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/15 hover:text-cream"
           >
             {t('accept')}
           </Button>
@@ -388,7 +393,7 @@ export function AgeGate() {
             onClick={() => void submit(false, true)}
             disabled={loading}
             variant="outline"
-            className="h-8 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/15 hover:text-cream"
+            className="h-11 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/15 hover:text-cream"
           >
             {t('refuse')}
           </Button>
@@ -423,7 +428,7 @@ export function AgeGate() {
           <strong className="text-cream">{t('healthWarning')}</strong> {t('moderation')}
         </p>
 
-        <label className="mt-4 flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+        <label className="mt-4 flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
           <Checkbox
             checked={analyticsChecked}
             onCheckedChange={(v) => setAnalyticsChecked(v === true)}
@@ -435,7 +440,7 @@ export function AgeGate() {
         <Button
           onClick={() => void submit(analyticsChecked, false)}
           disabled={loading}
-          className="mt-4 w-full bg-amber-500 font-semibold text-black hover:bg-amber-400"
+          className="mt-4 h-11 w-full bg-amber-500 font-semibold text-black hover:bg-amber-400"
         >
           {loading ? t('validating') : t('enterAdult')}
         </Button>
@@ -448,7 +453,7 @@ export function AgeGate() {
             variant="ghost"
             onClick={cancelRequest}
             disabled={loading}
-            className="mt-2 h-auto min-h-11 w-full text-white/70 hover:bg-white/10 hover:text-white"
+            className="mt-2 h-auto min-h-[44px] w-full text-white/70 hover:bg-white/10 hover:text-white"
           >
             {tCommon('cancel')}
           </Button>

@@ -188,7 +188,10 @@ describe('fenêtre de présence', () => {
    * boucler les imports). Le compteur de l'écran de fin doit compter ceux que
    * la relance compte.
    */
-  it('le DTO et la relance tiennent la même fenêtre', async () => {
+  // Délai large : les vrais modules tirent tous les lanceurs et leurs moteurs,
+  // transformés à froid — 3 s seul, et plus de 5 s (le défaut de vitest) sous
+  // la charge de la suite complète, sans que rien ne soit en cause.
+  it('le DTO et la relance tiennent la même fenêtre', { timeout: 30_000 }, async () => {
     const room = await vi.importActual<typeof import('@/lib/online-room')>('@/lib/online-room')
     const launch = await vi.importActual<typeof import('@/lib/online-room-launch')>(
       '@/lib/online-room-launch'

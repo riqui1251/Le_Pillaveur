@@ -12,7 +12,7 @@ Deux équipes s'affrontent. À chaque manche, un orateur voit un mot à faire de
 2. **L'orateur** voit le mot + ses tabous sur son téléphone ; son équipe écoute au vocal.
 3. **Ça devine** à toute vitesse pendant 60 secondes : mot trouvé = point, on passe au suivant, le chrono tourne.
 4. Trop dur ? On peut passer. Un tabou prononcé annule le mot — c'est l'équipe adverse qui le signale.
-5. Les équipes alternent orateur après orateur ; la première au score cible gagne.
+5. Chacun devient orateur à son tour ; la première équipe au score cible gagne.
 
 ## Victoire
 
@@ -26,7 +26,7 @@ La première équipe qui atteint le score cible choisi par l'hôte (15, 20 ou 25
 
 ## Le mode apéro
 
-L'équipe perdante de la manche trinque. Mode soft : le score suffit au bonheur.
+Le jeu ne compte que des points, mais la tradition veut que l'équipe qui boucle sa manche sans un mot trouvé trinque. Mode soft : le score suffit au bonheur.
 
 ## Variantes et effectifs
 
@@ -37,8 +37,8 @@ L'équipe perdante de la manche trinque. Mode soft : le score suffit au bonheur
 - **12 à 16 joueurs** : de grandes équipes ; montez le score cible à 25 pour
   que chacun passe orateur au moins une fois.
 - **Équipes inégales** : possible, chaque équipe doit seulement compter deux
-  joueurs. L'orateur alterne strictement d'un camp à l'autre, l'équipe la
-  moins nombreuse passe donc plus souvent à l'oral.
+  joueurs. Chacun décrit une fois par tour de table : l'équipe la plus
+  nombreuse a donc plus de manches.
 - **Avec des bots** : un bot ne décrit pas — sa manche est écourtée à quelques
   secondes — et ne devine pas. Comptez au moins deux humains par équipe.
 

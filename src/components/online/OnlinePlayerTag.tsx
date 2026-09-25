@@ -130,7 +130,7 @@ export function OnlineLevelBadge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center rounded-full border border-sky-400/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-sky-300',
+        'inline-flex shrink-0 items-center rounded-full border border-sky-400/30 bg-sky-500/10 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-sky-300',
         className
       )}
       title={`Niveau ${cosmetics.level}`}

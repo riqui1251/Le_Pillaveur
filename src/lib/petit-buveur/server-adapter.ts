@@ -10,6 +10,7 @@ import {
 } from './engine'
 import { DEFI_DRINKS, DEFI_VERIFIABLE_ONLINE } from './game-data'
 import type { Difficulty } from './types'
+import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 
 /**
  * Pont entre une salle en ligne (`OnlineRoom` + membres) et le moteur pur.
@@ -26,10 +27,25 @@ export interface RoomMemberLite {
   displayName: string
 }
 
+/** Minimum du moteur en ligne (même borne que l'adaptateur, bots compris). */
+const PETIT_BUVEUR_MIN_PLAYERS = 2
+/** Borne haute de l'adaptateur (purement théorique : pas de plafond historique). */
+const PETIT_BUVEUR_MAX_PLAYERS = 99
+
+/**
+ * État initial d'une partie en ligne. `botsCount` : les bots choisis par
+ * l'hôte au lobby (RoomSettings.botsCount), assis APRÈS les humains — le
+ * premier humain garde donc la main au premier tour. Même convention que les
+ * autres jeux : identifiants `bot-N` (jamais un compte, cf. match-results),
+ * noms de persona (tempo du tick serveur), et complément jusqu'au minimum.
+ * Sans bot, l'état est identique à celui d'avant l'option (mêmes tirages à
+ * graine égale).
+ */
 export function buildPetitBuveurEngineState(
   members: RoomMemberLite[],
   difficulty: Difficulty,
-  seed: string | number
+  seed: string | number,
+  botsCount: number = 0
 ): EngineState {
   // En ligne, seuls les défis vérifiables sont tirés (pas de défi physique :
   // impossible à contrôler à distance). Le texte reste résolu par defiIndex.
@@ -39,7 +55,25 @@ export function buildPetitBuveurEngineState(
     defiAllowed: DEFI_VERIFIABLE_ONLINE.flatMap((ok, i) => (ok ? [i] : [])),
   }
   const players = members.map((m) => ({ id: m.userId, name: m.displayName }))
-  return createInitialState(players, settings, seed)
+  const botIds = new Set<string>()
+  const botPersonas = pickBotPersonas(PETIT_BUVEUR_MAX_PLAYERS)
+  const addBot = () => {
+    const id = `bot-${botIds.size + 1}`
+    players.push({ id, name: botDisplayName(botPersonas[botIds.size % botPersonas.length]) })
+    botIds.add(id)
+  }
+  const wanted = Math.max(0, Math.min(botsCount, PETIT_BUVEUR_MAX_PLAYERS - players.length))
+  for (let i = 0; i < wanted; i += 1) addBot()
+  while (players.length < PETIT_BUVEUR_MIN_PLAYERS) addBot()
+
+  const state = createInitialState(players, settings, seed)
+  if (botIds.size === 0) return state
+  // createInitialState ne connaît que { id, name } : le drapeau bot est posé
+  // après coup, sans toucher au générateur (rngState ne dépend que de la graine).
+  return {
+    ...state,
+    players: state.players.map((p) => (botIds.has(p.id) ? { ...p, isBot: true } : p)),
+  }
 }
 
 export function serializeEngineState(state: EngineState): string {

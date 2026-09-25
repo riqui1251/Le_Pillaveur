@@ -1,4 +1,4 @@
-import { GAMES, type GameMeta } from '@/lib/games'
+import { GAMES, hasContentIn, type GameMeta } from '@/lib/games'
 
 /**
  * Collections de jeux — les pages /jeux/<collection> (« à 2 joueurs »,
@@ -40,15 +40,19 @@ function playableByTwo(game: GameMeta): boolean {
 
 /**
  * Le critère de chaque collection, sur un jeu VISIBLE (les masqués sont
- * écartés avant, voir `gamesInCollection`).
+ * écartés avant, voir `gamesInCollection`), dans la langue de la page.
  */
-const CRITERIA: Record<CollectionSlug, (game: GameMeta) => boolean> = {
+const CRITERIA: Record<CollectionSlug, (game: GameMeta, locale: string | undefined) => boolean> = {
   'a-2-joueurs': playableByTwo,
   // Le mode Soft n'existe que côté serveur : seuls les jeux en ligne le
   // proposent (les jeux de dés locaux gardent leurs gorgées).
   'sans-alcool': (game) => Boolean(game.softModeReady),
-  // Les bots complètent une table EN LIGNE : un jeu local n'en a pas.
-  'seul-avec-des-bots': (game) => Boolean(game.botsFillable) && Boolean(game.onlineReady),
+  // Les bots complètent une table EN LIGNE : un jeu local n'en a pas. Et la
+  // table ne s'ouvre que dans une langue où le jeu a ses cartes (création
+  // refusée sinon, content_lang_unavailable) — même filtre que le raccourci
+  // « Jouer seul avec les bots » du hub.
+  'seul-avec-des-bots': (game, locale) =>
+    Boolean(game.botsFillable) && Boolean(game.onlineReady) && hasContentIn(game, locale),
   'en-grand-groupe': (game) => game.maxPlayers !== undefined && game.maxPlayers >= LARGE_GROUP_MIN_PLAYERS,
 }
 
@@ -59,9 +63,14 @@ export function isCollectionSlug(value: string): value is CollectionSlug {
 /**
  * Les jeux d'une collection, dans l'ordre du registre — le même que le hub,
  * pour que le joueur retrouve ses repères d'une page à l'autre. Jamais un jeu
- * masqué : il n'a de page ni au hub ni au sitemap.
+ * masqué : il n'a de page ni au hub ni au sitemap. `locale` : la langue de la
+ * page (absente = fr, comme hasContentIn).
  */
-export function gamesInCollection(slug: CollectionSlug, games: readonly GameMeta[] = GAMES): GameMeta[] {
+export function gamesInCollection(
+  slug: CollectionSlug,
+  games: readonly GameMeta[] = GAMES,
+  locale?: string
+): GameMeta[] {
   const matches = CRITERIA[slug]
-  return games.filter((game) => !game.hidden && matches(game))
+  return games.filter((game) => !game.hidden && matches(game, locale))
 }

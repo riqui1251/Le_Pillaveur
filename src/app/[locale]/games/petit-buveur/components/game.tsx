@@ -24,6 +24,7 @@ import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { formatPlayerNameHtml } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
 import { EndConfetti } from '@/components/online/EndConfetti'
+import { recordWinnerStats } from '@/lib/petit-buveur/local-stats'
 // Plateau (grille, cases, pions) : la feuille suit le composant — servie avec
 // ce morceau seulement, pas avec chaque page de /games (idem PetitBuveurOnline).
 import '@/styles/petit-buveur-board.css'
@@ -962,13 +963,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         if (newPosition === boardSize - 1) {
           setTimeout(() => {
             setWinner(updatedPlayers[currentPlayer]);
-            try {
-              updatePlayerStats(player.id, 'petit-buveur', {
-                wins: 1
-              });
-            } catch (error) {
-              console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
-            }
+            recordWinnerStats(updatePlayerStats, player.id);
             setIsProcessingTurn(false);
           }, hopMs);
           return;
@@ -1826,11 +1821,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           if (effectPosition === boardSize - 1) {
             setPlayers(updatedPlayers)
             setWinner(targetPlayer)
-            try {
-              updatePlayerStats(targetPlayer.id, 'petit-buveur', { wins: 1 })
-            } catch (error) {
-              console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error)
-            }
+            recordWinnerStats(updatePlayerStats, targetPlayer.id)
             setIsProcessingTurn(false)
             return
           }
@@ -2206,7 +2197,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     <span
       className={cn(
         'inline-flex shrink-0 items-center justify-center rounded-md border font-bold tabular-nums',
-        size === 'sm' ? 'h-5 min-w-5 px-1 text-[10px]' : 'h-6 min-w-6 px-1.5 text-xs',
+        size === 'sm' ? 'h-5 min-w-[1.25rem] px-1 text-[10px]' : 'h-6 min-w-[1.5rem] px-1.5 text-xs',
         getRankBadgeClass(index)
       )}
     >
@@ -3540,13 +3531,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     // Vérifier si le joueur a gagné
                     if (newPosition === boardSize - 1) {
                       setWinner(updatedPlayers[currentPlayer]);
-                      try {
-                        updatePlayerStats(currentPlayerObj.id, 'petit-buveur', {
-                          wins: 1
-                        });
-                      } catch (error) {
-                        console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
-                      }
+                      recordWinnerStats(updatePlayerStats, currentPlayerObj.id);
                       setIsProcessingTurn(false);
                       return;
                     }
@@ -3668,13 +3653,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     // Vérifier si un des joueurs a gagné
                     if (targetPos === boardSize - 1) {
                       setWinner(updatedPlayers[currentPlayer]);
-                      try {
-                        updatePlayerStats(currentPlayerObj.id, 'petit-buveur', {
-                          wins: 1
-                        });
-                      } catch (error) {
-                        console.error("Erreur lors de la mise à jour des statistiques du gagnant:", error);
-                      }
+                      recordWinnerStats(updatePlayerStats, currentPlayerObj.id);
                       setIsProcessingTurn(false);
                       return;
                     }

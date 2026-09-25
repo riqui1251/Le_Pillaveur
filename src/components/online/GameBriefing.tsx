@@ -118,7 +118,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
               colorClassName="bg-gold"
               dangerClassName="bg-suit-red"
             />
-            <p className="mt-1 text-right text-[10px] text-[#6B6455]">
+            <p className="mt-1 text-right text-xs text-[#6B6455]">
               <PhaseCountdown endsAt={deadline}>{({ seconds }) => t('autoStart', { s: seconds })}</PhaseCountdown>
             </p>
           </div>
@@ -141,7 +141,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                   transition={{ duration: 0.15 }}
                   className="min-h-[6rem] text-center"
                 >
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B6455]">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#6B6455]">
                     {t('stepCounter', { n: idx + 1, total: steps.length })}
                   </p>
                   <h3 className="mt-1 font-display text-lg font-bold text-[#24201A]">{step?.title}</h3>
@@ -230,9 +230,9 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                   {m.isSelf && <span className="text-white/40"> {t('you')}</span>}
                 </span>
                 {ready ? (
-                  <span className="shrink-0 text-[10px] font-bold text-emerald-300">✓ {t('done')}</span>
+                  <span className="shrink-0 text-xs font-bold text-emerald-300">✓ {t('done')}</span>
                 ) : (
-                  <span className="shrink-0 text-[10px] text-white/35">{t('reading')}</span>
+                  <span className="shrink-0 text-xs text-white/35">{t('reading')}</span>
                 )}
               </li>
             )

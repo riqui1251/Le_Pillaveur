@@ -214,6 +214,10 @@
       "emptyTitle": "Aucun jeu trouvé",
       "emptyHint": "Essayez un autre mot-clé.",
       "botsBadge": "Jouable avec des bots",
+      "betaBadge": "Bêta",
+      "betaHint": "Nouveau jeu, encore en rodage",
+      "frOnlyBadge": "FR",
+      "frOnlyHint": "Cartes en français uniquement",
       "h1": "Jeux de soirée gratuits, entre amis ou avec des bots",
       "intro": "Choisissez un jeu et lancez la partie en quelques secondes : à plusieurs sur un seul téléphone qui tourne autour de la table, ou chacun le sien avec un code de table.",
       "featured": "Les incontournables",
@@ -227,6 +231,10 @@
         "hint": "Ces jeux demandent un téléphone par joueur : ouvrez une table en ligne avec un compte gratuit, ou essayez-les seul contre des bots."
       },
       "opening": "Ouverture…"
+    },
+    "recentLocal": {
+      "title": "Vos derniers jeux",
+      "replay": "Rejouer"
     },
     "jeuxOnline": {
       "title": "Jeux en ligne",
@@ -325,7 +333,7 @@
     "seul-avec-des-bots": {
       "title": "Jouer seul : les jeux avec des bots",
       "description": "Pas de monde ce soir ? Ouvrez une table, les bots complètent : Loup-Garou, quiz, Menteur, bluff, Président… Gratuit, en ligne, seul ou à deux.",
-      "intro": "Personne de disponible, ou l'envie de s'entraîner avant la prochaine soirée : sur ces jeux, l'hôte de la table peut « compléter avec des bots » depuis le lobby, et la partie se lance même sous le minimum de joueurs — tout seul, donc. Les bots ont chacun leur nom et leur personnalité, et ils tiennent leur siège : ils enchérissent et accusent au Menteur, bluffent au Grand Bluff, répondent au Grand Pillaveur, le quiz à buzzers, parient à Purple et au 1220, jouent leurs cartes au Président, votent et accusent au Loup-Garou. Ce sont les jeux qui se jouent vraiment seul. À L'Imposteur, à Qui est l'Espion ?, au Crobard, à Sans Filtre ou à Dilemmes, les bots complètent une table sans la faire vivre : un bot n'y dessine pas, n'y raconte rien et n'y mène pas l'enquête, ces jeux-là veulent de vrais joueurs. Si quelqu'un décroche en cours de partie, un bot le remplace pour que la table continue. C'est la même liste que le raccourci « Jouer seul avec les bots » de la vitrine. Tout se passe en ligne, sur votre téléphone, et une fois un jeu pris en main, il suffit de partager le code de la table pour que vos amis prennent les sièges à leur tour."
+      "intro": "Personne de disponible, ou l'envie de s'entraîner avant la prochaine soirée : sur ces jeux, l'hôte de la table peut « compléter avec des bots » depuis le lobby, et la partie se lance même sous le minimum de joueurs — tout seul, donc. Les bots ont chacun leur nom et leur personnalité, et ils tiennent leur siège : ils enchérissent et accusent au Menteur, bluffent au Grand Bluff, répondent au Grand Pillaveur, le quiz à buzzers, parient à Purple et au 1220, jouent leurs cartes au Président, lancent le dé au Petit Buveur, votent et accusent au Loup-Garou. Ce sont les jeux qui se jouent vraiment seul. À L'Imposteur, à Qui est l'Espion ?, au Crobard, à Sans Filtre ou à Dilemmes, les bots complètent une table sans la faire vivre : un bot n'y dessine pas, n'y raconte rien et n'y mène pas l'enquête, ces jeux-là veulent de vrais joueurs. Si quelqu'un décroche en cours de partie, un bot le remplace pour que la table continue. C'est la même liste que le raccourci « Jouer seul avec les bots » de la vitrine. Tout se passe en ligne, sur votre téléphone, et une fois un jeu pris en main, il suffit de partager le code de la table pour que vos amis prennent les sièges à leur tour."
     },
     "en-grand-groupe": {
       "title": "Jeux de soirée en grand groupe",
@@ -566,6 +574,7 @@
       "team_full": "Cette équipe est complète.",
       "room_full": "Ce lobby est complet.",
       "invite_only": "Ce lobby est sur invitation uniquement.",
+      "content_lang_unavailable": "Les cartes de ce jeu n'existent qu'en français : ouvre la table depuis le site en français.",
       "not_host": "Seul le créateur de la table peut faire ça.",
       "cannot_kick_self": "Tu ne peux pas t'expulser toi-même.",
       "member_not_found": "Ce joueur n'est plus à la table.",
@@ -744,6 +753,12 @@
     "onlineSection": {
       "title": "Compte en ligne"
     },
+    "onlineName": {
+      "title": "Pseudo en ligne (compte)",
+      "hint": "Ce pseudo est utilisé automatiquement pour les parties en ligne (un joueur par compte). Les mêmes restrictions de pseudo s’appliquent.",
+      "placeholder": "Ton pseudo en ligne",
+      "saved": "Pseudo en ligne enregistré."
+    },
     "tables": {
       "title": "Mes dernières tables",
       "loading": "Chargement de tes dernières tables…",
@@ -907,6 +922,7 @@
     "addTitle": "Ajouter un joueur",
     "namePlaceholder": "Nom du joueur",
     "addButton": "Ajouter",
+    "removePlayer": "Retirer {name}",
     "selectTitle": "Sélectionner les joueurs",
     "wins": "{count} victoires",
     "customize": "Personnaliser",
@@ -1155,6 +1171,10 @@
       "telephone-dessine": {
         "title": "Jouer au Téléphone Dessiné en ligne gratuit — fous rires",
         "description": "Écris une phrase, le suivant la dessine, le troisième la devine… et tout dérape. 3 à 8 joueurs, chat vocal, gratuit et sans installation."
+      },
+      "tabou": {
+        "title": "Jouer au Tabou Vocal en ligne gratuit — fais deviner",
+        "description": "Décris un mot au chat vocal sans dire ses 4 mots tabous, ton équipe devine contre la montre. 4 à 16 joueurs, 2 par équipe, gratuit, sans installation."
       }
     },
     "catalog": {
@@ -1364,7 +1384,21 @@
       "summary": "Résumé",
       "wheelInfo": "Roue générée automatiquement — Risque: {risk}, Segments: {count}",
       "wheelHint": "Contenu: SAFE et gorgées 1 à 12, avec répétitions. Plus la valeur est élevée, plus le segment est petit.",
-      "segmentSips": "{count} gorgées"
+      "segmentSips": "{count} gorgées",
+      "settings": {
+        "tab": "Paramètres",
+        "gameTab": "Jeu",
+        "title": "Paramètres de la roue",
+        "riskLabel": "Niveau de risque",
+        "riskPlaceholder": "Choisir un risque",
+        "risks": {
+          "faible": "Faible (plus de SAFE et petites gorgées)",
+          "moyen": "Moyen",
+          "eleve": "Élevé (plus de grosses gorgées)"
+        },
+        "segments": "Nombre de segments",
+        "segmentsMin": "Minimum {min}"
+      }
     },
     "monsieur-3": {
       "title": "Monsieur 3",
@@ -1451,6 +1485,9 @@
         "seeResults": "Voir les résultats",
         "distribute": "{name} distribue {count} gorgées à {target}",
         "libreWin": "{name} gagne ! Distribuez {count} gorgées.",
+        "toWhom": "À qui ?",
+        "allWinners": "Tous les joueurs sont gagnants.",
+        "giveTo": "à",
         "replay": "Rejouer",
         "menu": "Menu"
       }
@@ -2056,6 +2093,7 @@
         "yourTurn": "À toi de jouer",
         "categoryLabel": "Catégorie: {category}",
         "errors": "Erreurs: {count}/{max}",
+        "robotError": "ERREUR",
         "hint": "💡 Indice ({used}/{max})",
         "hintCost": "Coût: -10s",
         "wrongLetters": "Lettres incorrectes: {letters}",
@@ -2539,8 +2577,8 @@
         "teamA": "Équipe A",
         "teamB": "Équipe B",
         "joinTeam": "Rejoindre",
-        "botSlot": "Bot",
-        "botsFill": "Les places vides seront occupées par des bots.",
+        "openSeat": "Place libre",
+        "teamRule": "Deux joueurs minimum par équipe. Un bot ne remplace qu'un joueur parti en cours de partie.",
         "targetScore": "Score cible",
         "points": "pts"
       },
@@ -2594,6 +2632,11 @@
             "body": "Si le décrivant prononce un mot tabou, un adversaire qui l'entend clique TABOU ! — le mot passe, sans point pour personne."
           }
         ]
+      },
+      "about": {
+        "p1": "Deux équipes, A et B, et un décrivant qui change à chaque manche, chaque joueur à son tour. Lui seul voit sur son téléphone le mot à faire deviner et ses quatre mots tabous, interdits de séjour dans sa bouche. Il décrit à voix haute, au chat vocal, pendant que son équipe mitraille les propositions.",
+        "p2": "Une manche dure 60 secondes et plusieurs mots y défilent : un coéquipier touche TROUVÉ, +1 point pour l'équipe et le mot suivant arrive aussitôt ; le décrivant peut passer un mot trop dur, sans point ; un adversaire qui entend un mot tabou touche TABOU, et le mot saute sans point pour personne. Le bilan dévoile le dernier mot et le compte de la manche. La première équipe au score cible gagne : 15, 20 ou 25, au choix de l'hôte.",
+        "p3": "Les adversaires n'ont pas la carte sous les yeux : ils écoutent, et c'est le fair-play de la table qui arbitre. Décris par l'usage quand la définition est taboue, et passe vite ce qui bloque, le chrono est le vrai adversaire. Quatre joueurs minimum, deux par équipe, jusqu'à seize. Pas de bots pour lancer la partie : un bot ne décrit rien, il ne remplace qu'un joueur parti. Les mots existent en quatre langues. Le jeu ne compte aucune gorgée, seulement les points."
       }
     },
     "crobard": {

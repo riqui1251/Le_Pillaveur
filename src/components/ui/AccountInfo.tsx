@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils'
 /* Ligne de compte uniforme (Direction B) : icône + libellé + chevron,
    ≥48px de haut — la même qu'elle déplie une section ou qu'elle navigue. */
 const ACCOUNT_ROW_CLASS =
-  'flex w-full min-h-12 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06]'
+  'flex w-full min-h-[48px] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06]'
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
@@ -567,7 +567,7 @@ export function AccountInfo() {
                 setConfirmGuestLogout(false)
               }}
               disabled={loggingOut}
-              className="h-auto min-h-11 w-full whitespace-normal rounded-2xl bg-amber-500 font-bold text-black hover:bg-amber-400"
+              className="h-auto min-h-[44px] w-full whitespace-normal rounded-2xl bg-amber-500 font-bold text-black hover:bg-amber-400"
             >
               <ShieldCheck className="mr-2 h-4 w-4 shrink-0" />
               {/* Même libellé que le bouton de la carte vers laquelle il mène. */}
@@ -578,7 +578,7 @@ export function AccountInfo() {
               variant="outline"
               onClick={() => { void logoutGuestAnyway() }}
               disabled={loggingOut}
-              className="h-auto min-h-11 w-full whitespace-normal rounded-2xl border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10 hover:text-red-200"
+              className="h-auto min-h-[44px] w-full whitespace-normal rounded-2xl border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10 hover:text-red-200"
             >
               <LogOut className="mr-2 h-4 w-4 shrink-0" />
               {loggingOut ? tCommon('loading') : t('guestLogout.logoutAnyway')}
@@ -588,7 +588,7 @@ export function AccountInfo() {
                 type="button"
                 variant="ghost"
                 disabled={loggingOut}
-                className="h-auto min-h-11 w-full whitespace-normal rounded-2xl text-white/70 hover:bg-white/10 hover:text-white"
+                className="h-auto min-h-[44px] w-full whitespace-normal rounded-2xl text-white/70 hover:bg-white/10 hover:text-white"
               >
                 {tCommon('cancel')}
               </Button>
@@ -670,10 +670,10 @@ export function AccountInfo() {
           <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
             <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/70">
               <Cloud className="h-4 w-4 text-cyan-300" />
-              Pseudo online (compte)
+              {t('onlineName.title')}
             </div>
             <p className="mb-2 text-xs text-cyan-100/80">
-              Ce pseudo est utilisé automatiquement pour les parties online (1 joueur compte). Les mêmes restrictions de pseudo s’appliquent.
+              {t('onlineName.hint')}
             </p>
 
             {/* Aperçu de l'identité en ligne (écusson de rang + icône encadrée + effet) */}
@@ -705,7 +705,7 @@ export function AccountInfo() {
                   if (onlineNameError) setOnlineNameError(null)
                 }}
                 maxLength={30}
-                placeholder="Ton pseudo online"
+                placeholder={t('onlineName.placeholder')}
                 className="h-9 border-cyan-300/25 bg-black/20 text-sm text-white placeholder:text-white/35"
               />
               <button
@@ -713,11 +713,11 @@ export function AccountInfo() {
                 onClick={() => { void saveOnlineName() }}
                 className="rounded-lg bg-cyan-500/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/35"
               >
-                Enregistrer
+                {tCommon('save')}
               </button>
             </div>
             {onlineNameError && <p className="mt-2 text-xs text-orange-300">{onlineNameError}</p>}
-            {onlineNameSaved && <p className="mt-2 text-xs text-emerald-300">Pseudo online enregistré.</p>}
+            {onlineNameSaved && <p className="mt-2 text-xs text-emerald-300">{t('onlineName.saved')}</p>}
           </div>
 
           <RecentTables />
@@ -1010,7 +1010,7 @@ export function AccountInfo() {
               <button
                 type="button"
                 onClick={() => setDeleteArmed(false)}
-                className="min-h-11 w-full rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/[0.06]"
+                className="min-h-[44px] w-full rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/[0.06]"
               >
                 {tCommon('cancel')}
               </button>
@@ -1029,7 +1029,7 @@ export function AccountInfo() {
                 !deleteMethod || deletingAccount || (deleteMethod === 'password' && !deletePassword)
               }
               className={cn(
-                'flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-colors disabled:opacity-40',
+                'flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-colors disabled:opacity-40',
                 deleteArmed
                   ? 'bg-red-600 text-white hover:bg-red-500'
                   : 'border border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10'

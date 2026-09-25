@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { requestAgeVerification } from '@/components/legal/AgeGate'
-import { GAMES } from '@/lib/games'
+import { GAMES, hasContentIn } from '@/lib/games'
 import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
@@ -28,7 +28,10 @@ function isExistingAccountResponse(data: unknown): boolean {
  * pseudo → compte invité → table privée créée avec les bots qui manquent →
  * lobby, prêt à lancer. Aucune inscription.
  *
- * Réservé aux jeux botsFillable ; sinon seul le bouton connexion s'affiche.
+ * Réservé aux jeux botsFillable dont les cartes existent dans la langue de
+ * la page (la table prend la langue du visiteur : Sans Filtre en anglais
+ * serait refusé, content_lang_unavailable, APRÈS la création du compte
+ * invité) ; sinon seul le bouton connexion s'affiche.
  * Navigation DOCUMENT en sortie (routeur vierge + session fraîche visible
  * du middleware — même raison que le fix d'onboarding d'AuthForm).
  */
@@ -64,7 +67,7 @@ export function TryBotsGate({
   }
 
   if (!game) return null
-  const canBots = Boolean(game.botsFillable && game.onlineReady && !game.hidden)
+  const canBots = Boolean(game.botsFillable && game.onlineReady && !game.hidden && hasContentIn(game, locale))
   const loginHref = `/compte?redirect=${encodeURIComponent(`/games/${gameId}`)}`
 
   // Déjà une session (compte ou invité) : direction le jeu, tout simplement.

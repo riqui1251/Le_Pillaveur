@@ -7,7 +7,7 @@ import { publishRoomChanged } from '@/lib/online/room-bus'
 import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
-import { GAMES } from '@/lib/games'
+import { GAMES, hasContentIn } from '@/lib/games'
 import { getGameAdapter } from '@/lib/online/game-adapters'
 
 type Params = { params: Promise<{ roomId: string }> }
@@ -61,7 +61,9 @@ function settingsForGame(current: RoomSettings, gameId: string, humans: number):
  * peut changer de JEU (`gameId`) sans refaire de table : même code, mêmes
  * joueurs, qui suivent vers la page du nouveau jeu (GameOnlineLobby). Refus :
  * `invalid_game` (400) pour un jeu pas jouable en ligne, `max_players` (409,
- * avec `count`) si la tablée dépasse déjà le nouveau jeu.
+ * avec `count`) si la tablée dépasse déjà le nouveau jeu,
+ * `content_lang_unavailable` (409) si ses cartes n'existent pas dans la
+ * langue de la table.
  */
 export async function PUT(request: Request, { params }: Params) {
   const user = await getCurrentUser()
@@ -117,6 +119,14 @@ export async function PUT(request: Request, { params }: Params) {
       const max = getGameAdapter(game.id)?.maxPlayers ?? Number.MAX_SAFE_INTEGER
       if (humans > max) {
         return NextResponse.json(onlineErrorBody('max_players', { count: max }), { status: 409 })
+      }
+      // La langue de la table est posée à sa création (POST /rooms) et suit
+      // le changement de jeu (settingsForGame) : une table anglaise ne passe
+      // pas à un jeu dont les cartes n'existent qu'en français. Seul le
+      // CHANGEMENT est contrôlé — une table déjà ouverte sur ce jeu garde ses
+      // autres réglages.
+      if (!hasContentIn(game, parseRoomSettings(room.settingsJson).lang)) {
+        return NextResponse.json(onlineErrorBody('content_lang_unavailable'), { status: 409 })
       }
     }
   }
