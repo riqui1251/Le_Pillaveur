@@ -41,25 +41,48 @@ tar xf "$ARCHIVE"
 find scripts \( -name '*.sh' -o -name '*.Dockerfile' \) -exec sed -i 's/\r$//' {} + 2>/dev/null || true
 sed -i 's/\r$//' Dockerfile .dockerignore 2>/dev/null || true
 
-# tar xf n'ecrase/n'ajoute que les fichiers presents dans l'archive : les
-# fichiers retires du depot (ex. anciennes pages pre-i18n hors [locale])
-# restent orphelins sur le disque d'un deploiement a l'autre. Next.js
-# compile TOUTE page.tsx sous src/app, donc un orphelin qui importe un
-# composant partage dont la signature a change casse le build. On purge
-# ici tout ce qui n'est plus dans l'archive, limite a src/app (la seule
-# zone ou un fichier mort devient une route compilee).
-echo "=== Purge des pages orphelines (src/app) ==="
-if [ -d src/app ]; then
-  tar tf "$ARCHIVE" | grep -E '^src/app/' | cut -d/ -f1-3 | sort -u > /tmp/.deploy-app-manifest.txt
-  for entry in src/app/*; do
-    [ -e "$entry" ] || continue
-    if ! grep -qxF "$entry" /tmp/.deploy-app-manifest.txt; then
-      echo "  orpheline supprimee : $entry"
-      rm -rf "$entry"
-    fi
-  done
-  rm -f /tmp/.deploy-app-manifest.txt
+# tar xf n'ecrase/n'ajoute que les fichiers presents dans l'archive : un
+# fichier retire du depot reste orphelin sur le disque d'un deploiement a
+# l'autre. Trois zones ou c'est dangereux, et qui sont ENTIEREMENT suivies par
+# git (tout ce qui n'est pas dans l'archive y est donc un reliquat) :
+#  - src/    : `next build` verifie les types de TOUT src/ (tsconfig inclut
+#              **/*.ts). Un module mort qui importe un hook dont la signature
+#              a change casse le build — vecu le 25/09/2026 avec
+#              src/hooks/useOnlineGameSync.ts. Et une page morte sous src/app,
+#              a n'importe quelle profondeur, reste une route EN LIGNE.
+#  - public/ : servi tel quel ; un ancien fichier y reste telechargeable.
+#  - docs/   : lu par le build (pages legales, regles).
+# L'ancienne purge ne regardait que le premier niveau de src/app : les pages
+# mortes plus profondes (src/app/[locale]/…) passaient au travers.
+# Meme regle pour les configurations ESLint a l'ancienne (.eslintrc*), que le
+# lint du build pourrait lire a cote d'eslint.config.mjs.
+echo "=== Purge des fichiers orphelins (src, public, docs) ==="
+PURGE_MANIFEST=$(mktemp)
+tar tf "$ARCHIVE" | grep -v '/$' | LC_ALL=C sort -u > "$PURGE_MANIFEST"
+# Garde-fou : une liste vide ou tronquee ferait tout effacer. L'archive a deja
+# ete extraite sans erreur ci-dessus ; on exige en plus qu'elle contienne bien
+# le code (src/) avant de supprimer quoi que ce soit.
+if [ "$(grep -c '^src/' "$PURGE_MANIFEST" || true)" -lt 100 ]; then
+  echo "Liste de l'archive anormalement courte : purge ANNULEE, deploiement arrete" >&2
+  rm -f "$PURGE_MANIFEST"
+  exit 1
 fi
+for dir in src public docs; do
+  [ -d "$dir" ] || continue
+  find "$dir" -type f -print | LC_ALL=C sort | LC_ALL=C comm -13 "$PURGE_MANIFEST" - |
+    while IFS= read -r orphan; do
+      echo "  orphelin supprime : $orphan"
+      rm -f -- "$orphan"
+    done
+  find "$dir" -mindepth 1 -type d -empty -delete
+done
+for orphan in .eslintrc .eslintrc.json .eslintrc.js .eslintrc.cjs .eslintrc.yml; do
+  if [ -e "$orphan" ] && ! grep -qxF "$orphan" "$PURGE_MANIFEST"; then
+    echo "  orphelin supprime : $orphan"
+    rm -f -- "$orphan"
+  fi
+done
+rm -f "$PURGE_MANIFEST"
 
 echo "=== Version deployee ==="
 # BUILD_INFO est ecrit par scripts/deploy-from-local.sh et ajoute a l'archive
