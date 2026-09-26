@@ -9,6 +9,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  *    unique » = place OU visite ≥ 60 s en partie ;
  *  - nouveau = créé ET actif dans la période ; revenant = actif, créé avant ;
  *    un invité créé sans jouer n'est ni l'un ni l'autre, il est compté à part ;
+ *    la série compte les nouveaux à leur jour de création de Paris, et ses
+ *    7 derniers jours redonnent les nouveaux sur 7 jours ;
+ *  - les appareils des visites de 7 jours se comptent après fusion, par
+ *    catégorie seulement, hors équipe et comptes de test ;
  *  - l'équipe et les comptes de test sortent de tous les chiffres et sont
  *    comptés à part ; une partie de l'équipe seule n'est pas un lancement ;
  *  - les retours J+1 / J+7 lisent des cohortes de jours de Paris, invités
@@ -74,7 +78,13 @@ function account(id: string, createdIso: string, extra: Partial<ActivityAccount>
 function visit(
   userId: string,
   startIso: string,
-  { minutes = 10, active = 0, game = 0, visible }: { minutes?: number; active?: number; game?: number; visible?: number } = {}
+  {
+    minutes = 10,
+    active = 0,
+    game = 0,
+    visible,
+    device = null,
+  }: { minutes?: number; active?: number; game?: number; visible?: number; device?: string | null } = {}
 ): ActivityVisit {
   const startedAt = new Date(startIso)
   return {
@@ -84,7 +94,7 @@ function visit(
     visibleSeconds: visible ?? Math.max(active, game),
     activeSeconds: active,
     gameSeconds: game,
-    device: null,
+    device,
   }
 }
 
@@ -245,6 +255,132 @@ describe('summarizeActiveAccounts — nouveaux et revenants', () => {
   it('compte à part les invités créés sans jouer sur la période', () => {
     expect(stats.accounts.idleGuests).toEqual({ d7: 1, d30: 1 })
   })
+
+  it('série : les 7 derniers jours de nouveaux additionnés redonnent les nouveaux sur 7 jours', () => {
+    const lastWeek = stats.series.slice(-7)
+    expect(lastWeek[0].day).toBe('2026-10-19')
+    expect(lastWeek.reduce((sum, point) => sum + point.newAccounts, 0)).toBe(stats.accounts.newAccounts.d7)
+    // edgeOld, créé le 18/10 et actif le 20/10 : à son jour de création, hors des 7 jours.
+    expect(stats.series.find((point) => point.day === '2026-10-18')?.newAccounts).toBe(1)
+  })
+})
+
+describe('summarizeActiveAccounts — nouveaux comptes par jour (série)', () => {
+  const old = '2026-08-01T10:00:00.000Z'
+  const stats = summarizeActiveAccounts(
+    input({
+      accounts: [
+        // Créé le 25/10 à 0 h 30 à Paris (heure d'été), joue le jour même.
+        account('todayEdge', '2026-10-24T22:30:00.000Z', { isGuest: true }),
+        // Créé le 24/10 à 23 h 30 à Paris, actif seulement le lendemain :
+        // compté à son jour de création.
+        account('yesterdayEdge', '2026-10-24T21:30:00.000Z'),
+        // Créé le 22/10 à 0 h 30 à Paris (21/10 en UTC), joue le jour même.
+        account('guest22', '2026-10-21T22:30:00.000Z', { isGuest: true }),
+        account('player22', '2026-10-22T10:00:00.000Z'),
+        // Moins de 60 s actives : pas actif, pas nouveau.
+        account('shortVisit', '2026-10-22T09:00:00.000Z'),
+        // Invité créé sans jouer : compté à part, jamais parmi les nouveaux.
+        account('idleGuest', '2026-10-23T10:00:00.000Z', { isGuest: true }),
+        // Équipe et compte de test créés et actifs : exclus.
+        account('staff', '2026-10-23T10:00:00.000Z', { role: 'moderator' }),
+        account('tester', '2026-10-23T10:00:00.000Z', { isGuest: true }),
+        // Premier jour de la série.
+        account('firstDay', '2026-10-12T10:00:00.000Z'),
+        // Créé avant la série (11/10), actif dedans : jamais un nouveau de la série.
+        account('before', '2026-10-11T10:00:00.000Z'),
+        account('old', old),
+      ],
+      excludedUserIds: ['tester'],
+      visits: [
+        visit('yesterdayEdge', '2026-10-25T10:00:00.000Z', { active: 120 }),
+        visit('shortVisit', '2026-10-22T09:05:00.000Z', { active: 30 }),
+        visit('staff', '2026-10-23T12:00:00.000Z', { active: 600 }),
+      ],
+      games: [
+        game('2026-10-24T23:00:00.000Z', 'todayEdge'),
+        game('2026-10-21T23:00:00.000Z', 'guest22', 'player22'),
+        game('2026-10-23T12:00:00.000Z', 'tester'),
+        game('2026-10-12T12:00:00.000Z', 'firstDay'),
+        game('2026-10-20T12:00:00.000Z', 'before', 'old'),
+      ],
+    }),
+    NOW
+  )
+  const byDay = new Map(stats.series.map((point) => [point.day, point]))
+
+  it('compte par jour de création de Paris les comptes créés et actifs depuis, invités ventilés', () => {
+    expect(byDay.get('2026-10-25')).toMatchObject({ newAccounts: 1, newGuests: 1 })
+    expect(byDay.get('2026-10-24')).toMatchObject({ newAccounts: 1, newGuests: 0 })
+    expect(byDay.get('2026-10-22')).toMatchObject({ newAccounts: 2, newGuests: 1 })
+    expect(byDay.get('2026-10-12')).toMatchObject({ newAccounts: 1, newGuests: 0 })
+    expect(byDay.get('2026-10-11')).toBeUndefined()
+  })
+
+  it('écarte l’équipe, les comptes de test, les inactifs et les invités créés sans jouer', () => {
+    expect(byDay.get('2026-10-23')).toMatchObject({ newAccounts: 0, newGuests: 0 })
+    expect(stats.series.reduce((sum, point) => sum + point.newAccounts, 0)).toBe(5)
+    expect(stats.accounts.idleGuests.d7).toBe(1)
+  })
+
+  it('les 7 derniers jours additionnés redonnent les nouveaux sur 7 jours', () => {
+    const lastWeek = stats.series.slice(-7).reduce((sum, point) => sum + point.newAccounts, 0)
+    expect(lastWeek).toBe(4)
+    expect(stats.accounts.newAccounts.d7).toBe(lastWeek)
+  })
+
+  it('sans compte, 14 jours à zéro', () => {
+    const empty = summarizeActiveAccounts(input({}), NOW)
+    expect(empty.series).toHaveLength(14)
+    expect(empty.series.every((point) => point.newAccounts === 0 && point.newGuests === 0)).toBe(true)
+  })
+})
+
+describe('summarizeActiveAccounts — appareils des visites de 7 jours', () => {
+  const old = '2026-08-01T10:00:00.000Z'
+  const stats = summarizeActiveAccounts(
+    input({
+      accounts: ['u1', 'u2', 'u3', 'u4', 'admin', 'tester'].map((id) =>
+        account(id, old, id === 'admin' ? { role: 'admin' } : {})
+      ),
+      excludedUserIds: ['tester'],
+      visits: [
+        visit('u1', '2026-10-23T18:00:00.000Z', { device: 'mobile' }),
+        // Deux créations simultanées : une seule visite, l'appareil du premier
+        // battement connu.
+        visit('u1', '2026-10-24T18:00:00.000Z', { device: null }),
+        visit('u1', '2026-10-24T18:00:00.000Z', { device: 'mobile' }),
+        visit('u1', '2026-10-25T10:00:00.000Z', { device: 'mobile' }),
+        visit('u1', '2026-10-22T18:00:00.000Z', { device: 'pc' }),
+        visit('u2', '2026-10-22T18:00:00.000Z', { device: 'pc' }),
+        // Non reconnu (null) ou valeur inattendue : 'unknown'.
+        visit('u2', '2026-10-23T18:00:00.000Z', { device: null }),
+        visit('u4', '2026-10-24T18:00:00.000Z', { device: 'console' }),
+        // 19/10 à 0 h 30 à Paris : dans les 7 jours ; 18/10 à 23 h 30 : hors.
+        visit('u3', '2026-10-18T22:30:00.000Z', { device: 'tablet' }),
+        visit('u3', '2026-10-18T21:30:00.000Z', { device: 'tablet' }),
+        // Équipe et compte de test : exclus (aucune ligne « mac »).
+        visit('admin', '2026-10-24T18:00:00.000Z', { device: 'mobile' }),
+        visit('tester', '2026-10-24T18:00:00.000Z', { device: 'mac' }),
+      ],
+    }),
+    NOW
+  )
+
+  it('compte visites et comptes distincts par appareil, triés par visites décroissantes', () => {
+    expect(stats.visits.devices7d).toEqual([
+      { device: 'mobile', visits: 3, accounts: 1 },
+      // À égalité de visites : plus de comptes d'abord, puis l'ordre fixe ('unknown' en dernier).
+      { device: 'pc', visits: 2, accounts: 2 },
+      { device: 'unknown', visits: 2, accounts: 2 },
+      { device: 'tablet', visits: 1, accounts: 1 },
+    ])
+  })
+
+  it('ne renvoie qu’une catégorie : ni identifiant de compte ni navigateur', () => {
+    const json = JSON.stringify(stats.visits.devices7d)
+    for (const id of ['u1', 'u2', 'u3', 'u4']) expect(json).not.toContain(`"${id}"`)
+  })
 })
 
 describe('summarizeActiveAccounts — équipe et comptes de test', () => {
@@ -298,12 +434,13 @@ describe('summarizeActiveAccounts — équipe et comptes de test', () => {
     expect(byDay.get('2026-10-24')).toBe(2)
   })
 
-  it('écarte leurs visites des durées et du classement', () => {
+  it('écarte leurs visites des durées, des appareils et du classement', () => {
     expect(stats.visits).toEqual({
       medianVisitSeconds7d: 21 * 60,
       medianActiveSecondsPerAccount7d: 600,
       gameSeconds7d: 0,
       visibleSeconds7d: 600,
+      devices7d: [{ device: 'unknown', visits: 1, accounts: 1 }],
     })
     expect(stats.topAccounts7d).toEqual([{ userId: 'player', activeSeconds: 600, games: 1 }])
     expect(stats.players.deletedSeats).toEqual({ d1: 0, d7: 1, d30: 1 })
@@ -439,6 +576,8 @@ describe('summarizeActiveAccounts — visites, classement, navigateurs', () => {
       medianActiveSecondsPerAccount7d: 900,
       gameSeconds7d: 1400,
       visibleSeconds7d: 3130,
+      // Les deux créations simultanées de u1 : une visite, pas deux.
+      devices7d: [{ device: 'unknown', visits: 4, accounts: 3 }],
     })
   })
 
@@ -477,6 +616,7 @@ describe('summarizeActiveAccounts — visites, classement, navigateurs', () => {
       medianActiveSecondsPerAccount7d: null,
       gameSeconds7d: 0,
       visibleSeconds7d: 0,
+      devices7d: [],
     })
     expect(empty.retention).toEqual({
       d1: { cohort: 0, retained: 0, createdSince: null },
@@ -553,6 +693,8 @@ describe('getActiveAccountsStats', () => {
     // Borne basse : minuit de Paris du 26/09 (heure d'été), jamais « now − 30 × 24 h ».
     const since = new Date('2026-09-25T22:00:00.000Z')
     expect(visitMock.findMany.mock.calls[0][0].where).toEqual({ startedAt: { gte: since } })
+    // L'appareil (catégorie seule) est lu pour la répartition par appareil.
+    expect(visitMock.findMany.mock.calls[0][0].select).toMatchObject({ device: true })
     expect(gameSessionMock.findMany.mock.calls[0][0].where).toEqual({ startedAt: { gte: since } })
     expect(dailyVisitorMock.findMany.mock.calls[0][0].where).toEqual({ date: { gte: '2026-10-19' } })
     expect(presenceMock.findMany.mock.calls[0][0].where).toEqual({
@@ -570,6 +712,10 @@ describe('getActiveAccountsStats', () => {
     expect(stats.accounts.active).toEqual({ d1: 0, d7: 1, d30: 1 })
     expect(stats.accounts.testExcluded).toBe(1)
     expect(stats.series.find((point) => point.day === '2026-10-24')?.launches).toBe(1)
+    // Invité créé le 20/10 et actif depuis : nouveau de son jour de création ;
+    // le compte de test, créé le même jour, n'y est pas.
+    expect(stats.series.find((point) => point.day === '2026-10-20')).toMatchObject({ newAccounts: 1, newGuests: 1 })
+    expect(stats.visits.devices7d).toEqual([])
     expect(stats.topAccounts7d).toEqual([
       { userId: 'guest1', displayName: 'Suzon', accountCode: 'LP-ABCDEF', kind: 'guest', activeSeconds: null, games: 1 },
     ])

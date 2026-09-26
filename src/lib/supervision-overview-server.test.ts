@@ -14,7 +14,7 @@ const { prismaMock, cleanupAbandonedRoomsMock, listFlaggedMock } = vi.hoisted(()
     moderationTerm: { findMany: vi.fn() },
     userFeedback: { findMany: vi.fn() },
     dailyVisitor: { groupBy: vi.fn() },
-    onlineRoom: { findMany: vi.fn(), deleteMany: vi.fn() },
+    onlineRoom: { findMany: vi.fn(), deleteMany: vi.fn(), groupBy: vi.fn() },
   },
   cleanupAbandonedRoomsMock: vi.fn(),
   listFlaggedMock: vi.fn(),
@@ -50,8 +50,14 @@ const player = (userId: string, isGuest = false) => ({ userId, user: { role: 'us
 const staff = (userId: string) => ({ userId, user: { role: 'admin', isGuest: false } })
 const noAccount = { userId: null, user: null }
 
-const session = (startedAt: string, humanSeats: OnlinePlaySessionRow['humanSeats'], humanCount = 1) => ({
+const session = (
+  startedAt: string,
+  humanSeats: OnlinePlaySessionRow['humanSeats'],
+  humanCount = 1,
+  gameId = 'quiz'
+): OnlinePlaySessionRow => ({
   startedAt: new Date(startedAt),
+  gameId,
   humanCount,
   humanSeats,
 })
@@ -60,19 +66,19 @@ const SESSIONS: OnlinePlaySessionRow[] = [
   // 25/10 à 1 h 30 à Paris (encore à l'heure d'été) : aujourd'hui.
   session('2026-10-24T23:30:00.000Z', [player('u1')]),
   // 24/10 à 23 h 30 à Paris : hier, donc hors de « aujourd'hui ».
-  session('2026-10-24T21:30:00.000Z', [player('g1', true)]),
+  session('2026-10-24T21:30:00.000Z', [player('g1', true)], 1, 'menteur'),
   // 19/10 à 0 h 30 à Paris : premier jour des 7 derniers jours.
   session('2026-10-18T22:30:00.000Z', [player('u2')]),
   // 18/10 à 23 h 30 à Paris : juste hors des 7 jours, dans les 30.
-  session('2026-10-18T21:30:00.000Z', [player('u3')]),
+  session('2026-10-18T21:30:00.000Z', [player('u3')], 1, 'pmu'),
   // humanCount écrit à 1, mais deux humains à table (l'un jamais rattaché).
-  session('2026-10-20T10:00:00.000Z', [player('u1'), noAccount], 1),
+  session('2026-10-20T10:00:00.000Z', [player('u1'), noAccount], 1, 'menteur'),
   // Partie de l'équipe seule (test de TryBotsGate) : hors de la série.
-  session('2026-10-21T10:00:00.000Z', [staff('a1')]),
+  session('2026-10-21T10:00:00.000Z', [staff('a1')], 1, 'pmu'),
   // Équipe + joueur : une partie de joueur, avec un autre humain.
   session('2026-10-22T10:00:00.000Z', [staff('a1'), player('u2')], 2),
   // Au-delà des 30 jours de Paris : ignorée.
-  session('2026-09-20T10:00:00.000Z', [player('u9')]),
+  session('2026-09-20T10:00:00.000Z', [player('u9')], 1, 'pmu'),
 ]
 
 describe('summarizeOnlinePlay', () => {
@@ -134,6 +140,50 @@ describe('summarizeOnlinePlay', () => {
     expect(byDay.get('2026-10-24')).toMatchObject({ solo: 1, withHumans: 1 })
     expect(stats.testExcluded).toBe(0)
   })
+
+  it('compte les lancements par jeu sur 7 jours de Paris, avec humains ventilés, titres du catalogue', () => {
+    // pmu : lancée le 18/10 à 23 h 30 à Paris (hors des 7 jours), ou par l'équipe seule.
+    expect(stats.launchesByGame7d).toEqual([
+      { gameId: 'quiz', gameTitle: 'Le Grand Pillaveur', launches: 3, withHumans: 1 },
+      { gameId: 'menteur', gameTitle: 'Le Menteur', launches: 2, withHumans: 1 },
+    ])
+  })
+
+  it('par jeu : même total que les 7 derniers jours de la série', () => {
+    const lastWeek = stats.launchesByDay.slice(-7)
+    expect(lastWeek[0].day).toBe('2026-10-19')
+    const seriesTotal = lastWeek.reduce((sum, d) => sum + d.solo + d.withHumans, 0)
+    expect(stats.launchesByGame7d.reduce((sum, g) => sum + g.launches, 0)).toBe(seriesTotal)
+  })
+
+  it('par jeu : écarte les parties des comptes de test seuls, garde un jeu retiré sous son identifiant', () => {
+    const byGame = summarizeOnlinePlay(
+      [
+        // Compte de test seul : pas un lancement.
+        session('2026-10-23T10:00:00.000Z', [player('t1', true)], 1, 'pmu'),
+        // Compte de test + joueur : une partie de joueur, avec humains.
+        session('2026-10-24T10:00:00.000Z', [player('t1', true), player('u1')], 2, 'pmu'),
+        // Jeu absent du catalogue : son identifiant tient lieu de titre.
+        session('2026-10-24T11:00:00.000Z', [player('u1')], 1, 'jeu-retire'),
+        // 26/10 à 0 h 30 à Paris (heure d'hiver) : demain, hors de la série, donc ignorée.
+        session('2026-10-25T23:30:00.000Z', [player('u1')], 1, 'jeu-retire'),
+      ],
+      NOW,
+      ['t1']
+    ).launchesByGame7d
+    // À égalité de lancements : la partie avec humains d'abord.
+    expect(byGame).toEqual([
+      { gameId: 'pmu', gameTitle: 'Course PMU', launches: 1, withHumans: 1 },
+      { gameId: 'jeu-retire', gameTitle: 'jeu-retire', launches: 1, withHumans: 0 },
+    ])
+  })
+
+  it('sans partie : série de 14 jours à zéro, aucun jeu', () => {
+    const empty = summarizeOnlinePlay([], NOW)
+    expect(empty.launchesByDay).toHaveLength(14)
+    expect(empty.launchesByDay.every((d) => d.solo === 0 && d.withHumans === 0)).toBe(true)
+    expect(empty.launchesByGame7d).toEqual([])
+  })
 })
 
 describe('getGrowthStats', () => {
@@ -146,7 +196,12 @@ describe('getGrowthStats', () => {
     )
     prismaMock.siteSetting.findUnique.mockResolvedValue({ key: 'metrics.excludedUserIds', value: '["t1"]' })
     prismaMock.onlineGameSession.findMany.mockResolvedValue([
-      { startedAt: new Date(), humanCount: 1, participants: [{ userId: 't1', user: { role: 'user', isGuest: true } }] },
+      {
+        startedAt: new Date(),
+        gameId: 'quiz',
+        humanCount: 1,
+        participants: [{ userId: 't1', user: { role: 'user', isGuest: true } }],
+      },
     ])
 
     const growth = await getGrowthStats()
@@ -154,6 +209,9 @@ describe('getGrowthStats', () => {
     // Même liste de comptes de test que le tableau des comptes actifs.
     expect(growth.onlinePlay.testExcluded).toBe(1)
     expect(growth.onlinePlay.uniquePlayers.d30).toBe(0)
+    // Le jeu de chaque partie est lu ; celle du compte de test seul n'est pas un lancement.
+    expect(prismaMock.onlineGameSession.findMany.mock.calls[0][0].select).toMatchObject({ gameId: true })
+    expect(growth.onlinePlay.launchesByGame7d).toEqual([])
     expect(growth).not.toHaveProperty('retentionD1')
     expect(growth).not.toHaveProperty('retentionD7')
     expect(growth.windows).toEqual({ registeredShareDays: 30, playersByGameDays: 7 })
@@ -192,11 +250,59 @@ describe('logStaffAction', () => {
   })
 })
 
+/** Lectures de la Vue d'ensemble, toutes vides : chaque test surcharge ce qu'il vérifie. */
+function mockEmptyOverview() {
+  prismaMock.dailyVisitor.groupBy.mockResolvedValue([])
+  prismaMock.$queryRawUnsafe.mockResolvedValue([])
+  prismaMock.onlineRoom.findMany.mockResolvedValue([])
+  prismaMock.onlineRoom.groupBy.mockResolvedValue([])
+  prismaMock.accountBanEvent.findMany.mockResolvedValue([])
+  prismaMock.cosmeticGrant.findMany.mockResolvedValue([])
+  prismaMock.featureBan.findMany.mockResolvedValue([])
+  prismaMock.moderationTerm.findMany.mockResolvedValue([])
+  prismaMock.userFeedback.findMany.mockResolvedValue([])
+  listFlaggedMock.mockResolvedValue([])
+}
+
+describe('getSupervisionOverview — tables en cours', () => {
+  it('compte les statuts EN BASE, pas sur la liste plafonnée, diffusion TV comprise', async () => {
+    mockEmptyOverview()
+    const room = (id: string, status: string) => ({
+      id,
+      code: id.toUpperCase(),
+      gameId: 'quiz',
+      status,
+      visibility: 'public',
+      currentTurnUserId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      host: null,
+      _count: { members: 0 },
+      members: [],
+    })
+    // La liste ne remonte que deux salles (ses `take`) alors que 45 jouent.
+    prismaMock.onlineRoom.findMany.mockResolvedValue([room('r1', 'playing'), room('r2', 'waiting')])
+    prismaMock.onlineRoom.groupBy.mockResolvedValue([
+      { status: 'playing', _count: { _all: 45 } },
+      { status: 'waiting', _count: { _all: 3 } },
+      { status: 'cast', _count: { _all: 1 } },
+    ])
+
+    const overview = await getSupervisionOverview('admin')
+
+    expect(overview.liveTables).toHaveLength(2)
+    expect(overview.liveTablesByStatus).toEqual({ waiting: 3, briefing: 0, playing: 45, cast: 1 })
+    expect(prismaMock.onlineRoom.groupBy).toHaveBeenCalledWith({
+      by: ['status'],
+      where: { status: { in: ['waiting', 'briefing', 'playing', 'cast'] } },
+      _count: { _all: true },
+    })
+  })
+})
+
 describe('getSupervisionOverview — journal', () => {
   it('affiche une exclusion des statistiques comme un réglage visant un compte, jamais comme un ban', async () => {
-    prismaMock.dailyVisitor.groupBy.mockResolvedValue([])
-    prismaMock.$queryRawUnsafe.mockResolvedValue([])
-    prismaMock.onlineRoom.findMany.mockResolvedValue([])
+    mockEmptyOverview()
     prismaMock.accountBanEvent.findMany.mockResolvedValue([
       {
         id: 'e1',
@@ -209,11 +315,6 @@ describe('getSupervisionOverview — journal', () => {
         actor: { displayName: 'Alice' },
       },
     ])
-    prismaMock.cosmeticGrant.findMany.mockResolvedValue([])
-    prismaMock.featureBan.findMany.mockResolvedValue([])
-    prismaMock.moderationTerm.findMany.mockResolvedValue([])
-    prismaMock.userFeedback.findMany.mockResolvedValue([])
-    listFlaggedMock.mockResolvedValue([])
 
     const { journal } = await getSupervisionOverview('admin')
 

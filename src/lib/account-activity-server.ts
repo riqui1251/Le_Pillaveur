@@ -83,6 +83,7 @@ export type AccountPlayedGame = {
   startedAt: Date
   /** Null = partie encore en cours. */
   endedAt: Date | null
+  /** Humains à table : max(compteur écrit, sièges sans botName), comme la Vue d'ensemble. */
   humanCount: number
   reliability: DurationReliability
 }
@@ -560,6 +561,9 @@ async function readAccountGames(userId: string, since: Date): Promise<AccountPla
           endedAt: true,
           endReason: true,
           humanCount: true,
+          // Sièges HUMAINS (sans botName), rattachés ou non à un compte :
+          // `humanCount` ne compte que les rattachés au lancement.
+          _count: { select: { participants: { where: { botName: null } } } },
         },
       },
     },
@@ -577,7 +581,11 @@ async function readAccountGames(userId: string, since: Date): Promise<AccountPla
       gameId: session.gameId,
       startedAt: session.startedAt,
       endedAt: session.endedAt,
-      humanCount: session.humanCount,
+      // Même effectif que summarizeOnlinePlay (Vue d'ensemble) : le plus grand
+      // du compteur écrit et des sièges humains. Un humain jamais rattaché
+      // passait pour un bot, et sa partie pour du « solo contre des bots » —
+      // la fiche et la Vue d'ensemble se contredisaient sur la même partie.
+      humanCount: Math.max(session.humanCount, session._count.participants),
       reliability: durationReliabilityOf(parseEndReason(session.endReason)),
     })
   }

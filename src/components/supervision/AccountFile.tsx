@@ -32,6 +32,13 @@ import { Link } from '@/i18n/navigation'
 import { Badge } from '@/components/ui/badge'
 import { AccountKindBadge } from '@/components/supervision/AccountKindBadge'
 import {
+  BarList,
+  StackedBar,
+  type BarListRow,
+  type ChartTone,
+  type StackedBarSegment,
+} from '@/components/supervision/charts'
+import {
   DurationReliabilityBadge,
   DurationReliabilityLegend,
   tableDurationLabel,
@@ -594,34 +601,91 @@ function MetricsExclusionToggle({ userId, isStaff }: { userId: string; isStaff: 
   )
 }
 
-/** Petite statistique d'une tuile 7 j / 30 j. */
-function Stat({ label, value }: { label: string; value: ReactNode }) {
+/**
+ * Petite statistique d'une tuile 7 j / 30 j. `children` : la répartition de
+ * ce total (barre 100 % du kit), posée SOUS le chiffre qu'elle détaille — le
+ * total se lit d'abord, la barre dit ensuite de quoi il est fait.
+ */
+function Stat({
+  label,
+  value,
+  children,
+  className,
+}: {
+  label: string
+  value: ReactNode
+  children?: ReactNode
+  className?: string
+}) {
   return (
-    <div className="min-w-0">
+    <div className={cn('min-w-0', className)}>
       <dt className="text-[11px] leading-tight text-white/45">{label}</dt>
       <dd className="mt-0.5 break-words font-display text-xl font-bold tabular-nums text-white">{value}</dd>
+      {children ? <dd className="mt-2 min-w-0">{children}</dd> : null}
     </div>
   )
 }
 
+/**
+ * Tuile 7 j / 30 j des parties : deux totaux, chacun avec sa répartition.
+ * Les quatre chiffres d'avant y sont tous écrits (légendes « libellé —
+ * valeur (part) ») ; la barre ajoute la proportion, qu'un « 3 sur 12 » ou
+ * deux durées côte à côte obligeaient à calculer de tête. Total nul : pas de
+ * barre — un cadre « aucune donnée » sous un « 0 » ne dirait rien de plus.
+ */
 function WindowTiles({ label, totals }: { label: string; totals: AccountPlayTotals }) {
   const t = useTranslations('supervision.accountFile')
   const { units } = useFileFormat()
+  const duration = (seconds: number) => formatPresenceDuration(seconds, units)
+  // Même partage que le graphe « Parties lancées par jour » de la Vue
+  // d'ensemble : solo = un seul humain à table, le reste en a au moins deux,
+  // humains comptés pareil des deux côtés (readAccountGames).
+  const withHumans = Math.max(0, totals.games - totals.solo)
+  // Les durées de fiabilité inconnue ne sont jamais additionnées (windowHint).
+  const countedSeconds = totals.reliableSeconds + totals.estimatedSeconds
+  // Un total qui contient une part ESTIMÉE est lui-même une estimation : il
+  // garde le « ≈ » de l'ancien affichage. Le chiffre se lit avant la barre,
+  // il ne doit pas passer pour exact.
+  const countedLabel =
+    totals.estimatedSeconds > 0 ? tableDurationLabel(countedSeconds, 'estimated', units) : duration(countedSeconds)
   return (
     <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
       <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-gold/70">{label}</p>
-      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2.5">
-        <Stat label={t('gamesLaunched')} value={totals.games} />
-        <Stat label={t('solo')} value={t('soloValue', { solo: totals.solo, games: totals.games })} />
-        <Stat label={t('reliableTime')} value={formatPresenceDuration(totals.reliableSeconds, units)} />
-        <Stat
-          label={t('estimatedTime')}
-          value={
-            totals.estimatedSeconds > 0
-              ? tableDurationLabel(totals.estimatedSeconds, 'estimated', units)
-              : formatPresenceDuration(0, units)
-          }
-        />
+      <dl className="mt-2 grid grid-cols-1 gap-y-3">
+        <Stat label={t('gamesLaunched')} value={totals.games}>
+          {totals.games > 0 && (
+            // Teintes de la Vue d'ensemble : solo en crème (neutre), avec
+            // d'autres humains en or — une teinte suit son entité.
+            <StackedBar
+              ariaLabel={t('charts.gamesSplitAria', { window: label })}
+              segments={[
+                { key: 'solo', label: t('solo'), value: totals.solo, tone: 'cream' },
+                { key: 'withHumans', label: t('charts.withHumans'), value: withHumans, tone: 'gold' },
+              ]}
+              categoryLabel={t('charts.kind')}
+              valueLabel={t('charts.count')}
+              shareLabel={t('charts.share')}
+            />
+          )}
+        </Stat>
+        <Stat label={t('charts.countedTime')} value={countedLabel}>
+          {countedSeconds > 0 && (
+            // Part sûre / part estimée : dit d'un coup d'œil ce que vaut le
+            // total au-dessus. Dans la légende, « Estimée » est écrit dans le
+            // libellé du segment : pas besoin d'y répéter le « ≈ ».
+            <StackedBar
+              ariaLabel={t('charts.timeSplitAria', { window: label })}
+              segments={[
+                { key: 'reliable', label: t('reliableTime'), value: totals.reliableSeconds, tone: 'gold' },
+                { key: 'estimated', label: t('estimatedTime'), value: totals.estimatedSeconds, tone: 'cream' },
+              ]}
+              valueFormatter={duration}
+              categoryLabel={t('charts.kind')}
+              valueLabel={t('charts.duration')}
+              shareLabel={t('charts.share')}
+            />
+          )}
+        </Stat>
       </dl>
     </div>
   )
@@ -751,6 +815,12 @@ function VisitsSection({ visits, role }: { visits: AccountVisitsSummary; role: s
             {sinceLabel && `${t('visitsSince', { date: sinceLabel })} `}
             {t('visitsWindowHint')}
           </p>
+          {/* Seule définition du segment « Visible, inactif » de la barre : en
+              crème 70 % (≥ 4,5:1 sur le feutre), pas dans le blanc 40 % des
+              précisions ci-dessus (~3,3:1). */}
+          <p className="text-[11px] leading-snug text-cream/70">
+            {t('charts.visibleSplitHint', { active: ACTIVE_WINDOW_MINUTES, visible: INTERACTION_WINDOW_MINUTES })}
+          </p>
         </>
       )}
       {/* Couverture : ne jamais laisser croire à un temps complet. Aucun
@@ -769,18 +839,37 @@ function VisitsSection({ visits, role }: { visits: AccountVisitsSummary; role: s
 function VisitWindowTiles({ label, totals }: { label: string; totals: AccountVisitTotals }) {
   const t = useTranslations('supervision.accountFile')
   const { units } = useFileFormat()
+  const duration = (seconds: number) => formatPresenceDuration(seconds, units)
+  // Actif ⊆ visible (chaque battement crédite le visible, et l'actif en plus
+  // s'il y a eu interaction récente) : la barre découpe le visible en actif +
+  // inactif, deux parts qui s'additionnent — jamais deux durées qui se
+  // recouvrent. Le temps en partie, lui, recoupe les deux : il reste une tuile.
+  const idleSeconds = Math.max(0, totals.visibleSeconds - totals.activeSeconds)
   return (
     <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
       <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-gold/70">{label}</p>
       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2.5">
         <Stat label={t('visitsCount')} value={totals.visits} />
-        <Stat label={t('visitsActive')} value={formatPresenceDuration(totals.activeSeconds, units)} />
-        <Stat label={t('visitsGame')} value={formatPresenceDuration(totals.gameSeconds, units)} />
+        <Stat label={t('visitsActive')} value={duration(totals.activeSeconds)} />
+        <Stat label={t('visitsGame')} value={duration(totals.gameSeconds)} />
         {/* Sans visite sur la fenêtre, pas de médiane : « — », jamais « 0 s ». */}
-        <Stat
-          label={t('visitsMedian')}
-          value={totals.visits > 0 ? formatPresenceDuration(totals.medianVisitSeconds, units) : '—'}
-        />
+        <Stat label={t('visitsMedian')} value={totals.visits > 0 ? duration(totals.medianVisitSeconds) : '—'} />
+        <Stat className="col-span-2" label={t('charts.visibleTime')} value={duration(totals.visibleSeconds)}>
+          {totals.visibleSeconds > 0 && (
+            // Actif en or, comme dans la barre de chaque visite plus bas.
+            <StackedBar
+              ariaLabel={t('charts.visibleSplitAria', { window: label })}
+              segments={[
+                { key: 'active', label: t('visitLegendActive'), value: totals.activeSeconds, tone: 'gold' },
+                { key: 'idle', label: t('charts.visibleIdle'), value: idleSeconds, tone: 'cream' },
+              ]}
+              valueFormatter={duration}
+              categoryLabel={t('charts.kind')}
+              valueLabel={t('charts.duration')}
+              shareLabel={t('charts.share')}
+            />
+          )}
+        </Stat>
       </dl>
     </div>
   )
@@ -864,8 +953,7 @@ function VisitLine({ visit, scale }: { visit: AccountVisitRow; scale: number }) 
 
   const SlotIcon = SLOT_ICONS[visit.slot] ?? Clock
   const DeviceIcon = (visit.device && DEVICE_ICONS[visit.device]) || Monitor
-  const deviceKey = visit.device && DEVICE_ICONS[visit.device] ? visit.device : 'unknown'
-  const deviceLabel = t(`devices.${deviceKey}`)
+  const deviceLabel = t(`devices.${deviceKeyOf(visit.device)}`)
   const ongoing = isVisitOngoing(visit)
   // Une entrée par partie lancée (revanches comprises) : le nombre de parties
   // est la longueur, les noms sont dédoublonnés.
@@ -1079,8 +1167,12 @@ function RecentGamesSection({ activity, userId }: { activity: AccountActivity; u
   )
 }
 
+/** Rangées de barres repliées au-delà : un compte peut avoir touché à ~30 jeux. */
+const GAME_BARS_SHOWN = 8
+
 function GamesSection({ activity }: { activity: AccountActivity }) {
   const t = useTranslations('supervision.accountFile')
+  const format = useFormatter()
   const { day, dateTime } = useFileFormat()
   const gameTitle = useGameTitle()
 
@@ -1094,44 +1186,142 @@ function GamesSection({ activity }: { activity: AccountActivity }) {
   ]
   const { progression } = activity
 
+  // Icône masquée aux lecteurs d'écran : le titre du jeu suffit.
+  const gameLabel = (gameId: string) => (
+    <>
+      <span aria-hidden className="mr-1.5 inline-block align-[-3px]">
+        <GameIconById id={gameId} className="block h-4 w-4 text-gold" />
+      </span>
+      {gameTitle(gameId)}
+    </>
+  )
+
+  // Deux listes, une mesure chacune. Lancements et résultats ne se
+  // mélangent pas dans une même barre : le compteur de lancements compte
+  // aussi les tentatives et les parties sans classement (solo, jeux
+  // coopératifs), il ne se découpe pas en victoires + défaites. Barres
+  // triées par nombre (le tableau détaillé garde l'ordre du plus récent).
+  const launchRows: BarListRow[] = [...activity.history]
+    .sort((a, b) => b.playCount - a.playCount || b.lastPlayedAt.localeCompare(a.lastPlayedAt))
+    .map((h) => ({
+      key: h.gameId,
+      label: gameLabel(h.gameId),
+      value: h.playCount,
+      hint: t('charts.lastLaunch', { date: day(h.lastPlayedAt) }),
+    }))
+  // Servis du plus joué au moins joué (victoires + défaites) : l'ordre des barres.
+  // Victoires d'abord, défaites au bout : la barre entière = parties classées,
+  // la part de vert se lit comme le taux de victoire, écrit en clair dessous.
+  const resultRows: BarListRow[] = activity.results.map((r) => {
+    const ranked = r.wins + r.losses
+    return {
+      key: r.gameId,
+      label: gameLabel(r.gameId),
+      value: r.wins,
+      secondary: r.losses,
+      hint:
+        ranked > 0
+          ? t('charts.winRate', {
+              rate: format.number(r.wins / ranked, { style: 'percent', maximumFractionDigits: 0 }),
+            })
+          : undefined,
+    }
+  })
+
   return (
     <SectionCard icon={Gamepad2} title={t('gamesTitle')} description={t('gamesDesc')} bodyClassName="space-y-3">
       {gameIds.length === 0 ? (
         <EmptyState icon={Inbox} title={t('gamesEmpty')} />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="w-full min-w-[520px] text-left text-sm">
-            <thead className="bg-white/[0.03] text-[11px] uppercase tracking-wide text-white/45">
-              <tr>
-                <th scope="col" className="px-3 py-2 font-semibold">{t('colGame')}</th>
-                <th scope="col" className="px-3 py-2 text-right font-semibold">{t('colLaunches')}</th>
-                <th scope="col" className="px-3 py-2 font-semibold">{t('colLastLaunch')}</th>
-                <th scope="col" className="px-3 py-2 text-right font-semibold">{t('colWins')}</th>
-                <th scope="col" className="px-3 py-2 text-right font-semibold">{t('colLosses')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.06]">
-              {gameIds.map((gameId) => {
-                const h = history.get(gameId)
-                const r = results.get(gameId)
-                return (
-                  <tr key={gameId} className="text-white/80">
-                    <td className="px-3 py-2">
-                      <span className="flex items-center gap-2">
-                        <GameIconById id={gameId} className="h-4 w-4 shrink-0 text-gold" />
-                        <span className="text-white">{gameTitle(gameId)}</span>
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{h ? h.playCount : '—'}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-white/60">{h ? dateTime(h.lastPlayedAt) : '—'}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-emerald-300">{r ? r.wins : '—'}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-rose-300">{r ? r.losses : '—'}</td>
+        <>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="min-w-0 space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-cream/70">
+                {t('charts.launchesTitle')}
+              </h3>
+              <BarList
+                ariaLabel={t('charts.launchesAria')}
+                rows={launchRows}
+                showShare
+                limit={GAME_BARS_SHOWN}
+                tone="gold"
+                primaryLabel={t('colLaunches')}
+                categoryLabel={t('colGame')}
+                shareLabel={t('charts.share')}
+                emptyLabel={t('charts.launchesEmpty')}
+                showAllLabel={t('charts.showAll')}
+                collapseLabel={t('charts.collapse')}
+              />
+            </div>
+            <div className="min-w-0 space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-cream/70">
+                {t('charts.resultsTitle')}
+              </h3>
+              {/* Vert / rouge : les couleurs des colonnes du tableau détaillé.
+                  Jamais la couleur seule : légende, et les deux nombres écrits,
+                  chacun précédé de sa pastille. */}
+              <BarList
+                ariaLabel={t('charts.resultsAria')}
+                rows={resultRows}
+                limit={GAME_BARS_SHOWN}
+                tone="green"
+                secondaryTone="red"
+                primaryLabel={t('colWins')}
+                secondaryLabel={t('colLosses')}
+                categoryLabel={t('colGame')}
+                emptyLabel={t('charts.resultsEmpty')}
+                showAllLabel={t('charts.showAll')}
+                collapseLabel={t('charts.collapse')}
+              />
+              {resultRows.length > 0 && (
+                <p className="text-[11px] leading-snug text-cream/70">{t('charts.resultsHint')}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Tableau détaillé replié : seul endroit où se lisent la date ET
+              l'heure du dernier lancement, et lancements + résultats d'un jeu
+              sur une même ligne. */}
+          <details className="group min-w-0">
+            <summary className="-mx-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-2 text-xs text-cream/70 transition-colors hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 [&::-webkit-details-marker]:hidden">
+              <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-open:rotate-90" />
+              {t('charts.tableToggle')}
+            </summary>
+            <div className="mt-1 overflow-x-auto rounded-xl border border-white/10">
+              <table className="w-full min-w-[520px] text-left text-sm">
+                <thead className="bg-white/[0.03] text-[11px] uppercase tracking-wide text-cream/70">
+                  <tr>
+                    <th scope="col" className="px-3 py-2 font-semibold">{t('colGame')}</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">{t('colLaunches')}</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">{t('colLastLaunch')}</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">{t('colWins')}</th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">{t('colLosses')}</th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-white/[0.06]">
+                  {gameIds.map((gameId) => {
+                    const h = history.get(gameId)
+                    const r = results.get(gameId)
+                    return (
+                      <tr key={gameId} className="text-white/80">
+                        <td className="px-3 py-2">
+                          <span className="flex items-center gap-2">
+                            <GameIconById id={gameId} className="h-4 w-4 shrink-0 text-gold" />
+                            <span className="text-white">{gameTitle(gameId)}</span>
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums">{h ? h.playCount : '—'}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-white/60">{h ? dateTime(h.lastPlayedAt) : '—'}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-emerald-300">{r ? r.wins : '—'}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-rose-300">{r ? r.losses : '—'}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </>
       )}
       {/* XP et série : des instantanés, pas une mesure d'activité (solo au
           plafond sans XP ni série, jeux coopératifs sans résultat). */}
@@ -1151,6 +1341,28 @@ const DEVICE_ICONS: Record<string, typeof Monitor> = {
   pc: Monitor,
 }
 
+/** Ordre fixe des appareils (celui de DeviceKind), pour départager les égalités. */
+const DEVICE_ORDER = ['mobile', 'tablet', 'mac', 'pc', 'unknown'] as const
+type DeviceKey = (typeof DEVICE_ORDER)[number]
+
+/**
+ * Teinte de chaque appareil dans la répartition des navigateurs : fixe (une
+ * teinte suit son entité, pas son rang), le crème — la teinte neutre du
+ * kit — pour l'appareil non reconnu.
+ */
+const DEVICE_TONES: Record<DeviceKey, ChartTone> = {
+  mobile: 'gold',
+  pc: 'blue',
+  mac: 'green',
+  tablet: 'violet',
+  unknown: 'cream',
+}
+
+/** Clé d'appareil affichable ; null ou valeur inattendue -> « inconnu ». */
+function deviceKeyOf(device: string | null): DeviceKey {
+  return device && DEVICE_ICONS[device] ? (device as DeviceKey) : 'unknown'
+}
+
 function NetworksSection({ activity }: { activity: AccountActivity }) {
   const t = useTranslations('supervision.accountFile')
   const tSup = useTranslations('supervision')
@@ -1162,6 +1374,24 @@ function NetworksSection({ activity }: { activity: AccountActivity }) {
     countries.length > 0
       ? countries.map((c) => `${countryFlag(c)} ${countryLabel(c, locale, tSup('unknownCountry'))}`).join(', ')
       : tSup('unknownCountry')
+
+  // Navigateurs par appareil (à leur dernier passage). Seuls les appareils
+  // présents figurent : pour UN compte, « tablette — 0 » n'apprend rien. Le
+  // plus fréquent d'abord, l'ordre fixe à égalité.
+  const deviceCounts = new Map<DeviceKey, number>()
+  for (const browser of activity.browsers) {
+    const key = deviceKeyOf(browser.device)
+    deviceCounts.set(key, (deviceCounts.get(key) ?? 0) + 1)
+  }
+  const deviceCount = (key: DeviceKey) => deviceCounts.get(key) ?? 0
+  const deviceSegments: StackedBarSegment[] = DEVICE_ORDER.filter((key) => deviceCounts.has(key))
+    .sort((a, b) => deviceCount(b) - deviceCount(a) || DEVICE_ORDER.indexOf(a) - DEVICE_ORDER.indexOf(b))
+    .map((key) => ({
+      key,
+      label: t(`devices.${key}`),
+      value: deviceCount(key),
+      tone: DEVICE_TONES[key],
+    }))
 
   return (
     <SectionCard icon={Network} title={t('networksTitle')} description={tSup('ipNetwork.help')}>
@@ -1228,31 +1458,50 @@ function NetworksSection({ activity }: { activity: AccountActivity }) {
           {activity.browsers.length === 0 ? (
             <p className="text-sm text-white/45">{t('noBrowsers')}</p>
           ) : (
-            <ul className="space-y-1.5">
-              {activity.browsers.map((browser, index) => {
-                const Icon = (browser.device && DEVICE_ICONS[browser.device]) || Monitor
-                const deviceKey = browser.device && DEVICE_ICONS[browser.device] ? browser.device : 'unknown'
-                // Ni visitorId ni IP servis : l'ordre (dernière vue) sert de clé.
-                return (
-                  <li
-                    key={`${index}-${browser.lastSeen}`}
-                    className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-2.5 py-2"
-                  >
-                    <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-white/80">
-                      <Icon className="h-3.5 w-3.5 shrink-0 text-white/50" />
-                      <span>{t(`devices.${deviceKey}`)}</span>
-                      <span className="text-white/45">
-                        {countryFlag(browser.country)} {countryLabel(browser.country, locale, tSup('unknownCountry'))}
-                      </span>
-                    </p>
-                    <p className="mt-0.5 min-w-0 break-words text-[11px] text-white/45">
-                      {tSup('visitorCard.browserSeen', { date: dateTime(browser.lastSeen) })} ·{' '}
-                      {browser.connectedHere ? t('browserConnected') : t('browserLastAccount')}
-                    </p>
-                  </li>
-                )
-              })}
-            </ul>
+            <>
+              {/* Un seul navigateur : une barre à 100 % ne dirait rien que sa
+                  ligne ne dise déjà. La liste reste dessous (pays, dernière
+                  vue, connexion) : la barre la résume, ne la remplace pas. */}
+              {activity.browsers.length > 1 && (
+                <div className="min-w-0 space-y-1.5 pb-1">
+                  <StackedBar
+                    ariaLabel={t('charts.devicesAria')}
+                    segments={deviceSegments}
+                    categoryLabel={t('charts.device')}
+                    valueLabel={t('charts.count')}
+                    shareLabel={t('charts.share')}
+                  />
+                  <p className="text-[11px] leading-snug text-cream/70">
+                    {t('charts.devicesCaption', { count: activity.browsers.length })}
+                  </p>
+                </div>
+              )}
+              <ul className="space-y-1.5">
+                {activity.browsers.map((browser, index) => {
+                  const Icon = (browser.device && DEVICE_ICONS[browser.device]) || Monitor
+                  const deviceKey = deviceKeyOf(browser.device)
+                  // Ni visitorId ni IP servis : l'ordre (dernière vue) sert de clé.
+                  return (
+                    <li
+                      key={`${index}-${browser.lastSeen}`}
+                      className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-2.5 py-2"
+                    >
+                      <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-white/80">
+                        <Icon className="h-3.5 w-3.5 shrink-0 text-white/50" />
+                        <span>{t(`devices.${deviceKey}`)}</span>
+                        <span className="text-white/70">
+                          {countryFlag(browser.country)} {countryLabel(browser.country, locale, tSup('unknownCountry'))}
+                        </span>
+                      </p>
+                      <p className="mt-0.5 min-w-0 break-words text-[11px] text-white/70">
+                        {tSup('visitorCard.browserSeen', { date: dateTime(browser.lastSeen) })} ·{' '}
+                        {browser.connectedHere ? t('browserConnected') : t('browserLastAccount')}
+                      </p>
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
           )}
         </div>
       </div>

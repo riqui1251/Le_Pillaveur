@@ -170,6 +170,17 @@ export type OnlinePlayStats = {
    */
   launchesByDay: Array<{ day: string; solo: number; withHumans: number }>
   /**
+   * Parties LANCÉES par jeu sur les 7 derniers jours de Paris (aujourd'hui
+   * inclus), mêmes règles que `launchesByDay` : revanches comprises, parties
+   * jouées par l'équipe ou des comptes de test SEULS exclues ; `withHumans` =
+   * dont parties à deux humains ou plus (le reste est solo contre des bots).
+   * La somme des `launches` = total des 7 derniers jours de `launchesByDay`.
+   * Titre tiré du catalogue (identifiant brut pour un jeu retiré). Jeux sans
+   * lancement absents ; tri par lancements décroissants, puis parties avec
+   * humains, puis titre.
+   */
+  launchesByGame7d: Array<{ gameId: string; gameTitle: string; launches: number; withHumans: number }>
+  /**
    * Sièges humains SANS compte (ni compte ni bot) des parties lancées sur
    * 30 jours : compte supprimé depuis, ou humain jamais rattaché à un membre
    * au lancement — indiscernables en base. Comptés À PART : un compte supprimé
@@ -335,7 +346,10 @@ export async function cleanupStaleCastRooms(): Promise<void> {
   await prisma.onlineRoom.deleteMany({ where: { id: { in: stale.map((r) => r.id) } } })
 }
 
-async function getLiveTables(): Promise<LiveTable[]> {
+/** Effectif RÉEL des salles listées, par statut (`cast` compris). */
+export type LiveTablesByStatus = Record<LiveTableStatus, number>
+
+async function getLiveTables(): Promise<{ tables: LiveTable[]; byStatus: LiveTablesByStatus }> {
   // Purge les salles abandonnées (plus aucun tick client depuis 1h) avant de
   // lister : sinon les fantômes qui n'intéressent plus personne restent
   // affichés « en jeu » indéfiniment dans Supervision. Les salles de cast
@@ -367,7 +381,7 @@ async function getLiveTables(): Promise<LiveTable[]> {
   // construction celles dont `updatedAt` est le plus ANCIEN — un simple
   // « 20 dernières modifiées » les aurait donc toutes coupées, c'est-à-dire
   // précisément ce que l'exploitant doit voir (F46).
-  const [freshest, stalest] = await Promise.all([
+  const [freshest, stalest, statusRows] = await Promise.all([
     prisma.onlineRoom.findMany({
       where: { status: { in: LIVE_STATUSES } },
       orderBy: { updatedAt: 'desc' },
@@ -380,7 +394,23 @@ async function getLiveTables(): Promise<LiveTable[]> {
       take: 10,
       select: roomSelect,
     }),
+    // Répartition par statut COMPTÉE EN BASE, sans charger une ligne : la
+    // liste ci-dessus est plafonnée par ses `take` (30 salles au plus, les
+    // plus fraîches et les plus figées). Compter ses statuts omettrait les
+    // tables « du milieu » — surtout des parties en jeu — dès qu'il y a du
+    // monde : le piège déjà corrigé pour les tables figées. Même périmètre
+    // que la liste (LIVE_STATUSES, diffusion TV comprise), après la purge.
+    prisma.onlineRoom.groupBy({
+      by: ['status'],
+      where: { status: { in: LIVE_STATUSES } },
+      _count: { _all: true },
+    }),
   ])
+
+  const byStatus: LiveTablesByStatus = { waiting: 0, briefing: 0, playing: 0, cast: 0 }
+  for (const row of statusRows) {
+    if (row.status in byStatus) byStatus[row.status as LiveTableStatus] = row._count._all
+  }
 
   const byId = new Map([...freshest, ...stalest].map((room) => [room.id, room]))
   const rooms = [...byId.values()]
@@ -413,16 +443,18 @@ async function getLiveTables(): Promise<LiveTable[]> {
   })
 
   // Les tables bloquées d'abord : c'est ce que l'exploitant doit repérer.
-  return tables.sort((a, b) => {
+  tables.sort((a, b) => {
     if (a.stalled !== b.stalled) return a.stalled ? -1 : 1
     // Bloquées : la plus figée en tête. Vivantes : la plus fraîche en tête.
     return a.stalled ? b.idleSeconds - a.idleSeconds : a.idleSeconds - b.idleSeconds
   })
+  return { tables, byStatus }
 }
 
 /** Partie du journal telle que la lit `getOnlinePlayStats` (voir la requête). */
 export type OnlinePlaySessionRow = {
   startedAt: Date
+  gameId: string
   humanCount: number
   /** Sièges HUMAINS seulement (botName nul) : compte, ou compte supprimé. */
   humanSeats: Array<{ userId: string | null; user: { role: string; isGuest: boolean } | null }>
@@ -461,6 +493,8 @@ export function summarizeOnlinePlay(
   const launches = new Map(
     parisDaysBack(ONLINE_LAUNCH_SERIES_DAYS, now).map((day) => [day, { day, solo: 0, withHumans: 0 }])
   )
+  const weekStartMs = windowStartMs(ONLINE_PLAY_WINDOW_DAYS.d7)
+  const launchesByGame = new Map<string, { launches: number; withHumans: number }>()
 
   for (const session of sessions) {
     const startedMs = session.startedAt.getTime()
@@ -481,6 +515,15 @@ export function summarizeOnlinePlay(
       const humans = Math.max(session.humanCount, session.humanSeats.length)
       if (humans >= 2) launch.withHumans += 1
       else launch.solo += 1
+      // Par jeu : seulement une partie déjà comptée dans la série (jour de la
+      // série, donc jamais après aujourd'hui), et des 7 derniers jours — les
+      // deux graphes s'additionnent au même total.
+      if (startedMs >= weekStartMs) {
+        const byGame = launchesByGame.get(session.gameId) ?? { launches: 0, withHumans: 0 }
+        byGame.launches += 1
+        if (humans >= 2) byGame.withHumans += 1
+        launchesByGame.set(session.gameId, byGame)
+      }
     }
 
     for (const seat of session.humanSeats) {
@@ -516,6 +559,15 @@ export function summarizeOnlinePlay(
     staffExcluded: staff.size,
     testExcluded: tests.size,
     launchesByDay: [...launches.values()],
+    launchesByGame7d: [...launchesByGame]
+      .map(([gameId, row]) => ({ gameId, gameTitle: gameTitleFor(gameId), ...row }))
+      .sort(
+        (a, b) =>
+          b.launches - a.launches ||
+          b.withHumans - a.withHumans ||
+          a.gameTitle.localeCompare(b.gameTitle, 'fr') ||
+          a.gameId.localeCompare(b.gameId)
+      ),
     deletedSeats30,
   }
 }
@@ -533,6 +585,7 @@ async function getOnlinePlayStats(now: Date): Promise<OnlinePlayStats> {
       where: { startedAt: { gte: since } },
       select: {
         startedAt: true,
+        gameId: true,
         humanCount: true,
         participants: {
           where: { botName: null },
@@ -547,7 +600,12 @@ async function getOnlinePlayStats(now: Date): Promise<OnlinePlayStats> {
     getExcludedUserIds(),
   ])
   return summarizeOnlinePlay(
-    rows.map((row) => ({ startedAt: row.startedAt, humanCount: row.humanCount, humanSeats: row.participants })),
+    rows.map((row) => ({
+      startedAt: row.startedAt,
+      gameId: row.gameId,
+      humanCount: row.humanCount,
+      humanSeats: row.participants,
+    })),
     now,
     excludedUserIds
   )
@@ -879,7 +937,7 @@ async function getRetentionLastRun(actorRole: string): Promise<RetentionLastRun 
  * sur `/api/admin/growth` (voir GROWTH_CACHE_MS).
  */
 export async function getSupervisionOverview(actorRole: string) {
-  const [dailySeries, liveTables, journal, queue, retentionLastRun] = await Promise.all([
+  const [dailySeries, live, journal, queue, retentionLastRun] = await Promise.all([
     getDailySeries(14),
     getLiveTables(),
     getJournal(20),
@@ -887,5 +945,12 @@ export async function getSupervisionOverview(actorRole: string) {
     getRetentionLastRun(actorRole),
   ])
 
-  return { dailySeries, liveTables, journal, queue, retentionLastRun }
+  return {
+    dailySeries,
+    liveTables: live.tables,
+    liveTablesByStatus: live.byStatus,
+    journal,
+    queue,
+    retentionLastRun,
+  }
 }

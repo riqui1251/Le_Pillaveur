@@ -43,7 +43,7 @@ import {
   UserCheck,
   ServerCog,
 } from 'lucide-react'
-import { deviceLabel } from '@/lib/device-from-user-agent'
+import { deviceLabel, type DeviceKind } from '@/lib/device-from-user-agent'
 import { isGuestPurgeOverdue, parseAccountDeleteLogDetail, type AccountKind } from '@/lib/account-kind'
 import type { OnlinePlayStats, RetentionLastRun } from '@/lib/supervision-overview-server'
 import type { ActiveAccountsStats } from '@/lib/active-accounts-server'
@@ -111,7 +111,6 @@ import {
   SupervisionNav,
   SectionCard,
   KpiPlaque,
-  TrendChart,
   LiveTableCard,
   JournalList,
   QueueList,
@@ -122,6 +121,16 @@ import {
   ErrorState,
   type SupervisionNavGroup,
 } from '@/components/supervision/SupervisionLayout'
+import {
+  BarList,
+  ColumnChart,
+  Sparkline,
+  StackedBar,
+  chartToneColor,
+  type BarListRow,
+  type ChartSeries,
+  type ColumnChartDatum,
+} from '@/components/supervision/charts'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { cn } from '@/lib/utils'
 
@@ -156,6 +165,114 @@ function useHonestPresenceSince(): string {
     month: '2-digit',
     timeZone: PARIS_TIME_ZONE,
   })
+}
+
+/**
+ * Textes communs du kit de graphiques (charts.tsx) : le kit n'appelle pas
+ * useTranslations, tout lui arrive en props. « Jour », « Aucune donnée »,
+ * « Voir tout (n) »… sont posés ici une fois, puis étalés dans chaque appel
+ * (`{...texts.column}`), chaque graphe ajoutant ses propres libellés.
+ */
+function useChartTexts() {
+  const t = useTranslations('supervision')
+  return useMemo(
+    () => ({
+      column: { categoryLabel: t('charts.day'), emptyLabel: t('charts.noData'), totalLabel: t('charts.total') },
+      list: {
+        emptyLabel: t('charts.noData'),
+        showAllLabel: (count: number) => t('charts.showAll', { count }),
+        collapseLabel: t('charts.collapse'),
+        shareLabel: t('charts.share'),
+      },
+      stacked: { emptyLabel: t('charts.noData'), shareLabel: t('charts.share') },
+    }),
+    [t]
+  )
+}
+
+/** Un jour de Paris d'une série, prêt à devenir une colonne du kit. */
+type DayValues = { day: string; values: Record<string, number>; muted?: boolean }
+
+/**
+ * Jours de Paris → colonnes du kit, à l'heure de Paris comme toute la page :
+ * étiquette d'axe courte (« 26 »), libellé complet pour le bandeau de lecture
+ * et la version texte (« ven. 26 sept. »). Le jour mis en avant est
+ * AUJOURD'HUI, reconnu à sa date et non à sa place : une série mise en cache
+ * juste avant minuit finit la veille, qu'on ne présente pas comme le jour
+ * courant. `ariaFor` nomme le graphe avec sa période : l'axe n'écrit que le
+ * numéro du jour, le mois n'y figure pas.
+ */
+function useDayCharts() {
+  const t = useTranslations('supervision')
+  const format = useFormatter()
+  return useMemo(() => {
+    const fullDay = (day: string) =>
+      format.dateTime(parisDayToDate(day), { weekday: 'short', day: 'numeric', month: 'short', timeZone: PARIS_TIME_ZONE })
+    const shortDay = (day: string) =>
+      format.dateTime(parisDayToDate(day), { day: 'numeric', month: 'short', timeZone: PARIS_TIME_ZONE })
+    const columns = (days: DayValues[]): ColumnChartDatum[] => {
+      const today = parisDayString()
+      return days.map((d) => ({
+        key: d.day,
+        label: format.dateTime(parisDayToDate(d.day), { day: 'numeric', timeZone: PARIS_TIME_ZONE }),
+        fullLabel: fullDay(d.day),
+        values: d.values,
+        highlight: d.day === today,
+        muted: d.muted,
+      }))
+    }
+    const ariaFor = (title: string, days: string[]) =>
+      days.length === 0
+        ? title
+        : t('charts.ariaDays', { title, from: shortDay(days[0]), to: shortDay(days[days.length - 1]) })
+    return { columns, ariaFor, fullDay, shortDay }
+  }, [t, format])
+}
+
+/**
+ * Intitulé d'un graphe, et sa précision d'une ligne (unité, périmètre).
+ * `level` suit la hiérarchie de la carte : h3 directement sous le titre de
+ * la section, h4 sous un groupe déjà titré. Un h4 passe en casse normale,
+ * pour ne pas se confondre avec le titre en capitales de son groupe — sauf
+ * `caps`, pour un graphe posé en tuile parmi des tuiles titrées en capitales.
+ */
+function ChartHeading({
+  title,
+  subtitle,
+  level = 3,
+  caps = level === 3,
+}: {
+  title: string
+  subtitle?: string
+  level?: 3 | 4
+  caps?: boolean
+}) {
+  const Heading = level === 3 ? 'h3' : 'h4'
+  return (
+    <div className="mb-2.5 min-w-0">
+      <Heading
+        className={cn(
+          'break-words font-semibold',
+          caps ? 'text-[11px] uppercase tracking-wide text-cream/80' : 'text-sm text-cream/90'
+        )}
+      >
+        {title}
+      </Heading>
+      {subtitle && <p className="mt-0.5 break-words text-xs text-cream/70">{subtitle}</p>}
+    </div>
+  )
+}
+
+/** Libellé d'un jeu dans une liste en barres : son icône, puis son titre. */
+function GameBarLabel({ gameId, title }: { gameId: string; title: string }) {
+  return (
+    <>
+      <span aria-hidden>
+        <GameIconById id={gameId} className="mr-1.5 inline-block h-4 w-4 align-middle text-gold" />
+      </span>
+      {title}
+    </>
+  )
 }
 
 type CountryRow = { country: string | null; count: number }
@@ -357,7 +474,14 @@ type QueueItem = {
 
 type SupervisionOverview = {
   dailySeries: DailyPoint[]
+  /** Liste PLAFONNÉE (30 salles au plus : les plus fraîches et les plus figées). */
   liveTables: LiveTable[]
+  /**
+   * Effectif RÉEL par statut, compté en base (diffusion TV comprise) : ce que
+   * trace la barre par statut. Absent d'une réponse antérieure : la barre
+   * retombe alors sur la liste.
+   */
+  liveTablesByStatus?: Record<LiveTable['status'], number>
   journal: JournalEntry[]
   queue: QueueItem[]
   /**
@@ -950,20 +1074,44 @@ function UserActivityLines({
   )
 }
 
+/**
+ * Pays des navigateurs, en barres : la part de chacun se lit d'un coup d'œil
+ * (drapeau, nom, effectif et %), et chaque rangée reste un bouton qui ouvre
+ * la liste des visiteurs de ce pays. Le périmètre (`scope`) est passé
+ * explicitement : il se déduisait autrefois du titre traduit (« aujourd' »,
+ * « today », « oggi »…), ce qui cassait à la première reformulation.
+ */
 function CountryList({
   title,
   description,
   rows,
+  scope,
   onCountryClick,
 }: {
   title: string
   description: string
   rows: CountryRow[]
+  scope: 'online' | 'today'
   onCountryClick?: (country: string | null, scope: 'online' | 'today') => void
 }) {
   const t = useTranslations('supervision')
   const locale = useLocale()
-  const scope = title.toLowerCase().includes('aujourd') || title.toLowerCase().includes('today') || title.toLowerCase().includes('oggi') || title.toLowerCase().includes('hoy') ? 'today' : 'online'
+  const texts = useChartTexts()
+  const sorted = [...rows].sort((a, b) => b.count - a.count)
+  const barRows: BarListRow[] = sorted.map((row) => ({
+    key: row.country ?? 'unknown',
+    label: (
+      <>
+        <span aria-hidden className="mr-1.5">
+          {countryFlag(row.country)}
+        </span>
+        {countryLabel(row.country, locale, t('unknownCountry'))}
+        {row.country && row.country !== '??' && <span className="ml-1 text-xs text-cream/70">({row.country})</span>}
+      </>
+    ),
+    value: row.count,
+    onClick: onCountryClick ? () => onCountryClick(row.country, scope) : undefined,
+  }))
 
   return (
     <SectionCard
@@ -979,26 +1127,15 @@ function CountryList({
       {rows.length === 0 ? (
         <EmptyState icon={Inbox} title={t('geo.noData')} />
       ) : (
-        <ul className="space-y-2">
-          {rows.map((row) => (
-            <li key={row.country ?? 'unknown'}>
-              <button
-                type="button"
-                onClick={() => onCountryClick?.(row.country, scope)}
-                className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-left transition-colors hover:border-white/[0.16] hover:bg-white/[0.05]"
-              >
-                <span className="flex items-center gap-2 text-sm text-white">
-                  <span>{countryFlag(row.country)}</span>
-                  {countryLabel(row.country, locale, t('unknownCountry'))}
-                  {row.country && row.country !== '??' && (
-                    <span className="text-xs text-white/35">({row.country})</span>
-                  )}
-                </span>
-                <Badge variant="secondary">{row.count}</Badge>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <BarList
+          {...texts.list}
+          ariaLabel={title}
+          rows={barRows}
+          showShare
+          limit={10}
+          categoryLabel={t('charts.country')}
+          primaryLabel={t('charts.browsers')}
+        />
       )}
     </SectionCard>
   )
@@ -1443,19 +1580,65 @@ function replaceUrlParam(key: string, value: string | null) {
   window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
 }
 
-/** Rayures des jours antérieurs au journal : « rien à compter », jamais un zéro. */
-const BEFORE_JOURNAL_HATCH = {
-  backgroundImage: 'repeating-linear-gradient(135deg, rgb(255 255 255 / 0.08) 0 2px, transparent 2px 6px)',
+/**
+ * Tendance de la Salle sur 14 jours de Paris : DEUX graphes, un par unité —
+ * des navigateurs d'un côté, des salles de jeu de l'autre —, chacun avec sa
+ * graduation et sa définition. Plus de courbes superposées à deux échelles
+ * (l'ancien TrendChart), dont la comparaison était trompeuse.
+ */
+function RoomTrendCharts({ points }: { points: DailyPoint[] }) {
+  const t = useTranslations('supervision')
+  const texts = useChartTexts()
+  const { columns, ariaFor, shortDay } = useDayCharts()
+  const days = points.map((p) => p.date)
+  const visitorsTitle = t('room.visitorsChartTitle')
+  const partiesTitle = t('room.partiesChartTitle')
+  // Consentement de version 2 : le bandeau a été reposé à tous et un
+  // navigateur ne compte plus tant qu'il n'a pas répondu. Tant que ce jour
+  // est dans la fenêtre, on le dit sous le graphe : la marche qu'il dessine
+  // n'est pas une chute de fréquentation (même raison que le delta masqué).
+  const consentBreakShown = days.length > 0 && days[0] <= ANALYTICS_CONSENT_V2_SINCE
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <div className="min-w-0">
+        <ChartHeading title={visitorsTitle} subtitle={t('room.trendVisitors')} />
+        <ColumnChart
+          {...texts.column}
+          ariaLabel={ariaFor(visitorsTitle, days)}
+          data={columns(points.map((p) => ({ day: p.date, values: { visitors: p.visitors } })))}
+          series={[{ key: 'visitors', label: t('room.visitorsSeries'), tone: 'gold' }]}
+          caption={
+            <>
+              {t('room.visitorsDef')}
+              {consentBreakShown && ` ${t('room.visitorsConsentNote', { date: shortDay(ANALYTICS_CONSENT_V2_SINCE) })}`}
+            </>
+          }
+        />
+      </div>
+      <div className="min-w-0">
+        <ChartHeading title={partiesTitle} subtitle={t('room.partiesChartSubtitle')} />
+        <ColumnChart
+          {...texts.column}
+          ariaLabel={ariaFor(partiesTitle, days)}
+          data={columns(points.map((p) => ({ day: p.date, values: { parties: p.parties } })))}
+          // Vert, teinte propre aux résultats classés (celle des victoires de la
+          // fiche compte) : le bleu est pris par les « Parties lancées » du
+          // tableau des comptes actifs, une AUTRE mesure que la définition
+          // ci-dessous prend soin de distinguer — même teinte, on les rapprocherait.
+          series={[{ key: 'parties', label: t('room.partiesSeries'), tone: 'green' }]}
+          caption={t('room.partiesDef')}
+        />
+      </div>
+    </div>
+  )
 }
 
 /**
- * Parties lancées par jour de Paris, en barres empilées À L'ÉCHELLE : solo
- * contre des bots en bas (crème), avec d'autres humains au-dessus (or). Deux
- * teintes lisibles sur le feutre vert comme sur le bleu nuit du mode Soft
- * (le bleu jeton, lui, disparaissait sur le bleu nuit), séparées d'un filet
- * pour ne pas dépendre de la seule couleur. Des divs plutôt qu'un SVG étiré :
- * les chiffres gardent leur taille sur téléphone. Les jours d'avant le
- * journal sont rayés — un 0 y mentirait.
+ * Parties lancées par jour de Paris, en colonnes empilées À L'ÉCHELLE : solo
+ * contre des bots en bas (crème), avec d'autres humains au-dessus (or), le
+ * total écrit au-dessus de chaque pile. Les jours d'avant le journal sont
+ * rayés — un 0 y mentirait.
  */
 function OnlineLaunchesChart({
   days,
@@ -1465,116 +1648,27 @@ function OnlineLaunchesChart({
   journalSince: string
 }) {
   const t = useTranslations('supervision')
-  const format = useFormatter()
-  if (days.length === 0) return null
-  // Échelle commune : la plus haute pile touche la graduation haute. Jamais 0.
-  const max = Math.max(1, ...days.map((d) => d.solo + d.withHumans))
-  const columns = { gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }
-  const dayText = (day: string, options: Pick<Intl.DateTimeFormatOptions, 'weekday' | 'day' | 'month'>) =>
-    format.dateTime(parisDayToDate(day), { ...options, timeZone: PARIS_TIME_ZONE })
-  const today = days[days.length - 1].day
-  const hasDaysBeforeJournal = days.some((d) => d.day < journalSince)
-
+  const texts = useChartTexts()
+  const { columns, ariaFor } = useDayCharts()
+  const series: ChartSeries[] = [
+    { key: 'solo', label: t('onlinePlayers.legendSolo'), tone: 'cream' },
+    { key: 'withHumans', label: t('onlinePlayers.legendWithHumans'), tone: 'gold' },
+  ]
   return (
-    <div className="min-w-0">
-      <div className="flex min-w-0 gap-1.5">
-        {/* Axe : graduation haute (l'échelle) et zéro, alignés sur le tracé. */}
-        <div
-          aria-hidden
-          className="flex h-32 shrink-0 flex-col justify-between pt-4 text-right text-[10px] leading-none tabular-nums text-white/50"
-        >
-          <span className="-translate-y-1/2">{max}</span>
-          <span className="translate-y-1/2">0</span>
-        </div>
-        <div className="relative min-w-0 flex-1">
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-4 border-t border-dashed border-white/15" />
-          {/* pt-4 : place des totaux au-dessus de la plus haute barre. */}
-          <ul
-            aria-label={t('onlinePlayers.launchesTitle')}
-            className="grid h-32 gap-0.5 border-b border-white/30 pt-4 sm:gap-1"
-            style={columns}
-          >
-            {days.map((d) => {
-              const total = d.solo + d.withHumans
-              const date = dayText(d.day, { weekday: 'short', day: 'numeric', month: 'short' })
-              const beforeJournal = d.day < journalSince
-              const label = beforeJournal
-                ? t('onlinePlayers.dayBeforeJournal', { date })
-                : t('onlinePlayers.dayBar', { date, solo: d.solo, withHumans: d.withHumans })
-              const height = `${(total / max) * 100}%`
-              return (
-                <li key={d.day} className="relative min-w-0" title={label}>
-                  <span className="sr-only">{label}</span>
-                  {beforeJournal ? (
-                    <div aria-hidden className="absolute inset-0 rounded-t-sm" style={BEFORE_JOURNAL_HATCH} />
-                  ) : (
-                    total > 0 && (
-                      <>
-                        <span
-                          aria-hidden
-                          className="absolute inset-x-0 text-center text-[9px] font-semibold leading-none tabular-nums text-white/75 sm:text-[10px]"
-                          style={{ bottom: `calc(${height} + 3px)` }}
-                        >
-                          {total}
-                        </span>
-                        <div
-                          aria-hidden
-                          className="absolute inset-x-0 bottom-0 flex flex-col-reverse gap-px overflow-hidden rounded-t-sm"
-                          style={{ height }}
-                        >
-                          {d.solo > 0 && <div className="bg-cream/40" style={{ flex: `${d.solo} 1 0%` }} />}
-                          {d.withHumans > 0 && <div className="bg-gold" style={{ flex: `${d.withHumans} 1 0%` }} />}
-                        </div>
-                      </>
-                    )
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      </div>
-      {/* Jours du mois sous chaque colonne ; l'espaceur invisible reprend la
-          largeur de l'axe pour garder l'alignement. */}
-      <div aria-hidden className="mt-1 flex min-w-0 gap-1.5">
-        <span className="invisible shrink-0 text-[10px] leading-none tabular-nums">{max}</span>
-        <div className="grid min-w-0 flex-1 gap-0.5 sm:gap-1" style={columns}>
-          {days.map((d) => (
-            <span
-              key={d.day}
-              className={cn(
-                'min-w-0 text-center text-[9px] leading-none tabular-nums sm:text-[10px]',
-                d.day === today ? 'font-bold text-white/80' : 'text-white/45'
-              )}
-            >
-              {dayText(d.day, { day: 'numeric' })}
-            </span>
-          ))}
-        </div>
-      </div>
-      <p className="mt-1.5 text-[11px] text-white/45">
-        {t('onlinePlayers.range', {
-          from: dayText(days[0].day, { day: 'numeric', month: 'short' }),
-          to: dayText(today, { day: 'numeric', month: 'short' }),
-        })}
-      </p>
-      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-white/60">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-sm bg-cream/40" />
-          {t('onlinePlayers.legendSolo')}
-        </span>
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-sm bg-gold" />
-          {t('onlinePlayers.legendWithHumans')}
-        </span>
-        {hasDaysBeforeJournal && (
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-sm border border-white/20" style={BEFORE_JOURNAL_HATCH} />
-            {t('onlinePlayers.legendBeforeJournal')}
-          </span>
-        )}
-      </div>
-    </div>
+    <ColumnChart
+      {...texts.column}
+      ariaLabel={ariaFor(t('onlinePlayers.launchesTitle'), days.map((d) => d.day))}
+      data={columns(
+        days.map((d) => ({
+          day: d.day,
+          values: { solo: d.solo, withHumans: d.withHumans },
+          muted: d.day < journalSince,
+        }))
+      )}
+      series={series}
+      stacked
+      mutedLabel={t('onlinePlayers.legendBeforeJournal')}
+    />
   )
 }
 
@@ -1596,7 +1690,11 @@ function OnlinePlayersSection({
 }) {
   const t = useTranslations('supervision')
   const format = useFormatter()
+  const texts = useChartTexts()
+  const dayCharts = useDayCharts()
   const { uniquePlayers, launchesByDay } = onlinePlay
+  // Absent d'une réponse antérieure à ce champ : liste simplement vide.
+  const launchesByGame = onlinePlay.launchesByGame7d ?? []
   const journalSinceLabel = format.dateTime(parisDayToDate(onlinePlay.journalSince), {
     day: '2-digit',
     month: '2-digit',
@@ -1671,18 +1769,53 @@ function OnlinePlayersSection({
       </ul>
 
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
-          {t('onlinePlayers.launchesTitle')}
-        </p>
-        <p className="mt-0.5 text-xs text-white/65">
-          {solo + withHumans > 0
-            ? t('onlinePlayers.launchesTotal', { total: solo + withHumans, days: launchesByDay.length, solo, withHumans })
-            : t('onlinePlayers.launchesNone', { days: launchesByDay.length })}
-        </p>
-        <div className="mt-3">
-          <OnlineLaunchesChart days={launchesByDay} journalSince={onlinePlay.journalSince} />
-        </div>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-white/40">{t('onlinePlayers.launchesDef')}</p>
+        <ChartHeading
+          title={t('onlinePlayers.launchesTitle')}
+          subtitle={
+            solo + withHumans > 0
+              ? t('onlinePlayers.launchesTotal', { total: solo + withHumans, days: launchesByDay.length, solo, withHumans })
+              : t('onlinePlayers.launchesNone', { days: launchesByDay.length })
+          }
+        />
+        <OnlineLaunchesChart days={launchesByDay} journalSince={onlinePlay.journalSince} />
+        {launchesByDay.length > 0 && (
+          <p className="mt-2 text-[11px] text-cream/70">
+            {t('onlinePlayers.range', {
+              from: dayCharts.shortDay(launchesByDay[0].day),
+              to: dayCharts.shortDay(launchesByDay[launchesByDay.length - 1].day),
+            })}
+          </p>
+        )}
+        <p className="mt-1.5 text-[11px] leading-relaxed text-cream/70">{t('onlinePlayers.launchesDef')}</p>
+      </div>
+
+      {/* Les mêmes lancements, par jeu, sur 7 jours : les deux graphes
+          s'additionnent au même total (7 derniers jours de la série). Solo
+          et « avec humains » gardent leurs teintes du graphe par jour. */}
+      <div className="min-w-0">
+        <ChartHeading
+          title={t('onlinePlayers.byGameTitle', { window: windowLabel(t('stats.week'), 7) })}
+        />
+        <BarList
+          {...texts.list}
+          ariaLabel={t('onlinePlayers.byGameTitle', { window: windowLabel(t('stats.week'), 7) })}
+          rows={launchesByGame.map((g) => ({
+            key: g.gameId,
+            label: <GameBarLabel gameId={g.gameId} title={g.gameTitle} />,
+            value: Math.max(0, g.launches - g.withHumans),
+            secondary: g.withHumans,
+            hint: t('onlinePlayers.byGameHint', { count: g.launches }),
+          }))}
+          showShare
+          limit={8}
+          tone="cream"
+          secondaryTone="gold"
+          primaryLabel={t('onlinePlayers.legendSolo')}
+          secondaryLabel={t('onlinePlayers.legendWithHumans')}
+          categoryLabel={t('charts.game')}
+          emptyLabel={t('onlinePlayers.byGameEmpty')}
+        />
+        <p className="mt-2 text-[11px] leading-relaxed text-cream/70">{t('onlinePlayers.byGameDef')}</p>
       </div>
 
       <p className="border-t border-white/[0.07] pt-2 text-[11px] text-white/35">
@@ -1816,8 +1949,10 @@ const ACTIVITY_GROUP_TITLE = 'text-[11px] font-semibold uppercase tracking-wide 
 /**
  * Définition courte d'un chiffre, repliée : la vue garde sa densité sur
  * téléphone, et chaque chiffre reste défendable sans nous appeler (F45).
+ * `summary` remplace « Définition » quand un même bloc en porte plusieurs
+ * (« Définition : Nouveaux comptes », « Définition : Revenants »).
  */
-function MetricDefinition({ text, className }: { text: string; className?: string }) {
+function MetricDefinition({ text, className, summary }: { text: string; className?: string; summary?: string }) {
   const t = useTranslations('supervision.activeAccounts')
   return (
     <details
@@ -1828,7 +1963,7 @@ function MetricDefinition({ text, className }: { text: string; className?: strin
     >
       <summary className="-mx-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-1.5 text-white/55 transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 [&::-webkit-details-marker]:hidden">
         <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-open:rotate-90" />
-        {t('definition')}
+        {summary ?? t('definition')}
       </summary>
       <p className="min-w-0 break-words pb-0.5">{text}</p>
     </details>
@@ -1862,22 +1997,59 @@ function ActivityMetric({
   )
 }
 
-/** Deux effectifs côte à côte, 7 et 30 jours (nouveaux, revenants). */
-function WindowPair({
-  values,
-  labels,
+/**
+ * Nouveaux et revenants PARMI LES ACTIFS, fenêtre par fenêtre, en barres
+ * 100 % : c'est une partition exacte (nouveau = créé dans la fenêtre et
+ * actif, revenant = actif et créé avant), donc nouveaux + revenants = actifs,
+ * et la part des nouveaux se lit sans calcul. Les deux définitions restent
+ * sous la carte, chacune nommée.
+ */
+function NewReturningSplit({
+  accounts,
+  windowLabels,
 }: {
-  values: { d7: number; d30: number }
-  labels: { d7: string; d30: string }
+  accounts: ActiveAccountsStats['accounts']
+  windowLabels: { d7: string; d30: string }
 }) {
+  const t = useTranslations('supervision')
+  const texts = useChartTexts()
   return (
-    <div className="mt-0.5 grid grid-cols-2 gap-x-3">
-      {(['d7', 'd30'] as const).map((key) => (
-        <div key={key} className="min-w-0">
-          <p className="font-display text-2xl font-bold tabular-nums text-white">{values[key]}</p>
-          <p className="break-words text-[11px] leading-snug text-white/50">{labels[key]}</p>
-        </div>
-      ))}
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <p className="break-words text-[11px] font-semibold uppercase tracking-wide text-cream/80">
+        {t('activeAccounts.newReturningLabel')}
+      </p>
+      <div className="mt-2.5 grid gap-4 sm:grid-cols-2">
+        {(['d7', 'd30'] as const).map((key) => (
+          <div key={key} className="min-w-0">
+            <p className="mb-2 flex min-w-0 flex-wrap items-baseline gap-x-2 text-xs">
+              <span className="break-words font-semibold text-cream">{windowLabels[key]}</span>
+              <span className="tabular-nums text-cream/70">
+                {t('activeAccounts.activeCount', { count: accounts.active[key] })}
+              </span>
+            </p>
+            <StackedBar
+              {...texts.stacked}
+              ariaLabel={t('activeAccounts.newReturningAria', { window: windowLabels[key] })}
+              segments={[
+                { key: 'new', label: t('activeAccounts.newLabel'), value: accounts.newAccounts[key], tone: 'gold' },
+                { key: 'returning', label: t('activeAccounts.returningLabel'), value: accounts.returning[key], tone: 'cream' },
+              ]}
+              categoryLabel={t('charts.category')}
+              valueLabel={t('charts.accounts')}
+            />
+          </div>
+        ))}
+      </div>
+      <MetricDefinition
+        summary={t('activeAccounts.definitionOf', { label: t('activeAccounts.newLabel') })}
+        text={t('activeAccounts.newDef')}
+        className="mt-3"
+      />
+      <MetricDefinition
+        summary={t('activeAccounts.definitionOf', { label: t('activeAccounts.returningLabel') })}
+        text={t('activeAccounts.returningDef')}
+        className="mt-0"
+      />
     </div>
   )
 }
@@ -1921,19 +2093,17 @@ function ReturnMetric({
   )
 }
 
-type ActivitySeriesKey = 'activeAccounts' | 'uniquePlayers' | 'launches'
-
 /**
- * Série de 14 jours de Paris en trois rangées de barres À L'ÉCHELLE, sur le
- * modèle du graphique des parties lancées : un petit graphique par mesure
- * plutôt que trois barres serrées par jour, illisibles sur téléphone.
- * Comptes actifs et joueurs uniques partagent leur échelle (même unité, des
- * comptes : les hauteurs se comparent d'une rangée à l'autre) ; les parties
- * ont la leur, graduée à part. Teintes or et crème, lisibles sur le feutre
- * vert comme sur le bleu nuit du mode Soft. Les jours antérieurs à la source
- * d'une rangée sont rayés : un 0 y mentirait.
+ * Séries de 14 jours de Paris du tableau des comptes actifs, en trois
+ * graphes gradués :
+ * - comptes actifs et joueurs uniques CÔTE À CÔTE, sur la même échelle :
+ *   même unité (des comptes), les hauteurs se comparent colonne à colonne ;
+ * - parties lancées, autre unité, graduées à part ;
+ * - nouveaux comptes au jour de leur CRÉATION, empilés comptes enregistrés /
+ *   invités (le total d'une pile = les nouveaux du jour).
+ * Les jours antérieurs à la source d'une série sont rayés : un 0 y mentirait.
  */
-function ActivitySeriesChart({
+function ActivitySeriesCharts({
   series,
   accountsSince,
   journalSince,
@@ -1943,117 +2113,231 @@ function ActivitySeriesChart({
   journalSince: string
 }) {
   const t = useTranslations('supervision')
-  const format = useFormatter()
-  if (series.length === 0) return null
-  const columns = { gridTemplateColumns: `repeat(${series.length}, minmax(0, 1fr))` }
-  const dayText = (day: string, options: Pick<Intl.DateTimeFormatOptions, 'weekday' | 'day' | 'month'>) =>
-    format.dateTime(parisDayToDate(day), { ...options, timeZone: PARIS_TIME_ZONE })
-  const today = series[series.length - 1].day
-  const accountsMax = Math.max(1, ...series.map((d) => Math.max(d.activeAccounts, d.uniquePlayers)))
-  const launchesMax = Math.max(1, ...series.map((d) => d.launches))
-  const rows: Array<{ key: ActivitySeriesKey; label: string; max: number; since: string; bar: string }> = [
-    { key: 'activeAccounts', label: t('activeAccounts.seriesAccounts'), max: accountsMax, since: accountsSince, bar: 'bg-gold' },
-    { key: 'uniquePlayers', label: t('activeAccounts.seriesPlayers'), max: accountsMax, since: accountsSince, bar: 'bg-cream/60' },
-    {
-      key: 'launches',
-      label: t('activeAccounts.seriesLaunches'),
-      max: launchesMax,
-      since: journalSince,
-      bar: 'bg-cream/20 ring-1 ring-inset ring-cream/55',
-    },
+  const texts = useChartTexts()
+  const { columns, ariaFor, fullDay, shortDay } = useDayCharts()
+  const days = series.map((d) => d.day)
+  const accountsSeries: ChartSeries[] = [
+    { key: 'activeAccounts', label: t('activeAccounts.seriesAccounts'), tone: 'gold' },
+    { key: 'uniquePlayers', label: t('activeAccounts.seriesPlayers'), tone: 'cream' },
   ]
-  // Le journal est la source la plus tardive : rien de rayé sans jour antérieur.
-  const hasDaysWithoutData = series.some((d) => d.day < journalSince)
+  // Bleu : un total sans partage solo / avec humains (la série n'en porte pas),
+  // donc pas les teintes crème / or du graphe « Parties lancées par jour » ; et
+  // surtout pas le vert des parties CLASSÉES, une autre mesure.
+  const launchesSeries: ChartSeries[] = [{ key: 'launches', label: t('activeAccounts.seriesLaunches'), tone: 'blue' }]
+  // Invités en violet : la teinte de leur badge de type partout ailleurs.
+  const newSeries: ChartSeries[] = [
+    { key: 'registered', label: t('activeAccounts.seriesNewRegistered'), tone: 'gold' },
+    { key: 'guests', label: t('activeAccounts.seriesNewGuests'), tone: 'violet' },
+  ]
+  // Les sièges sans compte ne sont pas des joueurs uniques : jamais dans les
+  // colonnes, mais toujours dits, jour par jour (ils l'étaient en infobulle).
+  const deletedSeatDays = series.filter((d) => d.deletedSeats > 0)
+  const accountsTitle = t('activeAccounts.seriesAccountsTitle')
+  const launchesTitle = t('activeAccounts.seriesLaunches')
+  const newTitle = t('activeAccounts.seriesNewTitle')
 
   return (
     <div className="min-w-0">
-      <div className="space-y-3">
-        {rows.map((row) => (
-          <div key={row.key} className="min-w-0">
-            <p className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-white/70">
-              <span aria-hidden className={cn('h-2.5 w-2.5 shrink-0 rounded-sm', row.bar)} />
-              <span className="min-w-0 break-words">{row.label}</span>
-            </p>
-            <div className="mt-1 flex min-w-0 gap-1.5">
-              {/* Axe à largeur fixe : les colonnes des trois rangées restent alignées. */}
-              <div
-                aria-hidden
-                className="flex h-16 w-6 shrink-0 flex-col justify-between pt-3 text-right text-[10px] leading-none tabular-nums text-white/50"
-              >
-                <span className="-translate-y-1/2">{row.max}</span>
-                <span className="translate-y-1/2">0</span>
-              </div>
-              <div className="relative min-w-0 flex-1">
-                <div aria-hidden className="pointer-events-none absolute inset-x-0 top-3 border-t border-dashed border-white/15" />
-                {/* pt-3 : place des valeurs au-dessus de la plus haute barre. */}
-                <ul aria-label={row.label} className="grid h-16 gap-0.5 border-b border-white/30 pt-3 sm:gap-1" style={columns}>
-                  {series.map((d) => {
-                    const value = d[row.key]
-                    const date = dayText(d.day, { weekday: 'short', day: 'numeric', month: 'short' })
-                    const noData = d.day < row.since
-                    const label = noData
-                      ? t('activeAccounts.seriesDayNoData', { date })
-                      : row.key === 'uniquePlayers' && d.deletedSeats > 0
-                        ? t('activeAccounts.seriesDayDeletedSeats', { date, value, seats: d.deletedSeats })
-                        : t('activeAccounts.seriesDay', { date, value })
-                    const height = `${(value / row.max) * 100}%`
-                    return (
-                      <li key={d.day} className="relative min-w-0" title={label}>
-                        <span className="sr-only">{label}</span>
-                        {noData ? (
-                          <div aria-hidden className="absolute inset-0 rounded-t-sm" style={BEFORE_JOURNAL_HATCH} />
-                        ) : (
-                          value > 0 && (
-                            <>
-                              <span
-                                aria-hidden
-                                className="absolute inset-x-0 text-center text-[9px] font-semibold leading-none tabular-nums text-white/75 sm:text-[10px]"
-                                style={{ bottom: `calc(${height} + 3px)` }}
-                              >
-                                {value}
-                              </span>
-                              <div aria-hidden className={cn('absolute inset-x-0 bottom-0 rounded-t-sm', row.bar)} style={{ height }} />
-                            </>
-                          )
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      {/* Jours du mois sous la dernière rangée ; l'espaceur reprend la largeur de l'axe. */}
-      <div aria-hidden className="mt-1 flex min-w-0 gap-1.5">
-        <span className="w-6 shrink-0" />
-        <div className="grid min-w-0 flex-1 gap-0.5 sm:gap-1" style={columns}>
-          {series.map((d) => (
-            <span
-              key={d.day}
-              className={cn(
-                'min-w-0 text-center text-[9px] leading-none tabular-nums sm:text-[10px]',
-                d.day === today ? 'font-bold text-white/80' : 'text-white/45'
-              )}
-            >
-              {dayText(d.day, { day: 'numeric' })}
-            </span>
-          ))}
-        </div>
-      </div>
-      <p className="mt-1.5 text-[11px] text-white/45">
-        {t('onlinePlayers.range', {
-          from: dayText(series[0].day, { day: 'numeric', month: 'short' }),
-          to: dayText(today, { day: 'numeric', month: 'short' }),
-        })}
-      </p>
-      {hasDaysWithoutData && (
-        <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-white/60">
-          <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-sm border border-white/20" style={BEFORE_JOURNAL_HATCH} />
-          <span className="min-w-0">{t('activeAccounts.legendNoData')}</span>
+      {/* La période en clair, sous « 14 derniers jours » : l'axe n'écrit que le
+          numéro du jour, sans mois — une série à cheval sur deux mois (« 31 1 »)
+          ne se daterait plus qu'au survol. Même ligne que « Joueurs du jeu en ligne ». */}
+      {days.length > 0 && (
+        <p className="mb-4 text-[11px] text-cream/70">
+          {t('onlinePlayers.range', { from: shortDay(days[0]), to: shortDay(days[days.length - 1]) })}
         </p>
       )}
+      <div className="min-w-0 space-y-6">
+        <div className="min-w-0">
+          <ChartHeading level={4} title={accountsTitle} />
+          <ColumnChart
+            {...texts.column}
+            ariaLabel={ariaFor(accountsTitle, days)}
+            data={columns(
+              series.map((d) => ({
+                day: d.day,
+                values: { activeAccounts: d.activeAccounts, uniquePlayers: d.uniquePlayers },
+                muted: d.day < accountsSince,
+              }))
+            )}
+            series={accountsSeries}
+            mutedLabel={t('activeAccounts.legendNoData')}
+          />
+          {deletedSeatDays.length > 0 && (
+            <p className="mt-2 break-words text-[11px] leading-relaxed text-cream/70">
+              {t('activeAccounts.seriesDeletedSeatsDays', {
+                days: deletedSeatDays
+                  .map((d) => t('activeAccounts.seriesDay', { date: fullDay(d.day), value: d.deletedSeats }))
+                  .join(' · '),
+              })}
+            </p>
+          )}
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="min-w-0">
+            <ChartHeading level={4} title={launchesTitle} />
+            <ColumnChart
+              {...texts.column}
+              ariaLabel={ariaFor(launchesTitle, days)}
+              data={columns(
+                series.map((d) => ({ day: d.day, values: { launches: d.launches }, muted: d.day < journalSince }))
+              )}
+              series={launchesSeries}
+              mutedLabel={t('activeAccounts.legendNoData')}
+            />
+          </div>
+          <div className="min-w-0">
+            <ChartHeading level={4} title={newTitle} />
+            <ColumnChart
+              {...texts.column}
+              ariaLabel={ariaFor(newTitle, days)}
+              data={columns(
+                series.map((d) => {
+                  // Champs absents d'une réponse antérieure : 0, jamais NaN.
+                  const total = d.newAccounts ?? 0
+                  const guests = Math.min(total, d.newGuests ?? 0)
+                  return {
+                    day: d.day,
+                    values: { registered: total - guests, guests },
+                    muted: d.day < accountsSince,
+                  }
+                })
+              )}
+              series={newSeries}
+              stacked
+              mutedLabel={t('activeAccounts.legendNoData')}
+              caption={t('activeAccounts.seriesNewDef')}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Les plus actifs sur 7 jours, avec une barre de temps actif. Pas le BarList
+ * du kit : chaque pseudo est un LIEN vers la fiche (qu'on ouvre aussi dans un
+ * autre onglet), et le kit recopie le libellé dans sa version texte masquée —
+ * ce serait un lien invisible mais atteignable au clavier. Ici la barre et la
+ * valeur de droite sont un décor (aria-hidden) : la phrase lue par le lecteur
+ * d'écran porte déjà les deux chiffres.
+ */
+function TopAccountsBars({
+  accounts,
+  duration,
+}: {
+  accounts: ActiveAccountsStats['topAccounts7d']
+  duration: (seconds: number | null) => string
+}) {
+  const t = useTranslations('supervision')
+  const max = Math.max(0, ...accounts.map((acc) => acc.activeSeconds ?? 0))
+  return (
+    <div className="min-w-0">
+      <p aria-hidden className="mb-1 flex justify-end px-3 text-[11px] text-cream/70">
+        {t('activeAccounts.topActiveHeader')}
+      </p>
+      <ol className="space-y-1.5">
+        {accounts.map((acc, index) => {
+          const tracked = acc.activeSeconds != null
+          const width = tracked && max > 0 ? ((acc.activeSeconds ?? 0) / max) * 100 : 0
+          return (
+            <li
+              key={acc.userId}
+              className="flex min-w-0 items-start gap-2.5 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2"
+            >
+              <span className="w-5 shrink-0 pt-0.5 text-right text-xs font-semibold tabular-nums text-gold">
+                {index + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <AccountNameLink userId={acc.userId} name={acc.displayName} className="text-sm font-medium text-white" />
+                    <AccountCodeBadge code={acc.accountCode} />
+                    <AccountKindBadge kind={acc.kind} lastSeenAt={null} createdAt={null} compact />
+                  </div>
+                  <span aria-hidden className="shrink-0 pt-0.5 text-sm font-semibold tabular-nums text-cream">
+                    {tracked ? duration(acc.activeSeconds) : '—'}
+                  </span>
+                </div>
+                <span aria-hidden className="mt-1.5 block h-2 w-full">
+                  {width > 0 && (
+                    <span
+                      className="block h-full rounded-r-[4px]"
+                      style={{ width: `${width}%`, minWidth: 2, backgroundColor: chartToneColor('gold') }}
+                    />
+                  )}
+                </span>
+                <p className="mt-1 break-words text-xs tabular-nums text-cream/70">
+                  {tracked ? (
+                    <>
+                      <span aria-hidden>{t('activeAccounts.topGames', { games: acc.games })}</span>
+                      <span className="sr-only">
+                        {t('activeAccounts.topLine', { active: duration(acc.activeSeconds), games: acc.games })}
+                      </span>
+                    </>
+                  ) : (
+                    t('activeAccounts.topLineUntracked', { games: acc.games })
+                  )}
+                </p>
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+/** Icône d'une catégorie d'appareil (même jeu d'icônes que DeviceBadge). */
+const DEVICE_ICONS: Partial<Record<DeviceKind, typeof Monitor>> = {
+  mobile: Smartphone,
+  tablet: Tablet,
+  mac: Laptop,
+  pc: Monitor,
+}
+
+/**
+ * Appareils des visites de 7 jours : barres des VISITES (une partition, d'où
+ * la part en %), et en indice les comptes distincts vus sur chaque appareil
+ * — ceux-là ne s'additionnent pas (un compte vu sur mobile et sur PC compte
+ * pour les deux), ils ne portent donc ni barre ni part.
+ */
+function VisitDevicesBars({ devices }: { devices: ActiveAccountsStats['visits']['devices7d'] }) {
+  const t = useTranslations('supervision')
+  const texts = useChartTexts()
+  const title = t('activeAccounts.devicesTitle')
+  return (
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <ChartHeading level={4} caps title={title} />
+      <BarList
+        {...texts.list}
+        ariaLabel={title}
+        rows={devices.map((row) => {
+          const Icon = DEVICE_ICONS[row.device]
+          return {
+            key: row.device,
+            label: (
+              <>
+                {/* « Inconnu » n'a pas d'icône : une case vide garde les libellés alignés. */}
+                {Icon ? (
+                  <Icon aria-hidden className="mr-1.5 inline-block h-3.5 w-3.5 align-middle text-cream/70" />
+                ) : (
+                  <span aria-hidden className="mr-1.5 inline-block w-3.5" />
+                )}
+                {t(`activeAccounts.deviceKinds.${row.device}`)}
+              </>
+            ),
+            value: row.visits,
+            hint: t('activeAccounts.devicesAccounts', { count: row.accounts }),
+          }
+        })}
+        showShare
+        categoryLabel={t('charts.device')}
+        primaryLabel={t('charts.visits')}
+        emptyLabel={t('activeAccounts.devicesEmpty')}
+      />
+      <MetricDefinition text={t('activeAccounts.devicesDef')} />
     </div>
   )
 }
@@ -2173,14 +2457,7 @@ function ActiveAccountsBody({ stats }: { stats: ActiveAccountsStats }) {
             />
           ))}
         </div>
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          <ActivityMetric label={t('activeAccounts.newLabel')} definition={t('activeAccounts.newDef')}>
-            <WindowPair values={accounts.newAccounts} labels={pairLabels} />
-          </ActivityMetric>
-          <ActivityMetric label={t('activeAccounts.returningLabel')} definition={t('activeAccounts.returningDef')}>
-            <WindowPair values={accounts.returning} labels={pairLabels} />
-          </ActivityMetric>
-        </div>
+        <NewReturningSplit accounts={accounts} windowLabels={pairLabels} />
         {/* Ce que les effectifs ne comptent pas, dit à côté d'eux. */}
         <div className="min-w-0 text-xs text-white/55">
           <p className="break-words">
@@ -2268,11 +2545,13 @@ function ActiveAccountsBody({ stats }: { stats: ActiveAccountsStats }) {
             definition={t('activeAccounts.gameShareDef')}
           />
         </div>
+        {/* Les mêmes visites de 7 jours, par appareil (champ absent d'une réponse antérieure : rien). */}
+        <VisitDevicesBars devices={visits.devices7d ?? []} />
       </div>
 
       <div className="min-w-0 space-y-2.5">
         <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.seriesTitle')}</h3>
-        <ActivitySeriesChart series={stats.series} accountsSince={accountsSince} journalSince={journalSince} />
+        <ActivitySeriesCharts series={stats.series} accountsSince={accountsSince} journalSince={journalSince} />
         {/* Le passé bouge (visites en cascade, places à compte nul) : dit en clair, pas seulement replié. */}
         <p className="min-w-0 break-words text-[11px] leading-relaxed text-white/55">
           {t('activeAccounts.seriesRecomputed')}
@@ -2300,32 +2579,9 @@ function ActiveAccountsBody({ stats }: { stats: ActiveAccountsStats }) {
       <div className="min-w-0 space-y-2">
         <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.topTitle')}</h3>
         {stats.topAccounts7d.length === 0 ? (
-          <p className="text-sm text-white/45">{t('activeAccounts.topEmpty')}</p>
+          <p className="text-sm text-cream/70">{t('activeAccounts.topEmpty')}</p>
         ) : (
-          <ol className="space-y-1.5">
-            {stats.topAccounts7d.map((acc, index) => (
-              <li
-                key={acc.userId}
-                className="flex min-w-0 items-start gap-2.5 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2"
-              >
-                <span className="w-5 shrink-0 pt-0.5 text-right text-xs font-semibold tabular-nums text-gold/80">
-                  {index + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                    <AccountNameLink userId={acc.userId} name={acc.displayName} className="text-sm font-medium text-white" />
-                    <AccountCodeBadge code={acc.accountCode} />
-                    <AccountKindBadge kind={acc.kind} lastSeenAt={null} createdAt={null} compact />
-                  </div>
-                  <p className="mt-0.5 break-words text-xs tabular-nums text-white/55">
-                    {acc.activeSeconds == null
-                      ? t('activeAccounts.topLineUntracked', { games: acc.games })
-                      : t('activeAccounts.topLine', { active: duration(acc.activeSeconds), games: acc.games })}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <TopAccountsBars accounts={stats.topAccounts7d} duration={duration} />
         )}
         <MetricDefinition text={t('activeAccounts.topDef')} />
       </div>
@@ -2387,6 +2643,8 @@ function SupervisionDashboard() {
   const format = useFormatter()
   const durationUnits = useDurationUnits()
   const honestPresenceSince = useHonestPresenceSince()
+  const chartTexts = useChartTexts()
+  const dayCharts = useDayCharts()
   const { user, loading } = useAuth()
   const router = useRouter()
   // Onglet ouvert, lu dans ?tab= : un rechargement ou un retour depuis la
@@ -3358,6 +3616,31 @@ function SupervisionDashboard() {
     prev7.length > 0 && prevWeekVisitors > 0 && comparableSince(prev7[0]?.date)
       ? Math.round(((sumBy(last7, 'visitors') - prevWeekVisitors) / prevWeekVisitors) * 100)
       : null
+  // Mini-courbe sous la SEULE plaque « 7 jours » (la même, sous deux plaques
+  // voisines, se lisait deux fois au lecteur d'écran), en teintes lisibles
+  // sur le crème. Jours RÉVOLUS seulement : finir sur aujourd'hui, entamé,
+  // plongerait chaque matin vers un point mis en avant — la chute trompeuse
+  // pour laquelle le delta du jour a été retiré. Et seulement APRÈS la reprise
+  // du bandeau de consentement : sa marche n'est pas une baisse, et seul le
+  // graphe de tendance porte la note qui le dit (même règle que le delta).
+  const todayParis = parisDayString()
+  const sparkPoints = trendPoints.filter((p) => p.date < todayParis && comparableSince(p.date))
+  const visitorsSparkline =
+    sparkPoints.length > 1 ? (
+      <Sparkline
+        ariaLabel={dayCharts.ariaFor(t('room.visitorsChartTitle'), sparkPoints.map((p) => p.date))}
+        values={sparkPoints.map((p) => p.visitors)}
+        labels={sparkPoints.map((p) => dayCharts.fullDay(p.date))}
+        surface="cream"
+        tone="gold"
+      />
+    ) : undefined
+  const liveTables = overview?.liveTables ?? []
+  // Comptes de la barre par statut : ceux de la BASE, pas ceux de la liste
+  // affichée, plafonnée à 30 salles (voir getLiveTables). La liste ne sert
+  // que de repli face à un serveur antérieur à ce champ.
+  const liveStatusCount = (status: LiveTable['status']) =>
+    overview?.liveTablesByStatus?.[status] ?? liveTables.filter((tbl) => tbl.status === status).length
 
   const handleQueueAction = (id: string) => {
     const item = overview?.queue.find((q) => q.id === id)
@@ -3484,6 +3767,7 @@ function SupervisionDashboard() {
                     }
                   : undefined
               }
+              trend={visitorsSparkline}
             />
             <KpiPlaque
               // Navigateurs (statistiques acceptées), pas des comptes : jamais
@@ -3505,8 +3789,19 @@ function SupervisionDashboard() {
             <RetentionRunLine run={overview.retentionLastRun} />
           )}
 
-          <SectionCard icon={CalendarDays} title={t('room.trendTitle')}>
-            <TrendChart points={trendPoints} primaryLabel={t('room.trendVisitors')} secondaryLabel={t('room.trendParties')} />
+          <SectionCard
+            icon={CalendarDays}
+            title={t('room.trendTitle')}
+            description={
+              trendPoints.length > 0
+                ? t('onlinePlayers.range', {
+                    from: dayCharts.shortDay(trendPoints[0].date),
+                    to: dayCharts.shortDay(trendPoints[trendPoints.length - 1].date),
+                  })
+                : undefined
+            }
+          >
+            <RoomTrendCharts points={trendPoints} />
           </SectionCard>
 
           <ActiveAccountsSection
@@ -3526,17 +3821,32 @@ function SupervisionDashboard() {
               {/* Rétention J+1 / J+7 retirée (lot 7) : remplacée par les retours
                   du tableau des comptes actifs, sur de vrais jours d'activité. */}
               <div className="grid gap-2.5 sm:grid-cols-2">
+                {/* Les deux effectifs (ex-« 5 enregistrés, 7 invités ») sont
+                    écrits dans la légende de la barre, avec leur part. */}
                 <GrowthMetric
                   label={t('growth.registeredShareLabel')}
                   value={rateLabel(growth.registeredShare.share)}
-                  detail={t('growth.registeredShareDetail', {
-                    registered: growth.registeredShare.registered,
-                    guests: growth.registeredShare.guests,
-                  })}
                   definition={t('growth.registeredShareDef', {
                     days: growth.windows.registeredShareDays,
                   })}
-                />
+                >
+                  <StackedBar
+                    {...chartTexts.stacked}
+                    ariaLabel={t('growth.registeredShareLabel')}
+                    segments={[
+                      {
+                        key: 'registered',
+                        label: t('growth.registeredSegment'),
+                        value: growth.registeredShare.registered,
+                        tone: 'gold',
+                      },
+                      { key: 'guests', label: t('growth.guestsSegment'), value: growth.registeredShare.guests, tone: 'violet' },
+                    ]}
+                    categoryLabel={t('charts.category')}
+                    valueLabel={t('charts.accounts')}
+                    emptyLabel={t('growth.registeredShareEmpty')}
+                  />
+                </GrowthMetric>
                 <GrowthMetric
                   label={t('growth.abandonedLabel')}
                   value={String(growth.abandonedTables.stalled)}
@@ -3549,29 +3859,23 @@ function SupervisionDashboard() {
                 />
               </div>
 
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
-                  {t('growth.playersByGameTitle')}
-                </p>
-                {growth.playersByGame.length === 0 ? (
-                  <p className="mt-1.5 text-sm text-white/40">{t('growth.noData')}</p>
-                ) : (
-                  <ul className="mt-1.5 space-y-1.5">
-                    {growth.playersByGame.map((row) => (
-                      <li
-                        key={row.gameId}
-                        className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2"
-                      >
-                        <span className="flex min-w-0 items-center gap-2 text-sm text-white">
-                          <GameIconById id={row.gameId} className="h-4 w-4 shrink-0 text-gold" />
-                          <span className="truncate">{row.gameTitle}</span>
-                        </span>
-                        <Badge variant="secondary" className="tabular-nums">{row.players}</Badge>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <p className="mt-1.5 text-[11px] leading-relaxed text-white/40">
+              {/* Pas de part en % : un joueur de deux jeux compte dans les deux,
+                  les lignes ne s'additionnent pas. */}
+              <div className="min-w-0">
+                <ChartHeading title={t('growth.playersByGameTitle')} />
+                <BarList
+                  {...chartTexts.list}
+                  ariaLabel={t('growth.playersByGameTitle')}
+                  rows={growth.playersByGame.map((row) => ({
+                    key: row.gameId,
+                    label: <GameBarLabel gameId={row.gameId} title={row.gameTitle} />,
+                    value: row.players,
+                  }))}
+                  categoryLabel={t('charts.game')}
+                  primaryLabel={t('charts.players')}
+                  emptyLabel={t('growth.noData')}
+                />
+                <p className="mt-2 text-[11px] leading-relaxed text-cream/70">
                   {t('growth.playersByGameDef', {
                     days: growth.windows.playersByGameDays,
                   })}
@@ -3611,55 +3915,75 @@ function SupervisionDashboard() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <SectionCard icon={Gamepad2} title={t('room.liveTablesTitle')} description={t('room.liveTablesDesc')}>
-              {(overview?.liveTables ?? []).length === 0 ? (
+              {liveTables.length === 0 ? (
                 <EmptyState icon={Gamepad2} title={t('room.liveTablesEmpty')} hint={t('room.liveTablesEmptyHint')} />
               ) : (
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  {overview?.liveTables.map((tbl) => (
-                    <LiveTableCard
-                      key={tbl.id}
-                      icon={tbl.gameId ? <GameIconById id={tbl.gameId} className="h-4 w-4 shrink-0 text-gold" /> : undefined}
-                      gameTitle={tbl.gameTitle}
-                      code={tbl.code}
-                      status={tbl.status}
-                      statusLabel={t(
-                        tbl.status === 'waiting'
-                          ? 'room.statusWaiting'
-                          : tbl.status === 'briefing'
-                            ? 'room.statusBriefing'
-                            : tbl.status === 'cast'
-                              ? 'room.statusCast'
-                              : 'room.statusPlaying'
-                      )}
-                      memberCount={tbl.memberCount}
-                      memberNames={tbl.memberNames}
-                      elapsed={formatPresenceDuration((Date.now() - new Date(tbl.createdAt).getTime()) / 1000, durationUnits)}
-                      stalled={tbl.stalled}
-                      stalledLabel={t('room.stalledFor', { duration: idleLabel(tbl.idleSeconds) })}
-                      turnLabel={
-                        tbl.status === 'cast'
-                          ? tbl.hostName
-                            ? t('room.castHost', { name: tbl.hostName })
+                <div className="min-w-0 space-y-4">
+                  {/* Teintes des pastilles de statut des cartes : attente neutre,
+                      briefing or, en jeu vert, diffusion bleu jeton. Toutes les
+                      salles en cours, comptées en base (pas les 30 listées) ; la
+                      diffusion TV y est un segment NOMMÉ, alors que « tables en
+                      cours » de la tuile Tables figées l'exclut. */}
+                  <StackedBar
+                    {...chartTexts.stacked}
+                    ariaLabel={t('room.liveTablesByStatus')}
+                    segments={[
+                      { key: 'waiting', label: t('room.statusWaiting'), value: liveStatusCount('waiting'), tone: 'cream' },
+                      { key: 'briefing', label: t('room.statusBriefing'), value: liveStatusCount('briefing'), tone: 'gold' },
+                      { key: 'playing', label: t('room.statusPlaying'), value: liveStatusCount('playing'), tone: 'green' },
+                      { key: 'cast', label: t('room.statusCast'), value: liveStatusCount('cast'), tone: 'blue' },
+                    ]}
+                    categoryLabel={t('charts.status')}
+                    valueLabel={t('charts.tables')}
+                  />
+                  <p className="text-[11px] text-cream/70">{t('room.liveTablesByStatusDef')}</p>
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    {liveTables.map((tbl) => (
+                      <LiveTableCard
+                        key={tbl.id}
+                        icon={tbl.gameId ? <GameIconById id={tbl.gameId} className="h-4 w-4 shrink-0 text-gold" /> : undefined}
+                        gameTitle={tbl.gameTitle}
+                        code={tbl.code}
+                        status={tbl.status}
+                        statusLabel={t(
+                          tbl.status === 'waiting'
+                            ? 'room.statusWaiting'
+                            : tbl.status === 'briefing'
+                              ? 'room.statusBriefing'
+                              : tbl.status === 'cast'
+                                ? 'room.statusCast'
+                                : 'room.statusPlaying'
+                        )}
+                        memberCount={tbl.memberCount}
+                        memberNames={tbl.memberNames}
+                        elapsed={formatPresenceDuration((Date.now() - new Date(tbl.createdAt).getTime()) / 1000, durationUnits)}
+                        stalled={tbl.stalled}
+                        stalledLabel={t('room.stalledFor', { duration: idleLabel(tbl.idleSeconds) })}
+                        turnLabel={
+                          tbl.status === 'cast'
+                            ? tbl.hostName
+                              ? t('room.castHost', { name: tbl.hostName })
+                              : undefined
+                            : tbl.currentTurnName
+                              ? t('room.turnLabel', { name: tbl.currentTurnName })
+                              : undefined
+                        }
+                        closeLabel={canEditAccounts ? t('room.closeTable') : undefined}
+                        onClose={
+                          canEditAccounts
+                            ? () =>
+                                setCloseTableDialog({
+                                  roomId: tbl.id,
+                                  code: tbl.code,
+                                  gameTitle: tbl.gameTitle,
+                                  memberCount: tbl.memberCount,
+                                })
                             : undefined
-                          : tbl.currentTurnName
-                            ? t('room.turnLabel', { name: tbl.currentTurnName })
-                            : undefined
-                      }
-                      closeLabel={canEditAccounts ? t('room.closeTable') : undefined}
-                      onClose={
-                        canEditAccounts
-                          ? () =>
-                              setCloseTableDialog({
-                                roomId: tbl.id,
-                                code: tbl.code,
-                                gameTitle: tbl.gameTitle,
-                                memberCount: tbl.memberCount,
-                              })
-                          : undefined
-                      }
-                      closing={closingRoomId === tbl.id}
-                    />
-                  ))}
+                        }
+                        closing={closingRoomId === tbl.id}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </SectionCard>
@@ -3752,23 +4076,25 @@ function SupervisionDashboard() {
               {(stats?.games?.games ?? []).length === 0 ? (
                 <EmptyState icon={Gamepad2} title={t('games.noneRecorded')} />
               ) : (
-                <ul className="space-y-2">
-                  {stats?.games?.games.map((game) => (
-                    <li
-                      key={game.gameId}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5"
-                    >
-                      <span className="flex items-center gap-2.5 text-sm text-white">
-                        <GameIconById id={game.gameId} className="h-4 w-4 text-gold" />
-                        <span className="font-medium">{game.title}</span>
-                      </span>
-                      <Badge variant="secondary" className="tabular-nums">
-                        {game.partiesPlayed}{' '}
-                        {game.partiesPlayed > 1 ? t('games.parties') : t('games.party')}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <BarList
+                    {...chartTexts.list}
+                    ariaLabel={t('games.playedTitle')}
+                    rows={(stats?.games?.games ?? []).map((game) => ({
+                      key: game.gameId,
+                      label: <GameBarLabel gameId={game.gameId} title={game.title} />,
+                      value: game.partiesPlayed,
+                    }))}
+                    total={stats?.games?.totalParties}
+                    showShare
+                    limit={10}
+                    categoryLabel={t('charts.game')}
+                    primaryLabel={t('games.parties')}
+                  />
+                  {/* Un cumul, pas une activité : dit sous la liste, sans quoi
+                      on la lirait comme les parties de la semaine. */}
+                  <p className="mt-2 text-[11px] leading-relaxed text-cream/70">{t('games.allTimeNote')}</p>
+                </>
               )}
             </SectionCard>
           </div>
@@ -3777,34 +4103,63 @@ function SupervisionDashboard() {
             {/* Tous les comptes, invités compris (lot 2) : la tuile ne comptait
                 que les comptes à mot de passe (15 sur 28). Même décompte que
                 la liste Comptes et que la répartition par rôle. */}
-            <SectionCard icon={Users} title={t('accounts.overviewTitle')} bodyClassName="space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 lg:grid-cols-5">
-                <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 sm:p-3">
-                  <p className="text-xl font-bold text-white sm:text-2xl">{stats?.accounts.total ?? 0}</p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.total')}</p>
-                </div>
-                <div className="min-w-0 rounded-xl border border-chip-blue/25 bg-chip-blue/10 p-2.5 sm:p-3">
-                  <p className="text-xl font-bold text-sky-200 sm:text-2xl">{stats?.accounts.byRole.moderator ?? 0}</p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.moderators')}</p>
-                </div>
-                <div className="min-w-0 rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 sm:p-3">
-                  <p className="text-xl font-bold text-amber-200 sm:text-2xl">{stats?.accounts.byRole.admin ?? 0}</p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.admins')}</p>
-                </div>
-                <div className="min-w-0 rounded-xl border border-rose-500/20 bg-rose-500/5 p-2.5 sm:p-3">
-                  <p className="text-xl font-bold text-rose-200 sm:text-2xl">{stats?.accounts.byRole.superadmin ?? 0}</p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.superAdmins')}</p>
-                </div>
-                <div className="col-span-2 min-w-0 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-2.5 sm:col-span-1 sm:p-3">
-                  <p className="text-xl font-bold text-yellow-200 sm:text-2xl">{stats?.accounts.byRole.fondateur ?? 0}</p>
-                  <p className="text-[11px] text-white/45 sm:text-xs">{t('accounts.founders')}</p>
-                </div>
-              </div>
+            <SectionCard icon={Users} title={t('accounts.overviewTitle')} bodyClassName="space-y-5">
+              <p className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                <span className="font-display text-3xl font-bold tabular-nums text-white">{stats?.accounts.total ?? 0}</span>
+                <span className="text-xs text-cream/70">{t('accounts.total')}</span>
+              </p>
               {stats?.accounts.byKind && (
-                <p className="text-xs leading-relaxed text-white/55">
-                  {t('accounts.kindSummary', kindSummaryValues(stats.accounts.total, stats.accounts.byKind))}
-                </p>
+                <div className="min-w-0">
+                  <ChartHeading title={t('accounts.byKindTitle')} />
+                  {/* Les quatre types du serveur sont DISJOINTS : la barre fait
+                      bien 100 % des comptes (invités orphelins à part). */}
+                  <StackedBar
+                    {...chartTexts.stacked}
+                    ariaLabel={t('accounts.byKindTitle')}
+                    segments={[
+                      { key: 'password', label: t('accountKind.password'), value: stats.accounts.byKind.password, tone: 'gold' },
+                      { key: 'google', label: t('accountKind.google'), value: stats.accounts.byKind.google, tone: 'blue' },
+                      { key: 'guest', label: t('accounts.kindGuests'), value: stats.accounts.byKind.guest, tone: 'violet' },
+                      {
+                        key: 'guestOrphan',
+                        label: t('accounts.kindOrphans'),
+                        value: stats.accounts.byKind.guestOrphan,
+                        tone: 'cream',
+                      },
+                    ]}
+                    categoryLabel={t('accounts.kindPlaceholder')}
+                    valueLabel={t('charts.accounts')}
+                  />
+                  <p className="mt-2 text-xs leading-relaxed text-cream/70">
+                    {t('accounts.kindSummary', kindSummaryValues(stats.accounts.total, stats.accounts.byKind))}
+                  </p>
+                </div>
               )}
+              {/* Joueurs compris (rôle « user », invités compris) : ils
+                  manquaient à l'ancienne grille, qui ne montrait que l'équipe.
+                  Un rôle à 0 reste affiché : « 0 modérateur » est une information. */}
+              <div className="min-w-0">
+                <ChartHeading title={t('accounts.byRoleTitle')} />
+                <BarList
+                  {...chartTexts.list}
+                  ariaLabel={t('accounts.byRoleTitle')}
+                  rows={[
+                    {
+                      key: 'user',
+                      label: t('accounts.players'),
+                      value: stats?.accounts.byRole.user ?? 0,
+                      hint: t('accounts.playersRoleHint'),
+                    },
+                    { key: 'moderator', label: t('accounts.moderators'), value: stats?.accounts.byRole.moderator ?? 0 },
+                    { key: 'admin', label: t('accounts.admins'), value: stats?.accounts.byRole.admin ?? 0 },
+                    { key: 'superadmin', label: t('accounts.superAdmins'), value: stats?.accounts.byRole.superadmin ?? 0 },
+                    { key: 'fondateur', label: t('accounts.founders'), value: stats?.accounts.byRole.fondateur ?? 0 },
+                  ]}
+                  showShare
+                  categoryLabel={t('accounts.rolePlaceholder')}
+                  primaryLabel={t('charts.accounts')}
+                />
+              </div>
             </SectionCard>
 
             <SectionCard icon={Gavel} title={t('bans.activeTitle')} description={t('bans.suspendedCount', { count: bans.length })}>
@@ -3903,12 +4258,14 @@ function SupervisionDashboard() {
             title={t('geo.onlineByCountry')}
             description={t('geo.onlineByCountryWindowDesc', { minutes: ONLINE_WINDOW_MINUTES })}
             rows={stats?.visitors.onlineByCountry ?? []}
+            scope="online"
             onCountryClick={handleCountryClick}
           />
           <CountryList
             title={t('geo.todayByCountry')}
             description={t('geo.todayByCountryDesc')}
             rows={stats?.visitors.visitorsTodayByCountry ?? []}
+            scope="today"
             onCountryClick={handleCountryClick}
           />
           <IpVisitorList

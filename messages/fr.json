@@ -4402,13 +4402,35 @@
       "guestNoRole": "Compte invité : aucun rôle d'équipe possible",
       "matchCount": "{total} compte{plural} trouvé{plural}",
       "kindSummary": "{total, plural, one {# compte} other {# comptes}} : {password} mot de passe · {google} Google · {guests, plural, one {# invité} other {# invités}}{orphans, plural, =0 {} one { (dont # orphelin)} other { (dont # orphelins)}}",
-      "countsNote": "Invités compris. Depuis la mise à jour du suivi de présence (le {date}), la dernière activité suit une page réellement utilisée : onglet visible et interaction dans les 30 dernières minutes (avant, un onglet resté ouvert suffisait). Elle ne prouve pas que la personne joue."
+      "countsNote": "Invités compris. Depuis la mise à jour du suivi de présence (le {date}), la dernière activité suit une page réellement utilisée : onglet visible et interaction dans les 30 dernières minutes (avant, un onglet resté ouvert suffisait). Elle ne prouve pas que la personne joue.",
+      "byKindTitle": "Par type de compte",
+      "byRoleTitle": "Par rôle",
+      "playersRoleHint": "invités compris"
     },
     "units": {
       "s": "s",
       "min": "min",
       "h": "h",
       "d": "j"
+    },
+    "charts": {
+      "day": "Jour",
+      "noData": "Aucune donnée",
+      "total": "Total",
+      "showAll": "Voir tout ({count})",
+      "collapse": "Réduire",
+      "share": "Part",
+      "ariaDays": "{title}, du {from} au {to} (jours de Paris)",
+      "country": "Pays",
+      "browsers": "Navigateurs",
+      "game": "Jeu",
+      "players": "Joueurs",
+      "accounts": "Comptes",
+      "category": "Catégorie",
+      "status": "Statut",
+      "tables": "Tables",
+      "device": "Appareil",
+      "visits": "Visites"
     },
     "accountKind": {
       "password": "Mot de passe",
@@ -4482,8 +4504,6 @@
       "seriesPlayers": "Joueurs uniques",
       "seriesLaunches": "Parties lancées",
       "seriesDay": "{date} : {value}",
-      "seriesDayNoData": "{date} : pas encore de données",
-      "seriesDayDeletedSeats": "{date} : {value} (+ {seats, plural, one {# siège sans compte} other {# sièges sans compte}}, hors effectifs)",
       "legendNoData": "Avant le début des mesures (aucune donnée)",
       "seriesRecomputed": "Séries recalculées à chaque lecture : un compte supprimé depuis sort des totaux, jours passés compris.",
       "seriesDef": "Par jour de Paris : comptes actifs et joueurs uniques selon les définitions ci-dessus, sur ce seul jour ; parties lancées d'après le journal, revanches comprises, hors parties jouées par l'équipe ou des comptes de test seuls. Comptes actifs et joueurs uniques partagent la même échelle, les parties ont la leur.",
@@ -4507,13 +4527,35 @@
       "browsersNotAdded": "Une autre unité que les comptes : ces chiffres ne s'ajoutent jamais aux effectifs de comptes.",
       "browsersDef": "Navigateurs distincts ayant accepté les statistiques, vus depuis minuit ou sur les 7 derniers jours de Paris, et sur lesquels aucun compte n'a été vu. Un même visiteur compte deux fois sur deux appareils ; un refus des statistiques le rend invisible.",
       "coverage": "Journal des parties : tous les comptes, depuis le {journal}. Visites : comptes ayant accepté les statistiques, depuis le {visits}.",
-      "coverageNoVisits": "Journal des parties : tous les comptes, depuis le {journal}. Visites : aucune suivie pour l'instant."
+      "coverageNoVisits": "Journal des parties : tous les comptes, depuis le {journal}. Visites : aucune suivie pour l'instant.",
+      "newReturningLabel": "Nouveaux et revenants parmi les actifs",
+      "activeCount": "{count, plural, one {# compte actif} other {# comptes actifs}}",
+      "newReturningAria": "Nouveaux comptes et revenants parmi les comptes actifs · {window}",
+      "definitionOf": "Définition : {label}",
+      "seriesAccountsTitle": "Comptes actifs et joueurs uniques par jour",
+      "seriesNewTitle": "Nouveaux comptes par jour de création",
+      "seriesNewRegistered": "Comptes enregistrés",
+      "seriesNewGuests": "Invités",
+      "seriesNewDef": "Par jour de Paris : comptes créés ce jour-là ET actifs depuis, ce jour compris (place dans une partie en ligne ou visite d'au moins 60 s actives). Invités créés sans jouer exclus, comptés à part. Hors équipe et comptes de test. Un jour passé peut monter après coup : un compte actif pour la première fois le lendemain de sa création rejoint son jour de création. Les 7 derniers jours additionnés redonnent les nouveaux comptes sur 7 jours.",
+      "seriesDeletedSeatsDays": "Sièges sans compte, hors effectifs (jamais comptés dans les joueurs uniques) : {days}",
+      "topActiveHeader": "Temps actif",
+      "topGames": "{games, plural, =0 {aucune partie en ligne} one {# partie en ligne} other {# parties en ligne}}",
+      "devicesTitle": "Appareils des visites (7 jours)",
+      "devicesAccounts": "{count, plural, one {# compte} other {# comptes}}",
+      "devicesEmpty": "Aucune visite suivie sur 7 jours.",
+      "devicesDef": "Visites commencées sur les 7 derniers jours de Paris, par type d'appareil au début de la visite (deux onglets ouverts au même instant font une seule visite). Seulement les comptes ayant accepté les statistiques, hors équipe et comptes de test. « Inconnu » : appareil non reconnu. Un compte vu sur plusieurs appareils compte pour chacun : la somme des comptes dépasse le nombre de comptes.",
+      "deviceKinds": {
+        "mobile": "Mobile",
+        "tablet": "Tablette",
+        "mac": "Mac",
+        "pc": "PC",
+        "unknown": "Inconnu"
+      }
     },
     "growth": {
       "title": "Croissance",
       "desc": "Chaque chiffre porte la définition exacte de la requête qui le produit.",
       "registeredShareLabel": "Part de comptes enregistrés",
-      "registeredShareDetail": "{registered} enregistrés, {guests} invités",
       "registeredShareDef": "Part des comptes CRÉÉS depuis {days} jours qui portent un e-mail, parmi tous ceux créés sur la même fenêtre. Ce n’est pas un entonnoir : rien ne relie un compte enregistré au compte invité utilisé avant, donc la proportion d’invités devenus membres reste hors de portée.",
       "abandonedLabel": "Tables figées",
       "abandonedDetail": "{stalled} figées sur {live} tables en cours",
@@ -4521,7 +4563,10 @@
       "playersByGameTitle": "Joueurs par jeu, en ligne",
       "playersByGameDef": "Comptes ayant LANCÉ une partie en ligne de ce jeu au cours des {days} derniers jours — une ligne par joueur et par jeu, 12 jeux au plus. C’est le lancement qui compte, pas la fin : une partie quittée en route y figure. Les parties locales (même appareil) et le mode TV n’écrivent rien : ils n’apparaissent pas ici.",
       "noData": "Aucune partie en ligne lancée sur cette fenêtre.",
-      "freshness": "Calculé à {time} — recalculé au plus une fois toutes les {minutes} min."
+      "freshness": "Calculé à {time} — recalculé au plus une fois toutes les {minutes} min.",
+      "registeredSegment": "Enregistrés (e-mail)",
+      "guestsSegment": "Invités",
+      "registeredShareEmpty": "Aucun compte créé sur cette fenêtre."
     },
     "onlinePlayers": {
       "title": "Joueurs du jeu en ligne",
@@ -4540,9 +4585,11 @@
       "legendSolo": "Solo contre des bots",
       "legendWithHumans": "Avec d'autres humains",
       "legendBeforeJournal": "Avant le journal (aucune donnée)",
-      "dayBar": "{date} : {solo} en solo contre des bots, {withHumans} avec d'autres humains",
-      "dayBeforeJournal": "{date} : journal pas encore tenu",
-      "range": "Du {from} au {to}, jours de Paris."
+      "range": "Du {from} au {to}, jours de Paris.",
+      "byGameTitle": "Parties lancées par jeu · {window}",
+      "byGameHint": "{count, plural, one {# partie lancée} other {# parties lancées}}",
+      "byGameEmpty": "Aucune partie en ligne lancée sur 7 jours.",
+      "byGameDef": "Parties en ligne lancées sur les 7 derniers jours de Paris (aujourd'hui compris), par jeu, revanches comprises, que la partie aille au bout ou non. « Avec d'autres humains » : au moins deux joueurs humains à la table ; le reste est du solo contre des bots. Parties jouées par l'équipe ou des comptes de test seuls exclues. Les jeux additionnés redonnent le total des 7 derniers jours du graphe par jour ; la part est celle des lancements de la semaine."
     },
     "room": {
       "todayLabel": "Aujourd'hui",
@@ -4550,7 +4597,6 @@
       "vsPrevWeek": "vs 7 j. préc.",
       "trendTitle": "Tendance — 14 derniers jours",
       "trendVisitors": "Navigateurs (statistiques acceptées, équipe incluse)",
-      "trendParties": "Parties",
       "liveTablesTitle": "Tables en cours",
       "liveTablesDesc": "Salons actifs en ce moment",
       "liveTablesEmpty": "Aucune table en cours.",
@@ -4585,7 +4631,17 @@
       "journalRoomClose": "{actor} a fermé la table {detail}",
       "journalSiteSetting": "{actor} a modifié un réglage du site : {detail}",
       "journalMetricsExclusionOn": "{actor} a marqué {target} comme compte de test, exclu des statistiques",
-      "journalMetricsExclusionOff": "{actor} a réintégré {target} dans les statistiques (plus un compte de test)"
+      "journalMetricsExclusionOff": "{actor} a réintégré {target} dans les statistiques (plus un compte de test)",
+      "visitorsChartTitle": "Visiteurs par jour",
+      "visitorsSeries": "Navigateurs",
+      "visitorsDef": "Navigateurs distincts ayant accepté les statistiques, vus au moins une fois ce jour de Paris, équipe incluse. Des navigateurs, pas des comptes ni des personnes : un même joueur compte deux fois sur deux appareils, et un refus des statistiques le rend invisible.",
+      "visitorsConsentNote": "Le {date}, le bandeau de consentement a été reposé à tous : un navigateur ne compte plus tant qu'il n'a pas répondu. La marche de ce jour-là n'est pas une chute de fréquentation.",
+      "partiesChartTitle": "Salles avec une partie classée, par jour",
+      "partiesChartSubtitle": "Salles en ligne ayant terminé au moins une partie avec un résultat classé",
+      "partiesSeries": "Salles",
+      "partiesDef": "Salles en ligne ayant enregistré au moins un résultat classé ce jour de Paris, comptées une fois par salle et par jour. Plusieurs jeux n'enregistrent aucun résultat (pas de gagnant), ni les parties à un seul humain contre des bots : ce n'est donc pas le nombre de parties lancées, qui se lit dans « Joueurs du jeu en ligne ». Équipe et comptes de test compris.",
+      "liveTablesByStatus": "Tables en cours par statut",
+      "liveTablesByStatusDef": "Toutes les salles en cours, comptées en base (la liste ci-dessous en montre 30 au plus). La diffusion TV y a son propre segment, alors que la tuile « Tables figées » l'exclut."
     },
     "retentionRun": {
       "lastRun": "Dernier ménage des données : {date}",
@@ -4601,15 +4657,15 @@
       "playedTitle": "Parties jouées par jeu",
       "playedDesc": "Agrégat cloud des comptes synchronisés",
       "totalParties": " — {count} partie{plural} au total",
-      "party": "partie",
       "parties": "parties",
-      "noneRecorded": "Aucune partie enregistrée pour le moment."
+      "noneRecorded": "Aucune partie enregistrée pour le moment.",
+      "allTimeNote": "Cumul depuis toujours, toutes périodes confondues : parties des joueurs locaux synchronisées sur les comptes, statistiques enregistrées en base et parties en ligne classées (une par salle). Ce n'est pas l'activité récente : pour la semaine, voir « Parties lancées par jeu »."
     },
     "geo": {
       "onlineByCountry": "En ligne par pays",
-      "onlineByCountryWindowDesc": "Navigateurs actifs ces {minutes} dernières minutes",
+      "onlineByCountryWindowDesc": "Navigateurs actifs ces {minutes} dernières minutes.",
       "todayByCountry": "Connectés aujourd'hui par pays",
-      "todayByCountryDesc": "Navigateurs (statistiques acceptées, équipe incluse) vus depuis minuit, heure de Paris",
+      "todayByCountryDesc": "Navigateurs (statistiques acceptées, équipe incluse) vus depuis minuit, heure de Paris.",
       "tapCountry": " Touchez un pays pour voir les visiteurs.",
       "noData": "Aucune donnée pour le moment.",
       "visitorsTitle": "Visiteurs et joueurs",
@@ -4738,7 +4794,6 @@
       "windowHint": "Jours à l'heure de Paris, aujourd'hui compris. Une partie compte pour le jour de son lancement ; les durées de fiabilité inconnue ne sont pas additionnées.",
       "gamesLaunched": "Parties lancées",
       "solo": "Solo contre des bots",
-      "soloValue": "{solo} sur {games}",
       "reliableTime": "Durée de table sûre",
       "estimatedTime": "Durée de table estimée",
       "visitsTitle": "Visites",
@@ -4812,7 +4867,36 @@
         "unknown": "Appareil inconnu"
       },
       "moderationTitle": "Modération",
-      "notBanned": "Aucune sanction en cours."
+      "notBanned": "Aucune sanction en cours.",
+      "charts": {
+        "showAll": "Voir tout",
+        "collapse": "Réduire",
+        "share": "Part",
+        "count": "Nombre",
+        "duration": "Durée",
+        "device": "Appareil",
+        "kind": "Type",
+        "launchesTitle": "Lancements par jeu",
+        "launchesAria": "Lancements par jeu (compteur tenu avant le journal, tentatives comprises)",
+        "launchesEmpty": "Aucun lancement enregistré.",
+        "lastLaunch": "Dernier : {date}",
+        "resultsTitle": "Victoires et défaites par jeu",
+        "resultsAria": "Victoires et défaites par jeu, parties classées terminées",
+        "resultsEmpty": "Aucune partie classée terminée.",
+        "resultsHint": "Victoires puis défaites, bout à bout : la barre entière compte les parties classées terminées, à la même échelle pour tous les jeux.",
+        "winRate": "{rate} de victoires",
+        "tableToggle": "Tableau détaillé (date et heure du dernier lancement)",
+        "withHumans": "Avec d'autres humains",
+        "countedTime": "Durée de table cumulée",
+        "gamesSplitAria": "Parties lancées, {window} : en solo contre des bots ou avec d'autres humains",
+        "timeSplitAria": "Durée de table cumulée, {window} : part sûre et part estimée",
+        "visibleTime": "Temps visible",
+        "visibleIdle": "Visible, inactif",
+        "visibleSplitAria": "Temps visible, {window} : part active et part inactive",
+        "visibleSplitHint": "Temps visible = temps actif + temps visible inactif (dernière interaction il y a {active} à {visible} min).",
+        "devicesAria": "Navigateurs liés au compte, par type d'appareil",
+        "devicesCaption": "{count, plural, one {Sur le # navigateur listé ci-dessous, selon l'appareil de son dernier passage.} other {Sur les # navigateurs listés ci-dessous, selon l'appareil de leur dernier passage.}}"
+      }
     },
     "actions": {
       "banPermanent": "Bannissement permanent",

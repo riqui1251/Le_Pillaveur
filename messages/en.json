@@ -4402,13 +4402,35 @@
       "guestNoRole": "Guest account: no staff role possible",
       "matchCount": "{total} account{plural} found",
       "kindSummary": "{total, plural, one {# account} other {# accounts}}: {password} password · {google} Google · {guests, plural, one {# guest} other {# guests}}{orphans, plural, =0 {} other { (including # orphaned)}}",
-      "countsNote": "Guests included. Since the presence tracking update ({date}), last activity follows a page actually in use: visible tab and an interaction within the last 30 minutes (before, a tab left open was enough). It does not prove the person is playing."
+      "countsNote": "Guests included. Since the presence tracking update ({date}), last activity follows a page actually in use: visible tab and an interaction within the last 30 minutes (before, a tab left open was enough). It does not prove the person is playing.",
+      "byKindTitle": "By account type",
+      "byRoleTitle": "By role",
+      "playersRoleHint": "guests included"
     },
     "units": {
       "s": "s",
       "min": "min",
       "h": "h",
       "d": "d"
+    },
+    "charts": {
+      "day": "Day",
+      "noData": "No data",
+      "total": "Total",
+      "showAll": "Show all ({count})",
+      "collapse": "Show less",
+      "share": "Share",
+      "ariaDays": "{title}, from {from} to {to} (Paris days)",
+      "country": "Country",
+      "browsers": "Browsers",
+      "game": "Game",
+      "players": "Players",
+      "accounts": "Accounts",
+      "category": "Category",
+      "status": "Status",
+      "tables": "Tables",
+      "device": "Device",
+      "visits": "Visits"
     },
     "accountKind": {
       "password": "Password",
@@ -4482,8 +4504,6 @@
       "seriesPlayers": "Unique players",
       "seriesLaunches": "Games launched",
       "seriesDay": "{date}: {value}",
-      "seriesDayNoData": "{date}: no data yet",
-      "seriesDayDeletedSeats": "{date}: {value} (+ {seats, plural, one {# seat without an account} other {# seats without an account}}, not counted)",
       "legendNoData": "Before measurements started (no data)",
       "seriesRecomputed": "Series are recalculated on every read: an account deleted since then drops out of the totals, past days included.",
       "seriesDef": "Per Paris day: active accounts and unique players as defined above, for that day only; games launched according to the game log, rematches included, excluding games played by staff or test accounts alone. Active accounts and unique players share the same scale; games have their own.",
@@ -4507,13 +4527,35 @@
       "browsersNotAdded": "A different unit from accounts: these figures are never added to account counts.",
       "browsersDef": "Distinct browsers that accepted statistics, seen since midnight or over the last 7 Paris days, and on which no account has been seen. One visitor counts twice on two devices; declining statistics makes them invisible.",
       "coverage": "Game log: every account, since {journal}. Visits: accounts that accepted statistics, since {visits}.",
-      "coverageNoVisits": "Game log: every account, since {journal}. Visits: none tracked yet."
+      "coverageNoVisits": "Game log: every account, since {journal}. Visits: none tracked yet.",
+      "newReturningLabel": "New and returning among active accounts",
+      "activeCount": "{count, plural, one {# active account} other {# active accounts}}",
+      "newReturningAria": "New accounts and returning accounts among active accounts · {window}",
+      "definitionOf": "Definition: {label}",
+      "seriesAccountsTitle": "Active accounts and unique players per day",
+      "seriesNewTitle": "New accounts by day of creation",
+      "seriesNewRegistered": "Registered accounts",
+      "seriesNewGuests": "Guests",
+      "seriesNewDef": "Per Paris day: accounts created that day AND active since, that day included (a seat in an online game or a visit with at least 60 s active). Guests created without playing are excluded and counted separately. Staff and test accounts excluded. A past day can go up afterwards: an account active for the first time the day after its creation joins its day of creation. Added up, the last 7 days give back the new accounts over 7 days.",
+      "seriesDeletedSeatsDays": "Seats without an account, not counted (never included in unique players): {days}",
+      "topActiveHeader": "Active time",
+      "topGames": "{games, plural, =0 {no online game} one {# online game} other {# online games}}",
+      "devicesTitle": "Visit devices (7 days)",
+      "devicesAccounts": "{count, plural, one {# account} other {# accounts}}",
+      "devicesEmpty": "No tracked visit over 7 days.",
+      "devicesDef": "Visits started over the last 7 Paris days, by device type at the start of the visit (two tabs opened at the same moment make a single visit). Only accounts that accepted statistics, staff and test accounts excluded. “Unknown”: device not recognised. An account seen on several devices counts for each one: the sum of accounts exceeds the number of accounts.",
+      "deviceKinds": {
+        "mobile": "Mobile",
+        "tablet": "Tablet",
+        "mac": "Mac",
+        "pc": "PC",
+        "unknown": "Unknown"
+      }
     },
     "growth": {
       "title": "Growth",
       "desc": "Every figure carries the exact definition of the query behind it.",
       "registeredShareLabel": "Share of registered accounts",
-      "registeredShareDetail": "{registered} registered, {guests} guests",
       "registeredShareDef": "Share of the accounts CREATED in the last {days} days that carry an e-mail, among all those created over the same window. This is not a funnel: nothing links a registered account to the guest account used before it, so the share of guests who later signed up stays out of reach.",
       "abandonedLabel": "Stalled tables",
       "abandonedDetail": "{stalled} stalled out of {live} live tables",
@@ -4521,7 +4563,10 @@
       "playersByGameTitle": "Players per game, online",
       "playersByGameDef": "Accounts that STARTED an online game of that game over the last {days} days — one row per player per game, 12 games at most. The start is what counts, not the finish: a game left halfway still shows up. Local games (same device) and TV mode write nothing, so they do not appear here.",
       "noData": "No online game started within this window.",
-      "freshness": "Computed at {time} — recalculated at most once every {minutes} min."
+      "freshness": "Computed at {time} — recalculated at most once every {minutes} min.",
+      "registeredSegment": "Registered (e-mail)",
+      "guestsSegment": "Guests",
+      "registeredShareEmpty": "No account created within this window."
     },
     "onlinePlayers": {
       "title": "Online game players",
@@ -4540,9 +4585,11 @@
       "legendSolo": "Solo against bots",
       "legendWithHumans": "With other humans",
       "legendBeforeJournal": "Before the log (no data)",
-      "dayBar": "{date}: {solo} solo against bots, {withHumans} with other humans",
-      "dayBeforeJournal": "{date}: log not kept yet",
-      "range": "From {from} to {to}, Paris days."
+      "range": "From {from} to {to}, Paris days.",
+      "byGameTitle": "Games launched, by game · {window}",
+      "byGameHint": "{count, plural, one {# game launched} other {# games launched}}",
+      "byGameEmpty": "No online game launched over 7 days.",
+      "byGameDef": "Online games launched over the last 7 Paris days (today included), by game, rematches included, whether or not the game was finished. “With other humans”: at least two human players at the table; the rest is solo against bots. Games played by staff or test accounts alone are excluded. Added up, the games give back the total of the last 7 days in the per-day chart; the share is that of the week's launches."
     },
     "room": {
       "todayLabel": "Today",
@@ -4550,7 +4597,6 @@
       "vsPrevWeek": "vs prev. 7 d.",
       "trendTitle": "Trend — last 14 days",
       "trendVisitors": "Browsers (statistics accepted, staff included)",
-      "trendParties": "Games",
       "liveTablesTitle": "Tables in progress",
       "liveTablesDesc": "Rooms active right now",
       "liveTablesEmpty": "No table in progress.",
@@ -4585,7 +4631,17 @@
       "journalRoomClose": "{actor} closed the table {detail}",
       "journalSiteSetting": "{actor} changed a site setting: {detail}",
       "journalMetricsExclusionOn": "{actor} flagged {target} as a test account, excluded from statistics",
-      "journalMetricsExclusionOff": "{actor} put {target} back into the statistics (no longer a test account)"
+      "journalMetricsExclusionOff": "{actor} put {target} back into the statistics (no longer a test account)",
+      "visitorsChartTitle": "Visitors per day",
+      "visitorsSeries": "Browsers",
+      "visitorsDef": "Distinct browsers that accepted statistics, seen at least once on that Paris day, staff included. Browsers, not accounts or people: the same player counts twice on two devices, and declining statistics makes them invisible.",
+      "visitorsConsentNote": "On {date}, the consent banner was shown to everyone again: a browser no longer counts until it has answered. The step on that day is not a drop in traffic.",
+      "partiesChartTitle": "Rooms with a ranked game, per day",
+      "partiesChartSubtitle": "Online rooms that finished at least one game with a ranked result",
+      "partiesSeries": "Rooms",
+      "partiesDef": "Online rooms that recorded at least one ranked result on that Paris day, counted once per room and per day. Several games record no result (no winner), and neither do games with a single human against bots: so this is not the number of games launched, which is shown in “Online game players”. Staff and test accounts included.",
+      "liveTablesByStatus": "Tables in progress by status",
+      "liveTablesByStatusDef": "Every room in progress, counted in the database (the list below shows 30 at most). TV casting has its own segment, while the “Stalled tables” tile leaves it out."
     },
     "retentionRun": {
       "lastRun": "Last data clean-up: {date}",
@@ -4601,15 +4657,15 @@
       "playedTitle": "Games played",
       "playedDesc": "Cloud aggregate of synced accounts",
       "totalParties": " — {count} game{plural} total",
-      "party": "game",
       "parties": "games",
-      "noneRecorded": "No game recorded yet."
+      "noneRecorded": "No game recorded yet.",
+      "allTimeNote": "All-time total, all periods combined: local players' games synced to accounts, statistics stored in the database and ranked online games (one per room). This is not recent activity: for the week, see “Games launched, by game”."
     },
     "geo": {
       "onlineByCountry": "Online by country",
-      "onlineByCountryWindowDesc": "Browsers active in the last {minutes} minutes",
+      "onlineByCountryWindowDesc": "Browsers active in the last {minutes} minutes.",
       "todayByCountry": "Connected today by country",
-      "todayByCountryDesc": "Browsers (statistics accepted, staff included) seen since midnight, Paris time",
+      "todayByCountryDesc": "Browsers (statistics accepted, staff included) seen since midnight, Paris time.",
       "tapCountry": " Tap a country to see visitors.",
       "noData": "No data yet.",
       "visitorsTitle": "Visitors and players",
@@ -4738,7 +4794,6 @@
       "windowHint": "Days in Paris time, today included. A game counts for the day it was launched; durations of unknown reliability are not added up.",
       "gamesLaunched": "Games launched",
       "solo": "Solo against bots",
-      "soloValue": "{solo} of {games}",
       "reliableTime": "Reliable table time",
       "estimatedTime": "Estimated table time",
       "visitsTitle": "Visits",
@@ -4812,7 +4867,36 @@
         "unknown": "Unknown device"
       },
       "moderationTitle": "Moderation",
-      "notBanned": "No active sanction."
+      "notBanned": "No active sanction.",
+      "charts": {
+        "showAll": "Show all",
+        "collapse": "Show less",
+        "share": "Share",
+        "count": "Count",
+        "duration": "Duration",
+        "device": "Device",
+        "kind": "Type",
+        "launchesTitle": "Launches by game",
+        "launchesAria": "Launches by game (counter kept since before the log, attempts included)",
+        "launchesEmpty": "No launch recorded.",
+        "lastLaunch": "Last: {date}",
+        "resultsTitle": "Wins and losses by game",
+        "resultsAria": "Wins and losses by game, finished ranked games",
+        "resultsEmpty": "No finished ranked game.",
+        "resultsHint": "Wins then losses, end to end: the whole bar counts finished ranked games, on the same scale for every game.",
+        "winRate": "{rate} wins",
+        "tableToggle": "Detailed table (date and time of the last launch)",
+        "withHumans": "With other humans",
+        "countedTime": "Total table time",
+        "gamesSplitAria": "Games launched, {window}: solo against bots or with other humans",
+        "timeSplitAria": "Total table time, {window}: reliable part and estimated part",
+        "visibleTime": "Visible time",
+        "visibleIdle": "Visible, idle",
+        "visibleSplitAria": "Visible time, {window}: active part and idle part",
+        "visibleSplitHint": "Visible time = active time + idle visible time (last interaction {active} to {visible} min ago).",
+        "devicesAria": "Browsers linked to the account, by device type",
+        "devicesCaption": "{count, plural, one {Out of the # browser listed below, by the device of its last visit.} other {Out of the # browsers listed below, by the device of their last visit.}}"
+      }
     },
     "actions": {
       "banPermanent": "Permanent ban",

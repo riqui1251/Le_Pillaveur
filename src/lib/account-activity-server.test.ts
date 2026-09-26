@@ -304,7 +304,8 @@ function seat(
   minutes: number,
   endReason: string | null,
   humanCount = 2,
-  gameId = 'quiz'
+  gameId = 'quiz',
+  humanSeats = humanCount
 ) {
   const startedAt = new Date(startIso)
   return {
@@ -315,6 +316,7 @@ function seat(
       endedAt: new Date(startedAt.getTime() + minutes * MIN),
       endReason,
       humanCount,
+      _count: { participants: humanSeats },
     },
   }
 }
@@ -715,6 +717,25 @@ describe('getAccountActivity', () => {
 
     expect(activity?.totals.d7).toEqual({ games: 3, solo: 1, reliableSeconds: 1800, estimatedSeconds: 1200 })
     expect(activity?.seances.map((s) => s.reliability)).toEqual(['estimated', 'reliable', 'unknown'])
+  })
+
+  it('range en solo comme la Vue d’ensemble : un humain non rattaché n’est pas un bot', async () => {
+    seatMock.findMany.mockResolvedValue([
+      // humanCount écrit à 1, mais deux sièges humains (l'un jamais rattaché) : pas du solo.
+      seat('mixte', '2026-09-12T18:00:00Z', 30, 'finished', 1, 'menteur', 2),
+      // Vraiment seul contre des bots.
+      seat('solo', '2026-09-12T20:00:00Z', 30, 'finished', 1, 'quiz', 1),
+      // Ligne sans siège écrit : le compteur fait foi.
+      seat('ancienne', '2026-09-12T21:00:00Z', 30, 'finished', 2, 'quiz', 0),
+    ])
+
+    const activity = await getAccountActivity('u1', now)
+
+    expect(activity?.totals.d7).toMatchObject({ games: 3, solo: 1 })
+    // Le compte des sièges humains est lu en base, bots exclus.
+    expect(seatMock.findMany.mock.calls[0][0].select.session.select._count).toEqual({
+      select: { participants: { where: { botName: null } } },
+    })
   })
 
   it('sert navigateurs et réseaux sans visitorId, et le bilan par jeu', async () => {

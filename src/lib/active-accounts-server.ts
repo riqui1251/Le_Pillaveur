@@ -6,6 +6,7 @@ import {
   type StoredAccountVisit,
 } from '@/lib/account-activity-server'
 import { accountKindSelect, kindOfAccount, NON_LEGACY_ACCOUNT_WHERE } from '@/lib/account-kind-server'
+import type { DeviceKind } from '@/lib/device-from-user-agent'
 import { getExcludedUserIds } from '@/lib/metrics-exclusions'
 import { GAME_JOURNAL_SINCE } from '@/lib/online/game-sessions'
 import { parisDayOffset, parisDayStartUtc, parisDayString, parisDaysBack } from '@/lib/paris-time'
@@ -27,12 +28,20 @@ import { onlineSince } from '@/lib/presence'
  * - NOUVEAU sur P : créé dans P ET actif dans P (un invité créé sans jouer
  *   n'est pas un nouveau compte : il est compté à part) ; REVENANT : actif
  *   dans P, créé avant P ;
+ * - NOUVEAUX DU JOUR J (série) : créés le jour J ET actifs depuis, J compris.
+ *   Même définition, rapportée au jour de CRÉATION : les 7 derniers jours de
+ *   la série additionnés redonnent le « nouveaux sur 7 jours ». Un simple
+ *   « créés ce jour-là » aurait menti : les invités créés sans jouer sont
+ *   purgés à 7 jours, la courbe aurait chuté d'elle-même au-delà ;
  * - retour J+1 / J+7 : parmi les comptes créés du jour J−8 au jour J−2
  *   (resp. J−21 à J−8) ET actifs depuis leur création, ceux actifs un jour de
  *   Paris ≥ création + 1 (resp. + 7). Jamais de compte créé avant le début du
  *   journal : ses jours d'activité d'alors ne sont connus nulle part, il
  *   passerait pour « non revenu ». Effectifs bruts, invités compris : l'écran
- *   masque le pourcentage des petites cohortes.
+ *   masque le pourcentage des petites cohortes ;
+ * - APPAREILS sur 7 jours : visites commencées sur 7 jours par catégorie
+ *   d'appareil de leur premier battement (AccountVisit.device), et comptes
+ *   distincts par catégorie. Une catégorie, jamais un navigateur ni une IP.
  * Une visite compte pour son jour de DÉBUT ; une partie, pour son lancement.
  *
  * Équipe (rôle ≠ 'user', rôle ACTUEL : un ancien modérateur rétrogradé
@@ -76,6 +85,21 @@ export const RETENTION_COHORTS = {
 
 /** Taille du classement des comptes les plus actifs sur 7 jours. */
 export const TOP_ACCOUNTS = 10
+
+/**
+ * Catégories d'appareil connues, dans l'ordre de départage à égalité de
+ * visites. 'unknown' en dernier : c'est l'absence de réponse, pas un appareil.
+ */
+const DEVICE_ORDER: readonly DeviceKind[] = ['mobile', 'tablet', 'mac', 'pc', 'unknown']
+
+/**
+ * Catégorie d'une visite. L'écriture stocke null pour un appareil non reconnu
+ * (account-visits-server.ts) ; une valeur inattendue (colonne écrite par une
+ * autre version) est traitée pareil plutôt que de créer une catégorie de plus.
+ */
+function visitDevice(device: string | null): DeviceKind {
+  return DEVICE_ORDER.find((kind) => kind === device) ?? 'unknown'
+}
 
 /** Durée de vie du cache (même parti pris que getGrowthStats). */
 const ACTIVE_ACCOUNTS_CACHE_MS = 5 * 60 * 1000
@@ -178,6 +202,17 @@ export type ActiveAccountsStats = {
     /** Temps en partie des visites de 7 jours (part du temps passée en partie : / visibleSeconds7d). */
     gameSeconds7d: number
     visibleSeconds7d: number
+    /**
+     * Visites commencées sur 7 jours de Paris (les mêmes que les durées
+     * ci-dessus : comptes ayant accepté les statistiques, hors équipe et
+     * comptes de test), par catégorie d'appareil de leur premier battement ;
+     * 'unknown' = appareil non reconnu. `accounts` = comptes distincts ayant
+     * au moins une visite sur cet appareil : un compte vu sur mobile ET sur
+     * PC compte dans les deux, la somme des `accounts` dépasse donc le nombre
+     * de comptes. Catégories sans visite absentes ; tri par visites
+     * décroissantes. Vide sans visite.
+     */
+    devices7d: Array<{ device: DeviceKind; visits: number; accounts: number }>
   }
   /**
    * 14 jours de Paris, du plus ancien au plus récent. `launches` = parties
@@ -190,6 +225,19 @@ export type ActiveAccountsStats = {
     uniquePlayers: number
     launches: number
     deletedSeats: number
+    /**
+     * Comptes CRÉÉS ce jour de Paris ET actifs depuis (ce jour compris,
+     * jusqu'à aujourd'hui), hors équipe et comptes de test : la définition de
+     * « nouveau », rapportée au jour de création. Les 7 derniers jours
+     * additionnés = `accounts.newAccounts.d7`. Un invité créé sans jouer n'y
+     * est pas (voir `accounts.idleGuests`). Peut monter après coup : un compte
+     * créé un jour et actif seulement le lendemain rejoint son jour de
+     * création au calcul suivant. Avant `coverage.journalSince`, seules les
+     * visites disent l'activité : sous-estimé, comme `activeAccounts`.
+     */
+    newAccounts: number
+    /** Dont comptes invités. */
+    newGuests: number
   }>
   retention: {
     d1: RetentionCohort
@@ -373,6 +421,28 @@ export function summarizeActiveAccounts(input: ActiveAccountsInput, now: Date): 
       : []
   })
 
+  // ── Appareils des visites de 7 jours : les mêmes visites que les durées
+  // (après fusion : deux onglets ouverts au même instant ne font pas deux
+  // visites mobiles), comptes comptés seulement. ──
+  const devices = new Map<DeviceKind, { visits: number; accounts: Set<string> }>()
+  for (const account of counted) {
+    for (const visit of visits7.get(account.id) ?? []) {
+      const device = visitDevice(visit.device)
+      const row = devices.get(device) ?? { visits: 0, accounts: new Set<string>() }
+      row.visits += 1
+      row.accounts.add(account.id)
+      devices.set(device, row)
+    }
+  }
+  const devices7d = [...devices]
+    .map(([device, row]) => ({ device, visits: row.visits, accounts: row.accounts.size }))
+    .sort(
+      (a, b) =>
+        b.visits - a.visits ||
+        b.accounts - a.accounts ||
+        DEVICE_ORDER.indexOf(a.device) - DEVICE_ORDER.indexOf(b.device)
+    )
+
   // ── Retours J+1 / J+7 par cohorte de création. ──
   const retention = (spec: { from: number; to: number; gapDays: number }): RetentionCohort => {
     const nominalOldest = parisDayOffset(spec.from, now)
@@ -435,6 +505,20 @@ export function summarizeActiveAccounts(input: ActiveAccountsInput, now: Date): 
     ).length
   }
 
+  // ── Nouveaux comptes par jour de création (série) : créés ce jour-là ET
+  // actifs depuis. Les comptes créés dans la fenêtre sont tous lus (voir la
+  // requête), sans lecture de plus ; leur activité aussi, puisque la série
+  // tient dans la fenêtre de 30 jours. ──
+  const newByDay = new Map<string, { accounts: number; guests: number }>()
+  for (const account of counted) {
+    const day = createdDay(account)
+    if (!launchesByDay.has(day) || !hasDaySince(activeDays.get(account.id), day)) continue
+    const row = newByDay.get(day) ?? { accounts: 0, guests: 0 }
+    row.accounts += 1
+    if (account.isGuest) row.guests += 1
+    newByDay.set(day, row)
+  }
+
   return {
     coverage: {
       journalSince: GAME_JOURNAL_SINCE,
@@ -477,6 +561,7 @@ export function summarizeActiveAccounts(input: ActiveAccountsInput, now: Date): 
       medianActiveSecondsPerAccount7d: median(activeByAccount7.map((row) => row.activeSeconds)),
       gameSeconds7d: countedVisits7.reduce((sum, visit) => sum + visit.gameSeconds, 0),
       visibleSeconds7d: countedVisits7.reduce((sum, visit) => sum + visit.visibleSeconds, 0),
+      devices7d,
     },
     series: [...launchesByDay].map(([day, launches]) => ({
       day,
@@ -484,6 +569,8 @@ export function summarizeActiveAccounts(input: ActiveAccountsInput, now: Date): 
       uniquePlayers: counted.filter((account) => playerDays.get(account.id)?.has(day)).length,
       launches,
       deletedSeats: deletedSeatsByDay.get(day) ?? 0,
+      newAccounts: newByDay.get(day)?.accounts ?? 0,
+      newGuests: newByDay.get(day)?.guests ?? 0,
     })),
     retention: {
       d1: retention(RETENTION_COHORTS.d1),
@@ -540,6 +627,8 @@ async function computeActiveAccountsSummary(now: Date): Promise<CachedSummary> {
         visibleSeconds: true,
         activeSeconds: true,
         gameSeconds: true,
+        // Catégorie d'appareil seulement ('mobile', 'pc'…) : ni navigateur ni IP.
+        device: true,
       },
     }),
     prisma.onlineGameSession.findMany({
@@ -577,7 +666,7 @@ async function computeActiveAccountsSummary(now: Date): Promise<CachedSummary> {
   const summary = summarizeActiveAccounts(
     {
       accounts,
-      visits: visits.map((visit) => ({ ...visit, device: null })),
+      visits,
       games: games.map((game) => ({
         startedAt: game.startedAt,
         seatUserIds: game.participants.map((seat) => seat.userId),

@@ -206,6 +206,9 @@ export function SectionCard({
  * Plaque de casino : un KPI sur fond crème, tranchant sur le feutre — le
  * vocabulaire visuel du lobby (plaques de mise) appliqué à la supervision.
  * `tone="alert"` bascule sur le rouge d'enseigne (file à traiter, bans…).
+ * `trend` : mini-courbe posée juste sous la valeur (Sparkline du kit, en
+ * teintes « surface crème ») — le chiffre avec, d'un coup d'œil, la pente des
+ * jours RÉVOLUS qui précèdent (un jour entamé y passerait pour une chute).
  */
 export function KpiPlaque({
   label,
@@ -213,12 +216,14 @@ export function KpiPlaque({
   hint,
   delta,
   tone = 'default',
+  trend,
 }: {
   label: string
   value: ReactNode
   hint?: string
   delta?: { direction: 'up' | 'down'; label: string }
   tone?: 'default' | 'alert'
+  trend?: ReactNode
 }) {
   const alert = tone === 'alert'
   return (
@@ -246,60 +251,17 @@ export function KpiPlaque({
           </span>
         )}
       </p>
+      {trend && <div className="mt-1.5">{trend}</div>}
       {hint && <p className={cn('mt-0.5 text-[11px]', alert ? 'text-cream' : 'text-[#6B6455]')}>{hint}</p>}
     </div>
   )
 }
 
-/** Courbe 14 j : visiteurs (trait plein or) + parties (pointillé bleu jeton). */
-export function TrendChart({
-  points,
-  primaryLabel,
-  secondaryLabel,
-}: {
-  points: Array<{ date: string; visitors: number; parties: number }>
-  primaryLabel: string
-  secondaryLabel: string
-}) {
-  if (points.length === 0) return null
-  const w = 640
-  const h = 110
-  const pad = 6
-  const maxV = Math.max(1, ...points.map((p) => p.visitors))
-  const maxP = Math.max(1, ...points.map((p) => p.parties))
-  const stepX = points.length > 1 ? (w - pad * 2) / (points.length - 1) : 0
-  const xAt = (i: number) => pad + i * stepX
-  const yAt = (v: number, max: number) => h - pad - (v / max) * (h - pad * 2 - 14)
-
-  const linePath = (key: 'visitors' | 'parties', max: number) =>
-    points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(p[key], max).toFixed(1)}`).join(' ')
-
-  const areaPath = `${linePath('visitors', maxV)} L${xAt(points.length - 1).toFixed(1)},${h - pad} L${xAt(0).toFixed(1)},${h - pad} Z`
-
-  return (
-    <div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="h-24 w-full sm:h-28" role="img" aria-label={`${primaryLabel} / ${secondaryLabel}`}>
-        <defs>
-          <linearGradient id="supervision-trend-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="rgb(var(--gold-rgb))" stopOpacity="0.35" />
-            <stop offset="1" stopColor="rgb(var(--gold-rgb))" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={areaPath} fill="url(#supervision-trend-fill)" />
-        <path d={linePath('parties', maxP)} fill="none" stroke="rgb(var(--chip-blue-rgb))" strokeWidth="1.6" strokeDasharray="3 3" strokeLinecap="round" />
-        <path d={linePath('visitors', maxV)} fill="none" stroke="rgb(var(--gold-rgb))" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      <div className="mt-1.5 flex items-center gap-4 text-[11px] text-white/45">
-        <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-3 rounded-full bg-gold" /> {primaryLabel}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-3 rounded-full bg-chip-blue" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgb(var(--chip-blue-rgb)) 0 3px, transparent 3px 5px)' }} /> {secondaryLabel}
-        </span>
-      </div>
-    </div>
-  )
-}
+/*
+ * Plus de TrendChart ici : sa courbe sans axe superposait deux séries à
+ * DEUX échelles, la comparaison était trompeuse. La tendance de la Salle
+ * passe par deux ColumnChart du kit (charts.tsx), axe gradué, valeurs écrites.
+ */
 
 export type LiveTableStatus = 'waiting' | 'briefing' | 'playing' | 'cast'
 
@@ -606,6 +568,8 @@ export function ErrorState({
  * Indicateur de croissance : la valeur ET sa définition, écrites noir sur
  * blanc juste en dessous. Un chiffre dont on ignore la définition ne sert à
  * rien — l'exploitant doit pouvoir le défendre sans nous appeler (F45).
+ * `children` : un graphe du kit (répartition…) entre la valeur et sa
+ * définition, qui reste en dernier.
  */
 export function GrowthMetric({
   label,
@@ -613,23 +577,28 @@ export function GrowthMetric({
   detail,
   definition,
   tone = 'default',
+  children,
 }: {
   label: string
   value: string
   detail?: string
   definition: string
   tone?: 'default' | 'alert'
+  children?: ReactNode
 }) {
   return (
     <div
       className={cn(
-        'rounded-xl border p-3',
+        // min-w-0 : posée dans une grille, la carte (et le graphe qu'elle
+        // peut porter) doit pouvoir descendre sous la largeur de son contenu.
+        'min-w-0 rounded-xl border p-3',
         tone === 'alert' ? 'border-suit-red/35 bg-suit-red/[0.07]' : 'border-white/10 bg-white/[0.02]'
       )}
     >
       <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</p>
       <p className="mt-0.5 font-display text-2xl font-bold tabular-nums text-white">{value}</p>
       {detail && <p className="text-xs text-white/50">{detail}</p>}
+      {children && <div className="mt-2.5 min-w-0">{children}</div>}
       <p className="mt-1.5 border-t border-white/[0.07] pt-1.5 text-[11px] leading-relaxed text-white/40">
         {definition}
       </p>
