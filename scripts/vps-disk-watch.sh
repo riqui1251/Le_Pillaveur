@@ -26,6 +26,45 @@ THRESHOLD_PCT="${DISK_ALERT_PCT:-80}"
 PING_URL_FILE="/etc/le-pillaveur/disk-ping-url"
 NOW="[$(date -Is)]"
 
+# Fichier d'état disk.json, lu par l'onglet « Surveillance » de la supervision
+# (contrat : src/lib/ops-status-types.ts ; dossier monté en lecture seule dans
+# le conteneur par prod-deploy.sh). STATUS_DIR le déplace pour un essai local.
+# Le ping dit « ça a marché / pas marché » à healthchecks.io ; ce fichier dit
+# QUOI (pourcentage, seuil) aux fondateurs, sans ouvrir de session ssh.
+# write_status est la copie CONFORME de celle de scripts/vps-site-probe.sh (où
+# ses règles sont commentées) : chaque script est installé seul sous
+# /usr/local/bin, et src/lib/shell-scripts.test.ts vérifie qu'aucune copie ne
+# diverge. Écriture atomique, JSON valide, ne fait jamais échouer le script.
+STATUS_DIR="${STATUS_DIR:-/var/lib/le-pillaveur-status}"
+
+# write_status <job> <true|false|null> <code> <detail> [cle=entier ...]
+write_status() {
+  (
+    job="$1" ok="$2" code="$3" detail="${4:-}"
+    shift 4 || shift "$#"
+    case "$ok" in true|false|null) ;; *) ok=null ;; esac
+    detail=$(printf '%s' "$detail" | LC_ALL=C tr -d '"\\' | LC_ALL=C tr -c '[:print:]' ' ')
+    detail="${detail:0:200}"
+    metrics=""
+    for pair in "$@"; do
+      key="${pair%%=*}" val="${pair#*=}"
+      case "$key" in ''|*[!A-Za-z0-9_]*) continue ;; esac
+      case "$val" in ''|*[!0-9]*) continue ;; esac
+      metrics="${metrics:+$metrics,}\"$key\":$((10#$val))"
+    done
+    [ -d "$STATUS_DIR" ] || mkdir -p -m 755 "$STATUS_DIR" || exit 1
+    tmp=$(mktemp "$STATUS_DIR/.$job.json.XXXXXX") || exit 1
+    if printf '{"v":1,"job":"%s","ok":%s,"code":"%s","at":"%s","detail":"%s","metrics":{%s}}\n' \
+        "$job" "$ok" "$code" "$(date -Is)" "$detail" "$metrics" >"$tmp" \
+      && chmod 644 "$tmp" && mv -f "$tmp" "$STATUS_DIR/$job.json"; then
+      exit 0
+    fi
+    rm -f "$tmp"
+    exit 1
+  ) 2>/dev/null || echo "[$(date -Is)] etat $1 non ecrit dans $STATUS_DIR : l'onglet Surveillance le verra en retard" >&2 || true
+  return 0
+}
+
 PING_URL=""
 if [ -r "$PING_URL_FILE" ]; then
   PING_URL=$(head -n 1 "$PING_URL_FILE" | tr -d '[:space:]')
@@ -54,6 +93,9 @@ USED_PCT=$(df -P / 2>/dev/null | awk 'NR == 2 { sub("%", "", $5); print $5 }') |
 case "$USED_PCT" in
   ''|*[!0-9]*)
     echo "$NOW disk ECHEC : impossible de lire df -P / (rendu : « ${USED_PCT:-vide} »)"
+    # Pas de usedPct : la mesure a justement échoué ; write_status écarte de
+    # toute façon une valeur non entière.
+    write_status disk false df_failed "df -P / illisible (rendu : ${USED_PCT:-vide})" "thresholdPct=$THRESHOLD_PCT"
     ping_url /fail
     exit 1 ;;
 esac
@@ -64,13 +106,19 @@ esac
 # on veut quand même la mesure du disque.
 DOCKER_DF=$(docker system df 2>/dev/null || echo "docker system df indisponible")
 BUILD_CACHE=$(printf '%s\n' "$DOCKER_DF" | awk '/^Build Cache/ { print "cache de build docker récupérable : " $(NF-1) " " $NF }')
+# Même ligne, en ASCII pour le fichier d'état : seule la colonne RECLAIMABLE
+# ($6 : « Build Cache » compte pour deux champs), la seule qui dise quoi faire.
+CACHE_RECLAIM=$(printf '%s\n' "$DOCKER_DF" | awk '/^Build Cache/ { print $6 }')
+STATE_DETAIL="/ occupe a ${USED_PCT} % (seuil ${THRESHOLD_PCT} %), cache de build docker recuperable : ${CACHE_RECLAIM:-inconnu}"
 
 if [ "$USED_PCT" -ge "$THRESHOLD_PCT" ]; then
   echo "$NOW disk ALERTE : / occupé à ${USED_PCT} % (seuil ${THRESHOLD_PCT} %) — ${BUILD_CACHE:-docker injoignable}"
   printf '%s\n' "$DOCKER_DF" | sed 's/^/    /'
   echo "$NOW disk ALERTE : que faire -> docs/ops/ALERTES.md (section « disque »)"
+  write_status disk false over_threshold "$STATE_DETAIL" "usedPct=$USED_PCT" "thresholdPct=$THRESHOLD_PCT"
   ping_url /fail
   exit 1
 fi
 echo "$NOW disk OK : / occupé à ${USED_PCT} % (seuil ${THRESHOLD_PCT} %) — ${BUILD_CACHE:-docker injoignable}"
+write_status disk true ok "$STATE_DETAIL" "usedPct=$USED_PCT" "thresholdPct=$THRESHOLD_PCT"
 ping_url

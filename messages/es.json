@@ -4305,7 +4305,9 @@
       "bansShort": "Sanciones",
       "moderationShort": "Términos",
       "feedbackShort": "Reportes",
-      "feedbackResolvedShort": "Resueltos"
+      "feedbackResolvedShort": "Resueltos",
+      "ops": "Monitorización del servidor",
+      "opsShort": "Monitorización"
     },
     "moderation": {
       "title": "Filtro anti-insultos",
@@ -4910,7 +4912,8 @@
     "navGroups": {
       "analysis": "Análisis",
       "community": "Comunidad",
-      "moderation": "Moderación"
+      "moderation": "Moderación",
+      "server": "Servidor"
     },
     "journalFilter": {
       "showAll": "Mostrar todas las partidas"
@@ -4965,6 +4968,139 @@
       "pageSummary": "Página {page} de {pages} — {total} resultados",
       "previousPage": "Anterior",
       "nextPage": "Siguiente"
+    },
+    "ops": {
+      "refresh": "Actualizar",
+      "refreshedAt": "Actualizado a las {time}",
+      "refreshFailed": "No se pudo actualizar; se muestra el estado de las {time}:",
+      "loadError": "No se pudo cargar el estado del servidor.",
+      "forbidden": "Sesión caducada o acceso retirado: hay que volver a iniciar sesión.",
+      "jobs": {
+        "title": "Tareas del servidor",
+        "desc": "Las tareas root del VPS dejan un archivo de estado en cada ejecución. Horarios según el reloj del servidor, fechas en hora de París.",
+        "noStatusDir": "No se encuentra la carpeta de los archivos de estado en el contenedor.",
+        "noStatusDirHint": "El contenedor funciona sin el volumen de los archivos de estado: puede que las tareas se ejecuten con normalidad, simplemente esta pantalla no las ve. prod-deploy.sh y prod-db-restore.sh lo montan; un contenedor relanzado a mano probablemente lo omitió.",
+        "alertNote": "Esta pantalla no avisa a nadie: si el sitio cae, cae con él. La alerta por correo viene de healthchecks.io (check «site»), al que la sonda deja de avisar cuando el sitio ya no responde.",
+        "lastRun": "Última ejecución: {date} ({relative})",
+        "lastRunUnreadable": "Última ejecución: fecha ilegible",
+        "noRecord": "Ningún estado legible: archivo ausente (tarea nunca ejecutada) o no válido.",
+        "noRecordNoDir": "Ilegible: carpeta de estado no montada en el contenedor.",
+        "lateHint": "Ninguna ejecución desde hace más de {duration}: la tarea ya no se ejecuta, o el servidor estaba apagado.",
+        "detailLabel": "Detalle técnico escrito por la tarea"
+      },
+      "job": {
+        "probe": {
+          "name": "Sonda externa del sitio",
+          "cadence": "Cada 5 minutos"
+        },
+        "backupDaily": {
+          "name": "Copia de seguridad diaria",
+          "cadence": "Cada noche a las 3:00"
+        },
+        "backupHourly": {
+          "name": "Copia de seguridad horaria",
+          "cadence": "Cada hora de 18:00 a 2:00, y luego a las 4:00"
+        },
+        "offsite": {
+          "name": "Copia fuera del servidor",
+          "cadence": "Cada noche a las 3:15"
+        },
+        "disk": {
+          "name": "Vigilancia del disco",
+          "cadence": "Cada mañana a las 7:00"
+        }
+      },
+      "state": {
+        "ok": "OK",
+        "late": "Con retraso",
+        "failed": "Error",
+        "skipped": "Sin efecto",
+        "unknown": "Desconocido"
+      },
+      "codes": {
+        "probe": {
+          "ok": "El sitio responde en {ms} ms.",
+          "httpError": "El sitio respondió con el código HTTP {httpCode}.",
+          "keywordMissing": "El sitio responde, pero su control de salud no es bueno (base de datos o aplicación con fallos).",
+          "unreachable": "El sitio no responde (conexión imposible o tiempo de espera agotado)."
+        },
+        "backup": {
+          "ok": "Copia verificada y comprimida: {sizeMb} MB.",
+          "integrityFailed": "La copia no superó el control de integridad: apartada, puede que la base de datos esté dañada.",
+          "gzipFailed": "El archivo comprimido no se puede releer: copia descartada.",
+          "failed": "La copia de seguridad falló (código de salida {exitCode})."
+        },
+        "offsite": {
+          "ok": "Última copia de seguridad enviada fuera del servidor.",
+          "notConfigured": "Copia fuera del servidor sin configurar: no se envía nada.",
+          "noLocalBackup": "No hay ninguna copia local que enviar.",
+          "staleLocalBackup": "La última copia local es demasiado antigua: no se envía nada.",
+          "gzipFailed": "La copia local no se puede releer: no se envía nada.",
+          "failed": "El envío fuera del servidor falló."
+        },
+        "disk": {
+          "ok": "Disco ocupado al {usedPct}% (umbral {thresholdPct}%).",
+          "overThreshold": "Disco ocupado al {usedPct}%: umbral del {thresholdPct}% superado.",
+          "dfFailed": "No se pudo leer la ocupación del disco."
+        },
+        "unknown": "Código no reconocido por esta pantalla: {code}."
+      },
+      "live": {
+        "title": "En directo",
+        "desc": "El contenedor en el momento de la actualización. Nada de esto sobrevive a un reinicio, salvo el barrido de conservación (guardado en la base de datos).",
+        "version": "Versión",
+        "versionHint": "Commit en producción",
+        "uptime": "En línea desde hace",
+        "uptimeHint": "Iniciado el {date}",
+        "memory": "Memoria",
+        "memoryHint": "Heap de JavaScript: {value} MB",
+        "db": "Base de datos",
+        "dbUp": "En servicio",
+        "dbDown": "Fuera de servicio",
+        "dbHint": "Latencia de una consulta simple",
+        "dbDownHint": "La base de datos no responde",
+        "disk": "Disco libre",
+        "diskHint": "Alerta al {pct}% ocupado, reserva root incluida",
+        "diskOver": "Umbral superado: {used}% ocupado, reserva root incluida (alerta al {pct}%)",
+        "streams": "Flujos SSE",
+        "streamsHint": "{accounts, plural, =0 {ninguna cuenta} one {# cuenta} other {# cuentas}} · {max} como máximo por cuenta",
+        "crashes": "Fallos 24 h",
+        "crashesHint": "Detalle en La Sala",
+        "unreadable": "Ilegible"
+      },
+      "units": {
+        "ms": "{value} ms",
+        "s": "{value} s",
+        "mb": "{value} MB",
+        "pct": "{value}%"
+      },
+      "scheduler": {
+        "title": "Tareas programadas internas",
+        "names": {
+          "retention": "Barrido de conservación",
+          "tables": "Limpieza de mesas"
+        },
+        "cadence": {
+          "retention": "Cada noche a las 4:30",
+          "tables": "Cada 5 minutos"
+        },
+        "lastRun": "Última ejecución {relative} · {duration}",
+        "noRunYet": "Aún no desde el arranque",
+        "outcome": {
+          "done": "Terminada",
+          "failed": "Error",
+          "skipped": "Omitida"
+        },
+        "empty": "Ninguna tarea programada anunciada.",
+        "note": "Ejecuciones contadas desde el arranque del contenedor: un nuevo despliegue las pone a cero."
+      },
+      "retention": {
+        "lastRun": "Último barrido de conservación: {date} ({relative})",
+        "lastRunUnreadable": "Último barrido de conservación: fecha ilegible",
+        "never": "Ningún barrido de conservación registrado.",
+        "failedHint": "El último barrido terminó con un error: detalle en La Sala.",
+        "staleHint": "Más de {hours} h sin barrido: los plazos de conservación anunciados ya no están garantizados."
+      }
     }
   },
   "voice": {

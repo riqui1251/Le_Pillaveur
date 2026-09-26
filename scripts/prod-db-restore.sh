@@ -141,6 +141,13 @@ if ! docker image inspect "$SQLITE_IMAGE" >/dev/null 2>&1; then
   docker build -q -t "$SQLITE_IMAGE" -f "$(dirname "$0")/sqlite-tools.Dockerfile" "$(dirname "$0")" >/dev/null
 fi
 
+# Dossier d'etat monte en lecture seule au redemarrage (etape 7), comme au
+# deploiement : cree ici avec des droits connus plutot qu'invente par docker
+# au montage. ICI et pas a l'etape 7 : sous set -e, un sudo refuse doit
+# arreter le script AVANT que le conteneur soit coupe, pas apres.
+sudo mkdir -p /var/lib/le-pillaveur-status
+sudo chmod 755 /var/lib/le-pillaveur-status
+
 if [ "$RESTORE_DATA" = "1" ]; then
   # Un nom nu est cherche dans BACKUP_DIR, un chemin absolu est pris tel quel.
   case "$SNAPSHOT" in
@@ -276,7 +283,11 @@ fi
 # options, le conteneur tournerait sans plafond memoire ni rotation de
 # journaux jusqu'au deploiement suivant. --memory=1g est un plafond de
 # securite (283 Mio mesures le 21/09/2026), pas de swap, 512 pids, journaux
-# json-file en 5 x 20 Mo.
+# json-file en 5 x 20 Mo, et le dossier d'etat des taches root en lecture
+# seule (onglet « Surveillance ») — sans lui, le panneau d'un site restaure ne
+# verrait plus aucune tache jusqu'au deploiement suivant. Ce dossier a ete
+# cree avant toute coupure (apres la verification des images).
+# src/lib/shell-scripts.test.ts compare cette liste a RUN_ARGS.
 docker run -d \
   --name le-pillaveur \
   --restart always \
@@ -286,6 +297,7 @@ docker run -d \
   --log-opt max-size=20m --log-opt max-file=5 \
   -p 127.0.0.1:3000:3000 \
   -v "$DB_VOLUME:/app/prisma" \
+  -v /var/lib/le-pillaveur-status:/app/ops-status:ro \
   "${ENV_ARGS[@]}" \
   -e NODE_ENV=production \
   -e DATABASE_URL=file:/app/prisma/prod.db \

@@ -230,7 +230,12 @@ export function KpiPlaque({
           : 'border-gold/30 bg-cream text-[#24201A] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]'
       )}
     >
-      <p className={cn('text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]', alert ? 'text-cream/75' : 'text-[#6B6455]')}>
+      {/* En alerte, libellé et indice en crème PLEINE : sur le rouge d'enseigne,
+          /75 et /70 tombaient à ~3,4:1 et ~3,2:1, sous les 4,5:1 exigés pour
+          du texte de 10-11 px ; le crème plein donne ~5:1 (même /90 plafonne
+          à ~4,3:1). L'indice porte parfois l'information d'état (« La base ne
+          répond pas »). */}
+      <p className={cn('text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]', alert ? 'text-cream' : 'text-[#6B6455]')}>
         {label}
       </p>
       <p className="mt-0.5 flex items-baseline gap-1.5 font-display text-2xl font-bold tabular-nums sm:text-3xl">
@@ -241,7 +246,7 @@ export function KpiPlaque({
           </span>
         )}
       </p>
-      {hint && <p className={cn('mt-0.5 text-[11px]', alert ? 'text-cream/70' : 'text-[#6B6455]')}>{hint}</p>}
+      {hint && <p className={cn('mt-0.5 text-[11px]', alert ? 'text-cream' : 'text-[#6B6455]')}>{hint}</p>}
     </div>
   )
 }

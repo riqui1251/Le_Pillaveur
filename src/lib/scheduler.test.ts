@@ -42,9 +42,11 @@ vi.mock('@/lib/client-errors-server', () => ({
 import { validate } from 'node-cron'
 import {
   SCHEDULER_GUARD,
+  SCHEDULER_LAST_RUNS,
   runExclusive,
   runScheduledJob,
   scheduledJobs,
+  schedulerJobViews,
   shouldStartScheduler,
   startScheduledJobs,
 } from '@/lib/scheduler'
@@ -59,9 +61,13 @@ function serverEnv() {
   vi.stubEnv('VITEST', '')
 }
 
-/** Oublie que les tâches ont déjà été posées (la garde vit sur globalThis). */
+/**
+ * Oublie que les tâches ont déjà été posées (la garde vit sur globalThis), et
+ * leurs derniers tours (le registre aussi).
+ */
 function forgetScheduler() {
   delete (globalThis as Record<symbol, unknown>)[SCHEDULER_GUARD]
+  delete (globalThis as Record<symbol, unknown>)[SCHEDULER_LAST_RUNS]
 }
 
 /** Options passées à node-cron, par expression. */
@@ -204,6 +210,97 @@ describe('exécution des tâches', () => {
 
   it('ne lève pas sur un nom inconnu', async () => {
     await expect(runScheduledJob('inconnue')).resolves.toBe('unknown')
+  })
+})
+
+describe('dernier tour de chaque tâche (onglet « Surveillance »)', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  /** Dernier tour tel que l'annonce la vue, pour une tâche du contrat. */
+  const lastRunOf = (name: string) => schedulerJobViews().find((job) => job.name === name)?.lastRun
+
+  it('annonce les tâches du contrat, sans tour tant qu’elles n’ont pas tourné', () => {
+    expect(schedulerJobViews()).toEqual(
+      scheduledJobs().map((job) => ({ ...job, lastRun: null }))
+    )
+  })
+
+  it('retient le début et la durée d’un tour réussi', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-26T02:30:00.000Z'))
+    runRetentionSweepMock.mockImplementation(async () => {
+      // Le balayage « dure » 1,5 s.
+      vi.setSystemTime(new Date('2026-09-26T02:30:01.500Z'))
+    })
+
+    await expect(runScheduledJob('retention')).resolves.toBe('done')
+
+    expect(lastRunOf('retention')).toEqual({
+      at: '2026-09-26T02:30:00.000Z',
+      outcome: 'done',
+      durationMs: 1500,
+    })
+    // L'autre tâche n'a pas tourné : pas de témoin inventé.
+    expect(lastRunOf('tables')).toBeNull()
+  })
+
+  it('retient un échec, sans rien de l’erreur', async () => {
+    runRetentionSweepMock.mockRejectedValue(new Error('UNIQUE constraint failed: joueur@exemple.fr'))
+    await expect(runScheduledJob('retention')).resolves.toBe('failed')
+    const lastRun = lastRunOf('retention')
+    expect(lastRun).toMatchObject({ outcome: 'failed' })
+    expect(Object.keys(lastRun ?? {}).sort()).toEqual(['at', 'durationMs', 'outcome'])
+    expect(JSON.stringify(lastRun)).not.toMatch(/@/)
+  })
+
+  it('retient un tour sauté, puis le tour lent quand il finit', async () => {
+    // Horloge figée : sur l'horloge réelle, une suite chargée franchissait
+    // parfois une milliseconde entre le début et la fin du tour sauté
+    // (durationMs 1 au lieu de 0) — un test instable, pas un défaut.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-26T02:30:00.000Z'))
+    let finish!: () => void
+    runRetentionSweepMock.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve
+        })
+    )
+    const slow = runScheduledJob('retention')
+    await expect(runScheduledJob('retention')).resolves.toBe('skipped')
+    expect(lastRunOf('retention')).toMatchObject({ outcome: 'skipped', durationMs: 0 })
+
+    finish()
+    await expect(slow).resolves.toBe('done')
+    expect(lastRunOf('retention')).toMatchObject({ outcome: 'done' })
+  })
+
+  it('vit sur globalThis : une autre instance du module voit les mêmes tours', async () => {
+    // C'est la situation réelle : instrumentation.ts exécute les tâches, la
+    // route de supervision lit le registre, chacune avec SA copie du module.
+    await runScheduledJob('tables')
+    vi.resetModules()
+    const otherInstance = await import('@/lib/scheduler')
+    expect(otherInstance.schedulerJobViews().find((job) => job.name === 'tables')?.lastRun).toMatchObject({
+      outcome: 'done',
+    })
+  })
+
+  it('rend des copies : toucher à la vue ne change pas le registre', async () => {
+    await runScheduledJob('tables')
+    const views = schedulerJobViews()
+    const tables = views.find((job) => job.name === 'tables')!
+    tables.lastRun!.outcome = 'failed'
+    tables.cron = '* * * * *'
+    expect(lastRunOf('tables')).toMatchObject({ outcome: 'done' })
+    expect(scheduledJobs().find((job) => job.name === 'tables')?.cron).toBe('*/5 * * * *')
+  })
+
+  it('n’affiche pas un nom hors de la liste passé à runExclusive', async () => {
+    await runExclusive('bricolage', async () => {})
+    expect(schedulerJobViews().map((job) => job.name)).toEqual(['retention', 'tables'])
   })
 })
 

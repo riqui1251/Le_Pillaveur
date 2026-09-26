@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  canAccessSupervision,
   canManageUserFeedback,
+  canViewOpsStatus,
   canViewSupervisionAnalytics,
   canViewUserFeedback,
   USER_ROLES,
@@ -42,5 +44,30 @@ describe('roles — retours joueurs', () => {
   it('laisse la vue d\'ensemble au grade admin (inchangé)', () => {
     expect(canViewSupervisionAnalytics('moderator')).toBe(false)
     expect(canViewSupervisionAnalytics('admin')).toBe(true)
+  })
+})
+
+/**
+ * Onglet « Surveillance » : l'exploitation du serveur (sauvegardes, sonde,
+ * conteneur) ne regarde que le fondateur — pas même le super admin.
+ */
+describe('roles — surveillance du serveur', () => {
+  it('ne s’ouvre qu’au fondateur', () => {
+    expect(canViewOpsStatus('fondateur')).toBe(true)
+    for (const role of ['user', 'moderator', 'admin', 'superadmin']) {
+      expect(canViewOpsStatus(role), role).toBe(false)
+    }
+  })
+
+  it('ne se laisse pas tromper par un rôle inconnu ou mal écrit', () => {
+    for (const role of ['', 'Fondateur', 'FONDATEUR', ' fondateur', 'founder', 'root']) {
+      expect(canViewOpsStatus(role), JSON.stringify(role)).toBe(false)
+    }
+  })
+
+  it('reste un sous-ensemble de la Supervision', () => {
+    for (const role of USER_ROLES) {
+      if (canViewOpsStatus(role)) expect(canAccessSupervision(role)).toBe(true)
+    }
   })
 })

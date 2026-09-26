@@ -5,6 +5,7 @@ import { cleanupAbandonedRooms } from '@/lib/online-room'
 import { cleanupStaleCastRooms } from '@/lib/supervision-overview-server'
 import { closeOrphanGameSessions } from '@/lib/online/game-sessions'
 import { CLIENT_ERROR_RETENTION_DAYS, purgeOldClientErrors } from '@/lib/client-errors-server'
+import type { SchedulerJobView } from '@/lib/ops-status-types'
 
 /**
  * PLANIFICATEUR DU SERVEUR — les ménages qui ne dépendent plus du trafic.
@@ -136,19 +137,72 @@ const running = new Set<string>()
  */
 export type JobOutcome = 'done' | 'failed' | 'skipped'
 
+/** Dernier tour d'une tâche, tel que l'onglet « Surveillance » l'affiche. */
+type LastRun = NonNullable<SchedulerJobView['lastRun']>
+
+/**
+ * Registre des derniers tours, par nom de tâche, pour l'onglet « Surveillance »
+ * de la Supervision (src/lib/ops-live.ts) : jusqu'ici, savoir si le ménage de
+ * 4 h 30 était passé demandait de fouiller `docker logs`.
+ *
+ * Sur globalThis et non en variable de module, et pas seulement pour le
+ * rechargement à chaud : instrumentation.ts (qui EXÉCUTE les tâches) et la
+ * route /api/admin/ops-status (qui les LIT) sont compilés par Next dans des
+ * couches distinctes, chacune avec sa propre instance de ce module. Une Map de
+ * module resterait vide vue de la route ; globalThis est le seul objet que les
+ * deux partagent dans le processus (même raison que le client Prisma et le
+ * bus temps réel). `Symbol.for` : même clé d'une instance à l'autre.
+ *
+ * Rien n'est persisté : un redémarrage remet tout à « jamais passé depuis le
+ * démarrage », ce que dit le contrat. Une entrée par NOM, écrasée à chaque
+ * tour : la Map ne grossit pas avec le temps. Exportée pour les tests.
+ */
+export const SCHEDULER_LAST_RUNS: unique symbol = Symbol.for('lepillaveur.scheduler.lastRuns')
+
+type LastRunsGlobal = typeof globalThis & { [SCHEDULER_LAST_RUNS]?: Map<string, LastRun> }
+
+function lastRuns(): Map<string, LastRun> {
+  const globalWithRuns = globalThis as LastRunsGlobal
+  let runs = globalWithRuns[SCHEDULER_LAST_RUNS]
+  if (!runs) {
+    runs = new Map()
+    globalWithRuns[SCHEDULER_LAST_RUNS] = runs
+  }
+  return runs
+}
+
 /**
  * Enveloppe de tout ce que lance le planificateur :
  *  - JAMAIS deux exécutions concurrentes de la même tâche — un balayage plus
  *    long que sa cadence empilerait sinon les passages jusqu'à saturer la
  *    base (mémoire seulement : voir l'en-tête, un seul conteneur) ;
  *  - aucune erreur ne s'échappe : une tâche qui lève est journalisée, et le
- *    processus continue.
+ *    processus continue ;
+ *  - chaque tour, même sauté, laisse son témoin dans le registre ci-dessus.
+ *    `at` est le DÉBUT du tour (il tombe sur la cadence : « 04:30 », pas
+ *    « 04:30:12 »), et l'entrée est celle du dernier tour TERMINÉ : un tour
+ *    sauté pendant un balayage lent est écrasé quand ce balayage finit.
  * Exportée pour les tests.
  */
 export async function runExclusive(
   name: string,
   run: () => Promise<unknown>
 ): Promise<JobOutcome> {
+  const startedAt = Date.now()
+  const outcome = await runLocked(name, run)
+  // Après coup et hors du try de runLocked : l'enregistrement ne fait que des
+  // opérations qui ne lèvent pas (Map.set, date valide), il ne peut ni changer
+  // l'issue du tour ni rendre le verrou plus tard.
+  lastRuns().set(name, {
+    at: new Date(startedAt).toISOString(),
+    outcome,
+    durationMs: Math.max(0, Date.now() - startedAt),
+  })
+  return outcome
+}
+
+/** Le verrou et l'isolement des erreurs de runExclusive, sans le témoin. */
+async function runLocked(name: string, run: () => Promise<unknown>): Promise<JobOutcome> {
   if (running.has(name)) {
     console.warn(`[scheduler] ${name} : tour précédent encore en cours, ce tour est sauté`)
     return 'skipped'
@@ -179,6 +233,21 @@ export async function runScheduledJob(name: string): Promise<JobOutcome | 'unkno
     return 'unknown'
   }
   return runExclusive(job.name, job.run)
+}
+
+/**
+ * Les tâches annoncées, chacune avec son dernier tour depuis le démarrage (null
+ * tant qu'elle n'a pas tourné) : ce que l'onglet « Surveillance » affiche.
+ * Recopiées comme scheduledJobs : l'appelant ne peut pas toucher au registre.
+ * Seules les tâches de JOBS apparaissent — un nom passé à runExclusive hors de
+ * la liste (tests) reste invisible.
+ */
+export function schedulerJobViews(): SchedulerJobView[] {
+  const runs = lastRuns()
+  return scheduledJobs().map((job) => {
+    const lastRun = runs.get(job.name)
+    return { ...job, lastRun: lastRun ? { ...lastRun } : null }
+  })
 }
 
 /**

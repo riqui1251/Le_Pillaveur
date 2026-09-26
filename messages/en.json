@@ -4305,7 +4305,9 @@
       "bansShort": "Sanctions",
       "moderationShort": "Terms",
       "feedbackShort": "Reports",
-      "feedbackResolvedShort": "Resolved"
+      "feedbackResolvedShort": "Resolved",
+      "ops": "Server monitoring",
+      "opsShort": "Monitoring"
     },
     "moderation": {
       "title": "Profanity filter",
@@ -4910,7 +4912,8 @@
     "navGroups": {
       "analysis": "Analytics",
       "community": "Community",
-      "moderation": "Moderation"
+      "moderation": "Moderation",
+      "server": "Server"
     },
     "journalFilter": {
       "showAll": "Show all games"
@@ -4965,6 +4968,139 @@
       "pageSummary": "Page {page} of {pages} — {total} results",
       "previousPage": "Previous",
       "nextPage": "Next"
+    },
+    "ops": {
+      "refresh": "Refresh",
+      "refreshedAt": "Refreshed at {time}",
+      "refreshFailed": "Couldn't refresh, showing the status from {time}:",
+      "loadError": "Couldn't load the server status.",
+      "forbidden": "Session expired or access removed: sign in again.",
+      "jobs": {
+        "title": "Server jobs",
+        "desc": "The VPS root jobs drop a status file on every run. Schedules follow the server clock; dates are shown in Paris time.",
+        "noStatusDir": "Status file folder not found in the container.",
+        "noStatusDirHint": "The container is running without the status file volume: the jobs may well be running, this screen just can’t see them. prod-deploy.sh and prod-db-restore.sh mount it; a container restarted by hand probably left it out.",
+        "alertNote": "This screen alerts no one: if the site goes down, it goes down with it. The email alert comes from healthchecks.io (the “site” check), which the probe stops pinging once the site no longer responds.",
+        "lastRun": "Last run: {date} ({relative})",
+        "lastRunUnreadable": "Last run: unreadable date",
+        "noRecord": "No readable status: file missing (job never ran) or invalid.",
+        "noRecordNoDir": "Unreadable: status folder not mounted in the container.",
+        "lateHint": "No run for more than {duration}: the job has stopped running, or the server was off.",
+        "detailLabel": "Technical detail written by the job"
+      },
+      "job": {
+        "probe": {
+          "name": "External site probe",
+          "cadence": "Every 5 minutes"
+        },
+        "backupDaily": {
+          "name": "Daily backup",
+          "cadence": "Every night at 3 am"
+        },
+        "backupHourly": {
+          "name": "Hourly backup",
+          "cadence": "Every hour from 6 pm to 2 am, then at 4 am"
+        },
+        "offsite": {
+          "name": "Off-server copy",
+          "cadence": "Every night at 3:15 am"
+        },
+        "disk": {
+          "name": "Disk watch",
+          "cadence": "Every morning at 7 am"
+        }
+      },
+      "state": {
+        "ok": "OK",
+        "late": "Late",
+        "failed": "Failed",
+        "skipped": "No effect",
+        "unknown": "Unknown"
+      },
+      "codes": {
+        "probe": {
+          "ok": "The site responds in {ms} ms.",
+          "httpError": "The site responded with HTTP code {httpCode}.",
+          "keywordMissing": "The site responds, but its health check isn't good (database or app at fault).",
+          "unreachable": "The site doesn't respond (connection failed or timed out)."
+        },
+        "backup": {
+          "ok": "Copy verified and compressed: {sizeMb} MB.",
+          "integrityFailed": "The copy failed the integrity check: set aside, the database may be damaged.",
+          "gzipFailed": "The compressed archive can't be read back: backup discarded.",
+          "failed": "The backup failed (exit code {exitCode})."
+        },
+        "offsite": {
+          "ok": "Latest backup sent off the server.",
+          "notConfigured": "Off-server copy not configured: nothing is sent.",
+          "noLocalBackup": "No local backup to send.",
+          "staleLocalBackup": "The latest local backup is too old: nothing is sent.",
+          "gzipFailed": "The local backup can't be read back: nothing is sent.",
+          "failed": "Sending off the server failed."
+        },
+        "disk": {
+          "ok": "Disk {usedPct}% full (threshold {thresholdPct}%).",
+          "overThreshold": "Disk {usedPct}% full: {thresholdPct}% threshold exceeded.",
+          "dfFailed": "Couldn't read disk usage."
+        },
+        "unknown": "Code not recognised by this screen: {code}."
+      },
+      "live": {
+        "title": "Live",
+        "desc": "The container at the time of the refresh. None of this survives a restart, except the retention sweep (kept in the database).",
+        "version": "Version",
+        "versionHint": "Live commit",
+        "uptime": "Up for",
+        "uptimeHint": "Started on {date}",
+        "memory": "Memory",
+        "memoryHint": "JavaScript heap: {value} MB",
+        "db": "Database",
+        "dbUp": "Up",
+        "dbDown": "Down",
+        "dbHint": "Latency of a simple query",
+        "dbDownHint": "The database isn't responding",
+        "disk": "Free disk",
+        "diskHint": "Alert at {pct}% used, root reserve included",
+        "diskOver": "Threshold exceeded: {used}% used, root reserve included (alert at {pct}%)",
+        "streams": "SSE streams",
+        "streamsHint": "{accounts, plural, =0 {no accounts} one {# account} other {# accounts}} · {max} max per account",
+        "crashes": "Crashes (24 h)",
+        "crashesHint": "Details in The Room",
+        "unreadable": "Unreadable"
+      },
+      "units": {
+        "ms": "{value} ms",
+        "s": "{value} s",
+        "mb": "{value} MB",
+        "pct": "{value}%"
+      },
+      "scheduler": {
+        "title": "Internal scheduled jobs",
+        "names": {
+          "retention": "Retention sweep",
+          "tables": "Table clean-up"
+        },
+        "cadence": {
+          "retention": "Every night at 4:30 am",
+          "tables": "Every 5 minutes"
+        },
+        "lastRun": "Last run {relative} · {duration}",
+        "noRunYet": "Not yet since startup",
+        "outcome": {
+          "done": "Done",
+          "failed": "Failed",
+          "skipped": "Skipped"
+        },
+        "empty": "No scheduled jobs reported.",
+        "note": "Runs counted since the container started: a redeploy resets them."
+      },
+      "retention": {
+        "lastRun": "Last retention sweep: {date} ({relative})",
+        "lastRunUnreadable": "Last retention sweep: unreadable date",
+        "never": "No retention sweep recorded.",
+        "failedHint": "The last sweep ended with an error: details in The Room.",
+        "staleHint": "More than {hours} h without a sweep: the advertised retention periods are no longer guaranteed."
+      }
     }
   },
   "voice": {

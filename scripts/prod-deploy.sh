@@ -116,6 +116,21 @@ echo "=== Image d'outils SQLite ==="
 # manque.
 docker build -q -t "$SQLITE_IMAGE" -f "$APP_DIR/scripts/sqlite-tools.Dockerfile" "$APP_DIR/scripts" >/dev/null
 
+echo "=== Dossier d'etat des taches root (onglet Surveillance) ==="
+# Monte en lecture seule dans le conteneur (RUN_ARGS, plus bas). Il doit
+# exister AVANT la sonde `docker create`, avec des droits CONNUS : absent,
+# `-v` le laisserait creer en silence par le demon (comportement historique
+# de docker, que --mount refuse deja) ; cree a la main en 700, il serait
+# illisible pour l'UID 1001 de l'application et le panneau ne pourrait rien
+# en lire. Fait ICI, avant toute etape destructive : sous set -e, un sudo
+# refuse arrete le deploiement alors que rien n'a bouge — juste avant le
+# redemarrage, il l'arreterait apres la migration, site peut-etre coupe.
+# Sur un VPS ou vps-secure-max.sh n'a pas encore ete rejoue, c'est ici qu'il
+# nait, vide : chaque tache y apparait « inconnue » jusqu'a son premier
+# passage, ce qui est la verite.
+sudo mkdir -p /var/lib/le-pillaveur-status
+sudo chmod 755 /var/lib/le-pillaveur-status
+
 echo "=== Conservation de l'image precedente ==="
 # A faire AVANT le build : une fois `le-pillaveur:latest` reconstruit, l'image
 # qui tournait n'a plus de tag et peut disparaitre au prochain `docker prune`.
@@ -449,8 +464,16 @@ fi
 #     a relire les derniers jours avec `docker logs`. Ces deux options ne sont
 #     valides QUE pour les pilotes json-file et local : sur un demon configure
 #     en journald/syslog, docker refuse le conteneur (« unknown log opt »).
+#   -v /var/lib/le-pillaveur-status:/app/ops-status:ro : fichiers d'etat des
+#     taches root (sauvegardes, copie off-site, veille disque, sonde du site),
+#     lus par l'onglet « Surveillance » de la supervision (fondateurs). En
+#     LECTURE SEULE : le conteneur n'a pas a ecrire l'etat d'une tache qu'il
+#     ne fait pas, et une faille applicative ne doit pas pouvoir peindre en
+#     vert une sauvegarde ratee. Chemin en dur, le meme que dans
+#     vps-secure-max.sh et que la valeur par defaut des scripts ; cote
+#     application, OPS_STATUS_DIR vaut /app/ops-status par defaut.
 # Les memes options sont reprises par scripts/prod-db-restore.sh (retour
-# arriere) : les garder identiques.
+# arriere) : les garder identiques (src/lib/shell-scripts.test.ts le verifie).
 RUN_ARGS=(
   --restart always
   --memory=1g --memory-swap=1g
@@ -459,6 +482,7 @@ RUN_ARGS=(
   --log-opt max-size=20m --log-opt max-file=5
   -p 127.0.0.1:3000:3000
   -v "$DB_VOLUME:/app/prisma"
+  -v /var/lib/le-pillaveur-status:/app/ops-status:ro
   "${ENV_ARGS[@]}"
   -e NODE_ENV=production
   -e DATABASE_URL=file:/app/prisma/prod.db
@@ -470,6 +494,8 @@ RUN_ARGS=(
 # reserve qu'au start), puis on jette le conteneur sonde. Un echec ici laisse
 # l'ancien conteneur en place : le site tourne toujours, sur l'ancien code
 # mais la base est deja migree — corriger l'option puis relancer le script.
+# (Le dossier monte en lecture seule, /var/lib/le-pillaveur-status, existe
+# deja : il est cree plus haut, avant toute etape destructive.)
 docker rm -f le-pillaveur-probe >/dev/null 2>&1 || true
 if ! docker create --name le-pillaveur-probe "${RUN_ARGS[@]}" le-pillaveur:latest >/dev/null; then
   echo "ECHEC DEPLOY : le demon docker refuse les options du conteneur (message ci-dessus)."

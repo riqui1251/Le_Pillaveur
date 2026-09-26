@@ -4305,7 +4305,9 @@
       "bansShort": "Sanctions",
       "moderationShort": "Termes",
       "feedbackShort": "Signalements",
-      "feedbackResolvedShort": "Traités"
+      "feedbackResolvedShort": "Traités",
+      "ops": "Surveillance du serveur",
+      "opsShort": "Surveillance"
     },
     "moderation": {
       "title": "Filtre anti-insultes",
@@ -4910,7 +4912,8 @@
     "navGroups": {
       "analysis": "Analyse",
       "community": "Communauté",
-      "moderation": "Modération"
+      "moderation": "Modération",
+      "server": "Serveur"
     },
     "journalFilter": {
       "showAll": "Afficher toutes les parties"
@@ -4965,6 +4968,139 @@
       "pageSummary": "Page {page} sur {pages} — {total} résultats",
       "previousPage": "Précédent",
       "nextPage": "Suivant"
+    },
+    "ops": {
+      "refresh": "Actualiser",
+      "refreshedAt": "Actualisé à {time}",
+      "refreshFailed": "Actualisation impossible, état de {time} affiché :",
+      "loadError": "Impossible de charger l'état du serveur.",
+      "forbidden": "Session expirée ou accès retiré : reconnectez-vous.",
+      "jobs": {
+        "title": "Tâches du serveur",
+        "desc": "Les tâches root du VPS déposent un fichier d'état à chaque passage. Cadences à l'horloge du serveur, dates à l'heure de Paris.",
+        "noStatusDir": "Dossier des fichiers d'état introuvable dans le conteneur.",
+        "noStatusDirHint": "Le conteneur tourne sans le volume des fichiers d'état : les tâches tournent peut-être normalement, cet écran ne les voit simplement pas. prod-deploy.sh et prod-db-restore.sh le montent ; un conteneur relancé à la main l'a sans doute oublié.",
+        "alertNote": "Cet écran n'alerte personne : si le site tombe, il tombe avec lui. L'alerte e-mail vient de healthchecks.io (check « site »), que la sonde cesse de prévenir quand le site ne répond plus.",
+        "lastRun": "Dernier passage : {date} ({relative})",
+        "lastRunUnreadable": "Dernier passage : date illisible",
+        "noRecord": "Aucun état lisible : fichier absent (tâche jamais passée) ou invalide.",
+        "noRecordNoDir": "Non lisible : dossier d'état non monté dans le conteneur.",
+        "lateHint": "Aucun passage depuis plus de {duration} : la tâche ne tourne plus, ou le serveur était éteint.",
+        "detailLabel": "Détail technique écrit par la tâche"
+      },
+      "job": {
+        "probe": {
+          "name": "Sonde externe du site",
+          "cadence": "Toutes les 5 minutes"
+        },
+        "backupDaily": {
+          "name": "Sauvegarde quotidienne",
+          "cadence": "Chaque nuit à 3 h"
+        },
+        "backupHourly": {
+          "name": "Sauvegarde horaire",
+          "cadence": "Chaque heure de 18 h à 2 h, puis à 4 h"
+        },
+        "offsite": {
+          "name": "Copie hors serveur",
+          "cadence": "Chaque nuit à 3 h 15"
+        },
+        "disk": {
+          "name": "Veille du disque",
+          "cadence": "Chaque matin à 7 h"
+        }
+      },
+      "state": {
+        "ok": "OK",
+        "late": "En retard",
+        "failed": "Échec",
+        "skipped": "Sans effet",
+        "unknown": "Inconnu"
+      },
+      "codes": {
+        "probe": {
+          "ok": "Le site répond en {ms} ms.",
+          "httpError": "Le site a répondu avec le code HTTP {httpCode}.",
+          "keywordMissing": "Le site répond, mais son bilan de santé n'est pas bon (base ou application en défaut).",
+          "unreachable": "Le site ne répond pas (connexion impossible ou délai dépassé)."
+        },
+        "backup": {
+          "ok": "Copie vérifiée et compressée : {sizeMb} Mo.",
+          "integrityFailed": "La copie a échoué au contrôle d'intégrité : mise de côté, la base est peut-être abîmée.",
+          "gzipFailed": "L'archive compressée ne se relit pas : sauvegarde écartée.",
+          "failed": "La sauvegarde a échoué (code de sortie {exitCode})."
+        },
+        "offsite": {
+          "ok": "Dernière sauvegarde envoyée hors du serveur.",
+          "notConfigured": "Copie hors serveur non configurée : rien n'est envoyé.",
+          "noLocalBackup": "Aucune sauvegarde locale à envoyer.",
+          "staleLocalBackup": "La dernière sauvegarde locale est trop ancienne : rien n'est envoyé.",
+          "gzipFailed": "La sauvegarde locale ne se relit pas : rien n'est envoyé.",
+          "failed": "L'envoi hors serveur a échoué."
+        },
+        "disk": {
+          "ok": "Disque occupé à {usedPct} % (seuil {thresholdPct} %).",
+          "overThreshold": "Disque occupé à {usedPct} % : seuil de {thresholdPct} % dépassé.",
+          "dfFailed": "Lecture de l'occupation du disque impossible."
+        },
+        "unknown": "Code non reconnu par cet écran : {code}."
+      },
+      "live": {
+        "title": "En direct",
+        "desc": "Le conteneur au moment de l'actualisation. Rien de tout cela ne survit à un redémarrage, sauf le balayage de conservation (gardé en base).",
+        "version": "Version",
+        "versionHint": "Commit en ligne",
+        "uptime": "En ligne depuis",
+        "uptimeHint": "Démarré le {date}",
+        "memory": "Mémoire",
+        "memoryHint": "Tas JavaScript : {value} Mo",
+        "db": "Base",
+        "dbUp": "En service",
+        "dbDown": "Hors service",
+        "dbHint": "Latence d'une requête simple",
+        "dbDownHint": "La base ne répond pas",
+        "disk": "Disque libre",
+        "diskHint": "Alerte à {pct} % occupé, réserve root comprise",
+        "diskOver": "Seuil dépassé : {used} % occupé, réserve root comprise (alerte à {pct} %)",
+        "streams": "Flux SSE",
+        "streamsHint": "{accounts, plural, =0 {aucun compte} one {# compte} other {# comptes}} · {max} au plus par compte",
+        "crashes": "Plantages 24 h",
+        "crashesHint": "Détail dans La Salle",
+        "unreadable": "Illisible"
+      },
+      "units": {
+        "ms": "{value} ms",
+        "s": "{value} s",
+        "mb": "{value} Mo",
+        "pct": "{value} %"
+      },
+      "scheduler": {
+        "title": "Tâches planifiées internes",
+        "names": {
+          "retention": "Balayage de conservation",
+          "tables": "Ménage des tables"
+        },
+        "cadence": {
+          "retention": "Chaque nuit à 4 h 30",
+          "tables": "Toutes les 5 minutes"
+        },
+        "lastRun": "Dernier tour {relative} · {duration}",
+        "noRunYet": "Pas encore depuis le démarrage",
+        "outcome": {
+          "done": "Terminé",
+          "failed": "Échec",
+          "skipped": "Sauté"
+        },
+        "empty": "Aucune tâche planifiée annoncée.",
+        "note": "Tours comptés depuis le démarrage du conteneur : un redéploiement les remet à zéro."
+      },
+      "retention": {
+        "lastRun": "Dernier balayage de conservation : {date} ({relative})",
+        "lastRunUnreadable": "Dernier balayage de conservation : date illisible",
+        "never": "Aucun balayage de conservation enregistré.",
+        "failedHint": "Le dernier balayage s'est terminé en erreur : détail dans La Salle.",
+        "staleHint": "Plus de {hours} h sans balayage : les durées de conservation annoncées ne sont plus garanties."
+      }
     }
   },
   "voice": {

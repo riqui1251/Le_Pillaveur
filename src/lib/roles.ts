@@ -145,6 +145,22 @@ export function canManageUserFeedback(role: string): boolean {
   return roleRank(role) >= ROLE_RANK.admin
 }
 
+/**
+ * Onglet « Surveillance » (état des sauvegardes, de la copie off-site, de la
+ * sonde externe et du conteneur) : FONDATEURS SEULEMENT.
+ *
+ * Ce n'est pas de la modération : c'est l'exploitation du serveur, que seul le
+ * fondateur mène (accès root au VPS, secrets des alertes). Un admin ne pourrait
+ * rien faire d'une sauvegarde en échec, et l'écran dit précisément quand le
+ * site n'a plus de sauvegarde récente — une information qu'on ne diffuse pas
+ * plus loin que ceux qui peuvent la corriger. Égalité stricte sur le rôle
+ * normalisé plutôt qu'un rang minimal : un grade ajouté un jour au-dessus
+ * n'hériterait pas de cet accès sans décision explicite.
+ */
+export function canViewOpsStatus(role: string): boolean {
+  return normalizeRole(role) === 'fondateur'
+}
+
 export function assignableRoles(actorRole: string): UserRole[] {
   if (!canAssignRoles(actorRole)) return []
   return USER_ROLES.filter((r) => {

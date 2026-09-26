@@ -41,6 +41,7 @@ import {
   Sparkles,
   RefreshCw,
   UserCheck,
+  ServerCog,
 } from 'lucide-react'
 import { deviceLabel } from '@/lib/device-from-user-agent'
 import { isGuestPurgeOverdue, parseAccountDeleteLogDetail, type AccountKind } from '@/lib/account-kind'
@@ -60,6 +61,7 @@ import {
   canModifyTarget,
   canDeleteTarget,
   canViewAccountActivity,
+  canViewOpsStatus,
   canViewSupervisionAnalytics,
   canViewSupervisionBans,
   canViewUserFeedback,
@@ -101,6 +103,7 @@ import { NameModerationAttemptsPanel } from '@/components/supervision/NameModera
 import { CosmeticGrantsDialog } from '@/components/supervision/CosmeticGrantsDialog'
 import { GameSessionsPanel } from '@/components/supervision/GameSessionsPanel'
 import { ClientErrorsPanel } from '@/components/supervision/ClientErrorsPanel'
+import { OpsStatusPanel } from '@/components/supervision/OpsStatusPanel'
 import { ACCOUNT_KIND_BADGES, AccountKindBadge } from '@/components/supervision/AccountKindBadge'
 import {
   SupervisionShell,
@@ -2541,6 +2544,9 @@ function SupervisionDashboard() {
   const showAnalytics = user ? canViewSupervisionAnalytics(user.role) : false
   const showBansTab = user ? canViewSupervisionBans(user.role) : false
   const showFeedbackTab = user ? canViewUserFeedback(user.role) : false
+  // Surveillance du serveur : fondateurs seulement. La route le vérifie
+  // aussi ; ici, c'est seulement ne pas montrer un onglet qui répondrait 403.
+  const showOpsTab = user ? canViewOpsStatus(user.role) : false
   // Lire un retour est ouvert aux modérateurs, le CLORE reste admin+ (F44).
   const canTriageFeedback = user ? canManageUserFeedback(user.role) : false
   const defaultTab = showAnalytics ? 'overview' : 'accounts'
@@ -2553,8 +2559,9 @@ function SupervisionDashboard() {
     if (showBansTab) tabs.push('bans')
     if (canEditAccounts) tabs.push('moderation')
     if (showFeedbackTab) tabs.push('feedback', 'feedback-resolved')
+    if (showOpsTab) tabs.push('ops')
     return tabs
-  }, [showAnalytics, showBansTab, canEditAccounts, showFeedbackTab])
+  }, [showAnalytics, showBansTab, canEditAccounts, showFeedbackTab, showOpsTab])
 
   const subtitle = showAnalytics
     ? t('subtitles.full')
@@ -2566,7 +2573,7 @@ function SupervisionDashboard() {
   // ce qui n'est pas résolu) ou « résolus ». Plus de tri côté navigateur.
   const feedbackScope = activeTab === 'feedback-resolved' ? 'resolved' : 'active'
 
-  // Navigation groupée par famille (Analyse / Communauté / Modération).
+  // Navigation groupée par famille (Analyse / Communauté / Modération / Serveur).
   const navGroups = useMemo<SupervisionNavGroup[]>(() => {
     const groups: SupervisionNavGroup[] = []
     if (showAnalytics) {
@@ -2615,12 +2622,22 @@ function SupervisionDashboard() {
       })
     }
     if (moderation.items.length > 0) groups.push(moderation)
+
+    // Groupe à part, en dernier : l'état de la machine n'est ni de l'analyse
+    // ni de la modération, et seuls les fondateurs le voient.
+    if (showOpsTab) {
+      groups.push({
+        label: t('navGroups.server'),
+        items: [{ value: 'ops', label: t('tabs.opsShort'), icon: ServerCog }],
+      })
+    }
     return groups
   }, [
     showAnalytics,
     showBansTab,
     canEditAccounts,
     showFeedbackTab,
+    showOpsTab,
     accountCounts?.total,
     bans.length,
     activeFeedbackTotal,
@@ -4633,6 +4650,15 @@ function SupervisionDashboard() {
                 nextLabel={t('states.nextPage')}
               />
           </SectionCard>
+        </TabsContent>
+        )}
+
+        {/* Surveillance : panneau autonome (route /api/admin/ops-status). Monté
+            seulement onglet ouvert, son rafraîchissement de 60 s s'arrête
+            avec lui. */}
+        {showOpsTab && (
+        <TabsContent value="ops" className="space-y-4">
+          <OpsStatusPanel />
         </TabsContent>
         )}
       </Tabs>

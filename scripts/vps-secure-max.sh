@@ -10,6 +10,15 @@ BACKUP_SCRIPT="/usr/local/bin/le-pillaveur-db-backup.sh"
 # n'exécute ainsi jamais un fichier de $APP_DIR, que `ubuntu` peut modifier.
 DISK_SCRIPT="/usr/local/bin/le-pillaveur-disk-watch.sh"
 OFFSITE_SCRIPT="/usr/local/bin/le-pillaveur-db-backup-offsite.sh"
+# Sonde du site (scripts/vps-site-probe.sh), même mécanisme de recopie.
+PROBE_SCRIPT="/usr/local/bin/le-pillaveur-site-probe.sh"
+# Dossier des fichiers d'état que ces tâches écrivent pour l'onglet
+# « Surveillance » de la supervision. Chemin FIXE, volontairement pas
+# surchargeable ici : prod-deploy.sh et prod-db-restore.sh le montent en dur
+# (`-v /var/lib/le-pillaveur-status:/app/ops-status:ro`), et c'est aussi la
+# valeur par défaut de STATUS_DIR dans chaque script. En déplacer un seul
+# rendrait le panneau aveugle sans la moindre erreur.
+STATUS_DIR="/var/lib/le-pillaveur-status"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DB_VOLUME="${DB_VOLUME:-le-pillaveur-db}"
 # UID/GID du propriétaire de prod.db : l'utilisateur `nextjs` du Dockerfile.
@@ -59,6 +68,19 @@ docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c '
   fi
   ls -la /data/
 '
+
+echo "===== 2b) DOSSIER D'ÉTAT DES TÂCHES (onglet Surveillance) ====="
+# Chaque tâche root (sauvegardes, copie off-site, veille disque, sonde du site)
+# y dépose son dernier résultat, <tâche>.json. Le conteneur le lit en lecture
+# SEULE (prod-deploy.sh) : 755 root pour le dossier, 644 pour les fichiers
+# (posés par write_status). Aucune donnée personnelle dedans — des codes, des
+# dates, des nombres, un nom de fichier de sauvegarde —, et surtout pas les
+# URL de ping, qui restent dans /etc/le-pillaveur (700). Créé AVANT la
+# première sauvegarde de la section 4, pour qu'elle y écrive déjà.
+sudo mkdir -p "$STATUS_DIR"
+sudo chmod 755 "$STATUS_DIR"
+sudo chown root:root "$STATUS_DIR"
+echo "$STATUS_DIR -> $(stat -c '%a %U:%G' "$STATUS_DIR")"
 
 echo "===== 3) SAUVEGARDE DB (quotidienne 03:00, horaire 18 h - 04 h) ====="
 # /!\ À rejouer LE SOIR MÊME d'un déploiement, avant 03:00 : le script de
@@ -135,16 +157,67 @@ ping_url() {
     || echo "[$(date -Is)] ping${suffix} impossible : la sauvegarde n'en dépend pas, mais l'alerte externe est aveugle"
 }
 
+# Fichier d'état backup-daily.json / backup-hourly.json, lu par l'onglet
+# « Surveillance » de la supervision (contrat : src/lib/ops-status-types.ts ;
+# dossier monté en lecture seule dans le conteneur par prod-deploy.sh).
+# L'horaire n'a pas de ping de succès : sans ce fichier, rien hors du journal
+# ne disait qu'il tournait encore. STATUS_DIR le déplace pour un essai local.
+# write_status est la copie CONFORME de celle de scripts/vps-site-probe.sh (où
+# ses règles sont commentées) : chaque script est installé seul sous
+# /usr/local/bin, et src/lib/shell-scripts.test.ts vérifie qu'aucune copie ne
+# diverge. Écriture atomique, JSON valide, ne fait jamais échouer la sauvegarde.
+STATUS_DIR="${STATUS_DIR:-/var/lib/le-pillaveur-status}"
+
+# write_status <job> <true|false|null> <code> <detail> [cle=entier ...]
+write_status() {
+  (
+    job="$1" ok="$2" code="$3" detail="${4:-}"
+    shift 4 || shift "$#"
+    case "$ok" in true|false|null) ;; *) ok=null ;; esac
+    detail=$(printf '%s' "$detail" | LC_ALL=C tr -d '"\\' | LC_ALL=C tr -c '[:print:]' ' ')
+    detail="${detail:0:200}"
+    metrics=""
+    for pair in "$@"; do
+      key="${pair%%=*}" val="${pair#*=}"
+      case "$key" in ''|*[!A-Za-z0-9_]*) continue ;; esac
+      case "$val" in ''|*[!0-9]*) continue ;; esac
+      metrics="${metrics:+$metrics,}\"$key\":$((10#$val))"
+    done
+    [ -d "$STATUS_DIR" ] || mkdir -p -m 755 "$STATUS_DIR" || exit 1
+    tmp=$(mktemp "$STATUS_DIR/.$job.json.XXXXXX") || exit 1
+    if printf '{"v":1,"job":"%s","ok":%s,"code":"%s","at":"%s","detail":"%s","metrics":{%s}}\n' \
+        "$job" "$ok" "$code" "$(date -Is)" "$detail" "$metrics" >"$tmp" \
+      && chmod 644 "$tmp" && mv -f "$tmp" "$STATUS_DIR/$job.json"; then
+      exit 0
+    fi
+    rm -f "$tmp"
+    exit 1
+  ) 2>/dev/null || echo "[$(date -Is)] etat $1 non ecrit dans $STATUS_DIR : l'onglet Surveillance le verra en retard" >&2 || true
+  return 0
+}
+
+# Cause de l'échec pour le fichier d'état, posée juste avant chaque étape qui
+# peut échouer : `failed` (+ code de sortie) couvre tout ce qui n'est ni la
+# vérification de la copie ni sa compression.
+# Le détail ne porte que des noms de fichiers, jamais un chemin de l'hôte : il
+# traverse l'API jusqu'à l'écran. Le journal à lire est nommé sans son dossier
+# (docs/ops/ALERTES.md dit où il vit).
+STATUS_CODE=failed
+STATUS_DETAIL=""
+if [ "$MODE" = hourly ]; then LOG_HINT="le-pillaveur-backup-hourly.log"; else LOG_HINT="le-pillaveur-backup.log"; fi
+
 # Tout échec passe ici (set -e) : le fichier en cours est retiré, le journal
-# dit pourquoi, le service d'alerte est prévenu. Le mode horaire n'envoie pas
-# de ping de SUCCÈS (le quotidien suffit à prouver que la chaîne fonctionne),
-# mais un échec horaire — une copie qui ne passe pas integrity_check est le
-# premier signe d'une base abîmée — n'attend pas 03:00 pour être signalé.
+# dit pourquoi, le fichier d'état et le service d'alerte sont prévenus. Le mode
+# horaire n'envoie pas de ping de SUCCÈS (le quotidien suffit à prouver que la
+# chaîne fonctionne), mais un échec horaire — une copie qui ne passe pas
+# integrity_check est le premier signe d'une base abîmée — n'attend pas 03:00
+# pour être signalé.
 on_exit() {
   local status=$?
   if [ "$status" -ne 0 ]; then
     if [ "$BACKUP_DONE" -eq 0 ]; then rm -f "$OUT" "${OUT}.gz"; fi
     echo "[$(date -Is)] backup ECHEC ($MODE, code $status) : aucune copie conservée pour ce passage"
+    write_status "backup-$MODE" false "$STATUS_CODE" "${STATUS_DETAIL:-code de sortie $status, voir $LOG_HINT}" "exitCode=$status"
     ping_url /fail
   fi
 }
@@ -199,7 +272,10 @@ docker run --rm \
       mv /tmp/copie.db "/backup/suspect-${MODE}-${STAMP}.db"
       gzip -f "/backup/suspect-${MODE}-${STAMP}.db"
       echo "Copie suspecte conservée pour analyse : suspect-${MODE}-${STAMP}.db.gz (à supprimer à la main une fois la base réparée)" >&2
-      exit 1
+      # 65 (EX_DATAERR) et non 1 : docker run rend ce code tel quel, et le
+      # script hôte distingue ainsi une copie REFUSÉE (integrity_failed dans
+      # le fichier d état) d une panne de docker, de apk ou de sqlite3.
+      exit 65
     fi
     # Point de contrôle APRÈS la copie, UNE fois par nuit seulement : sans lui,
     # prod.db-wal grossit sans fin entre deux redémarrages du conteneur (les
@@ -213,7 +289,16 @@ docker run --rm \
       su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db "PRAGMA wal_checkpoint(TRUNCATE);" >/dev/null || true
     fi
     mv /tmp/copie.db "$TARGET"
-  '
+  ' || {
+    rc=$?
+    if [ "$rc" -eq 65 ]; then
+      STATUS_CODE=integrity_failed
+      STATUS_DETAIL="integrity_check de la copie en echec ; copie suspecte conservee : suspect-${MODE}-${STAMP}.db.gz"
+    fi
+    exit "$rc"
+  }
+STATUS_CODE=gzip_failed
+STATUS_DETAIL="$(basename "$OUT").gz : compression ou relecture (gzip -t) en echec, disque plein ?"
 gzip -f "$OUT"
 # Relecture complète de l'archive : un disque plein ou un gzip interrompu
 # laisse un .gz tronqué que `gzip -f` ne signale pas toujours. Un fichier qui
@@ -223,6 +308,8 @@ if ! gzip -t "${OUT}.gz"; then
   exit 1
 fi
 BACKUP_DONE=1
+STATUS_CODE=failed
+STATUS_DETAIL="copie $(basename "$OUT").gz valide, mais purge des anciennes copies en echec"
 
 if [ "$MODE" = hourly ]; then
   # 48 h : deux soirées de recul à la maille de l'heure, le quotidien couvre le
@@ -243,6 +330,9 @@ else
   find "$BACKUP_DIR" -name "prod-*.db.gz" ! -name "prod-hourly-*" -mmin +$((13 * 24 * 60 + 60)) -delete
 fi
 echo "[$(date -Is)] backup OK ($MODE): ${OUT}.gz"
+# Fichier d'état, dans les deux modes : c'est la seule trace de l'horaire hors
+# du journal. La taille aide à repérer une copie anormalement petite.
+write_status "backup-$MODE" true ok "$(basename "$OUT").gz" "sizeBytes=$(stat -c %s "${OUT}.gz" 2>/dev/null || echo 0)"
 # Ping de succès, quotidien seulement, et DERNIER ordre du script : s'il
 # manque, c'est que quelque chose a cassé avant lui.
 if [ "$MODE" = daily ]; then ping_url; fi
@@ -250,7 +340,7 @@ SCRIPT
 sudo chmod 750 "$BACKUP_SCRIPT"
 sudo chown root:root "$BACKUP_SCRIPT"
 
-echo "===== 3b) VEILLE DISQUE + COPIE OFF-SITE (scripts du dépôt recopiés en root) ====="
+echo "===== 3b) VEILLE DISQUE, SONDE DU SITE, COPIE OFF-SITE (scripts du dépôt recopiés en root) ====="
 # Recopie un script du dépôt sous /usr/local/bin, en root et sans CR : le
 # dépôt est édité sous Windows, et prod-deploy.sh ne nettoie scripts/ qu'au
 # déploiement — ce script peut être rejoué depuis une archive fraîche.
@@ -265,6 +355,11 @@ if [ -f "$SCRIPT_DIR/vps-disk-watch.sh" ]; then
 else
   echo "vps-disk-watch.sh introuvable dans $SCRIPT_DIR : veille disque NON installée"
 fi
+if [ -f "$SCRIPT_DIR/vps-site-probe.sh" ]; then
+  install_root_script "$SCRIPT_DIR/vps-site-probe.sh" "$PROBE_SCRIPT"
+else
+  echo "vps-site-probe.sh introuvable dans $SCRIPT_DIR : sonde du site NON installée"
+fi
 # La copie off-site n'est rafraîchie que si vps-setup-offsite-r2.sh l'a déjà
 # installée (R2 configuré) : ici on ne configure rien, on met à jour.
 if sudo test -f "$OFFSITE_SCRIPT" && [ -f "$SCRIPT_DIR/vps-backup-offsite.sh" ]; then
@@ -273,7 +368,7 @@ else
   echo "copie off-site non installée (sudo bash scripts/vps-setup-offsite-r2.sh) : rien à rafraîchir"
 fi
 
-echo "===== 3c) CRONS ROOT (sauvegardes, veille disque) ====="
+echo "===== 3c) CRONS ROOT (sauvegardes, veille disque, sonde du site) ====="
 # Une seule ligne par script quel que soit le nombre de passages : on retire
 # TOUTES les lignes qui citent le script (motif -F sur son chemin) avant de
 # réécrire les nôtres. La ligne off-site (03:15, posée par
@@ -287,18 +382,39 @@ CRON_HOURLY="0 18-23,0-2,4 * * * $BACKUP_SCRIPT hourly >> /var/log/le-pillaveur-
 # 07:00 : après la nuit de sauvegardes, avant la journée ; le journal dit ce
 # que la nuit a coûté en disque, et l'opérateur le lit au réveil.
 CRON_DISK="0 7 * * * $DISK_SCRIPT >> /var/log/le-pillaveur-disk.log 2>&1"
-EXISTING=$(sudo crontab -l 2>/dev/null | grep -Fv "$BACKUP_SCRIPT" | grep -Fv "$DISK_SCRIPT" || true)
+# Toutes les 5 minutes, jour et nuit : c'est la cadence du check « site » de
+# healthchecks.io (période 5 min, grâce 10 min). Le journal ne reçoit une
+# ligne qu'à un échec ou au retour à la normale, pas 288 par jour.
+CRON_PROBE="*/5 * * * * $PROBE_SCRIPT >> /var/log/le-pillaveur-probe.log 2>&1"
+EXISTING=$(sudo crontab -l 2>/dev/null | grep -Fv "$BACKUP_SCRIPT" | grep -Fv "$DISK_SCRIPT" | grep -Fv "$PROBE_SCRIPT" || true)
+# Une ligne par script réellement installé : un cron qui pointe sur un fichier
+# absent échouerait en silence toutes les 5 minutes.
+CRON_LINES=$(printf '%s\n%s' "$CRON_DAILY" "$CRON_HOURLY")
 if sudo test -f "$DISK_SCRIPT"; then
-  printf '%s\n%s\n%s\n%s\n' "$EXISTING" "$CRON_DAILY" "$CRON_HOURLY" "$CRON_DISK" | sudo crontab -
-else
-  printf '%s\n%s\n%s\n' "$EXISTING" "$CRON_DAILY" "$CRON_HOURLY" | sudo crontab -
+  CRON_LINES=$(printf '%s\n%s' "$CRON_LINES" "$CRON_DISK")
 fi
+if sudo test -f "$PROBE_SCRIPT"; then
+  CRON_LINES=$(printf '%s\n%s' "$CRON_LINES" "$CRON_PROBE")
+fi
+printf '%s\n%s\n' "$EXISTING" "$CRON_LINES" | sudo crontab -
 echo "Crons posés :"
 sudo crontab -l | grep -F le-pillaveur
 
 echo "===== 4) PREMIERE SAUVEGARDE ====="
 sudo "$BACKUP_SCRIPT"
 ls -lh "$BACKUP_DIR" | tail -5
+
+echo "===== 4b) PREMIER PASSAGE DE LA SONDE DU SITE ====="
+# Tout de suite plutôt qu'au prochain multiple de 5 minutes : l'onglet
+# Surveillance a son état et le check « site » reçoit son premier ping pendant
+# que l'opérateur regarde encore. Un échec ne coupe pas ce script (les mises à
+# jour système restent à faire) : la sonde a écrit pourquoi juste au-dessus,
+# et l'alerte suit sa règle habituelle (vps-site-probe.sh).
+if sudo test -f "$PROBE_SCRIPT"; then
+  sudo "$PROBE_SCRIPT" || echo "sonde du site en ECHEC : lire la ligne ci-dessus, puis docs/ops/ALERTES.md"
+else
+  echo "sonde du site non installée : rien à lancer"
+fi
 
 echo "===== 5) SYSCTL RESEAU ====="
 SYSCTL_DROPIN=/etc/sysctl.d/99-lepillaveur-hardening.conf
@@ -329,11 +445,22 @@ ls -lh "$BACKUP_DIR" 2>/dev/null | tail -3
 echo "--- crons root ---"
 sudo crontab -l 2>/dev/null | grep -F le-pillaveur || echo "aucun cron le-pillaveur"
 echo "--- alertes (fichiers de ping ; leur contenu est un secret, jamais affiché) ---"
-for check in backup offsite disk; do
+for check in backup offsite disk site; do
   if sudo test -s "/etc/le-pillaveur/$check-ping-url"; then
     echo "$check-ping-url : présent"
   else
     echo "$check-ping-url : ABSENT — personne n'est prévenu, voir docs/ops/ALERTES.md"
   fi
 done
+echo "--- fichiers d'état (onglet Surveillance ; aucun secret dedans) ---"
+# Ce que le panneau affichera : une ligne JSON par tâche déjà passée. Les
+# absentes (veille disque avant 07:00, off-site non installé) y seront
+# « inconnues » jusqu'à leur premier passage.
+found_state=0
+for state_file in "$STATUS_DIR"/*.json; do
+  [ -e "$state_file" ] || continue
+  found_state=1
+  cat "$state_file"
+done
+[ "$found_state" = 1 ] || echo "aucun fichier d'état dans $STATUS_DIR"
 echo "===== DONE ====="

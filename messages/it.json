@@ -4305,7 +4305,9 @@
       "bansShort": "Sanzioni",
       "moderationShort": "Termini",
       "feedbackShort": "Segnalazioni",
-      "feedbackResolvedShort": "Risolti"
+      "feedbackResolvedShort": "Risolti",
+      "ops": "Monitoraggio del server",
+      "opsShort": "Monitoraggio"
     },
     "moderation": {
       "title": "Filtro anti-insulti",
@@ -4910,7 +4912,8 @@
     "navGroups": {
       "analysis": "Analisi",
       "community": "Comunità",
-      "moderation": "Moderazione"
+      "moderation": "Moderazione",
+      "server": "Server"
     },
     "journalFilter": {
       "showAll": "Mostra tutte le partite"
@@ -4965,6 +4968,139 @@
       "pageSummary": "Pagina {page} di {pages} — {total} risultati",
       "previousPage": "Precedente",
       "nextPage": "Successivo"
+    },
+    "ops": {
+      "refresh": "Aggiorna",
+      "refreshedAt": "Aggiornato alle {time}",
+      "refreshFailed": "Aggiornamento non riuscito, mostro lo stato delle {time}:",
+      "loadError": "Impossibile caricare lo stato del server.",
+      "forbidden": "Sessione scaduta o accesso revocato: occorre accedere di nuovo.",
+      "jobs": {
+        "title": "Attività del server",
+        "desc": "Le attività root del VPS lasciano un file di stato a ogni esecuzione. Orari secondo l'orologio del server, date all'ora di Parigi.",
+        "noStatusDir": "Cartella dei file di stato non trovata nel container.",
+        "noStatusDirHint": "Il container gira senza il volume dei file di stato: le attività potrebbero girare normalmente, questa schermata semplicemente non le vede. prod-deploy.sh e prod-db-restore.sh lo montano; un container riavviato a mano probabilmente lo ha omesso.",
+        "alertNote": "Questa schermata non avvisa nessuno: se il sito cade, cade con lui. L'avviso via e-mail arriva da healthchecks.io (check «site»), che la sonda smette di avvisare quando il sito non risponde più.",
+        "lastRun": "Ultima esecuzione: {date} ({relative})",
+        "lastRunUnreadable": "Ultima esecuzione: data illeggibile",
+        "noRecord": "Nessuno stato leggibile: file assente (attività mai eseguita) o non valido.",
+        "noRecordNoDir": "Illeggibile: cartella di stato non montata nel container.",
+        "lateHint": "Nessuna esecuzione da più di {duration}: l'attività non gira più, oppure il server era spento.",
+        "detailLabel": "Dettaglio tecnico scritto dall'attività"
+      },
+      "job": {
+        "probe": {
+          "name": "Sonda esterna del sito",
+          "cadence": "Ogni 5 minuti"
+        },
+        "backupDaily": {
+          "name": "Backup giornaliero",
+          "cadence": "Ogni notte alle 3:00"
+        },
+        "backupHourly": {
+          "name": "Backup orario",
+          "cadence": "Ogni ora dalle 18:00 alle 2:00, poi alle 4:00"
+        },
+        "offsite": {
+          "name": "Copia fuori dal server",
+          "cadence": "Ogni notte alle 3:15"
+        },
+        "disk": {
+          "name": "Controllo del disco",
+          "cadence": "Ogni mattina alle 7:00"
+        }
+      },
+      "state": {
+        "ok": "OK",
+        "late": "In ritardo",
+        "failed": "Errore",
+        "skipped": "Senza effetto",
+        "unknown": "Sconosciuto"
+      },
+      "codes": {
+        "probe": {
+          "ok": "Il sito risponde in {ms} ms.",
+          "httpError": "Il sito ha risposto con il codice HTTP {httpCode}.",
+          "keywordMissing": "Il sito risponde, ma il suo controllo di salute non è buono (database o applicazione in errore).",
+          "unreachable": "Il sito non risponde (connessione impossibile o tempo scaduto)."
+        },
+        "backup": {
+          "ok": "Copia verificata e compressa: {sizeMb} MB.",
+          "integrityFailed": "La copia non ha superato il controllo di integrità: messa da parte, il database potrebbe essere danneggiato.",
+          "gzipFailed": "L'archivio compresso non si rilegge: backup scartato.",
+          "failed": "Il backup non è riuscito (codice di uscita {exitCode})."
+        },
+        "offsite": {
+          "ok": "Ultimo backup inviato fuori dal server.",
+          "notConfigured": "Copia fuori dal server non configurata: non viene inviato nulla.",
+          "noLocalBackup": "Nessun backup locale da inviare.",
+          "staleLocalBackup": "L'ultimo backup locale è troppo vecchio: non viene inviato nulla.",
+          "gzipFailed": "Il backup locale non si rilegge: non viene inviato nulla.",
+          "failed": "L'invio fuori dal server non è riuscito."
+        },
+        "disk": {
+          "ok": "Disco occupato al {usedPct}% (soglia {thresholdPct}%).",
+          "overThreshold": "Disco occupato al {usedPct}%: soglia del {thresholdPct}% superata.",
+          "dfFailed": "Impossibile leggere l'occupazione del disco."
+        },
+        "unknown": "Codice non riconosciuto da questa schermata: {code}."
+      },
+      "live": {
+        "title": "In diretta",
+        "desc": "Il container al momento dell'aggiornamento. Niente di tutto questo sopravvive a un riavvio, tranne la pulizia di conservazione (salvata nel database).",
+        "version": "Versione",
+        "versionHint": "Commit in produzione",
+        "uptime": "Online da",
+        "uptimeHint": "Avviato il {date}",
+        "memory": "Memoria",
+        "memoryHint": "Heap JavaScript: {value} MB",
+        "db": "Database",
+        "dbUp": "In servizio",
+        "dbDown": "Fuori servizio",
+        "dbHint": "Latenza di una query semplice",
+        "dbDownHint": "Il database non risponde",
+        "disk": "Disco libero",
+        "diskHint": "Avviso al {pct}% occupato, riserva root inclusa",
+        "diskOver": "Soglia superata: {used}% occupato, riserva root inclusa (avviso al {pct}%)",
+        "streams": "Flussi SSE",
+        "streamsHint": "{accounts, plural, =0 {nessun account} one {# account} other {# account}} · al massimo {max} per account",
+        "crashes": "Crash 24 h",
+        "crashesHint": "Dettagli nella Sala",
+        "unreadable": "Illeggibile"
+      },
+      "units": {
+        "ms": "{value} ms",
+        "s": "{value} s",
+        "mb": "{value} MB",
+        "pct": "{value}%"
+      },
+      "scheduler": {
+        "title": "Attività pianificate interne",
+        "names": {
+          "retention": "Pulizia di conservazione",
+          "tables": "Riordino dei tavoli"
+        },
+        "cadence": {
+          "retention": "Ogni notte alle 4:30",
+          "tables": "Ogni 5 minuti"
+        },
+        "lastRun": "Ultima esecuzione {relative} · {duration}",
+        "noRunYet": "Non ancora dall'avvio",
+        "outcome": {
+          "done": "Completata",
+          "failed": "Errore",
+          "skipped": "Saltata"
+        },
+        "empty": "Nessuna attività pianificata annunciata.",
+        "note": "Esecuzioni contate dall'avvio del container: un nuovo deploy le azzera."
+      },
+      "retention": {
+        "lastRun": "Ultima pulizia di conservazione: {date} ({relative})",
+        "lastRunUnreadable": "Ultima pulizia di conservazione: data illeggibile",
+        "never": "Nessuna pulizia di conservazione registrata.",
+        "failedHint": "L'ultima pulizia si è conclusa con un errore: dettagli nella Sala.",
+        "staleHint": "Più di {hours} h senza pulizia: i tempi di conservazione dichiarati non sono più garantiti."
+      }
     }
   },
   "voice": {
