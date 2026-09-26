@@ -238,7 +238,7 @@ export function TabouOnline() {
             onClick={() => void sendAction({ action: 'pass' })}
             disabled={busy}
             variant="outline"
-            className="w-full rounded-xl border-white/15 bg-white/5 py-3 text-sm font-bold text-white/80 hover:bg-white/10"
+            className="w-full rounded-xl border-white/[0.15] bg-white/5 py-3 text-sm font-bold text-white/80 hover:bg-white/10"
           >
             <SkipForward className="mr-2 h-4 w-4" /> {t('passButton')}
           </Button>

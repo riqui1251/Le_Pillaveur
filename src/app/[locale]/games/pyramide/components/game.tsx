@@ -479,7 +479,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
             </button>
             <button
               onClick={session.discard}
-              className="w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+              className="w-full rounded-2xl border border-white/[0.15] bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
             >
               {tCommon('resumeGame.newGame')}
             </button>

@@ -600,7 +600,7 @@ export function PresidentOnline() {
               onClick={() => void sendAction({ action: 'pass' })}
               disabled={!myTurn || !view.lastPlay || busy}
               variant="outline"
-              className="flex-1 rounded-2xl border-white/15 bg-white/5 py-5 text-base font-bold text-white/80 hover:bg-white/10 disabled:opacity-50"
+              className="flex-1 rounded-2xl border-white/[0.15] bg-white/5 py-5 text-base font-bold text-white/80 hover:bg-white/10 disabled:opacity-50"
             >
               {t('pass')}
             </Button>

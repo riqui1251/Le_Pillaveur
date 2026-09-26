@@ -492,7 +492,7 @@ export function MenteurOnline() {
                 <div className="flex grow basis-[8.5rem] items-center justify-between rounded-2xl border border-white/12 bg-white/5 px-2 py-1.5">
                   <button
                     onClick={() => setBidQty((q) => Math.max(1, q - 1))}
-                    className="game-grid-cell flex h-9 w-9 items-center justify-center rounded-xl bg-white/8 text-white transition-colors hover:bg-white/15"
+                    className="game-grid-cell flex h-9 w-9 items-center justify-center rounded-xl bg-white/8 text-white transition-colors hover:bg-white/[0.15]"
                     aria-label="-1"
                   >
                     <Minus className="h-4 w-4" />
@@ -500,7 +500,7 @@ export function MenteurOnline() {
                   <span className="text-xl font-black tabular-nums">{bidQty}</span>
                   <button
                     onClick={() => setBidQty((q) => Math.min(totalDice, q + 1))}
-                    className="game-grid-cell flex h-9 w-9 items-center justify-center rounded-xl bg-white/8 text-white transition-colors hover:bg-white/15"
+                    className="game-grid-cell flex h-9 w-9 items-center justify-center rounded-xl bg-white/8 text-white transition-colors hover:bg-white/[0.15]"
                     aria-label="+1"
                   >
                     <Plus className="h-4 w-4" />

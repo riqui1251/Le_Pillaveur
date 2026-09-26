@@ -609,7 +609,7 @@ export function LoupGarouOnline() {
               className={cn(
                 'flex h-7 w-7 items-center justify-center rounded-lg border transition-colors',
                 showLegend
-                  ? 'border-gold/50 bg-gold/15 text-gold'
+                  ? 'border-gold/50 bg-gold/[0.15] text-gold'
                   : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
               )}
               aria-label={t('legend.title')}
@@ -623,7 +623,7 @@ export function LoupGarouOnline() {
                 className={cn(
                   'flex h-7 w-7 items-center justify-center rounded-lg border transition-colors',
                   showWolfChat
-                    ? 'border-suit-red/60 bg-suit-red/15 text-red-200'
+                    ? 'border-suit-red/60 bg-suit-red/[0.15] text-red-200'
                     : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
                 )}
                 aria-label={t('wolfChatTitle')}
@@ -638,7 +638,7 @@ export function LoupGarouOnline() {
                 className={cn(
                   'flex h-7 w-7 items-center justify-center rounded-lg border transition-colors',
                   showDayChat
-                    ? 'border-gold/60 bg-gold/15 text-gold'
+                    ? 'border-gold/60 bg-gold/[0.15] text-gold'
                     : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
                 )}
                 aria-label={t('dayChatTitle')}
@@ -845,7 +845,7 @@ export function LoupGarouOnline() {
               </PlayingCard>
               <button
                 onClick={() => setHideRole(true)}
-                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-[#24201A]/15 bg-[#24201A]/5 text-[#24201A]/60 transition-colors hover:bg-[#24201A]/10"
+                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-[#24201A]/[0.15] bg-[#24201A]/5 text-[#24201A]/60 transition-colors hover:bg-[#24201A]/10"
                 aria-label={t('hideRole')}
               >
                 <EyeOff className="h-4 w-4" />
@@ -1038,7 +1038,7 @@ export function LoupGarouOnline() {
                     <Button
                       onClick={() => setWitchKillMode(false)}
                       variant="outline"
-                      className="w-full rounded-xl border-white/15 bg-white/5 py-2 text-xs text-white/70"
+                      className="w-full rounded-xl border-white/[0.15] bg-white/5 py-2 text-xs text-white/70"
                     >
                       {t('witchCancel')}
                     </Button>
@@ -1067,7 +1067,7 @@ export function LoupGarouOnline() {
                       onClick={() => void sendAction({ action: 'witch', witchAction: 'none' })}
                       disabled={busy}
                       variant="outline"
-                      className="w-full rounded-xl border-white/15 bg-white/5 py-3 text-sm font-semibold text-white/70"
+                      className="w-full rounded-xl border-white/[0.15] bg-white/5 py-3 text-sm font-semibold text-white/70"
                     >
                       {t('witchNone')}
                     </Button>

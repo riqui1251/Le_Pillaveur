@@ -455,7 +455,7 @@ export function AccountInfo() {
               <button
                 type="button"
                 onClick={copyAccountCode}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#24201A]/15 bg-[#24201A]/5 px-2.5 py-1 font-mono text-xs text-[#4A443A] transition-colors hover:bg-[#24201A]/10"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#24201A]/[0.15] bg-[#24201A]/5 px-2.5 py-1 font-mono text-xs text-[#4A443A] transition-colors hover:bg-[#24201A]/10"
                 title={t('copyAccountCode')}
               >
                 <Hash className="h-3 w-3" />
@@ -686,7 +686,7 @@ export function AccountInfo() {
               <button
                 type="button"
                 onClick={() => setCustomizingOnline(true)}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/25 px-2.5 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/35"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/25 px-2.5 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/[0.35]"
                 title={t('playersList.customize')}
                 aria-label={t('playersList.customize')}
               >
@@ -711,7 +711,7 @@ export function AccountInfo() {
               <button
                 type="button"
                 onClick={() => { void saveOnlineName() }}
-                className="rounded-lg bg-cyan-500/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/35"
+                className="rounded-lg bg-cyan-500/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/[0.35]"
               >
                 {tCommon('save')}
               </button>
@@ -872,21 +872,21 @@ export function AccountInfo() {
                     <div className="flex shrink-0 items-center gap-1">
                       <button
                         onClick={() => startRename(player)}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-amber-500/[0.15] hover:text-amber-300"
                         title={t('playersList.rename')}
                       >
                         <TextCursorInput className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setCustomizingPlayer(player)}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-amber-500/[0.15] hover:text-amber-300"
                         title={t('playersList.customize')}
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setConfirmDelete(player.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/15 hover:text-red-400"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/[0.15] hover:text-red-400"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

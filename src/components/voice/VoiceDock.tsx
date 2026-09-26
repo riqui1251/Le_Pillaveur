@@ -155,7 +155,7 @@ export function VoiceDock() {
               </button>
               <button
                 onClick={dismissPrompt}
-                className="min-h-[44px] flex-1 rounded-xl border border-white/15 bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
+                className="min-h-[44px] flex-1 rounded-xl border border-white/[0.15] bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
               >
                 {t('prompt.later')}
               </button>
@@ -272,8 +272,8 @@ export function VoiceDock() {
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center text-xs font-semibold leading-tight transition-all',
                       voice.micMuted
-                        ? 'border-red-400/40 bg-red-500/15 text-red-100'
-                        : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10'
+                        ? 'border-red-400/40 bg-red-500/[0.15] text-red-100'
+                        : 'border-white/[0.15] bg-white/5 text-white/80 hover:bg-white/10'
                     )}
                     aria-label={voice.micMuted ? t('micUnmute') : t('micMute')}
                   >
@@ -285,8 +285,8 @@ export function VoiceDock() {
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center text-xs font-semibold leading-tight transition-all',
                       voice.deafened
-                        ? 'border-red-400/40 bg-red-500/15 text-red-100'
-                        : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10'
+                        ? 'border-red-400/40 bg-red-500/[0.15] text-red-100'
+                        : 'border-white/[0.15] bg-white/5 text-white/80 hover:bg-white/10'
                     )}
                     aria-label={voice.deafened ? t('undeafen') : t('deafen')}
                   >
@@ -295,7 +295,7 @@ export function VoiceDock() {
                   </button>
                   <button
                     onClick={voice.leave}
-                    className="flex flex-col items-center gap-1 rounded-xl border border-red-400/40 bg-red-500/15 px-1 py-2 text-center text-xs font-semibold leading-tight text-red-100 transition-all hover:bg-red-500/25"
+                    className="flex flex-col items-center gap-1 rounded-xl border border-red-400/40 bg-red-500/[0.15] px-1 py-2 text-center text-xs font-semibold leading-tight text-red-100 transition-all hover:bg-red-500/25"
                     aria-label={t('leave')}
                   >
                     <PhoneOff className="h-4 w-4" />
@@ -312,7 +312,7 @@ export function VoiceDock() {
                     'flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all',
                     voice.speaker
                       ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
-                      : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
+                      : 'border-white/[0.15] bg-white/5 text-white/70 hover:bg-white/10'
                   )}
                   aria-label={t('speaker')}
                   aria-pressed={voice.speaker}
@@ -409,7 +409,7 @@ export function VoiceDock() {
                           className={cn(
                             'touch-target flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-all',
                             isMuted
-                              ? 'border-red-400/40 bg-red-500/15 text-red-200'
+                              ? 'border-red-400/40 bg-red-500/[0.15] text-red-200'
                               : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
                           )}
                           aria-label={isMuted ? t('unmutePeer') : t('mutePeer')}
@@ -441,7 +441,7 @@ export function VoiceDock() {
           'relative flex h-12 w-12 cursor-grab items-center justify-center rounded-2xl border shadow-lg backdrop-blur-md transition-all active:scale-95 active:cursor-grabbing',
           voice.joined
             ? 'border-emerald-400/50 bg-emerald-600/90 text-white'
-            : 'border-white/15 bg-gray-900/90 text-white/80 hover:bg-gray-800',
+            : 'border-white/[0.15] bg-gray-900/90 text-white/80 hover:bg-gray-800',
           someoneSpeaking && voice.joined && !voice.deafened && 'ring-2 ring-emerald-300/80'
         )}
         aria-label={t('title')}

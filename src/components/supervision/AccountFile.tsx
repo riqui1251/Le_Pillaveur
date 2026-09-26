@@ -1020,7 +1020,7 @@ function RecentGamesSection({ activity, userId }: { activity: AccountActivity; u
       actions={
         <Link
           href={`/supervision?tab=overview&userId=${encodeURIComponent(userId)}`}
-          className="inline-flex h-8 items-center rounded-lg border border-white/15 bg-white/[0.04] px-2.5 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+          className="inline-flex h-8 items-center rounded-lg border border-white/[0.15] bg-white/[0.04] px-2.5 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
         >
           {t('seeInJournal')}
         </Link>
@@ -1063,7 +1063,7 @@ function RecentGamesSection({ activity, userId }: { activity: AccountActivity; u
                         key={p.id}
                         href={`/supervision/comptes/${p.userId}`}
                         title={tSessions('openAccount')}
-                        className="min-w-0 break-words rounded-lg border border-white/15 bg-white/[0.04] px-2 py-0.5 text-xs text-white/85 transition-colors hover:border-amber-400/40 hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                        className="min-w-0 break-words rounded-lg border border-white/[0.15] bg-white/[0.04] px-2 py-0.5 text-xs text-white/85 transition-colors hover:border-amber-400/40 hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
                       >
                         {p.name}
                       </Link>

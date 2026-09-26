@@ -469,14 +469,14 @@ export function ToucherCouleOnline() {
               <Button
                 type="button"
                 onClick={() => setHorizontal((h) => !h)}
-                className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
+                className="rounded-xl border border-white/[0.15] bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
               >
                 {horizontal ? t('horizontal') : t('vertical')}
               </Button>
               <Button
                 type="button"
                 onClick={randomizePlacement}
-                className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
+                className="rounded-xl border border-white/[0.15] bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
               >
                 {t('random')}
               </Button>
@@ -484,7 +484,7 @@ export function ToucherCouleOnline() {
                 type="button"
                 onClick={() => setPlacedShips([])}
                 disabled={placedShips.filter(Boolean).length === 0}
-                className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white/60 hover:bg-white/10 disabled:opacity-40"
+                className="rounded-xl border border-white/[0.15] bg-white/5 px-3 py-2 text-xs font-semibold text-white/60 hover:bg-white/10 disabled:opacity-40"
               >
                 {t('clear')}
               </Button>
@@ -552,7 +552,7 @@ export function ToucherCouleOnline() {
                           'rounded-full border px-2 py-0.5 text-xs font-bold transition-colors',
                           bombArmed
                             ? 'border-rose-400 bg-rose-500/25 text-rose-100'
-                            : 'border-white/15 bg-white/10 text-white/70 hover:bg-white/20'
+                            : 'border-white/[0.15] bg-white/10 text-white/70 hover:bg-white/20'
                         )}
                       >
                         💣 {t('bombButton')}

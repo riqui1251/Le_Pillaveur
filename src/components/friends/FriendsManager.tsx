@@ -124,7 +124,7 @@ function FriendsManagerView({
           type="button"
           onClick={() => { void handleAdd() }}
           disabled={!codeInput.trim()}
-          className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-500/25 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-500/35 disabled:opacity-40"
+          className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-500/25 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-500/[0.35] disabled:opacity-40"
         >
           <UserPlus className="h-3.5 w-3.5" />
           {tFriends('add')}
@@ -234,7 +234,7 @@ function FriendsManagerView({
                   ) : (
                     <button
                       onClick={() => handleRemoveFriend(f.friendshipId)}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/15 hover:text-red-400"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/30 transition-colors hover:bg-red-500/[0.15] hover:text-red-400"
                       title={tFriends('remove')}
                     >
                       <Trash2 className="h-4 w-4" />

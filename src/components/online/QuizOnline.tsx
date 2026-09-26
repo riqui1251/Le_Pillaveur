@@ -333,7 +333,7 @@ export function QuizOnline() {
               onClick={() => void sendAction({ action: 'continue' })}
               disabled={busy}
               variant="outline"
-              className="w-full rounded-xl border-white/15 bg-white/5 py-2.5 text-xs font-semibold text-white/70 hover:bg-white/10"
+              className="w-full rounded-xl border-white/[0.15] bg-white/5 py-2.5 text-xs font-semibold text-white/70 hover:bg-white/10"
             >
               {t('skipReveal')}
             </Button>

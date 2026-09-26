@@ -113,7 +113,7 @@ export function TvRoomView({ code }: { code: string }) {
               a ni barre d'adresse ni bouton « retour » à portée de main. */}
           <Link
             href="/tv"
-            className="mt-2 rounded-2xl border border-gold/50 bg-gold/15 px-8 py-3 text-xl font-bold text-gold transition-colors hover:bg-gold/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+            className="mt-2 rounded-2xl border border-gold/50 bg-gold/[0.15] px-8 py-3 text-xl font-bold text-gold transition-colors hover:bg-gold/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
           >
             {t('changeCode')}
           </Link>

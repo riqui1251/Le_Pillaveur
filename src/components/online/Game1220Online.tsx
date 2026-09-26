@@ -207,7 +207,7 @@ export function Game1220Online() {
                     className={cn(
                       'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50',
                       myDraft.parity === v
-                        ? 'border-teal-500/50 bg-teal-500/15 text-teal-300'
+                        ? 'border-teal-500/50 bg-teal-500/[0.15] text-teal-300'
                         : 'border-white/10 bg-white/[0.04] text-white/50 hover:bg-white/[0.08]'
                     )}
                   >
@@ -228,7 +228,7 @@ export function Game1220Online() {
                     className={cn(
                       'rounded-xl border py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50',
                       myDraft.band === b
-                        ? 'border-gold/50 bg-gold/15 text-gold'
+                        ? 'border-gold/50 bg-gold/[0.15] text-gold'
                         : 'border-white/10 bg-white/[0.04] text-white/50 hover:bg-white/[0.08]'
                     )}
                   >
@@ -440,7 +440,7 @@ export function Game1220Online() {
           onClick={() => void sendAction({ action: 'end' })}
           disabled={busy}
           variant="outline"
-          className="rounded-2xl border-white/15 bg-white/5 px-4 text-sm font-semibold text-white/70 hover:bg-white/10"
+          className="rounded-2xl border-white/[0.15] bg-white/5 px-4 text-sm font-semibold text-white/70 hover:bg-white/10"
         >
           {t('online.endGame')}
         </Button>

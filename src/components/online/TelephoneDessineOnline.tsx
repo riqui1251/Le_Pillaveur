@@ -244,7 +244,7 @@ export function TelephoneDessineOnline() {
                 onClick={() => void sendAction({ action: 'previous' })}
                 disabled={busy}
                 variant="outline"
-                className="flex-1 rounded-2xl border-white/15 bg-white/5 py-4 text-sm font-bold text-white/80 hover:bg-white/10"
+                className="flex-1 rounded-2xl border-white/[0.15] bg-white/5 py-4 text-sm font-bold text-white/80 hover:bg-white/10"
               >
                 {t('reveal.previousChain')}
               </Button>

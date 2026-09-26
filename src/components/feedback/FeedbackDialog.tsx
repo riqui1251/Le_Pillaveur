@@ -147,7 +147,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-colors',
                       type === value
-                        ? 'border-amber-400/40 bg-amber-500/15 text-amber-100'
+                        ? 'border-amber-400/40 bg-amber-500/[0.15] text-amber-100'
                         : 'border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06]'
                     )}
                   >

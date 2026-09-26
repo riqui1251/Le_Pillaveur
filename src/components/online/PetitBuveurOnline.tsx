@@ -1028,7 +1028,7 @@ export function PetitBuveurOnline() {
                         const pick = view.players[Math.floor(Math.random() * view.players.length)]
                         if (pick) sendAction('resolve', { targetId: pick.id })
                       }}
-                      className="h-11 w-full gap-2 border-amber-500/30 bg-amber-500/5 text-white hover:bg-amber-500/15"
+                      className="h-11 w-full gap-2 border-amber-500/30 bg-amber-500/5 text-white hover:bg-amber-500/[0.15]"
                     >
                       <Shuffle className="h-4 w-4 text-amber-300" />
                       {tGame('target.random')}

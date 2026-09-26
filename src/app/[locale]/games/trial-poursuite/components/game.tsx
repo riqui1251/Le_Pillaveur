@@ -519,7 +519,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             <button
               type="button"
               onClick={session.discard}
-              className="min-h-[44px] w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+              className="min-h-[44px] w-full rounded-2xl border border-white/[0.15] bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
             >
               {tc('resumeGame.newGame')}
             </button>

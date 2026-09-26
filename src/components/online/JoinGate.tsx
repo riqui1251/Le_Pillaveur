@@ -134,7 +134,7 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
           type="button"
           variant="outline"
           onClick={handleLogin}
-          className="mt-4 h-11 w-full border-white/15 bg-transparent text-white/80 hover:bg-white/[0.06] hover:text-white"
+          className="mt-4 h-11 w-full border-white/[0.15] bg-transparent text-white/80 hover:bg-white/[0.06] hover:text-white"
         >
           <LogIn className="mr-2 h-4 w-4" />
           {t('loginCta')}

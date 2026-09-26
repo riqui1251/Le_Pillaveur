@@ -3275,7 +3275,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     type="button"
                     variant="outline"
                     onClick={selectRandomPlayer}
-                    className="h-11 w-full gap-2 border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/15"
+                    className="h-11 w-full gap-2 border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/[0.15]"
                   >
                     <Shuffle className="h-4 w-4 text-violet-400" />
                     {t('game.target.random')}
@@ -3330,7 +3330,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               <Button
                 key={player.id}
                 onClick={() => applyVoteTarget(player.id)}
-                className="border-white/15 bg-white/[0.06] text-white hover:bg-white/10"
+                className="border-white/[0.15] bg-white/[0.06] text-white hover:bg-white/10"
               >
                 <PlayerName player={player} />
               </Button>
@@ -3680,7 +3680,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                       players: turn.updatedPlayers,
                     })
                   }}
-                  className="border-white/15 bg-white/[0.06] p-3 font-bold text-white hover:bg-white/10"
+                  className="border-white/[0.15] bg-white/[0.06] p-3 font-bold text-white hover:bg-white/10"
                 >
                   <PlayerName player={player} />
                 </Button>
@@ -3904,7 +3904,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                   </button>
                   <button
                     onClick={onGameEnd}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 py-3 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.15] bg-white/5 py-3 text-sm font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
                   >
                     <Home className="h-4 w-4" /> {t('game.backToMenu')}
                   </button>
@@ -4034,7 +4034,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                       <button
                         type="button"
                         onClick={() => resolveChallengeChoice(true)}
-                        className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/15 py-3.5 font-bold text-emerald-100 transition-all hover:bg-emerald-500/25 active:scale-[0.98]"
+                        className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/[0.15] py-3.5 font-bold text-emerald-100 transition-all hover:bg-emerald-500/25 active:scale-[0.98]"
                       >
                         <Check className="h-4 w-4 shrink-0" />
                         {t('game.challengeSuccess')}
@@ -4042,7 +4042,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                       <button
                         type="button"
                         onClick={() => resolveChallengeChoice(false)}
-                        className="flex items-center justify-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-500/15 py-3.5 font-bold text-amber-100 transition-all hover:bg-amber-500/25 active:scale-[0.98]"
+                        className="flex items-center justify-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-500/[0.15] py-3.5 font-bold text-amber-100 transition-all hover:bg-amber-500/25 active:scale-[0.98]"
                       >
                         <Beer className="h-4 w-4 shrink-0" />
                         {t('game.challengeDrink', { count: pendingChallenge.drinks })}

@@ -68,7 +68,7 @@ export function TvStage({
               type="button"
               onClick={() => void toggleFullscreen()}
               aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-felt-deep text-gold transition-colors hover:bg-gold/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-felt-deep text-gold transition-colors hover:bg-gold/[0.15] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
             >
               {isFullscreen ? (
                 <Minimize2 aria-hidden className="h-5 w-5" />

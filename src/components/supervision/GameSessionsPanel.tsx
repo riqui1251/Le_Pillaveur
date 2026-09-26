@@ -254,7 +254,7 @@ export function GameSessionsPanel({ userId }: { userId?: string } = {}) {
                             key={p.id}
                             href={`/supervision/comptes/${p.userId}`}
                             title={t('openAccount')}
-                            className="min-w-0 break-words rounded-lg border border-white/15 bg-white/[0.04] px-2 py-1 text-xs text-white/85 underline-offset-2 transition-colors hover:border-amber-400/40 hover:text-amber-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                            className="min-w-0 break-words rounded-lg border border-white/[0.15] bg-white/[0.04] px-2 py-1 text-xs text-white/85 underline-offset-2 transition-colors hover:border-amber-400/40 hover:text-amber-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
                           >
                             {p.name}
                           </Link>

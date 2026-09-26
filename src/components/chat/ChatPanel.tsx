@@ -189,7 +189,7 @@ function ChatConversation({
                       }
                       aria-label={t('report')}
                       title={t('report')}
-                      className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white/25 transition-colors hover:bg-red-500/15 hover:text-red-300"
+                      className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white/25 transition-colors hover:bg-red-500/[0.15] hover:text-red-300"
                     >
                       <Flag className="h-3 w-3" />
                     </button>
@@ -352,7 +352,7 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                     onClick={() => setConfirmBlockId(activeFriend.userId)}
                     aria-label={t('block')}
                     title={t('block')}
-                    className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-red-500/15 hover:text-red-300"
+                    className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-red-500/[0.15] hover:text-red-300"
                   >
                     <UserX className="h-4 w-4" />
                   </button>
@@ -383,7 +383,7 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                   <button
                     type="button"
                     onClick={() => setConfirmBlockId(null)}
-                    className="flex-1 rounded-lg border border-white/15 bg-white/5 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10"
+                    className="flex-1 rounded-lg border border-white/[0.15] bg-white/5 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10"
                   >
                     {tCommon('cancel')}
                   </button>

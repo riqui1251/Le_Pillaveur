@@ -222,7 +222,7 @@ export default function Navbar() {
               'touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-11 sm:w-11',
               drawerOpen
                 ? 'border-amber-400/40 bg-amber-500/20 text-amber-200 shadow-[0_0_16px_rgba(245,158,11,0.15)]'
-                : 'border-white/10 bg-white/[0.04] text-amber-300 hover:border-amber-400/35 hover:bg-amber-500/10'
+                : 'border-white/10 bg-white/[0.04] text-amber-300 hover:border-amber-400/[0.35] hover:bg-amber-500/10'
             )}
           >
             {drawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -244,7 +244,7 @@ export default function Navbar() {
                 'touch-target relative hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:flex sm:h-11 sm:w-11',
                 friendsOpen
                   ? 'border-amber-400/40 bg-amber-500/20 text-amber-200 shadow-[0_0_16px_rgba(217,164,65,0.15)]'
-                  : 'border-white/10 bg-white/[0.04] text-amber-300 hover:border-amber-400/35 hover:bg-amber-500/10'
+                  : 'border-white/10 bg-white/[0.04] text-amber-300 hover:border-amber-400/[0.35] hover:bg-amber-500/10'
               )}
             >
               <Users className="h-5 w-5" />
@@ -265,7 +265,7 @@ export default function Navbar() {
                 'touch-target relative hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:flex sm:h-11 sm:w-11',
                 chatOpen
                   ? 'border-sky-400/40 bg-sky-500/20 text-sky-200 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
-                  : 'border-white/10 bg-white/[0.04] text-sky-300 hover:border-sky-400/35 hover:bg-sky-500/10'
+                  : 'border-white/10 bg-white/[0.04] text-sky-300 hover:border-sky-400/[0.35] hover:bg-sky-500/10'
               )}
             >
               <MessageCircle className="h-5 w-5" />
@@ -317,7 +317,7 @@ export default function Navbar() {
               href="/compte"
               aria-label={t('guestBadge')}
               title={t('guestBadge')}
-              className="touch-target flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-amber-400/40 bg-amber-500/15 text-[11px] font-bold text-amber-200 transition-all duration-200 hover:border-amber-400/60 hover:bg-amber-500/25 active:scale-95 sm:h-11 sm:w-auto sm:px-3 sm:text-xs"
+              className="touch-target flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-amber-400/40 bg-amber-500/[0.15] text-[11px] font-bold text-amber-200 transition-all duration-200 hover:border-amber-400/60 hover:bg-amber-500/25 active:scale-95 sm:h-11 sm:w-auto sm:px-3 sm:text-xs"
             >
               <ShieldAlert className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
               <span className="hidden sm:inline">{t('guestBadge')}</span>
@@ -325,7 +325,7 @@ export default function Navbar() {
           ) : progression ? (
             <Link
               href="/compte"
-              className="touch-target flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-bold tabular-nums text-amber-200 transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:px-3 sm:text-xs"
+              className="touch-target flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-bold tabular-nums text-amber-200 transition-all duration-200 hover:border-amber-400/[0.35] hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:px-3 sm:text-xs"
             >
               <Star className="h-3.5 w-3.5 shrink-0 text-amber-300" />
               {t('levelBadge', { level: progression.level })}
@@ -338,7 +338,7 @@ export default function Navbar() {
               aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
               title={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
               onClick={() => void toggleFullscreen()}
-              className="touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-amber-300 transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:w-11"
+              className="touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-amber-300 transition-all duration-200 hover:border-amber-400/[0.35] hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:w-11"
             >
               {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
             </button>
@@ -415,7 +415,7 @@ export default function Navbar() {
                     className={cn(
                       'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150',
                       isActive
-                        ? 'bg-amber-500/15 text-amber-100 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.25)]'
+                        ? 'bg-amber-500/[0.15] text-amber-100 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.25)]'
                         : 'text-white/70 hover:bg-white/[0.06] hover:text-white'
                     )}
                   >

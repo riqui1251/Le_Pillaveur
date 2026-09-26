@@ -320,7 +320,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
             </button>
             <button
               onClick={session.discard}
-              className="w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+              className="w-full rounded-2xl border border-white/[0.15] bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
             >
               {tCommon('resumeGame.newGame')}
             </button>
@@ -383,7 +383,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
                   <button onClick={handleContinue} className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600">
                     {tCommon('continue')}
                   </button>
-                  <button onClick={handlePass} className="rounded-xl border border-white/15 bg-white/[0.05] px-5 py-2 text-sm text-white/70 hover:bg-white/10">
+                  <button onClick={handlePass} className="rounded-xl border border-white/[0.15] bg-white/[0.05] px-5 py-2 text-sm text-white/70 hover:bg-white/10">
                     {tCommon('pass')}
                   </button>
                 </div>

@@ -56,7 +56,7 @@ function useGuardedAction(): [boolean, (fn: () => Promise<unknown>) => Promise<v
 const COPIED_FEEDBACK_MS = 2000
 
 const SECONDARY_BUTTON =
-  'h-12 min-w-0 whitespace-normal rounded-2xl border-white/15 bg-white/5 px-3 text-sm font-semibold leading-tight text-white/80 hover:bg-white/10 hover:text-white'
+  'h-12 min-w-0 whitespace-normal rounded-2xl border-white/[0.15] bg-white/5 px-3 text-sm font-semibold leading-tight text-white/80 hover:bg-white/10 hover:text-white'
 
 export type OnlineEndScreenProps = {
   /** Titre propre au jeu (trophée, vainqueur, sous-titre…), rendu en tête. */

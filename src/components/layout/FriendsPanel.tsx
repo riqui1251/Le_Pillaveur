@@ -138,7 +138,7 @@ function InviteToTable({ friends }: { friends: Friend[] }) {
                   className={cn(
                     'flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
                     invited
-                      ? 'bg-emerald-500/15 text-emerald-300'
+                      ? 'bg-emerald-500/[0.15] text-emerald-300'
                       : 'bg-emerald-500/25 text-emerald-50 hover:bg-emerald-500/40 disabled:opacity-50'
                   )}
                 >

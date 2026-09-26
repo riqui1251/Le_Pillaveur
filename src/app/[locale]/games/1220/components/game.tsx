@@ -345,7 +345,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
             </button>
             <button
               onClick={session.discard}
-              className="w-full rounded-2xl border border-white/15 bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+              className="w-full rounded-2xl border border-white/[0.15] bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
             >
               {tCommon('resumeGame.newGame')}
             </button>
@@ -406,7 +406,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
                         className={cn(
                           "flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-all",
                           c.parity === v
-                            ? "border-teal-500/50 bg-teal-500/15 text-teal-300 shadow-[0_0_12px_rgba(20,184,166,0.15)]"
+                            ? "border-teal-500/50 bg-teal-500/[0.15] text-teal-300 shadow-[0_0_12px_rgba(20,184,166,0.15)]"
                             : "border-white/10 bg-white/[0.04] text-white/50 hover:bg-white/[0.08]"
                         )}
                       >
@@ -426,7 +426,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
                         className={cn(
                           "rounded-xl border py-2.5 text-sm font-semibold transition-all",
                           c.band === b
-                            ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
+                            ? "border-indigo-500/50 bg-indigo-500/[0.15] text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
                             : "border-white/10 bg-white/[0.04] text-white/50 hover:bg-white/[0.08]"
                         )}
                       >

@@ -342,7 +342,7 @@ export function OnlineRankingBoard({
             'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
             period === p
-              ? 'bg-gold/15 text-amber-200'
+              ? 'bg-gold/[0.15] text-amber-200'
               : 'text-cream/60 hover:text-cream'
           )}
         >
@@ -405,7 +405,7 @@ export function OnlineRankingBoard({
             'shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
             filter === 'all'
-              ? 'border-gold bg-gold/15 text-amber-200'
+              ? 'border-gold bg-gold/[0.15] text-amber-200'
               : 'border-gold/25 text-cream/70 hover:border-gold/50 hover:text-cream'
           )}
         >
@@ -424,7 +424,7 @@ export function OnlineRankingBoard({
                 'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
                 active
-                  ? 'border-gold bg-gold/15 text-amber-200'
+                  ? 'border-gold bg-gold/[0.15] text-amber-200'
                   : 'border-gold/25 text-cream/70 hover:border-gold/50 hover:text-cream'
               )}
             >

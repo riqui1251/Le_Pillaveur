@@ -385,7 +385,7 @@ export function AgeGate() {
             onClick={() => void submit(true, true)}
             disabled={loading}
             variant="outline"
-            className="h-11 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/15 hover:text-cream"
+            className="h-11 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/[0.15] hover:text-cream"
           >
             {t('accept')}
           </Button>
@@ -393,7 +393,7 @@ export function AgeGate() {
             onClick={() => void submit(false, true)}
             disabled={loading}
             variant="outline"
-            className="h-11 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/15 hover:text-cream"
+            className="h-11 flex-1 border-white/30 bg-white/[0.06] text-xs font-semibold text-cream hover:bg-white/[0.15] hover:text-cream"
           >
             {t('refuse')}
           </Button>

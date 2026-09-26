@@ -166,7 +166,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                   <Button
                     onClick={() => setIdx((i) => Math.max(0, i - 1))}
                     variant="outline"
-                    className="rounded-2xl border-[#24201A]/15 bg-transparent px-3 py-5 text-[#4A443A] hover:bg-[#24201A]/5"
+                    className="rounded-2xl border-[#24201A]/[0.15] bg-transparent px-3 py-5 text-[#4A443A] hover:bg-[#24201A]/5"
                     aria-label={t('prev')}
                   >
                     <ChevronLeft className="h-4 w-4" />

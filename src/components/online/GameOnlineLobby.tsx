@@ -577,13 +577,13 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="min-h-[44px] font-semibold text-amber-100 hover:bg-amber-500/15"
+                  className="min-h-[44px] font-semibold text-amber-100 hover:bg-amber-500/[0.15]"
                   onClick={() => router.push(otherRoomGame.path)}
                 >
                   {tOnline('gameSwitch.goToTable')}
                 </Button>
               )}
-              <Button variant="ghost" size="sm" className="min-h-[44px] text-amber-200 hover:bg-amber-500/15 hover:text-amber-100" onClick={() => leaveRoom()}>
+              <Button variant="ghost" size="sm" className="min-h-[44px] text-amber-200 hover:bg-amber-500/[0.15] hover:text-amber-100" onClick={() => leaveRoom()}>
                 {tOnline('quit')}
               </Button>
             </div>
@@ -634,7 +634,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 <Button
                   onClick={handleJoinByCode}
                   disabled={loading || joinCode.trim().length !== 6}
-                  className="h-12 shrink-0 rounded-xl border border-white/15 bg-white/10 px-4 text-sm font-semibold text-white hover:bg-white/20"
+                  className="h-12 shrink-0 rounded-xl border border-white/[0.15] bg-white/10 px-4 text-sm font-semibold text-white hover:bg-white/20"
                 >
                   {tOnline('joinByCode.submit')}
                 </Button>
@@ -1482,7 +1482,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost || botsCount <= 0}
                   onClick={() => updateSettings({ botsCount: botsCount - 1 })}
-                  className="game-grid-cell flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-lg font-black text-white transition-colors hover:bg-white/15 disabled:opacity-30"
+                  className="game-grid-cell flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-lg font-black text-white transition-colors hover:bg-white/[0.15] disabled:opacity-30"
                   aria-label="-1 bot"
                 >
                   −
@@ -1494,7 +1494,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost || botsCount >= maxBots}
                   onClick={() => updateSettings({ botsCount: botsCount + 1 })}
-                  className="game-grid-cell flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-lg font-black text-white transition-colors hover:bg-white/15 disabled:opacity-30"
+                  className="game-grid-cell flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-lg font-black text-white transition-colors hover:bg-white/[0.15] disabled:opacity-30"
                   aria-label="+1 bot"
                 >
                   +
@@ -2168,8 +2168,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   'h-12 rounded-2xl border text-sm font-semibold transition-all',
                   isHost ? 'flex-[0.8]' : 'flex-1',
                   selfMember?.isReady
-                    ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20'
-                    : 'border-white/15 bg-white/5 text-white hover:bg-white/10'
+                    ? 'border-emerald-400/30 bg-emerald-500/[0.15] text-emerald-200 hover:bg-emerald-500/20'
+                    : 'border-white/[0.15] bg-white/5 text-white hover:bg-white/10'
                 )}
               >
                 {selfMember?.isReady ? tOnline('readyButton.on') : tOnline('readyButton.off')}

@@ -227,7 +227,7 @@ function SetupPhase({
                 className={cn(
                   'relative min-h-[100px] overflow-hidden rounded-2xl border p-3 text-left transition-colors duration-150',
                   isTarget
-                    ? 'cursor-pointer border-dashed border-amber-400/35 hover:border-amber-400/60 hover:bg-white/[0.03]'
+                    ? 'cursor-pointer border-dashed border-amber-400/[0.35] hover:border-amber-400/60 hover:bg-white/[0.03]'
                     : 'border-white/10',
                 )}
               >
@@ -751,7 +751,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                             className={cn(
                               'flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition-all',
                               isChosen
-                                ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-200'
+                                ? 'border-emerald-400/60 bg-emerald-500/[0.15] text-emerald-200'
                                 : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/10 hover:text-white',
                             )}
                           >

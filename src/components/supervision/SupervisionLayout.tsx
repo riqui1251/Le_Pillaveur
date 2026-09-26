@@ -132,7 +132,7 @@ export function SupervisionNav({
                 className={cn(
                   'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50',
                   isActive
-                    ? 'border border-amber-400/40 bg-amber-500/15 text-amber-100'
+                    ? 'border border-amber-400/40 bg-amber-500/[0.15] text-amber-100'
                     : 'border border-transparent text-white/60 hover:bg-white/[0.06] hover:text-white'
                 )}
               >
@@ -506,7 +506,7 @@ export function QueueList({
                 type="button"
                 onClick={() => onView(it.id)}
                 disabled={busy}
-                className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                className="rounded-lg border border-white/[0.15] bg-white/5 px-2.5 py-1 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
               >
                 {viewLabel}
               </button>
@@ -515,7 +515,7 @@ export function QueueList({
                 type="button"
                 onClick={() => onAcknowledge(it.id)}
                 disabled={busy}
-                className="flex items-center gap-1 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                className="flex items-center gap-1 rounded-lg border border-emerald-500/[0.35] bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
               >
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 {acknowledgeLabel}
@@ -587,7 +587,7 @@ export function ErrorState({
       <button
         type="button"
         onClick={onRetry}
-        className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-3 text-xs font-medium text-white transition-colors hover:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+        className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/[0.15] bg-white/[0.06] px-3 text-xs font-medium text-white transition-colors hover:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
       >
         {retryLabel}
       </button>
@@ -660,7 +660,7 @@ export function Pager({
   if (pageCount <= 1) return null
 
   const buttonClass =
-    'rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50'
+    'rounded-lg border border-white/[0.15] bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50'
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] pt-3">

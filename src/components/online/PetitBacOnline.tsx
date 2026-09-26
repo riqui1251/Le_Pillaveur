@@ -393,9 +393,9 @@ export function PetitBacOnline() {
                           className={cn(
                             'touch-target flex shrink-0 items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] font-bold transition-colors',
                             cell.rejected
-                              ? 'border-suit-red/40 bg-suit-red/15 text-suit-red'
+                              ? 'border-suit-red/40 bg-suit-red/[0.15] text-suit-red'
                               : cell.iContested
-                                ? 'border-amber-500/50 bg-amber-500/15 text-amber-700'
+                                ? 'border-amber-500/50 bg-amber-500/[0.15] text-amber-700'
                                 : 'border-[#D8CCAE] text-[#8A7A55] hover:bg-amber-500/10'
                           )}
                         >

@@ -67,7 +67,7 @@ function ResetPasswordForm() {
     return (
       <div className="space-y-4 text-center">
         <p className="text-red-300">{t('invalidLink')}</p>
-        <Button asChild variant="outline" className="border-white/15 text-white">
+        <Button asChild variant="outline" className="border-white/[0.15] text-white">
           <Link href="/compte">{t('backToLogin')}</Link>
         </Button>
       </div>

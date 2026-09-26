@@ -134,7 +134,7 @@ export async function LandingPage({ locale }: { locale: string }) {
           </Link>
           <Link
             href={{ pathname: '/jeux', query: { solo: '1' } }}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-violet-400/40 bg-violet-500/15 px-8 text-base font-semibold text-violet-100 transition-colors hover:bg-violet-500/25"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-violet-400/40 bg-violet-500/[0.15] px-8 text-base font-semibold text-violet-100 transition-colors hover:bg-violet-500/25"
           >
             <Bot aria-hidden className="h-4 w-4" />
             {t('hero.ctaSolo')}

@@ -210,7 +210,7 @@ export function TryBotsGate({
         <Button
           asChild
           variant="outline"
-          className="w-full border-white/15 bg-transparent text-sm text-white/70 hover:bg-white/[0.06] hover:text-white"
+          className="w-full border-white/[0.15] bg-transparent text-sm text-white/70 hover:bg-white/[0.06] hover:text-white"
         >
           <Link href={loginHref}>
             <LogIn className="mr-2 h-4 w-4" />

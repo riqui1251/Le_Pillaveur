@@ -161,7 +161,7 @@ export function ReportDialog({ target, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-xl bg-white/10 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/15"
+            className="flex-1 rounded-xl bg-white/10 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.15]"
           >
             {t('back')}
           </button>
@@ -170,7 +170,7 @@ export function ReportDialog({ target, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-white/15 bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
+              className="flex-1 rounded-xl border border-white/[0.15] bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
             >
               {tCommon('cancel')}
             </button>

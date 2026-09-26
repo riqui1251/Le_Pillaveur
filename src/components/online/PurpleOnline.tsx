@@ -297,7 +297,7 @@ export function PurpleOnline() {
                   <button
                     onClick={() => void sendAction({ action: 'pass' })}
                     disabled={busy}
-                    className="rounded-xl border border-white/15 bg-white/[0.05] px-5 py-2 text-sm text-white/70 hover:bg-white/10 disabled:opacity-50"
+                    className="rounded-xl border border-white/[0.15] bg-white/[0.05] px-5 py-2 text-sm text-white/70 hover:bg-white/10 disabled:opacity-50"
                   >
                     {tCommon('pass')}
                   </button>
@@ -358,7 +358,7 @@ export function PurpleOnline() {
           onClick={() => void sendAction({ action: 'end' })}
           disabled={busy}
           variant="outline"
-          className="w-full rounded-2xl border-white/15 bg-white/5 py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
+          className="w-full rounded-2xl border-white/[0.15] bg-white/5 py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
         >
           {t('online.endGame')}
         </Button>

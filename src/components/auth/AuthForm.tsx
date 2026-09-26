@@ -451,7 +451,7 @@ export function AuthForm() {
           variant="outline"
           disabled={localLoading}
           onClick={handleLocalPlay}
-          className="w-full border-white/15 bg-transparent text-white/70 hover:bg-white/[0.06] hover:text-white"
+          className="w-full border-white/[0.15] bg-transparent text-white/70 hover:bg-white/[0.06] hover:text-white"
         >
           <Gamepad2 className="mr-2 h-4 w-4" />
           {localLoading ? tCommon('loading') : t('localPlay.button')}

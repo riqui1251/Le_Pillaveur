@@ -370,7 +370,7 @@ export function ImposteurOnline() {
               </PlayingCard>
               <button
                 onClick={() => setHideWord(true)}
-                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-[#24201A]/15 bg-[#24201A]/5 text-[#24201A]/60 transition-colors hover:bg-[#24201A]/10"
+                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-[#24201A]/[0.15] bg-[#24201A]/5 text-[#24201A]/60 transition-colors hover:bg-[#24201A]/10"
                 aria-label={t('hideWord')}
               >
                 <EyeOff className="h-4 w-4" />

@@ -138,7 +138,7 @@ export function RecentGamesRow() {
             type="button"
             disabled={busy}
             onClick={() => handleReplay(entry, game.id, game.path, game.title)}
-            className="group flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] py-2 pl-2.5 pr-3 text-left backdrop-blur-md transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-500/10 active:scale-[0.98] disabled:opacity-60"
+            className="group flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] py-2 pl-2.5 pr-3 text-left backdrop-blur-md transition-all duration-200 hover:border-amber-400/[0.35] hover:bg-amber-500/10 active:scale-[0.98] disabled:opacity-60"
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-amber-200">
               <GameIconById id={game.id} className="h-4 w-4" />
@@ -183,7 +183,7 @@ export function RecentGamesRow() {
                   onClick={() => toggleMate(mate.userId)}
                   className={`touch-target flex h-9 items-center gap-1 rounded-full border px-3 text-xs transition-colors disabled:opacity-60 ${
                     on
-                      ? 'border-amber-400/50 bg-amber-500/15 text-amber-100'
+                      ? 'border-amber-400/50 bg-amber-500/[0.15] text-amber-100'
                       : 'border-white/10 bg-white/[0.03] text-white/45'
                   }`}
                 >
