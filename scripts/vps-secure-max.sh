@@ -33,6 +33,12 @@ echo "===== 2) VOLUME DB (prod uniquement, permissions restreintes) ====="
 # et un -journal présent est un journal CHAUD que seule l'ouverture de la base
 # par sqlite peut rejouer sans risque de corruption. L'ouverture ci-dessous s'en
 # charge et affiche le mode réellement en place.
+#
+# /!\ Le bloc ci-dessous est ENTRE APOSTROPHES : aucune apostrophe dans son
+# texte, commentaires compris. Une seule (« d'écriture ») le refermait en plein
+# milieu, et la fin du bloc s'exécutait sur l'HÔTE au lieu du conteneur — le
+# script mourait sur « ls: cannot access '/data/' » (25/09/2026, lots 4-5).
+# src/lib/shell-scripts.test.ts le vérifie.
 docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c '
   # apk exige root ; sqlite3 redescend ensuite en DB_UID (su-exec).
   apk add --no-cache sqlite su-exec >/dev/null 2>&1 || true
@@ -41,10 +47,10 @@ docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" alpine sh -c '
   chmod 750 /data
   # 640 et non 660 : le chown ci-dessus fait de $DB_UID le PROPRIÉTAIRE du
   # fichier, et le conteneur applicatif tourne sous cet UID — il écrit donc
-  # prod.db, prod.db-wal et prod.db-shm avec le seul bit d'écriture du
+  # prod.db, prod.db-wal et prod.db-shm avec le seul droit en écriture du
   # propriétaire. Les fichiers -wal/-shm sont créés par SQLite à côté, en
-  # héritant du mode du fichier principal. Donner l'écriture au GROUPE n'était
-  # requis par rien, et c'est le fichier qui porte tous les comptes.
+  # héritant du mode du fichier principal. Ouvrir cette écriture au GROUPE
+  # ne servait à rien, et ce fichier porte tous les comptes.
   chmod 640 /data/prod.db 2>/dev/null || true
   if [ -f /data/prod.db ]; then
     echo "journal SQLite : $(su-exec "$DB_UID:$DB_UID" sqlite3 /data/prod.db "PRAGMA journal_mode;" 2>/dev/null || echo inconnu)"
