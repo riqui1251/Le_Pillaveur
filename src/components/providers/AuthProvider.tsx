@@ -11,6 +11,7 @@ import {
 } from 'react'
 import { useTranslations } from 'next-intl'
 import type { PlayerIconFrame, PlayerSpecialEffect } from '@/lib/players'
+import { readLocalAmbianceMode } from '@/lib/ambiance-mode'
 
 export type OnlineUserPreferences = {
   color: string
@@ -122,7 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password, displayName, locale }),
+        // Le compte naît avec l'ambiance de l'appareil (« Sans alcool » d'office
+        // dans l'app) au lieu de réimposer l'alcool à qui l'avait écarté.
+        body: JSON.stringify({ email, password, displayName, locale, ambianceMode: readLocalAmbianceMode() }),
       })
     } catch {
       return tErrors('network')

@@ -256,7 +256,8 @@
       "alcool": "Con alcol",
       "soft": "Senza alcol",
       "hintAlcool": "Sorsi e shottini. Tocca «Senza alcol» per sostituirli con penitenze.",
-      "hintSoft": "I sorsi diventano penitenze e il sito passa al blu notte."
+      "hintSoft": "I sorsi diventano penitenze e il sito passa al blu notte.",
+      "moderation": "L’abuso di alcol è pericoloso per la salute. Consumare con moderazione."
     },
     "selectedPlayers": {
       "ready": "{count, plural, one {# giocatore pronto} other {# giocatori pronti}}",

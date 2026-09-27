@@ -262,7 +262,8 @@
       "alcool": "Avec alcool",
       "soft": "Sans alcool",
       "hintAlcool": "Gorgées et cul-secs. Touchez « Sans alcool » pour les remplacer par des gages.",
-      "hintSoft": "Les gorgées deviennent des gages, et le site passe en bleu nuit."
+      "hintSoft": "Les gorgées deviennent des gages, et le site passe en bleu nuit.",
+      "moderation": "L'abus d'alcool est dangereux pour la santé. À consommer avec modération."
     },
     "selectedPlayers": {
       "ready": "{count, plural, one {# joueur prêt} other {# joueurs prêts}}",

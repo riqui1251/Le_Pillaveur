@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
 import { apiErrorMessage } from '@/lib/api-response'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
+import { readLocalAmbianceMode } from '@/lib/ambiance-mode'
 import {
   Dialog,
   DialogContent,
@@ -178,7 +179,9 @@ export function AuthForm() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ credential, locale }),
+          // Ambiance de l'appareil : la route ne s'en sert que si ce clic CRÉE
+          // le compte — un compte existant garde son réglage.
+          body: JSON.stringify({ credential, locale, ambianceMode: readLocalAmbianceMode() }),
         })
         const data = await res.json().catch(() => null)
         if (!res.ok) {

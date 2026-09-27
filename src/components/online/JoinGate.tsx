@@ -10,6 +10,7 @@ import { apiErrorMessage } from '@/lib/api-response'
 import { useAuth } from '@/hooks/useAuth'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
+import { readLocalAmbianceMode } from '@/lib/ambiance-mode'
 
 /**
  * Porte d'entrée après scan d'un QR de table (?join=CODE) pour un visiteur
@@ -47,7 +48,9 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: trimmed, locale }),
+        // Ambiance de l'appareil : dans l'app, un invité sans choix naît
+        // « Sans alcool » (politique Google Play) ; le compte prime ensuite.
+        body: JSON.stringify({ displayName: trimmed, locale, ambianceMode: readLocalAmbianceMode() }),
       })
       const data = await res.json().catch(() => null)
       if (res.status === 403 && data?.code === 'age_gate_required') {

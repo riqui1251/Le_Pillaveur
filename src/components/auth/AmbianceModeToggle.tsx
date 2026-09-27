@@ -1,9 +1,11 @@
 "use client"
 
+import { useEffect, useState } from 'react'
 import { Beer, Leaf } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useAmbianceMode, type AmbianceMode } from '@/components/providers/AmbianceAttribute'
+import { isCapacitorApp } from '@/lib/native-app'
 import { cn } from '@/lib/utils'
 
 const MODES: { id: AmbianceMode; icon: typeof Beer }[] = [
@@ -24,15 +26,26 @@ export function AmbianceModeToggle({ className, hint = true }: { className?: str
   // eux (cf. useAmbianceMode). On attend quand même la réponse de l'auth pour
   // ne pas afficher « Alcool » à un connecté qui a choisi Soft.
   const { mode, setMode } = useAmbianceMode()
+  // App Android lue après montage : le serveur ne voit pas la coquille, et un
+  // message rendu d'emblée côté client seulement casserait l'hydratation.
+  const [inApp, setInApp] = useState(false)
+  useEffect(() => {
+    setInApp(isCapacitorApp())
+  }, [])
 
   if (loading) return null
+
+  // Dans l'app, l'aide de l'ambiance alcool porte aussi le message de
+  // modération : c'est la condition posée pour garder l'alcool accessible
+  // malgré la politique alcool de Google Play. Le site, lui, reste tel quel.
+  const showModeration = hint && inApp && mode === 'alcool'
 
   return (
     <div className={cn('w-full min-w-0', className)}>
       <div
         role="radiogroup"
         aria-label={t('label')}
-        aria-describedby={hint ? 'ambiance-hint' : undefined}
+        aria-describedby={hint ? (showModeration ? 'ambiance-hint ambiance-moderation' : 'ambiance-hint') : undefined}
         className="inline-flex w-full rounded-full border border-white/10 bg-black/30 p-1 shadow-inner"
       >
         {MODES.map(({ id, icon: Icon }) => {
@@ -67,6 +80,11 @@ export function AmbianceModeToggle({ className, hint = true }: { className?: str
       {hint && (
         <p id="ambiance-hint" className="mt-1 px-2 text-[11px] leading-snug text-white/45">
           {t(mode === 'soft' ? 'hintSoft' : 'hintAlcool')}
+        </p>
+      )}
+      {showModeration && (
+        <p id="ambiance-moderation" className="mt-1 px-2 text-[11px] font-medium leading-snug text-white/70">
+          {t('moderation')}
         </p>
       )}
     </div>

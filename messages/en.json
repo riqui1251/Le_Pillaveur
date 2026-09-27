@@ -262,7 +262,8 @@
       "alcool": "With alcohol",
       "soft": "Alcohol-free",
       "hintAlcool": "Sips and shots. Tap “Alcohol-free” to swap them for dares.",
-      "hintSoft": "Sips become dares, and the site turns midnight blue."
+      "hintSoft": "Sips become dares, and the site turns midnight blue.",
+      "moderation": "Alcohol abuse is dangerous for your health. Consume in moderation."
     },
     "selectedPlayers": {
       "ready": "{count, plural, one {# player ready} other {# players ready}}",

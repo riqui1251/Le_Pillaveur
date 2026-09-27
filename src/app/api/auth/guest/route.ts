@@ -29,6 +29,7 @@ import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { recordIpSeen } from '@/lib/ip-history-server'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
+import { parseRequestedAmbianceMode } from '@/lib/ambiance-mode'
 
 // Quota de création d'invités par RÉSEAU (networkRateLimitKey : IPv4 entière,
 // IPv6 ramenée à son /64), pas par adresse : le réseau, c'est la tablée —
@@ -54,7 +55,7 @@ const GUEST_WINDOW_MS = 60 * 60 * 1000
  */
 export const POST = withApiRoute('auth/guest POST', async (request: Request) => {
   try {
-    const parsed = await readApiJson<{ displayName?: unknown; locale?: unknown }>(request)
+    const parsed = await readApiJson<{ displayName?: unknown; locale?: unknown; ambianceMode?: unknown }>(request)
     if (!parsed.ok) return parsed.response
     const body = parsed.body
     const requested = typeof body.displayName === 'string' ? body.displayName.trim() : ''
@@ -132,6 +133,10 @@ export const POST = withApiRoute('auth/guest POST', async (request: Request) => 
       )
     }
 
+    // Ambiance de l'appareil (« Sans alcool » d'office dans l'app) : lue ici,
+    // à la création seulement — la session déjà en place, renvoyée plus haut,
+    // garde son réglage. Valeur inconnue : défaut du schéma.
+    const ambianceMode = parseRequestedAmbianceMode(body.ambianceMode)
     const accountCode = await createUniqueAccountCode()
     const user = await prisma.user.create({
       data: {
@@ -141,6 +146,7 @@ export const POST = withApiRoute('auth/guest POST', async (request: Request) => 
         accountCode,
         playMode: 'online',
         locale: initialLocale,
+        ...(ambianceMode ? { ambianceMode } : {}),
         lastLoginAt: new Date(),
         lastSeenAt: new Date(),
       },

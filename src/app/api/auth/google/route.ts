@@ -22,6 +22,7 @@ import { getDisplayNameValidationError, isDisplayNameTaken, DISPLAY_NAME_MAX_LEN
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 import { linkVisitorNameModerationAttempts } from '@/lib/name-moderation-attempts-server'
 import { readConsentedVisitorId } from '@/lib/auth-cookies'
+import { parseRequestedAmbianceMode } from '@/lib/ambiance-mode'
 
 const GOOGLE_LIMIT = 15
 const GOOGLE_WINDOW_MS = 15 * 60 * 1000
@@ -55,7 +56,7 @@ async function pickAvailableDisplayName(preferred: string): Promise<string> {
 
 export const POST = withApiRoute('auth/google POST', async (request: Request) => {
   try {
-    const parsed = await readApiJson<{ credential?: unknown; locale?: unknown }>(request)
+    const parsed = await readApiJson<{ credential?: unknown; locale?: unknown; ambianceMode?: unknown }>(request)
     if (!parsed.ok) return parsed.response
     const body = parsed.body
     const credential = typeof body.credential === 'string' ? body.credential : ''
@@ -83,6 +84,10 @@ export const POST = withApiRoute('auth/google POST', async (request: Request) =>
         claims.given_name || claims.name || email.split('@')[0]
       )
       const accountCode = await createUniqueAccountCode()
+      // Ambiance de l'appareil, pour la CRÉATION seulement : le même clic
+      // Google reconnecte aussi des comptes existants, dont le réglage (choisi
+      // ailleurs, suivi d'un appareil à l'autre) ne doit jamais être écrasé.
+      const ambianceMode = parseRequestedAmbianceMode(body.ambianceMode)
       user = await prisma.user.create({
         data: {
           email,
@@ -94,6 +99,7 @@ export const POST = withApiRoute('auth/google POST', async (request: Request) =>
           accountCode,
           playMode: 'local',
           locale: initialLocale,
+          ...(ambianceMode ? { ambianceMode } : {}),
           lastLoginAt: new Date(),
           lastSeenAt: new Date(),
         },

@@ -29,6 +29,7 @@ import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limi
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
+import { parseRequestedAmbianceMode } from '@/lib/ambiance-mode'
 
 const REGISTER_LIMIT = 5
 const REGISTER_WINDOW_MS = 60 * 60 * 1000
@@ -40,6 +41,7 @@ export const POST = withApiRoute('auth/register POST', async (request: Request) 
       password?: unknown
       displayName?: unknown
       locale?: unknown
+      ambianceMode?: unknown
     }>(request)
     if (!parsed.ok) return parsed.response
     const body = parsed.body
@@ -105,6 +107,9 @@ export const POST = withApiRoute('auth/register POST', async (request: Request) 
 
     const passwordHash = await hashPassword(password)
     const accountCode = await createUniqueAccountCode()
+    // Ambiance de l'appareil (« Sans alcool » d'office dans l'app, ou choix du
+    // visiteur avant son inscription). Valeur inconnue : défaut du schéma.
+    const ambianceMode = parseRequestedAmbianceMode(body.ambianceMode)
 
     // Uniquement une CRÉATION : plus aucun écrasement d'un compte existant.
     const user = await prisma.user.create({
@@ -116,6 +121,7 @@ export const POST = withApiRoute('auth/register POST', async (request: Request) 
         accountCode,
         playMode: 'local',
         locale: initialLocale,
+        ...(ambianceMode ? { ambianceMode } : {}),
         lastLoginAt: new Date(),
         lastSeenAt: new Date(),
       },

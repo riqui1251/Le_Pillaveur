@@ -256,7 +256,8 @@
       "alcool": "Con alcohol",
       "soft": "Sin alcohol",
       "hintAlcool": "Tragos y chupitos. Toca «Sin alcohol» para cambiarlos por retos.",
-      "hintSoft": "Los tragos se convierten en retos y el sitio pasa al azul noche."
+      "hintSoft": "Los tragos se convierten en retos y el sitio pasa al azul noche.",
+      "moderation": "El abuso de alcohol es peligroso para su salud. Consumir con moderación."
     },
     "selectedPlayers": {
       "ready": "{count, plural, one {# jugador listo} other {# jugadores listos}}",
