@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Feutre profond du site (variable CSS felt-deep, #0A2C22). Le site est toujours sombre :
+         les bandes des barres système, le fond de la WebView avant le premier rendu et
+         le splash Android 12+ prennent cette teinte au lieu du blanc ou du gris système. -->
+    <color name="felt_deep">#0A2C22</color>
+</resources>

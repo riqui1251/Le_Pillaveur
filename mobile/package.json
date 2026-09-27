@@ -6,11 +6,15 @@
   "scripts": {
     "sync": "cap sync",
     "open:android": "cap open android",
-    "build:android": "cd android && gradlew assembleDebug"
+    "icones": "node gen-assets.mjs && capacitor-assets generate --android",
+    "build:android": "cap sync android && cd android && gradlew assembleDebug",
+    "bundle:android": "cap sync android && cd android && gradlew bundleRelease",
+    "android:local": "cap sync android && node essai-local.mjs && cd android && gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",
     "@capacitor/core": "^8.4.2",
+    "@capacitor/share": "^8.0.2",
     "@capgo/capacitor-social-login": "^8.3.38"
   },
   "devDependencies": {

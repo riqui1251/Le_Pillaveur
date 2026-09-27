@@ -3,50 +3,203 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0a2c22" />
     <title>Le Pillaveur</title>
+    <!--
+      Écran de secours de l'app (server.errorPath) : Capacitor l'affiche, servi depuis les
+      assets sur https://localhost/index.html, quand la page principale ne se charge pas :
+      hors ligne, ou panne du serveur (502/503/504, 52x de Cloudflare, pendant un
+      déploiement par exemple). MainActivity lui laisse les 404, les 500 et les défis
+      Cloudflare, qui gardent la page du serveur. Tout est en ligne : aucune ressource
+      réseau n'est joignable ici.
+    -->
     <style>
-      /* Écran de secours hors-ligne — l'app charge normalement lepillaveur.fr. */
-      html,
+      :root {
+        --felt: #0e3b2e;
+        --felt-deep: #0a2c22;
+        --gold: #d9a441;
+        --cream: #f3ead3;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        height: 100%;
+        /* Même teinte que les barres système (felt_deep) : pas de couture autour de la page. */
+        background: var(--felt-deep);
+      }
       body {
         margin: 0;
-        height: 100%;
+        min-height: 100%;
+        min-height: 100dvh;
         display: flex;
         align-items: center;
         justify-content: center;
         text-align: center;
-        background: radial-gradient(120% 120% at 50% 0%, #0e3b2e, #0a2c22);
-        color: #f3ead3;
-        font-family: Georgia, 'Times New Roman', serif;
+        background: radial-gradient(120% 80% at 50% 0%, var(--felt), var(--felt-deep) 70%);
+        color: var(--cream);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        -webkit-tap-highlight-color: transparent;
       }
       main {
-        padding: 24px;
+        width: 100%;
+        max-width: 22rem;
+        padding: 32px 24px;
+      }
+      .cartes {
+        display: block;
+        width: 72px;
+        height: 84px;
+        margin: 0 auto 24px;
+      }
+      .marque {
+        margin: 0 0 12px;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 13px;
+        letter-spacing: 0.2em;
+        color: var(--gold);
       }
       h1 {
-        color: #d9a441;
-        font-size: 28px;
-        margin: 0 0 8px;
-        letter-spacing: 0.04em;
+        margin: 0 0 12px;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 26px;
+        font-weight: 400;
+        line-height: 1.2;
       }
       p {
-        margin: 0 0 20px;
-        opacity: 0.75;
-        font-size: 15px;
+        margin: 0 0 32px;
+        font-size: 16px;
+        line-height: 1.5;
+        color: rgba(243, 234, 211, 0.75);
       }
-      button {
-        border: 1px solid #d9a441;
-        background: transparent;
-        color: #d9a441;
-        font-size: 15px;
-        padding: 10px 22px;
+      .bouton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 11rem;
+        min-height: 48px;
+        padding: 0 28px;
         border-radius: 999px;
+        background: var(--gold);
+        color: var(--felt-deep);
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .bouton:active {
+        transform: scale(0.98);
+      }
+      .bouton:focus-visible {
+        outline: 2px solid var(--cream);
+        outline-offset: 3px;
+      }
+      .bouton[aria-disabled='true'] {
+        opacity: 0.7;
+        pointer-events: none;
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>LE PILLAVEUR</h1>
-      <p>Impossible de joindre la table.<br />Vérifie ta connexion internet.</p>
-      <button onclick="window.location.href='https://lepillaveur.fr'">Réessayer</button>
+      <!-- Même dessin que l'icône de l'app et le favicon du site (mobile/gen-assets.mjs). -->
+      <svg class="cartes" viewBox="7.4 4.1 32.3 38" aria-hidden="true">
+        <rect x="14.5" y="6.5" width="22" height="31" rx="3.5" transform="rotate(9 25.5 22)" fill="#0A2C22" stroke="#D9A441" stroke-width="1.8" />
+        <rect x="10" y="9" width="22" height="31" rx="3.5" transform="rotate(-6 21 24.5)" fill="#F3EAD3" stroke="#D9A441" stroke-width="1.8" />
+        <g transform="rotate(-6 21 24.5)">
+          <path d="M21 15.5 c3.4 4 5.6 6.1 5.6 8.9 a3.4 3.4 0 0 1 -5 3 c.3 1.7 .9 2.9 1.8 3.9 h-4.8 c.9 -1 1.5 -2.2 1.8 -3.9 a3.4 3.4 0 0 1 -5 -3 c0 -2.8 2.2 -4.9 5.6 -8.9 z" fill="#B3382E" />
+        </g>
+      </svg>
+      <p class="marque">LE PILLAVEUR</p>
+      <h1 id="titre">La table ne répond pas</h1>
+      <p id="texte">Vérifie ta connexion internet ou réessaie dans un instant.</p>
+      <!--
+        Adresse ABSOLUE de l'hôte de l'app : cette page vit sur https://localhost, un lien
+        relatif resterait dans les assets. Un vrai lien (et non location.replace) : il marche
+        même sans script, et la page du site s'ajoute APRÈS cet écran dans l'historique, ce
+        qui permet à MainActivity de reconnaître la sortie par « Réessayer » et d'effacer
+        l'historique en échec (sinon le retour ramènerait ici). L'accueil n'est que le
+        repli : une fois l'écran chargé, MainActivity y met la page en panne (reessayerVers).
+      -->
+      <a id="reessayer" class="bouton" href="https://lepillaveur.fr/">Réessayer</a>
     </main>
+    <script>
+      // Pas de next-intl ici (page locale, hors ligne) : les 4 langues du site, choisies
+      // d'après la langue du téléphone, le français par défaut.
+      (function () {
+        var TEXTES = {
+          fr: {
+            titre: 'La table ne répond pas',
+            texte: 'Vérifie ta connexion internet ou réessaie dans un instant.',
+            bouton: 'Réessayer',
+            attente: 'Connexion…',
+          },
+          en: {
+            titre: 'The table isn’t responding',
+            texte: 'Check your internet connection or try again in a moment.',
+            bouton: 'Try again',
+            attente: 'Connecting…',
+          },
+          es: {
+            titre: 'La mesa no responde',
+            texte: 'Comprueba tu conexión a internet o vuelve a intentarlo en un momento.',
+            bouton: 'Reintentar',
+            attente: 'Conectando…',
+          },
+          it: {
+            titre: 'Il tavolo non risponde',
+            texte: 'Controlla la connessione a internet o riprova tra un attimo.',
+            bouton: 'Riprova',
+            attente: 'Connessione…',
+          },
+        };
+        var langues = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'fr'];
+        var code = 'fr';
+        for (var i = 0; i < langues.length; i++) {
+          var candidat = String(langues[i]).slice(0, 2).toLowerCase();
+          if (TEXTES[candidat]) {
+            code = candidat;
+            break;
+          }
+        }
+        var t = TEXTES[code];
+        document.documentElement.lang = code;
+        document.getElementById('titre').textContent = t.titre;
+        document.getElementById('texte').textContent = t.texte;
+        var bouton = document.getElementById('reessayer');
+        bouton.textContent = t.bouton;
+
+        // Appelée par MainActivity (evaluateJavascript) avec la page qui a échoué : le lien
+        // reçu (/invite/CODE, /compte/reinitialiser?token=…) n'est pas perdu au retour du
+        // réseau. Contrôle d'origine en plus de celui de l'app : seulement le site en https,
+        // ou le serveur de dev du PC en http (variante d'essai local, npm run android:local ;
+        // le HTTP en clair n'est de toute façon permis que dans les builds debug).
+        window.reessayerVers = function (adresse) {
+          var cible;
+          try {
+            cible = new URL(adresse);
+          } catch (e) {
+            return;
+          }
+          var site = cible.protocol === 'https:' && cible.host === 'lepillaveur.fr';
+          var essaiLocal = cible.protocol === 'http:' && (cible.hostname === 'localhost' || cible.hostname === '127.0.0.1');
+          if ((site || essaiLocal) && !cible.username && !cible.password) {
+            bouton.href = cible.href;
+          }
+        };
+
+        // Un seul essai à la fois : un double appui relancerait la navigation en cours.
+        // Si le réseau manque encore, Capacitor recharge cet écran (bouton neuf) ; si la
+        // réponse traîne, le bouton redevient actif au bout de 10 s.
+        bouton.addEventListener('click', function () {
+          bouton.setAttribute('aria-disabled', 'true');
+          bouton.textContent = t.attente;
+          setTimeout(function () {
+            bouton.removeAttribute('aria-disabled');
+            bouton.textContent = t.bouton;
+          }, 10000);
+        });
+      })();
+    </script>
   </body>
 </html>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Variante DEBUG (remplace celle de main dans les builds debug uniquement) : même
+     interdiction du clair, sauf vers localhost, pour l'essai local
+     (serveur de dev sur le PC + adb reverse, server.url http://localhost:3131).
+     Le build release, lui, garde main/res/xml : aucun clair, localhost compris. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

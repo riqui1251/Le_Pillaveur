@@ -1,1 +1,7 @@
 node_modules/
+
+# Clés de signature et mots de passe, où qu'on les dépose sous mobile/ par erreur
+# (android/.gitignore ne couvre que android/).
+*.jks
+*.keystore
+keystore.properties

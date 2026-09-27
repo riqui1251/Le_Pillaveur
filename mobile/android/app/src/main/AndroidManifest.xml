@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- networkSecurityConfig : HTTP en clair interdit (res/xml/network_security_config.xml).
+         Dès l'API 24, sa présence fait ignorer usesCleartextTraffic, qu'un sync de la
+         variante de test (server.cleartext) injecte dans le manifeste cordova généré. -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
@@ -18,9 +22,10 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- App Links : un lien (ou QR) lepillaveur.fr ouvre l'app.
-                 L'auto-vérification exige /.well-known/assetlinks.json sur le
-                 site (à publier avec l'empreinte de la clé de signature). -->
+            <!-- App Links : un lien (ou QR) lepillaveur.fr ouvre l'app, et MainActivity.onNewIntent
+                 charge la page demandée. L'auto-vérification exige /.well-known/assetlinks.json
+                 sur le site (à publier avec l'empreinte de la clé de signature), APRÈS la
+                 diffusion d'un APK qui sait charger l'URL reçue. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -46,4 +51,19 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Vibrations des jeux (navigator.vibrate). -->
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Garde-fou Play : l'app n'utilise ni identifiant publicitaire ni attribution. Ces
+         permissions arrivaient avec le SDK Facebook du plugin de connexion (désactivé dans
+         capacitor.config.json, plugins.SocialLogin.providers) ; si une dépendance les
+         réintroduit, la fusion du manifeste les retire, sinon la release est refusée
+         (déclaration « pas d'identifiant publicitaire » dans la Play Console). -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_CUSTOM_AUDIENCE" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_TOPICS" tools:node="remove" />
+    <uses-permission
+        android:name="com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE"
+        tools:node="remove"
+    />
 </manifest>

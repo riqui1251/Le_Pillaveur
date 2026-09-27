@@ -1,12 +1,27 @@
-﻿{
+{
   "appId": "fr.lepillaveur.app",
   "appName": "Le Pillaveur",
   "webDir": "www",
+  "backgroundColor": "#0A2C22",
   "server": {
     "url": "https://lepillaveur.fr",
-    "allowNavigation": ["lepillaveur.fr", "*.lepillaveur.fr"]
+    "errorPath": "index.html"
   },
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "resolveServiceWorkerRequests": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK"
+    },
+    "SocialLogin": {
+      "providers": {
+        "google": true,
+        "facebook": false,
+        "apple": false,
+        "twitter": false
+      }
+    }
   }
 }

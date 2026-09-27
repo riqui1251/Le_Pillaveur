@@ -1,5 +1,22 @@
 apply plugin: 'com.android.application'
 
+// Signature release : la clé d'upload Play vit HORS du dépôt. android/keystore.properties
+// (ignoré par git, voir mobile/README.md) donne son chemin et ses mots de passe. Sans ce
+// fichier, bundleRelease sort un AAB NON signé (refusé par la Play Console) mais la
+// configuration Gradle ne casse pas : le debug se construit toujours.
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    // Lecteur UTF-8 : Properties.load(InputStream) décode en ISO-8859-1, et un mot de passe
+    // accentué écrit par un éditeur en UTF-8 (VS Code, Bloc-notes) arrivait déformé
+    // (« é » → « Ã© ») : la signature échouait sur un « password was incorrect » trompeur.
+    keystorePropertiesFile.withReader('UTF-8') { keystoreProperties.load(it) }
+}
+def releaseSigningReady = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].every { keystoreProperties[it] }
+if (keystorePropertiesFile.exists() && !releaseSigningReady) {
+    logger.warn('keystore.properties incomplet (storeFile, storePassword, keyAlias, keyPassword) : release NON signée.')
+}
+
 android {
     namespace = "fr.lepillaveur.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,6 +24,9 @@ android {
         applicationId "fr.lepillaveur.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+        // versionCode : entier que la Play Console exige STRICTEMENT croissant. L'incrémenter
+        // avant CHAQUE AAB téléversé (test interne compris), sinon l'envoi est refusé.
+        // versionName : libellé affiché aux joueurs, libre (ex. "1.1").
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -16,10 +36,27 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseSigningReady) {
+                // Chemin ABSOLU conseillé (clé hors dépôt) ; un chemin relatif part de android/app/.
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseSigningReady) {
+                signingConfig signingConfigs.release
+            }
+            // R8 reste coupé tant qu'une release minifiée n'a pas été essayée sur un téléphone
+            // (chargement des plugins par réflexion). Le fichier « optimize » est celui que
+            // l'AGP recommande, « proguard-android.txt » étant déprécié.
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aucun HTTP en clair : le site est servi en HTTPS (HSTS), et ni la WebView ni les
+     requêtes natives des plugins (OkHttp, CapacitorHttp) n'ont à sortir en clair.
+     Les builds debug utilisent app/src/debug/res/xml/network_security_config.xml, qui
+     n'ouvre que localhost pour les essais sur serveur local. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
