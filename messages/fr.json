@@ -448,7 +448,8 @@
     "share": {
       "text": "Rejoins ma table {game} sur Le Pillaveur ! Code : {code}",
       "cta": "Partager",
-      "linkCopied": "Lien copié !"
+      "linkCopied": "Lien copié !",
+      "copyFailed": "Copie impossible"
     },
     "openTables": {
       "title": "Tables ouvertes · {count}"
@@ -466,7 +467,8 @@
     "table": {
       "label": "Table",
       "copied": "copié !",
-      "tapToCopy": "toucher = copier"
+      "tapToCopy": "toucher = copier",
+      "copyFailed": "copie impossible"
     },
     "seat": {
       "you": "Toi",
@@ -5205,6 +5207,7 @@
     "notInVoice": "absent",
     "nobody": "Personne en vocal pour l'instant",
     "micDenied": "Micro refusé — autorise-le dans les réglages de ton navigateur.",
+    "micDeniedApp": "Micro refusé — autorise-le dans Paramètres › Applications › Le Pillaveur › Autorisations › Micro.",
     "unsupported": "Ton navigateur ne supporte pas le vocal.",
     "networkError": "Connexion au vocal impossible — réessaie.",
     "disabled": "Le vocal est désactivé sur le site par un administrateur.",

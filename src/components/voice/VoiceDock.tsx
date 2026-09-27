@@ -8,6 +8,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useVoiceChat } from '@/hooks/useVoiceChat'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { isCapacitorApp } from '@/lib/native-app'
 import { cn } from '@/lib/utils'
 
 /**
@@ -107,6 +108,15 @@ export function VoiceDock() {
     setMicPromptRoomId(roomId)
   }, [roomId, voice.joined])
 
+  // Dans l'app mobile, le micro est une autorisation ANDROID : après deux
+  // refus, le système refuse seul, sans plus rien demander, et « les
+  // réglages de ton navigateur » n'existent pas. On y donne le vrai chemin.
+  // Lu après montage, comme partout ailleurs (Navbar, FullscreenButton).
+  const [inApp, setInApp] = useState(false)
+  useEffect(() => {
+    setInApp(isCapacitorApp())
+  }, [])
+
   if (!room || !user) return null
 
   const dismissPrompt = () => {
@@ -197,7 +207,7 @@ export function VoiceDock() {
               {/* États d'erreur */}
               {voice.error === 'mic-denied' && (
                 <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
-                  {t('micDenied')}
+                  {inApp ? t('micDeniedApp') : t('micDenied')}
                 </p>
               )}
               {voice.error === 'unsupported' && (

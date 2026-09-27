@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
-import { Armchair, Check, Loader2, LogOut, RefreshCw, Share2 } from 'lucide-react'
+import { Armchair, Check, Loader2, LogOut, RefreshCw, Share2, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { getGameById } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { shareLink } from '@/lib/native-share'
 import { EndConfetti } from './EndConfetti'
 import { endShareClipboardText, endShareUrl, mayBringTableBack, rematchCounter } from './end-screen'
 
@@ -54,6 +55,8 @@ function useGuardedAction(): [boolean, (fn: () => Promise<unknown>) => Promise<v
 
 /** Durée de la confirmation « Lien copié » (même délai que le lobby). */
 const COPIED_FEEDBACK_MS = 2000
+/** Un échec de copie reste plus longtemps : il faut le temps de le lire. */
+const COPY_FAILED_FEEDBACK_MS = 4000
 
 const SECONDARY_BUTTON =
   'h-12 min-w-0 whitespace-normal rounded-2xl border-white/[0.15] bg-white/5 px-3 text-sm font-semibold leading-tight text-white/80 hover:bg-white/10 hover:text-white'
@@ -128,12 +131,19 @@ export function OnlineEndScreen({
   const [backPending, runBack] = useGuardedAction()
   const [leavePending, runLeave] = useGuardedAction()
   const [sharePending, runShare] = useGuardedAction()
-  const [copied, setCopied] = useState(false)
+  // Retour du partage quand aucune feuille ne s'est ouverte : lien copié, ou
+  // copie impossible (sans quoi le bouton revenait sans rien dire).
+  const [shareFeedback, setShareFeedback] = useState<'copied' | 'failed' | null>(null)
   useEffect(() => {
-    if (!copied) return
-    const timer = setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS)
+    if (!shareFeedback) return
+    const timer = setTimeout(
+      () => setShareFeedback(null),
+      shareFeedback === 'failed' ? COPY_FAILED_FEEDBACK_MS : COPIED_FEEDBACK_MS
+    )
     return () => clearTimeout(timer)
-  }, [copied])
+  }, [shareFeedback])
+  const copied = shareFeedback === 'copied'
+  const shareFailed = shareFeedback === 'failed'
 
   // Quorum de la relance : les membres de la TABLE, pas les humains de l'état
   // moteur (cf. rematchCounter).
@@ -150,20 +160,15 @@ export function OnlineEndScreen({
     runShare(async () => {
       const url = endShareUrl(window.location.origin, room, gameId ? getGameById(gameId)?.path : null)
       const text = shareText ?? (won ? t('end.shareWon', { game: gameTitle }) : t('end.sharePlayed', { game: gameTitle }))
-      if (typeof navigator.share === 'function') {
-        try {
-          await navigator.share({ title: 'Le Pillaveur', text, url })
-        } catch {
-          // Partage annulé par l'utilisateur : ne pas basculer sur la copie.
-        }
-        return
-      }
-      try {
-        await navigator.clipboard.writeText(endShareClipboardText(text, url))
-        setCopied(true)
-      } catch {
-        // Presse-papier indisponible — tant pis.
-      }
+      // Feuille de l'app, puis du navigateur, puis copie (cf. shareLink) ;
+      // une feuille refermée par le joueur ne se rabat pas sur la copie.
+      const outcome = await shareLink({
+        title: 'Le Pillaveur',
+        text,
+        url,
+        clipboardText: endShareClipboardText(text, url),
+      })
+      if (outcome === 'copied' || outcome === 'failed') setShareFeedback(outcome)
     })
 
   const actions = (
@@ -230,10 +235,12 @@ export function OnlineEndScreen({
         >
           {copied ? (
             <Check aria-hidden className="mr-1.5 h-4 w-4 shrink-0 text-emerald-300" />
+          ) : shareFailed ? (
+            <X aria-hidden className="mr-1.5 h-4 w-4 shrink-0 text-red-300" />
           ) : (
             <Share2 aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
           )}
-          {copied ? t('share.linkCopied') : t('share.cta')}
+          {copied ? t('share.linkCopied') : shareFailed ? t('share.copyFailed') : t('share.cta')}
         </Button>
         <Button
           onClick={() => void runLeave(onLeave)}
@@ -257,6 +264,7 @@ export function OnlineEndScreen({
           ? t('end.rematchStatus', { count: counter.count, total: counter.total })
           : ''}
         {copied ? ` ${t('share.linkCopied')}` : ''}
+        {shareFailed ? ` ${t('share.copyFailed')}` : ''}
       </p>
     </div>
   )

@@ -1,12 +1,11 @@
 ﻿"use client"
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Check, ChevronDown, Copy, Crown, Globe, Lock, LogOut, Mail, Play, Plus, Settings, Share2, Trophy, Tv, UserPlus, Users, X } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Check, ChevronDown, Copy, Crown, Globe, Lock, LogOut, Mail, Play, Plus, Settings, Share2, Tv, UserPlus, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
@@ -24,6 +23,8 @@ import { OnlinePlayerIcon } from '@/components/online/OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { JoinQR } from '@/components/tv/JoinQR'
 import { cn } from '@/lib/utils'
+import { isCapacitorApp } from '@/lib/native-app'
+import { copyText, shareLink } from '@/lib/native-share'
 import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
 import { forceLaunchDecision, MC_TEAM_MIN_PLAYERS } from '@/components/online/lobby-launch'
 
@@ -274,6 +275,12 @@ const KICK_CONFIRM_MS = 3000
  */
 const KICK_BOUNCE_MS = 250
 
+/** Durée de la confirmation « copié ». */
+const COPIED_FEEDBACK_MS = 2000
+/** Un échec de copie reste plus longtemps : il faut le temps de le lire, puis de noter le code. */
+const COPY_FAILED_FEEDBACK_MS = 4000
+type CopyFeedback = 'copied' | 'failed' | null
+
 export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps) {
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
   const pathname = usePathname()
@@ -282,7 +289,19 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const router = useRouter()
   const { lobbies, liveGames, liveGamesTotal } = useOpenLobbies({ pollMs: 15_000 }) // la table, elle, est sondée par useOnlineRoom
   const { friends, incoming, outgoing, sendRequestToUser, acceptRequest } = useFriends()
-  const [copied, setCopied] = useState(false)
+  // Retour de « toucher = copier » sur le code de la table.
+  const [codeCopy, setCodeCopy] = useState<CopyFeedback>(null)
+  useEffect(() => {
+    if (!codeCopy) return
+    const timer = setTimeout(() => setCodeCopy(null), codeCopy === 'failed' ? COPY_FAILED_FEEDBACK_MS : COPIED_FEEDBACK_MS)
+    return () => clearTimeout(timer)
+  }, [codeCopy])
+  // Coquille mobile : connue seulement après montage (comme dans la Navbar),
+  // pour que le premier rendu client reste celui du HTML serveur.
+  const [inApp, setInApp] = useState(false)
+  useEffect(() => {
+    setInApp(isCapacitorApp())
+  }, [])
   const [joinCode, setJoinCode] = useState('')
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [showTv, setShowTv] = useState(false)
@@ -313,11 +332,17 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     setChoosingVisibility(false)
   }, [room?.id])
 
-  // Partage du lien de la table (boucle virale n°1) : partage natif si
-  // disponible (mobile), sinon copie dans le presse-papier. Le lien
-  // /jeux?join=CODE fonctionne même pour un ami SANS compte : le code est
-  // mémorisé et consommé après son inscription (voir jeux/page.tsx).
-  const [linkShared, setLinkShared] = useState(false)
+  // Partage du lien de la table (boucle virale n°1) : feuille de partage de
+  // l'app ou du navigateur (mobile), sinon copie dans le presse-papier — cf.
+  // shareLink. Le lien /jeux?join=CODE fonctionne même pour un ami SANS
+  // compte : le code est mémorisé et consommé après son inscription (voir
+  // jeux/page.tsx).
+  const [linkShare, setLinkShare] = useState<CopyFeedback>(null)
+  useEffect(() => {
+    if (!linkShare) return
+    const timer = setTimeout(() => setLinkShare(null), linkShare === 'failed' ? COPY_FAILED_FEEDBACK_MS : COPIED_FEEDBACK_MS)
+    return () => clearTimeout(timer)
+  }, [linkShare])
   const shareTableLink = async () => {
     if (!room) return
     // URL SANS préfixe de langue (le rejoignant garde SA locale) via
@@ -326,22 +351,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     const url = `${window.location.origin}/invite/${room.code}`
     const gameTitle = game?.title ?? 'Le Pillaveur'
     const text = tOnline('share.text', { game: gameTitle, code: room.code })
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: 'Le Pillaveur', text, url })
-        return
-      }
-    } catch {
-      // Partage annulé par l'utilisateur : ne pas basculer sur la copie.
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(`${text}\n${url}`)
-      setLinkShared(true)
-      setTimeout(() => setLinkShared(false), 2000)
-    } catch {
-      // Presse-papier indisponible — tant pis.
-    }
+    const outcome = await shareLink({ title: 'Le Pillaveur', text, url, clipboardText: `${text}\n${url}` })
+    // Feuille ouverte ou refermée : elle a parlé d'elle-même, rien à ajouter.
+    if (outcome === 'copied' || outcome === 'failed') setLinkShare(outcome)
   }
   const [showInvite, setShowInvite] = useState(false)
   const [seatSel, setSeatSel] = useState<string | null>(null)
@@ -454,10 +466,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
   const copyCode = () => {
     if (!room?.code) return
-    navigator.clipboard.writeText(room.code).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+    // copyText ne rejette jamais : un refus ne finit plus en rejet non géré
+    // et muet — il s'affiche sous le code, que le joueur peut alors dicter.
+    void copyText(room.code).then((ok) => setCodeCopy(ok ? 'copied' : 'failed'))
   }
 
   const handleJoinByCode = () => {
@@ -1044,8 +1055,18 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           <span className="block text-xs font-bold uppercase tracking-[0.2em] text-[#6B6455]">{tOnline('table.label')}</span>
           <span className="block font-display text-xl font-black tracking-[0.16em]">{room.code}</span>
           <span className="flex items-center justify-center gap-1 text-xs font-semibold text-[#6B6455]">
-            {copied ? <Check className="h-3 w-3 text-emerald-700" /> : <Copy className="h-3 w-3" />}
-            {copied ? tOnline('table.copied') : tOnline('table.tapToCopy')}
+            {codeCopy === 'copied' ? (
+              <Check className="h-3 w-3 text-emerald-700" />
+            ) : codeCopy === 'failed' ? (
+              <X className="h-3 w-3 text-red-700" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+            {codeCopy === 'copied'
+              ? tOnline('table.copied')
+              : codeCopy === 'failed'
+                ? tOnline('table.copyFailed')
+                : tOnline('table.tapToCopy')}
           </span>
         </button>
       </div>
@@ -1133,8 +1154,18 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           onClick={() => void shareTableLink()}
           className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20"
         >
-          {linkShared ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-          {linkShared ? tOnline('share.linkCopied') : tOnline('share.cta')}
+          {linkShare === 'copied' ? (
+            <Check className="h-3.5 w-3.5" />
+          ) : linkShare === 'failed' ? (
+            <X className="h-3.5 w-3.5" />
+          ) : (
+            <Share2 className="h-3.5 w-3.5" />
+          )}
+          {linkShare === 'copied'
+            ? tOnline('share.linkCopied')
+            : linkShare === 'failed'
+              ? tOnline('share.copyFailed')
+              : tOnline('share.cta')}
         </button>
         <button
           type="button"
@@ -1164,17 +1195,25 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </p>
           {/* Le seul chemin vers /tv dans tout le produit : sans ce lien, il
               fallait taper l'URL à la main. Nouvel onglet (et <a> nu, sans
-              préfixe de langue) — le téléphone reste la manette de la table. */}
-          <a
-            href={`/tv/${room.code}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-200 transition-colors hover:bg-amber-500/20"
-          >
-            <Tv className="h-3.5 w-3.5" />
-            {tTv('openTvScreen')}
-          </a>
-          <p className="text-xs leading-relaxed text-white/40">{tTv('openTvScreenHint')}</p>
+              préfixe de langue) — le téléphone reste la manette de la table.
+              Pas dans l'app : la WebView n'ouvre pas de seconde fenêtre, le
+              lien chargeait /tv À LA PLACE du lobby (sans retour) et « nouvel
+              onglet » devenait faux. Il y reste le code, le QR et la consigne
+              « Ouvre lepillaveur.fr/tv sur ta télé » ci-dessus. */}
+          {!inApp && (
+            <>
+              <a
+                href={`/tv/${room.code}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-200 transition-colors hover:bg-amber-500/20"
+              >
+                <Tv className="h-3.5 w-3.5" />
+                {tTv('openTvScreen')}
+              </a>
+              <p className="text-xs leading-relaxed text-white/40">{tTv('openTvScreenHint')}</p>
+            </>
+          )}
           <JoinQR
             url={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${room.code}`}
             size={128}

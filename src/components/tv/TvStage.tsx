@@ -1,10 +1,11 @@
 "use client"
 
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import { Maximize2, Minimize2 } from 'lucide-react'
 import { BrandMark } from '@/components/brand/BrandLogo'
 import { useFullscreen } from '@/hooks/useFullscreen'
+import { isCapacitorApp } from '@/lib/native-app'
 import { JoinQR } from './JoinQR'
 import { useKeepScreenAwake } from './use-keep-screen-awake'
 
@@ -33,6 +34,13 @@ export function TvStage({
   const t = useTranslations('tv')
   const { isFullscreen, isSupported, toggleFullscreen } = useFullscreen()
   useKeepScreenAwake()
+  // Coquille mobile, connue après montage (comme FullscreenButton) : la
+  // WebView y annule aussitôt tout plein écran d'élément — le bouton restait
+  // visible mais ne faisait rien, alors que l'app occupe déjà l'écran.
+  const [inApp, setInApp] = useState(false)
+  useEffect(() => {
+    setInApp(isCapacitorApp())
+  }, [])
 
   return (
     <div className="app-felt fixed inset-0 flex flex-col overflow-hidden text-white">
@@ -62,8 +70,9 @@ export function TvStage({
           )}
           {/* Plein écran : impossible à déclencher au chargement (les
               navigateurs l'exigent sur un geste), d'où ce bouton. Absent là où
-              l'API n'existe pas (iPhone Safari) plutôt qu'inerte. */}
-          {isSupported && (
+              l'API n'existe pas (iPhone Safari) ou reste sans effet (app
+              mobile) plutôt qu'inerte. */}
+          {isSupported && !inApp && (
             <button
               type="button"
               onClick={() => void toggleFullscreen()}

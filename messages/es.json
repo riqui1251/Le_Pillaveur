@@ -448,7 +448,8 @@
     "share": {
       "text": "¡Únete a mi mesa de {game} en Le Pillaveur! Código: {code}",
       "cta": "Compartir",
-      "linkCopied": "¡Enlace copiado!"
+      "linkCopied": "¡Enlace copiado!",
+      "copyFailed": "Error al copiar"
     },
     "openTables": {
       "title": "Mesas abiertas · {count}"
@@ -466,7 +467,8 @@
     "table": {
       "label": "Mesa",
       "copied": "¡copiado!",
-      "tapToCopy": "toca para copiar"
+      "tapToCopy": "toca para copiar",
+      "copyFailed": "error al copiar"
     },
     "seat": {
       "you": "Tú",
@@ -5205,6 +5207,7 @@
     "notInVoice": "ausente",
     "nobody": "Nadie en la voz todavía",
     "micDenied": "Micrófono denegado — permítelo en tu navegador.",
+    "micDeniedApp": "Micrófono denegado — permítelo en Ajustes › Aplicaciones › Le Pillaveur › Permisos › Micrófono.",
     "unsupported": "Tu navegador no soporta la voz.",
     "networkError": "No se pudo conectar a la voz — reinténtalo.",
     "disabled": "El chat de voz ha sido desactivado en el sitio por un administrador.",

@@ -1,6 +1,5 @@
 import createIntlMiddleware from 'next-intl/middleware'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { LOCAL_PLAY_COOKIE, SESSION_COOKIE } from '@/lib/auth-cookies'
 import { LOCALE_COOKIE, LOCALE_MAX_AGE } from '@/lib/locale-cookies'
 import { routing, stripLocalePrefix } from '@/i18n/routing'
@@ -132,6 +131,9 @@ export const config = {
     // redirigeait vers /fr/manifest.json (404) : aucun navigateur ne
     // proposait l'installation. PUBLIC_PREFIXES ne suffit pas : pour un
     // chemin public, on renvoie la réponse de next-intl, redirection comprise.
-    '/((?!api|_next/static|_next/image|icon|apple-icon|opengraph-image|robots\\.txt|sitemap\\.xml|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    // .well-known : fichiers lus par des robots à une adresse IMPOSÉE, qui
+    // n'admettent aucune redirection — assetlinks.json (App Links de l'app
+    // Android, src/app/.well-known) répondait 307 vers /fr/…, puis 404.
+    '/((?!api|_next/static|_next/image|\\.well-known|icon|apple-icon|opengraph-image|robots\\.txt|sitemap\\.xml|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

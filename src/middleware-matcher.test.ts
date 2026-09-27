@@ -17,7 +17,10 @@ describe('matcher du middleware', () => {
   it('laisse les fichiers lus tels quels par le navigateur hors de next-intl', () => {
     // manifest.json redirigé vers /fr/manifest.json (404) = plus aucune
     // proposition d'installation de l'application.
+    // assetlinks.json redirigé = App Links jamais vérifiés : Android exige
+    // un 200 direct, sans aucune redirection.
     for (const path of [
+      '/.well-known/assetlinks.json',
       '/manifest.json',
       '/robots.txt',
       '/sitemap.xml',
@@ -31,7 +34,9 @@ describe('matcher du middleware', () => {
   })
 
   it('fait passer les pages par le middleware (préfixe de langue, garde d’accès)', () => {
-    for (const path of ['/', '/fr', '/fr/jeux', '/regles/loup-garou', '/en/games/tabou']) {
+    // Le point de .well-known est littéral : une page dont le nom contient
+    // « well-known » reste localisée.
+    for (const path of ['/', '/fr', '/fr/jeux', '/regles/loup-garou', '/en/games/tabou', '/well-known', '/xwell-known/a']) {
       expect(matcher.test(path), path).toBe(true)
     }
   })

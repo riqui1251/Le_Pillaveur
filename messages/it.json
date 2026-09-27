@@ -448,7 +448,8 @@
     "share": {
       "text": "Unisciti al mio tavolo di {game} su Le Pillaveur! Codice: {code}",
       "cta": "Condividi",
-      "linkCopied": "Link copiato!"
+      "linkCopied": "Link copiato!",
+      "copyFailed": "Copia non riuscita"
     },
     "openTables": {
       "title": "Tavoli aperti · {count}"
@@ -466,7 +467,8 @@
     "table": {
       "label": "Tavolo",
       "copied": "copiato!",
-      "tapToCopy": "tocca per copiare"
+      "tapToCopy": "tocca per copiare",
+      "copyFailed": "copia non riuscita"
     },
     "seat": {
       "you": "Tu",
@@ -5205,6 +5207,7 @@
     "notInVoice": "assente",
     "nobody": "Ancora nessuno nel vocale",
     "micDenied": "Microfono negato — consentilo nel browser.",
+    "micDeniedApp": "Microfono negato — consentilo in Impostazioni › App › Le Pillaveur › Autorizzazioni › Microfono.",
     "unsupported": "Il tuo browser non supporta il vocale.",
     "networkError": "Impossibile connettersi al vocale — riprova.",
     "disabled": "La chat vocale è stata disattivata sul sito da un amministratore.",

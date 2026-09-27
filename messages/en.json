@@ -448,7 +448,8 @@
     "share": {
       "text": "Join my {game} table on Le Pillaveur! Code: {code}",
       "cta": "Share",
-      "linkCopied": "Link copied!"
+      "linkCopied": "Link copied!",
+      "copyFailed": "Couldn’t copy"
     },
     "openTables": {
       "title": "Open tables · {count}"
@@ -466,7 +467,8 @@
     "table": {
       "label": "Table",
       "copied": "copied!",
-      "tapToCopy": "tap to copy"
+      "tapToCopy": "tap to copy",
+      "copyFailed": "couldn’t copy"
     },
     "seat": {
       "you": "You",
@@ -5205,6 +5207,7 @@
     "notInVoice": "away",
     "nobody": "Nobody in voice yet",
     "micDenied": "Microphone denied — allow it in your browser settings.",
+    "micDeniedApp": "Microphone denied — allow it in Settings › Apps › Le Pillaveur › Permissions › Microphone.",
     "unsupported": "Your browser does not support voice chat.",
     "networkError": "Could not connect to voice — try again.",
     "disabled": "Voice chat has been disabled site-wide by an administrator.",

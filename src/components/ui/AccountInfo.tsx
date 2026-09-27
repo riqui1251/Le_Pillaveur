@@ -24,6 +24,7 @@ import { GuestUpgradeCard } from '@/components/auth/GuestUpgradeCard'
 import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
 import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
 import { isNativeGoogleAvailable } from '@/lib/native-google-login'
+import { copyText } from '@/lib/native-share'
 import { MyOnlineStats } from '@/components/online/MyOnlineStats'
 import { RecentTables } from '@/components/online/RecentTables'
 import { canAccessSupervision } from '@/lib/roles'
@@ -373,13 +374,12 @@ export function AccountInfo() {
 
   const copyAccountCode = async () => {
     if (!user?.accountCode) return
-    try {
-      await navigator.clipboard.writeText(user.accountCode)
-      setCodeCopied(true)
-      window.setTimeout(() => setCodeCopied(false), 2000)
-    } catch {
-      /* ignore */
-    }
+    // copyText tente aussi l'ancienne copie quand le presse-papiers asynchrone
+    // est refusé (WebView de l'app). En cas d'échec, le code reste lisible
+    // sur le bouton même : pas de coche, rien de plus à dire.
+    if (!(await copyText(user.accountCode))) return
+    setCodeCopied(true)
+    window.setTimeout(() => setCodeCopied(false), 2000)
   }
 
   const saveOnlineName = async () => {

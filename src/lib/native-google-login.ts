@@ -17,6 +17,28 @@ type SocialLoginPlugin = {
     provider: 'google'
     options: Record<string, never>
   }) => Promise<{ result?: { idToken?: string | null } }>
+  logout: (options: { provider: 'google' }) => Promise<void>
+}
+
+/**
+ * Efface les jetons Google que le plugin garde dans l'app. En mode « online »
+ * (par défaut), il enregistre idToken + accessToken EN CLAIR dans ses
+ * SharedPreferences et les réécrit dans logcat à chaque initialize : un
+ * idToken encore valide finissait dans tout rapport de bug (adb bugreport),
+ * alors que /api/auth/google l'accepte tel quel. Le site n'a besoin que de
+ * l'ID token renvoyé ici — le serveur ouvre ensuite SA propre session — et
+ * effacer la copie du plugin ne l'invalide pas (vérifié par tokeninfo).
+ *
+ * Sans attendre ni échouer : la connexion du joueur ne dépend pas de ce
+ * ménage (un plugin ancien sans logout lèverait même de façon synchrone).
+ * Effet visible : la connexion suivante réaffiche le choix du compte.
+ */
+function forgetPluginTokens(plugin: SocialLoginPlugin): void {
+  try {
+    void plugin.logout({ provider: 'google' }).catch(() => {})
+  } catch {
+    // Méthode absente ou pont indisponible : rien de plus à faire.
+  }
 }
 
 function getSocialLogin(): SocialLoginPlugin | null {
@@ -71,6 +93,7 @@ export async function nativeGoogleSignIn(): Promise<string | null> {
     })
     const idToken = res?.result?.idToken
     if (!idToken) throw new Error('native_google_no_token')
+    forgetPluginTokens(plugin)
     return idToken
   } catch (err) {
     if (isUserCancel(err)) return null
