@@ -79,6 +79,7 @@ import { idleLabel, rateLabel } from '@/lib/supervision/labels'
 import { networkGroupsOf } from '@/lib/supervision/ip-groups'
 import { parisDayToDate } from '@/lib/supervision/paris-day'
 import { RETENTION_RUN_STALE_MS, retentionRunStatus } from '@/lib/supervision/retention-run'
+import { FIRST_GAME_FEEDBACK_TYPE } from '@/lib/feedback'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -103,6 +104,7 @@ import { NameModerationAttemptsPanel } from '@/components/supervision/NameModera
 import { CosmeticGrantsDialog } from '@/components/supervision/CosmeticGrantsDialog'
 import { GameSessionsPanel } from '@/components/supervision/GameSessionsPanel'
 import { ClientErrorsPanel } from '@/components/supervision/ClientErrorsPanel'
+import { FirstGameFeedbackMeta, FirstGameFeedbackPanel } from '@/components/supervision/FirstGameFeedbackPanel'
 import { OpsStatusPanel } from '@/components/supervision/OpsStatusPanel'
 import { ACCOUNT_KIND_BADGES, AccountKindBadge } from '@/components/supervision/AccountKindBadge'
 import {
@@ -593,6 +595,14 @@ type FeedbackItem = {
   statusLabel: string
   createdAt: string
   updatedAt: string
+  /**
+   * Avis de 1re partie (type FIRST_GAME_FEEDBACK_TYPE) : note 1..5, jeu et
+   * mode ('online' | 'local') ; null pour les autres types. Optionnels : une
+   * réponse d'un serveur antérieur ne les porte pas.
+   */
+  rating?: number | null
+  gameId?: string | null
+  playMode?: string | null
   /** Renseignés uniquement sur le détail chargé à l'ouverture. */
   message?: string
   screenshots?: string[]
@@ -916,6 +926,26 @@ function IpAddressDisplay({
   )
 }
 
+/**
+ * Teinte du badge de type d'un retour : rouge pour un bug, or pour une
+ * amélioration, violet pour un avis de 1re partie (ni alerte ni chantier :
+ * une note), bleu jeton pour le reste. Fonds en valeur arbitraire : /15
+ * n'existe pas dans l'échelle de Tailwind 3.3 et ne produisait AUCUN CSS
+ * (badge sans fond).
+ */
+function feedbackTypeBadgeClass(type: string): string {
+  switch (type) {
+    case 'bug':
+      return 'border-red-500/30 bg-red-500/[0.15] text-red-200'
+    case 'improvement':
+      return 'border-amber-500/30 bg-amber-500/[0.15] text-amber-200'
+    case FIRST_GAME_FEEDBACK_TYPE:
+      return 'border-violet-400/30 bg-violet-500/[0.15] text-violet-200'
+    default:
+      return 'border-chip-blue/50 bg-chip-blue/20 text-sky-200'
+  }
+}
+
 function FeedbackListSection({
   items,
   emptyMessage,
@@ -942,23 +972,23 @@ function FeedbackListSection({
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                className={
-                  item.type === 'bug'
-                    ? 'border-red-500/30 bg-red-500/15 text-red-200'
-                    : item.type === 'improvement'
-                      ? 'border-amber-500/30 bg-amber-500/15 text-amber-200'
-                      : 'border-chip-blue/50 bg-chip-blue/20 text-sky-200'
-                }
-              >
-                {item.typeLabel}
-              </Badge>
+              <Badge className={feedbackTypeBadgeClass(item.type)}>{item.typeLabel}</Badge>
               <Badge variant="secondary">{item.statusLabel}</Badge>
             </div>
             <span className="text-xs text-white/40">
               {format.dateTime(new Date(item.createdAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
             </span>
           </div>
+          {/* Avis de 1re partie : la note, le jeu et le mode d'abord — c'est
+              ce qu'on trie ; le commentaire suit comme pour tout retour. */}
+          {item.type === FIRST_GAME_FEEDBACK_TYPE && (
+            <FirstGameFeedbackMeta
+              rating={item.rating}
+              gameId={item.gameId}
+              playMode={item.playMode}
+              className="mt-2"
+            />
+          )}
           <p className="mt-2 text-sm font-medium text-white">{item.authorName}</p>
           <p className="mt-1 text-sm text-white/60">{item.messagePreview}</p>
           {item.screenshotCount > 0 && (
@@ -4934,6 +4964,10 @@ function SupervisionDashboard() {
 
         {showFeedbackTab && (
         <TabsContent value="feedback" className="space-y-4">
+          {/* Avis de 1re partie, résumés : panneau autonome chargé à
+              l'ouverture de l'onglet (route /api/admin/first-game-feedback),
+              hors de loadAll et du rechargement de 15 s. */}
+          <FirstGameFeedbackPanel />
           <SectionCard icon={MessageSquareWarning} title={t('feedback.activeTitle')} description={t('feedback.activeDesc')} bodyClassName="space-y-4">
               <FeedbackSearchBar
                 value={feedbackSearch}
@@ -5252,9 +5286,24 @@ function SupervisionDashboard() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="whitespace-pre-wrap text-sm text-white/80">
-                  {selectedFeedback.message ?? selectedFeedback.messagePreview}
-                </p>
+                {selectedFeedback.type === FIRST_GAME_FEEDBACK_TYPE && (
+                  <FirstGameFeedbackMeta
+                    rating={selectedFeedback.rating}
+                    gameId={selectedFeedback.gameId}
+                    playMode={selectedFeedback.playMode}
+                    size="lg"
+                  />
+                )}
+                {/* Un avis de 1re partie peut n'être qu'une note : le dire
+                    plutôt que laisser un paragraphe vide. */}
+                {(selectedFeedback.message ?? selectedFeedback.messagePreview) ||
+                selectedFeedback.type !== FIRST_GAME_FEEDBACK_TYPE ? (
+                  <p className="whitespace-pre-wrap text-sm text-white/80">
+                    {selectedFeedback.message ?? selectedFeedback.messagePreview}
+                  </p>
+                ) : (
+                  <p className="text-sm italic text-white/50">{t('feedback.noComment')}</p>
+                )}
                 {selectedFeedback.contactEmail && (
                   <p className="text-sm text-white/50">
                     {t('feedback.contact')}{' '}

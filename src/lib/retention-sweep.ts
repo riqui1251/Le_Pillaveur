@@ -39,6 +39,10 @@ import {
  *   pseudo recopié — juste une référence de compte qui tombe à null dès la
  *   suppression dudit compte. Les participants partent en cascade ;
  * - DailyVisitor (mesure d'audience) : 13 mois ;
+ * - UserFeedback (retours « Signaler / Suggérer » et avis de 1re partie :
+ *   message, captures, page, navigateur) : 24 mois après leur envoi. La
+ *   politique le promettait sans que rien ne l'applique ; l'avis de 1re
+ *   partie ajoute une ligne par nouveau joueur, anonymes compris ;
  * - Session : la ligne part dès son échéance (jusqu'ici, seule la lecture du
  *   cookie correspondant l'effaçait — une session jamais représentée restait
  *   en base indéfiniment) ;
@@ -135,6 +139,7 @@ const MONTH_MS = 30 * DAY_MS
 const SIX_MONTHS_MS = 6 * MONTH_MS
 const TWELVE_MONTHS_MS = 12 * MONTH_MS
 const THIRTEEN_MONTHS_MS = 13 * MONTH_MS
+const TWENTY_FOUR_MONTHS_MS = 24 * MONTH_MS
 /**
  * Durée de vie d'un compte INVITÉ sans activité.
  *
@@ -278,6 +283,7 @@ export async function runRetentionSweep({ force = false }: RetentionSweepOptions
   const nowDate = new Date(now)
   const sixMonthsAgo = new Date(now - SIX_MONTHS_MS)
   const twelveMonthsAgo = new Date(now - TWELVE_MONTHS_MS)
+  const twentyFourMonthsAgo = new Date(now - TWENTY_FOUR_MONTHS_MS)
   const dailyVisitorCutoff = dateStringParis(THIRTEEN_MONTHS_MS)
 
   // Témoin du passage (RetentionLastRun), rempli bloc par bloc.
@@ -317,6 +323,9 @@ export async function runRetentionSweep({ force = false }: RetentionSweepOptions
         prisma.nameModerationAttempt.deleteMany({ where: { createdAt: { lt: twelveMonthsAgo } } }),
       ],
       ['DailyVisitor', prisma.dailyVisitor.deleteMany({ where: { date: { lt: dailyVisitorCutoff } } })],
+      // Retours et avis de 1re partie : 24 mois après l'envoi, quel que soit
+      // leur statut — un retour « ouvert » depuis deux ans ne sera plus traité.
+      ['UserFeedback', prisma.userFeedback.deleteMany({ where: { createdAt: { lt: twentyFourMonthsAgo } } })],
       // Journal des parties : la ligne part avec ses participants (cascade).
       // On borne sur le LANCEMENT, seule date toujours renseignée (`endedAt`
       // reste nul pour une partie que rien n'a jamais close).

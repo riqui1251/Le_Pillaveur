@@ -8,6 +8,7 @@ import useScreenSize from '@/hooks/useScreenSize'
 import { Player as BasePlayer } from '@/lib/players'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
 import {
@@ -1032,8 +1033,11 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
 
         {/* Écran de fin mode classique */}
         {gameOver && gameMode === 'classic' && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-amber-500/20 bg-[#0d0b06] p-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto p-4 bg-black/70 backdrop-blur-sm">
+            {/* Défilable, carte centrée par my-auto (et non items-center) : avec
+                l'avis de première partie, la carte peut dépasser un petit écran,
+                et un contenu centré qui déborde perdait son haut ET ses boutons. */}
+            <div className="relative my-auto w-full max-w-md overflow-hidden rounded-3xl border border-amber-500/20 bg-[#0d0b06] p-6 shadow-2xl">
               <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #f59e0b, transparent 70%)' }} />
               <div className="relative space-y-4">
                 <div className="text-center">
@@ -1075,6 +1079,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                     </>
                   )
                 })()}
+                <FirstGameFeedbackCard mode="local" gameId="pyramide" />
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={resetGame}

@@ -26,6 +26,7 @@ vi.mock('@/lib/name-moderation-attempts-server', () => ({
   listFlaggedNameModerationUsers: listFlaggedMock,
 }))
 
+import { FEEDBACK_INBOX_WHERE } from '@/lib/feedback'
 import {
   getGrowthStats,
   getSupervisionOverview,
@@ -329,6 +330,56 @@ describe('getSupervisionOverview — journal', () => {
         detail: 'on',
         createdAt: '2026-10-25T10:00:00.000Z',
       },
+    ])
+  })
+})
+
+describe('getSupervisionOverview — file « à traiter »', () => {
+  it('lit les retours ouverts À TRAVERS le filtre de la boîte de tri, sans les captures', async () => {
+    mockEmptyOverview()
+
+    await getSupervisionOverview('moderator')
+
+    const args = prismaMock.userFeedback.findMany.mock.calls[0][0]
+    // Les notes de 1re partie sans commentaire restent hors de la file.
+    expect(args.where).toEqual({ AND: [{ status: 'open' }, FEEDBACK_INBOX_WHERE] })
+    expect(args.select).not.toHaveProperty('screenshots')
+  })
+
+  it('un avis de 1re partie commenté : libellé dédié et note devant le texte', async () => {
+    mockEmptyOverview()
+    prismaMock.userFeedback.findMany.mockResolvedValue([
+      {
+        id: 'f1',
+        type: 'first-game',
+        message: 'Trop bien, mais les règles vont vite',
+        rating: 4,
+        createdAt: new Date('2026-10-07T20:00:00.000Z'),
+        user: { displayName: 'Suzon' },
+      },
+      {
+        id: 'f2',
+        type: 'bug',
+        message: 'Le bouton ne répond pas',
+        rating: null,
+        createdAt: new Date('2026-10-07T19:00:00.000Z'),
+        user: null,
+      },
+    ])
+
+    const { queue } = await getSupervisionOverview('moderator')
+
+    expect(queue).toEqual([
+      expect.objectContaining({
+        id: 'feedback-f1',
+        title: 'Avis 1re partie',
+        subtitle: 'Suzon — 4/5 · Trop bien, mais les règles vont vite',
+      }),
+      expect.objectContaining({
+        id: 'feedback-f2',
+        title: 'Bug',
+        subtitle: 'Anonyme — Le bouton ne répond pas',
+      }),
     ])
   })
 })

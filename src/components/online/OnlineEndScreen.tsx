@@ -1,10 +1,12 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { Armchair, Check, Loader2, LogOut, RefreshCw, Share2, X } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
+import { onlineProgressionMark } from '@/hooks/useOnlineProgression'
 import { getGameById } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { Button } from '@/components/ui/button'
@@ -12,6 +14,14 @@ import { cn } from '@/lib/utils'
 import { shareLink } from '@/lib/native-share'
 import { EndConfetti } from './EndConfetti'
 import { endShareClipboardText, endShareUrl, mayBringTableBack, rematchCounter } from './end-screen'
+
+// Avis de première partie : chargé à part et sans rendu serveur — il ne
+// s'affiche qu'une fois dans la vie d'un compte, inutile d'alourdir les
+// dix-huit écrans de fin, et sa décision lit le stockage de l'appareil.
+const FirstGameFeedbackCard = dynamic(
+  () => import('@/components/feedback/FirstGameFeedbackCard').then((m) => m.FirstGameFeedbackCard),
+  { ssr: false }
+)
 
 /**
  * ÉCRAN DE FIN PARTAGÉ des salles en ligne.
@@ -22,8 +32,10 @@ import { endShareClipboardText, endShareUrl, mayBringTableBack, rematchCounter }
  * l'état moteur au lieu du quorum réel de la relance. Ici, le jeu ne fournit
  * plus que ce qui lui est propre — le titre (`header`) et son contenu
  * (`ranking` : rôles du Loup-Garou, podium du Quiz, grille des Mots Codés…) —
- * et l'écran rend, dans l'ordre : ce contenu, l'XP, puis la barre d'actions
- * (Rejouer, Retour à la table, Partager, Quitter la table).
+ * et l'écran rend, dans l'ordre : ce contenu, l'XP, l'avis de première partie
+ * (une seule fois dans la vie d'un compte), puis la barre d'actions
+ * (Rejouer, Retour à la table, Partager, Quitter la table). Un avis décidé
+ * tard se pose SOUS la barre, pour ne pas la décaler sous le pouce.
  *
  * Logique pure (compteur des présents, lien partagé) : ./end-screen.ts.
  */
@@ -152,6 +164,18 @@ export function OnlineEndScreen({
   // à la table pendant qu'on s'en va.
   const leaving = leavePending
 
+  // Repère de fraîcheur de la progression, noté AVANT le montage de la
+  // bannière d'XP (`xp`, rendue plus bas) : la lecture qu'elle lance pour cet
+  // écran sert aussi à l'avis de 1re partie, monté en différé — sans ce
+  // repère, il refaisait la même requête à chaque fin de partie.
+  const [progressionSince] = useState(onlineProgressionMark)
+  // Apparition de l'écran, et emplacement SOUS la barre d'actions : un avis
+  // de 1re partie décidé tard (relecture de la progression) s'y pose au lieu
+  // de décaler la barre sous le pouce (cf. FirstGameFeedbackCard). Vide, il
+  // est masqué (`empty:hidden`) : ni marge ni écart de plus.
+  const [shownAt] = useState(() => Date.now())
+  const [lateSlot, setLateSlot] = useState<HTMLDivElement | null>(null)
+
   const gameId = room?.gameId ?? null
   const gameTitle =
     (gameId ? localizedGames.find((g) => g.id === gameId)?.title : undefined) ?? 'Le Pillaveur'
@@ -275,7 +299,18 @@ export function OnlineEndScreen({
         {header}
         {ranking}
         {xp}
+        {gameId && (
+          <FirstGameFeedbackCard
+            mode="online"
+            gameId={gameId}
+            progressionSince={progressionSince}
+            shownAt={shownAt}
+            lateSlot={lateSlot}
+            className="mb-4"
+          />
+        )}
         {actions}
+        <div ref={setLateSlot} className="mt-4 empty:hidden" />
       </div>
     )
   }
@@ -295,6 +330,19 @@ export function OnlineEndScreen({
       {header}
       {ranking}
       {xp}
+      {/* Entre l'XP et les actions, jamais DANS les actions : la barre fixe
+          du Quiz réserve une hauteur calculée pour ses seuls boutons. */}
+      {gameId && (
+        <FirstGameFeedbackCard
+          mode="online"
+          gameId={gameId}
+          progressionSince={progressionSince}
+          shownAt={shownAt}
+          // Barre fixe (Quiz) : une carte tardive n'y décale rien, elle reste ici.
+          lateSlot={fixedActions ? null : lateSlot}
+          className="max-w-sm"
+        />
+      )}
       {fixedActions ? (
         <>
           {/* Réserve pour la barre fixe (zone sûre comprise) : deux rangées,
@@ -311,7 +359,10 @@ export function OnlineEndScreen({
           </div>
         </>
       ) : (
-        <div className="w-full max-w-sm">{actions}</div>
+        <>
+          <div className="w-full max-w-sm">{actions}</div>
+          <div ref={setLateSlot} className="w-full max-w-sm empty:hidden" />
+        </>
       )}
     </div>
   )

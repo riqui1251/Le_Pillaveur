@@ -19,6 +19,7 @@ import { apiErrorMessage } from '@/lib/api-response'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineProgression } from '@/hooks/useOnlineProgression'
+import { useSaveOnlinePreferences } from '@/hooks/useSaveOnlinePreferences'
 import { FriendsManager } from '@/components/friends/FriendsManager'
 import { GuestUpgradeCard } from '@/components/auth/GuestUpgradeCard'
 import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
@@ -32,9 +33,9 @@ import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer'
 import { OnlineCollection } from '@/components/online/OnlineCollection'
+import { FirstStepsCard, revealElement } from '@/components/online/FirstStepsCard'
 import { OnlinePlayerIcon, OnlinePlayerName, RankCrest } from '@/components/online/OnlinePlayerTag'
 import { Player, getPlayerNameValidationError } from '@/lib/players'
-import type { OnlinePreferences } from '@/lib/online-preferences'
 import { nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { getSafeStorage } from '@/lib/storage'
@@ -88,7 +89,10 @@ export function AccountInfo() {
   // Les effets réseau ne dépendent que de l'identité du compte, pas de
   // l'objet `user` (nouvelle référence à chaque rafraîchissement de session).
   const userId = user?.id
-  const { progression, refresh: refreshProgression } = useOnlineProgression()
+  const { progression, loading: progressionLoading } = useOnlineProgression()
+  // Enregistre les TROIS champs (icône, effet, cadre) fusionnés avec le
+  // profil, puis rafraîchit session et progression partagées.
+  const { save: saveOnlinePreferences } = useSaveOnlinePreferences()
   const { players, loading, removePlayer, updatePlayer, updatePlayerPreferences } = usePlayers()
   const tFriends = useTranslations('account.friends')
   const tNav = useTranslations('nav')
@@ -151,12 +155,7 @@ export function AccountInfo() {
     goToUpgradeOnCloseRef.current = false
     event.preventDefault()
     // Image suivante : le verrou de défilement de la modale est levé.
-    window.requestAnimationFrame(() => {
-      const card = upgradeCardRef.current
-      if (!card) return
-      card.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      card.focus({ preventScroll: true })
-    })
+    window.requestAnimationFrame(() => revealElement(upgradeCardRef.current))
   }
 
   const [onlineName, setOnlineName] = useState('')
@@ -168,6 +167,41 @@ export function AccountInfo() {
   const [showOnlineSection, setShowOnlineSection] = useState(false)
   const [showFriends, setShowFriends] = useState(false)
   const [showDangerZone, setShowDangerZone] = useState(false)
+
+  // Ouvrir la Collection, c'est aussi déplier la section en ligne : à la
+  // fermeture, le joueur voit tout de suite son aperçu avec le nouveau look.
+  const openOnlineCollection = () => {
+    setShowOnlineSection(true)
+    setCustomizingOnline(true)
+  }
+
+  // Liens profonds (fin de partie, bannières) : ?focus=profil ouvre la
+  // Collection, ?focus=sauvegarde amène la carte de pérennisation,
+  // ?focus=premiers-pas la carte Premiers pas. Lu UNE fois au montage puis
+  // retiré de l'URL (sans navigation, comme replaceUrlParam en Supervision) :
+  // un rechargement ou un retour arrière ne rouvrirait pas la Collection.
+  // Les deux cartes ne sont dans la page qu'après le chargement des joueurs
+  // (spinner avant) : la demande attend donc son tour.
+  const [pendingUpgradeFocus, setPendingUpgradeFocus] = useState(false)
+  const [focusFirstSteps, setFocusFirstSteps] = useState(false)
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const focus = url.searchParams.get('focus')
+    if (focus === null) return
+    url.searchParams.delete('focus')
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+    if (focus === 'profil') openOnlineCollection()
+    else if (focus === 'sauvegarde') setPendingUpgradeFocus(true)
+    else if (focus === 'premiers-pas') setFocusFirstSteps(true)
+  }, [])
+
+  useEffect(() => {
+    if (!pendingUpgradeFocus || loading) return
+    setPendingUpgradeFocus(false)
+    // Image suivante : la carte vient d'entrer dans la mise en page.
+    window.requestAnimationFrame(() => revealElement(upgradeCardRef.current))
+  }, [pendingUpgradeFocus, loading])
+
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteArmed, setDeleteArmed] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -300,15 +334,21 @@ export function AccountInfo() {
     [user?.onlinePreferences, user?.role, progression?.level]
   )
 
-  const saveOnlinePreferences = async (preferences: Partial<OnlinePreferences>) => {
-    await fetch('/api/auth/online-preferences', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(preferences),
-    })
-    await Promise.all([refresh(), refreshProgression()])
-  }
+  // Ce que mesure la carte Premiers pas et qui change sur cette page même :
+  // icône, effet (Collection), statut d'invité (sauvegarde), XP. Une
+  // nouvelle clé = la liste est redemandée. Null tant que la progression de
+  // CETTE visite n'est pas arrivée : au chargement à froid, l'XP passait de
+  // « 0 » (rien encore) à sa vraie valeur, et la carte demandait sa liste
+  // deux fois — la première jetée. Une lecture échouée termine aussi
+  // l'attente (la carte se contente alors de l'XP connue, ou de 0).
+  const firstStepsKey = progressionLoading
+    ? null
+    : [
+        user?.onlinePreferences?.icon ?? '',
+        user?.onlinePreferences?.specialEffect ?? '',
+        user?.isGuest ? 'guest' : 'member',
+        progression?.xp ?? 0,
+      ].join('|')
 
   useEffect(() => {
     if (!userId) {
@@ -528,6 +568,15 @@ export function AccountInfo() {
         <GuestUpgradeCard />
       </div>
 
+      {/* Visible sans rien déplier : c'est le guide du nouveau venu. La carte
+          se masque d'elle-même (sans compte, tout fait, « Masquer »). */}
+      <FirstStepsCard
+        refreshKey={firstStepsKey}
+        onCustomize={openOnlineCollection}
+        onSave={() => revealElement(upgradeCardRef.current)}
+        focusOnReady={focusFirstSteps}
+      />
+
       <Dialog
         open={confirmGuestLogout}
         onOpenChange={(open) => {
@@ -677,23 +726,24 @@ export function AccountInfo() {
             </p>
 
             {/* Aperçu de l'identité en ligne (écusson de rang + icône encadrée + effet) */}
-            <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
+            <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
               <RankCrest role={user?.role} />
               <OnlinePlayerIcon cosmetics={onlineMemberCosmetics} className="h-10 w-10 text-xl" />
               <p className="min-w-0 flex-1 truncate text-sm font-semibold">
                 <OnlinePlayerName name={onlineDisplayName} cosmetics={onlineMemberCosmetics} />
               </p>
+              {/* Libellé visible PARTOUT : un crayon seul ne disait pas que
+                  les niveaux débloquent de quoi s'habiller (23 joueurs de
+                  niveau 2+ n'y avaient jamais touché). En mobile, le bouton
+                  passe sur sa propre ligne, pleine largeur : le pseudo garde
+                  la place (il se tronquait à 3 caractères à 375px). */}
               <button
                 type="button"
                 onClick={() => setCustomizingOnline(true)}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/25 px-2.5 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/[0.35]"
-                title={t('playersList.customize')}
-                aria-label={t('playersList.customize')}
+                className="flex min-h-[44px] w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-500/25 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/[0.35] sm:w-auto"
               >
-                <Pencil className="h-3.5 w-3.5" />
-                {/* Icône seule en mobile : le pseudo garde la place (il se
-                    tronquait à 3 caractères à 375px). */}
-                <span className="hidden sm:inline">{t('playersList.customize')}</span>
+                <Pencil className="h-3.5 w-3.5" aria-hidden />
+                {t('playersList.customize')}
               </button>
             </div>
 

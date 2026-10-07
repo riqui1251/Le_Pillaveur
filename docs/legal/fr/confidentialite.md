@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-**Dernière mise à jour :** 13 septembre 2026
+**Dernière mise à jour :** 7 octobre 2026
 
 ## 1. Introduction
 
@@ -87,6 +87,8 @@ Si vous utilisez le formulaire de feedback, nous pouvons collecter :
 - captures d'écran que vous joignez volontairement ;
 - email de contact (optionnel) ;
 - contexte technique (page visitée, navigateur).
+
+À la fin de votre toute première partie, une carte vous propose de **noter cette partie** de 1 à 5, avec un commentaire facultatif ; elle ne revient plus une fois que vous l'avez remplie ou refusée. Si vous notez, nous enregistrons la note, le jeu, le mode de jeu (en ligne ou local), votre commentaire s'il y en a un et le même contexte technique (page visitée, sans ses paramètres, et navigateur), rattachés à votre compte si vous êtes connecté ; l'email de votre compte n'est pas recopié dans l'avis, qui suit la durée de conservation du feedback (voir 7). Si vous êtes connecté, nous enregistrons aussi sur votre compte la date à laquelle vous avez noté ou refusé (« Non merci »), pour ne pas vous reposer la question : ni la note ni votre choix n'y figurent. Pour la même raison, votre navigateur garde une marque dans son stockage local (`lp-first-game-feedback`) : elle retient seulement si cet appareil avait déjà servi sur le site, la date de votre première visite (qui ne sert que pendant 24 heures), si la question a déjà été posée et combien de fois la carte s'est affichée ; elle ne contient aucun identifiant et n'est jamais envoyée à nos serveurs.
 
 ### 3.8 Cookies
 

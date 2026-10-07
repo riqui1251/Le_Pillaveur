@@ -7,6 +7,7 @@ import BalloonRace from './components/BalloonRace';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { GameShell } from '@/components/game/GameShell';
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard';
 import { usePlayers } from '@/hooks/usePlayers';
 import { Player } from '@/lib/players';
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers';
@@ -95,6 +96,8 @@ export default function BallonSurprisePage() {
                   {t('results.noWinner', { color: raceResult.winnerColor, count: raceResult.sips })}
                 </p>
               )}
+
+              <FirstGameFeedbackCard mode="local" gameId="ballon-surprise" className="mx-auto mt-2 max-w-sm" />
 
               <Button onClick={handleReplay} className="mt-4">
                 {t('results.replay')}

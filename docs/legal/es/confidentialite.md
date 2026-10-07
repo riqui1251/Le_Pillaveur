@@ -1,6 +1,6 @@
 # Política de privacidad
 
-**Última actualización:** 13 de septiembre de 2026
+**Última actualización:** 7 de octubre de 2026
 
 ## 1. Introducción
 
@@ -87,6 +87,8 @@ Si utiliza el formulario de comentarios, podemos recoger:
 - capturas de pantalla que adjunte voluntariamente;
 - correo de contacto (opcional);
 - contexto técnico (página visitada, navegador).
+
+Al final de su primerísima partida, una tarjeta le propone **puntuar esa partida** de 1 a 5, con un comentario opcional; no vuelve a aparecer una vez que la ha rellenado o rechazado. Si puntúa, registramos la nota, el juego, el modo de juego (en línea o local), su comentario si lo hay y el mismo contexto técnico (página visitada, sin sus parámetros, y navegador), vinculados a su cuenta si está conectado; el correo electrónico de su cuenta no se copia en la valoración, que sigue el plazo de conservación de los comentarios (véase 7). Si está conectado, registramos también en su cuenta la fecha en la que puntuó o rechazó («No, gracias»), para no volver a preguntarle: ni la nota ni su elección figuran en ella. Por el mismo motivo, su navegador guarda una marca en su almacenamiento local (`lp-first-game-feedback`): solo recuerda si este dispositivo ya se había utilizado en el sitio, la fecha de su primera visita (que solo sirve durante 24 horas), si ya se ha hecho la pregunta y cuántas veces se ha mostrado la tarjeta; no contiene ningún identificador y nunca se envía a nuestros servidores.
 
 ### 3.8 Cookies
 

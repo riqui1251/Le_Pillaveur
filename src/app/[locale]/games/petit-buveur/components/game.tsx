@@ -24,6 +24,7 @@ import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { formatPlayerNameHtml } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
 import { EndConfetti } from '@/components/online/EndConfetti'
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 import { recordWinnerStats } from '@/lib/petit-buveur/local-stats'
 // Plateau (grille, cases, pions) : la feuille suit le composant — servie avec
 // ce morceau seulement, pas avec chaque page de /games (idem PetitBuveurOnline).
@@ -3893,6 +3894,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     </div>
                   ))}
                 </div>
+
+                <FirstGameFeedbackCard mode="local" gameId="petit-buveur" className="mb-5" />
 
                 {/* Actions */}
                 <div className="flex flex-col gap-2.5">

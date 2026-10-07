@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { GAMES } from '@/lib/games'
 import { canViewUserFeedback, canManageUsers, canViewSupervisionAnalytics } from '@/lib/roles'
-import { feedbackTypeLabel, isFeedbackType } from '@/lib/feedback'
+import { FEEDBACK_INBOX_WHERE, feedbackTypeLabel } from '@/lib/feedback'
 import { listFlaggedNameModerationUsers } from '@/lib/name-moderation-attempts-server'
 import { getExcludedUserIds } from '@/lib/metrics-exclusions'
 import { parisDayOffset, parisDayStartUtc, parisDayString, parisDaysBack } from '@/lib/paris-time'
@@ -874,7 +874,9 @@ async function getQueue(actorRole: string): Promise<QueueItem[]> {
 
   if (canViewUserFeedback(actorRole)) {
     const openFeedback = await prisma.userFeedback.findMany({
-      where: { status: 'open' },
+      // Même boîte de tri que la liste admin : une note de 1re partie sans
+      // commentaire n'a rien à faire dans « à traiter » (FEEDBACK_INBOX_WHERE).
+      where: { AND: [{ status: 'open' }, FEEDBACK_INBOX_WHERE] },
       orderBy: { createdAt: 'desc' },
       take: 10,
       // Surtout PAS `screenshots` : ce sont des images base64, et cette file
@@ -883,17 +885,22 @@ async function getQueue(actorRole: string): Promise<QueueItem[]> {
         id: true,
         type: true,
         message: true,
+        rating: true,
         createdAt: true,
         user: { select: { displayName: true } },
       },
     })
     for (const f of openFeedback) {
+      // Avis de 1re partie commenté : la note devant le texte, elle dit d'un
+      // coup d'œil si c'est un coup de gueule ou un compliment.
+      const note = f.rating !== null ? `${f.rating}/5 · ` : ''
+      const message = f.message.length > 80 ? `${f.message.slice(0, 80)}…` : f.message
       items.push({
         id: `feedback-${f.id}`,
         kind: 'feedback',
         targetId: f.id,
-        title: isFeedbackType(f.type) ? feedbackTypeLabel(f.type) : f.type,
-        subtitle: `${f.user?.displayName ?? 'Anonyme'} — ${f.message.length > 80 ? `${f.message.slice(0, 80)}…` : f.message}`,
+        title: feedbackTypeLabel(f.type),
+        subtitle: `${f.user?.displayName ?? 'Anonyme'} — ${note}${message}`,
         href: 'feedback',
         createdAt: f.createdAt.toISOString(),
       })

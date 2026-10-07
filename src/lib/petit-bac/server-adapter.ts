@@ -9,7 +9,7 @@ import {
   type PbcState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
-import { censorChatMessage } from '@/lib/chat-moderation'
+import { maskContactDetails } from '@/lib/chat-moderation'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
 /**
@@ -57,10 +57,18 @@ export function parsePbcState(json: string | null): PbcState | null {
   }
 }
 
-/** Les réponses passent par la modération de texte libre (mêmes règles que le chat). */
+/**
+ * Réponses : on masque les COORDONNÉES (e-mail, numéro ≥ 10 chiffres) — la
+ * grille est publique au reveal, c'est de l'anti-sollicitation — mais PAS les
+ * gros mots. Le filtre d'insultes du chat ratait sa cible ici : ses faux
+ * positifs (Monique, Député, Drapeau…) passaient en astérisques, la case
+ * valait 0 et le STOP était refusé (INCOMPLETE_STOP) alors que la réponse
+ * était bonne. Un « Connard » à la lettre C est une réponse de Petit Bac
+ * comme une autre ; un abus relève de la contestation à la majorité.
+ */
 function moderateAnswers(answers: unknown): string[] {
   if (!Array.isArray(answers)) return []
-  return answers.map((a) => (typeof a === 'string' ? censorChatMessage(a).text : ''))
+  return answers.map((a) => (typeof a === 'string' ? maskContactDetails(a).text : ''))
 }
 
 export type PbcRoomActionInput =

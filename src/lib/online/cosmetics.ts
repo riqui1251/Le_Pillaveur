@@ -187,31 +187,73 @@ export const COSMETICS: Cosmetic[] = [
 ]
 
 /**
+ * Ce que gagne un joueur par le NIVEAU : séries d'icônes (en bloc — une série
+ * se nomme, ses douze icônes non), effets de pseudo, cadres. Les icônes
+ * individuelles n'y figurent pas : leur série les porte.
+ */
+export type LevelUnlocks = {
+  seriesIds: string[]
+  frameIds: string[]
+  effectIds: string[]
+}
+
+/**
+ * Ce qui se débloque en passant du niveau `fromLevel` au niveau `toLevel`
+ * (bornes : exclu, inclus) — l'annonce « Nouveau : … » de l'écran de fin.
+ * Un même gain peut franchir PLUSIEURS niveaux (bonus de série) : tout ce qui
+ * tombe en route est rendu, dans l'ordre des niveaux. Mêmes exclusions que
+ * nextUnlockForXp : rien de grant-only (VIP, série Fondateur), et les cadres
+ * de rôle ne sont pas au catalogue de niveaux — un grade ne se « débloque »
+ * pas en jouant. Vide si `toLevel <= fromLevel`.
+ */
+export function unlocksBetweenLevels(fromLevel: number, toLevel: number): LevelUnlocks {
+  const reached = (unlockLevel: number) =>
+    unlockLevel > fromLevel && unlockLevel <= toLevel && unlockLevel < GRANT_ONLY_FRAME_LEVEL
+  // Tri stable par niveau : à niveau égal, l'ordre du catalogue est gardé.
+  const byLevel = <T extends { unlockLevel: number }>(items: T[]) =>
+    [...items].sort((a, b) => a.unlockLevel - b.unlockLevel)
+  const gained = byLevel(COSMETICS.filter((c) => reached(c.unlockLevel)))
+  return {
+    seriesIds: byLevel(ICON_SERIES.filter((s) => reached(s.unlockLevel))).map((s) => s.id),
+    frameIds: gained.filter((c) => c.kind === 'frame').map((c) => c.id),
+    effectIds: gained.filter((c) => c.kind === 'effect').map((c) => c.id),
+  }
+}
+
+/** Le passage de niveau a-t-il quelque chose à annoncer ? */
+export function hasLevelUnlocks(unlocks: LevelUnlocks): boolean {
+  return unlocks.seriesIds.length + unlocks.frameIds.length + unlocks.effectIds.length > 0
+}
+
+/**
  * Prochain déblocage au-dessus du niveau courant : le niveau et ce qui s'y
  * gagne (séries d'icônes en bloc, cadres, effets). Sert à rendre l'objectif
  * concret (« Plus que 60 XP → série Trognes »). Null quand tout le catalogue
  * de niveaux est débloqué. Les grant-only (VIP) sont exclus.
  */
-export function nextUnlockForXp(xp: number): {
-  level: number
-  seriesIds: string[]
-  frameIds: string[]
-  effectIds: string[]
-} | null {
+export function nextUnlockForXp(xp: number): ({ level: number } & LevelUnlocks) | null {
   const level = levelForXp(xp)
-  const candidates = COSMETICS.filter(
-    (c) => c.unlockLevel > level && c.unlockLevel < GRANT_ONLY_FRAME_LEVEL
+  const upcoming = COSMETICS.map((c) => c.unlockLevel).filter(
+    (unlockLevel) => unlockLevel > level && unlockLevel < GRANT_ONLY_FRAME_LEVEL
   )
-  if (candidates.length === 0) return null
-  const nextLevel = Math.min(...candidates.map((c) => c.unlockLevel))
-  const at = candidates.filter((c) => c.unlockLevel === nextLevel)
-  const seriesIds = ICON_SERIES.filter((s) => s.unlockLevel === nextLevel).map((s) => s.id)
-  return {
-    level: nextLevel,
-    seriesIds,
-    frameIds: at.filter((c) => c.kind === 'frame').map((c) => c.id),
-    effectIds: at.filter((c) => c.kind === 'effect').map((c) => c.id),
-  }
+  if (upcoming.length === 0) return null
+  const nextLevel = Math.min(...upcoming)
+  return { level: nextLevel, ...unlocksBetweenLevels(nextLevel - 1, nextLevel) }
+}
+
+/**
+ * Look en ligne encore celui de l'inscription : icône par défaut, ni effet de
+ * pseudo ni cadre. Critère des incitations à personnaliser (écran de fin,
+ * siège à la Table Ronde) — rien à stocker ni à purger : l'incitation
+ * s'éteint d'elle-même au premier changement, ce qui est précisément ce qu'on
+ * cherche (23 joueurs niveau 2+ n'avaient jamais touché à leur profil). Qui
+ * garde délibérément la chope nue garde une ligne discrète : prix accepté.
+ */
+export function isDefaultOnlineLook(
+  prefs: { icon?: string | null; specialEffect?: string | null; iconFrame?: string | null } | null | undefined
+): boolean {
+  if (!prefs) return true
+  return (prefs.icon || DEFAULT_ONLINE_ICON) === DEFAULT_ONLINE_ICON && !prefs.specialEffect && !prefs.iconFrame
 }
 
 /** Clé unique d'un cosmétique (les ids se recoupent entre effets/cadres/icônes). */

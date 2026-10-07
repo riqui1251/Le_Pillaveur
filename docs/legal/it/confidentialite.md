@@ -1,6 +1,6 @@
 # Informativa sulla privacy
 
-**Ultimo aggiornamento:** 13 settembre 2026
+**Ultimo aggiornamento:** 7 ottobre 2026
 
 ## 1. Introduzione
 
@@ -87,6 +87,8 @@ Se utilizzi il modulo di feedback, possiamo raccogliere:
 - screenshot che alleghi volontariamente;
 - email di contatto (facoltativa);
 - contesto tecnico (pagina visitata, browser).
+
+Alla fine della tua primissima partita, una scheda ti propone di **valutare quella partita** da 1 a 5, con un commento facoltativo; non viene più riproposta dopo che l'hai compilata o rifiutata. Se dai un voto, registriamo il voto, il gioco, la modalità di gioco (online o locale), il tuo commento se c'è e lo stesso contesto tecnico (pagina visitata, senza i suoi parametri, e browser), collegati al tuo account se sei connesso; l'email del tuo account non viene copiata nella valutazione, che segue la durata di conservazione del feedback (vedi 7). Se sei connesso, registriamo anche sul tuo account la data in cui hai votato o rifiutato («No, grazie»), per non riproporti la domanda: né il voto né la tua scelta vi figurano. Per lo stesso motivo, il tuo browser conserva un contrassegno nella sua memoria locale (`lp-first-game-feedback`): ricorda solo se questo dispositivo era già stato usato sul sito, la data della tua prima visita (che serve solo per 24 ore), se la domanda è già stata posta e quante volte la scheda è stata mostrata; non contiene alcun identificativo e non viene mai inviato ai nostri server.
 
 ### 3.8 Cookie
 

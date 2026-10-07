@@ -9,6 +9,7 @@ import { OnlineRoomProvider } from '@/components/providers/OnlineRoomProvider'
 import { VisitTracker } from '@/components/analytics/VisitTracker'
 import { ToastProvider } from '@/components/ui/toast'
 import { AgeGate } from '@/components/legal/AgeGate'
+import { FirstGameDeviceInit } from '@/components/feedback/FirstGameDeviceInit'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -24,6 +25,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <BrowserCapabilitiesProvider>
             <PlayerEffectsProvider>
               <ToastProvider>
+                {/* En tête des frères : son effet passe avant ceux de la page
+                    (une première visite qui atterrit sur un jeu reste « neuve »). */}
+                <FirstGameDeviceInit />
                 <AmbianceAttribute />
                 <VisitTracker />
                 <AgeGate />

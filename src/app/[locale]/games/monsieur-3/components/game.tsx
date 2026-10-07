@@ -8,6 +8,7 @@ import { fireConfetti, preloadConfetti } from '@/components/online/EndConfetti'
 import { Player as BasePlayer, PlayerPreferences } from '@/lib/players'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
 import { GameFixedActionBar, gameActionBarPadding } from '@/components/game/GameFixedActionBar'
@@ -607,13 +608,16 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/75 backdrop-blur-sm p-4"
           >
+            {/* Défilable, carte centrée par my-auto (et non items-center) : avec
+                l'avis de première partie, la carte peut dépasser un petit écran,
+                et un contenu centré qui déborde perdait son haut ET ses boutons. */}
             <motion.div
               initial={{ scale: 0.85, y: 24 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ type: 'spring', duration: 0.6 }}
-              className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-red-500/20 bg-[#0d0807] p-6 shadow-2xl"
+              className="relative my-auto w-full max-w-sm overflow-hidden rounded-3xl border border-red-500/20 bg-[#0d0807] p-6 shadow-2xl"
             >
               <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #ef4444, transparent 70%)' }} />
               <div className="relative space-y-5 text-center">
@@ -628,6 +632,8 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
                     <p className="text-xs text-white/40 mt-1">{t('sipsDrunk', { count: monsieur3Player.score })}</p>
                   </div>
                 )}
+
+                <FirstGameFeedbackCard mode="local" gameId="monsieur-3" />
 
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button

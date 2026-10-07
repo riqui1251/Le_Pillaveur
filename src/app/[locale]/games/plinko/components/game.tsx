@@ -8,6 +8,7 @@ import { Player } from '@/types/game'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { GameShell } from '@/components/game/GameShell'
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 import { cn } from '@/lib/utils'
 import { playGameSound, isSoundMuted, setSoundMuted as persistSoundMuted } from '@/lib/sound/game-sounds'
 import { useCastRoom } from '@/hooks/useCastRoom'
@@ -1816,6 +1817,12 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                   )
                 })}
               </div>
+            )}
+
+            {/* Avis de première partie : sur les totaux seulement — les
+                tournées et le détail par joueur ne sont pas encore la fin. */}
+            {resultDisplayPhase === 'final' && (
+              <FirstGameFeedbackCard mode="local" gameId="plinko" className="mx-auto max-w-md" />
             )}
 
             {/* Navigation */}

@@ -1,16 +1,21 @@
 ﻿"use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Check, ChevronDown, Copy, Crown, Globe, Lock, LogOut, Mail, Play, Plus, Settings, Share2, Tv, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Copy, Crown, Globe, Lock, LogOut, Mail, Pencil, Play, Plus, Settings, Share2, Tv, UserPlus, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
 import { useFriends } from '@/hooks/useFriends'
+import { useOnlineProgression } from '@/hooks/useOnlineProgression'
+import { useSaveOnlinePreferences } from '@/hooks/useSaveOnlinePreferences'
+import { OnlineCollection } from '@/components/online/OnlineCollection'
+import { isDefaultOnlineLook } from '@/lib/online/cosmetics'
+import { DEFAULT_ONLINE_PREFERENCES } from '@/lib/online-preferences'
 import { GAMES, hasContentIn, type GameMeta } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
@@ -236,6 +241,56 @@ function GameSwitchSheet({
   )
 }
 
+/**
+ * La collection de la fiche compte, ouverte depuis son siège. Composant À
+ * PART, monté au premier toucher du siège seulement (puis gardé, pour que la
+ * modale se referme en douceur) : un abonné à la progression lance une
+ * lecture à son montage (règle de fraîcheur du store). Monté avec le lobby,
+ * il en coûtait une à chaque page de jeu en ligne et à chaque retour à la
+ * table, pour une donnée qui ne sert qu'ici.
+ *
+ * Au-dessus du dock vocal (z-90), sur le même plan que la feuille « Changer
+ * de jeu » : une modale dont un bouton du dock recouvrirait le coin perdrait
+ * son « Enregistrer » sur mobile. La collection se ferme dès « Enregistrer » :
+ * l'issue remonte au lobby (onSaved / onSaveFailed), qui l'affiche.
+ */
+function SeatCollection({
+  open,
+  onOpenChange,
+  onSaved,
+  onSaveFailed,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSaved: () => void
+  onSaveFailed: () => void
+}) {
+  const { user } = useAuth()
+  const { progression } = useOnlineProgression()
+  const { save } = useSaveOnlinePreferences()
+  if (!user) return null
+  return (
+    <OnlineCollection
+      open={open}
+      onOpenChange={onOpenChange}
+      displayName={user.onlineDisplayName ?? user.displayName}
+      role={user.role}
+      // Couleur forcée comme sur la fiche compte : le catalogue en ligne n'en a qu'une.
+      preferences={{
+        ...DEFAULT_ONLINE_PREFERENCES,
+        ...user.onlinePreferences,
+        color: DEFAULT_ONLINE_PREFERENCES.color,
+      }}
+      progression={progression}
+      onSave={(preferences) => {
+        void save(preferences).then((ok) => (ok ? onSaved() : onSaveFailed()))
+      }}
+      contentClassName="z-[100]"
+      overlayClassName="z-[100]"
+    />
+  )
+}
+
 /** Position d'un siège autour de la table ovale (siège 0 en haut, sens horaire). */
 function seatPos(index: number, count: number) {
   const angle = -Math.PI / 2 + (index * 2 * Math.PI) / count
@@ -285,7 +340,19 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
   const pathname = usePathname()
   const { user } = useAuth()
-  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend, kickMember, changeGame } = useOnlineRoom()
+  const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend, kickMember, changeGame, refreshRoom } = useOnlineRoom()
+  // Son propre siège ouvre la collection (icône, effet de pseudo, cadre) :
+  // l'attente à la Table Ronde est un temps mort, et c'est LÀ que les autres
+  // voient son look. La collection n'est montée qu'au premier toucher (voir
+  // SeatCollection) ; son état vit ici. Avant tout retour anticipé : ordre
+  // des hooks fixe.
+  const [showCollection, setShowCollection] = useState(false)
+  const [collectionMounted, setCollectionMounted] = useState(false)
+  // Échec du dernier enregistrement depuis la collection : sans ce message,
+  // la modale se fermait, le siège gardait l'ancien look, et rien ne disait
+  // pourquoi.
+  const [lookSaveFailed, setLookSaveFailed] = useState(false)
+  const seatCustomizeId = useId()
   const router = useRouter()
   const { lobbies, liveGames, liveGamesTotal } = useOpenLobbies({ pollMs: 15_000 }) // la table, elle, est sondée par useOnlineRoom
   const { friends, incoming, outgoing, sendRequestToUser, acceptRequest } = useFriends()
@@ -325,6 +392,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     return () => clearTimeout(timer)
   }, [kickArmed])
   const tOnline = useTranslations('onlineLobby')
+  const tXp = useTranslations('onlineXp')
   // Choix ouvert/privé proposé au clic « Ouvrir une table » (modifiable
   // ensuite dans les réglages du lobby).
   const [choosingVisibility, setChoosingVisibility] = useState(false)
@@ -887,6 +955,24 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     void kickMember(userId)
   }
 
+  // Indice « Touche ton siège… » tant que le look est celui de l'inscription
+  // (même critère que l'écran de fin, cf. isDefaultOnlineLook) : rien à
+  // stocker ni à purger, il s'éteint de lui-même au premier changement.
+  const showLookHint = Boolean(selfMember) && isDefaultOnlineLook(user.onlinePreferences)
+  const openSeatCollection = () => {
+    setLookSaveFailed(false)
+    setCollectionMounted(true)
+    setShowCollection(true)
+  }
+  const roomId = room.id
+  // Le siège lit le look dans le DTO de la salle, relu en base à chaque GET :
+  // on relit tout de suite plutôt que d'attendre le prochain sondage, pour
+  // que le joueur se voie changer à table (et les autres dans la foulée, à
+  // leur propre sondage).
+  const onLookSaved = () => {
+    void refreshRoom(roomId)
+  }
+
   // Dans le lobby en attente
   return (
     <LobbyShell>
@@ -939,7 +1025,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {/* La Table Ronde : les joueurs sont assis autour du feutre (même
           langage que le mode TV), le code trône au centre — le toucher le
-          copie. Toucher un siège ouvre les actions d'amitié du joueur. */}
+          copie. Toucher un siège ouvre les actions d'amitié du joueur ;
+          toucher LE SIEN ouvre sa collection, pour changer de look. */}
       <div className="relative mx-auto mb-1 h-64 w-full max-w-sm flex-none">
         <div
           className="absolute inset-x-3 inset-y-5 rounded-[50%] border-[3px] border-gold/40 shadow-[inset_0_10px_30px_rgba(0,0,0,0.45),0_10px_24px_-10px_rgba(0,0,0,0.6)]"
@@ -960,10 +1047,21 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               className="absolute w-16 -translate-x-1/2 -translate-y-1/2"
               style={seatPos(i, totalSeatCount)}
             >
+              {/* Son propre siège n'a pas d'actions d'amitié : il ouvre la
+                  collection. Le nom reste le contenu (« Toi », état prêt) —
+                  un aria-label l'aurait remplacé : « Toucher Toi » ne
+                  répondait plus à la commande vocale (WCAG 2.5.3) et l'état
+                  prêt du joueur n'était plus lu. Le geste passe en
+                  DESCRIPTION, par un texte masqué. */}
               <button
                 type="button"
-                disabled={m.isSelf}
-                onClick={() => setSeatSel((v) => (v === m.userId ? null : m.userId))}
+                onClick={
+                  m.isSelf
+                    ? openSeatCollection
+                    : () => setSeatSel((v) => (v === m.userId ? null : m.userId))
+                }
+                aria-describedby={m.isSelf ? seatCustomizeId : undefined}
+                aria-haspopup={m.isSelf ? 'dialog' : undefined}
                 className="flex w-16 flex-col items-center gap-0.5"
               >
                 <span className="relative">
@@ -972,6 +1070,17 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     cosmetics={memberCosmetics}
                     className="h-9 w-9 border border-[#D8CCAE] bg-cream text-base text-[#24201A] shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]"
                   />
+                  {/* Crayon d'or au coin libre de l'avatar (la pastille
+                      « prêt » tient le haut-droit, la couronne le
+                      haut-gauche) : on voit que ce siège-là se touche. */}
+                  {m.isSelf && (
+                    <span
+                      aria-hidden
+                      className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-felt-deep bg-gold text-felt-deep shadow-[0_2px_6px_-2px_rgba(0,0,0,0.7)]"
+                    >
+                      <Pencil className="h-2.5 w-2.5" />
+                    </span>
+                  )}
                   <span
                     aria-label={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
                     title={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
@@ -998,6 +1107,14 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )}
                 </span>
               </button>
+              {/* Masqué mais lu comme description (aria-describedby suit
+                  aussi un élément caché) : ni doublon à l'écran, ni dans
+                  le parcours du lecteur d'écran. */}
+              {m.isSelf && (
+                <span id={seatCustomizeId} hidden>
+                  {tOnline('seat.customize')}
+                </span>
+              )}
               {kickable && (
                 /* Posée à la place de la couronne (jamais sur un siège
                    retirable : l'hôte ne se retire pas lui-même), à l'opposé de
@@ -1070,6 +1187,32 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </span>
         </button>
       </div>
+
+      {/* Indice d'une ligne, tant que le look est celui de l'inscription
+          (voir showLookHint) : le crayon seul ne dit pas ce qu'on
+          gagne à toucher. */}
+      {showLookHint && !lookSaveFailed && (
+        <p className="mb-2 flex items-center justify-center gap-1.5 text-center text-xs text-white/50">
+          <Pencil aria-hidden className="h-3 w-3 shrink-0 text-gold/70" />
+          {tOnline('seat.customizeHint')}
+        </p>
+      )}
+      {/* Échec de l'enregistrement : dit sous la table, là où le joueur
+          regarde son siège (la collection s'est déjà refermée). */}
+      {lookSaveFailed && (
+        <p role="alert" className="mb-2 text-center text-xs font-semibold text-red-300">
+          {tXp('lookSaveFailed')}
+        </p>
+      )}
+
+      {collectionMounted && (
+        <SeatCollection
+          open={showCollection}
+          onOpenChange={setShowCollection}
+          onSaved={onLookSaved}
+          onSaveFailed={() => setLookSaveFailed(true)}
+        />
+      )}
 
       {/* Actions d'amitié du siège sélectionné. */}
       {seatSel && (() => {

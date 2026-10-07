@@ -352,8 +352,19 @@
     "soloCapped": "Les parties contre les bots seuls ne rapportent plus d'XP — invite un pote pour que ça compte !",
     "streak": "Série de {days} jours !",
     "nextUnlock": "Prochain déblocage : niveau {level} — {name}",
-    "guestKeep": "Compte invité : supprimé après 90 jours d’inactivité.",
-    "guestKeepCta": "Sauvegarde ton pseudo et ton XP",
+    "unlockedNew": "Nouveau : {items}",
+    "unlockSeries": "icônes {name}",
+    "unlockEffect": "effet {name}",
+    "unlockFrame": "cadre {name}",
+    "unlockFrames": "{count, plural, one {# cadre} other {# cadres}}",
+    "equipNow": "Équiper maintenant",
+    "profileLoop": "Chaque niveau débloque des icônes, des effets de pseudo et des cadres, visibles par toute la table. Déjà à toi : {icons, plural, one {# icône} other {# icônes}} et {effects, plural, one {# effet} other {# effets}}.",
+    "customizeProfile": "Personnaliser mon profil",
+    "lookSaved": "Ton nouveau look sera visible à ta prochaine partie.",
+    "lookSaveFailed": "Impossible d'enregistrer ton look. Réessaie.",
+    "guestRisk": "Compte invité : ton niveau {level} et tes {xp} XP disparaissent après 90 jours d'inactivité.",
+    "guestRiskAchievements": "Compte invité : ton niveau {level}, tes {xp} XP et {achievements, plural, one {ton succès} other {tes # succès}} disparaissent après 90 jours d'inactivité.",
+    "guestSaveCta": "Sauvegarder mon compte",
     "streakStart": "Série lancée !",
     "streakBonus": "dont +{xp} XP de série",
     "achievementUnlocked": "Succès débloqué : {name}"
@@ -478,7 +489,9 @@
       "bot": "Bot",
       "kick": "Retirer {name} de la table",
       "kickConfirm": "Retirer ?",
-      "kickConfirmLabel": "Touche à nouveau pour retirer {name}"
+      "kickConfirmLabel": "Touche à nouveau pour retirer {name}",
+      "customize": "Change ton icône, ton effet de pseudo et ton cadre",
+      "customizeHint": "Touche ton siège pour changer de look"
     },
     "settings": {
       "title": "Réglages",
@@ -881,6 +894,48 @@
       "title": "Te déconnecter de ce compte invité ?",
       "body": "Un compte invité n’a ni email ni mot de passe : ce navigateur est ta seule clé. Si tu te déconnectes, tu ne pourras plus jamais y revenir — pseudo, niveau, XP, cosmétiques et amis compris — et il sera supprimé au bout de {days} jours. Sauvegarde-le d’abord pour le garder.",
       "logoutAnyway": "Me déconnecter quand même"
+    },
+    "firstSteps": {
+      "title": "Premiers pas",
+      "intro": "Chaque niveau débloque des icônes, des effets de pseudo et des cadres à équiper pour tes prochaines parties. Voici par où commencer.",
+      "dismiss": "Masquer",
+      "dismissLabel": "Masquer les premiers pas",
+      "progressLabel": "{completed, plural, one {# étape faite} other {# étapes faites}} sur {total}",
+      "done": "fait",
+      "todo": "à faire",
+      "steps": {
+        "play": {
+          "title": "Joue ta première partie en ligne",
+          "hint": "Contre des bots ou entre potes : chaque partie terminée rapporte de l'XP.",
+          "action": "Jouer"
+        },
+        "icon": {
+          "title": "Choisis ton icône",
+          "hint": "Elle te suit à chaque table. Le niveau 2 débloque la série {series}.",
+          "hintUnlocked": "La série {series} est débloquée : pioche ton icône pour tes prochaines parties.",
+          "action": "Choisir"
+        },
+        "effect": {
+          "title": "Équipe un effet de pseudo",
+          "hint": "Tu as déjà des effets débloqués : équipe-en un pour animer ton pseudo à chaque partie.",
+          "action": "Équiper"
+        },
+        "save": {
+          "title": "Sauvegarde ton compte",
+          "hint": "Ajoute un email ou lie ton compte à Google : ton niveau, ton XP et tes cosmétiques sont à l'abri pour de bon.",
+          "action": "Sauvegarder"
+        },
+        "friends": {
+          "title": "Joue avec tes potes",
+          "hint": "Ouvre une table en ligne et partage son lien : tes potes la rejoignent sans inscription.",
+          "action": "Choisir un jeu"
+        },
+        "level3": {
+          "title": "Atteins le niveau 3",
+          "hint": "Plus que {xp} XP : le niveau 3 débloque l'effet {effect}.",
+          "action": "Jouer"
+        }
+      }
     }
   },
   "legal": {
@@ -4244,7 +4299,22 @@
     "emptyMessage": "Merci de décrire votre retour.",
     "imageError": "Impossible de traiter une ou plusieurs images.",
     "send": "Envoyer",
-    "sending": "Envoi…"
+    "sending": "Envoi…",
+    "firstGame": {
+      "title": "Alors, cette première partie ?",
+      "subtitle": "Le Pillaveur est tout jeune : ton avis nous aide vraiment à l'améliorer.",
+      "rate": "Note {rating} sur 5",
+      "commentLabel": "Une idée, un bug, ce qui t'a manqué ?",
+      "commentPlaceholder": "Facultatif",
+      "send": "Envoyer",
+      "sending": "Envoi…",
+      "dismiss": "Non merci",
+      "thanks": "Merci ! On lit chaque avis, promis.",
+      "already": "Ton avis était déjà enregistré : merci !",
+      "dismissed": "Pas de souci. Bonne partie !",
+      "error": "Envoi impossible pour le moment. Réessaie plus tard.",
+      "tooMany": "Trop d'envois d'un coup : réessaie dans un moment."
+    }
   },
   "errors": {
     "generic": "Erreur",
@@ -4314,7 +4384,7 @@
     },
     "moderation": {
       "title": "Filtre anti-insultes",
-      "description": "Listes intégrées FR/EN/ES/IT, fichier data/moderation-extra-terms.json et termes ajoutés ici (effectifs côté serveur immédiatement).",
+      "description": "S'applique aux pseudos et au chat (pas aux réponses de jeu). Listes intégrées FR/EN/ES/IT, fichier data/moderation-extra-terms.json et termes ajoutés ici (effectifs côté serveur immédiatement).",
       "loading": "Chargement…",
       "loadError": "Impossible de charger la modération",
       "saveError": "Impossible d'ajouter le terme",
@@ -4748,7 +4818,44 @@
       "captureAlt": "Capture {index}",
       "statusRead": "Lu",
       "statusResolved": "Résolu",
-      "loadingDetail": "Chargement du détail…"
+      "loadingDetail": "Chargement du détail…",
+      "ratingLabel": "Note : {rating} sur 5",
+      "playMode": {
+        "online": "En ligne",
+        "local": "Local"
+      },
+      "unknownGame": "Jeu inconnu",
+      "noComment": "Pas de commentaire, seulement une note."
+    },
+    "firstGameFeedback": {
+      "title": "Avis après la 1re partie",
+      "desc": "La note donnée par chaque joueur à la fin de sa toute première partie, demandée une seule fois. Les avis avec un commentaire arrivent aussi dans les retours ci-dessous ; les notes seules ne vivent qu'ici.",
+      "refresh": "Actualiser",
+      "loadError": "Impossible de charger les avis de 1re partie.",
+      "forbidden": "Session expirée ou accès retiré : reconnectez-vous.",
+      "empty": "Aucun avis de 1re partie pour l'instant.",
+      "emptyHint": "Ils apparaissent ici dès qu'un nouveau joueur note sa première partie.",
+      "averageLabel": "Note moyenne",
+      "outOf": "sur 5",
+      "totalCount": "{count, plural, one {# avis au total} other {# avis au total}}",
+      "last30dLabel": "30 derniers jours",
+      "last30dCount": "{count, plural, =0 {Aucun avis} one {# avis} other {# avis}}",
+      "last30dAverage": "Moyenne : {average} sur 5",
+      "last30dNoAverage": "Aucune note sur la période.",
+      "distributionTitle": "Répartition des notes",
+      "distributionAria": "Répartition par nombre d'étoiles ({count, plural, one {# avis} other {# avis}})",
+      "stars": "{count, plural, one {# étoile} other {# étoiles}}",
+      "colRating": "Note",
+      "colCount": "Avis",
+      "colShare": "Part",
+      "byGameTitle": "Moyenne par jeu",
+      "byGameHint": "Classés par nombre d'avis : une moyenne sur deux avis ne dit pas grand-chose.",
+      "byGameEmpty": "Aucun jeu identifié dans ces avis.",
+      "ratingCount": "{count, plural, one {# avis} other {# avis}}",
+      "commentsTitle": "Derniers commentaires",
+      "commentsEmpty": "Aucun commentaire écrit pour l'instant : les joueurs ont seulement noté.",
+      "commentsShowAll": "Voir les {count} commentaires",
+      "commentsCollapse": "Replier"
     },
     "history": {
       "activeConnection": "Connexion active",

@@ -9,6 +9,7 @@ import { Play, RotateCcw, Settings, ArrowLeft, Home } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { GameShell } from '@/components/game/GameShell'
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 
 interface GameProps {
@@ -897,6 +898,8 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
              </div>
            </div>
          </Card>
+
+         <FirstGameFeedbackCard mode="local" gameId="petits-points" className="mx-auto max-w-md" />
 
          <div className="flex justify-center gap-4">
            <Button onClick={restartGame} variant="outline" className="px-6">

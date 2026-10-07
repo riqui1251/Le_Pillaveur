@@ -13,7 +13,7 @@ import {
 import { phaseKey } from '@/lib/online/phase-clock'
 import { getMCWords } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
-import { censorChatMessage } from '@/lib/chat-moderation'
+import { maskContactDetails } from '@/lib/chat-moderation'
 
 /**
  * Adaptateur serveur de Mots Codés : sérialisation, mapping HTTP → actions
@@ -113,8 +113,13 @@ export function applyMCRoomAction(
   try {
     switch (input.type) {
       case 'clue': {
-        // Filtre de vulgarité : l'indice est le seul texte libre du jeu.
-        const { text } = censorChatMessage(input.word)
+        // L'indice est le seul texte libre du jeu : on y masque les
+        // coordonnées (anti-sollicitation, il s'affiche à toute la table),
+        // pas les gros mots. Le filtre d'insultes du chat transformait des
+        // mots innocents (Cocktail, Question…) en astérisques — un indice
+        // illisible — et maquillait même un mot de la grille au lieu de le
+        // faire refuser par le moteur (CLUE_ON_GRID).
+        const { text } = maskContactDetails(input.word)
         return {
           ok: true,
           state: reduceMC(state, {

@@ -33,10 +33,17 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     showCloseButton?: boolean
+    /**
+     * Classes du voile. Le voile a son propre z-index (z-50) : une modale
+     * ouverte par-dessus une surcouche plus haute (écran de fin en z-[110])
+     * doit relever le voile ET le contenu, sinon le contenu passe devant
+     * mais la surcouche reste visible, non voilée, entre les deux.
+     */
+    overlayClassName?: string
   }
->(({ className, children, showCloseButton = true, ...props }, ref) => (
+>(({ className, children, showCloseButton = true, overlayClassName, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay className={overlayClassName} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(

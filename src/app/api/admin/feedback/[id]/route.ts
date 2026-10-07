@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { canManageUserFeedback, canViewUserFeedback } from '@/lib/roles'
-import {
-  feedbackStatusLabel,
-  feedbackTypeLabel,
-  isFeedbackStatus,
-  isFeedbackType,
-} from '@/lib/feedback'
+import { feedbackStatusLabel, feedbackTypeLabel, isFeedbackStatus } from '@/lib/feedback'
 import { logAccountEvent } from '@/lib/ban-server'
 import { adminErrorResponse, requireRole } from '../../_guard'
 
@@ -23,7 +18,8 @@ function parseScreenshots(raw: string | null): string[] {
 /**
  * Détail d'UN retour, captures d'écran comprises (F40). C'est le seul endroit
  * qui charge les images base64 : elles n'arrivent qu'à l'ouverture du retour,
- * plus dans la liste rechargée en boucle.
+ * plus dans la liste rechargée en boucle. Ouvrable par id quel que soit le
+ * type : le filtre de la boîte de tri ne vaut que pour la liste.
  */
 export async function GET(
   _request: Request,
@@ -45,7 +41,7 @@ export async function GET(
       feedback: {
         id: row.id,
         type: row.type,
-        typeLabel: isFeedbackType(row.type) ? feedbackTypeLabel(row.type) : row.type,
+        typeLabel: feedbackTypeLabel(row.type),
         message: row.message,
         messagePreview: row.message.length > 120 ? `${row.message.slice(0, 120)}…` : row.message,
         screenshots: parseScreenshots(row.screenshots),
@@ -57,6 +53,10 @@ export async function GET(
         contactEmail: row.contactEmail,
         status: row.status,
         statusLabel: feedbackStatusLabel(row.status),
+        // Avis de 1re partie seulement (null pour les autres types).
+        rating: row.rating,
+        gameId: row.gameId,
+        playMode: row.playMode,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
       },
@@ -98,7 +98,7 @@ export async function PATCH(
     })
 
     if (status === 'resolved' && existing.userId) {
-      const typeLabel = isFeedbackType(existing.type) ? feedbackTypeLabel(existing.type) : existing.type
+      const typeLabel = feedbackTypeLabel(existing.type)
       await logAccountEvent({
         userId: existing.userId,
         actorId: actor.id,

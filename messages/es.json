@@ -352,8 +352,19 @@
     "soloCapped": "Las partidas solo contra bots ya no dan XP — ¡invita a un amigo para que cuente!",
     "streak": "¡Racha de {days} días!",
     "nextUnlock": "Próximo desbloqueo: nivel {level} — {name}",
-    "guestKeep": "Cuenta de invitado: se elimina tras 90 días de inactividad.",
-    "guestKeepCta": "Guarda tu apodo y tu XP",
+    "unlockedNew": "Nuevo: {items}",
+    "unlockSeries": "iconos {name}",
+    "unlockEffect": "efecto {name}",
+    "unlockFrame": "marco {name}",
+    "unlockFrames": "{count, plural, one {# marco} other {# marcos}}",
+    "equipNow": "Equipar ahora",
+    "profileLoop": "Cada nivel desbloquea iconos, efectos de nombre y marcos que ve toda la mesa. Ya tienes: {icons, plural, one {# icono} other {# iconos}} y {effects, plural, one {# efecto} other {# efectos}}.",
+    "customizeProfile": "Personalizar mi perfil",
+    "lookSaved": "Tu nuevo look se verá en tu próxima partida.",
+    "lookSaveFailed": "No se pudo guardar tu look. Inténtalo de nuevo.",
+    "guestRisk": "Cuenta de invitado: tu nivel {level} y tus {xp} XP desaparecen tras 90 días de inactividad.",
+    "guestRiskAchievements": "Cuenta de invitado: tu nivel {level}, tus {xp} XP y {achievements, plural, one {tu logro} other {tus # logros}} desaparecen tras 90 días de inactividad.",
+    "guestSaveCta": "Guardar mi cuenta",
     "streakStart": "¡Racha iniciada!",
     "streakBonus": "incluye +{xp} XP de racha",
     "achievementUnlocked": "Logro desbloqueado: {name}"
@@ -478,7 +489,9 @@
       "bot": "Bot",
       "kick": "Quitar a {name} de la mesa",
       "kickConfirm": "¿Quitar?",
-      "kickConfirmLabel": "Toca de nuevo para quitar a {name}"
+      "kickConfirmLabel": "Toca de nuevo para quitar a {name}",
+      "customize": "Cambia tu icono, tu efecto de nombre y tu marco",
+      "customizeHint": "Toca tu asiento para cambiar de look"
     },
     "settings": {
       "title": "Ajustes",
@@ -881,6 +894,48 @@
       "title": "¿Desconectarte de esta cuenta de invitado?",
       "body": "Una cuenta de invitado no tiene email ni contraseña: este navegador es tu única llave. Si te desconectas, no podrás volver a entrar nunca — apodo, nivel, XP, cosméticos y amigos incluidos — y se eliminará a los {days} días. Guárdala antes para conservarla.",
       "logoutAnyway": "Desconectarme de todos modos"
+    },
+    "firstSteps": {
+      "title": "Primeros pasos",
+      "intro": "Cada nivel desbloquea iconos, efectos de nombre y marcos para equipar en tus próximas partidas. Empieza por aquí.",
+      "dismiss": "Ocultar",
+      "dismissLabel": "Ocultar primeros pasos",
+      "progressLabel": "{completed, plural, one {# paso hecho} other {# pasos hechos}} de {total}",
+      "done": "hecho",
+      "todo": "pendiente",
+      "steps": {
+        "play": {
+          "title": "Juega tu primera partida en línea",
+          "hint": "Contra bots o con amigos: cada partida terminada da XP.",
+          "action": "Jugar"
+        },
+        "icon": {
+          "title": "Elige tu icono",
+          "hint": "Te acompaña en cada mesa. El nivel 2 desbloquea la serie {series}.",
+          "hintUnlocked": "La serie {series} está desbloqueada: elige tu icono para tus próximas partidas.",
+          "action": "Elegir"
+        },
+        "effect": {
+          "title": "Equipa un efecto de nombre",
+          "hint": "Ya tienes efectos desbloqueados: equipa uno para dar vida a tu nombre en cada partida.",
+          "action": "Equipar"
+        },
+        "save": {
+          "title": "Guarda tu cuenta",
+          "hint": "Añade un email o vincula tu cuenta a Google: tu nivel, tu XP y tus cosméticos quedan a salvo para siempre.",
+          "action": "Guardar"
+        },
+        "friends": {
+          "title": "Juega con tus amigos",
+          "hint": "Abre una mesa en línea y comparte su enlace: tus amigos se unen sin registrarse.",
+          "action": "Elegir un juego"
+        },
+        "level3": {
+          "title": "Alcanza el nivel 3",
+          "hint": "Solo te faltan {xp} XP: el nivel 3 desbloquea el efecto {effect}.",
+          "action": "Jugar"
+        }
+      }
     }
   },
   "legal": {
@@ -956,9 +1011,9 @@
     "frames": {
       "none": "Ninguno",
       "gold": "Oro",
-      "silver": "Dinero",
+      "silver": "Plata",
       "neon": "Neón",
-      "ember": "Cocido a fuego lento",
+      "ember": "Brasa",
       "royal": "Real",
       "diamond": "Diamante",
       "staff": "Personal",
@@ -4244,7 +4299,22 @@
     "emptyMessage": "Por favor describa su devolución.",
     "imageError": "No se puede procesar una o más imágenes.",
     "send": "Enviar",
-    "sending": "Envío…"
+    "sending": "Envío…",
+    "firstGame": {
+      "title": "¿Qué tal tu primera partida?",
+      "subtitle": "Le Pillaveur acaba de nacer: tu opinión nos ayuda de verdad a mejorarlo.",
+      "rate": "Nota {rating} de 5",
+      "commentLabel": "¿Una idea, un fallo, algo que echaste en falta?",
+      "commentPlaceholder": "Opcional",
+      "send": "Enviar",
+      "sending": "Enviando…",
+      "dismiss": "No, gracias",
+      "thanks": "¡Gracias! Leemos todas las opiniones, prometido.",
+      "already": "Tu valoración ya estaba guardada: ¡gracias!",
+      "dismissed": "Sin problema. ¡Buena partida!",
+      "error": "No se ha podido enviar ahora. Inténtalo más tarde.",
+      "tooMany": "Demasiados envíos seguidos: inténtalo dentro de un momento."
+    }
   },
   "errors": {
     "generic": "Error",
@@ -4314,7 +4384,7 @@
     },
     "moderation": {
       "title": "Filtro anti-insultos",
-      "description": "Listas FR/EN/ES/IT integradas, archivo data/moderation-extra-terms.json y términos añadidos aquí (efecto inmediato en servidor).",
+      "description": "Se aplica a los apodos y al chat (no a las respuestas de juego). Listas FR/EN/ES/IT integradas, archivo data/moderation-extra-terms.json y términos añadidos aquí (efecto inmediato en servidor).",
       "loading": "Cargando…",
       "loadError": "No se pudo cargar la moderación",
       "saveError": "No se pudo añadir el término",
@@ -4748,7 +4818,44 @@
       "captureAlt": "Captura {index}",
       "statusRead": "Leído",
       "statusResolved": "Resuelto",
-      "loadingDetail": "Cargando el detalle…"
+      "loadingDetail": "Cargando el detalle…",
+      "ratingLabel": "Nota: {rating} de 5",
+      "playMode": {
+        "online": "En línea",
+        "local": "Local"
+      },
+      "unknownGame": "Juego desconocido",
+      "noComment": "Sin comentario, solo una nota."
+    },
+    "firstGameFeedback": {
+      "title": "Valoraciones tras la 1.ª partida",
+      "desc": "La nota que da cada jugador al terminar su primerísima partida, pedida una sola vez. Las valoraciones con comentario también llegan a los comentarios de abajo; las notas solas solo aparecen aquí.",
+      "refresh": "Actualizar",
+      "loadError": "No se pudieron cargar las valoraciones de la 1.ª partida.",
+      "forbidden": "Sesión caducada o acceso retirado: hay que volver a iniciar sesión.",
+      "empty": "Aún no hay valoraciones de la 1.ª partida.",
+      "emptyHint": "Aparecen aquí en cuanto un jugador nuevo puntúa su primera partida.",
+      "averageLabel": "Nota media",
+      "outOf": "de 5",
+      "totalCount": "{count, plural, one {# valoración en total} other {# valoraciones en total}}",
+      "last30dLabel": "Últimos 30 días",
+      "last30dCount": "{count, plural, =0 {Ninguna valoración} one {# valoración} other {# valoraciones}}",
+      "last30dAverage": "Media: {average} de 5",
+      "last30dNoAverage": "Ninguna nota en este periodo.",
+      "distributionTitle": "Distribución de las notas",
+      "distributionAria": "Distribución por número de estrellas ({count, plural, one {# valoración} other {# valoraciones}})",
+      "stars": "{count, plural, one {# estrella} other {# estrellas}}",
+      "colRating": "Nota",
+      "colCount": "Valoraciones",
+      "colShare": "Porcentaje",
+      "byGameTitle": "Media por juego",
+      "byGameHint": "Ordenados por número de valoraciones: una media de dos valoraciones dice poco.",
+      "byGameEmpty": "Ningún juego identificado en estas valoraciones.",
+      "ratingCount": "{count, plural, one {# valoración} other {# valoraciones}}",
+      "commentsTitle": "Últimos comentarios",
+      "commentsEmpty": "Aún no hay comentarios escritos: los jugadores solo han puntuado.",
+      "commentsShowAll": "Ver los {count} comentarios",
+      "commentsCollapse": "Mostrar menos"
     },
     "history": {
       "activeConnection": "Conexión activa",

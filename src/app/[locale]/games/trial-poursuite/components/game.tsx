@@ -10,6 +10,7 @@ import { Player as BasePlayer, PlayerPreferences } from '@/lib/players'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { EndConfetti } from '@/components/online/EndConfetti'
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 import { RefreshCw, Home, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 
@@ -757,7 +758,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       </Dialog>
 
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
-        <DialogContent className="bg-gray-900 border-white/20">
+        {/* Hauteur bornée et défilante : classement + avis de première partie
+            peuvent dépasser un petit écran, et le pied (Rejouer) doit rester atteignable. */}
+        <DialogContent className="max-h-[90dvh] overflow-y-auto bg-gray-900 border-white/20">
           <DialogHeader>
             <DialogTitle className="text-center text-3xl">
               {t('gameCompletedTitle')}
@@ -812,6 +815,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               </div>
             </div>
           </div>
+          <FirstGameFeedbackCard mode="local" gameId="trial-poursuite" />
           <DialogFooter className="flex-col space-y-2">
             <Button onClick={restartGame} className="w-full">
               {tc('replay')}

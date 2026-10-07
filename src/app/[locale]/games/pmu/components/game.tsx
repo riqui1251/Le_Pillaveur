@@ -8,6 +8,7 @@ import { usePlayers } from '@/hooks/usePlayers'
 import { useCastRoom } from '@/hooks/useCastRoom'
 import type { PmuCastState } from '@/lib/cast-types'
 import { GameShell } from '@/components/game/GameShell'
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { cn } from '@/lib/utils'
@@ -841,6 +842,8 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
               </div>
             ))}
           </div>
+
+          <FirstGameFeedbackCard mode="local" gameId="pmu" />
 
           <div className="flex w-full gap-3">
             <Button onClick={replayGame} className="flex-1 bg-gradient-to-r from-fuchsia-600 to-violet-700 font-semibold text-white hover:from-fuchsia-500 hover:to-violet-600">

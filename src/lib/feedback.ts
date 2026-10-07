@@ -1,5 +1,31 @@
+import type { Prisma } from '@prisma/client'
+
 export const FEEDBACK_TYPES = ['bug', 'improvement', 'comment'] as const
 export type FeedbackType = (typeof FEEDBACK_TYPES)[number]
+
+/**
+ * Avis de 1re partie (POST /api/feedback/first-game) : une note 1..5, le jeu,
+ * le mode, un commentaire facultatif. VOLONTAIREMENT absent de FEEDBACK_TYPES :
+ * le POST générique /api/feedback valide le type contre cette liste — s'il
+ * l'acceptait, n'importe qui fabriquerait des « avis de 1re partie » sans
+ * note, hors de leur quota propre, et fausserait le résumé de la Supervision.
+ */
+export const FIRST_GAME_FEEDBACK_TYPE = 'first-game'
+
+/**
+ * Filtre de la BOÎTE DE TRI des retours : liste admin, compteurs
+ * activeCount / resolvedCount, file de la vue d'ensemble. Un avis de 1re
+ * partie SANS commentaire n'est qu'une note : rien à lire, rien à traiter — et
+ * il en arrive un par nouveau joueur, de quoi noyer les vrais signalements.
+ * Il reste en base et nourrit le résumé (/api/admin/first-game-feedback) ;
+ * avec un commentaire, il entre dans la boîte comme les autres.
+ * `message` et `type` sont NOT NULL : le NOT n'a pas de piège de NULL en SQL.
+ * Import de TYPE seulement : ce module est aussi chargé côté client
+ * (FeedbackDialog), Prisma n'y entre pas.
+ */
+export const FEEDBACK_INBOX_WHERE: Prisma.UserFeedbackWhereInput = {
+  NOT: { type: FIRST_GAME_FEEDBACK_TYPE, message: '' },
+}
 
 export const FEEDBACK_STATUSES = ['open', 'read', 'resolved'] as const
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number]
@@ -19,7 +45,12 @@ export function isFeedbackStatus(value: string): value is FeedbackStatus {
   return (FEEDBACK_STATUSES as readonly string[]).includes(value)
 }
 
-export function feedbackTypeLabel(type: FeedbackType): string {
+/**
+ * Libellé staff d'un type de retour. Prend une chaîne brute (la colonne en
+ * base) : un type inconnu — ancien, ou ajouté sans libellé — ressort tel quel
+ * plutôt que de casser la liste.
+ */
+export function feedbackTypeLabel(type: string): string {
   switch (type) {
     case 'bug':
       return 'Bug'
@@ -27,6 +58,10 @@ export function feedbackTypeLabel(type: FeedbackType): string {
       return 'Amélioration'
     case 'comment':
       return 'Commentaire'
+    case FIRST_GAME_FEEDBACK_TYPE:
+      return 'Avis 1re partie'
+    default:
+      return type
   }
 }
 

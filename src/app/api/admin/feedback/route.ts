@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { canViewUserFeedback } from '@/lib/roles'
-import { feedbackStatusLabel, feedbackTypeLabel, isFeedbackType } from '@/lib/feedback'
+import { FEEDBACK_INBOX_WHERE, feedbackStatusLabel, feedbackTypeLabel } from '@/lib/feedback'
 import { adminErrorResponse, parsePaging, requireRole } from '../_guard'
 
 /**
@@ -12,6 +12,11 @@ import { adminErrorResponse, parsePaging, requireRole } from '../_guard'
  * tour, de la base jusqu'au navigateur. La liste ne porte plus que leur
  * NOMBRE ; l'image elle-même n'arrive qu'au GET /api/admin/feedback/[id],
  * c'est-à-dire à l'ouverture du retour concerné.
+ *
+ * Boîte de TRI : les avis de 1re partie sans commentaire (une note seule) en
+ * sont exclus, liste ET compteurs (FEEDBACK_INBOX_WHERE) — ils se lisent
+ * agrégés dans /api/admin/first-game-feedback. `rating`, `gameId` et
+ * `playMode` ne sont remplis que pour ce type, null ailleurs.
  */
 
 const DEFAULT_PAGE_SIZE = 25
@@ -71,7 +76,7 @@ export async function GET(request: Request) {
         }
       : {}
 
-    const where = { ...statusWhere, ...searchWhere }
+    const where = { AND: [FEEDBACK_INBOX_WHERE, statusWhere, searchWhere] }
 
     const [rows, total, activeCount, resolvedCount] = await Promise.all([
       prisma.userFeedback.findMany({
@@ -88,14 +93,17 @@ export async function GET(request: Request) {
           userId: true,
           contactEmail: true,
           status: true,
+          rating: true,
+          gameId: true,
+          playMode: true,
           createdAt: true,
           updatedAt: true,
           user: { select: { displayName: true } },
         },
       }),
       prisma.userFeedback.count({ where }),
-      prisma.userFeedback.count({ where: { status: { not: 'resolved' } } }),
-      prisma.userFeedback.count({ where: { status: 'resolved' } }),
+      prisma.userFeedback.count({ where: { AND: [FEEDBACK_INBOX_WHERE, { status: { not: 'resolved' } }] } }),
+      prisma.userFeedback.count({ where: { AND: [FEEDBACK_INBOX_WHERE, { status: 'resolved' }] } }),
     ])
 
     const screenshotCounts = await countScreenshotsByFeedbackId(rows.map((r) => r.id))
@@ -104,7 +112,7 @@ export async function GET(request: Request) {
       feedback: rows.map((row) => ({
         id: row.id,
         type: row.type,
-        typeLabel: isFeedbackType(row.type) ? feedbackTypeLabel(row.type) : row.type,
+        typeLabel: feedbackTypeLabel(row.type),
         messagePreview: row.message.length > 120 ? `${row.message.slice(0, 120)}…` : row.message,
         screenshotCount: screenshotCounts.get(row.id) ?? 0,
         pageUrl: row.pageUrl,
@@ -113,6 +121,9 @@ export async function GET(request: Request) {
         contactEmail: row.contactEmail,
         status: row.status,
         statusLabel: feedbackStatusLabel(row.status),
+        rating: row.rating,
+        gameId: row.gameId,
+        playMode: row.playMode,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
       })),

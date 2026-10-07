@@ -49,6 +49,11 @@ model User {
   // au trafic dans recordMatchResults, aucun cron.
   streakCount      Int       @default(0)
   streakLastDay    String?
+  // Avis de 1re partie (POST /api/feedback/first-game) : date à laquelle la
+  // carte a été présentée PUIS notée ou refusée — posée une fois, jamais
+  // remise à null. Seul but : ne pas redemander. Minimisation : une date, ni
+  // la note ni le choix ; la note vit dans UserFeedback, sans e-mail recopié.
+  firstFeedbackAskedAt DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   stats            Stats[]
@@ -475,10 +480,19 @@ model UserFeedback {
   user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   contactEmail String?
   status       String   @default("open")
+  // Avis de 1re partie (type 'first-game') seulement — null pour les autres
+  // types. Note entière 1..5, jeu (id de src/lib/games.ts) et mode
+  // ('online' | 'local') : de quoi agréger par jeu sans relire les messages.
+  rating       Int?
+  gameId       String?
+  playMode     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([status, createdAt])
+  // Résumé des avis de 1re partie (Supervision) : filtre sur le type, borne
+  // sur la date — sans index, chaque ouverture lisait toute la table.
+  @@index([type, createdAt])
 }
 
 model ModerationTerm {

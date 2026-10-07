@@ -33,6 +33,13 @@ import { cn } from '@/lib/utils'
  * rôle si débloqués). Tout est régi par la progression (voir cosmetics.ts) ;
  * un item verrouillé reste visible (cadenas + niveau requis) sauf les cadres
  * de rôle, masqués tant qu'ils ne sont pas débloqués par le grade.
+ *
+ * Ouverte depuis la fiche compte, le siège du lobby ou l'écran de fin de
+ * partie : toujours SUR PLACE (jamais une navigation — quitter l'écran de fin
+ * coûte la revanche et la place à table). D'où `contentClassName` /
+ * `overlayClassName` : les écrans de fin du Petit Buveur et du Toucher-Coulé
+ * sont des surcouches en z-[110], le dock vocal du lobby en z-90 ; la modale
+ * (z-50 par défaut) doit passer au-dessus, voile compris.
  */
 
 const RARITIES: CosmeticRarity[] = ['commun', 'rare', 'epique', 'legendaire']
@@ -47,6 +54,8 @@ export function OnlineCollection({
   preferences,
   progression,
   onSave,
+  contentClassName,
+  overlayClassName,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -54,7 +63,12 @@ export function OnlineCollection({
   role: string
   preferences: OnlinePreferences
   progression: { level: number; unlockedKeys: string[] } | null
+  /** Rien n'est attendu : la modale se ferme dès l'appel, l'appelant annonce l'issue. */
   onSave: (preferences: Partial<OnlinePreferences>) => void
+  /** Classes ajoutées au contenu (ex. 'z-[120]' au-dessus d'une surcouche z-[110]). */
+  contentClassName?: string
+  /** Classes ajoutées au voile — à relever avec le contenu (même z-index). */
+  overlayClassName?: string
 }) {
   const t = useTranslations('onlineCollection')
   const tCommon = useTranslations('common')
@@ -108,7 +122,13 @@ export function OnlineCollection({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#0f0e14] text-white sm:max-w-lg">
+      <DialogContent
+        overlayClassName={overlayClassName}
+        className={cn(
+          'max-h-[90vh] overflow-y-auto border-white/10 bg-[#0f0e14] text-white sm:max-w-lg',
+          contentClassName
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="text-white">{t('title', { name: displayName })}</DialogTitle>
         </DialogHeader>
@@ -203,7 +223,7 @@ export function OnlineCollection({
                           className={cn(
                             'rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06]',
                             effect === c.id && 'border-amber-400/50 bg-amber-500/10 ring-1 ring-amber-400/50',
-                            locked && 'opacity-45 hover:bg-white/[0.03]'
+                            locked && 'opacity-40 hover:bg-white/[0.03]'
                           )}
                         >
                           <span className="flex items-center justify-between gap-1 text-sm">
@@ -251,7 +271,7 @@ export function OnlineCollection({
                   className={cn(
                     'flex flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-2.5 transition-colors hover:bg-white/[0.06]',
                     frame === c.id && 'border-amber-400/50 bg-amber-500/10 ring-1 ring-amber-400/50',
-                    locked && 'opacity-45 hover:bg-white/[0.03]'
+                    locked && 'opacity-40 hover:bg-white/[0.03]'
                   )}
                 >
                   {frameSwatch(c.id as PlayerIconFrame)}

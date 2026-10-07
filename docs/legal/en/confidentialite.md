@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 13 September 2026
+**Last updated:** 7 October 2026
 
 ## 1. Introduction
 
@@ -87,6 +87,8 @@ If you use the feedback form, we may collect:
 - screenshots you voluntarily attach;
 - contact email (optional);
 - technical context (page visited, browser).
+
+At the end of your very first game, a card invites you to **rate that game** from 1 to 5, with an optional comment; it does not come back once you have filled it in or declined it. If you rate it, we record the rating, the game, the play mode (online or local), your comment if you wrote one and the same technical context (page visited, without its parameters, and browser), linked to your account if you are signed in; your account email is not copied into the rating, which follows the feedback retention period (see 7). If you are signed in, we also record on your account the date on which you rated or declined ("No thanks"), so that you are not asked again: neither the rating nor your choice is stored there. For the same reason, your browser keeps a marker in its local storage (`lp-first-game-feedback`): it only remembers whether this device had already been used on the site, the date of your first visit (only used for 24 hours), whether the question has already been asked and how many times the card has been shown; it contains no identifier and is never sent to our servers.
 
 ### 3.8 Cookies
 

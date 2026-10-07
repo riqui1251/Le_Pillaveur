@@ -16,10 +16,14 @@ import {
   XP_WIN,
   cosmeticKey,
   effectRarity,
+  hasLevelUnlocks,
   isCosmeticUnlocked,
+  isDefaultOnlineLook,
   levelForXp,
+  nextUnlockForXp,
   progressForXp,
   unlockedCosmeticKeys,
+  unlocksBetweenLevels,
   xpForLevel,
 } from './cosmetics'
 
@@ -312,5 +316,110 @@ describe('déblocage', () => {
     expect(keys.has(cosmeticKey('frame', 'sentinel'))).toBe(true)
     expect(keys.has(cosmeticKey('frame', 'blade'))).toBe(true)
     expect(keys.has(cosmeticKey('frame', 'prestige'))).toBe(false)
+  })
+})
+
+describe('prochain déblocage (nextUnlockForXp)', () => {
+  it('niveau 1 → niveau 2 : la série Trognes, rien d’autre', () => {
+    expect(nextUnlockForXp(0)).toEqual({ level: 2, seriesIds: ['trognes'], frameIds: [], effectIds: [] })
+    // Juste sous le seuil du niveau 2 : toujours niveau 1, même annonce.
+    expect(nextUnlockForXp(xpForLevel(2) - 1)?.level).toBe(2)
+  })
+
+  it('niveau 2 → niveau 3 : l’effet Émeraude', () => {
+    expect(nextUnlockForXp(xpForLevel(2))).toEqual({
+      level: 3,
+      seriesIds: [],
+      frameIds: [],
+      effectIds: ['emerald'],
+    })
+  })
+
+  it('un niveau sans déblocage est sauté (11 → 12 : effet Or)', () => {
+    expect(nextUnlockForXp(xpForLevel(11))).toEqual({
+      level: 12,
+      seriesIds: [],
+      frameIds: [],
+      effectIds: ['gold'],
+    })
+  })
+
+  it('null en fin de catalogue de niveaux (VIP et série Fondateur ne comptent pas)', () => {
+    const lastLevel = Math.max(
+      ...COSMETICS.filter((c) => c.unlockLevel < GRANT_ONLY_FRAME_LEVEL).map((c) => c.unlockLevel)
+    )
+    expect(nextUnlockForXp(xpForLevel(lastLevel - 1))?.level).toBe(lastLevel)
+    expect(nextUnlockForXp(xpForLevel(lastLevel))).toBeNull()
+    expect(nextUnlockForXp(xpForLevel(99))).toBeNull()
+  })
+})
+
+describe('déblocages d’un passage de niveau (unlocksBetweenLevels)', () => {
+  it('1 → 2 : série Trognes', () => {
+    expect(unlocksBetweenLevels(1, 2)).toEqual({ seriesIds: ['trognes'], frameIds: [], effectIds: [] })
+  })
+
+  it('borne basse exclue, borne haute incluse', () => {
+    // Niveau 4 : effet Océan + série Fêtard ; niveau 5 : effet Glace + cadre Argent.
+    expect(unlocksBetweenLevels(4, 5)).toEqual({ seriesIds: [], frameIds: ['silver'], effectIds: ['ice'] })
+    expect(unlocksBetweenLevels(3, 4)).toEqual({ seriesIds: ['fetard'], frameIds: [], effectIds: ['ocean'] })
+  })
+
+  it('un gain qui franchit plusieurs niveaux rend tout, dans l’ordre des niveaux', () => {
+    expect(unlocksBetweenLevels(2, 5)).toEqual({
+      seriesIds: ['fetard'],
+      frameIds: ['silver'],
+      effectIds: ['emerald', 'ocean', 'ice'],
+    })
+  })
+
+  it('niveau sans déblocage ou pas de montée : vide', () => {
+    expect(hasLevelUnlocks(unlocksBetweenLevels(10, 11))).toBe(false)
+    expect(hasLevelUnlocks(unlocksBetweenLevels(5, 5))).toBe(false)
+    expect(hasLevelUnlocks(unlocksBetweenLevels(6, 3))).toBe(false)
+    expect(hasLevelUnlocks(unlocksBetweenLevels(1, 2))).toBe(true)
+  })
+
+  it('niveau 22 : série Aliens et ses dix cadres Orbite', () => {
+    const at22 = unlocksBetweenLevels(21, 22)
+    expect(at22.seriesIds).toEqual(['aliens'])
+    expect([...at22.frameIds].sort()).toEqual([...ONLINE_EXCLUSIVE_FRAME_IDS].sort())
+  })
+
+  it('jamais de VIP, de série Fondateur ni de cadre de rôle — même tout le catalogue d’un coup', () => {
+    const all = unlocksBetweenLevels(0, 10_000)
+    expect(all.seriesIds).not.toContain('fondateur')
+    for (const id of VIP_FRAME_IDS) expect(all.frameIds).not.toContain(id)
+    for (const id of [...Object.keys(ROLE_FRAME_MIN_RANK), 'staff']) expect(all.frameIds).not.toContain(id)
+    // Tout le reste y est : chaque série de niveau, chaque effet.
+    expect(all.seriesIds).toEqual(
+      ICON_SERIES.filter((s) => s.unlockLevel < GRANT_ONLY_FRAME_LEVEL).map((s) => s.id)
+    )
+    expect([...all.effectIds].sort()).toEqual([...ONLINE_EFFECT_IDS].sort())
+  })
+
+  it('cohérent avec nextUnlockForXp à chaque niveau', () => {
+    for (let level = 1; level <= 45; level++) {
+      const next = nextUnlockForXp(xpForLevel(level))
+      if (!next) continue
+      const { level: nextLevel, ...unlocks } = next
+      expect(unlocksBetweenLevels(level, nextLevel)).toEqual(unlocks)
+    }
+  })
+})
+
+describe('look en ligne par défaut (isDefaultOnlineLook)', () => {
+  it('rien de choisi, ou la chope nue : look par défaut', () => {
+    expect(isDefaultOnlineLook(undefined)).toBe(true)
+    expect(isDefaultOnlineLook(null)).toBe(true)
+    expect(isDefaultOnlineLook({})).toBe(true)
+    expect(isDefaultOnlineLook({ icon: '' })).toBe(true)
+    expect(isDefaultOnlineLook({ icon: DEFAULT_ONLINE_ICON, specialEffect: null, iconFrame: null })).toBe(true)
+  })
+
+  it('une autre icône, un effet ou un cadre : personnalisé', () => {
+    expect(isDefaultOnlineLook({ icon: 'renard' })).toBe(false)
+    expect(isDefaultOnlineLook({ icon: DEFAULT_ONLINE_ICON, specialEffect: 'red' })).toBe(false)
+    expect(isDefaultOnlineLook({ icon: DEFAULT_ONLINE_ICON, iconFrame: 'silver' })).toBe(false)
   })
 })

@@ -31,6 +31,7 @@ import {
 } from '@/lib/hi-lo/engine'
 import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 
 // Propriétés du composant Game
 interface GameProps {
@@ -516,7 +517,9 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
 
       {/* Dialogue de fin de jeu */}
       <Dialog open={showGameOver} onOpenChange={setShowGameOver}>
-        <DialogContent className={`${isMobile ? 'w-[95%] max-w-lg p-3 sm:p-6' : ''}`}>
+        {/* Hauteur bornée et défilante : résultats + avis de première partie
+            peuvent dépasser un petit écran, et le pied (Rejouer) doit rester atteignable. */}
+        <DialogContent className={`max-h-[90dvh] overflow-y-auto ${isMobile ? 'w-[95%] max-w-lg p-3 sm:p-6' : ''}`}>
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
@@ -563,6 +566,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
               })}
             </ul>
           </div>
+
+          <FirstGameFeedbackCard mode="local" gameId="hi-lo" />
           
           <DialogFooter className={`flex ${isMobile ? 'flex-col space-y-2' : 'space-x-2'}`}>
             <Button 

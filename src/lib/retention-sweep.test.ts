@@ -12,6 +12,7 @@ const { prismaMock, deleteUserAccountMock } = vi.hoisted(() => ({
     dailyVisitor: { deleteMany: vi.fn() },
     onlineGameSession: { deleteMany: vi.fn() },
     session: { deleteMany: vi.fn() },
+    userFeedback: { deleteMany: vi.fn() },
     accountBanEvent: { updateMany: vi.fn() },
     user: { updateMany: vi.fn(), findMany: vi.fn() },
     siteSetting: { upsert: vi.fn() },
@@ -88,6 +89,7 @@ describe('balayage de conservation', () => {
       prismaMock.dailyVisitor,
       prismaMock.onlineGameSession,
       prismaMock.session,
+      prismaMock.userFeedback,
     ]) {
       model.deleteMany.mockReset().mockResolvedValue({ count: 0 })
     }
@@ -129,6 +131,13 @@ describe('balayage de conservation', () => {
     await runSweep()
     expect(prismaMock.accountVisit.deleteMany).toHaveBeenCalledWith({
       where: { startedAt: { lt: new Date(NOW - 180 * DAY_MS) } },
+    })
+  })
+
+  it('purge les retours (avis de 1re partie compris) envoyés il y a plus de 24 mois, quel que soit leur statut', async () => {
+    await runSweep()
+    expect(prismaMock.userFeedback.deleteMany).toHaveBeenCalledWith({
+      where: { createdAt: { lt: new Date(NOW - 720 * DAY_MS) } },
     })
   })
 
@@ -278,7 +287,7 @@ describe('balayage de conservation', () => {
         'User.staleGuests': 1,
       })
       // Un bloc par purge simple, plus les deux blocs de comptes.
-      expect(Object.keys(lastRun.counts)).toHaveLength(17)
+      expect(Object.keys(lastRun.counts)).toHaveLength(18)
       const stored = prismaMock.siteSetting.upsert.mock.calls[0][0].update.value as string
       for (const id of ['guest-a', 'guest-b', 'guest-old']) expect(stored).not.toContain(id)
     })
