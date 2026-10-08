@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { createTranslator } from 'next-intl'
+import { SITE_URL as PUBLIC_SITE_URL } from '@/lib/site'
 
 let resendClient: Resend | null = null
 
@@ -12,16 +13,32 @@ function getResend(): Resend {
   return resendClient
 }
 
+/**
+ * Adresse publique des liens d'e-mail. En production, le repli est l'adresse
+ * du site (SITE_URL de site.ts) et non localhost : le serveur n'a jamais eu de
+ * variable SITE_URL, et un lien « réinitialiser » ou « se désinscrire » vers
+ * localhost serait mort chez le joueur. localhost reste le repli du dev.
+ */
 function getAppUrl(): string {
   return (
     process.env.SITE_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
-    'http://localhost:3000'
+    (process.env.NODE_ENV === 'production' ? PUBLIC_SITE_URL : 'http://localhost:3000')
   )
 }
 
+/**
+ * Expéditeur : le domaine lepillaveur.fr est vérifié chez Resend (DKIM + SPF
+ * sur send.lepillaveur.fr). L'adresse de test onboarding@resend.dev ne livre
+ * qu'au propriétaire du compte Resend : elle ne sert plus que hors production.
+ */
 function getEmailFrom(): string {
-  return process.env.EMAIL_FROM ?? 'Le Pillaveur <onboarding@resend.dev>'
+  return (
+    process.env.EMAIL_FROM ??
+    (process.env.NODE_ENV === 'production'
+      ? 'Le Pillaveur <noreply@lepillaveur.fr>'
+      : 'Le Pillaveur <onboarding@resend.dev>')
+  )
 }
 
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {

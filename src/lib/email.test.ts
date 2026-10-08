@@ -19,10 +19,12 @@ import enMessages from '../../messages/en.json'
 import esMessages from '../../messages/es.json'
 import itMessages from '../../messages/it.json'
 import {
+  appBaseUrl,
   isEmailSendingConfigured,
   renderFridayReminderEmail,
   renderReminderConfirmEmail,
   sendFridayReminderEmail,
+  sendPasswordResetEmail,
   sendReminderConfirmEmail,
 } from './email'
 
@@ -142,5 +144,24 @@ describe('e-mail de confirmation du rappel (double opt-in)', () => {
     ).rejects.toThrow()
     expect(errorSpy.mock.calls.map((call) => call.map(String).join(' ')).join('\n')).not.toMatch(/@/)
     errorSpy.mockRestore()
+  })
+})
+
+describe('replis de production (aucune variable SITE_URL / EMAIL_FROM sur le serveur)', () => {
+  it('liens vers le site public, jamais vers localhost', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('SITE_URL', undefined as unknown as string)
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', undefined as unknown as string)
+    expect(appBaseUrl()).toBe('https://lepillaveur.fr')
+  })
+
+  it('expéditeur du domaine vérifié, pas l’adresse de test de Resend', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('RESEND_API_KEY', 're_test_123')
+    vi.stubEnv('EMAIL_FROM', undefined as unknown as string)
+    sendMock.mockResolvedValue({ data: { id: 'x' }, error: null })
+    await sendPasswordResetEmail('joueur@example.com', 'jeton')
+    expect(sendMock.mock.calls[0][0].from).toBe('Le Pillaveur <noreply@lepillaveur.fr>')
+    expect(sendMock.mock.calls[0][0].html).toContain('https://lepillaveur.fr/compte/reinitialiser?token=jeton')
   })
 })
