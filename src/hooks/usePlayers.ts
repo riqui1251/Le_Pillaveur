@@ -19,7 +19,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { clearSelectedPlayerIds } from '@/lib/selectedPlayers';
 import { syncLocalPlayersNow } from '@/lib/visit-ping-client';
-import { pushPlayersToCloud, syncLocalWithCloud } from '@/lib/player-sync';
+import { pushPlayersToCloud, schedulePlayersPush, syncLocalWithCloud } from '@/lib/player-sync';
 
 type PlayersListener = () => void;
 const playersListeners = new Set<PlayersListener>();
@@ -52,7 +52,6 @@ export function usePlayers() {
   const [loading, setLoading] = useState(true);
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [mostActivePlayers, setMostActivePlayers] = useState<Player[]>([]);
-  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cloudSyncedRef = useRef(false);
   const listenerRef = useRef<PlayersListener | null>(null);
 
@@ -233,21 +232,15 @@ export function usePlayers() {
     return getPlayerStatsByGameFromStorage(playerId, gameId);
   }, []);
 
+  // Poussée différée partagée par toutes les instances : une resynchro qui
+  // démarre avant son échéance la fait partir d'abord (voir syncLocalWithCloud),
+  // sinon la copie du nuage, en retard, annulerait le changement.
   useEffect(() => {
     if (loading) return;
     savePlayers(players);
 
     if (!userId || !cloudSyncedRef.current) return;
-
-    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = setTimeout(() => {
-      fetch('/api/players/local', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ players }),
-      }).catch(() => {});
-    }, 800);
+    schedulePlayersPush();
   }, [players, loading, userId]);
 
   // Pseudos locaux → statistiques de visite. Relancé seulement quand les NOMS
