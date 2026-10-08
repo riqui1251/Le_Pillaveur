@@ -1,21 +1,19 @@
-import { compactForModeration, containsProfanity } from '@/lib/name-moderation'
-import { getPreparedTerms } from '@/lib/name-moderation/prepared-terms'
+import { containsProfanity, containsProfanityAcrossWords } from '@/lib/name-moderation'
 
 /**
  * Filtre anti-insultes du chat : les mots injurieux sont masqués (***) mais le
  * message est délivré — on censure, on ne bloque pas la conversation.
  *
- * Réutilise le détecteur des pseudos (normalisation accents/leet + termes
- * ajoutés par la modération en DB), plus trois durcissements dictés par les
- * contournements réellement observés :
+ * Réutilise le détecteur des pseudos, mot par mot : normalisation accents/leet,
+ * termes ajoutés par la modération en DB, racines courtes cherchées dans le
+ * mot (« grossebite », « tapute ») sauf les racines ambiguës, en début de mot
+ * seulement (« question », « unique » passent), liste blanche (député,
+ * cocktail, râpé…) et seconde lecture des lettres martelées (`coooonnard`,
+ * `tapuuute`). S'y ajoutent deux durcissements propres au chat, dictés par
+ * les contournements réellement observés :
  *
  *  1. caractères invisibles (`co<U+200B>nnard`) retirés avant analyse ;
- *  2. lettres martelées (`coooonnard`) — la normalisation d'origine réduit les
- *     répétitions à DEUX caractères, ce qui laissait justement passer les
- *     insultes à double lettre ; on retente donc avec les répétitions écrasées
- *     à un seul caractère, mais UNIQUEMENT si le mot contenait vraiment une
- *     salve de 3 lettres identiques (sinon on n'ajouterait que du faux positif) ;
- *  3. insulte éclatée sur plusieurs mots (`con nard`, `e n c u l e`) : on teste
+ *  2. insulte éclatée sur plusieurs mots (`con nard`, `e n c u l e`) : on teste
  *     les fenêtres de mots ADJACENTS, mais seulement quand tous les morceaux
  *     sont courts — le propre d'un découpage volontaire. Jamais la phrase
  *     entière compactée : coller des mots normaux crée des faux positifs, et un
@@ -47,58 +45,6 @@ function mask(word: string): string {
 
 function stripInvisible(text: string): string {
   return text.replace(INVISIBLE_RE, '')
-}
-
-/** Écrase toute répétition de la même lettre à un seul caractère. */
-function squashRepeats(text: string): string {
-  return text.replace(/(.)\1+/g, '$1')
-}
-
-// Liste des termes déjà écrasés, recalculée seulement si la modération a
-// rechargé ses termes (rebuildPreparedTerms remplace le tableau).
-let squashedCacheSource: readonly unknown[] | null = null
-let squashedCache: string[] = []
-
-function getSquashedTerms(): string[] {
-  const prepared = getPreparedTerms()
-  if (squashedCacheSource !== prepared) {
-    squashedCacheSource = prepared
-    squashedCache = prepared
-      .map((entry) => squashRepeats(entry.compact))
-      .filter((term) => term.length >= 4)
-  }
-  return squashedCache
-}
-
-/**
- * Deuxième chance pour les lettres martelées. Réservée aux mots qui portent
- * réellement une salve de 3 lettres identiques : ailleurs, écraser les doubles
- * ne ferait que rapprocher des mots innocents des termes interdits.
- */
-function containsHammeredProfanity(word: string): boolean {
-  if (!/(.)\1\1/.test(word)) return false
-  const squashed = squashRepeats(word.toLowerCase())
-  if (squashed.length < 4) return false
-  // On repasse par la normalisation maison (leet, accents) via containsProfanity,
-  // puis par une comparaison directe aux termes écrasés.
-  if (containsProfanity(squashed)) return true
-  const compact = squashRepeats(
-    squashed.normalize('NFD').replace(/\p{M}/gu, '').replace(/[^a-z0-9]/g, '')
-  )
-  return getSquashedTerms().some((term) => compact.includes(term))
-}
-
-function isProfaneWord(word: string): boolean {
-  return containsProfanity(word) || containsHammeredProfanity(word)
-}
-
-/** Terme LONG reconnu dans un recollage de mots adjacents (voir SPLIT_TERM_MIN). */
-function containsSplitProfanity(joined: string): boolean {
-  const compact = compactForModeration(joined)
-  if (compact.length < SPLIT_TERM_MIN) return false
-  return getPreparedTerms().some(
-    ({ compact: term }) => term.length >= SPLIT_TERM_MIN && compact.includes(term)
-  )
 }
 
 export type ChatCensorFlags = {
@@ -152,7 +98,7 @@ export function censorChatMessage(text: string): ChatCensorResult {
   for (let i = 0; i < parts.length; i += 1) {
     const probe = probes[i]
     if (!probe || /^\s+$/.test(probe)) continue
-    if (isProfaneWord(probe)) {
+    if (containsProfanity(probe)) {
       parts[i] = mask(parts[i])
       probes[i] = parts[i]
       profanity = true
@@ -165,7 +111,7 @@ export function censorChatMessage(text: string): ChatCensorResult {
     .filter(({ w }) => w && !/^\s+$/.test(w) && !/^\*+$/.test(w))
 
   for (let start = 0; start < slots.length; start += 1) {
-    let joined = ''
+    const windowWords: string[] = []
     let allTiny = true
     for (let end = start; end < slots.length; end += 1) {
       const fragment = slots[end].w
@@ -174,9 +120,9 @@ export function censorChatMessage(text: string): ChatCensorResult {
       if (fragment.length > TINY_FRAGMENT_MAX) allTiny = false
       const size = end - start + 1
       if (size > (allTiny ? WINDOW_MAX_TINY : WINDOW_MAX)) break
-      joined += fragment
+      windowWords.push(fragment)
       if (size < 2) continue
-      if (!containsSplitProfanity(joined)) continue
+      if (!containsProfanityAcrossWords(windowWords, SPLIT_TERM_MIN)) continue
       for (let k = start; k <= end; k += 1) {
         const slot = slots[k]
         parts[slot.i] = mask(parts[slot.i])

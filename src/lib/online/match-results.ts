@@ -5,11 +5,10 @@ import {
   XP_SOLO_BOTS,
   XP_WIN,
   levelForXp,
-  streakBonusXp,
 } from '@/lib/online/cosmetics'
 import { checkMatchAchievements } from '@/lib/online/achievements'
 import { closeGameSession } from '@/lib/online/game-sessions'
-import { parisDayOffset } from '@/lib/paris-time'
+import { advanceWeeklyStreak } from '@/lib/online/streak'
 import {
   buildXpGainDetail,
   rememberXpGain,
@@ -323,22 +322,25 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
 
 /** Ce que la série a rapporté à un joueur, plus son XP AVANT tout crédit. */
 type StreakCredit = {
-  /** Série en jours après cette partie. */
+  /** Série en semaines après cette partie. */
   streak: number
-  /** Bonus crédité (0 si la série était déjà comptée aujourd'hui). */
+  /** Bonus crédité (0 si la série était déjà comptée cette semaine). */
   bonus: number
   /** XP du compte AVANT le moindre crédit de cette partie. */
   xpBefore: number
 }
 
 /**
- * Série quotidienne des joueurs crédités : première partie comptée du jour →
- * la série avance (ou repart à 1) et un bonus d'XP croissant tombe. Tout au
- * trafic, aucun cron. Une partie de plus le même jour ne change rien.
+ * Série HEBDOMADAIRE des joueurs crédités (règles : src/lib/online/streak.ts) :
+ * première partie comptée de la semaine de Paris → la série avance (ou
+ * repart à 1) et un bonus d'XP croissant tombe. Tout au trafic, aucun cron.
+ * Une partie de plus la même semaine ne change rien — le bonus ne tombe
+ * qu'une fois, et le détail rendu au joueur l'annonce une fois.
  *
  * Appelée AVANT les crédits de base : la lecture sert aussi de photo de l'XP
  * d'avant-partie, d'où le détail honnête du gain rendu au joueur (une seule
- * requête au lieu de deux).
+ * requête au lieu de deux). Lecture et écritures passent par `client` : dans
+ * la transaction de fin de partie, un `prisma.` global interbloquerait.
  */
 async function updateStreaks(
   client: PrismaClient | Prisma.TransactionClient,
@@ -346,34 +348,30 @@ async function updateStreaks(
 ): Promise<Map<string, StreakCredit>> {
   const credits = new Map<string, StreakCredit>()
   if (userIds.length === 0) return credits
-  // Jours de Paris CALENDAIRES, lus sur un seul instant : « hier » n'est plus
-  // « maintenant − 24 h », qui tombait sur avant-hier (ou sur aujourd'hui)
-  // autour de minuit les jours de changement d'heure, et cassait la série.
+  // Un seul instant pour toute la table : une fin de partie à cheval sur
+  // minuit du dimanche ne crédite pas deux joueurs sur deux semaines.
   const now = new Date()
-  const today = parisDayOffset(0, now)
-  const yesterday = parisDayOffset(1, now)
   const users = await client.user.findMany({
     where: { id: { in: userIds } },
     select: { id: true, streakCount: true, streakLastDay: true, onlineXp: true },
   })
   for (const u of users) {
     const xpBefore = u.onlineXp ?? 0
-    if (u.streakLastDay === today) {
-      // Déjà créditée aujourd'hui : la série reste AFFICHABLE, sans bonus.
-      credits.set(u.id, { streak: u.streakCount, bonus: 0, xpBefore })
-      continue
+    // Une ancienne valeur quotidienne ('YYYY-MM-DD') se lit comme sa semaine
+    // (migration douce, cf. readWeeklyStreak) et se réécrit en clé de semaine
+    // au premier crédit.
+    const step = advanceWeeklyStreak(u, now)
+    if (step.credited) {
+      await client.user.update({
+        where: { id: u.id },
+        data: {
+          streakCount: step.streak,
+          streakLastDay: step.week,
+          onlineXp: { increment: step.bonus },
+        },
+      })
     }
-    const streak = u.streakLastDay === yesterday ? u.streakCount + 1 : 1
-    const bonus = streakBonusXp(streak)
-    await client.user.update({
-      where: { id: u.id },
-      data: {
-        streakCount: streak,
-        streakLastDay: today,
-        onlineXp: { increment: bonus },
-      },
-    })
-    credits.set(u.id, { streak, bonus, xpBefore })
+    credits.set(u.id, { streak: step.streak, bonus: step.bonus, xpBefore })
   }
   return credits
 }

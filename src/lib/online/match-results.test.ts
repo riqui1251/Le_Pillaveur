@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PrismaClient } from '@prisma/client'
-import { XP_LOSS, XP_WIN } from '@/lib/online/cosmetics'
+import { XP_LOSS, XP_WIN, streakBonusXp } from '@/lib/online/cosmetics'
 import { clearXpGains, recallXpGain } from '@/lib/online/xp'
 import {
   computeMatchResults,
@@ -234,7 +234,7 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     return { client: client as unknown as PrismaClient, created, xpUpdates, userUpdates, achievements }
   }
 
-  it('crédite XP_WIN aux gagnants et XP_LOSS aux perdants, et démarre la série du jour', async () => {
+  it('crédite XP_WIN aux gagnants et XP_LOSS aux perdants, et démarre la série de la semaine', async () => {
     const { client, created, xpUpdates, userUpdates } = fakeClient({ u1: {}, u2: {} })
     const state = { players: [
       { id: 'u1', isBot: false },
@@ -248,10 +248,12 @@ describe('recordMatchResults (enregistrement + XP)', () => {
       { ids: ['u1'], increment: XP_WIN },
       { ids: ['u2'], increment: XP_LOSS },
     ])
-    // Première partie du jour : série à 1, bonus +10 pour chacun.
+    // Première partie comptée de la semaine : série à 1, bonus +10 pour
+    // chacun, et la colonne reçoit une clé de SEMAINE, plus un jour.
     expect(userUpdates.map((u) => u.id).sort()).toEqual(['u1', 'u2'])
     for (const u of userUpdates) {
       expect(u.data.streakCount).toBe(1)
+      expect(u.data.streakLastDay).toMatch(/^\d{4}-W\d{2}$/)
       expect(u.data.onlineXp).toEqual({ increment: 10 })
     }
   })
@@ -343,7 +345,7 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
     const gain = recallXpGain('u1')
     expect(gain).not.toBeNull()
-    // Victoire (50) + première série du jour (10) = 60, et non « +50 ».
+    // Victoire (50) + première semaine de série (10) = 60, et non « +50 ».
     expect(gain!.base).toBe(XP_WIN)
     expect(gain!.streakBonus).toBe(10)
     expect(gain!.total).toBe(60)
@@ -405,27 +407,88 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     expect(recallXpGain('u2')?.achievements).not.toContain('first_room')
   })
 
-  it('série : hier → +1 avec bonus croissant ; déjà créditée aujourd’hui → rien', async () => {
-    const today = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit',
-    }).format(new Date())
-    const yesterday = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit',
-    }).format(new Date(Date.now() - 24 * 60 * 60 * 1000))
-    const { client, userUpdates } = fakeClient({
-      u1: { streakCount: 3, streakLastDay: yesterday },
-      u2: { streakCount: 9, streakLastDay: today },
+  describe('série HEBDOMADAIRE', () => {
+    // Horloge figée (Date seule) : jeudi 08/10/2026, 20 h à Paris = 2026-W41.
+    // Lire l'horloge réelle rendrait le test faux chaque dimanche à minuit.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-10-08T18:00:00.000Z'))
     })
-    const state = { players: [
-      { id: 'u1', isBot: false },
-      { id: 'u2', isBot: false },
-    ], winner: 'u1' }
-    await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
-    // u1 : 3 → 4 jours, bonus 40. u2 : déjà créditée aujourd'hui.
-    expect(userUpdates).toHaveLength(1)
-    expect(userUpdates[0].id).toBe('u1')
-    expect(userUpdates[0].data.streakCount).toBe(4)
-    expect(userUpdates[0].data.onlineXp).toEqual({ increment: 40 })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    const twoPlayers = {
+      players: [
+        { id: 'u1', isBot: false },
+        { id: 'u2', isBot: false },
+      ],
+      winner: 'u1',
+    }
+
+    it('semaine dernière → +1 avec bonus croissant ; déjà créditée cette semaine → rien', async () => {
+      const { client, userUpdates } = fakeClient({
+        u1: { streakCount: 3, streakLastDay: '2026-W40' },
+        u2: { streakCount: 9, streakLastDay: '2026-W41' },
+      })
+      await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state: twoPlayers })
+      // u1 : 3 → 4 semaines, bonus 40. u2 : déjà créditée cette semaine.
+      expect(userUpdates).toEqual([
+        {
+          id: 'u1',
+          data: { streakCount: 4, streakLastDay: '2026-W41', onlineXp: { increment: streakBonusXp(4) } },
+        },
+      ])
+      // Le détail annonce la série SANS rejouer le bonus déjà touché.
+      expect(recallXpGain('u1')).toMatchObject({ streakCount: 4, streakBonus: 40, total: XP_WIN + 40 })
+      expect(recallXpGain('u2')).toMatchObject({ streakCount: 9, streakBonus: 0, total: XP_LOSS })
+    })
+
+    it('une semaine sautée : retour à 1', async () => {
+      const { client, userUpdates } = fakeClient({
+        u1: { streakCount: 6, streakLastDay: '2026-W39' },
+        u2: {},
+      })
+      await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state: twoPlayers })
+      expect(userUpdates.find((u) => u.id === 'u1')?.data).toEqual({
+        streakCount: 1,
+        streakLastDay: '2026-W41',
+        onlineXp: { increment: streakBonusXp(1) },
+      })
+    })
+
+    it('ancienne valeur quotidienne : lue comme sa semaine, réécrite en semaine', async () => {
+      const { client, userUpdates } = fakeClient({
+        // Lundi 05/10 : même semaine que jeudi — le bonus est déjà tombé.
+        u1: { streakCount: 1, streakLastDay: '2026-10-05' },
+        // Samedi 03/10 : la semaine dernière — la série continue.
+        u2: { streakCount: 1, streakLastDay: '2026-10-03' },
+      })
+      await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state: twoPlayers })
+      expect(userUpdates).toEqual([
+        {
+          id: 'u2',
+          data: { streakCount: 2, streakLastDay: '2026-W41', onlineXp: { increment: streakBonusXp(2) } },
+        },
+      ])
+      expect(recallXpGain('u1')).toMatchObject({ streakCount: 1, streakBonus: 0 })
+    })
+
+    it('deux parties la même semaine : le bonus ne tombe qu’une fois', async () => {
+      const users: Record<string, { streakCount?: number; streakLastDay?: string | null }> = { u1: {}, u2: {} }
+      const first = fakeClient(users)
+      await recordMatchResults(first.client, { roomId: 'r1', gameId: 'petit-buveur', state: twoPlayers })
+      // La base telle que la première partie l'a laissée.
+      for (const u of first.userUpdates) {
+        users[u.id] = { streakCount: u.data.streakCount as number, streakLastDay: u.data.streakLastDay as string }
+      }
+      // Dimanche 11/10, 23 h 30 à Paris : toujours la W41.
+      vi.setSystemTime(new Date('2026-10-11T21:30:00.000Z'))
+      const second = fakeClient(users)
+      await recordMatchResults(second.client, { roomId: 'r2', gameId: 'petit-buveur', state: twoPlayers })
+      expect(second.userUpdates).toEqual([])
+      expect(recallXpGain('u1')).toMatchObject({ streakCount: 1, streakBonus: 0, total: XP_WIN })
+    })
   })
 })
 

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   COSMETICS,
@@ -10,8 +11,11 @@ import {
   ONLINE_EXCLUSIVE_FRAME_IDS,
   ONLINE_FRAME_IDS,
   ONLINE_ICON_IDS,
+  PIONEER_FRAME_ID,
+  PIONEER_FRAME_KEY,
   ROLE_FRAME_MIN_RANK,
   VIP_FRAME_IDS,
+  VIP_FRAME_LABELS,
   XP_LOSS,
   XP_WIN,
   cosmeticKey,
@@ -145,8 +149,10 @@ describe('catalogue cosmétiques', () => {
 })
 
 describe('cadres VIP (grant-only, Fondateur)', () => {
-  it('14 cadres VIP, tous hors de portée du niveau', () => {
-    expect(VIP_FRAME_IDS.length).toBe(14)
+  it('14 cadres VIP + le cadre Pionnier, tous hors de portée du niveau', () => {
+    expect(VIP_FRAME_IDS.filter((id) => id.startsWith('vip-')).length).toBe(14)
+    expect(VIP_FRAME_IDS).toContain(PIONEER_FRAME_ID)
+    expect(VIP_FRAME_IDS.length).toBe(15)
     for (const id of VIP_FRAME_IDS) {
       const c = COSMETICS.find((c) => c.kind === 'frame' && c.id === id)!
       expect(c.unlockLevel).toBeGreaterThanOrEqual(GRANT_ONLY_FRAME_LEVEL)
@@ -170,6 +176,50 @@ describe('cadres VIP (grant-only, Fondateur)', () => {
 
     const granted = { xp: 0, role: 'user', grantedKeys: new Set([cosmeticKey('frame', first)]) }
     expect(isCosmeticUnlocked(granted, 'frame', first)).toBe(true)
+  })
+})
+
+describe('cadre Pionnier (grant-only, gagné par les Premiers pas)', () => {
+  it('au catalogue des cadres, grant-only comme les VIP', () => {
+    const c = COSMETICS.find((c) => c.kind === 'frame' && c.id === PIONEER_FRAME_ID)
+    expect(c).toBeTruthy()
+    expect(c!.unlockLevel).toBeGreaterThanOrEqual(GRANT_ONLY_FRAME_LEVEL)
+    expect(PIONEER_FRAME_KEY).toBe('frame:pionnier')
+    // Reconnu par la validation des préférences : il s'équipe une fois accordé.
+    expect(ONLINE_FRAME_IDS).toContain(PIONEER_FRAME_ID)
+    // Libellé du dialogue d'octroi en Supervision.
+    expect(VIP_FRAME_LABELS[PIONEER_FRAME_ID]).toBe('Pionnier')
+  })
+
+  it('jamais par le niveau, jamais annoncé comme prochain déblocage', () => {
+    const maxedOut = { xp: xpForLevel(60), role: 'user', grantedKeys: new Set<string>() }
+    expect(isCosmeticUnlocked(maxedOut, 'frame', PIONEER_FRAME_ID)).toBe(false)
+    expect(unlocksBetweenLevels(0, 10_000).frameIds).not.toContain(PIONEER_FRAME_ID)
+  })
+
+  it('la ligne CosmeticGrant suffit : unlockedCosmeticKeys le rend, la Collection l’affiche', () => {
+    const ctx = { xp: 0, role: 'user', grantedKeys: new Set([PIONEER_FRAME_KEY]) }
+    expect(isCosmeticUnlocked(ctx, 'frame', PIONEER_FRAME_ID)).toBe(true)
+    expect(unlockedCosmeticKeys(ctx).has(PIONEER_FRAME_KEY)).toBe(true)
+    // Un grant VIP n'ouvre pas le Pionnier, et inversement.
+    expect(unlockedCosmeticKeys(ctx).has(cosmeticKey('frame', 'vip-jeton'))).toBe(false)
+    const vip = { xp: 0, role: 'user', grantedKeys: new Set([cosmeticKey('frame', 'vip-jeton')]) }
+    expect(unlockedCosmeticKeys(vip).has(PIONEER_FRAME_KEY)).toBe(false)
+  })
+})
+
+describe('rendu CSS des cadres (online-cosmetics.css)', () => {
+  const css = readFileSync(new URL('../../styles/online-cosmetics.css', import.meta.url), 'utf8')
+
+  it('chaque cadre du catalogue a sa règle .on-frame-<id> (sinon il s’équipe et ne se voit pas)', () => {
+    for (const c of COSMETICS.filter((c) => c.kind === 'frame')) {
+      expect(css).toMatch(new RegExp(`\\.on-frame-${c.id}\\b`))
+    }
+  })
+
+  it('le reflet de l’étoile Pionnier s’éteint sous prefers-reduced-motion', () => {
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'))
+    expect(reduced).toContain('.on-frame-pionnier::after')
   })
 })
 

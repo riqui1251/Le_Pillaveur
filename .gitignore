@@ -43,9 +43,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# bases SQLite locales
+# bases SQLite locales — journaux WAL compris : -wal et -shm portent des
+# pages entières de la base (lignes User : e-mail, IP, jetons).
 prisma/**/*.db
 prisma/**/*.db-journal
+prisma/**/*.db-wal
+prisma/**/*.db-shm
 
 # vercel
 .vercel

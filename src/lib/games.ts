@@ -46,6 +46,32 @@ export type GameMeta = {
   localMaxPlayers?: number;
   /** L'hôte peut activer « compléter avec des bots » au lobby (lancer sous le minimum). */
   botsFillable?: boolean;
+  /**
+   * Tenue du jeu SEUL contre des bots — réservé aux jeux `botsFillable` (un
+   * test le garde). Pourquoi : en prod (07/10/2026), une 1re partie jouée
+   * seul contre des bots n'est rejouée que 4 fois sur 21, contre 25 sur 36 à
+   * plusieurs, et Dilemmes, Sans Filtre, Crobard, Grand Bluff, le Menteur et
+   * l'Espion y sont quittés en 1 à 2 min. Le premier essai doit montrer un
+   * jeu qui tient sans potes, pas un salon vide. La MESURE tranche, pas
+   * l'intention : un jeu ne passe 'great' que si ses parties solo durent
+   * comme celles du Quiz ou du Président.
+   * - 'great' : les bots JOUENT pour de vrai (combos au Président, bonnes
+   *   réponses dosées par la difficulté au Quiz, débat et rôles clés au
+   *   Loup-Garou), ou le jeu est un pari de chacun contre le hasard (Purple,
+   *   1220, le plateau du Petit Buveur) où leur niveau ne change rien ;
+   * - 'group' : le sel du jeu, c'est la discussion ou le bluff entre
+   *   humains, et les bots n'y font que de la figuration (indice « … » et
+   *   vote au hasard à l'Imposteur, aucune accusation à l'Espion, aucun
+   *   dessin à Crobard, juge au hasard à Sans Filtre, bluffs tirés des
+   *   mauvaises réponses au Grand Bluff, votes de persona à Dilemmes) : seul,
+   *   on n'y voit rien. Le Menteur y est aussi : ses bots enchérissent sur
+   *   les probabilités, mais un bluff sans visage à lire ne retient personne
+   *   — quitté en 1 à 2 min seul, comme les autres.
+   * Lu par le hub en mode solo (rangée « Parfaits en solo » d'abord, badge
+   * « Mieux à plusieurs » ensuite) et par TryBotsGate (encart « ce jeu se
+   * joue entre potes » + `soloAlternativeFor`). Ne retire jamais un jeu.
+   */
+  soloFit?: 'great' | 'group';
   /** Proposé en mode Soft (sans gorgées) — sous-ensemble des jeux onlineReady. */
   softModeReady?: boolean;
   /**
@@ -116,6 +142,7 @@ export const GAMES: GameMeta[] = [
     minPlayers: 2,
     maxPlayers: 99,
     botsFillable: true,
+    soloFit: 'great',
   },
   {
     id: 'toucher-coule',
@@ -150,6 +177,8 @@ export const GAMES: GameMeta[] = [
     onlineReady: true,
     minPlayers: 2,
     botsFillable: true,
+    // Quitté en 1 à 2 min seul contre des bots (07/10/2026) : voir soloFit.
+    soloFit: 'group',
     maxPlayers: 6,
     onlineOnly: true,
     softModeReady: true,
@@ -169,6 +198,7 @@ export const GAMES: GameMeta[] = [
     onlineReady: true,
     minPlayers: 3,
     botsFillable: true,
+    soloFit: 'group',
     maxPlayers: 16,
     onlineOnly: true,
     softModeReady: true,
@@ -188,6 +218,7 @@ export const GAMES: GameMeta[] = [
     onlineReady: true,
     minPlayers: 2,
     botsFillable: true,
+    soloFit: 'great',
     maxPlayers: 16,
     onlineOnly: true,
     softModeReady: true,
@@ -208,6 +239,7 @@ export const GAMES: GameMeta[] = [
     onlineReady: true,
     minPlayers: 4,
     botsFillable: true,
+    soloFit: 'great',
     maxPlayers: 12,
     onlineOnly: true,
     softModeReady: true,
@@ -243,6 +275,7 @@ export const GAMES: GameMeta[] = [
     minPlayers: 2,
     maxPlayers: 16,
     botsFillable: true,
+    soloFit: 'great',
   },
   {
     id: 'pyramide',
@@ -349,6 +382,7 @@ export const GAMES: GameMeta[] = [
     minPlayers: 2,
     maxPlayers: 16,
     botsFillable: true,
+    soloFit: 'great',
   },
   {
     id: 'bluff',
@@ -368,6 +402,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 16,
     onlineOnly: true,
     botsFillable: true,
+    soloFit: 'group',
     softModeReady: true,
   },
   {
@@ -388,6 +423,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 16,
     onlineOnly: true,
     botsFillable: true,
+    soloFit: 'group',
     softModeReady: true,
   },
   {
@@ -435,6 +471,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 16,
     onlineOnly: true,
     botsFillable: true,
+    soloFit: 'group',
     softModeReady: true,
     featured: true,
   },
@@ -456,6 +493,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 16,
     onlineOnly: true,
     botsFillable: true,
+    soloFit: 'group',
     softModeReady: true,
     featured: true,
     // Cartes écrites en français seulement (src/lib/sans-filtre/data/cards.fr.ts).
@@ -498,6 +536,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 16,
     onlineOnly: true,
     botsFillable: true,
+    soloFit: 'group',
     softModeReady: true,
     // Cartes écrites en français seulement (src/lib/dilemmes/data/index.ts).
     contentLangs: ['fr'],
@@ -539,6 +578,7 @@ export const GAMES: GameMeta[] = [
     maxPlayers: 8,
     onlineOnly: true,
     botsFillable: true,
+    soloFit: 'great',
     softModeReady: true,
   },
   {
@@ -580,3 +620,52 @@ export function hasContentIn(
 
 
 
+
+/**
+ * Hub en mode solo : les jeux « parfaits en solo » d'abord, tous les autres
+ * ensuite — dans l'ordre reçu (celui du registre), sans en retirer aucun. Un
+ * jeu sans `soloFit` tombe dans les autres : il n'a pas fait ses preuves seul.
+ */
+export function splitBySoloFit<T extends Pick<GameMeta, 'soloFit'>>(
+  games: readonly T[]
+): { great: T[]; others: T[] } {
+  return {
+    great: games.filter((g) => g.soloFit === 'great'),
+    others: games.filter((g) => g.soloFit !== 'great'),
+  };
+}
+
+/**
+ * Le jeu « parfait en solo » à proposer à la place d'un jeu fait pour les
+ * potes (encart de TryBotsGate) — « Essayer plutôt le Quiz ». Il doit
+ * s'ouvrir seul avec des bots ICI : visible, en ligne, complétable par des
+ * bots, cartes dans la langue de la page et, en ambiance Sans alcool, doté
+ * de sa variante (la table serait sinon refusée ou hors ambiance).
+ * Préférence : un phare de la même famille (l'Espion ou l'Imposteur, rôles
+ * cachés, renvoient au Loup-Garou), puis un phare (le Quiz), puis la même
+ * famille, puis le premier venu. Null si rien ne convient.
+ */
+export function soloAlternativeFor(
+  gameId: string,
+  { locale, soft = false, games = GAMES }: { locale?: string | null; soft?: boolean; games?: readonly GameMeta[] } = {}
+): GameMeta | null {
+  const game = games.find((g) => g.id === gameId);
+  const candidates = games.filter(
+    (g) =>
+      g.id !== gameId &&
+      g.soloFit === 'great' &&
+      Boolean(g.botsFillable) &&
+      Boolean(g.onlineReady) &&
+      !g.hidden &&
+      (!soft || Boolean(g.softModeReady)) &&
+      hasContentIn(g, locale)
+  );
+  const sameSuit = (g: GameMeta) => Boolean(game?.suit) && g.suit === game?.suit;
+  return (
+    candidates.find((g) => g.featured && sameSuit(g)) ??
+    candidates.find((g) => g.featured) ??
+    candidates.find(sameSuit) ??
+    candidates[0] ??
+    null
+  );
+}

@@ -12,7 +12,12 @@ export type OnlineProgression = {
   required: number
   unlockedKeys: string[]
   grantedKeys: string[]
-  /** Série quotidienne : jours consécutifs et dernier jour crédité (Paris, 'YYYY-MM-DD'). */
+  /**
+   * Série HEBDOMADAIRE : semaines consécutives et dernière semaine créditée
+   * (Paris, 'YYYY-Www' — le nom du champ est celui de la colonne historique).
+   * Un serveur d'avant la série hebdomadaire peut encore y mettre un jour
+   * 'YYYY-MM-DD' : lire via streakThisWeek (src/lib/online/streak.ts).
+   */
   streakCount: number
   streakLastDay: string | null
 }

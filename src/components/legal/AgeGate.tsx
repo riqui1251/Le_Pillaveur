@@ -322,8 +322,17 @@ export function AgeGate() {
   // discret, lui, reste possible partout. Exception : une action qui l'exige
   // l'a demandé sur cette page (« Essayer avec des bots ») — il s'affiche
   // alors, annulable puisque rien n'oblige à jouer pour lire.
+  // Les pages du rappel par e-mail (/compte/rappel : confirmer l'accord, se
+  // désinscrire) en sont aussi : on y arrive depuis un webmail ou la vue web
+  // d'une messagerie, souvent sans le cookie d'âge, et une modale « Accès
+  // réservé aux majeurs » y ferait croire que le geste demande une étape de
+  // plus, ou a échoué. Ni jeu ni donnée : rien à certifier.
   const readingPage =
-    pathname === '/' || pathname.startsWith('/legal') || pathname.startsWith('/regles')
+    pathname === '/' ||
+    pathname.startsWith('/legal') ||
+    pathname.startsWith('/regles') ||
+    pathname === '/compte/rappel' ||
+    pathname.startsWith('/compte/rappel/')
   const requestedHere = requestedOn === pathname
   if (isOverlayFreeRoute(pathname)) return null
   const showGate = mode === 'gate' && (!readingPage || requestedHere)

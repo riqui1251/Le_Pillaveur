@@ -68,7 +68,7 @@ import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
 import { GAMES } from '@/lib/games'
 import { ACTIVE_WINDOW_MS, BEAT_INTERVAL_MS, HONEST_PRESENCE_SINCE, INTERACTION_WINDOW_MS } from '@/lib/heartbeat'
-import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
+import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString, toWeekKey, weekKeyMonday } from '@/lib/paris-time'
 import { isOnline } from '@/lib/presence'
 import { canManageUsers, normalizeRole } from '@/lib/roles'
 import { cn } from '@/lib/utils'
@@ -1185,6 +1185,10 @@ function GamesSection({ activity }: { activity: AccountActivity }) {
     ...activity.results.map((r) => r.gameId).filter((id) => !history.has(id)),
   ]
   const { progression } = activity
+  // Série HEBDOMADAIRE : la dernière semaine créditée se lit par son lundi
+  // (« semaine du 5 oct. »). toWeekKey tolère encore un ancien jour, au cas
+  // où la fiche serait servie par un serveur d'avant la série hebdomadaire.
+  const streakWeek = toWeekKey(progression.streakLastDay)
 
   // Icône masquée aux lecteurs d'écran : le titre du jeu suffit.
   const gameLabel = (gameId: string) => (
@@ -1323,11 +1327,13 @@ function GamesSection({ activity }: { activity: AccountActivity }) {
           </details>
         </>
       )}
-      {/* XP et série : des instantanés, pas une mesure d'activité (solo au
-          plafond sans XP ni série, jeux coopératifs sans résultat). */}
+      {/* XP et série (en semaines) : des instantanés, pas une mesure
+          d'activité (solo au plafond sans XP ni série, jeux coopératifs sans
+          résultat). */}
       <p className="min-w-0 break-words text-xs text-white/60">
         {t('progression', { xp: progression.onlineXp, streak: progression.streakCount })}
-        {progression.streakLastDay && ` · ${t('streakLastDay', { date: day(progression.streakLastDay) })}`}
+        {streakWeek &&
+          ` · ${t('streakLastDay', { date: day(parisDayStartUtc(weekKeyMonday(streakWeek)).toISOString()) })}`}
         <span className="block text-[11px] text-white/40">{t('progressionNote')}</span>
       </p>
     </SectionCard>

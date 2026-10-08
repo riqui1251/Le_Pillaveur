@@ -39,6 +39,9 @@ import {
  *   pseudo recopié — juste une référence de compte qui tombe à null dès la
  *   suppression dudit compte. Les participants partent en cascade ;
  * - DailyVisitor (mesure d'audience) : 13 mois ;
+ * - LocalGameDaily (compteurs agrégés des parties locales, sans aucune
+ *   donnée personnelle) : 13 mois, même règle que DailyVisitor — la durée
+ *   d'une comparaison d'une saison à la même saison de l'année suivante ;
  * - UserFeedback (retours « Signaler / Suggérer » et avis de 1re partie :
  *   message, captures, page, navigateur) : 24 mois après leur envoi. La
  *   politique le promettait sans que rien ne l'applique ; l'avis de 1re
@@ -323,6 +326,9 @@ export async function runRetentionSweep({ force = false }: RetentionSweepOptions
         prisma.nameModerationAttempt.deleteMany({ where: { createdAt: { lt: twelveMonthsAgo } } }),
       ],
       ['DailyVisitor', prisma.dailyVisitor.deleteMany({ where: { date: { lt: dailyVisitorCutoff } } })],
+      // Compteurs des parties locales : même borne que DailyVisitor, sur le
+      // même format de jour de Paris (AAAA-MM-JJ, comparable comme une chaîne).
+      ['LocalGameDaily', prisma.localGameDaily.deleteMany({ where: { day: { lt: dailyVisitorCutoff } } })],
       // Retours et avis de 1re partie : 24 mois après l'envoi, quel que soit
       // leur statut — un retour « ouvert » depuis deux ans ne sera plus traité.
       ['UserFeedback', prisma.userFeedback.deleteMany({ where: { createdAt: { lt: twentyFourMonthsAgo } } })],

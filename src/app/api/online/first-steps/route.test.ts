@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * GET /api/online/first-steps — carte « Premiers pas » de la page Compte.
@@ -7,6 +7,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * la session ; la base n'est interrogée que pour le succès première partie
  * (et seulement sans XP) et pour la partie à plusieurs humains (journal
  * d'abord, résultats classés en repli). Vraie route, base et session simulées.
+ *
+ * Récompense : liste bouclée avant PIONEER_DEADLINE → la route pose elle-même
+ * la ligne CosmeticGrant `frame:pionnier` (une fois, P2002 toléré) ; une
+ * ligne déjà là reste rendue `granted`, date passée ou pas. L'horloge est
+ * figée (seul Date est simulé : les promesses de la route tournent normalement).
  */
 
 const { db, currentUserMock } = vi.hoisted(() => ({
@@ -14,6 +19,7 @@ const { db, currentUserMock } = vi.hoisted(() => ({
     achievement: { findUnique: vi.fn() },
     onlineGameSessionPlayer: { findFirst: vi.fn() },
     onlineMatchResult: { findFirst: vi.fn() },
+    cosmeticGrant: { findUnique: vi.fn(), create: vi.fn() },
   },
   currentUserMock: vi.fn(),
 }))
@@ -22,6 +28,10 @@ vi.mock('@/lib/prisma', () => ({ prisma: db }))
 vi.mock('@/lib/auth-server', () => ({ getCurrentUser: currentUserMock }))
 
 import { GET } from './route'
+import { PIONEER_DEADLINE, PIONEER_DEADLINE_MS } from '@/lib/online/first-steps'
+
+/** Le jour de ce chantier : bien avant la date limite. */
+const TODAY = new Date('2026-10-08T21:00:00+02:00')
 
 type Session = {
   id: string
@@ -48,10 +58,18 @@ const doneOf = (body: { steps: { id: string; done: boolean }[] }) =>
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(TODAY)
   currentUserMock.mockResolvedValue(member())
   db.achievement.findUnique.mockResolvedValue(null)
   db.onlineGameSessionPlayer.findFirst.mockResolvedValue(null)
   db.onlineMatchResult.findFirst.mockResolvedValue(null)
+  db.cosmeticGrant.findUnique.mockResolvedValue(null)
+  db.cosmeticGrant.create.mockResolvedValue({ id: 'grant-1' })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('GET /api/online/first-steps', () => {
@@ -65,6 +83,8 @@ describe('GET /api/online/first-steps', () => {
     expect(db.achievement.findUnique).not.toHaveBeenCalled()
     expect(db.onlineGameSessionPlayer.findFirst).not.toHaveBeenCalled()
     expect(db.onlineMatchResult.findFirst).not.toHaveBeenCalled()
+    expect(db.cosmeticGrant.findUnique).not.toHaveBeenCalled()
+    expect(db.cosmeticGrant.create).not.toHaveBeenCalled()
   })
 
   it('invité tout neuf : six étapes, aucune faite, 300 XP jusqu’au niveau 3', async () => {
@@ -166,5 +186,124 @@ describe('GET /api/online/first-steps', () => {
     expect(status).toBe(500)
     expect(body.error).toBe('server_error')
     consoleError.mockRestore()
+  })
+
+  it('liste incomplète : récompense promise, rien d’écrit', async () => {
+    const { body } = await read()
+
+    expect(body.reward).toEqual({ key: 'frame:pionnier', granted: false, deadline: PIONEER_DEADLINE })
+    expect(db.cosmeticGrant.findUnique).toHaveBeenCalledWith({
+      where: { userId_cosmeticKey: { userId: 'compte-1', cosmeticKey: 'frame:pionnier' } },
+      select: { id: true },
+    })
+    expect(db.cosmeticGrant.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('GET /api/online/first-steps — cadre Pionnier', () => {
+  /** Compte enregistré qui a tout fait : partie, icône, effet, niveau 3, partie à plusieurs. */
+  const veteran = (over: Partial<Session> = {}) =>
+    member({
+      onlineXp: 320,
+      onlinePreferences: { color: 'bg-amber-500', icon: 'trogne-1', specialEffect: 'emerald', iconFrame: null },
+      ...over,
+    })
+
+  beforeEach(() => {
+    currentUserMock.mockResolvedValue(veteran())
+    db.onlineGameSessionPlayer.findFirst.mockResolvedValue({ id: 'siege-1' })
+  })
+
+  it('tout fait avant la date limite : la ligne est posée, sans auteur, et la réponse le dit', async () => {
+    const { status, body } = await read()
+
+    expect(status).toBe(200)
+    expect(body).toMatchObject({ completed: 5, total: 5 })
+    expect(body.reward).toEqual({ key: 'frame:pionnier', granted: true, deadline: PIONEER_DEADLINE })
+    expect(db.cosmeticGrant.create).toHaveBeenCalledTimes(1)
+    expect(db.cosmeticGrant.create).toHaveBeenCalledWith({
+      data: { userId: 'compte-1', cosmeticKey: 'frame:pionnier', grantedById: null },
+      select: { id: true },
+    })
+  })
+
+  it('dernière milliseconde de mars (heure de Paris) : encore gagné', async () => {
+    vi.setSystemTime(PIONEER_DEADLINE_MS - 1)
+
+    const { body } = await read()
+
+    expect(body.reward.granted).toBe(true)
+    expect(db.cosmeticGrant.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('tout fait APRÈS la date limite : plus rien n’est accordé', async () => {
+    vi.setSystemTime(PIONEER_DEADLINE_MS)
+
+    const { body } = await read()
+
+    expect(body.completed).toBe(body.total)
+    expect(body.reward).toEqual({ key: 'frame:pionnier', granted: false, deadline: PIONEER_DEADLINE })
+    expect(db.cosmeticGrant.create).not.toHaveBeenCalled()
+  })
+
+  it('idempotent : ligne déjà là → granted, aucune écriture', async () => {
+    db.cosmeticGrant.findUnique.mockResolvedValue({ id: 'grant-1' })
+
+    const { body } = await read()
+
+    expect(body.reward.granted).toBe(true)
+    expect(db.cosmeticGrant.create).not.toHaveBeenCalled()
+  })
+
+  it('jamais retiré : ligne déjà là, date passée et une étape défaite → toujours granted', async () => {
+    vi.setSystemTime(new Date('2027-06-01T12:00:00+02:00'))
+    db.cosmeticGrant.findUnique.mockResolvedValue({ id: 'grant-1' })
+    currentUserMock.mockResolvedValue(
+      veteran({ onlinePreferences: { color: 'bg-amber-500', icon: 'trogne-1', specialEffect: null, iconFrame: 'pionnier' } })
+    )
+
+    const { body } = await read()
+
+    expect(body.completed).toBeLessThan(body.total)
+    expect(body.reward.granted).toBe(true)
+    expect(db.cosmeticGrant.create).not.toHaveBeenCalled()
+  })
+
+  it('course entre deux onglets : la contrainte unique (P2002) vaut réussite', async () => {
+    db.cosmeticGrant.create.mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }))
+
+    const { status, body } = await read()
+
+    expect(status).toBe(200)
+    expect(body.reward.granted).toBe(true)
+  })
+
+  it('autre panne à l’écriture : 500 server_error, pas de faux « débloqué »', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    db.cosmeticGrant.create.mockRejectedValue(new Error('disque plein'))
+
+    const { status, body } = await read()
+
+    expect(status).toBe(500)
+    expect(body.error).toBe('server_error')
+    consoleError.mockRestore()
+  })
+
+  it('invité qui a tout fait sauf sauvegarder : pas encore', async () => {
+    currentUserMock.mockResolvedValue(veteran({ isGuest: true }))
+
+    const { body } = await read()
+
+    expect(body).toMatchObject({ completed: 5, total: 6 })
+    expect(body.reward.granted).toBe(false)
+    expect(db.cosmeticGrant.create).not.toHaveBeenCalled()
+  })
+
+  it('le même invité, une fois son compte sauvegardé : gagné — sa sauvegarde était l’étape qui manquait', async () => {
+    currentUserMock.mockResolvedValue(veteran({ isGuest: false }))
+
+    const { body } = await read()
+
+    expect(body.reward.granted).toBe(true)
   })
 })

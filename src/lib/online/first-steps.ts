@@ -2,6 +2,7 @@ import {
   COSMETICS,
   DEFAULT_ONLINE_ICON,
   ICON_SERIES,
+  PIONEER_FRAME_KEY,
   levelForXp,
   xpForLevel,
 } from '@/lib/online/cosmetics'
@@ -106,4 +107,94 @@ export function computeFirstSteps(input: FirstStepsInput): FirstStepsDto {
     xp,
     xpToLevel3,
   }
+}
+
+/**
+ * Récompense des Premiers pas : le cadre Pionnier, pour qui les boucle TOUS
+ * avant cette date — fin mars 2027, heure de Paris (minuit le 1er avril,
+ * déjà en heure d'été : +02:00).
+ *
+ * Pourquoi une date limite : le site est jeune (89 comptes au 07/10/2026) ;
+ * ceux qui l'essuient maintenant gardent une marque que les suivants
+ * n'auront plus. Sans date, le cadre deviendrait le décor de tout le monde
+ * et ne dirait plus rien. Après la date, rien n'est retiré à qui l'a :
+ * c'est précisément ce qui en fait la valeur.
+ *
+ * Un invité peut le gagner : « Sauvegarder » est l'une de SES étapes, il
+ * l'obtient donc en mettant son compte à l'abri — le geste qu'on veut le
+ * voir faire.
+ */
+export const PIONEER_DEADLINE = '2027-04-01T00:00:00+02:00'
+export const PIONEER_DEADLINE_MS = Date.parse(PIONEER_DEADLINE)
+
+/** Fenêtre ouverte : `now` strictement avant la date limite (`deadline` : ISO, celle de la route par défaut). */
+export function isPioneerWindowOpen(
+  now: Date | number = Date.now(),
+  deadline: string = PIONEER_DEADLINE
+): boolean {
+  const deadlineMs = Date.parse(deadline)
+  if (!Number.isFinite(deadlineMs)) return false
+  return (typeof now === 'number' ? now : now.getTime()) < deadlineMs
+}
+
+/**
+ * Le cadre est-il gagné MAINTENANT ? Toutes les étapes faites, fenêtre
+ * ouverte. Liste vide : jamais (garde-fou — computeFirstSteps en rend
+ * toujours cinq ou six).
+ */
+export function earnsPioneerFrame(
+  progress: Pick<FirstStepsDto, 'completed' | 'total'>,
+  now: Date | number = Date.now()
+): boolean {
+  return progress.total > 0 && progress.completed >= progress.total && isPioneerWindowOpen(now)
+}
+
+export type PioneerRewardDto = {
+  /** Clé de la ligne CosmeticGrant (`frame:pionnier`). */
+  key: string
+  /** Le compte a le cadre — gagné ici, ou accordé avant (jamais retiré). */
+  granted: boolean
+  /** Date limite (ISO) : la carte cesse de promettre le cadre une fois passée. */
+  deadline: string
+}
+
+/** Réponse de GET /api/online/first-steps : la liste, plus la récompense. */
+export type FirstStepsResponse = FirstStepsDto & {
+  /** Facultatif côté client : un serveur d'avant la récompense ne l'envoie pas. */
+  reward?: PioneerRewardDto
+}
+
+export function pioneerReward(granted: boolean): PioneerRewardDto {
+  return { key: PIONEER_FRAME_KEY, granted, deadline: PIONEER_DEADLINE }
+}
+
+/**
+ * Ce que la carte Premiers pas dit de la récompense :
+ *  - 'promise'  : à gagner — liste à finir ET date limite pas encore passée ;
+ *  - 'unlocked' : accordé, pas encore porté → « L'équiper » ;
+ *  - 'equipped' : équipé PENDANT cette visite → confirmation, puis plus rien
+ *    aux visites suivantes ;
+ *  - null       : rien à dire (date passée sans l'avoir, déjà porté, ou
+ *    serveur d'avant la récompense).
+ * Accordé l'emporte sur la date : un cadre gagné s'annonce même après.
+ */
+export type PioneerRewardState = 'promise' | 'unlocked' | 'equipped'
+
+export function pioneerRewardState(input: {
+  reward: Pick<PioneerRewardDto, 'granted'> | null | undefined
+  stepsLeft: boolean
+  /** Date limite pas encore passée (isPioneerWindowOpen, jugée à la réponse). */
+  windowOpen: boolean
+  /** Cadre Pionnier porté (préférences en ligne du compte). */
+  equipped: boolean
+  /** Le joueur l'a équipé sous les yeux de la carte. */
+  justEquipped: boolean
+}): PioneerRewardState | null {
+  const { reward, stepsLeft, windowOpen, equipped, justEquipped } = input
+  if (!reward) return null
+  if (reward.granted) {
+    if (!equipped) return 'unlocked'
+    return justEquipped ? 'equipped' : null
+  }
+  return stepsLeft && windowOpen ? 'promise' : null
 }

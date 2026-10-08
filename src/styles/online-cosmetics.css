@@ -295,6 +295,37 @@
   box-shadow: 0 0 4px rgba(242, 123, 166, 0.6);
 }
 
+/* ── Cadre Pionnier — grant-only, GAGNÉ : Premiers pas bouclés avant la date
+   limite (PIONEER_DEADLINE, first-steps.ts). Jeton de feutre cerclé d'or
+   patiné (un reflet clair, une ombre bronze : l'or qui a déjà servi, pas
+   l'or neuf des cadres de niveau), étoile du pionnier à la couronne.
+   Lisible à 36 px : un anneau et une étoile, rien de plus. Seule l'étoile
+   s'anime — un reflet lent toutes les 7 s ; une marque d'ancienneté se
+   porte, elle ne clignote pas. ── */
+.on-frame-pionnier {
+  border: 2px solid transparent;
+  background:
+    radial-gradient(circle at 50% 36%, var(--felt), var(--felt-deep) 78%) padding-box,
+    conic-gradient(from 200deg, #f2d58c, var(--gold) 14%, #8a6526 34%, #6e5020 46%, #b8862f 62%, #f2d58c 78%, #9c7430) border-box;
+  box-shadow: 0 0 0 1.5px var(--felt-deep), 0 0 0 2.5px rgba(217, 164, 65, 0.5), 0 0 10px rgba(217, 164, 65, 0.25);
+}
+/* Étoile à cinq branches : contour d'encre (::before) sous l'étoile d'or
+   (::after) — un drop-shadow serait rogné par le clip-path. */
+.on-frame-pionnier::before, .on-frame-pionnier::after {
+  content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.on-frame-pionnier::before { top: -10px; width: 15px; height: 15px; background: #24201a; }
+.on-frame-pionnier::after {
+  top: -8.5px; width: 12px; height: 12px; z-index: 1;
+  background: radial-gradient(circle at 42% 38%, #fbe7b0, var(--gold) 55%, var(--gold-strong));
+  animation: on-frame-pionnier-glint 7s ease-in-out infinite;
+}
+@keyframes on-frame-pionnier-glint {
+  0%, 84%, 100% { filter: brightness(1); }
+  92% { filter: brightness(1.3); }
+}
+
 /* ── Cadres « Orbite » (série Aliens, Nv 22) — anneau + halo pulsant +
    satellite en orbite, la couleur suit le code couleur de chaque alien. ── */
 .on-frame-alien { --al-ring: #5f86d9; --al-glow: 95, 134, 217; }
@@ -411,7 +442,7 @@
   .on-frame-ember, .on-frame-neon, .on-frame-crown, .on-frame-diamond::after,
   .on-frame-eagle, .on-frame-prestige, .on-crest-fondateur .on-crest-disc,
   .on-frame-vip-constellation, .on-frame-vip-halo, .on-frame-vip-flamme::after, .on-frame-vip-aura,
-  .on-frame-vip-flamant,
+  .on-frame-vip-flamant, .on-frame-pionnier::after,
   [class*='on-frame-alien'], [class*='on-frame-alien']::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

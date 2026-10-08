@@ -14,6 +14,7 @@ const { prismaMock, cleanupAbandonedRoomsMock, listFlaggedMock } = vi.hoisted(()
     moderationTerm: { findMany: vi.fn() },
     userFeedback: { findMany: vi.fn() },
     dailyVisitor: { groupBy: vi.fn() },
+    localGameDaily: { findMany: vi.fn(), aggregate: vi.fn() },
     onlineRoom: { findMany: vi.fn(), deleteMany: vi.fn(), groupBy: vi.fn() },
   },
   cleanupAbandonedRoomsMock: vi.fn(),
@@ -27,11 +28,16 @@ vi.mock('@/lib/name-moderation-attempts-server', () => ({
 }))
 
 import { FEEDBACK_INBOX_WHERE } from '@/lib/feedback'
+import { getGameById } from '@/lib/games'
+import { parisDayOffset } from '@/lib/paris-time'
 import {
   getGrowthStats,
   getSupervisionOverview,
+  invalidateGrowthStats,
   logStaffAction,
+  summarizeLocalPlay,
   summarizeOnlinePlay,
+  type LocalGameDailyRow,
   type OnlinePlaySessionRow,
 } from '@/lib/supervision-overview-server'
 
@@ -187,7 +193,131 @@ describe('summarizeOnlinePlay', () => {
   })
 })
 
+/**
+ * Parties locales : compteurs anonymes par jour de Paris et par jeu. Même
+ * `NOW` (25/10/2026 à 23 h 30 à Paris) : 7 jours = depuis le 19/10, 30 jours =
+ * depuis le 26/09, série de 14 jours = depuis le 12/10.
+ */
+const LOCAL_ROWS: LocalGameDailyRow[] = [
+  // Aujourd'hui : plus de fins que de lancements (revanches sur la même page).
+  { day: '2026-10-25', gameId: 'pmu', starts: 3, ends: 4 },
+  // Jeu retiré du catalogue : son identifiant tient lieu de titre.
+  { day: '2026-10-24', gameId: 'jeu-retire', starts: 1, ends: 0 },
+  // Ligne abîmée (négatif, NaN) : comptée nulle part.
+  { day: '2026-10-24', gameId: 'pendu', starts: -1, ends: Number.NaN },
+  // Premier jour des 7 jours ; Purple n'a pas d'écran de fin.
+  { day: '2026-10-19', gameId: 'purple', starts: 2, ends: 0 },
+  // Veille des 7 jours : dans les 30 et dans la série.
+  { day: '2026-10-18', gameId: 'pyramide', starts: 5, ends: 2 },
+  // Premier jour des 30 jours, hors de la série.
+  { day: '2026-09-26', gameId: 'pmu', starts: 1, ends: 1 },
+  // Veille des 30 jours, et un jour à venir : ignorés malgré l'appelant.
+  { day: '2026-09-25', gameId: 'pmu', starts: 9, ends: 9 },
+  { day: '2026-10-26', gameId: 'pmu', starts: 7, ends: 7 },
+]
+
+const titleOf = (gameId: string) => getGameById(gameId)?.title ?? gameId
+
+describe('summarizeLocalPlay', () => {
+  const stats = summarizeLocalPlay(LOCAL_ROWS, NOW, '2026-09-01')
+
+  it('série de 14 jours de Paris, lancées et terminées par jour', () => {
+    expect(stats.byDay).toHaveLength(14)
+    expect(stats.byDay[0].day).toBe('2026-10-12')
+    expect(stats.byDay[13]).toEqual({ day: '2026-10-25', starts: 3, ends: 4 })
+    const byDay = new Map(stats.byDay.map((d) => [d.day, d]))
+    expect(byDay.get('2026-10-24')).toEqual({ day: '2026-10-24', starts: 1, ends: 0 })
+    expect(byDay.get('2026-10-19')).toEqual({ day: '2026-10-19', starts: 2, ends: 0 })
+    expect(byDay.get('2026-10-18')).toEqual({ day: '2026-10-18', starts: 5, ends: 2 })
+    expect(byDay.get('2026-10-20')).toEqual({ day: '2026-10-20', starts: 0, ends: 0 })
+  })
+
+  it('par jeu sur 7 jours : tri par lancements, titres du catalogue, jeux sans écran de fin signalés', () => {
+    expect(stats.byGame.d7).toEqual([
+      { gameId: 'pmu', gameTitle: titleOf('pmu'), starts: 3, ends: 4, noEndScreen: false },
+      { gameId: 'purple', gameTitle: titleOf('purple'), starts: 2, ends: 0, noEndScreen: true },
+      { gameId: 'jeu-retire', gameTitle: 'jeu-retire', starts: 1, ends: 0, noEndScreen: false },
+    ])
+    expect(stats.totals.d7).toEqual({ starts: 6, ends: 4 })
+  })
+
+  it('par jeu sur 30 jours : bornes de la fenêtre refaites, rien au-delà d’aujourd’hui', () => {
+    expect(stats.byGame.d30.map((g) => [g.gameId, g.starts, g.ends])).toEqual([
+      ['pyramide', 5, 2],
+      ['pmu', 4, 5],
+      ['purple', 2, 0],
+      ['jeu-retire', 1, 0],
+    ])
+    expect(stats.totals.d30).toEqual({ starts: 12, ends: 7 })
+  })
+
+  it('premier jour mesuré rendu tel quel, jamais un jour à venir', () => {
+    expect(stats.since).toBe('2026-09-01')
+    expect(summarizeLocalPlay([], NOW, '2026-10-26').since).toBeNull()
+  })
+
+  it('sans compteur : série à zéro, aucun jeu, aucun jour de début', () => {
+    const empty = summarizeLocalPlay([], NOW, null)
+    expect(empty.since).toBeNull()
+    expect(empty.byDay).toHaveLength(14)
+    expect(empty.byDay.every((d) => d.starts === 0 && d.ends === 0)).toBe(true)
+    expect(empty.byGame).toEqual({ d7: [], d30: [] })
+    expect(empty.totals).toEqual({ d7: { starts: 0, ends: 0 }, d30: { starts: 0, ends: 0 } })
+  })
+})
+
 describe('getGrowthStats', () => {
+  beforeEach(() => {
+    // Valeur mise en cache 5 min par processus : chaque test recalcule.
+    invalidateGrowthStats()
+    prismaMock.localGameDaily.findMany.mockResolvedValue([])
+    prismaMock.localGameDaily.aggregate.mockResolvedValue({ _min: { day: null } })
+  })
+
+  /** Lectures de la croissance, toutes vides : chaque test surcharge ce qu'il vérifie. */
+  function mockEmptyGrowth() {
+    prismaMock.user.count.mockResolvedValue(0)
+    prismaMock.$queryRawUnsafe.mockImplementation(async (sql: string) =>
+      sql.includes('OnlineGameHistory') ? [] : [{ live: BigInt(0), stalled: BigInt(0) }]
+    )
+    prismaMock.siteSetting.findUnique.mockResolvedValue(null)
+    prismaMock.onlineGameSession.findMany.mockResolvedValue([])
+  }
+
+  it('sert les parties locales des 30 derniers jours de Paris, avec le premier jour mesuré', async () => {
+    mockEmptyGrowth()
+    const today = parisDayOffset(0)
+    prismaMock.localGameDaily.findMany.mockResolvedValue([{ day: today, gameId: 'pmu', starts: 2, ends: 1 }])
+    prismaMock.localGameDaily.aggregate.mockResolvedValue({ _min: { day: '2026-01-01' } })
+
+    const growth = await getGrowthStats()
+
+    expect(prismaMock.localGameDaily.findMany).toHaveBeenCalledWith({
+      where: { day: { gte: parisDayOffset(29) } },
+      select: { day: true, gameId: true, starts: true, ends: true },
+    })
+    expect(prismaMock.localGameDaily.aggregate).toHaveBeenCalledWith({ _min: { day: true } })
+    expect(growth.localPlay?.since).toBe('2026-01-01')
+    expect(growth.localPlay?.totals.d7).toEqual({ starts: 2, ends: 1 })
+    expect(growth.localPlay?.byGame.d30).toEqual([
+      { gameId: 'pmu', gameTitle: titleOf('pmu'), starts: 2, ends: 1, noEndScreen: false },
+    ])
+  })
+
+  it('une lecture des parties locales en échec ne fait pas tomber le reste de la croissance', async () => {
+    mockEmptyGrowth()
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    prismaMock.localGameDaily.findMany.mockRejectedValue(new Error('no such table: LocalGameDaily'))
+
+    const growth = await getGrowthStats()
+
+    expect(growth.localPlay).toBeNull()
+    expect(growth.onlinePlay.launchesByDay).toHaveLength(14)
+    // Le nom de l'erreur seulement, jamais son message.
+    expect(errorSpy).toHaveBeenCalledWith('growth stats: parties locales illisibles:', 'Error')
+    errorSpy.mockRestore()
+  })
+
   it('ne calcule plus de rétention sur lastSeenAt (remplacée par les retours par cohorte)', async () => {
     prismaMock.user.count.mockResolvedValueOnce(3).mockResolvedValueOnce(1)
     prismaMock.$queryRawUnsafe.mockImplementation(async (sql: string) =>

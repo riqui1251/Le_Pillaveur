@@ -10,6 +10,7 @@ import {
   type DurationReliability,
   type GameSessionRow,
 } from '@/lib/online/game-sessions'
+import { readWeeklyStreak } from '@/lib/online/streak'
 import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
 
 /**
@@ -228,7 +229,11 @@ export type AccountActivity = {
   totals: { d7: AccountPlayTotals; d30: AccountPlayTotals }
   history: Array<{ gameId: string; playCount: number; lastPlayedAt: string }>
   results: Array<{ gameId: string; wins: number; losses: number }>
-  /** Pour information : XP et série ne mesurent pas l'activité (instantanés). */
+  /**
+   * Pour information : XP et série ne mesurent pas l'activité (instantanés).
+   * Série HEBDOMADAIRE : `streakCount` en semaines, `streakLastDay` = dernière
+   * semaine créditée ('YYYY-Www'), ancienne forme quotidienne déjà convertie.
+   */
   progression: { onlineXp: number; streakCount: number; streakLastDay: string | null }
   networks: AccountNetworkSummary[]
   browsers: AccountBrowser[]
@@ -770,6 +775,10 @@ export async function getAccountActivity(
     entries: group.entries,
   }))
 
+  // Même lecture que la bannière de fin : un compte resté sur l'ancienne
+  // série quotidienne (« 3 jours ») ne s'affiche pas en « 3 semaines ».
+  const streak = readWeeklyStreak(user)
+
   return {
     journalSince: GAME_JOURNAL_SINCE,
     games: recent.sessions,
@@ -785,8 +794,8 @@ export async function getAccountActivity(
     ),
     progression: {
       onlineXp: user.onlineXp,
-      streakCount: user.streakCount,
-      streakLastDay: user.streakLastDay,
+      streakCount: streak.count,
+      streakLastDay: streak.week,
     },
     networks,
     browsers: presences.map((p) => ({

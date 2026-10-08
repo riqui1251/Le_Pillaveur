@@ -117,6 +117,25 @@ export async function readJsonBodyLimited<T = unknown>(
   }
 }
 
+/**
+ * Lecture TEXTE bornée, mêmes garde-fous que readJsonBodyLimited : pour les
+ * formulaires HTML (application/x-www-form-urlencoded) et les POST « One-Click »
+ * des messageries (RFC 8058), qui n'envoient pas de JSON.
+ */
+export async function readTextBodyLimited(
+  request: Request,
+  maxBytes: number
+): Promise<{ ok: true; text: string } | { ok: false; reason: 'too_large' | 'unreadable' }> {
+  const declared = Number(request.headers.get('content-length'))
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    return { ok: false, reason: 'too_large' }
+  }
+  const raw = await readBodyLimited(request, maxBytes)
+  if (raw === TOO_LARGE) return { ok: false, reason: 'too_large' }
+  if (raw === null) return { ok: false, reason: 'unreadable' }
+  return { ok: true, text: raw }
+}
+
 /** Sentinelle « plafond dépassé », distincte du null d'échec de lecture. */
 const TOO_LARGE = Symbol('too_large')
 

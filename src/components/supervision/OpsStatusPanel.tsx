@@ -95,7 +95,7 @@ const KNOWN_CODES: Record<CodeFamily, readonly string[]> = {
 const DEFAULT_DISK_THRESHOLD_PCT = 80
 
 /** Tâches internes que le catalogue sait nommer (src/lib/scheduler.ts). */
-const KNOWN_SCHEDULER_JOBS: readonly string[] = ['retention', 'tables']
+const KNOWN_SCHEDULER_JOBS: readonly string[] = ['retention', 'tables', 'reminder-friday']
 
 const STATE_STYLES: Record<OpsJobState, { icon: IconType; pill: string; row: string }> = {
   ok: {

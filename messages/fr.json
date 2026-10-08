@@ -226,6 +226,12 @@
         "text": "Seuls les jeux où des bots peuvent compléter la table sont affichés.",
         "showAll": "Voir tout le catalogue"
       },
+      "soloFit": {
+        "greatTitle": "Parfaits en solo",
+        "greatHint": "Les bots y jouent pour de vrai : de quoi découvrir le jeu, même seul.",
+        "othersTitle": "Aussi jouables avec des bots",
+        "groupBadge": "Mieux à plusieurs"
+      },
       "onlineOnly": {
         "title": "En ligne uniquement",
         "hint": "Ces jeux demandent un téléphone par joueur : ouvrez une table en ligne avec un compte gratuit, ou essayez-les seul contre des bots."
@@ -333,8 +339,8 @@
     },
     "seul-avec-des-bots": {
       "title": "Jouer seul : les jeux avec des bots",
-      "description": "Pas de monde ce soir ? Ouvrez une table, les bots complètent : Loup-Garou, quiz, Menteur, bluff, Président… Gratuit, en ligne, seul ou à deux.",
-      "intro": "Personne de disponible, ou l'envie de s'entraîner avant la prochaine soirée : sur ces jeux, l'hôte de la table peut « compléter avec des bots » depuis le lobby, et la partie se lance même sous le minimum de joueurs — tout seul, donc. Les bots ont chacun leur nom et leur personnalité, et ils tiennent leur siège : ils enchérissent et accusent au Menteur, bluffent au Grand Bluff, répondent au Grand Pillaveur, le quiz à buzzers, parient à Purple et au 1220, jouent leurs cartes au Président, lancent le dé au Petit Buveur, votent et accusent au Loup-Garou. Ce sont les jeux qui se jouent vraiment seul. À L'Imposteur, à Qui est l'Espion ?, au Crobard, à Sans Filtre ou à Dilemmes, les bots complètent une table sans la faire vivre : un bot n'y dessine pas, n'y raconte rien et n'y mène pas l'enquête, ces jeux-là veulent de vrais joueurs. Si quelqu'un décroche en cours de partie, un bot le remplace pour que la table continue. C'est la même liste que le raccourci « Jouer seul avec les bots » de la vitrine. Tout se passe en ligne, sur votre téléphone, et une fois un jeu pris en main, il suffit de partager le code de la table pour que vos amis prennent les sièges à leur tour."
+      "description": "Pas de monde ce soir ? Ouvrez une table, les bots complètent : Loup-Garou, quiz, Président, Purple… Gratuit, en ligne, seul ou à deux.",
+      "intro": "Personne de disponible, ou l'envie de s'entraîner avant la prochaine soirée : sur ces jeux, l'hôte de la table peut « compléter avec des bots » depuis le lobby, et la partie se lance même sous le minimum de joueurs — tout seul, donc. Les bots ont chacun leur nom et leur personnalité, et ils tiennent leur siège : ils répondent au Grand Pillaveur, le quiz à buzzers, jouent leurs cartes au Président, votent et accusent au Loup-Garou, parient à Purple et au 1220, lancent le dé au Petit Buveur. Ce sont les jeux qui se jouent vraiment seul. À L'Imposteur, à Qui est l'Espion ?, au Crobard, au Grand Bluff, à Sans Filtre, à Dilemmes ou au Menteur, les bots complètent une table sans la faire vivre : un bot n'y dessine pas, n'y invente aucun bluff, n'y raconte rien et n'y mène pas l'enquête ; aux dés du Menteur, il enchérit, mais sans visage à lire, le bluff tombe à plat. Ces jeux-là veulent de vrais joueurs. Si quelqu'un décroche en cours de partie, un bot le remplace pour que la table continue. C'est la même liste que le raccourci « Jouer seul avec les bots » de la vitrine. Tout se passe en ligne, sur votre téléphone, et une fois un jeu pris en main, il suffit de partager le code de la table pour que vos amis prennent les sièges à leur tour."
     },
     "en-grand-groupe": {
       "title": "Jeux de soirée en grand groupe",
@@ -350,7 +356,7 @@
     "soloGained": "+{xp} XP d'entraînement",
     "soloHint": "Invite un pote pour l'XP complète — les parties contre les bots seuls paient jusqu'au niveau 5.",
     "soloCapped": "Les parties contre les bots seuls ne rapportent plus d'XP — invite un pote pour que ça compte !",
-    "streak": "Série de {days} jours !",
+    "streak": "{weeks} semaines d'affilée !",
     "nextUnlock": "Prochain déblocage : niveau {level} — {name}",
     "unlockedNew": "Nouveau : {items}",
     "unlockSeries": "icônes {name}",
@@ -365,8 +371,10 @@
     "guestRisk": "Compte invité : ton niveau {level} et tes {xp} XP disparaissent après 90 jours d'inactivité.",
     "guestRiskAchievements": "Compte invité : ton niveau {level}, tes {xp} XP et {achievements, plural, one {ton succès} other {tes # succès}} disparaissent après 90 jours d'inactivité.",
     "guestSaveCta": "Sauvegarder mon compte",
-    "streakStart": "Série lancée !",
+    "streakStart": "Série hebdo lancée !",
+    "streakOne": "Série : 1 semaine",
     "streakBonus": "dont +{xp} XP de série",
+    "streakNextWeek": "Rejoue la semaine prochaine : +{xp} XP de série",
     "achievementUnlocked": "Succès débloqué : {name}"
   },
   "onlineCollection": {
@@ -378,7 +386,7 @@
     "roleFrames": "Cadres de rôle",
     "roleFramesHint": "Réservés à ton grade — non attribuables par niveau.",
     "vipFrames": "Cadres VIP",
-    "vipFramesHint": "Accordés à la main par un Fondateur — jamais débloqués par le niveau.",
+    "vipFramesHint": "Hors progression : accordés par un Fondateur ou gagnés lors d'un événement limité dans le temps — jamais par le niveau.",
     "unlockAt": "Nv. {level}",
     "grantOnly": "Sur attribution",
     "rarity": {
@@ -667,6 +675,46 @@
       "pending": "Jouer"
     }
   },
+  "rematchNight": {
+    "title": "On remet ça ?",
+    "addTable": "Ajouter la tablée en amis",
+    "friendsSent": "{count, plural, one {# demande d'ami envoyée} other {# demandes d'ami envoyées}}",
+    "friendsAccepted": "{count, plural, one {# nouvel ami ajouté} other {# nouveaux amis ajoutés}}",
+    "friendsNothing": "Aucune nouvelle demande à envoyer.",
+    "friendsError": "Envoi impossible pour le moment. Réessaie dans un instant.",
+    "tooMany": "Trop d'envois d'un coup : réessaie dans une minute.",
+    "remindMe": "Me rappeler vendredi",
+    "reminderHint": "Un e-mail le vendredi vers 17 h (heure de Paris), jamais plus d'un par semaine. Tu le coupes quand tu veux.",
+    "reminderOn": "Rappel du vendredi activé",
+    "reminderPending": "E-mail envoyé : confirme le rappel depuis ta boîte de réception.",
+    "reminderManage": "Gérer",
+    "reminderError": "Impossible d'enregistrer ton choix. Réessaie.",
+    "decline": "Non merci",
+    "declined": "Compris : pas de rappel."
+  },
+  "fridayTable": {
+    "label": "Table ouverte du vendredi",
+    "next": "Table ouverte d'Imposteur {day} à {time} : viens rencontrer d'autres joueurs",
+    "nextToday": "Table ouverte d'Imposteur aujourd'hui à {time} : viens rencontrer d'autres joueurs",
+    "live": {
+      "kicker": "En direct jusqu'à {time}",
+      "title": "La table du vendredi est ouverte",
+      "waiting": "{count, plural, one {# joueur t'attend} other {# joueurs t'attendent}} pour une partie d'Imposteur : assieds-toi !",
+      "empty": "Personne n'a encore ouvert la table : lance-la, les suivants te rejoindront.",
+      "seated": "Tu es à la table : les prochains arrivants te rejoindront."
+    },
+    "join": "Rejoindre la table",
+    "open": "Ouvrir la table",
+    "opening": "Ouverture…",
+    "joining": "Arrivée à la table…",
+    "backToTable": "Retourner à la table",
+    "dismiss": "Masquer ce rendez-vous",
+    "dismissed": "Rendez-vous du vendredi masqué pour cette semaine.",
+    "landing": {
+      "next": "Chaque vendredi à {time} (heure de Paris), table ouverte d'Imposteur : viens rencontrer d'autres joueurs",
+      "live": "La table du vendredi est ouverte : viens jouer à L'Imposteur avec d'autres joueurs"
+    }
+  },
   "chat": {
     "title": "Chat",
     "tabGame": "Partie",
@@ -845,6 +893,16 @@
       "blockedTitle": "Joueurs bloqués",
       "unblock": "Débloquer"
     },
+    "reminder": {
+      "title": "Rappel du vendredi par e-mail",
+      "on": "Activé : un e-mail le vendredi vers 17 h (heure de Paris)",
+      "off": "Désactivé",
+      "pending": "En attente : confirme depuis l'e-mail envoyé à ton adresse",
+      "loading": "Chargement…",
+      "loadError": "État indisponible pour le moment.",
+      "saveError": "Impossible d'enregistrer ton choix. Réessaie.",
+      "hint": "Le vendredi en fin d'après-midi, un e-mail court pour proposer une partie. Jamais plus d'un par semaine, et rien si tu viens de passer sur le site. Chaque e-mail contient un lien pour l'arrêter en un clic."
+    },
     "nameModerationWarning": "Plusieurs tentatives de nom inapproprié ont été enregistrées sur ce compte. Merci d'utiliser un pseudo respectueux — l'équipe de modération peut consulter l'historique.",
     "reset": {
       "title": "Nouveau mot de passe",
@@ -935,7 +993,61 @@
           "hint": "Plus que {xp} XP : le niveau 3 débloque l'effet {effect}.",
           "action": "Jouer"
         }
+      },
+      "reward": {
+        "label": "Récompense",
+        "promise": "Termine les premiers pas avant fin {month} pour gagner le cadre {frame}, réservé aux premiers joueurs.",
+        "unlockedTitle": "Cadre {frame} débloqué",
+        "unlockedHint": "Réservé aux premiers joueurs : équipe-le pour le porter à chaque table.",
+        "equip": "L'équiper",
+        "equippedTitle": "Cadre {frame} équipé",
+        "equippedHint": "Il te suit désormais à chaque table.",
+        "allDone": "Tout est fait : voici ta récompense.",
+        "dismissLabel": "Masquer la récompense"
       }
+    }
+  },
+  "reminder": {
+    "unsubscribed": {
+      "metaTitle": "Rappel du vendredi coupé",
+      "title": "C'est noté, plus de rappel",
+      "body": "Cette adresse ne recevra plus le rappel « On remet ça ? » du vendredi.",
+      "reactivate": "Tu changes d'avis ? Tu peux le réactiver à tout moment depuis ta page Compte.",
+      "games": "Voir les jeux",
+      "account": "Mon compte"
+    },
+    "unsubscribe": {
+      "metaTitle": "Ne plus recevoir le rappel du vendredi",
+      "title": "Ne plus recevoir le rappel du vendredi ?",
+      "body": "Un geste, et cette adresse ne recevra plus le rappel « On remet ça ? » du vendredi. Tu pourras le réactiver depuis ta page Compte.",
+      "button": "Ne plus recevoir le rappel"
+    },
+    "email": {
+      "subject": "Ce soir, on remet ça ?",
+      "title": "C'est vendredi : on remet ça ?",
+      "body": "Ta tablée t'attend sur Le Pillaveur. Lance une partie sur un seul téléphone ou retrouve tes amis en ligne, en deux clics.",
+      "cta": "Choisir un jeu",
+      "why": "Tu reçois cet e-mail parce que tu as demandé le rappel du vendredi sur Le Pillaveur. Jamais plus d'un par semaine.",
+      "unsubscribe": "Ne plus recevoir ce rappel",
+      "manage": "Le gérer depuis ma page Compte"
+    },
+    "confirm": {
+      "metaTitle": "Confirmer le rappel du vendredi",
+      "title": "Activer le rappel du vendredi ?",
+      "body": "Un e-mail le vendredi vers 17 h (heure de Paris) pour proposer une partie, jamais plus d'un par semaine. Chaque e-mail contient un lien pour l'arrêter.",
+      "button": "Activer le rappel",
+      "activeTitle": "C'est noté, rendez-vous vendredi",
+      "activeBody": "Le rappel du vendredi est activé pour cette adresse. Tu peux le couper à tout moment, depuis ta page Compte ou le lien de chaque e-mail.",
+      "invalidTitle": "Lien expiré ou déjà utilisé",
+      "invalidBody": "Ce lien de confirmation n'est plus valable. Redemande le rappel depuis ta page Compte : un nouvel e-mail te sera envoyé."
+    },
+    "confirmEmail": {
+      "subject": "Confirme ton rappel du vendredi",
+      "title": "Un clic pour activer ton rappel du vendredi",
+      "body": "Tu as demandé le rappel du vendredi de Le Pillaveur : un e-mail le vendredi vers 17 h (heure de Paris) pour proposer une partie, jamais plus d'un par semaine. Rien ne partira tant que tu n'as pas confirmé.",
+      "cta": "Confirmer le rappel",
+      "expiry": "Ce lien est valable 7 jours.",
+      "ignore": "Tu n'as rien demandé ? Ignore simplement cet e-mail : aucun rappel ne te sera envoyé."
     }
   },
   "legal": {
@@ -1036,6 +1148,7 @@
       "vip-ganse": "Double Ganse",
       "vip-aura": "Aura Pourpre",
       "vip-flamant": "Flamant Rose",
+      "pionnier": "Pionnier",
       "alien": "Orbite Bleue",
       "alien-triclope": "Orbite Verte",
       "alien-cyclope": "Orbite Violette",
@@ -4664,6 +4777,24 @@
       "byGameEmpty": "Aucune partie en ligne lancée sur 7 jours.",
       "byGameDef": "Parties en ligne lancées sur les 7 derniers jours de Paris (aujourd'hui compris), par jeu, revanches comprises, que la partie aille au bout ou non. « Avec d'autres humains » : au moins deux joueurs humains à la table ; le reste est du solo contre des bots. Parties jouées par l'équipe ou des comptes de test seuls exclues. Les jeux additionnés redonnent le total des 7 derniers jours du graphe par jour ; la part est celle des lancements de la semaine."
     },
+    "localPlay": {
+      "title": "Parties locales",
+      "desc": "Jeux joués sur un seul téléphone, comptés depuis le {date} : deux compteurs anonymes par jeu et par jour, sans compte, sans appareil, sans adresse IP. Des volumes bruts : ni joueurs uniques, ni exclusion de l'équipe.",
+      "descEmpty": "Jeux joués sur un seul téléphone : aucune partie locale comptée pour l'instant. Deux compteurs anonymes par jeu et par jour, sans compte, sans appareil, sans adresse IP.",
+      "totalsDetail": "{starts, plural, one {partie lancée} other {parties lancées}}, {ends, plural, =0 {aucune terminée} one {# terminée} other {# terminées}}",
+      "windowDef": "Pages de jeu ouvertes en mode local avec une table de joueurs sur les {days} derniers jours (heure de Paris), aujourd'hui compris, et parties arrivées à leur écran de fin sur la même période.",
+      "byDayTitle": "Parties locales par jour",
+      "byDayTotal": "{starts, plural, =0 {Aucune lancée} one {# lancée} other {# lancées}} et {ends, plural, =0 {aucune terminée} one {# terminée} other {# terminées}} sur {days} jours.",
+      "byDayEmpty": "Aucune partie locale comptée pour l'instant.",
+      "legendStarts": "Lancées",
+      "legendEnds": "Terminées",
+      "legendBeforeMeasure": "Avant la mesure (aucune donnée)",
+      "byGameTitle": "Parties locales par jeu · {window}",
+      "endsHint": "{count, plural, =0 {aucune terminée} one {# terminée} other {# terminées}}",
+      "noEndScreen": "pas d'écran de fin, jamais « terminée »",
+      "byGameEmpty": "Aucune partie locale lancée sur {days} jours.",
+      "def": "Lancée : la page du jeu s'ouvre en mode local avec une table de joueurs ; une revanche jouée sur la même page ne relance rien. Terminée : la partie lancée atteint son écran de fin ; seule la première fin après un lancement compte, les revanches n'en ajoutent pas. Les fins ne dépassent donc jamais les lancements : leur écart, ce sont les ouvertures quittées avant la fin. Les jeux sans écran de fin ne sont jamais « terminés ». Ni les parties en ligne ni le mode TV ne comptent ici ; la part est celle des lancements de la fenêtre."
+    },
     "room": {
       "todayLabel": "Aujourd'hui",
       "weekLabel": "7 jours",
@@ -4959,8 +5090,8 @@
       "colLastLaunch": "Dernier lancement",
       "colWins": "Victoires",
       "colLosses": "Défaites",
-      "progression": "XP en ligne : {xp} · Série : {streak, plural, one {# jour} other {# jours}}",
-      "streakLastDay": "dernier jour crédité le {date}",
+      "progression": "XP en ligne : {xp} · Série : {streak, plural, one {# semaine} other {# semaines}}",
+      "streakLastDay": "dernier crédit : semaine du {date}",
       "progressionNote": "Pour information : l'XP et la série ne mesurent pas l'activité.",
       "networksTitle": "Réseaux et navigateurs",
       "noNetworks": "Aucune adresse IP enregistrée pour ce compte.",
@@ -5272,11 +5403,13 @@
         "title": "Tâches planifiées internes",
         "names": {
           "retention": "Balayage de conservation",
-          "tables": "Ménage des tables"
+          "tables": "Ménage des tables",
+          "reminder-friday": "Rappel du vendredi"
         },
         "cadence": {
           "retention": "Chaque nuit à 4 h 30",
-          "tables": "Toutes les 5 minutes"
+          "tables": "Toutes les 5 minutes",
+          "reminder-friday": "Chaque vendredi à 17 h"
         },
         "lastRun": "Dernier tour {relative} · {duration}",
         "noRunYet": "Pas encore depuis le démarrage",
@@ -5434,7 +5567,7 @@
     },
     "solo": {
       "title": "Personne dispo ce soir ? Joue quand même.",
-      "body": "Nos bots ne se défilent jamais : lance un Menteur, un quiz du Grand Pillaveur ou un Purple en solo — ils complètent la table en un clic. Et si un pote débarque en cours de route, il scanne le QR et prend un siège.",
+      "body": "Nos bots ne se défilent jamais : lance un quiz du Grand Pillaveur, un Président ou un Loup-Garou en solo — ils complètent la table en un clic. Et si un pote débarque en cours de route, il scanne le QR et prend un siège.",
       "cta": "Lancer une partie avec les bots",
       "hint": "Seuls les jeux où des bots peuvent compléter la table sont affichés."
     },
@@ -5525,7 +5658,14 @@
     "loginCta": "Se connecter ou créer un compte",
     "pseudoPlaceholder": "Ton pseudo pour la soirée",
     "error": "Impossible de lancer pour l'instant. Réessaie.",
-    "rateLimited": "Trop d'essais depuis ce réseau. Réessaie dans {seconds} s."
+    "rateLimited": "Trop d'essais depuis ce réseau. Réessaie dans {seconds} s.",
+    "groupFit": {
+      "text": "Ce jeu se joue surtout entre potes : contre des bots, il perd tout son sel.",
+      "inviteCta": "Inviter des potes",
+      "tryInstead": "Essayer plutôt {game}",
+      "openTable": "Ouvrir ma table",
+      "shareHint": "Ta table s'ouvre sans bots : partage son lien depuis le lobby, tes potes te rejoignent en un clic."
+    }
   },
   "joinGate": {
     "title": "Rejoindre la table",

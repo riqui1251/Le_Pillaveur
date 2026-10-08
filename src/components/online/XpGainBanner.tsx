@@ -31,11 +31,12 @@ import {
   type LevelUnlocks,
 } from '@/lib/online/cosmetics'
 import { DEFAULT_ONLINE_PREFERENCES, type OnlinePreferences } from '@/lib/online-preferences'
+import { nextWeekStreakBonus, streakThisWeek } from '@/lib/online/streak'
 import type { XpGainDetail } from '@/lib/online/xp'
 
 /**
- * Fin de partie : le gain d'XP, le niveau atteint, la série du jour et les
- * succès qui viennent de tomber — puis CE QU'ON EN FAIT.
+ * Fin de partie : le gain d'XP, le niveau atteint, la série de la semaine et
+ * les succès qui viennent de tomber — puis CE QU'ON EN FAIT.
  *
  * Le chiffre affiché vient du SERVEUR (`lastGain`), pas d'un recalcul local :
  * la version précédente déduisait « +50 » des constantes et ignorait le bonus
@@ -105,16 +106,6 @@ export function gainForCurrentXp(
 ): XpGainDetail | null {
   if (!lastGain) return null
   return lastGain.xpAfter === xp ? lastGain : null
-}
-
-/** Date du jour à Paris ('YYYY-MM-DD') — même convention que le serveur. */
-function todayParis(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
 }
 
 /** Classes du bouton d'incitation : contour or, cible tactile ≥ 44 px. */
@@ -389,15 +380,29 @@ export function XpGainBanner({
     </Link>
   ) : null
 
-  // Série du jour : visible DÈS le premier jour (elle démarre au premier, mais
-  // rien ne l'annonçait avant deux jours).
-  const streakDays = lastGain
-    ? lastGain.streakCount
-    : progression.streakLastDay === todayParis()
-      ? progression.streakCount
-      : 0
+  // Série HEBDOMADAIRE (src/lib/online/streak.ts) : visible DÈS la première
+  // semaine (elle démarre à 1, mais rien ne l'annonçait avant la deuxième).
+  // Sans détail de gain, on retombe sur la semaine de Paris en cours — même
+  // lecture que le serveur, ancienne forme quotidienne comprise.
+  const streakWeeks = lastGain ? lastGain.streakCount : streakThisWeek(progression)
+  // « Série hebdo lancée ! » UNE fois : à la partie qui vient de créditer la
+  // 1re semaine (bonus > 0). Les parties suivantes de la semaine, et la
+  // lecture sans détail de gain, disent l'état sans le réannoncer.
+  const streakStarted = Boolean(lastGain && lastGain.streakBonus > 0)
   const streakLabel =
-    streakDays > 1 ? t('streak', { days: streakDays }) : streakDays === 1 ? t('streakStart') : null
+    streakWeeks > 1
+      ? t('streak', { weeks: streakWeeks })
+      : streakWeeks === 1
+        ? streakStarted
+          ? t('streakStart')
+          : t('streakOne')
+        : null
+  // Le rendez-vous de la semaine prochaine, dit UNE fois par semaine : à la
+  // partie qui vient de créditer le bonus. Le rythme réel est la soirée du
+  // vendredi ou du dimanche — une série hebdomadaire ne retient que si le
+  // joueur sait qu'elle existe et ce qu'elle rapporte en revenant.
+  const streakNext =
+    lastGain && lastGain.streakBonus > 0 ? nextWeekStreakBonus(lastGain.streakCount) : null
 
   // Prochain déblocage : une série d'icônes en priorité, sinon cadre/effet.
   const next = nextUnlockForXp(xp)
@@ -459,6 +464,11 @@ export function XpGainBanner({
       {lastGain && lastGain.streakBonus > 0 && (
         <p className="mt-1 text-center text-xs text-orange-200/70">
           {t('streakBonus', { xp: lastGain.streakBonus })}
+        </p>
+      )}
+      {streakNext !== null && (
+        <p className="mt-0.5 text-center text-xs text-orange-200/70">
+          {t('streakNextWeek', { xp: streakNext })}
         </p>
       )}
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">

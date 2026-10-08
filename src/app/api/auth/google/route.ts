@@ -94,6 +94,9 @@ export const POST = withApiRoute('auth/google POST', async (request: Request) =>
           // Pas de mot de passe : la connexion passe par Google (un mot de
           // passe pourra être défini plus tard via « mot de passe oublié »).
           passwordHash: '',
+          // Google ne délivre l'adresse que vérifiée (google-auth-server) : la
+          // preuve d'adresse qu'exige le rappel par e-mail (reminder-server).
+          emailVerified: new Date(),
           displayName,
           name: displayName,
           accountCode,
@@ -150,6 +153,8 @@ export const POST = withApiRoute('auth/google POST', async (request: Request) =>
         data: {
           lastLoginAt: now,
           lastSeenAt: now,
+          // Même compte, adresse revérifiée par Google : posée une fois.
+          ...(freshUser?.emailVerified ? {} : { emailVerified: now }),
           ...(country ? { lastCountry: country } : {}),
           ...(ip ? { lastIp: ip } : {}),
           ...(device !== 'unknown' ? { lastDevice: device } : {}),

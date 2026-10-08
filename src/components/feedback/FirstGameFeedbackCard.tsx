@@ -14,6 +14,7 @@ import {
   shouldAskFirstGameFeedback,
   type FirstGamePlayMode,
 } from '@/lib/first-game-device'
+import { reportLocalGame } from '@/lib/local-game-beacon'
 import { cn } from '@/lib/utils'
 
 /**
@@ -137,6 +138,22 @@ function LocalGate(props: FirstGameFeedbackCardProps) {
   const { user, loading } = useAuth()
   const userId = user?.id ?? null
   const [verdict, setVerdict] = useState<{ ready: boolean; eligible?: boolean }>({ ready: false })
+
+  // Fin de partie LOCALE pour la mesure anonyme (local-game-beacon.ts) : la
+  // carte est montée par les 10 écrans de fin locaux, c'est donc le seul
+  // point commun où l'on sait qu'une partie est allée au bout — sans toucher
+  // aux écrans. Indépendant de l'avis : proposé à chaque fin, que la carte
+  // s'affiche ou non, compte connecté ou pas ; le rapporteur ne compte que la
+  // première fin après un lancement (les revanches n'ajoutent rien). Une
+  // fois par montage : le verrou en ref tient au double effet du mode strict
+  // et aux re-rendus de l'écran de fin. La porte en ligne n'envoie rien.
+  const endReportedRef = useRef(false)
+  const { gameId } = props
+  useEffect(() => {
+    if (endReportedRef.current) return
+    endReportedRef.current = true
+    reportLocalGame(gameId, 'end')
+  }, [gameId])
 
   useEffect(() => {
     if (loading) return

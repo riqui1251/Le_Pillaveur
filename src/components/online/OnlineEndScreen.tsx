@@ -12,6 +12,7 @@ import { useLocalizedGames } from '@/lib/games-i18n'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { shareLink } from '@/lib/native-share'
+import { isMultiHumanTable } from '@/lib/rematch-night'
 import { EndConfetti } from './EndConfetti'
 import { endShareClipboardText, endShareUrl, mayBringTableBack, rematchCounter } from './end-screen'
 
@@ -20,6 +21,13 @@ import { endShareClipboardText, endShareUrl, mayBringTableBack, rematchCounter }
 // dix-huit écrans de fin, et sa décision lit le stockage de l'appareil.
 const FirstGameFeedbackCard = dynamic(
   () => import('@/components/feedback/FirstGameFeedbackCard').then((m) => m.FirstGameFeedbackCard),
+  { ssr: false }
+)
+
+// « On remet ça ? » : même raison — montée seulement aux tables de plusieurs
+// humains, et sa décision attend trois lectures faites côté client.
+const RematchNightCard = dynamic(
+  () => import('./RematchNightCard').then((m) => m.RematchNightCard),
   { ssr: false }
 )
 
@@ -33,9 +41,13 @@ const FirstGameFeedbackCard = dynamic(
  * plus que ce qui lui est propre — le titre (`header`) et son contenu
  * (`ranking` : rôles du Loup-Garou, podium du Quiz, grille des Mots Codés…) —
  * et l'écran rend, dans l'ordre : ce contenu, l'XP, l'avis de première partie
- * (une seule fois dans la vie d'un compte), puis la barre d'actions
- * (Rejouer, Retour à la table, Partager, Quitter la table). Un avis décidé
- * tard se pose SOUS la barre, pour ne pas la décaler sous le pouce.
+ * (une seule fois dans la vie d'un compte), puis la barre d'actions (Rejouer,
+ * Retour à la table, Partager, Quitter la table). Un avis décidé tard se pose
+ * SOUS la barre, pour ne pas la décaler sous le pouce. À une table de
+ * plusieurs humains, la carte « On remet ça ? » (amis + rappel du vendredi —
+ * elle s'efface quand l'avis est dû) vient SOUS la barre, toujours : elle
+ * revient à chaque fin de partie, « Rejouer » garde sa place (seule la barre
+ * fixe du Quiz, qui ne bouge pas, la laisse au-dessus).
  *
  * Logique pure (compteur des présents, lien partagé) : ./end-screen.ts.
  */
@@ -176,6 +188,20 @@ export function OnlineEndScreen({
   const [shownAt] = useState(() => Date.now())
   const [lateSlot, setLateSlot] = useState<HTMLDivElement | null>(null)
 
+  // « On remet ça ? » : au moins deux comptes humains à la table (membres
+  // réels de la salle, bots exclus). Verrouillé dès que c'est vrai : un
+  // joueur qui quitte la table pendant l'écran de fin ne doit pas faire
+  // disparaître la carte sous le doigt de ceux qui restent (le serveur, lui,
+  // relit les membres au moment du geste).
+  const multiHuman = isMultiHumanTable(
+    (room?.members ?? []).map((m) => m.userId),
+    user?.id
+  )
+  const [rematchRoomId, setRematchRoomId] = useState<string | null>(null)
+  useEffect(() => {
+    if (multiHuman && room?.id) setRematchRoomId((current) => current ?? room.id)
+  }, [multiHuman, room?.id])
+
   const gameId = room?.gameId ?? null
   const gameTitle =
     (gameId ? localizedGames.find((g) => g.id === gameId)?.title : undefined) ?? 'Le Pillaveur'
@@ -310,6 +336,15 @@ export function OnlineEndScreen({
           />
         )}
         {actions}
+        {/* Sous les actions, toujours : dans une carte de modale, rien ne
+            doit repousser « Rejouer » hors de vue. */}
+        {rematchRoomId && (
+          <RematchNightCard
+            roomId={rematchRoomId}
+            progressionSince={progressionSince}
+            className="mt-4"
+          />
+        )}
         <div ref={setLateSlot} className="mt-4 empty:hidden" />
       </div>
     )
@@ -343,6 +378,20 @@ export function OnlineEndScreen({
           className="max-w-sm"
         />
       )}
+      {/* Barre fixe (Quiz) : la carte « On remet ça ? » peut rester au-dessus,
+          elle ne déplace pas une barre qui ne bouge pas. Ailleurs, elle passe
+          SOUS les actions (ci-dessous) : contrairement à l'avis de 1re partie
+          (une fois dans la vie d'un compte), elle revient à CHAQUE fin de
+          partie à plusieurs tant qu'un geste reste à faire — au-dessus, elle
+          repousserait « Rejouer » sous le pli à chaque fois, alors que la
+          revanche du soir même est LA boucle qui marche à plusieurs. */}
+      {rematchRoomId && fixedActions && (
+        <RematchNightCard
+          roomId={rematchRoomId}
+          progressionSince={progressionSince}
+          className="max-w-sm"
+        />
+      )}
       {fixedActions ? (
         <>
           {/* Réserve pour la barre fixe (zone sûre comprise) : deux rangées,
@@ -361,6 +410,13 @@ export function OnlineEndScreen({
       ) : (
         <>
           <div className="w-full max-w-sm">{actions}</div>
+          {rematchRoomId && (
+            <RematchNightCard
+              roomId={rematchRoomId}
+              progressionSince={progressionSince}
+              className="max-w-sm"
+            />
+          )}
           <div ref={setLateSlot} className="w-full max-w-sm empty:hidden" />
         </>
       )}

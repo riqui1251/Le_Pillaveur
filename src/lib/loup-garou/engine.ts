@@ -1,5 +1,6 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import { LG_DEBATE_DEFAULT_MS } from './debate'
 
 /**
  * LOUP-GAROU PILLAVEUR — moteur PUR, serveur-autoritaire.
@@ -37,8 +38,9 @@ export const LG_WOLVES_MS = 45_000
 export const LG_WITCH_MS = 30_000
 export const LG_DAWN_MS = 10_000
 export const LG_HUNTER_MS = 20_000
-export const LG_DEBATE_DEFAULT_MS = 180_000
-export const LG_DEBATE_CHOICES_MIN = [1, 2, 3, 4, 5] as const
+// Durée du débat : tenue dans ./debate (sans dépendance, lue aussi par le
+// lobby commun) et réexportée ici pour les appelants du moteur.
+export { LG_DEBATE_DEFAULT_MS, LG_DEBATE_CHOICES_MIN } from './debate'
 export const LG_VOTE_MS = 60_000
 export const LG_REVOTE_MS = 45_000
 /** Échéance raccourcie quand tous les acteurs attendus d'une phase ont agi. */

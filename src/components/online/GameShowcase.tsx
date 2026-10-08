@@ -62,7 +62,8 @@ export function GameShowcase({
   children?: ReactNode
 }) {
   const t = useTranslations('onlineLobby.showcase')
-  // Badges « Bêta » et « FR » : les mêmes mots que sur la carte du hub.
+  // Badges « Bêta », « FR » et « Mieux à plusieurs » : les mêmes mots que sur
+  // la carte du hub.
   const tHub = useTranslations('hub.jeux')
   const tAbout = useTranslations(`games.${gameId}.about`)
   const tCommon = useTranslations('common')
@@ -75,11 +76,14 @@ export function GameShowcase({
   // Les faits, dans l'ordre où on les cherche : combien, seul ?, vocal, prix.
   // Rien n'est promis que games.ts ne dise : les bots suivent botsFillable,
   // le vocal vient du dock monté pour toute salle en ligne (games/layout.tsx).
+  // Jeu fait pour les potes (soloFit 'group') : « Mieux à plusieurs », le mot
+  // du hub, plutôt que « Jouable seul avec des bots » — l'encart de
+  // TryBotsGate, juste dessous, dit que seul il perd tout son sel.
   const facts: string[] = []
   if (game.minPlayers && game.maxPlayers) {
     facts.push(t('players', { min: game.minPlayers, max: game.maxPlayers }))
   }
-  if (game.botsFillable) facts.push(t('bots'))
+  if (game.botsFillable) facts.push(game.soloFit === 'group' ? tHub('soloFit.groupBadge') : t('bots'))
   if (game.onlineReady) facts.push(t('voice'))
   facts.push(t('free'))
 

@@ -1,9 +1,10 @@
 import { getTranslations } from 'next-intl/server'
-import { Bot, Dice5, Droplets, Globe2, Mic, Tv, Zap } from 'lucide-react'
+import { Bot, CalendarClock, Dice5, Droplets, Globe2, Mic, Tv, Zap } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { BrandLogo } from '@/components/brand/BrandLogo'
 import { AnalyticsConsentButton } from '@/components/legal/AgeGate'
 import { COLLECTION_SLUGS } from '@/lib/collections'
+import { FRIDAY_TABLE, fridayTableStatus } from '@/lib/friday-table'
 import { GAMES, type GameSuit } from '@/lib/games'
 import { readLandingLaunchesStat } from '@/lib/landing-stats-server'
 import { RULES_GAME_IDS } from '@/lib/rules/rules-ids'
@@ -63,6 +64,7 @@ export async function LandingPage({ locale }: { locale: string }) {
   const tNavLegal = await getTranslations({ locale, namespace: 'nav.legal' })
   const tCollections = await getTranslations({ locale, namespace: 'hub.collections' })
   const tRules = await getTranslations({ locale, namespace: 'rules' })
+  const tFriday = await getTranslations({ locale, namespace: 'fridayTable' })
 
   const visibleGames = GAMES.filter((g) => !g.hidden)
   // Les jeux phares ouvrent la grille : le héros promet « Loup-Garou, quiz,
@@ -78,6 +80,17 @@ export async function LandingPage({ locale }: { locale: string }) {
   // voir landing-stats-server.ts) : null, et la vitrine n'en dit rien.
   const launches = await readLandingLaunchesStat()
   const previewGameTitle = tCatalog(`${PREVIEW_GAME_ID}.title`)
+  // Table ouverte du vendredi (src/lib/friday-table.ts) : calculée à chaque
+  // rendu, sans réseau — la vitrine lit les cookies, elle est donc rendue par
+  // requête et sait si la soirée est en cours. L'heure se dit À PARIS : le
+  // serveur ignore le fuseau du visiteur (le bandeau du hub, lui, la
+  // convertit dans le navigateur), et le texte le précise.
+  const friday = fridayTableStatus()
+  const fridayTime = new Intl.DateTimeFormat(locale, {
+    timeZone: FRIDAY_TABLE.tz,
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(friday.startsAt))
 
   // FAQ courte : cinq questions qu'un visiteur pose avant de cliquer, avec
   // leurs réponses telles que le produit les tient aujourd'hui — et le même
@@ -161,6 +174,27 @@ export async function LandingPage({ locale }: { locale: string }) {
             )}
           </div>
         )}
+        {/* Rendez-vous du vendredi : une ligne, pas un bandeau — le héros
+            reste à « Jouer ». Elle mène au hub, où le bandeau de la soirée
+            propose de rejoindre ou d'ouvrir la table. */}
+        <p className="mt-4 flex justify-center">
+          <Link
+            href="/jeux"
+            className="inline-flex min-h-[44px] max-w-full items-center gap-2 rounded-full border border-gold/30 bg-felt-deep/70 px-4 py-2 text-left text-xs font-semibold text-cream/80 transition-colors hover:border-gold/60 hover:text-cream"
+          >
+            {friday.live ? (
+              <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+                <span className="absolute inline-flex h-full w-full rounded-full bg-suit-red/60 motion-safe:animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-suit-red" />
+              </span>
+            ) : (
+              <CalendarClock aria-hidden className="h-3.5 w-3.5 shrink-0 text-gold" />
+            )}
+            <span>
+              {friday.live ? tFriday('landing.live') : tFriday('landing.next', { time: fridayTime })}
+            </span>
+          </Link>
+        </p>
         <p className="mt-4 text-xs text-white/40">{t('hero.trust')}</p>
       </section>
 

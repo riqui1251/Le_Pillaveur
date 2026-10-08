@@ -44,8 +44,16 @@ const TIMEZONE = 'Europe/Paris'
 /** Une tâche telle qu'elle est ANNONCÉE (sans son corps) : nom, cadence, fuseau. */
 export type ScheduledJob = { name: string; cron: string; tz: string }
 
+/**
+ * Ce qu'une tâche rend pour dire « rien à faire, tour sauté » (rappel du
+ * vendredi sans clé d'envoi) : le registre l'affiche alors en « Sauté » et
+ * non en « Terminé », qui ferait croire que des e-mails sont partis.
+ * `Symbol.for` : la même valeur d'une instance du module à l'autre.
+ */
+export const JOB_SKIPPED: unique symbol = Symbol.for('lepillaveur.scheduler.jobSkipped')
+
 /** Une tâche telle qu'elle est EXÉCUTÉE. */
-type JobDefinition = ScheduledJob & { run: () => Promise<void> }
+type JobDefinition = ScheduledJob & { run: () => Promise<void | typeof JOB_SKIPPED> }
 
 /**
  * Exécute une étape sans laisser son échec priver les suivantes de leur tour
@@ -93,9 +101,25 @@ async function cleanupTables(): Promise<void> {
 }
 
 /**
- * Les tâches du serveur. Deux cadences seulement, choisies pour ce qu'elles
+ * Rappel « On remet ça ? » du vendredi (src/lib/reminder-server.ts). Sans clé
+ * d'envoi, le tour sort aussitôt : il est alors annoncé « Sauté ».
+ *
+ * Module chargé au premier tour seulement (comme le minuteur des parties) :
+ * l'envoi d'e-mails tire Resend et les catalogues de traduction, que le
+ * démarrage du serveur n'a pas à charger — et un import qui casserait là ne
+ * ferait échouer que ce tour, pas la pose de toutes les tâches.
+ */
+async function sendFridayReminders(): Promise<void | typeof JOB_SKIPPED> {
+  const { runFridayReminders } = await import('@/lib/reminder-server')
+  const report = await runFridayReminders()
+  return report.status === 'skipped' ? JOB_SKIPPED : undefined
+}
+
+/**
+ * Les tâches du serveur. Les cadences sont choisies pour ce qu'elles
  * coûtent : la nuit pour ce qui supprime des comptes, un quart d'heure de
- * marge pour ce qui fait disparaître une table fantôme de l'écran d'accueil.
+ * marge pour ce qui fait disparaître une table fantôme de l'écran d'accueil,
+ * et le vendredi en fin d'après-midi pour le seul envoi vers l'extérieur.
  */
 const JOBS: readonly JobDefinition[] = [
   {
@@ -118,6 +142,16 @@ const JOBS: readonly JobDefinition[] = [
     tz: TIMEZONE,
     run: cleanupTables,
   },
+  {
+    name: 'reminder-friday',
+    // Vendredi 17 h, heure de Paris : la soirée se décide en fin
+    // d'après-midi, et les parties réelles tombent entre 21 h et 1 h. Plus
+    // tôt, l'e-mail est noyé dans la journée de travail ; plus tard, la
+    // soirée est déjà organisée sans nous.
+    cron: '0 17 * * 5',
+    tz: TIMEZONE,
+    run: sendFridayReminders,
+  },
 ]
 
 /**
@@ -132,8 +166,8 @@ export function scheduledJobs(): ScheduledJob[] {
 const running = new Set<string>()
 
 /**
- * Issue d'un tour : exécuté, exécuté mais en échec, ou sauté parce que le
- * tour précédent n'était pas fini.
+ * Issue d'un tour : exécuté, exécuté mais en échec, ou sauté — tour précédent
+ * pas fini, ou tâche qui a rendu JOB_SKIPPED (rien à faire ce tour-ci).
  */
 export type JobOutcome = 'done' | 'failed' | 'skipped'
 
@@ -209,8 +243,8 @@ async function runLocked(name: string, run: () => Promise<unknown>): Promise<Job
   }
   running.add(name)
   try {
-    await run()
-    return 'done'
+    const result = await run()
+    return result === JOB_SKIPPED ? 'skipped' : 'done'
   } catch (error) {
     console.error(`[scheduler] ${name} : échec`, errorTrace(error))
     return 'failed'

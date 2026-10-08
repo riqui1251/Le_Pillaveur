@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-**Dernière mise à jour :** 7 octobre 2026
+**Dernière mise à jour :** 8 octobre 2026
 
 ## 1. Introduction
 
@@ -23,7 +23,7 @@ Lors de la création d'un compte, nous collectons :
 - mot de passe (stocké sous forme de **empreinte cryptographique** — jamais en clair) ;
 - pseudo (nom d'affichage).
 
-Si vous créez votre compte ou vous connectez **avec Google** (bouton « Continuer avec Google » ou, dans l'application mobile, fenêtre de connexion Google), ou si vous liez un compte invité à Google, aucun mot de passe n'est enregistré. Une fois la connexion acceptée dans la fenêtre de Google, Google nous transmet votre adresse email, l'identifiant de votre compte Google et, selon les réglages de ce compte, votre nom (prénom et nom de famille) et votre photo de profil ; notre serveur fait vérifier ces informations par Google. Nous ne conservons que l'adresse email, qui identifie votre compte. À la création du compte, votre prénom (à défaut, votre nom complet ou, s'il manque aussi, la partie de votre adresse email placée avant le @) sert à proposer votre pseudo de départ, visible des autres joueurs et modifiable depuis la page Compte ; l'identifiant du compte Google et la photo ne sont pas conservés, et le nom ne l'est qu'à travers ce pseudo de départ. Google traite de son côté vos données de connexion (voir 6).
+Si vous créez votre compte ou vous connectez **avec Google** (bouton « Continuer avec Google » ou, dans l'application mobile, fenêtre de connexion Google), ou si vous liez un compte invité à Google, aucun mot de passe n'est enregistré. Une fois la connexion acceptée dans la fenêtre de Google, Google nous transmet votre adresse email, l'identifiant de votre compte Google et, selon les réglages de ce compte, votre nom (prénom et nom de famille) et votre photo de profil ; notre serveur fait vérifier ces informations par Google. Nous ne conservons que l'adresse email, qui identifie votre compte, et la date à laquelle elle a été vérifiée : Google ne transmet qu'une adresse vérifiée, ce qui vous dispense de l'email de confirmation si vous demandez le rappel du vendredi (voir 3.8). À la création du compte, votre prénom (à défaut, votre nom complet ou, s'il manque aussi, la partie de votre adresse email placée avant le @) sert à proposer votre pseudo de départ, visible des autres joueurs et modifiable depuis la page Compte ; l'identifiant du compte Google et la photo ne sont pas conservés, et le nom ne l'est qu'à travers ce pseudo de départ. Google traite de son côté vos données de connexion (voir 6).
 
 ### 3.2 Données de jeu
 
@@ -33,7 +33,7 @@ Si vous utilisez un compte, nous pouvons stocker :
 - compteurs de « gorgées » (unités ludiques abstraites, sans lien avec une consommation réelle) ;
 - succès et achievements débloqués ;
 - progression en ligne (expérience, niveau, cosmétiques) et résultats de parties en ligne (classements) ;
-- liste d'amis (demandes envoyées et acceptées) ;
+- liste d'amis (demandes envoyées et acceptées) ; à la fin d'une partie en ligne, le bouton « Ajouter la tablée en amis » envoie d'un seul geste une demande d'ami à chacun des autres joueurs de la table (bots exceptés), selon les mêmes règles qu'une demande envoyée une à une (joueurs bloqués et comptes bannis écartés), sans enregistrer d'autre donnée ;
 - statut « en ligne » visible par vos amis : il indique seulement si votre compte a été actif sur le site au cours des 3 dernières minutes (date de dernière activité du compte), que vous ayez accepté ou non les statistiques de visite ; ni l'heure exacte ni votre historique ne leur sont communiqués ;
 - liste de joueurs synchronisée (pseudos locaux que vous créez).
 
@@ -61,11 +61,13 @@ Si vous refusez, aucun suivi de visite n'est enregistré. Si vous retirez votre 
 
 Ces statistiques étaient auparavant présentées à l'entrée du site comme anonymes et servant uniquement à compter les visites, ce qu'elles n'étaient pas (identifiant de navigateur, adresses IP). Un accord donné sous cet ancien libellé n'est plus pris en compte : la question vous est reposée. Lors de ce changement, les noms des joueurs locaux et les adresses IP enregistrées hors connexion ont été supprimés, ainsi que les données des navigateurs jamais utilisés avec un compte. Pour un navigateur utilisé avec un compte, la dernière adresse IP, le pays, l'appareil, les dates de passage et le dernier compte utilisé restent conservés jusqu'au prochain passage de ce navigateur sur le site, où ils sont effacés avec le cookie `lp_vid`, et au plus tard 6 mois après son dernier passage. Les jours de visite de chaque navigateur (identifiant de navigateur et date, sans adresse IP, nom ni compte) sont conservés jusqu'à leur purge à 13 mois.
 
-**Indépendamment de ce consentement**, pour les **comptes connectés** uniquement, nous conservons l'adresse IP, le pays estimé et le type d'appareil relevés à la création du compte et lors des dernières connexions, ainsi que la date de dernière activité du compte, mise à jour seulement quand le site est réellement utilisé (page affichée et interaction depuis 30 minutes au plus) ou lors d'une authentification, qui sert aussi au statut « en ligne » visible par vos amis, au nombre de comptes en ligne (un décompte, sans nom) et à la suppression automatique des comptes invités inactifs ; aucune durée de présence n'est enregistrée à ce titre. Finalités : **sécurité et modération des comptes** (prévention des fraudes, bannissements), statut « en ligne », nombre de comptes en ligne et suppression des comptes invités inactifs — base : intérêt légitime.
+**Indépendamment de ce consentement**, pour les **comptes connectés** uniquement, nous conservons l'adresse IP, le pays estimé et le type d'appareil relevés à la création du compte et lors des dernières connexions, ainsi que la date de dernière activité du compte, mise à jour seulement quand le site est réellement utilisé (page affichée et interaction depuis 30 minutes au plus) ou lors d'une authentification, qui sert aussi au statut « en ligne » visible par vos amis, au nombre de comptes en ligne (un décompte, sans nom), à la suppression automatique des comptes invités inactifs et, si vous avez demandé le rappel du vendredi, à ne pas vous l'envoyer juste après un passage sur le site (voir 3.8) ; aucune durée de présence n'est enregistrée à ce titre. Finalités : **sécurité et modération des comptes** (prévention des fraudes, bannissements), statut « en ligne », nombre de comptes en ligne et suppression des comptes invités inactifs — base : intérêt légitime.
 
 Est considérée comme activité l'utilisation d'une page affichée à l'écran : un signal part au plus une fois par minute, seulement tant que la page est visible et que vous l'avez utilisée (clic, touche, toucher d'écran ou molette) au cours des 30 dernières minutes. Seul l'instant de votre dernier geste est gardé, dans la mémoire de la page et sans son contenu ; il n'est ni enregistré ni transmis. Sans votre consentement, le signal ne contient rien d'autre et ne sert qu'à la date de dernière activité d'un compte connecté (voir ci-dessus) : aucune durée n'est enregistrée à partir de lui. Avec votre consentement, il indique seulement en plus « actif ou non » et « en partie ou non », et sert à mesurer la durée des visites de votre compte si vous êtes connecté (voir ci-dessus) ; ni l'adresse de la page, ni le jeu, ni le nombre de gestes ne sont enregistrés. Le cumul de temps de présence calculé avant le 13 septembre 2026, selon une méthode abandonnée qui comptait aussi les onglets restés ouverts, a été remis à zéro ; il n'est plus ni alimenté ni affiché.
 
 Dans les outils de modération du site, les adresses IPv6 d'un même réseau (même préfixe /64, en général une même box ou un même lieu) sont regroupées à l'affichage : ce regroupement est calculé à la lecture et n'enregistre aucune donnée supplémentaire.
+
+**Parties jouées en mode local.** Indépendamment de tout consentement, le site compte les parties jouées sur un seul téléphone : quand la page d'un jeu s'ouvre en mode local avec une table de joueurs, puis quand la partie atteint son écran de fin, votre navigateur envoie seulement le jeu concerné et l'événement (partie lancée ou terminée). Le serveur n'en garde que deux compteurs par jeu et par jour (heure de Paris) : le nombre de parties lancées et le nombre de parties terminées. Aucun compte, aucun pseudo, aucun identifiant d'appareil ou de navigateur n'est enregistré, aucun cookie n'est lu, et l'adresse IP n'est jamais conservée : elle ne sert, en mémoire et de façon passagère, qu'à limiter le nombre d'envois par réseau pour prévenir les abus. Comme rien ne permet de relier un compteur à une personne, ces compteurs ne sont pas des données personnelles et ne dépendent pas de votre choix sur les statistiques de visite ; nous les mentionnons par transparence. Ils sont consultables par l'administration du site et conservés 13 mois (voir 7).
 
 ### 3.4 Chat et parties en ligne
 
@@ -90,7 +92,21 @@ Si vous utilisez le formulaire de feedback, nous pouvons collecter :
 
 À la fin de votre toute première partie, une carte vous propose de **noter cette partie** de 1 à 5, avec un commentaire facultatif ; elle ne revient plus une fois que vous l'avez remplie ou refusée. Si vous notez, nous enregistrons la note, le jeu, le mode de jeu (en ligne ou local), votre commentaire s'il y en a un et le même contexte technique (page visitée, sans ses paramètres, et navigateur), rattachés à votre compte si vous êtes connecté ; l'email de votre compte n'est pas recopié dans l'avis, qui suit la durée de conservation du feedback (voir 7). Si vous êtes connecté, nous enregistrons aussi sur votre compte la date à laquelle vous avez noté ou refusé (« Non merci »), pour ne pas vous reposer la question : ni la note ni votre choix n'y figurent. Pour la même raison, votre navigateur garde une marque dans son stockage local (`lp-first-game-feedback`) : elle retient seulement si cet appareil avait déjà servi sur le site, la date de votre première visite (qui ne sert que pendant 24 heures), si la question a déjà été posée et combien de fois la carte s'est affichée ; elle ne contient aucun identifiant et n'est jamais envoyée à nos serveurs.
 
-### 3.8 Cookies
+### 3.8 Rappel du vendredi par email
+
+Si vous le demandez, nous vous envoyons au plus **un email par semaine**, le vendredi vers 17 h (heure de Paris), pour vous proposer de revenir jouer. Son contenu est le même pour tous : il ne contient aucune donnée de partie (ni jeu joué, ni partenaires, ni score) et aucun pseudo.
+
+Ce rappel repose sur votre **consentement**, donné par un geste explicite et distinct : le bouton « Me rappeler vendredi » de l'écran de fin d'une partie en ligne, ou l'interrupteur « Rappel du vendredi par e-mail » de la page Compte. Rien n'est activé par défaut, et le texte affiché avant votre accord indique la fréquence des envois et comment les arrêter. Un compte invité, qui n'a pas d'adresse email, ne peut pas s'inscrire. Le bouton et l'interrupteur ne sont proposés que lorsque l'envoi d'emails est en service sur le site.
+
+**Confirmation de votre adresse.** L'inscription avec un email et un mot de passe ne vérifie pas l'adresse saisie. Pour un tel compte, votre geste ne suffit donc pas : nous envoyons d'abord à l'adresse du compte un email de confirmation, dont le lien est valable 7 jours. Ce lien ouvre, sans connexion, une page qui rappelle ce que vous acceptez et vous demande de confirmer par un bouton (« Activer le rappel ») : ouvrir le lien ne confirme rien. Ce clic enregistre votre accord et la date de vérification de votre adresse. Tant que vous n'avez pas cliqué, aucun rappel n'est envoyé ; si vous ignorez cet email, rien ne se passe. Un nouvel email de confirmation peut être redemandé par le même bouton ou le même interrupteur, au plus une fois par jour. Si votre adresse est déjà vérifiée, parce que vous l'avez confirmée de cette façon ou parce que vous vous êtes connecté avec Google, qui ne transmet qu'une adresse vérifiée (voir 3.1), votre accord est enregistré dès votre geste, sans email de confirmation.
+
+Le rappel utilise l'adresse email déjà associée à votre compte : aucune nouvelle donnée ne vous est demandée. Nous enregistrons seulement sur votre compte la date de votre accord (preuve du consentement, effacée dès que vous le retirez), la date de vérification de votre adresse (gardée après un retrait, pour qu'un nouvel accord n'exige pas de nouvel email de confirmation), la date du dernier email lié au rappel, rappel ou email de confirmation (pour garantir au plus un rappel par semaine : aucun rappel ne part la semaine où l'email de confirmation vous a été envoyé), et un jeton aléatoire utilisé par les liens de ces emails. Ce jeton ne peut activer le rappel que par le bouton de la page de confirmation, dans les 7 jours qui suivent l'envoi de l'email de confirmation et tant que votre adresse n'est pas vérifiée ; en dehors de ce cas, il permet seulement de couper le rappel. Il est gardé après un retrait pour que les liens des emails déjà reçus restent valables. Aucun rappel n'est envoyé à une adresse non vérifiée, à un compte banni, ni à un compte actif sur le site au cours des 12 heures précédentes (date de dernière activité du compte, voir 3.3).
+
+Vous pouvez retirer votre consentement à tout moment, sans avoir à vous justifier : par le lien présent dans chaque email, qui ouvre sans connexion une page où un bouton confirme la désinscription (ouvrir le lien ne désinscrit pas, pour qu'un logiciel de sécurité qui analyse les liens de vos emails ne le fasse pas à votre insu) ; par le bouton « Se désabonner » de votre messagerie, si elle en affiche un, qui vous désinscrit en un clic ; ou par l'interrupteur de la page Compte. Le retrait est immédiat. La page qui le confirme est la même quel que soit le lien suivi et n'affiche aucune information sur le compte.
+
+L'envoi de l'email de confirmation et du rappel passe par notre prestataire d'emails, Resend (voir 6), qui reçoit votre adresse email et le contenu du message pour l'acheminer. Nos journaux ne conservent que des volumes (nombre d'envois et d'échecs) et des types d'erreur, jamais d'adresse, de pseudo ni de jeton.
+
+### 3.9 Cookies
 
 Le Service utilise les cookies suivants :
 
@@ -105,6 +121,8 @@ Le Service utilise les cookies suivants :
 
 Vous pouvez modifier votre choix à tout moment, sans supprimer vos cookies, avec le lien « Statistiques de visite » du menu et du pied de la page d'accueil : il rouvre le choix Accepter / Refuser. Refuser efface immédiatement les données décrites au 3.3 pour ce navigateur et, si vous êtes connecté et aviez accepté les statistiques sur ce navigateur, l'historique des visites de votre compte. Le choix ne vaut que pour ce navigateur.
 
+Votre navigateur garde aussi, dans son stockage local, de simples préférences d'affichage, sans identifiant et jamais envoyées à nos serveurs : par exemple `lp-friday-table-dismissed`, enregistrée quand vous masquez le rendez-vous de la table ouverte du vendredi, ne retient que la semaine concernée (sous la forme « 2026-W41 »).
+
 ## 4. Finalités du traitement
 
 Vos données sont traitées pour :
@@ -116,6 +134,7 @@ Vos données sont traitées pour :
 - assurer la sécurité du Service et prévenir les abus ;
 - modérer les comptes et les contenus (suspension, bannissement en cas de violation) ;
 - répondre à vos demandes de support et feedback ;
+- vous envoyer, si vous l'avez demandé, le rappel du vendredi par email, après vérification de votre adresse ;
 - produire des statistiques de visite, y compris l'historique des visites de votre compte (avec votre consentement) ;
 - respecter nos obligations légales.
 
@@ -132,6 +151,7 @@ Nous **ne vendons pas** vos données personnelles à des tiers.
 | Date de dernière activité du compte (statut « en ligne » visible par vos amis, nombre de comptes en ligne, sécurité, suppression des comptes invités inactifs) | Intérêt légitime |
 | Journal des parties lancées (suivi de l'usage, signalements, consultation compte par compte par l'administration du site) | Intérêt légitime |
 | Statistiques de visite (cookie `lp_vid`, IP, pays, appareil, noms des joueurs locaux, historique des visites du compte) | **Consentement** |
+| Rappel du vendredi par email (email de confirmation, date de l'accord, date de vérification de l'adresse par cet email, date du dernier email lié au rappel, jeton des liens de confirmation et de désinscription) | **Consentement** |
 | Porte d'âge (cookie) | Intérêt légitime (conformité) |
 | Feedback | Consentement (envoi volontaire) |
 
@@ -141,7 +161,7 @@ Vos données peuvent être traitées par :
 
 - **L'hébergeur du Service** : OVH SAS — 2 rue Kellermann, 59100 Roubaix (France). Le serveur héberge la base de données et ses sauvegardes quotidiennes (voir 7).
 - **Cloudflare, Inc.** (intermédiaire technique : proxy et réseau de diffusion de contenu) — États-Unis. Toutes les requêtes adressées au Service passent par Cloudflare avant d'atteindre notre serveur : Cloudflare reçoit donc votre adresse IP et le contenu des échanges avec le site, qu'il achemine jusqu'à notre serveur (avec mise en cache des fichiers publics du site et protection contre les attaques). Il nous indique aussi le pays estimé de votre adresse IP (voir 3.3). Cloudflare conserve en outre la copie hors site des sauvegardes de la base de données (service de stockage R2, voir 7). Cloudflare pouvant traiter ces données hors de l'Union européenne, notamment aux États-Unis, ces transferts sont encadrés par les clauses contractuelles types de la Commission européenne ou par le cadre de protection des données UE–États-Unis (Data Privacy Framework), selon les engagements de ce prestataire.
-- **Resend** (envoi d'emails de réinitialisation de mot de passe) — États-Unis, avec garanties contractuelles appropriées
+- **Resend** (envoi des emails de réinitialisation de mot de passe, de confirmation du rappel du vendredi et de ce rappel, voir 3.8 : Resend reçoit l'adresse du destinataire et le contenu du message, pour l'acheminer) — États-Unis, avec garanties contractuelles appropriées
 - **Google** — si vous utilisez la connexion avec Google : la connexion se fait auprès de Google, qui traite les données de connexion à votre compte Google selon ses propres règles de confidentialité, en tant que responsable de traitement distinct, puis nous transmet les données décrites au 3.1. Le bouton « Continuer avec Google » est chargé depuis les serveurs de Google sur la page Compte : son affichage transmet déjà à Google votre adresse IP et des informations techniques sur votre navigateur. Pour le chat vocal, votre navigateur interroge aussi des serveurs publics de Google (STUN), qui reçoivent votre adresse IP (voir 3.5). Google peut traiter ces données hors de l'Union européenne.
 
 L'éditeur reste responsable des traitements décrits dans la présente politique. Aucun autre transfert à des tiers n'est effectué sans votre consentement, sauf obligation légale.
@@ -149,6 +169,7 @@ L'éditeur reste responsable des traitements décrits dans la présente politiqu
 ## 7. Durée de conservation
 
 - **Compte actif** : données conservées tant que le compte existe.
+- **Rappel du vendredi** (date de l'accord, date de vérification de l'adresse, date du dernier email lié au rappel, jeton des liens) : conservés tant que le compte existe et supprimés avec lui ; la date de l'accord est effacée dès le retrait du consentement. Le lien d'un email de confirmation n'est valable que 7 jours.
 - **Compte invité** (créé sans email ni mot de passe : en scannant un QR code, par un lien d'invitation ou avec « Essayer avec des bots ») : supprimé automatiquement après **90 jours** sans activité, avec tout ce qu'il contient (pseudo, progression, cosmétiques, amis). Il n'est accessible que par le cookie de session du navigateur (ou de l'application) où il a été créé : chaque visite depuis ce navigateur repousse ce délai, mais il reste inaccessible depuis un autre navigateur ou un autre appareil, et se déconnecter, se connecter à un autre compte dans ce navigateur ou effacer ses cookies le rend définitivement inaccessible. Un compte invité qui n'a plus aucune session valide (après une déconnexion, une connexion à un autre compte dans ce navigateur ou l'expiration de sa session) est supprimé plus tôt, après **7 jours** sans activité, sauf s'il est banni ou visé par un signalement en cours d'examen. Ajouter un email et un mot de passe, ou lier le compte à Google, le rend permanent.
 - **Compte supprimé** : suppression ou anonymisation dans un délai de **12 mois** maximum après la demande, sauf obligation légale de conservation plus longue.
 - **Logs techniques (adresses IP, présence)** : **6 mois**. L'adresse IP et le pays de dernière connexion attachés à un compte sont effacés après **6 mois** sans activité ; l'historique d'adresses IP d'un compte est supprimé immédiatement avec le compte, et un contrôle automatique efface aussi tout historique d'adresses IP resté rattaché à un compte supprimé.
@@ -158,6 +179,7 @@ L'éditeur reste responsable des traitements décrits dans la présente politiqu
 - **Journal des parties lancées** (jeu, date, durée de la table, motif de fin, participants) : **12 mois**.
 - **Traces de modération de pseudo** : **12 mois**.
 - **Données de mesure d'audience** : **13 mois**.
+- **Compteurs de parties locales** (jeu, jour, nombre de parties lancées et terminées, sans aucune donnée personnelle) : **13 mois**.
 - **Feedback** : conservation jusqu'à **24 mois** ou suppression sur demande ; l'email de contact associé est effacé si vous supprimez votre compte.
 - **Cookies âge et consentement** : 1 an, renouvelables à chaque validation.
 - **Sauvegardes de la base de données** (copie de l'ensemble des données ci-dessus) : **16 jours au plus** sur le serveur, **31 jours au plus** pour la copie hors site ; une donnée supprimée disparaît des sauvegardes à leur expiration.
@@ -173,7 +195,7 @@ Conformément au RGPD, vous disposez des droits suivants :
 - **Effacement** : demander la suppression de vos données ;
 - **Limitation** : restreindre certains traitements ;
 - **Opposition** : vous opposer à un traitement fondé sur l'intérêt légitime ;
-- **Retrait du consentement** : à tout moment, pour les traitements fondés sur le consentement. Pour les statistiques de visite, par le lien « Statistiques de visite » (menu et pied de la page d'accueil) : le retrait efface aussitôt les données de ce navigateur et l'historique des visites du compte connecté, tous appareils confondus ; il vaut pour ce navigateur, et les autres navigateurs où vous aviez accepté continuent d'enregistrer vos visites tant que vous n'y refusez pas aussi ;
+- **Retrait du consentement** : à tout moment, pour les traitements fondés sur le consentement, sans remettre en cause la licéité des traitements effectués avant le retrait. Pour les statistiques de visite, par le lien « Statistiques de visite » (menu et pied de la page d'accueil) : le retrait efface aussitôt les données de ce navigateur et l'historique des visites du compte connecté, tous appareils confondus ; il vaut pour ce navigateur, et les autres navigateurs où vous aviez accepté continuent d'enregistrer vos visites tant que vous n'y refusez pas aussi. Pour le rappel du vendredi, par le lien présent dans chaque email, le bouton de désabonnement de votre messagerie ou l'interrupteur de la page Compte, avec effet immédiat (voir 3.8) ;
 - **Portabilité** : recevoir vos données dans un format structuré (le cas échéant).
 
 Vous pouvez **supprimer votre compte directement** depuis la page Compte (bouton « Supprimer mon compte ») : la suppression est immédiate et définitive.

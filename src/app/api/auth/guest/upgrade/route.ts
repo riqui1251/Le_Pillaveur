@@ -79,6 +79,10 @@ export const POST = withApiRoute('auth/guest/upgrade POST', async (request: Requ
         // Liaison Google : aucun mot de passe à enregistrer — on n'écrit donc
         // pas de hash vide (il se définira via « mot de passe oublié »).
         ...(passwordHash ? { passwordHash } : {}),
+        // Liaison Google : adresse vérifiée par Google (le rappel par e-mail
+        // l'exige, reminder-server). Une adresse saisie à la main, elle, ne
+        // prouve rien tant qu'elle n'a pas été confirmée.
+        ...(credential ? { emailVerified: new Date() } : {}),
         isGuest: false,
         lastLoginAt: new Date(),
         lastSeenAt: new Date(),

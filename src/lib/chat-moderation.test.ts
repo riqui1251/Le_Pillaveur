@@ -84,6 +84,101 @@ describe('censorChatMessage — ce qui NE doit PAS être filtré', () => {
   }
 })
 
+describe('censorChatMessage — mots courants masqués à tort (relevé de prod)', () => {
+  // Une racine courte (« nique », « esti », « pute », « cock »…) cherchée
+  // n'importe où dans le mot censurait des phrases banales.
+  const innocents = [
+    "C'est une bonne question !",
+    'Ta technique est unique',
+    'Désolé, je suis en retard',
+    'Le député a perdu la dispute',
+    'Un Cocktail sans alcool ?',
+    'Quel destin, le postier gagne encore',
+    'Bonne gestion de la partie',
+    'Dominique et Monique arrivent',
+    'Célestine, Ernestine et Tamer sont là',
+    'Salut Tamer!',
+    'Bravo Dominique!!',
+    "J'ai de l'estime pour toi",
+    "C'est l'unique fois",
+    'Du fromage râpé sur les pâtes',
+    'Il est dans le cockpit',
+    'Ma salopette est tachée',
+    'Panique pas, on gère',
+    'My therapist would love this game',
+    'No lo conozco',
+    'Conosco questa canzone',
+    'Partita della nazionale stasera',
+    'Questi giochi sono belli',
+    'On calculera les points après',
+    "C'est sacrément bien joué",
+    'Il reculera pas',
+    // Racines cherchées dans le mot : leurs mots innocents passent.
+    "J'habite à Lyon, pas loin de la gare",
+    'Mon computer rame',
+    'La combinazione vincente',
+    'Le drapeau, on va le rattraper',
+    'Bibite fresche per tutti',
+    'On joue à la crapette ?',
+  ]
+
+  for (const message of innocents) {
+    it(`laisse intact : « ${message} »`, () => {
+      const result = censorChatMessage(message)
+      expect(result.text).toBe(message)
+      expect(result.censored).toBe(false)
+    })
+  }
+})
+
+describe('censorChatMessage — insultes toujours masquées', () => {
+  const cases: Array<[message: string, hidden: string]> = [
+    ['nique ta mère', 'nique'],
+    ['va niquer ailleurs', 'niquer'],
+    ['ntm', 'ntm'],
+    ['sale pute', 'pute'],
+    ['putain de partie', 'putain'],
+    ['espèce de salope', 'salope'],
+    ['enculé va', 'enculé'],
+    ['quel connard', 'connard'],
+    ['petit bâtard', 'bâtard'],
+    ['fdp', 'fdp'],
+    ['n1qu3r', 'n1qu3r'],
+    ['p.u.t.e', 'p.u.t.e'],
+    ['puuuute', 'puuuute'],
+    ['tamerelapute', 'tamerelapute'],
+    ['fuck you', 'fuck'],
+    ['clusterfuck total', 'clusterfuck'],
+    ['quel emmerdeur', 'emmerdeur'],
+    ['hijo de puta', 'puta'],
+    ['che cazzo fai', 'cazzo'],
+    ['stronzo', 'stronzo'],
+    ['Cocktail de connard', 'connard'],
+    ['Dominique est une pute', 'pute'],
+    // Racines de 4-5 lettres collées (régression du 08/10/2026) : un mot
+    // d'un bloc, cherché DANS le mot, martelé ou non.
+    ['t es qu une salenegre', 'salenegre'],
+    ['grossebite va', 'grossebite'],
+    ['jsuisnazi', 'jsuisnazi'],
+    ['ta gueule lapute', 'lapute'],
+    ['mypussy', 'mypussy'],
+    ['tapuuute', 'tapuuute'],
+  ]
+
+  for (const [message, hidden] of cases) {
+    it(`masque « ${hidden} » dans « ${message} »`, () => {
+      const result = censorChatMessage(message)
+      expect(result.flags.profanity).toBe(true)
+      expect(result.text).not.toContain(hidden)
+    })
+  }
+
+  it('ne masque que le mot fautif, pas le prénom voisin', () => {
+    const result = censorChatMessage('Dominique est une pute')
+    expect(result.text).toContain('Dominique est une')
+  })
+})
+
 describe('maskContactDetails — coordonnées personnelles', () => {
   it('masque une adresse e-mail', () => {
     const result = maskContactDetails('écris-moi sur jean.dupont@example.com stp')

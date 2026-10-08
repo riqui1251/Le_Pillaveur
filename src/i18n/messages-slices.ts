@@ -60,7 +60,10 @@ const BORROWED_GAMES: Readonly<Record<string, readonly string[]>> = {
 /**
  * Sous-arbres lus UNIQUEMENT par des composants serveur (getTranslations) :
  * intros des pages collections, FAQ de la landing, index et enveloppe des
- * règles, extraits des pages légales. Ils partent dans le HTML de LEUR page,
+ * règles, extraits des pages légales, et `reminder` — la page de
+ * confirmation de désinscription du rappel du vendredi
+ * (src/app/[locale]/compte/rappel) et l'e-mail lui-même (src/lib/email.ts,
+ * qui lit les catalogues JSON directement). Ils partent dans le HTML de LEUR page,
  * rendu côté serveur à partir du catalogue complet (src/i18n/request.ts) ;
  * sérialisés dans le socle, ils voyageaient en plus dans le HTML de toutes
  * les autres pages (≈ 8 Ko en français) sans qu'aucun composant client ne
@@ -71,7 +74,7 @@ const BORROWED_GAMES: Readonly<Record<string, readonly string[]>> = {
  *
  * Ajouter un chemin ici : seulement s'il n'a AUCUN lecteur client.
  */
-export const SERVER_ONLY_PATHS: readonly string[] = ['collections', 'landing.faq', 'rules', 'legal.meta']
+export const SERVER_ONLY_PATHS: readonly string[] = ['collections', 'landing.faq', 'rules', 'legal.meta', 'reminder']
 
 /** Un nœud du catalogue (objet imbriqué) — les tableaux (étapes de tutoriel) sont des feuilles. */
 function isNode(value: unknown): value is AbstractIntlMessages {

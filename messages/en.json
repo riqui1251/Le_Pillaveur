@@ -226,6 +226,12 @@
         "text": "Only games where bots can fill the table are shown.",
         "showAll": "See all games"
       },
+      "soloFit": {
+        "greatTitle": "Great on your own",
+        "greatHint": "The bots really play these: a good way to discover the game, even alone.",
+        "othersTitle": "Also playable with bots",
+        "groupBadge": "Better with friends"
+      },
       "onlineOnly": {
         "title": "Online only",
         "hint": "These games need one phone per player: open an online table with a free account, or try them solo against bots."
@@ -333,8 +339,8 @@
     },
     "seul-avec-des-bots": {
       "title": "Play solo: games with bots",
-      "description": "Nobody around tonight? Open a table and the bots fill the seats: Werewolf, quiz, Liar's Dice, bluffing, Président… Free, online, alone or as a pair.",
-      "intro": "Nobody free, or just the wish to practise before the next party: on these games the table host can fill the empty seats with bots from the lobby, and the game starts even below the minimum player count — on your own, then. Each bot has its own name and personality, and they hold their seat: they bid and call bluffs at Liar's Dice, bluff at The Big Bluff, answer at The Big Pillaveur Quiz, the buzzer quiz, bet at Purple and 1220, play their cards at Président, roll the dice at The Little Drinker, vote and accuse at Werewolf. Those are the games you can truly play alone. At The Impostor, Who's the Spy? or Crobard, bots fill a table without bringing it to life: a bot doesn't draw, tells no stories and leads no investigation, so those games want real players. If someone drops out mid-game, a bot steps in so the table keeps going. It is the same list as the “Play solo with bots” shortcut on the home page. Everything happens online, on your phone, and once you have the hang of a game, sharing the table code is all it takes for your friends to take the seats in turn."
+      "description": "Nobody around tonight? Open a table and the bots fill the seats: Werewolf, quiz, Président, Purple… Free, online, alone or as a pair.",
+      "intro": "Nobody free, or just the wish to practise before the next party: on these games the table host can fill the empty seats with bots from the lobby, and the game starts even below the minimum player count — on your own, then. Each bot has its own name and personality, and they hold their seat: they answer at The Big Pillaveur Quiz, the buzzer quiz, play their cards at Président, vote and accuse at Werewolf, bet at Purple and 1220, roll the dice at The Little Drinker. Those are the games you can truly play alone. At The Impostor, Who's the Spy?, Crobard, The Big Bluff, Sans Filtre, Dilemmes or Liar's Dice, bots fill a table without bringing it to life: a bot doesn't draw, makes up no bluffs, tells no stories and leads no investigation, and at Liar's Dice it does bid, but with no face to read, the bluffing falls flat. Those games want real players. If someone drops out mid-game, a bot steps in so the table keeps going. It is the same list as the “Play solo with bots” shortcut on the home page. Everything happens online, on your phone, and once you have the hang of a game, sharing the table code is all it takes for your friends to take the seats in turn."
     },
     "en-grand-groupe": {
       "title": "Party games for big groups",
@@ -350,7 +356,7 @@
     "soloGained": "+{xp} practice XP",
     "soloHint": "Invite a friend for full XP — bot-only games pay out until level 5.",
     "soloCapped": "Bot-only games no longer earn XP — invite a friend to make it count!",
-    "streak": "{days}-day streak!",
+    "streak": "{weeks}-week streak!",
     "nextUnlock": "Next unlock: level {level} — {name}",
     "unlockedNew": "New: {items}",
     "unlockSeries": "{name} icons",
@@ -365,8 +371,10 @@
     "guestRisk": "Guest account: your level {level} and {xp} XP vanish after 90 days of inactivity.",
     "guestRiskAchievements": "Guest account: your level {level}, {xp} XP and {achievements, plural, one {# achievement} other {# achievements}} vanish after 90 days of inactivity.",
     "guestSaveCta": "Save my account",
-    "streakStart": "Streak started!",
+    "streakStart": "Weekly streak started!",
+    "streakOne": "Streak: 1 week",
     "streakBonus": "including +{xp} XP streak bonus",
+    "streakNextWeek": "Play again next week: +{xp} streak XP",
     "achievementUnlocked": "Achievement unlocked: {name}"
   },
   "onlineCollection": {
@@ -378,7 +386,7 @@
     "roleFrames": "Rank frames",
     "roleFramesHint": "Reserved to your rank — not earnable by level.",
     "vipFrames": "VIP frames",
-    "vipFramesHint": "Granted by hand by a Founder — never unlocked by level.",
+    "vipFramesHint": "Outside progression: granted by a Founder or earned during a limited-time event — never by level.",
     "unlockAt": "Lv. {level}",
     "grantOnly": "By grant only",
     "rarity": {
@@ -667,6 +675,46 @@
       "pending": "Play"
     }
   },
+  "rematchNight": {
+    "title": "Same again soon?",
+    "addTable": "Add the whole table as friends",
+    "friendsSent": "{count, plural, one {# friend request sent} other {# friend requests sent}}",
+    "friendsAccepted": "{count, plural, one {# new friend added} other {# new friends added}}",
+    "friendsNothing": "No new request to send.",
+    "friendsError": "Couldn't send right now. Try again in a moment.",
+    "tooMany": "Too many attempts at once: try again in a minute.",
+    "remindMe": "Remind me on Friday",
+    "reminderHint": "One email on Friday around 5 pm (Paris time), never more than one a week. Turn it off anytime.",
+    "reminderOn": "Friday reminder on",
+    "reminderPending": "Email sent: confirm the reminder from your inbox.",
+    "reminderManage": "Manage",
+    "reminderError": "Couldn't save your choice. Try again.",
+    "decline": "No thanks",
+    "declined": "Got it: no reminder."
+  },
+  "fridayTable": {
+    "label": "Friday open table",
+    "next": "Open Impostor table on {day} at {time}: come and meet other players",
+    "nextToday": "Open Impostor table today at {time}: come and meet other players",
+    "live": {
+      "kicker": "Live until {time}",
+      "title": "The Friday table is open",
+      "waiting": "{count, plural, one {# player is waiting} other {# players are waiting}} for a game of The Impostor: take a seat!",
+      "empty": "Nobody has opened the table yet: start it and the next players will join you.",
+      "seated": "You're at the table: the next arrivals will join you."
+    },
+    "join": "Join the table",
+    "open": "Open the table",
+    "opening": "Opening…",
+    "joining": "Joining the table…",
+    "backToTable": "Back to the table",
+    "dismiss": "Hide this event",
+    "dismissed": "Friday table hidden for this week.",
+    "landing": {
+      "next": "Every Friday at {time} (Paris time), an open Impostor table: come and meet other players",
+      "live": "The Friday table is open: come play The Impostor with other players"
+    }
+  },
   "chat": {
     "title": "Chat",
     "tabGame": "Game",
@@ -845,6 +893,16 @@
       "blockedTitle": "Blocked players",
       "unblock": "Unblock"
     },
+    "reminder": {
+      "title": "Friday reminder by email",
+      "on": "On: one email on Friday around 5 pm (Paris time)",
+      "off": "Off",
+      "pending": "Pending: confirm from the email sent to your address",
+      "loading": "Loading…",
+      "loadError": "Status unavailable right now.",
+      "saveError": "Couldn't save your choice. Try again.",
+      "hint": "Late Friday afternoon, a short email suggesting a game. Never more than one a week, and none if you've just been on the site. Every email has a one-click link to stop it."
+    },
     "nameModerationWarning": "Several inappropriate name attempts have been recorded on this account. Please use a respectful nickname — the moderation team can review the history.",
     "reset": {
       "title": "New password",
@@ -935,7 +993,61 @@
           "hint": "Only {xp} XP to go: level 3 unlocks the {effect} effect.",
           "action": "Play"
         }
+      },
+      "reward": {
+        "label": "Reward",
+        "promise": "Finish your first steps by the end of {month} to earn the {frame} frame, reserved for early players.",
+        "unlockedTitle": "{frame} frame unlocked",
+        "unlockedHint": "Reserved for early players: equip it to wear it at every table.",
+        "equip": "Equip it",
+        "equippedTitle": "{frame} frame equipped",
+        "equippedHint": "It now follows you to every table.",
+        "allDone": "All done: here's your reward.",
+        "dismissLabel": "Hide the reward"
       }
+    }
+  },
+  "reminder": {
+    "unsubscribed": {
+      "metaTitle": "Friday reminder turned off",
+      "title": "Got it, no more reminders",
+      "body": "This address won't get the Friday reminder anymore.",
+      "reactivate": "Changed your mind? You can turn it back on anytime from your Account page.",
+      "games": "Browse games",
+      "account": "My account"
+    },
+    "unsubscribe": {
+      "metaTitle": "Stop the Friday reminder",
+      "title": "Stop getting the Friday reminder?",
+      "body": "One tap and this address won't get the Friday reminder anymore. You can turn it back on from your Account page.",
+      "button": "Stop the reminder"
+    },
+    "email": {
+      "subject": "Game night again tonight?",
+      "title": "It's Friday: same again?",
+      "body": "Your crew is waiting on Le Pillaveur. Start a game on one phone or meet your friends online in two taps.",
+      "cta": "Pick a game",
+      "why": "You're getting this email because you asked for the Friday reminder on Le Pillaveur. Never more than one a week.",
+      "unsubscribe": "Stop these reminders",
+      "manage": "Manage it from my Account page"
+    },
+    "confirm": {
+      "metaTitle": "Confirm the Friday reminder",
+      "title": "Turn on the Friday reminder?",
+      "body": "One email on Friday around 5 pm (Paris time) suggesting a game, never more than one a week. Every email has a link to stop it.",
+      "button": "Turn on the reminder",
+      "activeTitle": "All set, see you Friday",
+      "activeBody": "The Friday reminder is on for this address. You can turn it off anytime from your Account page or the link in each email.",
+      "invalidTitle": "Link expired or already used",
+      "invalidBody": "This confirmation link is no longer valid. Ask for the reminder again from your Account page: a new email will be sent."
+    },
+    "confirmEmail": {
+      "subject": "Confirm your Friday reminder",
+      "title": "One click to turn on your Friday reminder",
+      "body": "You asked for the Friday reminder from Le Pillaveur: one email on Friday around 5 pm (Paris time) suggesting a game, never more than one a week. Nothing will be sent until you confirm.",
+      "cta": "Confirm the reminder",
+      "expiry": "This link is valid for 7 days.",
+      "ignore": "Didn't ask for this? Just ignore this email: no reminder will be sent."
     }
   },
   "legal": {
@@ -1036,6 +1148,7 @@
       "vip-ganse": "Double Band",
       "vip-aura": "Purple Aura",
       "vip-flamant": "Pink Flamingo",
+      "pionnier": "Pioneer",
       "alien": "Blue Orbit",
       "alien-triclope": "Green Orbit",
       "alien-cyclope": "Purple Orbit",
@@ -4664,6 +4777,24 @@
       "byGameEmpty": "No online game launched over 7 days.",
       "byGameDef": "Online games launched over the last 7 Paris days (today included), by game, rematches included, whether or not the game was finished. “With other humans”: at least two human players at the table; the rest is solo against bots. Games played by staff or test accounts alone are excluded. Added up, the games give back the total of the last 7 days in the per-day chart; the share is that of the week's launches."
     },
+    "localPlay": {
+      "title": "Local games",
+      "desc": "Games played on a single phone, counted since {date}: two anonymous counters per game and per day, with no account, no device and no IP address. Raw volumes: no unique players, no staff exclusion.",
+      "descEmpty": "Games played on a single phone: no local game counted yet. Two anonymous counters per game and per day, with no account, no device and no IP address.",
+      "totalsDetail": "{starts, plural, one {game started} other {games started}}, {ends, plural, =0 {none finished} one {# finished} other {# finished}}",
+      "windowDef": "Game pages opened in local mode with a table of players over the last {days} days (Paris time), today included, and games that reached their end screen over the same period.",
+      "byDayTitle": "Local games per day",
+      "byDayTotal": "{starts, plural, =0 {None started} one {# started} other {# started}} and {ends, plural, =0 {none finished} one {# finished} other {# finished}} over {days} days.",
+      "byDayEmpty": "No local game counted yet.",
+      "legendStarts": "Started",
+      "legendEnds": "Finished",
+      "legendBeforeMeasure": "Before tracking began (no data)",
+      "byGameTitle": "Local games, by game · {window}",
+      "endsHint": "{count, plural, =0 {none finished} one {# finished} other {# finished}}",
+      "noEndScreen": "no end screen, never “finished”",
+      "byGameEmpty": "No local game started in the last {days} days.",
+      "def": "Started: the game page opens in local mode with a table of players; a rematch played on the same page does not count as a new start. Finished: the started game reaches its end screen; only the first finish after a start counts, rematches add none. Finishes therefore never exceed starts: the gap is the openings abandoned before the end. Games without an end screen are never “finished”. Online games and TV mode are not counted here; the share is that of starts in the window."
+    },
     "room": {
       "todayLabel": "Today",
       "weekLabel": "7 days",
@@ -4959,8 +5090,8 @@
       "colLastLaunch": "Last launch",
       "colWins": "Wins",
       "colLosses": "Losses",
-      "progression": "Online XP: {xp} · Streak: {streak, plural, one {# day} other {# days}}",
-      "streakLastDay": "last day credited on {date}",
+      "progression": "Online XP: {xp} · Streak: {streak, plural, one {# week} other {# weeks}}",
+      "streakLastDay": "last credited: week of {date}",
       "progressionNote": "For information only: XP and streak do not measure activity.",
       "networksTitle": "Networks and browsers",
       "noNetworks": "No IP address recorded for this account.",
@@ -5272,11 +5403,13 @@
         "title": "Internal scheduled jobs",
         "names": {
           "retention": "Retention sweep",
-          "tables": "Table clean-up"
+          "tables": "Table clean-up",
+          "reminder-friday": "Friday reminder"
         },
         "cadence": {
           "retention": "Every night at 4:30 am",
-          "tables": "Every 5 minutes"
+          "tables": "Every 5 minutes",
+          "reminder-friday": "Every Friday at 5 pm"
         },
         "lastRun": "Last run {relative} · {duration}",
         "noRunYet": "Not yet since startup",
@@ -5434,7 +5567,7 @@
     },
     "solo": {
       "title": "Nobody free tonight? Play anyway.",
-      "body": "Our bots never bail: start a Liar's game, a Grand Pillaveur quiz or a Purple run solo — they fill the table in one click. And if a friend shows up mid-game, they scan the QR and grab a seat.",
+      "body": "Our bots never bail: start a Grand Pillaveur quiz, a game of Président or a Werewolf round solo — they fill the table in one click. And if a friend shows up mid-game, they scan the QR and grab a seat.",
       "cta": "Start a game with bots",
       "hint": "Only games where bots can fill the table are shown."
     },
@@ -5525,7 +5658,14 @@
     "loginCta": "Sign in or create an account",
     "pseudoPlaceholder": "Your nickname for tonight",
     "error": "Can't start right now. Try again.",
-    "rateLimited": "Too many attempts from this network. Try again in {seconds, plural, one {# second} other {# seconds}}."
+    "rateLimited": "Too many attempts from this network. Try again in {seconds, plural, one {# second} other {# seconds}}.",
+    "groupFit": {
+      "text": "This game is best with friends: against bots, it loses its spark.",
+      "inviteCta": "Invite friends",
+      "tryInstead": "Try {game} instead",
+      "openTable": "Open my table",
+      "shareHint": "Your table opens without bots: share its link from the lobby and your friends join in one tap."
+    }
   },
   "joinGate": {
     "title": "Join the table",

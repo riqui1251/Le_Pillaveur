@@ -25,11 +25,14 @@ export type XpGainDetail = {
   reason: XpGainReason
   /** Gain de base (victoire / défaite / participation / entraînement solo). */
   base: number
-  /** Bonus de série quotidienne (0 si la série était déjà créditée aujourd'hui). */
+  /**
+   * Bonus de série hebdomadaire (0 si la série était déjà créditée cette
+   * semaine de Paris : il ne tombe qu'à la 1re partie comptée de la semaine).
+   */
   streakBonus: number
   /** base + streakBonus — LE chiffre à afficher. */
   total: number
-  /** Série en jours APRÈS cette partie (0 = aucune série créditée). */
+  /** Série en SEMAINES consécutives APRÈS cette partie (0 = aucune série créditée). */
   streakCount: number
   xpBefore: number
   xpAfter: number

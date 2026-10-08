@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GAMES, getGameById, hasContentIn } from './games'
+import { GAMES, getGameById, hasContentIn, soloAlternativeFor, splitBySoloFit, type GameMeta } from './games'
 import { locales } from '@/i18n/routing'
 
 /**
@@ -115,5 +115,100 @@ describe('langues du contenu (contentLangs)', () => {
       const featured = GAMES.filter((g) => g.featured && hasContentIn(g, locale))
       expect(featured.length, locale).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('tenue en solo (soloFit)', () => {
+  // Figée à la main : reclasser un jeu change ce que voit un visiteur seul
+  // (rangée « Parfaits en solo », encart « entre potes »). Un jeu qui gagne
+  // des bots doit être classé ici, en connaissance de cause.
+  const EXPECTED: Record<string, 'great' | 'group'> = {
+    quiz: 'great',
+    president: 'great',
+    'loup-garou': 'great',
+    'petit-buveur': 'great',
+    purple: 'great',
+    '1220': 'great',
+    dilemmes: 'group',
+    'sans-filtre': 'group',
+    crobard: 'group',
+    bluff: 'group',
+    espion: 'group',
+    imposteur: 'group',
+    // Mesuré : quitté en 1 à 2 min seul contre des bots (07/10/2026).
+    menteur: 'group',
+  }
+
+  it('classe chaque jeu complétable par des bots, et lui seul', () => {
+    const classified = Object.fromEntries(GAMES.filter((g) => g.soloFit).map((g) => [g.id, g.soloFit]))
+    expect(classified).toEqual(EXPECTED)
+  })
+
+  it("n'existe que sur des jeux botsFillable — et tout jeu botsFillable en a un", () => {
+    for (const game of GAMES) {
+      if (game.soloFit) expect(game.botsFillable, `${game.id} classé sans bots`).toBe(true)
+      if (game.botsFillable) expect(game.soloFit, `${game.id} complétable mais non classé`).toBeTruthy()
+    }
+  })
+
+  it('Toucher-Coulé, sans complément par bots au lobby, reste hors classement', () => {
+    expect(getGameById('toucher-coule')?.soloFit).toBeUndefined()
+  })
+})
+
+describe('splitBySoloFit', () => {
+  it('met les « parfaits en solo » devant, garde tous les autres dans leur ordre', () => {
+    const games = [
+      { id: 'a', soloFit: 'group' as const },
+      { id: 'b', soloFit: 'great' as const },
+      { id: 'c' },
+      { id: 'd', soloFit: 'great' as const },
+    ]
+    const { great, others } = splitBySoloFit(games)
+    expect(great.map((g) => g.id)).toEqual(['b', 'd'])
+    expect(others.map((g) => g.id)).toEqual(['a', 'c'])
+  })
+})
+
+describe('soloAlternativeFor', () => {
+  const groupGames = GAMES.filter((g) => g.soloFit === 'group')
+
+  it('propose toujours un jeu parfait en solo, ouvrable avec des bots dans chaque langue', () => {
+    for (const locale of locales) {
+      for (const soft of [false, true]) {
+        for (const game of groupGames) {
+          const alt = soloAlternativeFor(game.id, { locale, soft })
+          expect(alt, `${game.id} (${locale}, soft=${soft})`).not.toBeNull()
+          expect(alt!.soloFit).toBe('great')
+          expect(alt!.botsFillable).toBe(true)
+          expect(alt!.onlineReady).toBe(true)
+          expect(alt!.hidden).toBeFalsy()
+          expect(hasContentIn(alt!, locale)).toBe(true)
+          if (soft) expect(alt!.softModeReady, `${alt!.id} en Sans alcool`).toBe(true)
+        }
+      }
+    }
+  })
+
+  it('rôles cachés → Loup-Garou ; le reste → le Quiz', () => {
+    expect(soloAlternativeFor('espion', { locale: 'fr' })?.id).toBe('loup-garou')
+    expect(soloAlternativeFor('imposteur', { locale: 'fr' })?.id).toBe('loup-garou')
+    expect(soloAlternativeFor('menteur', { locale: 'fr' })?.id).toBe('loup-garou')
+    for (const id of ['dilemmes', 'sans-filtre', 'crobard', 'bluff']) {
+      expect(soloAlternativeFor(id, { locale: 'fr' })?.id, id).toBe('quiz')
+    }
+  })
+
+  it('ne se propose jamais lui-même et écarte un candidat hors langue ou hors Sans alcool', () => {
+    const base = { title: 't', description: 'd', emoji: '', gradient: '', fallbackColor: '' }
+    const fake: GameMeta[] = [
+      { ...base, id: 'groupe', path: '/games/groupe', suit: 'heart', botsFillable: true, onlineReady: true, soloFit: 'group' },
+      { ...base, id: 'fr-seul', path: '/games/fr-seul', suit: 'heart', featured: true, botsFillable: true, onlineReady: true, softModeReady: true, soloFit: 'great', contentLangs: ['fr'] },
+      { ...base, id: 'gorgees', path: '/games/gorgees', suit: 'club', botsFillable: true, onlineReady: true, soloFit: 'great' },
+    ]
+    expect(soloAlternativeFor('fr-seul', { locale: 'fr', games: fake })?.id).toBe('gorgees')
+    expect(soloAlternativeFor('groupe', { locale: 'fr', games: fake })?.id).toBe('fr-seul')
+    expect(soloAlternativeFor('groupe', { locale: 'en', games: fake })?.id).toBe('gorgees')
+    expect(soloAlternativeFor('groupe', { locale: 'en', soft: true, games: fake })).toBeNull()
   })
 })

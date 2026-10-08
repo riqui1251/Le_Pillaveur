@@ -90,3 +90,47 @@ export function tokenizeForModeration(name: string): string[] {
 export function compactForModeration(name: string): string {
   return collapseRepeatedChars(tokenizeForModeration(name).join(''))
 }
+
+/** Écrase toute répétition de la même lettre à un seul caractère (puuuute → pute). */
+export function squashRepeats(text: string): string {
+  return text.replace(/(.)\1+/g, '$1')
+}
+
+export type ModerationWord = {
+  /** Mot tel que tapé (minuscules, NFC) : les accents y sont intacts. */
+  raw: string
+  /** Même mot normalisé (leet, accents retirés) — identique au token de tokenizeForModeration. */
+  norm: string
+}
+
+/** Un seul caractère séparateur (même classe que SEPARATOR_RE, sans le drapeau g). */
+const SEPARATOR_CHAR_RE = /[\s._\-+*\\/|'"`~^:,;!?#%&=<>()[\]{}]/
+
+/**
+ * Découpe en mots en gardant, pour chacun, la forme brute ET la forme
+ * normalisée. Les frontières sont exactement celles de tokenizeForModeration :
+ * un caractère leet (`!`, `|`, `+`, `(`…) devient une lettre AVANT le
+ * découpage, il ne sépare donc jamais deux mots (`sh!t` reste un mot).
+ *
+ * La forme brute sert à la liste blanche : « râpé » et « rape » ont la même
+ * forme normalisée, seuls les accents les distinguent.
+ */
+export function splitModerationWords(text: string): ModerationWord[] {
+  const words: ModerationWord[] = []
+  let raw = ''
+
+  const flush = () => {
+    if (!raw) return
+    const norm = normalizeForModeration(raw)
+    if (norm) words.push({ raw, norm })
+    raw = ''
+  }
+
+  for (const char of text.normalize('NFC').toLowerCase()) {
+    if (LEET_MAP[char] === undefined && SEPARATOR_CHAR_RE.test(char)) flush()
+    else raw += char
+  }
+  flush()
+
+  return words
+}

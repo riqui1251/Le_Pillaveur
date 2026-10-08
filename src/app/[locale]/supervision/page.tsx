@@ -45,7 +45,7 @@ import {
 } from 'lucide-react'
 import { deviceLabel, type DeviceKind } from '@/lib/device-from-user-agent'
 import { isGuestPurgeOverdue, parseAccountDeleteLogDetail, type AccountKind } from '@/lib/account-kind'
-import type { OnlinePlayStats, RetentionLastRun } from '@/lib/supervision-overview-server'
+import type { LocalPlayStats, OnlinePlayStats, RetentionLastRun } from '@/lib/supervision-overview-server'
 import type { ActiveAccountsStats } from '@/lib/active-accounts-server'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -431,6 +431,12 @@ type GrowthStats = {
    * antérieure au lot 4 n'affiche simplement pas la section.
    */
   onlinePlay?: OnlinePlayStats
+  /**
+   * Parties locales, compteurs anonymes. Absent d'une réponse antérieure,
+   * null quand leur lecture a échoué côté serveur : la section ne s'affiche
+   * simplement pas, le reste de l'onglet si.
+   */
+  localPlay?: LocalPlayStats | null
   windows: {
     registeredShareDays: number
     playersByGameDays: number
@@ -1849,6 +1855,156 @@ function OnlinePlayersSection({
       </div>
 
       <p className="border-t border-white/[0.07] pt-2 text-[11px] text-white/35">
+        {t('growth.freshness', {
+          time: format.dateTime(new Date(computedAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
+          minutes: Math.max(1, Math.round(cacheSeconds / 60)),
+        })}
+      </p>
+    </SectionCard>
+  )
+}
+
+/**
+ * « Parties locales » : les jeux joués sur UN téléphone qui tourne autour de
+ * la table, invisibles du journal des parties en ligne. Source : compteurs
+ * anonymes LocalGameDaily (local-game-beacon.ts → /api/analytics/local-game),
+ * deux nombres par jeu et par jour de Paris — ni compte ni appareil, donc des
+ * volumes bruts : pas de joueurs uniques, pas d'exclusion de l'équipe.
+ *
+ * Lancées et terminées côte à côte : une fin n'est comptée qu'après un
+ * lancement du même jeu (les revanches sur la même page n'en ajoutent pas),
+ * donc fins ≤ lancements et leur écart se lit comme les ouvertures quittées
+ * avant le premier écran de fin. Les jeux sans écran de fin le disent sur
+ * leur ligne plutôt que d'afficher un « 0 terminée » trompeur.
+ * Servi avec la croissance (même route, même cache de quelques minutes).
+ */
+function LocalPlaySection({
+  localPlay,
+  computedAt,
+  cacheSeconds,
+}: {
+  localPlay: LocalPlayStats
+  computedAt: string
+  cacheSeconds: number
+}) {
+  const t = useTranslations('supervision')
+  const format = useFormatter()
+  const texts = useChartTexts()
+  const dayCharts = useDayCharts()
+  const { since, byDay, byGame, totals } = localPlay
+  const sinceShort = since
+    ? format.dateTime(parisDayToDate(since), { day: '2-digit', month: '2-digit', timeZone: PARIS_TIME_ZONE })
+    : ''
+  // Fenêtre plus vieille que la mesure : la tuile le dit, comme pour le
+  // journal des parties en ligne — « 30 jours » promettrait un mois de
+  // données qui n'existent pas. Jour lu à l'heure du calcul (valeur en cache).
+  const windowLabel = (label: string, days: number) =>
+    since && parisDayOffset(days - 1, new Date(computedAt)) < since
+      ? t('gameSessions.windowSince', { window: label, date: sinceShort })
+      : label
+  const windows = [
+    { key: 'd7' as const, days: 7, label: windowLabel(t('stats.week'), 7) },
+    { key: 'd30' as const, days: 30, label: windowLabel(t('stats.month'), 30) },
+  ]
+  // Lancées en or (la mesure principale), terminées en crème : côte à côte
+  // sur la même échelle, jamais empilées — elles ne s'additionnent pas.
+  const series: ChartSeries[] = [
+    { key: 'starts', label: t('localPlay.legendStarts'), tone: 'gold' },
+    { key: 'ends', label: t('localPlay.legendEnds'), tone: 'cream' },
+  ]
+  const seriesStarts = byDay.reduce((sum, d) => sum + d.starts, 0)
+  const seriesEnds = byDay.reduce((sum, d) => sum + d.ends, 0)
+
+  return (
+    <SectionCard
+      icon={Smartphone}
+      title={t('localPlay.title')}
+      description={
+        since
+          ? t('localPlay.desc', {
+              date: format.dateTime(parisDayToDate(since), {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                timeZone: PARIS_TIME_ZONE,
+              }),
+            })
+          : t('localPlay.descEmpty')
+      }
+      bodyClassName="space-y-4"
+    >
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        {windows.map((w) => (
+          <div key={w.key} className="min-w-0">
+            <GrowthMetric
+              label={w.label}
+              value={String(totals[w.key].starts)}
+              detail={t('localPlay.totalsDetail', { starts: totals[w.key].starts, ends: totals[w.key].ends })}
+              definition={t('localPlay.windowDef', { days: w.days })}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="min-w-0">
+        <ChartHeading
+          title={t('localPlay.byDayTitle')}
+          subtitle={t('localPlay.byDayTotal', { starts: seriesStarts, ends: seriesEnds, days: byDay.length })}
+        />
+        <ColumnChart
+          {...texts.column}
+          emptyLabel={t('localPlay.byDayEmpty')}
+          ariaLabel={dayCharts.ariaFor(t('localPlay.byDayTitle'), byDay.map((d) => d.day))}
+          data={dayCharts.columns(
+            byDay.map((d) => ({
+              day: d.day,
+              values: { starts: d.starts, ends: d.ends },
+              // Avant le premier jour compté : rayé, un 0 y mentirait.
+              muted: !since || d.day < since,
+            }))
+          )}
+          series={series}
+          mutedLabel={t('localPlay.legendBeforeMeasure')}
+        />
+        {byDay.length > 0 && (
+          <p className="mt-2 text-[11px] text-cream/70">
+            {t('onlinePlayers.range', {
+              from: dayCharts.shortDay(byDay[0].day),
+              to: dayCharts.shortDay(byDay[byDay.length - 1].day),
+            })}
+          </p>
+        )}
+      </div>
+
+      {/* Par jeu, 7 et 30 jours côte à côte sur grand écran, l'un sous
+          l'autre au téléphone. La barre porte les lancements (et leur part
+          dans la fenêtre) ; les fins sont écrites sous le titre du jeu. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {windows.map((w) => (
+          <div key={w.key} className="min-w-0">
+            <ChartHeading title={t('localPlay.byGameTitle', { window: w.label })} />
+            <BarList
+              {...texts.list}
+              ariaLabel={t('localPlay.byGameTitle', { window: w.label })}
+              rows={byGame[w.key].map((g) => ({
+                key: g.gameId,
+                label: <GameBarLabel gameId={g.gameId} title={g.gameTitle} />,
+                value: g.starts,
+                hint: g.noEndScreen ? t('localPlay.noEndScreen') : t('localPlay.endsHint', { count: g.ends }),
+              }))}
+              showShare
+              limit={8}
+              tone="gold"
+              primaryLabel={t('localPlay.legendStarts')}
+              categoryLabel={t('charts.game')}
+              emptyLabel={t('localPlay.byGameEmpty', { days: w.days })}
+            />
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] leading-relaxed text-cream/70">{t('localPlay.def')}</p>
+
+      <p className="border-t border-white/[0.07] pt-2 text-[11px] text-white/40">
         {t('growth.freshness', {
           time: format.dateTime(new Date(computedAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
           minutes: Math.max(1, Math.round(cacheSeconds / 60)),
@@ -3938,6 +4094,14 @@ function SupervisionDashboard() {
           {growth?.onlinePlay && (
             <OnlinePlayersSection
               onlinePlay={growth.onlinePlay}
+              computedAt={growth.computedAt}
+              cacheSeconds={growth.cacheSeconds}
+            />
+          )}
+
+          {growth?.localPlay && (
+            <LocalPlaySection
+              localPlay={growth.localPlay}
               computedAt={growth.computedAt}
               cacheSeconds={growth.cacheSeconds}
             />

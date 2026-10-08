@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { Globe, Search, Sparkles } from 'lucide-react'
+import { Bot, Globe, Search, Sparkles } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
-import { hasContentIn } from '@/lib/games'
+import { hasContentIn, splitBySoloFit } from '@/lib/games'
 import { GameCard } from '@/components/hub/GameCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Input } from '@/components/ui/input'
@@ -24,7 +24,12 @@ const FAMILIES = [
   { suit: 'club', glyph: '♣' },
 ] as const
 
-function GamesCardGrid({ games }: { games: LocalizedGameMeta[] }) {
+/**
+ * `soloHints` : mode « seul avec les bots » — les jeux faits pour les potes
+ * (soloFit 'group') portent le badge discret « Mieux à plusieurs ». Hors de
+ * ce mode, rien : à plusieurs, l'avertissement n'a pas lieu d'être.
+ */
+function GamesCardGrid({ games, soloHints = false }: { games: LocalizedGameMeta[]; soloHints?: boolean }) {
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6">
       {games.map((game) => (
@@ -32,6 +37,7 @@ function GamesCardGrid({ games }: { games: LocalizedGameMeta[] }) {
           key={game.id}
           game={game}
           icon={<GameIconById id={game.id} className="h-6 w-6 sm:h-7 sm:w-7" />}
+          groupHint={soloHints && game.soloFit === 'group'}
         />
       ))}
     </div>
@@ -118,14 +124,26 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
     [localGames, query, locale]
   )
 
+  // Mode solo hors recherche : « Parfaits en solo » d'abord, puis tous les
+  // autres. Une 1re partie seul contre des bots n'est rejouée que 4 fois sur
+  // 21 en prod, et les jeux de discussion (Dilemmes, Crobard…) y sont quittés
+  // en 1 à 2 min : le premier essai doit tomber sur un jeu qui tient sans
+  // potes. Aucun jeu ne disparaît — les autres gardent leur place, badge
+  // « Mieux à plusieurs » à l'appui. Remplace phares et familles : un même
+  // jeu n'a pas à paraître deux fois dans une liste aussi courte.
+  const soloSections = useMemo(
+    () => (soloBots && !query.trim() ? splitBySoloFit(localGames) : null),
+    [soloBots, localGames, query]
+  )
+
   // Sections par enseigne hors recherche — grille plate quand on cherche.
   const sections = useMemo(() => {
-    if (query.trim()) return null
+    if (query.trim() || soloBots) return null
     return FAMILIES.map((f) => ({
       ...f,
       games: localGames.filter((g) => g.suit === f.suit),
     })).filter((s) => s.games.length > 0)
-  }, [localGames, query])
+  }, [localGames, query, soloBots])
 
   return (
     <>
@@ -176,7 +194,31 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
         </div>
       ) : (
         <div className="space-y-4">
-          {sections ? (
+          {soloSections ? (
+            <>
+              {soloSections.great.length > 0 && (
+                <section>
+                  <h2 className="mb-1.5 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <Bot className="h-3 w-3" aria-hidden /> {t('soloFit.greatTitle')}
+                    </span>
+                    <span aria-hidden className="h-px flex-1 bg-gold/20" />
+                  </h2>
+                  <p className="mb-2 text-[11px] leading-snug text-white/50">{t('soloFit.greatHint')}</p>
+                  <GamesCardGrid games={soloSections.great} />
+                </section>
+              )}
+              {soloSections.others.length > 0 && (
+                <section>
+                  <h2 className="mb-1.5 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
+                    <span className="shrink-0">{t('soloFit.othersTitle')}</span>
+                    <span aria-hidden className="h-px flex-1 bg-gold/20" />
+                  </h2>
+                  <GamesCardGrid games={soloSections.others} soloHints />
+                </section>
+              )}
+            </>
+          ) : sections ? (
             <>
               {featured.length > 0 && (
                 <section>
@@ -200,7 +242,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
               ))}
             </>
           ) : (
-            localGames.length > 0 && <GamesCardGrid games={localGames} />
+            localGames.length > 0 && <GamesCardGrid games={localGames} soloHints={soloBots} />
           )}
 
           {/* Promesse honnête AVANT le clic : ces jeux réclament un téléphone

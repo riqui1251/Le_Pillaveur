@@ -5,6 +5,7 @@ import {
   validateLocalPlayerName,
 } from './index'
 import { PROFANITY_BY_LOCALE } from './terms'
+import { isAllowedWord } from './allowed-words'
 
 describe('containsProfanity — français', () => {
   it('détecte les insultes directes', () => {
@@ -178,6 +179,9 @@ describe('couverture des listes par langue', () => {
       for (const term of terms) {
         if (term.length <= 3) continue
         const sample = term.replace(/\s+/g, '')
+        // « tamer » reste un terme (tamerlapute) mais, seul, c'est un prénom
+        // autorisé par la liste blanche : il est couvert dans word-boundaries.test.ts.
+        if (isAllowedWord(sample)) continue
         expect(
           containsProfanity(sample),
           `terme ${locale}:${term} devrait être bloqué`

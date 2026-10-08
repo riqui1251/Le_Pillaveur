@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { parseRoomSettings } from '@/lib/online-game-state'
 import { buildLGState, serializeLGState } from '@/lib/loup-garou/server-adapter'
-import { currentLGActorId, LG_DEBATE_CHOICES_MIN, LG_DEBATE_DEFAULT_MS } from '@/lib/loup-garou/engine'
+import { currentLGActorId } from '@/lib/loup-garou/engine'
+import { lgDebateMinutes } from '@/lib/loup-garou/debate'
 
 type LaunchRoom = {
   settingsJson: string | null
@@ -13,15 +14,13 @@ type LaunchRoom = {
 
 /**
  * Lance (ou relance) une partie de Loup-Garou — SERVEUR-AUTORITAIRE.
- * Durée du débat réglée par l'hôte (1-5 min, défaut 3).
+ * Durée du débat réglée par l'hôte (1-5 min) ; sans choix de sa part, 3 min,
+ * ou 1 min quand il est le seul humain face aux bots (lgDebateMinutes) —
+ * recalculée à chaque relance, avec les humains alors présents.
  */
 export async function launchLoupGarouRoom(roomId: string, room: LaunchRoom) {
   const settings = parseRoomSettings(room.settingsJson)
-  const debateMs = LG_DEBATE_CHOICES_MIN.includes(
-    settings.lgDebateMin as (typeof LG_DEBATE_CHOICES_MIN)[number]
-  )
-    ? (settings.lgDebateMin as number) * 60_000
-    : LG_DEBATE_DEFAULT_MS
+  const debateMs = lgDebateMinutes(settings.lgDebateMin, room.members.length) * 60_000
   const state = buildLGState(
     room.members,
     debateMs,

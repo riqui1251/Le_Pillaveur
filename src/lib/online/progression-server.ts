@@ -4,6 +4,7 @@ import {
   unlockedCosmeticKeys,
   type UnlockContext,
 } from '@/lib/online/cosmetics'
+import { readWeeklyStreak } from '@/lib/online/streak'
 
 /**
  * Progression d'un compte (serveur) : XP + niveau + cosmétiques débloqués.
@@ -21,7 +22,13 @@ export type ProgressionDto = {
   unlockedKeys: string[]
   /** Clés accordées MANUELLEMENT (sous-ensemble de unlockedKeys). */
   grantedKeys: string[]
-  /** Série quotidienne : jours consécutifs et dernier jour crédité (Paris). */
+  /**
+   * Série HEBDOMADAIRE : semaines consécutives et dernière semaine créditée
+   * (Paris, clé ISO 'YYYY-Www'). Le champ garde le nom de la colonne
+   * (`streakLastDay`) pour ne pas casser le contrat avec un onglet ouvert
+   * pendant le déploiement ; la valeur, elle, est TOUJOURS une semaine :
+   * l'ancienne forme quotidienne est convertie ici (readWeeklyStreak).
+   */
   streakCount: number
   streakLastDay: string | null
 }
@@ -48,6 +55,10 @@ export async function buildProgression(user: {
   ])
   const ctx: UnlockContext = { xp: user.onlineXp, role: user.role, grantedKeys }
   const progress = progressForXp(user.onlineXp)
+  const weekly = readWeeklyStreak({
+    streakCount: streak?.streakCount ?? 0,
+    streakLastDay: streak?.streakLastDay ?? null,
+  })
   return {
     xp: user.onlineXp,
     level: progress.level,
@@ -55,7 +66,7 @@ export async function buildProgression(user: {
     required: progress.required,
     unlockedKeys: [...unlockedCosmeticKeys(ctx)].sort(),
     grantedKeys: [...grantedKeys].sort(),
-    streakCount: streak?.streakCount ?? 0,
-    streakLastDay: streak?.streakLastDay ?? null,
+    streakCount: weekly.count,
+    streakLastDay: weekly.week,
   }
 }

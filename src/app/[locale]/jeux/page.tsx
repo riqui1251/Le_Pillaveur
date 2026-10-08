@@ -8,6 +8,7 @@ import { SelectedPlayersBar } from '@/components/hub/SelectedPlayersBar'
 import { GamesGrid } from '@/components/hub/GamesGrid'
 import { OpenLobbiesList } from '@/components/online/OpenLobbiesList'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
+import { FridayTableBanner } from '@/components/online/FridayTableBanner'
 import { JoinGate } from '@/components/online/JoinGate'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { RecentGamesRow } from '@/components/online/RecentGamesRow'
@@ -122,6 +123,12 @@ export default function GamesHubPage() {
 
       {isOnline && <RejoinBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <FriendInviteBanner onJoin={handleJoinInvite} joining={joining} />}
+      {/* Rendez-vous « table du vendredi » : en tête du hub, avant tables et
+          catalogue, en ligne comme en local — il décide seul s'il a quelque
+          chose à dire. Seules les deux alertes du moment le précèdent (une
+          partie en cours à rejoindre, une invitation qui attend) : rares,
+          elles ne se montrent que lorsqu'elles pressent. */}
+      <FridayTableBanner />
       {isOnline && <RecentGamesRow />}
       {isOnline && <OpenLobbiesList />}
       {/* Pendant local de « Vos dernières tables » : les derniers jeux ouverts
@@ -180,7 +187,10 @@ function JoinDeepLink() {
   const { joinRoom } = useOnlineRoom()
   const isOnline = user?.playMode === 'online'
   const searchParams = useSearchParams()
-  const joinAttemptedRef = useRef(false)
+  // DERNIER code tenté, pas un simple « déjà tenté » : un second lien
+  // (?join=DEF456 après un échec sur ABC123) doit encore partir, le même
+  // code ne doit pas repartir en boucle à chaque rendu.
+  const lastJoinCodeRef = useRef<string | null>(null)
   const modeSwitchedRef = useRef(false)
   const [gateCode, setGateCode] = useState<string | null>(null)
   // Déclaration 18+ faite (cookie présent, ou portail franchi à l'instant) :
@@ -256,7 +266,7 @@ function JoinDeepLink() {
     void setPlayMode('online')
   }, [searchParams, user, isOnline, setPlayMode])
   useEffect(() => {
-    if (joinAttemptedRef.current || !isOnline || !user) return
+    if (!isOnline || !user) return
     let code = searchParams.get('join')?.trim().toUpperCase() ?? null
     if (!code) {
       try {
@@ -265,8 +275,8 @@ function JoinDeepLink() {
         code = null
       }
     }
-    if (!code || !/^[A-Z0-9]{6}$/.test(code)) return
-    joinAttemptedRef.current = true
+    if (!code || !/^[A-Z0-9]{6}$/.test(code) || lastJoinCodeRef.current === code) return
+    lastJoinCodeRef.current = code
     try {
       window.localStorage.removeItem('lp-pending-join')
     } catch {

@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { parisDayOffset, parisDayStartUtc, parisDayString, parisDaysBack } from '@/lib/paris-time'
+import {
+  calendarDayOffset,
+  parisDayOffset,
+  parisDayStartUtc,
+  parisDayString,
+  parisDaysBack,
+  parisWeekKey,
+  parisWeekOffset,
+  toWeekKey,
+  weekKeyMonday,
+  weekKeyOfDay,
+  weeksBetween,
+} from '@/lib/paris-time'
 
 const at = (iso: string) => new Date(iso)
 const HOUR_MS = 60 * 60 * 1000
@@ -141,5 +153,130 @@ describe('parisDayStartUtc', () => {
 
   it('refuse un jour mal formé plutôt que de renvoyer une date invalide', () => {
     expect(() => parisDayStartUtc('13/09/2026')).toThrow(RangeError)
+  })
+})
+
+// ─── Semaines ISO de Paris (série hebdomadaire) ──────────────────────────────
+
+describe('calendarDayOffset', () => {
+  it('décale une date connue, sans fuseau, bords de mois et d’année compris', () => {
+    expect(calendarDayOffset('2026-10-08', 0)).toBe('2026-10-08')
+    expect(calendarDayOffset('2026-10-08', 3)).toBe('2026-10-05')
+    expect(calendarDayOffset('2027-01-01', 1)).toBe('2026-12-31')
+    expect(calendarDayOffset('2028-03-01', 1)).toBe('2028-02-29')
+    expect(calendarDayOffset('2026-10-25', -1)).toBe('2026-10-26')
+  })
+})
+
+describe('weekKeyOfDay', () => {
+  it('semaine ISO du lundi au dimanche', () => {
+    // Jeudi 08/10/2026 : semaine 41 ; lundi 05 et dimanche 11 aussi.
+    expect(weekKeyOfDay('2026-10-08')).toBe('2026-W41')
+    expect(weekKeyOfDay('2026-10-05')).toBe('2026-W41')
+    expect(weekKeyOfDay('2026-10-11')).toBe('2026-W41')
+    expect(weekKeyOfDay('2026-10-12')).toBe('2026-W42')
+  })
+
+  it('l’année ISO n’est pas l’année civile aux bords', () => {
+    // 2026 commence un jeudi : 53 semaines, et le 01/01/2027 est encore en W53.
+    expect(weekKeyOfDay('2025-12-29')).toBe('2026-W01')
+    expect(weekKeyOfDay('2026-01-01')).toBe('2026-W01')
+    expect(weekKeyOfDay('2026-12-31')).toBe('2026-W53')
+    expect(weekKeyOfDay('2027-01-03')).toBe('2026-W53')
+    expect(weekKeyOfDay('2027-01-04')).toBe('2027-W01')
+    // Lundi 30/12/2024 : déjà la semaine 1 de 2025.
+    expect(weekKeyOfDay('2024-12-30')).toBe('2025-W01')
+    expect(weekKeyOfDay('2021-01-03')).toBe('2020-W53')
+  })
+})
+
+describe('parisWeekKey — le dimanche minuit de Paris, pas d’UTC', () => {
+  it('passage à l’heure d’hiver (dimanche 25/10/2026)', () => {
+    // 22:30Z = 23:30 à Paris, encore dimanche : semaine 43.
+    expect(parisWeekKey(at('2026-10-25T22:30:00.000Z'))).toBe('2026-W43')
+    // 23:30Z = 00:30 lundi à Paris : semaine 44 (en UTC, encore dimanche).
+    expect(parisWeekKey(at('2026-10-25T23:30:00.000Z'))).toBe('2026-W44')
+  })
+
+  it('passage à l’heure d’été (dimanche 28/03/2027)', () => {
+    expect(parisWeekKey(at('2027-03-28T21:30:00.000Z'))).toBe('2027-W12')
+    // 22:30Z = 00:30 lundi à Paris (+2 h) : déjà la semaine 13.
+    expect(parisWeekKey(at('2027-03-28T22:30:00.000Z'))).toBe('2027-W13')
+  })
+
+  it('en heure d’été, dimanche 22:30Z est déjà lundi à Paris', () => {
+    expect(parisWeekKey(at('2026-09-13T21:59:59.999Z'))).toBe('2026-W37')
+    expect(parisWeekKey(at('2026-09-13T22:00:00.000Z'))).toBe('2026-W38')
+  })
+})
+
+describe('parisWeekOffset', () => {
+  it('semaine précédente juste après les changements d’heure (jamais 7 × 24 h)', () => {
+    // Dimanche 25/10 23:30 à Paris (semaine de 169 h) : la précédente est la 42.
+    expect(parisWeekOffset(1, at('2026-10-25T22:30:00.000Z'))).toBe('2026-W42')
+    // Lundi 29/03/2027 00:30 à Paris, après une semaine de 167 h : la 12, pas la 11.
+    expect(parisWeekOffset(1, at('2027-03-28T22:30:00.000Z'))).toBe('2027-W12')
+    expect(parisWeekOffset(0, at('2027-03-28T22:30:00.000Z'))).toBe('2027-W13')
+  })
+
+  it('traverse le Nouvel An ISO (2026 a 53 semaines)', () => {
+    expect(parisWeekOffset(1, at('2027-01-04T12:00:00.000Z'))).toBe('2026-W53')
+    expect(parisWeekOffset(2, at('2027-01-04T12:00:00.000Z'))).toBe('2026-W52')
+    expect(parisWeekOffset(1, at('2026-01-05T12:00:00.000Z'))).toBe('2026-W01')
+  })
+
+  it.each([
+    ['heure d’hiver 2026', '2026-10-23T12:00:00.000Z'],
+    ['heure d’été 2027', '2027-03-26T12:00:00.000Z'],
+    ['Nouvel An', '2026-12-30T12:00:00.000Z'],
+  ])('à toute heure, la semaine précédente est exactement une semaine avant (%s)', (_label, isoStart) => {
+    for (const from of instantsAround(isoStart)) {
+      expect(weeksBetween(parisWeekOffset(1, from), parisWeekKey(from))).toBe(1)
+      expect(parisWeekOffset(0, from)).toBe(parisWeekKey(from))
+    }
+  })
+})
+
+describe('weekKeyMonday et weeksBetween', () => {
+  it('lundi d’une semaine, années à 52 et 53 semaines', () => {
+    expect(weekKeyMonday('2026-W41')).toBe('2026-10-05')
+    expect(weekKeyMonday('2026-W01')).toBe('2025-12-29')
+    expect(weekKeyMonday('2026-W53')).toBe('2026-12-28')
+    expect(weekKeyMonday('2025-W01')).toBe('2024-12-30')
+    expect(weekKeyMonday('2027-W01')).toBe('2027-01-04')
+    expect(() => weekKeyMonday('2026-10-05')).toThrow(RangeError)
+  })
+
+  it('écart en semaines, à cheval sur deux années ISO', () => {
+    expect(weeksBetween('2026-W53', '2027-W01')).toBe(1)
+    expect(weeksBetween('2026-W01', '2026-W53')).toBe(52)
+    expect(weeksBetween('2026-W41', '2026-W41')).toBe(0)
+    expect(weeksBetween('2026-W42', '2026-W41')).toBe(-1)
+  })
+})
+
+describe('toWeekKey — lecture tolérante (migration douce de la série)', () => {
+  it('une clé de semaine valide passe telle quelle', () => {
+    expect(toWeekKey('2026-W41')).toBe('2026-W41')
+    expect(toWeekKey('2026-W53')).toBe('2026-W53')
+  })
+
+  it('un ancien jour devient la semaine qui le contient', () => {
+    expect(toWeekKey('2026-10-08')).toBe('2026-W41')
+    expect(toWeekKey('2026-10-11')).toBe('2026-W41')
+    expect(toWeekKey('2027-01-01')).toBe('2026-W53')
+  })
+
+  it('tout le reste → null, jamais une semaine inventée', () => {
+    expect(toWeekKey(null)).toBeNull()
+    expect(toWeekKey(undefined)).toBeNull()
+    expect(toWeekKey('')).toBeNull()
+    // 2025 n'a que 52 semaines ; W00 n'existe pas ; le 30 février non plus.
+    expect(toWeekKey('2025-W53')).toBeNull()
+    expect(toWeekKey('2026-W00')).toBeNull()
+    expect(toWeekKey('2026-W54')).toBeNull()
+    expect(toWeekKey('2026-02-30')).toBeNull()
+    expect(toWeekKey('13/09/2026')).toBeNull()
+    expect(toWeekKey('2026-W41 ')).toBeNull()
   })
 })

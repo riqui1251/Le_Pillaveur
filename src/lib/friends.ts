@@ -1,5 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { isOnline } from '@/lib/presence'
+import { getBanState } from '@/lib/ban-server'
+import { listBlockedCounterpartIds } from '@/lib/moderation/blocks'
+import { addableTablemateIds, otherHumanIds } from '@/lib/rematch-night'
 import type { Friendship } from '@prisma/client'
 
 export type FriendDto = {
@@ -171,4 +174,135 @@ export async function listPendingRequests(
       createdAt: f.createdAt.toISOString(),
     })),
   }
+}
+
+// ---------------------------------------------------------------------------
+// « Ajouter la tablée en amis » (carte « On remet ça ? » de l'écran de fin)
+// ---------------------------------------------------------------------------
+
+/** Colonnes de ban d'un compte de la tablée : getBanState les lit sans requête de plus. */
+type TablemateRow = {
+  id: string
+  banType: string | null
+  bannedUntil: Date | null
+  banComment: string | null
+  bannedAt: Date | null
+}
+
+export type TablemateLookup =
+  | { kind: 'room_not_found' }
+  | { kind: 'not_a_member' }
+  | { kind: 'ok'; tablemates: TablemateRow[] }
+
+/**
+ * Les AUTRES comptes humains d'une salle, lus EN BASE (OnlineRoomMember) —
+ * jamais une liste envoyée par le client : sans cette règle, n'importe qui
+ * pourrait demander en ami n'importe quel identifiant en se disant « à sa
+ * table ». Le demandeur doit lui-même être membre de la salle.
+ *
+ * Une seule requête : la salle, ses membres et leurs colonnes de ban.
+ */
+export async function lookupTablemates(roomId: string, userId: string): Promise<TablemateLookup> {
+  const room = await prisma.onlineRoom.findUnique({
+    where: { id: roomId },
+    select: {
+      members: {
+        select: {
+          userId: true,
+          user: {
+            select: { id: true, banType: true, bannedUntil: true, banComment: true, bannedAt: true },
+          },
+        },
+      },
+    },
+  })
+  if (!room) return { kind: 'room_not_found' }
+  const memberIds = room.members.map((m) => m.userId)
+  if (!memberIds.includes(userId)) return { kind: 'not_a_member' }
+  const others = new Set(otherHumanIds(memberIds, userId))
+  return {
+    kind: 'ok',
+    tablemates: room.members.filter((m) => others.has(m.userId)).map((m) => m.user),
+  }
+}
+
+/** Relations existantes entre `userId` et ces comptes, dans les deux sens (une requête). */
+async function friendshipsWith(userId: string, otherIds: string[]) {
+  if (otherIds.length === 0) return []
+  return prisma.friendship.findMany({
+    where: {
+      OR: [
+        { requesterId: userId, addresseeId: { in: otherIds } },
+        { addresseeId: userId, requesterId: { in: otherIds } },
+      ],
+    },
+    select: { requesterId: true, addresseeId: true, status: true },
+  })
+}
+
+/**
+ * Combien de membres de la tablée le bouton toucherait-il ? Sert à ne pas
+ * afficher « Ajouter la tablée » à une bande déjà toute amie. Aveugle au
+ * blocage et au ban, à dessein : voir addableTablemateIds.
+ */
+export async function countAddableTablemates(userId: string, tablemates: TablemateRow[]): Promise<number> {
+  const ids = tablemates.map((t) => t.id)
+  return addableTablemateIds(userId, ids, await friendshipsWith(userId, ids)).length
+}
+
+export type TableFriendRequestsTally = {
+  /** Demandes créées (ou réactivées après un refus prescrit). */
+  requested: number
+  /** Demandes reçues de la tablée, acceptées par ce geste. */
+  accepted: number
+  /** Déjà amis ou déjà en attente : rien d'écrit. */
+  already: number
+  /**
+   * Écartés sans rien écrire : compte banni, blocage dans un sens ou dans
+   * l'autre, refus trop récent. JAMAIS renvoyé au client : le détail dirait
+   * qui a bloqué ou refusé qui (même règle que cannot_add_player).
+   */
+  skipped: number
+}
+
+/**
+ * Envoie une demande d'ami à chaque autre humain de la tablée, avec la
+ * logique du geste unitaire (sendFriendRequest : une ligne par paire,
+ * auto-acceptation de la demande croisée, délai après un refus). En SÉRIE :
+ * SQLite n'a qu'un écrivain, et une tablée compte au plus une douzaine de
+ * comptes.
+ */
+export async function sendTableFriendRequests(
+  userId: string,
+  tablemates: TablemateRow[]
+): Promise<TableFriendRequestsTally> {
+  const tally: TableFriendRequestsTally = { requested: 0, accepted: 0, already: 0, skipped: 0 }
+  if (tablemates.length === 0) return tally
+  const ids = tablemates.map((t) => t.id)
+  const [blocked, existing] = await Promise.all([
+    listBlockedCounterpartIds(userId),
+    friendshipsWith(userId, ids),
+  ])
+  // Déjà amis ou déjà sollicités : rien à écrire, inutile de repasser par
+  // sendFriendRequest (deux lectures de plus par membre).
+  const addable = new Set(addableTablemateIds(userId, ids, existing))
+
+  for (const mate of tablemates) {
+    if (!addable.has(mate.id)) {
+      tally.already += 1
+      continue
+    }
+    // Ban lu sur la ligne déjà chargée : un ban temporaire échu ne compte
+    // plus (getBanState compare l'échéance), sans écriture ni relecture.
+    if (getBanState(mate).banned || blocked.has(mate.id)) {
+      tally.skipped += 1
+      continue
+    }
+    const result = await sendFriendRequest(userId, mate.id)
+    if (result.status === 'sent') tally.requested += 1
+    else if (result.status === 'auto-accepted') tally.accepted += 1
+    else if (result.status === 'declined-cooldown') tally.skipped += 1
+    else tally.already += 1
+  }
+  return tally
 }

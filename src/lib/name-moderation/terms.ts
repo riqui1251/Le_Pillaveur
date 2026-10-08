@@ -1,14 +1,79 @@
 /**
  * Racines et expressions modérées par langue.
  *
- * - Termes ≤3 caractères : correspondance exacte (token ou pseudo entier compact).
- * - Termes ≥4 caractères : sous-chaîne sur la forme compacte (leet, espaces, séparateurs).
+ * La longueur du terme (forme compacte : sans espaces ni accents) décide où il
+ * peut être trouvé — la même règle vaut pour les termes ajoutés par la
+ * supervision (fichier ou base) :
+ *
+ * - ≤ 3 caractères : mot entier uniquement (token ou pseudo entier compact).
+ * - 4 à 5 caractères (« racines courtes ») : n'importe où DANS un mot, ou en
+ *   tête d'un mot éclaté (« p.u.t.e ») — jamais au milieu de mots recollés
+ *   (« la mer dorée » ne devient pas « merd »). Un pseudo s'écrit presque
+ *   toujours d'un bloc, sans séparateur ni majuscule exploitable : une racine
+ *   qui ne compterait qu'en début de mot laisserait passer SaleNegre, NeoNazi,
+ *   GrosseBite, LaPute ou BigDick dès qu'un préfixe s'y colle — c'était la
+ *   régression du 08/10/2026.
+ *   Exception : TERMS_AT_WORD_START, racines VRAIMENT ambiguës, qu'une foule
+ *   de mots banals contient (unique, question, hostile, économie, agile,
+ *   significa…) : celles-là ne comptent qu'en début de mot, et leurs formes
+ *   collées les plus courantes sont listées en toutes lettres (« te nique »).
+ * - ≥ 6 caractères : n'importe où, mots recollés compris (tamerelapute,
+ *   c o n n a r d) — assez longs pour ne pas tomber par hasard dans un mot.
+ *
+ * Les mots innocents qui contiennent malgré tout une racine (député, habite,
+ * peacock, combinazione, cocktail, salopette, Tamer, râpé…) sont dans
+ * allowed-words.ts : la liste blanche ne protège que LEUR portion du mot.
+ *
+ * Les termes ajoutés par la supervision suivent la règle de longueur : un
+ * terme de 4-5 lettres (« teub ») est donc cherché dans les mots, comme
+ * avant la règle des débuts de mot — un modérateur doit pouvoir bloquer une
+ * racine courte collée.
  *
  * Commentaires grave / moyen : tous bloqués pour l'instant ; le marquage partiel
  * pourra s'appuyer sur ModerationSeverity plus tard.
  */
 
-import { foldDiacritics } from './normalize'
+import { compactForModeration } from './normalize'
+
+/** Longueur max (forme compacte) d'un terme qui doit être un mot entier. */
+export const EXACT_TERM_MAX_LENGTH = 3
+/** Longueur max (forme compacte) d'une racine courte, cherchée dans un mot. */
+export const SHORT_ROOT_MAX_LENGTH = 5
+
+/**
+ * Termes cherchés en DÉBUT de mot seulement (forme compacte, sans accents) :
+ * ceux qu'une foule de mots banals contient, dans l'une des quatre langues —
+ * trop pour une liste blanche. Critère d'entrée : des dizaines de mots
+ * courants, pas trois prénoms (ceux-là vont dans allowed-words.ts). Une
+ * insulte haineuse ou sexuelle n'a rien à faire ici : collée à un préfixe,
+ * elle passerait.
+ *
+ * - nique : unique, technique, panique, Dominique, Monique, Véronique…
+ * - esti / osti / ostie : question, gestion, destin, Célestine ; hostile,
+ *   hosting, posti (IT), hostie — sacres québécois, injures légères ;
+ * - cono : économie, reconocer, conoscere, finiscono (IT) ;
+ * - gili : agile, fragile, vigile ;
+ * - fica : significa, modification, vérification, efficacité ;
+ * - porco : sporco (IT, « sale ») — « porcodio », long, reste cherché partout ;
+ * - branl : ébranler — « branleur », long, reste cherché partout ;
+ * - tamer : prénom, et « tamere », long, reste cherché partout ;
+ * - culero / culera (ES, 6 lettres) : le futur des verbes en -culer
+ *   (calculera, reculera, basculera).
+ */
+export const TERMS_AT_WORD_START: ReadonlySet<string> = new Set([
+  'nique',
+  'esti',
+  'osti',
+  'ostie',
+  'cono',
+  'gili',
+  'fica',
+  'porco',
+  'branl',
+  'tamer',
+  'culero',
+  'culera',
+])
 
 export type ModerationLocale = 'fr' | 'en' | 'es' | 'it'
 export type ModerationSeverity = 'severe' | 'medium' | 'mild'
@@ -45,6 +110,9 @@ const FR_TERMS: readonly ModerationTermEntry[] = [
   { term: 'nique ta mère', severity: 'severe' },
   { term: 'niquer', severity: 'severe' },
   { term: 'nique', severity: 'severe' },
+  // « nique » n'est cherché qu'en début de mot (unique, technique) : la
+  // forme collée « jtenique » passe par cette expression plus longue.
+  { term: 'te nique', severity: 'severe' },
   { term: 'ntm', severity: 'severe' },
   { term: 'trouduc', severity: 'severe' },
   { term: 'trou du cul', severity: 'severe' },
@@ -95,6 +163,7 @@ const FR_TERMS: readonly ModerationTermEntry[] = [
   { term: 'salechienne', severity: 'medium' },
   { term: 'sale chienne', severity: 'medium' },
   { term: 'ta mere', severity: 'medium' },
+  // Gardé pour « tamerlapute » ; le prénom Tamer, seul, est dans allowed-words.ts.
   { term: 'tamer', severity: 'medium' },
   { term: 'tabarnak', severity: 'severe' },
   { term: 'tabarnac', severity: 'severe' },
@@ -105,7 +174,8 @@ const FR_TERMS: readonly ModerationTermEntry[] = [
   { term: 'crisse', severity: 'medium' },
   { term: 'criss', severity: 'medium' },
   { term: 'sacrament', severity: 'medium' },
-  { term: 'sacrément', severity: 'medium' },
+  // Sans accent : l'adverbe « sacrément » (accentué) est dans allowed-words.ts.
+  { term: 'sacrement', severity: 'medium' },
   { term: 'osti', severity: 'medium' },
   { term: 'ostie', severity: 'medium' },
   { term: 'ciboire', severity: 'medium' },
@@ -156,7 +226,11 @@ const EN_TERMS: readonly ModerationTermEntry[] = [
   { term: 'twat', severity: 'medium' },
   { term: 'bollocks', severity: 'medium' },
   { term: 'jackass', severity: 'medium' },
-  { term: 'retard', severity: 'medium' },
+  // Pas « retard » : en français c'est « en retard », la phrase la plus banale
+  // d'une soirée, et un mot entier — aucune règle de position ne l'en
+  // distingue. Perte ACCEPTÉE : le pseudo « Retard » passe désormais (il
+  // était refusé avant le 08/10/2026). L'adjectif anglais reste bloqué.
+  { term: 'retarded', severity: 'medium' },
   { term: 'mf', severity: 'medium' },
 ]
 
@@ -298,9 +372,14 @@ export const PROFANITY_BY_LOCALE: Record<ModerationLocale, readonly string[]> = 
 /** Toutes les langues actives — un pseudo est vérifié contre l'ensemble. */
 export const ALL_PROFANITY_TERMS: readonly string[] = Object.values(PROFANITY_BY_LOCALE).flat()
 
-/** Termes multi-mots stockés sans espaces, accents neutralisés. */
+/**
+ * Forme compacte d'un terme : EXACTEMENT la chaîne appliquée aux textes
+ * (leet, accents, séparateurs, répétitions). Sans le leet, « fils2pute »
+ * restait « fils2pute » alors que le texte devient « filszpute » : le terme ne
+ * pouvait jamais correspondre, pas plus qu'un « f*ck » ajouté en supervision.
+ */
 export function normalizeTermForMatching(term: string): string {
-  return foldDiacritics(term.replace(/\s+/g, '').toLowerCase())
+  return compactForModeration(term)
 }
 
 export function getTermsBySeverity(

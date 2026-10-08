@@ -13,8 +13,9 @@ import { PLAYER_ICON_SERIES } from '@/lib/online/player-icon-defs'
  *    filtres anti-abus que le classement : ≥ 2 comptes humains, bots exclus) ;
  *  - victoire = 50 XP, défaite = 20 XP (jouer rapporte toujours) ;
  *  - le niveau est DÉRIVÉ de l'XP (jamais stocké) — pas de désynchronisation ;
- *  - un cosmétique est débloqué par niveau, par grant manuel (fondateur) ou
- *    d'office à partir du grade super administrateur ;
+ *  - un cosmétique est débloqué par niveau, par grant manuel (fondateur), par
+ *    grant automatique (cadre Pionnier, voir first-steps.ts) ou d'office à
+ *    partir du grade super administrateur ;
  *  - les 4 cadres de RÔLE et le cadre `staff` sont réservés au grade
  *    correspondant, hors catalogue de niveaux (voir ROLE_FRAME_MIN_RANK) ;
  *  - le système visuel EN LIGNE (icônes/effets/cadres/écusson) est
@@ -37,14 +38,18 @@ export const XP_SOLO_BOTS = 10
 export const SOLO_BOTS_LEVEL_CAP = 5
 
 /**
- * Série quotidienne : bonus d'XP à la PREMIÈRE partie comptée du jour,
- * +10 XP par jour de série consécutif, plafonné à +50 (5 jours et plus).
+ * Série HEBDOMADAIRE : bonus d'XP à la PREMIÈRE partie comptée de la
+ * semaine (lundi-dimanche, heure de Paris), +10 XP par semaine de série
+ * consécutive, plafonné à +50 (5 semaines et plus). Hebdomadaire et non plus
+ * quotidienne : les soirées tombent le vendredi et le dimanche, aucune série
+ * de jours ne dépassait 1 — le rendez-vous réaliste est celui de la semaine.
+ * Décision et migration douce des anciennes séries en jours : ./streak.ts.
  */
 export const XP_STREAK_STEP = 10
-export const STREAK_BONUS_CAP_DAYS = 5
+export const STREAK_BONUS_CAP_WEEKS = 5
 
-export function streakBonusXp(streakDays: number): number {
-  return XP_STREAK_STEP * Math.max(1, Math.min(streakDays, STREAK_BONUS_CAP_DAYS))
+export function streakBonusXp(streakWeeks: number): number {
+  return XP_STREAK_STEP * Math.max(1, Math.min(streakWeeks, STREAK_BONUS_CAP_WEEKS))
 }
 
 /** XP TOTALE requise pour atteindre `level` (niveau 1 = 0 XP). */
@@ -117,6 +122,14 @@ export const ICON_SERIES: IconSeries[] = PLAYER_ICON_SERIES.map((series) => ({
 export const DEFAULT_ONLINE_ICON = 'chope'
 
 /**
+ * Cadre « Pionnier » : la marque des premiers joueurs (voir PIONEER_DEADLINE
+ * dans first-steps.ts). Déclaré AVANT le catalogue, qui le référence.
+ * Typé `string` comme les ids VIP : PlayerIconFrame (players.ts, catalogue
+ * LOCAL) ne le connaît pas et ne doit pas le connaître.
+ */
+export const PIONEER_FRAME_ID: string = 'pionnier'
+
+/**
  * Catalogue : chaque effet de pseudo et cadre d'icône existant, associé à un
  * niveau. Les ids d'effet DOIVENT rester alignés sur PLAYER_EFFECTS
  * (vérifié par test) ; les 7 cadres de niveau sur PLAYER_FRAMES. Les icônes
@@ -180,6 +193,12 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'vip-ganse', kind: 'frame', unlockLevel: 999 },
   { id: 'vip-aura', kind: 'frame', unlockLevel: 999 },
   { id: 'vip-flamant', kind: 'frame', unlockLevel: 999 },
+  // Cadre Pionnier — grant-only lui aussi, mais GAGNÉ et non offert : la route
+  // GET /api/online/first-steps l'accorde d'elle-même (grantedById null) à
+  // qui boucle les Premiers pas avant PIONEER_DEADLINE (first-steps.ts).
+  // Même rangée que les VIP en Collection, sans autre code : le déblocage
+  // passe par grantedKeys comme pour eux.
+  { id: PIONEER_FRAME_ID, kind: 'frame', unlockLevel: 999 },
   // Icônes (dérivées des séries)
   ...ICON_SERIES.flatMap((series) =>
     series.icons.map((icon) => ({ id: icon, kind: 'icon' as const, unlockLevel: series.unlockLevel }))
@@ -355,15 +374,23 @@ export const ONLINE_FRAME_IDS = [
 /** Niveau à partir duquel un cadre n'est plus accessible que par grant Fondateur. */
 export const GRANT_ONLY_FRAME_LEVEL = 900
 
-/** Ids des cadres VIP (grant-only) — pour l'affichage dédié en Collection. */
+/**
+ * Ids des cadres grant-only — pour l'affichage dédié en Collection : les 14
+ * VIP et le cadre Pionnier (gagné, pas offert, mais hors progression de la
+ * même façon). Dérivé du niveau requis : un nouveau cadre grant-only y entre
+ * sans qu'on touche à la Collection.
+ */
 export const VIP_FRAME_IDS = COSMETICS.filter(
   (c) => c.kind === 'frame' && c.unlockLevel >= GRANT_ONLY_FRAME_LEVEL
 ).map((c) => c.id)
 
+/** Clé `frame:pionnier` de la ligne CosmeticGrant qui débloque le cadre Pionnier. */
+export const PIONEER_FRAME_KEY = cosmeticKey('frame', PIONEER_FRAME_ID)
+
 /**
- * Libellés FR des cadres VIP — pas de traduction 4 langues ici : ce n'est
- * consommé que par le dialogue d'octroi en Supervision (staff, FR).
- * L'équivalent joueur (`players.frames.vip-*`) est traduit dans messages/*.json.
+ * Libellés FR des cadres grant-only — pas de traduction 4 langues ici : ce
+ * n'est consommé que par le dialogue d'octroi en Supervision (staff, FR).
+ * L'équivalent joueur (`players.frames.*`) est traduit dans messages/*.json.
  */
 export const VIP_FRAME_LABELS: Record<string, string> = {
   'vip-jeton': 'Jeton VIP',
@@ -380,4 +407,5 @@ export const VIP_FRAME_LABELS: Record<string, string> = {
   'vip-ganse': 'Double Ganse',
   'vip-aura': 'Aura Pourpre',
   'vip-flamant': 'Flamant Rose',
+  [PIONEER_FRAME_ID]: 'Pionnier',
 }

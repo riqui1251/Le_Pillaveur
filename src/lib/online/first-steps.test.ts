@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ONLINE_ICON, xpForLevel } from './cosmetics'
+import { parisDayString } from '@/lib/paris-time'
+import { DEFAULT_ONLINE_ICON, PIONEER_FRAME_KEY, xpForLevel } from './cosmetics'
 import {
   FIRST_STEP_ORDER,
   LEVEL2_ICON_SERIES_ID,
   LEVEL3_EFFECT_ID,
+  PIONEER_DEADLINE,
+  PIONEER_DEADLINE_MS,
   computeFirstSteps,
+  earnsPioneerFrame,
+  isPioneerWindowOpen,
+  pioneerReward,
+  pioneerRewardState,
   type FirstStepsInput,
 } from './first-steps'
 
@@ -130,5 +137,108 @@ describe('déblocages cités par la carte', () => {
     // La carte les nomme : si le catalogue change de palier, ce test le dit.
     expect(LEVEL2_ICON_SERIES_ID).toBe('trognes')
     expect(LEVEL3_EFFECT_ID).toBe('emerald')
+  })
+})
+
+describe('cadre Pionnier — date limite', () => {
+  it('fin mars 2027, heure de Paris : le 31 mars compte encore, le 1er avril non', () => {
+    // Minuit le 1er avril à Paris, déjà en heure d'été (+02:00) = 22 h UTC la veille.
+    expect(PIONEER_DEADLINE_MS).toBe(Date.UTC(2027, 2, 31, 22, 0, 0))
+    expect(parisDayString(new Date(PIONEER_DEADLINE_MS - 1))).toBe('2027-03-31')
+    expect(parisDayString(new Date(PIONEER_DEADLINE_MS))).toBe('2027-04-01')
+  })
+
+  it('fenêtre ouverte strictement avant la date limite', () => {
+    expect(isPioneerWindowOpen(new Date('2026-10-08T12:00:00Z'))).toBe(true)
+    expect(isPioneerWindowOpen(PIONEER_DEADLINE_MS - 1)).toBe(true)
+    expect(isPioneerWindowOpen(PIONEER_DEADLINE_MS)).toBe(false)
+    expect(isPioneerWindowOpen(new Date('2027-06-01T12:00:00Z'))).toBe(false)
+  })
+
+  it('date limite fournie par le serveur (carte) : la même règle, illisible = fermée', () => {
+    const utc = new Date(PIONEER_DEADLINE_MS).toISOString()
+    expect(isPioneerWindowOpen(PIONEER_DEADLINE_MS - 1, PIONEER_DEADLINE)).toBe(true)
+    expect(isPioneerWindowOpen(PIONEER_DEADLINE_MS - 1, utc)).toBe(true)
+    expect(isPioneerWindowOpen(PIONEER_DEADLINE_MS, utc)).toBe(false)
+    expect(isPioneerWindowOpen(0, 'pas une date')).toBe(false)
+  })
+})
+
+describe('cadre Pionnier — attribution', () => {
+  const allDone = computeFirstSteps({
+    xp: 450,
+    prefs: { icon: 'autre-icone', specialEffect: 'emerald' },
+    isGuest: false,
+    hasFirstGame: true,
+    playedWithHumans: true,
+  })
+  const before = new Date('2027-03-31T23:59:59+02:00')
+  const after = new Date('2027-04-01T00:00:00+02:00')
+
+  it('toutes les étapes faites avant la date limite : gagné', () => {
+    expect(earnsPioneerFrame(allDone, before)).toBe(true)
+  })
+
+  it('toutes faites, mais à la date limite ou après : plus gagné', () => {
+    expect(earnsPioneerFrame(allDone, after)).toBe(false)
+    expect(earnsPioneerFrame(allDone, new Date('2028-01-01T00:00:00Z'))).toBe(false)
+  })
+
+  it('invité qui a tout fait sauf sauvegarder : pas encore ; une fois sauvegardé : gagné', () => {
+    const asGuest = fresh({
+      xp: 450,
+      prefs: { icon: 'autre-icone', specialEffect: 'emerald' },
+      hasFirstGame: true,
+      playedWithHumans: true,
+    })
+    const almost = computeFirstSteps(asGuest)
+    expect(almost.completed).toBe(almost.total - 1)
+    expect(earnsPioneerFrame(almost, before)).toBe(false)
+    // Même parcours, compte mis à l'abri : la sauvegarde était l'étape qui manquait.
+    expect(earnsPioneerFrame(computeFirstSteps({ ...asGuest, isGuest: false }), before)).toBe(true)
+  })
+
+  it('liste vide : jamais (garde-fou)', () => {
+    expect(earnsPioneerFrame({ completed: 0, total: 0 }, before)).toBe(false)
+  })
+
+  it('la réponse porte la clé du grant et la date limite', () => {
+    expect(pioneerReward(true)).toEqual({ key: PIONEER_FRAME_KEY, granted: true, deadline: PIONEER_DEADLINE })
+    expect(pioneerReward(false).granted).toBe(false)
+    expect(PIONEER_FRAME_KEY).toBe('frame:pionnier')
+  })
+})
+
+describe('cadre Pionnier — ce qu’en dit la carte (pioneerRewardState)', () => {
+  const base = { stepsLeft: true, windowOpen: true, equipped: false, justEquipped: false }
+
+  it('à gagner : promis tant que la liste est à finir et la date pas passée', () => {
+    expect(pioneerRewardState({ ...base, reward: { granted: false } })).toBe('promise')
+  })
+
+  it('date passée sans l’avoir : plus promis', () => {
+    expect(pioneerRewardState({ ...base, reward: { granted: false }, windowOpen: false })).toBeNull()
+  })
+
+  it('liste finie sans grant (après la date) : rien à dire', () => {
+    expect(pioneerRewardState({ ...base, reward: { granted: false }, stepsLeft: false })).toBeNull()
+  })
+
+  it('accordé, pas porté : « L’équiper », même après la date limite', () => {
+    expect(pioneerRewardState({ ...base, reward: { granted: true }, stepsLeft: false })).toBe('unlocked')
+    expect(
+      pioneerRewardState({ ...base, reward: { granted: true }, stepsLeft: false, windowOpen: false })
+    ).toBe('unlocked')
+  })
+
+  it('équipé pendant la visite : confirmé ; déjà porté en arrivant : silence', () => {
+    const worn = { ...base, reward: { granted: true }, stepsLeft: false, equipped: true }
+    expect(pioneerRewardState({ ...worn, justEquipped: true })).toBe('equipped')
+    expect(pioneerRewardState(worn)).toBeNull()
+  })
+
+  it('serveur d’avant la récompense : rien', () => {
+    expect(pioneerRewardState({ ...base, reward: undefined })).toBeNull()
+    expect(pioneerRewardState({ ...base, reward: null })).toBeNull()
   })
 })

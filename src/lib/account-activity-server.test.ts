@@ -777,7 +777,9 @@ describe('getAccountActivity', () => {
     })
     expect(activity?.results).toEqual([{ gameId: 'quiz', wins: 4, losses: 0 }])
     expect(activity?.history).toEqual([{ gameId: 'quiz', playCount: 6, lastPlayedAt: '2026-09-12T18:00:00.000Z' }])
-    expect(activity?.progression).toEqual({ onlineXp: 120, streakCount: 3, streakLastDay: '2026-09-12' })
+    // Ancienne série quotidienne (3 jours, du jeudi 10 au samedi 12/09) : une
+    // seule semaine ISO couverte — la fiche dit « 1 semaine », pas « 3 ».
+    expect(activity?.progression).toEqual({ onlineXp: 120, streakCount: 1, streakLastDay: '2026-W37' })
     expect(activity?.journalSince).toBe('2026-09-10')
   })
 

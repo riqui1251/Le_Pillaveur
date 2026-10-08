@@ -34,6 +34,7 @@ import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer'
 import { OnlineCollection } from '@/components/online/OnlineCollection'
 import { FirstStepsCard, revealElement } from '@/components/online/FirstStepsCard'
+import { FridayReminderSetting } from '@/components/ui/FridayReminderSetting'
 import { OnlinePlayerIcon, OnlinePlayerName, RankCrest } from '@/components/online/OnlinePlayerTag'
 import { Player, getPlayerNameValidationError } from '@/lib/players'
 import { nameValidationI18nKey } from '@/lib/name-moderation'
@@ -175,15 +176,18 @@ export function AccountInfo() {
     setCustomizingOnline(true)
   }
 
-  // Liens profonds (fin de partie, bannières) : ?focus=profil ouvre la
-  // Collection, ?focus=sauvegarde amène la carte de pérennisation,
-  // ?focus=premiers-pas la carte Premiers pas. Lu UNE fois au montage puis
+  // Liens profonds (fin de partie, bannières, e-mail du rappel) :
+  // ?focus=profil ouvre la Collection, ?focus=sauvegarde amène la carte de
+  // pérennisation, ?focus=premiers-pas la carte Premiers pas, ?focus=rappel
+  // l'interrupteur du rappel du vendredi. Lu UNE fois au montage puis
   // retiré de l'URL (sans navigation, comme replaceUrlParam en Supervision) :
   // un rechargement ou un retour arrière ne rouvrirait pas la Collection.
   // Les deux cartes ne sont dans la page qu'après le chargement des joueurs
   // (spinner avant) : la demande attend donc son tour.
   const [pendingUpgradeFocus, setPendingUpgradeFocus] = useState(false)
   const [focusFirstSteps, setFocusFirstSteps] = useState(false)
+  const [pendingReminderFocus, setPendingReminderFocus] = useState(false)
+  const reminderRef = useRef<HTMLElement>(null)
   useEffect(() => {
     const url = new URL(window.location.href)
     const focus = url.searchParams.get('focus')
@@ -193,7 +197,16 @@ export function AccountInfo() {
     if (focus === 'profil') openOnlineCollection()
     else if (focus === 'sauvegarde') setPendingUpgradeFocus(true)
     else if (focus === 'premiers-pas') setFocusFirstSteps(true)
+    else if (focus === 'rappel') setPendingReminderFocus(true)
   }, [])
+
+  // Même attente que la carte de pérennisation : l'interrupteur n'est dans la
+  // page qu'une fois les joueurs chargés.
+  useEffect(() => {
+    if (!pendingReminderFocus || loading) return
+    setPendingReminderFocus(false)
+    window.requestAnimationFrame(() => revealElement(reminderRef.current))
+  }, [pendingReminderFocus, loading])
 
   useEffect(() => {
     if (!pendingUpgradeFocus || loading) return
@@ -983,6 +996,15 @@ export function AccountInfo() {
           <FriendsManager />
         </div>
       </section>
+
+      {/* Rappel « On remet ça ? » du vendredi : un compte avec adresse
+          seulement (un invité n'a nulle part où le recevoir). Cible du lien
+          ?focus=rappel (carte de fin de partie, e-mail du rappel). */}
+      {user?.email && !user.isGuest && (
+        <section ref={reminderRef} tabIndex={-1} className="scroll-mt-20 outline-none">
+          <FridayReminderSetting />
+        </section>
+      )}
 
       {/* Lignes de navigation : mêmes gabarits que les accordéons — la
           flèche › dit « ça ouvre un autre écran ». */}

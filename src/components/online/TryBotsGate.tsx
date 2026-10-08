@@ -2,13 +2,15 @@
 
 import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { Bot, LogIn, Play } from 'lucide-react'
+import { Bot, LogIn, Play, Sparkles, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { requestAgeVerification } from '@/components/legal/AgeGate'
-import { GAMES, hasContentIn } from '@/lib/games'
+import { GAMES, hasContentIn, soloAlternativeFor } from '@/lib/games'
+import { useLocalizedGames } from '@/lib/games-i18n'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
@@ -35,6 +37,14 @@ function isExistingAccountResponse(data: unknown): boolean {
  * invité) ; sinon seul le bouton connexion s'affiche.
  * Navigation DOCUMENT en sortie (routeur vierge + session fraîche visible
  * du middleware — même raison que le fix d'onboarding d'AuthForm).
+ *
+ * Jeu fait pour les potes (soloFit 'group' : Dilemmes, Crobard, l'Espion…) :
+ * un encart le dit AU-DESSUS du bouton d'essai, qui reste disponible. En
+ * prod, ces jeux sont quittés en 1 à 2 min seul contre des bots, et une 1re
+ * partie solo n'est rejouée que 4 fois sur 21 (25 sur 36 à plusieurs). Deux
+ * sorties : « Inviter des potes » — le même chemin, table privée SANS bots,
+ * dont le salon porte déjà le bouton de partage du lien — ou « Essayer
+ * plutôt » un jeu qui tient seul (soloAlternativeFor).
  */
 export function TryBotsGate({
   gameId,
@@ -50,7 +60,14 @@ export function TryBotsGate({
   const { user } = useAuth()
 
   const game = GAMES.find((g) => g.id === gameId)
+  // Titres du catalogue dans la langue (et l'ambiance) de la page : le jeu
+  // proposé à la place s'annonce sous le nom que porte sa carte au hub.
+  const localizedGames = useLocalizedGames()
+  const { mode: ambiance } = useAmbianceMode()
   const [open, setOpen] = useState(false)
+  // 'friends' : « Inviter des potes » — même formulaire, table ouverte sans
+  // bots (on vient la remplir de vrais joueurs, pas de figurants).
+  const [mode, setMode] = useState<'bots' | 'friends'>('bots')
   const [pseudo, setPseudo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -69,6 +86,11 @@ export function TryBotsGate({
 
   if (!game) return null
   const canBots = Boolean(game.botsFillable && game.onlineReady && !game.hidden && hasContentIn(game, locale))
+  const groupFit = canBots && game.soloFit === 'group'
+  const alternative = groupFit ? soloAlternativeFor(gameId, { locale, soft: ambiance === 'soft' }) : null
+  const alternativeTitle = alternative
+    ? (localizedGames.find((g) => g.id === alternative.id)?.title ?? alternative.title)
+    : null
   const loginHref = `/compte?redirect=${encodeURIComponent(`/games/${gameId}`)}`
 
   // Déjà une session (compte ou invité) : direction le jeu, tout simplement.
@@ -158,7 +180,8 @@ export function TryBotsGate({
       }
       // 3. Les bots qui manquent pour pouvoir lancer seul (best-effort :
       //    le callout du lobby permet de compléter en un clic au besoin).
-      const missing = Math.max(0, (game.minPlayers ?? 2) - 1)
+      //    Aucun pour « Inviter des potes » : la table attend les vrais.
+      const missing = mode === 'friends' ? 0 : Math.max(0, (game.minPlayers ?? 2) - 1)
       if (missing > 0) {
         await fetch(`/api/online/rooms/${roomData.room.id}/settings`, {
           method: 'PUT',
@@ -177,7 +200,7 @@ export function TryBotsGate({
     }
   }
 
-  const openForm = async () => {
+  const openForm = async (nextMode: 'bots' | 'friends' = 'bots') => {
     // Âge pas encore certifié (visiteur SEO arrivé sur /regles, où la porte
     // 18+ ne s'affiche pas d'elle-même) : la route refuserait le compte
     // (403 age_gate_required). La porte s'ouvre donc SUR PLACE, puis le
@@ -185,6 +208,7 @@ export function TryBotsGate({
     // n'offrent pas toutes « Essayer avec des bots »). Renoncer laisse la page
     // en l'état.
     if (!(await requestAgeVerification())) return
+    setMode(nextMode)
     setOpen(true)
   }
 
@@ -202,6 +226,39 @@ export function TryBotsGate({
   if (!open) {
     return (
       <div className="space-y-2.5">
+        {groupFit && (
+          <div className="rounded-2xl border border-gold/25 bg-gold/[0.06] p-3 text-left">
+            <p className="flex items-start gap-2 text-sm leading-snug text-cream/80">
+              <Users className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />
+              <span>{t('groupFit.text')}</span>
+            </p>
+            <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { void openForm('friends') }}
+                className="h-auto min-h-[2.75rem] whitespace-normal border-gold/40 bg-transparent px-3 py-2 text-sm font-semibold text-cream hover:bg-gold/10 hover:text-cream"
+              >
+                <Users className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+                {t('groupFit.inviteCta')}
+              </Button>
+              {/* Sans préchargement, comme les cartes du hub : une page de
+                  jeu se précharge ENTIÈRE, pour un lien rarement suivi. */}
+              {alternative && alternativeTitle && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-auto min-h-[2.75rem] whitespace-normal border-gold/40 bg-transparent px-3 py-2 text-sm font-semibold text-cream hover:bg-gold/10 hover:text-cream"
+                >
+                  <Link href={alternative.path} prefetch={false}>
+                    <Sparkles className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+                    {t('groupFit.tryInstead', { game: alternativeTitle })}
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         <Button
           onClick={() => { void openForm() }}
           className={accentClassName ?? 'w-full rounded-2xl bg-amber-500 py-5 text-base font-bold text-black hover:bg-amber-400'}
@@ -235,16 +292,34 @@ export function TryBotsGate({
         autoFocus
         className="border-white/10 bg-white/[0.05] text-center text-white"
       />
-      {error && <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">{error}</p>}
+      {error && <p className="rounded-lg bg-red-500/[0.15] px-3 py-2 text-sm text-red-300">{error}</p>}
       <Button
         type="submit"
         disabled={loading || pseudo.trim().length === 0}
         className={accentClassName ?? 'w-full rounded-2xl bg-amber-500 py-5 text-base font-bold text-black hover:bg-amber-400'}
       >
-        <Bot className="mr-2 h-4 w-4" />
-        {loading ? tCommon('loading') : t('go')}
+        {mode === 'friends' ? <Users className="mr-2 h-4 w-4" aria-hidden /> : <Bot className="mr-2 h-4 w-4" />}
+        {loading ? tCommon('loading') : mode === 'friends' ? t('groupFit.openTable') : t('go')}
       </Button>
+      {mode === 'friends' && (
+        <p className="text-center text-xs leading-snug text-cream/70">{t('groupFit.shareHint')}</p>
+      )}
       <p className="text-center text-[11px] leading-snug text-white/40">{t('guestHintDevice')}</p>
+      {/* Retour aux choix (bots, potes, autre jeu, connexion) : un toucher
+          hésitant sur « Inviter des potes » ne doit pas enfermer le visiteur
+          dans un seul chemin — le retour du navigateur quitterait la page. */}
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(false)
+          setMode('bots')
+          setError(null)
+        }}
+        disabled={loading}
+        className="min-h-[44px] w-full text-center text-xs text-white/40 underline underline-offset-2 transition-colors hover:text-white/70 disabled:opacity-50"
+      >
+        {tCommon('cancel')}
+      </button>
     </form>
   )
 }

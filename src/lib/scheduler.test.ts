@@ -11,6 +11,7 @@ const {
   cleanupStaleCastRoomsMock,
   closeOrphanGameSessionsMock,
   purgeOldClientErrorsMock,
+  runFridayRemindersMock,
 } = vi.hoisted(() => ({
   scheduleMock: vi.fn(),
   runRetentionSweepMock: vi.fn(),
@@ -18,6 +19,7 @@ const {
   cleanupStaleCastRoomsMock: vi.fn(),
   closeOrphanGameSessionsMock: vi.fn(),
   purgeOldClientErrorsMock: vi.fn(),
+  runFridayRemindersMock: vi.fn(),
 }))
 
 vi.mock('node-cron', async (importOriginal) => {
@@ -38,9 +40,12 @@ vi.mock('@/lib/client-errors-server', () => ({
   purgeOldClientErrors: purgeOldClientErrorsMock,
   CLIENT_ERROR_RETENTION_DAYS: 30,
 }))
+// Rappel du vendredi : le tour lui-même est testé dans reminder-server.test.ts.
+vi.mock('@/lib/reminder-server', () => ({ runFridayReminders: runFridayRemindersMock }))
 
 import { validate } from 'node-cron'
 import {
+  JOB_SKIPPED,
   SCHEDULER_GUARD,
   SCHEDULER_LAST_RUNS,
   runExclusive,
@@ -84,6 +89,9 @@ beforeEach(() => {
   cleanupStaleCastRoomsMock.mockReset().mockResolvedValue(undefined)
   closeOrphanGameSessionsMock.mockReset().mockResolvedValue(0)
   purgeOldClientErrorsMock.mockReset().mockResolvedValue(0)
+  runFridayRemindersMock
+    .mockReset()
+    .mockResolvedValue({ status: 'done', sent: 0, failed: 0, capped: false, aborted: false })
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -100,6 +108,7 @@ describe('les tâches annoncées', () => {
     expect(scheduledJobs()).toEqual([
       { name: 'retention', cron: '30 4 * * *', tz: 'Europe/Paris' },
       { name: 'tables', cron: '*/5 * * * *', tz: 'Europe/Paris' },
+      { name: 'reminder-friday', cron: '0 17 * * 5', tz: 'Europe/Paris' },
     ])
   })
 
@@ -113,7 +122,7 @@ describe('les tâches annoncées', () => {
     const jobs = scheduledJobs()
     jobs.pop()
     jobs[0].cron = '* * * * *'
-    expect(scheduledJobs()).toHaveLength(2)
+    expect(scheduledJobs()).toHaveLength(3)
     expect(scheduledJobs()[0].cron).toBe('30 4 * * *')
   })
 })
@@ -208,6 +217,24 @@ describe('exécution des tâches', () => {
     expect(purgeOldClientErrorsMock).toHaveBeenCalledTimes(1)
   })
 
+  it('« reminder-friday » lance le tour du rappel', async () => {
+    await expect(runScheduledJob('reminder-friday')).resolves.toBe('done')
+    expect(runFridayRemindersMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('« reminder-friday » sans clé d’envoi : tour annoncé « sauté », pas « terminé »', async () => {
+    runFridayRemindersMock.mockResolvedValue({ status: 'skipped', reason: 'email_not_configured' })
+    await expect(runScheduledJob('reminder-friday')).resolves.toBe('skipped')
+    expect(
+      schedulerJobViews().find((job) => job.name === 'reminder-friday')?.lastRun
+    ).toMatchObject({ outcome: 'skipped' })
+  })
+
+  it('une tâche qui rend JOB_SKIPPED est « sautée » ; tout autre retour vaut « terminé »', async () => {
+    await expect(runExclusive('vide', async () => JOB_SKIPPED)).resolves.toBe('skipped')
+    await expect(runExclusive('pleine', async () => 'skipped')).resolves.toBe('done')
+  })
+
   it('ne lève pas sur un nom inconnu', async () => {
     await expect(runScheduledJob('inconnue')).resolves.toBe('unknown')
   })
@@ -300,7 +327,7 @@ describe('dernier tour de chaque tâche (onglet « Surveillance »)', () => {
 
   it('n’affiche pas un nom hors de la liste passé à runExclusive', async () => {
     await runExclusive('bricolage', async () => {})
-    expect(schedulerJobViews().map((job) => job.name)).toEqual(['retention', 'tables'])
+    expect(schedulerJobViews().map((job) => job.name)).toEqual(['retention', 'tables', 'reminder-friday'])
   })
 })
 
@@ -335,9 +362,10 @@ describe('startScheduledJobs', () => {
     serverEnv()
     startScheduledJobs()
 
-    expect(scheduleMock).toHaveBeenCalledTimes(2)
+    expect(scheduleMock).toHaveBeenCalledTimes(3)
     expect(scheduledWith('30 4 * * *')).toMatchObject({ timezone: 'Europe/Paris', name: 'retention' })
     expect(scheduledWith('*/5 * * * *')).toMatchObject({ timezone: 'Europe/Paris', name: 'tables' })
+    expect(scheduledWith('0 17 * * 5')).toMatchObject({ timezone: 'Europe/Paris', name: 'reminder-friday' })
   })
 
   it('est idempotente : trois appels ne posent qu’une série de tâches', () => {
@@ -345,7 +373,7 @@ describe('startScheduledJobs', () => {
     startScheduledJobs()
     startScheduledJobs()
     startScheduledJobs()
-    expect(scheduleMock).toHaveBeenCalledTimes(2)
+    expect(scheduleMock).toHaveBeenCalledTimes(3)
   })
 
   it('ne pose rien pendant la construction ni sous test', () => {

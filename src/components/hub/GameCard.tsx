@@ -3,7 +3,7 @@
 import { Link, useRouter } from "@/i18n/navigation"
 import { useLinkStatus } from "next/link"
 import { useLocale, useTranslations } from "next-intl"
-import { Loader2 } from "lucide-react"
+import { Loader2, Users } from "lucide-react"
 import { LocalizedGameMeta } from "@/lib/games-i18n"
 import { hasContentIn } from "@/lib/games"
 import { PlayingCard, suitIsRed } from "@/components/ui/PlayingCard"
@@ -15,6 +15,12 @@ import { useAuth } from "@/hooks/useAuth"
 interface GameCardProps {
   game: LocalizedGameMeta
   icon: ReactNode
+  /**
+   * Badge « Mieux à plusieurs » (hub en mode solo, jeu soloFit 'group') :
+   * le jeu reste proposé, mais le visiteur seul sait AVANT le clic que les
+   * bots n'y font que de la figuration.
+   */
+  groupHint?: boolean
 }
 
 /** Badge « nombre de joueurs » : 3-12, ou 2+ quand il n'y a pas de vrai plafond. */
@@ -61,7 +67,7 @@ function OpeningVeil({ forced, label }: { forced: boolean; label: string }) {
  * Playfair centré et accroche sur deux lignes — 22 noms de code sans un mot
  * d'explication ne se choisissent pas au doigt.
  */
-export function GameCard({ game, icon }: GameCardProps) {
+export function GameCard({ game, icon, groupHint = false }: GameCardProps) {
   const t = useTranslations("hub.jeux")
   const locale = useLocale()
   const router = useRouter()
@@ -168,9 +174,29 @@ export function GameCard({ game, icon }: GameCardProps) {
           <p className="mt-0.5 line-clamp-2 text-[9px] leading-[1.25] text-[#6B6455] sm:text-[10px]">
             {game.description}
           </p>
-          {players && (
-            <span className="mt-auto pt-0.5 text-[9px] font-bold text-[#6B6455]" aria-label={`${players} joueurs`}>
-              {players} j.
+          {(groupHint || players) && (
+            // Pied de carte commun : un seul `mt-auto`, sinon deux marges
+            // automatiques se partageraient l'espace libre et décolleraient
+            // le badge du nombre de joueurs.
+            <span className="mt-auto flex flex-col items-center gap-0.5 pt-0.5">
+              {groupHint && (
+                // Largeur bornée à la colonne MOINS l'index du coin bas-droit
+                // (rang + enseigne retournés de PlayingCard, ~7 px à 6 px du
+                // bord) : centré, le badge garde 10 px libres de chaque côté.
+                // À 375 px (~97 px utiles), le libellé passe sur deux lignes
+                // au lieu de recouvrir l'index. Fond crème : rien ne se mêle
+                // à sa bordure. 11 px comme les badges « Bêta »/« FR » : le
+                // plancher lisible au téléphone (règle ESLint du dépôt).
+                <span className="inline-flex max-w-[calc(100%-1.25rem)] items-center gap-0.5 rounded-sm border border-[#24201A]/20 bg-cream px-1 py-px text-[11px] font-semibold leading-[13px] text-[#6B6455]">
+                  <Users className="h-3 w-3 shrink-0" aria-hidden />
+                  <span className="min-w-0 text-center">{t("soloFit.groupBadge")}</span>
+                </span>
+              )}
+              {players && (
+                <span className="text-[9px] font-bold text-[#6B6455]" aria-label={`${players} joueurs`}>
+                  {players} j.
+                </span>
+              )}
             </span>
           )}
         </article>

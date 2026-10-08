@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils'
 import { isCapacitorApp } from '@/lib/native-app'
 import { copyText, shareLink } from '@/lib/native-share'
 import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
+import { lgDebateMinutes } from '@/lib/loup-garou/debate'
 import { forceLaunchDecision, MC_TEAM_MIN_PLAYERS } from '@/components/online/lobby-launch'
 
 const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
@@ -2176,7 +2177,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </p>
           <div className="grid grid-cols-5 gap-2">
             {[1, 2, 3, 4, 5].map((value) => {
-              const active = (room.settings.lgDebateMin ?? 3) === value
+              // La durée qui sera RÉELLEMENT jouée : sans choix de l'hôte,
+              // 1 min quand il est seul face aux bots (lgDebateMinutes, la
+              // même règle que le lanceur) — surligner « 3 » mentirait.
+              const active = lgDebateMinutes(room.settings.lgDebateMin, room.members.length) === value
               return (
                 <button
                   key={value}

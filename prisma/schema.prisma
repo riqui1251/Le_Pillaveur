@@ -44,11 +44,22 @@ model User {
   // AccountVisit.
   totalPresenceSeconds Int   @default(0)
   onlineXp         Int       @default(0)
-  // Série quotidienne : nombre de jours consécutifs avec au moins une partie
-  // comptée, et dernier jour crédité (date Paris 'YYYY-MM-DD') — mis à jour
-  // au trafic dans recordMatchResults, aucun cron.
+  // Série HEBDOMADAIRE (depuis le 08/10/2026, ex-série quotidienne : aucun
+  // joueur n'enchaînait deux jours, le rythme réel est la soirée du vendredi
+  // ou du dimanche) : nombre de semaines consécutives avec au moins une partie
+  // comptée, et dernière semaine créditée. La colonne garde son nom historique
+  // `streakLastDay` mais porte désormais la clé de semaine Paris 'YYYY-Www'
+  // (ISO, lundi) ; une ancienne valeur 'YYYY-MM-DD' se lit comme la semaine
+  // qui contient ce jour. Mise à jour au trafic dans recordMatchResults, aucun
+  // cron.
   streakCount      Int       @default(0)
   streakLastDay    String?
+  // Rappel « On remet ça ? » du vendredi (e-mail, opt-in explicite) : date de
+  // l'accord (null = pas de rappel), dernier envoi (au plus un par semaine) et
+  // jeton aléatoire du lien de désinscription en un clic (sans connexion).
+  reminderOptInAt    DateTime?
+  reminderLastSentAt DateTime?
+  reminderToken      String?   @unique
   // Avis de 1re partie (POST /api/feedback/first-game) : date à laquelle la
   // carte a été présentée PUIS notée ou refusée — posée une fois, jamais
   // remise à null. Seul but : ne pas redemander. Minimisation : une date, ni
@@ -371,6 +382,24 @@ model IpSeenLog {
   @@unique([subjectKey, ip])
   @@index([subjectKey])
   @@index([ip])
+}
+
+// PARTIES LOCALES (même téléphone) : compteurs AGRÉGÉS par jour et par jeu.
+// Ces parties ne laissaient aucune trace en base (61 % des comptes n'ont
+// jamais joué en ligne : on ne savait rien de ce qu'ils faisaient). Aucune
+// donnée personnelle : ni compte, ni visiteur, ni IP, ni pseudo — deux
+// compteurs incrémentés par POST /api/analytics/local-game. Purge 13 mois
+// (retention-sweep), comme DailyVisitor.
+model LocalGameDaily {
+  /// Jour Paris 'YYYY-MM-DD'.
+  day       String
+  /// Id du jeu (src/lib/games.ts).
+  gameId    String
+  /// Parties lancées / arrivées à leur écran de fin.
+  starts    Int    @default(0)
+  ends      Int    @default(0)
+
+  @@id([day, gameId])
 }
 
 model DailyVisitor {

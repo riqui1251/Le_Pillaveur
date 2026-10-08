@@ -7,6 +7,8 @@ import { getExcludedUserIds } from '@/lib/metrics-exclusions'
 import { parisDayOffset, parisDayStartUtc, parisDayString, parisDaysBack } from '@/lib/paris-time'
 import { cleanupAbandonedRooms } from '@/lib/online-room'
 import { GAME_JOURNAL_SINCE } from '@/lib/online/game-sessions'
+import { LOCAL_GAMES_WITHOUT_END_SCREEN } from '@/lib/local-game-beacon'
+import { errorTrace } from '@/lib/error-trace'
 import {
   RETENTION_LAST_RUN_KEY,
   parseRetentionLastRun,
@@ -71,6 +73,10 @@ const GROWTH_CACHE_MS = 5 * 60 * 1000
 /** Fenêtres des indicateurs de jeu en ligne, en jours de Paris (aujourd'hui inclus). */
 const ONLINE_PLAY_WINDOW_DAYS = { d1: 1, d7: 7, d30: 30 }
 const ONLINE_LAUNCH_SERIES_DAYS = 14
+
+/** Fenêtres des parties locales, en jours de Paris (aujourd'hui inclus). */
+const LOCAL_PLAY_WINDOW_DAYS = { d7: 7, d30: 30 }
+const LOCAL_PLAY_SERIES_DAYS = 14
 
 const HOUR_MS = 60 * 60 * 1000
 
@@ -189,6 +195,47 @@ export type OnlinePlayStats = {
   deletedSeats30: number
 }
 
+/** Parties locales d'un jeu sur une fenêtre. */
+export type LocalGameTotals = {
+  gameId: string
+  gameTitle: string
+  /** Pages du jeu ouvertes en mode local avec une table de joueurs. */
+  starts: number
+  /** Parties arrivées à leur écran de fin, revanches comprises. */
+  ends: number
+  /** Jeu sans écran de fin (1220, Purple, Roue des gorgées) : jamais de « terminée ». */
+  noEndScreen: boolean
+}
+
+/**
+ * Parties LOCALES (un téléphone pour toute la table), tirées des compteurs
+ * anonymes LocalGameDaily (local-games-server.ts) : ni compte ni appareil,
+ * donc ni joueurs uniques ni exclusion de l'équipe possibles — des volumes
+ * bruts, que l'écran doit présenter comme tels.
+ *
+ * `ends` ne compte que la première fin après chaque lancement (les revanches
+ * sur la même page n'ajoutent rien, local-game-beacon.ts) : fins ≤
+ * lancements, et leur rapport est la part des ouvertures menées jusqu'à un
+ * écran de fin.
+ */
+export type LocalPlayStats = {
+  /**
+   * Premier jour de Paris mesuré (AAAA-MM-JJ), null tant que rien n'a été
+   * compté : les jours d'avant n'ont pas de données, un 0 y mentirait.
+   */
+  since: string | null
+  /** Lancées / terminées par jour de Paris sur 14 jours, du plus ancien au plus récent. */
+  byDay: Array<{ day: string; starts: number; ends: number }>
+  /**
+   * Par jeu, sur les 7 et 30 derniers jours de Paris (aujourd'hui inclus).
+   * Jeux sans aucun événement absents ; tri par lancements décroissants, puis
+   * fins, puis titre.
+   */
+  byGame: { d7: LocalGameTotals[]; d30: LocalGameTotals[] }
+  /** Totaux des mêmes fenêtres. */
+  totals: { d7: { starts: number; ends: number }; d30: { starts: number; ends: number } }
+}
+
 export type GrowthStats = {
   /**
    * PART des comptes enregistrés parmi les comptes CRÉÉS sur la fenêtre.
@@ -207,6 +254,11 @@ export type GrowthStats = {
   abandonedTables: { stalled: number; live: number; rate: number | null }
   /** Joueurs uniques et parties lancées en ligne, depuis le journal (lot 4). */
   onlinePlay: OnlinePlayStats
+  /**
+   * Parties locales lancées et terminées, compteurs anonymes. Null quand la
+   * lecture a échoué : le reste de la croissance est servi quand même.
+   */
+  localPlay: LocalPlayStats | null
   /** Fenêtres employées, pour afficher la définition exacte à l'écran. */
   windows: {
     registeredShareDays: number
@@ -611,12 +663,112 @@ async function getOnlinePlayStats(now: Date): Promise<OnlinePlayStats> {
   )
 }
 
+/** Ligne de LocalGameDaily telle que la lit `getLocalPlayStats`. */
+export type LocalGameDailyRow = { day: string; gameId: string; starts: number; ends: number }
+
+/** Entier positif, sinon 0 : une ligne abîmée ne fausse pas un total. */
+function positiveCount(value: number): number {
+  return Number.isInteger(value) && value > 0 ? value : 0
+}
+
+/**
+ * Agrégation PURE des parties locales (voir `LocalPlayStats`). Jours de Paris
+ * comparés comme des chaînes AAAA-MM-JJ : rien au-delà d'aujourd'hui, et
+ * chaque fenêtre refait sa borne basse — la requête borne déjà, on ne se fie
+ * pas à l'appelant. `since` = premier jour jamais compté (toute la table, pas
+ * seulement la fenêtre lue).
+ */
+export function summarizeLocalPlay(rows: LocalGameDailyRow[], now: Date, since: string | null): LocalPlayStats {
+  const today = parisDayString(now)
+  const windowStart = {
+    d7: parisDayOffset(LOCAL_PLAY_WINDOW_DAYS.d7 - 1, now),
+    d30: parisDayOffset(LOCAL_PLAY_WINDOW_DAYS.d30 - 1, now),
+  }
+  const byDay = new Map(
+    parisDaysBack(LOCAL_PLAY_SERIES_DAYS, now).map((day) => [day, { day, starts: 0, ends: 0 }])
+  )
+  const byGame = { d7: new Map<string, LocalGameTotals>(), d30: new Map<string, LocalGameTotals>() }
+  const totals = { d7: { starts: 0, ends: 0 }, d30: { starts: 0, ends: 0 } }
+
+  for (const row of rows) {
+    if (row.day > today) continue
+    const starts = positiveCount(row.starts)
+    const ends = positiveCount(row.ends)
+    if (starts === 0 && ends === 0) continue
+    const point = byDay.get(row.day)
+    if (point) {
+      point.starts += starts
+      point.ends += ends
+    }
+    for (const key of ['d7', 'd30'] as const) {
+      if (row.day < windowStart[key]) continue
+      const game = byGame[key].get(row.gameId) ?? {
+        gameId: row.gameId,
+        gameTitle: gameTitleFor(row.gameId),
+        starts: 0,
+        ends: 0,
+        noEndScreen: LOCAL_GAMES_WITHOUT_END_SCREEN.includes(row.gameId),
+      }
+      game.starts += starts
+      game.ends += ends
+      byGame[key].set(row.gameId, game)
+      totals[key].starts += starts
+      totals[key].ends += ends
+    }
+  }
+
+  const sorted = (games: Map<string, LocalGameTotals>) =>
+    [...games.values()].sort(
+      (a, b) =>
+        b.starts - a.starts ||
+        b.ends - a.ends ||
+        a.gameTitle.localeCompare(b.gameTitle, 'fr') ||
+        a.gameId.localeCompare(b.gameId)
+    )
+
+  return {
+    since: since && since <= today ? since : null,
+    byDay: [...byDay.values()],
+    byGame: { d7: sorted(byGame.d7), d30: sorted(byGame.d30) },
+    totals,
+  }
+}
+
+/**
+ * Lecture des compteurs pour `summarizeLocalPlay` : les 30 derniers jours de
+ * Paris (au plus 30 lignes par jeu local, quelques centaines), plus le plus
+ * ancien jour de la table. Appelée uniquement sous le cache de
+ * `getGrowthStats`.
+ *
+ * Null sur panne, journalisée : ce bloc est venu s'ajouter à une route qui
+ * porte déjà les joueurs du jeu en ligne et la croissance — une table
+ * absente (base pas encore migrée) ou verrouillée ne doit pas emporter tout
+ * l'onglet avec elle.
+ */
+async function getLocalPlayStats(now: Date): Promise<LocalPlayStats | null> {
+  try {
+    const [rows, oldest] = await Promise.all([
+      prisma.localGameDaily.findMany({
+        where: { day: { gte: parisDayOffset(LOCAL_PLAY_WINDOW_DAYS.d30 - 1, now) } },
+        select: { day: true, gameId: true, starts: true, ends: true },
+      }),
+      prisma.localGameDaily.aggregate({ _min: { day: true } }),
+    ])
+    return summarizeLocalPlay(rows, now, oldest._min.day ?? null)
+  } catch (error) {
+    console.error('growth stats: parties locales illisibles:', errorTrace(error))
+    return null
+  }
+}
+
 /**
  * Indicateurs de croissance (F45). Tout est dérivé de l'existant — dates de
  * création des comptes, historique des lancements de parties, journal des
  * parties, salles en cours — sans le moindre changement de schéma, et chaque
  * requête est bornée par une fenêtre de dates, un LIMIT, ou ne renvoie que
- * des comptages (aucune ligne chargée).
+ * des comptages (aucune ligne chargée). Seule exception : les parties
+ * LOCALES, invisibles de tout le reste, ont leurs propres compteurs anonymes
+ * (LocalGameDaily), lus sur 30 jours de Paris.
  *
  * Coûteux et lent à bouger : passer par `getGrowthStats()`, jamais appeler
  * directement depuis une boucle de rafraîchissement.
@@ -633,7 +785,7 @@ async function computeGrowthStats(): Promise<GrowthStats> {
   const shareSince = new Date(parisDayStartMs(REGISTERED_SHARE_WINDOW_DAYS - 1))
   const playersSince = new Date(parisDayStartMs(PLAYERS_BY_GAME_WINDOW_DAYS - 1))
 
-  const [registered, guests, gameRows, abandonedRows, onlinePlay] = await Promise.all([
+  const [registered, guests, gameRows, abandonedRows, onlinePlay, localPlay] = await Promise.all([
     prisma.user.count({
       where: { createdAt: { gte: shareSince }, email: { not: null }, isGuest: false },
     }),
@@ -683,6 +835,7 @@ async function computeGrowthStats(): Promise<GrowthStats> {
       now - STALLED_MS.playing
     ),
     getOnlinePlayStats(new Date(now)),
+    getLocalPlayStats(new Date(now)),
   ])
 
   const ratio = (part: number, whole: number) => (whole > 0 ? part / whole : null)
@@ -711,6 +864,7 @@ async function computeGrowthStats(): Promise<GrowthStats> {
       rate: ratio(stalledRooms, liveRooms),
     },
     onlinePlay,
+    localPlay,
     windows: {
       registeredShareDays: REGISTERED_SHARE_WINDOW_DAYS,
       playersByGameDays: PLAYERS_BY_GAME_WINDOW_DAYS,

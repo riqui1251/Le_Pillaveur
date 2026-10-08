@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { GAMES, getGameById, type GameMeta } from '@/lib/games'
+import { measuredLocalGameIdFromPath, reportLocalGame } from '@/lib/local-game-beacon'
 import { getSafeStorage } from '@/lib/storage'
 
 // ─── Derniers jeux LOCAUX ────────────────────────────────────────────────────
@@ -103,11 +104,32 @@ export function recordRecentLocalGame(gameId: string): void {
  * faite). Le contexte vient de l'appelant, qui a déjà session et table sous
  * la main : ce module reste léger pour le morceau commun à toutes les pages
  * de jeu, et testable sans fournisseur.
+ *
+ * Même point pour le 'start' de la mesure anonyme des parties locales
+ * (local-game-beacon.ts) : c'est le seul endroit commun aux 13 jeux locaux où
+ * l'on sait à la fois QUEL jeu s'ouvre et qu'il se joue EN LOCAL avec une
+ * table. « Lancée » veut donc dire « page du jeu ouverte avec une table » —
+ * un groupe qui repart de l'écran de réglages compte comme un abandon, ce
+ * qu'on veut voir ; une revanche sur la même page n'est pas un relancement.
+ * Les jeux masqués sont mesurés (pas la rangée) : leurs écrans de fin le sont.
+ *
+ * Un lancement par page OUVERTE : le verrou en ref retient le chemin déjà
+ * compté, si bien que ni le double effet du mode strict ni une table qui
+ * clignote (`localTable` vrai → faux → vrai pendant une resynchronisation des
+ * joueurs) ne recomptent la même ouverture. Passer d'un jeu à l'autre, ou
+ * revenir après être sorti des pages de jeu (layout remonté), en est une
+ * nouvelle.
  */
 export function useRecordRecentLocalGame(pathname: string | null | undefined, localTable: boolean): void {
+  const reportedPathRef = useRef<string | null>(null)
   useEffect(() => {
     if (!localTable) return
     const gameId = localGameIdFromPath(pathname)
     if (gameId) recordRecentLocalGame(gameId)
+    const measuredId = measuredLocalGameIdFromPath(pathname)
+    if (measuredId && reportedPathRef.current !== pathname) {
+      reportedPathRef.current = pathname ?? null
+      reportLocalGame(measuredId, 'start')
+    }
   }, [pathname, localTable])
 }

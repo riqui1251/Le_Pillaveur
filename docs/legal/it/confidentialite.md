@@ -1,6 +1,6 @@
 # Informativa sulla privacy
 
-**Ultimo aggiornamento:** 7 ottobre 2026
+**Ultimo aggiornamento:** 8 ottobre 2026
 
 ## 1. Introduzione
 
@@ -23,7 +23,7 @@ Alla creazione di un account raccogliamo:
 - password (memorizzata come **impronta crittografica** — mai in chiaro);
 - nickname (nome visualizzato).
 
-Se crei il tuo account o accedi **con Google** (pulsante «Continua con Google» o, nell'app mobile, finestra di accesso di Google), o se colleghi un account ospite a Google, nessuna password viene registrata. Una volta accettato l'accesso nella finestra di Google, Google ci trasmette il tuo indirizzo email, l'identificativo del tuo account Google e, secondo le impostazioni di quell'account, il tuo nome (nome e cognome) e la tua foto del profilo; il nostro server fa verificare queste informazioni da Google. Conserviamo solo l'indirizzo email, che identifica il tuo account. Alla creazione dell'account, il tuo nome proprio (o, in mancanza, il nome completo o, se manca anche questo, la parte del tuo indirizzo email che precede la @) serve a proporre il tuo nickname iniziale, visibile agli altri giocatori e modificabile dalla pagina Account; l'identificativo dell'account Google e la foto non vengono conservati, e il nome è conservato solo attraverso quel nickname iniziale. Google tratta per conto proprio i tuoi dati di accesso (vedi 6).
+Se crei il tuo account o accedi **con Google** (pulsante «Continua con Google» o, nell'app mobile, finestra di accesso di Google), o se colleghi un account ospite a Google, nessuna password viene registrata. Una volta accettato l'accesso nella finestra di Google, Google ci trasmette il tuo indirizzo email, l'identificativo del tuo account Google e, secondo le impostazioni di quell'account, il tuo nome (nome e cognome) e la tua foto del profilo; il nostro server fa verificare queste informazioni da Google. Conserviamo solo l'indirizzo email, che identifica il tuo account, e la data in cui è stato verificato: Google trasmette solo indirizzi verificati, il che ti evita l'email di conferma se chiedi il promemoria del venerdì (vedi 3.8). Alla creazione dell'account, il tuo nome proprio (o, in mancanza, il nome completo o, se manca anche questo, la parte del tuo indirizzo email che precede la @) serve a proporre il tuo nickname iniziale, visibile agli altri giocatori e modificabile dalla pagina Account; l'identificativo dell'account Google e la foto non vengono conservati, e il nome è conservato solo attraverso quel nickname iniziale. Google tratta per conto proprio i tuoi dati di accesso (vedi 6).
 
 ### 3.2 Dati di gioco
 
@@ -33,7 +33,7 @@ Se utilizzi un account, possiamo memorizzare:
 - contatori di «sorsi» (unità ludiche astratte, senza legame con un consumo reale);
 - obiettivi sbloccati;
 - progressione online (esperienza, livello, cosmetici) e risultati delle partite online (classifiche);
-- lista amici (richieste inviate e accettate);
+- lista amici (richieste inviate e accettate); alla fine di una partita online, il pulsante «Aggiungi tutto il tavolo agli amici» invia con un solo gesto una richiesta di amicizia a ciascuno degli altri giocatori del tavolo (bot esclusi), con le stesse regole di una richiesta inviata singolarmente (giocatori bloccati e account bannati esclusi), senza registrare altri dati;
 - stato «online» visibile ai tuoi amici: indica soltanto se il tuo account è stato attivo sul sito negli ultimi 3 minuti (data di ultima attività dell'account), che tu abbia accettato o meno le statistiche di visita; né l'ora esatta né la tua cronologia vengono comunicate loro;
 - lista di giocatori sincronizzata (nickname locali che crei).
 
@@ -61,11 +61,13 @@ Se rifiuti, nessun tracciamento di visita viene registrato. Se revochi il consen
 
 In precedenza, all'ingresso del sito, queste statistiche erano presentate come anonime e destinate solo a contare le visite, cosa che non erano (identificativo del browser, indirizzi IP). Il consenso dato con quella formulazione precedente non viene più preso in considerazione: la domanda ti viene riproposta. Con questa modifica sono stati eliminati i nomi dei giocatori locali e gli indirizzi IP registrati senza accesso, così come i dati dei browser mai usati con un account. Per un browser usato con un account, l'ultimo indirizzo IP, il paese, il dispositivo, le date delle visite e l'ultimo account utilizzato sono conservati fino alla visita successiva di quel browser al sito, quando vengono cancellati insieme al cookie `lp_vid`, e al massimo 6 mesi dopo la sua ultima visita. I registri giornalieri delle visite di ogni browser (identificativo del browser e data, senza indirizzo IP, nome né account) sono conservati fino alla loro eliminazione dopo 13 mesi.
 
-**Indipendentemente da questo consenso**, solo per gli **account connessi**, conserviamo l'indirizzo IP, il paese stimato e il tipo di dispositivo rilevati alla creazione dell'account e nelle ultime connessioni, nonché la data di ultima attività dell'account, aggiornata solo quando il sito è effettivamente utilizzato (pagina visualizzata e un'interazione negli ultimi 30 minuti) o al momento dell'autenticazione, usata anche per lo stato «online» visibile ai tuoi amici, per il numero di account online (un conteggio, senza nomi) e per l'eliminazione automatica degli account ospite inattivi; nessun tempo di presenza viene registrato a questo titolo. Finalità: **sicurezza e moderazione degli account** (prevenzione delle frodi, ban), stato «online», numero di account online ed eliminazione degli account ospite inattivi — base: legittimo interesse.
+**Indipendentemente da questo consenso**, solo per gli **account connessi**, conserviamo l'indirizzo IP, il paese stimato e il tipo di dispositivo rilevati alla creazione dell'account e nelle ultime connessioni, nonché la data di ultima attività dell'account, aggiornata solo quando il sito è effettivamente utilizzato (pagina visualizzata e un'interazione negli ultimi 30 minuti) o al momento dell'autenticazione, usata anche per lo stato «online» visibile ai tuoi amici, per il numero di account online (un conteggio, senza nomi), per l'eliminazione automatica degli account ospite inattivi e, se hai chiesto il promemoria del venerdì, per non inviartelo subito dopo un passaggio sul sito (vedi 3.8); nessun tempo di presenza viene registrato a questo titolo. Finalità: **sicurezza e moderazione degli account** (prevenzione delle frodi, ban), stato «online», numero di account online ed eliminazione degli account ospite inattivi — base: legittimo interesse.
 
 Per attività si intende l'uso di una pagina visualizzata sullo schermo: un segnale parte al massimo una volta al minuto, solo finché la pagina è visibile e l'hai utilizzata (clic, tasto, tocco dello schermo o rotellina del mouse) negli ultimi 30 minuti. Viene conservato solo l'istante della tua ultima interazione, nella memoria della pagina e senza il suo contenuto; non viene né registrato né trasmesso. Senza il tuo consenso, il segnale non contiene nient'altro e serve solo per la data di ultima attività di un account connesso (vedi sopra): nessuna durata viene registrata a partire da esso. Con il tuo consenso, indica in più soltanto «attivo o no» e «in partita o no», e serve a misurare la durata delle visite del tuo account se sei connesso (vedi sopra); non vengono registrati né l'indirizzo della pagina, né il gioco, né il numero di interazioni. Il cumulo del tempo di presenza calcolato prima del 13 settembre 2026, con un metodo abbandonato che contava anche le schede rimaste aperte, è stato azzerato; non viene più né aggiornato né visualizzato.
 
 Negli strumenti di moderazione del sito, gli indirizzi IPv6 di una stessa rete (stesso prefisso /64, in genere uno stesso router o uno stesso luogo) vengono raggruppati in visualizzazione: questo raggruppamento è calcolato al momento della consultazione e non memorizza alcun dato aggiuntivo.
+
+**Partite giocate in modalità locale.** Indipendentemente da qualsiasi consenso, il sito conta le partite giocate su un solo telefono: quando la pagina di un gioco si apre in modalità locale con un tavolo di giocatori e poi quando la partita arriva alla schermata finale, il tuo browser invia soltanto il gioco interessato e l'evento (partita avviata o conclusa). Il server ne conserva solo due contatori per gioco e per giorno (ora di Parigi): il numero di partite avviate e il numero di partite concluse. Non viene registrato alcun account, nickname o identificativo di dispositivo o di browser, non viene letto alcun cookie e l'indirizzo IP non viene mai conservato: serve soltanto, in memoria e in modo temporaneo, a limitare il numero di invii per rete per prevenire gli abusi. Poiché nulla permette di collegare un contatore a una persona, questi contatori non sono dati personali e non dipendono dalla tua scelta sulle statistiche di visita; li citiamo per trasparenza. Sono consultabili dall'amministrazione del sito e conservati per 13 mesi (vedi 7).
 
 ### 3.4 Chat e partite online
 
@@ -90,7 +92,21 @@ Se utilizzi il modulo di feedback, possiamo raccogliere:
 
 Alla fine della tua primissima partita, una scheda ti propone di **valutare quella partita** da 1 a 5, con un commento facoltativo; non viene più riproposta dopo che l'hai compilata o rifiutata. Se dai un voto, registriamo il voto, il gioco, la modalità di gioco (online o locale), il tuo commento se c'è e lo stesso contesto tecnico (pagina visitata, senza i suoi parametri, e browser), collegati al tuo account se sei connesso; l'email del tuo account non viene copiata nella valutazione, che segue la durata di conservazione del feedback (vedi 7). Se sei connesso, registriamo anche sul tuo account la data in cui hai votato o rifiutato («No, grazie»), per non riproporti la domanda: né il voto né la tua scelta vi figurano. Per lo stesso motivo, il tuo browser conserva un contrassegno nella sua memoria locale (`lp-first-game-feedback`): ricorda solo se questo dispositivo era già stato usato sul sito, la data della tua prima visita (che serve solo per 24 ore), se la domanda è già stata posta e quante volte la scheda è stata mostrata; non contiene alcun identificativo e non viene mai inviato ai nostri server.
 
-### 3.8 Cookie
+### 3.8 Promemoria del venerdì via email
+
+Se lo chiedi, ti inviamo al massimo **un'email a settimana**, il venerdì verso le 17 (ora di Parigi), per proporti di tornare a giocare. Il suo contenuto è lo stesso per tutti: non contiene alcun dato di partita (né gioco giocato, né compagni, né punteggio) né alcun nickname.
+
+Questo promemoria si basa sul tuo **consenso**, dato con un gesto esplicito e distinto: il pulsante «Ricordamelo venerdì» della schermata finale di una partita online, o l'interruttore «Promemoria del venerdì via e-mail» della pagina Account. Nulla è attivato per impostazione predefinita, e il testo mostrato prima del tuo consenso indica la frequenza degli invii e come interromperli. Un account ospite, che non ha un indirizzo email, non può iscriversi. Il pulsante e l'interruttore sono proposti solo quando l'invio di email è attivo sul sito.
+
+**Conferma del tuo indirizzo.** La registrazione con email e password non verifica l'indirizzo inserito. Per un account di questo tipo il tuo gesto non basta: inviamo prima all'indirizzo dell'account un'email di conferma, il cui link è valido per 7 giorni. Senza bisogno di accedere, il link apre una pagina che riassume ciò che accetti e ti chiede di confermare con un pulsante («Attiva il promemoria»): aprire il link non conferma nulla. Quel clic registra il tuo consenso e la data di verifica del tuo indirizzo. Finché non clicchi, non viene inviato alcun promemoria; se ignori l'email, non succede nulla. Puoi richiedere una nuova email di conferma con lo stesso pulsante o lo stesso interruttore, al massimo una volta al giorno. Se il tuo indirizzo è già verificato, perché l'hai confermato in questo modo o perché hai effettuato l'accesso con Google, che trasmette solo indirizzi verificati (vedi 3.1), il tuo consenso è registrato subito, senza email di conferma.
+
+Il promemoria usa l'indirizzo email già associato al tuo account: non ti viene chiesto alcun dato nuovo. Registriamo sul tuo account soltanto la data del tuo consenso (prova del consenso, cancellata non appena lo revochi), la data di verifica del tuo indirizzo (conservata dopo una revoca, perché un nuovo consenso non richieda una nuova email di conferma), la data dell'ultima email legata al promemoria, promemoria o email di conferma (per garantire al massimo un promemoria a settimana: nessun promemoria parte nella settimana in cui ti è stata inviata l'email di conferma), e un token casuale usato dai link di queste email. Questo token può attivare il promemoria solo tramite il pulsante della pagina di conferma, entro 7 giorni dall'invio dell'email di conferma e finché il tuo indirizzo non è verificato; al di fuori di questo caso, permette soltanto di disattivare il promemoria. È conservato dopo una revoca perché i link delle email già ricevute restino validi. Nessun promemoria viene inviato a un indirizzo non verificato, a un account bannato né a un account attivo sul sito nelle 12 ore precedenti (data di ultima attività dell'account, vedi 3.3).
+
+Puoi revocare il consenso in qualsiasi momento, senza doverlo motivare: tramite il link presente in ogni email, che apre, senza bisogno di accedere, una pagina in cui un pulsante conferma la disiscrizione (aprire il link non ti disiscrive, perché un software di sicurezza che analizza i link delle tue email non lo faccia a tua insaputa); con il pulsante «Annulla iscrizione» del tuo servizio di posta, se ne mostra uno, che ti disiscrive con un clic; o con l'interruttore della pagina Account. La revoca è immediata. La pagina che la conferma è la stessa qualunque sia il link seguito e non mostra alcuna informazione sull'account.
+
+L'invio dell'email di conferma e del promemoria passa dal nostro fornitore di email, Resend (vedi 6), che riceve il tuo indirizzo email e il contenuto del messaggio per recapitarlo. I nostri log conservano solo volumi (numero di invii e di errori) e tipi di errore, mai un indirizzo, un nickname o un token.
+
+### 3.9 Cookie
 
 Il Servizio utilizza i seguenti cookie:
 
@@ -105,6 +121,8 @@ Il Servizio utilizza i seguenti cookie:
 
 Puoi modificare la tua scelta in qualsiasi momento, senza eliminare i cookie, con il link «Statistiche di visita» del menu e del piè di pagina della home page: riapre la scelta Accetta / Rifiuta. Rifiutare cancella immediatamente i dati descritti al punto 3.3 per questo browser e, se sei connesso e avevi accettato le statistiche su questo browser, lo storico delle visite del tuo account. La scelta vale solo per questo browser.
 
+Il tuo browser conserva inoltre nella sua memoria locale semplici preferenze di visualizzazione, senza alcun identificativo e mai inviate ai nostri server: per esempio `lp-friday-table-dismissed`, salvata quando nascondi l'annuncio del tavolo aperto del venerdì, ricorda soltanto la settimana interessata (nella forma «2026-W41»).
+
 ## 4. Finalità del trattamento
 
 I tuoi dati sono trattati per:
@@ -116,6 +134,7 @@ I tuoi dati sono trattati per:
 - garantire la sicurezza del Servizio e prevenire gli abusi;
 - moderare gli account e i contenuti (sospensione, ban in caso di violazione);
 - rispondere alle tue richieste di supporto e feedback;
+- inviarti il promemoria del venerdì via email, se l'hai chiesto, dopo la verifica del tuo indirizzo;
 - produrre statistiche di visita, compreso lo storico delle visite del tuo account (con il tuo consenso);
 - rispettare i nostri obblighi legali.
 
@@ -132,6 +151,7 @@ I tuoi dati sono trattati per:
 | Data di ultima attività dell'account (stato «online» visibile ai tuoi amici, numero di account online, sicurezza, eliminazione degli account ospite inattivi) | Legittimo interesse |
 | Registro delle partite avviate (monitoraggio dell'uso, segnalazioni, consultazione account per account da parte dell'amministrazione del sito) | Legittimo interesse |
 | Statistiche di visita (cookie `lp_vid`, IP, paese, dispositivo, nomi dei giocatori locali, storico delle visite dell'account) | **Consenso** |
+| Promemoria del venerdì via email (email di conferma, data del consenso, data di verifica dell'indirizzo tramite quell'email, data dell'ultima email legata al promemoria, token dei link di conferma e di disiscrizione) | **Consenso** |
 | Verifica dell'età (cookie) | Legittimo interesse (conformità) |
 | Feedback | Consenso (invio volontario) |
 
@@ -141,7 +161,7 @@ I tuoi dati possono essere trattati da:
 
 - **L'hosting provider del Servizio**: OVH SAS — 2 rue Kellermann, 59100 Roubaix (Francia). Il server ospita il database e i suoi backup giornalieri (vedi 7).
 - **Cloudflare, Inc.** (intermediario tecnico: proxy e rete di distribuzione dei contenuti) — Stati Uniti. Tutte le richieste rivolte al Servizio passano da Cloudflare prima di raggiungere il nostro server: Cloudflare riceve quindi il tuo indirizzo IP e il contenuto degli scambi con il sito, che instrada fino al nostro server (con memorizzazione nella cache dei file pubblici del sito e protezione dagli attacchi). Ci indica inoltre il paese stimato del tuo indirizzo IP (vedi 3.3). Cloudflare conserva anche la copia esterna dei backup del database (servizio di archiviazione R2, vedi 7). Poiché Cloudflare può trattare questi dati al di fuori dell'Unione europea, in particolare negli Stati Uniti, questi trasferimenti sono disciplinati dalle clausole contrattuali tipo della Commissione europea o dal quadro UE-USA per la protezione dei dati personali (Data Privacy Framework), secondo gli impegni di questo fornitore.
-- **Resend** (invio di email di reimpostazione password) — Stati Uniti, con garanzie contrattuali appropriate
+- **Resend** (invio delle email di reimpostazione password, di conferma del promemoria del venerdì e del promemoria stesso, vedi 3.8: Resend riceve l'indirizzo del destinatario e il contenuto del messaggio per recapitarlo) — Stati Uniti, con garanzie contrattuali appropriate
 - **Google** — se utilizzi l'accesso con Google: l'accesso avviene presso Google, che tratta i dati relativi all'accesso al tuo account Google secondo le proprie regole sulla privacy, in qualità di titolare autonomo del trattamento, e poi ci trasmette i dati descritti al punto 3.1. Il pulsante «Continua con Google» viene caricato dai server di Google nella pagina Account: la sua sola visualizzazione trasmette già a Google il tuo indirizzo IP e informazioni tecniche sul tuo browser. Per la chat vocale, il tuo browser interroga anche server pubblici di Google (STUN), che ricevono il tuo indirizzo IP (vedi 3.5). Google può trattare questi dati al di fuori dell'Unione europea.
 
 L'editore resta il titolare dei trattamenti descritti nella presente informativa. Nessun altro trasferimento a terzi viene effettuato senza il tuo consenso, salvo obbligo legale.
@@ -149,6 +169,7 @@ L'editore resta il titolare dei trattamenti descritti nella presente informativa
 ## 7. Durata di conservazione
 
 - **Account attivo**: dati conservati finché l'account esiste.
+- **Promemoria del venerdì** (data del consenso, data di verifica dell'indirizzo, data dell'ultima email legata al promemoria, token dei link): conservati finché l'account esiste ed eliminati insieme a esso; la data del consenso viene cancellata non appena il consenso è revocato. Il link di un'email di conferma è valido solo 7 giorni.
 - **Account ospite** (creato senza email né password: scansionando un QR code, tramite un link di invito o con «Provalo con i bot»): eliminato automaticamente dopo **90 giorni** di inattività, con tutto ciò che contiene (nickname, progressione, cosmetici, amici). È accessibile solo tramite il cookie di sessione del browser (o dell’app) in cui è stato creato: ogni visita da quel browser azzera questo termine, ma non è accessibile da un altro browser né da un altro dispositivo, e disconnettersi, accedere a un altro account in quel browser o cancellare i cookie lo rende definitivamente inaccessibile. Un account ospite che non ha più alcuna sessione valida (dopo una disconnessione, un accesso a un altro account in quel browser o la scadenza della sua sessione) viene eliminato prima, dopo **7 giorni** di inattività, salvo che sia bannato o oggetto di una segnalazione in corso di esame. Aggiungere un’email e una password, o collegare l’account a Google, lo rende permanente.
 - **Account eliminato**: cancellazione o anonimizzazione entro un massimo di **12 mesi** dalla richiesta, salvo obbligo legale di conservazione più lunga.
 - **Log tecnici (indirizzi IP, presenza)**: **6 mesi**. L'indirizzo IP e il paese dell'ultima connessione associati a un account vengono cancellati dopo **6 mesi** di inattività; lo storico degli indirizzi IP di un account viene eliminato immediatamente insieme all'account, e un controllo automatico cancella inoltre qualsiasi storico degli indirizzi IP rimasto associato a un account eliminato.
@@ -158,6 +179,7 @@ L'editore resta il titolare dei trattamenti descritti nella presente informativa
 - **Registro delle partite avviate** (gioco, data, durata del tavolo, motivo di chiusura, partecipanti): **12 mesi**.
 - **Tracce di moderazione dei nickname**: **12 mesi**.
 - **Dati di misurazione dell'audience**: **13 mesi**.
+- **Contatori delle partite locali** (gioco, giorno, numero di partite avviate e concluse, senza alcun dato personale): **13 mesi**.
 - **Feedback**: conservazione fino a **24 mesi** o cancellazione su richiesta; l'email di contatto associata viene cancellata se elimini il tuo account.
 - **Cookie di età e consenso**: 1 anno, rinnovabili a ogni convalida.
 - **Backup del database** (copia di tutti i dati sopra indicati): **16 giorni al massimo** sul server, **31 giorni al massimo** per la copia esterna; un dato eliminato scompare dai backup alla loro scadenza.
@@ -173,7 +195,7 @@ Conformemente al GDPR, disponi dei seguenti diritti:
 - **Cancellazione**: richiedere la cancellazione dei tuoi dati;
 - **Limitazione**: limitare determinati trattamenti;
 - **Opposizione**: opporti a un trattamento fondato sul legittimo interesse;
-- **Revoca del consenso**: in qualsiasi momento, per i trattamenti fondati sul consenso. Per le statistiche di visita, tramite il link «Statistiche di visita» (menu e piè di pagina della home page): la revoca cancella subito i dati di questo browser e lo storico delle visite dell'account connesso, su tutti i dispositivi; vale per questo browser, e gli altri browser in cui le avevi accettate continuano a registrare le tue visite finché non le rifiuti anche lì;
+- **Revoca del consenso**: in qualsiasi momento, per i trattamenti fondati sul consenso, senza pregiudicare la liceità dei trattamenti effettuati prima della revoca. Per le statistiche di visita, tramite il link «Statistiche di visita» (menu e piè di pagina della home page): la revoca cancella subito i dati di questo browser e lo storico delle visite dell'account connesso, su tutti i dispositivi; vale per questo browser, e gli altri browser in cui le avevi accettate continuano a registrare le tue visite finché non le rifiuti anche lì. Per il promemoria del venerdì, tramite il link presente in ogni email, il pulsante di disiscrizione del tuo servizio di posta o l'interruttore della pagina Account, con effetto immediato (vedi 3.8);
 - **Portabilità**: ricevere i tuoi dati in un formato strutturato (se applicabile).
 
 Puoi **eliminare il tuo account direttamente** dalla pagina Account (pulsante «Elimina il mio account»): l'eliminazione è immediata e definitiva.

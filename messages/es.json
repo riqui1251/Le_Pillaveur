@@ -226,6 +226,12 @@
         "text": "Solo se muestran los juegos en los que los bots pueden completar la mesa.",
         "showAll": "Ver todo el catálogo"
       },
+      "soloFit": {
+        "greatTitle": "Perfectos en solitario",
+        "greatHint": "Aquí los bots juegan de verdad: ideal para descubrir el juego, aunque estés solo.",
+        "othersTitle": "También se juegan con bots",
+        "groupBadge": "Mejor en grupo"
+      },
       "onlineOnly": {
         "title": "Solo en línea",
         "hint": "Estos juegos necesitan un teléfono por jugador: abre una mesa en línea con una cuenta gratuita o pruébalos en solitario contra bots."
@@ -333,8 +339,8 @@
     },
     "seul-avec-des-bots": {
       "title": "Jugar solo: los juegos con bots",
-      "description": "¿No hay nadie esta noche? Abre una mesa y los bots la completan: Hombre Lobo, quiz, El Mentiroso, faroleo, Président… Gratis, en línea, solo o a dos.",
-      "intro": "Nadie disponible, o ganas de entrenar antes de la próxima fiesta: en estos juegos, el anfitrión de la mesa puede completar los asientos vacíos con bots desde la sala, y la partida arranca incluso por debajo del mínimo de jugadores — en solitario, pues. Los bots tienen cada uno su nombre y su personalidad, y cumplen en su asiento: pujan y acusan en El Mentiroso, farolean en El Gran Farol, responden en El Gran Pillaveur, el quiz con pulsadores, apuestan en Purple y 1220, juegan sus cartas en Président, tiran el dado en El Pequeño Bebedor, votan y acusan en Hombre Lobo. Esos son los juegos que de verdad se juegan en solitario. En El Impostor, ¿Quién es el Espía? o Crobard, los bots completan una mesa sin darle vida: un bot no dibuja, no cuenta nada ni dirige la investigación, así que esos juegos piden jugadores de verdad. Si alguien se desconecta a mitad de partida, un bot lo sustituye para que la mesa siga. Es la misma lista que el atajo «Jugar solo con bots» de la portada. Todo ocurre en línea, en tu móvil, y en cuanto le cojas el truco a un juego, basta con compartir el código de la mesa para que tus amigos ocupen los asientos."
+      "description": "¿No hay nadie esta noche? Abre una mesa y los bots la completan: Hombre Lobo, quiz, Président, Purple… Gratis, en línea, solo o a dos.",
+      "intro": "Nadie disponible, o ganas de entrenar antes de la próxima fiesta: en estos juegos, el anfitrión de la mesa puede completar los asientos vacíos con bots desde la sala, y la partida arranca incluso por debajo del mínimo de jugadores — en solitario, pues. Los bots tienen cada uno su nombre y su personalidad, y cumplen en su asiento: responden en El Gran Pillaveur, el quiz con pulsadores, juegan sus cartas en Président, votan y acusan en Hombre Lobo, apuestan en Purple y 1220, tiran el dado en El Pequeño Bebedor. Esos son los juegos que de verdad se juegan en solitario. En El Impostor, ¿Quién es el Espía?, Crobard, El Gran Farol, Sans Filtre, Dilemmes o El Mentiroso, los bots completan una mesa sin darle vida: un bot no dibuja, no inventa faroles, no cuenta nada ni dirige la investigación, y en El Mentiroso puja, pero sin una cara que leer, el farol pierde toda la gracia. Esos juegos piden jugadores de verdad. Si alguien se desconecta a mitad de partida, un bot lo sustituye para que la mesa siga. Es la misma lista que el atajo «Jugar solo con bots» de la portada. Todo ocurre en línea, en tu móvil, y en cuanto le cojas el truco a un juego, basta con compartir el código de la mesa para que tus amigos ocupen los asientos."
     },
     "en-grand-groupe": {
       "title": "Juegos de fiesta para grupos grandes",
@@ -350,7 +356,7 @@
     "soloGained": "+{xp} XP de entrenamiento",
     "soloHint": "Invita a un amigo para la XP completa — las partidas solo contra bots pagan hasta el nivel 5.",
     "soloCapped": "Las partidas solo contra bots ya no dan XP — ¡invita a un amigo para que cuente!",
-    "streak": "¡Racha de {days} días!",
+    "streak": "¡Racha de {weeks} semanas!",
     "nextUnlock": "Próximo desbloqueo: nivel {level} — {name}",
     "unlockedNew": "Nuevo: {items}",
     "unlockSeries": "iconos {name}",
@@ -365,8 +371,10 @@
     "guestRisk": "Cuenta de invitado: tu nivel {level} y tus {xp} XP desaparecen tras 90 días de inactividad.",
     "guestRiskAchievements": "Cuenta de invitado: tu nivel {level}, tus {xp} XP y {achievements, plural, one {tu logro} other {tus # logros}} desaparecen tras 90 días de inactividad.",
     "guestSaveCta": "Guardar mi cuenta",
-    "streakStart": "¡Racha iniciada!",
+    "streakStart": "¡Racha semanal iniciada!",
+    "streakOne": "Racha: 1 semana",
     "streakBonus": "incluye +{xp} XP de racha",
+    "streakNextWeek": "Vuelve a jugar la semana que viene: +{xp} XP de racha",
     "achievementUnlocked": "Logro desbloqueado: {name}"
   },
   "onlineCollection": {
@@ -378,7 +386,7 @@
     "roleFrames": "Marcos de rango",
     "roleFramesHint": "Reservados a tu rango — no se ganan por nivel.",
     "vipFrames": "Marcos VIP",
-    "vipFramesHint": "Concedidos a mano por un Fundador — nunca se desbloquean por nivel.",
+    "vipFramesHint": "Fuera de la progresión: concedidos por un Fundador o ganados en un evento por tiempo limitado — nunca por nivel.",
     "unlockAt": "Nv. {level}",
     "grantOnly": "Solo por concesión",
     "rarity": {
@@ -667,6 +675,46 @@
       "pending": "Jugar"
     }
   },
+  "rematchNight": {
+    "title": "¿Lo repetimos?",
+    "addTable": "Añadir a toda la mesa como amigos",
+    "friendsSent": "{count, plural, one {# solicitud de amistad enviada} other {# solicitudes de amistad enviadas}}",
+    "friendsAccepted": "{count, plural, one {# nuevo amigo añadido} other {# nuevos amigos añadidos}}",
+    "friendsNothing": "No hay solicitudes nuevas que enviar.",
+    "friendsError": "No se pudo enviar ahora. Inténtalo de nuevo en un momento.",
+    "tooMany": "Demasiados intentos seguidos: inténtalo de nuevo en un minuto.",
+    "remindMe": "Recuérdamelo el viernes",
+    "reminderHint": "Un correo el viernes hacia las 17:00 (hora de París), nunca más de uno por semana. Lo desactivas cuando quieras.",
+    "reminderOn": "Recordatorio del viernes activado",
+    "reminderPending": "Correo enviado: confirma el recordatorio desde tu bandeja de entrada.",
+    "reminderManage": "Gestionar",
+    "reminderError": "No se pudo guardar tu elección. Inténtalo de nuevo.",
+    "decline": "No, gracias",
+    "declined": "Entendido: sin recordatorio."
+  },
+  "fridayTable": {
+    "label": "Mesa abierta del viernes",
+    "next": "Mesa abierta de El Impostor el {day} a las {time}: ven a conocer a otros jugadores",
+    "nextToday": "Mesa abierta de El Impostor hoy a las {time}: ven a conocer a otros jugadores",
+    "live": {
+      "kicker": "En directo hasta las {time}",
+      "title": "La mesa del viernes está abierta",
+      "waiting": "{count, plural, one {# jugador te espera} other {# jugadores te esperan}} para una partida de El Impostor: ¡siéntate!",
+      "empty": "Nadie ha abierto la mesa todavía: ábrela y los siguientes se unirán a ti.",
+      "seated": "Ya estás en la mesa: los próximos en llegar se unirán a ti."
+    },
+    "join": "Unirse a la mesa",
+    "open": "Abrir la mesa",
+    "opening": "Abriendo…",
+    "joining": "Entrando en la mesa…",
+    "backToTable": "Volver a la mesa",
+    "dismiss": "Ocultar esta cita",
+    "dismissed": "Mesa del viernes oculta esta semana.",
+    "landing": {
+      "next": "Cada viernes a las {time} (hora de París), mesa abierta de El Impostor: ven a conocer a otros jugadores",
+      "live": "La mesa del viernes está abierta: ven a jugar a El Impostor con otros jugadores"
+    }
+  },
   "chat": {
     "title": "Chat",
     "tabGame": "Partida",
@@ -845,6 +893,16 @@
       "blockedTitle": "Jugadores bloqueados",
       "unblock": "Desbloquear"
     },
+    "reminder": {
+      "title": "Recordatorio del viernes por correo",
+      "on": "Activado: un correo el viernes hacia las 17:00 (hora de París)",
+      "off": "Desactivado",
+      "pending": "Pendiente: confírmalo desde el correo enviado a tu dirección",
+      "loading": "Cargando…",
+      "loadError": "Estado no disponible por ahora.",
+      "saveError": "No se pudo guardar tu elección. Inténtalo de nuevo.",
+      "hint": "El viernes por la tarde, un correo breve para proponerte una partida. Nunca más de uno por semana, y ninguno si acabas de pasar por el sitio. Cada correo incluye un enlace para cancelarlo con un clic."
+    },
     "nameModerationWarning": "Se han registrado varios intentos de nombre inapropiado en esta cuenta. Utilice un apodo respetuoso — el equipo de moderación puede consultar el historial.",
     "reset": {
       "title": "Nueva contraseña",
@@ -935,7 +993,61 @@
           "hint": "Solo te faltan {xp} XP: el nivel 3 desbloquea el efecto {effect}.",
           "action": "Jugar"
         }
+      },
+      "reward": {
+        "label": "Recompensa",
+        "promise": "Completa los primeros pasos antes de finales de {month} para ganar el marco {frame}, reservado a los primeros jugadores.",
+        "unlockedTitle": "Marco {frame} desbloqueado",
+        "unlockedHint": "Reservado a los primeros jugadores: equípalo para llevarlo en cada mesa.",
+        "equip": "Equiparlo",
+        "equippedTitle": "Marco {frame} equipado",
+        "equippedHint": "Ahora te acompaña en cada mesa.",
+        "allDone": "Todo hecho: aquí tienes tu recompensa.",
+        "dismissLabel": "Ocultar la recompensa"
       }
+    }
+  },
+  "reminder": {
+    "unsubscribed": {
+      "metaTitle": "Recordatorio del viernes desactivado",
+      "title": "Entendido, no más recordatorios",
+      "body": "Esta dirección ya no recibirá el recordatorio del viernes.",
+      "reactivate": "¿Cambiaste de opinión? Puedes volver a activarlo cuando quieras desde tu página de Cuenta.",
+      "games": "Ver los juegos",
+      "account": "Mi cuenta"
+    },
+    "unsubscribe": {
+      "metaTitle": "Dejar de recibir el recordatorio del viernes",
+      "title": "¿Dejar de recibir el recordatorio del viernes?",
+      "body": "Un toque y esta dirección dejará de recibir el recordatorio del viernes. Podrás volver a activarlo desde tu página de Cuenta.",
+      "button": "Dejar de recibirlo"
+    },
+    "email": {
+      "subject": "¿Esta noche repetimos?",
+      "title": "Es viernes: ¿repetimos?",
+      "body": "Tu grupo te espera en Le Pillaveur. Empieza una partida en un solo móvil o reúnete con tus amigos en línea en dos toques.",
+      "cta": "Elegir un juego",
+      "why": "Recibes este correo porque pediste el recordatorio del viernes en Le Pillaveur. Nunca más de uno por semana.",
+      "unsubscribe": "No recibir más este recordatorio",
+      "manage": "Gestionarlo desde mi página de Cuenta"
+    },
+    "confirm": {
+      "metaTitle": "Confirmar el recordatorio del viernes",
+      "title": "¿Activar el recordatorio del viernes?",
+      "body": "Un correo el viernes hacia las 17:00 (hora de París) para proponerte una partida, nunca más de uno por semana. Cada correo incluye un enlace para cancelarlo.",
+      "button": "Activar el recordatorio",
+      "activeTitle": "Hecho, nos vemos el viernes",
+      "activeBody": "El recordatorio del viernes está activado para esta dirección. Puedes desactivarlo cuando quieras desde tu página de Cuenta o con el enlace de cada correo.",
+      "invalidTitle": "Enlace caducado o ya usado",
+      "invalidBody": "Este enlace de confirmación ya no es válido. Vuelve a pedir el recordatorio desde tu página de Cuenta: te enviaremos un nuevo correo."
+    },
+    "confirmEmail": {
+      "subject": "Confirma tu recordatorio del viernes",
+      "title": "Un clic para activar tu recordatorio del viernes",
+      "body": "Pediste el recordatorio del viernes de Le Pillaveur: un correo el viernes hacia las 17:00 (hora de París) para proponerte una partida, nunca más de uno por semana. No se enviará nada hasta que lo confirmes.",
+      "cta": "Confirmar el recordatorio",
+      "expiry": "Este enlace es válido durante 7 días.",
+      "ignore": "¿No lo has pedido tú? Ignora este correo: no se enviará ningún recordatorio."
     }
   },
   "legal": {
@@ -1036,6 +1148,7 @@
       "vip-ganse": "Doble Anillo",
       "vip-aura": "Aura Púrpura",
       "vip-flamant": "Flamenco Rosa",
+      "pionnier": "Pionero",
       "alien": "Órbita Azul",
       "alien-triclope": "Órbita Verde",
       "alien-cyclope": "Órbita Violeta",
@@ -4664,6 +4777,24 @@
       "byGameEmpty": "Ninguna partida en línea lanzada en 7 días.",
       "byGameDef": "Partidas en línea lanzadas en los últimos 7 días de París (hoy incluido), por juego, revanchas incluidas, termine o no la partida. «Con otros humanos»: al menos dos jugadores humanos en la mesa; el resto es en solitario contra bots. Quedan excluidas las partidas jugadas solo por el equipo o por cuentas de prueba. Sumados, los juegos dan el total de los últimos 7 días del gráfico por día; la proporción es la de los lanzamientos de la semana."
     },
+    "localPlay": {
+      "title": "Partidas locales",
+      "desc": "Juegos jugados en un solo teléfono, contados desde el {date}: dos contadores anónimos por juego y por día, sin cuenta, sin dispositivo y sin dirección IP. Volúmenes brutos: ni jugadores únicos ni exclusión del equipo.",
+      "descEmpty": "Juegos jugados en un solo teléfono: todavía no se ha contado ninguna partida local. Dos contadores anónimos por juego y por día, sin cuenta, sin dispositivo y sin dirección IP.",
+      "totalsDetail": "{starts, plural, one {partida lanzada} other {partidas lanzadas}}, {ends, plural, =0 {ninguna terminada} one {# terminada} other {# terminadas}}",
+      "windowDef": "Páginas de juego abiertas en modo local con una mesa de jugadores en los últimos {days} días (hora de París), hoy incluido, y partidas que llegaron a su pantalla final en el mismo periodo.",
+      "byDayTitle": "Partidas locales por día",
+      "byDayTotal": "{starts, plural, =0 {Ninguna lanzada} one {# lanzada} other {# lanzadas}} y {ends, plural, =0 {ninguna terminada} one {# terminada} other {# terminadas}} en {days} días.",
+      "byDayEmpty": "Todavía no se ha contado ninguna partida local.",
+      "legendStarts": "Lanzadas",
+      "legendEnds": "Terminadas",
+      "legendBeforeMeasure": "Antes de la medición (sin datos)",
+      "byGameTitle": "Partidas locales por juego · {window}",
+      "endsHint": "{count, plural, =0 {ninguna terminada} one {# terminada} other {# terminadas}}",
+      "noEndScreen": "sin pantalla final, nunca «terminada»",
+      "byGameEmpty": "Ninguna partida local lanzada en {days} días.",
+      "def": "Lanzada: la página del juego se abre en modo local con una mesa de jugadores; una revancha jugada en la misma página no cuenta como nuevo lanzamiento. Terminada: la partida lanzada llega a su pantalla final; solo cuenta el primer final tras un lanzamiento, las revanchas no suman. Los finales nunca superan los lanzamientos: la diferencia son las aperturas abandonadas antes del final. Los juegos sin pantalla final nunca están «terminados». Ni las partidas en línea ni el modo TV cuentan aquí; la proporción es la de los lanzamientos del periodo."
+    },
     "room": {
       "todayLabel": "Hoy",
       "weekLabel": "7 días",
@@ -4959,8 +5090,8 @@
       "colLastLaunch": "Último lanzamiento",
       "colWins": "Victorias",
       "colLosses": "Derrotas",
-      "progression": "XP en línea: {xp} · Racha: {streak, plural, one {# día} other {# días}}",
-      "streakLastDay": "último día contabilizado el {date}",
+      "progression": "XP en línea: {xp} · Racha: {streak, plural, one {# semana} other {# semanas}}",
+      "streakLastDay": "último crédito: semana del {date}",
       "progressionNote": "Solo a título informativo: la XP y la racha no miden la actividad.",
       "networksTitle": "Redes y navegadores",
       "noNetworks": "Ninguna dirección IP registrada para esta cuenta.",
@@ -5272,11 +5403,13 @@
         "title": "Tareas programadas internas",
         "names": {
           "retention": "Barrido de conservación",
-          "tables": "Limpieza de mesas"
+          "tables": "Limpieza de mesas",
+          "reminder-friday": "Recordatorio del viernes"
         },
         "cadence": {
           "retention": "Cada noche a las 4:30",
-          "tables": "Cada 5 minutos"
+          "tables": "Cada 5 minutos",
+          "reminder-friday": "Cada viernes a las 17:00"
         },
         "lastRun": "Última ejecución {relative} · {duration}",
         "noRunYet": "Aún no desde el arranque",
@@ -5434,7 +5567,7 @@
     },
     "solo": {
       "title": "¿Nadie disponible esta noche? Juega igual.",
-      "body": "Nuestros bots nunca fallan: lanza un Mentiroso, un quiz del Gran Pillaveur o un Purple en solitario — completan la mesa en un clic. Y si un amigo aparece a mitad de partida, escanea el QR y ocupa un asiento.",
+      "body": "Nuestros bots nunca fallan: lanza un quiz del Gran Pillaveur, una partida de Président o un Hombre Lobo en solitario — completan la mesa en un clic. Y si un amigo aparece a mitad de partida, escanea el QR y ocupa un asiento.",
       "cta": "Empezar una partida con bots",
       "hint": "Solo se muestran los juegos en los que los bots pueden completar la mesa."
     },
@@ -5525,7 +5658,14 @@
     "loginCta": "Iniciar sesión o crear una cuenta",
     "pseudoPlaceholder": "Tu apodo para esta noche",
     "error": "No se puede empezar ahora. Inténtalo de nuevo.",
-    "rateLimited": "Demasiados intentos desde esta red. Vuelve a intentarlo en {seconds} s."
+    "rateLimited": "Demasiados intentos desde esta red. Vuelve a intentarlo en {seconds} s.",
+    "groupFit": {
+      "text": "Este juego se disfruta sobre todo con amigos: contra bots pierde toda la gracia.",
+      "inviteCta": "Invitar a amigos",
+      "tryInstead": "Mejor prueba {game}",
+      "openTable": "Abrir mi mesa",
+      "shareHint": "Tu mesa se abre sin bots: comparte su enlace desde el lobby y tus amigos se unen con un toque."
+    }
   },
   "joinGate": {
     "title": "Unirse a la mesa",
