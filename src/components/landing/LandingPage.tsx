@@ -4,7 +4,7 @@ import { Link } from '@/i18n/navigation'
 import { BrandLogo } from '@/components/brand/BrandLogo'
 import { AnalyticsConsentButton } from '@/components/legal/AgeGate'
 import { COLLECTION_SLUGS } from '@/lib/collections'
-import { FRIDAY_TABLE, fridayTableStatus } from '@/lib/friday-table'
+import { FRIDAY_TABLE, formatClockTime, fridayTableStatus } from '@/lib/friday-table'
 import { GAMES, type GameSuit } from '@/lib/games'
 import { readLandingLaunchesStat } from '@/lib/landing-stats-server'
 import { RULES_GAME_IDS } from '@/lib/rules/rules-ids'
@@ -86,11 +86,7 @@ export async function LandingPage({ locale }: { locale: string }) {
   // serveur ignore le fuseau du visiteur (le bandeau du hub, lui, la
   // convertit dans le navigateur), et le texte le précise.
   const friday = fridayTableStatus()
-  const fridayTime = new Intl.DateTimeFormat(locale, {
-    timeZone: FRIDAY_TABLE.tz,
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(friday.startsAt))
+  const fridayTime = formatClockTime(new Date(friday.startsAt), locale, FRIDAY_TABLE.tz)
 
   // FAQ courte : cinq questions qu'un visiteur pose avant de cliquer, avec
   // leurs réponses telles que le produit les tient aujourd'hui — et le même

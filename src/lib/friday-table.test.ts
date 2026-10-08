@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   FRIDAY_TABLE,
+  formatClockTime,
   fridayTableStatus,
   fridayTableWeekKey,
   parseFridayTableLang,
@@ -210,5 +211,27 @@ describe('pickFridayTable', () => {
 
   it('une salle sans membre n’est pas une table', () => {
     expect(pickFridayTable([table({ players: 0 })], 'fr', 16)).toBeNull()
+  })
+})
+
+describe('formatClockTime', () => {
+  const NBSP = String.fromCharCode(0xa0)
+  // Vendredi 9 octobre 2026, 21 h à Paris (UTC+2).
+  const at21 = new Date('2026-10-09T19:00:00Z')
+  const at2130 = new Date('2026-10-09T19:30:00Z')
+
+  it('écrit « 21 h » et « 21 h 30 » en français, espaces insécables', () => {
+    expect(formatClockTime(at21, 'fr', 'Europe/Paris')).toBe(`21${NBSP}h`)
+    expect(formatClockTime(at2130, 'fr', 'Europe/Paris')).toBe(`21${NBSP}h${NBSP}30`)
+  })
+
+  it('minuit en « 0 h », pas « 24 h »', () => {
+    expect(formatClockTime(new Date('2026-10-09T22:00:00Z'), 'fr', 'Europe/Paris')).toBe(`0${NBSP}h`)
+  })
+
+  it('les autres langues gardent le format d’Intl', () => {
+    expect(formatClockTime(at21, 'en', 'Europe/Paris')).toBe(
+      new Intl.DateTimeFormat('en', { timeZone: 'Europe/Paris', hour: 'numeric', minute: '2-digit' }).format(at21)
+    )
   })
 })

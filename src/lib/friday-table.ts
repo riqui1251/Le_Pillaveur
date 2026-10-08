@@ -108,6 +108,31 @@ export function fridayTableWeekKey(status: FridayTableStatus): string {
   return parisWeekKey(new Date(status.startsAt))
 }
 
+const NBSP = String.fromCharCode(0xa0)
+
+/**
+ * Heure d'horloge du rendez-vous à la typographie de la langue. Intl rend
+ * « 21:00 » en français, alors que l'usage (et le reste du site : « vers
+ * 17 h ») est « 21 h », « 21 h 30 » — espaces insécables, pour que « 21 h »
+ * ne se coupe jamais en fin de ligne. Les autres langues gardent le format
+ * d'Intl. `timeZone` absent = fuseau de l'appelant (le navigateur pour le
+ * bandeau du hub) ; la vitrine, rendue au serveur, passe celui de Paris.
+ */
+export function formatClockTime(date: Date, locale: string, timeZone?: string): string {
+  if (!locale.startsWith('fr')) {
+    return new Intl.DateTimeFormat(locale, { timeZone, hour: 'numeric', minute: '2-digit' }).format(date)
+  }
+  const parts = new Intl.DateTimeFormat('fr-FR', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0')
+  const minute = parts.find((p) => p.type === 'minute')?.value ?? '00'
+  return minute === '00' ? `${hour}${NBSP}h` : `${hour}${NBSP}h${NBSP}${minute}`
+}
+
 /** Langues de contenu d'une table (settings.lang, posé à la création). */
 export const FRIDAY_TABLE_LANGS = ['fr', 'en', 'es', 'it'] as const
 export type FridayTableLang = (typeof FRIDAY_TABLE_LANGS)[number]

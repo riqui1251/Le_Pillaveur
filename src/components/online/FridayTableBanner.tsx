@@ -15,6 +15,7 @@ import {
   FRIDAY_TABLE_DISMISS_KEY,
   fridayTableStatus,
   fridayTableWeekKey,
+  formatClockTime,
   type FridayTableResponse,
   type FridayTableSeat,
 } from '@/lib/friday-table'
@@ -38,28 +39,6 @@ const GAME = GAMES.find((g) => g.id === FRIDAY_TABLE.gameId)
 const GAME_PATH = GAME?.path ?? `/games/${FRIDAY_TABLE.gameId}`
 
 /** Écran TV : ni barre de nav ni bandeau — même règle que Navbar et AgeGate. */
-/**
- * Heure d'horloge à la typographie de la langue. Intl rend « 21:00 » en
- * français, alors que l'usage (et tout le reste du site : « vers 17 h ») est
- * « 21 h », « 21 h 30 » ; les autres langues gardent le format d'Intl.
- */
-const NBSP = String.fromCharCode(0xa0)
-
-function clockFormat(locale: string): { format: (date: Date) => string } {
-  const intl = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' })
-  if (!locale.startsWith('fr')) return intl
-  const parts = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-  return {
-    format: (date) => {
-      const p = parts.formatToParts(date)
-      const hour = Number(p.find((x) => x.type === 'hour')?.value ?? '0')
-      const minute = p.find((x) => x.type === 'minute')?.value ?? '00'
-      // Espace insécable : « 21 h » ne se coupe jamais en fin de ligne.
-      return minute === '00' ? `${hour}${NBSP}h` : `${hour}${NBSP}h${NBSP}${minute}`
-    },
-  }
-}
-
 function isTvPath(pathname: string): boolean {
   return pathname === '/tv' || pathname.startsWith('/tv/')
 }
@@ -252,7 +231,7 @@ export function FridayTableBanner() {
   // Heures dans le FUSEAU DU VISITEUR (Intl sans timeZone) : le rendez-vous
   // est fixé à Paris, mais chacun le lit à sa montre.
   const startsAt = new Date(status.startsAt)
-  const timeFormat = clockFormat(locale)
+  const timeFormat = { format: (date: Date) => formatClockTime(date, locale) }
 
   if (!live) {
     const dayFormat = new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
