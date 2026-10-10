@@ -1,6 +1,6 @@
 # Regole di Dilemmes — voti segreti e rivelazioni
 
-**Dilemmes** è il rompighiaccio del Pillaveur: «Preferiresti», «Non ho mai» e «Chi del tavolo» con voti segreti, rivelati tutti insieme a tutto il tavolo. Gratis, da 3 a 16 giocatori, partite da cinque minuti: perfetto per scaldare la serata prima dei giochi più impegnativi. Attenzione: per ora le carte sono solo in francese.
+**Dilemmes** è il rompighiaccio del Pillaveur: «Preferiresti», «Non ho mai» e «Chi del tavolo» con voti segreti, rivelati tutti insieme a tutto il tavolo. Gratis, da 3 a 16 giocatori, partite da cinque minuti: perfetto per scaldare la serata prima dei giochi più impegnativi.
 
 ## Il principio
 

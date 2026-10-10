@@ -1,6 +1,6 @@
 # Rules of Sans Filtre — the fill-in-the-blank card game
 
-**Sans Filtre** ("No Filter") is the online party game where bad faith is a virtue: a black card to complete, anonymous answers laid down by the whole table, and a judge who crowns the funniest. 4 to 16 players, free, with built-in voice chat — it's made to be read out loud. Heads-up: the cards are only in French for now.
+**Sans Filtre** ("No Filter") is the online party game where bad faith is a virtue: a black card to complete, anonymous answers laid down by the whole table, and a judge who crowns the funniest. 4 to 16 players, free, with built-in voice chat — it's made to be read out loud.
 
 ## How it works
 

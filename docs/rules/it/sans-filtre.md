@@ -1,6 +1,6 @@
 # Regole di Sans Filtre — il gioco delle carte da completare
 
-**Sans Filtre** («senza filtri») è il gioco da aperitivo online in cui la malafede è una virtù: una carta nera da completare, risposte anonime calate da tutto il tavolo e un giudice che incorona la più divertente. Da 4 a 16 giocatori, gratis, con chat vocale integrata: è fatto per essere letto ad alta voce. Attenzione: per ora le carte sono solo in francese.
+**Sans Filtre** («senza filtri») è il gioco da aperitivo online in cui la malafede è una virtù: una carta nera da completare, risposte anonime calate da tutto il tavolo e un giudice che incorona la più divertente. Da 4 a 16 giocatori, gratis, con chat vocale integrata: è fatto per essere letto ad alta voce.
 
 ## Il principio
 

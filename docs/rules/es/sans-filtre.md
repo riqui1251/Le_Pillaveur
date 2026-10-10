@@ -1,6 +1,6 @@
 # Reglas de Sans Filtre — el juego de las cartas con hueco
 
-**Sans Filtre** es el juego de aperitivo para jugar online en el que la mala fe es una virtud: una carta negra que completar, respuestas anónimas que juega toda la mesa y un juez que corona la más divertida. De 4 a 16 jugadores, gratis, con chat de voz integrado: está hecho para leerse en voz alta. Ojo: por ahora, las cartas solo están en francés.
+**Sans Filtre** es el juego de aperitivo para jugar online en el que la mala fe es una virtud: una carta negra que completar, respuestas anónimas que juega toda la mesa y un juez que corona la más divertida. De 4 a 16 jugadores, gratis, con chat de voz integrado: está hecho para leerse en voz alta.
 
 ## La idea
 

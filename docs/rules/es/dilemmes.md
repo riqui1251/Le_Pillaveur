@@ -1,6 +1,6 @@
 # Reglas de Dilemmes — votos secretos y revelaciones
 
-**Dilemmes** es el rompehielos de Le Pillaveur: «Qué prefieres», «Yo nunca» y «Quién de la mesa» en votos secretos, revelados de golpe para toda la mesa. Gratis, de 3 a 16 jugadores, partidas de cinco minutos: perfecto para calentar la noche antes de los juegos gordos. Ojo: por ahora, las cartas solo están en francés.
+**Dilemmes** es el rompehielos de Le Pillaveur: «Qué prefieres», «Yo nunca» y «Quién de la mesa» en votos secretos, revelados de golpe para toda la mesa. Gratis, de 3 a 16 jugadores, partidas de cinco minutos: perfecto para calentar la noche antes de los juegos gordos.
 
 ## La idea
 

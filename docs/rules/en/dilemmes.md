@@ -1,6 +1,6 @@
 # Rules of Dilemmes — secret votes and reveals
 
-**Dilemmes** ("Dilemmas") is Le Pillaveur's icebreaker: "Would you rather", "Never have I ever" and "Who at the table" as secret votes, revealed all at once to the whole table. Free, 3 to 16 players, five-minute games — perfect for warming up the night before the big games. Heads-up: the cards are only in French for now.
+**Dilemmes** ("Dilemmas") is Le Pillaveur's icebreaker: "Would you rather", "Never have I ever" and "Who at the table" as secret votes, revealed all at once to the whole table. Free, 3 to 16 players, five-minute games — perfect for warming up the night before the big games.
 
 ## How it works
 
