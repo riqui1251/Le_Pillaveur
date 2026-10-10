@@ -5,27 +5,22 @@ import { Link } from '@/i18n/navigation'
 import { PlayingCard, suitIsRed } from '@/components/ui/PlayingCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { getGameById, type GameMeta } from '@/lib/games'
-import { RULES_GAME_IDS, RULES_META, type RulesGameId } from '@/lib/rules/rules-content'
-import { OG_LOCALES, SITE_NAME, siteOgImage } from '@/lib/seo/alternates'
+import { RULES_GAME_IDS, type RulesGameId } from '@/lib/rules/rules-content'
+import { buildAlternates, pageOpenGraph, pageTwitter } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
 import { cn } from '@/lib/utils'
 
 /**
- * Index des règles — /regles. Les dix-sept articles de docs/rules/fr/ n'avaient
+ * Index des règles — /regles. Les dix-sept articles de docs/rules/<langue>/ n'avaient
  * aucune page mère : chacun n'était atteignable que depuis la landing ou
  * depuis un autre article. Ici, une carte par jeu (titre, accroche du
  * catalogue, effectif EN LIGNE lu dans src/lib/games.ts — jamais recopié —,
  * et « jouable avec des bots » quand c'est vrai), qui mène à /regles/<id>.
  *
- * Rendue UNE fois au build, par langue. Le contenu est FRANÇAIS sous les
- * quatre locales, comme les articles eux-mêmes (leur canonique pointe déjà
- * sur /fr) : d'où `lang="fr"`, un canonical /fr/regles et des textes lus
- * dans le catalogue français quelle que soit l'URL. Les clés existent dans les
- * quatre langues pour le jour où les articles seront traduits.
+ * Rendue UNE fois au build, par langue : les articles existent dans les
+ * quatre langues (docs/rules/<langue>/), l'index aussi — canonical
+ * auto-référent et hreflang, comme toute page publique.
  */
-
-/** Langue de TOUT le contenu de la page : celle des articles (docs/rules/fr/). */
-const CONTENT_LOCALE = 'fr'
 
 type RulesEntry = { id: RulesGameId; game: GameMeta }
 
@@ -37,32 +32,24 @@ function rulesEntries(): RulesEntry[] {
   })
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'rules' })
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'rules' })
   const title = t('meta.title')
   const description = t('meta.description')
-  const canonical = `/${CONTENT_LOCALE}/regles`
+  const alternates = buildAlternates('/regles', locale)
   return {
     // Le gabarit du layout ajoute « — Le Pillaveur » : le titre est court,
     // le suffixe tient dans les 60 caractères.
     title,
     description,
-    // Une seule version canonique (/fr) pour les quatre URL : même règle que
-    // les articles, dont l'index partage la langue.
-    alternates: { canonical },
-    // Pas de pageOpenGraph : ses alternateLocale annonceraient des versions
-    // traduites qui n'existent pas. Type et nom du site reposés à la main
-    // (l'openGraph de la page remplace celui du layout en entier).
-    openGraph: {
-      type: 'website',
-      siteName: SITE_NAME,
-      locale: OG_LOCALES[CONTENT_LOCALE],
-      title,
-      description,
-      url: canonical,
-      images: [{ url: siteOgImage(CONTENT_LOCALE), width: 1200, height: 630, alt: title }],
-    },
-    twitter: { card: 'summary_large_image', title, description, images: [siteOgImage(CONTENT_LOCALE)] },
+    alternates,
+    openGraph: pageOpenGraph(locale, { title, description, url: alternates.canonical }),
+    twitter: pageTwitter(locale, { title, description }),
   }
 }
 
@@ -76,10 +63,10 @@ export default async function RulesIndexPage({
   // là, pas les en-têtes de la requête — condition du rendu au build.
   setRequestLocale(locale)
 
-  const t = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'rules' })
-  const tCatalog = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'games.catalog' })
+  const t = await getTranslations({ locale, namespace: 'rules' })
+  const tCatalog = await getTranslations({ locale, namespace: 'games.catalog' })
   const entries = rulesEntries()
-  const url = `${SITE_URL}/${CONTENT_LOCALE}/regles`
+  const url = `${SITE_URL}/${locale}/regles`
 
   // Données structurées : la page de collection porte la liste ordonnée des
   // articles (chaque entrée pointe sur un article qui porte son propre
@@ -90,7 +77,7 @@ export default async function RulesIndexPage({
     name: t('title'),
     description: t('meta.description'),
     url,
-    inLanguage: CONTENT_LOCALE,
+    inLanguage: locale,
     isPartOf: { '@type': 'WebSite', name: 'Le Pillaveur', url: SITE_URL },
     mainEntity: {
       '@type': 'ItemList',
@@ -98,8 +85,8 @@ export default async function RulesIndexPage({
       itemListElement: entries.map(({ id }, index) => ({
         '@type': 'ListItem',
         position: index + 1,
-        name: RULES_META[id].title,
-        url: `${SITE_URL}/${CONTENT_LOCALE}/regles/${id}`,
+        name: t(`articles.${id}.title`),
+        url: `${url}/${id}`,
       })),
     },
   }
@@ -107,16 +94,13 @@ export default async function RulesIndexPage({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: t('breadcrumb.home'), item: `${SITE_URL}/${CONTENT_LOCALE}` },
+      { '@type': 'ListItem', position: 1, name: t('breadcrumb.home'), item: `${SITE_URL}/${locale}` },
       { '@type': 'ListItem', position: 2, name: t('breadcrumb.rules'), item: url },
     ],
   }
 
   return (
-    // Contenu 100 % FRANÇAIS servi aussi sous /en, /es et /it : sans ce
-    // `lang`, le document annoncerait la langue de l'URL sur du texte
-    // français — faute pour un moteur comme pour un lecteur d'écran.
-    <main lang={CONTENT_LOCALE} className="relative min-h-screen overflow-x-clip text-white">
+    <main className="relative min-h-screen overflow-x-clip text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify([collection, breadcrumbs]) }}

@@ -25,10 +25,9 @@ import { isRulesGameId } from '@/lib/rules/rules-ids'
  * icône, <h1> et accroche du catalogue, les faits tirés de src/lib/games.ts
  * (effectif, bots, vocal, gratuit), puis « Comment ça se joue » en trois
  * courts paragraphes (`games.<id>.about` : la tranche de la page, jamais un
- * namespace de premier niveau — voir src/i18n/messages-slices.ts) et, en
- * français seulement, le lien vers les règles complètes quand le document
- * existe (docs/rules/fr/, canonique /fr : un lecteur italien tomberait sur
- * un article en français).
+ * namespace de premier niveau — voir src/i18n/messages-slices.ts) et le
+ * lien vers les règles complètes quand l'article existe (docs/rules/<langue>/,
+ * traduit dans les quatre langues).
  *
  * Les actions restent celles de la page (`children` : TryBotsGate pour un
  * visiteur, « passer en ligne » pour un compte local…). En `pending`, tant
@@ -87,7 +86,7 @@ export function GameShowcase({
   if (game.onlineReady) facts.push(t('voice'))
   facts.push(t('free'))
 
-  const rulesHref = locale === 'fr' && isRulesGameId(gameId) ? `/regles/${gameId}` : null
+  const rulesHref = isRulesGameId(gameId) ? `/regles/${gameId}` : null
   // Cartes absentes de la langue de la page : dit en clair à côté du badge,
   // la table ne s'ouvrirait pas dans cette langue (content_lang_unavailable).
   const frOnly = !hasContentIn(game, locale)

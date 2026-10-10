@@ -402,39 +402,36 @@ export async function LandingPage({ locale }: { locale: string }) {
       </section>
 
       {/* ── Règles (maillage interne SEO) ──
-          Les articles de /regles n'existent QU'EN FRANÇAIS (docs/rules/fr/, et
-          leur canonique pointe déjà sur /fr). Les proposer à un anglophone était
-          une promesse non tenue : la section ne sort donc qu'en français. */}
-      {locale === 'fr' && (
-        <section className="py-8">
-          <h2 className="text-center font-display text-xl font-bold text-gold sm:text-2xl">
-            {t('rules.title')}
-          </h2>
-          <p className="mt-1 text-center text-xs text-white/45">{t('rules.subtitle')}</p>
-          <ul className="mt-4 flex flex-wrap justify-center gap-2">
-            {RULES_GAME_IDS.map((id) => (
-              <li key={id}>
-                <Link
-                  href={`/regles/${id}`}
-                  className="inline-flex rounded-full border border-gold/25 px-3 py-1.5 text-xs font-semibold text-cream/75 transition-colors hover:border-gold/50 hover:text-cream"
-                >
-                  {t('rules.linkLabel', { game: tCatalog(`${id}.title`) })}
-                </Link>
-              </li>
-            ))}
-            {/* L'index /regles : sans ce lien, la page mère des articles ne
-                recevait aucun lien interne depuis la vitrine. */}
-            <li>
+          Un article par jeu en ligne, dans la langue de la page
+          (docs/rules/<langue>/). */}
+      <section className="py-8">
+        <h2 className="text-center font-display text-xl font-bold text-gold sm:text-2xl">
+          {t('rules.title')}
+        </h2>
+        <p className="mt-1 text-center text-xs text-white/45">{t('rules.subtitle')}</p>
+        <ul className="mt-4 flex flex-wrap justify-center gap-2">
+          {RULES_GAME_IDS.map((id) => (
+            <li key={id}>
               <Link
-                href="/regles"
-                className="inline-flex rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold transition-colors hover:border-gold hover:text-cream"
+                href={`/regles/${id}`}
+                className="inline-flex rounded-full border border-gold/25 px-3 py-1.5 text-xs font-semibold text-cream/75 transition-colors hover:border-gold/50 hover:text-cream"
               >
-                {tRules('backToRules')}
+                {t('rules.linkLabel', { game: tCatalog(`${id}.title`) })}
               </Link>
             </li>
-          </ul>
-        </section>
-      )}
+          ))}
+          {/* L'index /regles : sans ce lien, la page mère des articles ne
+              recevait aucun lien interne depuis la vitrine. */}
+          <li>
+            <Link
+              href="/regles"
+              className="inline-flex rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold transition-colors hover:border-gold hover:text-cream"
+            >
+              {tRules('backToRules')}
+            </Link>
+          </li>
+        </ul>
+      </section>
 
       {/* ── FAQ (SSR) ──
           Cinq réponses courtes, vraies, dans le HTML : c'est ce qu'un visiteur

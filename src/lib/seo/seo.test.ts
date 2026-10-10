@@ -6,7 +6,7 @@ import robots from '@/app/robots'
 import sitemap from '@/app/sitemap'
 import { locales } from '@/i18n/routing'
 import { GAMES } from '@/lib/games'
-import { RULES_GAME_IDS, RULES_META } from '@/lib/rules/rules-content'
+import { RULES_GAME_IDS } from '@/lib/rules/rules-content'
 import { SITE_URL } from '@/lib/site'
 
 /**
@@ -15,7 +15,8 @@ import { SITE_URL } from '@/lib/site'
  * un extrait de 190 caractères perd sa fin (l'effectif, la gratuité). Tout
  * ce qui est lu ici est ce que les pages lisent : le catalogue de messages
  * (games.meta.<id>, puis la metadata des autres pages : accueil, hub,
- * collections, règles, classement, application, pages légales), RULES_META,
+ * collections, règles, classement, application, pages légales), les articles
+ * de règles (rules.articles.<id>),
  * le sitemap et robots.txt tels que Next les sert.
  *
  * Les longueurs comptent des points de code (« — », « œ » : un caractère),
@@ -28,7 +29,7 @@ const TITLE_MAX = 60
 const DESCRIPTION_MAX = 160
 
 type Meta = { title?: string; description?: string }
-type Catalogue = { games?: { meta?: Record<string, Meta> } }
+type Catalogue = { games?: { meta?: Record<string, Meta> }; rules?: { articles?: Record<string, Meta> } }
 
 const CATALOGUES: Record<string, Catalogue> = Object.fromEntries(
   locales.map((locale) => [
@@ -81,26 +82,26 @@ describe('games.meta — titre et extrait des pages de jeu, par langue', () => {
   }
 })
 
-describe('pages règles (RULES_META)', () => {
+describe('pages règles (rules.articles)', () => {
   it('ne documente que des jeux visibles du hub', () => {
     const visibleIds = new Set(visible.map((g) => g.id))
     expect(RULES_GAME_IDS.filter((id) => !visibleIds.has(id))).toEqual([])
   })
 
-  it(`a une entrée par page, titre ≤ ${TITLE_MAX} et extrait ≤ ${DESCRIPTION_MAX}`, () => {
-    const missing = RULES_GAME_IDS.filter((id) => !RULES_META[id]?.title || !RULES_META[id]?.description)
-    expect(missing).toEqual([])
-    expect(RULES_GAME_IDS.flatMap((id) => tooLong(id, RULES_META[id]))).toEqual([])
-  })
+  for (const locale of locales) {
+    it(`${locale} : une entrée par page, titre ≤ ${TITLE_MAX} et extrait ≤ ${DESCRIPTION_MAX}`, () => {
+      const articles = CATALOGUES[locale].rules?.articles ?? {}
+      const missing = RULES_GAME_IDS.filter((id) => !articles[id]?.title || !articles[id]?.description)
+      expect(missing).toEqual([])
+      expect(RULES_GAME_IDS.flatMap((id) => tooLong(id, articles[id]))).toEqual([])
+    })
+  }
 })
 
 /**
  * Les autres pages dont la metadata vient du catalogue : titre tel que Google
  * l'affiche — suffixé « — Le Pillaveur » par le gabarit du layout de langue,
- * sauf titre `absolute` — et extrait, dans les quatre langues. Les pages
- * règles (index compris) ne lisent que le français, mais les quatre versions
- * existent pour le jour où les articles seront traduits : elles tiennent les
- * mêmes bornes.
+ * sauf titre `absolute` — et extrait, dans les quatre langues.
  */
 describe('metadata lue dans le catalogue — titres et extraits, par langue', () => {
   const COLLECTION_SLUGS = ['a-2-joueurs', 'sans-alcool', 'seul-avec-des-bots', 'en-grand-groupe']
@@ -159,11 +160,21 @@ describe('sitemap.xml', () => {
     for (const id of RULES_GAME_IDS) expect(urls).toContain(`${SITE_URL}/fr/regles/${id}`)
   })
 
-  it("liste l'index des règles en français seul (pas d'alternates)", () => {
+  it("liste l'index des règles et chaque article avec leurs quatre langues", () => {
     const index = entries.find((entry) => entry.url === `${SITE_URL}/fr/regles`)
     expect(index).toBeDefined()
-    expect(index?.alternates).toBeUndefined()
     expect(index?.priority).toBe(0.7)
+    for (const path of ['/regles', ...RULES_GAME_IDS.map((id) => `/regles/${id}`)]) {
+      const entry = entries.find((e) => e.url === `${SITE_URL}/fr${path}`)
+      expect(entry, path).toBeDefined()
+      expect(languagesOf(entry!), path).toEqual({
+        fr: `${SITE_URL}/fr${path}`,
+        en: `${SITE_URL}/en${path}`,
+        es: `${SITE_URL}/es${path}`,
+        it: `${SITE_URL}/it${path}`,
+        'x-default': `${SITE_URL}/fr${path}`,
+      })
+    }
   })
 
   it('liste les quatre collections du hub, mêmes slugs dans les quatre langues', () => {

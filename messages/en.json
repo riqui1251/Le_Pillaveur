@@ -5647,7 +5647,81 @@
     "showcaseFacts": "free · nothing to install",
     "voiceChat": "voice chat",
     "playNow": "Play now — it's free",
-    "otherRules": "Rules of the other games"
+    "otherRules": "Rules of the other games",
+    "articles": {
+      "1220": {
+        "title": "Rules of 1220 — learn the bets, then play free",
+        "description": "A d12, a d20, parity, sum range and key numbers: the full rules. Then play it free: 2 to 16 players, voice chat — or solo with bots."
+      },
+      "loup-garou": {
+        "title": "Werewolf Rules — learn it, then play free online",
+        "description": "Roles (Seer, Witch, Hunter…), nights, votes and the Mayor explained. Then play free: 4 to 12 players, voice chat — or solo with bots."
+      },
+      "imposteur": {
+        "title": "The Impostor Rules — learn it, then play free online",
+        "description": "A secret word, an impostor, clues and a vote: the rules in 2 minutes. Then play free: 3 to 16 players, voice chat — or solo with bots."
+      },
+      "quiz": {
+        "title": "The Big Pillaveur Quiz Rules — learn it, then play",
+        "description": "Buzzer, speed, points and podium: the quiz explained in a flash. Then play free: 2 to 16 players, voice chat — or solo against the bots."
+      },
+      "menteur": {
+        "title": "Liar's Dice Rules — learn the dice game, then play",
+        "description": "Hidden dice, bids and when to shout \"Liar!\": the rules in 2 minutes. Then play free: 2 to 6 players, voice chat — or solo with bots."
+      },
+      "petit-buveur": {
+        "title": "The Little Drinker Rules — learn it, then play free",
+        "description": "Board, effect squares, dares and sips: the rules at a glance. Then play free: 2 to 99 players, voice chat — or solo with bots."
+      },
+      "toucher-coule": {
+        "title": "Hit & Sunk Rules — learn it, then play free",
+        "description": "Ship placement, team shots, hit or sunk: simple rules. Then play free online: 1 to 8 players, voice chat, nothing to install."
+      },
+      "bluff": {
+        "title": "The Big Bluff Rules — learn it, then play free online",
+        "description": "Invent a fake answer, vote for the real one, score: rules and tips. Then play free: 3 to 16 players, voice chat — or solo with bots."
+      },
+      "espion": {
+        "title": "Who's the Spy? Rules — learn it, then play free",
+        "description": "A secret location, questions, an accusation: the rules in 2 minutes. Then play free: 3 to 16 players, voice chat — or solo with bots."
+      },
+      "tabou": {
+        "title": "Taboo Voice Rules — get them guessing, no banned words",
+        "description": "Get your team to guess a word over voice chat without saying the taboo words: the rules. Then play free: 4 to 16 players, 2 per team, voice chat."
+      },
+      "crobard": {
+        "title": "Rules of Crobard — learn it and play online free",
+        "description": "Live drawing, timed guessing, point scoring: it's all here. Then play it free: 3 to 16 players, voice chat — or solo with bots."
+      },
+      "telephone-dessine": {
+        "title": "Rules of Drawn Telephone — learn it and play free",
+        "description": "One sentence, one drawing, one guess: the telephone game in drawings, explained. Then play it free: 3 to 8 players, voice chat, nothing to install."
+      },
+      "purple": {
+        "title": "Rules of Purple — learn it and play online free",
+        "description": "Red, black or purple: the bets, the sips and passing the pot explained. Then play it free: 2 to 16 players, voice chat — or solo with bots."
+      },
+      "sans-filtre": {
+        "title": "Rules of Sans Filtre — learn it and play online free",
+        "description": "Fill-in-the-blank cards, anonymous answers, a round judge: the rules in 2 minutes. Then play it free: 4 to 16 players, voice chat — or solo with bots."
+      },
+      "mots-codes": {
+        "title": "Rules of Mots Codés — learn it and play online free",
+        "description": "25 words, two teams, one clue and a number, beware the assassin: all explained. Then play it free: 4 to 16 players, voice chat, nothing to install."
+      },
+      "dilemmes": {
+        "title": "Rules of Dilemmes — learn it and play online free",
+        "description": "Would you rather, Never have I ever, Who at the table, secret votes: quick rules. Then play it free: 3 to 16 players, voice chat — or solo with bots."
+      },
+      "petit-bac": {
+        "title": "Rules of Petit Bac — learn it and play online free",
+        "description": "Letter, categories, STOP, scoring and contesting: the full rules. Then play it free: 2 to 16 players, voice chat, nothing to install."
+      },
+      "president": {
+        "title": "Rules of Président online — combos, 2 cuts and the Trou",
+        "description": "Combos, the 2 cuts, President and Trou, automatic exchange: quick rules. Then play it free: 4 to 8 players, voice chat — or solo with bots."
+      }
+    }
   },
   "tryBots": {
     "play": "Play now",

@@ -5647,7 +5647,81 @@
     "showcaseFacts": "gratuit · sans installation",
     "voiceChat": "chat vocal",
     "playNow": "Jouer maintenant — c'est gratuit",
-    "otherRules": "Les règles des autres jeux"
+    "otherRules": "Les règles des autres jeux",
+    "articles": {
+      "1220": {
+        "title": "Règles du 1220 — apprendre les paris puis jouer gratuit",
+        "description": "Un dé 12, un dé 20, parité, plage de somme et chiffres clés : règles complètes. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "loup-garou": {
+        "title": "Règles du Loup-Garou — apprendre et jouer en ligne gratuit",
+        "description": "Rôles (Voyante, Sorcière, Chasseur…), nuits, votes et maire expliqués. Puis joues-y gratuitement : 4 à 12 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "imposteur": {
+        "title": "Règles de L'Imposteur — apprendre et jouer en ligne gratuit",
+        "description": "Un mot secret, un imposteur, des indices et un vote : les règles en 2 minutes. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "quiz": {
+        "title": "Règles du Grand Pillaveur — comprendre le quiz puis jouer",
+        "description": "Buzzer, rapidité, points et podium : le quiz expliqué en un clin d’œil. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal — ou seul contre les bots."
+      },
+      "menteur": {
+        "title": "Règles du Menteur — apprendre le jeu de dés puis jouer",
+        "description": "Dés cachés, enchères et quand crier « Menteur ! » : les règles en 2 minutes. Puis joues-y gratuitement : 2 à 6 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "petit-buveur": {
+        "title": "Règles du Petit Buveur — apprendre et jouer en ligne gratuit",
+        "description": "Plateau, cases à effets, défis et gorgées : les règles en un clin d’œil. Puis joues-y gratuitement : 2 à 99 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "toucher-coule": {
+        "title": "Règles du Toucher-Coulé — apprendre puis jouer gratuit",
+        "description": "Placement des navires, tirs en équipes, touché ou coulé : règles simples. Puis joues-y gratuitement en ligne : 1 à 8 joueurs, chat vocal, sans installation."
+      },
+      "bluff": {
+        "title": "Règles du Grand Bluff — apprendre et jouer en ligne gratuit",
+        "description": "Inventer une fausse réponse, voter pour la vraie, marquer : règles et astuces. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "espion": {
+        "title": "Règles de Qui est l'Espion ? — apprendre et jouer gratuit",
+        "description": "Un lieu secret, des questions, une accusation : les règles en 2 minutes. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "tabou": {
+        "title": "Règles du Tabou Vocal — faire deviner sans mot interdit",
+        "description": "Faire deviner un mot au chat vocal sans dire les mots tabous, en équipes : les règles. Puis joues-y gratuitement : 4 à 16 joueurs, 2 par équipe, chat vocal."
+      },
+      "crobard": {
+        "title": "Règles du Crobard — apprendre et jouer en ligne gratuit",
+        "description": "Dessin en direct, devinettes chronométrées, comptage des points : tout y est. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "telephone-dessine": {
+        "title": "Règles du Téléphone Dessiné — apprendre et jouer gratuit",
+        "description": "Une phrase, un dessin, une devinette : le téléphone arabe en dessins expliqué. Puis joues-y gratuitement : 3 à 8 joueurs, chat vocal, sans installation."
+      },
+      "purple": {
+        "title": "Règles du Purple — apprendre et jouer en ligne gratuit",
+        "description": "Rouge, noir ou purple : les paris, les gorgées et l’alternance expliqués. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "sans-filtre": {
+        "title": "Règles de Sans Filtre — apprendre et jouer en ligne gratuit",
+        "description": "Carte à trou, réponses anonymes, juge du tour : les règles en 2 minutes. Puis joues-y gratuitement : 4 à 16 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "mots-codes": {
+        "title": "Règles de Mots Codés — apprendre et jouer en ligne gratuit",
+        "description": "25 mots, deux équipes, un indice chiffré, gare à l’assassin : tout est expliqué. Puis joues-y gratuitement : 4 à 16 joueurs, chat vocal, sans installation."
+      },
+      "dilemmes": {
+        "title": "Règles de Dilemmes — apprendre et jouer en ligne gratuit",
+        "description": "Tu préfères, Je n’ai jamais, Qui de la table, votes secrets : règles éclair. Puis joues-y gratuitement : 3 à 16 joueurs, chat vocal — ou seul avec des bots."
+      },
+      "petit-bac": {
+        "title": "Règles du Petit Bac — apprendre et jouer en ligne gratuit",
+        "description": "Lettre, catégories, STOP, comptage et contestations : les règles complètes. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal, sans installation."
+      },
+      "president": {
+        "title": "Règles du Président en ligne — combos, coupe au 2 et Trou",
+        "description": "Combos, coupe au 2, Président et Trou, échange automatique : règles éclair. Puis joues-y gratuitement : 4 à 8 joueurs, chat vocal — ou seul avec des bots."
+      }
+    }
   },
   "tryBots": {
     "play": "Jouer maintenant",

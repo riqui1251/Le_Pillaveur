@@ -50,18 +50,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...GAMES.filter((game) => !game.hidden).map((game) =>
       entry(`/games/${game.id}`, 0.7, 'monthly')
     ),
-    // Index des règles puis un article par jeu : contenu français uniquement
-    // (docs/rules/fr/), canonical /fr — pas d'alternates.
-    {
-      url: `${SITE_URL}/fr/regles`,
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-    ...RULES_GAME_IDS.map((id) => ({
-      url: `${SITE_URL}/fr/regles/${id}`,
-      changeFrequency: 'monthly' as const,
-      priority: 0.6,
-    })),
+    // Index des règles puis un article par jeu, traduits dans les quatre
+    // langues (docs/rules/<langue>/).
+    entry('/regles', 0.7, 'weekly'),
+    ...RULES_GAME_IDS.map((id) => entry(`/regles/${id}`, 0.6, 'monthly')),
     entry('/legal/cgu', 0.2, 'yearly'),
     entry('/legal/confidentialite', 0.2, 'yearly'),
     entry('/legal/mentions-legales', 0.2, 'yearly'),

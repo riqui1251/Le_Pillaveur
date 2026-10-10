@@ -4,7 +4,7 @@ import { Link, usePathname } from '@/i18n/navigation'
 import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, ShieldAlert, Star, Loader2, BookOpen } from 'lucide-react'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
 import { isCapacitorApp } from '@/lib/native-app'
 import { useFriends, type Friend } from '@/hooks/useFriends'
@@ -85,9 +85,6 @@ const ChatPanel = dynamic<ChatPanelProps>(
 const NAV_LINK_KEYS = [
   { href: '/joueurs', key: 'joueurs', icon: User },
   { href: '/jeux', key: 'jeux', icon: Gamepad2 },
-  // Français seulement : les articles de /regles n'existent qu'en français
-  // (docs/rules/fr/) — le proposer à un anglophone serait une promesse non
-  // tenue, même règle que la section règles de la landing.
   { href: '/regles', key: 'regles', icon: BookOpen },
   { href: '/classement', key: 'classement', icon: Trophy },
   { href: '/compte', key: 'compte', icon: Home },
@@ -108,7 +105,6 @@ type NavLinkItem = {
 
 export default function Navbar() {
   const t = useTranslations('nav')
-  const locale = useLocale()
   const [mounted, setMounted] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -153,7 +149,7 @@ export default function Navbar() {
 
   const links = useMemo((): NavLinkItem[] => {
     const base: NavLinkItem[] = NAV_LINK_KEYS.filter(
-      ({ key }) => !(inApp && key === 'application') && !(key === 'regles' && locale !== 'fr')
+      ({ key }) => !(inApp && key === 'application')
     ).map(({ href, key, icon }) => ({
       href,
       key,
@@ -171,7 +167,7 @@ export default function Navbar() {
       })
     }
     return base
-  }, [user, t, inApp, locale])
+  }, [user, t, inApp])
 
   const activeHref =
     links.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`))?.href ?? null
