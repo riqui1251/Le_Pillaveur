@@ -4,27 +4,20 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { ArrowLeft, Play } from 'lucide-react'
 import { renderMarkdown } from '@/lib/legal/render-markdown'
-import {
-  RULES_GAME_IDS,
-  RULES_META,
-  isRulesGameId,
-  loadRulesDoc,
-} from '@/lib/rules/rules-content'
+import { RULES_GAME_IDS, isRulesGameId, loadRulesDoc } from '@/lib/rules/rules-content'
 import { GAMES } from '@/lib/games'
 import { TryBotsGate } from '@/components/online/TryBotsGate'
-import { OG_LOCALES, SITE_NAME } from '@/lib/seo/alternates'
+import { SITE_NAME, buildAlternates, buildOpenGraphLocale } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
 
 /**
- * Pages « règles » SEO — un article par jeu en ligne (contenu français,
- * voir docs/rules/fr/). Rendues UNE fois au build (un HTML par jeu et par
- * langue, croisement avec les langues du layout), liées depuis la landing,
- * l'index /regles et le sitemap : c'est le maillage long-tail (« règles loup
- * garou en ligne »…).
+ * Pages « règles » SEO — un article par jeu en ligne et par langue (voir
+ * docs/rules/<langue>/, le français faisant référence). Rendues UNE fois au
+ * build (un HTML par jeu et par langue, croisement avec les langues du
+ * layout), liées depuis la landing, l'index /regles et le sitemap : c'est le
+ * maillage long-tail (« règles loup garou en ligne », « werewolf rules
+ * online »…).
  */
-
-/** Langue de TOUT le contenu de la page : celle des articles (docs/rules/fr/). */
-const CONTENT_LOCALE = 'fr'
 
 /**
  * Carte de partage peinte pour CE jeu (même route que les pages de jeu,
@@ -32,8 +25,8 @@ const CONTENT_LOCALE = 'fr'
  * Discord montrait la carte générique du site — ou rien. Chemin relatif
  * (metadata, résolue contre metadataBase) ; le JSON-LD la veut absolue.
  */
-function rulesOgImage(gameId: string): string {
-  return `/api/og?type=game&game=${encodeURIComponent(gameId)}&locale=${CONTENT_LOCALE}`
+function rulesOgImage(gameId: string, locale: string): string {
+  return `/api/og?type=game&game=${encodeURIComponent(gameId)}&locale=${locale}`
 }
 
 export function generateStaticParams() {
@@ -43,35 +36,36 @@ export function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ gameId: string }>
+  params: Promise<{ locale: string; gameId: string }>
 }): Promise<Metadata> {
-  const { gameId } = await params
+  const { locale, gameId } = await params
   if (!isRulesGameId(gameId)) return {}
-  const meta = RULES_META[gameId]
-  const canonical = `/${CONTENT_LOCALE}/regles/${gameId}`
-  const ogImage = rulesOgImage(gameId)
-  const images = [{ url: ogImage, width: 1200, height: 630, alt: meta.title }]
+  const t = await getTranslations({ locale, namespace: `rules.articles.${gameId}` })
+  const title = t('title')
+  const description = t('description')
+  const alternates = buildAlternates(`/regles/${gameId}`, locale)
+  const ogImage = rulesOgImage(gameId, locale)
+  const images = [{ url: ogImage, width: 1200, height: 630, alt: title }]
   return {
-    // Titre SANS le suffixe « — Le Pillaveur » du layout : les titres RULES_META
-    // dépassaient 60 caractères et étaient tronqués dans Google.
-    title: { absolute: meta.title },
-    description: meta.description,
-    // Contenu 100 % français servi sous les 4 locales : une seule version
-    // canonique (/fr) pour consolider le signal (ex. /it/regles/purple :
-    // 106 impressions avec un extrait français, 0 clic).
-    alternates: { canonical },
+    // Titre SANS le suffixe « — Le Pillaveur » du layout : les titres
+    // d'articles dépassaient 60 caractères et étaient tronqués dans Google.
+    title: { absolute: title },
+    description,
+    // Un article traduit par langue : canonical auto-référent + hreflang,
+    // comme toute page publique (le sitemap porte les mêmes).
+    alternates,
     // L'openGraph de la page remplace celui du layout en entier : type, nom
-    // du site et locale (française seule, sans alternates) reposés ici.
+    // du site, locale et alternates reposés ici.
     openGraph: {
       type: 'article',
       siteName: SITE_NAME,
-      locale: OG_LOCALES[CONTENT_LOCALE],
-      title: meta.title,
-      description: meta.description,
-      url: canonical,
+      ...buildOpenGraphLocale(locale),
+      title,
+      description,
+      url: alternates.canonical,
       images,
     },
-    twitter: { card: 'summary_large_image', title: meta.title, description: meta.description, images: [ogImage] },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
   }
 }
 
@@ -86,18 +80,18 @@ export default async function RulesPage({
   // la requête — condition du rendu au build.
   setRequestLocale(locale)
   if (!isRulesGameId(gameId)) notFound()
-  const content = loadRulesDoc(gameId)
+  const content = loadRulesDoc(gameId, locale)
   if (!content) notFound()
   const game = GAMES.find((g) => g.id === gameId)
-  const meta = RULES_META[gameId]
-  // Textes de l'enveloppe en FRANÇAIS quelle que soit l'URL, comme l'article
-  // qu'ils encadrent (voir le `lang="fr"` plus bas).
-  const t = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'rules' })
-  const rulesIndexUrl = `${SITE_URL}/${CONTENT_LOCALE}/regles`
+  const t = await getTranslations({ locale, namespace: 'rules' })
+  const tCatalog = await getTranslations({ locale, namespace: 'games.catalog' })
+  const meta = { title: t(`articles.${gameId}.title`), description: t(`articles.${gameId}.description`) }
+  const gameTitle = (id: string) => (GAMES.some((g) => g.id === id) ? tCatalog(`${id}.title`) : id)
+  const rulesIndexUrl = `${SITE_URL}/${locale}/regles`
   const canonicalUrl = `${rulesIndexUrl}/${gameId}`
 
-  // Données structurées de l'article de règles : le canonical est /fr, la
-  // langue déclarée doit l'être aussi (voir le `lang="fr"` plus bas). `about`
+  // Données structurées de l'article de règles, dans la langue de l'URL
+  // (canonical auto-référent, article traduit). `about`
   // rattache l'article au jeu décrit, ce qui manquait complètement ; `image`
   // (la carte du jeu) et le logo de l'éditeur sont ce que Google recommande
   // pour un Article — même logo que l'Organization du layout de langue.
@@ -106,10 +100,10 @@ export default async function RulesPage({
     '@type': 'Article',
     headline: meta.title,
     description: meta.description,
-    inLanguage: CONTENT_LOCALE,
+    inLanguage: locale,
     url: canonicalUrl,
     mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
-    image: [`${SITE_URL}${rulesOgImage(gameId)}`],
+    image: [`${SITE_URL}${rulesOgImage(gameId, locale)}`],
     publisher: {
       '@type': 'Organization',
       name: 'Le Pillaveur',
@@ -119,8 +113,8 @@ export default async function RulesPage({
     about: game
       ? {
           '@type': 'Game',
-          name: game.title,
-          url: `${SITE_URL}/${CONTENT_LOCALE}${game.path}`,
+          name: gameTitle(game.id),
+          url: `${SITE_URL}/${locale}${game.path}`,
           ...(game.minPlayers && game.maxPlayers
             ? {
                 numberOfPlayers: {
@@ -139,18 +133,16 @@ export default async function RulesPage({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: t('breadcrumb.home'), item: `${SITE_URL}/${CONTENT_LOCALE}` },
+      { '@type': 'ListItem', position: 1, name: t('breadcrumb.home'), item: `${SITE_URL}/${locale}` },
       { '@type': 'ListItem', position: 2, name: t('breadcrumb.rules'), item: rulesIndexUrl },
-      { '@type': 'ListItem', position: 3, name: game?.title ?? meta.title, item: canonicalUrl },
+      { '@type': 'ListItem', position: 3, name: game ? gameTitle(game.id) : meta.title, item: canonicalUrl },
     ],
   }
 
   return (
-    // Contenu 100 % FRANÇAIS servi aussi sous /en, /es et /it : sans ce
-    // `lang`, le document annonçait de l'anglais (ou de l'espagnol…) sur du
-    // texte français — faute pour un moteur comme pour un lecteur d'écran.
-    // Le middleware et le préfixe d'URL, eux, ne bougent pas.
-    <div lang={CONTENT_LOCALE} className="mx-auto min-h-screen max-w-3xl px-4 py-8 pb-24 sm:px-6">
+    // `lang` de l'URL : chaque article existe dans les quatre langues (le
+    // test rules-consistency l'exige), le repli français n'est qu'un filet.
+    <div lang={locale} className="mx-auto min-h-screen max-w-3xl px-4 py-8 pb-24 sm:px-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify([article, breadcrumbs]) }}
@@ -208,7 +200,7 @@ export default async function RulesPage({
           {RULES_GAME_IDS.filter((id) => id !== gameId).map((id) => (
             <li key={id}>
               <Link href={`/regles/${id}`} className="text-white/50 hover:text-amber-300">
-                {GAMES.find((g) => g.id === id)?.title ?? id}
+                {gameTitle(id)}
               </Link>
             </li>
           ))}

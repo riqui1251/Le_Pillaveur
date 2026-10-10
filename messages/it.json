@@ -5647,7 +5647,81 @@
     "showcaseFacts": "gratis · senza installazione",
     "voiceChat": "chat vocale",
     "playNow": "Gioca ora — è gratis",
-    "otherRules": "Le regole degli altri giochi"
+    "otherRules": "Le regole degli altri giochi",
+    "articles": {
+      "1220": {
+        "title": "Regole del 1220 — impara le scommesse e gioca gratis",
+        "description": "Un dado da 12, uno da 20, parità, fascia della somma e numeri chiave: regole complete. Poi gioca gratis: da 2 a 16 giocatori, chat vocale — o da solo con i bot."
+      },
+      "loup-garou": {
+        "title": "Regole di Lupo Mannaro — impara e gioca online gratis",
+        "description": "Ruoli (Veggente, Strega, Cacciatore…), notti, voti e sindaco spiegati. Poi gioca gratis: da 4 a 12 giocatori, chat vocale — o da solo con i bot."
+      },
+      "imposteur": {
+        "title": "Regole dell'Impostore — impara e gioca online gratis",
+        "description": "Una parola segreta, un impostore, indizi e un voto: le regole in 2 minuti. Poi gioca gratis: da 3 a 16 giocatori, chat vocale — o da solo con i bot."
+      },
+      "quiz": {
+        "title": "Regole del Gran Pillaveur — capisci il quiz e gioca",
+        "description": "Pulsante, velocità, punti e podio: il quiz spiegato in un attimo. Poi gioca gratis: da 2 a 16 giocatori, chat vocale — o da solo contro i bot."
+      },
+      "menteur": {
+        "title": "Regole del Bugiardo — impara il gioco di dadi e gioca",
+        "description": "Dadi nascosti, rilanci e quando gridare «Bugiardo!»: le regole in 2 minuti. Poi gioca gratis: da 2 a 6 giocatori, chat vocale — o da solo con i bot."
+      },
+      "petit-buveur": {
+        "title": "Regole del Piccolo Bevitore — impara e gioca gratis",
+        "description": "Tabellone, caselle a effetto, sfide e sorsi: le regole in un attimo. Poi gioca gratis: da 2 a 99 giocatori, chat vocale — o da solo con i bot."
+      },
+      "toucher-coule": {
+        "title": "Regole di Colpito e Affondato — impara e gioca gratis",
+        "description": "Navi da piazzare, colpi a squadre, colpito o affondato: regole semplici. Poi gioca gratis online: da 1 a 8 giocatori, chat vocale, senza installare nulla."
+      },
+      "bluff": {
+        "title": "Regole del Grande Bluff — impara e gioca online gratis",
+        "description": "Inventa una risposta falsa, vota quella vera, fai punti: regole e consigli. Poi gioca gratis: da 3 a 16 giocatori, chat vocale — o da solo con i bot."
+      },
+      "espion": {
+        "title": "Regole di Chi è la Spia? — impara e gioca gratis",
+        "description": "Un luogo segreto, domande, un'accusa: le regole in 2 minuti. Poi gioca gratis: da 3 a 16 giocatori, chat vocale — o da solo con i bot."
+      },
+      "tabou": {
+        "title": "Regole di Tabù Vocale — fai indovinare senza parole vietate",
+        "description": "Fai indovinare una parola in chat vocale senza dire i tabù, a squadre. Poi gioca gratis: da 4 a 16 giocatori, 2 per squadra, chat vocale."
+      },
+      "crobard": {
+        "title": "Regole del Crobard — impara e gioca online gratis",
+        "description": "Disegno dal vivo, indovinelli a tempo, conteggio dei punti: c'è tutto. Poi gioca gratis: da 3 a 16 giocatori, chat vocale — o da solo con i bot."
+      },
+      "telephone-dessine": {
+        "title": "Regole del Telefono Disegnato — impara e gioca gratis",
+        "description": "Una frase, un disegno, un'interpretazione: il telefono senza fili a disegni spiegato. Poi gioca gratis: da 3 a 8 giocatori, chat vocale, niente da installare."
+      },
+      "purple": {
+        "title": "Regole del Purple — impara e gioca online gratis",
+        "description": "Rosso, nero o purple: scommesse, sorsi e passaggi di mano spiegati. Poi gioca gratis: da 2 a 16 giocatori, chat vocale — o da solo con i bot."
+      },
+      "sans-filtre": {
+        "title": "Regole di Sans Filtre — impara e gioca online gratis",
+        "description": "Carta da completare, risposte anonime, giudice di turno: le regole in 2 minuti. Poi gioca gratis: da 4 a 16 giocatori, chat vocale — o da solo con i bot."
+      },
+      "mots-codes": {
+        "title": "Regole di Mots Codés — impara e gioca online gratis",
+        "description": "25 parole, due squadre, un indizio con numero, occhio all'assassino: tutto spiegato. Poi gioca gratis: da 4 a 16 giocatori, chat vocale, niente da installare."
+      },
+      "dilemmes": {
+        "title": "Regole di Dilemmes — impara e gioca online gratis",
+        "description": "Preferiresti, Non ho mai, Chi del tavolo, voti segreti: regole lampo. Poi gioca gratis: da 3 a 16 giocatori, chat vocale — o da solo con i bot."
+      },
+      "petit-bac": {
+        "title": "Regole del Petit Bac — impara e gioca online gratis",
+        "description": "Lettera, categorie, STOP, conteggio e contestazioni: le regole complete. Poi gioca gratis: da 2 a 16 giocatori, chat vocale, niente da installare."
+      },
+      "president": {
+        "title": "Regole del Président online — combo, taglio col 2 e Trou",
+        "description": "Combo, taglio col 2, Presidente e Trou, scambio automatico: regole lampo. Poi gioca gratis: da 4 a 8 giocatori, chat vocale — o da solo con i bot."
+      }
+    }
   },
   "tryBots": {
     "play": "Gioca ora",
