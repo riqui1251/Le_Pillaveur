@@ -88,8 +88,9 @@ export type GameMeta = {
   beta?: boolean;
   /**
    * Langues dans lesquelles le CONTENU du jeu existe (cartes, questions…),
-   * quand il n'existe pas dans les quatre : Sans Filtre et Dilemmes n'ont que
-   * des cartes françaises. Absent = toutes les langues du site. Le serveur
+   * quand il n'existe pas dans les quatre (aucun jeu aujourd'hui : Sans Filtre
+   * et Dilemmes ont leurs cartes ×4 depuis 10/2026). Absent = toutes les
+   * langues du site. Le serveur
    * refuse une table dont la langue n'y est pas (content_lang_unavailable),
    * le hub le signale par un badge « FR » — voir hasContentIn.
    */
@@ -496,8 +497,6 @@ export const GAMES: GameMeta[] = [
     soloFit: 'group',
     softModeReady: true,
     featured: true,
-    // Cartes écrites en français seulement (src/lib/sans-filtre/data/cards.fr.ts).
-    contentLangs: ['fr'],
   },
   {
     id: 'mots-codes',
@@ -538,8 +537,6 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     soloFit: 'group',
     softModeReady: true,
-    // Cartes écrites en français seulement (src/lib/dilemmes/data/index.ts).
-    contentLangs: ['fr'],
   },
   {
     id: 'petit-bac',

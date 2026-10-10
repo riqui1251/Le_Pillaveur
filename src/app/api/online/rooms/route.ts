@@ -82,10 +82,9 @@ export async function POST(request: Request) {
     const cookieLang = (await cookies()).get(LOCALE_COOKIE)?.value
     const lang = cookieLang && ROOM_LANGS.has(cookieLang) ? cookieLang : 'fr'
 
-    // Jeu dont les cartes n'existent pas dans cette langue (Sans Filtre et
-    // Dilemmes : français seulement) : le lancement tirerait des cartes
-    // françaises à une table anglaise. Refusé AVANT de quitter les autres
-    // tables — un refus ne doit coûter à l'hôte aucune de ses places.
+    // Jeu dont les cartes n'existent pas dans cette langue (GameMeta.contentLangs) :
+    // le lancement tirerait des cartes françaises à une table anglaise.
+    // Refusé AVANT de quitter les autres tables — un refus ne doit coûter à l'hôte aucune de ses places.
     if (!hasContentIn(game, lang)) {
       return NextResponse.json(onlineErrorBody('content_lang_unavailable'), { status: 400 })
     }
