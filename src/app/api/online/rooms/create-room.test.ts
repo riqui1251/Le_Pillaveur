@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * Garde d'entrée de POST /api/online/rooms : on n'ouvre une table QUE pour un
@@ -113,20 +113,39 @@ describe('POST /api/online/rooms — jeu jouable en ligne', () => {
 })
 
 describe('POST /api/online/rooms — cartes dans la langue de la table', () => {
-  // La table prend la langue du cookie du créateur ; Sans Filtre et Dilemmes
-  // n'ont que des cartes françaises (GameMeta.contentLangs).
-  const FR_ONLY = GAMES.filter((g) => g.contentLangs && !g.contentLangs.includes('en')).map((g) => g.id)
-
-  it('les jeux aux cartes françaises seules sont bien Sans Filtre et Dilemmes', () => {
-    expect(FR_ONLY.sort()).toEqual(['dilemmes', 'sans-filtre'])
+  it('aucun jeu n’est plus limité au français : Sans Filtre et Dilemmes ont leurs cartes ×4', () => {
+    expect(GAMES.filter((g) => g.contentLangs && !g.contentLangs.includes('en'))).toEqual([])
   })
 
   for (const gameId of ['sans-filtre', 'dilemmes']) {
-    for (const lang of ['en', 'es', 'it']) {
-      it(`refuse ${gameId} depuis le site en ${lang}, sans quitter ni créer de table`, async () => {
+    for (const lang of ['fr', 'en', 'es', 'it']) {
+      it(`ouvre ${gameId} depuis le site en ${lang}, table en ${lang}`, async () => {
         cookieLang.value = lang
 
         const res = await createRoom(gameId)
+
+        expect(res.status).toBe(200)
+        expect(JSON.parse(roomCreateMock.mock.calls[0][0].data.settingsJson).lang).toBe(lang)
+      })
+    }
+  }
+
+  // Le garde-fou reste pour un futur jeu aux cartes non traduites : on le
+  // vérifie en posant temporairement contentLangs sur un vrai jeu.
+  describe('jeu aux cartes françaises seules (contentLangs)', () => {
+    const game = GAMES.find((g) => g.id === 'sans-filtre')!
+    beforeEach(() => {
+      game.contentLangs = ['fr']
+    })
+    afterEach(() => {
+      delete game.contentLangs
+    })
+
+    for (const lang of ['en', 'es', 'it']) {
+      it(`refuse depuis le site en ${lang}, sans quitter ni créer de table`, async () => {
+        cookieLang.value = lang
+
+        const res = await createRoom('sans-filtre')
 
         expect(res.status).toBe(400)
         expect((await res.json()).error).toBe('content_lang_unavailable')
@@ -143,24 +162,15 @@ describe('POST /api/online/rooms — cartes dans la langue de la table', () => {
       ['sans cookie de langue', undefined],
       ['avec un cookie de langue invalide', 'de'],
     ] as const) {
-      it(`ouvre ${gameId} ${label}, table en français`, async () => {
+      it(`ouvre ${label}, table en français`, async () => {
         cookieLang.value = lang
 
-        const res = await createRoom(gameId)
+        const res = await createRoom('sans-filtre')
 
         expect(res.status).toBe(200)
         expect(roomCreateMock).toHaveBeenCalledTimes(1)
         expect(JSON.parse(roomCreateMock.mock.calls[0][0].data.settingsJson).lang).toBe('fr')
       })
     }
-  }
-
-  it('un jeu aux cartes traduites s’ouvre dans la langue du cookie', async () => {
-    cookieLang.value = 'it'
-
-    const res = await createRoom('loup-garou')
-
-    expect(res.status).toBe(200)
-    expect(JSON.parse(roomCreateMock.mock.calls[0][0].data.settingsJson).lang).toBe('it')
   })
 })
