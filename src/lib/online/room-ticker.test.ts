@@ -69,7 +69,7 @@ import {
   type ServiceTick,
   type ServiceTickOptions,
 } from '@/lib/online/game-adapters'
-import { BOT_PERSONAS, botTickDelayMs, personaForBotName } from '@/lib/online/bot-personas'
+import { BOT_PERSONAS, botDisplayName, botTickDelayMs, personaForBotName } from '@/lib/online/bot-personas'
 import { buildMenteurState } from '@/lib/menteur/server-adapter'
 import { buildLGState } from '@/lib/loup-garou/server-adapter'
 import { buildQuizState } from '@/lib/quiz/server-adapter'
@@ -551,7 +551,7 @@ describe('serviceTick — couverture du registre', () => {
 
   it('la borne haute du serveur couvre tout tirage du client', () => {
     for (const persona of BOT_PERSONAS) {
-      const name = `${persona.name} ${persona.emoji}`
+      const name = botDisplayName(persona)
       expect(botTickDelayMs(name, () => 1)).toBe(persona.tempoMaxMs)
       expect(botTickDelayMs(name, () => 0.999)).toBeLessThanOrEqual(persona.tempoMaxMs)
     }

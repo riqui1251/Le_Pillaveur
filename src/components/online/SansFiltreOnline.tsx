@@ -13,7 +13,7 @@ import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { SF_JUDGE_MS, SF_SUBMIT_MS, type SFClientView } from '@/lib/sans-filtre/engine'
-import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
+import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -110,7 +110,7 @@ export function SansFiltreOnline() {
     view.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot
-      ? botEmojiFromName(p.name)
+      ? botAvatarFromName(p.name)
       : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const totalPhaseMs = view.phase === 'judging' ? SF_JUDGE_MS : SF_SUBMIT_MS

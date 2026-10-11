@@ -3,7 +3,7 @@
 import { Crown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
-import { botEmojiFromName } from '@/lib/online/bot-personas'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import type { PreClientView } from '@/lib/president/engine'
 import { preRankOf, preSuitOf, PRE_RANKS, PRE_SUITS, PRE_TURN_MS } from '@/lib/president/engine'
 import { cn } from '@/lib/utils'
@@ -19,7 +19,7 @@ export function TvPresident({ room, state }: { room: TvRoomDto; state: PreClient
   const t = useTranslations('games.president.game')
   const nameOf = (id: string | null) => state.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const bigCard = (card: number) => {
     const red = PRE_SUITS[preSuitOf(card)] === '♥' || PRE_SUITS[preSuitOf(card)] === '♦'

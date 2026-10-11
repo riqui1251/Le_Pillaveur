@@ -3840,8 +3840,18 @@
         "dawnDeathSoft": "💀 {name} è morto — era {role}",
         "hunterPrompt": "🏹 Ultimo respiro: porta qualcuno con te!",
         "hunterWaiting": "{name} carica il fucile…",
-        "debatePrompt": "🗣️ Dibattete in vocale: chi è il lupo?",
-        "debateHint": "Accusate, difendetevi, bluffate…",
+        "debatePrompt": "🗣️ Dibattito: chi è il lupo?",
+        "debateHint": "Accusa, difenditi, fai squadra — o in vocale.",
+        "speakAccuse": "Accusare",
+        "speakDefend": "Difendermi",
+        "speakAlly": "Fare squadra",
+        "speakPickAccuse": "Chi accusi?",
+        "speakPickAlly": "Con chi fai squadra?",
+        "speakCancel": "Annulla",
+        "speechLeft": "Interventi rimasti: {n}/{max}",
+        "accusedYou": "⚡ Difenditi!",
+        "askedBy": "{name} ti chiede: chi voti?",
+        "feedAria": "Filo del dibattito",
         "skipToVote": "Passa al voto ({n}/{total})",
         "skipWaiting": "In attesa degli altri ({n}/{total})",
         "votePrompt": "Chi linciate? Voto segreto!",
@@ -3866,7 +3876,52 @@
         "botSay": {
           "suspect": "{name} mi sembra sospetto… nasconde qualcosa 🤨",
           "defend": "Cosa?! {name} dice sciocchezze, sono innocente!",
-          "ally": "Facciamo squadra con {name}, mi fido 🤝"
+          "ally": "Facciamo squadra con {name}, mi fido 🤝",
+          "rally": "Ben detto, {name} è sospetto anche per me 👀",
+          "doubt": "Non sono sicuro su {name}… prove?",
+          "ask": "{name}, e tu, chi voti?",
+          "toldYou": "L’avevo detto di {name}!",
+          "wrong": "Beh… mi sono sbagliato su {name}."
+        },
+        "botSayTrait": {
+          "prudent": {
+            "suspect": "Forse mi sbaglio… ma {name}, sei molto silenzioso.",
+            "defend": "Piano {name}, non hai nessuna prova contro di me…"
+          },
+          "farceur": {
+            "suspect": "{name}, quello è pelo sulle tue mani o sto sognando? 🐺",
+            "defend": "Io, un lupo? {name}, hai bevuto troppo 🍻"
+          },
+          "suiveur": {
+            "suspect": "Non ne sono sicuro… ma {name}, sei sospetto comunque.",
+            "defend": "No no {name}, ti sbagli, sto con il villaggio!"
+          },
+          "agressif": {
+            "suspect": "{name}, sei tu il lupo, ci metto la mano sul fuoco!",
+            "defend": "Mi accusi, {name}? Guardati prima tu!"
+          }
+        },
+        "botTic": {
+          "barnabe": "Se posso permettermi,",
+          "gepeto": "…giuro!",
+          "raoul": "Senza offesa,",
+          "suzette": "Anch’io,",
+          "marcel": "…cin cin!",
+          "gaston": "Piano, piano!",
+          "bernadette": "…tesoro.",
+          "norbert": "Statisticamente,",
+          "ginette": "Ma insomma!",
+          "roger": "…come si suol dire.",
+          "paulette": "…scherzo. O forse no.",
+          "dede": "Punto tutto!",
+          "huguette": "Ai miei tempi,",
+          "keke": "…fidati, bro.",
+          "mauricette": "Mamma mia,",
+          "firmin": "…dico così per dire.",
+          "josiane": "Detto tra noi,",
+          "lucien": "…tranquillo.",
+          "germaine": "…e sbrigatevi!",
+          "bricole": "…dovrebbe reggere."
         },
         "legend": {
           "title": "Legenda dei ruoli",

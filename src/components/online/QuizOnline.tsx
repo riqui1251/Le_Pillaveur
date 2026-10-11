@@ -17,7 +17,7 @@ import {
   QUIZ_REVEAL_MS,
   type QuizClientView,
 } from '@/lib/quiz/engine'
-import { botEmojiFromName } from '@/lib/online/bot-personas'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
@@ -111,7 +111,7 @@ export function QuizOnline() {
   const ranking = [...view.players].sort((a, b) => b.score - a.score)
 
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   // Verrou de version conservé ; le hook lit la réponse et annonce les refus.
   const sendAction = (body: Record<string, unknown>) =>

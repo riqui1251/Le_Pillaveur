@@ -242,10 +242,15 @@ Extension du pattern `stripEngineSecretForUser` avec un « profil de vue » :
   (distribution des rôles, chaque phase, résolutions au timeout, victoires).
 - Actions : `SEER_PEEK`, `WOLF_VOTE`, `WITCH_ACTION`, `HUNTER_SHOT`,
   `DEBATE_SKIP`, `DAY_VOTE`, `ADVANCE`, `CONTINUE`.
-- **Min 5 joueurs humains au lancement** (bots interdits au launch — la
-  déduction sociale avec bots n'a pas d'intérêt) ; bots en REMPLACEMENT
-  uniquement : loup → victime aléatoire non-loup ; Voyante/Sorcière → passe ;
-  vote du jour → suit la majorité courante sinon aléatoire.
+- **Bots au lancement comme en remplacement** (table solo « Essayer avec des
+  bots » = 1 humain + 3 bots) : ils jouent sur l'information PUBLIQUE via un
+  score de soupçon unique (`lgSuspicion`) — accusation d'ouverture, vote,
+  potion de mort de la Sorcière, tir du Chasseur ; la Voyante bot sonde le plus
+  suspect et ouvre sur le loup vu sans le dire ; les loups bots convergent sur
+  qui a nommé un loup (25 % de nuits au hasard) ; au débat, un coup par tick
+  selon le trait du persona (`bot-debate.ts`), avec réaction à la parole
+  humaine et remarques « je l'avais dit / je me suis planté » d'une manche à
+  l'autre. Maire, Salvateur et Corbeau restent au hasard.
 - UI mobile : carte rôle flip (« tap pour cacher »), overlays nuit (ciel étoilé
   + action selon rôle), aube dramatique, débat (timer + vivants + vocal), grille
   de vote, mode fantôme (vue omnisciente grisée).
@@ -267,8 +272,11 @@ Extension du pattern `stripEngineSecretForUser` avec un « profil de vue » :
 ### Risques identifiés
 - **Vocal + morts (Loup-Garou)** : pas de mute serveur possible (P2P) → règle
   sociale V1, auto-mute V2. Assumé.
-- **Bots en déduction sociale** : volontairement basiques (remplacement
-  uniquement) ; le launch exige des humains (min 5 LG / 4 Imposteur).
+- **Bots en déduction sociale** : au Loup-Garou ils jouent pour de vrai
+  (score de soupçon public, réactions au trait, mémoire d'une manche — voir
+  `src/lib/loup-garou/{bot-debate,engine}.ts`) ; une table peut se lancer
+  seul avec trois bots. Les autres jeux sociaux (Imposteur, Espion) gardent
+  des bots basiques, à porter sur le même socle une fois stabilisé.
 - **Volume de contenu (Quiz/Imposteur)** : généré par lots avec relecture ;
   format extensible pour en rajouter au fil de l'eau.
 - **Refactor Lot 0** : touche la route action existante → filet des 143 tests

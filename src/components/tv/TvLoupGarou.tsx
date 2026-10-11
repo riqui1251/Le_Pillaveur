@@ -4,12 +4,13 @@ import { type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
 import { Beer, Bird, FlaskConical, Hourglass, Medal, Moon, Shield, Skull, Sparkles, Sun, Target, Trophy, Wheat } from 'lucide-react'
 import type { TvRoomDto } from '@/lib/online-room'
-import { botEmojiFromName } from '@/lib/online/bot-personas'
 import type { LGClientView, LGRole } from '@/lib/loup-garou/engine'
 import { WolfIcon } from '@/components/icons/GameIcons'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { cn } from '@/lib/utils'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
+import { DebateFeed } from '@/components/online/loup-garou/DebateFeed'
+import { lgPlayerIcon } from '@/components/online/loup-garou/debate-feed'
 
 /**
  * LOUP-GAROU sur grand écran : la table vue du dessus — les joueurs sont des
@@ -61,8 +62,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
   const alive = state.players.filter((p) => p.alive)
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) => lgPlayerIcon(p, room.members)
   const roleName = (role: LGRole) => t(`roles.${role}.name`)
 
   // ── Fin de partie : révélation complète ──────────────────────────────────
@@ -184,6 +184,13 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
         {state.phase === 'day-debate' && (
           <>
             <p className="font-display text-4xl font-bold text-cream">{t('debatePrompt')}</p>
+            <DebateFeed
+              speeches={state.debateSpeech}
+              round={state.round}
+              players={state.players}
+              iconOf={iconOf}
+              variant="tv"
+            />
             <p className="text-xl text-white/50">
               {t('skipToVote', { n: state.debateSkips.length, total: alive.length })}
             </p>

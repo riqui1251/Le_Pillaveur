@@ -4,6 +4,9 @@ import {
   lgAlive,
   lgBotHunterTarget,
   lgBotWitchAction,
+  lgBotWolfTarget,
+  lgMostSuspect,
+  lgSuspicion,
   reduceLG,
   toLGClientView,
   toLGSpectatorView,
@@ -11,10 +14,11 @@ import {
   LG_DEBATE_DEFAULT_MS,
   LG_MIN_PLAYERS,
   LG_MAX_PLAYERS,
-  type LGPlayer,
+  type LGDebateSpeech,
   type LGState,
 } from './engine'
-import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
+import { lgBotDebateMove } from './bot-debate'
+import { botDisplayName, botTraitsFor, pickBotPersonas } from '@/lib/online/bot-personas'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
 /**
@@ -93,8 +97,13 @@ export function parseLGState(json: string | null): LGState | null {
   }
 }
 
+/** Paroles qu'un HUMAIN peut émettre par les boutons du débat. */
+export const LG_SPEAK_KINDS = ['suspect', 'defend', 'ally'] as const satisfies readonly LGDebateSpeech['kind'][]
+export type LGSpeakKind = (typeof LG_SPEAK_KINDS)[number]
+
 export type LGRoomActionInput =
   | { type: 'mayor-vote'; targetId: string }
+  | { type: 'debate-speak'; kind: LGSpeakKind; targetId: string }
   | { type: 'guard-protect'; targetId: string }
   | { type: 'raven-mark'; targetId: string }
   | { type: 'seer-peek'; targetId: string }
@@ -182,6 +191,16 @@ export function applyLGRoomAction(
             now: Date.now(),
           }),
         }
+      case 'debate-speak':
+        return {
+          ok: true,
+          state: reduceLG(state, {
+            type: 'DEBATE_SPEAK',
+            playerId: userId,
+            kind: input.kind,
+            targetId: input.targetId,
+          }),
+        }
       case 'debate-skip':
         return {
           ok: true,
@@ -254,17 +273,33 @@ export function lgSpectatorViewJson(state: LGState): string {
 
 // ─── Bots ────────────────────────────────────────────────────────────────────
 
-function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]
+function pickRandom<T>(arr: T[], rand: () => number): T {
+  return arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))]
 }
 
 /**
- * Fait agir TOUS les bots concernés par la phase courante. Volontairement
- * basiques (les bots n'existent qu'en remplacement) : actions plausibles,
- * jamais optimales. Le hasard des choix utilise Math.random (entrée
- * « joueur ») ; les tirages du moteur restent sur le RNG seedé.
+ * Part des nuits où la meute des loups bots frappe au hasard plutôt que sur
+ * sa cible commune (`lgBotWolfTarget`) : la convergence sur « celui qui a
+ * nommé un loup » reste lisible sans devenir une certitude.
  */
-export function applyLGBotAction(state: LGState): LGRoomActionResult {
+export const LG_WOLF_RANDOM_SHARE = 0.25
+
+/**
+ * Fait agir les bots concernés par la phase courante. Ils jouent avec ce
+ * qu'un joueur verrait : le score de soupçon public (`lgSuspicion`) guide
+ * l'accusation, le vote, la potion de mort et le tir du chasseur ; la voyante
+ * bot sonde le plus suspect et s'en souvient ; les loups bots convergent sur
+ * qui a nommé un loup. Seuls le maire, le Salvateur et le Corbeau restent au
+ * hasard (invisibles de l'écran « Le village dort… »). Nuit et votes en un
+ * tick, débat UN COUP PAR TICK via `lgBotDebateMove` (./bot-debate). `rand`
+ * et `now` sont injectés pour les tests ; en production, Math.random (entrée
+ * « joueur ») et l'horloge — les tirages du moteur restent sur le RNG seedé.
+ */
+export function applyLGBotAction(
+  state: LGState,
+  rand: () => number = Math.random,
+  now: number = Date.now()
+): LGRoomActionResult {
   try {
     let next = state
     let acted = false
@@ -278,8 +313,8 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
         next = reduceLG(next, {
           type: 'MAYOR_VOTE',
           playerId: bot.id,
-          targetId: pickRandom(candidates).id,
-          now: Date.now(),
+          targetId: pickRandom(candidates, rand).id,
+          now,
         })
         acted = true
       }
@@ -292,8 +327,8 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
           next = reduceLG(next, {
             type: 'GUARD_PROTECT',
             playerId: guard.id,
-            targetId: pickRandom(targets).id,
-            now: Date.now(),
+            targetId: pickRandom(targets, rand).id,
+            now,
           })
           acted = true
         }
@@ -306,8 +341,8 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
           next = reduceLG(next, {
             type: 'RAVEN_MARK',
             playerId: raven.id,
-            targetId: pickRandom(targets).id,
-            now: Date.now(),
+            targetId: pickRandom(targets, rand).id,
+            now,
           })
           acted = true
         }
@@ -315,26 +350,35 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
     } else if (next.phase === 'night-seer') {
       const seer = alive().find((p) => p.isBot && p.role === 'voyante')
       if (seer && !next.seerPeeks.some((pk) => pk.round === next.round)) {
+        // Sonde le plus suspect qu'elle n'a pas encore vu (tous vus : n'importe lequel).
+        const seen = new Set(next.seerPeeks.map((pk) => pk.targetId))
         const targets = alive().filter((p) => p.id !== seer.id)
+        const fresh = targets.filter((p) => !seen.has(p.id))
+        const pool = fresh.length > 0 ? fresh : targets
+        const tied = lgMostSuspect(lgSuspicion(next, seer.id), pool.map((p) => p.id))
         next = reduceLG(next, {
           type: 'SEER_PEEK',
           playerId: seer.id,
-          targetId: pickRandom(targets).id,
-          now: Date.now(),
+          targetId: pickRandom(tied, rand),
+          now,
         })
         acted = true
       }
     } else if (next.phase === 'night-wolves') {
-      for (const wolf of alive().filter((p) => p.isBot && p.role === 'loup')) {
-        if (next.wolfVotes[wolf.id]) continue
-        const targets = alive().filter((p) => p.role !== 'loup')
-        if (targets.length === 0) break
-        next = reduceLG(next, {
-          type: 'WOLF_VOTE',
-          playerId: wolf.id,
-          targetId: pickRandom(targets).id,
-        })
-        acted = true
+      const wolves = alive().filter((p) => p.isBot && p.role === 'loup' && !next.wolfVotes[p.id])
+      const targets = alive().filter((p) => p.role !== 'loup')
+      if (wolves.length > 0 && targets.length > 0) {
+        // Une seule cible pour toute la meute du tick : la menace commune, ou
+        // une victime au hasard une nuit sur quatre — et quand rien ne la
+        // désigne (première nuit, table muette).
+        const targetId =
+          rand() < LG_WOLF_RANDOM_SHARE
+            ? pickRandom(targets, rand).id
+            : (lgBotWolfTarget(next) ?? pickRandom(targets, rand).id)
+        for (const wolf of wolves) {
+          next = reduceLG(next, { type: 'WOLF_VOTE', playerId: wolf.id, targetId })
+          acted = true
+        }
       }
     } else if (next.phase === 'night-witch') {
       const witch = alive().find((p) => p.isBot && p.role === 'sorciere')
@@ -348,7 +392,7 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
           playerId: witch.id,
           action: decision.action,
           targetId: decision.targetId,
-          now: Date.now(),
+          now,
         })
         acted = true
       }
@@ -363,91 +407,38 @@ export function applyLGBotAction(state: LGState): LGRoomActionResult {
             type: 'HUNTER_SHOT',
             playerId: hunter.id,
             targetId,
-            now: Date.now(),
+            now,
           })
           acted = true
         }
       }
     } else if (next.phase === 'day-debate') {
-      // Étape 1 : chaque bot PARLE (se défend s'il est accusé, sinon accuse —
-      // les loups détournent les soupçons vers des non-loups — ou propose une
-      // alliance). Étape 2 (tick suivant) : quand tous ont parlé, ils passent
-      // au vote.
-      const bots = alive().filter((p) => p.isBot)
-      const spoke = (id: string) =>
-        next.debateSpeech.some((sp) => sp.playerId === id && sp.round === next.round)
-      const silent = bots.filter((b) => !spoke(b.id))
-      if (silent.length > 0) {
-        for (const bot of silent) {
-          if (next.phase !== 'day-debate') break
-          const accusedBy = next.debateSpeech.find(
-            (sp) => sp.round === next.round && sp.kind === 'suspect' && sp.targetId === bot.id
-          )
-          let kind: 'suspect' | 'defend' | 'ally'
-          let target: LGPlayer | undefined
-          if (accusedBy && accusedBy.playerId !== bot.id) {
-            kind = 'defend'
-            target = next.players.find((p) => p.id === accusedBy.playerId && p.alive)
-          }
-          if (!target) {
-            kind = Math.random() < 0.3 ? 'ally' : 'suspect'
-            const pool = alive().filter(
-              (p) => p.id !== bot.id && (bot.role !== 'loup' || p.role !== 'loup')
-            )
-            if (pool.length === 0) continue
-            target = pickRandom(pool)
-          }
-          next = reduceLG(next, {
-            type: 'DEBATE_SPEAK',
-            playerId: bot.id,
-            kind: kind!,
-            targetId: target.id,
-          })
-          acted = true
-        }
-      } else {
-        for (const bot of bots) {
-          if (next.phase !== 'day-debate') break
-          if (next.debateSkips.includes(bot.id)) continue
-          next = reduceLG(next, { type: 'DEBATE_SKIP', playerId: bot.id, now: Date.now() })
-          acted = true
-        }
+      // Un coup par tick : réaction à l'humain, ouverture, interpellation ou
+      // skip groupé — la parole bumpe la version et réarme le tick suivant.
+      for (const action of lgBotDebateMove(next, now, rand) ?? []) {
+        next = reduceLG(next, action)
+        acted = true
       }
     } else if (next.phase === 'day-vote' || next.phase === 'day-revote') {
-      // Vote informé par le débat : cible la plus accusée (les loups évitent
-      // toujours leurs complices).
-      const tally = new Map<string, number>()
-      for (const sp of next.debateSpeech) {
-        if (sp.round === next.round && sp.kind === 'suspect' && sp.targetId) {
-          tally.set(sp.targetId, (tally.get(sp.targetId) ?? 0) + 1)
-        }
-      }
+      // Vote informé par le débat et le caractère (rancune, loyauté) : le
+      // plus soupçonné parmi les candidats légaux (un loup évite toujours ses
+      // complices), le bot vote TOUJOURS.
       for (const bot of alive().filter((p) => p.isBot)) {
         if (next.phase !== 'day-vote' && next.phase !== 'day-revote') break
         if (next.dayVotes[bot.id]) continue
-        const pool = alive().filter(
-          (p) =>
-            p.id !== bot.id &&
-            (bot.role !== 'loup' || p.role !== 'loup') &&
-            (!next.revoteCandidates || next.revoteCandidates.includes(p.id))
-        )
-        const fallback = alive().filter(
-          (p) =>
-            p.id !== bot.id &&
-            (!next.revoteCandidates || next.revoteCandidates.includes(p.id))
-        )
-        const candidates = pool.length > 0 ? pool : fallback
+        const legal = (p: { id: string }) =>
+          p.id !== bot.id && (!next.revoteCandidates || next.revoteCandidates.includes(p.id))
+        const traits = botTraitsFor(bot.name)
+        const score = lgSuspicion(next, bot.id, traits.trait, traits)
+        const pool = alive().filter((p) => legal(p) && score.has(p.id))
+        const candidates = pool.length > 0 ? pool : alive().filter(legal)
         if (candidates.length === 0) continue
-        const best = [...candidates].sort(
-          (a, b) => (tally.get(b.id) ?? 0) - (tally.get(a.id) ?? 0)
-        )
-        const top = tally.get(best[0].id) ?? 0
-        const tied = best.filter((p) => (tally.get(p.id) ?? 0) === top)
+        const tied = lgMostSuspect(score, candidates.map((p) => p.id))
         next = reduceLG(next, {
           type: 'DAY_VOTE',
           playerId: bot.id,
-          targetId: pickRandom(tied).id,
-          now: Date.now(),
+          targetId: tied.length > 0 ? pickRandom(tied, rand) : pickRandom(candidates, rand).id,
+          now,
         })
         acted = true
       }

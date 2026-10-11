@@ -81,7 +81,9 @@ import {
   rejoinLGPlayer,
   lgClientViewJson,
   lgSpectatorViewJson,
+  LG_SPEAK_KINDS,
   type LGRoomActionInput,
+  type LGSpeakKind,
 } from '@/lib/loup-garou/server-adapter'
 import {
   currentLGActorId,
@@ -810,6 +812,13 @@ const loupGarouAdapter: GameAdapter = {
       }
     } else if (body.action === 'hunter-shot' && typeof body.targetId === 'string') {
       input = { type: 'hunter-shot', targetId: body.targetId }
+    } else if (
+      body.action === 'debate-speak' &&
+      typeof body.kind === 'string' &&
+      (LG_SPEAK_KINDS as readonly string[]).includes(body.kind) &&
+      typeof body.targetId === 'string'
+    ) {
+      input = { type: 'debate-speak', kind: body.kind as LGSpeakKind, targetId: body.targetId }
     } else if (body.action === 'debate-skip') {
       input = { type: 'debate-skip' }
     } else if (body.action === 'day-vote' && typeof body.targetId === 'string') {

@@ -3840,8 +3840,18 @@
         "dawnDeathSoft": "💀 {name} ha muerto — era {role}",
         "hunterPrompt": "🏹 Último aliento: ¡llévate a alguien!",
         "hunterWaiting": "{name} carga su rifle…",
-        "debatePrompt": "🗣️ Debatid por voz: ¿quién es el lobo?",
-        "debateHint": "Acusad, defendeos, farolead…",
+        "debatePrompt": "🗣️ Debate: ¿quién es el lobo?",
+        "debateHint": "Acusa, defiéndete, haz equipo — o por voz.",
+        "speakAccuse": "Acusar",
+        "speakDefend": "Defenderme",
+        "speakAlly": "Hacer equipo",
+        "speakPickAccuse": "¿A quién acusas?",
+        "speakPickAlly": "¿Con quién haces equipo?",
+        "speakCancel": "Cancelar",
+        "speechLeft": "Intervenciones restantes: {n}/{max}",
+        "accusedYou": "⚡ ¡Defiéndete!",
+        "askedBy": "{name} te pregunta: ¿a quién votas?",
+        "feedAria": "Hilo del debate",
         "skipToVote": "Pasar a la votación ({n}/{total})",
         "skipWaiting": "Esperando a los demás ({n}/{total})",
         "votePrompt": "¿A quién lincháis? ¡Voto secreto!",
@@ -3866,7 +3876,52 @@
         "botSay": {
           "suspect": "{name} me parece sospechoso… esconde algo 🤨",
           "defend": "¡¿Qué?! {name} dice tonterías, ¡soy inocente!",
-          "ally": "Hagamos equipo con {name}, confío en él 🤝"
+          "ally": "Hagamos equipo con {name}, confío en él 🤝",
+          "rally": "Bien visto, {name} también me parece sospechoso 👀",
+          "doubt": "No estoy seguro con {name}… ¿pruebas?",
+          "ask": "{name}, ¿y tú, a quién votas?",
+          "toldYou": "¡Lo dije de {name}!",
+          "wrong": "Bueno… me equivoqué con {name}."
+        },
+        "botSayTrait": {
+          "prudent": {
+            "suspect": "Puede que me equivoque… pero {name}, estás muy callado.",
+            "defend": "Tranquilo {name}, no tienes ninguna prueba contra mí…"
+          },
+          "farceur": {
+            "suspect": "{name}, ¿eso es pelo en tus manos o estoy soñando? 🐺",
+            "defend": "¿Yo, un lobo? {name}, has bebido demasiado 🍻"
+          },
+          "suiveur": {
+            "suspect": "No estoy seguro… pero {name}, pareces sospechoso igual.",
+            "defend": "No no {name}, te equivocas, ¡estoy con la aldea!"
+          },
+          "agressif": {
+            "suspect": "{name}, ¡tú eres el lobo, pondría la mano en el fuego!",
+            "defend": "¿Me acusas, {name}? ¡Mírate tú primero!"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
         },
         "legend": {
           "title": "Leyenda de roles",

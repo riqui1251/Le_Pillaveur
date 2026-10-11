@@ -3,9 +3,14 @@ import {
   createLGState,
   currentLGActorId,
   lgAlive,
+  lgBotEventRemark,
   lgBotHunterTarget,
   lgBotWitchAction,
+  lgBotWolfTarget,
+  lgLatestDebateRound,
+  lgMostSuspect,
   lgRolesFor,
+  lgSuspicion,
   reduceLG,
   toLGClientView,
   toLGSpectatorView,
@@ -20,6 +25,7 @@ import {
   LG_SIPS_DEATH,
   LG_SIPS_POTION,
   LG_SIPS_WOLF_LYNCHED,
+  LG_SPEECH_CAP,
   LG_VOTE_MS,
   LG_WITCH_MS,
   LG_WOLVES_MS,
@@ -615,17 +621,56 @@ describe('buildLGState (adaptateur)', () => {
 })
 
 describe('paroles du débat (DEBATE_SPEAK)', () => {
-  it('publiques, limitées à 2 par joueur/manche, remises à zéro la nuit', () => {
+  it('la nuit garde la manche qui s’achève et jette la précédente (jamais plus de deux en mémoire)', () => {
+    const s = craft(SIX, 'day-vote', {
+      round: 2,
+      phaseEndsAt: T0 + LG_VOTE_MS,
+      debateSpeech: [
+        { playerId: 'vil1', kind: 'suspect', targetId: 'loup1', round: 1 },
+        { playerId: 'vil2', kind: 'ally', targetId: 'voy', round: 2 },
+        { playerId: 'voy', kind: 'suspect', targetId: 'cha', round: 2 },
+      ],
+    })
+    // Personne n'a voté : pas de lynchage, la nuit tombe.
+    const night = advance(s, T0 + LG_VOTE_MS)
+    expect(night.round).toBe(3)
+    expect(night.debateSpeech).toEqual(s.debateSpeech.filter((sp) => sp.round === 2))
+  })
+
+  it('une cible MORTE n’est tolérée que pour les remarques toldYou / wrong', () => {
+    const s = craft(
+      SIX.map((p) => (p.id === 'vil2' ? { ...p, alive: false } : p)),
+      'day-debate',
+      { phaseEndsAt: T0 + LG_DEBATE_DEFAULT_MS }
+    )
+    const told = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'toldYou', targetId: 'vil2' })
+    expect(told.debateSpeech.at(-1)).toEqual({ playerId: 'vil1', kind: 'toldYou', targetId: 'vil2', round: 1 })
+    expect(() =>
+      reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'wrong', targetId: 'vil2' })
+    ).not.toThrow()
+    expect(() =>
+      reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'suspect', targetId: 'vil2' })
+    ).toThrow('INVALID_TARGET')
+    expect(() =>
+      reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'toldYou', targetId: 'inconnu' })
+    ).toThrow('INVALID_TARGET')
+  })
+
+  it('publiques, limitées à LG_SPEECH_CAP = 3 par joueur/manche', () => {
+    expect(LG_SPEECH_CAP).toBe(3)
     let s = craft(SIX, 'day-debate', { phaseEndsAt: T0 + LG_DEBATE_DEFAULT_MS })
     s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'suspect', targetId: 'loup1' })
     s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'loup1', kind: 'defend', targetId: 'vil1' })
     s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'ally', targetId: 'voy' })
+    // Ouverture + réaction + réponse à une interpellation : la 3e passe…
+    s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'defend', targetId: 'loup1' })
+    // …la 4e est refusée.
     expect(() =>
       reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'suspect', targetId: 'cha' })
     ).toThrow('ALREADY_SPOKE')
-    expect(s.debateSpeech).toHaveLength(3)
+    expect(s.debateSpeech).toHaveLength(4)
     // Visible de tous (public) — y compris la TV neutre.
-    expect(toLGSpectatorView(s).debateSpeech).toHaveLength(3)
+    expect(toLGSpectatorView(s).debateSpeech).toHaveLength(4)
   })
 })
 
@@ -836,7 +881,35 @@ describe('bots à rôle clé (F39)', () => {
       expect(lgBotWitchAction(s, 'sor')).toEqual({ action: 'none' })
     })
 
-    it('empoisonne rarement : village au bord de la bascule ET suspect désigné', () => {
+    /**
+     * Flux RÉEL par le réducteur : débat → vote (personne ne sort) → nuit
+     * suivante, les loups désignent leur victime → phase de la sorcière.
+     * `debateSpeech` garde le débat de la veille : c'est lui qu'elle lit.
+     */
+    function witchNight(
+      table: LGPlayer[],
+      debate: { playerId: string; targetId: string }[],
+      victimId: string
+    ): LGState {
+      let s = craft(table, 'day-debate', { phaseEndsAt: T0 + LG_DEBATE_DEFAULT_MS })
+      for (const sp of debate) {
+        s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: sp.playerId, kind: 'suspect', targetId: sp.targetId })
+      }
+      s = advance(s, s.phaseEndsAt!)
+      expect(s.phase).toBe('day-vote')
+      s = advance(s, s.phaseEndsAt!)
+      expect(s.round).toBe(2)
+      while (s.phase !== 'night-wolves') s = advance(s, s.phaseEndsAt!)
+      for (const wolf of table.filter((p) => p.role === 'loup')) {
+        s = reduceLG(s, { type: 'WOLF_VOTE', playerId: wolf.id, targetId: victimId })
+      }
+      s = advance(s, s.phaseEndsAt!)
+      expect(s.phase).toBe('night-witch')
+      expect(s.nightVictimId).toBe(victimId)
+      return s
+    }
+
+    it('empoisonne au bord de la bascule le suspect du débat de la veille (flux réel, sans état artisanal)', () => {
       const table = [
         P('loup1', 'loup'),
         P('loup2', 'loup'),
@@ -846,28 +919,28 @@ describe('bots à rôle clé (F39)', () => {
         P('vil3', 'villageois'),
       ]
       const debate = [
-        { playerId: 'vil1', kind: 'suspect' as const, targetId: 'loup2', round: 1 },
-        { playerId: 'vil2', kind: 'suspect' as const, targetId: 'loup2', round: 1 },
-        { playerId: 'vil3', kind: 'suspect' as const, targetId: 'vil1', round: 1 },
+        { playerId: 'vil1', targetId: 'loup2' },
+        { playerId: 'vil2', targetId: 'loup2' },
+        { playerId: 'vil3', targetId: 'vil1' },
       ]
-      // Potion de vie déjà bue : seule la potion de mort reste sur la table.
-      const s = craft(table, 'night-witch', {
-        nightVictimId: 'vil1',
-        witchSaveUsed: true,
-        debateSpeech: debate,
-      })
+      const s = witchNight(table, debate, 'vil1')
+      expect(s.debateSpeech).toHaveLength(3)
+      // 4 villageois − la victime = 3 ≤ 2 loups + 1 : on ose, sur loup2 (le plus accusé hier).
       expect(lgBotWitchAction(s, 'sor')).toEqual({ action: 'kill', targetId: 'loup2' })
+      // Décision légale : à l'aube, loup2 meurt empoisonné à côté de la victime des loups.
+      const acted = reduceLG(s, { type: 'WITCH_ACTION', playerId: 'sor', action: 'kill', targetId: 'loup2', now: s.phaseEndsAt! - 1 })
+      const dawn = advance(acted, acted.phaseEndsAt!)
+      expect(dawn.phase).toBe('dawn')
+      expect(dawn.lastNightDeaths.map((d) => [d.playerId, d.cause])).toEqual([
+        ['vil1', 'loups'],
+        ['loup2', 'sorciere'],
+      ])
 
-      // Même situation SANS débat : elle garde sa fiole (aucun suspect).
-      const mute = craft(table, 'night-witch', { nightVictimId: 'vil1', witchSaveUsed: true })
-      expect(lgBotWitchAction(mute, 'sor')).toEqual({ action: 'none' })
+      // Même nuit SANS débat la veille : elle garde sa fiole (aucun suspect clair).
+      expect(lgBotWitchAction(witchNight(table, [], 'vil1'), 'sor')).toEqual({ action: 'none' })
 
       // Village confortable (un seul loup) : pas de poison non plus.
-      const safe = craft(SIX, 'night-witch', {
-        nightVictimId: 'vil1',
-        witchSaveUsed: true,
-        debateSpeech: debate,
-      })
+      const safe = witchNight(SIX, [{ playerId: 'vil1', targetId: 'loup1' }], 'vil2')
       expect(lgBotWitchAction(safe, 'sor')).toEqual({ action: 'none' })
     })
 
@@ -963,5 +1036,244 @@ describe('bots à rôle clé (F39)', () => {
       expect(next.players.find((p) => p.id === targetId)?.alive).toBe(false)
       expect(next.deaths.some((d) => d.playerId === targetId && d.cause === 'chasseur')).toBe(true)
     })
+  })
+})
+
+describe('score de soupçon public (lot 3) : une seule logique pour accuser, voter, potionner et tirer', () => {
+  /** `b*` = bots, les autres humains (la pondération ×2 d'un suiveur ne vaut que pour eux). */
+  const B = (id: string, role: LGPlayer['role'], extra: Partial<LGPlayer> = {}) =>
+    P(id, role, { isBot: true, ...extra })
+  const MIXED = [
+    P('h1', 'villageois'),
+    P('h2', 'villageois'),
+    B('b1', 'sorciere'),
+    B('b2', 'voyante'),
+    B('b3', 'loup'),
+    B('b4', 'villageois'),
+  ]
+
+  it('lgLatestDebateRound : la journée en cours, la veille pendant la nuit, à l’aube et pour un chasseur tué la nuit', () => {
+    expect(lgLatestDebateRound(craft(SIX, 'day-debate', { round: 2 }))).toBe(2)
+    expect(lgLatestDebateRound(craft(SIX, 'day-revote', { round: 2 }))).toBe(2)
+    expect(lgLatestDebateRound(craft(SIX, 'night-witch', { round: 2 }))).toBe(1)
+    expect(lgLatestDebateRound(craft(SIX, 'dawn', { round: 2 }))).toBe(1)
+    expect(lgLatestDebateRound(craft(SIX, 'hunter-shot', { round: 2, afterHunter: 'day' }))).toBe(1)
+    expect(lgLatestDebateRound(craft(SIX, 'hunter-shot', { round: 2, afterHunter: 'night' }))).toBe(2)
+  })
+
+  it('déterministe, dans l’ordre de table, sur le public du jour : paroles, Corbeau, maire, égalité du dernier vote', () => {
+    const s = craft(MIXED, 'day-debate', {
+      round: 2,
+      ravenTargetId: 'b4',
+      mayorId: 'h2',
+      lastVoteResult: { round: 1, tally: { b4: 2, h1: 1 }, eliminatedId: null, tie: true, role: null },
+      debateSpeech: [
+        { playerId: 'h1', kind: 'suspect', targetId: 'b3', round: 2 },
+        { playerId: 'b4', kind: 'rally', targetId: 'b3', round: 2 },
+        { playerId: 'b2', kind: 'doubt', targetId: 'b3', round: 2 },
+        { playerId: 'b3', kind: 'ally', targetId: 'h2', round: 2 },
+        { playerId: 'b3', kind: 'defend', targetId: 'h1', round: 2 },
+      ],
+    })
+    const score = lgSuspicion(s, 'b1')
+    expect([...score.entries()]).toEqual([
+      ['h1', 1 + 1], // defend reçu (bot) + 1 voix à l'égalité
+      ['h2', -2 - 2], // ally reçu (bot) + maire
+      ['b2', 0],
+      ['b3', 4 + 2 - 1], // suspect humain ×2, rally bot, doubt bot
+      ['b4', 1 + 2], // marque du Corbeau + 2 voix à l'égalité
+    ])
+    expect(lgSuspicion(s, 'b1')).toEqual(score)
+    expect(lgMostSuspect(score, s.players.map((p) => p.id))).toEqual(['b3'])
+    // Égalité : ordre de table, et un inconnu du score est ignoré.
+    expect(lgMostSuspect(new Map([['x', 1], ['y', 1], ['z', 0]]), ['z', 'y', 'x', 'w'])).toEqual(['y', 'x'])
+  })
+
+  it('un suiveur compte double la parole humaine ; un agressif vise qui l’accuse', () => {
+    const s = craft(MIXED, 'day-debate', {
+      debateSpeech: [
+        { playerId: 'h1', kind: 'suspect', targetId: 'b4', round: 1 },
+        { playerId: 'b2', kind: 'suspect', targetId: 'h2', round: 1 },
+        { playerId: 'h2', kind: 'suspect', targetId: 'b1', round: 1 },
+      ],
+    })
+    const suiveur = lgSuspicion(s, 'b1', 'suiveur')
+    expect(suiveur.get('b4')).toBe(4)
+    expect(suiveur.get('h2')).toBe(2)
+    const prudent = lgSuspicion(s, 'b1', 'prudent')
+    expect(prudent.get('b4')).toBe(2)
+    expect(prudent.get('h2')).toBe(2)
+    expect(prudent.get('h1')).toBe(0)
+    const agressif = lgSuspicion(s, 'b1', 'agressif')
+    expect(agressif.get('h2')).toBe(2 + 3)
+    expect(lgMostSuspect(agressif, s.players.map((p) => p.id))).toEqual(['h2'])
+  })
+
+  it('caractère (lot A) : la rancune pondère accusations et rallyes reçus, aujourd’hui et hier ; la loyauté protège l’allié choisi', () => {
+    const s = craft(MIXED, 'day-debate', {
+      round: 2,
+      debateSpeech: [
+        { playerId: 'h1', kind: 'suspect', targetId: 'b1', round: 1 },
+        { playerId: 'h2', kind: 'suspect', targetId: 'b1', round: 2 },
+        { playerId: 'b4', kind: 'rally', targetId: 'b1', round: 2 },
+        { playerId: 'b1', kind: 'ally', targetId: 'b2', round: 2 },
+        { playerId: 'b3', kind: 'ally', targetId: 'b1', round: 2 },
+      ],
+    })
+    const neutral = lgSuspicion(s, 'b1', 'prudent', { rancune: 0, loyaute: 0 })
+    expect([...neutral.entries()]).toEqual([['h1', 0], ['h2', 0], ['b2', -2], ['b3', 0], ['b4', 0]])
+    // Rancune 1 : +3 à l'accusateur du jour, +2 à qui a abondé, +2 à l'accusateur d'hier.
+    const bitter = lgSuspicion(s, 'b1', 'prudent', { rancune: 1, loyaute: 0 })
+    expect([...bitter.entries()]).toEqual([['h1', 2], ['h2', 3], ['b2', -2], ['b3', 0], ['b4', 2]])
+    // Loyauté 1 : −2 de plus à l'allié qu'il s'est choisi ; l'alliance reçue de b3 n'engage pas.
+    const faithful = lgSuspicion(s, 'b1', 'prudent', { rancune: 0, loyaute: 1 })
+    expect(faithful.get('b2')).toBe(-4)
+    expect(faithful.get('b3')).toBe(0)
+    // Arrondi : à 0,5, une accusation vaut +2 (3 × 0,5), un rallye +1, la fidélité −1.
+    const half = lgSuspicion(s, 'b1', 'prudent', { rancune: 0.5, loyaute: 0.5 })
+    expect([...half.entries()]).toEqual([['h1', 1], ['h2', 2], ['b2', -3], ['b3', 0], ['b4', 1]])
+    // Sans caractère : l'agressif tient pleinement rancune, les autres pas du tout, personne n'est fidèle.
+    expect(lgSuspicion(s, 'b1', 'agressif')).toEqual(lgSuspicion(s, 'b1', 'agressif', { rancune: 1, loyaute: 0 }))
+    expect(lgSuspicion(s, 'b1', 'prudent')).toEqual(neutral)
+    expect(lgSuspicion(s, 'b1')).toEqual(lgSuspicion(s, 'b1', 'suiveur', { rancune: 0, loyaute: 0 }))
+  })
+
+  it('mémoire d’une manche et anti-fuite : +2 au lyncheur d’innocent, −2 à qui avait nommé un loup ; les rôles secrets des vivants n’y changent rien', () => {
+    const MEM = [
+      P('h1', 'villageois'),
+      P('h2', 'villageois'),
+      B('b1', 'sorciere'),
+      B('b2', 'voyante'),
+      B('b3', 'loup'),
+      B('b4', 'loup', { alive: false }),
+      B('b5', 'villageois', { alive: false }),
+    ]
+    const s = craft(MEM, 'day-debate', {
+      round: 2,
+      deaths: [
+        { playerId: 'b4', role: 'loup', cause: 'chasseur', round: 1 },
+        { playerId: 'b5', role: 'villageois', cause: 'vote', round: 1 },
+      ],
+      debateSpeech: [
+        { playerId: 'h1', kind: 'suspect', targetId: 'b4', round: 1 },
+        { playerId: 'h2', kind: 'suspect', targetId: 'b5', round: 1 },
+        { playerId: 'b2', kind: 'suspect', targetId: 'b3', round: 1 },
+      ],
+    })
+    expect([...lgSuspicion(s, 'b1').entries()]).toEqual([['h1', -4], ['h2', 4], ['b2', 0], ['b3', 0]])
+    // Rôles secrets des vivants permutés (b2 ↔ b3), public inchangé : même score pour un bot du village.
+    const permuted: LGState = {
+      ...s,
+      players: s.players.map((p) =>
+        p.id === 'b2' ? { ...p, role: 'loup' } : p.id === 'b3' ? { ...p, role: 'voyante' } : p
+      ),
+    }
+    expect(lgSuspicion(permuted, 'b1')).toEqual(lgSuspicion(s, 'b1'))
+    // Exception admise du loup bot : complices retirés, +3 à qui a nommé un loup VIVANT (×2 si humain).
+    expect([...lgSuspicion(s, 'b3').entries()]).toEqual([['h1', -4], ['h2', 4], ['b1', 0], ['b2', 3]])
+    const humanNamed: LGState = {
+      ...s,
+      debateSpeech: [...s.debateSpeech, { playerId: 'h1', kind: 'suspect', targetId: 'b3', round: 2 }],
+    }
+    expect(lgSuspicion(humanNamed, 'b3').get('h1')).toBe(-4 + 6)
+    // Exception admise de la voyante bot : ±100 selon ses visions.
+    const seer: LGState = {
+      ...s,
+      seerPeeks: [
+        { round: 1, targetId: 'b3', team: 'loups' },
+        { round: 2, targetId: 'h2', team: 'village' },
+      ],
+    }
+    expect(lgSuspicion(seer, 'b2').get('b3')).toBe(100)
+    expect(lgSuspicion(seer, 'b2').get('h2')).toBe(4 - 100)
+  })
+
+  it('lgBotWolfTarget : la meute vise qui a nommé un loup vivant (humain ×2), sinon le maire ; jamais un loup ni un mort', () => {
+    const PACK = [
+      P('h1', 'villageois'),
+      P('h2', 'villageois'),
+      B('b1', 'loup'),
+      B('b2', 'loup'),
+      B('b3', 'villageois'),
+      B('b4', 'villageois', { alive: false }),
+    ]
+    const quiet = craft(PACK, 'night-wolves', { round: 2 })
+    // Rien ne menace la meute : aucune cible désignée (l'adaptateur tire au hasard).
+    expect(lgBotWolfTarget(quiet)).toBeNull()
+    expect(lgBotWolfTarget({ ...quiet, mayorId: 'b3' })).toBe('b3')
+    const named: LGState = {
+      ...quiet,
+      mayorId: 'b3',
+      debateSpeech: [
+        { playerId: 'h1', kind: 'suspect', targetId: 'b1', round: 1 }, // humain nomme un loup : +6
+        { playerId: 'b3', kind: 'suspect', targetId: 'b2', round: 1 }, // bot : +3 (+2 maire = 5)
+        { playerId: 'h2', kind: 'rally', targetId: 'b1', round: 1 }, // humain abonde contre un loup : +2
+        { playerId: 'b4', kind: 'suspect', targetId: 'b1', round: 1 }, // mort depuis : ignoré
+        { playerId: 'h2', kind: 'suspect', targetId: 'h1', round: 1 }, // accuser un villageois ne menace pas la meute
+      ],
+    }
+    expect(lgBotWolfTarget(named)).toBe('h1')
+    expect(lgBotWolfTarget({ ...named, debateSpeech: named.debateSpeech.slice(1) })).toBe('b3')
+    const wolvesOnly = craft(
+      PACK.map((p) => (p.role === 'loup' ? p : { ...p, alive: false })),
+      'night-wolves'
+    )
+    expect(lgBotWolfTarget(wolvesOnly)).toBeNull()
+  })
+
+  it('lgBotEventRemark : « je l’avais dit » sur un loup démasqué qu’il accusait hier, « je me suis planté » sur un lynché innocent ou un loup allié', () => {
+    const table = [
+      P('h1', 'villageois'),
+      B('b1', 'villageois'),
+      B('b2', 'villageois'),
+      B('b3', 'villageois'),
+      B('b4', 'villageois'),
+      B('w', 'loup', { alive: false }),
+      B('v', 'villageois', { alive: false }),
+    ]
+    const s = craft(table, 'day-debate', {
+      round: 2,
+      deaths: [
+        { playerId: 'v', role: 'villageois', cause: 'vote', round: 1 },
+        { playerId: 'w', role: 'loup', cause: 'sorciere', round: 2 },
+      ],
+      debateSpeech: [
+        { playerId: 'b1', kind: 'suspect', targetId: 'w', round: 1 },
+        { playerId: 'b2', kind: 'suspect', targetId: 'v', round: 1 },
+        { playerId: 'b3', kind: 'ally', targetId: 'w', round: 1 },
+        { playerId: 'b4', kind: 'suspect', targetId: 'h1', round: 1 },
+        { playerId: 'b4', kind: 'ally', targetId: 'w', round: 1 },
+        { playerId: 'b4', kind: 'suspect', targetId: 'w', round: 1 },
+      ],
+    })
+    expect(lgBotEventRemark(s, 'b1')).toEqual({ kind: 'toldYou', targetId: 'w' })
+    expect(lgBotEventRemark(s, 'b2')).toEqual({ kind: 'wrong', targetId: 'v' })
+    expect(lgBotEventRemark(s, 'b3')).toEqual({ kind: 'wrong', targetId: 'w' })
+    // Raison ET tort : il se vante.
+    expect(lgBotEventRemark(s, 'b4')).toEqual({ kind: 'toldYou', targetId: 'w' })
+    expect(lgBotEventRemark(s, 'h1')).toBeNull()
+    // Une manche plus tard, ces paroles ne sont plus « d'hier ».
+    expect(lgBotEventRemark({ ...s, round: 3 }, 'b1')).toBeNull()
+  })
+
+  it('chasseur tué la nuit : il vise celui qui l’accusait la veille (flux réel)', () => {
+    let s = craft(SIX, 'day-debate', { phaseEndsAt: T0 + LG_DEBATE_DEFAULT_MS })
+    s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'loup1', kind: 'suspect', targetId: 'cha' })
+    s = reduceLG(s, { type: 'DEBATE_SPEAK', playerId: 'vil1', kind: 'suspect', targetId: 'vil2' })
+    s = advance(s, s.phaseEndsAt!)
+    s = advance(s, s.phaseEndsAt!)
+    expect(s.round).toBe(2)
+    while (s.phase !== 'night-wolves') s = advance(s, s.phaseEndsAt!)
+    s = reduceLG(s, { type: 'WOLF_VOTE', playerId: 'loup1', targetId: 'cha' })
+    s = advance(s, s.phaseEndsAt!)
+    expect(s.phase).toBe('night-witch')
+    s = advance(s, s.phaseEndsAt!)
+    expect(s.phase).toBe('dawn')
+    expect(s.pendingHunterId).toBe('cha')
+    s = advance(s, s.phaseEndsAt!)
+    expect(s.phase).toBe('hunter-shot')
+    expect(lgLatestDebateRound(s)).toBe(1)
+    // Le débat d'hier est encore en mémoire : loup1 (+6, accusateur humain) devant vil2 (+4).
+    expect(lgBotHunterTarget(s, 'cha')).toBe('loup1')
   })
 })

@@ -11,7 +11,7 @@ import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { parsePurpleState, type PurpleSyncedState, type SerializedCard } from '@/lib/online-game-state'
-import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
+import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -167,7 +167,7 @@ export function PurpleOnline() {
     postAction({ ...body, expectedVersion: room.stateVersion })
 
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const finished = view.phase === 'finished'
   const currentActor = view.players[view.currentPlayer]

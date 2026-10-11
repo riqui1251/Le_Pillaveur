@@ -12,7 +12,7 @@ import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PLAYER_ICONS } from '@/lib/players'
-import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
+import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -219,10 +219,10 @@ export function PetitBuveurOnline() {
     : 'normal'
 
   // Icône personnalisée du compte si définie, sinon icône stable dérivée de
-  // l'index. Les bots portent l'emoji de leur persona (🤖 pour les convertis).
+  // l'index. Les bots portent le portrait de leur persona (🤖 pour les convertis).
   const iconOf = (id: string) => {
     const player = view.players.find((p) => p.id === id)
-    if (player?.isBot) return botEmojiFromName(player.name)
+    if (player?.isBot) return botAvatarFromName(player.name)
     return (
       room.members.find((m) => m.userId === id)?.preferences?.icon ??
       iconFor(Math.max(0, view.players.findIndex((p) => p.id === id)))

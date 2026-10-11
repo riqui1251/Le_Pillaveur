@@ -5,6 +5,7 @@ import type { TvRoomDto } from '@/lib/online-room'
 import type { PurpleSyncedState, SerializedCard } from '@/lib/online-game-state'
 import { cn } from '@/lib/utils'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { TvAvatar } from './tv-shared'
 
 /**
@@ -28,7 +29,11 @@ function TvCard({ card }: { card: SerializedCard }) {
 
 export function TvPurple({ room, state }: { room: TvRoomDto; state: PurpleSyncedState }) {
   const t = useTranslations('games.purple')
-  const iconOf = (userId: string) => room.members.find((m) => m.userId === userId)?.preferences?.icon ?? '👤'
+  const iconOf = (userId: string) => {
+    const player = state.players.find((p) => p.id === userId)
+    if (player?.isBot) return botAvatarFromName(player.name)
+    return room.members.find((m) => m.userId === userId)?.preferences?.icon ?? '👤'
+  }
 
   if (state.phase === 'finished') {
     return (

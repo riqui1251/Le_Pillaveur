@@ -3840,8 +3840,18 @@
         "dawnDeathSoft": "💀 {name} est mort — c’était {role}",
         "hunterPrompt": "🏹 Dernier souffle : emporte quelqu’un !",
         "hunterWaiting": "{name} arme son fusil…",
-        "debatePrompt": "🗣️ Débattez au vocal : qui est le loup ?",
-        "debateHint": "Accusez, défendez-vous, bluffez…",
+        "debatePrompt": "🗣️ Débat : qui est le loup ?",
+        "debateHint": "Accuse, défends-toi, fais équipe — ou au vocal.",
+        "speakAccuse": "Accuser",
+        "speakDefend": "Me défendre",
+        "speakAlly": "Faire équipe",
+        "speakPickAccuse": "Qui accuses-tu ?",
+        "speakPickAlly": "Avec qui fais-tu équipe ?",
+        "speakCancel": "Annuler",
+        "speechLeft": "Paroles restantes : {n}/{max}",
+        "accusedYou": "⚡ Défends-toi !",
+        "askedBy": "{name} te demande : tu votes qui ?",
+        "feedAria": "Fil du débat",
         "skipToVote": "Passer au vote ({n}/{total})",
         "skipWaiting": "En attente des autres ({n}/{total})",
         "votePrompt": "Qui lynchez-vous ? Vote secret !",
@@ -3866,7 +3876,52 @@
         "botSay": {
           "suspect": "Je trouve {name} louche… il cache quelque chose 🤨",
           "defend": "Quoi ?! {name} raconte n’importe quoi, je suis innocent !",
-          "ally": "Faisons équipe avec {name}, je le sens bien 🤝"
+          "ally": "Faisons équipe avec {name}, je le sens bien 🤝",
+          "rally": "Bien vu, {name} me paraît louche aussi 👀",
+          "doubt": "Pas sûr pour {name}… des preuves ?",
+          "ask": "{name}, et toi, tu votes qui ?",
+          "toldYou": "Je l’avais dit pour {name} !",
+          "wrong": "Bon… je me suis planté sur {name}."
+        },
+        "botSayTrait": {
+          "prudent": {
+            "suspect": "Je ne voudrais pas me tromper… mais {name}, tu es bien discret.",
+            "defend": "Doucement {name}, tu n’as aucune preuve contre moi…"
+          },
+          "farceur": {
+            "suspect": "{name}, c’est du poil sur tes mains ou je rêve ? 🐺",
+            "defend": "Moi, un loup ? {name}, tu as trop bu 🍻"
+          },
+          "suiveur": {
+            "suspect": "Je ne sais pas trop… mais {name}, tu es louche quand même.",
+            "defend": "Non non {name}, tu te trompes, je suis avec le village !"
+          },
+          "agressif": {
+            "suspect": "{name}, c’est toi le loup, j’en mettrais ma main au feu !",
+            "defend": "Tu m’accuses, {name} ? Regarde-toi d’abord !"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
         },
         "legend": {
           "title": "Légende des rôles",

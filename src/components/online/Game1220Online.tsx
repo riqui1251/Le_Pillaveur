@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import type { Band1220, Parity1220 } from '@/lib/game-1220'
 import { TOTAL_MAX, TOTAL_MIN } from '@/lib/game-1220'
 import type { Game1220SyncedState } from '@/lib/online-game-state'
-import { botEmojiFromName } from '@/lib/online/bot-personas'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -113,7 +113,7 @@ export function Game1220Online() {
     postAction({ ...body, expectedVersion: room.stateVersion })
 
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const finished = view.phase === 'finished'
 

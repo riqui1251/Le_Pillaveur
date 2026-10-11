@@ -3840,8 +3840,18 @@
         "dawnDeathSoft": "💀 {name} is dead — they were {role}",
         "hunterPrompt": "🏹 Last breath: take someone with you!",
         "hunterWaiting": "{name} is loading their rifle…",
-        "debatePrompt": "🗣️ Debate on voice: who is the wolf?",
-        "debateHint": "Accuse, defend, bluff…",
+        "debatePrompt": "🗣️ Debate: who is the wolf?",
+        "debateHint": "Accuse, defend yourself, team up — or on voice.",
+        "speakAccuse": "Accuse",
+        "speakDefend": "Defend myself",
+        "speakAlly": "Team up",
+        "speakPickAccuse": "Who do you accuse?",
+        "speakPickAlly": "Who do you team up with?",
+        "speakCancel": "Cancel",
+        "speechLeft": "Speeches left: {n}/{max}",
+        "accusedYou": "⚡ Defend yourself!",
+        "askedBy": "{name} asks you: who do you vote for?",
+        "feedAria": "Debate feed",
         "skipToVote": "Skip to the vote ({n}/{total})",
         "skipWaiting": "Waiting for the others ({n}/{total})",
         "votePrompt": "Who gets lynched? Secret vote!",
@@ -3866,7 +3876,52 @@
         "botSay": {
           "suspect": "I find {name} shady… they are hiding something 🤨",
           "defend": "What?! {name} is talking nonsense, I am innocent!",
-          "ally": "Let’s team up with {name}, I trust them 🤝"
+          "ally": "Let’s team up with {name}, I trust them 🤝",
+          "rally": "Good call, {name} looks shady to me too 👀",
+          "doubt": "Not sure about {name}… any proof?",
+          "ask": "{name}, what about you, who do you vote for?",
+          "toldYou": "Told you so about {name}!",
+          "wrong": "Well… I was wrong about {name}."
+        },
+        "botSayTrait": {
+          "prudent": {
+            "suspect": "I may be wrong… but {name}, you are awfully quiet.",
+            "defend": "Easy, {name}, you have no proof against me…"
+          },
+          "farceur": {
+            "suspect": "{name}, is that fur on your hands or am I dreaming? 🐺",
+            "defend": "Me, a wolf? {name}, you have had one too many 🍻"
+          },
+          "suiveur": {
+            "suspect": "Not sure… but {name}, you do look shady anyway.",
+            "defend": "No no {name}, you are wrong, I am with the village!"
+          },
+          "agressif": {
+            "suspect": "{name}, you are the wolf, I would bet my life on it!",
+            "defend": "You accuse me, {name}? Look at yourself first!"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
         },
         "legend": {
           "title": "Role legend",

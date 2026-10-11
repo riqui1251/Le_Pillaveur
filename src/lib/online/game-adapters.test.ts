@@ -7,6 +7,8 @@ import { buildPetitBuveurEngineState } from '@/lib/petit-buveur/server-adapter'
 import type { EngineState } from '@/lib/petit-buveur/engine'
 import { buildTabouState, markTabouPlayerLeft } from '@/lib/tabou/server-adapter'
 import type { TabouState } from '@/lib/tabou/engine'
+import { buildLGState } from '@/lib/loup-garou/server-adapter'
+import type { LGState } from '@/lib/loup-garou/engine'
 
 /**
  * Les bornes de joueurs vivent à DEUX endroits : le registre (vérité serveur,
@@ -85,5 +87,62 @@ describe('Tabou Vocal : pas de bots au lancement, remplacement intact', () => {
     const state = buildTabouState(members, { ...teams }, 'fr', 0, 'tabou-seed')
     const converted = adapter.convertToBot(state, 'u3') as TabouState | null
     expect(converted?.players.find((p) => p.id === 'u3')?.isBot).toBe(true)
+  })
+})
+
+describe('Loup-Garou : parole humaine au débat (debate-speak)', () => {
+  const adapter = GAME_ADAPTERS['loup-garou']
+  /** 1 humain + 3 bots, posés en plein débat. */
+  const debating = (): LGState => ({
+    ...buildLGState([{ userId: 'u1', user: { displayName: 'Riri' } }], undefined, 3, 42),
+    phase: 'day-debate',
+    phaseEndsAt: Date.now() + 60_000,
+    round: 1,
+  })
+  const speak = (state: LGState, body: Record<string, unknown>) =>
+    adapter.applyAction(state, 'u1', { action: 'debate-speak', ...body })
+
+  it('accuser / se défendre / faire équipe entre dans debateSpeech', () => {
+    const result = speak(debating(), { kind: 'suspect', targetId: 'bot-1' })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect((result.state as LGState).debateSpeech).toEqual([
+        { playerId: 'u1', kind: 'suspect', targetId: 'bot-1', round: 1 },
+      ])
+    }
+    for (const kind of ['defend', 'ally']) {
+      expect(speak(debating(), { kind, targetId: 'bot-1' }).ok).toBe(true)
+    }
+  })
+
+  it('kind hors liste ou cible absente → invalid_action 400', () => {
+    expect(speak(debating(), { kind: 'rally', targetId: 'bot-1' })).toEqual({
+      ok: false,
+      error: 'invalid_action',
+      status: 400,
+    })
+    expect(speak(debating(), { kind: 'suspect' })).toEqual({
+      ok: false,
+      error: 'invalid_action',
+      status: 400,
+    })
+  })
+
+  it('refus du moteur → 403 (mort : NOT_ALIVE ; soi-même : INVALID_TARGET)', () => {
+    const base = debating()
+    const dead: LGState = {
+      ...base,
+      players: base.players.map((p) => (p.id === 'u1' ? { ...p, alive: false } : p)),
+    }
+    expect(speak(dead, { kind: 'suspect', targetId: 'bot-1' })).toEqual({
+      ok: false,
+      error: 'NOT_ALIVE',
+      status: 403,
+    })
+    expect(speak(base, { kind: 'suspect', targetId: 'u1' })).toEqual({
+      ok: false,
+      error: 'INVALID_TARGET',
+      status: 403,
+    })
   })
 })

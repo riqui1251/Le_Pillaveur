@@ -1,5 +1,6 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotTrait } from '@/lib/online/bot-personas'
 import { LG_DEBATE_DEFAULT_MS } from './debate'
 
 /**
@@ -52,6 +53,11 @@ export const LG_SIPS_WOLF_LYNCHED = 3
 export const LG_SIPS_POTION = 1
 /** Voix ajoutées contre le marqué du Corbeau au vote du jour. */
 export const LG_RAVEN_EXTRA_VOTES = 2
+/**
+ * Prises de parole max par joueur et par manche au débat (anti-spam) :
+ * une ouverture, une réaction, une réponse à une interpellation.
+ */
+export const LG_SPEECH_CAP = 3
 
 export type LGRole =
   | 'loup'
@@ -97,15 +103,24 @@ export type LGDeathCause = 'loups' | 'sorciere' | 'vote' | 'chasseur'
 export type LGDeath = { playerId: string; role: LGRole; cause: LGDeathCause; round: number }
 
 /**
- * Prise de parole PUBLIQUE au débat (utilisée par les bots — les humains
- * parlent au vocal). Structurée pour être localisée côté client.
+ * Prise de parole PUBLIQUE au débat, émise par les bots ET par les humains
+ * (boutons Accuser / Me défendre / Faire équipe, en plus du vocal).
+ * Structurée pour être localisée côté client ; les bots y réagissent.
+ * `rally` (j'abonde), `doubt` (j'en doute) et `ask` (et toi, tu votes qui ?)
+ * sont réservés aux bots : le lien avec la parole qu'ils commentent se lit
+ * par l'ordre du fil, {name} reste le seul argument. `toldYou` / `wrong`
+ * (remarques d'ouverture sur un mort révélé de la veille) sont les seules
+ * paroles dont la cible peut être morte.
  */
 export type LGDebateSpeech = {
   playerId: string
-  kind: 'suspect' | 'defend' | 'ally'
+  kind: 'suspect' | 'defend' | 'ally' | 'rally' | 'doubt' | 'ask' | 'toldYou' | 'wrong'
   targetId: string | null
   round: number
 }
+
+/** Remarques d'ouverture : la seule parole tolérée vers un joueur mort. */
+export const LG_REMARK_KINDS = ['toldYou', 'wrong'] as const satisfies readonly LGDebateSpeech['kind'][]
 
 export type LGVoteResult = {
   round: number
@@ -407,7 +422,10 @@ function firstNightPhase(state: LGState): { phase: LGPhase; ms: number } {
 /**
  * Nouvelle nuit : remise à zéro des buffers, saut des rôles morts.
  * `lastVoteResult` PERSISTE (bannière « X a été lynché » pendant la nuit) —
- * il est remplacé au prochain dépouillement.
+ * il est remplacé au prochain dépouillement. `debateSpeech` garde la journée
+ * qui s'achève (jamais plus de deux manches en mémoire) : la sorcière bot y
+ * lit le suspect du jour, le chasseur tué la nuit y retrouve ses accusateurs,
+ * et les bots commentent à l'ouverture du débat suivant.
  */
 function startNight(state: LGState, now: number): LGState {
   const next: LGState = {
@@ -424,7 +442,7 @@ function startNight(state: LGState, now: number): LGState {
     ravenTargetId: null,
     dayVotes: {},
     debateSkips: [],
-    debateSpeech: [],
+    debateSpeech: state.debateSpeech.filter((sp) => sp.round === state.round),
     revoteCandidates: null,
     pendingHunterId: null,
     afterHunter: null,
@@ -834,13 +852,15 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       if (!actor?.alive) throw new LGEngineError('NOT_ALIVE')
       if (action.targetId) {
         const target = playerOf(state, action.targetId)
-        if (!target?.alive || target.id === actor.id) throw new LGEngineError('INVALID_TARGET')
+        if (!target || target.id === actor.id) throw new LGEngineError('INVALID_TARGET')
+        // Seule une remarque d'ouverture (« je l'avais dit pour X ») vise un mort.
+        const remark = (LG_REMARK_KINDS as readonly string[]).includes(action.kind)
+        if (!target.alive && !remark) throw new LGEngineError('INVALID_TARGET')
       }
-      // Deux prises de parole max par joueur et par manche (anti-spam).
       const mine = state.debateSpeech.filter(
         (sp) => sp.playerId === actor.id && sp.round === state.round
       )
-      if (mine.length >= 2) throw new LGEngineError('ALREADY_SPOKE')
+      if (mine.length >= LG_SPEECH_CAP) throw new LGEngineError('ALREADY_SPOKE')
       return {
         ...state,
         debateSpeech: [
@@ -982,36 +1002,147 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
 // ─── Décisions des bots à rôle (déterministes, donc testables) ───────────────
 
 /**
- * BOTS À RÔLE CLÉ — pourquoi ici et pas dans l'adaptateur : un bot sorcière
- * qui ne boit jamais ses potions et un chasseur qui tire au hasard vident la
- * partie de son sel dès qu'un humain est remplacé (F39). Ces décisions sont
- * donc des fonctions PURES du moteur : aucun Math.random, donc reproductibles
- * et couvertes par des tests.
+ * BOTS — pourquoi ici et pas dans l'adaptateur : un bot sorcière qui ne boit
+ * jamais ses potions et un chasseur qui tire au hasard vident la partie de
+ * son sel dès qu'un humain est remplacé (F39). Ces décisions sont donc des
+ * fonctions PURES du moteur : aucun Math.random, donc reproductibles et
+ * couvertes par des tests.
  *
  * Elles s'appuient sur ce qu'un joueur pourrait légitimement savoir (le
- * débat public, le maire élu, les morts annoncées, les comptes de vivants) —
- * pas sur les rôles secrets de la table.
+ * débat public, le maire élu, la marque du Corbeau, les morts annoncées, les
+ * comptes de vivants) — jamais sur les rôles secrets des vivants, à deux
+ * exceptions près, admises parce qu'un humain dans le même rôle ferait
+ * pareil : un loup bot épargne ses complices et vise qui les a nommés, une
+ * voyante bot tient compte de ses visions sans jamais les dire.
  */
 
-/** Joueur vivant le plus accusé au débat (toutes manches), hors `excluded`. */
-function topDebateSuspect(state: LGState, excluded: (string | null)[]): string | null {
+const DAY_SPEECH_PHASES: LGPhase[] = ['day-debate', 'day-vote', 'day-revote']
+
+/**
+ * Manche du dernier débat tenu : la journée en cours, ou celle d'hier pendant
+ * la nuit (la nuit d'une manche précède son jour), à l'aube et pour un
+ * chasseur tué la nuit.
+ */
+export function lgLatestDebateRound(state: LGState): number {
+  if (DAY_SPEECH_PHASES.includes(state.phase)) return state.round
+  if (state.phase === 'hunter-shot') return state.afterHunter === 'day' ? state.round - 1 : state.round
+  return state.round - 1
+}
+
+/** Ajoute `n` à un joueur présent dans le score (les absents — morts, soi — sont ignorés). */
+function addScore(score: Map<string, number>, id: string | null | undefined, n: number): void {
+  if (id && score.has(id)) score.set(id, (score.get(id) ?? 0) + n)
+}
+
+/**
+ * SCORE DE SOUPÇON d'un bot sur chaque vivant (hors lui) — l'unique logique
+ * derrière ses accusations, son vote, la potion de mort de la sorcière et le
+ * tir du chasseur. Information PUBLIQUE :
+ *   • ce round : +2 par `suspect`/`rally` reçu, −1 par `doubt`, −2 par `ally`,
+ *     +1 à l'accusateur visé par un `defend` ;
+ *   • +1 la marque du Corbeau, −2 le maire, +1 par voix reçue au dernier vote
+ *     s'il s'est soldé par une égalité ;
+ *   • manche précédente : +2 à qui avait accusé un villageois lynché depuis,
+ *     −2 à qui avait accusé un loup démasqué depuis.
+ * Trait : un suiveur compte double les paroles humaines. Caractère (`mood`) :
+ *   • rancune r : +round(3r) à qui l'a accusé ce round, +round(2r) à qui a
+ *     abondé contre lui ce round ou l'avait accusé la veille — les voix du
+ *     dernier vote, elles, ne sont pas attribuables (le dépouillement public
+ *     est par cible, jamais par votant) ;
+ *   • loyauté l : −round(2l) à qui il s'est allié ce round (sa parole, pas
+ *     celle qu'on lui a offerte).
+ * Sans `mood`, l'ancienne règle : seul l'agressif tient rancune (r = 1, +3),
+ * personne n'est fidèle — c'est ce que voient la sorcière, la voyante et le
+ * chasseur, qui n'ont pas de caractère.
+ * Exceptions admises : un loup bot retire ses complices et met +3 (×2 si
+ * humain) à qui a nommé un loup vivant ce round ou la veille ; une voyante
+ * bot met +100 à un loup vu, −100 à un villageois vu.
+ * Égalités : à l'appelant (ordre de table via `lgMostSuspect`, puis hasard).
+ */
+export type LGBotMood = { rancune: number; loyaute: number }
+
+export function lgSuspicion(
+  state: LGState,
+  botId: string,
+  trait: BotTrait = 'suiveur',
+  mood: LGBotMood = { rancune: trait === 'agressif' ? 1 : 0, loyaute: 0 }
+): Map<string, number> {
+  const bot = playerOf(state, botId)
+  const isWolf = bot?.role === 'loup'
+  const today = lgLatestDebateRound(state)
+  const grudge = (n: number) => Math.round(n * mood.rancune)
+  const bond = Math.round(2 * mood.loyaute)
   const score = new Map<string, number>()
-  for (const sp of state.debateSpeech) {
-    if (sp.kind !== 'suspect' || !sp.targetId) continue
-    score.set(sp.targetId, (score.get(sp.targetId) ?? 0) + 1)
-  }
-  let best: string | null = null
-  let bestScore = 0
-  // Parcours dans l'ORDRE DE TABLE : égalité départagée de façon stable.
   for (const p of state.players) {
-    if (!p.alive || excluded.includes(p.id)) continue
-    const sc = score.get(p.id) ?? 0
-    if (sc > bestScore) {
-      bestScore = sc
-      best = p.id
+    if (!p.alive || p.id === botId) continue
+    if (isWolf && p.role === 'loup') continue
+    score.set(p.id, 0)
+  }
+  const deathOf = new Map(state.deaths.map((d) => [d.playerId, d]))
+  const isHuman = (id: string) => playerOf(state, id)?.isBot === false
+  const add = (id: string | null, n: number) => addScore(score, id, n)
+
+  for (const sp of state.debateSpeech) {
+    const w = trait === 'suiveur' && isHuman(sp.playerId) ? 2 : 1
+    if (sp.round === today) {
+      if (sp.kind === 'suspect' || sp.kind === 'rally') add(sp.targetId, 2 * w)
+      else if (sp.kind === 'doubt') add(sp.targetId, -w)
+      else if (sp.kind === 'ally') add(sp.targetId, -2 * w)
+      else if (sp.kind === 'defend') add(sp.targetId, w)
+      if (sp.targetId === botId) {
+        if (sp.kind === 'suspect') add(sp.playerId, grudge(3))
+        else if (sp.kind === 'rally') add(sp.playerId, grudge(2))
+      }
+      if (sp.kind === 'ally' && sp.playerId === botId) add(sp.targetId, -bond)
+    } else if (sp.round === today - 1 && sp.kind === 'suspect' && sp.targetId) {
+      const death = deathOf.get(sp.targetId)
+      if (death?.role === 'loup') add(sp.playerId, -2 * w)
+      else if (death?.cause === 'vote') add(sp.playerId, 2 * w)
+      if (sp.targetId === botId) add(sp.playerId, grudge(2))
+    }
+    if (isWolf && sp.kind === 'suspect' && sp.targetId && sp.round >= today - 1) {
+      const named = playerOf(state, sp.targetId)
+      if (named?.alive && named.role === 'loup') add(sp.playerId, isHuman(sp.playerId) ? 6 : 3)
     }
   }
-  return best
+  add(state.ravenTargetId, 1)
+  add(state.mayorId, -2)
+  if (state.lastVoteResult?.tie) {
+    for (const [id, votes] of Object.entries(state.lastVoteResult.tally)) add(id, votes)
+  }
+  if (bot?.role === 'voyante') {
+    for (const peek of state.seerPeeks) add(peek.targetId, peek.team === 'loups' ? 100 : -100)
+  }
+  return score
+}
+
+/**
+ * Les mieux classés d'un score, dans l'ordre de `candidates` (ordre de table :
+ * égalité stable ; l'appelant départage au hasard s'il le souhaite). Un
+ * candidat absent du score est ignoré.
+ */
+export function lgMostSuspect(score: Map<string, number>, candidates: readonly string[]): string[] {
+  let best = -Infinity
+  let tied: string[] = []
+  for (const id of candidates) {
+    const sc = score.get(id)
+    if (sc === undefined) continue
+    if (sc > best) {
+      best = sc
+      tied = [id]
+    } else if (sc === best) {
+      tied.push(id)
+    }
+  }
+  return tied
+}
+
+/** Vivant le plus soupçonné par la sorcière (score > 0 : un suspect CLAIR), hors `excluded`. */
+function topDebateSuspect(state: LGState, witchId: string, excluded: (string | null)[]): string | null {
+  const score = lgSuspicion(state, witchId)
+  const candidates = state.players.filter((p) => p.alive && !excluded.includes(p.id)).map((p) => p.id)
+  const [best] = lgMostSuspect(score, candidates)
+  return best !== undefined && (score.get(best) ?? 0) > 0 ? best : null
 }
 
 export type LGBotWitchDecision = { action: 'save' | 'kill' | 'none'; targetId?: string }
@@ -1050,7 +1181,7 @@ export function lgBotWitchAction(state: LGState, witchId: string): LGBotWitchDec
     // Au bord de la bascule (un villageois de marge au plus) : on ose.
     if (villageAfter <= wolvesAlive + 1) {
       // Inutile d'empoisonner quelqu'un que les loups emportent déjà.
-      const suspect = topDebateSuspect(state, [witchId, state.nightVictimId])
+      const suspect = topDebateSuspect(state, witchId, [state.nightVictimId])
       if (suspect) return { action: 'kill', targetId: suspect }
     }
   }
@@ -1059,35 +1190,72 @@ export function lgBotWitchAction(state: LGState, witchId: string): LGBotWitchDec
 }
 
 /**
- * Cible du CHASSEUR bot : son coup de fusil part sur un SUSPECT, pas au
- * hasard. Dans l'ordre de poids :
- *   • celui qui l'a accusé au débat (il a poussé à sa mort — 3 points) ;
- *   • celui que le village accusait (1 point par accusation) ;
- *   • celui qui a récolté des voix au dernier vote (1 point par voix).
- * Égalité ou table muette : premier vivant dans l'ordre de table (jamais lui).
+ * Cible du CHASSEUR bot : le score de soupçon commun, plus 3 points à qui l'a
+ * accusé (il a poussé à sa mort — la veille s'il est tombé la nuit ; ×2 pour
+ * un humain, comme toute parole humaine dans le score) et les voix du dernier
+ * vote (déjà dans le score s'il s'est soldé par une égalité). Égalité ou
+ * table muette : premier vivant dans l'ordre de table (jamais lui).
  */
 export function lgBotHunterTarget(state: LGState, hunterId: string): string | null {
-  const score = new Map<string, number>()
-  const add = (id: string, n: number) => score.set(id, (score.get(id) ?? 0) + n)
+  const score = lgSuspicion(state, hunterId)
   for (const sp of state.debateSpeech) {
-    if (sp.kind !== 'suspect' || !sp.targetId) continue
-    if (sp.targetId === hunterId) add(sp.playerId, 3)
-    add(sp.targetId, 1)
+    if (sp.kind !== 'suspect' || sp.targetId !== hunterId) continue
+    addScore(score, sp.playerId, playerOf(state, sp.playerId)?.isBot === false ? 6 : 3)
   }
-  for (const [targetId, votes] of Object.entries(state.lastVoteResult?.tally ?? {})) {
-    add(targetId, votes)
+  if (!state.lastVoteResult?.tie) {
+    for (const [id, votes] of Object.entries(state.lastVoteResult?.tally ?? {})) addScore(score, id, votes)
   }
-  let best: string | null = null
-  let bestScore = -1
-  for (const p of state.players) {
-    if (!p.alive || p.id === hunterId) continue
-    const sc = score.get(p.id) ?? 0
-    if (best === null || sc > bestScore) {
-      best = p.id
-      bestScore = sc
-    }
+  const candidates = state.players.filter((p) => p.alive && p.id !== hunterId).map((p) => p.id)
+  return lgMostSuspect(score, candidates)[0] ?? null
+}
+
+/**
+ * Cible COMMUNE des loups bots : le non-loup vivant qui menace le plus la
+ * meute — +3 par accusation d'un loup vivant (×2 si elle vient d'un humain),
+ * +1 par `rally` contre un loup vivant (×2 idem), +2 le maire (voix double au
+ * lynchage). Rien ne menace la meute (première nuit, qui précède tout débat)
+ * → null : l'adaptateur tire alors une victime commune au hasard. Un repli
+ * dans l'ordre de table désignerait toujours le premier siège — l'hôte humain
+ * d'une table solo — trois nuits sur quatre. L'adaptateur ajoute de toute
+ * façon une part de hasard pour que la convergence reste imprévisible.
+ */
+export function lgBotWolfTarget(state: LGState): string | null {
+  const score = new Map<string, number>()
+  for (const p of state.players) if (p.alive && p.role !== 'loup') score.set(p.id, 0)
+  for (const sp of state.debateSpeech) {
+    if ((sp.kind !== 'suspect' && sp.kind !== 'rally') || !sp.targetId) continue
+    const named = playerOf(state, sp.targetId)
+    if (!named?.alive || named.role !== 'loup') continue
+    const w = playerOf(state, sp.playerId)?.isBot === false ? 2 : 1
+    addScore(score, sp.playerId, (sp.kind === 'suspect' ? 3 : 1) * w)
   }
-  return best
+  addScore(score, state.mayorId, 2)
+  const [best] = lgMostSuspect(score, [...score.keys()])
+  return best !== undefined && (score.get(best) ?? 0) > 0 ? best : null
+}
+
+export type LGBotRemark = { kind: 'toldYou' | 'wrong'; targetId: string }
+
+/**
+ * Remarque d'OUVERTURE d'un bot sur la manche écoulée, à partir de ses propres
+ * paroles de la veille et des morts révélés depuis : « je l'avais dit » s'il
+ * avait accusé un loup démasqué, « je me suis planté » s'il avait accusé un
+ * villageois lynché ou fait équipe avec un loup. Null sinon.
+ */
+export function lgBotEventRemark(state: LGState, botId: string): LGBotRemark | null {
+  const yesterday = lgLatestDebateRound(state) - 1
+  const deathOf = new Map(state.deaths.map((d) => [d.playerId, d]))
+  let wrong: string | null = null
+  for (const sp of state.debateSpeech) {
+    if (sp.playerId !== botId || sp.round !== yesterday || !sp.targetId) continue
+    const death = deathOf.get(sp.targetId)
+    if (!death) continue
+    if (sp.kind === 'suspect' && death.role === 'loup') return { kind: 'toldYou', targetId: sp.targetId }
+    if (wrong !== null) continue
+    if (sp.kind === 'suspect' && death.role !== 'loup' && death.cause === 'vote') wrong = sp.targetId
+    else if (sp.kind === 'ally' && death.role === 'loup') wrong = sp.targetId
+  }
+  return wrong ? { kind: 'wrong', targetId: wrong } : null
 }
 
 // ─── Acteur courant ──────────────────────────────────────────────────────────

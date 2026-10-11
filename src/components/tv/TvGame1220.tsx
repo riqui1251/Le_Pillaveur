@@ -5,6 +5,7 @@ import type { TvRoomDto } from '@/lib/online-room'
 import type { Game1220SyncedState } from '@/lib/online-game-state'
 import { cn } from '@/lib/utils'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { TvAvatar } from './tv-shared'
 
 /**
@@ -14,7 +15,11 @@ import { TvAvatar } from './tv-shared'
  */
 export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220SyncedState }) {
   const t = useTranslations('games.1220')
-  const iconOf = (userId: string) => room.members.find((m) => m.userId === userId)?.preferences?.icon ?? '👤'
+  const iconOf = (userId: string) => {
+    const player = state.players.find((p) => p.id === userId)
+    if (player?.isBot) return botAvatarFromName(player.name)
+    return room.members.find((m) => m.userId === userId)?.preferences?.icon ?? '👤'
+  }
 
   if (state.phase === 'finished') {
     return (

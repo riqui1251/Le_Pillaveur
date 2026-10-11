@@ -3,7 +3,7 @@
 import { Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
-import { botEmojiFromName } from '@/lib/online/bot-personas'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import type { TabouClientView } from '@/lib/tabou/engine'
 import { TABOU_ROUND_MS } from '@/lib/tabou/engine'
 import { cn } from '@/lib/utils'
@@ -21,7 +21,7 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
   const finished = state.phase === 'finished'
   const describer = state.players.find((p) => p.id === state.describerId)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   if (finished) {
     return (

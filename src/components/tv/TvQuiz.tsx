@@ -3,7 +3,7 @@
 import { Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
-import { botEmojiFromName } from '@/lib/online/bot-personas'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import type { QuizClientView } from '@/lib/quiz/engine'
 import { QUIZ_QUESTION_MS, QUIZ_REVEAL_MS } from '@/lib/quiz/engine'
 import { cn } from '@/lib/utils'
@@ -34,7 +34,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
   const totalPhaseMs = state.phase === 'question' ? QUIZ_QUESTION_MS : QUIZ_REVEAL_MS
   const ranking = [...state.players].sort((a, b) => b.score - a.score)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   // ── Podium final ─────────────────────────────────────────────────────────
   if (state.phase === 'finished') {

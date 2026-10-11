@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
-import { botEmojiFromName } from '@/lib/online/bot-personas'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import type { TelephoneClientView } from '@/lib/telephone-dessine/engine'
 import { PartyCanvas } from '@/components/online/PartyCanvas'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -18,7 +18,7 @@ export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: Te
   const t = useTranslations('games.telephone-dessine.game')
   const finished = state.phase === 'finished'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   if (finished) {
     return (

@@ -12,7 +12,7 @@ import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { DIL_VOTE_MS, type DilClientView } from '@/lib/dilemmes/engine'
-import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
+import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -103,7 +103,7 @@ export function DilemmesOnline() {
   const nameOf = (id: string) => view.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot
-      ? botEmojiFromName(p.name)
+      ? botAvatarFromName(p.name)
       : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   const votedCount = view.players.filter((p) => p.hasVoted && !p.leftAt).length

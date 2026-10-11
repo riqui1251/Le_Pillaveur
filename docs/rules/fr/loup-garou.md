@@ -77,7 +77,7 @@ Oui. Le Loup-Garou est proposé dans le mode sans alcool du site : les gorgées
 
 ### Peut-on jouer seul, avec des bots ?
 
-Oui. « Essayer avec des bots » lance une table privée avec trois bots — le minimum de quatre joueurs — qui votent, accusent et se défendent. Tes amis peuvent rejoindre en cours de route.
+Oui. « Essayer avec des bots » lance une table privée avec trois bots — le minimum de quatre joueurs — qui votent, accusent et se défendent. Ils jouent leur rôle : la Voyante bot ouvre le débat sur le loup qu’elle a vu sans le dire, la Sorcière bot garde sa potion de mort pour le moment où le village est au bord de la défaite, et si tu nommes un loup, la meute te vise la nuit suivante (une nuit sur quatre, elle frappe au hasard). Tes amis peuvent rejoindre en cours de route.
 
 ### Combien de temps dure une partie ?
 

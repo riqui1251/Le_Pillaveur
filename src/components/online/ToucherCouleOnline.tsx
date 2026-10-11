@@ -12,7 +12,7 @@ import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
-import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
+import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -158,9 +158,9 @@ export function ToucherCouleOnline() {
   const winner = view.winner
 
   const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '—'
-  /** Icône du joueur : emoji du persona pour les bots, icône personnalisée du compte pour les humains. */
+  /** Icône du joueur : portrait du persona pour les bots, icône personnalisée du compte pour les humains. */
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? null
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? null
 
   // Verrou de version conservé ; le hook lit la réponse et annonce les refus.
   const sendAction = (body: Record<string, unknown>) =>

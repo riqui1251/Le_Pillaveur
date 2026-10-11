@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { CrobardClientView } from '@/lib/crobard/engine'
 import { CROBARD_CHOOSING_MS, CROBARD_DRAWING_MS } from '@/lib/crobard/engine'
-import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
+import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -114,7 +114,7 @@ export function CrobardOnline() {
   const ranking = [...view.players].sort((a, b) => b.score - a.score)
 
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const nameOf = (id: string | null | undefined) => view.players.find((p) => p.id === id)?.name ?? '—'
 
   /** Vide la file de traits, un envoi à la fois (retente sur 409/5xx/réseau). */

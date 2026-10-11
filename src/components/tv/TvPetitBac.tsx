@@ -3,7 +3,7 @@
 import { Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
-import { botEmojiFromName } from '@/lib/online/bot-personas'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import type { PbcClientView } from '@/lib/petit-bac/engine'
 import { PBC_WRITE_MS } from '@/lib/petit-bac/engine'
 import { cn } from '@/lib/utils'
@@ -20,7 +20,7 @@ export function TvPetitBac({ room, state }: { room: TvRoomDto; state: PbcClientV
   const t = useTranslations('games.petit-bac.game')
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const submittedCount = state.players.filter((p) => p.hasSubmitted && !p.leftAt).length
   const activeCount = state.players.filter((p) => !p.leftAt).length
 

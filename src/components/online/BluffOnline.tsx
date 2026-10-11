@@ -13,7 +13,7 @@ import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { BLUFF_FAKE_MAX_LEN, type BluffClientView } from '@/lib/bluff/engine'
-import { botEmojiFromName, botTickDelayMs } from '@/lib/online/bot-personas'
+import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -117,7 +117,7 @@ export function BluffOnline() {
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   // Verrou de version conservé ; le hook lit la réponse et annonce les refus.
   const sendAction = (body: Record<string, unknown>) =>

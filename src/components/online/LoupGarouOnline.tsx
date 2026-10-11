@@ -10,9 +10,11 @@ import {
   Eye,
   EyeOff,
   FlaskConical,
+  Handshake,
   Heart,
   Hourglass,
   Medal,
+  Megaphone,
   MessageCircle,
   Moon,
   Send,
@@ -37,9 +39,14 @@ import { Button } from '@/components/ui/button'
 import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
 import { WolfIcon } from '@/components/icons/GameIcons'
 import { cn } from '@/lib/utils'
-import { lgTeamOf } from '@/lib/loup-garou/engine'
-import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
-import { botEmojiFromName } from '@/lib/online/bot-personas'
+import {
+  lgTeamOf,
+  LG_SPEECH_CAP,
+  type LGClientView,
+  type LGPlayerView,
+  type LGRole,
+} from '@/lib/loup-garou/engine'
+import type { LGSpeakKind } from '@/lib/loup-garou/server-adapter'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { playGameSound } from '@/lib/sound/game-sounds'
@@ -47,6 +54,8 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
+import { DebateFeed } from './loup-garou/DebateFeed'
+import { lgPlayerIcon } from './loup-garou/debate-feed'
 
 /**
  * LOUP-GAROU en ligne. La vue reçue est déjà filtrée par le serveur selon QUI
@@ -388,6 +397,8 @@ export function LoupGarouOnline() {
   const [showWolfChat, setShowWolfChat] = useState(false)
   const [showDayChat, setShowDayChat] = useState(false)
   const [witchKillMode, setWitchKillMode] = useState(false)
+  // Débat : grille de cibles ouverte par « Accuser » ou « Faire équipe ».
+  const [speakMode, setSpeakMode] = useState<'suspect' | 'ally' | null>(null)
 
   const inGame = room?.gameId === 'loup-garou' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
@@ -399,6 +410,18 @@ export function LoupGarouOnline() {
   useEffect(() => {
     setWitchKillMode(false)
   }, [stateVersion])
+
+  // La grille du débat se referme quand MA parole est passée ou que la phase
+  // change — pas à chaque version : les bots parlent toutes les 2,5-5,5 s et
+  // fermeraient la grille sous le doigt du joueur.
+  const mySpeechCount =
+    view && user
+      ? view.debateSpeech.filter((sp) => sp.round === view.round && sp.playerId === user.id).length
+      : 0
+  const phaseKeyOfView = view?.phaseKey
+  useEffect(() => {
+    setSpeakMode(null)
+  }, [phaseKeyOfView, mySpeechCount])
 
   // Sting du Chasseur : son dramatique + vibration à l'ENTRÉE de la phase
   // (une seule fois par phase, pour tous les joueurs — c'est LE highlight).
@@ -468,8 +491,7 @@ export function LoupGarouOnline() {
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botEmojiFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) => lgPlayerIcon(p, room.members)
   const roleName = (role: LGRole) => t(`roles.${role}.name`)
 
   const sendAction = async (body: Record<string, unknown>) => {
@@ -501,6 +523,32 @@ export function LoupGarouOnline() {
   )
   const iAmHunter = view.phase === 'hunter-shot' && view.pendingHunterId === user.id
   const wolves = view.players.filter((p) => p.role === 'loup')
+
+  // Débat : paroles de la manche (bots ET humains), les miennes, et le
+  // dernier VIVANT qui m'accuse (cible de « Me défendre »).
+  const roundSpeech = view.debateSpeech.filter((sp) => sp.round === view.round)
+  const myAccusers = roundSpeech.filter(
+    (sp) =>
+      sp.kind === 'suspect' && sp.targetId === user.id && alive.some((p) => p.id === sp.playerId)
+  )
+  const lastAccuserId = myAccusers.length > 0 ? myAccusers[myAccusers.length - 1].playerId : null
+  // Interpellation « tu votes qui ? » encore sans réponse : un `ask` qui me
+  // vise, après lequel je n'ai ni parlé ni passé au vote.
+  let askedById: string | null = null
+  if (!view.debateSkips.includes(user.id)) {
+    for (let i = roundSpeech.length - 1; i >= 0; i -= 1) {
+      const sp = roundSpeech[i]
+      if (sp.playerId === user.id) break
+      if (sp.kind === 'ask' && sp.targetId === user.id) {
+        askedById = sp.playerId
+        break
+      }
+    }
+  }
+  const speechLeft = Math.max(0, LG_SPEECH_CAP - mySpeechCount)
+  const canSpeak = Boolean(me?.alive) && !busy && speechLeft > 0
+  const speak = (kind: LGSpeakKind, targetId: string) =>
+    void sendAction({ action: 'debate-speak', kind, targetId })
 
   // ── Écran de fin ─────────────────────────────────────────────────────────
   if (finished) {
@@ -1176,21 +1224,95 @@ export function LoupGarouOnline() {
                   {t('ravenMarkBanner', { name: nameOf(view.ravenTargetId) })}
                 </p>
               )}
-              {/* Paroles des bots : accusations, défenses, alliances. */}
-              {view.debateSpeech.filter((sp) => sp.round === view.round).length > 0 && (
-                <ul className="space-y-1">
-                  {view.debateSpeech
-                    .filter((sp) => sp.round === view.round)
-                    .map((sp, i) => (
-                      <li
-                        key={i}
-                        className="rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-white/80"
+              <DebateFeed
+                speeches={view.debateSpeech}
+                round={view.round}
+                players={view.players}
+                iconOf={iconOf}
+                meId={user.id}
+                variant="phone"
+              />
+              {me?.alive && speakMode && (
+                <>
+                  <p className="text-center text-xs font-semibold text-white/60">
+                    {speakMode === 'suspect' ? t('speakPickAccuse') : t('speakPickAlly')}
+                  </p>
+                  <TargetGrid
+                    players={alive.filter((p) => p.id !== user.id)}
+                    iconOf={iconOf}
+                    onPick={(id) => speak(speakMode, id)}
+                    disabled={!canSpeak}
+                    youLabel={t('you')}
+                    selfId={user.id}
+                  />
+                  <Button
+                    onClick={() => setSpeakMode(null)}
+                    variant="outline"
+                    className="w-full rounded-xl border-white/[0.15] bg-white/5 py-2 text-xs text-white/70"
+                  >
+                    {t('speakCancel')}
+                  </Button>
+                </>
+              )}
+              {me?.alive && !speakMode && askedById && (
+                <div className="space-y-2 rounded-xl border border-gold/40 bg-gold/10 p-3">
+                  <p className="text-center text-xs font-bold text-gold">
+                    {t('askedBy', { name: nameOf(askedById) })}
+                  </p>
+                  <TargetGrid
+                    players={alive.filter((p) => p.id !== user.id)}
+                    iconOf={iconOf}
+                    onPick={(id) => speak('suspect', id)}
+                    disabled={!canSpeak}
+                    youLabel={t('you')}
+                    selfId={user.id}
+                  />
+                  <Button
+                    onClick={() => setSpeakMode('ally')}
+                    disabled={!canSpeak}
+                    variant="outline"
+                    className="w-full rounded-xl border-white/[0.15] bg-white/5 py-2 text-xs font-bold text-white/80"
+                  >
+                    <Handshake className="mr-1 h-3.5 w-3.5 shrink-0" />
+                    {t('speakAlly')}
+                  </Button>
+                </div>
+              )}
+              {me?.alive && !speakMode && (
+                <>
+                  <div className={cn('grid gap-2', lastAccuserId ? 'grid-cols-3' : 'grid-cols-2')}>
+                    <Button
+                      onClick={() => setSpeakMode('suspect')}
+                      disabled={!canSpeak}
+                      className="rounded-xl bg-gradient-to-r from-suit-red to-red-700 px-2 py-2.5 text-xs font-bold"
+                    >
+                      <Megaphone className="mr-1 h-3.5 w-3.5 shrink-0" />
+                      {t('speakAccuse')}
+                    </Button>
+                    {lastAccuserId && (
+                      <Button
+                        onClick={() => speak('defend', lastAccuserId)}
+                        disabled={!canSpeak}
+                        className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-2 py-2.5 text-xs font-bold"
                       >
-                        <span className="font-bold">{botEmojiFromName(nameOf(sp.playerId))} {nameOf(sp.playerId)}</span>{' '}
-                        {t(`botSay.${sp.kind}`, { name: nameOf(sp.targetId) })}
-                      </li>
-                    ))}
-                </ul>
+                        <Shield className="mr-1 h-3.5 w-3.5 shrink-0" />
+                        {t('speakDefend')}
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => setSpeakMode('ally')}
+                      disabled={!canSpeak}
+                      variant="outline"
+                      className="rounded-xl border-white/[0.15] bg-white/5 px-2 py-2.5 text-xs font-bold text-white/80"
+                    >
+                      <Handshake className="mr-1 h-3.5 w-3.5 shrink-0" />
+                      {t('speakAlly')}
+                    </Button>
+                  </div>
+                  <p className="text-center text-[11px] text-white/40">
+                    {t('speechLeft', { n: speechLeft, max: LG_SPEECH_CAP })}
+                  </p>
+                </>
               )}
               {me?.alive && (
                 <Button
