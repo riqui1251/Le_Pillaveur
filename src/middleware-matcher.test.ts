@@ -25,6 +25,7 @@ describe('matcher du middleware', () => {
       '/.well-known/assetlinks.json',
       '/manifest.json',
       '/sw.js',
+      '/app/le-pillaveur.apk',
       '/robots.txt',
       '/sitemap.xml',
       '/icons/icon-192.png',

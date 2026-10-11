@@ -22,6 +22,14 @@
     "stores": {
       "title": "On the app stores"
     },
+    "apk": {
+      "title": "Download the Android app (APK)",
+      "hint": "Until Google Play: the install file, straight from the site. Same app, same tables.",
+      "button": "Download the APK ({size} MB)",
+      "step1": "Download the file, then open it from your notifications or downloads.",
+      "step2": "Android asks you to allow installs from this browser (“unknown sources”): accept, it is the only way outside Google Play.",
+      "step3": "Once installed, the app follows the site: every site update arrives on its own. Only a new version of the app itself is downloaded again here."
+    },
     "install": {
       "title": "Add to Home Screen",
       "hint": "Free, no store needed: the site installs from your browser in two taps.",

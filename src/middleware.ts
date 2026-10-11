@@ -138,9 +138,11 @@ export const config = {
     // sw.js : le service worker (route src/app/sw.js/route.ts), enregistré
     // sur la portée « / » — redirigé vers /fr/sw.js, il ne s'installerait
     // jamais (même cause que manifest.json).
+    // apk : le fichier d'installation Android servi depuis public/app/ ; redirigé
+    // vers /fr/app/…, le téléchargement tombait en 404.
     // .well-known : fichiers lus par des robots à une adresse IMPOSÉE, qui
     // n'admettent aucune redirection — assetlinks.json (App Links de l'app
     // Android, src/app/.well-known) répondait 307 vers /fr/…, puis 404.
-    '/((?!api|_next/static|_next/image|\\.well-known|icon|apple-icon|opengraph-image|robots\\.txt|sitemap\\.xml|manifest\\.json|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!api|_next/static|_next/image|\\.well-known|icon|apple-icon|opengraph-image|robots\\.txt|sitemap\\.xml|manifest\\.json|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|apk)$).*)',
   ],
 }

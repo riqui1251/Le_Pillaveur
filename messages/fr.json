@@ -22,6 +22,14 @@
     "stores": {
       "title": "Sur les stores"
     },
+    "apk": {
+      "title": "Télécharger l’application Android (APK)",
+      "hint": "En attendant Google Play : le fichier d’installation, direct depuis le site. Même app, mêmes tables.",
+      "button": "Télécharger l’APK ({size} Mo)",
+      "step1": "Télécharge le fichier, puis ouvre-le depuis les notifications ou les téléchargements.",
+      "step2": "Android demande d’autoriser les installations depuis ce navigateur (« sources inconnues ») : accepte, c’est le passage obligé hors Google Play.",
+      "step3": "Une fois installée, l’app suit le site : chaque mise à jour du site arrive toute seule. Seule une nouvelle version de l’app elle-même se retélécharge ici."
+    },
     "install": {
       "title": "Ajouter à l'écran d'accueil",
       "hint": "Gratuit, sans passer par un store : le site s'installe depuis ton navigateur, en deux gestes.",

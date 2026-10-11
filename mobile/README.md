@@ -138,6 +138,23 @@ npm run build:android                  # refait le sync : l'APK repointe sur lep
 
 La webview d'un build debug s'inspecte depuis Chrome du PC : `chrome://inspect`.
 
+## Diffusion directe (APK sur le site)
+
+En attendant les stores, la page `/application` du site propose l'APK au
+téléchargement (`public/app/le-pillaveur.apk`, servi hors middleware i18n ;
+la carte ne s'affiche que si le fichier est dans le dépôt). Android demande
+alors d'autoriser les « sources inconnues » pour le navigateur. Publier une
+nouvelle version de la coquille :
+
+```bash
+npm run build:android                                        # depuis mobile/
+cp android/app/build/outputs/apk/debug/app-debug.apk ../public/app/le-pillaveur.apk
+```
+
+puis commiter et déployer le site (`npm run deploy` à la racine). Le site, lui,
+se met à jour dans l'app sans retéléchargement : seule la coquille (Java,
+plugins, config Capacitor) demande un nouvel APK.
+
 ## Publication Play Store
 
 ### Une fois
