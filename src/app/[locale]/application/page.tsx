@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
-import { Apple, Maximize2, Play, Smartphone, Zap } from 'lucide-react'
+import { Apple, Maximize2, Play, Smartphone, WifiOff, Zap } from 'lucide-react'
 import { HiddenInApp } from '@/components/pwa/HiddenInApp'
 import { InstallButton } from '@/components/pwa/InstallButton'
 import { buildAlternates, pageOpenGraph, pageTwitter } from '@/lib/seo/alternates'
@@ -78,6 +78,8 @@ export default async function ApplicationPage({
     { Icon: Maximize2, title: t('benefits.fullscreen'), desc: t('benefits.fullscreenDesc') },
     { Icon: Smartphone, title: t('benefits.icon'), desc: t('benefits.iconDesc') },
     { Icon: Zap, title: t('benefits.quick'), desc: t('benefits.quickDesc') },
+    // Jeux « un seul téléphone » sans réseau : service worker, src/lib/offline/.
+    { Icon: WifiOff, title: t('benefits.offline'), desc: t('benefits.offlineDesc') },
   ]
 
   return (
@@ -105,7 +107,9 @@ export default async function ApplicationPage({
             <h2 id="app-benefits" className="sr-only">
               {t('benefits.title')}
             </h2>
-            <div className="grid gap-3 sm:grid-cols-3">
+            {/* Quatre cartes : deux par deux dès `sm` (trois colonnes laissaient
+                la dernière orpheline sur sa ligne). */}
+            <div className="grid gap-3 sm:grid-cols-2">
               {benefits.map(({ Icon, title, desc }) => (
                 <div key={title} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
                   <Icon aria-hidden className="h-5 w-5 text-amber-300" />

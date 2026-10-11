@@ -15,7 +15,9 @@
       "icon": "Un icono en la pantalla de inicio",
       "iconDesc": "Le Pillaveur junto a tus otras apps, sin pasar por el navegador.",
       "quick": "Vuelta rápida a la mesa",
-      "quickDesc": "El icono abre directamente el hub de juegos, y el sitio se actualiza solo: nada que descargar."
+      "quickDesc": "El icono abre directamente el hub de juegos, y el sitio se actualiza solo: nada que descargar.",
+      "offline": "Jugable sin red",
+      "offlineDesc": "Los juegos en un solo teléfono siguen disponibles sin conexión, en cuanto el sitio se ha abierto una vez en línea."
     },
     "stores": {
       "title": "En las tiendas"
@@ -5688,5 +5690,16 @@
     "inviteTitleBare": "Te espera una mesa",
     "inviteFooter": "Basta con un apodo — gratis, sin instalar",
     "inviteDescription": "Únete a la mesa {code}: basta con un apodo. Gratis, sin instalar."
+  },
+  "offline": {
+    "title": "Sin conexión",
+    "lead": "No hay red por ahora.",
+    "body": "Los juegos que se juegan en un solo teléfono siguen disponibles, con los jugadores guardados en este dispositivo. Las mesas en línea esperarán a que vuelva la red.",
+    "gamesTitle": "Jugables sin red",
+    "players": "Gestionar jugadores",
+    "retry": "Reintentar",
+    "backToGames": "Volver a los juegos",
+    "hubBanner": "Sin conexión: los juegos en un solo teléfono siguen jugables, las mesas en línea esperarán a la red.",
+    "unavailable": "No disponible sin conexión"
   }
 }

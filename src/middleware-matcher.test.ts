@@ -19,9 +19,12 @@ describe('matcher du middleware', () => {
     // proposition d'installation de l'application.
     // assetlinks.json redirigé = App Links jamais vérifiés : Android exige
     // un 200 direct, sans aucune redirection.
+    // sw.js redirigé vers /fr/sw.js = le service worker (jeux locaux hors
+    // ligne) ne s'installe jamais : un script de worker n'admet aucune redirection.
     for (const path of [
       '/.well-known/assetlinks.json',
       '/manifest.json',
+      '/sw.js',
       '/robots.txt',
       '/sitemap.xml',
       '/icons/icon-192.png',
@@ -36,7 +39,8 @@ describe('matcher du middleware', () => {
   it('fait passer les pages par le middleware (préfixe de langue, garde d’accès)', () => {
     // Le point de .well-known est littéral : une page dont le nom contient
     // « well-known » reste localisée.
-    for (const path of ['/', '/fr', '/fr/jeux', '/regles/loup-garou', '/en/games/tabou', '/well-known', '/xwell-known/a']) {
+    // Même chose pour sw.js : « /swxjs » et « /fr/sw.js » restent des pages.
+    for (const path of ['/', '/fr', '/fr/jeux', '/regles/loup-garou', '/en/games/tabou', '/well-known', '/xwell-known/a', '/swxjs', '/fr/sw.js']) {
       expect(matcher.test(path), path).toBe(true)
     }
   })

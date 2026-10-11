@@ -8,6 +8,8 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.webkit.CookieManager;
 import android.webkit.RenderProcessGoneDetail;
+import android.webkit.ServiceWorkerClient;
+import android.webkit.ServiceWorkerController;
 import android.webkit.WebBackForwardList;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -103,6 +105,16 @@ public class MainActivity extends BridgeActivity {
         // les appelle plus tard, sur ce même fil, une fois onCreate terminé.
         bridge.setWebViewClient(new ClientDuSite(bridge));
         bridge.addWebViewListener(new SurvieDuRendu());
+        // Service worker du site (jeux locaux hors ligne — src/lib/offline/ côté site) : ses
+        // propres requêtes ne passent pas par ClientDuSite mais par ce client-ci, global à la
+        // WebView. Capacitor en pose un quand android.resolveServiceWorkerRequests est vrai,
+        // SANS le filtre des chemins spéciaux : le réglage reste à faux et on pose le nôtre,
+        // qui ferme ces chemins puis délègue au serveur local — c'est lui qui injecte le pont
+        // natif (window.Capacitor) dans le HTML que le worker rapatrie, à l'installation
+        // (pages préchargées) comme à chaque navigation qu'il relaie. Sans ce client, ces
+        // pages arrivaient sans pont : connexion Google native, partage et ambiance « Sans
+        // alcool » par défaut perdus dès que le worker est actif.
+        ServiceWorkerController.getInstance().setServiceWorkerClient(new ClientDesWorkers(bridge));
     }
 
     @Override
@@ -122,6 +134,18 @@ public class MainActivity extends BridgeActivity {
             aRecreerAuRetour = false;
             recreate();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        // Le client des service workers est global au PROCESSUS : laissé en place, il
+        // retiendrait le pont — donc cette activité, sa WebView et ses plugins — jusqu'au
+        // prochain onCreate ou à la mort du processus. Dans un recreate(), la nouvelle
+        // activité en pose un neuf après ce retrait.
+        if (bridge != null) {
+            ServiceWorkerController.getInstance().setServiceWorkerClient(null);
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -326,6 +350,46 @@ public class MainActivity extends BridgeActivity {
         return false;
     }
 
+    /** Chemin spécial du serveur local de Capacitor (voir PREFIXE_CAPACITOR). */
+    private static boolean estUnCheminCapacitor(WebResourceRequest requete) {
+        String chemin = requete.getUrl().getPath();
+        return chemin != null && chemin.startsWith(PREFIXE_CAPACITOR);
+    }
+
+    /** 403 vide : la réponse des chemins spéciaux, pour la page comme pour le service worker. */
+    private static WebResourceResponse reponseInterdite() {
+        return new WebResourceResponse(
+            "text/plain",
+            "utf-8",
+            403,
+            "Forbidden",
+            Collections.emptyMap(),
+            new ByteArrayInputStream(new byte[0])
+        );
+    }
+
+    /**
+     * Requêtes émises par le service worker du site (préchargement des pages de jeu, navigations
+     * relayées) : mêmes fermetures que ClientDuSite, puis le serveur local de Capacitor, qui
+     * proxifie les pages HTML (Accept: text/html) pour y injecter le pont natif.
+     */
+    private static class ClientDesWorkers extends ServiceWorkerClient {
+
+        private final Bridge pont;
+
+        ClientDesWorkers(Bridge pont) {
+            this.pont = pont;
+        }
+
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebResourceRequest requete) {
+            if (estUnCheminCapacitor(requete)) {
+                return reponseInterdite();
+            }
+            return pont.getLocalServer().shouldInterceptRequest(requete);
+        }
+    }
+
     /** Client WebView de Capacitor, chemins spéciaux fermés et écran d'erreur réservé aux vraies pannes. */
     private class ClientDuSite extends BridgeWebViewClient {
 
@@ -338,16 +402,8 @@ public class MainActivity extends BridgeActivity {
 
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView vue, WebResourceRequest requete) {
-            String chemin = requete.getUrl().getPath();
-            if (chemin != null && chemin.startsWith(PREFIXE_CAPACITOR)) {
-                return new WebResourceResponse(
-                    "text/plain",
-                    "utf-8",
-                    403,
-                    "Forbidden",
-                    Collections.emptyMap(),
-                    new ByteArrayInputStream(new byte[0])
-                );
+            if (estUnCheminCapacitor(requete)) {
+                return reponseInterdite();
             }
             return super.shouldInterceptRequest(vue, requete);
         }

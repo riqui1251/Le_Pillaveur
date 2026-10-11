@@ -8,6 +8,7 @@ import { PlayerManager } from "@/components/PlayerManager"
 import { HubShell } from "@/components/hub/HubShell"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 import { useAuth } from "@/hooks/useAuth"
+import { useBrowserOnline } from "@/hooks/useBrowserOnline"
 import { useLocalizedGame } from "@/lib/games-i18n"
 import { resolveNextGame } from "@/lib/next-game-path"
 import { Button } from "@/components/ui/button"
@@ -46,10 +47,14 @@ function JoueursContent() {
   // dit où l'on va, « Commencer la partie » non.
   const localizedGame = useLocalizedGame(nextGame?.id ?? '')
   const startLabel = localizedGame ? t('playGame', { game: localizedGame.title }) : undefined
+  // Hors ligne, un compte connecté passe pour un visiteur (session
+  // invérifiable) : pas de « créez un compte » à qui en a peut-être un — et
+  // /compte n'est de toute façon pas servi sans réseau.
+  const online = useBrowserOnline()
 
   return (
     <>
-      {!loading && !user && (
+      {!loading && !user && online && (
         <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
           <p className="text-sm text-amber-100/90">{t('guestPrompt')}</p>
           <Button asChild className="mt-3 bg-amber-500 text-black hover:bg-amber-400">

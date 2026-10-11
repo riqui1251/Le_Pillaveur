@@ -15,7 +15,9 @@
       "icon": "Un'icona nella schermata Home",
       "iconDesc": "Le Pillaveur accanto alle altre app, senza passare dal browser.",
       "quick": "Ritorno rapido al tavolo",
-      "quickDesc": "L'icona apre direttamente l'hub dei giochi, e il sito si aggiorna da solo: niente da scaricare."
+      "quickDesc": "L'icona apre direttamente l'hub dei giochi, e il sito si aggiorna da solo: niente da scaricare.",
+      "offline": "Giocabile senza rete",
+      "offlineDesc": "I giochi su un solo telefono restano disponibili offline, non appena il sito è stato aperto una volta online."
     },
     "stores": {
       "title": "Negli store"
@@ -5688,5 +5690,16 @@
     "inviteTitleBare": "Un tavolo ti aspetta",
     "inviteFooter": "Basta un nickname — gratis, senza installare",
     "inviteDescription": "Unisciti al tavolo {code}: basta un nickname. Gratis, senza installare."
+  },
+  "offline": {
+    "title": "Offline",
+    "lead": "Nessuna rete per ora.",
+    "body": "I giochi che si giocano su un solo telefono restano disponibili, con i giocatori salvati su questo dispositivo. I tavoli online aspetteranno il ritorno della rete.",
+    "gamesTitle": "Giocabili senza rete",
+    "players": "Gestisci i giocatori",
+    "retry": "Riprova",
+    "backToGames": "Torna ai giochi",
+    "hubBanner": "Offline: i giochi su un solo telefono restano giocabili, i tavoli online aspetteranno la rete.",
+    "unavailable": "Non disponibile offline"
   }
 }

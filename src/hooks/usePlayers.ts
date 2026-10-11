@@ -19,7 +19,13 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { clearSelectedPlayerIds } from '@/lib/selectedPlayers';
 import { syncLocalPlayersNow } from '@/lib/visit-ping-client';
-import { pushPlayersToCloud, schedulePlayersPush, syncLocalWithCloud } from '@/lib/player-sync';
+import {
+  markCloudBehind,
+  pushPlayersToCloud,
+  schedulePlayersPush,
+  setCloudAccount,
+  syncLocalWithCloud,
+} from '@/lib/player-sync';
 
 type PlayersListener = () => void;
 const playersListeners = new Set<PlayersListener>();
@@ -43,7 +49,7 @@ function refreshPlayersState(
 }
 
 export function usePlayers() {
-  const { user } = useAuth();
+  const { user, unavailable: sessionUnavailable } = useAuth();
   // Toute la synchro cloud ne dépend que de l'identité du compte : l'objet
   // `user` change de référence à chaque rafraîchissement de session, ce qui
   // relancerait fusion et poussées sans qu'aucun joueur n'ait bougé.
@@ -61,11 +67,12 @@ export function usePlayers() {
     async function load() {
       setLoading(true);
       cloudSyncedRef.current = false;
+      setCloudAccount(userId);
       const local = getStoredPlayers();
 
       if (userId) {
         try {
-          const merged = await syncLocalWithCloud();
+          const merged = await syncLocalWithCloud(userId);
           if (!cancelled) {
             setPlayers(merged);
             if (merged.length === 0) {
@@ -114,19 +121,30 @@ export function usePlayers() {
   const pushCloudIfReady = useCallback((playerList: Player[]) => {
     if (userId && cloudSyncedRef.current) {
       pushPlayersToCloud(playerList).catch(() => {});
+      return;
     }
-  }, [userId]);
+    // Nuage pas joint depuis ce chargement — compte connu mais synchro en
+    // échec, ou session INVÉRIFIABLE (app ouverte hors ligne) : le geste est
+    // noté « en retard » pour que la prochaine resynchro pousse la liste
+    // locale au lieu de fusionner une copie du nuage qui ressusciterait un
+    // joueur supprimé ici. Un visiteur franchement déconnecté (401) ne note
+    // rien : ses gestes ne sont dus à aucun compte.
+    if (userId || sessionUnavailable) markCloudBehind();
+  }, [userId, sessionUnavailable]);
 
   useEffect(() => {
     if (!userId || loading) return;
 
     const resyncFromCloud = () => {
       if (document.visibilityState === 'hidden') return;
-      syncLocalWithCloud()
+      syncLocalWithCloud(userId)
         .then((merged) => {
           setPlayers(merged);
           setTopPlayers(getTopPlayers());
           setMostActivePlayers(getMostActivePlayers());
+          // Nuage rejoint (après un chargement hors ligne, par exemple) : les
+          // gestes suivants repartent directement.
+          cloudSyncedRef.current = true;
         })
         .catch(() => {});
     };
@@ -134,10 +152,13 @@ export function usePlayers() {
     document.addEventListener('visibilitychange', resyncFromCloud);
     window.addEventListener('focus', resyncFromCloud);
     window.addEventListener('pageshow', resyncFromCloud);
+    // Retour du réseau en pleine soirée : le nuage rattrape la table sans attendre un focus.
+    window.addEventListener('online', resyncFromCloud);
     return () => {
       document.removeEventListener('visibilitychange', resyncFromCloud);
       window.removeEventListener('focus', resyncFromCloud);
       window.removeEventListener('pageshow', resyncFromCloud);
+      window.removeEventListener('online', resyncFromCloud);
     };
   }, [userId, loading]);
 
@@ -203,8 +224,12 @@ export function usePlayers() {
     const updatedPlayers = updatePlayerPreferencesInStorage(playerId, preferences);
     setPlayers(updatedPlayers);
     notifyOthers();
+    // Pas de poussée immédiate (l'effet de sauvegarde la programme), mais la
+    // même note « nuage en retard » que les autres gestes quand il n'est pas
+    // joint : une couleur choisie hors ligne ne doit pas revenir à l'ancienne.
+    if (!(userId && cloudSyncedRef.current) && (userId || sessionUnavailable)) markCloudBehind();
     return updatedPlayers;
-  }, [notifyOthers]);
+  }, [notifyOthers, userId, sessionUnavailable]);
 
   const selectPlayersForGame = useCallback((selectedIds: string[]): Player[] => {
     return players.filter(player => selectedIds.includes(player.id));

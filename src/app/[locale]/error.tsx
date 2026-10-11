@@ -36,6 +36,10 @@ export default function Error({
         msg
       )
     if (!isStaleChunk) return
+    // Sans réseau (jeux locaux servis par le service worker) : recharger ne
+    // ramènera pas le fichier manquant — on laisse l'écran, avec sa sortie
+    // vers les jeux, plutôt qu'un rechargement qui clignote pour rien.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
     try {
       const KEY = 'lp-chunk-reload-at'
       const last = Number(window.sessionStorage.getItem(KEY) ?? 0)

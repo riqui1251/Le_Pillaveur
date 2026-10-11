@@ -10,6 +10,7 @@ import { GameCard } from '@/components/hub/GameCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
+import { useBrowserOnline } from '@/hooks/useBrowserOnline'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 
 /**
@@ -29,7 +30,18 @@ const FAMILIES = [
  * (soloFit 'group') portent le badge discret « Mieux à plusieurs ». Hors de
  * ce mode, rien : à plusieurs, l'avertissement n'a pas lieu d'être.
  */
-function GamesCardGrid({ games, soloHints = false }: { games: LocalizedGameMeta[]; soloHints?: boolean }) {
+function GamesCardGrid({
+  games,
+  soloHints = false,
+  isDisabled,
+  disabledHint,
+}: {
+  games: LocalizedGameMeta[]
+  soloHints?: boolean
+  /** Cartes à éteindre (jeu injouable maintenant), et pourquoi. */
+  isDisabled?: (game: LocalizedGameMeta) => boolean
+  disabledHint?: string
+}) {
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6">
       {games.map((game) => (
@@ -38,6 +50,8 @@ function GamesCardGrid({ games, soloHints = false }: { games: LocalizedGameMeta[
           game={game}
           icon={<GameIconById id={game.id} className="h-6 w-6 sm:h-7 sm:w-7" />}
           groupHint={soloHints && game.soloFit === 'group'}
+          disabled={isDisabled?.(game) ?? false}
+          disabledHint={disabledHint}
         />
       ))}
     </div>
@@ -47,10 +61,17 @@ function GamesCardGrid({ games, soloHints = false }: { games: LocalizedGameMeta[
 export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const t = useTranslations('hub.jeux')
   const tCommon = useTranslations('common')
+  const tOffline = useTranslations('offline')
   const locale = useLocale()
   const games = useLocalizedGames()
   const { user } = useAuth()
   const isOnline = user?.playMode === 'online'
+  // Navigateur hors ligne : une table en ligne ne peut pas s'ouvrir — les
+  // jeux « en ligne uniquement » s'éteignent, et TOUT le catalogue en mode en
+  // ligne (le lobby a besoin du serveur). Les jeux sur un seul téléphone
+  // restent allumés : le service worker sert leur page (src/lib/offline/).
+  const browserOnline = useBrowserOnline()
+  const unplayableOffline = (game: LocalizedGameMeta) => !browserOnline && (Boolean(game.onlineOnly) || isOnline)
   // Ambiance de l'appareil ou du compte (useAmbianceMode) : elle ne dépend
   // plus d'une session. Le filtre par softModeReady, lui, ne concerne que les
   // jeux EN LIGNE (seuls à avoir une variante sans alcool côté serveur).
@@ -66,7 +87,9 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   // Funnel « Jouer seul avec les bots » (?solo=1) : on ne montre que les jeux
   // effectivement jouables avec des bots. Sans objet en mode local (les bots
   // sont un concept online) — le flag y est ignoré.
-  const soloBots = solo && (visitor || isOnline)
+  // Les bots vivent sur le serveur : sans réseau, le hub retombe sur le
+  // catalogue local normal, sous le bandeau hors ligne.
+  const soloBots = solo && browserOnline && (visitor || isOnline)
   // Regard « local » : le joueur en mode local ET le visiteur (qui joue local
   // par défaut). Plus d'un jeu sur deux du catalogue est online-only : le
   // visiteur les voyait mélangés aux autres et tombait après le clic sur
@@ -205,7 +228,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
                     <span aria-hidden className="h-px flex-1 bg-gold/20" />
                   </h2>
                   <p className="mb-2 text-[11px] leading-snug text-white/50">{t('soloFit.greatHint')}</p>
-                  <GamesCardGrid games={soloSections.great} />
+                  <GamesCardGrid games={soloSections.great} isDisabled={unplayableOffline} disabledHint={tOffline('unavailable')} />
                 </section>
               )}
               {soloSections.others.length > 0 && (
@@ -214,7 +237,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
                     <span className="shrink-0">{t('soloFit.othersTitle')}</span>
                     <span aria-hidden className="h-px flex-1 bg-gold/20" />
                   </h2>
-                  <GamesCardGrid games={soloSections.others} soloHints />
+                  <GamesCardGrid games={soloSections.others} soloHints isDisabled={unplayableOffline} disabledHint={tOffline('unavailable')} />
                 </section>
               )}
             </>
@@ -228,7 +251,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
                     </span>
                     <span aria-hidden className="h-px flex-1 bg-gold/15" />
                   </h2>
-                  <GamesCardGrid games={featured} />
+                  <GamesCardGrid games={featured} isDisabled={unplayableOffline} disabledHint={tOffline('unavailable')} />
                 </section>
               )}
               {sections.map((section) => (
@@ -237,12 +260,12 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
                     <span className="shrink-0"><span aria-hidden>{section.glyph}</span> {t(`families.${section.suit}`)}</span>
                     <span aria-hidden className="h-px flex-1 bg-gold/15" />
                   </h2>
-                  <GamesCardGrid games={section.games} />
+                  <GamesCardGrid games={section.games} isDisabled={unplayableOffline} disabledHint={tOffline('unavailable')} />
                 </section>
               ))}
             </>
           ) : (
-            localGames.length > 0 && <GamesCardGrid games={localGames} soloHints={soloBots} />
+            localGames.length > 0 && <GamesCardGrid games={localGames} soloHints={soloBots} isDisabled={unplayableOffline} disabledHint={tOffline('unavailable')} />
           )}
 
           {/* Promesse honnête AVANT le clic : ces jeux réclament un téléphone
@@ -257,7 +280,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
                 <span aria-hidden className="h-px flex-1 bg-gold/15" />
               </h2>
               <p className="mb-2 text-[11px] leading-snug text-white/45">{t('onlineOnly.hint')}</p>
-              <GamesCardGrid games={onlineOnlyGames} />
+              <GamesCardGrid games={onlineOnlyGames} isDisabled={unplayableOffline} disabledHint={tOffline('unavailable')} />
             </section>
           )}
         </div>

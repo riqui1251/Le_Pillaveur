@@ -31,6 +31,9 @@ const PUBLIC_PREFIXES = [
   '/regles',
   // Page de téléchargement de l'app mobile (liens stores) : publique.
   '/application',
+  // Page de repli du service worker (jeux locaux sans réseau) : publique et
+  // statique, servie depuis le cache quand le réseau manque.
+  '/hors-ligne',
   // Liens d'invitation partagés (aperçu OG + redirection vers /jeux?join=).
   '/invite',
   '/api/',
@@ -53,6 +56,7 @@ const KNOWN_SEGMENTS = new Set([
   'classement',
   'compte',
   'games',
+  'hors-ligne',
   'invite',
   'jeux',
   'joueurs',
@@ -131,9 +135,12 @@ export const config = {
     // redirigeait vers /fr/manifest.json (404) : aucun navigateur ne
     // proposait l'installation. PUBLIC_PREFIXES ne suffit pas : pour un
     // chemin public, on renvoie la réponse de next-intl, redirection comprise.
+    // sw.js : le service worker (route src/app/sw.js/route.ts), enregistré
+    // sur la portée « / » — redirigé vers /fr/sw.js, il ne s'installerait
+    // jamais (même cause que manifest.json).
     // .well-known : fichiers lus par des robots à une adresse IMPOSÉE, qui
     // n'admettent aucune redirection — assetlinks.json (App Links de l'app
     // Android, src/app/.well-known) répondait 307 vers /fr/…, puis 404.
-    '/((?!api|_next/static|_next/image|\\.well-known|icon|apple-icon|opengraph-image|robots\\.txt|sitemap\\.xml|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!api|_next/static|_next/image|\\.well-known|icon|apple-icon|opengraph-image|robots\\.txt|sitemap\\.xml|manifest\\.json|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

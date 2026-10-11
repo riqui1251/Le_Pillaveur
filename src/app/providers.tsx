@@ -10,6 +10,7 @@ import { VisitTracker } from '@/components/analytics/VisitTracker'
 import { ToastProvider } from '@/components/ui/toast'
 import { AgeGate } from '@/components/legal/AgeGate'
 import { FirstGameDeviceInit } from '@/components/feedback/FirstGameDeviceInit'
+import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -31,6 +32,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <AmbianceAttribute />
                 <VisitTracker />
                 <AgeGate />
+                {/* Jeux locaux hors ligne : enregistre le service worker après le
+                    chargement — voir src/lib/offline/. */}
+                <ServiceWorkerRegistration />
                 {children}
               </ToastProvider>
             </PlayerEffectsProvider>

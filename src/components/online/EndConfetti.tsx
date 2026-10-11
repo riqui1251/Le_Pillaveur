@@ -26,7 +26,15 @@ let libPromise: Promise<ConfettiLib> | null = null
 
 /** Charge canvas-confetti UNE fois, à la demande. */
 export function loadConfetti(): Promise<ConfettiLib> {
-  if (!libPromise) libPromise = import('canvas-confetti').then((m) => m.default)
+  if (!libPromise) {
+    libPromise = import('canvas-confetti').then((m) => m.default)
+    // Morceau injoignable (hors ligne sans ce fichier en cache) : on oublie
+    // l'échec, le prochain appel réessaiera — sinon plus aucun confetti
+    // jusqu'au rechargement, même une fois le réseau revenu.
+    libPromise.catch(() => {
+      libPromise = null
+    })
+  }
   return libPromise
 }
 
@@ -40,7 +48,7 @@ function prefersReducedMotion(): boolean {
  */
 export function preloadConfetti(): void {
   if (prefersReducedMotion()) return
-  void loadConfetti()
+  void loadConfetti().catch(() => {})
 }
 
 /**
@@ -49,7 +57,9 @@ export function preloadConfetti(): void {
  */
 export function fireConfetti(options: confetti.Options): void {
   if (prefersReducedMotion()) return
-  void loadConfetti().then((fire) => fire(options))
+  void loadConfetti()
+    .then((fire) => fire(options))
+    .catch(() => {})
 }
 
 /** Pièces d'une salve : ce que react-confetti lançait sur les écrans de fin. */
@@ -113,6 +123,8 @@ export function EndConfetti({
         emitted += count
         if (!rain && emitted >= pieces) clearInterval(emitter)
       }, EMIT_EVERY_MS)
+    }).catch(() => {
+      /* pas de confettis sans le morceau : l'écran de fin s'affiche quand même */
     })
 
     return () => {
