@@ -137,7 +137,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onDestroy() {
+    public void onDestroy() {
         // Le client des service workers est global au PROCESSUS : laissé en place, il
         // retiendrait le pont — donc cette activité, sa WebView et ses plugins — jusqu'au
         // prochain onCreate ou à la mort du processus. Dans un recreate(), la nouvelle
