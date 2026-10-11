@@ -52,6 +52,11 @@ Le JSON n'a pas de commentaires, d'où ce récapitulatif :
   secours, il ne passait jamais et « Réessayer » retombait dessus. Le bouton
   « Réessayer » relance la page en panne (lien d'invitation, jeton d'e-mail),
   l'accueil à défaut.
+- `appendUserAgent: "LePillaveurApp/1"` : marque ajoutée au user-agent de la
+  WebView. Le site la lit (`src/lib/native-app.ts`) en plus du pont natif pour
+  se savoir dans l'app — même sur une page servie depuis le cache du service
+  worker sans pont : l'entrée « Application mobile » du menu, la carte
+  d'installation et le bouton plein écran restent cachés.
 - `backgroundColor` + `plugins.SystemBars.style: "DARK"` : fond feutre avant le
   premier rendu et icônes claires dans les barres système (le site est toujours
   sombre). Les bandes des barres viennent de `res/values/styles.xml`.
