@@ -3874,31 +3874,63 @@
         "sleep": "🌙 The village sleeps…",
         "sleepHint": "Some dream, others scheme…",
         "botSay": {
-          "suspect": "I find {name} shady… they are hiding something 🤨",
+          "suspect": "I find {name} shady… {target, select, f {she’s hiding something} m {he’s hiding something} other {something’s off}} 🤨",
+          "suspect_2": "{name} is way too nice… {target, select, f {she’s up to something} m {he’s up to something} other {something’s up}}.",
+          "suspect_3": "Tell me {name}, what exactly did you do last night?",
           "defend": "What?! {name} is talking nonsense, I am innocent!",
-          "ally": "Let’s team up with {name}, I trust them 🤝",
+          "defend_2": "{name}, {target, select, f {you’re awfully keen to lynch me} m {you’re awfully keen to lynch me} other {you’re awfully keen to lynch me}}, why is that?",
+          "defend_3": "{name} accuses me? Look at {target, select, f {her wolfish grin} m {his wolfish grin} other {that guilty face}} instead 😏",
+          "ally": "Let’s team up with {name}, {target, select, f {I trust her} m {I trust him} other {I trust them}} 🤝",
+          "ally_2": "{name}, team up? Two of us can corner the wolves.",
+          "ally_3": "{speaker, select, f {Happy to team up with {name}} m {Happy to team up with {name}} other {Happy to team up with {name}}}, got my back?",
           "rally": "Good call, {name} looks shady to me too 👀",
-          "doubt": "Not sure about {name}… any proof?",
+          "rally_2": "Agreed, {name} is far too clever, {target, select, f {she’s} m {he’s} other {they’re}} not honest.",
+          "rally_3": "{speaker, select, f {I’m not the only one thinking it} m {I’m not the only one thinking it} other {At least two of us think it}}, {name} is playing us.",
+          "doubt": "{speaker, select, f {Not sure about {name}} m {Not sure about {name}} other {Not so fast about {name}}}… any proof?",
+          "doubt_2": "Hmm, {name} {target, select, f {seems like an honest girl} m {seems like an honest guy} other {seems pretty honest to me}}… look elsewhere?",
+          "doubt_3": "Easy, we don’t lynch {name} on a mere hunch.",
           "ask": "{name}, what about you, who do you vote for?",
+          "ask_2": "{speaker, select, f {I’m a bit lost} m {I’m a bit lost} other {I don’t know anymore}}, {name}, what do you think?",
+          "ask_3": "Come on {name}, give us a name, we’re listening!",
           "toldYou": "Told you so about {name}!",
-          "wrong": "Well… I was wrong about {name}."
+          "toldYou_2": "{target, select, f {{name}, unmasked!} m {{name}, unmasked!} other {{name}, the mask is off!}} I said so from the start.",
+          "toldYou_3": "And there! {speaker, select, f {I was sure of it} m {I was sure of it} other {I knew it}}, {name} was with the wolves 😎",
+          "wrong": "Well… {speaker, select, f {I got it wrong} m {I got it wrong} other {I was totally off}} about {name}.",
+          "wrong_2": "Oops, {target, select, f {{name} was innocent, poor girl} m {{name} was innocent, poor guy} other {{name} had nothing to do with it}}… {speaker, select, f {sorry} m {sorry} other {my bad}}.",
+          "wrong_3": "Missed on {name}… I was completely off the mark."
         },
         "botSayTrait": {
           "prudent": {
-            "suspect": "I may be wrong… but {name}, you are awfully quiet.",
-            "defend": "Easy, {name}, you have no proof against me…"
+            "suspect": "I may be wrong… but {name}, {target, select, f {you are awfully quiet} m {you are awfully quiet} other {you keep a very low profile}}.",
+            "suspect_2": "Hmm… {name}, not saying it’s you, but it sure looks like it.",
+            "suspect_3": "{speaker, select, f {I’m not certain} m {I’m not certain} other {Nothing is certain}}, but {name} doesn’t reassure me…",
+            "defend": "Easy, {name}, you have no proof against me…",
+            "defend_2": "{speaker, select, f {I’m as worried as you are} m {I’m as worried as you are} other {I worry as much as you do}}, {name}, but it’s not me.",
+            "defend_3": "{target, select, f {Are you sure of yourself, {name}?} m {Are you sure of yourself, {name}?} other {Have you thought it through, {name}?}} I did nothing, promise."
           },
           "farceur": {
             "suspect": "{name}, is that fur on your hands or am I dreaming? 🐺",
-            "defend": "Me, a wolf? {name}, you have had one too many 🍻"
+            "suspect_2": "We heard {name} howling at the moon… {target, select, f {she was off-key} m {he was off-key} other {it was off-key}}.",
+            "suspect_3": "{speaker, select, f {I’m not crazy} m {I’m not crazy} other {I’m not nuts}}, {name} has mutton stuck in their teeth!",
+            "defend": "{speaker, select, f {Me, a she-wolf?} m {Me, a wolf?} other {Me, the wolf?}} {name}, you’ve had one too many 🍻",
+            "defend_2": "If I were the wolf, {name}, {target, select, f {I’d have eaten you first} m {I’d have eaten you first} other {you’d be on the menu already}}.",
+            "defend_3": "Wait {name}, {target, select, f {are you serious} m {are you serious} other {are you kidding}}? I don’t even have fangs!"
           },
           "suiveur": {
             "suspect": "Not sure… but {name}, you do look shady anyway.",
-            "defend": "No no {name}, you are wrong, I am with the village!"
+            "suspect_2": "Everyone’s wary of {name}, and {target, select, f {she looks nervous} m {he looks nervous} other {no wonder}}.",
+            "suspect_3": "{speaker, select, f {Won over by the others} m {Won over by the others} other {Going by what the others say}}, I lean towards {name} too.",
+            "defend": "No no {name}, you are wrong, I am with the village!",
+            "defend_2": "{name}, {speaker, select, f {I’m no she-wolf, I’m a ewe} m {I’m no wolf, I’m a sheep} other {I’m with the flock, not the wolves}} 🐑",
+            "defend_3": "{name}, {target, select, f {you’ve got some nerve} m {you’ve got some nerve} other {what a cheek}}… the others do trust me."
           },
           "agressif": {
-            "suspect": "{name}, you are the wolf, I would bet my life on it!",
-            "defend": "You accuse me, {name}? Look at yourself first!"
+            "suspect": "{name}, {target, select, f {you’re the she-wolf} m {you’re the wolf} other {you’re the wolf}}, I’d bet my life on it!",
+            "suspect_2": "{target, select, f {{name} is a liar} m {{name} is a liar} other {{name} is lying}}, you can see it a mile off!",
+            "suspect_3": "{speaker, select, f {I’m ready to bet} m {I’m ready to bet} other {I’d bet big}} it’s {name}, end of story!",
+            "defend": "You accuse me, {name}? Look at yourself first!",
+            "defend_2": "{name}, {target, select, f {you’re hardly one to talk} m {you’re hardly one to talk} other {speak for yourself}}, we see you coming!",
+            "defend_3": "You want my hide, {name}? {speaker, select, f {I wasn’t born yesterday} m {I wasn’t born yesterday} other {You can’t fool me}}!"
           }
         },
         "botTic": {

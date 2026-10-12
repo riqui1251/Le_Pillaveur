@@ -17,7 +17,11 @@ type FeedPlayer = { id: string; name: string; isBot: boolean }
  *
  * Chaque bot parle au ton de son persona quand le catalogue a la variante,
  * sinon de la voix neutre commune aux humains, et glisse son tic de langage
- * dans sa première parole de la manche (lgBotLine). Un kind inconnu de cet
+ * dans sa première parole de la manche (lgBotLine). Les phrases s'accordent
+ * au genre du persona, auteur comme cible (« Suzette est trop maligne », un
+ * humain reste au neutre), et varient d'une parole à l'autre de façon
+ * déterministe : la graine est la clé de l'item, la même sur les téléphones
+ * et la TV. Un kind inconnu de cet
  * onglet (ouvert avant un déploiement) est masqué plutôt que rendu en clé
  * brute. La bulle qui VISE le spectateur local est
  * surlignée — c'est elle qui ouvre « Me défendre » dans la carte parente. La
@@ -73,7 +77,8 @@ export function DebateFeed({
     >
       {items.map(({ key, speech, aimsAtMe, firstOfAuthor }) => {
         const author = players.find((p) => p.id === speech.playerId)
-        const line = lgBotLine(speech.kind, author, nameOf(speech.targetId), tr, firstOfAuthor)
+        const target = players.find((p) => p.id === speech.targetId)
+        const line = lgBotLine(speech.kind, author, target, tr, { withTic: firstOfAuthor, seed: key })
         if (!line) return null
         return (
           <motion.li

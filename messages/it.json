@@ -3874,31 +3874,63 @@
         "sleep": "🌙 Il villaggio dorme…",
         "sleepHint": "Alcuni sognano, altri complottano…",
         "botSay": {
-          "suspect": "{name} mi sembra sospetto… nasconde qualcosa 🤨",
-          "defend": "Cosa?! {name} dice sciocchezze, sono innocente!",
-          "ally": "Facciamo squadra con {name}, mi fido 🤝",
-          "rally": "Ben detto, {name} è sospetto anche per me 👀",
-          "doubt": "Non sono sicuro su {name}… prove?",
+          "suspect": "{target, select, f {{name} mi sembra sospetta… ci nasconde qualcosa} m {{name} mi sembra sospetto… ci nasconde qualcosa} other {{name} non mi convince… c’è qualcosa che non torna}} 🤨",
+          "suspect_2": "{target, select, f {{name} è fin troppo buona} m {{name} è fin troppo buono} other {{name} si comporta fin troppo bene}}, non è normale.",
+          "suspect_3": "Dimmi {name}, cosa hai fatto stanotte, esattamente?",
+          "defend": "Cosa?! {name} dice sciocchezze, io non ho fatto niente!",
+          "defend_2": "{name}, {target, select, f {sei proprio decisa a linciarmi} m {sei proprio deciso a linciarmi} other {che fretta di linciarmi}}, cosa nascondi?",
+          "defend_3": "{name} mi accusa? Guardate {target, select, f {la sua faccia da lupa} m {la sua faccia da lupo} other {che faccia da colpevole}} 😏",
+          "ally": "Facciamo squadra con {name}, {target, select, f {mi fido di lei} m {mi fido di lui} other {ho una buona sensazione}} 🤝",
+          "ally_2": "{name}, facciamo fronte comune? In due incastriamo i lupi.",
+          "ally_3": "{speaker, select, f {Pronta ad allearmi con {name}} m {Pronto ad allearmi con {name}} other {Mi va di allearmi con {name}}}, ci copriamo?",
+          "rally": "Ben detto, {name} non convince neanche me 👀",
+          "rally_2": "Confermo, {target, select, f {{name} è troppo furba per essere onesta} m {{name} è troppo furbo per essere onesto} other {{name} ne sa troppe per essere in regola}}.",
+          "rally_3": "{speaker, select, f {Non sono la sola a pensarlo} m {Non sono il solo a pensarlo} other {Siamo almeno in due a pensarlo}}, {name} ci prende in giro.",
+          "doubt": "{speaker, select, f {Non sono sicura su {name}} m {Non sono sicuro su {name}} other {Non così in fretta con {name}}}… prove?",
+          "doubt_2": "Mah, {name} {target, select, f {mi sembra piuttosto sincera} m {mi sembra piuttosto sincero} other {mi sembra a posto}}… cerchiamo altrove?",
+          "doubt_3": "Calma, non linciamo {name} per una semplice impressione.",
           "ask": "{name}, e tu, chi voti?",
-          "toldYou": "L’avevo detto di {name}!",
-          "wrong": "Beh… mi sono sbagliato su {name}."
+          "ask_2": "{speaker, select, f {Sono un po’ persa} m {Sono un po’ perso} other {Non so più bene}}, {name}, tu che ne pensi?",
+          "ask_3": "Dai {name}, butta lì un nome, ti ascoltiamo!",
+          "toldYou": "Lo avevo detto di {name}!",
+          "toldYou_2": "{target, select, f {{name}, smascherata!} m {{name}, smascherato!} other {{name}, cade la maschera!}} Lo dicevo dall’inizio.",
+          "toldYou_3": "Ecco! {speaker, select, f {Ne ero sicura} m {Ne ero sicuro} other {Lo sapevo}}, {name} stava con i lupi 😎",
+          "wrong": "Beh… {speaker, select, f {mi sono sbagliata su {name}} m {mi sono sbagliato su {name}} other {ho preso un abbaglio su {name}}}.",
+          "wrong_2": "Ops, {target, select, f {{name} era innocente, poverina} m {{name} era innocente, poverino} other {{name} non c’entrava niente}}… {speaker, select, f {sono mortificata} m {sono mortificato} other {mea culpa}}.",
+          "wrong_3": "Toppato su {name}… ero completamente fuori strada."
         },
         "botSayTrait": {
           "prudent": {
-            "suspect": "Forse mi sbaglio… ma {name}, sei molto silenzioso.",
-            "defend": "Piano {name}, non hai nessuna prova contro di me…"
+            "suspect": "Forse mi sbaglio… ma {name}, {target, select, f {sei molto silenziosa} m {sei molto silenzioso} other {ti fai dimenticare}}.",
+            "suspect_2": "Mmm… {name}, non dico che sei tu, ma ci assomiglia.",
+            "suspect_3": "{speaker, select, f {Non sono certa} m {Non sono certo} other {Niente di sicuro}}, ma {name} non mi rassicura…",
+            "defend": "Piano {name}, non hai nessuna prova contro di me…",
+            "defend_2": "{speaker, select, f {Sono preoccupata quanto te} m {Sono preoccupato quanto te} other {Mi preoccupo quanto te}}, {name}, ma non sono io.",
+            "defend_3": "{target, select, f {Sei sicura di te, {name}?} m {Sei sicuro di te, {name}?} other {Ci hai pensato bene, {name}?}} Io non ho fatto nulla, giuro."
           },
           "farceur": {
             "suspect": "{name}, quello è pelo sulle tue mani o sto sognando? 🐺",
-            "defend": "Io, un lupo? {name}, hai bevuto troppo 🍻"
+            "suspect_2": "Abbiamo sentito {name} ululare alla luna… {target, select, f {era stonata} m {era stonato} other {stonava pure}}.",
+            "suspect_3": "{speaker, select, f {Non sono matta} m {Non sono matto} other {Non sono fuori}}, {name} ha del montone tra i denti!",
+            "defend": "{speaker, select, f {Io, una lupa?} m {Io, un lupo?} other {Io, il lupo?}} {name}, hai bevuto troppo 🍻",
+            "defend_2": "Se fossi il lupo, {name}, {target, select, f {ti avrei sbranata per prima} m {ti avrei sbranato per primo} other {saresti già nel menù}}.",
+            "defend_3": "Aspetta {name}, {target, select, f {sei seria} m {sei serio} other {scherzi}}? Non ho nemmeno le zanne!"
           },
           "suiveur": {
-            "suspect": "Non ne sono sicuro… ma {name}, sei sospetto comunque.",
-            "defend": "No no {name}, ti sbagli, sto con il villaggio!"
+            "suspect": "Non so bene… ma {name}, non mi convinci comunque.",
+            "suspect_2": "Tutti diffidano di {name}, e {target, select, f {lei sembra nervosa} m {lui sembra nervoso} other {c’è un motivo}}.",
+            "suspect_3": "{speaker, select, f {Convinta dagli altri} m {Convinto dagli altri} other {Sentiti gli altri}}, punto pure io su {name}.",
+            "defend": "No no {name}, ti sbagli, sto con il villaggio!",
+            "defend_2": "{name}, {speaker, select, f {non sono una lupa, sono una pecorella} m {non sono un lupo, sono un agnello} other {sto nel gregge, non tra i lupi}} 🐑",
+            "defend_3": "{name}, {target, select, f {sei proprio sfacciata} m {sei proprio sfacciato} other {che faccia tosta}}… gli altri si fidano di me."
           },
           "agressif": {
-            "suspect": "{name}, sei tu il lupo, ci metto la mano sul fuoco!",
-            "defend": "Mi accusi, {name}? Guardati prima tu!"
+            "suspect": "{name}, {target, select, f {sei tu la lupa} m {sei tu il lupo} other {sei tu il lupo}}, ci metto la mano sul fuoco!",
+            "suspect_2": "{target, select, f {{name} è una bugiarda} m {{name} è un bugiardo} other {{name} mente}}, si vede a chilometri!",
+            "suspect_3": "{speaker, select, f {Sono pronta a scommettere} m {Sono pronto a scommettere} other {Scommetto forte}} che è {name}, punto e basta!",
+            "defend": "Mi accusi, {name}? Guardati prima tu!",
+            "defend_2": "{name}, {target, select, f {sei l’ultima che può parlare} m {sei l’ultimo che può parlare} other {parla per te}}, ti vediamo arrivare!",
+            "defend_3": "Vuoi la mia pelle, {name}? {speaker, select, f {Non sono nata ieri} m {Non sono nato ieri} other {Non me la dai a bere}}!"
           }
         },
         "botTic": {

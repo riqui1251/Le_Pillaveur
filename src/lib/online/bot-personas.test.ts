@@ -7,6 +7,7 @@ import {
   botAvatarFromName,
   botDisplayName,
   botEmojiFromName,
+  botGenreFor,
   botTraitsFor,
   personaForBotName,
 } from './bot-personas'
@@ -126,5 +127,33 @@ describe('caractère chiffré : vingt personnages distincts, dans les bornes', (
       'Mauricette',
       'Josiane',
     ])
+  })
+})
+
+describe('genre : l’accord des phrases du débat', () => {
+  it('chaque persona est f ou m — huit femmes, douze hommes, d’après le lore', () => {
+    for (const p of BOT_PERSONAS) expect(['f', 'm'], p.name).toContain(p.genre)
+    expect(BOT_PERSONAS.filter((p) => p.genre === 'f').map((p) => p.name)).toEqual([
+      'Suzette',
+      'Bernadette',
+      'Ginette',
+      'Paulette',
+      'Huguette',
+      'Mauricette',
+      'Josiane',
+      'Germaine',
+    ])
+    expect(BOT_PERSONAS.filter((p) => p.genre === 'm')).toHaveLength(12)
+  })
+
+  it('botGenreFor : le genre du persona (ancien format « Raoul 🦊 » compris), other pour un converti ou sans nom', () => {
+    expect(botGenreFor('Suzette')).toBe('f')
+    expect(botGenreFor('Germaine')).toBe('f')
+    expect(botGenreFor('Raoul 🦊')).toBe('m')
+    expect(botGenreFor('Dédé')).toBe('m')
+    expect(botGenreFor('Kevin_du_93')).toBe('other')
+    expect(botGenreFor('')).toBe('other')
+    expect(botGenreFor(null)).toBe('other')
+    expect(botGenreFor(undefined)).toBe('other')
   })
 })

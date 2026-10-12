@@ -3874,31 +3874,63 @@
         "sleep": "🌙 Le village dort…",
         "sleepHint": "Certains rêvent, d’autres complotent…",
         "botSay": {
-          "suspect": "Je trouve {name} louche… il cache quelque chose 🤨",
-          "defend": "Quoi ?! {name} raconte n’importe quoi, je suis innocent !",
-          "ally": "Faisons équipe avec {name}, je le sens bien 🤝",
+          "suspect": "Je trouve {name} louche… {target, select, f {elle nous cache un truc} m {il nous cache un truc} other {y a un truc qui cloche}} 🤨",
+          "suspect_2": "{target, select, f {{name} est bien trop gentille} m {{name} est bien trop gentil} other {{name} est bien trop sage}}, c’est pas net.",
+          "suspect_3": "Dis-moi {name}, tu as fait quoi cette nuit, au juste ?",
+          "defend": "Quoi ?! {name} raconte n’importe quoi, je n’ai rien fait !",
+          "defend_2": "{name}, {target, select, f {tu es bien pressée de me lyncher} m {tu es bien pressé de me lyncher} other {quelle hâte de me lyncher}}, ça cache quoi ?",
+          "defend_3": "{name} m’accuse ? Regardez plutôt {target, select, f {sa tête de louve} m {sa tête de loup} other {sa tête de coupable}} 😏",
+          "ally": "Faisons équipe avec {name}, {target, select, f {je la sens bien} m {je le sens bien} other {j’ai un bon feeling}} 🤝",
+          "ally_2": "{name}, on fait bloc ? À deux, on coince les loups.",
+          "ally_3": "{speaker, select, f {Partante pour m’allier à {name}} m {Partant pour m’allier à {name}} other {Ça me va de m’allier à {name}}}, on se couvre ?",
           "rally": "Bien vu, {name} me paraît louche aussi 👀",
-          "doubt": "Pas sûr pour {name}… des preuves ?",
+          "rally_2": "Je confirme, {target, select, f {{name} est trop maligne} m {{name} est trop malin} other {{name} en sait trop}} pour être honnête.",
+          "rally_3": "{speaker, select, f {Je suis pas la seule à le penser} m {Je suis pas le seul à le penser} other {On est au moins deux à le penser}}, {name} nous balade.",
+          "doubt": "{speaker, select, f {Pas sûre pour {name}} m {Pas sûr pour {name}} other {Pas si vite pour {name}}}… des preuves ?",
+          "doubt_2": "Hum, {name} {target, select, f {me paraît plutôt franche} m {me paraît plutôt franc} other {me paraît plutôt réglo}}… on cherche ailleurs ?",
+          "doubt_3": "Du calme, on lynche pas {name} sur une simple impression.",
           "ask": "{name}, et toi, tu votes qui ?",
+          "ask_2": "{speaker, select, f {Je suis un peu perdue} m {Je suis un peu perdu} other {Je sais plus trop}}, {name}, tu en penses quoi ?",
+          "ask_3": "Allez {name}, balance un nom, on t’écoute !",
           "toldYou": "Je l’avais dit pour {name} !",
-          "wrong": "Bon… je me suis planté sur {name}."
+          "toldYou_2": "{target, select, f {{name}, démasquée !} m {{name}, démasqué !} other {{name}, le masque tombe !}} Je le disais depuis le début.",
+          "toldYou_3": "Et voilà ! {speaker, select, f {J’en étais sûre} m {J’en étais sûr} other {Je le savais}}, {name} était avec les loups 😎",
+          "wrong": "Bon… {speaker, select, f {je me suis plantée} m {je me suis planté} other {j’ai eu tout faux}} sur {name}.",
+          "wrong_2": "Oups, {target, select, f {{name} était innocente} m {{name} était innocent} other {{name} n’y était pour rien}}… {speaker, select, f {désolée} m {désolé} other {mea culpa}}.",
+          "wrong_3": "Raté pour {name}… j’étais complètement à côté de la plaque."
         },
         "botSayTrait": {
           "prudent": {
-            "suspect": "Je ne voudrais pas me tromper… mais {name}, tu es bien discret.",
-            "defend": "Doucement {name}, tu n’as aucune preuve contre moi…"
+            "suspect": "Je peux me tromper… mais {name}, {target, select, f {tu es bien discrète} m {tu es bien discret} other {tu te fais bien oublier}}.",
+            "suspect_2": "Hmm… {name}, je dis pas que c’est toi, mais ça y ressemble.",
+            "suspect_3": "{speaker, select, f {Je ne suis pas certaine} m {Je ne suis pas certain} other {Rien de sûr}}, mais {name} ne me rassure pas…",
+            "defend": "Doucement {name}, tu n’as aucune preuve contre moi…",
+            "defend_2": "{speaker, select, f {Je suis aussi inquiète que toi} m {Je suis aussi inquiet que toi} other {Je m’inquiète autant que toi}}, {name}, mais c’est pas moi.",
+            "defend_3": "{target, select, f {Tu es sûre de toi, {name} ?} m {Tu es sûr de toi, {name} ?} other {Tu y as bien réfléchi, {name} ?}} Moi, j’ai rien fait, promis."
           },
           "farceur": {
             "suspect": "{name}, c’est du poil sur tes mains ou je rêve ? 🐺",
-            "defend": "Moi, un loup ? {name}, tu as trop bu 🍻"
+            "suspect_2": "On a entendu {name} hurler à la lune… {target, select, f {elle chantait faux} m {il chantait faux} other {ça chantait faux}}.",
+            "suspect_3": "{speaker, select, f {Je suis pas folle} m {Je suis pas fou} other {Je suis pas dingue}}, {name} a du mouton entre les dents !",
+            "defend": "{speaker, select, f {Moi, une louve ?} m {Moi, un loup ?} other {Moi, le loup ?}} {name}, tu as trop bu 🍻",
+            "defend_2": "Si j’étais le loup, {name}, {target, select, f {je t’aurais croquée en premier} m {je t’aurais croqué en premier} other {tu serais déjà au menu}}.",
+            "defend_3": "Attends {name}, {target, select, f {tu es sérieuse} m {tu es sérieux} other {tu rigoles}} ? J’ai même pas de crocs !"
           },
           "suiveur": {
             "suspect": "Je ne sais pas trop… mais {name}, tu es louche quand même.",
-            "defend": "Non non {name}, tu te trompes, je suis avec le village !"
+            "suspect_2": "Tout le monde se méfie de {name}, et {target, select, f {elle a l’air nerveuse} m {il a l’air nerveux} other {y a de quoi}}.",
+            "suspect_3": "{speaker, select, f {Convaincue par les autres} m {Convaincu par les autres} other {Vu ce que disent les autres}}, je penche pour {name} aussi.",
+            "defend": "Non non {name}, tu te trompes, je suis avec le village !",
+            "defend_2": "{name}, {speaker, select, f {je ne suis pas une louve, je suis une brebis} m {je ne suis pas un loup, je suis un mouton} other {je suis du troupeau, pas chez les loups}} 🐑",
+            "defend_3": "{name}, {target, select, f {tu es gonflée} m {tu es gonflé} other {quel culot}}… les autres me font confiance, eux."
           },
           "agressif": {
-            "suspect": "{name}, c’est toi le loup, j’en mettrais ma main au feu !",
-            "defend": "Tu m’accuses, {name} ? Regarde-toi d’abord !"
+            "suspect": "{name}, {target, select, f {c’est toi la louve} m {c’est toi le loup} other {c’est toi le loup}}, j’en mettrais ma main au feu !",
+            "suspect_2": "{target, select, f {{name} est une menteuse} m {{name} est un menteur} other {{name} ment}}, ça se voit à des kilomètres !",
+            "suspect_3": "{speaker, select, f {Je suis prête à parier} m {Je suis prêt à parier} other {Je parie gros}} que c’est {name}, point final !",
+            "defend": "Tu m’accuses, {name} ? Regarde-toi d’abord !",
+            "defend_2": "{name}, {target, select, f {tu es mal placée pour parler} m {tu es mal placé pour parler} other {parle pour toi}}, on te voit venir !",
+            "defend_3": "Tu veux ma peau, {name} ? {speaker, select, f {Pas née de la dernière pluie} m {Pas né de la dernière pluie} other {On ne me la fait pas}} !"
           }
         },
         "botTic": {
