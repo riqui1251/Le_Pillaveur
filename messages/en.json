@@ -15,10 +15,20 @@
       "icon": "An icon on your home screen",
       "iconDesc": "Le Pillaveur next to your other apps, without going through the browser.",
       "quick": "Straight back to the table",
-      "quickDesc": "The icon opens the games hub directly, and the site updates itself: nothing to download."
+      "quickDesc": "The icon opens the games hub directly, and the site updates itself: nothing to download.",
+      "offline": "Playable without network",
+      "offlineDesc": "Single-phone games stay available offline, as soon as the site has been opened online once."
     },
     "stores": {
       "title": "On the app stores"
+    },
+    "apk": {
+      "title": "Download the Android app (APK)",
+      "hint": "Until Google Play: the install file, straight from the site. Same app, same tables.",
+      "button": "Download the APK ({size} MB)",
+      "step1": "Download the file, then open it from your notifications or downloads.",
+      "step2": "Android asks you to allow installs from this browser (“unknown sources”): accept, it is the only way outside Google Play.",
+      "step3": "Once installed, the app follows the site: every site update arrives on its own. Only a new version of the app itself is downloaded again here."
     },
     "install": {
       "title": "Add to Home Screen",
@@ -5775,5 +5785,16 @@
     "inviteTitleBare": "A table is waiting for you",
     "inviteFooter": "Just pick a nickname — free, no install",
     "inviteDescription": "Join table {code}: just pick a nickname. Free, no install."
+  },
+  "offline": {
+    "title": "Offline",
+    "lead": "No network right now.",
+    "body": "Games played on a single phone are still available, with the players saved on this device. Online tables will wait for the network to come back.",
+    "gamesTitle": "Playable without network",
+    "players": "Manage players",
+    "retry": "Try again",
+    "backToGames": "Back to games",
+    "hubBanner": "Offline: single-phone games are still playable, online tables will wait for the network.",
+    "unavailable": "Unavailable offline"
   }
 }

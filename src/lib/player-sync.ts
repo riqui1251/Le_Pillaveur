@@ -6,6 +6,7 @@ import {
   savePlayers,
   dedupePlayersById,
 } from '@/lib/players'
+import { getSafeStorage } from '@/lib/storage'
 
 function playerKey(player: Player): string {
   return player.name.trim().toLowerCase()
@@ -80,11 +81,94 @@ export function mergePlayerLists(local: Player[], cloud: Player[]): Player[] {
   return dedupePlayersById([...byKey.values()].sort((a, b) => a.createdAt - b.createdAt))
 }
 
+/**
+ * Délai au-delà duquel le nuage est tenu pour injoignable. Hors ligne franc,
+ * le navigateur échoue tout de suite ; un Wi-Fi sans internet, lui, laisse la
+ * requête PENDRE — et usePlayers attend la synchro avant d'afficher la liste :
+ * la page des joueurs restait sur son écran de chargement, sans fin.
+ */
+export const CLOUD_TIMEOUT_MS = 8000
+
+function fetchCloud(init: RequestInit): Promise<Response> {
+  const controller = typeof AbortController === 'function' ? new AbortController() : null
+  const timer = controller ? setTimeout(() => controller.abort(), CLOUD_TIMEOUT_MS) : null
+  return fetch('/api/players/local', { credentials: 'include', ...init, signal: controller?.signal }).finally(() => {
+    if (timer) clearTimeout(timer)
+  })
+}
+
 export async function fetchCloudPlayers(): Promise<Player[]> {
-  const res = await fetch('/api/players/local', { credentials: 'include' })
+  const res = await fetchCloud({})
   if (!res.ok) return []
   const data = await res.json()
   return Array.isArray(data.players) ? data.players : []
+}
+
+// ─── « Le nuage est en retard sur ce poste » ─────────────────────────────────
+// Hors ligne (jeux locaux servis par le service worker), les gestes sur la
+// table — joueur supprimé, renommé, couleur changée — ne partent pas. Sans
+// marque, la resynchro du retour du réseau FUSIONNAIT la copie du nuage,
+// périmée : le joueur supprimé ressuscitait, le renommé revenait en doublon.
+// Tant que la marque est là, la prochaine resynchro POUSSE la liste locale
+// telle quelle. Risque assumé : un changement fait sur un AUTRE appareil
+// pendant la coupure est écrasé — rare pour une table qui se joue sur un seul
+// téléphone. En localStorage, car la coupure peut durer plus que l'onglet.
+//
+// La marque porte l'identifiant du COMPTE concerné : un geste fait sans
+// session (app ouverte hors ligne, /api/auth/me injoignable) est dû au
+// dernier compte vu sur l'appareil ; un autre compte qui se connecte ensuite
+// n'en hérite pas (il fusionne, comme avant).
+
+/** Identifiant du compte dont le nuage attend la liste locale. */
+export const CLOUD_BEHIND_KEY = 'game_players_cloud_behind'
+/** Dernier compte dont ce poste a joint le nuage. */
+export const LAST_CLOUD_ACCOUNT_KEY = 'game_players_last_account'
+
+let currentAccount: string | null = null
+
+function readStorage(key: string): string | null {
+  const storage = getSafeStorage()
+  if (!storage) return null
+  try {
+    return storage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeStorage(key: string, value: string | null): void {
+  const storage = getSafeStorage()
+  if (!storage) return
+  try {
+    if (value === null) storage.removeItem(key)
+    else storage.setItem(key, value)
+  } catch {
+    // quota ou navigation privée : la marque vit en mémoire seulement
+  }
+}
+
+/** Le compte au nom duquel usePlayers parle au nuage (null : visiteur). */
+export function setCloudAccount(userId: string | null | undefined): void {
+  currentAccount = userId ?? null
+  if (userId) writeStorage(LAST_CLOUD_ACCOUNT_KEY, userId)
+}
+
+/**
+ * Note qu'un geste local n'a pas atteint le nuage — pour le compte courant,
+ * ou à défaut le dernier vu sur l'appareil. Un vrai visiteur (jamais de
+ * compte ici) n'a pas de nuage : rien à noter.
+ */
+export function markCloudBehind(): void {
+  const account = currentAccount ?? readStorage(LAST_CLOUD_ACCOUNT_KEY)
+  if (account) writeStorage(CLOUD_BEHIND_KEY, account)
+}
+
+function clearCloudBehind(): void {
+  writeStorage(CLOUD_BEHIND_KEY, null)
+}
+
+export function isCloudBehindFor(userId: string): boolean {
+  return readStorage(CLOUD_BEHIND_KEY) === userId
 }
 
 // Poussées parties mais pas encore enregistrées : tant qu'il en reste, le
@@ -94,12 +178,23 @@ const pushesInFlight = new Set<Promise<boolean>>()
 
 export function pushPlayersToCloud(players: Player[]): Promise<boolean> {
   const push = (async () => {
-    const res = await fetch('/api/players/local', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ players }),
-    })
+    let res: Response
+    try {
+      res = await fetchCloud({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ players }),
+      })
+    } catch (error) {
+      markCloudBehind()
+      throw error
+    }
+    // La marque ne sert qu'aux pannes RÉSEAU (branche catch) : une réponse
+    // HTTP prouve que le nuage est joignable. Un refus définitif (4xx :
+    // modération d'un pseudo, session perdue) la lève — repousser la même
+    // liste échouerait pareil, et la resynchro doit retrouver la fusion
+    // habituelle ; une panne passagère (5xx) la laisse, pour réessayer.
+    if (res.ok || (res.status >= 400 && res.status < 500)) clearCloudBehind()
     return res.ok
   })()
   pushesInFlight.add(push)
@@ -164,11 +259,26 @@ function withoutPlayersChangedMeanwhile(cloud: Player[], before: Player[], local
  *  - fait AVANT elle et pas encore arrivé au nuage → poussé et attendu d'abord ;
  *  - fait PENDANT ses requêtes → liste relue à la réponse, la version du nuage
  *    des joueurs touchés entre-temps est écartée, et la liste rendue est celle
- *    du stockage à la toute fin (pas un instantané d'avant l'envoi).
+ *    du stockage à la toute fin (pas un instantané d'avant l'envoi) ;
+ *  - fait HORS LIGNE (marque « nuage en retard » pour `userId`) → la liste
+ *    locale est poussée telle quelle, sans fusion.
+ *
+ * Navigateur hors ligne : rejette tout de suite (usePlayers retombe sur la
+ * liste locale) — pas la peine d'attendre un délai pour l'apprendre.
  */
-export async function syncLocalWithCloud(): Promise<Player[]> {
+export async function syncLocalWithCloud(userId?: string): Promise<Player[]> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new TypeError('offline')
   const before = getStoredPlayers()
   await flushPlayersPush()
+  if (userId && isCloudBehindFor(userId)) {
+    const pushed = await pushPlayersToCloud(getStoredPlayers())
+    if (pushed) return getStoredPlayers()
+    // Refus définitif (4xx) : la marque est levée, on repart sur la fusion
+    // habituelle ; panne passagère (5xx) : elle reste, prochaine resynchro.
+    if (isCloudBehindFor(userId)) throw new Error('cloud_behind')
+  }
+  // Marque d'un autre compte : sans objet pour celui-ci, qui fusionne comme avant.
+  if (userId) clearCloudBehind()
   const cloud = await fetchCloudPlayers()
   const local = getStoredPlayers()
   const merged = mergePlayerLists(local, withoutPlayersChangedMeanwhile(cloud, before, local))

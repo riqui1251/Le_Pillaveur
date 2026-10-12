@@ -52,6 +52,11 @@ Le JSON n'a pas de commentaires, d'où ce récapitulatif :
   secours, il ne passait jamais et « Réessayer » retombait dessus. Le bouton
   « Réessayer » relance la page en panne (lien d'invitation, jeton d'e-mail),
   l'accueil à défaut.
+- `appendUserAgent: "LePillaveurApp/1"` : marque ajoutée au user-agent de la
+  WebView. Le site la lit (`src/lib/native-app.ts`) en plus du pont natif pour
+  se savoir dans l'app — même sur une page servie depuis le cache du service
+  worker sans pont : l'entrée « Application mobile » du menu, la carte
+  d'installation et le bouton plein écran restent cachés.
 - `backgroundColor` + `plugins.SystemBars.style: "DARK"` : fond feutre avant le
   premier rendu et icônes claires dans les barres système (le site est toujours
   sombre). Les bandes des barres viennent de `res/values/styles.xml`.
@@ -59,8 +64,9 @@ Le JSON n'a pas de commentaires, d'où ce récapitulatif :
   défaut embarquait son SDK et les permissions publicitaires (AD_ID…), qui font
   refuser la release si la Play Console déclare « pas d'identifiant
   publicitaire ». Le manifeste retire en plus ces permissions (`tools:node="remove"`).
-- `android.resolveServiceWorkerRequests: false` : le serveur local de Capacitor
-  ne répond pas aux requêtes des service workers (défense en profondeur).
+- `android.resolveServiceWorkerRequests: false` : Capacitor ne pose PAS son
+  propre `ServiceWorkerClient` (sans filtre) ; c'est `MainActivity` qui en
+  pose un, avec les chemins spéciaux fermés — voir « Hors ligne » plus bas.
 
 `MainActivity.java` complète Capacitor : retour Android dans l'historique du
 site, liens entrants `https://lepillaveur.fr/...` chargés (contrôle strict de
@@ -75,6 +81,39 @@ rafale, plantage normal à la 3e).
 Plugins natifs : `@capgo/capacitor-social-login` (bouton Google natif) et
 `@capacitor/share` (feuille de partage Android, appelée par le site ; un APK
 plus ancien, sans le plugin, garde le repli presse-papiers).
+
+## Hors ligne (jeux locaux)
+
+Le site enregistre un **service worker** (`/sw.js`, généré par
+`src/app/sw.js/route.ts` ; stratégies dans `src/lib/offline/`) qui précharge
+le hub, la page de repli `/hors-ligne` et les pages des jeux « un seul
+téléphone » (Monsieur 3, PMU, Petit Buveur, Hi/Lo, Purple, Pyramide, Plinko,
+1220) avec leurs fichiers JS/CSS ; la page des joueurs entre dans le cache à
+sa première visite. Une fois l'app ouverte **une première fois en ligne**,
+ces pages se rouvrent sans réseau — depuis l'icône (la racine est ramenée au
+hub de la dernière langue vue) comme depuis une page restaurée. Les tables en
+ligne, le compte et les règles tombent sur `/hors-ligne`, qui liste ce qui
+reste jouable et propose « Réessayer ». Le worker sert aussi la page en cache
+quand le serveur répond 502/503/504 ou 52x hors défi Cloudflare : une partie
+en cours survit à un déploiement.
+
+Côté coquille, `MainActivity` pose un `ServiceWorkerClient` (Capacitor n'en
+pose aucun, `resolveServiceWorkerRequests` est à faux) : les requêtes du
+worker ferment les chemins `/_capacitor_*` comme celles de la page, puis
+passent par le serveur local de Capacitor, qui proxifie les pages HTML pour y
+**injecter le pont natif**. Sans ce client, les pages rapatriées par le worker
+(préchargées ou relayées) arrivaient sans `window.Capacitor` : connexion
+Google native, partage et ambiance « Sans alcool » par défaut perdus. L'écran
+de secours `www/index.html` ne sert plus que sans worker installé (tout
+premier lancement hors ligne), quand même la page de repli manque, ou quand
+une page NON mise en cache (table en ligne, compte, règles) reçoit une
+502/503/504 ou 52x du serveur : le worker ne redirige vers `/hors-ligne`
+qu'en panne réseau, une panne serveur garde sa réponse.
+
+Essai sur appareil : ouvrir l'app en ligne, attendre quelques secondes (le
+préchargement se fait après le chargement de la page), passer en mode avion,
+relancer l'app depuis l'icône : le hub puis un jeu local doivent s'ouvrir et
+se jouer ; une table en ligne doit mener à « Hors ligne ».
 
 ## Essai local (serveur de dev du PC)
 
@@ -98,6 +137,23 @@ npm run build:android                  # refait le sync : l'APK repointe sur lep
 ```
 
 La webview d'un build debug s'inspecte depuis Chrome du PC : `chrome://inspect`.
+
+## Diffusion directe (APK sur le site)
+
+En attendant les stores, la page `/application` du site propose l'APK au
+téléchargement (`public/app/le-pillaveur.apk`, servi hors middleware i18n ;
+la carte ne s'affiche que si le fichier est dans le dépôt). Android demande
+alors d'autoriser les « sources inconnues » pour le navigateur. Publier une
+nouvelle version de la coquille :
+
+```bash
+npm run build:android                                        # depuis mobile/
+cp android/app/build/outputs/apk/debug/app-debug.apk ../public/app/le-pillaveur.apk
+```
+
+puis commiter et déployer le site (`npm run deploy` à la racine). Le site, lui,
+se met à jour dans l'app sans retéléchargement : seule la coquille (Java,
+plugins, config Capacitor) demande un nouvel APK.
 
 ## Publication Play Store
 

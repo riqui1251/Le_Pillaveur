@@ -548,6 +548,17 @@ while [ "$attempt" -le "$HEALTH_TRIES" ]; do
       echo "Sante OK (tentative $attempt/$HEALTH_TRIES) : $(cat "$HEALTH_BODY")"
       echo "Page $PAGE_URL rendue (status=$page_code)"
       rm -f "$HEALTH_BODY" "$PAGE_BODY"
+      # Service worker (jeux locaux hors ligne, src/app/sw.js/route.ts) : il lit
+      # les manifestes de build dans .next/ de l'image standalone. Illisibles,
+      # la route sert un worker « neutralise » qui se retire : le site marche
+      # sans lui, donc un AVERTISSEMENT, pas un echec du deploiement.
+      SW_URL="${SW_URL:-http://127.0.0.1:3000/sw.js?l=fr}"
+      sw_body=$(curl -s --max-time 10 "$SW_URL" || true)
+      if printf '%s' "$sw_body" | grep -q 'var PAGES = ' && ! printf '%s' "$sw_body" | grep -q 'neutralise'; then
+        echo "Service worker $SW_URL : complet ($(printf '%s' "$sw_body" | grep -o '"/_next/static/[^"]*"' | wc -l) fichiers precaches)"
+      else
+        echo "ATTENTION : service worker $SW_URL neutralise ou illisible (jeux locaux hors ligne indisponibles)"
+      fi
       echo "Version en ligne : $GIT_SHA"
       echo DONE_DEPLOY
 

@@ -15,10 +15,20 @@
       "icon": "Une icône sur l'écran d'accueil",
       "iconDesc": "Le Pillaveur à côté de tes autres apps, sans passer par le navigateur.",
       "quick": "Retour rapide à la table",
-      "quickDesc": "L'icône ouvre directement le hub des jeux, et le site se met à jour tout seul : rien à télécharger."
+      "quickDesc": "L'icône ouvre directement le hub des jeux, et le site se met à jour tout seul : rien à télécharger.",
+      "offline": "Jouable sans réseau",
+      "offlineDesc": "Les jeux sur un seul téléphone restent disponibles sans réseau, dès que le site a été ouvert une fois en ligne."
     },
     "stores": {
       "title": "Sur les stores"
+    },
+    "apk": {
+      "title": "Télécharger l’application Android (APK)",
+      "hint": "En attendant Google Play : le fichier d’installation, direct depuis le site. Même app, mêmes tables.",
+      "button": "Télécharger l’APK ({size} Mo)",
+      "step1": "Télécharge le fichier, puis ouvre-le depuis les notifications ou les téléchargements.",
+      "step2": "Android demande d’autoriser les installations depuis ce navigateur (« sources inconnues ») : accepte, c’est le passage obligé hors Google Play.",
+      "step3": "Une fois installée, l’app suit le site : chaque mise à jour du site arrive toute seule. Seule une nouvelle version de l’app elle-même se retélécharge ici."
     },
     "install": {
       "title": "Ajouter à l'écran d'accueil",
@@ -5775,5 +5785,16 @@
     "inviteTitleBare": "Une table t'attend",
     "inviteFooter": "Un pseudo suffit — gratuit, sans installation",
     "inviteDescription": "Rejoins la table {code} : un pseudo suffit. Gratuit, sans installation."
+  },
+  "offline": {
+    "title": "Hors ligne",
+    "lead": "Pas de réseau pour le moment.",
+    "body": "Les jeux qui se jouent sur un seul téléphone restent disponibles, avec les joueurs enregistrés sur cet appareil. Les tables en ligne attendront le retour du réseau.",
+    "gamesTitle": "Jouables sans réseau",
+    "players": "Gérer les joueurs",
+    "retry": "Réessayer",
+    "backToGames": "Retour aux jeux",
+    "hubBanner": "Hors ligne : les jeux sur un seul téléphone restent jouables, les tables en ligne attendront le réseau.",
+    "unavailable": "Indisponible hors ligne"
   }
 }

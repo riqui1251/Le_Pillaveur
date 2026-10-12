@@ -21,6 +21,14 @@ interface GameCardProps {
    * bots n'y font que de la figuration.
    */
   groupHint?: boolean
+  /**
+   * Carte éteinte : le jeu ne peut pas s'ouvrir maintenant (jeu en ligne
+   * alors que le navigateur est hors ligne). Elle reste visible et nommée —
+   * le catalogue ne change pas de forme — mais ne mène nulle part, et
+   * `disabledHint` dit pourquoi (infobulle + lecteur d'écran).
+   */
+  disabled?: boolean
+  disabledHint?: string
 }
 
 /** Badge « nombre de joueurs » : 3-12, ou 2+ quand il n'y a pas de vrai plafond. */
@@ -67,7 +75,7 @@ function OpeningVeil({ forced, label }: { forced: boolean; label: string }) {
  * Playfair centré et accroche sur deux lignes — 22 noms de code sans un mot
  * d'explication ne se choisissent pas au doigt.
  */
-export function GameCard({ game, icon, groupHint = false }: GameCardProps) {
+export function GameCard({ game, icon, groupHint = false, disabled = false, disabledHint }: GameCardProps) {
   const t = useTranslations("hub.jeux")
   const locale = useLocale()
   const router = useRouter()
@@ -116,17 +124,24 @@ export function GameCard({ game, icon, groupHint = false }: GameCardProps) {
   // gz) derrière le voile ci-dessous puis games/loading.tsx — le coût des
   // pages dynamiques d'avant, sans la rafale. En Next 15 ce réglage coupe
   // aussi le préchargement au survol/toucher : assumé, un doigt ne survole pas.
-  return (
-    <Link href={game.path} prefetch={false} onClick={handleClick} className="group block h-full touch-manipulation" title={game.description}>
-      <PlayingCard
-        suit={game.suit}
-        rank={game.rank}
-        className={cn(
-          "h-full transition-all duration-200",
-          "group-hover:-translate-y-0.5 group-hover:shadow-[0_16px_30px_-12px_rgba(0,0,0,0.7)]",
-          "group-active:scale-[0.98]"
-        )}
-      >
+  //
+  // Carte ÉTEINTE (`disabled`) : plus de <Link> du tout — un lien qui garde son
+  // href s'ouvre quand même au clic molette, en « nouvel onglet » ou à Entrée
+  // depuis le mode navigation du lecteur d'écran, et `tabIndex=-1` le
+  // rendrait invisible au clavier. Une boîte `role="link"` `aria-disabled`,
+  // focalisable, porte la raison (infobulle + texte sr-only) et ne va nulle part.
+  const card = (
+    <PlayingCard
+      suit={game.suit}
+      rank={game.rank}
+      className={cn(
+        "h-full transition-all duration-200",
+        disabled
+          ? "opacity-45 saturate-50"
+          : "group-hover:-translate-y-0.5 group-hover:shadow-[0_16px_30px_-12px_rgba(0,0,0,0.7)] group-active:scale-[0.98]"
+      )}
+    >
+        {disabled && disabledHint && <span className="sr-only">{disabledHint}</span>}
         {/* Badges du coin haut-droit, libre sur la mini-carte (le rang+enseigne
             occupe haut-gauche et bas-droite) : « Bêta », « FR » (cartes en
             français seulement, hors fr) et 🤖 « jouable avec des bots ».
@@ -200,8 +215,28 @@ export function GameCard({ game, icon, groupHint = false }: GameCardProps) {
             </span>
           )}
         </article>
-        <OpeningVeil forced={redirecting} label={t("opening")} />
+        {/* Le voile lit le statut du <Link> parent : sans lien, pas de voile. */}
+        {!disabled && <OpeningVeil forced={redirecting} label={t("opening")} />}
       </PlayingCard>
+  )
+
+  if (disabled) {
+    return (
+      <div
+        role="link"
+        aria-disabled="true"
+        tabIndex={0}
+        title={disabledHint ?? game.description}
+        className="group block h-full cursor-not-allowed touch-manipulation"
+      >
+        {card}
+      </div>
+    )
+  }
+
+  return (
+    <Link href={game.path} prefetch={false} onClick={handleClick} className="group block h-full touch-manipulation" title={game.description}>
+      {card}
     </Link>
   )
 }

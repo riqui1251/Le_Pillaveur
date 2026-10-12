@@ -2,6 +2,7 @@
   "appId": "fr.lepillaveur.app",
   "appName": "Le Pillaveur",
   "webDir": "www",
+  "appendUserAgent": "LePillaveurApp/1",
   "backgroundColor": "#0A2C22",
   "server": {
     "url": "https://lepillaveur.fr",

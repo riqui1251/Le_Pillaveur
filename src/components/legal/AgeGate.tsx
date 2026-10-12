@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   AGE_VERIFIED_COOKIE,
+  AGE_VERIFIED_MAX_AGE,
   ANALYTICS_CONSENT_COOKIE,
   ANALYTICS_CONSENT_GRANTED,
   hasAnsweredAnalyticsConsent,
@@ -18,6 +19,17 @@ import { resetLocalPlayersSync } from '@/lib/visit-ping-client'
 function hasCookie(name: string): boolean {
   if (typeof document === 'undefined') return false
   return document.cookie.split(';').some((c) => c.trim().startsWith(`${name}=`))
+}
+
+/**
+ * Le cookie 18+ tel que le pose /api/legal/accept-age (httpOnly: false, un
+ * an, tout le site, Lax, Secure en https) — pour le poser SANS serveur, hors
+ * ligne. Le navigateur refuse `Secure` sur http (serveur de dev) : omis alors.
+ */
+function writeAgeVerifiedCookieLocally(): void {
+  if (typeof document === 'undefined') return
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `${AGE_VERIFIED_COOKIE}=1; Max-Age=${AGE_VERIFIED_MAX_AGE}; Path=/; SameSite=Lax${secure}`
 }
 
 /** Valeur brute d'un cookie lisible en JS (pas lp_vid, httpOnly), ou null. */
@@ -290,12 +302,35 @@ export function AgeGate() {
   const submit = useCallback(async (analytics: boolean, consentOnly: boolean) => {
     setLoading(true)
     try {
-      const res = await fetch('/api/legal/accept-age', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analytics, consentOnly, consentVersion: ANALYTICS_CONSENT_GRANTED }),
-      })
+      let res: Response
+      try {
+        res = await fetch('/api/legal/accept-age', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ analytics, consentOnly, consentVersion: ANALYTICS_CONSENT_GRANTED }),
+        })
+      } catch {
+        // Hors ligne (jeux locaux servis par le service worker) : le serveur
+        // n'est pas là pour poser le cookie. Sans ceci, le rejet n'était pas
+        // attrapé et le portail ne partait jamais — le site devenait
+        // inutilisable sans réseau dès que la déclaration (1 an) avait expiré.
+        // La certification d'âge n'est qu'un clic : on pose ici le MÊME
+        // cookie que la route (valeur, durée, chemin) et on ouvre. Le
+        // consentement statistiques, lui, attend le réseau : un refus
+        // déclenche un effacement côté serveur et un accord posé d'ici ne
+        // vaudrait rien — le bandeau se retire pour la visite, il reviendra.
+        if (consentOnly) {
+          setConsentRequested(false)
+          setMode(hasCookie(AGE_VERIFIED_COOKIE) ? null : 'gate')
+        } else {
+          writeAgeVerifiedCookieLocally()
+          setMode(null)
+          setRequestedOn(null)
+          announceAgeGateResult(true)
+        }
+        return
+      }
       if (res.ok) {
         // Un refus (ici ou dans un autre onglet) efface la présence du
         // navigateur et ses pseudos locaux : la synchro déjà confirmée dans ce

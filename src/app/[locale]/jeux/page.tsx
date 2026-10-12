@@ -13,6 +13,7 @@ import { JoinGate } from '@/components/online/JoinGate'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { RecentGamesRow } from '@/components/online/RecentGamesRow'
 import { RecentLocalGamesRow } from '@/components/hub/RecentLocalGamesRow'
+import { OfflineBanner } from '@/components/hub/OfflineBanner'
 import { PlayModeToggle } from '@/components/auth/PlayModeToggle'
 import { AmbianceModeToggle } from '@/components/auth/AmbianceModeToggle'
 import { requestAgeVerification } from '@/components/legal/AgeGate'
@@ -68,6 +69,10 @@ export default function GamesHubPage() {
       subtitle={isOnline ? tOnline('subtitle') : t('subtitle')}
       headerExtra={
         <div className="space-y-2">
+          {/* Sans réseau : le dit en tête, avant les bascules — les jeux sur un
+              seul téléphone restent jouables (service worker), le reste non.
+              Rendu vide tant que la connexion tient. */}
+          <OfflineBanner />
           {/* Deux réglages, deux lignes. Côte à côte, l'ambiance tenait en
               icônes seules (une chope, une feuille) : personne ne savait ce
               qu'elle changeait, ni laquelle était active. Elle a désormais ses
