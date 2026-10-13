@@ -19,13 +19,13 @@ export function DiceFace({ value, label }: { value: number; label: string }) {
 
   return (
     <div
-      className="grid h-[5.5rem] w-[5.5rem] grid-cols-3 grid-rows-3 gap-2 rounded-2xl border-2 border-slate-200/80 bg-gradient-to-br from-white to-slate-100 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
+      className="grid h-[5.5rem] w-[5.5rem] grid-cols-3 grid-rows-3 gap-2 rounded-2xl border-2 border-[#D8CCAE] bg-cream p-3 shadow-[0_8px_24px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
       aria-label={label}
     >
       {Array.from({ length: 9 }).map((_, i) => (
         <div key={i} className="flex items-center justify-center">
           {dots.includes(i) ? (
-            <span className="h-3 w-3 rounded-full bg-slate-900 shadow-inner sm:h-3.5 sm:w-3.5" />
+            <span className="h-3 w-3 rounded-full bg-[#24201A] shadow-inner sm:h-3.5 sm:w-3.5" />
           ) : null}
         </div>
       ))}
@@ -61,7 +61,7 @@ export function ShameDice({ displayValue, isRolling }: ShameDiceProps) {
     >
       {isRolling && (
         <motion.div
-          className="absolute inset-0 rounded-full bg-violet-500/20 blur-xl"
+          className="absolute inset-0 rounded-full bg-gold/20 blur-xl"
           animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.9, 1.15, 0.9] }}
           transition={{ duration: 0.4, repeat: Infinity }}
         />

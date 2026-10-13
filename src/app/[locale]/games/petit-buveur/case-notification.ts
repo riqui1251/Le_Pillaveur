@@ -219,5 +219,5 @@ export function outcomeFromLegacyHtml(html: string): EffectOutcome {
 }
 
 export function protectedBadgeHtml(t: PetitBuveurT): string {
-  return `<span class="bg-blue-500 text-white px-2 py-1 rounded-md font-bold">${t('game.effects.protected')}</span>`
+  return `<span class="rounded-md border border-emerald-400/30 bg-emerald-600/20 px-2 py-1 font-bold text-emerald-100">${t('game.effects.protected')}</span>`
 }

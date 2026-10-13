@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Player } from '@/lib/players'
 import { Button } from '@/components/ui/button'
 import { GameShell } from '@/components/game/GameShell'
+import { ResumeGamePrompt } from '@/components/game/ResumeGamePrompt'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ArrowUp, ArrowDown, RotateCcw, Trophy } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -24,14 +25,19 @@ import {
   restoreHiLoSave,
   startHiLoGame,
   toHiLoSave,
+  type CardSuit,
+  type HiLoCard,
   type HiLoEnd,
   type HiLoGuess,
   type HiLoSave,
   type HiLoState,
 } from '@/lib/hi-lo/engine'
+import type { GameSuit } from '@/lib/games'
 import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
+import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
 import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
+import { cn } from '@/lib/utils'
 
 // Propriétés du composant Game
 interface GameProps {
@@ -75,6 +81,32 @@ const isSpecialPlayer = (player: any): boolean => {
 // Durée de l'animation de retournement, puis délai avant le tour suivant après une bonne réponse.
 const FLIP_MS = 600
 const AUTO_NEXT_MS = 1500
+
+const SUIT_BY_GLYPH: Record<CardSuit, GameSuit> = {
+  '♠': 'spade',
+  '♥': 'heart',
+  '♦': 'diamond',
+  '♣': 'club',
+}
+
+const CARD_SIZE = 'w-[clamp(5rem,26vw,8rem)] h-[clamp(7.5rem,39vw,12rem)]'
+
+function HiLoCardFace({ card, className }: { card: HiLoCard; className?: string }) {
+  return (
+    <PlayingCard
+      suit={SUIT_BY_GLYPH[card.suit]}
+      rank={card.value}
+      className={cn(
+        'flex flex-col items-center justify-center font-display text-[clamp(1.5rem,8vw,2.25rem)] font-bold',
+        card.color === 'red' ? 'text-suit-red' : 'text-[#24201A]',
+        className
+      )}
+    >
+      <div>{card.value}</div>
+      <div>{card.suit}</div>
+    </PlayingCard>
+  )
+}
 
 export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }: GameProps) {
   const t = useTranslations('games.hi-lo')
@@ -277,40 +309,18 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     onGameEnd()
   }
 
-  // Style de carte adapté au thème sombre
-  const getCardStyle = (color: string) => {
-    return {
-      backgroundColor: 'white',
-      color: color === 'red' ? '#e53e3e' : '#1a202c',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-      border: '2px solid',
-      borderColor: color === 'red' ? '#e53e3e' : '#1a202c'
-    }
-  }
-
   // Si le composant n'est pas encore monté (côté client), afficher un état de chargement ou rien
   if (!isMounted || !session.ready) {
-    return <div className="p-6 text-center">{t('loading')}</div>;
+    return <div className="p-6 text-center text-cream/70">{t('loading')}</div>;
   }
 
   if (session.pending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-center">
-          <h2 className="text-xl font-extrabold">{tc('resumeGame.title')}</h2>
-          <p className="text-sm opacity-60">{tc('resumeGame.body')}</p>
-          <div className="flex flex-col gap-2">
-            <Button onClick={resumeSavedGame} className="w-full">{tc('resumeGame.resume')}</Button>
-            <Button onClick={session.discard} variant="outline" className="w-full">{tc('resumeGame.newGame')}</Button>
-          </div>
-        </div>
-      </div>
-    );
+    return <ResumeGamePrompt onResume={resumeSavedGame} onDiscard={session.discard} />;
   }
 
   // Première donne pas encore distribuée (un rendu, le temps de l'effet d'initialisation)
   if (!game) {
-    return <div className="p-6 text-center">{t('loading')}</div>;
+    return <div className="p-6 text-center text-cream/70">{t('loading')}</div>;
   }
 
   const {
@@ -357,10 +367,16 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   const headerRight = (
     <div className="flex items-center gap-2">
       <div className="flex flex-col items-end leading-tight">
-        <span className="text-sm font-semibold">{t('sipsHeader', { count: drinkCounter })}</span>
-        <span className="text-[10px] text-gray-400">{t('cardsPlayed', { played: cardsPlayed })}</span>
+        <span className="font-display text-sm font-semibold text-gold">{t('sipsHeader', { count: drinkCounter })}</span>
+        <span className="text-[10px] text-cream/60">{t('cardsPlayed', { played: cardsPlayed })}</span>
       </div>
-      <Button variant="outline" size="icon" onClick={restartGame} aria-label={t('restart')}>
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={restartGame}
+        aria-label={t('restart')}
+        className="rounded-xl border-gold/[0.15] bg-black/20 text-cream/70 shadow-none hover:bg-black/30 hover:text-gold"
+      >
         <RotateCcw className="h-4 w-4" />
       </Button>
     </div>
@@ -369,23 +385,23 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   const actionBar = !gameOver ? (
     !showResult ? (
       <div className="flex w-full justify-center gap-2">
-        <Button onClick={() => handleGuess('higher')} variant="outline" className="flex-1 max-w-[10rem]" disabled={isFlipping || isProcessing}>
+        <Button onClick={() => handleGuess('higher')} className="flex-1 max-w-[10rem] rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40" disabled={isFlipping || isProcessing}>
           <ArrowUp className="mr-1 h-4 w-4" />
           {t('higher')}
         </Button>
-        <Button onClick={() => handleGuess('equal')} variant="outline" className="flex-1 max-w-[8rem]" disabled={isFlipping || isProcessing}>
+        <Button onClick={() => handleGuess('equal')} variant="outline" className="flex-1 max-w-[8rem] rounded-2xl border-gold/25 bg-black/20 font-semibold text-cream/80 shadow-none hover:bg-black/30 hover:text-cream disabled:opacity-40" disabled={isFlipping || isProcessing}>
           <span className="mr-1">=</span>
           {t('equal')}
         </Button>
-        <Button onClick={() => handleGuess('lower')} variant="outline" className="flex-1 max-w-[10rem]" disabled={isFlipping || isProcessing}>
+        <Button onClick={() => handleGuess('lower')} className="flex-1 max-w-[10rem] rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40" disabled={isFlipping || isProcessing}>
           <ArrowDown className="mr-1 h-4 w-4" />
           {t('lower')}
         </Button>
       </div>
     ) : !isCorrect ? (
-      <Button onClick={nextTurn} className="mx-auto w-full max-w-xs">{tc('next')}</Button>
+      <Button onClick={nextTurn} className="mx-auto w-full max-w-xs rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40">{tc('next')}</Button>
     ) : (
-      <div className="w-full text-center font-semibold text-green-500">{t('correctNext')}</div>
+      <div className="w-full text-center font-semibold text-emerald-300">{t('correctNext')}</div>
     )
   ) : null
 
@@ -393,9 +409,9 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     <>
     <GameShell title={t('title')} onBack={quitGame} headerRight={headerRight} actionBar={actionBar} maxWidth={760}>
         {gameMode === 'traversee' && (
-          <div className="mb-2 text-center text-sm">
-            <span className="font-medium">{t('traverseeMode')}</span>
-            <span className="ml-2">{t('traverseeGoal', { current: correctGuessesInRow, target: targetGuesses })}</span>
+          <div className="mb-2 flex flex-wrap items-baseline justify-center gap-x-3 text-center text-sm">
+            <span className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('traverseeMode')}</span>
+            <span className="font-display font-bold text-gold">{t('traverseeGoal', { current: correctGuessesInRow, target: targetGuesses })}</span>
           </div>
         )}
 
@@ -406,11 +422,11 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
               return (
                 <div 
                   key={player.id} 
-                  className={`p-1 px-2 rounded-full text-xs flex items-center gap-1 ${
-                    isActive ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                  className={`p-1 px-2 rounded-full border text-xs flex items-center gap-1 ${
+                    isActive ? 'border-gold/60 bg-gold/[0.15] text-cream' : 'border-gold/[0.15] bg-black/25 text-cream/70'
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                  <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-gold' : 'bg-cream/30'}`}></span>
                   <PlayerName player={player} />
                 </div>
               );
@@ -428,25 +444,17 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
                   {currentPlayer?.preferences?.icon || (currentPlayer?.name ? currentPlayer.name.charAt(0).toUpperCase() : '?')}
                 </AvatarFallback>
               </Avatar>
-              <PlayerName player={currentPlayer} className={`font-semibold ${specialEffectClass}`} />
+              <PlayerName player={currentPlayer} className={`font-display font-semibold text-cream ${specialEffectClass}`} />
             </div>
           )}
 
           {/* Cartes */}
           <div className="flex justify-center items-center gap-3 sm:gap-8">
             {/* Carte actuelle */}
-            {currentCard && (
-              <div 
-                className="w-[clamp(5rem,26vw,8rem)] h-[clamp(7.5rem,39vw,12rem)] rounded-lg flex flex-col items-center justify-center text-[clamp(1.5rem,8vw,2.25rem)] font-bold relative"
-                style={getCardStyle(currentCard.color)}
-              >
-                <div>{currentCard.value}</div>
-                <div>{currentCard.suit}</div>
-              </div>
-            )}
+            {currentCard && <HiLoCardFace card={currentCard} className={CARD_SIZE} />}
 
             {/* Carte suivante avec animation */}
-            <div className="relative w-[clamp(5rem,26vw,8rem)] h-[clamp(7.5rem,39vw,12rem)]">
+            <div className={`relative ${CARD_SIZE}`}>
               {isFlipping ? (
                 <motion.div
                   className="absolute w-full h-full"
@@ -454,59 +462,39 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
                   animate={{ rotateY: 180 }}
                   transition={{ duration: 0.6 }}
                 >
-                  <div className="absolute w-full h-full backface-hidden rounded-lg flex items-center justify-center text-gray-400 bg-white border-2 border-gray-300">
-                    ?
-                  </div>
-                  <div 
-                    className="absolute w-full h-full backface-hidden rounded-lg flex flex-col items-center justify-center text-[clamp(1.5rem,8vw,2.25rem)] font-bold"
-                    style={{
-                      transform: 'rotateY(180deg)',
-                      backgroundColor: 'white',
-                      color: nextCard?.color === 'red' ? '#e53e3e' : '#1a202c',
-                      border: '2px solid',
-                      borderColor: nextCard?.color === 'red' ? '#e53e3e' : '#1a202c'
-                    }}
+                  <PlayingCardBack className="absolute w-full h-full backface-hidden" />
+                  <div
+                    className="absolute w-full h-full backface-hidden"
+                    style={{ transform: 'rotateY(180deg)' }}
                   >
-                    {nextCard && (
-                      <>
-                        <div>{nextCard.value}</div>
-                        <div>{nextCard.suit}</div>
-                      </>
+                    {nextCard ? (
+                      <HiLoCardFace card={nextCard} className="h-full w-full" />
+                    ) : (
+                      <PlayingCard className="h-full w-full" />
                     )}
                   </div>
                 </motion.div>
               ) : showResult ? (
-                <div 
-                  className="w-full h-full rounded-lg flex flex-col items-center justify-center text-[clamp(1.5rem,8vw,2.25rem)] font-bold"
-                  style={nextCard ? getCardStyle(nextCard.color) : {}}
-                >
-                  {nextCard && (
-                    <>
-                      <div>{nextCard.value}</div>
-                      <div>{nextCard.suit}</div>
-                    </>
-                  )}
-                </div>
+                nextCard ? (
+                  <HiLoCardFace card={nextCard} className="h-full w-full" />
+                ) : (
+                  <PlayingCard className="h-full w-full" />
+                )
               ) : (
-                <div className="w-full h-full rounded-lg flex items-center justify-center text-gray-400 bg-white border-2 border-gray-300">
-                  ?
-                </div>
+                <PlayingCardBack className="w-full h-full" />
               )}
             </div>
           </div>
 
           {/* Indicateur de progression du paquet de cartes */}
           <div className="w-full max-w-xs mt-2">
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 transition-all duration-300 ease-in-out"
-                style={{ 
-                  width: `${(cardsPlayed / DECK_SIZE) * 100}%`,
-                  backgroundColor: deck.length < 10 ? '#f56565' : '#3b82f6' 
-                }}
+            <div className="h-2 bg-black/30 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 ease-in-out ${deck.length < 10 ? 'bg-suit-red' : 'bg-gold'}`}
+                style={{ width: `${(cardsPlayed / DECK_SIZE) * 100}%` }}
               ></div>
             </div>
-            <div className="flex justify-between text-xs mt-1 text-gray-500">
+            <div className="flex justify-between text-xs mt-1 text-cream/60">
               <span>{t('cardsPlayedLabel', { count: cardsPlayed })}</span>
               <span>{t('cardsLeftLabel', { count: deck.length + (nextCard ? 1 : 0) })}</span>
             </div>
@@ -521,8 +509,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
             peuvent dépasser un petit écran, et le pied (Rejouer) doit rester atteignable. */}
         <DialogContent className={`max-h-[90dvh] overflow-y-auto ${isMobile ? 'w-[95%] max-w-lg p-3 sm:p-6' : ''}`}>
           <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
+            <DialogTitle className="flex items-center font-display text-cream">
+              <Trophy className="mr-2 h-5 w-5 text-gold" />
               {gameMode === 'traversee' && correctGuessesInRow >= targetGuesses
                 ? t('gameOver.congrats')
                 : sameCardCount[`${nextCard?.value}-${nextCard?.suit}`] > 4
@@ -533,24 +521,24 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
           
           <div className="space-y-4">
             {gameMode === 'traversee' && correctGuessesInRow >= targetGuesses && (
-              <p className="font-medium text-green-600">
+              <p className="font-medium text-emerald-300">
                 {t('gameOver.goalReached', { count: targetGuesses })}
               </p>
             )}
 
             {sameCardCount[`${nextCard?.value}-${nextCard?.suit}`] > 4 && (
-              <p className="font-medium text-orange-600">
+              <p className="font-display font-medium text-gold">
                 {t('gameOver.fiveSame', { value: nextCard?.value ?? '', suit: nextCard?.suit ?? '' })}
               </p>
             )}
 
-            <h3 className="font-semibold">{t('gameOver.results')}</h3>
+            <h3 className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('gameOver.results')}</h3>
             <ul className={`space-y-2 ${isMobile ? 'max-h-[40vh] overflow-y-auto pr-2' : ''}`}>
               {players.map(player => {
                 const specialEffectClass = getSpecialEffectClass(player?.preferences?.specialEffect);
                 const isSpecial = isSpecialPlayer(player);
                 return (
-                  <li key={player.id} className="flex justify-between items-center">
+                  <li key={player.id} className="flex justify-between items-center rounded-xl border border-gold/[0.15] bg-black/20 px-3 py-2">
                     <div className="flex items-center space-x-2">
                       <Avatar className={`h-8 w-8 ${isSpecial ? 'border-2 border-red-500 shadow-lg shadow-red-500/50' : ''}`}>
                         <AvatarImage src={player?.preferences?.avatar} />
@@ -558,9 +546,9 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
                           {player?.preferences?.icon || (player?.name ? player.name.charAt(0).toUpperCase() : '?')}
                         </AvatarFallback>
                       </Avatar>
-                      <PlayerName player={player} className={`${specialEffectClass || ''} ${isMobile ? 'text-sm' : ''}`} />
+                      <PlayerName player={player} className={`font-display text-cream ${specialEffectClass || ''} ${isMobile ? 'text-sm' : ''}`} />
                     </div>
-                    <span>{t('gameOver.sipsResult', { count: gameResults[player.id] || 0 })}</span>
+                    <span className="font-display font-semibold text-gold">{t('gameOver.sipsResult', { count: gameResults[player.id] || 0 })}</span>
                   </li>
                 );
               })}
@@ -570,14 +558,13 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
           <FirstGameFeedbackCard mode="local" gameId="hi-lo" />
           
           <DialogFooter className={`flex ${isMobile ? 'flex-col space-y-2' : 'space-x-2'}`}>
-            <Button 
-              variant="outline" 
+            <Button
               onClick={restartGame}
-              className={isMobile ? 'w-full' : ''}
+              className={cn('rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40', isMobile && 'w-full')}
             >
               {tc('replay')}
             </Button>
-            <Button onClick={quitGame} className={isMobile ? 'w-full' : ''}>
+            <Button variant="outline" onClick={quitGame} className={cn('rounded-2xl border-gold/25 bg-black/20 font-semibold text-cream/80 shadow-none hover:bg-black/30 hover:text-cream', isMobile && 'w-full')}>
               {tc('quit')}
             </Button>
           </DialogFooter>
@@ -586,20 +573,20 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
 
       {/* Dialogue pour mauvais choix */}
       <Dialog open={showIncorrectDialog} onOpenChange={setShowIncorrectDialog}>
-        <DialogContent className={`bg-red-50 border-red-200 ${isMobile ? 'w-[95%] max-w-lg p-4' : ''}`}>
+        <DialogContent className={isMobile ? 'w-[95%] max-w-lg p-4' : ''}>
           <DialogHeader>
-            <DialogTitle className="text-red-600">
+            <DialogTitle className="font-display text-red-300">
               {isUnguessedEqual && gameMode === 'traversee' ? t('wrong.unguessedEqual') : t('wrong.title')}
             </DialogTitle>
           </DialogHeader>
           
           <div className="py-4">
             {gameMode === 'standard' ? (
-              <p className="text-center text-lg font-semibold text-black">
+              <p className="text-center text-lg font-semibold text-cream">
                 {currentPlayer ? getPersonalizedMessage(currentPlayer) : t('drinkMessageDefault', { name: tc('players'), count: drinkCounter })}
               </p>
             ) : (
-              <div className="text-center text-black">
+              <div className="text-center text-cream">
                 {isUnguessedEqual ? (
                   <p className="text-lg font-semibold mb-2">
                     {t('wrong.traverseeEqual')}
@@ -609,7 +596,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
                     {t('wrong.traverseeAllDrink', { count: drinkCounter })}
                   </p>
                 )}
-                <p className="text-sm">
+                <p className="text-sm text-cream/70">
                   {!isUnguessedEqual && `${t('wrong.streakReset')} `}
                   {activePlayers.length > 1 &&
                     t('wrong.nextTurn', { name: activePlayers[(currentPlayerIndex + 1) % activePlayers.length]?.name ?? '' })}
@@ -619,7 +606,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
           </div>
           
           <DialogFooter>
-            <Button onClick={closeIncorrectDialog} className={isMobile ? 'w-full' : ''}>
+            <Button onClick={closeIncorrectDialog} className={cn('rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40', isMobile && 'w-full')}>
               {tc('understood')}
             </Button>
           </DialogFooter>

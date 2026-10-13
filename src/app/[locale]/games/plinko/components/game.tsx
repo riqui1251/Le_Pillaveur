@@ -1384,18 +1384,18 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         // ── État RÉSULTAT : le joueur qui vient de jouer + son score, puis « ensuite » ──
         <>
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="shrink-0 rounded-full ring-2 ring-white/25">
+            <span className="shrink-0 rounded-full ring-2 ring-gold/40">
               <PlayerIcon player={turnResult.player} size="md" className="h-9 w-9 text-base" />
             </span>
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-bold text-red-400">
+              <span className="rounded-lg bg-suit-red/20 px-2 py-1 text-xs font-bold text-red-300">
                 {t('game.drinks')} {turnResult.redSips ?? 0} 🍺
               </span>
-              <span className="rounded-lg bg-emerald-500/20 px-2 py-1 text-xs font-bold text-emerald-400">
+              <span className="rounded-lg bg-emerald-700/30 px-2 py-1 text-xs font-bold text-emerald-300">
                 {t('game.gives')} {turnResult.greenSips ?? 0} 🍺
               </span>
               {roundDrinksCount > 0 && (
-                <span className="rounded-lg bg-amber-500/20 px-2 py-1 text-xs font-bold text-amber-400">
+                <span className="rounded-lg border border-gold/30 bg-gold/10 px-2 py-1 text-xs font-bold text-gold">
                   {t('game.roundDrinksShort')} 🥂
                 </span>
               )}
@@ -1403,11 +1403,11 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
           </div>
 
           {/* Qui vient ensuite (l'index a déjà avancé vers currentPlayer) */}
-          <div className="ml-auto flex shrink-0 items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5">
-            <ArrowRight className="h-4 w-4 shrink-0 text-violet-300" aria-hidden />
+          <div className="ml-auto flex shrink-0 items-center gap-2 rounded-xl border border-gold/[0.15] bg-black/20 px-2.5 py-1.5">
+            <ArrowRight className="h-4 w-4 shrink-0 text-gold" aria-hidden />
             <div className="leading-tight">
-              <p className="text-[9px] font-semibold uppercase tracking-wider text-violet-300/70">{t('game.nextUp')}</p>
-              <p className="max-w-[92px] truncate text-xs font-bold text-white"><PlayerName player={currentPlayer} /></p>
+              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.nextUp')}</p>
+              <p className="max-w-[92px] truncate font-display text-xs font-bold text-cream"><PlayerName player={currentPlayer} /></p>
             </div>
             <PlayerIcon player={currentPlayer} size="sm" className="h-6 w-6 shrink-0 text-xs" />
           </div>
@@ -1417,26 +1417,26 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         <>
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="relative flex shrink-0">
-              {!isAnimating && <span className="absolute inset-0 -m-0.5 animate-ping rounded-full bg-violet-500/40" aria-hidden />}
-              <span className="relative rounded-full ring-2 ring-violet-400/80">
+              {!isAnimating && <span className="absolute inset-0 -m-0.5 animate-ping rounded-full bg-gold/40" aria-hidden />}
+              <span className="relative rounded-full ring-2 ring-gold/70">
                 <PlayerIcon player={currentPlayer} size="md" className="h-10 w-10 text-lg" />
               </span>
             </span>
             <div className="min-w-0 leading-tight">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-300/70">{t('game.turnLabel')}</p>
-              <p className="truncate text-base font-extrabold text-white"><PlayerName player={currentPlayer} /></p>
+              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.turnLabel')}</p>
+              <p className="truncate font-display text-base font-bold text-cream"><PlayerName player={currentPlayer} /></p>
             </div>
           </div>
 
           <div className="relative ml-auto shrink-0">
-            {!isAnimating && <span className="pointer-events-none absolute inset-0 animate-ping rounded-md bg-violet-500/25" aria-hidden />}
+            {!isAnimating && <span className="pointer-events-none absolute inset-0 animate-ping rounded-2xl bg-gold/25" aria-hidden />}
             <Button
               onClick={dropBalls}
               disabled={isAnimating}
-              className="relative h-11 gap-1.5 bg-gradient-to-r from-violet-600 to-purple-700 px-5 text-base font-bold text-white shadow-lg shadow-violet-900/40 hover:from-violet-500 hover:to-purple-600 disabled:opacity-60"
+              className="relative h-11 gap-1.5 rounded-2xl bg-amber-500 px-5 text-base font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
             >
               {isAnimating
-                ? <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 animate-pulse rounded-full bg-white/80" />{t('game.inGame')}</span>
+                ? <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 animate-pulse rounded-full bg-black/70" />{t('game.inGame')}</span>
                 : <><ChevronsDown className="h-5 w-5 shrink-0" aria-hidden />{t('game.launch')}</>}
             </Button>
           </div>
@@ -1449,7 +1449,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
   return (
     <GameShell title={t('title')} onBack={onGameEnd} maxWidth={920} actionBar={actionBar}>
-      <div className="space-y-4">
+      <div className="space-y-4 text-cream">
 
         {/* ── Plateau de jeu ───────────────────────────────────────────── */}
         {!gameOver && (
@@ -1468,17 +1468,17 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                   const isActive = distance === 0
                   return (
                     <div key={p.id} className={cn(
-                      'flex shrink-0 items-center gap-1.5 rounded-xl border transition-all duration-200',
+                      'flex shrink-0 items-center gap-1.5 rounded-full border transition-all duration-200',
                       isActive
-                        ? 'border-violet-400/70 bg-violet-500/20 px-2.5 py-1.5 shadow-lg shadow-violet-900/30 ring-1 ring-violet-400/30'
-                        : 'border-white/[0.07] bg-white/[0.03] px-2 py-1 opacity-45',
+                        ? 'border-gold/60 bg-gold/[0.15] px-2.5 py-1.5'
+                        : 'border-gold/[0.15] bg-black/25 px-2 py-1 opacity-60',
                     )}>
-                      {isActive && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-violet-300" aria-hidden />}
+                      {isActive && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-gold" aria-hidden />}
                       <PlayerIcon player={p} size="sm" className={cn(isActive ? 'h-6 w-6' : 'h-5 w-5', 'text-xs')} />
-                      <span className={cn('font-semibold', isActive ? 'text-sm text-white' : 'text-xs text-white/50')}>
+                      <span className={cn('font-semibold', isActive ? 'text-sm text-cream' : 'text-xs text-cream/60')}>
                         <PlayerName player={p} />
                       </span>
-                      {distance === 1 && <span className="text-[9px] uppercase tracking-wide text-white/30">{t('game.next')}</span>}
+                      {distance === 1 && <span className="text-[11px] uppercase tracking-wide text-cream/50">{t('game.next')}</span>}
                     </div>
                   )
                 })}
@@ -1488,7 +1488,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 onClick={toggleMute}
                 aria-label={muted ? t('a11y.unmute') : t('a11y.mute')}
                 aria-pressed={muted}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-white/60 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-gold/[0.15] bg-black/20 text-cream/70 transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
               >
                 {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </button>
@@ -1498,10 +1498,10 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 aria-label={tTv('castToTv')}
                 aria-pressed={castActive}
                 className={cn(
-                  'flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60',
+                  'flex h-8 shrink-0 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
                   castActive
-                    ? 'border-violet-400/50 bg-violet-500/20 text-violet-200'
-                    : 'border-white/10 bg-white/[0.04] text-white/60 hover:border-white/20 hover:text-white',
+                    ? 'border-gold/60 bg-gold/[0.15] text-cream'
+                    : 'border-gold/[0.15] bg-black/20 text-cream/70 hover:text-gold',
                 )}
               >
                 <Tv className="h-4 w-4 shrink-0" /> {tTv('castShort')}
@@ -1509,19 +1509,19 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
             </div>
 
             {castActive && castCode && (
-              <div className="flex items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-center text-xs text-violet-100">
-                <Tv className="h-4 w-4 shrink-0 text-violet-300" />
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-center text-xs text-gold">
+                <Tv className="h-4 w-4 shrink-0 text-gold" />
                 <span>
                   {tTv('castHint')}{' '}
-                  <span className="font-mono text-sm font-black tracking-widest text-white">{castCode}</span>
+                  <span className="font-mono text-sm font-black tracking-widest text-cream">{castCode}</span>
                 </span>
               </div>
             )}
 
             <div
               ref={canvasRef}
-              className="relative w-full overflow-hidden rounded-2xl border border-white/10"
-              style={{ height: 'clamp(360px, 60vh, 550px)', background: 'radial-gradient(ellipse at 50% -10%, rgba(124,58,237,0.22) 0%, rgba(9,6,20,1) 65%)' }}
+              className="relative w-full overflow-hidden rounded-2xl border border-gold/15 bg-felt-deep"
+              style={{ height: 'clamp(360px, 60vh, 550px)' }}
               onClick={() => setPinTooltip(null)}
             >
               {/* Pins normaux */}
@@ -1533,7 +1533,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     key={`pin-${index}`}
                     className={cn(
                       `absolute ${VISUAL_NORMAL_PIN_SIZE_CLASS} rounded-full transition-all duration-75`,
-                      isFlashing ? 'bg-purple-200 scale-[2.2] z-30' : 'bg-violet-400/50',
+                      isFlashing ? 'bg-gold scale-[2.2] z-30' : 'bg-cream/[0.35]',
                     )}
                     style={{ top: `${pin.y}%`, left: `${pin.x}%`, transform: 'translate(-50%, -50%)' }}
                   />
@@ -1556,7 +1556,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                       // game-grid-cell : neutralise le min tap-target 40/44px que
                       // globals.css impose à tout <button> sur mobile (sinon le
                       // pin s'affiche à 40px au lieu de 16/20px).
-                      `game-grid-cell absolute ${VISUAL_SPECIAL_PIN_SIZE_CLASS} flex items-center justify-center rounded-full border-2 cursor-pointer transition-all duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80`,
+                      `game-grid-cell absolute ${VISUAL_SPECIAL_PIN_SIZE_CLASS} flex items-center justify-center rounded-full border-2 cursor-pointer transition-all duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold`,
                       colors.border, colors.bg,
                       isFlashing && 'scale-[2.5] brightness-150',
                     )}
@@ -1580,18 +1580,18 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
               {/* Tooltip pin spécial */}
               {pinTooltip && (
                 <div
-                  className="pointer-events-none absolute z-50 rounded-xl border border-violet-500/30 bg-violet-950/95 px-3 py-2 shadow-2xl"
+                  className="pointer-events-none absolute z-50 rounded-xl border border-gold/20 bg-felt-deep px-3 py-2 shadow-2xl"
                   style={{
                     left: `${Math.min(82, Math.max(18, pinTooltip.x))}%`,
                     top: `${Math.max(6, pinTooltip.y - 10)}%`,
                     transform: 'translate(-50%, -100%)',
                   }}
                 >
-                  <p className="flex items-center gap-1.5 whitespace-nowrap text-xs font-bold text-white">
+                  <p className="flex items-center gap-1.5 whitespace-nowrap font-display text-xs font-bold text-cream">
                     <span aria-hidden className="text-sm leading-none">{SPECIAL_PIN_COLORS[pinTooltip.type].glyph}</span>
                     {getPinLabel(pinTooltip.type)}
                   </p>
-                  <p className="mt-0.5 max-w-[180px] text-[10px] leading-tight text-white/60">{getPinEffect(pinTooltip.type)}</p>
+                  <p className="mt-0.5 max-w-[180px] text-[10px] leading-tight text-cream/60">{getPinEffect(pinTooltip.type)}</p>
                 </div>
               )}
 
@@ -1607,12 +1607,12 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     <div
                       key={index}
                       className={cn(
-                        'flex h-11 sm:h-14 items-center justify-center border-t border-x border-violet-800/25 transition-colors duration-200',
-                        isBoth ? 'bg-purple-400/50' : isRedHit ? 'bg-red-500/45' : isGreenHit ? 'bg-emerald-500/45' : isExtraHit ? 'bg-violet-500/45' : 'bg-violet-950/40',
+                        'flex h-11 sm:h-14 items-center justify-center border-t border-x border-gold/[0.15] transition-colors duration-200',
+                        isBoth ? 'bg-gradient-to-r from-suit-red/60 to-emerald-700/60' : isRedHit ? 'bg-suit-red/60' : isGreenHit ? 'bg-emerald-700/60' : isExtraHit ? 'bg-gold/40' : 'bg-black/30',
                       )}
                       style={{ width: `${100 / TARGET_NUM_SLOTS}%` }}
                     >
-                      <span className={cn('font-bold text-sm sm:text-base', isHit ? 'text-white' : 'text-white/55')}>{sips}</span>
+                      <span className={cn('font-display font-bold text-sm sm:text-base', isHit ? 'text-cream' : 'text-cream/60')}>{sips}</span>
                     </div>
                   )
                 })}
@@ -1663,15 +1663,15 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
             </div>
 
             {/* ── Légende repliable des pins spéciaux ─────────────────────── */}
-            <div className="rounded-2xl border border-violet-800/20 bg-violet-950/30">
+            <div className="rounded-2xl border border-gold/15 bg-felt-deep/70">
               <button
                 type="button"
                 onClick={() => setLegendOpen(o => !o)}
                 aria-expanded={legendOpen}
-                className="flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                className="flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
               >
-                <span className="text-xs font-semibold uppercase tracking-widest text-violet-400/60">{t('game.specialPins')}</span>
-                <ChevronDown className={cn('h-4 w-4 shrink-0 text-white/40 transition-transform', legendOpen && 'rotate-180')} />
+                <span className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.specialPins')}</span>
+                <ChevronDown className={cn('h-4 w-4 shrink-0 text-cream/60 transition-transform', legendOpen && 'rotate-180')} />
               </button>
               {legendOpen && (
                 <div className="grid grid-cols-1 gap-x-4 gap-y-2 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1686,9 +1686,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                         >
                           {colors.glyph}
                         </span>
-                        <span className="min-w-0 truncate text-xs text-white/55">
-                          <span className="font-semibold text-white/75">{getPinLabel(type)}</span>
-                          <span className="text-white/40"> · {getPinEffect(type)}</span>
+                        <span className="min-w-0 truncate text-xs text-cream/60">
+                          <span className="font-semibold text-cream/80">{getPinLabel(type)}</span>
+                          <span className="text-cream/50"> · {getPinEffect(type)}</span>
                         </span>
                       </div>
                     )
@@ -1703,7 +1703,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         {gameOver && (
           <div className="space-y-4">
             {/* Titre de phase */}
-            <p className="text-center text-xs font-semibold uppercase tracking-widest text-violet-400/70">
+            <p className="text-center font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
               {resultDisplayPhase === 'tournees' && t('game.results.roundDrinksPhase')}
               {resultDisplayPhase === 'details' && t('game.results.detailsPhase')}
               {resultDisplayPhase === 'final' && t('game.results.finalPhase')}
@@ -1711,9 +1711,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
             {/* ── Phase tournées ── */}
             {resultDisplayPhase === 'tournees' && (
-              <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.08] p-6 text-center">
-                <p className="text-5xl font-extrabold text-violet-300">{roundDrinksCount > 0 ? roundDrinksCount : '—'}</p>
-                <p className="mt-2 text-sm text-white/60">
+              <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-6 text-center">
+                <p className="font-display text-5xl font-bold text-gold">{roundDrinksCount > 0 ? roundDrinksCount : '—'}</p>
+                <p className="mt-2 text-sm text-cream/60">
                   {roundDrinksCount > 0
                     ? t('roundDrinksBanner', {
                         label: roundDrinksCount === 1 ? t('roundDrinksSingular') : t('roundDrinksPlural'),
@@ -1730,32 +1730,32 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
               const results = playerResults[player?.id] || []
               return (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2.5 rounded-2xl border border-violet-800/20 bg-violet-950/30 p-3">
+                  <div className="flex items-center gap-2.5 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
                     <PlayerIcon player={player} size="md" className="h-9 w-9 text-lg" />
-                    <span className="font-bold">
+                    <span className="font-display font-bold text-cream">
                       <PlayerName player={player} />
                     </span>
-                    <span className="ml-auto text-xs text-white/35">{currentPlayerResultIndex + 1} / {players.length}</span>
+                    <span className="ml-auto text-xs text-cream/60">{currentPlayerResultIndex + 1} / {players.length}</span>
                   </div>
                   {results.map((result, i) => (
-                    <div key={i} className="rounded-2xl border border-violet-800/20 bg-violet-950/30 p-3">
-                      <p className="mb-2 text-xs text-white/35">{t('game.results.turn', { n: i + 1 })}</p>
+                    <div key={i} className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
+                      <p className="mb-2 text-xs text-cream/60">{t('game.results.turn', { n: i + 1 })}</p>
                       <div className="flex gap-2 mb-3">
-                        <div className="flex-1 rounded-xl border border-red-500/20 bg-red-500/10 p-2 text-center">
-                          <p className="text-xs text-red-400/70">{t('game.drinks')}</p>
-                          <p className="text-xl font-extrabold text-red-400">{result.redSips}</p>
+                        <div className="flex-1 rounded-xl border border-suit-red/30 bg-suit-red/[0.15] p-2 text-center">
+                          <p className="text-xs text-red-300">{t('game.drinks')}</p>
+                          <p className="font-display text-xl font-bold text-red-300">{result.redSips}</p>
                         </div>
-                        <div className="flex-1 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2 text-center">
-                          <p className="text-xs text-emerald-400/70">{t('game.gives')}</p>
-                          <p className="text-xl font-extrabold text-emerald-400">{result.greenSips}</p>
+                        <div className="flex-1 rounded-xl border border-emerald-700/40 bg-emerald-700/20 p-2 text-center">
+                          <p className="text-xs text-emerald-300">{t('game.gives')}</p>
+                          <p className="font-display text-xl font-bold text-emerald-300">{result.greenSips}</p>
                         </div>
                       </div>
                       {result.powerups.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-white/[0.06]">
+                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-gold/10">
                           {result.powerups.map((pu, pi) => {
                             const c = SPECIAL_PIN_COLORS[pu.type]
                             return (
-                              <span key={pi} className={`rounded-full border px-2 py-0.5 text-xs ${c.border} ${c.bg} text-white`} title={getPinEffect(pu.type)}>
+                              <span key={pi} className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${c.border} ${c.bg} text-[#24201A]`} title={getPinEffect(pu.type)}>
                                 {getPinLabel(pu.type)}
                               </span>
                             )
@@ -1772,8 +1772,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
             {resultDisplayPhase === 'final' && (
               <div className="space-y-3">
                 {roundDrinksCount > 0 && (
-                  <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.08] p-4 text-center">
-                    <p className="text-sm font-semibold text-violet-300">
+                  <div className="rounded-2xl border border-gold/30 bg-gold/10 p-4 text-center">
+                    <p className="font-display text-sm font-semibold text-gold">
                       {t('game.results.roundDrinksAll', { count: roundDrinksCount })}
                     </p>
                   </div>
@@ -1784,21 +1784,21 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                   const totalGreen = results.reduce((s, r) => s + r.greenSips, 0)
                   const allPowerups = results.flatMap(r => r.powerups)
                   return (
-                    <div key={player.id} className="rounded-2xl border border-violet-800/20 bg-violet-950/30 p-4">
+                    <div key={player.id} className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-4">
                       <div className="mb-3 flex items-center gap-2.5">
                         <PlayerIcon player={player} size="md" />
-                        <span className="font-bold">
+                        <span className="font-display font-bold text-cream">
                           <PlayerName player={player} />
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <div className="flex-1 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-center">
-                          <p className="text-xs text-red-400/70 uppercase tracking-wider">{t('game.drinks')}</p>
-                          <p className="text-2xl font-extrabold text-red-400">{totalRed}</p>
+                        <div className="flex-1 rounded-xl border border-suit-red/30 bg-suit-red/[0.15] p-3 text-center">
+                          <p className="text-xs text-red-300 uppercase tracking-wider">{t('game.drinks')}</p>
+                          <p className="font-display text-2xl font-bold text-red-300">{totalRed}</p>
                         </div>
-                        <div className="flex-1 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
-                          <p className="text-xs text-emerald-400/70 uppercase tracking-wider">{t('game.gives')}</p>
-                          <p className="text-2xl font-extrabold text-emerald-400">{totalGreen}</p>
+                        <div className="flex-1 rounded-xl border border-emerald-700/40 bg-emerald-700/20 p-3 text-center">
+                          <p className="text-xs text-emerald-300 uppercase tracking-wider">{t('game.gives')}</p>
+                          <p className="font-display text-2xl font-bold text-emerald-300">{totalGreen}</p>
                         </div>
                       </div>
                       {allPowerups.length > 0 && (
@@ -1806,7 +1806,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                           {allPowerups.map((pu, pi) => {
                             const c = SPECIAL_PIN_COLORS[pu.type]
                             return (
-                              <span key={pi} className={`rounded-full border px-2 py-0.5 text-xs ${c.border} ${c.bg} text-white`} title={getPinEffect(pu.type)}>
+                              <span key={pi} className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${c.border} ${c.bg} text-[#24201A]`} title={getPinEffect(pu.type)}>
                                 {getPinLabel(pu.type)}
                               </span>
                             )
@@ -1830,7 +1830,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
               {resultDisplayPhase === 'tournees' && (
                 <button
                   onClick={() => setResultDisplayPhase('details')}
-                  className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600"
+                  className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
                 >
                   {roundDrinksCount > 0 ? t('game.results.seeDetails') : t('game.results.seeResults')}
                 </button>
@@ -1845,7 +1845,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                       <button
                         onClick={() => setCurrentPlayerResultIndex(p => Math.max(0, p - 1))}
                         disabled={currentPlayerResultIndex === 0}
-                        className="rounded-xl border border-violet-800/30 bg-violet-950/30 px-4 py-2.5 text-sm text-white/70 disabled:opacity-30 hover:bg-violet-900/40"
+                        className="rounded-2xl border border-gold/25 bg-black/20 px-4 py-2.5 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream disabled:opacity-40"
                       >
                         {t('game.results.previous')}
                       </button>
@@ -1854,10 +1854,10 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                         <button
                           onClick={() => setCurrentPlayerResultIndex(p => Math.min(players.length - 1, p + 1))}
                           className={cn(
-                            'rounded-xl px-5 py-2.5 text-sm font-semibold',
+                            'rounded-2xl px-5 py-2.5 text-sm',
                             allPlayersSeen
-                              ? 'border border-violet-800/30 bg-violet-950/30 text-white/70 hover:bg-violet-900/40'
-                              : 'bg-gradient-to-r from-violet-600 to-purple-700 text-white hover:from-violet-500 hover:to-purple-600',
+                              ? 'border border-gold/25 bg-black/20 font-semibold text-cream/80 hover:bg-black/30 hover:text-cream'
+                              : 'bg-amber-500 font-bold text-black hover:bg-amber-400',
                           )}
                         >
                           {t('game.results.nextPlayer')}
@@ -1867,14 +1867,14 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                       {allPlayersSeen && (
                         <button
                           onClick={() => setResultDisplayPhase('final')}
-                          className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600"
+                          className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
                         >
                           {t('game.results.totals')}
                         </button>
                       )}
                     </div>
                     {!allPlayersSeen && (
-                      <p className="text-xs text-white/40">{t('game.results.seeAllHint')}</p>
+                      <p className="text-xs text-cream/60">{t('game.results.seeAllHint')}</p>
                     )}
                   </div>
                 )
@@ -1884,13 +1884,13 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 <>
                   <button
                     onClick={handleRestartGame}
-                    className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2.5 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600"
+                    className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
                   >
                     {t('game.results.newGame')}
                   </button>
                   <button
                     onClick={onGameEnd}
-                    className="rounded-xl border border-violet-800/30 bg-violet-950/30 px-5 py-2.5 text-sm text-white/70 hover:bg-violet-900/40"
+                    className="rounded-2xl border border-gold/25 bg-black/20 px-5 py-2.5 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
                   >
                     {t('game.results.back')}
                   </button>

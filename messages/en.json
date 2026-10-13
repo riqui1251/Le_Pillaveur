@@ -152,6 +152,7 @@
   },
   "common": {
     "back": "Back",
+    "backToGames": "Back to games",
     "loading": "Loading…",
     "save": "Save",
     "cancel": "Cancel",
@@ -1677,13 +1678,10 @@
       "title": "Hi/Lo",
       "page": {
         "gameMode": "Game mode",
-        "selectMode": "Select a mode",
         "modes": {
           "standard": "Standard",
           "traversee": "Crossing"
-        },
-        "start": "Start the game",
-        "backToGames": "Back to games"
+        }
       },
       "loading": "Loading the game...",
       "sipsHeader": "Sips: {count}",
@@ -1773,7 +1771,6 @@
         "cardsCount": "{n} cards",
         "height": "Height",
         "rowsCards": "{rows} rows · {cards} cards",
-        "noPlayersSelected": "No players selected",
         "rulesTitle": "Game rules",
         "rulesFun": [
           "Flip the cards one by one starting from the bottom.",
@@ -1784,9 +1781,7 @@
           "Mini prelude: 4-step predictions (color → higher/lower → inside/outside → suit).",
           "Each player memorizes their secretly assigned cards.",
           "The pyramid is built without players' cards. Distribute sips to those who have the flipped value."
-        ],
-        "needPlayers": "Select at least 2 players on the Players page.",
-        "backToGames": "Back to games"
+        ]
       },
       "game": {
         "titleClassic": "· Classic",
@@ -1973,7 +1968,6 @@
       "title": "Plinko",
       "tagline": "Drop balls, distribute sips",
       "page": {
-        "noPlayers": "No players selected. Go back to the Players page to build your team (minimum 2).",
         "difficulty": "Difficulty",
         "difficulties": {
           "easy": {
@@ -1993,8 +1987,7 @@
           }
         },
         "cumulativeMode": "Cumulative Mode",
-        "cumulativeDesc": "Multiplier and +/- effects stack during the turn",
-        "backToGames": "Back to games"
+        "cumulativeDesc": "Multiplier and +/- effects stack during the turn"
       },
       "pinLabels": {
         "multiplier": "x2",
@@ -2942,12 +2935,7 @@
     },
     "petit-buveur": {
       "page": {
-        "back": "Back",
-        "badge": "🍺 Board game",
-        "title": "The Little Drinker",
         "tagline": "Move onto the set without getting too drunk!",
-        "selectedPlayers": "Selected players",
-        "noPlayers": "No players — go to the Players page.",
         "difficulty": "Difficulty",
         "difficulties": {
           "facile": {
@@ -2975,8 +2963,6 @@
           "🏆 The first to reach square 30 wins the game!",
           "⚠️ Consume in moderation."
         ],
-        "needPlayers": "Select at least 2 players to start.",
-        "start": "Start the game",
         "resume": "Resume the current game",
         "soft": {
           "rules": [

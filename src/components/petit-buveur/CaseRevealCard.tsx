@@ -10,7 +10,7 @@ import { playGameSound } from '@/lib/sound/game-sounds'
  * Révélation de case — partagée local + online.
  *
  * Carte qui « flippe » à l'apparition, teintée par la FAMILLE de la case
- * (bonus vert, malus rouge, déplacement bleu, interaction violet) avec son
+ * (bonus vert, malus rouge, déplacement bleu, interaction or) avec son
  * icône : l'effet se lit d'un coup d'œil. `revealKey` relance l'animation
  * (et le son) à chaque nouvelle case.
  */

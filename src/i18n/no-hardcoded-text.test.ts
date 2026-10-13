@@ -78,12 +78,9 @@ const LISTE_D_ATTENTE: Record<string, { depuis: string; raison: string; textes: 
     raison:
       'plateau local du Petit Buveur, hors périmètre de ce chantier. « Résultat » et les deux issues du ' +
       'duel ont déjà leur clé (games.petit-buveur.game.duel.result, .winnerStays, .opponentWins — ces ' +
-      'deux-là en t.rich, les noms sont des composants) ; « Actions de tour » et « case {n} » en demandent ' +
-      'de nouvelles',
+      'deux-là en t.rich, les noms sont des composants) ; « Actions de tour » en demande une nouvelle',
     textes: [
-      'case',
       'Actions de tour',
-      'Case',
       'gagne et reste ·',
       'recule d&apos;une case',
       'gagne ·',

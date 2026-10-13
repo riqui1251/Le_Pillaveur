@@ -6,9 +6,12 @@ import { useTranslations } from 'next-intl'
 import { Player } from '@/lib/players'
 import { RotateCcw, X } from 'lucide-react'
 import { GameShell } from '@/components/game/GameShell'
+import { ResumeGamePrompt } from '@/components/game/ResumeGamePrompt'
 import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { PlayingCard as PlayingCardFace } from '@/components/ui/PlayingCard'
+import type { GameSuit } from '@/lib/games'
 import { cn } from '@/lib/utils'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 
@@ -60,14 +63,17 @@ const BET_META: Record<BetType, { cards: number; gulps: number; labelKey: string
   'double-purple': { cards: 4, gulps: 4, labelKey: 'doublePurple',  emoji: '🟣🟣' },
 }
 
-const BET_STYLE: Record<BetType, { from: string; to: string; border: string }> = {
-  'rouge':         { from: 'from-red-600',    to: 'to-red-800',     border: 'border-red-500/40' },
-  'double-rouge':  { from: 'from-red-500',    to: 'to-rose-700',    border: 'border-red-400/40' },
-  'noir':          { from: 'from-zinc-700',   to: 'to-zinc-900',    border: 'border-zinc-500/40' },
-  'double-noir':   { from: 'from-zinc-600',   to: 'to-neutral-900', border: 'border-zinc-400/40' },
-  'purple':        { from: 'from-violet-600', to: 'to-purple-800',  border: 'border-violet-500/40' },
-  'double-purple': { from: 'from-violet-500', to: 'to-fuchsia-800', border: 'border-violet-400/40' },
+// Couleurs de contenu : rouge/noir des cartes et violet signature du Purple.
+const BET_STYLE: Record<BetType, string> = {
+  'rouge':         'border-suit-red/60 bg-suit-red',
+  'double-rouge':  'border-suit-red/60 bg-suit-red ring-1 ring-gold/40',
+  'noir':          'border-gold/20 bg-[#24201A]',
+  'double-noir':   'border-gold/20 bg-[#24201A] ring-1 ring-gold/40',
+  'purple':        'border-violet-500/40 bg-gradient-to-br from-violet-600 to-purple-800',
+  'double-purple': 'border-violet-400/40 bg-gradient-to-br from-violet-500 to-fuchsia-800',
 }
+
+const SUIT_TO_GAME_SUIT: Record<CardSuit, GameSuit> = { '♠': 'spade', '♥': 'heart', '♦': 'diamond', '♣': 'club' }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -91,23 +97,20 @@ function checkBetResult(bet: BetType, cards: PlayingCard[]): boolean {
 // ─── Composant carte ──────────────────────────────────────────────────────────
 
 function PlayingCardUI({ card, size = 'lg' }: { card: PlayingCard; size?: 'sm' | 'lg' }) {
-  const isRed = card.color === 'red'
+  const ink = card.color === 'red' ? 'text-suit-red' : 'text-[#24201A]'
   if (size === 'sm') {
     return (
-      <div className="flex h-14 w-10 shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/20 bg-white shadow-md">
-        <span className={cn('text-xs font-extrabold leading-none', isRed ? 'text-red-600' : 'text-gray-900')}>{card.value}</span>
-        <span className={cn('text-sm leading-none', isRed ? 'text-red-600' : 'text-gray-900')}>{card.suit}</span>
-      </div>
+      <PlayingCardFace suit={SUIT_TO_GAME_SUIT[card.suit]} rank={card.value} corners={false} className="flex h-14 w-10 shrink-0 flex-col items-center justify-center rounded-lg">
+        <span className={cn('font-display text-xs font-bold leading-none', ink)}>{card.value}</span>
+        <span className={cn('text-sm leading-none', ink)}>{card.suit}</span>
+      </PlayingCardFace>
     )
   }
   return (
-    <div className={cn(
-      'flex h-32 w-20 sm:h-36 sm:w-24 flex-col items-center justify-center rounded-2xl border-2 bg-white shadow-xl',
-      isRed ? 'border-red-400' : 'border-gray-800',
-    )}>
-      <span className={cn('text-3xl sm:text-4xl font-extrabold', isRed ? 'text-red-600' : 'text-gray-900')}>{card.value}</span>
-      <span className={cn('text-2xl sm:text-3xl leading-tight', isRed ? 'text-red-600' : 'text-gray-900')}>{card.suit}</span>
-    </div>
+    <PlayingCardFace suit={SUIT_TO_GAME_SUIT[card.suit]} rank={card.value} className="flex h-32 w-20 sm:h-36 sm:w-24 flex-col items-center justify-center">
+      <span className={cn('font-display text-3xl sm:text-4xl font-bold', ink)}>{card.value}</span>
+      <span className={cn('text-2xl sm:text-3xl leading-tight', ink)}>{card.suit}</span>
+    </PlayingCardFace>
   )
 }
 
@@ -303,31 +306,10 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   const currentPlayer = players[currentPlayerIndex]
 
   if (!isMounted || !session.ready) return null
-  if (!players || players.length < 2) return <div className="p-6 text-center text-red-400">{t('minPlayers')}</div>
+  if (!players || players.length < 2) return <div className="p-6 text-center text-red-300">{t('minPlayers')}</div>
 
   if (session.pending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#07060b] p-4 text-white">
-        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-violet-500/20 bg-violet-950/30 p-6 text-center">
-          <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
-          <p className="text-sm text-white/55">{tCommon('resumeGame.body')}</p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={resumeSavedGame}
-              className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3 text-sm font-bold text-white hover:from-violet-500 hover:to-purple-600"
-            >
-              {tCommon('resumeGame.resume')}
-            </button>
-            <button
-              onClick={session.discard}
-              className="w-full rounded-2xl border border-white/[0.15] bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
-            >
-              {tCommon('resumeGame.newGame')}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
+    return <ResumeGamePrompt onResume={resumeSavedGame} onDiscard={session.discard} />
   }
 
   const betButtons: BetType[] = ['rouge', 'double-rouge', 'noir', 'double-noir', 'purple', 'double-purple']
@@ -338,31 +320,31 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
       onBack={quitGame}
       maxWidth={700}
       headerRight={
-        <button onClick={initializeGame} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/60 transition hover:bg-white/10 hover:text-white" aria-label={t('newGame')}>
+        <button onClick={initializeGame} className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/[0.15] bg-black/20 text-cream/70 transition-colors hover:bg-black/30 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold" aria-label={t('newGame')}>
           <RotateCcw className="h-4 w-4" />
         </button>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-4 text-cream">
 
         {/* ── Joueur actif ─────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 rounded-2xl border border-violet-800/20 bg-violet-950/30 p-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
           <PlayerIcon player={currentPlayer} size="md" className="h-10 w-10 text-xl" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-white/40">{t('yourTurn')}</p>
-            <p className="font-bold truncate">
+            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('yourTurn')}</p>
+            <p className="font-display font-bold text-cream truncate">
               <PlayerName player={currentPlayer} />
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="rounded-xl border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-center">
-              <p className="text-[10px] text-violet-400/70 uppercase tracking-wide">{t('counter')}</p>
-              <p className="text-lg font-extrabold text-violet-300">{drinkCounter}<span className="text-xs ml-0.5">🍺</span></p>
+            <div className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1.5 text-center text-gold">
+              <p className="text-[10px] uppercase tracking-wide text-gold/75">{t('counter')}</p>
+              <p className="font-display text-lg font-bold text-gold">{drinkCounter}<span className="text-xs ml-0.5">🍺</span></p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-center">
-              <p className="text-sm font-bold text-white/60">{t('cardsLeft', { count: deck.length })}</p>
+            <div className="rounded-xl border border-gold/[0.15] bg-black/20 px-3 py-1.5 text-center">
+              <p className="text-sm font-bold text-cream/60">{t('cardsLeft', { count: deck.length })}</p>
               {newDeckFlash && (
-                <p className="text-[10px] font-semibold text-violet-300">{t('newDeck')}</p>
+                <p className="text-[10px] font-semibold text-gold">{t('newDeck')}</p>
               )}
             </div>
           </div>
@@ -370,27 +352,27 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
 
         {/* ── Cartes tirées ────────────────────────────────────────────── */}
         {drawnCards.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-4">
             <div className="flex flex-wrap justify-center gap-3">
               {drawnCards.map((card, i) => <PlayingCardUI key={i} card={card} />)}
             </div>
             {isCorrect === true && canContinue && (
               <div className="mt-4 text-center space-y-3">
-                <p className="text-emerald-400 font-semibold">
+                <p className="text-emerald-300 font-semibold">
                   {t('correct', { count: lastBet ? betConfig[lastBet].gulps : 0 })}
                 </p>
                 <div className="flex gap-2 justify-center">
-                  <button onClick={handleContinue} className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-2 text-sm font-semibold text-white hover:from-violet-500 hover:to-purple-600">
+                  <button onClick={handleContinue} className="rounded-2xl bg-amber-500 px-5 py-2 text-sm font-bold text-black hover:bg-amber-400">
                     {tCommon('continue')}
                   </button>
-                  <button onClick={handlePass} className="rounded-xl border border-white/[0.15] bg-white/[0.05] px-5 py-2 text-sm text-white/70 hover:bg-white/10">
+                  <button onClick={handlePass} className="rounded-2xl border border-gold/25 bg-black/20 px-5 py-2 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream">
                     {tCommon('pass')}
                   </button>
                 </div>
               </div>
             )}
             {isRevealing && (
-              <p className="mt-3 text-center text-sm text-violet-400 animate-pulse">{t('revealing')}</p>
+              <p className="mt-3 text-center font-display text-sm text-gold animate-pulse">{t('revealing')}</p>
             )}
           </div>
         )}
@@ -398,10 +380,9 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
         {/* ── Boutons de paris ─────────────────────────────────────────── */}
         {!canContinue && !showResult && (
           <div className="space-y-2">
-            <p className="text-center text-xs font-semibold uppercase tracking-widest text-violet-400/60">{t('chooseBet')}</p>
+            <p className="text-center font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('chooseBet')}</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {betButtons.map(bet => {
-                const s = BET_STYLE[bet]
                 const cfg = betConfig[bet]
                 return (
                   <button
@@ -409,16 +390,13 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
                     onClick={() => handleBet(bet)}
                     disabled={isRevealing}
                     className={cn(
-                      'relative overflow-hidden rounded-2xl border py-4 text-center font-semibold text-white transition-all active:scale-95 disabled:opacity-40',
-                      s.border,
+                      'rounded-2xl border py-4 text-center font-semibold text-cream transition-all enabled:hover:ring-2 enabled:hover:ring-gold focus-visible:ring-2 focus-visible:ring-gold active:scale-95 disabled:opacity-40',
+                      BET_STYLE[bet],
                     )}
                   >
-                    <div className={cn('absolute inset-0 bg-gradient-to-br opacity-80', s.from, s.to)} />
-                    <div className="relative">
-                      <p className="text-lg leading-none mb-1">{cfg.emoji}</p>
-                      <p className="text-xs font-bold">{cfg.label}</p>
-                      <p className="text-[10px] text-white/60">{tCommon('sipsCount', { count: cfg.gulps })}</p>
-                    </div>
+                    <p className="text-lg leading-none mb-1">{cfg.emoji}</p>
+                    <p className="text-xs font-bold">{cfg.label}</p>
+                    <p className="text-[10px] text-cream/70">{tCommon('sipsCount', { count: cfg.gulps })}</p>
                   </button>
                 )
               })}
@@ -428,8 +406,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
 
         {/* ── Historique des cartes ────────────────────────────────────── */}
         {cardHistory.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/30">{t('lastCards')}</p>
+          <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
+            <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('lastCards')}</p>
             <div className="flex flex-wrap gap-2">
               {cardHistory.map((card, i) => <PlayingCardUI key={i} card={card} size="sm" />)}
             </div>
@@ -439,26 +417,25 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
         {/* ── Dialog mauvaise réponse ──────────────────────────────────── */}
         {showResult && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-red-500/20 bg-[#0d0814] p-6 shadow-2xl">
-              <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #ef4444, transparent 70%)' }} />
-              <div className="relative text-center space-y-4">
-                <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-red-500/15 border border-red-500/20 text-3xl">
+            <div className="relative w-full max-w-sm rounded-2xl border border-gold/20 bg-felt-deep p-6 text-cream shadow-2xl">
+              <div className="text-center space-y-4">
+                <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-suit-red/[0.15] border border-suit-red/30 text-3xl">
                   😬
                 </div>
                 <div>
-                  <p className="text-lg font-extrabold text-white">{t('wrongCombo')}</p>
-                  <p className="mt-1 text-white/60 text-sm">
+                  <p className="font-display text-lg font-bold text-cream">{t('wrongCombo')}</p>
+                  <p className="mt-1 text-sm text-cream/70">
                     {t('mustDrink', { name: currentPlayer?.name ?? '', count: amountToDrink })}
                   </p>
                 </div>
                 <button
                   onClick={closeResult}
-                  className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 py-3 text-sm font-bold text-white hover:from-violet-500 hover:to-purple-600"
+                  className="w-full rounded-2xl bg-amber-500 py-3 text-sm font-bold text-black hover:bg-amber-400"
                 >
                   {tCommon('understoodNext')}
                 </button>
               </div>
-              <button onClick={closeResult} className="absolute right-4 top-4 text-white/30 hover:text-white/60">
+              <button onClick={closeResult} className="absolute right-3 top-3 rounded-xl p-1 text-cream/60 transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold">
                 <X className="h-4 w-4" />
               </button>
             </div>

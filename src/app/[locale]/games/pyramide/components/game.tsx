@@ -28,6 +28,9 @@ import {
   buildClassicPyramid,
 } from '@/lib/pyramide/engine'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
+import { ResumeGamePrompt } from '@/components/game/ResumeGamePrompt'
+import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
+import type { GameSuit } from '@/lib/games'
 import { usePlayers } from '@/hooks/usePlayers'
 
 // ── Helpers partagés ─────────────────────────────────────────────────────────
@@ -39,6 +42,15 @@ function PlayerAvatar({ player, size = 'md' }: { player: BasePlayer; size?: 'sm'
     <PlayerIcon player={player} size={size} className={cn(sizeClass, 'shrink-0')} />
   )
 }
+
+const GAME_SUIT: Record<Suit, GameSuit> = {
+  hearts: 'heart',
+  diamonds: 'diamond',
+  clubs: 'club',
+  spades: 'spade',
+}
+
+const isRedSuit = (suit: Suit) => suit === 'hearts' || suit === 'diamonds'
 
 interface GameProps {
   players: BasePlayer[]
@@ -112,7 +124,6 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   const session = useResumableLocalGame<PyramideSave>(SAVE_ID, SAVE_VERSION, (s) =>
     isSameLocalTable(s.playerIds, players)
   )
-  const tCommon = useTranslations('common')
   const { updatePlayerStats } = usePlayers()
 
   const computePreludeTotals = (): Record<string, number> =>
@@ -418,7 +429,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
 
   // Obtenir la couleur de la carte en fonction de sa couleur
   const getCardColor = (suit: Suit): string => {
-    return suit === 'hearts' || suit === 'diamonds' ? 'text-red-500' : 'text-black'
+    return isRedSuit(suit) ? 'text-suit-red' : 'text-[#24201A]'
   }
 
   // Obtenir le symbole de la couleur
@@ -465,58 +476,28 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     setNextCardToFlip({ row: pyramidHeight - 1, col: 0 });
   };
 
-  if (session.pending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#07060b] p-4 text-white">
-        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-amber-500/20 bg-amber-950/20 p-6 text-center">
-          <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
-          <p className="text-sm text-white/55">{tCommon('resumeGame.body')}</p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={resumeSavedGame}
-              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
-            >
-              {tCommon('resumeGame.resume')}
-            </button>
-            <button
-              onClick={session.discard}
-              className="w-full rounded-2xl border border-white/[0.15] bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
-            >
-              {tCommon('resumeGame.newGame')}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  if (session.pending) return <ResumeGamePrompt onResume={resumeSavedGame} onDiscard={session.discard} />
 
   return (
-    <div className="w-full min-h-screen relative text-white">
-      {/* Arrière-plan */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[#07060b]" />
-        <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-amber-600/12 blur-[120px]" />
-        <div className="absolute -bottom-40 right-0 h-[30rem] w-[30rem] rounded-full bg-orange-600/10 blur-[110px]" />
-      </div>
-
+    <div className="w-full relative text-cream">
       <div className={`container mx-auto max-w-6xl pb-24 ${isMobile ? 'p-2' : 'p-4'}`} style={{ maxWidth: containerMaxWidth }}>
         {/* En-tête */}
-        <div className={`rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.45)] ${isMobile ? 'mb-2 px-3 py-2' : 'mb-5 md:mb-6 px-4 py-3 md:px-6 md:py-4'}`}>
+        <div className={`rounded-2xl border border-gold/20 bg-felt-deep/90 backdrop-blur-xl ${isMobile ? 'mb-2 px-3 py-2' : 'mb-5 md:mb-6 px-4 py-3 md:px-6 md:py-4'}`}>
           <div className="flex items-center justify-between gap-2">
-            <h1 className={`font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 ${isMobile ? 'text-lg pl-10' : 'text-2xl sm:text-3xl'}`}>
-              🔺 {t('title')}{gameMode === 'classic' ? ` ${t('game.titleClassic')}` : ''}
+            <h1 className={`font-display font-bold text-gold ${isMobile ? 'text-lg pl-10' : 'text-2xl sm:text-3xl'}`}>
+              {t('title')}{gameMode === 'classic' ? ` ${t('game.titleClassic')}` : ''}
             </h1>
             <div className="flex items-center gap-1">
               <button
                 onClick={resetGame}
-                className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-amber-300/60 transition hover:bg-white/10 hover:text-amber-300"
+                className="rounded-xl border border-gold/20 bg-black/20 p-2 text-cream/70 transition hover:text-gold"
                 aria-label={t('game.newGameAria')}
               >
                 <RotateCcw className="h-4 w-4" />
               </button>
               <button
                 onClick={onGameEnd}
-                className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70"
+                className="rounded-xl border border-gold/20 bg-black/20 p-2 text-cream/70 transition hover:text-gold"
                 aria-label={t('game.backAria')}
               >
                 <ArrowDown className="h-4 w-4 rotate-90" />
@@ -528,7 +509,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
         {/* Phase de pré-jeu classique: prédictions en 4 étapes */}
         {gameMode === 'classic' && classicGamePhase === 'prelude' && (
           <div className="mb-6 space-y-3">
-            <div className="rounded-2xl border border-amber-800/20 bg-amber-950/20 backdrop-blur p-4 md:p-5">
+            <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-4 md:p-5">
               {/* Joueur courant */}
               <div className="flex items-center gap-3 mb-4">
                 {(() => {
@@ -537,24 +518,24 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                     <>
                       <PlayerAvatar player={p} size="md" />
                       <div>
-                        <p className="text-xs text-amber-400/70 uppercase tracking-wide">{t('game.predictions')}</p>
-                        <p className={cn('font-bold text-white', isSpecialPlayer(p) && getSpecialEffectClass(p))}>{p.name}</p>
+                        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.predictions')}</p>
+                        <p className={cn('font-display font-bold text-cream', isSpecialPlayer(p) && getSpecialEffectClass(p))}>{p.name}</p>
                       </div>
                     </>
                   ) : null
                 })()}
                 <div className="ml-auto flex gap-1">
                   {(['color','higherLower','insideOutside','suit'] as const).map((s, i) => (
-                    <div key={s} className={cn('h-2 w-2 rounded-full transition-all', 
-                      preludeStep === s ? 'bg-amber-400' :
-                      (['color','higherLower','insideOutside','suit'].indexOf(preludeStep) > i) ? 'bg-amber-600' : 'bg-white/10'
+                    <div key={s} className={cn('h-2 w-2 rounded-full transition-all',
+                      preludeStep === s ? 'bg-gold' :
+                      (['color','higherLower','insideOutside','suit'].indexOf(preludeStep) > i) ? 'bg-gold/50' : 'bg-black/30'
                     )} />
                   ))}
                 </div>
               </div>
 
               {/* Question */}
-              <p className="mb-3 text-sm text-amber-200/80">
+              <p className="mb-3 text-sm text-cream/80">
                 {preludeStep === 'color' && t('game.questions.color')}
                 {preludeStep === 'higherLower' && t('game.questions.higherLower', { value: preludeRevealed[0]?.value ?? '?' })}
                 {preludeStep === 'insideOutside' && t('game.questions.insideOutside')}
@@ -564,26 +545,26 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
               <div className="flex flex-wrap gap-2">
                 {preludeStep === 'color' && (
                   <>
-                    <button onClick={() => handlePreludeSelection('red')} className="flex-1 rounded-xl bg-gradient-to-br from-rose-600 to-red-700 border border-rose-500/40 py-3 font-semibold text-white hover:from-rose-500 active:scale-95">{t('game.choices.red')}</button>
-                    <button onClick={() => handlePreludeSelection('black')} className="flex-1 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-zinc-500/40 py-3 font-semibold text-white hover:from-zinc-600 active:scale-95">{t('game.choices.black')}</button>
+                    <button onClick={() => handlePreludeSelection('red')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-red-300 transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.red')}</button>
+                    <button onClick={() => handlePreludeSelection('black')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.black')}</button>
                   </>
                 )}
                 {preludeStep === 'higherLower' && (
                   <>
-                    <button onClick={() => handlePreludeSelection('higher')} className="flex-1 rounded-xl bg-gradient-to-br from-emerald-600 to-green-700 border border-emerald-500/40 py-3 font-semibold text-white hover:from-emerald-500 active:scale-95">{t('game.choices.higher')}</button>
-                    <button onClick={() => handlePreludeSelection('lower')} className="flex-1 rounded-xl bg-gradient-to-br from-amber-600 to-orange-700 border border-amber-500/40 py-3 font-semibold text-white hover:from-amber-500 active:scale-95">{t('game.choices.lower')}</button>
+                    <button onClick={() => handlePreludeSelection('higher')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.higher')}</button>
+                    <button onClick={() => handlePreludeSelection('lower')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.lower')}</button>
                   </>
                 )}
                 {preludeStep === 'insideOutside' && (
                   <>
-                    <button onClick={() => handlePreludeSelection('inside')} className="flex-1 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 border border-indigo-500/40 py-3 font-semibold text-white hover:from-indigo-500 active:scale-95">{t('game.choices.inside')}</button>
-                    <button onClick={() => handlePreludeSelection('outside')} className="flex-1 rounded-xl bg-gradient-to-br from-fuchsia-600 to-purple-700 border border-fuchsia-500/40 py-3 font-semibold text-white hover:from-fuchsia-500 active:scale-95">{t('game.choices.outside')}</button>
+                    <button onClick={() => handlePreludeSelection('inside')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.inside')}</button>
+                    <button onClick={() => handlePreludeSelection('outside')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.outside')}</button>
                   </>
                 )}
                 {preludeStep === 'suit' && (
                   <div className="grid grid-cols-2 gap-2 w-full">
-                    {([['hearts','choices.hearts','from-rose-600 to-red-700','border-rose-500/40'],['diamonds','choices.diamonds','from-pink-600 to-rose-700','border-pink-500/40'],['clubs','choices.clubs','from-zinc-600 to-zinc-800','border-zinc-500/40'],['spades','choices.spades','from-slate-700 to-slate-900','border-slate-500/40']] as const).map(([suit, labelKey, grad, border]) => (
-                      <button key={suit} onClick={() => handlePreludeSelection(suit)} className={`rounded-xl bg-gradient-to-br ${grad} border ${border} py-3 font-semibold text-white hover:brightness-110 active:scale-95`}>
+                    {([['hearts','choices.hearts','text-red-300'],['diamonds','choices.diamonds','text-red-300'],['clubs','choices.clubs','text-cream'],['spades','choices.spades','text-cream']] as const).map(([suit, labelKey, tone]) => (
+                      <button key={suit} onClick={() => handlePreludeSelection(suit)} className={`rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold ${tone} transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95`}>
                         {t(`game.${labelKey}`)}
                       </button>
                     ))}
@@ -595,21 +576,15 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
               {preludeRevealed.length > 0 && (
                 <div className="mt-4 flex items-center gap-2">
                   {preludeRevealed.map((c, idx) => (
-                    <div key={idx} className="relative flex h-20 w-14 flex-col items-center justify-center rounded-xl border-2 border-white/20 bg-white shadow-lg">
-                      <div className={`absolute top-1 left-1 text-[9px] font-black leading-none ${getCardColor(c.suit)}`}>
-                        <div>{c.value}</div><div>{getSuitSymbol(c.suit)}</div>
-                      </div>
-                      <div className={`text-2xl font-black ${getCardColor(c.suit)}`}>{getSuitSymbol(c.suit)}</div>
-                      <div className={`absolute bottom-1 right-1 rotate-180 text-[9px] font-black leading-none ${getCardColor(c.suit)}`}>
-                        <div>{c.value}</div><div>{getSuitSymbol(c.suit)}</div>
-                      </div>
-                    </div>
+                    <PlayingCard key={idx} suit={GAME_SUIT[c.suit]} rank={c.value} className="flex h-20 w-14 items-center justify-center">
+                      <span className={`text-2xl font-bold ${getCardColor(c.suit)}`}>{getSuitSymbol(c.suit)}</span>
+                    </PlayingCard>
                   ))}
                   {preludeMessage && (
                     <p
                       role="status"
                       aria-live="polite"
-                      className={cn('ml-2 text-sm font-semibold', preludeMessage.includes('✓') ? 'text-emerald-400' : 'text-red-400')}
+                      className={cn('ml-2 text-sm font-semibold', preludeMessage.includes('✓') ? 'text-emerald-300' : 'text-red-300')}
                     >
                       {preludeMessage}
                     </p>
@@ -619,15 +594,15 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
             </div>
 
             {/* Récapitulatif gorgées du pré-jeu */}
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/60 mb-2">{t('game.preludeDrinks')}</p>
+            <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
+              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75 mb-2">{t('game.preludeDrinks')}</p>
               <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
                 {players.map(p => {
                   const drinks = preludeDrinksByPlayer[p.id] || 0
                   return (
-                    <li key={p.id} className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.04] px-2.5 py-1.5">
-                      <span className="text-white/70 truncate">{p.name}</span>
-                      <span className={cn('font-bold ml-2', drinks > 0 ? 'text-red-400' : 'text-white/30')}>{drinks}🍺</span>
+                    <li key={p.id} className="flex items-center justify-between rounded-xl border border-gold/20 bg-black/20 px-2.5 py-1.5">
+                      <span className="text-cream/70 truncate">{p.name}</span>
+                      <span className={cn('font-bold ml-2', drinks > 0 ? 'text-red-300' : 'text-cream/50')}>{drinks}🍺</span>
                     </li>
                   )
                 })}
@@ -640,8 +615,8 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
         {/* Résumé du mini-jeu + pause avant mémorisation */}
         {gameMode === 'classic' && classicGamePhase === 'preludeSummary' && (
           <div className="mb-6">
-            <div className="rounded-2xl border border-amber-800/20 bg-amber-950/20 backdrop-blur p-4 md:p-5">
-              <h3 className="text-lg font-extrabold text-amber-200 mb-4">{t('game.preludeSummaryTitle')}</h3>
+            <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-4 md:p-5">
+              <h3 className="font-display text-lg font-bold text-cream mb-4">{t('game.preludeSummaryTitle')}</h3>
               {(() => {
                 const totals = computePreludeTotals()
                 return (
@@ -651,16 +626,16 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                       const mistakes = (preludeResultsByPlayer[p.id] || []).filter(r => !r.success).map(r => t(`stepLabels.${r.step}`))
                       const totalPts = totals[p.id] || 0
                       return (
-                        <li key={p.id} className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.04] px-3 py-2.5">
+                        <li key={p.id} className="flex items-start gap-3 rounded-xl border border-gold/20 bg-black/20 px-3 py-2.5">
                           <PlayerAvatar player={p} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                              <span className="font-semibold text-white text-sm">{p.name}</span>
-                              <span className={cn('text-sm font-bold', drinks > 0 ? 'text-red-400' : 'text-emerald-400')}>{drinks > 0 ? `${drinks}🍺` : '✓'}</span>
+                              <span className="font-semibold text-cream text-sm">{p.name}</span>
+                              <span className={cn('text-sm font-bold', drinks > 0 ? 'text-red-300' : 'text-emerald-300')}>{drinks > 0 ? `${drinks}🍺` : '✓'}</span>
                             </div>
                             <div className="flex items-center justify-between mt-0.5">
-                              <span className="text-xs text-white/40">{mistakes.length > 0 ? t('game.mistakes', { list: mistakes.join(', ') }) : t('game.noMistakes')}</span>
-                              <span className="text-xs font-semibold text-amber-300">{t('game.points', { pts: totalPts })}</span>
+                              <span className="text-xs text-cream/60">{mistakes.length > 0 ? t('game.mistakes', { list: mistakes.join(', ') }) : t('game.noMistakes')}</span>
+                              <span className="font-display text-xs font-semibold text-gold">{t('game.points', { pts: totalPts })}</span>
                             </div>
                           </div>
                         </li>
@@ -676,7 +651,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                     setCurrentSelectionPlayer(0)
                     setReadyToStart(false)
                   }}
-                  className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
+                  className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
                 >
                   {t('game.memorizationContinue')}
                 </button>
@@ -687,9 +662,8 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
 
         {/* Message : tourner en paysage sur mobile portrait */}
         {isMobile && !isLandscape && !gameOver && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
-          <div className="flex items-center justify-center mb-3 p-3 rounded-xl border border-amber-500/50 bg-amber-500/20 backdrop-blur">
-            <div className="flex items-center gap-2 text-amber-200 text-sm">
-              <span className="text-lg">📱</span>
+          <div className="flex items-center justify-center mb-3 p-3 rounded-xl border border-gold/30 bg-gold/10">
+            <div className="flex items-center gap-2 text-cream/80 text-sm">
               <span className="font-medium" dangerouslySetInnerHTML={{ __html: t.raw('game.landscapeHint') as string }} />
             </div>
           </div>
@@ -697,17 +671,17 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
         {/* Instructions sur mobile paysage */}
         {isMobile && isLandscape && !gameOver && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
           <div className="flex items-center justify-center mb-2">
-            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur px-3 py-1.5 text-center text-xs flex items-center gap-2 shadow-sm">
-              <ArrowDown className="h-3 w-3 text-amber-300" />
-              <span className="text-amber-200/90">{t('game.scrollHint')}</span>
+            <div className="rounded-xl border border-gold/20 bg-black/20 px-3 py-1.5 text-center text-xs flex items-center gap-2">
+              <ArrowDown className="h-3 w-3 text-gold" />
+              <span className="text-cream/70">{t('game.scrollHint')}</span>
             </div>
           </div>
         )}
 
         {/* Overlay mémorisation */}
         {gameMode === 'classic' && classicGamePhase === 'selection' && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-            <div className="w-full max-w-2xl rounded-2xl border border-amber-800/20 bg-[#0d0b06] shadow-2xl">
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl">
               <div className="p-5 md:p-6">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
@@ -717,15 +691,15 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                         <>
                           <PlayerAvatar player={p} size="lg" />
                           <div>
-                            <p className="text-xs text-amber-400/70 uppercase tracking-wide">{t('game.memorization')}</p>
-                            <p className={cn('font-extrabold text-white text-lg leading-tight', isSpecialPlayer(p) && getSpecialEffectClass(p))}>{p.name}</p>
-                            <p className="text-xs text-amber-300/70">{currentSelectionPlayer + 1} / {players.length}</p>
+                            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.memorization')}</p>
+                            <p className={cn('font-display font-bold text-cream text-lg leading-tight', isSpecialPlayer(p) && getSpecialEffectClass(p))}>{p.name}</p>
+                            <p className="font-display text-xs text-gold">{currentSelectionPlayer + 1} / {players.length}</p>
                           </div>
                         </>
                       ) : null
                     })()}
                   </div>
-                  <span className="text-sm text-amber-200/60 font-medium">{t('page.cardsCount', { n: cardsToSelect })}</span>
+                  <span className="rounded-lg border border-gold/30 bg-gold/10 px-2 py-0.5 text-sm font-medium text-gold">{t('page.cardsCount', { n: cardsToSelect })}</span>
                 </div>
 
                 <div className={cn('grid place-items-center py-2 gap-3', cardsToSelect === 5 ? 'grid-cols-5' : 'grid-cols-4')}>
@@ -740,22 +714,15 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                         setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: prev[pid].map((c, i) => i === idx ? { ...c, faceUp: !c.faceUp } : c) }))
                       }}
                       className={cn(
-                        'h-24 w-16 md:h-28 md:w-20 rounded-xl border flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95',
-                        card.faceUp ? 'bg-white border-white/40' : 'border-amber-800/30 bg-amber-950/40 text-amber-200'
+                        'h-24 w-16 md:h-28 md:w-20 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95'
                       )}
                     >
                       {card.faceUp ? (
-                        <div className="relative w-full h-full">
-                          <div className={`absolute top-1 left-1 text-[9px] font-black ${getCardColor(card.suit)}`}>
-                            <div>{card.value}</div><div>{getSuitSymbol(card.suit)}</div>
-                          </div>
-                          <div className={`absolute inset-0 flex items-center justify-center text-2xl font-black ${getCardColor(card.suit)}`}>{getSuitSymbol(card.suit)}</div>
-                          <div className={`absolute bottom-1 right-1 rotate-180 text-[9px] font-black ${getCardColor(card.suit)}`}>
-                            <div>{card.value}</div><div>{getSuitSymbol(card.suit)}</div>
-                          </div>
-                        </div>
+                        <PlayingCard suit={GAME_SUIT[card.suit]} rank={card.value} className="flex h-full w-full items-center justify-center">
+                          <span className={`text-2xl font-bold ${getCardColor(card.suit)}`}>{getSuitSymbol(card.suit)}</span>
+                        </PlayingCard>
                       ) : (
-                        <span className="text-xl">❓</span>
+                        <PlayingCardBack className="h-full w-full" />
                       )}
                     </button>
                   ))}
@@ -768,7 +735,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                       if (!pid) return
                       setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: true })) }))
                     }}
-                    className="rounded-xl bg-amber-700/60 border border-amber-600/40 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-700/80"
+                    className="rounded-2xl border border-gold/25 bg-black/20 px-4 py-2 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
                   >{t('game.seeAll')}</button>
                   <button
                     onClick={() => {
@@ -776,7 +743,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                       if (!pid) return
                       setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: false })) }))
                     }}
-                    className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/60 hover:bg-white/[0.08]"
+                    className="rounded-2xl border border-gold/25 bg-black/20 px-4 py-2 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
                   >{t('game.hideAll')}</button>
                   <button
                     onClick={() => {
@@ -789,7 +756,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                         startClassicGame()
                       }
                     }}
-                    className="ml-auto rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-2 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
+                    className="ml-auto rounded-2xl bg-amber-500 px-5 py-2 text-sm font-bold text-black shadow-none hover:bg-amber-400"
                   >
                     {currentSelectionPlayer < players.length - 1 ? t('game.nextPlayer') : t('game.start')}
                   </button>
@@ -808,14 +775,10 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
             <div className="w-full min-w-0">
               <div
                 className={cn(
-                  'relative overflow-hidden rounded-2xl border border-amber-800/20 shadow-[0_20px_60px_rgba(0,0,0,0.6)]',
+                  'relative overflow-hidden rounded-2xl border border-gold/15 bg-felt-deep/70',
                   isMobile ? 'mb-2 p-2' : 'mb-4 md:mb-6 p-3 md:p-5'
                 )}
-                style={{ background: 'radial-gradient(ellipse at 50% -10%, rgba(180,100,8,0.18) 0%, #07060b 60%)' }}
               >
-                {/* Texture subtile */}
-                <div className="pointer-events-none absolute inset-0 opacity-[0.04] [background:repeating-linear-gradient(60deg,rgba(255,255,255,.15)_0px,rgba(255,255,255,.15)_1px,transparent_1px,transparent_28px)]" />
-
                 {/* Pyramide */}
                 {(gameMode === 'fun' || classicGamePhase === 'play') && (
                   <div
@@ -837,8 +800,8 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                           <div className={cn(
                             'mr-2 md:mr-3 flex shrink-0 items-center justify-center rounded-lg font-bold',
                             isTopRow
-                              ? 'border border-red-500/40 bg-red-600/20 px-1.5 py-0.5 text-[9px] md:text-[11px] text-red-300'
-                              : 'h-5 w-5 md:h-7 md:w-7 border border-amber-700/30 bg-amber-900/20 text-[10px] md:text-xs text-amber-400'
+                              ? 'border border-suit-red/40 bg-suit-red/20 px-1.5 py-0.5 text-[11px] text-cream'
+                              : 'h-5 w-5 md:h-7 md:w-7 border border-gold/30 bg-gold/10 font-display text-[10px] md:text-xs text-gold'
                           )}>
                             {isTopRow ? '🔥' : pyramid.length - rowIndex}
                           </div>
@@ -846,51 +809,27 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                           {row.map((card, colIndex) => {
                             const isNext = !!(nextCardToFlip && nextCardToFlip.row === rowIndex && nextCardToFlip.col === colIndex)
                             const isLast = !!(lastFlippedCard && lastFlippedCard.row === rowIndex && lastFlippedCard.col === colIndex)
-                            const isRed = card.suit === 'hearts' || card.suit === 'diamonds'
 
                             return (
                               <motion.div
                                 key={`${rowIndex}-${colIndex}`}
                                 className={cn(
-                                  cardWidth, 'mx-0.5 md:mx-1 rounded-xl flex items-center justify-center shadow-xl border transition-all duration-200',
-                                  card.faceUp
-                                    ? cn('bg-white', isRed ? 'border-red-300/60' : 'border-gray-700/40')
-                                    : 'border-amber-800/30 bg-transparent',
-                                  isNext && !card.faceUp && 'shadow-[0_0_16px_rgba(245,158,11,0.5)] border-amber-400/60',
-                                  isLast && 'scale-105 shadow-[0_0_20px_rgba(52,211,153,0.35)] border-emerald-400/50'
+                                  cardWidth, 'mx-0.5 md:mx-1 rounded-xl flex items-center justify-center transition-all duration-200',
+                                  isNext && !card.faceUp && 'ring-2 ring-gold',
+                                  isLast && 'scale-105 ring-2 ring-gold/60'
                                 )}
                                 animate={card.faceUp ? { rotateY: 0 } : { rotateY: 180 }}
                                 transition={{ duration: 0.45, ease: 'easeOut' }}
                                 style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
                               >
                                 {card.faceUp ? (
-                                  /* Face */
-                                  <div className="relative w-full h-full px-0.5">
-                                    <div className={cn('absolute top-0.5 left-1 text-[9px] md:text-[11px] font-black leading-tight', getCardColor(card.suit))}>
-                                      <div>{card.value}</div>
-                                      <div className="leading-none">{getSuitSymbol(card.suit)}</div>
-                                    </div>
-                                    <div className={cn('absolute inset-0 flex items-center justify-center', getCardColor(card.suit))}>
-                                      <span className={cn(isMobile ? 'text-xl' : 'text-2xl md:text-3xl', 'font-black opacity-80')}>{getSuitSymbol(card.suit)}</span>
-                                    </div>
-                                    <div className={cn('absolute bottom-0.5 right-1 rotate-180 text-[9px] md:text-[11px] font-black leading-tight', getCardColor(card.suit))}>
-                                      <div>{card.value}</div>
-                                      <div className="leading-none">{getSuitSymbol(card.suit)}</div>
-                                    </div>
-                                  </div>
+                                  <PlayingCard suit={GAME_SUIT[card.suit]} rank={card.value} className="flex h-full w-full items-center justify-center">
+                                    <span className={cn(isMobile ? 'text-xl' : 'text-2xl md:text-3xl', 'font-black opacity-80', getCardColor(card.suit))}>{getSuitSymbol(card.suit)}</span>
+                                  </PlayingCard>
                                 ) : (
-                                  /* Dos */
-                                  <div className="relative w-full h-full rounded-xl overflow-hidden" style={{ transform: 'rotateY(180deg)' }}>
-                                    {/* Fond dégradé or/amber */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900" />
-                                    {/* Motif losanges */}
-                                    <div className="absolute inset-0 opacity-15 [background:repeating-linear-gradient(45deg,rgba(0,0,0,.25)_0px,rgba(0,0,0,.25)_3px,transparent_3px,transparent_14px),repeating-linear-gradient(-45deg,rgba(0,0,0,.25)_0px,rgba(0,0,0,.25)_3px,transparent_3px,transparent_14px)]" />
-                                    {/* Bordure intérieure */}
-                                    <div className="absolute inset-[3px] rounded-lg border border-amber-400/20" />
-                                    {/* Ornement central */}
-                                    <div className="absolute inset-0 flex items-center justify-center text-amber-300/30 font-black" style={{ fontSize: isMobile ? '14px' : '18px' }}>🔺</div>
-                                    {/* Glow si prochaine carte */}
-                                    {isNext && <div className="absolute inset-0 bg-amber-400/10 animate-pulse" />}
+                                  <div className="relative w-full h-full rounded-xl" style={{ transform: 'rotateY(180deg)' }}>
+                                    <PlayingCardBack className="h-full w-full" />
+                                    {isNext && <div className="absolute inset-0 rounded-xl bg-gold/10 animate-pulse" />}
                                   </div>
                                 )}
                               </motion.div>
@@ -911,22 +850,22 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                       aria-valuemin={0}
                       aria-valuemax={totalCards}
                       aria-label={t('game.progressAria', { flipped: totalCardsFlipped, total: totalCards })}
-                      className="relative w-full overflow-hidden rounded-full bg-white/[0.05] border border-white/[0.08] h-2 md:h-2.5"
+                      className="relative w-full overflow-hidden rounded-full bg-black/30 h-2 md:h-2.5"
                     >
                       <div
-                        className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 shadow-[0_0_16px_rgba(245,158,11,0.5)] transition-all duration-500"
+                        className="absolute left-0 top-0 h-full rounded-full bg-gold transition-all duration-500"
                         style={{ width: `${(totalCardsFlipped / totalCards) * 100}%` }}
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-amber-400/70">{totalCardsFlipped} / {totalCards}</span>
+                      <span className="font-display text-[11px] text-gold/70">{totalCardsFlipped} / {totalCards}</span>
                       {currentCard && (
-                        <span className="flex items-center gap-1 text-xs font-semibold text-white/70">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-cream/70">
                           {t('game.lastCard')}
-                          <span className={cn('text-sm font-black', getCardColor(currentCard.suit))}>{currentCard.value}{getSuitSymbol(currentCard.suit)}</span>
+                          <span className={cn('text-sm font-black', isRedSuit(currentCard.suit) ? 'text-red-300' : 'text-cream')}>{currentCard.value}{getSuitSymbol(currentCard.suit)}</span>
                         </span>
                       )}
-                      <span className="text-[11px] text-amber-400/70">{Math.round((totalCardsFlipped / totalCards) * 100)}%</span>
+                      <span className="font-display text-[11px] text-gold/70">{Math.round((totalCardsFlipped / totalCards) * 100)}%</span>
                     </div>
                   </div>
                 )}
@@ -936,21 +875,20 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
 
             {/* ── Cartes des joueurs (mode classique) ───────────────────── */}
             {gameMode === 'classic' && classicGamePhase === 'play' && (
-              <div className="rounded-2xl border border-amber-800/20 p-3 md:p-4" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(120,60,5,0.12) 0%, #07060b 70%)' }}>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-amber-400/70">{t('game.playerCards')}</p>
+              <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3 md:p-4">
+                <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.playerCards')}</p>
                 <div className="flex flex-wrap gap-3">
                   {players.map((player) => {
                     const cards = selectedCardsByPlayer[player.id] || []
                     if (cards.length === 0) return null
                     return (
                       <div key={player.id} className="flex items-center gap-2">
-                        <span className={cn('text-xs font-semibold text-white/80 shrink-0', isSpecialPlayer(player) && getSpecialEffectClass(player))}>
+                        <span className={cn('text-xs font-semibold text-cream/80 shrink-0', isSpecialPlayer(player) && getSpecialEffectClass(player))}>
                           {player.name}
                         </span>
                         <div className="flex gap-1">
                           {cards.map((card, cardIndex) => {
                             const isLastFlippedValue = !!(lastFlippedCard && pyramid[lastFlippedCard.row]?.[lastFlippedCard.col]?.value === card.value)
-                            const isRed = card.suit === 'hearts' || card.suit === 'diamonds'
                             return (
                               <button
                                 key={`${player.id}-${card.suit}-${card.value}-${cardIndex}`}
@@ -958,19 +896,19 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                                 aria-pressed={card.faceUp}
                                 onClick={() => setSelectedCardsByPlayer(prev => ({ ...prev, [player.id]: prev[player.id].map((c, i) => i === cardIndex ? { ...c, faceUp: !c.faceUp } : c) }))}
                                 className={cn(
-                                  'flex h-10 w-7 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95',
-                                  card.faceUp
-                                    ? cn('bg-white shadow-md', isLastFlippedValue ? 'border-2 border-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)] scale-110' : isRed ? 'border-red-300/60' : 'border-gray-600/40')
-                                    : 'border-amber-800/25 bg-amber-950/30 text-amber-300/50'
+                                  'flex h-10 w-7 items-center justify-center rounded-xl transition-all duration-200 active:scale-95',
+                                  card.faceUp && isLastFlippedValue && 'ring-2 ring-gold scale-110'
                                 )}
                               >
                                 {card.faceUp ? (
-                                  <div className={cn('text-[10px] font-black leading-none text-center', getCardColor(card.suit))}>
-                                    <div>{card.value}</div>
-                                    <div>{getSuitSymbol(card.suit)}</div>
-                                  </div>
+                                  <PlayingCard corners={false} className="flex h-full w-full items-center justify-center">
+                                    <div className={cn('text-[10px] font-black leading-none text-center', getCardColor(card.suit))}>
+                                      <div>{card.value}</div>
+                                      <div>{getSuitSymbol(card.suit)}</div>
+                                    </div>
+                                  </PlayingCard>
                                 ) : (
-                                  <span className="text-[10px]">🔺</span>
+                                  <PlayingCardBack className="h-full w-full" />
                                 )}
                               </button>
                             )
@@ -987,27 +925,17 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
 
         {/* Barre fixe bas — bouton Suivant (toutes tailles d'écran) */}
         {(gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
-          <div className="fixed bottom-0 inset-x-0 z-20 bg-gradient-to-t from-[#07060b] via-[#07060b]/95 to-transparent backdrop-blur-sm">
+          <div className="fixed bottom-0 inset-x-0 z-20 border-t border-gold/[0.15] bg-felt-deep/95 backdrop-blur-md">
             <div className="mx-auto max-w-2xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <div className="flex items-center gap-3">
                 {/* Carte actuelle */}
                 <div className="shrink-0 w-14">
                   {currentCard ? (
-                    <div className="relative flex h-20 w-14 flex-col items-center justify-center rounded-xl border-2 bg-white shadow-lg"
-                      style={{ borderColor: (currentCard.suit === 'hearts' || currentCard.suit === 'diamonds') ? 'rgba(248,113,113,0.7)' : 'rgba(100,100,100,0.4)' }}
-                    >
-                      <div className={cn('absolute top-1 left-1 text-[9px] font-black leading-none', getCardColor(currentCard.suit))}>
-                        <div>{currentCard.value}</div>
-                        <div>{getSuitSymbol(currentCard.suit)}</div>
-                      </div>
-                      <div className={cn('text-2xl font-black', getCardColor(currentCard.suit))}>{getSuitSymbol(currentCard.suit)}</div>
-                      <div className={cn('absolute bottom-1 right-1 rotate-180 text-[9px] font-black leading-none', getCardColor(currentCard.suit))}>
-                        <div>{currentCard.value}</div>
-                        <div>{getSuitSymbol(currentCard.suit)}</div>
-                      </div>
-                    </div>
+                    <PlayingCard suit={GAME_SUIT[currentCard.suit]} rank={currentCard.value} className="flex h-20 w-14 items-center justify-center">
+                      <span className={cn('text-2xl font-black', getCardColor(currentCard.suit))}>{getSuitSymbol(currentCard.suit)}</span>
+                    </PlayingCard>
                   ) : (
-                    <div className="flex h-20 w-14 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/20 text-xs text-center leading-tight">
+                    <div className="flex h-20 w-14 items-center justify-center rounded-xl border border-gold/20 bg-black/20 text-cream/50 text-xs text-center leading-tight">
                       {t('game.noCard')}
                     </div>
                   )}
@@ -1016,7 +944,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                   onClick={flipNextCard}
                   disabled={gameOver || !nextCardToFlip || isCardFlipping}
                   aria-label={gameOver ? t('game.gameOverAria') : isCardFlipping ? t('game.flippingAria') : t('game.flipNextAria')}
-                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white py-3.5 rounded-2xl font-bold text-base shadow-[0_8px_24px_rgba(245,158,11,0.35)] [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 transition-transform"
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-black py-3.5 rounded-2xl font-bold text-base shadow-none [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 transition-transform"
                 >
                   {gameOver ? t('game.finished') : t('game.next')}
                 </button>
@@ -1037,12 +965,10 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
             {/* Défilable, carte centrée par my-auto (et non items-center) : avec
                 l'avis de première partie, la carte peut dépasser un petit écran,
                 et un contenu centré qui déborde perdait son haut ET ses boutons. */}
-            <div className="relative my-auto w-full max-w-md overflow-hidden rounded-3xl border border-amber-500/20 bg-[#0d0b06] p-6 shadow-2xl">
-              <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #f59e0b, transparent 70%)' }} />
+            <div className="relative my-auto w-full max-w-md overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep p-6 text-cream shadow-2xl">
               <div className="relative space-y-4">
                 <div className="text-center">
-                  <div className="text-4xl mb-2">🏆</div>
-                  <h3 className="text-xl font-extrabold text-amber-300">{t('game.gameFinished')}</h3>
+                  <h3 className="font-display text-xl font-bold text-gold">{t('game.gameFinished')}</h3>
                 </div>
                 {(() => {
                   const res = computeScores()
@@ -1050,27 +976,27 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                   return (
                     <>
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-center">
-                          <p className="text-[10px] text-amber-400/60 uppercase tracking-wide mb-1">{t('game.mostPoints')}</p>
-                          <p className="font-extrabold text-amber-300">{res.max.player?.name}</p>
-                          <p className="text-2xl font-black text-amber-200">{res.max.score}</p>
+                        <div className="rounded-2xl border border-gold/30 bg-gold/10 p-3 text-center">
+                          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75 mb-1">{t('game.mostPoints')}</p>
+                          <p className="font-display font-bold text-cream">{res.max.player?.name}</p>
+                          <p className="font-display text-2xl font-bold text-gold">{res.max.score}</p>
                         </div>
-                        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-center">
-                          <p className="text-[10px] text-red-400/60 uppercase tracking-wide mb-1">{t('game.leastPoints')}</p>
-                          <p className="font-extrabold text-red-300">{res.min.player?.name}</p>
-                          <p className="text-2xl font-black text-red-200">{res.min.score}</p>
+                        <div className="rounded-2xl border border-suit-red/30 bg-suit-red/[0.15] p-3 text-center">
+                          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-red-300 mb-1">{t('game.leastPoints')}</p>
+                          <p className="font-display font-bold text-cream">{res.min.player?.name}</p>
+                          <p className="font-display text-2xl font-bold text-red-300">{res.min.score}</p>
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-2">{t('game.fullScores')}</p>
+                      <div className="rounded-2xl border border-gold/[0.15] bg-black/20 p-3">
+                        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75 mb-2">{t('game.fullScores')}</p>
                         <ul className="grid grid-cols-2 gap-1.5">
                           {players.map(p => {
                             const score = res.scores[p.id] ?? 0
                             return (
-                              <li key={p.id} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.04] px-2.5 py-1.5">
+                              <li key={p.id} className="flex items-center gap-2 rounded-xl border border-gold/20 bg-black/20 px-2.5 py-1.5">
                                 <PlayerAvatar player={p} size="sm" />
-                                <span className="text-xs text-white/75 truncate flex-1">{p.name}</span>
-                                <span className="text-xs font-bold text-amber-300">{score}</span>
+                                <span className="text-xs text-cream/70 truncate flex-1">{p.name}</span>
+                                <span className="font-display text-xs font-bold text-gold">{score}</span>
                               </li>
                             )
                           })}
@@ -1083,13 +1009,13 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={resetGame}
-                    className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3 text-sm font-bold text-white hover:from-amber-400 hover:to-orange-500"
+                    className="flex-1 rounded-2xl bg-amber-500 py-3 text-sm font-bold text-black shadow-none hover:bg-amber-400"
                   >
                     {t('game.replay')}
                   </button>
                   <button
                     onClick={onGameEnd}
-                    className="flex-1 rounded-2xl border border-white/10 bg-white/[0.05] py-3 text-sm text-white/60 hover:bg-white/10 hover:text-white"
+                    className="flex-1 rounded-2xl border border-gold/25 bg-black/20 py-3 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
                   >
                     {t('game.menu')}
                   </button>

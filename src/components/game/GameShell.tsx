@@ -53,7 +53,7 @@ export function GameShell({
         className
       )}
     >
-      <header className="safe-top sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <header className="safe-top sticky top-0 z-30 border-b border-gold/20 bg-felt-deep/90 backdrop-blur-xl">
         <div
           className="game-surface flex items-center gap-2 py-2 pl-14 pr-3 sm:pr-4"
           style={surfaceStyle}
@@ -64,19 +64,19 @@ export function GameShell({
               size="icon"
               onClick={onBack}
               aria-label={t('back')}
-              className="shrink-0"
+              className="shrink-0 rounded-xl border border-gold/20 bg-black/20 text-cream/70 hover:bg-black/30 hover:text-gold"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
           ) : (
             <Link href={backHref} aria-label={t('back')} className="shrink-0">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="rounded-xl border border-gold/20 bg-black/20 text-cream/70 hover:bg-black/30 hover:text-gold">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
           )}
 
-          <h1 className="min-w-0 flex-1 truncate text-center text-lg font-bold sm:text-xl">
+          <h1 className="min-w-0 flex-1 truncate text-center font-display text-lg font-bold text-gold sm:text-xl">
             {title}
           </h1>
 
@@ -100,7 +100,7 @@ export function GameShell({
       </main>
 
       {actionBar && (
-        <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/90 backdrop-blur">
+        <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-gold/[0.15] bg-felt-deep/95 backdrop-blur-md">
           <div
             className="game-surface flex items-center gap-2 px-3 py-3 sm:px-4"
             style={surfaceStyle}

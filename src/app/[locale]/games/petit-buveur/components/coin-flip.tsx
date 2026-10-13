@@ -14,11 +14,11 @@ function CoinFaceContent({ side }: { side: CoinSide }) {
     <div
       className={`flex h-full w-full flex-col items-center justify-center rounded-full border-[3px] shadow-[inset_0_2px_8px_rgba(0,0,0,0.25),0_4px_16px_rgba(0,0,0,0.35)] ${
         isPile
-          ? 'border-slate-300/90 bg-gradient-to-br from-slate-200 via-slate-100 to-slate-300 text-slate-700'
-          : 'border-amber-300/90 bg-gradient-to-br from-amber-300 via-yellow-200 to-amber-400 text-amber-900'
+          ? 'border-gold-strong bg-gold text-[#24201A]'
+          : 'border-gold bg-gold-strong text-[#24201A]'
       }`}
     >
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">
+      <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">
         {isPile ? t('pile') : t('face')}
       </span>
       <span className="mt-0.5 text-3xl font-black sm:text-4xl" aria-hidden>
@@ -59,7 +59,7 @@ export function CoinFlip({ result, isFlipping }: CoinFlipProps) {
       >
         {isFlipping && (
           <motion.div
-            className="pointer-events-none absolute -inset-6 rounded-full bg-amber-400/25 blur-2xl"
+            className="pointer-events-none absolute -inset-6 rounded-full bg-gold/20 blur-2xl"
             animate={{ opacity: [0.2, 0.65, 0.15], scale: [0.85, 1.2, 0.9] }}
             transition={{ duration: 0.55, repeat: Infinity, repeatType: 'reverse' }}
           />

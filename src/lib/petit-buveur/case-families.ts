@@ -8,40 +8,40 @@
 
 export type CaseFamily = 'bonus' | 'malus' | 'move' | 'interactive' | 'neutral'
 
-/** Classes Tailwind par famille (bordure/fond/texte accordés au thème sombre). */
+/** Classes Tailwind par famille (palette « Cartes sur Table » : rouge, vert, bleu jeton, or, crème). */
 export const CASE_FAMILY_STYLE: Record<
   CaseFamily,
   { border: string; bg: string; text: string; chip: string }
 > = {
   bonus: {
     border: 'border-emerald-400/40',
-    bg: 'bg-gradient-to-br from-emerald-500/15 to-teal-500/10',
+    bg: 'bg-emerald-600/20',
     text: 'text-emerald-200',
-    chip: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-100',
+    chip: 'border-emerald-400/30 bg-emerald-600/20 text-emerald-100',
   },
   malus: {
-    border: 'border-red-400/40',
-    bg: 'bg-gradient-to-br from-red-500/15 to-rose-500/10',
+    border: 'border-suit-red/50',
+    bg: 'bg-suit-red/[0.15]',
     text: 'text-red-200',
-    chip: 'border-red-400/30 bg-red-500/15 text-red-100',
+    chip: 'border-suit-red/40 bg-suit-red/20 text-cream',
   },
   move: {
-    border: 'border-sky-400/40',
-    bg: 'bg-gradient-to-br from-sky-500/15 to-cyan-500/10',
-    text: 'text-sky-200',
-    chip: 'border-sky-400/30 bg-sky-500/15 text-sky-100',
+    border: 'border-chip-blue/60',
+    bg: 'bg-chip-blue/30',
+    text: 'text-sky-100',
+    chip: 'border-chip-blue/50 bg-chip-blue/30 text-cream',
   },
   interactive: {
-    border: 'border-violet-400/40',
-    bg: 'bg-gradient-to-br from-violet-500/15 to-purple-500/10',
-    text: 'text-violet-200',
-    chip: 'border-violet-400/30 bg-violet-500/15 text-violet-100',
+    border: 'border-gold/50',
+    bg: 'bg-gold/[0.12]',
+    text: 'text-gold',
+    chip: 'border-gold/40 bg-gold/[0.15] text-gold',
   },
   neutral: {
-    border: 'border-white/15',
-    bg: 'bg-white/5',
-    text: 'text-white/70',
-    chip: 'border-white/15 bg-white/10 text-white/70',
+    border: 'border-gold/20',
+    bg: 'bg-black/20',
+    text: 'text-cream/70',
+    chip: 'border-gold/20 bg-black/25 text-cream/70',
   },
 }
 
