@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import { playGameSound } from '@/lib/sound/game-sounds'
 
 /**
@@ -57,6 +58,7 @@ export function DiceOverlay({
   onSkip?: () => void
   skipLabel?: string
 }) {
+  const t = useTranslations('games.petit-buveur')
   const reduced = useReducedMotion()
   // Faces qui défilent pendant le lancer (purement visuel, le résultat est déjà tiré).
   const [spinFace, setSpinFace] = useState(1)
@@ -77,7 +79,21 @@ export function DiceOverlay({
     else if (phase === 'result') playGameSound('dice-result')
   }, [phase])
 
+  const announcement = !state
+    ? ''
+    : state.phase === 'rolling'
+      ? t('diceOverlay.rolling', { name: state.playerName })
+      : t('diceOverlay.result', { name: state.playerName, value: state.value })
+
+  // La région live reste montée, vide hors lancer : une région qui n'apparaît
+  // qu'avec son texte n'est pas annoncée par tous les lecteurs (VoiceOver iOS).
+  // Nom et dé de l'overlay sont masqués aux aides techniques (doublon de cette
+  // région) ; l'invite « toucher pour passer » y reste atteignable.
   return (
+    <>
+    <div role="status" aria-live="polite" className="sr-only">
+      {announcement}
+    </div>
     <AnimatePresence>
       {state && (
         <motion.div
@@ -89,12 +105,10 @@ export function DiceOverlay({
             'fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-sm ' +
             (onSkip ? 'cursor-pointer' : 'pointer-events-none')
           }
-          role="status"
-          aria-live="polite"
           onClick={onSkip}
         >
           <div className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-2 rounded-full border border-gold/20 bg-felt-deep/90 px-4 py-1.5">
+            <div className="flex items-center gap-2 rounded-full border border-gold/20 bg-felt-deep/90 px-4 py-1.5" aria-hidden>
               <span className="flex h-6 w-6 items-center justify-center text-base leading-none" aria-hidden>
                 {state.playerIcon}
               </span>
@@ -126,5 +140,6 @@ export function DiceOverlay({
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   )
 }

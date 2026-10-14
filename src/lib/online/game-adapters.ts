@@ -3,13 +3,20 @@ import {
   serializeEngineState,
   applyRoomAction,
   applyBotAction,
+  applyTimeoutAction,
   convertPlayerToBot,
+  deciderPlaysAuto,
   replaceExpiredWithBots,
   markPlayerLeft,
   rejoinPlayer,
   toClientView,
 } from '@/lib/petit-buveur/server-adapter'
-import { currentPlayerId, type EngineState } from '@/lib/petit-buveur/engine'
+import {
+  currentDeciderId,
+  INVALID_CHOICE,
+  INVALID_TARGET,
+  type EngineState,
+} from '@/lib/petit-buveur/engine'
 import {
   parseTCState,
   serializeTCState,
@@ -486,6 +493,13 @@ const petitBuveurAdapter: GameAdapter = {
       if (!result.ok) return { ok: false, error: result.error, status: 403 }
       return { ok: true, state: result.state }
     }
+    // Échéance du choix pile ou face de la cible : côté tiré au hasard.
+    if (body.action === 'advance') {
+      const result = applyTimeoutAction(state, Date.now())
+      if (!result.ok) return { ok: false, error: result.error, status: 409 }
+      return { ok: true, state: result.state }
+    }
+    // Le moteur valide chaque champ du choix (cible, côté, verdict, option).
     const input =
       body.action === 'resolve'
         ? {
@@ -497,12 +511,18 @@ const petitBuveurAdapter: GameAdapter = {
           }
         : { type: 'roll' as const }
     const result = applyRoomAction(state, userId, input)
-    if (!result.ok) return { ok: false, error: result.error, status: 403 }
+    if (!result.ok) {
+      if (result.error === INVALID_TARGET || result.error === INVALID_CHOICE) {
+        return { ok: false, error: 'invalid_action', status: 400 }
+      }
+      return { ok: false, error: result.error, status: 403 }
+    }
     return { ok: true, state: result.state }
   },
   convertToBot: (state, userId) => convertPlayerToBot(state as EngineState, userId),
   isFinished: (state) => (state as EngineState).phase === 'finished',
-  currentActorId: (state) => currentPlayerId(state as EngineState),
+  // Pendant l'étape pile ou face de la cible, c'est elle « au tour » (bots, AFK).
+  currentActorId: (state) => currentDeciderId(state as EngineState),
   clientViewJson: (state) => JSON.stringify(toClientView(state as EngineState)),
   spectatorViewJson: (state) => JSON.stringify(toClientView(state as EngineState)),
   // `viewJson` en plus de `view` : c'est la chaîne (identique à
@@ -515,12 +535,18 @@ const petitBuveurAdapter: GameAdapter = {
   },
   markLeft: (state, userId, at) => markPlayerLeft(state as EngineState, userId, at),
   rejoin: (state, userId) => rejoinPlayer(state as EngineState, userId),
-  // PetitBuveurOnline : tour d'un bot → un coup, au tempo de son persona.
+  // PetitBuveurOnline : décision d'un bot ou d'un joueur parti → un coup, au
+  // tempo d'un bot ; cible humaine de pile ou face → tirage à l'échéance.
   serviceTick(rawState, now, options) {
     const state = rawState as EngineState
-    const actor = state.players[state.currentPlayer]
+    if (state.phase === 'finished') return null
+    const deciderId = currentDeciderId(state)
+    const decider = state.players.find((p) => p.id === deciderId)
+    const auto = deciderPlaysAuto(state)
+    const deadlineAt = state.pending?.stage === 'side' ? state.pending.deadlineAt : undefined
     return serviceTickOf(state.players, now, options, {
-      botDelayMs: (rand) => (actor?.isBot ? botTickDelayMs(actor.name, rand) : null),
+      advance: deadlineAt != null ? { body: { action: 'advance' }, dueAt: deadlineAt } : null,
+      botDelayMs: (rand) => (auto ? botTickDelayMs(decider?.name, rand) : null),
     })
   },
 }

@@ -1,3 +1,5 @@
+import { getCaseTypePool } from '@/lib/petit-buveur/case-generator'
+
 export type CaseType =
   | 'normal'
   | 'defi'
@@ -63,48 +65,6 @@ const difficultyMultipliers: Record<Difficulty, number> = {
   extreme: 4,
 }
 
-/** Poids relatifs — cases courantes un peu plus fréquentes */
-const CASE_TYPE_POOL: { type: CaseType; weight: number }[] = [
-  { type: 'gorgée', weight: 7 },
-  { type: 'defi', weight: 5 },
-  { type: 'normal', weight: 4 },
-  { type: 'recul', weight: 3 },
-  { type: 'avance', weight: 3 },
-  { type: 'tous', weight: 3 },
-  { type: 'roue', weight: 2 },
-  { type: 'echange', weight: 2 },
-  { type: 'bombe', weight: 2 },
-  { type: 'protection', weight: 2 },
-  { type: 'malediction', weight: 2 },
-  { type: 'chance', weight: 2 },
-  { type: 'repetition', weight: 2 },
-  { type: 'miroir', weight: 2 },
-  { type: 'defi-chaine', weight: 2 },
-  { type: 'piege', weight: 2 },
-  { type: 'melange', weight: 2 },
-  { type: 'passe-tour', weight: 2 },
-  { type: 'double-peine', weight: 2 },
-  { type: 'solo', weight: 2 },
-  { type: 'copie', weight: 2 },
-  { type: 'roulette-russe', weight: 2 },
-  { type: 'teleport', weight: 2 },
-  { type: 'grappin', weight: 2 },
-  { type: 'ancre', weight: 2 },
-  { type: 'case-bonus', weight: 2 },
-  { type: 'recul-groupe', weight: 2 },
-  { type: 'pont', weight: 2 },
-  { type: 'question', weight: 2 },
-  { type: 'vote', weight: 2 },
-  { type: 'miroir-inverse', weight: 2 },
-  { type: 'rewind', weight: 2 },
-  { type: 'loterie', weight: 2 },
-  { type: 'inversion', weight: 2 },
-  { type: 'double-case', weight: 1 },
-  { type: 'roue-defis', weight: 2 },
-  { type: 'de-honte', weight: 2 },
-  { type: 'pile-face', weight: 2 },
-]
-
 type DefiItem = { text: string; drinks: number; verifiableOnline?: boolean }
 
 function getDefis(t: PetitBuveurT): DefiItem[] {
@@ -123,14 +83,20 @@ export function getCaseTypeLabel(type: CaseType, t: PetitBuveurT): string {
   return t(`caseTypes.${type}`)
 }
 
-export function pickCaseType(): CaseType {
-  const total = CASE_TYPE_POOL.reduce((s, e) => s + e.weight, 0)
+/** Même pondération par difficulté que le moteur en ligne (roue des défis comprise). */
+export function pickCaseType(
+  difficulty: Difficulty = 'normal',
+  exclude?: Iterable<CaseType>,
+): CaseType {
+  const pool = getCaseTypePool(difficulty, exclude ? new Set(exclude) : undefined)
+  if (pool.length === 0) return 'normal'
+  const total = pool.reduce((s, e) => s + e.weight, 0)
   let r = Math.random() * total
-  for (const entry of CASE_TYPE_POOL) {
+  for (const entry of pool) {
     r -= entry.weight
     if (r <= 0) return entry.type
   }
-  return 'gorgée'
+  return pool[pool.length - 1].type
 }
 
 /** Cases sans choix de cible (résolues au lancer / après le dé) */
@@ -157,8 +123,12 @@ export const CASES_SPECIAL_MODAL = new Set<CaseType>([
   'double-case',
 ])
 
-export function generateCase(difficulty: Difficulty, t: PetitBuveurT): Case {
-  const type = pickCaseType()
+export function generateCase(
+  difficulty: Difficulty,
+  t: PetitBuveurT,
+  exclude?: Iterable<CaseType>,
+): Case {
+  const type = pickCaseType(difficulty, exclude)
   const multiplier = difficultyMultipliers[difficulty]
 
   switch (type) {

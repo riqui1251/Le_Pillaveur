@@ -21,8 +21,13 @@ const difficultyMultipliers: Record<Difficulty, number> = {
   extreme: 4,
 }
 
-/** Poids relatifs — identiques à case-config.ts. */
-const CASE_TYPE_POOL: { type: CaseType; weight: number }[] = [
+export type CaseTypeWeight = { type: CaseType; weight: number }
+
+/**
+ * Poids de base (niveau Normal), source unique du tirage local (case-config.ts)
+ * et en ligne. La difficulté les module par famille : voir `getCaseTypePool`.
+ */
+export const CASE_TYPE_BASE_WEIGHTS: readonly CaseTypeWeight[] = [
   { type: 'gorgée', weight: 7 },
   { type: 'defi', weight: 5 },
   { type: 'normal', weight: 4 },
@@ -58,12 +63,65 @@ const CASE_TYPE_POOL: { type: CaseType; weight: number }[] = [
   { type: 'loterie', weight: 2 },
   { type: 'inversion', weight: 2 },
   { type: 'double-case', weight: 1 },
-  // 'roue-defis' est volontairement ABSENTE du tirage en ligne : sans défis
-  // réalisables à distance, elle se réduisait à un pile-ou-face de gorgées.
-  // Sa résolution reste supportée (états de parties déjà en cours).
+  { type: 'roue-defis', weight: 2 },
   { type: 'de-honte', weight: 2 },
   { type: 'pile-face', weight: 2 },
 ]
+
+type WeightFamily = 'drink' | 'challenge' | 'calm'
+
+/** Familles visées par les descriptions des niveaux (page.difficulties.*.desc). */
+const WEIGHT_FAMILY: Partial<Record<CaseType, WeightFamily>> = {
+  'gorgée': 'drink',
+  tous: 'drink',
+  solo: 'drink',
+  'double-peine': 'drink',
+  bombe: 'drink',
+  'roulette-russe': 'drink',
+  malediction: 'drink',
+  vote: 'drink',
+  inversion: 'drink',
+  defi: 'challenge',
+  question: 'challenge',
+  'defi-chaine': 'challenge',
+  'roue-defis': 'challenge',
+  normal: 'calm',
+  protection: 'calm',
+  chance: 'calm',
+  'case-bonus': 'calm',
+  avance: 'calm',
+}
+
+// Normal reste à 1 partout : le tirage Normal est inchangé, graine pour graine.
+const DIFFICULTY_FAMILY_FACTORS: Record<Difficulty, Record<WeightFamily, number>> = {
+  facile: { drink: 0.5, challenge: 0.75, calm: 1.75 },
+  normal: { drink: 1, challenge: 1, calm: 1 },
+  difficile: { drink: 1.5, challenge: 2, calm: 0.6 },
+  extreme: { drink: 2, challenge: 2.5, calm: 0.35 },
+}
+
+/** Pondération effective d'un niveau, privée des types exclus (ordre de base conservé). */
+export function getCaseTypePool(
+  difficulty: Difficulty,
+  exclude?: ReadonlySet<CaseType>,
+): CaseTypeWeight[] {
+  const factors = DIFFICULTY_FAMILY_FACTORS[difficulty] ?? DIFFICULTY_FAMILY_FACTORS.normal
+  return CASE_TYPE_BASE_WEIGHTS.filter((entry) => !exclude?.has(entry.type)).map((entry) => {
+    const family = WEIGHT_FAMILY[entry.type]
+    return { type: entry.type, weight: family ? entry.weight * factors[family] : entry.weight }
+  })
+}
+
+// 'roue-defis' n'est jamais tirée en ligne : sans défis réalisables à distance,
+// elle se réduisait à un pile-ou-face de gorgées. Sa résolution reste supportée
+// (états de parties déjà en cours).
+const ONLINE_EXCLUDED: readonly CaseType[] = ['roue-defis']
+
+function onlineExclusions(extra?: Iterable<CaseType>): Set<CaseType> {
+  const set = new Set<CaseType>(ONLINE_EXCLUDED)
+  if (extra) for (const type of extra) set.add(type)
+  return set
+}
 
 export interface CaseGenContext {
   difficulty: Difficulty
@@ -73,19 +131,28 @@ export interface CaseGenContext {
   defiDrinks: number[]
   /** Indices de défis autorisés au tirage (absent = tous). */
   defiAllowed?: number[]
+  /** Types interdits pour ce tirage (ex. « Double case » : cases simples seulement). */
+  excludeTypes?: Iterable<CaseType>
 }
 
-export function pickCaseType(rng: SeededRng): CaseType {
-  return rng.weightedPick(CASE_TYPE_POOL).type
+export function pickCaseType(
+  rng: SeededRng,
+  difficulty: Difficulty = 'normal',
+  exclude?: Iterable<CaseType>,
+): CaseType {
+  const pool = getCaseTypePool(difficulty, onlineExclusions(exclude))
+  if (pool.length === 0) return 'normal'
+  return rng.weightedPick(pool).type
 }
 
 export function generateCase(rng: SeededRng, ctx: CaseGenContext): EngineCase {
+  const excluded = ctx.excludeTypes ? new Set(ctx.excludeTypes) : null
   const boost = ctx.boostPercent ?? 0
-  if (boost > 0 && rng.next() * 100 < boost) {
+  if (boost > 0 && !excluded?.has('avance') && rng.next() * 100 < boost) {
     return { type: 'avance', effect: rng.int(1, 3) }
   }
 
-  const type = pickCaseType(rng)
+  const type = pickCaseType(rng, ctx.difficulty, excluded ?? undefined)
   const multiplier = difficultyMultipliers[ctx.difficulty]
 
   switch (type) {

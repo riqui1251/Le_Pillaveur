@@ -63,7 +63,13 @@ export type PmuCastFrame = {
 /**
  * Petit Buveur LOCAL : plateau 30 cases + pions. Tour par tour → pas de trame
  * (les positions changent au lancer, capturées par le payload principal).
- * Compatible avec le rendu `TvPetitBuveur` (mêmes champs lus).
+ * Rendu par `TvPetitBuveur`, comme la partie en ligne.
+ *
+ * `dice` et `reveal` remplacent, pour le jeu local, le couple
+ * `version`/`lastDice`/`lastCase` de l'état en ligne : la TV rejoue le dé à
+ * chaque nouveau `dice.seq` et la carte de case à chaque nouveau `reveal.seq`
+ * (après la fin du dé s'il est encore à l'écran). Les `seq` ne doivent jamais
+ * revenir en arrière pendant une diffusion, sinon la TV ne rejoue rien.
  */
 export type PetitBuveurCastState = {
   castKind: 'petit-buveur'
@@ -71,6 +77,12 @@ export type PetitBuveurCastState = {
   currentPlayer: number
   phase: 'playing' | 'finished'
   winner: string | null
+  /** Dernier lancer (valeur 1..6). Absent tant que personne n'a lancé. */
+  dice?: { value: number; seq: number } | null
+  /** Dernière case révélée (`CaseType` du jeu). Absent tant qu'aucune case n'est tombée. */
+  reveal?: { caseType: string; seq: number } | null
+  /** Ambiance de la table qui diffuse : en Soft, la TV n'affiche aucune bière. */
+  ambiance?: 'alcool' | 'soft'
 }
 
 export type CastState = PlinkoCastState | PmuCastState | PetitBuveurCastState

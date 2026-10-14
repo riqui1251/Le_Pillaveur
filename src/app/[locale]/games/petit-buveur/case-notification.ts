@@ -218,6 +218,12 @@ export function outcomeFromLegacyHtml(html: string): EffectOutcome {
   return { type: 'i18n', key: '__legacy__', htmlParams: { body: html } }
 }
 
+/** Résumé des effets en cours : la ponctuation du titre est celle de sa langue (« Effets en cours : », « Current effects: »). */
+export function buildEffectsSummaryHtml(t: PetitBuveurT, lines: readonly string[]): string {
+  if (lines.length === 0) return `<em>${t('game.effects.none')}</em>`
+  return `<strong>${t('game.effects.active')}</strong>\n${lines.join('\n')}`
+}
+
 export function protectedBadgeHtml(t: PetitBuveurT): string {
   return `<span class="rounded-md border border-emerald-400/30 bg-emerald-600/20 px-2 py-1 font-bold text-emerald-100">${t('game.effects.protected')}</span>`
 }

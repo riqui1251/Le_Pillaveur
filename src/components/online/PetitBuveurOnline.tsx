@@ -3,13 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Dice6, ArrowLeft, Beer, Trophy, Sparkles, Target, Shuffle, User, HelpCircle, History, X, Volume2, VolumeX } from 'lucide-react'
+import { Dice6, ArrowLeft, Beer, Leaf, Trophy, Sparkles, Shuffle, User, HelpCircle, History, X, Volume2, VolumeX, Coins, Gavel, Clover } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { EndConfetti } from './EndConfetti'
 import { PhaseCountdown } from './PhaseCountdown'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PLAYER_ICONS } from '@/lib/players'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
@@ -18,8 +17,28 @@ import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { DiceOverlay, type DiceOverlayState } from '@/components/petit-buveur/DiceOverlay'
 import { TurnOverlay } from '@/components/petit-buveur/TurnOverlay'
-import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositions'
-import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount } from '@/components/petit-buveur/drink-feedback'
+import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount, drinkIcon } from '@/components/petit-buveur/drink-feedback'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
+import {
+  ALCOHOL_DEFI_INDEXES,
+  resolveAmbianceMode,
+  withAmbiance,
+} from '@/app/[locale]/games/petit-buveur/ambiance'
+import type { PetitBuveurT } from '@/app/[locale]/games/petit-buveur/case-config'
+import { ChoiceSheet, PRIMARY_CHOICE, SECONDARY_CHOICE } from './petit-buveur/ChoiceSheet'
+import { useBoardSequence } from './petit-buveur/useBoardSequence'
+import {
+  choiceOf,
+  deciderIdOf,
+  defiTextAt,
+  landingIndex,
+  noteMessage,
+  outcomeSignature,
+  randomTargetPool,
+  rankByShown,
+  shownDrinks,
+  type EngineView,
+} from './petit-buveur/view-helpers'
 import { useGameSounds } from '@/hooks/useGameSounds'
 import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
 import { getCaseMeta } from '@/lib/petit-buveur/case-families'
@@ -29,7 +48,7 @@ import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerT
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
-import type { EngineState } from '@/lib/petit-buveur/engine'
+import type { LastOutcome, LastOutcomeChange, OutcomeNote } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
 /**
@@ -50,11 +69,16 @@ const DIFFICULTY_EMOJI: Record<string, string> = { facile: '🌱', normal: '🌟
  */
 const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 
-/** Cases interactives qui demandent de choisir un joueur cible. */
-const TARGET_INTERACTIVE = new Set(['vote', 'echange', 'pile-face', 'defi-chaine'])
+/** Laisse voir le pion arrivé (case 30) avant la fanfare et l'écran de fin. */
+const END_REVEAL_DELAY_MS = 500
 
-/** Vue client de l'état moteur (rngState absent de la réponse serveur). */
-type EngineView = Omit<EngineState, 'rngState'>
+type ResolveChoice = {
+  targetId?: string
+  side?: 'pile' | 'face'
+  option?: string
+  succeeded?: boolean
+  chanceChoice?: 'reroll' | 'plus2'
+}
 
 function parseView(json: string | null | undefined): EngineView | null {
   if (!json) return null
@@ -85,11 +109,20 @@ type EffectChip = {
 export function PetitBuveurOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
-  const t = useTranslations('games.petit-buveur.online')
-  const tPB = useTranslations('games.petit-buveur')
-  const tCase = useTranslations('games.petit-buveur.caseTypes')
-  const tGame = useTranslations('games.petit-buveur.game')
+  const basePB = useTranslations('games.petit-buveur') as PetitBuveurT
+  // Ambiance Soft : chaque texte tente d'abord sa variante `soft.<clé>` (gages).
+  const { mode: ambianceMode } = useAmbianceMode()
+  const ambiance = resolveAmbianceMode(ambianceMode)
+  const tPB = useMemo(() => withAmbiance(basePB, ambiance), [basePB, ambiance])
+  const t = useMemo(() => {
+    const scoped = ((key: string, values?: Record<string, string | number>) =>
+      tPB(`online.${key}`, values)) as PetitBuveurT
+    scoped.raw = (key: string) => tPB.raw(`online.${key}`)
+    return scoped
+  }, [tPB])
+  const tGame = (key: string, values?: Record<string, string | number>) => tPB(`game.${key}`, values)
   const tDiff = useTranslations('games.petit-buveur.difficultyLabels')
+  const DrinkGlyph = ambiance === 'soft' ? Leaf : Beer
   const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
   const [rolling, setRolling] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
@@ -118,23 +151,26 @@ export function PetitBuveurOnline() {
   // - tour d'un bot → demande au serveur de jouer UNE action (rythme visible) ;
   // - joueur parti depuis plus de 3 min → demande son remplacement par un bot.
   // La garde expectedVersion rend les ticks concurrents inoffensifs.
-  const activeActor = view?.players[view.currentPlayer]
+  // Le DÉCIDEUR, pas forcément le joueur au tour : la cible choisit pile ou face.
+  const deciderId = view ? deciderIdOf(view) : null
+  const decider = view?.players.find((p) => p.id === deciderId)
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
     userId: user?.id,
     players: view?.players,
     enabled: Boolean(view && user && room && view.phase !== 'finished'),
-    botTick: activeActor?.isBot
-      ? { body: { action: 'bot' }, delayMs: botTickDelayMs(activeActor.name) }
+    // Joueur parti : le serveur joue aussi sa décision en attente (deciderPlaysAuto).
+    botTick: decider?.isBot || decider?.leftAt
+      ? { body: { action: 'bot' }, delayMs: botTickDelayMs(decider.name) }
       : null,
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
   })
 
-  // Tick AFK : si le joueur au tour (humain, présent, pas moi) ne joue rien
+  // Tick AFK : si le décideur (humain, présent, pas moi) ne joue rien
   // pendant 3 min, n'importe quel autre client demande son remplacement —
   // le serveur revalide avec SA propre horloge avant d'expulser.
-  const afkTarget = view && view.phase !== 'finished' ? activeActor : undefined
+  const afkTarget = view && view.phase !== 'finished' ? decider : undefined
   // Surveillé seulement s'il reste un AUTRE humain présent : sans lui, personne
   // ne peut déclencher l'expulsion (le dernier humain n'est jamais expulsable).
   const afkWatchable = Boolean(
@@ -164,22 +200,16 @@ export function PetitBuveurOnline() {
 
   const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
 
-  // Pions animés case par case + feedback gorgées (voir src/components/petit-buveur/).
-  const positionsById = useMemo(() => {
-    const rec: Record<string, number> = {}
-    for (const p of view?.players ?? []) rec[p.id] = p.position
-    return rec
-  }, [view])
-  // Pions gelés tant que l'overlay du dé est affiché : le déplacement ne
-  // démarre qu'après la lecture du résultat (séquence dé → hop → case).
-  const { positions: shownPositions } = useSteppedPositions(positionsById, {
-    frozen: Boolean(diceOverlay),
-  })
-  const drinksById = useMemo(() => {
-    const rec: Record<string, number> = {}
-    for (const p of view?.players ?? []) rec[p.id] = p.drinks
-    return rec
-  }, [view])
+  // Pions animés case par case : gelés tant que l'overlay du dé est affiché,
+  // puis case du dé → pause → effet de la case (voir useBoardSequence).
+  const board = useBoardSequence(view, Boolean(diceOverlay))
+  const shownPositions = board.positions
+  const boardSettled = !diceOverlay && !board.animating
+  // Les gorgées de la case tombent avec son effet, pas pendant que le pion marche vers elle.
+  const drinksById = useMemo(
+    () => shownDrinks(view?.players ?? [], board.effectPending ? view?.lastOutcome : null),
+    [view, board.effectPending]
+  )
   const drinkDeltas = useDrinkDeltas(drinksById)
 
   // Mémorise le dé de la vue courante (voir rollFallbackRef dans handleRoll).
@@ -187,14 +217,25 @@ export function PetitBuveurOnline() {
     rollFallbackRef.current = view?.lastDice ?? null
   }, [view])
 
-  // Sons : fanfare de victoire (une seule fois) + toggle mute dans l'en-tête.
+  // Fin de partie dévoilée seulement quand le dé est lu et que le pion est
+  // arrivé : l'état « finished » arrive avec la réponse du lancer gagnant.
   const { muted, toggleMuted, play } = useGameSounds()
   const finishedNow = Boolean(view && (view.phase === 'finished' || view.winner))
-  const prevFinishedRef = useRef(false)
+  const [endRevealed, setEndRevealed] = useState(false)
   useEffect(() => {
-    if (finishedNow && !prevFinishedRef.current) play('victory')
-    prevFinishedRef.current = finishedNow
-  }, [finishedNow, play])
+    if (!finishedNow) {
+      setEndRevealed(false)
+      return
+    }
+    if (!boardSettled || endRevealed) return
+    const timer = setTimeout(() => setEndRevealed(true), END_REVEAL_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [finishedNow, boardSettled, endRevealed])
+  const prevRevealedRef = useRef(false)
+  useEffect(() => {
+    if (endRevealed && !prevRevealedRef.current) play('victory')
+    prevRevealedRef.current = endRevealed
+  }, [endRevealed, play])
 
   // Tant que la partie n'est pas lancée : le lobby gère création/join/prêt/lancer.
   if (!inGame) {
@@ -213,7 +254,25 @@ export function PetitBuveurOnline() {
   const isMyTurn = active?.id === user.id
   const finished = view.phase === 'finished' || Boolean(view.winner)
   const winner = view.winner ? view.players.find((p) => p.id === view.winner) : null
-  const caseLabel = (type: string) => tCase(type)
+  const caseLabel = (type: string) => tPB(`caseTypes.${type}`)
+  const nameOf = (id: string | null | undefined) => view.players.find((p) => p.id === id)?.name ?? ''
+  const pending = view.pending
+  const isMyDecision = Boolean(pending) && deciderId === user.id && !finished
+  const choice = pending ? choiceOf(pending) : null
+  // HUD, classement et surbrillance suivent le pion qui marche : pendant
+  // l'animation, c'est encore l'acteur de la case qui « a la main » à l'écran.
+  const shownTurnPlayer =
+    (board.animatedActorId && view.players.find((p) => p.id === board.animatedActorId)) || active
+  const defiText = (index: number | undefined) =>
+    typeof index === 'number'
+      ? defiTextAt(
+          basePB.raw('defis') as { text: string }[],
+          ambiance === 'soft' && basePB.has?.('soft.defis') ? (basePB.raw('soft.defis') as { text: string }[]) : null,
+          ALCOHOL_DEFI_INDEXES,
+          index,
+          ambiance === 'soft'
+        )
+      : undefined
   const difficulty = room.settings?.difficulty && room.settings.difficulty in DIFFICULTY_EMOJI
     ? room.settings.difficulty
     : 'normal'
@@ -231,20 +290,20 @@ export function PetitBuveurOnline() {
   // Positions AFFICHÉES (le pion avance case par case, l'état réel a déjà sauté).
   const shownPosOf = (id: string) => shownPositions[id] ?? view.players.find((p) => p.id === id)?.position ?? 0
   const leaderPos = Math.max(...view.players.map((p) => shownPosOf(p.id)))
-  const activeShownPos = active ? shownPosOf(active.id) : null
+  const activeShownPos = shownTurnPlayer ? shownPosOf(shownTurnPlayer.id) : null
 
   const effectChips: EffectChip[] = []
   view.players.forEach((p) => {
     if (p.protected && (p.protectionTurnsLeft ?? 0) > 0) {
       effectChips.push({
         id: `prot-${p.id}`, icon: '🛡️', title: tGame('effects.protection'), desc: tGame('effects.protectionDesc'),
-        remaining: p.protectionTurnsLeft ?? 1, playerName: p.name, accent: 'border-blue-400/50 bg-blue-500/15',
+        remaining: p.protectionTurnsLeft ?? 1, playerName: p.name, accent: 'border-blue-400/50 bg-blue-500/[0.15]',
       })
     }
     if (p.cursed > 0) {
       effectChips.push({
         id: `curse-${p.id}`, icon: '👻', title: tGame('effects.curse'), desc: tGame('effects.curseDesc'),
-        remaining: p.cursed, playerName: p.name, accent: 'border-red-400/50 bg-red-500/15',
+        remaining: p.cursed, playerName: p.name, accent: 'border-red-400/50 bg-red-500/[0.15]',
       })
     }
     if (p.linkedTo && (p.linkedTurns ?? 0) > 0) {
@@ -258,39 +317,40 @@ export function PetitBuveurOnline() {
     if (p.skipNextTurn) {
       effectChips.push({
         id: `skip-${p.id}`, icon: '⏭️', title: tGame('effects.skipTurn'), desc: tGame('effects.skipTurnDesc'),
-        remaining: 1, playerName: p.name, accent: 'border-slate-400/50 bg-slate-500/15',
+        remaining: 1, playerName: p.name, accent: 'border-slate-400/50 bg-slate-500/[0.15]',
       })
     }
     if (p.anchored) {
       effectChips.push({
         id: `anchor-${p.id}`, icon: '⚓', title: tGame('effects.anchor'), desc: tGame('effects.anchorDesc'),
-        remaining: 1, playerName: p.name, accent: 'border-cyan-400/50 bg-cyan-500/15',
+        remaining: 1, playerName: p.name, accent: 'border-cyan-400/50 bg-cyan-500/[0.15]',
       })
     }
   })
 
   /** Légende statique de tous les effets possibles (mêmes icônes/couleurs que les pastilles actives). */
   const legendEffects = [
-    { icon: '🛡️', title: tGame('effects.protection'), desc: tGame('effects.protectionDesc'), accent: 'border-blue-400/50 bg-blue-500/15' },
-    { icon: '👻', title: tGame('effects.curse'), desc: tGame('effects.curseDesc'), accent: 'border-red-400/50 bg-red-500/15' },
+    { icon: '🛡️', title: tGame('effects.protection'), desc: tGame('effects.protectionDesc'), accent: 'border-blue-400/50 bg-blue-500/[0.15]' },
+    { icon: '👻', title: tGame('effects.curse'), desc: tGame('effects.curseDesc'), accent: 'border-red-400/50 bg-red-500/[0.15]' },
     { icon: '🔗', title: tGame('effects.chain'), desc: tGame('effects.chainDesc'), accent: 'border-chip-blue/60 bg-chip-blue/20' },
-    { icon: '⏭️', title: tGame('effects.skipTurn'), desc: tGame('effects.skipTurnDesc'), accent: 'border-slate-400/50 bg-slate-500/15' },
-    { icon: '⚓', title: tGame('effects.anchor'), desc: tGame('effects.anchorDesc'), accent: 'border-cyan-400/50 bg-cyan-500/15' },
+    { icon: '⏭️', title: tGame('effects.skipTurn'), desc: tGame('effects.skipTurnDesc'), accent: 'border-slate-400/50 bg-slate-500/[0.15]' },
+    { icon: '⚓', title: tGame('effects.anchor'), desc: tGame('effects.anchorDesc'), accent: 'border-cyan-400/50 bg-cyan-500/[0.15]' },
   ]
 
-  const ranking = [...view.players].sort((a, b) => b.position - a.position)
+  const ranking = rankByShown(view.players, shownPosOf)
+  const finalRanking = [...view.players].sort((a, b) => b.position - a.position)
   const rankBorder = (i: number) =>
     i === 0
-      ? 'border-amber-400/35 bg-amber-500/10'
+      ? 'border-amber-400/[0.35] bg-amber-500/10'
       : i === 1
-        ? 'border-white/15 bg-white/5'
+        ? 'border-white/[0.15] bg-white/5'
         : i === 2
           ? 'border-orange-500/25 bg-orange-600/10'
-          : 'border-white/8 bg-white/3'
+          : 'border-white/[0.08] bg-white/[0.03]'
 
   const sendAction = async (
     action: 'roll' | 'resolve',
-    choice?: { targetId?: string; side?: 'pile' | 'face'; option?: string }
+    choice?: ResolveChoice
   ): Promise<{ view?: { lastDice?: number | null } } | null> => {
     // Le serveur diffuse le nouvel état (SSE) → useOnlineRoom rafraîchit la vue ;
     // le hook, lui, annonce les refus (pas ton tour, expulsion…).
@@ -298,7 +358,11 @@ export function PetitBuveurOnline() {
     return (res?.data ?? null) as { view?: { lastDice?: number | null } } | null
   }
 
-  const handleRoll = () => {
+  const handleRoll = () => runDiceAction(() => sendAction('roll'))
+  // « Relancer » de la case Chance : un vrai lancer, avec le même dé à l'écran.
+  const handleChanceReroll = () => runDiceAction(() => sendAction('resolve', { chanceChoice: 'reroll' }))
+
+  const runDiceAction = (send: () => Promise<{ view?: { lastDice?: number | null } } | null>) => {
     if (busy || rolling || !user) return
     setRolling(true)
     rollFallbackRef.current = null
@@ -335,7 +399,7 @@ export function PetitBuveurOnline() {
       else clear()
     }, 5000)
 
-    void sendAction('roll').then((body) => {
+    void send().then((body) => {
       if (settled) return
       settled = true
       clearTimeout(fallback)
@@ -351,7 +415,109 @@ export function PetitBuveurOnline() {
     })
   }
 
-  const awaitingChoice = Boolean(view.pending) && isMyTurn
+  // La fenêtre de décision s'ouvre une fois le pion arrivé sur sa case.
+  const showChoice = isMyDecision && boardSettled && !rolling
+  const pendingCase = pending ? (pending.case ?? view.lastCase ?? null) : null
+  const pendingTitle = pending
+    ? pending.caseType === 'double-case' && pending.cases?.length
+      ? `${caseLabel('double-case')} (${pending.cases.map((c) => caseLabel(c.type)).join(' + ')})`
+      : pending.via
+        ? `${caseLabel(pending.via)} → ${caseLabel(pending.caseType)}`
+        : caseLabel(pending.caseType)
+    : ''
+  const pendingDetail = (() => {
+    if (!pending || !pendingCase) return null
+    if (pendingCase.type === 'defi') {
+      const challenge = defiText(pendingCase.defiIndex)
+      return challenge
+        ? tPB('caseDescriptions.defi', { challenge, count: pendingCase.effect })
+        : null
+    }
+    if (pendingCase.type === 'question') return tPB('caseDescriptions.question', { count: pendingCase.effect })
+    return null
+  })()
+  const randomTarget = (allowSelf: boolean) => {
+    const pool = randomTargetPool(view.players, active?.id, allowSelf)
+    const pick = pool[Math.floor(Math.random() * pool.length)]
+    if (pick) void sendAction('resolve', { targetId: pick })
+  }
+  const actorFromForSpectacle = (() => {
+    const actorId = view.lastInteraction?.actorId
+    if (!actorId) return undefined
+    return (
+      view.lastOutcome?.changes.find((c) => c.playerId === actorId)?.from ??
+      view.players.find((p) => p.id === actorId)?.position
+    )
+  })()
+  const noteLines = (outcome: LastOutcome) =>
+    (outcome.notes ?? []).map((n: OutcomeNote) => {
+      const msg = noteMessage(n, (id) => nameOf(id), outcome.actorId)
+      return tPB(msg.key, msg.values)
+    })
+  // Le détail d'une case jouée : verdict du défi, choix Chance, notes du moteur.
+  const outcomeExtras = (outcome: LastOutcome): string[] => {
+    const lines: string[] = []
+    if (outcome.succeeded === true) {
+      lines.push(tGame('outcomes.challengeSuccess', { player: nameOf(outcome.targetId) }))
+    }
+    if (outcome.chanceChoice === 'reroll') lines.push(tGame('dialogs.chanceReroll'))
+    if (outcome.chanceChoice === 'plus2') lines.push(tGame('dialogs.chanceAdvance'))
+    return [...lines, ...noteLines(outcome)]
+  }
+  const outcomeTitle = (outcome: LastOutcome) =>
+    outcome.effectiveCase
+      ? `${caseLabel(outcome.caseType)} → ${caseLabel(outcome.effectiveCase.type)}`
+      : outcome.cases?.length
+        ? `${caseLabel(outcome.caseType)} (${outcome.cases.map((c) => caseLabel(c.type)).join(' + ')})`
+        : caseLabel(outcome.caseType)
+  const changeChips = (changes: LastOutcomeChange[], tone: 'card' | 'history') => (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {changes.map((c) => {
+        const p = view.players.find((pl) => pl.id === c.playerId)
+        return (
+          <span
+            key={c.playerId}
+            className={cn(
+              'flex items-center gap-1 rounded-full border border-white/[0.15] bg-gray-950/60 px-2 py-0.5 text-xs font-semibold',
+              tone === 'card' ? 'text-white/90' : 'text-white/80'
+            )}
+          >
+            <span aria-hidden><PlayerAvatarGlyph value={iconOf(c.playerId)} /></span>
+            {p && (
+              <OnlinePlayerName
+                name={p.name}
+                cosmetics={cosmetics.get(p.id)}
+                className={tone === 'card' ? 'max-w-[6rem] truncate' : 'max-w-[5rem] truncate'}
+              />
+            )}
+            {c.drinks > 0 && <span className="text-amber-300">+{c.drinks} {drinkIcon(ambiance)}</span>}
+            {c.to !== c.from && (
+              <span className="text-sky-300">
+                → {t('caseLabel')} {c.to + 1}
+              </span>
+            )}
+          </span>
+        )
+      })}
+    </div>
+  )
+  const outcomeBody = (outcome: LastOutcome, tone: 'card' | 'history', showNothing: boolean) => {
+    const extras = outcomeExtras(outcome)
+    return (
+      <>
+        {outcome.changes.length > 0 && changeChips(outcome.changes, tone)}
+        {extras.map((line, i) => (
+          <p key={i} className="mt-1.5 text-xs font-semibold text-cream/80">
+            {line}
+          </p>
+        ))}
+        {outcome.changes.length === 0 && extras.length === 0 && showNothing && (
+          <p className="mt-1.5 text-xs font-semibold text-emerald-300">{t('outcomeNothing')}</p>
+        )}
+      </>
+    )
+  }
+  const lastLanding = landingIndex(view.players, view.lastOutcome)
 
   // grid-cols-[minmax(0,1fr)] : sans lui, le min-content d'une rangée
   // (en-tête) étire la colonne implicite au-delà du viewport (mobile).
@@ -386,7 +552,9 @@ export function PetitBuveurOnline() {
           deHonteDrink: t('spectacle.deHonteDrink'),
           deHonteForward: t('spectacle.deHonteForward'),
           deHonteBack: t('spectacle.deHonteBack'),
+          deHonteCannotBack: t('spectacle.deHonteCannotBack'),
         }}
+        actorFromPosition={actorFromForSpectacle}
       />
 
       {/* Mise en scène du lancer de dé + flash de changement de tour */}
@@ -396,7 +564,7 @@ export function PetitBuveurOnline() {
         skipLabel={tGame('tapToSkip')}
       />
       <TurnOverlay
-        activeKey={finished || diceOverlay ? null : active?.id ?? null}
+        activeKey={finished || !boardSettled ? null : active?.id ?? null}
         icon={active ? <PlayerAvatarGlyph value={iconOf(active.id)} /> : null}
         name={active?.name ?? ''}
         isSelf={isMyTurn}
@@ -407,14 +575,17 @@ export function PetitBuveurOnline() {
 
       {/* Blobs animés */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
+        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/[0.15] blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
         <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-orange-600/10 blur-[100px] animate-[pulse_10s_ease-in-out_infinite_2s]" />
         <div className="absolute bottom-0 right-1/3 h-72 w-72 rounded-full bg-emerald-600/10 blur-[90px] animate-[pulse_12s_ease-in-out_infinite_4s]" />
       </div>
 
       {/* En-tête */}
-      <header className="relative z-30 shrink-0 border-b border-white/10 bg-gray-950/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
+      <header className="relative z-30 shrink-0 border-b border-white/10 bg-gray-950/[0.85] backdrop-blur-md">
+        {/* 375 px : cinq boutons de 36 px ne laissent qu'environ 140 px au
+            titre, d'où un écart réduit, la difficulté déplacée dans le HUD
+            et un titre sur deux lignes plutôt qu'une ellipse. */}
+        <div className="mx-auto flex max-w-3xl items-center gap-1.5 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <button
             onClick={() => leaveRoom()}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
@@ -422,10 +593,10 @@ export function PetitBuveurOnline() {
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <h1 className="min-w-0 flex-1 truncate text-center text-base font-bold sm:text-lg">
+          <h1 className="line-clamp-2 min-w-0 flex-1 text-center text-sm font-bold leading-tight sm:line-clamp-1 sm:text-lg">
             {t('title')}
           </h1>
-          <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/60">
+          <span className="hidden shrink-0 rounded-full border border-white/[0.15] bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/60 sm:inline-flex">
             {DIFFICULTY_EMOJI[difficulty]} {tDiff(difficulty)}
           </span>
           <button
@@ -445,7 +616,7 @@ export function PetitBuveurOnline() {
           <button
             onClick={() => setShowLegend(true)}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
-            aria-label={tGame('effects.active').replace(' :', '')}
+            aria-label={t('effectsLegend')}
           >
             <HelpCircle className="h-4 w-4" />
           </button>
@@ -458,26 +629,33 @@ export function PetitBuveurOnline() {
         <div className="mx-auto flex w-full max-w-3xl flex-col space-y-2 px-3 py-2.5 pb-4 sm:space-y-3 sm:px-4 sm:py-3">
           {/* HUD tour + joueur actif */}
           <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-md sm:px-4 sm:py-3">
-            <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300 sm:px-2.5 sm:py-1">
+            <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/[0.15] px-2 py-0.5 text-xs font-bold text-amber-300 sm:px-2.5 sm:py-1">
               {t('turn', { count: view.turnCount })}
             </span>
             <div className="min-w-0 flex-1 text-center">
               <p className="hidden text-xs uppercase tracking-widest text-white/40 sm:mb-0.5 sm:block">{tGame('turnOf')}</p>
               <div className="flex items-center justify-center gap-1.5 truncate text-sm font-bold sm:text-base">
-                {active && <span aria-hidden><PlayerAvatarGlyph value={iconOf(active.id)} /></span>}
-                {active && (
-                  <OnlinePlayerName name={active.name} cosmetics={cosmetics.get(active.id)} className="truncate" />
+                {shownTurnPlayer && <span aria-hidden><PlayerAvatarGlyph value={iconOf(shownTurnPlayer.id)} /></span>}
+                {shownTurnPlayer && (
+                  <OnlinePlayerName
+                    name={shownTurnPlayer.name}
+                    cosmetics={cosmetics.get(shownTurnPlayer.id)}
+                    className="truncate"
+                  />
                 )}
               </div>
             </div>
-            <span className="shrink-0 text-xs font-medium text-white/40">
-              {active ? active.position + 1 : '—'}/{BOARD_SIZE}
+            <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-white/60">
+              <span className="sm:hidden" role="img" aria-label={tDiff(difficulty)}>
+                {DIFFICULTY_EMOJI[difficulty]}
+              </span>
+              {activeShownPos != null ? activeShownPos + 1 : '—'}/{BOARD_SIZE}
             </span>
           </div>
 
           {/* Joueur(s) parti(s) : en attente de leur retour avant remplacement par un bot */}
           {someoneLeft && (
-            <div className="space-y-0.5 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-center">
+            <div className="space-y-0.5 rounded-xl border border-amber-400/[0.35] bg-amber-500/10 px-3 py-2 text-center">
               {view.players
                 .filter((p) => !p.isBot && p.leftAt)
                 .map((p) => (
@@ -492,7 +670,7 @@ export function PetitBuveurOnline() {
 
           {/* Coup refusé (pas ton tour, expulsion…) — 3 s */}
           {actionError && (
-            <div className="rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center text-xs font-semibold text-red-100">
+            <div className="rounded-xl border border-red-400/[0.35] bg-red-500/10 px-3 py-2 text-center text-xs font-semibold text-red-100">
               {actionError}
             </div>
           )}
@@ -500,7 +678,7 @@ export function PetitBuveurOnline() {
           {/* Avertissement AFK (60 dernières secondes avant expulsion) : message
               direct « joue ! » pour le joueur au tour, informatif pour les autres. */}
           {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
-            <div className="rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center">
+            <div className="rounded-xl border border-red-400/[0.35] bg-red-500/10 px-3 py-2 text-center">
               <p className="text-xs font-semibold text-red-100">
                 <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
                   {({ seconds }) =>
@@ -537,82 +715,97 @@ export function PetitBuveurOnline() {
             </div>
           )}
 
-          {/* Dernière case résolue — carte flip teintée par la famille de case */}
-          {view.lastCase && !view.pending && (
-            <CaseRevealCard
-              caseType={view.lastCase.type}
-              label={caseLabel(view.lastCase.type)}
-              revealKey={`${view.turnCount}:${view.lastCase.type}:${view.lastDice ?? ''}`}
-              headerExtra={
-                <>
-                  <span className="text-xs font-semibold text-white/70 sm:text-sm">
-                    {t('caseLabel')} {(active?.position ?? 0) + 1}
-                  </span>
-                  {view.lastDice != null && (
-                    <span className="ml-auto flex items-center gap-1 text-xs text-white/50">
-                      <Dice6 className="h-3.5 w-3.5" /> {view.lastDice}
-                    </span>
+          {/* Dernière case résolue — carte flip teintée par la famille de case,
+              retournée quand le pion de l'acteur est posé sur la case du dé. */}
+          {view.lastCase && !pending && board.caseRevealed && (() => {
+            const outcome =
+              view.lastOutcome && view.lastOutcome.caseType === view.lastCase.type ? view.lastOutcome : null
+            // Un défi rejoué par Répétition / Rewind porte son texte dans la case effective.
+            const shownDefi =
+              outcome?.effectiveCase?.type === 'defi'
+                ? outcome.effectiveCase
+                : view.lastCase.type === 'defi'
+                  ? view.lastCase
+                  : null
+            return (
+              <CaseRevealCard
+                caseType={view.lastCase.type}
+                label={outcome ? outcomeTitle(outcome) : caseLabel(view.lastCase.type)}
+                revealKey={outcomeSignature(view) || `${view.turnCount}:${view.lastCase.type}:${view.lastDice ?? ''}`}
+                headerExtra={
+                  <>
+                    {outcome && lastLanding != null && (
+                      <span className="text-xs font-semibold text-white/70 sm:text-sm">
+                        {t('caseLabel')} {lastLanding + 1}
+                      </span>
+                    )}
+                    {view.lastDice != null && (
+                      <span className="ml-auto flex items-center gap-1 text-xs text-white/60">
+                        <Dice6 className="h-3.5 w-3.5" aria-hidden /> {view.lastDice}
+                      </span>
+                    )}
+                  </>
+                }
+              >
+                {/* Texte du défi tiré (seuls les défis vérifiables sont tirés en ligne). */}
+                {shownDefi && typeof shownDefi.defiIndex === 'number' && (
+                  <p className="mt-1.5 text-sm font-medium text-white/[0.85]">{defiText(shownDefi.defiIndex)}</p>
+                )}
+                {/* CE QUE la case a fait : gorgées prises, déplacements, protections —
+                    lisible avant que le joueur suivant ne joue. */}
+                {outcome &&
+                  outcomeBody(
+                    outcome,
+                    'card',
+                    getCaseMeta(view.lastCase.type).family !== 'neutral' &&
+                      getCaseMeta(view.lastCase.type).family !== 'bonus'
                   )}
-                </>
-              }
-            >
-              {/* Texte du défi tiré (seuls les défis vérifiables sont tirés en ligne). */}
-              {view.lastCase.type === 'defi' && typeof view.lastCase.defiIndex === 'number' && (
-                <p className="mt-1.5 text-sm font-medium text-white/85">
-                  {(tPB.raw('defis') as { text: string }[])[view.lastCase.defiIndex]?.text}
+              </CaseRevealCard>
+            )
+          })()}
+
+          {/* Case en attente d'une décision — visible par toute la table */}
+          {pending && boardSettled && !finished && (
+            <div className="rounded-2xl border border-amber-500/30 bg-felt-deep/70 px-3 py-2.5 sm:px-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-base leading-none" aria-hidden>
+                  {getCaseMeta(pending.caseType).icon}
+                </span>
+                <span className="text-sm font-bold text-cream">{pendingTitle}</span>
+                {pending.targetId && (
+                  <span className="ml-auto flex items-center gap-1 text-xs font-semibold text-amber-200">
+                    🎯 {nameOf(pending.targetId)}
+                  </span>
+                )}
+              </div>
+              {pendingDetail && <p className="mt-1.5 text-sm font-medium text-white/[0.85]">{pendingDetail}</p>}
+              {!isMyDecision && (
+                <p className="mt-1.5 text-xs font-medium text-cream/70">
+                  {pending.stage === 'side' && typeof pending.deadlineAt === 'number' ? (
+                    <PhaseCountdown endsAt={pending.deadlineAt}>
+                      {({ seconds }) => t('sideWaiting', { name: nameOf(pending.targetId), seconds })}
+                    </PhaseCountdown>
+                  ) : pending.stage === 'verdict' ? (
+                    t('verdictWaiting', { name: nameOf(pending.playerId), target: nameOf(pending.targetId) })
+                  ) : (
+                    t('waitingFor', { name: nameOf(deciderId) })
+                  )}
                 </p>
               )}
-              {/* CE QUE la case a fait : gorgées prises, déplacements — lisible
-                  avant que le joueur suivant ne joue. */}
-              {view.lastOutcome && view.lastOutcome.caseType === view.lastCase.type && (
-                view.lastOutcome.changes.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {view.lastOutcome.changes.map((c) => {
-                      const p = view.players.find((pl) => pl.id === c.playerId)
-                      return (
-                        <span
-                          key={c.playerId}
-                          className="flex items-center gap-1 rounded-full border border-white/15 bg-gray-950/60 px-2 py-0.5 text-xs font-semibold text-white/90"
-                        >
-                          <span aria-hidden><PlayerAvatarGlyph value={iconOf(c.playerId)} /></span>
-                          {p && (
-                            <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="max-w-[6rem] truncate" />
-                          )}
-                          {c.drinks > 0 && <span className="text-amber-300">+{c.drinks} 🍺</span>}
-                          {c.to !== c.from && (
-                            <span className="text-sky-300">
-                              → {t('caseLabel')} {c.to + 1}
-                            </span>
-                          )}
-                        </span>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  getCaseMeta(view.lastCase.type).family !== 'neutral' &&
-                  getCaseMeta(view.lastCase.type).family !== 'bonus' && (
-                    <p className="mt-2 text-xs font-semibold text-emerald-300">
-                      {t('outcomeNothing')}
-                    </p>
-                  )
-                )
-              )}
-            </CaseRevealCard>
+            </div>
           )}
 
-          {/* Simple confirmation (case sans choix explicite) */}
-          {awaitingChoice && view.pending &&
-            !view.pending.needsTarget &&
-            !TARGET_INTERACTIVE.has(view.pending.caseType) &&
-            view.pending.caseType !== 'teleport' && (
-              <Button
-                onClick={() => sendAction('resolve')}
-                disabled={busy}
-                className="w-full bg-amber-600 py-5 text-base font-bold text-white hover:bg-amber-500"
-              >
-                {busy ? '…' : `${t('continueCase')} (${caseLabel(view.pending.caseType)})`}
-              </Button>
-            )}
+          {/* Simple confirmation (roue, dé de la honte… : aucun choix à faire) */}
+          {showChoice && choice?.kind === 'confirm' && pending && (
+            <button
+              type="button"
+              onClick={() => sendAction('resolve')}
+              disabled={busy}
+              className={PRIMARY_CHOICE}
+            >
+              {busy ? '…' : `${t('continueCase')} (${caseLabel(pending.caseType)})`}
+            </button>
+          )}
 
           {/* Plateau */}
           <div className="pb-board">
@@ -642,15 +835,13 @@ export function PetitBuveurOnline() {
                             : ''
                     )}
                   >
-                    {/* Numéro de case : 11 px au téléphone, pas 12 — la case
-                        fait ~47 px et partage son coin avec jusqu'à quatre
-                        jetons ; le numéro reste lisible en clair dans le
-                        classement (« Case N »). */}
+                    {/* Numéro de case : couleur et taille lisibles imposées par
+                        petit-buveur-board.css (crème 0,75, 11 px au téléphone). */}
                     {!isFinish && (
                       <span
                         className={cn(
-                          'pb-board-case-num absolute left-0.5 top-0.5 z-[1] text-[11px] font-semibold sm:left-1 sm:top-1 sm:text-xs',
-                          isStart ? 'text-emerald-400/70' : 'text-white/30'
+                          'pb-board-case-num absolute left-0.5 top-0.5 z-[1] font-semibold sm:left-1 sm:top-1',
+                          isStart && 'text-[11px] text-emerald-400/70 sm:text-xs'
                         )}
                       >
                         {isStart ? '🏁' : index + 1}
@@ -667,7 +858,7 @@ export function PetitBuveurOnline() {
                     >
                       {onCase.map((p) => {
                         const isSelf = p.id === user.id
-                        const isPlayerActive = p.id === active?.id
+                        const isPlayerActive = p.id === shownTurnPlayer?.id
                         return (
                           <motion.span
                             key={p.id}
@@ -699,14 +890,14 @@ export function PetitBuveurOnline() {
             </div>
             <div className="flex gap-2 overflow-x-auto p-0.5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {ranking.map((p, index) => {
-                const isActive = active?.id === p.id
+                const isActive = shownTurnPlayer?.id === p.id
                 return (
                   <div
                     key={p.id}
                     className={cn(
                       'relative flex w-[9.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:p-2.5',
                       isActive
-                        ? 'border-emerald-400/60 bg-emerald-500/12 shadow-[inset_0_0_0_1px_rgba(52,211,153,0.35)]'
+                        ? 'border-emerald-400/60 bg-emerald-500/[0.12] shadow-[inset_0_0_0_1px_rgba(52,211,153,0.35)]'
                         : rankBorder(index)
                     )}
                   >
@@ -715,11 +906,11 @@ export function PetitBuveurOnline() {
                       className={cn(
                         'inline-flex h-6 min-w-[1.5rem] shrink-0 items-center justify-center rounded-md border px-1.5 text-xs font-bold tabular-nums',
                         index === 0
-                          ? 'border-amber-400/45 bg-amber-500/20 text-amber-100'
+                          ? 'border-amber-400/[0.45] bg-amber-500/20 text-amber-100'
                           : index === 1
                             ? 'border-white/25 bg-white/10 text-white/80'
                             : index === 2
-                              ? 'border-orange-500/35 bg-orange-600/15 text-orange-100'
+                              ? 'border-orange-500/[0.35] bg-orange-600/[0.15] text-orange-100'
                               : 'border-white/10 bg-white/5 text-white/50'
                       )}
                     >
@@ -730,9 +921,9 @@ export function PetitBuveurOnline() {
                         <span className="shrink-0 text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
                         <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 truncate text-xs font-semibold text-white/90" />
                       </div>
-                      <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-white/40">
-                        {t('caseLabel')} {p.position + 1}
-                        <Beer className="h-3 w-3" /> <PulsingCount value={p.drinks} />
+                      <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-white/60">
+                        {t('caseLabel')} {shownPosOf(p.id) + 1}
+                        <DrinkGlyph className="h-3 w-3" aria-hidden /> <PulsingCount value={drinksById[p.id] ?? p.drinks} />
                       </span>
                     </div>
                   </div>
@@ -744,23 +935,23 @@ export function PetitBuveurOnline() {
         </div>
       </main>
 
-      {/* Barre d'action fixe */}
-      {!finished && (
+      {/* Barre d'action fixe — gardée jusqu'à l'écran de fin, qui attend l'arrivée du pion */}
+      {!endRevealed && (
         <footer
           className="relative z-40 border-t border-white/10 bg-gray-950/95 px-3 py-3 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4"
           aria-label={t('title')}
         >
           <div className="mx-auto flex w-full max-w-lg items-stretch gap-2 sm:max-w-3xl sm:gap-3">
-            {active && (
-              <div className="flex shrink-0 flex-col justify-center gap-1.5 rounded-2xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2.5 sm:px-4 sm:py-3">
+            {shownTurnPlayer && (
+              <div className="flex shrink-0 flex-col justify-center gap-1.5 rounded-2xl border border-emerald-400/[0.35] bg-emerald-500/10 px-3 py-2.5 sm:px-4 sm:py-3">
                 <span className="text-xs font-semibold uppercase tracking-wider text-emerald-300/80">
                   {tGame('turnShort')}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(active.id)} /></span>
+                  <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(shownTurnPlayer.id)} /></span>
                   <OnlinePlayerName
-                    name={active.name}
-                    cosmetics={cosmetics.get(active.id)}
+                    name={shownTurnPlayer.name}
+                    cosmetics={cosmetics.get(shownTurnPlayer.id)}
                     className="max-w-[5.5rem] truncate text-sm font-bold text-emerald-100 sm:max-w-[7.5rem] sm:text-base"
                   />
                 </div>
@@ -769,17 +960,17 @@ export function PetitBuveurOnline() {
             <button
               type="button"
               onClick={handleRoll}
-              disabled={!isMyTurn || Boolean(view.pending) || busy || rolling}
+              disabled={!isMyTurn || Boolean(pending) || finished || !boardSettled || busy || rolling}
               className="min-w-0 flex-1 touch-manipulation select-none rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-lg"
             >
               <span className="flex items-center justify-center gap-2">
                 <span>
-                  {rolling
+                  {rolling || finished
                     ? t('rollDice')
-                    : view.pending
-                      ? isMyTurn
+                    : pending
+                      ? isMyDecision
                         ? t('continueCase')
-                        : t('waitingFor', { name: active?.name ?? '' })
+                        : t('waitingFor', { name: nameOf(deciderId) })
                       : isMyTurn
                         ? t('rollDice')
                         : t('waitingFor', { name: active?.name ?? '' })}
@@ -793,7 +984,7 @@ export function PetitBuveurOnline() {
 
       {/* Écran de victoire — fidèle au mode local (confettis, trophée, stats, classement final). */}
       <AnimatePresence>
-        {finished && (
+        {finished && endRevealed && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -808,7 +999,7 @@ export function PetitBuveurOnline() {
               initial={{ scale: 0.85, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-felt-deep/95 shadow-2xl backdrop-blur-md"
+              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/[0.15] bg-felt-deep/95 shadow-2xl backdrop-blur-md"
             >
               <OnlineEndScreen
                 variant="sheet"
@@ -867,12 +1058,12 @@ export function PetitBuveurOnline() {
                       <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/40">
                         {tGame('finalRanking')}
                       </p>
-                      {ranking.map((p, index) => (
+                      {finalRanking.map((p, index) => (
                         <div
                           key={p.id}
                           className={cn(
                             'flex items-center justify-between rounded-xl px-3 py-2',
-                            p.id === winner?.id ? 'border border-amber-400/30 bg-amber-500/15' : 'bg-white/5'
+                            p.id === winner?.id ? 'border border-amber-400/30 bg-amber-500/[0.15]' : 'bg-white/5'
                           )}
                         >
                           <div className="flex min-w-0 items-center gap-2">
@@ -880,7 +1071,7 @@ export function PetitBuveurOnline() {
                               className={cn(
                                 'inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md border px-1 text-xs font-bold tabular-nums',
                                 index === 0
-                                  ? 'border-amber-400/45 bg-amber-500/20 text-amber-100'
+                                  ? 'border-amber-400/[0.45] bg-amber-500/20 text-amber-100'
                                   : 'border-white/10 bg-white/5 text-white/50'
                               )}
                             >
@@ -891,7 +1082,7 @@ export function PetitBuveurOnline() {
                             <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="truncate text-sm font-semibold text-white" />
                           </div>
                           <div className="flex shrink-0 gap-3 text-xs text-white/50">
-                            <span>{p.drinks}🍺</span>
+                            <span>{p.drinks} {drinkIcon(ambiance)}</span>
                             <span>{t('caseLabel')} {p.position + 1}</span>
                           </div>
                         </div>
@@ -912,191 +1103,243 @@ export function PetitBuveurOnline() {
         )}
       </AnimatePresence>
 
-      {/* Fenêtre de ciblage / téléport — plein écran mobile (bottom-sheet), centrée sur desktop */}
+      {/* Fenêtres de décision — plein écran mobile (bottom-sheet), centrées sur desktop */}
       <AnimatePresence>
-        {awaitingChoice && view.pending && (
-          view.pending.needsTarget || TARGET_INTERACTIVE.has(view.pending.caseType) ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              role="dialog"
-              aria-modal="true"
-              aria-label={tGame('target.title')}
-              className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
-            >
-              <motion.div
-                initial={{ opacity: 0, y: 24, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.97 }}
-                transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-                className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-felt-deep shadow-2xl"
-              >
-                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 pb-5 pt-5 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20 ring-1 ring-amber-400/30">
-                    <Target className="h-6 w-6 text-amber-300" />
-                  </div>
-                  <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-0.5 text-xs font-semibold text-amber-100">
-                    {caseLabel(view.pending.caseType)}
-                  </span>
-                  <h3 className="text-lg font-bold text-white">{tGame('target.title')}</h3>
-                  <p className="max-w-[18rem] text-sm text-white/50">{tGame('target.hint')}</p>
-                  <div
-                    className="mt-1 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-amber-400/40 bg-amber-500/10 text-2xl text-amber-100"
-                    aria-hidden
-                  >
-                    ?
-                  </div>
-                </div>
-
-                <div className="min-h-0 overflow-y-auto px-4 pb-4 pt-4">
-                  {/* Classement compact */}
-                  <div className="mb-4 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
-                      {tGame('ranking')}
-                    </p>
-                    <ul className="space-y-1">
-                      {ranking.map((p, index) => {
-                        const isActive = p.id === active?.id
-                        return (
-                          <li
-                            key={p.id}
-                            className={cn(
-                              'flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm',
-                              isActive && 'bg-emerald-500/10'
-                            )}
-                          >
-                            <span className="flex min-w-0 items-center gap-2">
-                              <span
-                                className={cn(
-                                  'inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md border px-1 text-xs font-bold tabular-nums',
-                                  index === 0
-                                    ? 'border-amber-400/45 bg-amber-500/20 text-amber-100'
-                                    : 'border-white/10 bg-white/5 text-white/50'
-                                )}
-                              >
-                                {index + 1}
-                              </span>
-                              <span className="shrink-0 text-xs" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
-                              <OnlinePlayerName
-                                name={p.name}
-                                cosmetics={cosmetics.get(p.id)}
-                                className={cn('truncate font-medium text-white/90', isActive && 'text-emerald-300')}
-                              />
-                            </span>
-                            <span className="shrink-0 text-xs text-white/40">
-                              {t('caseLabel')} {p.position + 1}
-                            </span>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
-
-                  {/* Cibles (hors soi-même — voir bouton "Moi" ci-dessous) */}
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {view.players
-                      .filter((p) => p.id !== active?.id)
-                      .map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          disabled={busy}
-                          onClick={() => sendAction('resolve', { targetId: p.id })}
-                          className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/10 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
-                        >
-                          <span className="text-3xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
-                          <OnlinePlayerName
-                            name={p.name}
-                            cosmetics={cosmetics.get(p.id)}
-                            className="max-w-full truncate text-center text-sm font-semibold text-white"
-                          />
-                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/50">
-                            {t('caseLabel')} {p.position + 1}
-                          </span>
-                        </button>
-                      ))}
-                  </div>
-
-                  {/* Actions rapides */}
-                  <div className="mt-5 space-y-2 border-t border-white/10 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => {
-                        const pick = view.players[Math.floor(Math.random() * view.players.length)]
-                        if (pick) sendAction('resolve', { targetId: pick.id })
-                      }}
-                      className="h-11 w-full gap-2 border-amber-500/30 bg-amber-500/5 text-white hover:bg-amber-500/[0.15]"
+        {showChoice && pending && choice?.kind === 'target' && (
+          <ChoiceSheet
+            key="target"
+            scroll
+            ariaLabel={tGame('target.title')}
+            caseLabel={pendingTitle}
+            title={tGame('target.title')}
+            hint={pendingDetail ?? tGame('target.hint')}
+          >
+            {/* Classement compact */}
+            <div className="mb-4 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">{tGame('ranking')}</p>
+              <ul className="space-y-1">
+                {ranking.map((p, index) => {
+                  const isActive = p.id === active?.id
+                  return (
+                    <li
+                      key={p.id}
+                      className={cn(
+                        'flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm',
+                        isActive && 'bg-emerald-500/10'
+                      )}
                     >
-                      <Shuffle className="h-4 w-4 text-amber-300" />
-                      {tGame('target.random')}
-                    </Button>
-                    {active && (
-                      <Button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => sendAction('resolve', { targetId: active.id })}
-                        className="h-11 w-full gap-2 border border-amber-500/30 bg-amber-500/10 text-white hover:bg-amber-500/20"
-                      >
-                        <User className="h-4 w-4 opacity-90" />
-                        <span className="flex min-w-0 items-center gap-1 truncate">
-                          {tGame('target.me')}{' '}
-                          <OnlinePlayerName name={active.name} cosmetics={cosmetics.get(active.id)} className="font-semibold" />
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={cn(
+                            'inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md border px-1 text-xs font-bold tabular-nums',
+                            index === 0
+                              ? 'border-amber-400/[0.45] bg-amber-500/20 text-amber-100'
+                              : 'border-white/10 bg-white/5 text-white/60'
+                          )}
+                        >
+                          {index + 1}
                         </span>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          ) : view.pending.caseType === 'teleport' ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              role="dialog"
-              aria-modal="true"
-              aria-label={t('teleportPrompt')}
-              className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
-            >
-              <motion.div
-                initial={{ opacity: 0, y: 24, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.97 }}
-                transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-                className="z-[100] w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-felt-deep shadow-2xl"
+                        <span className="shrink-0 text-xs" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
+                        <OnlinePlayerName
+                          name={p.name}
+                          cosmetics={cosmetics.get(p.id)}
+                          className={cn('truncate font-medium text-white/90', isActive && 'text-emerald-300')}
+                        />
+                      </span>
+                      <span className="shrink-0 text-xs text-white/60">
+                        {t('caseLabel')} {shownPosOf(p.id) + 1}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+
+            {/* Cibles (hors soi-même — voir bouton « Moi » quand la case l'autorise) */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {view.players
+                .filter((p) => p.id !== active?.id)
+                .map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => sendAction('resolve', { targetId: p.id })}
+                    className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/10 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                  >
+                    <span className="text-3xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
+                    <OnlinePlayerName
+                      name={p.name}
+                      cosmetics={cosmetics.get(p.id)}
+                      className="max-w-full truncate text-center text-sm font-semibold text-white"
+                    />
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/60">
+                      {t('caseLabel')} {shownPosOf(p.id) + 1}
+                    </span>
+                  </button>
+                ))}
+            </div>
+
+            {/* Actions rapides */}
+            <div className="mt-5 space-y-2 border-t border-white/10 pt-4">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => randomTarget(choice.allowSelf)}
+                className={SECONDARY_CHOICE}
               >
-                <div className="flex flex-col items-center gap-2 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 pb-4 pt-5 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20 ring-1 ring-amber-400/30">
-                    <Target className="h-6 w-6 text-amber-300" />
-                  </div>
-                  <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-0.5 text-xs font-semibold text-amber-100">
-                    {caseLabel(view.pending.caseType)}
+                <Shuffle className="h-4 w-4 text-amber-300" aria-hidden />
+                {tGame('target.random')}
+              </button>
+              {active && choice.allowSelf && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => sendAction('resolve', { targetId: active.id })}
+                  className={SECONDARY_CHOICE}
+                >
+                  <User className="h-4 w-4 opacity-90" aria-hidden />
+                  <span className="flex min-w-0 items-center gap-1 truncate">
+                    {tGame('target.me')}{' '}
+                    <OnlinePlayerName name={active.name} cosmetics={cosmetics.get(active.id)} className="font-semibold" />
                   </span>
-                  <h3 className="text-lg font-bold text-white">{t('teleportPrompt')}</h3>
-                </div>
-                <div className="grid grid-cols-1 gap-3 p-5">
-                  <Button
-                    disabled={busy}
-                    onClick={() => sendAction('resolve', { option: 'leader' })}
-                    className="h-12 justify-center bg-amber-500 text-base font-bold text-black hover:bg-amber-400"
-                  >
-                    {t('teleportLeader')}
-                  </Button>
-                  <Button
-                    disabled={busy}
-                    variant="secondary"
-                    onClick={() => sendAction('resolve', { option: 'last' })}
-                    className="h-12 justify-center text-base font-bold"
-                  >
-                    {t('teleportLast')}
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          ) : null
+                </button>
+              )}
+            </div>
+          </ChoiceSheet>
+        )}
+
+        {/* Défi / Question : le joueur au tour arbitre */}
+        {showChoice && pending && choice?.kind === 'verdict' && (
+          <ChoiceSheet
+            key="verdict"
+            ariaLabel={tGame('challengeQuestion')}
+            caseLabel={pendingTitle}
+            title={tGame('challengeQuestion')}
+            icon={<Gavel className="h-6 w-6 text-amber-300" aria-hidden />}
+            hint={
+              <>
+                <span className="block font-semibold text-cream">🎯 {nameOf(pending.targetId)}</span>
+                {pendingDetail && <span className="mt-1 block">{pendingDetail}</span>}
+              </>
+            }
+          >
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => sendAction('resolve', { succeeded: true })}
+                className={PRIMARY_CHOICE}
+              >
+                ✅ {tGame('challengeSuccess')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => sendAction('resolve', { succeeded: false })}
+                className={SECONDARY_CHOICE}
+              >
+                <DrinkGlyph className="h-4 w-4 text-red-300" aria-hidden />
+                {tGame('challengeDrink', { count: pendingCase?.effect ?? 0 })}
+              </button>
+            </div>
+          </ChoiceSheet>
+        )}
+
+        {/* Pile ou face : la CIBLE choisit son côté */}
+        {showChoice && pending && choice?.kind === 'side' && (
+          <ChoiceSheet
+            key="side"
+            ariaLabel={tGame('dialogs.coinFlip')}
+            caseLabel={pendingTitle}
+            title={tGame('dialogs.coinFlip')}
+            icon={<Coins className="h-6 w-6 text-amber-300" aria-hidden />}
+            hint={
+              <>
+                <span className="block">{t('sidePrompt', { actor: nameOf(pending.playerId) })}</span>
+                <span className="mt-1 block font-semibold text-cream">
+                  {tGame('dialogs.drinksToTake', { count: pendingCase?.effect || 2 })}
+                </span>
+                {typeof pending.deadlineAt === 'number' && (
+                  <PhaseCountdown endsAt={pending.deadlineAt}>
+                    {({ seconds }) => (
+                      <span className="mt-1 block text-xs tabular-nums text-cream/70">
+                        {t('secondsLeft', { seconds })}
+                      </span>
+                    )}
+                  </PhaseCountdown>
+                )}
+              </>
+            }
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => sendAction('resolve', { side: 'pile' })}
+                className={PRIMARY_CHOICE}
+              >
+                {tPB('coinFlip.pile')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => sendAction('resolve', { side: 'face' })}
+                className={PRIMARY_CHOICE}
+              >
+                {tPB('coinFlip.face')}
+              </button>
+            </div>
+          </ChoiceSheet>
+        )}
+
+        {/* Chance : relancer le dé (lancer complet) ou avancer de 2 cases, sans cible */}
+        {showChoice && pending && choice?.kind === 'chance' && (
+          <ChoiceSheet
+            key="chance"
+            ariaLabel={tGame('dialogs.chance')}
+            caseLabel={pendingTitle}
+            title={tGame('dialogs.chance')}
+            icon={<Clover className="h-6 w-6 text-amber-300" aria-hidden />}
+            hint={tGame('dialogs.chancePrompt')}
+          >
+            <div className="grid grid-cols-1 gap-3">
+              <button type="button" disabled={busy} onClick={handleChanceReroll} className={PRIMARY_CHOICE}>
+                {tGame('dialogs.chanceReroll')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => sendAction('resolve', { chanceChoice: 'plus2' })}
+                className={SECONDARY_CHOICE}
+              >
+                {tGame('dialogs.chanceAdvance')}
+              </button>
+            </div>
+          </ChoiceSheet>
+        )}
+
+        {showChoice && pending && choice?.kind === 'teleport' && (
+          <ChoiceSheet key="teleport" ariaLabel={t('teleportPrompt')} caseLabel={pendingTitle} title={t('teleportPrompt')}>
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => sendAction('resolve', { option: 'leader' })}
+                className={PRIMARY_CHOICE}
+              >
+                {t('teleportLeader')}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => sendAction('resolve', { option: 'last' })}
+                className={SECONDARY_CHOICE}
+              >
+                {t('teleportLast')}
+              </button>
+            </div>
+          </ChoiceSheet>
         )}
       </AnimatePresence>
 
@@ -1109,7 +1352,7 @@ export function PetitBuveurOnline() {
             exit={{ opacity: 0 }}
             role="dialog"
             aria-modal="true"
-            aria-label={tGame('effects.active').replace(' :', '')}
+            aria-label={t('effectsLegend')}
             onClick={() => setShowLegend(false)}
             className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
           >
@@ -1124,7 +1367,7 @@ export function PetitBuveurOnline() {
               <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 py-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 shrink-0 text-amber-300" />
-                  <h3 className="text-base font-bold text-white">{tGame('effects.active').replace(' :', '')}</h3>
+                  <h3 className="text-base font-bold text-white">{t('effectsLegend')}</h3>
                 </div>
                 <button
                   onClick={() => setShowLegend(false)}
@@ -1196,17 +1439,17 @@ export function PetitBuveurOnline() {
                         className="rounded-xl border border-white/10 bg-white/5 px-3 py-2"
                       >
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="rounded-md border border-white/15 bg-white/10 px-1.5 py-0.5 text-xs font-bold tabular-nums text-white/60">
+                          <span className="rounded-md border border-white/[0.15] bg-white/10 px-1.5 py-0.5 text-xs font-bold tabular-nums text-white/60">
                             T{entry.turn}
                           </span>
                           <span className="text-base leading-none" aria-hidden>
                             {getCaseMeta(entry.caseType).icon}
                           </span>
                           <span className="text-xs font-semibold text-white/90">
-                            {caseLabel(entry.caseType)}
+                            {outcomeTitle(entry)}
                           </span>
                           {entry.dice != null && (
-                            <span className="flex items-center gap-0.5 text-xs text-white/40">
+                            <span className="flex items-center gap-0.5 text-xs text-white/60">
                               <Dice6 className="h-3 w-3" /> {entry.dice}
                             </span>
                           )}
@@ -1217,34 +1460,7 @@ export function PetitBuveurOnline() {
                             )}
                           </span>
                         </div>
-                        {entry.changes.length > 0 ? (
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            {entry.changes.map((c) => {
-                              const p = view.players.find((pl) => pl.id === c.playerId)
-                              return (
-                                <span
-                                  key={c.playerId}
-                                  className="flex items-center gap-1 rounded-full border border-white/15 bg-gray-950/60 px-2 py-0.5 text-xs font-semibold text-white/85"
-                                >
-                                  <span aria-hidden><PlayerAvatarGlyph value={iconOf(c.playerId)} /></span>
-                                  {p && (
-                                    <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="max-w-[5rem] truncate" />
-                                  )}
-                                  {c.drinks > 0 && <span className="text-amber-300">+{c.drinks} 🍺</span>}
-                                  {c.to !== c.from && (
-                                    <span className="text-sky-300">
-                                      → {t('caseLabel')} {c.to + 1}
-                                    </span>
-                                  )}
-                                </span>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <p className="mt-1 text-xs font-medium text-emerald-300/80">
-                            {t('outcomeNothing')}
-                          </p>
-                        )}
+                        {outcomeBody(entry, 'history', true)}
                       </div>
                     )
                   })

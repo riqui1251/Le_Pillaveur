@@ -7,26 +7,34 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * simulées, registre des départs réel.
  */
 
-const { userMock, memberMock } = vi.hoisted(() => ({
+const { userMock, memberMock, roomMock, adapterMock, bus, tickerMock } = vi.hoisted(() => ({
   userMock: vi.fn(),
-  memberMock: { findUnique: vi.fn() },
+  memberMock: { findUnique: vi.fn(), deleteMany: vi.fn(), count: vi.fn(), findFirst: vi.fn() },
+  roomMock: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn() },
+  adapterMock: vi.fn(),
+  bus: { publishRoomChanged: vi.fn() },
+  tickerMock: vi.fn(),
 }))
 
-vi.mock('@/lib/prisma', () => ({ prisma: { onlineRoomMember: memberMock } }))
+vi.mock('@/lib/prisma', () => ({
+  prisma: { onlineRoomMember: memberMock, onlineRoom: roomMock },
+}))
 vi.mock('@/lib/auth-server', () => ({ getCurrentUser: userMock }))
 vi.mock('@/lib/online-room', () => ({
   buildRoomDto: vi.fn(),
   closeGameSessionBeforeRoomDelete: vi.fn(),
   touchMemberPresence: vi.fn(),
 }))
-vi.mock('@/lib/online-petit-buveur', () => ({ resetRoomToWaitingLobby: vi.fn() }))
-vi.mock('@/lib/online/room-bus', () => ({ publishRoomChanged: vi.fn() }))
+vi.mock('@/lib/online/room-bus', () => bus)
 vi.mock('@/lib/online/lobbies-cache', () => ({ invalidateLobbiesCache: vi.fn() }))
-vi.mock('@/lib/online/game-adapters', () => ({ getGameAdapter: vi.fn() }))
-vi.mock('@/lib/online/room-ticker', () => ({ armRoomTicker: vi.fn() }))
+vi.mock('@/lib/online/game-adapters', () => ({ getGameAdapter: adapterMock }))
+vi.mock('@/lib/online/room-ticker', () => ({ armRoomTicker: tickerMock }))
 
-import { GET } from './route'
+import { DELETE, GET } from './route'
 import { recordDeparture } from '@/lib/online/departures'
+import { buildPetitBuveurEngineState } from '@/lib/petit-buveur/server-adapter'
+import type { GameAdapter } from '@/lib/online/game-adapters'
+import type { EngineState } from '@/lib/petit-buveur/engine'
 
 const get = (userId: string, roomId = 'room-1') => {
   userMock.mockResolvedValue({ id: userId })
@@ -66,5 +74,149 @@ describe('GET /rooms/[roomId] — raison du 403', () => {
 
     expect(res.status).toBe(403)
     expect(await res.json()).toEqual({ error: 'forbidden', message: expect.any(String) })
+  })
+})
+
+/** Adaptateur minimal : l'état est `{ moves, left }`, le partant s'y ajoute. */
+const fakeAdapter = {
+  parse: (json: string | null) => (json ? JSON.parse(json) : null),
+  serialize: (state: unknown) => JSON.stringify(state),
+  markLeft: (state: unknown, userId: string) => {
+    const s = state as { moves: number; left: string[]; phase?: string }
+    return s.phase === 'finished' ? null : { ...s, left: [...s.left, userId] }
+  },
+  isFinished: (state: unknown) => (state as { phase?: string }).phase === 'finished',
+  currentActorId: () => 'alice',
+}
+
+const playingRoom = (over: Record<string, unknown> = {}) => ({
+  id: 'room-1',
+  status: 'playing',
+  gameId: 'menteur',
+  hostUserId: 'host',
+  gameStateJson: JSON.stringify({ moves: 0, left: [] }),
+  stateVersion: 5,
+  ...over,
+})
+
+const leave = (userId: string) => {
+  userMock.mockResolvedValue({ id: userId })
+  return DELETE(new Request('http://test/api/online/rooms/room-1', { method: 'DELETE' }), {
+    params: Promise.resolve({ roomId: 'room-1' }),
+  })
+}
+
+const writtenState = (call: number) =>
+  JSON.parse(roomMock.updateMany.mock.calls[call][0].data.gameStateJson as string)
+
+describe('DELETE /rooms/[roomId] — départ pendant une partie', () => {
+  beforeEach(() => {
+    memberMock.deleteMany.mockResolvedValue({ count: 1 })
+    memberMock.count.mockResolvedValue(2)
+    adapterMock.mockReturnValue(fakeAdapter)
+  })
+
+  it('écrit le départ par compare-and-swap sur la version lue', async () => {
+    roomMock.findUnique.mockResolvedValue(playingRoom())
+    roomMock.updateMany.mockResolvedValue({ count: 1 })
+
+    const res = await leave('carol')
+
+    expect(res.status).toBe(200)
+    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(1)
+    expect(roomMock.updateMany.mock.calls[0][0]).toMatchObject({
+      where: { id: 'room-1', stateVersion: 5 },
+      data: { stateVersion: 6, currentTurnUserId: 'alice' },
+    })
+    expect(tickerMock).toHaveBeenCalledWith('room-1')
+    expect(bus.publishRoomChanged).toHaveBeenCalledWith('room-1', { type: 'changed', stateVersion: 6 })
+  })
+
+  it('conflit : un coup passé entre-temps est conservé, le départ est réécrit sur l’état frais', async () => {
+    roomMock.findUnique
+      .mockResolvedValueOnce(playingRoom())
+      .mockResolvedValueOnce(playingRoom({ gameStateJson: JSON.stringify({ moves: 1, left: [] }), stateVersion: 6 }))
+    roomMock.updateMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 })
+
+    await leave('carol')
+
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(2)
+    expect(roomMock.updateMany.mock.calls[1][0]).toMatchObject({
+      where: { id: 'room-1', stateVersion: 6 },
+      data: { stateVersion: 7 },
+    })
+    // Le coup concurrent (moves: 1) n'est pas effacé par l'état lu en v5.
+    expect(writtenState(1)).toEqual({ moves: 1, left: ['carol'] })
+    expect(bus.publishRoomChanged).toHaveBeenCalledWith('room-1', { type: 'changed', stateVersion: 7 })
+  })
+
+  it('conflits répétés : abandon borné, rien n’est écrit sans condition', async () => {
+    roomMock.findUnique.mockResolvedValue(playingRoom())
+    roomMock.updateMany.mockResolvedValue({ count: 0 })
+
+    const res = await leave('carol')
+
+    expect(res.status).toBe(200)
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(3)
+    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(tickerMock).not.toHaveBeenCalled()
+    expect(bus.publishRoomChanged).toHaveBeenCalledWith('room-1', { type: 'lobby' })
+  })
+
+  it('salle disparue pendant le conflit : rien de plus', async () => {
+    roomMock.findUnique.mockResolvedValueOnce(playingRoom()).mockResolvedValueOnce(null)
+    roomMock.updateMany.mockResolvedValue({ count: 0 })
+
+    expect((await leave('carol')).status).toBe(200)
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('DELETE /rooms/[roomId] — Petit Buveur', () => {
+  let pbAdapter: GameAdapter
+  const members = ['A', 'B', 'C'].map((id) => ({ userId: id, displayName: id }))
+  const pbRoom = (state: EngineState) =>
+    playingRoom({ gameId: 'petit-buveur', gameStateJson: pbAdapter.serialize(state) })
+
+  beforeEach(async () => {
+    const actual = await vi.importActual<typeof import('@/lib/online/game-adapters')>(
+      '@/lib/online/game-adapters'
+    )
+    pbAdapter = actual.getGameAdapter('petit-buveur')!
+    adapterMock.mockReturnValue(pbAdapter)
+    memberMock.deleteMany.mockResolvedValue({ count: 1 })
+    memberMock.count.mockResolvedValue(2)
+    roomMock.updateMany.mockResolvedValue({ count: 1 })
+  })
+
+  it('le joueur au tour quitte : la main passe aussitôt au suivant', async () => {
+    const state = buildPetitBuveurEngineState(members, 'normal', 7)
+    expect(pbAdapter.currentActorId(state)).toBe('A')
+    roomMock.findUnique.mockResolvedValue(pbRoom(state))
+
+    await leave('A')
+
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(1)
+    const { data } = roomMock.updateMany.mock.calls[0][0]
+    expect(data.currentTurnUserId).toBe('B')
+    expect(pbAdapter.currentActorId(pbAdapter.parse(data.gameStateJson)!)).toBe('B')
+    expect(tickerMock).toHaveBeenCalledWith('room-1')
+    expect(bus.publishRoomChanged).toHaveBeenCalledWith('room-1', { type: 'changed', stateVersion: 6 })
+  })
+
+  it('partie TERMINÉE : la table reste sur l’écran de fin, votes « Rejouer » compris', async () => {
+    const base = buildPetitBuveurEngineState(members, 'normal', 7)
+    const finished = { ...base, phase: 'finished', winner: 'A', rematchVotes: ['A', 'B'] } as EngineState
+    roomMock.findUnique.mockResolvedValue(pbRoom(finished))
+
+    const res = await leave('C')
+
+    expect(res.status).toBe(200)
+    // Ni état effacé, ni statut 'waiting' : aucune écriture sur la salle.
+    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(roomMock.updateMany).not.toHaveBeenCalled()
+    expect(roomMock.delete).not.toHaveBeenCalled()
+    expect(bus.publishRoomChanged).toHaveBeenCalledWith('room-1', { type: 'lobby' })
   })
 })

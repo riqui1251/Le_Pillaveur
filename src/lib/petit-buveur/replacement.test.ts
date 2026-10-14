@@ -145,11 +145,17 @@ describe('lastInteraction (spectacle client des tirages)', () => {
     }
   })
 
+  // Deux étapes : l'acteur désigne la cible, puis c'est la cible qui choisit son côté.
   it('pile-face expose côté misé, résultat et gorgées cohérentes', () => {
-    const next = reduce(withPending('pile-face'), {
+    const staged = reduce(withPending('pile-face'), {
       type: 'RESOLVE_INTERACTION',
       playerId: 'u1',
-      choice: { targetId: 'u2', side: 'pile' },
+      choice: { targetId: 'u2' },
+    })
+    const next = reduce(staged, {
+      type: 'RESOLVE_INTERACTION',
+      playerId: 'u2',
+      choice: { side: 'pile' },
     })
     expect(next.lastInteraction?.kind).toBe('pile-face')
     if (next.lastInteraction?.kind === 'pile-face') {

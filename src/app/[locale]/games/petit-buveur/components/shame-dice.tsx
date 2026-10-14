@@ -92,6 +92,5 @@ export function buildDeHonteDescription(
   else if (roll === 5) key = 'shameDice.outcomeAdvance'
   else key = 'shameDice.outcomeBack'
 
-  let result = t(key, values)
-  return result.replaceAll('__HTML_player__', playerHtml)
+  return t(key, values).replaceAll('__HTML_player__', playerHtml)
 }

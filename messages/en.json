@@ -2059,7 +2059,39 @@
           "seeAllHint": "Go through every player to reveal the totals"
         },
         "turnLabel": "Turn of",
-        "nextUp": "Next up"
+        "nextUp": "Next up",
+        "live": {
+          "effectsLabel": "Effects hit by the balls this turn",
+          "previewLabel": "Final value of each ball depending on the slot it lands in",
+          "slotLabel": "Slot {n}: {values}",
+          "none": "no effect",
+          "cancelled": "Cancelled",
+          "jackpot": "Jackpot {value}",
+          "swapped": "count swapped",
+          "nothing": "did nothing",
+          "doubled": "doubled",
+          "extraBall": "bonus ball",
+          "short": {
+            "multiplier": "×2",
+            "addBall": "+ ball",
+            "addSip": "+1",
+            "subtractSip": "−1",
+            "cancellation": "Cancel",
+            "colorSwap": "Color",
+            "mystery": "Mystery",
+            "shake": "Shuffle",
+            "roundDrinks": "Round",
+            "jackpot": "Jackpot",
+            "teleportation": "Teleport",
+            "gravityFlip": "Gravity",
+            "slowMotion": "Slow-mo",
+            "split": "Split",
+            "scoreSwap": "Swap",
+            "doubleEffect": "Effect ×2",
+            "magnetLeft": "Magnet",
+            "magnetRight": "Magnet"
+          }
+        }
       },
       "a11y": {
         "turnResult": "Result: {drinks} sips to drink, {gives} to give.",
@@ -3041,7 +3073,7 @@
           },
           "difficile": {
             "label": "🔥 Difficult",
-            "desc": "No more challenges and sips"
+            "desc": "More challenges and sips"
           },
           "extreme": {
             "label": "💀 Extreme",
@@ -3054,6 +3086,7 @@
           "🍺 Depending on the box landed, take sips or take on a challenge.",
           "⚡ Special boxes trigger effects: exchanges, curses, protections...",
           "🏆 The first to reach square 30 wins the game!",
+          "⚔️ Duel: if you stop on an occupied square, you can challenge a player there; the loser moves back one square, unless protected.",
           "⚠️ Consume in moderation."
         ],
         "resume": "Resume the current game",
@@ -3063,6 +3096,7 @@
             "🌿 Depending on the square, take forfeits or take on a challenge.",
             "⚡ Special squares trigger effects: swaps, curses, protections…",
             "🏆 The first to reach square 30 wins the game!",
+            "⚔️ Duel: if you stop on an occupied square, you can challenge a player there; the loser moves back one square, unless protected.",
             "🌿 Soft mode: same games, not a single drop."
           ],
           "difficulties": {
@@ -3075,7 +3109,8 @@
             "extreme": {
               "desc": "Mega forfeit possible — for experts only"
             }
-          }
+          },
+          "tagline": "Move across the board, one forfeit at a time!"
         }
       },
       "difficultyLabels": {
@@ -3108,7 +3143,7 @@
         "defi-chaine": "Chain Challenge",
         "piege": "Trap",
         "melange": "Blend",
-        "passe-tour": "Take your turn",
+        "passe-tour": "Skip a turn",
         "double-peine": "Double punishment",
         "solo": "Solo",
         "copie": "Copy",
@@ -3164,13 +3199,25 @@
           "deHonteForward": "Move forward one square!",
           "deHonteBack": "Move back one square!",
           "wheelLegendSafe": "Safe",
-          "wheelLegendDrink": "Sips"
+          "wheelLegendDrink": "Sips",
+          "deHonteCannotBack": "Already on square 1: no moving back!"
         },
         "outcomeNothing": "No damage — safe!",
         "history": {
           "title": "Effect history",
           "empty": "No effects yet"
-        }
+        },
+        "effectsLegend": "Effects legend",
+        "notes": {
+          "bridgeForward": "🌉 Bridge (square {case}): everyone who was on it moves forward one square!",
+          "bridgeBack": "🌉 Bridge (square {case}): everyone who was on it moves back one square!",
+          "nothingToReplay": "Nothing to replay: no square played yet — {player} is safe!",
+          "noEffect": "Nobody is affected: the square has no effect."
+        },
+        "verdictWaiting": "{name} is judging whether {target} completed the challenge…",
+        "sideWaiting": "{name} is picking heads or tails… ({seconds}s)",
+        "sidePrompt": "{actor} is flipping the coin for you: pick your side!",
+        "secondsLeft": "{seconds}s left"
       },
       "defis": [
         {
@@ -3347,7 +3394,7 @@
         "recul": "Move back 1 space!",
         "avance": "Advance by {count} square(s)!",
         "tous": "Everyone drinks {count} sip(s) except the targeted person! 🍻",
-        "roue": "🎯 Special case: Sip Wheel!",
+        "roue": "🎯 Special square: Sip Wheel!",
         "roue-defis": "🎭 Wheel of Challenges!",
         "de-honte": "🎲 Dice of shame! Roll the dice of destiny.",
         "pile-face": "🪙 Heads or tails! The target chooses and tries his luck.",
@@ -3361,7 +3408,7 @@
         "defi-chaine": "🔗 Chain challenge! Linked 5 turns to a partner!",
         "piege": "🕳️ Trap! Drink as many sips as your position!",
         "melange": "🔀 Mix! Positions are mixed!",
-        "passe-tour": "⏭️ Take your turn! The target will not roll next turn.",
+        "passe-tour": "⏭️ Skip a turn! The target won't roll next turn.",
         "double-peine": "💥 Double penalty! The target drinks {count} sips × 2!",
         "solo": "🎯 Solo! Everyone is safe, you drink 1 sip.",
         "copie": "👯 Copy! The target undergoes the same movement as you this turn.",
@@ -3392,7 +3439,10 @@
         "pontAdvance": "advance",
         "pontBack": "steps back",
         "loterieCancelled": "🎰 Lottery canceled (not enough players).",
-        "loterieResult": "🎰 Lottery! {drinker} drinks 2 sips, {mover} moves forward one space."
+        "loterieResult": "🎰 Lottery! {drinker} drinks 2 sips, {mover} moves forward one space.",
+        "reculGroupeNobody": "⬅️ Group retreat! Nobody is behind {actor}: nobody moves back.",
+        "pontNoBack": "🌉 Bridge ({side})! Square {case}: no way back, nobody moves.",
+        "loterieProtected": "🎰 Lottery! {drinker} should have drunk 2 sips but {protected} — {mover} moves forward one square."
       },
       "shameDice": {
         "safe": "Safe",
@@ -3435,7 +3485,8 @@
           "applyCase": "Apply box effect",
           "changeOpponent": "Change opponent",
           "winnerStays": "{winner} wins and stays · {loser} moves back one square",
-          "opponentWins": "{winner} wins · {loser} moves back one square"
+          "opponentWins": "{winner} wins · {loser} moves back one square",
+          "loserProtected": "{winner} wins · {loser} is protected and does not move back"
         },
         "dialogs": {
           "teleport": "🌀 Teleport",
@@ -3489,7 +3540,11 @@
           "mirrorDescShort": "When one drinks, the other too",
           "protectedStatus": "{player} is protected",
           "cursedStatus": "{player} is cursed ({count} turns)",
-          "chainStatus": "{from} → {to} ({count} turns)"
+          "chainStatus": "{from} → {to} ({count} turns)",
+          "mirrorDescOneWay": "When {a} drinks, {b} drinks too",
+          "mirrorDescShortOneWay": "When the initiator drinks, their target drinks too",
+          "turnsLeft": "{count, plural, one {# turn left} other {# turns left}}",
+          "activeTitle": "Current effects"
         },
         "messages": {
           "cheers": [
@@ -3641,12 +3696,22 @@
           "curseApplied": "👻 {player} is now cursed for {count} turns!",
           "skipTurnNext": "⏭️ {player} will not roll on the next turn!",
           "anchorApplied": "⚓ {player} cannot move forward on the next turn!",
-          "rouletteSafe": "🔫 Click… {player} is safe!"
+          "rouletteSafe": "🔫 Click… {player} is safe!",
+          "shielded": "🛡️ {player} {protected}",
+          "teleportSelf": "🌀 {actor} is already {rank} in the ranking: no swap.",
+          "replayedCase": "🔁 {via}: the “{case}” square is replayed.",
+          "doubleCaseStep": "🎲 Effect {index}: {case}",
+          "mirrorLinkOneWay": "🪞 Reverse mirror: when {actor} drinks, {target} drinks too, until the end of {actor}'s next turn!",
+          "replayNothing": "🔁 Nothing to replay: no square has been played yet.",
+          "duelLoserProtected": "⚔️ Duel over: {winner} wins, but {loser} is protected and does not move back."
         },
         "yourTurn": "Your turn!",
         "soundOn": "Turn sound on",
         "soundOff": "Mute sound",
-        "tapToSkip": "Tap to skip"
+        "tapToSkip": "Tap to skip",
+        "turnActions": "Turn actions",
+        "defaultPlayerName": "Player {number}",
+        "notEnoughPlayers": "You need at least 2 players to start a game!"
       },
       "tutorial": {
         "steps": [
@@ -3689,7 +3754,8 @@
         },
         "resolveCase": {
           "solo": "🎯 {actor} takes 1 forfeit, the others are safe!",
-          "loterieResult": "🎰 Lottery! {drinker} takes 2 forfeits, {mover} moves forward one space."
+          "loterieResult": "🎰 Lottery! {drinker} takes 2 forfeits, {mover} moves forward one space.",
+          "loterieProtected": "🎰 Lottery! {drinker} should have taken 2 forfeits but {protected} — {mover} moves forward one square."
         },
         "shameDice": {
           "twoSips": "2 forfeits",
@@ -3727,7 +3793,9 @@
             "curseDesc": "Takes 1 extra forfeit each round",
             "chainDesc": "Linked to a partner: they suffer the same effects (forfeits)",
             "mirrorDesc": "When one takes a forfeit, so does the other ({a} ↔ {b})",
-            "mirrorDescShort": "When one takes a forfeit, so does the other"
+            "mirrorDescShort": "When one takes a forfeit, so does the other",
+            "mirrorDescOneWay": "When {a} takes a forfeit, {b} takes one too",
+            "mirrorDescShortOneWay": "When the initiator takes a forfeit, their target takes one too"
           },
           "outcomes": {
             "pileFaceLose": "🪙 Heads or tails: draw {result}, {player} takes {count} forfeit(s)!",
@@ -3743,7 +3811,8 @@
             "everyoneDrinksHonor": "Everyone takes {count} forfeit(s) to honor \"{compliment}\"",
             "everyoneDrinksExcept": "Everyone takes {count} forfeit(s) except",
             "wheelDefiOrDrink": "{player} — take on the challenge or take 2 forfeits!",
-            "wheelDrink": "{player} takes a forfeit (player on turn)."
+            "wheelDrink": "{player} takes a forfeit (player on turn).",
+            "mirrorLinkOneWay": "🪞 Reverse mirror: when {actor} takes a forfeit, {target} takes one too, until the end of {actor}'s next turn!"
           },
           "messages": {
             "drinking": [
@@ -3769,12 +3838,26 @@
               "Come on, go for it!"
             ]
           }
+        },
+        "online": {
+          "spectacle": {
+            "wheelSafe": "SAFE — no forfeit!",
+            "wheelDrinks": "{count} forfeit(s)!",
+            "pfWin": "Bet won — nobody takes a forfeit",
+            "pfLose": "{name} takes {count} forfeit(s)!",
+            "deHonteDrink": "2 forfeits!",
+            "wheelLegendDrink": "Forfeits"
+          }
         }
       },
       "about": {
         "p1": "The party board game: one die, pawns, thirty squares with effects and dares. Everyone moves at the die's pace, and every square has its character: dares to perform, sips given or received, table-wide events, special squares aimed at one particular player. The first to reach the end of the board wins, and online, the win counts towards the site's ranking.",
         "p2": "On your turn, roll the die: your pawn moves square by square and the square reveals itself. Apply its effect, dare, swap, event… The table judges whether the dare is done, nobody has to hold the rulebook. Some spots trigger mini-moments: wheel of fortune, coin toss, die of shame. The host sets the difficulty in the lobby, from easy to extreme, and voice chat carries the dares.",
         "p3": "Refused dares cost more than attempted ones, and some squares let you target opponents' pawns: keep an eye on them. A player who leaves is replaced by a bot after three minutes. Up to 99 online in theory; beyond eight, you wait a long time for your turn, so open two tables. The Little Drinker also plays locally, on a single phone."
+      },
+      "diceOverlay": {
+        "rolling": "{name} rolls the die…",
+        "result": "{name} rolled a {value}"
       }
     },
     "quiz": {
