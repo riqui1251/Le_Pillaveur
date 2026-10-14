@@ -12,6 +12,7 @@ import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCa
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
 import { GameFixedActionBar, gameActionBarPadding } from '@/components/game/GameFixedActionBar'
+import { ResumeGamePrompt } from '@/components/game/ResumeGamePrompt'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 import { usePlayers } from '@/hooks/usePlayers'
 
@@ -82,16 +83,16 @@ function Die({ value, rolling, highlight }: { value: number; rolling: boolean; h
       animate={rolling ? { rotate: [0, -12, 12, -8, 8, 0], scale: [1, 1.08, 0.95, 1.05, 1] } : {}}
       transition={{ duration: 0.6, ease: 'easeInOut' }}
       className={cn(
-        'relative h-20 w-20 rounded-2xl border-2 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-all duration-300',
-        highlight ? 'border-red-400 shadow-[0_0_24px_rgba(239,68,68,0.5)]' : 'border-white/80',
-        rolling && 'shadow-[0_0_32px_rgba(239,68,68,0.35)]'
+        'relative h-20 w-20 rounded-2xl border-2 bg-cream shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-all duration-300',
+        highlight ? 'border-suit-red shadow-[0_0_24px_rgb(var(--suit-red-rgb)/0.5)]' : 'border-[#D8CCAE]',
+        rolling && 'shadow-[0_0_32px_rgb(var(--gold-rgb)/0.35)]'
       )}
     >
       {(DOT_POSITIONS[value] || []).map((pos, i) => (
         <div key={i} className={DOT_CLASS[pos]}>
           <div className={cn(
             'h-3.5 w-3.5 rounded-full',
-            value === 3 ? 'bg-red-600' : 'bg-gray-800'
+            value === 3 ? 'bg-suit-red' : 'bg-[#24201A]'
           )} />
         </div>
       ))}
@@ -123,7 +124,6 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
   const session = useResumableLocalGame<Monsieur3Save>(SAVE_ID, SAVE_VERSION, (s) =>
     isSameLocalTable(s.playerStates.map((st) => st.id), initialBasePlayers)
   )
-  const tCommon = useTranslations('common')
   const { updatePlayerStats } = usePlayers()
 
   const confettiRef = useRef<HTMLDivElement>(null)
@@ -394,50 +394,22 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
   const monsieur3Player = players.find(p => p.isMonsieur3)
 
   if (session.pending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#07060b] p-4 text-white">
-        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-red-500/20 bg-red-950/20 p-6 text-center">
-          <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
-          <p className="text-sm text-white/55">{tCommon('resumeGame.body')}</p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={resumeSavedGame}
-              className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 py-3 text-sm font-bold text-white hover:from-red-500 hover:to-orange-500"
-            >
-              {tCommon('resumeGame.resume')}
-            </button>
-            <button
-              onClick={session.discard}
-              className="w-full rounded-2xl border border-white/[0.15] bg-white/[0.05] py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
-            >
-              {tCommon('resumeGame.newGame')}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
+    return <ResumeGamePrompt onResume={resumeSavedGame} onDiscard={session.discard} />
   }
 
   return (
-    <div className="w-full min-h-screen relative text-white">
-      {/* Fond */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[#07060b]" />
-        <div className="absolute -top-32 -left-20 h-[28rem] w-[28rem] rounded-full bg-red-600/10 blur-[120px]" />
-        <div className="absolute -bottom-32 right-0 h-[26rem] w-[26rem] rounded-full bg-indigo-700/10 blur-[110px]" />
-      </div>
-
+    <div className="w-full relative text-cream">
       {/* Header fixe */}
-      <div className="fixed top-0 inset-x-0 z-30 border-b border-white/[0.06] bg-[#07060b]/90 backdrop-blur-xl">
+      <div className="fixed top-0 inset-x-0 z-30 border-b border-gold/20 bg-felt-deep/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
-          <h1 className="font-black tracking-tight text-lg bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-rose-300 to-orange-400">
-            🎲 {t('title')}
+          <h1 className="font-display text-lg font-bold text-gold">
+            {t('title')}
           </h1>
           <div className="flex items-center gap-1">
-            <button onClick={restartGame} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-red-300/60 transition hover:bg-white/10 hover:text-red-300" aria-label={t('newGame')}>
+            <button onClick={restartGame} className="rounded-xl border border-gold/20 bg-black/20 p-2 text-cream/70 transition hover:text-gold" aria-label={t('newGame')}>
               <RotateCcw className="h-4 w-4" />
             </button>
-            <button onClick={onGameEnd} className="rounded-xl border border-white/10 bg-white/[0.05] p-2 text-white/40 transition hover:bg-white/10 hover:text-white/70" aria-label={t('backToGames')}>
+            <button onClick={onGameEnd} className="rounded-xl border border-gold/20 bg-black/20 p-2 text-cream/70 transition hover:text-gold" aria-label={t('backToGames')}>
               <ArrowLeft className="h-4 w-4" />
             </button>
           </div>
@@ -450,13 +422,13 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
         {/* Phase indicator */}
         <div className="flex items-center gap-2">
           <span className={cn(
-            'rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-widest',
-            gamePhase === 'setup' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'
+            'rounded-lg border px-3 py-1 font-display text-[11px] font-semibold uppercase tracking-[0.2em]',
+            gamePhase === 'setup' ? 'border-gold/30 bg-gold/10 text-gold' : 'border-suit-red/30 bg-suit-red/20 text-red-300'
           )}>
             {gamePhase === 'setup' ? t('phaseSetup') : t('phasePlay')}
           </span>
           {monsieur3Player && (
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-[11px] font-semibold text-amber-300">
+            <span className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-semibold text-gold">
               {t('m3Badge', { name: monsieur3Player.name, count: monsieur3Player.score })}
             </span>
           )}
@@ -464,14 +436,14 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
 
         {/* Joueur actif */}
         {currentPlayer && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 flex items-center gap-3">
+          <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 px-4 py-3 flex items-center gap-3">
             <PlayerIcon player={currentPlayer} size="md" className="h-10 w-10 text-xl" />
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">{t('activePlayer')}</p>
-              <PlayerName player={currentPlayer} className={cn('font-bold text-white text-base truncate', isSpecialPlayer(currentPlayer) && getSpecialEffectClass(currentPlayer))} />
+              <p className="mb-0.5 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('activePlayer')}</p>
+              <PlayerName player={currentPlayer} className={cn('font-display font-bold text-cream text-base truncate', isSpecialPlayer(currentPlayer) && getSpecialEffectClass(currentPlayer))} />
             </div>
             {currentPlayer.isMonsieur3 && (
-              <span className="shrink-0 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2.5 py-1 text-[11px] font-bold text-black shadow-[0_0_12px_rgba(245,158,11,0.4)]">
+              <span className="shrink-0 rounded-lg border border-suit-red/30 bg-suit-red/20 px-2.5 py-1 text-[11px] font-bold text-red-300">
                 {t('m3Label')}
               </span>
             )}
@@ -479,19 +451,16 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
         )}
 
         {/* Zone des dés */}
-        <div ref={confettiRef} className="relative rounded-2xl border border-white/10 bg-white/[0.04] p-6 overflow-hidden">
-          {/* Texture */}
-          <div className="pointer-events-none absolute inset-0 opacity-[0.03] [background:repeating-linear-gradient(45deg,rgba(255,255,255,.2)_0px,rgba(255,255,255,.2)_1px,transparent_1px,transparent_20px)]" />
-
+        <div ref={confettiRef} className="relative rounded-2xl border border-gold/15 bg-felt-deep/70 p-6 overflow-hidden">
           <div className="relative flex items-center justify-center gap-6 mb-5">
             <Die value={dice.dice1} rolling={rolling} highlight={dice.dice1 === 3} />
             {gamePhase !== 'setup' && (
               <>
-                <span className="text-white/20 text-2xl font-thin">+</span>
+                <span className="text-gold/40 text-2xl font-thin">+</span>
                 <Die value={dice.dice2} rolling={rolling} highlight={dice.dice2 === 3} />
                 {!rolling && gamePhase === 'play' && (
-                  <div className="absolute -bottom-1 right-4 flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 text-xs text-white/50">
-                    {t('sum')} <span className="font-bold text-white/80 ml-1">{dice.dice1 + dice.dice2}</span>
+                  <div className="absolute -bottom-1 right-4 flex items-center gap-1 rounded-lg border border-gold/30 bg-black/40 px-2.5 py-1 text-xs text-cream/60">
+                    {t('sum')} <span className="font-display font-bold text-gold ml-1">{dice.dice1 + dice.dice2}</span>
                   </div>
                 )}
               </>
@@ -508,7 +477,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
               transition={{ duration: 0.25 }}
               role="status"
               aria-live="polite"
-              className="text-center text-sm font-semibold text-white/80 min-h-[2.5rem] flex items-center justify-center px-2"
+              className="text-center font-display text-base font-semibold text-gold min-h-[2.5rem] flex items-center justify-center px-2"
             >
               {message}
             </motion.div>
@@ -521,9 +490,9 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
                 initial={{ opacity: 0, scale: 0.6 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.6 }}
-                className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-2xl z-10"
+                className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-2xl z-10"
               >
-                <div className="rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 px-6 py-4 text-2xl font-black text-black shadow-2xl">
+                <div className="rounded-2xl bg-amber-500 px-6 py-4 font-display text-2xl font-bold text-black shadow-2xl">
                   {specialMessage}
                 </div>
               </motion.div>
@@ -532,8 +501,8 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
         </div>
 
         {/* Liste des joueurs */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-white/40">{t('players')}</p>
+        <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
+          <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('players')}</p>
           <div className="space-y-1">
             {players.map((p, i) => {
               const isCurrent = i === currentPlayerIndex
@@ -542,19 +511,19 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
                   key={p.id}
                   className={cn(
                     'flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all',
-                    isCurrent ? 'bg-white/[0.07] border border-white/10' : 'border border-transparent'
+                    isCurrent ? 'border border-gold/60 bg-gold/[0.15]' : 'border border-gold/20 bg-black/20'
                   )}
                 >
                   <PlayerIcon player={p} size="sm" className="h-7 w-7 text-sm" />
-                  <PlayerName player={p} className={cn('text-sm font-medium flex-1 truncate', isCurrent ? 'text-white' : 'text-white/60', isSpecialPlayer(p) && getSpecialEffectClass(p))} />
+                  <PlayerName player={p} className={cn('text-sm font-medium flex-1 truncate', isCurrent ? 'text-cream' : 'text-cream/60', isSpecialPlayer(p) && getSpecialEffectClass(p))} />
                   {p.isMonsieur3 && (
-                    <span className="rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-400">M3</span>
+                    <span className="rounded-lg border border-suit-red/30 bg-suit-red/20 px-2 py-0.5 text-[10px] font-bold text-red-300">M3</span>
                   )}
                   {p.isMonsieur3 && p.score > 0 && (
-                    <span className="text-xs text-red-400 font-semibold">{p.score}🍺</span>
+                    <span className="text-xs text-red-300 font-semibold">{p.score}🍺</span>
                   )}
                   {isCurrent && !p.isMonsieur3 && (
-                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-gold animate-pulse" />
                   )}
                 </div>
               )
@@ -564,25 +533,25 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
 
         {/* Historique */}
         {rollHistory.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden">
+          <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 overflow-hidden">
             <button
               onClick={() => setShowHistory(v => !v)}
               aria-expanded={showHistory}
               aria-controls="roll-history"
-              className="flex w-full items-center justify-between px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-white/40 hover:text-white/60 transition"
+              className="flex w-full items-center justify-between px-4 py-3 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75 hover:text-gold transition"
             >
               <span>{t('history', { count: rollHistory.length })}</span>
               <span>{showHistory ? '▲' : '▼'}</span>
             </button>
             {showHistory && (
-              <div id="roll-history" className="border-t border-white/[0.06] px-4 pb-3 pt-2 max-h-48 overflow-y-auto space-y-1.5">
+              <div id="roll-history" className="border-t border-gold/10 px-4 pb-3 pt-2 max-h-48 overflow-y-auto space-y-1.5">
                 {[...rollHistory].reverse().map((r, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-white/50">
-                    <span className="shrink-0 font-semibold text-white/70">{r.player}</span>
-                    <span className="shrink-0 rounded border border-white/10 bg-white/[0.05] px-1.5 py-0.5 font-mono">
+                  <div key={i} className="flex items-start gap-2 text-xs text-cream/60">
+                    <span className="shrink-0 font-semibold text-cream">{r.player}</span>
+                    <span className="shrink-0 rounded border border-gold/20 bg-black/20 px-1.5 py-0.5 font-mono text-gold">
                       {r.dice.dice1}{r.dice.dice2 !== 1 ? `+${r.dice.dice2}` : ''}
                     </span>
-                    <span className="flex-1 text-white/45">{r.message}</span>
+                    <span className="flex-1 text-cream/50">{r.message}</span>
                   </div>
                 ))}
               </div>
@@ -596,7 +565,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
           onClick={rollDice}
           disabled={!canRoll || rolling || victoryScreen || players.length === 0}
           aria-label={rolling ? t('rolling') : t('rollPlay')}
-          className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-rose-500 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(239,68,68,0.35)] transition-transform [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 hover:from-red-500 hover:to-rose-400"
+          className="w-full rounded-2xl bg-amber-500 py-4 text-base font-bold text-black shadow-none transition-transform [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 hover:bg-amber-400"
         >
           {rolling ? t('rolling') : gamePhase === 'setup' ? t('rollSetup') : t('rollPlay')}
         </button>
@@ -608,7 +577,7 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/75 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4"
           >
             {/* Défilable, carte centrée par my-auto (et non items-center) : avec
                 l'avis de première partie, la carte peut dépasser un petit écran,
@@ -617,19 +586,17 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
               initial={{ scale: 0.85, y: 24 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ type: 'spring', duration: 0.6 }}
-              className="relative my-auto w-full max-w-sm overflow-hidden rounded-3xl border border-red-500/20 bg-[#0d0807] p-6 shadow-2xl"
+              className="relative my-auto w-full max-w-sm overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep p-6 text-cream shadow-2xl"
             >
-              <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #ef4444, transparent 70%)' }} />
               <div className="relative space-y-5 text-center">
-                <div className="text-5xl">🎲</div>
-                <h2 className="text-2xl font-black text-white">{t('gameOver')}</h2>
+                <h2 className="font-display text-2xl font-bold text-gold">{t('gameOver')}</h2>
 
                 {monsieur3Player && (
-                  <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/70 mb-2">{t('m3Title')}</p>
-                    <p className="text-xl font-extrabold text-amber-300">{monsieur3Player.name}</p>
-                    <p className="text-3xl font-black text-white mt-1">{monsieur3Player.score} 🍺</p>
-                    <p className="text-xs text-white/40 mt-1">{t('sipsDrunk', { count: monsieur3Player.score })}</p>
+                  <div className="rounded-xl border border-gold/30 bg-gold/10 p-4">
+                    <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('m3Title')}</p>
+                    <p className="font-display text-xl font-bold text-cream">{monsieur3Player.name}</p>
+                    <p className="mt-1 font-display text-3xl font-bold text-gold">{monsieur3Player.score} 🍺</p>
+                    <p className="text-xs text-cream/60 mt-1">{t('sipsDrunk', { count: monsieur3Player.score })}</p>
                   </div>
                 )}
 
@@ -638,13 +605,13 @@ export default function Game({ players: initialBasePlayers, onGameEnd }: GamePro
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     onClick={restartGame}
-                    className="rounded-2xl bg-gradient-to-r from-red-600 to-rose-500 py-3 text-sm font-bold text-white hover:from-red-500 hover:to-rose-400"
+                    className="rounded-2xl bg-amber-500 py-3 text-sm font-bold text-black shadow-none hover:bg-amber-400"
                   >
                     {t('replay')}
                   </button>
                   <button
                     onClick={onGameEnd}
-                    className="rounded-2xl border border-white/10 bg-white/[0.05] py-3 text-sm text-white/60 hover:bg-white/10 hover:text-white"
+                    className="rounded-2xl border border-gold/25 bg-black/20 py-3 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
                   >
                     {t('menu')}
                   </button>

@@ -152,6 +152,7 @@
   },
   "common": {
     "back": "Retour",
+    "backToGames": "Retour aux jeux",
     "loading": "Chargement…",
     "save": "Enregistrer",
     "cancel": "Annuler",
@@ -1677,13 +1678,10 @@
       "title": "Hi/Lo",
       "page": {
         "gameMode": "Mode de jeu",
-        "selectMode": "Sélectionner un mode",
         "modes": {
           "standard": "Standard",
           "traversee": "Traversée"
-        },
-        "start": "Commencer la partie",
-        "backToGames": "Retour aux jeux"
+        }
       },
       "loading": "Chargement du jeu...",
       "sipsHeader": "Gorgées : {count}",
@@ -1773,7 +1771,6 @@
         "cardsCount": "{n} cartes",
         "height": "Hauteur",
         "rowsCards": "{rows} rangées · {cards} cartes",
-        "noPlayersSelected": "Aucun joueur sélectionné",
         "rulesTitle": "Règles du jeu",
         "rulesFun": [
           "Retournez les cartes une par une en partant du bas.",
@@ -1784,9 +1781,7 @@
           "Mini pré-jeu : prédictions en 4 étapes (couleur → plus/moins → intérieur/extérieur → signe).",
           "Chaque joueur mémorise ses cartes attribuées secrètement.",
           "La pyramide est construite sans les cartes des joueurs. Distribuez les gorgées à ceux qui ont la valeur retournée."
-        ],
-        "needPlayers": "Sélectionnez au moins 2 joueurs sur la page Joueurs.",
-        "backToGames": "Retour aux jeux"
+        ]
       },
       "game": {
         "titleClassic": "· Classique",
@@ -1973,7 +1968,6 @@
       "title": "Plinko",
       "tagline": "Lancez des balles, distribuez des gorgées",
       "page": {
-        "noPlayers": "Aucun joueur sélectionné. Retournez sur la page Joueurs pour constituer votre équipe (minimum 2).",
         "difficulty": "Difficulté",
         "difficulties": {
           "easy": {
@@ -1993,8 +1987,7 @@
           }
         },
         "cumulativeMode": "Mode Cumulatif",
-        "cumulativeDesc": "Les effets multiplicateurs et +/- s'accumulent sur le tour",
-        "backToGames": "Retour aux jeux"
+        "cumulativeDesc": "Les effets multiplicateurs et +/- s'accumulent sur le tour"
       },
       "pinLabels": {
         "multiplier": "x2",
@@ -3035,12 +3028,7 @@
     },
     "petit-buveur": {
       "page": {
-        "back": "Retour",
-        "badge": "🍺 Jeu de plateau",
-        "title": "Le Petit Buveur",
         "tagline": "Avance sur le plateau sans être trop saoul !",
-        "selectedPlayers": "Joueurs sélectionnés",
-        "noPlayers": "Aucun joueur — rendez-vous sur la page Joueurs.",
         "difficulty": "Difficulté",
         "difficulties": {
           "facile": {
@@ -3068,8 +3056,6 @@
           "🏆 Le premier à atteindre la case 30 gagne la partie !",
           "⚠️ À consommer avec modération."
         ],
-        "needPlayers": "Sélectionne au moins 2 joueurs pour commencer.",
-        "start": "Commencer la partie",
         "resume": "Reprendre la partie en cours",
         "soft": {
           "rules": [

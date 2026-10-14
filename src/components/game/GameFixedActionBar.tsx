@@ -30,8 +30,7 @@ export function GameFixedActionBar({
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-0 z-20 border-t border-white/[0.06]",
-        "bg-gradient-to-t from-[#07060b] via-[#07060b]/98 to-[#07060b]/90 backdrop-blur-md",
+        "fixed inset-x-0 bottom-0 z-20 border-t border-gold/[0.15] bg-felt-deep/95 backdrop-blur-md",
         className
       )}
     >

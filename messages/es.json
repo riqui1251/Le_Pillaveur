@@ -152,6 +152,7 @@
   },
   "common": {
     "back": "Atrás",
+    "backToGames": "Volver a los juegos",
     "loading": "Cargando…",
     "save": "Guardar",
     "cancel": "Cancelar",
@@ -1677,13 +1678,10 @@
       "title": "Hi/Lo",
       "page": {
         "gameMode": "Modo de juego",
-        "selectMode": "Seleccionar un modo",
         "modes": {
           "standard": "Estándar",
           "traversee": "Travesía"
-        },
-        "start": "Empezar la partida",
-        "backToGames": "Volver a los juegos"
+        }
       },
       "loading": "Cargando el juego...",
       "sipsHeader": "Sorbos: {count}",
@@ -1773,7 +1771,6 @@
         "cardsCount": "{n} cartas",
         "height": "Altura",
         "rowsCards": "{rows} filas · {cards} cartas",
-        "noPlayersSelected": "Ningún jugador seleccionado",
         "rulesTitle": "Reglas del juego",
         "rulesFun": [
           "Voltea las cartas una por una empezando por abajo.",
@@ -1784,9 +1781,7 @@
           "Mini preludio: predicciones en 4 pasos (color → más/menos → interior/exterior → palo).",
           "Cada jugador memoriza sus cartas asignadas en secreto.",
           "La pirámide se construye sin las cartas de los jugadores. Reparte tragos a quienes tengan el valor volteado."
-        ],
-        "needPlayers": "Selecciona al menos 2 jugadores en la página Jugadores.",
-        "backToGames": "Volver a los juegos"
+        ]
       },
       "game": {
         "titleClassic": "· Clásico",
@@ -1973,7 +1968,6 @@
       "title": "Plinko",
       "tagline": "Lanza bolas, reparte tragos",
       "page": {
-        "noPlayers": "Ningún jugador seleccionado. Vuelve a la página Jugadores para formar tu equipo (mínimo 2).",
         "difficulty": "Dificultad",
         "difficulties": {
           "easy": {
@@ -1993,8 +1987,7 @@
           }
         },
         "cumulativeMode": "Modo acumulativo",
-        "cumulativeDesc": "Los efectos multiplicadores y +/- se acumulan en el turno",
-        "backToGames": "Volver a los juegos"
+        "cumulativeDesc": "Los efectos multiplicadores y +/- se acumulan en el turno"
       },
       "pinLabels": {
         "multiplier": "x2",
@@ -3035,12 +3028,7 @@
     },
     "petit-buveur": {
       "page": {
-        "back": "Atrás",
-        "badge": "🍺 Juego de mesa",
-        "title": "El pequeño bebedor",
         "tagline": "¡Entra en el set sin emborracharte demasiado!",
-        "selectedPlayers": "Jugadores seleccionados",
-        "noPlayers": "No hay jugadores: ve a la página de Jugadores.",
         "difficulty": "Dificultad",
         "difficulties": {
           "facile": {
@@ -3068,8 +3056,6 @@
           "🏆 ¡El primero en llegar a la casilla 30 gana el juego!",
           "⚠️Consumir con moderación."
         ],
-        "needPlayers": "Selecciona al menos 2 jugadores para comenzar.",
-        "start": "comienza el juego",
         "resume": "Reanudar el juego actual",
         "soft": {
           "rules": [

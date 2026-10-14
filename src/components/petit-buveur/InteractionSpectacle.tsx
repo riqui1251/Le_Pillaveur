@@ -69,12 +69,16 @@ function SpinningWheel({
   legendDrink: string
 }) {
   // La roue s'arrête avec le segment tiré sous l'aiguille (en haut).
-  // Couleurs SIGNIFIANTES : vert = sauvé, rouge/orangé = gorgées.
+  // Couleurs SIGNIFIANTES : vert = sauvé, deux rouges alternés = gorgées.
   const segAngle = 360 / WHEEL_SEGMENTS
   const finalRotation = 360 * 5 - (segment * segAngle + segAngle / 2)
   const gradient = useMemo(() => {
     const stops = Array.from({ length: WHEEL_SEGMENTS }, (_, i) => {
-      const color = isSafeSegment(i) ? '#10b981' : i % 2 === 0 ? '#ef4444' : '#f97316'
+      const color = isSafeSegment(i)
+        ? '#059669'
+        : i % 2 === 0
+          ? 'rgb(var(--suit-red-rgb))'
+          : 'rgb(var(--suit-red-rgb) / 0.8)'
       return `${color} ${i * segAngle}deg ${(i + 1) * segAngle}deg`
     })
     return `conic-gradient(${stops.join(', ')})`
@@ -90,14 +94,14 @@ function SpinningWheel({
           initial={{ rotate: 0 }}
           animate={{ rotate: reduced ? finalRotation % 360 : finalRotation }}
           transition={reduced ? { duration: 0 } : { duration: 4.5, ease: [0.12, 0.68, 0.16, 1] }}
-          className="relative h-40 w-40 rounded-full border-4 border-white/25 shadow-2xl"
-          style={{ backgroundImage: gradient }}
+          className="relative h-40 w-40 rounded-full border-4 border-gold/60 shadow-2xl"
+          style={{ backgroundImage: gradient, backgroundColor: 'rgb(var(--cream-rgb))' }}
         >
           {/* Picto au centre de chaque segment : ✓ sauvé, 🍺 gorgées */}
           {Array.from({ length: WHEEL_SEGMENTS }).map((_, i) => (
             <span
               key={i}
-              className="absolute left-1/2 top-1/2 text-[13px] font-black text-white drop-shadow"
+              className="absolute left-1/2 top-1/2 text-[13px] font-black text-cream drop-shadow"
               style={{
                 transform: `translate(-50%, -50%) rotate(${(i + 0.5) * segAngle}deg) translateY(-62px)`,
               }}
@@ -106,16 +110,16 @@ function SpinningWheel({
               {isSafeSegment(i) ? '✓' : '🍺'}
             </span>
           ))}
-          <span className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/40 bg-gray-900" />
+          <span className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gold/60 bg-felt-deep" />
         </motion.div>
       </div>
       {/* Légende */}
-      <div className="flex items-center gap-4 rounded-full border border-white/15 bg-gray-900/90 px-3 py-1 text-[11px] font-semibold text-white/80">
+      <div className="flex items-center gap-4 rounded-full border border-gold/20 bg-felt-deep/90 px-3 py-1 text-[11px] font-semibold text-cream/80">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden /> {legendSafe}
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" aria-hidden /> {legendSafe}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden /> 🍺 {legendDrink}
+          <span className="h-2.5 w-2.5 rounded-full bg-suit-red" aria-hidden /> 🍺 {legendDrink}
         </span>
       </div>
     </div>
@@ -136,13 +140,13 @@ function FlippingCoin({ flip, pileLabel, faceLabel, reduced }: { flip: 'pile' | 
         style={{ transformStyle: 'preserve-3d' }}
       >
         <div
-          className="absolute inset-0 flex items-center justify-center rounded-full border-4 border-amber-300/60 bg-gradient-to-br from-amber-400 to-yellow-600 text-lg font-black text-amber-950 shadow-2xl"
+          className="absolute inset-0 flex items-center justify-center rounded-full border-4 border-gold-strong bg-gold font-display text-lg font-black text-[#24201A] shadow-2xl"
           style={{ backfaceVisibility: 'hidden' }}
         >
           {pileLabel}
         </div>
         <div
-          className="absolute inset-0 flex items-center justify-center rounded-full border-4 border-slate-300/60 bg-gradient-to-br from-slate-300 to-slate-500 text-lg font-black text-slate-900 shadow-2xl"
+          className="absolute inset-0 flex items-center justify-center rounded-full border-4 border-gold bg-gold-strong font-display text-lg font-black text-[#24201A] shadow-2xl"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
         >
           {faceLabel}
@@ -231,16 +235,16 @@ export function InteractionSpectacle({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="pointer-events-none fixed inset-0 z-[118] flex items-center justify-center bg-black/70 backdrop-blur-[2px]"
+          className="pointer-events-none fixed inset-0 z-[118] flex items-center justify-center bg-black/70 backdrop-blur-sm"
           role="status"
           aria-live="polite"
         >
           <div className="flex flex-col items-center gap-4 px-6">
-            <div className="flex items-center gap-2 rounded-full border border-white/15 bg-gray-900/90 px-4 py-1.5">
-              <span className="rounded-full border border-violet-400/30 bg-violet-500/20 px-2 py-0.5 text-[11px] font-semibold text-violet-100">
+            <div className="flex items-center gap-2 rounded-full border border-gold/20 bg-felt-deep/90 px-4 py-1.5">
+              <span className="rounded-full border border-gold/40 bg-gold/[0.15] px-2 py-0.5 text-[11px] font-semibold text-gold">
                 {caseLabel}
               </span>
-              <span className="max-w-[11rem] truncate text-sm font-semibold text-white/90">{actorName}</span>
+              <span className="max-w-[11rem] truncate text-sm font-semibold text-cream">{actorName}</span>
             </div>
 
             {(current.kind === 'roue' || current.kind === 'roue-defis') && (
@@ -272,10 +276,10 @@ export function InteractionSpectacle({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{ type: 'spring', stiffness: 340, damping: 18 }}
                   className={cn(
-                    'rounded-2xl border px-5 py-2.5 text-center text-lg font-bold shadow-xl',
+                    'rounded-2xl border px-5 py-2.5 text-center font-display text-lg font-bold shadow-xl',
                     interactionDrinks(current) > 0
-                      ? 'border-red-400/40 bg-red-500/20 text-red-100'
-                      : 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100'
+                      ? 'border-suit-red/60 bg-suit-red/90 text-cream'
+                      : 'border-emerald-400/40 bg-emerald-700/70 text-emerald-50'
                   )}
                 >
                   {outcomeText(current, labels, targetName)}

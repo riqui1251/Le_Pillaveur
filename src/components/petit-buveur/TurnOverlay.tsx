@@ -94,7 +94,7 @@ export function TurnOverlay({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: reduced ? 0 : 0.18 }}
-          className="pointer-events-none fixed inset-0 z-[115] flex items-center justify-center bg-black/55 backdrop-blur-[2px]"
+          className="pointer-events-none fixed inset-0 z-[115] flex items-center justify-center bg-black/60 backdrop-blur-sm"
           role="status"
           aria-live="polite"
         >
@@ -105,8 +105,8 @@ export function TurnOverlay({
             className={
               'flex flex-col items-center gap-3 rounded-3xl border px-8 py-6 shadow-2xl ' +
               (isSelf
-                ? 'border-amber-400/50 bg-amber-500/15 shadow-amber-500/20'
-                : 'border-white/15 bg-gray-900/90')
+                ? 'border-gold/60 bg-felt-deep ring-2 ring-gold'
+                : 'border-gold/20 bg-felt-deep')
             }
           >
             <span className="flex h-16 w-16 items-center justify-center text-5xl leading-none" aria-hidden>
@@ -114,11 +114,11 @@ export function TurnOverlay({
             </span>
             <div className="text-center">
               {isSelf && labelSelf ? (
-                <p className="text-xl font-bold text-amber-200">{labelSelf}</p>
+                <p className="font-display text-xl font-bold text-gold">{labelSelf}</p>
               ) : (
-                <p className="text-lg font-bold text-white">{labelOf}</p>
+                <p className="font-display text-lg font-bold text-cream">{labelOf}</p>
               )}
-              <p className="mt-0.5 max-w-[14rem] truncate text-sm text-white/60">{name}</p>
+              <p className="mt-0.5 max-w-[14rem] truncate text-sm text-cream/60">{name}</p>
             </div>
           </motion.div>
         </motion.div>

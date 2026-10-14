@@ -13,7 +13,8 @@ import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { X, CheckCircle2, Minus, Plus, Tv } from 'lucide-react'
+import { MedalDot } from '@/components/online/MedalDot'
+import { X, Minus, Plus, Tv } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,19 +61,19 @@ function PlayerChip({
     <div
       onClick={onClick}
       className={cn(
-        'flex cursor-pointer items-center gap-1.5 rounded-xl border transition-all',
+        'flex cursor-pointer items-center gap-1.5 rounded-full border text-cream transition-all',
         size === 'sm' ? 'px-2 py-1' : 'px-2.5 py-1.5',
         selected
-          ? 'border-amber-400/70 bg-amber-400/20 shadow-[0_0_12px_rgba(245,158,11,0.3)] ring-1 ring-amber-400/40'
-          : 'border-white/10 bg-white/[0.06] hover:bg-white/10',
+          ? 'border-gold/60 bg-gold/[0.15] ring-2 ring-gold'
+          : 'border-gold/[0.15] bg-black/25 hover:bg-black/[0.35]',
       )}
     >
       <PlayerIcon player={player} size="sm" />
-      <span className="text-sm font-medium">
+      <span className="text-sm font-medium text-cream">
         <PlayerName player={player} />
       </span>
       {onRemove && (
-        <button onClick={e => { e.stopPropagation(); onRemove() }} className="ml-0.5 text-white/40 hover:text-white/90">
+        <button onClick={e => { e.stopPropagation(); onRemove() }} className="ml-0.5 text-cream/60 hover:text-gold">
           <X className="h-3.5 w-3.5" />
         </button>
       )}
@@ -85,14 +86,14 @@ function Stepper({ value, onChange, min = 1, max = 20 }: { value: number; onChan
     <div className="flex items-center gap-2">
       <button
         onClick={() => onChange(Math.max(min, value - 1))}
-        className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/70 hover:bg-white/10 hover:text-white"
+        className="flex h-8 w-8 items-center justify-center rounded-xl border border-gold/[0.15] bg-black/20 text-cream/70 hover:text-gold"
       >
         <Minus className="h-3.5 w-3.5" />
       </button>
-      <span className="w-8 text-center text-lg font-bold tabular-nums text-white">{value}</span>
+      <span className="w-8 text-center font-display text-lg font-bold tabular-nums text-gold">{value}</span>
       <button
         onClick={() => onChange(Math.min(max, value + 1))}
-        className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/70 hover:bg-white/10 hover:text-white"
+        className="flex h-8 w-8 items-center justify-center rounded-xl border border-gold/[0.15] bg-black/20 text-cream/70 hover:text-gold"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>
@@ -156,14 +157,14 @@ function SetupPhase({
         <Button
           onClick={onNext}
           disabled={totalAssigned === 0}
-          className="w-full h-11 bg-gradient-to-r from-fuchsia-600 to-violet-700 font-semibold text-white hover:from-fuchsia-500 hover:to-violet-600 disabled:opacity-50"
+          className="h-11 w-full rounded-2xl text-base bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
         >
           {totalAssigned === 0 ? t('setup.needOne') : nextLabel}
         </Button>
       }
     >
-      <div className="space-y-4">
-        <p className="text-center text-xs text-white/45">
+      <div className="space-y-4 text-cream">
+        <p className="text-center text-xs text-cream/60">
           {selectedPlayer
             ? t('setup.selectedHint', { name: selectedPlayer.name })
             : t('setup.defaultHint')}
@@ -184,15 +185,15 @@ function SetupPhase({
             }
           }}
           className={cn(
-            'min-h-[56px] rounded-2xl border p-3 transition-all duration-150',
+            'min-h-[56px] rounded-2xl border bg-felt-deep/70 p-3 transition-all duration-150',
             selectedPlayer && !unassigned.some(p => p.id === selectedPlayer.id)
-              ? 'cursor-pointer border-dashed border-white/25 bg-white/[0.05] hover:border-white/40'
-              : 'border-white/10 bg-white/[0.04]',
+              ? 'cursor-pointer border-dashed border-gold/40 hover:border-gold/60'
+              : 'border-gold/15',
           )}
         >
-          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/35">{t('setup.unassigned')}</p>
+          <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('setup.unassigned')}</p>
           {unassigned.length === 0 ? (
-            <p className="py-1 text-center text-xs text-white/25">
+            <p className="py-1 text-center text-xs text-cream/60">
               {selectedPlayer ? t('setup.tapToRemove') : t('setup.allAssigned')}
             </p>
           ) : (
@@ -226,10 +227,10 @@ function SetupPhase({
                   if (e.key === 'Enter') assignSelected(idx)
                 }}
                 className={cn(
-                  'relative min-h-[100px] overflow-hidden rounded-2xl border p-3 text-left transition-colors duration-150',
+                  'relative min-h-[100px] overflow-hidden rounded-2xl border bg-felt-deep/70 p-3 text-left transition-colors duration-150',
                   isTarget
-                    ? 'cursor-pointer border-dashed border-amber-400/[0.35] hover:border-amber-400/60 hover:bg-white/[0.03]'
-                    : 'border-white/10',
+                    ? 'cursor-pointer border-dashed border-gold/50 hover:border-gold/70'
+                    : 'border-gold/15',
                 )}
               >
                 <div
@@ -244,9 +245,9 @@ function SetupPhase({
                 <div className="relative">
                   <div className="mb-2 flex items-center gap-1.5">
                     <span className="text-lg">{horse.emoji}</span>
-                    <span className="text-sm font-bold text-white">{horse.name}</span>
+                    <span className="font-display text-sm font-bold text-cream">{horse.name}</span>
                     {isTarget && (
-                      <span className="ml-auto text-[10px] text-amber-300/80">{t('setup.assignHere')}</span>
+                      <span className="ml-auto text-[10px] text-gold/80">{t('setup.assignHere')}</span>
                     )}
                   </div>
                   {horse.players.length > 0 ? (
@@ -269,7 +270,7 @@ function SetupPhase({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-white/25">
+                    <p className="text-xs text-cream/60">
                       {isTarget ? t('setup.tapToAssign') : t('setup.noPlayer')}
                     </p>
                   )}
@@ -471,42 +472,23 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
   // ══════════════════════════════════════════════════════════════════════════
 
   if (phase === 'mode-select') {
-    const modes: { id: GameMode; emoji: string; titleKey: 'libre' | 'paris'; descKey: 'libre' | 'paris'; colorFrom: string; colorTo: string }[] = [
-      {
-        id: 'libre', emoji: '🎲', titleKey: 'libre', descKey: 'libre',
-        colorFrom: '#f59e0b', colorTo: '#f97316',
-      },
-      {
-        id: 'paris', emoji: '🃏', titleKey: 'paris', descKey: 'paris',
-        colorFrom: '#10b981', colorTo: '#14b8a6',
-      },
+    const modes: { id: GameMode; titleKey: 'libre' | 'paris'; descKey: 'libre' | 'paris' }[] = [
+      { id: 'libre', titleKey: 'libre', descKey: 'libre' },
+      { id: 'paris', titleKey: 'paris', descKey: 'paris' },
     ]
 
     return (
       <GameShell title={t('title')} onBack={onGameEnd} maxWidth={600}>
-        <div className="space-y-4">
-          <p className="text-center text-sm text-white/55">{t('chooseMode')}</p>
+        <div className="space-y-4 text-cream">
+          <p className="text-center text-sm text-cream/70">{t('chooseMode')}</p>
           {modes.map(m => (
             <button
               key={m.id}
               onClick={() => { setMode(m.id); setPhase('setup') }}
-              className="group relative w-full overflow-hidden rounded-2xl border border-white/10 p-5 text-left transition-all hover:border-white/25 hover:scale-[1.01] active:scale-[0.99]"
+              className="w-full rounded-2xl border border-gold/15 bg-felt-deep/70 p-4 text-left transition-all hover:border-gold/50 hover:scale-[1.01] active:scale-[0.99]"
             >
-              <div
-                className="absolute inset-0 opacity-15 transition-opacity group-hover:opacity-25"
-                style={{ background: `linear-gradient(135deg, ${m.colorFrom}, ${m.colorTo})` }}
-              />
-              <div
-                className="absolute left-0 top-0 h-full w-1 rounded-l-2xl"
-                style={{ background: `linear-gradient(to bottom, ${m.colorFrom}, ${m.colorTo})` }}
-              />
-              <div className="relative flex items-start gap-4">
-                <span className="text-3xl">{m.emoji}</span>
-                <div>
-                  <p className="font-bold text-white">{t(`modes.${m.titleKey}.title`)}</p>
-                  <p className="mt-1 text-sm text-white/55">{t(`modes.${m.descKey}.desc`)}</p>
-                </div>
-              </div>
+              <p className="font-display text-lg font-bold text-cream">{t(`modes.${m.titleKey}.title`)}</p>
+              <p className="mt-1 text-sm text-cream/70">{t(`modes.${m.descKey}.desc`)}</p>
             </button>
           ))}
         </div>
@@ -553,14 +535,14 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
         actionBar={
           <Button
             onClick={startRace}
-            className="w-full h-11 bg-gradient-to-r from-fuchsia-600 to-violet-700 font-semibold text-white hover:from-fuchsia-500 hover:to-violet-600"
+            className="h-11 w-full rounded-2xl text-base bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
           >
             {t('betting.confirm')}
           </Button>
         }
       >
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.07] px-4 py-3 text-sm text-amber-200/80">
+        <div className="space-y-4 text-cream">
+          <div className="rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-gold">
             {t('betting.info')}
           </div>
 
@@ -568,20 +550,20 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
             {assignedPlayers.map(player => {
               const horse = horses.find(h => h.players.some(x => x.id === player.id))!
               return (
-                <div key={player.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                <div key={player.id} className="flex items-center gap-3 rounded-xl border border-gold/[0.15] bg-black/20 p-3">
                   <PlayerIcon player={player} size="md" className="h-10 w-10 text-xl" />
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold">
+                    <p className="font-semibold text-cream">
                       <PlayerName player={player} />
                     </p>
                     <div className="flex items-center gap-1.5">
                       <div className="h-2 w-2 rounded-full" style={{ backgroundColor: horse.colorFrom }} />
-                      <p className="text-xs text-white/45">{horse.name}</p>
+                      <p className="text-xs text-cream/60">{horse.name}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <Stepper value={getBet(player.id)} onChange={v => setBets(prev => ({ ...prev, [player.id]: v }))} />
-                    <p className="text-[11px] text-white/40">
+                    <p className="text-[11px] text-cream/60">
                       {t('betting.drinkWin', { bet: getBet(player.id), payout: getBet(player.id) * 2 })}
                     </p>
                   </div>
@@ -601,12 +583,12 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
   if (phase === 'racing') {
     return (
       <GameShell title={t('titleRacing')} onBack={onGameEnd} maxWidth={800}>
-        <div className="space-y-3">
+        <div className="space-y-3 text-cream">
           <div className="flex flex-wrap items-center justify-end gap-2">
             {castActive && castCode && (
-              <span className="flex items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-xs text-violet-100">
-                <Tv className="h-3.5 w-3.5 text-violet-300" /> {tTv('castHint')}{' '}
-                <span className="font-mono font-black text-white">{castCode}</span>
+              <span className="flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-1 text-xs text-gold">
+                <Tv className="h-3.5 w-3.5" /> {tTv('castHint')}{' '}
+                <span className="font-mono font-black tracking-widest text-cream">{castCode}</span>
               </span>
             )}
             <button
@@ -614,20 +596,20 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
               onClick={toggleCast}
               aria-pressed={castActive}
               className={cn(
-                'flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors',
+                'flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
                 castActive
-                  ? 'border-violet-400/50 bg-violet-500/20 text-violet-200'
-                  : 'border-white/10 bg-white/[0.05] text-white/60 hover:border-white/20 hover:text-white',
+                  ? 'border-gold/60 bg-gold/[0.15] text-cream'
+                  : 'border-gold/[0.15] bg-black/20 text-cream/70 hover:text-gold',
               )}
             >
               <Tv className="h-4 w-4" /> {tTv('castToTv')}
             </button>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#0f1a0a] to-[#0a1208]">
-            <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2">
-              <span className="text-xs font-semibold uppercase tracking-widest text-white/30">{t('race.track')}</span>
-              <span className="text-xs font-semibold uppercase tracking-widest text-white/30">{t('race.finish')}</span>
+          <div className="overflow-hidden rounded-2xl border border-gold/15 bg-felt-deep/70">
+            <div className="flex items-center justify-between border-b border-gold/[0.15] px-4 py-2">
+              <span className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('race.track')}</span>
+              <span className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('race.finish')}</span>
             </div>
             <div className="space-y-2 p-3">
               {horses.map((horse, idx) => {
@@ -636,16 +618,16 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                 return (
                   <div key={idx} className="relative flex items-center gap-2">
                     <div className="w-20 shrink-0 text-right">
-                      <span className="text-xs font-medium text-white/60">{horse.name}</span>
+                      <span className="text-xs font-medium text-cream/80">{horse.name}</span>
                       {horse.players.length > 0 && (
-                        <p className="truncate text-[10px] text-white/35">
+                        <p className="truncate text-[10px] text-cream/60">
                           {horse.players.map(p => p.name).join(', ')}
                         </p>
                       )}
                     </div>
-                    <div className="relative h-9 flex-1 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.04]">
+                    <div className="relative h-9 flex-1 overflow-hidden rounded-xl border border-gold/[0.15] bg-black/30">
                       <div className="absolute inset-0 opacity-20"
-                        style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(255,255,255,0.03) 20px, rgba(255,255,255,0.03) 21px)' }} />
+                        style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 20px, rgb(var(--gold-rgb) / 0.12) 20px, rgb(var(--gold-rgb) / 0.12) 21px)' }} />
                       <div className="absolute inset-y-0 left-0 rounded-xl transition-all"
                         style={{ width: `${trackPct}%`, background: `linear-gradient(90deg, ${horse.colorFrom}40, ${horse.colorTo}60)` }} />
                       <motion.div
@@ -653,13 +635,13 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                         animate={{ left: `${Math.max(trackPct - 2, 0)}%` }}
                         transition={{ type: 'spring', damping: 18, stiffness: 120 }}
                       >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 text-base shadow-lg"
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-gold/30 text-base shadow-lg"
                           style={{ background: `linear-gradient(135deg, ${horse.colorFrom}, ${horse.colorTo})` }}>
                           🐎
                         </div>
                       </motion.div>
                     </div>
-                    <span className="w-9 shrink-0 text-right text-xs tabular-nums text-white/40">
+                    <span className="w-9 shrink-0 text-right font-display text-xs tabular-nums text-gold/80">
                       {Math.round(pct)}%
                     </span>
                   </div>
@@ -670,11 +652,11 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
 
           <div className="flex flex-wrap gap-2">
             {horses.filter(h => h.players.length > 0).map(horse => (
-              <div key={horse.name} className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
+              <div key={horse.name} className="flex items-center gap-1.5 rounded-xl border border-gold/[0.15] bg-black/20 px-2.5 py-1.5">
                 <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: horse.colorFrom }} />
-                <span className="text-xs font-medium text-white/70">{horse.name} :</span>
+                <span className="text-xs font-medium text-cream/80">{horse.name} :</span>
                 {horse.players.map(p => (
-                  <span key={p.id} className="text-xs">
+                  <span key={p.id} className="text-xs text-cream">
                     <PlayerName player={p} />
                     {mode === 'paris' && bets[p.id] ? ` (${bets[p.id]}🍺)` : ''}
                   </span>
@@ -705,42 +687,42 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
           <Button
             onClick={() => setPhase('results')}
             disabled={!allSelected}
-            className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 font-semibold text-white hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50"
+            className="h-11 w-full rounded-2xl text-base bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
           >
             {t('results.seeResults')}
           </Button>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-4 text-cream">
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl"
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-gold/30 text-3xl"
               style={{ background: `linear-gradient(135deg, ${winner.colorFrom}, ${winner.colorTo})` }}>
-              🏆
+              🐎
             </div>
-            <p className="font-bold text-white">{t('results.winner', { name: winner.name })}</p>
-            <p className="text-sm text-white/55">{t('results.pickTarget')}</p>
+            <p className="font-display font-bold text-cream">{t('results.winner', { name: winner.name })}</p>
+            <p className="text-sm text-cream/70">{t('results.pickTarget')}</p>
           </div>
 
           {winningPlayers.length === 0 ? (
-            <p className="text-center text-sm text-white/40">{t('results.noRider')}</p>
+            <p className="text-center text-sm text-cream/60">{t('results.noRider')}</p>
           ) : winningPlayers.map(player => {
             const bet = bets[player.id] ?? 2
             const payout = bet * 2
             return (
-              <div key={player.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 space-y-3">
+              <div key={player.id} className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <PlayerIcon player={player} size="md" className="h-10 w-10 text-xl" />
                   <div className="flex-1">
-                    <p className="font-semibold">
+                    <p className="font-semibold text-cream">
                       <PlayerName player={player} />
                     </p>
-                    <p className="text-sm text-amber-300">{tCommon('sipsCount', { count: payout })} 🍺</p>
+                    <p className="font-display text-sm text-gold">{tCommon('sipsCount', { count: payout })} 🍺</p>
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-xs text-white/45">{t('results.toWhom')}</p>
+                  <p className="mb-2 text-xs text-cream/60">{t('results.toWhom')}</p>
                   {allTargets.length === 0 ? (
-                    <p className="text-xs text-white/30">{t('results.allWinners')}</p>
+                    <p className="text-xs text-cream/60">{t('results.allWinners')}</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {allTargets.map(target => {
@@ -752,8 +734,8 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                             className={cn(
                               'flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition-all',
                               isChosen
-                                ? 'border-emerald-400/60 bg-emerald-500/[0.15] text-emerald-200'
-                                : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/10 hover:text-white',
+                                ? 'border-gold/60 bg-gold/[0.15] text-cream'
+                                : 'border-gold/[0.15] bg-black/20 text-cream/70 hover:bg-black/30 hover:text-cream',
                             )}
                           >
                             <PlayerIcon player={target} size="sm" className="h-5 w-5 text-xs" />
@@ -779,24 +761,23 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
   if (phase === 'results' && winner) {
     return (
       <GameShell title={t('title')} onBack={onGameEnd} maxWidth={600} center>
-        <div className="flex flex-col items-center gap-6 py-4 text-center">
-          <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/20 text-5xl shadow-2xl"
+        <div className="flex flex-col items-center gap-6 py-4 text-center text-cream">
+          <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-gold/30 text-5xl shadow-2xl"
             style={{ background: `linear-gradient(135deg, ${winner.colorFrom}, ${winner.colorTo})` }}>
-            🏆
+            🐎
           </div>
 
           <div>
-            <h2 className="mt-1 text-4xl font-extrabold"
-              style={{ backgroundImage: `linear-gradient(135deg, ${winner.colorFrom}, ${winner.colorTo})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <h2 className="mt-1 font-display text-4xl font-bold text-gold">
               {winner.name}
             </h2>
           </div>
 
           {/* Résumé selon le mode */}
           {mode === 'libre' && (
-            <div className="w-full rounded-2xl border border-amber-500/20 bg-amber-500/[0.08] px-6 py-4">
-              <p className="text-4xl font-extrabold text-amber-300">{distSips} 🍺</p>
-              <p className="mt-2 text-sm text-white/60">
+            <div className="w-full rounded-2xl border border-gold/15 bg-felt-deep/70 px-6 py-4">
+              <p className="font-display text-4xl font-bold text-gold">{distSips} 🍺</p>
+              <p className="mt-2 text-sm text-cream/70">
                 {winner.players.length > 0
                   ? t('results.libreWin', {
                       name: winner.players.map(p => p.name).join(', '),
@@ -813,13 +794,13 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
                 const bet = bets[p.id] ?? 2
                 const target = allPlayers.find(x => x.id === payoutTargets[p.id])
                 return (
-                  <div key={p.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <div key={p.id} className="flex items-center gap-3 rounded-xl border border-gold/[0.15] bg-black/20 px-4 py-3">
                     <PlayerChip player={p} />
-                    <span className="text-white/40">→</span>
-                    <span className="text-amber-300 font-semibold">{bet * 2} 🍺</span>
+                    <span className="text-cream/60">→</span>
+                    <span className="font-display font-semibold text-gold">{bet * 2} 🍺</span>
                     {target && (
                       <>
-                        <span className="text-white/40">{t('results.giveTo')}</span>
+                        <span className="text-cream/60">{t('results.giveTo')}</span>
                         <PlayerChip player={target} />
                       </>
                     )}
@@ -832,13 +813,13 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
           {/* Classement */}
           <div className="w-full space-y-2">
             {[...horses].sort((a, b) => b.position - a.position).map((h, i) => (
-              <div key={h.name} className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5">
-                <span className="w-5 text-center text-sm font-bold text-white/50">
-                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
+              <div key={h.name} className="flex items-center gap-3 rounded-xl border border-gold/[0.15] bg-black/20 px-4 py-2.5">
+                <span className="flex w-5 items-center justify-center text-sm font-bold text-cream/60">
+                  {i < 3 ? <MedalDot position={i + 1} /> : `${i + 1}.`}
                 </span>
                 <div className="h-3 w-3 rounded-full" style={{ backgroundColor: h.colorFrom }} />
-                <span className="flex-1 text-sm font-medium text-white/80">{h.name}</span>
-                <span className="text-xs text-white/40">{Math.round(Math.min(h.position, 100))}%</span>
+                <span className="flex-1 font-display text-sm font-medium text-cream">{h.name}</span>
+                <span className="text-xs text-cream/60">{Math.round(Math.min(h.position, 100))}%</span>
               </div>
             ))}
           </div>
@@ -846,10 +827,10 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
           <FirstGameFeedbackCard mode="local" gameId="pmu" />
 
           <div className="flex w-full gap-3">
-            <Button onClick={replayGame} className="flex-1 bg-gradient-to-r from-fuchsia-600 to-violet-700 font-semibold text-white hover:from-fuchsia-500 hover:to-violet-600">
+            <Button onClick={replayGame} className="flex-1 rounded-2xl text-base bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40">
               {t('results.replay')}
             </Button>
-            <Button onClick={onGameEnd} variant="outline" className="flex-1 border-white/20 text-white hover:bg-white/10">
+            <Button onClick={onGameEnd} variant="outline" className="flex-1 rounded-2xl border-gold/25 bg-black/20 font-semibold text-cream/80 shadow-none hover:bg-black/30 hover:text-cream">
               {tCommon('quit')}
             </Button>
           </div>

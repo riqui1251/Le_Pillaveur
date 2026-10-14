@@ -152,6 +152,7 @@
   },
   "common": {
     "back": "Indietro",
+    "backToGames": "Torna ai giochi",
     "loading": "Caricamento…",
     "save": "Salva",
     "cancel": "Annulla",
@@ -1677,13 +1678,10 @@
       "title": "Hi/Lo",
       "page": {
         "gameMode": "Modalità di gioco",
-        "selectMode": "Seleziona una modalità",
         "modes": {
           "standard": "Standard",
           "traversee": "Attraversamento"
-        },
-        "start": "Inizia la partita",
-        "backToGames": "Torna ai giochi"
+        }
       },
       "loading": "Caricamento del gioco...",
       "sipsHeader": "Sorsi: {count}",
@@ -1773,7 +1771,6 @@
         "cardsCount": "{n} carte",
         "height": "Altezza",
         "rowsCards": "{rows} righe · {cards} carte",
-        "noPlayersSelected": "Nessun giocatore selezionato",
         "rulesTitle": "Regole del gioco",
         "rulesFun": [
           "Gira le carte una alla volta partendo dal basso.",
@@ -1784,9 +1781,7 @@
           "Mini preludio: previsioni in 4 fasi (colore → più/meno → interno/esterno → seme).",
           "Ogni giocatore memorizza le carte assegnate segretamente.",
           "La piramide è costruita senza le carte dei giocatori. Distribuisci i sorsi a chi ha il valore girato."
-        ],
-        "needPlayers": "Seleziona almeno 2 giocatori nella pagina Giocatori.",
-        "backToGames": "Torna ai giochi"
+        ]
       },
       "game": {
         "titleClassic": "· Classico",
@@ -1973,7 +1968,6 @@
       "title": "Plinko",
       "tagline": "Lancia palline, distribuisci sorsi",
       "page": {
-        "noPlayers": "Nessun giocatore selezionato. Torna alla pagina Giocatori per formare la squadra (minimo 2).",
         "difficulty": "Difficoltà",
         "difficulties": {
           "easy": {
@@ -1993,8 +1987,7 @@
           }
         },
         "cumulativeMode": "Modalità cumulativa",
-        "cumulativeDesc": "Gli effetti moltiplicatori e +/- si accumulano nel turno",
-        "backToGames": "Torna ai giochi"
+        "cumulativeDesc": "Gli effetti moltiplicatori e +/- si accumulano nel turno"
       },
       "pinLabels": {
         "multiplier": "x2",
@@ -3035,12 +3028,7 @@
     },
     "petit-buveur": {
       "page": {
-        "back": "Indietro",
-        "badge": "🍺Gioco da tavolo",
-        "title": "Il piccolo bevitore",
         "tagline": "Muoviti sul set senza ubriacarti troppo!",
-        "selectedPlayers": "Giocatori selezionati",
-        "noPlayers": "Nessun giocatore: vai alla pagina Giocatori.",
         "difficulty": "Difficoltà",
         "difficulties": {
           "facile": {
@@ -3068,8 +3056,6 @@
           "🏆 Il primo che raggiunge la casella 30 vince la partita!",
           "⚠️ Consumare con moderazione."
         ],
-        "needPlayers": "Seleziona almeno 2 giocatori per iniziare.",
-        "start": "Inizia il gioco",
         "resume": "Riprendi la partita in corso",
         "soft": {
           "rules": [

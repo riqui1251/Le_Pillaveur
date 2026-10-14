@@ -31,15 +31,15 @@ export function DiceFace({ value, accent, size = 96 }: { value: number; accent?:
   return (
     <div
       className={
-        'relative grid grid-cols-3 grid-rows-3 place-items-center rounded-2xl bg-white p-3 shadow-2xl ' +
-        (accent ? 'ring-4 ring-amber-400/80 shadow-amber-500/40' : 'shadow-black/50')
+        'relative grid grid-cols-3 grid-rows-3 place-items-center rounded-2xl border-2 border-[#D8CCAE] bg-cream p-3 shadow-2xl ' +
+        (accent ? 'ring-4 ring-gold shadow-gold/40' : 'shadow-black/50')
       }
       style={{ width: size, height: size }}
     >
       {pips.map(([row, col], i) => (
         <span
           key={i}
-          className="rounded-full bg-gray-900"
+          className="rounded-full bg-[#24201A]"
           style={{ gridRow: row + 1, gridColumn: col + 1, width: size * 0.167, height: size * 0.167 }}
         />
       ))}
@@ -86,7 +86,7 @@ export function DiceOverlay({
           exit={{ opacity: 0 }}
           transition={{ duration: reduced ? 0 : 0.15 }}
           className={
-            'fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-[2px] ' +
+            'fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-sm ' +
             (onSkip ? 'cursor-pointer' : 'pointer-events-none')
           }
           role="status"
@@ -94,11 +94,11 @@ export function DiceOverlay({
           onClick={onSkip}
         >
           <div className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-2 rounded-full border border-white/15 bg-gray-900/90 px-4 py-1.5">
+            <div className="flex items-center gap-2 rounded-full border border-gold/20 bg-felt-deep/90 px-4 py-1.5">
               <span className="flex h-6 w-6 items-center justify-center text-base leading-none" aria-hidden>
                 {state.playerIcon}
               </span>
-              <span className="max-w-[12rem] truncate text-sm font-semibold text-white/90">
+              <span className="max-w-[12rem] truncate text-sm font-semibold text-cream">
                 {state.playerName}
               </span>
             </div>
@@ -120,7 +120,7 @@ export function DiceOverlay({
               </motion.div>
             )}
             {onSkip && skipLabel && (
-              <p className="text-[11px] font-medium text-white/40">{skipLabel}</p>
+              <p className="text-[11px] font-medium text-cream/50">{skipLabel}</p>
             )}
           </div>
         </motion.div>

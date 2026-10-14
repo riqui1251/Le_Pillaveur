@@ -60,7 +60,7 @@ export function FloatingDrinkBadge({ deltas }: { deltas: DrinkDelta[] }) {
           animate={reduced ? { opacity: 1 } : { opacity: [0, 1, 1, 0], y: -26, scale: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 1.4, ease: 'easeOut' }}
-          className="pointer-events-none absolute -top-1 right-2 z-20 whitespace-nowrap rounded-full border border-amber-400/40 bg-gray-950/90 px-2 py-0.5 text-xs font-bold text-amber-300 shadow-lg"
+          className="pointer-events-none absolute -top-1 right-2 z-20 whitespace-nowrap rounded-full border border-suit-red/60 bg-suit-red px-2 py-0.5 text-xs font-bold text-cream shadow-lg"
           aria-hidden
         >
           +{d.delta} 🍺
