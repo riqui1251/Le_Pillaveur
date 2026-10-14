@@ -189,7 +189,10 @@ describe('mode standard', () => {
   })
 
   it('tour suivant : la carte tirée devient visible, la main passe, gorgées cumulées', () => {
-    let state = standard({ drinkCounter: 2 })
+    // 4e carte (le roi) : sous 2 cartes restantes, le moteur remélange un paquet
+    // NEUF avec Math.random. Avec 3 cartes seulement, le 3e tirage était aléatoire
+    // (un autre 2 = égalité non annoncée, donc erreur) et le test échouait par intermittence.
+    let state = standard({ drinkCounter: 2, deck: [card('9', '♥'), card('2', '♣'), card('5', '♦'), card('R')] })
     state = play(state, 'higher') // 7 → 9 : juste, mise 3
     expect(currentHiLoPlayerId(state)).toBe('bob')
     expect(state.currentCard).toEqual(card('9', '♥'))
@@ -201,6 +204,8 @@ describe('mode standard', () => {
     expect(state.drinkCounter).toBe(1)
     expect(currentHiLoPlayerId(state)).toBe('chloe')
     state = play(state, 'higher') // 2 → 5 : juste
+    // Garde-fou : c'est bien le 5 du paquet posé qui est sorti, pas un remélange.
+    expect(state.currentCard).toEqual(card('5', '♦'))
     expect(currentHiLoPlayerId(state)).toBe('alice')
     expect(state.drinkCounter).toBe(2)
   })
