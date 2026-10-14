@@ -1,0 +1,1002 @@
+{
+ "4-0": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b3 1:b3:defend:b0 1:b2:suspect:b3 skip:b0 skip:b2 skip:b3 >day-vote result:1:b3:ok:b0=1,b3=3 >finished",
+  "states": "3caa2560bd1ef054"
+ },
+ "4-1": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b0 1:b0:defend:b2 1:b1:suspect:b0 skip:b0 skip:b1 skip:b2 >day-vote result:1:b0:ok:b0=3,b1=1 >finished",
+  "states": "8b923c0b227f48f7"
+ },
+ "4-2": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:h1 1:b0:suspect:h1 1:b1:ask:h0 1:h1:defend:b0 skip:b0 skip:b1 1:h0:suspect:b1 1:b1:defend:h0 1:h1:defend:b0 >day-vote vote:h1>b0 vote:b0>h1 vote:b1>b0 result:1:b0:ok:b0=3,h1=2 >night-seer >night-wolves >dawn >day-debate skip:h0 skip:b1 2:h1:suspect:b1 2:b1:defend:h1 2:h1:suspect:h0 2:b1:rally:h0 >day-vote vote:h1>b1 vote:b1>h0 result:2:h0:ok:b1=1,h0=2 >finished",
+  "states": "9a73e71535f3ce19"
+ },
+ "4-3": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b0 1:b3:suspect:b0 1:b0:defend:b2 skip:b0 skip:b2 skip:b3 >day-vote result:1:b0:ok:b0=3,b3=1 >finished",
+  "states": "a382aefc2fbb5236"
+ },
+ "4-4": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b2:ally:h0 1:h0:ally:b0 1:b0:ally:h0 1:b1:suspect:b2 skip:b0 skip:b1 skip:b2 1:h0:suspect:b0 1:b0:defend:h0 1:b2:rally:b0 >day-vote vote:b0>b1 vote:b1>b0 vote:b2>b0 result:1:b0:ok:b0=3,b1=1,b2=1 >night-wolves >dawn >day-debate 2:h0:suspect:b2 2:b2:suspect:h0 2:b1:rally:b2 skip:b1 skip:b2 >day-vote vote:b1>h0 vote:b2>h0 result:2:h0:ok:b1=1,h0=3 >finished",
+  "states": "24a6150f32b42c3c"
+ },
+ "4-5": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:b0 1:b0:defend:b1 1:h0:suspect:b1 1:b1:suspect:h0 skip:b0 skip:b1 >day-vote vote:h0>b1 result:1:b1:ok:b1=3,h0=1 >finished",
+  "states": "6daf28455220beea"
+ },
+ "4-6": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b0:suspect:b1 1:b2:suspect:b1 1:b3:suspect:b1 1:b1:defend:b0 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote result:1:b1:ok:b0=1,b1=4 >night-wolves >night-witch >dawn >finished",
+  "states": "b18e9e776b37334c"
+ },
+ "4-7": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b2 1:h0:ally:b2 1:b2:ally:h0 1:h0:suspect:b1 1:b1:suspect:h0 skip:h0 skip:b0 skip:b1 skip:b2 >day-vote vote:h0>b2 result:1:b2:ok:b1=2,b2=3 >night-seer >night-wolves >dawn >finished",
+  "states": "6efa92bc562a4ff3"
+ },
+ "4-8": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:h1 1:b0:ally:h0 1:h1:defend:b1 1:b1:ask:h0 skip:h0 skip:b0 skip:b1 1:h1:defend:b1 >day-vote vote:h0>b0 vote:b0>b1 vote:b1>h1 result:1:b1:ok:b0=1,b1=2,h0=1,h1=1 >night-wolves >night-witch >dawn >day-debate 2:b0:ally:h0 2:b0:ask:h0 skip:h0 skip:b0 >day-vote vote:b0>h1 result:2:h1:ok:h1=2 >finished",
+  "states": "c2bf0fe700047986"
+ },
+ "4-9": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:ally:b0 1:b0:suspect:b2 1:b1:suspect:b2 skip:b0 skip:b1 skip:b2 >day-vote result:1:b2:ok:b1=1,b2=3 >finished",
+  "states": "8c92a43e7f60d5e9"
+ },
+ "4-10": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:ally:h0 1:b0:ally:h0 1:b2:ask:h0 skip:b0 skip:b2 >day-vote vote:b0>b2 vote:b2>b0 result:1:b0:ok:b0=5,b2=1 >finished",
+  "states": "a22ec19b441892c5"
+ },
+ "4-11": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b1 1:b1:defend:b0 1:b0:ask:h0 skip:b0 skip:b1 >day-vote vote:b0>b1 vote:b1>b0 result:1:b1:ok:b0=1,b1=2 >finished",
+  "states": "ea6d30832fd64955"
+ },
+ "4-12": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b2 1:b2:defend:b1 1:b3:suspect:b2 skip:b1 skip:b2 skip:b3 >day-vote result:1:b2:ok:b1=1,b2=3 >finished",
+  "states": "3fba20c178b96f43"
+ },
+ "4-13": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b2 1:b2:defend:b0 1:h0:suspect:b1 1:b1:defend:h0 1:b0:doubt:b1 skip:b0 skip:b1 skip:b2 skip:h0 >day-vote vote:b0>b2 vote:b1>b2 vote:b2>b1 result:1:b2:ok:b0=1,b1=1,b2=5 >night-seer >night-raven >night-wolves >dawn >day-debate 2:h0:suspect:b1 2:b1:defend:h0 2:b0:doubt:b1 skip:b0 skip:b1 2:h0:ally:b0 2:b0:ally:h0 >day-vote vote:b0>h0 vote:b1>h0 result:2:h0:ok:h0=5 >finished",
+  "states": "4b207059e31611cd"
+ },
+ "4-14": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:h0 skip:h0 skip:b0 skip:b1 1:h0:suspect:b1 1:b1:suspect:h0 1:h1:suspect:h0 1:b0:rally:h0 1:h0:ally:b1 >day-vote vote:h0>b1 vote:h1>b1 result:1:h0:ok:b1=2,h0=3 >night-guard >night-wolves >dawn >day-debate 2:b1:suspect:h1 2:b0:suspect:h1 2:b0:ask:h1 2:h1:defend:b0 skip:b0 skip:b1 >day-vote vote:b0>h1 vote:b1>h1 result:2:h1:ok:b1=1,h1=3 >finished",
+  "states": "bd529e5b121ceb77"
+ },
+ "4-15": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b3 1:b3:defend:b1 1:b2:suspect:b3 skip:b1 skip:b2 skip:b3 >day-vote result:1:b3:ok:b1=1,b3=3 >finished",
+  "states": "0c0daaad899a3bec"
+ },
+ "4-16": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate skip:h0 skip:b0 skip:b1 >day-vote vote:h0>b0 result:1:b1:ok:b0=1,b1=2,h0=1 >finished",
+  "states": "16bd8c506dd2e043"
+ },
+ "4-17": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:b0 1:b0:defend:h0 1:h0:ally:b1 1:b1:ally:b0 skip:b0 skip:b1 >day-vote vote:b0>h0 vote:b1>h0 result:1:h0:ok:b0=2,h0=3 >finished",
+  "states": "d2576e35900465fb"
+ },
+ "4-18": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b3 1:b2:ally:b1 1:b3:defend:b1 skip:b1 skip:b2 skip:b3 >day-vote result:1:-:tie:b1=3,b3=3 >day-revote result:1:b3:ok:b1=1,b3=3 >finished",
+  "states": "b4d97b74b803c7b9"
+ },
+ "4-19": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:ally:b0 1:b0:suspect:b1 1:b1:ask:h0 skip:h0 skip:b0 skip:b1 >day-vote vote:h0>b0 result:1:b0:ok:b0=3,b1=1 >finished",
+  "states": "f70517c0d14fa804"
+ },
+ "4-20": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:ally:b0 1:b0:suspect:b1 1:h0:suspect:h1 1:b0:doubt:h1 skip:b0 skip:b1 1:h1:defend:h0 >day-vote vote:h0>b1 vote:b0>b1 vote:b1>h1 result:1:b1:ok:b1=3,h0=1,h1=1 >night-seer >night-wolves >night-witch >dawn >finished",
+  "states": "893213842a2ae418"
+ },
+ "4-21": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b3 1:b3:defend:b0 1:b2:ally:b0 skip:b0 skip:b2 skip:b3 >day-vote result:1:b3:ok:b0=1,b2=2,b3=3 >finished",
+  "states": "e0c541b68624a447"
+ },
+ "4-22": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b0 1:b2:ally:b1 1:b0:defend:b1 skip:b0 skip:b1 skip:b2 >day-vote result:1:b0:ok:b0=3,b1=1 >finished",
+  "states": "341d4407d6a6b694"
+ },
+ "4-23": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b1 1:b1:defend:b0 1:b0:ask:h0 1:h0:suspect:b1 1:b1:defend:h0 1:h0:suspect:b0 1:b0:suspect:h0 skip:b0 skip:b1 >day-vote vote:b0>b1 vote:b1>h0 result:1:h0:ok:b0=1,b1=1,h0=2 >finished",
+  "states": "6cc5b5674a686bdf"
+ },
+ "4-24": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >hunter-shot >finished",
+  "states": "5018474711216bdb"
+ },
+ "4-25": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:b2 1:b2:suspect:h0 1:b1:ally:b2 1:h0:defend:b2 skip:b1 skip:b2 >day-vote vote:b1>h0 vote:b2>h0 result:1:h0:ok:b2=1,h0=3 >finished",
+  "states": "7a286f3d79ebf06b"
+ },
+ "4-26": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b0 1:h0:suspect:h1 skip:h1 skip:b0 skip:b1 1:h1:ally:b1 1:b1:ally:h1 1:h0:suspect:b0 1:h1:defend:h0 >day-vote vote:h1>b0 vote:b0>h0 vote:b1>b0 result:1:b0:ok:b0=2,h0=1 >night-wolves >dawn >day-debate 2:b1:wrong:b0 skip:h0 2:h1:ally:b1 skip:b1 2:b1:ally:h1 2:h0:suspect:h1 2:h1:suspect:h0 >day-vote vote:h0>b1 vote:b1>h0 result:2:b1:ok:b1=2,h0=1 >finished",
+  "states": "e92d5c18400146bc"
+ },
+ "4-27": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:b1 1:b2:suspect:b1 1:b1:defend:b3 1:b0:suspect:b1 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote result:1:b1:ok:b1=4,b3=1 >night-wolves >night-witch >dawn >finished",
+  "states": "e94e2b4a8c464399"
+ },
+ "4-28": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b1 1:b1:defend:b0 skip:h0 skip:b0 skip:b1 >day-vote vote:h0>b0 result:1:-:tie:b0=2,b1=2 >day-revote vote:h0>b0 result:1:-:tie:b0=2,b1=2 >night-seer >night-wolves >dawn >finished",
+  "states": "3bc5840edafa4b29"
+ },
+ "4-29": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:ally:b0 1:b0:suspect:h0 1:h1:ally:h0 skip:b0 >day-vote vote:h0>b0 vote:h1>b0 result:1:-:tie:b0=2,h0=2 >day-revote vote:h0>b0 vote:h1>h0 result:1:h0:ok:b0=1,h0=3 >hunter-shot >finished",
+  "states": "b7b33853b2628ad2"
+ },
+ "4-30": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b1 1:b1:defend:b0 1:b3:suspect:b1 skip:b0 skip:b1 skip:b3 >day-vote result:1:b1:ok:b0=1,b1=3,b3=2 >finished",
+  "states": "4c221767a229aed6"
+ },
+ "4-31": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b1 skip:h0 skip:b0 skip:b1 skip:b2 >day-vote vote:b0>b1 vote:b1>b0 vote:b2>b1 result:1:b1:ok:b0=1,b1=3 >night-seer >night-wolves >dawn >finished",
+  "states": "06c7c669ce8fccc1"
+ },
+ "4-32": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:ally:h0 1:h1:suspect:b1 1:b1:defend:h1 1:b0:rally:b1 1:h1:suspect:b1 1:b1:defend:h1 1:h1:suspect:h0 skip:b0 skip:b1 1:h0:ally:b1 >day-vote vote:h0>b0 vote:b0>b1 vote:b1>h1 result:1:-:tie:b0=2,b1=2,h1=1 >day-revote vote:b0>b1 vote:b1>b0 vote:h0>b1 result:1:b1:ok:b0=1,b1=3 >night-wolves >dawn >day-debate 2:b0:suspect:h1 skip:b0 2:h0:ally:h1 2:h1:suspect:h0 >day-vote vote:h0>b0 vote:b0>h1 result:2:b0:ok:b0=2,h1=1 >finished",
+  "states": "efe8b65dad71053d"
+ },
+ "4-33": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b0 1:b1:suspect:b0 1:b0:defend:b2 skip:b0 skip:b1 skip:b2 >day-vote result:1:b0:ok:b0=3,b2=1 >finished",
+  "states": "0301d32c3d590cef"
+ },
+ "4-34": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b1 1:b2:suspect:b1 1:b1:defend:b0 skip:b0 skip:b1 skip:b2 >day-vote result:1:b1:ok:b0=1,b1=3 >hunter-shot >finished",
+  "states": "2ec78f34d980c82b"
+ },
+ "4-35": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:h1 1:b0:rally:h1 1:b0:ask:h1 1:h0:ally:b0 1:b0:ally:h0 1:h0:suspect:h1 skip:b0 >day-vote vote:h0>h1 vote:b0>h1 result:1:h1:ok:b0=1,h1=3 >finished",
+  "states": "530d5f576fbab748"
+ },
+ "4-36": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b2 1:b0:suspect:b2 1:b2:defend:b1 skip:b0 skip:b1 skip:b2 >day-vote result:1:b2:ok:b0=1,b2=3 >hunter-shot >finished",
+  "states": "541c20e6955a2f9f"
+ },
+ "4-37": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:h0 1:b2:suspect:h0 1:b0:ask:h0 skip:b0 skip:b2 >day-vote vote:h0>b0 result:1:h0:ok:b0=1,h0=3 >hunter-shot >finished",
+  "states": "d105e98832de6e29"
+ },
+ "4-38": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:h1 1:b1:rally:h1 1:h1:ally:h0 skip:b1 >day-vote vote:h0>b1 vote:b1>h1 result:1:h1:ok:b1=1,h1=2 >hunter-shot >finished",
+  "states": "3f5a2d904947d5d6"
+ },
+ "4-39": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:suspect:b1 1:b1:defend:b2 1:b0:suspect:b1 skip:b0 skip:b1 skip:b2 >day-vote result:1:b1:ok:b1=3,b2=1 >finished",
+  "states": "f53725dc5524025e"
+ },
+ "4-40": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:b0 1:b0:defend:h0 1:b2:rally:b0 skip:b0 skip:b2 >day-vote vote:h0>b0 result:1:-:tie:b0=2,h0=2 >day-revote vote:b0>h0 vote:b2>b0 result:1:h0:ok:b0=1,h0=2 >finished",
+  "states": "79c9d512ec95502e"
+ },
+ "4-41": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:ally:h1 1:h1:suspect:b1 1:b1:defend:h1 1:h0:suspect:b1 1:b1:defend:h0 1:h1:suspect:b1 1:b1:defend:h1 1:b0:rally:b1 1:h0:suspect:b1 skip:b0 skip:b1 >day-vote vote:h0>h1 vote:b0>b1 vote:b1>h0 result:1:b0:ok:b0=2,b1=1,h0=1,h1=1 >night-seer >night-wolves >dawn >day-debate 2:h1:ally:h0 2:b1:suspect:h0 2:h0:suspect:h1 2:b1:rally:h1 skip:b1 >day-vote vote:b1>h0 vote:h1>h0 result:2:h0:ok:h0=3 >finished",
+  "states": "a5414cdc3fd15901"
+ },
+ "4-42": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b0 1:b3:ally:b1 1:b0:defend:b1 skip:b0 skip:b1 skip:b3 >day-vote result:1:b0:ok:b0=3,b1=1 >finished",
+  "states": "46162b9ff9e09748"
+ },
+ "4-43": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:h0 1:b0:suspect:h0 1:b2:suspect:h0 1:b1:ask:h0 skip:b0 skip:b1 skip:b2 >day-vote vote:h0>b2 result:1:h0:ok:b2=1,h0=4 >finished",
+  "states": "db2111b8893db97b"
+ },
+ "4-44": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:b0 1:b0:suspect:h0 1:h0:suspect:h1 1:b0:rally:h1 skip:h0 skip:b0 >day-vote vote:h0>h1 vote:b0>h0 result:1:h0:ok:h0=3,h1=1 >hunter-shot >finished",
+  "states": "b76596ee9d8c6ee9"
+ },
+ "4-45": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >hunter-shot >finished",
+  "states": "0b3796ac86d14025"
+ },
+ "4-46": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:h0 1:h0:defend:b2 1:b0:suspect:h0 1:h0:defend:b0 skip:b0 skip:b2 1:h0:ally:b2 1:b2:ally:h0 >day-vote vote:h0>b2 result:1:b0:ok:b0=2,b2=1,h0=1 >finished",
+  "states": "e1cf03e5b2dd1637"
+ },
+ "4-47": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:ally:h1 skip:h1 skip:b0 skip:b1 1:h1:ally:b0 1:b0:ally:h1 1:h0:suspect:b0 1:b0:suspect:h0 1:b1:doubt:b0 1:h0:defend:b0 >day-vote vote:h0>h1 vote:b0>h0 vote:b1>h0 result:1:-:tie:h0=2,h1=2 >day-revote vote:b0>h0 vote:b1>h0 vote:h1>h0 result:1:h0:ok:h0=3 >night-seer >night-wolves >dawn >day-debate 2:b0:wrong:h0 2:b1:suspect:h1 2:b0:suspect:h1 2:h1:ally:b0 2:b0:ally:h1 2:h1:suspect:b1 2:b1:suspect:h1 2:h1:defend:b1 skip:b0 skip:b1 skip:h1 >day-vote vote:b0>b1 vote:b1>h1 result:2:-:tie:b1=1,h1=1 >day-revote vote:h1>b1 result:2:b1:ok:b1=2,h1=1 >finished",
+  "states": "37a61175bfd0a186"
+ },
+ "4-48": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:b2 1:b0:suspect:b2 1:b3:suspect:b2 1:b2:defend:b1 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote result:1:b2:ok:b1=1,b2=4 >finished",
+  "states": "4b6b44906e9550fe"
+ },
+ "4-49": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:ally:b0 1:b0:ally:b2 1:b1:ally:b0 skip:b0 skip:b1 skip:b2 >day-vote result:1:b1:ok:b1=4,b2=2 >finished",
+  "states": "9a30d9f1fddfa7b6"
+ },
+ "6-0": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b5:suspect:b0 1:b1:suspect:b0 1:b2:ally:b1 1:b4:suspect:b0 1:b3:suspect:b0 1:b0:defend:b5 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:1:b0:ok:b0=6,b5=1 >night-seer >night-wolves >night-witch >dawn >finished",
+  "states": "2fc1315d2285c4ad"
+ },
+ "6-1": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b4:suspect:b2 1:h0:suspect:b4 1:b4:suspect:h0 1:b0:rally:b4 skip:h0 skip:b0 skip:b2 skip:b3 skip:b4 >day-vote vote:h0>b3 result:1:b4:ok:b3=1,b4=3,h0=2 >night-guard >night-wolves >night-witch >dawn >day-debate 2:b0:suspect:b2 skip:h0 skip:b0 skip:b2 skip:b3 >day-vote vote:h0>b2 result:2:b2:ok:b0=1,b2=4 >night-wolves >night-witch >dawn >finished",
+  "states": "617cf02e45481c20"
+ },
+ "6-2": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h1:ally:h0 1:b1:suspect:b2 1:h0:suspect:b0 1:b0:defend:h0 1:h0:ally:h1 1:b3:ally:h1 1:h1:suspect:b2 1:b2:defend:h1 1:b1:rally:b2 1:h0:suspect:b1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 1:b3:rally:b1 1:b2:rally:b1 1:h1:suspect:b0 1:b0:defend:h1 >day-vote vote:b0>b1 vote:b1>b2 vote:b2>b1 vote:b3>b1 vote:h1>h0 result:1:b1:ok:b1=4,b2=1,h0=1 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate skip:h0 skip:h1 skip:b0 skip:b2 skip:b3 >day-vote vote:b0>h1 vote:b2>h1 vote:b3>b0 result:2:-:tie:b0=2,h1=2 >day-revote vote:h0>b0 vote:h1>b0 result:2:h1:ok:b0=2,h1=4 >finished",
+  "states": "cd5312ebd9bad012"
+ },
+ "6-3": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b3 1:b5:suspect:b3 1:b3:defend:b0 1:b2:suspect:b3 1:b1:suspect:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 >day-vote result:1:-:tie:b0=3,b3=3 >day-revote result:1:-:tie:b0=3,b3=3 >night-seer >night-wolves >dawn >finished",
+  "states": "89da7ac26f08a717"
+ },
+ "6-4": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b1 1:b4:suspect:b1 1:b2:suspect:b1 1:b1:defend:b0 1:h0:ally:b2 1:b2:ally:h0 1:b3:suspect:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 1:h0:suspect:b2 1:b2:defend:h0 1:b0:rally:b2 skip:h0 >day-vote vote:b0>b1 vote:b1>b0 vote:b2>b1 vote:b3>b1 vote:b4>b1 result:1:b1:ok:b0=3,b1=5 >night-seer >night-raven >night-wolves >dawn >finished",
+  "states": "53216f3b7796b0a1"
+ },
+ "6-5": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:ally:b3 1:b3:ally:h0 1:b2:suspect:b0 1:h0:suspect:b1 1:b1:defend:h0 1:b2:rally:b1 1:h0:suspect:h1 1:h1:suspect:b1 1:b1:defend:h1 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 1:h1:ally:b3 1:b3:ally:h1 >day-vote vote:h0>b2 vote:b0>b1 vote:b1>h1 vote:b2>b1 vote:b3>b1 result:1:b1:ok:b1=3,b2=1,h0=2,h1=1 >night-guard >night-wolves >dawn >finished",
+  "states": "0a3b03396f404fd2"
+ },
+ "6-6": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b3:suspect:b0 1:b4:ally:b2 1:b0:defend:b3 1:b2:suspect:b0 1:b1:ally:b2 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote result:1:b0:ok:b0=4,b2=2,b3=2 >night-seer >night-raven >night-wolves >dawn >day-debate 2:b3:toldYou:b0 2:b3:suspect:b1 2:b4:suspect:b1 2:b1:defend:b3 skip:b1 skip:b3 skip:b4 >day-vote result:2:b1:ok:b1=2,b4=1 >finished",
+  "states": "4d36cd5347d924c1"
+ },
+ "6-7": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:b1 1:b1:suspect:h0 1:b2:rally:b1 1:b0:ally:b4 1:b4:suspect:b2 1:h0:defend:b1 skip:b0 skip:b1 skip:b2 skip:b4 1:h0:defend:b1 >day-vote vote:h0>b4 result:1:-:tie:b1=3,b2=1,b4=1,h0=3 >day-revote vote:h0>b1 result:1:b1:ok:b1=5,h0=1 >finished",
+  "states": "6757544a5716c567"
+ },
+ "6-8": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >hunter-shot >mayor-election >day-debate 1:b2:ally:b1 1:b3:suspect:b0 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote vote:h1>b2 result:1:b0:ok:b0=3,b2=1,b3=2 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b3:toldYou:b0 2:b2:ally:h1 2:h1:suspect:b3 2:b3:suspect:h1 skip:b2 skip:b3 >day-vote vote:h1>b3 result:2:b3:ok:b2=1,b3=4 >finished",
+  "states": "0e48d1b47e5a09e5"
+ },
+ "6-9": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:b2 1:b5:ally:b3 1:b3:suspect:b1 1:b2:defend:b1 1:b4:suspect:b2 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:1:b2:ok:b1=2,b2=6 >finished",
+  "states": "1ed8a65e10f4a9e0"
+ },
+ "6-10": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b3 1:b3:defend:b2 1:b0:ally:b2 1:b4:ally:b2 1:b2:ask:h0 skip:b0 skip:b2 skip:b3 skip:b4 1:h0:suspect:b4 1:b4:defend:h0 1:b3:rally:b4 >day-vote vote:h0>b2 result:1:b4:ok:b2=1,b3=3,b4=4 >finished",
+  "states": "9275b5a4c0c8dd00"
+ },
+ "6-11": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >hunter-shot >mayor-election >day-debate 1:b1:suspect:b2 1:h1:suspect:b1 1:b1:defend:h1 1:b2:rally:b1 1:b3:ally:b1 1:h1:suspect:b3 1:b3:defend:h1 skip:b1 skip:b2 skip:b3 1:b2:rally:b3 >day-vote vote:h1>b1 result:1:h1:ok:b1=1,b3=1,h1=3 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b1:suspect:b3 2:b2:doubt:b3 2:b3:defend:b1 skip:b1 skip:b2 skip:b3 >day-vote result:2:-:tie:b1=2,b3=2 >day-revote result:2:-:tie:b1=2,b3=2 >night-seer >night-wolves >night-witch >dawn >finished",
+  "states": "3cfc128020a6cf33"
+ },
+ "6-12": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b3:ally:b4 1:b2:suspect:b0 1:b1:suspect:b0 1:b4:ally:b2 1:b0:defend:b2 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote result:1:b0:ok:b0=5,b1=1 >finished",
+  "states": "f45ef69074476cf9"
+ },
+ "6-13": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b3 1:h0:suspect:b3 1:b3:defend:h0 1:b2:rally:b3 1:b4:suspect:h0 1:h0:defend:b4 1:b1:ally:b3 skip:b1 skip:b2 skip:b3 skip:b4 1:h0:ally:b1 >day-vote vote:b1>b3 vote:b2>b3 vote:b3>h0 vote:b4>h0 result:1:-:tie:b2=2,b3=2,h0=2 >day-revote vote:h0>b2 result:1:-:tie:b2=2,b3=2,h0=2 >night-raven >night-wolves >dawn >finished",
+  "states": "20132a8567460ee2"
+ },
+ "6-14": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:h1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote vote:h1>b0 result:1:h1:ok:b0=1,b1=1,h1=4 >night-seer >night-wolves >dawn >day-debate 2:b0:suspect:b3 2:b3:defend:b0 2:b2:suspect:b3 skip:b0 skip:b2 skip:b3 >day-vote result:2:b3:ok:b0=1,b3=2 >finished",
+  "states": "0683e979f375d5bb"
+ },
+ "6-15": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b3:ally:b4 1:b1:ally:b3 1:b4:suspect:b2 1:b5:suspect:b2 1:b0:ally:b3 1:b2:defend:b4 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:1:b2:ok:b2=8,b5=1 >night-guard >night-raven >night-wolves >dawn >finished",
+  "states": "b15553ed08bfde7a"
+ },
+ "6-16": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:ally:b3 1:b3:ally:h0 1:b0:suspect:b1 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote vote:b0>b1 vote:b1>b0 vote:b2>b1 vote:b3>b1 vote:b4>b1 result:1:b1:ok:b0=1,b1=5,b2=1,b4=2 >night-guard >night-seer >night-wolves >dawn >day-debate 2:b0:wrong:b1 2:b2:suspect:b0 2:b3:suspect:b0 2:b0:defend:b2 2:b4:suspect:b3 2:b2:ask:h0 skip:b0 skip:b2 skip:b3 skip:b4 >day-vote vote:b0>b3 vote:b2>b0 vote:b3>b0 vote:b4>b3 result:2:b0:ok:b0=3,b3=2,b4=1 >night-guard >night-seer >night-wolves >dawn >day-debate 3:b3:toldYou:b0 3:b3:ally:h0 skip:h0 skip:b3 skip:b4 >day-vote vote:b3>b4 vote:b4>h0 result:3:b4:ok:b4=2,h0=1 >finished",
+  "states": "ed6b4bc0f5a090bc"
+ },
+ "6-17": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >hunter-shot >finished",
+  "states": "85c0bf73b40174e9"
+ },
+ "6-18": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b4:suspect:b0 1:b0:defend:b4 1:b3:suspect:b0 1:b1:suspect:b0 1:b5:suspect:b0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 >day-vote result:1:b0:ok:b0=5,b1=3 >hunter-shot >night-guard >night-raven >night-wolves >dawn >day-debate 2:b4:wrong:b0 2:b4:suspect:b5 2:b3:suspect:b5 2:b5:defend:b4 skip:b3 skip:b4 skip:b5 >day-vote result:2:-:tie:b4=3,b5=3 >day-revote result:2:b5:ok:b4=1,b5=3 >finished",
+  "states": "1212fa14c2a2dda7"
+ },
+ "6-19": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:h0 1:h0:ally:b4 1:b3:suspect:h0 1:h0:ally:b1 1:b1:ally:h0 1:h0:defend:b3 1:b2:ally:b1 1:b4:suspect:b3 skip:h0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote vote:h0>b2 result:1:b3:ok:b2=1,b3=4,h0=1 >finished",
+  "states": "d1992c7d5e016431"
+ },
+ "6-20": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >hunter-shot >mayor-election >day-debate skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote vote:h1>b2 result:1:h1:ok:b2=2,b3=1,h1=3 >finished",
+  "states": "3a192dd6c1caacc9"
+ },
+ "6-21": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b0:suspect:b3 1:b1:suspect:b3 1:b3:defend:b0 1:b5:suspect:b3 1:b2:ally:b4 1:b4:ally:b5 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:1:b3:ok:b0=1,b3=6 >night-seer >night-wolves >night-witch >dawn >finished",
+  "states": "7b46d954b663adaa"
+ },
+ "6-22": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b3:suspect:b0 skip:h0 skip:b0 skip:b2 skip:b3 skip:b4 >day-vote vote:h0>b3 result:1:b0:ok:b0=4,b3=1,b4=1 >hunter-shot >finished",
+  "states": "d59a97ea1cbe6d18"
+ },
+ "6-23": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:h0 1:b3:suspect:h0 1:b1:suspect:h0 1:b0:suspect:h0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote vote:b0>h0 vote:b1>h0 vote:b2>h0 vote:b3>h0 result:1:h0:ok:b3=1,h0=5 >finished",
+  "states": "56e4dba38f625085"
+ },
+ "6-24": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >hunter-shot >finished",
+  "states": "41cf4ad755db48c3"
+ },
+ "6-25": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >hunter-shot >mayor-election >day-debate 1:b3:suspect:b1 1:b1:defend:b3 1:b2:suspect:b1 1:b0:suspect:b1 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote result:1:b1:ok:b1=4,b2=1 >night-wolves >night-witch >dawn >day-debate 2:b2:wrong:b1 2:b3:wrong:b1 2:b3:suspect:b2 2:b2:defend:b3 2:b0:ally:b2 skip:b0 skip:b2 skip:b3 >day-vote result:2:b3:ok:b2=1,b3=3 >finished",
+  "states": "e3416fd72521ae2a"
+ },
+ "6-26": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h0:suspect:b1 1:b1:defend:h0 1:b2:rally:b1 1:b3:suspect:b1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 1:h0:ally:b0 1:b0:ally:h0 >day-vote vote:h1>b0 vote:b0>b1 vote:b1>h1 vote:b2>b1 vote:b3>b1 result:1:b1:ok:b0=2,b1=3,b2=1,h0=2,h1=1 >night-raven >night-wolves >night-witch >dawn >hunter-shot >finished",
+  "states": "cb0a30ba493271c6"
+ },
+ "6-27": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b4 1:b4:defend:b1 1:b5:suspect:b4 1:b3:suspect:b1 1:b0:ally:b3 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 >day-vote result:1:b4:ok:b1=2,b4=4 >night-guard >night-seer >night-wolves >dawn >hunter-shot >finished",
+  "states": "592ccd1398411c70"
+ },
+ "6-28": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:ally:h0 1:b0:suspect:b4 1:h0:ally:b0 1:b0:ally:h0 1:b4:defend:b0 1:b3:ally:h0 skip:b0 skip:b1 skip:b3 skip:b4 >day-vote vote:b0>b4 vote:b1>b4 vote:b3>b4 vote:b4>b3 result:1:b4:ok:b1=2,b3=1,b4=4 >finished",
+  "states": "b1364f434f283ff6"
+ },
+ "6-29": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:b0 1:h0:suspect:b1 1:b1:defend:h0 1:h1:suspect:h0 1:b2:rally:h0 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 1:b0:doubt:h0 1:h0:suspect:b2 1:h1:ally:b1 >day-vote vote:h1>h0 vote:b0>h0 vote:b1>h0 vote:b2>h0 vote:b3>h1 result:1:h0:ok:b1=1,h0=5,h1=1 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b3:ally:h1 2:h1:suspect:b3 2:b3:defend:h1 2:b2:rally:b3 2:b1:suspect:b3 2:h1:suspect:b3 2:b3:defend:h1 2:b2:rally:b3 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote vote:h1>b1 result:2:b3:ok:b1=1,b3=4,h1=1 >finished",
+  "states": "5415fa6cd418e26f"
+ },
+ "6-30": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:b2 1:b1:suspect:b2 1:b4:suspect:b2 1:b2:defend:b3 1:b0:suspect:b2 1:b5:suspect:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:1:b2:ok:b0=2,b2=5 >hunter-shot >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b3:wrong:b2 2:b4:wrong:b2 2:b3:suspect:b4 2:b1:ally:b5 2:b4:defend:b3 2:b5:suspect:b3 skip:b1 skip:b3 skip:b4 skip:b5 >day-vote result:2:b3:ok:b3=4,b4=1 >finished",
+  "states": "9905f0d757ed3400"
+ },
+ "6-31": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:ally:b4 1:b2:suspect:h0 1:h0:suspect:b1 1:b1:suspect:h0 1:h0:suspect:b2 1:b2:defend:h0 1:b4:rally:b2 1:h0:ally:b2 1:b2:ally:h0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b4 >day-vote vote:h0>b0 result:1:h0:ok:b0=1,b2=1,h0=4 >night-seer >night-wolves >dawn >day-debate 2:b1:toldYou:h0 2:b1:ally:b0 2:b4:suspect:b0 2:b0:defend:b4 skip:b0 skip:b1 skip:b4 >day-vote result:2:b4:ok:b0=1,b4=3 >finished",
+  "states": "7ed350a54aed96f0"
+ },
+ "6-32": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:suspect:h1 1:b3:ally:h0 1:h1:defend:b2 1:b0:doubt:h1 1:b1:ally:h0 1:h0:suspect:b0 1:b0:defend:h0 1:b3:rally:b0 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 1:h1:defend:b2 >day-vote vote:h0>b3 vote:b0>b2 vote:b1>b0 vote:b2>b0 vote:b3>b0 result:1:b0:ok:b0=3,b2=2,b3=1,h0=1 >night-raven >night-wolves >night-witch >dawn >day-debate 2:h1:suspect:b1 2:b1:defend:h1 2:b3:rally:b1 2:h1:ally:b1 skip:b1 skip:b3 2:h1:suspect:b1 2:b1:defend:h1 skip:h1 >day-vote vote:b1>h1 vote:b3>b1 result:2:-:tie:b1=1,h1=1 >day-revote vote:h1>b1 result:2:b1:ok:b1=2,h1=1 >finished",
+  "states": "5715ef284897caea"
+ },
+ "6-33": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b5:ally:b0 1:b1:ally:b3 1:b0:suspect:b2 1:b2:defend:b0 1:b4:suspect:b0 1:b3:ally:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:1:b2:ok:b0=3,b2=4 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:toldYou:b2 2:b5:suspect:b1 2:b1:defend:b5 2:b0:suspect:b1 2:b4:ally:b0 skip:b0 skip:b1 skip:b4 skip:b5 >day-vote result:2:b1:ok:b1=4,b4=1 >night-wolves >night-witch >dawn >day-debate 3:b0:wrong:b1 3:b5:ally:b4 3:b0:ally:b4 3:b4:ally:b0 skip:b0 skip:b4 skip:b5 >day-vote result:3:b5:ok:b0=1,b5=3 >finished",
+  "states": "9ebd731e2efc6ada"
+ },
+ "6-34": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >hunter-shot >mayor-election >day-debate 1:b4:suspect:b1 1:b0:suspect:b1 1:b1:defend:b4 1:b2:suspect:b1 1:b3:suspect:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote result:1:b1:ok:b1=5,b4=1 >finished",
+  "states": "9f3fbf9b7097d731"
+ },
+ "6-35": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b3:ally:h1 skip:h0 skip:b1 skip:b2 skip:b3 >day-vote vote:h1>b2 vote:b1>b2 vote:b2>b3 vote:b3>b2 result:1:b2:ok:b2=6,b3=2 >finished",
+  "states": "f0d04796d8e77c3f"
+ },
+ "6-36": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:b0 1:b3:ally:b5 1:b4:suspect:b0 1:b2:ally:b3 1:b5:suspect:b0 1:b0:defend:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:1:b0:ok:b0=6,b4=1 >night-guard >night-wolves >night-witch >dawn >finished",
+  "states": "ff3e303617f19be7"
+ },
+ "6-37": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:suspect:h0 1:h0:suspect:b0 1:b0:defend:h0 1:h0:ally:b4 1:b4:ally:b1 1:b1:ally:b4 skip:b0 skip:b1 skip:b2 skip:b4 1:h0:ally:b1 >day-vote vote:b0>h0 vote:b1>h0 vote:b2>b0 vote:b4>h0 result:1:h0:ok:b0=1,h0=4 >finished",
+  "states": "fd2a5fd7959f21b9"
+ },
+ "6-38": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b0:ally:h1 1:h1:suspect:b0 1:b0:defend:h1 1:b3:suspect:b0 1:b1:suspect:b0 1:b3:ask:h0 skip:b0 skip:b1 skip:b3 1:h1:suspect:b3 1:b3:suspect:h1 skip:h1 1:b1:rally:b3 1:h0:ally:h1 >day-vote vote:h0>b0 vote:h1>h0 result:1:b0:ok:b0=4,b3=1,h0=1 >finished",
+  "states": "303f85c490f52fac"
+ },
+ "6-39": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:b2 1:b4:ally:b3 1:b1:suspect:b2 1:b0:suspect:b2 1:b2:defend:b3 1:b5:ally:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:1:b2:ok:b0=2,b2=6,b3=1 >night-raven >night-wolves >night-witch >dawn >finished",
+  "states": "eb345a6e8e907e85"
+ },
+ "6-40": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b4:suspect:h0 1:b2:suspect:h0 1:b1:suspect:h0 1:b3:suspect:h0 1:h0:ally:b4 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote vote:b1>h0 vote:b2>h0 vote:b3>h0 vote:b4>h0 result:1:h0:ok:h0=7 >finished",
+  "states": "3edac001612f0853"
+ },
+ "6-41": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:h1 1:b1:ally:b3 1:h0:suspect:h1 1:b3:doubt:h1 1:h0:ally:h1 skip:b0 skip:b1 skip:b3 >day-vote vote:h1>h0 vote:b0>h1 vote:b1>h1 vote:b3>h1 result:1:h1:ok:b3=3,h0=1,h1=4 >finished",
+  "states": "05e28386ae837f86"
+ },
+ "6-42": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >finished",
+  "states": "11671e760da726f5"
+ },
+ "6-43": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:suspect:b3 1:b0:suspect:b2 1:b4:suspect:b2 1:b1:suspect:b2 1:b3:defend:b2 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote result:1:b2:ok:b2=5,b3=1 >finished",
+  "states": "3898680c9d341c14"
+ },
+ "6-44": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b0:ally:b1 1:h1:suspect:b2 1:b2:defend:h1 1:h1:ally:b1 1:b1:ally:h1 1:h1:ally:b3 1:b3:suspect:b2 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote vote:h1>b3 result:1:b2:ok:b2=4,b3=1,h1=1 >finished",
+  "states": "b5944a3a7c039de5"
+ },
+ "6-45": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:suspect:b4 1:b3:suspect:b4 1:b0:suspect:b4 1:b4:defend:b2 1:b1:ally:b3 1:b5:suspect:b4 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:1:b4:ok:b2=1,b4=6 >night-guard >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:b4 2:b2:wrong:b4 2:b2:suspect:b3 2:b3:defend:b2 2:b0:ally:b1 2:b1:ally:b3 2:b5:ally:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 >day-vote result:2:b2:ok:b2=5,b3=1 >finished",
+  "states": "01e8cb5e91c3ce27"
+ },
+ "6-46": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b3 1:h0:ally:b4 1:b4:ally:h0 1:b2:suspect:b3 1:b1:suspect:b3 1:h0:suspect:b4 1:b4:defend:h0 1:b0:rally:b4 1:h0:suspect:b0 1:b0:suspect:h0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote vote:h0>b0 result:1:b3:ok:b0=1,b3=4,b4=1,h0=1 >night-guard >night-wolves >dawn >finished",
+  "states": "5401a88ba0149aec"
+ },
+ "6-47": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h0:suspect:b0 1:b0:suspect:h0 1:b1:rally:b0 1:b3:suspect:b0 1:b2:ally:b3 1:b1:ask:h1 1:h1:ally:b1 1:b1:ally:h1 1:h1:suspect:b3 1:b3:defend:h1 1:h0:defend:b0 1:h1:suspect:b1 1:b2:rally:b1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:h0 >day-vote vote:b0>h0 vote:b1>b0 vote:b2>b0 vote:b3>b0 vote:h1>b0 result:1:b0:ok:b0=5,h0=1 >night-seer >night-wolves >night-witch >dawn >day-debate 2:h1:suspect:h0 2:b1:rally:h0 2:b3:rally:h0 2:b2:ally:b3 2:h0:defend:h1 skip:b1 skip:b2 skip:b3 >day-vote vote:b1>h0 vote:b2>h0 vote:b3>h0 result:2:h0:ok:h0=4 >night-wolves >night-witch >dawn >day-debate 3:b1:suspect:h1 3:b3:suspect:h1 3:h1:ally:b2 3:b2:ally:h1 skip:b1 skip:b2 skip:b3 >day-vote vote:h1>b3 result:3:h1:ok:b3=1,h1=4 >finished",
+  "states": "c6d7450520ebf458"
+ },
+ "6-48": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b0:suspect:b5 1:b1:suspect:b5 1:b5:defend:b0 1:b4:suspect:b5 1:b3:suspect:b5 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 >day-vote result:1:b5:ok:b0=1,b5=5 >finished",
+  "states": "d77352ec16373a06"
+ },
+ "6-49": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b4:ally:b0 1:b3:suspect:h0 1:h0:suspect:b3 1:b3:defend:h0 1:b4:rally:b3 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote vote:b0>b3 vote:b1>b3 vote:b2>h0 vote:b3>h0 vote:b4>b3 result:1:b3:ok:b3=5,h0=4 >hunter-shot >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b4:suspect:b2 2:b1:suspect:b4 2:b2:defend:b4 skip:b1 skip:b2 skip:b4 >day-vote result:2:-:tie:b1=1,b2=2,b4=2 >day-revote result:2:b4:ok:b2=1,b4=2 >finished",
+  "states": "63083ffca0935c9c"
+ },
+ "8-0": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b4:ally:b7 1:b1:suspect:b4 1:b7:suspect:b4 1:b6:ally:b2 1:b0:ally:b5 1:b5:ally:b7 1:b2:ally:b1 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 >day-vote result:1:b4:ok:b0=1,b4=7 >night-seer >night-raven >night-wolves >dawn >day-debate 2:b7:wrong:b4 2:b7:ally:b5 2:b6:ally:b0 2:b0:suspect:b7 2:b5:ally:b2 2:b2:suspect:b0 skip:b0 skip:b2 skip:b5 skip:b6 skip:b7 >day-vote result:2:b7:ok:b0=2,b7=3 >night-seer >night-raven >night-wolves >dawn >day-debate 3:b0:toldYou:b7 3:b0:suspect:b2 3:b5:ally:b0 3:b2:defend:b0 skip:b0 skip:b2 skip:b5 >day-vote result:3:-:tie:b0=1,b2=2,b5=2 >day-revote result:3:b2:ok:b2=2,b5=1 >finished",
+  "states": "726eddb29bc772e9"
+ },
+ "8-1": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:ally:b4 1:h0:suspect:b3 1:b3:defend:h0 1:h0:suspect:b0 1:b0:suspect:h0 1:b1:rally:b0 1:b2:suspect:b0 1:h0:suspect:b2 1:b2:suspect:h0 1:b0:rally:b2 1:b4:suspect:b0 1:b6:ally:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:h0 >day-vote vote:b0>h0 vote:b1>b0 vote:b2>b0 vote:b3>b0 vote:b4>b0 vote:b6>b0 result:1:b0:ok:b0=7,h0=1 >night-wolves >night-witch >dawn >day-debate 2:h0:suspect:b3 2:b3:defend:h0 2:b1:rally:b3 2:b2:wrong:b0 2:h0:suspect:b4 2:b4:defend:h0 2:b1:rally:b4 2:h0:suspect:b6 2:b6:defend:h0 2:b2:rally:b6 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 >day-vote vote:b1>b4 vote:b2>b4 vote:b3>h0 vote:b4>h0 vote:b6>b4 result:2:b4:ok:b4=4,h0=2 >hunter-shot >night-wolves >night-witch >dawn >day-debate 3:b1:suspect:b3 3:b2:suspect:b3 3:b3:defend:b1 skip:b1 skip:b2 skip:b3 >day-vote result:3:b3:ok:b1=1,b3=3 >finished",
+  "states": "63822aa9f09ae96e"
+ },
+ "8-2": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b5:suspect:b3 skip:h1 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 >day-vote vote:h0>b1 vote:h1>b0 result:1:b3:ok:b0=2,b1=1,b3=4,b5=1 >night-wolves >dawn >day-debate 2:h0:ally:b1 2:b5:wrong:b3 2:b5:suspect:b0 2:b4:suspect:b0 2:b0:defend:b5 2:b1:ally:b4 skip:b0 skip:b1 skip:b4 skip:b5 >day-vote vote:b0>b5 vote:b1>b0 vote:b4>b0 vote:b5>b0 result:2:b0:ok:b0=3,b5=1 >finished",
+  "states": "0ed4ce8c34a72362"
+ },
+ "8-3": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:ally:b0 1:b1:suspect:b5 1:b6:suspect:b2 1:b0:ally:b6 1:b3:ally:b5 1:b4:suspect:b2 1:b5:defend:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote result:1:b2:ok:b1=2,b2=6,b4=1,b5=1 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b6:toldYou:b2 2:b1:suspect:b5 2:b6:ally:b5 2:b0:suspect:b1 2:b4:ally:b6 2:b5:defend:b1 skip:b0 skip:b1 skip:b4 skip:b5 skip:b6 >day-vote result:2:b1:ok:b1=5,b5=1 >night-guard >night-wolves >night-witch >dawn >day-debate 3:b6:suspect:b0 3:b0:defend:b6 3:b4:suspect:b0 3:b5:suspect:b0 skip:b0 skip:b4 skip:b5 skip:b6 >day-vote result:3:b0:ok:b0=4,b6=1 >night-guard >night-wolves >dawn >day-debate 4:b6:wrong:b0 4:b6:suspect:b4 4:b4:defend:b6 4:b5:suspect:b4 skip:b4 skip:b5 skip:b6 >day-vote result:4:b4:ok:b4=3,b6=1 >finished",
+  "states": "db4082033ec34f04"
+ },
+ "8-4": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b4:suspect:h0 1:b0:ally:b5 1:h0:suspect:b1 1:b1:defend:h0 1:b4:rally:b1 1:b5:suspect:b1 1:b6:suspect:h0 1:b3:ally:b0 skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:b0>b1 vote:b1>h0 vote:b3>b1 vote:b4>b1 vote:b5>b1 vote:b6>h0 result:1:b1:ok:b1=5,b4=1,h0=2 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b5:toldYou:b1 2:b4:suspect:b3 2:b0:suspect:b3 2:b5:ally:b6 2:b6:suspect:b3 2:b3:defend:b4 skip:b0 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote result:2:b3:ok:b3=5,b4=1 >night-seer >night-wolves >dawn >day-debate 3:b4:wrong:b3 3:b4:suspect:b6 3:b5:suspect:b6 3:b6:defend:b4 skip:b4 skip:b5 skip:b6 >day-vote result:3:b6:ok:b4=1,b6=2 >finished",
+  "states": "6393dae093fa6728"
+ },
+ "8-5": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h0:suspect:b0 1:b0:suspect:h0 skip:h0 1:h1:suspect:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 1:b0:suspect:h1 1:b2:rally:b0 1:h0:suspect:b3 1:h1:defend:b0 >day-vote vote:h0>b1 vote:h1>b1 result:1:b0:ok:b0=5,b1=3,h1=1 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b2:suspect:b3 2:h1:suspect:b3 2:b3:defend:h1 2:h0:ally:b4 2:b4:ally:h0 2:b5:suspect:b3 2:b1:ally:b4 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 2:h1:suspect:b3 2:b3:defend:h1 2:h1:suspect:b2 2:b2:suspect:h1 2:b4:rally:b2 skip:h0 >day-vote vote:h0>h1 vote:b1>b3 vote:b2>b3 vote:b3>h1 vote:b4>b3 vote:b5>b3 result:2:b3:ok:b3=5,h1=3 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 3:h0:suspect:b1 skip:h1 skip:b1 skip:b2 skip:b4 skip:b5 3:h0:suspect:b4 3:b4:defend:h0 >day-vote vote:h0>b5 vote:b1>b4 vote:b2>b4 vote:b4>b1 vote:b5>b4 result:3:-:tie:b1=1,b4=3,b5=3 >day-revote vote:b1>b4 vote:b2>b4 vote:b4>b5 vote:b5>b4 vote:h0>b5 result:3:-:tie:b4=3,b5=3 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 4:b2:suspect:b5 4:b5:defend:b2 4:h1:suspect:b5 4:b5:defend:h1 4:b4:suspect:b5 4:b1:suspect:b5 skip:h0 4:h1:ally:b4 skip:b1 skip:b2 skip:b4 skip:b5 4:h1:suspect:b4 4:b4:defend:h1 skip:h1 >day-vote vote:b1>b5 vote:b2>b5 vote:b4>b5 vote:b5>b4 vote:h0>h1 result:4:b5:ok:b1=1,b4=1,b5=3,h1=2 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 5:h0:ally:b4 5:b4:ally:h0 5:h0:ally:h1 5:b2:wrong:b5 5:h1:suspect:h0 5:b2:rally:h0 skip:h0 skip:b1 skip:b2 skip:b4 5:h1:suspect:b2 5:b2:suspect:h1 5:h0:suspect:h1 5:b4:rally:h1 5:h1:suspect:b1 5:b1:defend:h1 >day-vote vote:b1>h1 vote:b2>h0 vote:b4>h1 vote:h0>b4 result:5:-:tie:b4=2,h0=1,h1=2 >day-revote vote:h0>h1 vote:h1>b4 result:5:h1:ok:b4=1,h1=5 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 6:b2:wrong:h1 6:b2:suspect:h0 6:b4:suspect:h0 6:b1:ally:b4 6:b2:ask:h0 skip:b1 skip:b2 skip:b4 6:h0:defend:b4 >day-vote vote:b1>h0 vote:b2>h0 vote:b4>h0 result:6:h0:ok:h0=3 >finished",
+  "states": "c48c375cc9de35d9"
+ },
+ "8-6": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >hunter-shot >mayor-election >day-debate 1:b2:suspect:b7 1:b5:suspect:b7 1:b6:suspect:b7 1:b7:defend:b2 1:b4:suspect:b7 1:b3:ally:b6 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 >day-vote result:1:b7:ok:b2=1,b7=6 >night-raven >night-wolves >night-witch >dawn >day-debate 2:b2:wrong:b7 2:b4:wrong:b7 2:b2:suspect:b5 2:b5:defend:b2 2:b6:ally:b3 2:b4:ally:b3 2:b3:suspect:b5 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote result:2:b5:ok:b2=1,b5=7 >finished",
+  "states": "80cfff7843953d0a"
+ },
+ "8-7": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:suspect:h0 1:b1:ally:b0 1:b6:suspect:h0 1:h0:ally:b3 1:b3:ally:h0 1:h0:suspect:b3 1:b3:defend:h0 1:b2:rally:b3 1:b4:doubt:h0 1:b0:suspect:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 >day-vote vote:b0>h0 vote:b1>h0 vote:b2>h0 vote:b3>h0 vote:b4>b1 vote:b6>h0 result:1:h0:ok:b1=1,h0=6 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:h0 2:b2:wrong:h0 2:b2:suspect:b6 2:b1:suspect:b6 2:b6:defend:b2 2:b3:ally:b6 2:b0:suspect:b6 skip:b0 skip:b1 skip:b2 skip:b3 skip:b6 >day-vote result:2:b6:ok:b2=1,b6=5 >finished",
+  "states": "56993280d5d16555"
+ },
+ "8-8": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:h1 1:b1:rally:h1 1:b5:rally:h1 1:b2:suspect:h1 skip:h1 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote vote:b1>h1 vote:b2>h1 vote:b3>h1 vote:b4>h1 vote:b5>h1 vote:h0>b3 result:1:h1:ok:b3=3,h1=6 >night-raven >night-wolves >dawn >day-debate 2:b1:ally:b3 skip:h0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote vote:h0>b2 result:2:h0:ok:b1=1,b2=1,h0=5 >night-wolves >dawn >day-debate 3:b2:suspect:b4 3:b3:suspect:b4 3:b4:defend:b2 skip:b2 skip:b3 skip:b4 >day-vote result:3:b4:ok:b2=1,b4=2 >finished",
+  "states": "dc6c12bd44382592"
+ },
+ "8-9": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b5:suspect:b4 1:b0:suspect:b4 1:b7:suspect:b5 1:b2:suspect:b4 1:b1:suspect:b4 1:b4:defend:b5 1:b3:suspect:b4 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 >day-vote result:1:b4:ok:b4=6,b5=2 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:toldYou:b4 2:b5:toldYou:b4 2:b5:ally:b0 2:b0:ally:b5 2:b7:ally:b2 2:b2:ally:b7 2:b1:ally:b5 2:b3:ally:b2 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b7 >day-vote result:2:b7:ok:b3=3,b7=4 >finished",
+  "states": "f3f0b53dafdfe9a3"
+ },
+ "8-10": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b6:suspect:h0 1:b0:suspect:h0 1:b2:suspect:h0 1:b1:ally:b4 1:b3:suspect:h0 1:b4:ally:b0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 >day-vote vote:h0>b2 result:1:h0:ok:b2=1,b6=2,h0=5 >night-guard >night-wolves >night-witch >dawn >day-debate 2:b0:toldYou:h0 2:b2:toldYou:h0 2:b6:suspect:b2 2:b0:suspect:b2 2:b2:defend:b6 2:b1:suspect:b2 2:b3:ally:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b6 >day-vote result:2:b2:ok:b2=5,b6=1 >night-wolves >night-witch >dawn >finished",
+  "states": "4e25245015db1c9a"
+ },
+ "8-11": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b3 1:h1:ally:b1 1:b5:suspect:b3 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote vote:h1>b0 result:1:b3:ok:b0=1,b2=2,b3=6,b5=1 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:h1:ally:b1 2:b1:wrong:b3 2:b1:suspect:b5 2:b5:defend:b1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 >day-vote vote:b0>b5 vote:b1>b5 vote:b2>b5 vote:b4>b5 vote:b5>h1 result:2:b5:ok:b4=1,b5=5,h1=3 >night-guard >night-raven >night-wolves >dawn >finished",
+  "states": "6fd16117fc69a519"
+ },
+ "8-12": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:ally:b4 1:b4:suspect:b6 1:b3:ally:b0 1:b7:ally:b4 1:b0:suspect:b3 1:b6:defend:b4 1:b5:suspect:b3 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 >day-vote result:1:b3:ok:b3=8,b5=1,b6=1 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:b3 2:b1:ally:b7 2:b7:suspect:b5 2:b0:suspect:b5 2:b5:defend:b7 skip:b0 skip:b1 skip:b5 skip:b7 >day-vote result:2:b5:ok:b0=1,b1=2,b5=4 >night-wolves >night-witch >dawn >day-debate 3:b0:wrong:b5 3:b7:wrong:b5 3:b1:suspect:b7 3:b7:defend:b1 3:b0:ally:b1 skip:b0 skip:b1 skip:b7 >day-vote result:3:b7:ok:b0=1,b7=3 >finished",
+  "states": "6e9fc8d8b298423b"
+ },
+ "8-13": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h0:suspect:b5 1:b5:suspect:h0 1:h0:defend:b5 1:b1:suspect:b5 1:h0:ally:b4 1:b0:suspect:b5 1:b3:suspect:b5 skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:b0>b5 vote:b1>b5 vote:b3>b5 vote:b4>b5 vote:b5>h0 vote:b6>b5 result:1:b5:ok:b5=8,h0=1 >night-wolves >night-witch >dawn >day-debate 2:b1:wrong:b5 skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b6 >day-vote vote:b0>h0 vote:b1>b3 vote:b3>h0 vote:b4>h0 vote:b6>h0 result:2:h0:ok:b3=2,h0=4 >night-wolves >night-witch >dawn >finished",
+  "states": "7fbdcd9ba5f9edaf"
+ },
+ "8-14": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >hunter-shot >mayor-election >day-debate 1:b0:suspect:h1 1:b5:suspect:h1 1:b4:suspect:h1 1:b1:ally:b0 1:b2:suspect:h1 1:b5:ask:h1 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 1:h1:suspect:b2 1:b2:defend:h1 1:b0:rally:b2 1:h1:suspect:b0 >day-vote vote:b0>h1 vote:b1>h1 vote:b2>h1 vote:b4>h1 vote:b5>h1 result:1:h1:ok:h1=6 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:h1 2:b4:wrong:h1 2:b0:suspect:b2 2:b5:suspect:b2 2:b4:suspect:b2 2:b1:suspect:b2 2:b2:defend:b0 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 >day-vote result:2:b2:ok:b0=1,b2=5 >finished",
+  "states": "ba8ddc9f43949949"
+ },
+ "8-15": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:suspect:b5 1:b4:suspect:b5 1:b7:ally:b4 1:b6:suspect:b5 1:b5:defend:b2 1:b1:ally:b6 1:b3:suspect:b5 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 >day-vote result:1:b5:ok:b2=1,b5=7 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b4:wrong:b5 2:b4:ally:b7 2:b7:ally:b1 2:b1:suspect:b4 2:b3:suspect:b4 skip:b1 skip:b3 skip:b4 skip:b7 >day-vote result:2:b4:ok:b3=1,b4=4 >night-wolves >night-witch >dawn >day-debate 3:b1:wrong:b4 3:b7:suspect:b3 3:b1:suspect:b3 3:b3:defend:b7 skip:b1 skip:b3 skip:b7 >day-vote result:3:b3:ok:b1=1,b3=3 >finished",
+  "states": "9a6b2c871483ad8f"
+ },
+ "8-16": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b4:suspect:b3 1:b5:ally:b0 1:b0:suspect:b3 1:b2:suspect:b3 1:b3:defend:b4 1:b6:suspect:b3 1:b1:ally:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote result:1:b3:ok:b3=7,b4=1 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:b3 2:b2:wrong:b3 2:b4:ally:b1 2:b5:suspect:b0 2:b0:defend:b5 2:b2:suspect:b0 2:b1:doubt:b0 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 >day-vote result:2:-:tie:b0=3,b2=3 >day-revote result:2:-:tie:b0=3,b2=3 >night-seer >night-wolves >night-witch >dawn >day-debate 3:b4:suspect:b2 3:b5:suspect:b0 3:b0:defend:b5 3:b2:defend:b4 3:b1:doubt:b0 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 >day-vote result:3:b2:ok:b2=4,b4=2 >night-seer >night-wolves >night-witch >dawn >finished",
+  "states": "9a029d33072c72e2"
+ },
+ "8-17": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:ally:b3 1:h1:suspect:b5 1:b5:defend:h1 1:h0:suspect:b5 1:b5:suspect:h0 1:b2:rally:b5 1:h0:suspect:b4 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 1:h1:ally:b5 1:b5:ally:h1 1:h0:defend:b5 >day-vote vote:h0>h1 vote:b0>h0 vote:b1>b5 vote:b2>b5 vote:b3>b5 vote:b4>h0 vote:b5>h0 result:1:-:tie:b5=4,h0=4,h1=1 >day-revote vote:b0>h0 vote:b1>b5 vote:b2>b5 vote:b3>b5 vote:b4>h0 vote:b5>h0 vote:h0>b5 result:1:-:tie:b5=4,h0=4 >night-seer >night-wolves >night-witch >dawn >day-debate 2:h0:suspect:b0 2:b0:defend:h0 2:h0:suspect:h1 2:b2:rally:h1 2:h0:ally:b4 2:b4:ally:h0 2:b3:suspect:b5 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:h0 >day-vote vote:b0>h0 vote:b1>b5 vote:b2>h1 vote:b3>b5 vote:b4>h0 vote:b5>h1 vote:h0>b1 result:2:h0:ok:b0=1,b1=1,b5=2,h0=3,h1=2 >night-seer >night-wolves >night-witch >dawn >day-debate 3:b2:suspect:b3 3:b3:defend:b2 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 >day-vote vote:b0>b3 vote:b1>b3 vote:b2>b3 vote:b3>b2 vote:b4>b3 result:3:b3:ok:b2=1,b3=5 >night-seer >night-wolves >dawn >hunter-shot >finished",
+  "states": "160cdfb87d59a1a6"
+ },
+ "8-18": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:suspect:b4 1:b4:defend:b2 1:b1:ally:b6 1:b6:ally:b0 1:b3:ally:b6 1:b5:suspect:b4 1:b0:suspect:b2 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote result:1:b4:ok:b2=2,b4=6 >night-guard >night-wolves >night-witch >dawn >day-debate 2:b2:toldYou:b4 2:b5:toldYou:b4 2:b2:suspect:b0 2:b1:ally:b2 2:b6:suspect:b0 2:b3:suspect:b0 2:b5:suspect:b0 2:b0:defend:b2 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 >day-vote result:2:b0:ok:b0=6,b6=1 >finished",
+  "states": "d60fd1aff0b00b56"
+ },
+ "8-19": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b6:ally:b1 1:b3:suspect:h0 1:b4:suspect:b6 1:h0:ally:b4 1:b1:ally:b0 1:b0:ally:b5 1:b5:ally:b4 1:h0:defend:b3 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:b0>h0 vote:b1>h0 vote:b3>h0 vote:b4>b6 vote:b5>h0 vote:b6>h0 result:1:h0:ok:b3=1,b6=1,h0=6 >hunter-shot >night-guard >night-seer >night-wolves >dawn >day-debate 2:b3:wrong:h0 2:b6:suspect:b5 2:b3:suspect:b5 2:b1:suspect:b5 2:b0:suspect:b5 2:b5:defend:b6 skip:b0 skip:b1 skip:b3 skip:b5 skip:b6 >day-vote result:2:b5:ok:b3=1,b5=5 >finished",
+  "states": "5570b8749eaf0610"
+ },
+ "8-20": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:h0 skip:h1 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 1:h0:suspect:b4 1:h1:suspect:h0 1:b3:rally:h0 1:b5:rally:h0 >day-vote vote:h0>b3 vote:h1>h0 result:1:h0:ok:b1=2,b3=1,h0=7 >night-guard >night-wolves >dawn >day-debate 2:b1:ally:b5 2:b5:ally:b0 skip:h1 skip:b0 skip:b1 skip:b4 skip:b5 >day-vote vote:b0>h1 vote:b1>h1 vote:b4>h1 vote:b5>b1 result:2:h1:ok:b1=2,b5=1,h1=3 >night-wolves >dawn >day-debate 3:b5:suspect:b0 3:b4:ally:b5 3:b0:defend:b5 skip:b0 skip:b4 skip:b5 >day-vote result:3:b0:ok:b0=3,b4=1 >finished",
+  "states": "1a4c61c665747981"
+ },
+ "8-21": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b6:suspect:b2 1:b7:suspect:b2 1:b5:ally:b4 1:b1:suspect:b2 1:b2:defend:b6 1:b3:suspect:b2 1:b4:ally:b5 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 >day-vote result:1:b2:ok:b2=8,b6=2 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:b1:toldYou:b2 2:b6:toldYou:b2 2:b6:suspect:b5 2:b7:ally:b4 2:b5:defend:b6 2:b1:suspect:b5 2:b3:suspect:b5 2:b4:suspect:b5 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 >day-vote result:2:b5:ok:b5=6,b6=1,b7=2 >finished",
+  "states": "fb31d31209b9c43e"
+ },
+ "8-22": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b4 1:b3:suspect:b4 1:b4:defend:b0 1:b6:suspect:b4 1:b2:ally:b5 1:b5:ally:b1 1:b1:suspect:b4 1:h0:suspect:b2 1:b2:defend:h0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:h0>b3 result:1:b4:ok:b0=1,b3=1,b4=9 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:b0:toldYou:b4 2:b3:toldYou:b4 2:h0:suspect:b6 2:b6:suspect:h0 2:b0:rally:b6 2:h0:ally:b2 2:b2:ally:h0 2:b3:suspect:b6 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 >day-vote vote:h0>b2 result:2:b6:ok:b2=1,b6=8,h0=1 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 3:h0:ally:b3 3:b3:ally:h0 3:h0:suspect:b0 3:b0:suspect:h0 3:b3:rally:b0 3:h0:defend:b0 3:b2:suspect:b0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 >day-vote vote:h0>b0 result:3:b0:ok:b0=6,b5=2,h0=1 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 4:b3:suspect:b2 4:b2:defend:b3 4:b5:doubt:b2 4:h0:suspect:b1 4:b1:defend:h0 4:b3:rally:b1 4:h0:ally:b2 skip:b1 skip:b2 skip:b3 skip:b5 >day-vote vote:h0>b1 result:4:-:tie:b1=3,b2=2,h0=3 >day-revote vote:b1>h0 vote:b2>b1 vote:b3>b1 vote:b5>h0 result:4:-:tie:b1=3,h0=3 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 5:b3:suspect:h0 5:b2:ally:b5 5:h0:suspect:b5 5:b5:defend:h0 5:b3:rally:b5 5:h0:ally:b5 5:b1:suspect:h0 skip:b1 skip:b2 skip:b3 skip:b5 5:h0:suspect:b3 5:b3:suspect:h0 5:b5:doubt:b3 skip:h0 >day-vote vote:b1>h0 vote:b2>h0 vote:b3>h0 vote:b5>h0 result:5:h0:ok:b5=2,h0=5 >finished",
+  "states": "244bb7c4986f6ec9"
+ },
+ "8-23": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b4:suspect:b5 1:b2:suspect:b5 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 1:h1:suspect:b1 1:b1:defend:h1 1:b4:rally:b1 >day-vote vote:h1>b0 vote:b0>b1 vote:b1>b5 vote:b2>b5 vote:b3>b1 vote:b4>b5 vote:b5>b1 result:1:-:tie:b0=1,b1=5,b5=5 >day-revote vote:b0>b1 vote:b1>b5 vote:b2>b5 vote:b3>b1 vote:b4>b5 vote:b5>b1 vote:h0>b5 result:1:b5:ok:b1=3,b5=5 >night-seer >night-raven >night-wolves >dawn >day-debate 2:b2:wrong:b5 2:b4:wrong:b5 2:h0:suspect:b2 2:h1:suspect:b4 2:b4:suspect:h1 2:h1:ally:b0 2:b0:ally:h1 2:h0:suspect:b2 2:b2:suspect:h0 2:b1:doubt:b2 2:h0:suspect:b0 2:b0:defend:h0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:h1 >day-vote vote:b0>b2 vote:b1>h1 vote:b2>b4 vote:b3>b2 vote:b4>b2 vote:h0>b3 result:2:-:tie:b2=3,b3=2,b4=3,h1=1 >day-revote vote:h0>b2 vote:b0>b2 vote:b1>b4 vote:b2>b4 vote:b3>b2 vote:b4>b2 result:2:b2:ok:b2=5,b4=3 >night-seer >night-raven >night-wolves >dawn >day-debate 3:h1:suspect:b4 3:b4:suspect:h1 3:b0:rally:b4 3:b1:doubt:b4 3:h1:ally:b3 3:b3:ally:h1 3:b4:ask:h0 3:h1:ally:b3 skip:b0 skip:b1 skip:b3 skip:b4 skip:h1 >day-vote vote:h1>b1 vote:b0>h0 vote:b1>h1 vote:b3>h0 vote:b4>h1 result:3:-:tie:b0=2,b1=1,b4=2,h0=2,h1=2 >day-revote vote:b0>h0 vote:b1>h1 vote:b3>h0 vote:b4>h1 vote:h0>b4 result:3:-:tie:b4=2,h0=2,h1=2 >night-seer >night-raven >night-wolves >dawn >day-debate 4:b4:ally:h0 4:h0:suspect:h1 4:b4:rally:h1 4:b0:rally:h1 4:h1:ally:b0 4:b1:suspect:h1 skip:h0 4:h1:suspect:b1 skip:b0 skip:b1 skip:b3 skip:b4 skip:h1 >day-vote vote:b0>h1 vote:b1>h1 vote:b3>h1 vote:b4>h1 result:4:h1:ok:b1=2,h1=4 >night-seer >night-raven >night-wolves >dawn >day-debate skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 >day-vote vote:b0>b4 vote:b1>h0 vote:b3>b4 vote:b4>b0 result:5:b4:ok:b0=1,b4=4,h0=1 >night-seer >night-raven >night-wolves >dawn >day-debate 6:b0:ally:h0 6:b1:suspect:h0 6:b3:suspect:b0 6:b1:ask:h0 6:h0:suspect:b3 6:b3:defend:h0 6:b1:doubt:b3 6:h0:defend:b1 skip:b0 skip:b1 skip:b3 >day-vote vote:b0>b3 vote:b1>h0 vote:b3>b0 result:6:-:tie:b0=3,b3=1,h0=3 >day-revote vote:b0>h0 vote:b1>h0 vote:b3>b0 result:6:b0:ok:b0=3,h0=2 >hunter-shot >finished",
+  "states": "a97da27c1d87d2b7"
+ },
+ "8-24": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b4:suspect:b2 1:b2:defend:b4 1:b5:ally:b6 1:b6:ally:b1 1:b7:suspect:b2 1:b0:ally:b1 1:b1:suspect:b2 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 >day-vote result:1:b2:ok:b2=7,b4=1 >night-wolves >dawn >day-debate 2:b1:wrong:b2 2:b4:wrong:b2 2:b4:ally:b6 2:b5:suspect:b4 2:b6:ally:b5 2:b0:suspect:b4 2:b1:ally:b6 skip:b0 skip:b1 skip:b4 skip:b5 skip:b6 >day-vote result:2:b4:ok:b0=1,b4=4 >finished",
+  "states": "c3e8f6cfa1cdfffb"
+ },
+ "8-25": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h0:ally:b3 1:b3:suspect:h0 1:b0:suspect:b2 1:b4:suspect:h0 1:h0:suspect:b0 1:b0:defend:h0 1:b3:rally:b0 1:b1:ally:b3 1:b2:defend:b0 1:b5:suspect:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote vote:h0>b5 result:1:h0:ok:b4=1,b5=1,h0=6 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b3:toldYou:h0 2:b4:toldYou:h0 2:b3:suspect:b0 2:b0:defend:b3 2:b4:ally:b3 2:b1:ally:b4 2:b2:suspect:b0 2:b5:suspect:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:2:b0:ok:b0=6,b2=1 >finished",
+  "states": "2e91936c6cc7baf8"
+ },
+ "8-26": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:h1:suspect:b0 1:b0:suspect:h1 1:b3:rally:b0 1:b5:suspect:b0 1:b2:suspect:b0 1:h1:defend:b0 1:b1:suspect:b0 1:b0:ask:h0 skip:h0 1:h1:ally:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 1:b3:ally:h1 >day-vote vote:h0>b3 vote:b0>b1 vote:b1>b0 vote:b2>b0 vote:b3>b0 vote:b5>b0 result:1:b0:ok:b0=7,b1=1,b3=1 >night-raven >night-wolves >dawn >day-debate 2:b1:wrong:b0 2:h1:suspect:b3 2:b3:defend:h1 2:h0:suspect:b1 2:b1:defend:h0 2:b5:suspect:b1 skip:b1 skip:b3 skip:b5 >day-vote vote:h0>b5 vote:b1>b5 vote:b3>b1 vote:b5>b1 result:2:-:tie:b1=4,b5=4 >day-revote vote:b1>b5 vote:b3>b1 vote:b5>b1 vote:h0>b5 result:2:-:tie:b1=3,b5=3 >night-wolves >dawn >finished",
+  "states": "15272ece74aa8a03"
+ },
+ "8-27": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b5 1:b4:ally:b0 1:b2:suspect:b5 1:b5:defend:b0 1:b1:suspect:b5 1:b6:ally:b4 1:b3:ally:b6 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote result:1:b5:ok:b2=1,b5=7 >night-seer >night-raven >night-wolves >dawn >hunter-shot >finished",
+  "states": "d9940ab0086fd0aa"
+ },
+ "8-28": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:h0 1:b5:ally:b6 1:h0:ally:b5 1:b1:suspect:h0 1:b6:suspect:h0 1:b4:suspect:h0 1:h0:defend:b4 1:b2:ally:b5 skip:h0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:h0>b3 result:1:h0:ok:b3=1,b4=1,h0=6 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b3:toldYou:h0 2:b3:suspect:b2 2:b5:ally:b4 2:b1:suspect:b2 2:b6:ally:b5 2:b4:suspect:b2 2:b2:defend:b3 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote result:2:b2:ok:b2=6,b3=1 >finished",
+  "states": "2c01e8acd7d9d9e2"
+ },
+ "8-29": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b5:suspect:h0 1:b2:suspect:b5 1:b0:suspect:b5 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 >day-vote vote:h0>h1 vote:h1>b1 result:1:b5:ok:b1=1,b5=5,h0=1,h1=1 >night-wolves >night-witch >dawn >day-debate 2:h0:ally:b3 2:b0:wrong:b5 2:b2:suspect:b0 2:b0:defend:b2 2:b3:suspect:b0 2:b1:ally:h0 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote vote:b0>b2 vote:b1>b0 vote:b2>b0 vote:b3>b0 vote:h0>b0 result:2:b0:ok:b0=5,b2=1,b3=1 >night-wolves >dawn >finished",
+  "states": "e2c1ccddd8af0fff"
+ },
+ "8-30": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b6:ally:b7 1:b7:suspect:b3 1:b4:suspect:b3 1:b5:ally:b7 1:b1:suspect:b3 1:b0:ally:b7 1:b3:defend:b7 1:b2:suspect:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 >day-vote result:1:b3:ok:b3=10,b4=1 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:b1:wrong:b3 2:b4:wrong:b3 2:b6:suspect:b2 2:b7:suspect:b2 2:b4:suspect:b2 2:b5:ally:b6 2:b1:suspect:b2 2:b2:defend:b6 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 >day-vote result:2:b2:ok:b2=5,b4=1 >night-raven >night-wolves >dawn >finished",
+  "states": "6da88fd530cf668c"
+ },
+ "8-31": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:b0>b4 vote:b1>b2 vote:b2>h0 vote:b3>b0 vote:b4>b1 vote:b5>b4 vote:b6>b4 result:1:b4:ok:b0=1,b1=1,b2=1,b4=4,h0=1 >night-seer >night-wolves >night-witch >dawn >day-debate 2:h0:suspect:b6 2:b6:suspect:h0 2:b1:rally:b6 2:h0:defend:b6 2:b0:suspect:b6 2:b2:suspect:b6 2:b3:suspect:b6 skip:b0 skip:b1 skip:b2 skip:b3 skip:b6 >day-vote vote:h0>b1 result:2:b6:ok:b1=1,b6=3,h0=2 >night-seer >night-wolves >night-witch >dawn >day-debate 3:h0:suspect:b1 3:b1:suspect:h0 3:b0:rally:b1 3:b2:toldYou:b6 3:b3:toldYou:b6 3:b2:suspect:b1 3:h0:suspect:b3 3:b3:defend:h0 3:b1:rally:b3 3:h0:defend:b1 skip:b0 skip:b1 skip:b2 skip:b3 >day-vote vote:b0>b1 vote:b1>h0 vote:b2>b1 vote:b3>b1 result:3:b1:ok:b0=1,b1=3,h0=1 >finished",
+  "states": "6ec48e679f3b4628"
+ },
+ "8-32": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:h0 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote vote:h0>h1 vote:b0>h0 vote:b1>h0 vote:b2>h0 vote:b3>h0 vote:b4>h0 vote:b5>h0 result:1:h0:ok:b4=2,h0=6,h1=1 >night-guard >night-seer >night-wolves >dawn >day-debate 2:b3:suspect:b2 2:b4:ally:b0 2:b0:ally:b5 2:h1:suspect:b0 2:b0:defend:h1 2:b3:rally:b0 2:b5:suspect:b0 2:h1:ally:b4 2:b4:ally:h1 2:b2:defend:b3 skip:b0 skip:b2 skip:b3 skip:b4 skip:b5 2:h1:suspect:b5 2:b5:defend:h1 skip:h1 >day-vote vote:b0>b2 vote:b2>b5 vote:b3>b0 vote:b4>b0 vote:b5>b0 result:2:-:tie:b0=3,b2=1,b5=3 >day-revote vote:b0>b5 vote:b2>b5 vote:b3>b0 vote:b4>b0 vote:b5>b0 result:2:b0:ok:b0=3,b5=2 >night-guard >night-seer >night-wolves >dawn >finished",
+  "states": "dc99258217fe16bc"
+ },
+ "8-33": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b0 1:b7:suspect:b0 1:b0:defend:b1 1:b6:ally:b5 1:b2:suspect:b0 1:b3:suspect:b0 1:b5:suspect:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 skip:b7 >day-vote result:1:b0:ok:b0=7,b1=1 >night-wolves >dawn >hunter-shot >finished",
+  "states": "f6d9a51b9e657f31"
+ },
+ "8-34": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b3 1:b1:suspect:b3 1:h0:ally:b1 1:b6:suspect:b4 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 >day-vote vote:h0>b2 result:1:b4:ok:b2=1,b3=3,b4=4,b6=2 >night-seer >night-wolves >dawn >day-debate 2:h0:ally:b2 2:b6:toldYou:b4 2:b2:suspect:b3 2:b6:doubt:b3 2:b3:defend:b2 2:b0:suspect:b3 skip:b0 skip:b2 skip:b3 skip:b6 2:h0:suspect:b2 2:b2:suspect:h0 >day-vote vote:b0>b3 vote:b2>h0 vote:b3>h0 vote:b6>h0 result:2:h0:ok:b3=1,h0=3 >night-seer >night-wolves >dawn >day-debate 3:b2:wrong:h0 3:b2:suspect:b0 3:b6:suspect:b0 3:b0:defend:b2 skip:b0 skip:b2 skip:b6 >day-vote result:3:b0:ok:b0=2,b2=1 >finished",
+  "states": "0ef936bee3540c76"
+ },
+ "8-35": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate skip:h1 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 1:h0:ally:b2 1:h1:ally:b2 1:b2:ally:h1 1:h0:suspect:b2 1:b2:defend:h0 1:b3:rally:b2 >day-vote vote:h0>h1 vote:h1>b3 result:1:h0:ok:b3=1,h0=6,h1=1 >night-wolves >night-witch >dawn >day-debate 2:b3:suspect:b1 2:b1:defend:b3 2:h1:suspect:b4 2:b4:defend:h1 2:b3:rally:b4 2:b2:suspect:b4 2:b5:ally:b2 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote vote:h1>b4 result:2:b4:ok:b4=5,h1=2 >night-wolves >night-witch >dawn >finished",
+  "states": "e263c9361103dce8"
+ },
+ "8-36": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b3 1:b1:suspect:b3 1:b7:suspect:b3 1:b0:ally:b2 1:b3:defend:b2 1:b4:ally:b6 1:b6:suspect:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 >day-vote result:1:b3:ok:b1=1,b3=7 >night-seer >night-wolves >dawn >day-debate 2:b2:wrong:b3 2:b7:wrong:b3 2:b2:suspect:b7 2:b1:suspect:b7 2:b7:defend:b2 2:b0:ally:b7 2:b6:doubt:b7 skip:b0 skip:b1 skip:b2 skip:b6 skip:b7 >day-vote result:2:b2:ok:b2=3,b7=2 >night-seer >night-wolves >dawn >day-debate 3:b1:suspect:b0 3:b7:suspect:b0 3:b0:defend:b1 skip:b0 skip:b1 skip:b7 >day-vote result:3:b0:ok:b0=2,b1=1 >hunter-shot >finished",
+  "states": "cdd55affe8f69eb7"
+ },
+ "8-37": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h0:suspect:b4 1:b4:suspect:h0 1:b3:rally:b4 1:b5:suspect:b4 1:b6:suspect:b4 1:h0:ally:b3 1:b1:ally:b3 1:h0:ally:b0 1:b0:ally:h0 skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:h0>b0 result:1:b4:ok:b0=1,b1=2,b4=6,b6=1 >night-seer >night-wolves >night-witch >dawn >day-debate 2:h0:suspect:b1 2:b1:defend:h0 2:b3:rally:b1 2:b5:wrong:b4 2:b6:wrong:b4 2:b5:ally:b3 2:b6:suspect:b1 2:b0:suspect:h0 2:h0:suspect:b3 2:b3:suspect:h0 2:b6:rally:b3 skip:b0 skip:b1 skip:b3 skip:b5 skip:b6 >day-vote vote:h0>b6 result:2:h0:ok:b1=1,b6=1,h0=5 >night-seer >night-wolves >night-witch >dawn >hunter-shot >day-debate 3:b3:toldYou:h0 3:b3:suspect:b6 3:b6:defend:b3 3:b0:suspect:b6 skip:b0 skip:b3 skip:b6 >day-vote result:3:b6:ok:b3=1,b6=2 >finished",
+  "states": "379d52986a218200"
+ },
+ "8-38": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote vote:h1>b0 result:1:b4:ok:b0=2,b1=1,b4=4,b5=1 >hunter-shot >night-seer >night-wolves >dawn >finished",
+  "states": "439edb95db6f4ca4"
+ },
+ "8-39": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b5:ally:b3 1:b3:suspect:b5 1:b1:suspect:b5 1:b4:suspect:b5 1:b2:suspect:b5 1:b7:ally:b3 1:b0:suspect:b5 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 >day-vote result:1:b5:ok:b1=1,b5=7 >night-wolves >dawn >day-debate 2:b0:wrong:b5 2:b3:wrong:b5 2:b3:suspect:b2 2:b4:suspect:b2 2:b2:defend:b3 2:b7:suspect:b2 2:b0:ally:b7 skip:b0 skip:b2 skip:b3 skip:b4 skip:b7 >day-vote result:2:b2:ok:b2=5,b4=1 >hunter-shot >night-wolves >dawn >finished",
+  "states": "5d95c4900b35e4cc"
+ },
+ "8-40": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b4 1:h0:ally:b4 1:b4:defend:b2 1:b5:suspect:b4 1:h0:suspect:b5 1:b5:suspect:h0 1:b2:rally:b5 1:b0:suspect:b5 1:h0:suspect:b1 1:b1:defend:h0 1:b2:rally:b1 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:h0>b0 result:1:b5:ok:b0=2,b4=2,b5=7 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:b0:toldYou:b5 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 >day-vote vote:b0>b2 vote:b1>b2 vote:b2>b6 vote:b3>b2 vote:b4>b2 vote:b6>b2 result:2:b2:ok:b2=8,b6=1 >night-guard >night-raven >night-wolves >dawn >day-debate 3:b4:suspect:b0 3:h0:suspect:b4 3:b4:suspect:h0 3:h0:suspect:b3 3:b3:defend:h0 3:h0:suspect:b1 3:b1:defend:h0 3:b0:rally:b1 3:b6:suspect:b1 skip:b0 skip:b1 skip:b3 skip:b4 skip:b6 >day-vote vote:h0>b3 result:3:b1:ok:b1=4,b3=3,h0=2 >night-guard >night-wolves >dawn >day-debate 4:b6:wrong:b1 4:h0:suspect:b6 4:b6:defend:h0 4:h0:ally:b6 4:b6:ally:h0 4:h0:ally:b4 4:b4:suspect:h0 4:b0:suspect:h0 4:b3:suspect:h0 skip:b0 skip:b3 skip:b4 skip:b6 >day-vote vote:h0>b4 result:4:h0:ok:b4=1,h0=5 >finished",
+  "states": "829f3d1abf05e3ef"
+ },
+ "8-41": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:b5 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 1:h0:suspect:h1 1:b3:rally:h1 skip:h1 >day-vote vote:b0>h1 vote:b1>h1 vote:b2>h1 vote:b3>h1 vote:b4>h1 vote:b5>h1 vote:h0>b2 result:1:h1:ok:b2=1,h0=1,h1=7 >night-wolves >night-witch >dawn >day-debate 2:b3:suspect:b0 2:b4:ally:b5 2:b5:suspect:b0 2:b0:defend:b3 2:b1:suspect:b0 2:b2:suspect:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:2:b0:ok:b0=6,b4=1 >night-wolves >night-witch >dawn >day-debate 3:b1:wrong:b0 3:b2:wrong:b0 3:b3:ally:b4 3:b4:suspect:b2 3:b5:suspect:b2 3:b1:suspect:b2 3:b2:defend:b4 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote result:3:b2:ok:b1=1,b2=5 >finished",
+  "states": "74d208dd822ea4df"
+ },
+ "8-42": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:b7 1:b0:suspect:b7 1:b4:suspect:b7 1:b7:defend:b3 1:b2:suspect:b7 1:b1:doubt:b7 1:b5:ally:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 >day-vote result:1:b7:ok:b3=4,b7=6 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:suspect:b2 2:b2:defend:b0 2:b1:suspect:b2 2:b5:suspect:b2 skip:b0 skip:b1 skip:b2 skip:b5 >day-vote result:2:b2:ok:b0=1,b2=4 >finished",
+  "states": "379bddda0636cfd3"
+ },
+ "8-43": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b1 1:b5:suspect:b1 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 >day-vote vote:b0>b1 vote:b1>b6 vote:b2>b1 vote:b3>b1 vote:b5>b1 vote:b6>b1 result:1:b1:ok:b1=6,b2=2,b6=1 >night-seer >night-raven >night-wolves >dawn >hunter-shot >day-debate 2:b2:wrong:b1 2:b2:suspect:b5 2:b5:defend:b2 2:b0:suspect:b5 2:b6:suspect:b0 2:b3:ally:b6 skip:b0 skip:b2 skip:b3 skip:b5 skip:b6 >day-vote result:2:b5:ok:b0=2,b5=4 >finished",
+  "states": "0fda41f80a1ff3de"
+ },
+ "8-44": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >hunter-shot >mayor-election >day-debate 1:h1:ally:b3 1:b1:suspect:b3 1:b2:suspect:b5 1:b5:defend:b2 1:h1:suspect:b3 1:b3:defend:h1 1:h1:suspect:b4 1:b4:defend:h1 1:b1:rally:b4 skip:h1 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote vote:h1>b3 result:1:b3:ok:b3=4,b4=1,h1=2 >night-seer >night-wolves >dawn >day-debate 2:h1:suspect:b4 2:b4:defend:h1 2:b1:doubt:b4 2:b5:ally:h1 2:h1:suspect:b4 2:b4:defend:h1 2:b1:doubt:b4 skip:b1 skip:b4 skip:b5 2:h1:suspect:b1 2:b1:suspect:h1 >day-vote vote:h1>b5 result:2:b5:ok:b4=1,b5=3,h1=1 >finished",
+  "states": "24d0d66c38734c49"
+ },
+ "8-45": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b2:suspect:b3 1:b6:suspect:b3 1:b0:suspect:b6 1:b7:suspect:b3 1:b4:ally:b2 1:b1:suspect:b3 1:b3:defend:b2 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 >day-vote result:1:b3:ok:b3=8,b6=2 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b6:toldYou:b3 2:b7:toldYou:b3 2:b2:ally:b6 2:b6:suspect:b0 2:b0:defend:b6 2:b7:ally:b2 2:b4:ally:b6 skip:b0 skip:b2 skip:b4 skip:b6 skip:b7 >day-vote result:2:b0:ok:b0=5,b4=1,b6=2 >finished",
+  "states": "4fec6784c85e0d5f"
+ },
+ "8-46": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h0:suspect:b2 1:b2:suspect:h0 1:b1:rally:b2 1:h0:defend:b2 1:b5:suspect:b2 1:h0:suspect:b0 1:b0:suspect:h0 1:b2:rally:b0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:h0>b5 result:1:b2:ok:b2=6,b5=1,h0=2 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b5:toldYou:b2 2:b1:ally:b5 2:b5:suspect:b0 2:b0:defend:b5 2:b4:suspect:b0 2:b6:suspect:b0 2:b3:suspect:b0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote result:2:b0:ok:b0=6,b3=1 >finished",
+  "states": "161ea3a821ba11fa"
+ },
+ "8-47": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 1:h0:suspect:b0 1:b0:suspect:h0 1:b3:rally:b0 1:h0:defend:b0 1:h1:ally:b1 1:b1:ally:h1 >day-vote vote:b0>b3 vote:b1>b0 vote:b2>b0 vote:b3>b0 vote:b4>b0 vote:b5>b0 vote:h1>b4 result:1:b0:ok:b0=5,b3=1,b4=1 >night-guard >night-seer >night-wolves >dawn >day-debate 2:h0:suspect:b4 2:b4:defend:h0 2:h1:suspect:b4 2:b4:defend:h1 2:b3:rally:b4 2:b1:suspect:b4 2:h0:suspect:b5 2:b5:defend:h0 2:h0:suspect:h1 2:h1:ally:b1 2:b1:ally:h1 2:b2:suspect:h1 skip:h1 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 >day-vote vote:b1>b4 vote:b2>h1 vote:b3>b4 vote:b4>h1 vote:b5>b4 vote:h0>b1 result:2:b4:ok:b1=2,b4=3,h1=2 >night-guard >night-seer >night-wolves >dawn >day-debate 3:b1:toldYou:b4 3:b3:ally:b2 3:b1:suspect:b5 3:h1:suspect:b5 3:b5:defend:h1 3:b3:rally:b5 3:b2:suspect:b5 skip:b1 skip:b2 skip:b3 skip:b5 >day-vote vote:b1>b5 vote:b2>b5 vote:b3>b5 vote:b5>b3 result:3:b5:ok:b3=1,b5=3 >night-guard >night-wolves >dawn >day-debate 4:b1:wrong:b5 4:h1:suspect:b2 4:b2:defend:h1 4:b1:rally:b2 skip:b1 skip:b2 skip:h1 >day-vote vote:b1>b2 vote:b2>h1 result:4:b2:ok:b2=2,h1=1 >finished",
+  "states": "22a2bd5c0516ea17"
+ },
+ "8-48": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:b4 1:b7:suspect:b4 1:b2:ally:b3 1:b4:defend:b3 1:b0:suspect:b4 1:b1:suspect:b4 1:b5:suspect:b4 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 >day-vote result:1:b4:ok:b1=1,b3=1,b4=6 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b3:wrong:b4 2:b7:wrong:b4 2:b3:suspect:b5 2:b7:ally:b2 2:b2:suspect:b5 2:b0:suspect:b5 2:b5:defend:b3 skip:b0 skip:b2 skip:b3 skip:b5 skip:b7 >day-vote result:2:b5:ok:b0=1,b5=5 >finished",
+  "states": "ca22f876553d623b"
+ },
+ "8-49": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:h0:ally:b5 1:b3:ally:b5 1:b4:ally:b6 1:b6:suspect:h0 1:b0:suspect:h0 1:b5:suspect:h0 1:b2:ally:b4 1:h0:defend:b5 skip:b0 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 >day-vote vote:h0>b4 result:1:h0:ok:b4=1,h0=7 >night-guard >night-seer >night-wolves >dawn >day-debate 2:b0:wrong:h0 2:b3:suspect:b6 2:b4:suspect:b6 2:b6:defend:b3 2:b0:suspect:b6 2:b2:suspect:b3 skip:b0 skip:b2 skip:b3 skip:b4 skip:b6 >day-vote result:2:b6:ok:b3=2,b6=3 >finished",
+  "states": "240745bc8bc92e1d"
+ },
+ "12-0": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b9:suspect:b4 1:b2:suspect:b4 1:b6:ally:b8 1:b1:suspect:b4 1:b11:suspect:b4 1:b8:suspect:b1 1:b3:suspect:b4 1:b5:ally:b6 1:b0:suspect:b4 1:b4:defend:b9 1:b7:suspect:b4 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b11 >day-vote result:1:b4:ok:b1=3,b4=9 >night-guard >night-seer >night-wolves >dawn >day-debate 2:b1:toldYou:b4 2:b3:toldYou:b4 2:b9:suspect:b5 2:b6:ally:b11 2:b1:ally:b3 2:b11:ally:b1 2:b8:suspect:b9 2:b3:suspect:b5 2:b5:defend:b9 2:b0:suspect:b5 2:b7:ally:b8 skip:b0 skip:b1 skip:b3 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b11 >day-vote result:2:b5:ok:b5=7,b9=2 >night-guard >night-seer >night-wolves >dawn >day-debate 3:b3:toldYou:b5 3:b9:toldYou:b5 3:b9:suspect:b8 3:b6:suspect:b8 3:b1:suspect:b8 3:b8:defend:b9 3:b3:suspect:b8 3:b0:suspect:b8 3:b7:suspect:b8 skip:b0 skip:b1 skip:b3 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote result:3:b8:ok:b6=1,b8=6 >finished",
+  "states": "9d7ea11ac95a8c9e"
+ },
+ "12-1": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >hunter-shot >mayor-election >day-debate 1:b6:suspect:b2 1:b10:suspect:b2 1:b4:suspect:b10 1:b2:defend:b6 1:b1:suspect:b2 1:b8:suspect:b2 1:b7:suspect:b2 1:b0:suspect:b2 1:b9:ally:b5 1:b5:suspect:b2 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote result:1:b2:ok:b10=3,b2=8 >night-seer >night-wolves >dawn >day-debate 2:b1:toldYou:b2 2:b6:toldYou:b2 2:b6:ally:b5 2:b10:suspect:b4 2:b4:defend:b10 2:b1:suspect:b4 2:b8:suspect:b4 2:b7:suspect:b4 2:b9:ally:b5 2:b5:suspect:b4 skip:b1 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote result:2:b4:ok:b10=2,b4=7 >night-seer >night-wolves >dawn >day-debate 3:b1:toldYou:b4 3:b8:toldYou:b4 3:b6:suspect:b9 3:b10:suspect:b9 3:b1:ally:b8 3:b8:suspect:b9 3:b9:defend:b6 3:b5:suspect:b9 skip:b1 skip:b5 skip:b6 skip:b8 skip:b9 skip:b10 >day-vote result:3:b9:ok:b6=1,b9=5 >finished",
+  "states": "2aa6d5acdf2b6454"
+ },
+ "12-2": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:b2 1:b5:suspect:h1 1:h0:suspect:b5 1:h1:ally:b6 1:b9:suspect:h1 1:b4:ally:b3 1:b2:defend:b3 1:b0:suspect:b5 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b8 skip:b9 >day-vote vote:h0>b8 vote:h1>b6 result:1:b5:ok:b5=7,b6=1,b8=1,h1=3 >night-wolves >night-witch >dawn >day-debate 2:h1:suspect:b8 2:b8:defend:h1 2:h1:suspect:b8 2:b8:defend:h1 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b8 2:h1:suspect:b0 2:b0:defend:h1 2:h0:ally:b4 skip:h1 >day-vote vote:b0>b8 vote:b1>b0 vote:b2>b8 vote:b3>b8 vote:b4>b0 vote:b6>b8 vote:b8>b0 vote:h1>b0 result:2:b0:ok:b0=5,b8=4 >night-wolves >dawn >day-debate 3:b3:suspect:h1 3:b4:suspect:b3 3:b2:ally:b4 3:b1:ally:b4 3:h1:defend:b3 3:b8:ally:b6 3:b6:suspect:h1 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b8 >day-vote vote:b1>h1 vote:b2>h1 vote:b3>h1 vote:b4>b3 vote:b6>h1 vote:b8>b3 result:3:h1:ok:b3=3,h1=4 >night-wolves >dawn >day-debate 4:b3:toldYou:h1 4:b3:suspect:b1 4:b4:ally:b3 4:b1:defend:b3 4:b8:suspect:b1 4:b6:suspect:b1 skip:b1 skip:b3 skip:b4 skip:b6 skip:b8 >day-vote result:4:b1:ok:b1=5,b8=1 >finished",
+  "states": "c953ef50088679f9"
+ },
+ "12-3": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b10:suspect:b3 1:b11:suspect:b0 1:b2:ally:b9 1:b8:ally:b6 1:b6:suspect:b3 1:b1:suspect:b3 1:b5:ally:b11 1:b9:ally:b4 1:b3:defend:b10 1:b4:ally:b6 1:b0:defend:b11 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b3:ok:b0=2,b3=12 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b6:wrong:b3 2:b10:wrong:b3 2:b10:suspect:b1 2:b11:suspect:b0 2:b8:suspect:b1 2:b6:ally:b5 2:b1:defend:b10 2:b5:suspect:b1 2:b9:suspect:b1 2:b4:suspect:b1 2:b0:defend:b11 skip:b0 skip:b1 skip:b4 skip:b5 skip:b6 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:2:b1:ok:b0=1,b1=8,b10=1,b11=2 >hunter-shot >night-seer >night-wolves >night-witch >dawn >day-debate 3:b4:wrong:b1 3:b5:wrong:b1 3:b11:suspect:b0 3:b8:ally:b6 3:b6:suspect:b11 3:b5:ally:b6 3:b9:suspect:b11 3:b4:suspect:b11 3:b0:defend:b11 skip:b0 skip:b4 skip:b5 skip:b6 skip:b8 skip:b9 skip:b11 >day-vote result:3:b11:ok:b0=1,b11=7 >finished",
+  "states": "518a53cfd7ea5c0d"
+ },
+ "12-4": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b5:suspect:b7 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b7 result:1:b7:ok:b2=1,b7=10,h0=1 >night-seer >night-wolves >dawn >day-debate 2:h0:ally:b3 2:b3:suspect:b9 2:b1:ally:h0 2:b8:ally:h0 2:h0:ally:b8 2:b8:ally:h0 2:b10:doubt:b9 2:h0:suspect:b9 2:b9:defend:h0 2:b3:rally:b9 2:b4:suspect:b9 2:b0:suspect:b9 2:b2:suspect:b9 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b4 result:2:b9:ok:b10=1,b4=2,b9=6 >night-seer >night-wolves >dawn >day-debate 3:b2:wrong:b9 3:b3:wrong:b9 3:b3:ally:b10 3:h0:suspect:b3 3:b3:suspect:h0 3:h0:ally:b3 3:b1:suspect:h0 3:b8:suspect:h0 3:b10:suspect:h0 3:h0:ally:b3 3:b4:suspect:b1 skip:h0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b8 skip:b10 >day-vote vote:b1>h0 vote:b2>h0 vote:b3>b1 vote:b4>b1 vote:b8>h0 vote:b10>h0 result:3:h0:ok:b1=2,h0=4 >night-seer >night-wolves >dawn >day-debate 4:b1:toldYou:h0 4:b3:toldYou:h0 4:b3:suspect:b2 4:b1:suspect:b2 4:b10:doubt:b2 4:b4:suspect:b2 4:b2:defend:b3 skip:b1 skip:b2 skip:b3 skip:b4 skip:b10 >day-vote result:4:b2:ok:b2=3,b4=2 >finished",
+  "states": "ea8da8af995cbfc9"
+ },
+ "12-5": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:h0 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:h0>b6 vote:h1>b3 result:1:h0:ok:b3=1,b6=1,h0=10 >night-seer >night-wolves >dawn >day-debate 2:b1:wrong:h0 2:b1:suspect:b6 2:h1:ally:b7 2:b7:ally:h1 2:b0:suspect:b6 2:b6:defend:b1 2:b9:ally:b2 2:b8:ally:b2 2:b2:suspect:b6 2:b5:suspect:b6 skip:b0 skip:b1 skip:b2 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:h1>b8 result:2:b6:ok:b1=4,b6=5,b8=1 >night-wolves >dawn >day-debate 3:b1:toldYou:b6 skip:h1 skip:b0 skip:b1 skip:b2 skip:b7 skip:b8 skip:b9 >day-vote vote:h1>b7 result:3:h1:ok:b7=1,b8=2,b9=2,h1=3 >night-wolves >dawn >day-debate 4:b1:ally:b0 4:b7:suspect:b9 4:b0:suspect:b9 4:b9:defend:b7 4:b8:ally:b1 skip:b0 skip:b1 skip:b7 skip:b8 skip:b9 >day-vote result:4:b9:ok:b7=1,b9=5 >finished",
+  "states": "4ec10c504ca4c087"
+ },
+ "12-6": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b7:suspect:b2 1:b10:suspect:b2 1:b8:suspect:b1 1:b5:suspect:b2 1:b11:suspect:b2 1:b0:suspect:b2 1:b4:ally:b0 1:b2:defend:b7 1:b3:ally:b5 1:b6:suspect:b2 1:b1:defend:b8 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:1:b2:ok:b1=2,b2=10 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:b2 2:b5:wrong:b2 2:b7:suspect:b0 2:b10:suspect:b0 2:b5:suspect:b0 2:b11:ally:b3 2:b0:defend:b7 2:b4:ally:b3 2:b3:suspect:b0 2:b6:suspect:b0 2:b1:suspect:b0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b10 skip:b11 >day-vote result:2:b0:ok:b0=9,b10=1 >night-guard >night-wolves >night-witch >dawn >day-debate 3:b3:wrong:b0 3:b5:wrong:b0 3:b7:suspect:b10 3:b10:defend:b7 3:b5:suspect:b10 3:b11:suspect:b10 3:b3:suspect:b10 3:b6:suspect:b10 3:b1:suspect:b10 skip:b1 skip:b3 skip:b5 skip:b6 skip:b7 skip:b10 skip:b11 >day-vote result:3:b10:ok:b10=7,b5=1 >finished",
+  "states": "4b37c409ce5d5f9b"
+ },
+ "12-7": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:b3 1:b0:suspect:b3 1:b6:suspect:b3 1:b5:ally:b10 1:b7:suspect:b3 1:b3:defend:b1 1:b8:ally:b5 1:b4:ally:b5 1:b9:suspect:b3 1:b10:ally:b2 1:b2:suspect:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote result:1:b3:ok:b1=1,b3=13 >night-guard >night-raven >night-wolves >night-witch >dawn >day-debate 2:b1:wrong:b3 2:b6:wrong:b3 2:b1:suspect:b7 2:b6:suspect:b7 2:b5:suspect:b7 2:b7:defend:b1 2:b8:ally:b4 2:b4:ally:b8 2:b9:ally:b8 2:b10:ally:b8 2:b2:suspect:b7 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote result:2:b7:ok:b1=1,b10=2,b7=9 >night-guard >night-wolves >night-witch >dawn >hunter-shot >day-debate 3:b5:wrong:b7 3:b6:wrong:b7 3:b6:ally:b5 3:b5:suspect:b6 3:b4:suspect:b2 3:b9:ally:b4 3:b2:defend:b4 skip:b2 skip:b4 skip:b5 skip:b6 skip:b9 >day-vote result:3:b2:ok:b2=4,b6=2 >finished",
+  "states": "bda9f48a00b7b7cd"
+ },
+ "12-8": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:b8 1:b8:defend:b1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:h0>b2 vote:b0>b1 vote:b1>b8 vote:b2>h0 vote:b3>b1 vote:b4>b1 vote:b6>b1 vote:b7>b1 vote:b8>b1 vote:b9>b1 result:1:b1:ok:b1=8,b2=1,b6=1,b8=1,h0=3 >night-guard >night-wolves >night-witch >dawn >day-debate 2:b8:suspect:b0 2:b0:defend:b8 skip:h1 skip:b0 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b8 vote:b2>b0 vote:b3>b0 vote:b4>b0 vote:b6>b0 vote:b7>b0 vote:b8>b0 vote:b9>b0 result:2:b0:ok:b0=8,b2=1,b8=1 >night-wolves >dawn >day-debate 3:h1:suspect:b4 3:b4:defend:h1 3:h1:suspect:b3 3:b3:defend:h1 3:b8:rally:b3 3:b2:suspect:b3 3:b7:ally:b6 3:h1:suspect:b4 3:b4:defend:h1 3:b8:rally:b4 skip:h1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 >day-vote vote:b2>b4 vote:b3>b4 vote:b4>b3 vote:b6>b4 vote:b7>b4 vote:b8>b3 result:3:b4:ok:b3=3,b4=4 >finished",
+  "states": "15e8cd050acaa921"
+ },
+ "12-9": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b5:suspect:b2 1:b7:ally:b11 1:b4:suspect:b2 1:b10:suspect:b2 1:b2:defend:b5 1:b6:ally:b11 1:b8:suspect:b2 1:b0:ally:b10 1:b11:ally:b0 1:b1:ally:b11 1:b3:ally:b11 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:1:b2:ok:b2=9,b5=3 >night-wolves >night-witch >dawn >day-debate 2:b4:toldYou:b2 2:b10:toldYou:b2 2:b5:ally:b0 2:b7:ally:b1 2:b4:suspect:b6 2:b10:suspect:b6 2:b6:defend:b4 2:b8:suspect:b6 2:b0:suspect:b6 2:b11:suspect:b6 2:b1:ally:b5 2:b3:suspect:b6 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:2:b6:ok:b11=2,b6=9 >night-wolves >night-witch >dawn >day-debate 3:b0:toldYou:b6 3:b4:toldYou:b6 3:b5:suspect:b1 3:b7:ally:b5 3:b4:suspect:b1 3:b10:suspect:b1 3:b8:ally:b7 3:b0:ally:b8 3:b11:ally:b4 3:b1:defend:b5 3:b3:suspect:b1 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:3:b1:ok:b1=9,b5=1 >finished",
+  "states": "a8f8eadaecc601d6"
+ },
+ "12-10": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b8 skip:b9 skip:b10 >day-vote vote:b0>b3 vote:b1>b3 vote:b2>b3 vote:b3>b2 vote:b4>b3 vote:b5>b3 vote:b6>b3 vote:b8>b3 vote:b9>b3 vote:b10>b3 result:1:b3:ok:b2=1,b3=12 >night-seer >night-wolves >dawn >day-debate 2:h0:suspect:b1 2:b1:defend:h0 2:h0:suspect:b1 2:b1:defend:h0 2:h0:suspect:b10 2:b10:defend:h0 2:b4:rally:b10 2:b8:suspect:b1 2:b6:suspect:b1 skip:h0 skip:b0 skip:b1 skip:b2 skip:b4 skip:b6 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b1 result:2:b1:ok:b1=8,b10=1 >night-wolves >dawn >day-debate 3:b8:wrong:b1 3:h0:ally:b8 3:b8:ally:h0 3:b4:ally:b2 3:b2:suspect:b4 3:b9:suspect:h0 3:b10:suspect:h0 3:b0:suspect:b10 3:h0:defend:b10 skip:b0 skip:b2 skip:b4 skip:b8 skip:b9 skip:b10 skip:h0 >day-vote vote:b0>b10 vote:b2>b10 vote:b4>h0 vote:b8>h0 vote:b9>h0 vote:b10>h0 result:3:h0:ok:b10=2,h0=4 >night-wolves >dawn >day-debate 4:b9:toldYou:h0 4:b10:toldYou:h0 4:b4:suspect:b2 4:b2:defend:b4 4:b9:suspect:b2 4:b10:suspect:b2 4:b0:suspect:b4 skip:b0 skip:b2 skip:b4 skip:b9 skip:b10 >day-vote result:4:b2:ok:b2=3,b4=2 >night-wolves >dawn >hunter-shot >finished",
+  "states": "7d5f4c3acedd3476"
+ },
+ "12-11": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h0:ally:b9 1:h1:suspect:b5 1:b5:defend:h1 1:b3:rally:b5 1:h0:suspect:h1 1:h1:suspect:b5 1:b5:defend:h1 1:b3:rally:b5 1:h0:ally:b9 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 1:b9:ally:h0 >day-vote vote:b0>b5 vote:b1>b5 vote:b2>b5 vote:b3>b5 vote:b5>h1 vote:b6>b5 vote:b7>b5 vote:b8>b5 vote:b9>b5 vote:h1>b7 result:1:b5:ok:b5=9,b7=1,h1=1 >night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b3:suspect:b0 2:h0:suspect:b2 2:b2:suspect:h0 2:h1:suspect:h0 2:b3:rally:h0 2:b6:rally:h0 2:h0:defend:h1 2:b1:ally:b7 2:h0:suspect:b3 2:b3:suspect:h0 2:b6:rally:b3 2:b9:suspect:h0 2:b7:suspect:h0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b6 skip:b7 skip:b8 skip:b9 skip:h1 >day-vote vote:b0>h1 vote:b1>h1 vote:b2>h0 vote:b3>h0 vote:b6>h0 vote:b7>h0 vote:b8>h0 vote:b9>h0 result:2:h0:ok:h0=7,h1=2 >night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 3:b2:toldYou:h0 3:b7:toldYou:h0 3:h1:suspect:b7 3:b7:defend:h1 3:b6:rally:b7 3:b2:suspect:b7 3:h1:ally:b6 3:b1:suspect:b7 3:b9:suspect:b7 3:b8:suspect:b7 3:b0:suspect:b7 3:h1:suspect:b1 3:b1:suspect:h1 3:b6:rally:b1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b7 vote:b1>b7 vote:b2>b7 vote:b6>b7 vote:b7>b1 vote:b8>b7 vote:b9>b7 result:3:b7:ok:b1=1,b7=7 >night-raven >night-wolves >night-witch >dawn >day-debate 4:b1:wrong:b7 4:b2:wrong:b7 4:b6:suspect:b1 4:b2:suspect:b1 4:b1:defend:b6 4:b9:suspect:b1 4:b8:ally:b2 4:b0:suspect:b9 skip:b0 skip:b1 skip:b2 skip:b6 skip:b8 skip:b9 >day-vote result:4:b1:ok:b1=5,b9=2 >night-wolves >night-witch >dawn >day-debate 5:b2:toldYou:b1 5:b6:toldYou:b1 5:b6:ally:b9 5:b2:suspect:b0 5:b9:suspect:b0 5:b0:defend:b2 skip:b0 skip:b2 skip:b6 skip:b9 >day-vote result:5:b0:ok:b0=3,b2=1 >finished",
+  "states": "b1efe9198b25eb83"
+ },
+ "12-12": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b3:ally:b4 1:b5:ally:b2 1:b7:suspect:b8 1:b9:ally:b1 1:b2:suspect:b8 1:b10:ally:b1 1:b4:suspect:b8 1:b1:suspect:b8 1:b8:defend:b7 1:b11:ally:b0 1:b0:ally:b11 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b8:ok:b7=1,b8=11 >night-guard >night-seer >night-wolves >dawn >day-debate 2:b2:wrong:b8 2:b3:suspect:b4 2:b5:suspect:b4 2:b7:suspect:b4 2:b2:suspect:b4 2:b10:ally:b5 2:b4:defend:b3 2:b1:suspect:b4 2:b11:ally:b10 2:b0:doubt:b4 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 skip:b10 skip:b11 >day-vote result:2:b4:ok:b1=1,b4=7,b7=1 >night-guard >night-seer >night-wolves >dawn >day-debate 3:b2:wrong:b4 3:b3:wrong:b4 3:b3:suspect:b5 3:b5:defend:b3 3:b7:suspect:b5 3:b2:suspect:b5 3:b10:suspect:b5 3:b1:suspect:b5 3:b11:suspect:b5 skip:b1 skip:b2 skip:b3 skip:b5 skip:b7 skip:b10 skip:b11 >day-vote result:3:b5:ok:b3=1,b5=6 >finished",
+  "states": "b69de26e15dd30ea"
+ },
+ "12-13": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b5:suspect:b3 1:b0:suspect:b3 1:b7:suspect:b3 1:b10:suspect:b3 1:b4:suspect:b3 skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b5 result:1:b3:ok:b0=1,b3=11,b4=1,b5=1 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:b0:toldYou:b3 2:b4:toldYou:b3 skip:h0 skip:b0 skip:b1 skip:b4 skip:b5 skip:b6 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b6 result:2:b8:ok:b1=1,b6=1,b8=9 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate skip:h0 skip:b0 skip:b1 skip:b4 skip:b5 skip:b6 skip:b9 skip:b10 >day-vote vote:h0>b5 result:3:b4:ok:b4=8,b5=1,h0=1 >night-guard >night-raven >night-wolves >dawn >day-debate 4:b5:suspect:h0 4:h0:ally:b10 4:b0:suspect:h0 4:b10:suspect:h0 4:b9:suspect:h0 4:b6:suspect:h0 4:b1:suspect:h0 skip:b0 skip:b1 skip:b5 skip:b6 skip:b9 skip:b10 >day-vote vote:h0>b10 result:4:h0:ok:b10=1,h0=8 >finished",
+  "states": "85e295c10e2e7826"
+ },
+ "12-14": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:ally:b0 1:b8:ally:b0 1:b9:suspect:b5 1:h0:suspect:b5 1:b5:defend:h0 1:h1:suspect:b3 1:b3:suspect:h1 1:b8:rally:b3 skip:h1 skip:b0 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:h0>b7 vote:h1>b9 result:1:b5:ok:b3=4,b5=5,b7=1,b9=2 >night-seer >night-wolves >dawn >day-debate 2:b9:wrong:b5 2:b8:suspect:b9 2:b9:defend:b8 skip:h0 skip:b0 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b9 vote:b2>b9 vote:b3>b9 vote:b4>b9 vote:b6>b9 vote:b7>h0 vote:b8>b9 vote:b9>b8 result:2:b9:ok:b8=1,b9=6,h0=1 >night-seer >night-wolves >dawn >day-debate skip:h0 skip:b0 skip:b2 skip:b4 skip:b6 skip:b7 skip:b8 >day-vote vote:b0>b8 vote:b2>b8 vote:b4>b8 vote:b6>b7 vote:b7>b8 vote:b8>b6 result:3:b8:ok:b6=1,b7=1,b8=4 >finished",
+  "states": "417218ecb6c98e66"
+ },
+ "12-15": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b5:suspect:b7 1:b2:suspect:b5 1:b4:suspect:b5 1:b1:suspect:b5 1:b7:defend:b5 1:b11:suspect:b5 1:b6:suspect:b5 1:b0:suspect:b5 1:b3:suspect:b5 1:b8:ally:b3 1:b10:suspect:b5 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:1:b5:ok:b2=1,b5=11 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:b5 2:b1:wrong:b5 2:b2:suspect:b10 2:b4:suspect:b10 2:b1:suspect:b7 2:b7:defend:b1 2:b11:suspect:b10 2:b6:ally:b8 2:b0:suspect:b10 2:b3:suspect:b10 2:b8:ally:b6 2:b10:defend:b2 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:2:b10:ok:b10=9,b2=1,b7=1 >night-seer >night-wolves >night-witch >dawn >day-debate 3:b0:wrong:b10 3:b3:wrong:b10 3:b2:ally:b8 3:b4:suspect:b3 3:b7:ally:b6 3:b11:suspect:b3 3:b6:ally:b7 3:b0:suspect:b3 3:b3:defend:b4 3:b8:suspect:b3 skip:b0 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b11 >day-vote result:3:b3:ok:b3=6,b4=3 >night-wolves >night-witch >dawn >day-debate 4:b0:toldYou:b3 4:b11:toldYou:b3 4:b2:suspect:b11 4:b7:ally:b0 4:b11:defend:b2 4:b6:suspect:b2 4:b0:suspect:b2 4:b8:suspect:b2 skip:b0 skip:b2 skip:b6 skip:b7 skip:b8 skip:b11 >day-vote result:4:b2:ok:b2=5,b8=2 >night-wolves >night-witch >dawn >hunter-shot >day-debate 5:b0:toldYou:b2 5:b7:suspect:b11 5:b11:defend:b7 5:b0:ally:b11 skip:b0 skip:b7 skip:b11 >day-vote result:5:b7:ok:b11=1,b7=2 >finished",
+  "states": "8c5cc70846daeb07"
+ },
+ "12-16": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b1:suspect:b2 1:h0:suspect:b6 1:b6:suspect:h0 1:b1:rally:b6 1:b8:ally:b9 1:h0:ally:b10 1:b10:ally:h0 1:h0:defend:b6 1:b5:suspect:b6 1:b4:suspect:b6 1:b7:suspect:b6 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b5 result:1:b6:ok:b2=1,b5=1,b6=11 >night-seer >night-wolves >night-witch >dawn >day-debate 2:h0:suspect:b3 2:b3:defend:h0 2:b1:rally:b3 2:b4:wrong:b6 2:b5:wrong:b6 2:h0:suspect:b3 2:b3:defend:h0 2:b1:rally:b3 2:b8:suspect:b3 2:b5:suspect:b3 2:b4:ally:b2 2:h0:suspect:b9 2:b9:defend:h0 2:b7:suspect:b3 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:b0>b3 vote:b1>b3 vote:b2>b3 vote:b3>h0 vote:b4>b3 vote:b5>b3 vote:b7>b3 vote:b8>b3 vote:b9>b3 vote:b10>b3 result:2:b3:ok:b0=1,b3=10,h0=1 >night-seer >night-wolves >night-witch >dawn >day-debate 3:b5:wrong:b3 3:b1:suspect:h0 3:b8:suspect:h0 3:h0:defend:b8 3:b5:suspect:h0 3:b4:suspect:h0 3:b7:suspect:h0 3:b10:ally:b0 3:b0:suspect:h0 3:h0:ally:b7 3:b2:ally:b0 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b7 skip:b8 skip:b10 3:h0:defend:b0 >day-vote vote:b0>h0 vote:b1>h0 vote:b2>h0 vote:b4>h0 vote:b5>h0 vote:b7>h0 vote:b8>h0 vote:b10>h0 result:3:h0:ok:h0=8 >night-wolves >night-witch >dawn >finished",
+  "states": "0547844272f5ac03"
+ },
+ "12-17": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b5 vote:b1>b9 vote:b2>h0 vote:b3>b4 vote:b4>b3 vote:b5>b1 vote:b7>h0 vote:b8>h0 vote:b9>h0 result:1:h0:ok:b1=1,b3=1,b4=1,b5=1,b9=1,h0=5 >night-seer >night-wolves >night-witch >dawn >day-debate skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b2 vote:b1>h1 vote:b2>b1 vote:b3>b2 vote:b4>b0 vote:b5>b4 vote:b7>b4 vote:b8>b9 vote:b9>b3 result:2:b2:ok:b0=1,b1=1,b2=3,b3=1,b4=2,b9=2,h1=1 >night-seer >night-wolves >night-witch >dawn >day-debate skip:h1 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b7 skip:b9 >day-vote vote:b0>b1 vote:b1>h1 vote:b3>b4 vote:b4>h1 vote:b5>b9 vote:b7>b1 vote:b9>h1 result:3:h1:ok:b1=2,b4=1,b9=2,h1=3 >night-wolves >night-witch >dawn >finished",
+  "states": "22f5f99eb769fa7e"
+ },
+ "12-18": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >hunter-shot >mayor-election >day-debate 1:b0:suspect:b7 1:b4:ally:b0 1:b8:suspect:b7 1:b1:suspect:b7 1:b6:ally:b10 1:b10:ally:b1 1:b7:defend:b0 1:b9:suspect:b7 1:b2:suspect:b7 1:b11:suspect:b7 skip:b0 skip:b1 skip:b2 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b7:ok:b11=1,b7=10 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:b2:wrong:b7 2:b8:wrong:b7 2:b0:suspect:b1 2:b8:suspect:b1 2:b1:defend:b0 2:b6:suspect:b1 2:b10:ally:b6 2:b9:suspect:b1 2:b2:suspect:b1 2:b11:suspect:b1 skip:b0 skip:b1 skip:b2 skip:b6 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:2:b1:ok:b0=1,b1=7,b6=2 >night-guard >night-seer >night-wolves >dawn >finished",
+  "states": "3ad430679a31c2e3"
+ },
+ "12-19": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:suspect:b2 1:h0:suspect:b1 1:b1:suspect:h0 1:h0:suspect:b4 1:b4:suspect:h0 1:h0:suspect:b4 1:b4:suspect:h0 1:b3:rally:b4 1:b7:ally:b5 1:b5:suspect:h0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>h0 vote:b1>h0 vote:b2>b4 vote:b3>h0 vote:b4>h0 vote:b5>h0 vote:b6>h0 vote:b7>h0 vote:b8>h0 vote:b9>h0 result:1:h0:ok:b4=3,b9=1,h0=10 >night-guard >night-raven >night-wolves >night-witch >dawn >day-debate 2:b1:wrong:h0 2:b4:wrong:h0 2:b3:suspect:b5 2:b7:suspect:b5 2:b4:suspect:b7 2:b5:defend:b3 2:b1:suspect:b7 2:b2:suspect:b5 2:b8:ally:b6 2:b0:ally:b6 2:b9:ally:b2 2:b6:ally:b8 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote result:2:b5:ok:b5=7,b7=6 >night-guard >night-raven >night-wolves >night-witch >dawn >day-debate 3:b2:toldYou:b5 3:b3:toldYou:b5 3:b3:suspect:b1 3:b7:suspect:b1 3:b4:ally:b0 3:b1:defend:b3 3:b2:ally:b7 3:b8:suspect:b1 3:b0:suspect:b1 3:b6:suspect:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 >day-vote result:3:b1:ok:b1=8,b8=3 >night-guard >night-raven >night-wolves >night-witch >dawn >day-debate 4:b0:toldYou:b1 4:b3:toldYou:b1 4:b3:suspect:b2 4:b7:ally:b8 4:b4:ally:b8 4:b2:defend:b3 4:b8:ally:b3 4:b0:suspect:b2 4:b6:suspect:b2 skip:b0 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 >day-vote result:4:b2:ok:b0=3,b2=7 >night-guard >night-raven >night-wolves >night-witch >dawn >hunter-shot >day-debate 5:b7:ally:b4 5:b4:suspect:b6 5:b8:ally:b7 5:b6:defend:b4 skip:b4 skip:b6 skip:b7 skip:b8 >day-vote result:5:b6:ok:b6=4,b8=1 >night-wolves >night-witch >dawn >day-debate 6:b4:wrong:b6 6:b7:ally:b4 6:b4:suspect:b7 6:b8:suspect:b7 skip:b4 skip:b7 skip:b8 >day-vote result:6:b7:ok:b7=3,b8=1 >finished",
+  "states": "e0d8bc97193458a4"
+ },
+ "12-20": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b1:suspect:b2 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b2 vote:b1>b2 vote:b2>b1 vote:b3>b2 vote:b4>b2 vote:b5>b2 vote:b6>b2 vote:b7>b2 vote:b8>b2 vote:b9>b2 result:1:b2:ok:b1=1,b2=10,b9=1 >night-seer >night-wolves >dawn >day-debate 2:b1:wrong:b2 skip:h1 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b9 >day-vote vote:h1>b6 result:2:b1:ok:b1=7,b6=2 >night-wolves >dawn >day-debate 3:b0:suspect:h1 3:h1:suspect:b0 3:b0:suspect:h1 3:b3:rally:b0 3:h1:defend:b0 3:b9:suspect:h1 3:b7:suspect:h1 3:h1:defend:b7 3:b6:ally:b5 skip:h1 skip:b0 skip:b3 skip:b5 skip:b6 skip:b7 skip:b9 >day-vote vote:h1>b9 result:3:h1:ok:b9=1,h1=6 >hunter-shot >finished",
+  "states": "3294a6038eb9dc9f"
+ },
+ "12-21": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b8 1:b9:ally:b3 1:b3:suspect:b8 1:b8:defend:b0 1:b11:suspect:b8 1:b10:suspect:b8 1:b7:ally:b3 1:b6:suspect:b8 1:b1:suspect:b8 1:b5:suspect:b8 1:b2:ally:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b8:ok:b0=1,b8=11 >night-seer >night-wolves >dawn >day-debate 2:b3:wrong:b8 2:b6:wrong:b8 2:b0:ally:b1 2:b3:suspect:b5 2:b11:suspect:b5 2:b10:suspect:b5 2:b7:ally:b2 2:b6:suspect:b3 2:b1:suspect:b0 2:b5:defend:b3 2:b2:ally:b7 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 skip:b7 skip:b10 skip:b11 >day-vote result:2:b5:ok:b0=2,b3=3,b5=5 >night-seer >night-wolves >dawn >day-debate 3:b3:toldYou:b5 3:b11:toldYou:b5 3:b0:ally:b11 3:b3:suspect:b6 3:b11:suspect:b6 3:b10:suspect:b6 3:b7:ally:b10 3:b6:defend:b3 3:b2:suspect:b6 skip:b0 skip:b2 skip:b3 skip:b6 skip:b7 skip:b10 skip:b11 >day-vote result:3:b6:ok:b2=2,b6=5 >night-wolves >dawn >day-debate 4:b3:toldYou:b6 4:b11:toldYou:b6 4:b0:ally:b11 4:b3:suspect:b7 4:b11:suspect:b7 4:b7:defend:b3 4:b2:suspect:b7 skip:b0 skip:b2 skip:b3 skip:b7 skip:b11 >day-vote result:4:b7:ok:b3=1,b7=4 >hunter-shot >night-wolves >dawn >finished",
+  "states": "47ec0443b2366adc"
+ },
+ "12-22": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b6:suspect:b2 1:b10:suspect:b2 1:b0:suspect:b2 1:b7:suspect:b2 1:b4:suspect:b2 1:b3:suspect:b6 1:b9:suspect:b6 1:b1:suspect:b2 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b9 skip:b10 >day-vote vote:b0>b2 vote:b1>b2 vote:b2>b6 vote:b3>b6 vote:b4>b2 vote:b5>b2 vote:b6>b2 vote:b7>b2 vote:b9>b6 vote:b10>b2 result:1:b2:ok:b2=8,b6=5,b9=1 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b1:toldYou:b2 2:h0:ally:b9 2:b9:ally:h0 2:b4:toldYou:b2 2:b6:suspect:b3 2:b10:suspect:b3 2:b0:suspect:b3 2:b7:ally:b1 2:h0:suspect:b9 2:b9:defend:h0 2:b6:rally:b9 2:b4:suspect:b3 2:h0:ally:b7 2:b7:ally:h0 2:b3:defend:b6 skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b9 skip:b10 >day-vote vote:h0>b10 result:2:b3:ok:b10=1,b3=8,b6=1,h0=3 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 3:b4:toldYou:b3 3:b6:toldYou:b3 3:b6:suspect:b9 3:b10:suspect:b9 3:b0:ally:b10 3:b7:suspect:b9 3:b4:ally:b1 3:b9:defend:b6 3:b1:suspect:b9 3:b5:suspect:b9 skip:b0 skip:b1 skip:b4 skip:b5 skip:b6 skip:b7 skip:b9 skip:b10 >day-vote result:3:b9:ok:b7=1,b9=10 >finished",
+  "states": "5728e28fbe854674"
+ },
+ "12-23": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:ally:b2 1:h1:suspect:b7 1:b7:defend:h1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b7 vote:b1>b7 vote:b2>h1 vote:b3>b7 vote:b4>b7 vote:b5>b7 vote:b6>b7 vote:b7>h1 vote:b8>h1 vote:b9>b7 result:1:b7:ok:b6=1,b7=7,h1=4 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b3:suspect:b4 2:b2:suspect:b4 2:b4:defend:b3 2:b6:suspect:b4 2:b0:suspect:b4 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b8 >day-vote vote:b0>b4 vote:b1>b4 vote:b2>b4 vote:b3>b4 vote:b4>b3 vote:b5>b4 vote:b6>b4 vote:b8>b4 result:2:b4:ok:b3=1,b4=8 >night-wolves >night-witch >dawn >day-debate 3:b0:wrong:b4 3:h1:suspect:b5 3:b5:defend:h1 3:h1:suspect:b1 3:b1:defend:h1 3:b3:rally:b1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b8 >day-vote vote:b0>b1 vote:b1>h1 vote:b2>b1 vote:b3>b1 vote:b5>h1 vote:b8>b1 result:3:b1:ok:b1=5,h1=2 >night-wolves >night-witch >dawn >day-debate 4:b3:suspect:b5 4:b2:suspect:b5 4:b0:suspect:b5 4:b8:suspect:b5 4:b5:defend:b3 skip:b0 skip:b2 skip:b3 skip:b5 skip:b8 >day-vote result:4:b5:ok:b3=1,b5=5 >finished",
+  "states": "f0f311235cf20235"
+ },
+ "12-24": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b7:suspect:b11 1:b1:ally:b0 1:b11:defend:b7 1:b6:suspect:b11 1:b2:ally:b8 1:b9:ally:b2 1:b3:suspect:b0 1:b0:defend:b3 1:b10:ally:b2 1:b8:ally:b2 1:b4:suspect:b11 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b11:ok:b0=1,b11=12,b3=1 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:b7:wrong:b11 2:b7:ally:b8 2:b1:suspect:b4 2:b6:suspect:b4 2:b2:ally:b0 2:b9:ally:b0 2:b0:ally:b9 2:b10:ally:b9 2:b8:ally:b9 2:b4:defend:b1 skip:b0 skip:b1 skip:b2 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote result:2:b4:ok:b2=2,b4=9,b6=1 >night-guard >night-wolves >dawn >day-debate 3:b1:wrong:b4 3:b1:suspect:b6 3:b6:defend:b1 3:b2:ally:b8 3:b9:suspect:b6 3:b0:ally:b9 3:b10:suspect:b6 3:b8:suspect:b6 skip:b0 skip:b1 skip:b2 skip:b6 skip:b8 skip:b9 skip:b10 >day-vote result:3:b6:ok:b1=1,b6=7 >hunter-shot >finished",
+  "states": "355bb8229cb090e0"
+ },
+ "12-25": {
+  "winner": "loups",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b6:suspect:b0 1:h0:suspect:b0 1:b0:defend:h0 skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b3 result:1:b0:ok:b0=9,b3=1,h0=4 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b6:toldYou:b0 2:b6:suspect:b7 2:b7:defend:b6 2:b5:suspect:b7 2:b9:suspect:b7 2:b8:ally:b5 2:h0:suspect:b4 2:b4:defend:h0 2:b7:rally:b4 2:h0:suspect:b8 2:b8:defend:h0 2:b7:rally:b8 skip:h0 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b7 result:2:b7:ok:b4=1,b7=8,h0=3 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 3:b5:wrong:b7 3:b6:wrong:b7 3:b6:suspect:b5 3:b5:defend:b6 3:b9:doubt:b5 3:b8:ally:b10 3:b4:ally:b3 3:b3:suspect:b6 3:b10:suspect:b6 skip:b3 skip:b4 skip:b5 skip:b6 skip:b8 skip:b9 skip:b10 >day-vote result:3:b6:ok:b4=1,b5=1,b6=6 >night-seer >night-wolves >night-witch >dawn >day-debate 4:b5:suspect:b3 4:b9:suspect:b4 4:b8:suspect:b3 4:b4:defend:b9 4:b3:defend:b5 skip:b3 skip:b4 skip:b5 skip:b8 skip:b9 >day-vote result:4:b3:ok:b3=4,b4=2 >finished",
+  "states": "308bc70b9fd44cff"
+ },
+ "12-26": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >hunter-shot >mayor-election >day-debate 1:b4:suspect:b3 1:h1:ally:b9 1:b2:ally:h1 skip:h1 skip:b0 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 1:h1:suspect:b0 1:b0:defend:h1 1:h0:suspect:b8 1:b8:defend:h0 1:h1:ally:b2 >day-vote vote:b0>b8 vote:b2>b3 vote:b3>b0 vote:b4>b3 vote:b6>b3 vote:b7>b0 vote:b8>b0 vote:b9>b3 result:1:b3:ok:b0=3,b3=5,b8=1 >night-seer >night-raven >night-wolves >dawn >day-debate 2:h0:suspect:b8 2:b8:defend:h0 2:b4:rally:b8 2:h0:suspect:h1 2:h1:suspect:b7 2:b7:defend:h1 2:h0:suspect:b8 2:b8:defend:h0 2:b4:rally:b8 skip:h0 skip:b0 skip:b2 skip:b4 skip:b7 skip:b8 skip:b9 2:h1:defend:h0 >day-vote vote:h0>b2 vote:h1>b0 result:2:b8:ok:b0=3,b2=1,b7=1,b8=5 >night-seer >night-wolves >dawn >day-debate skip:h0 3:h1:suspect:b2 skip:b0 skip:b2 skip:b4 skip:b7 skip:b9 3:h0:suspect:b2 3:b2:suspect:h0 3:h1:ally:b0 >day-vote vote:h0>b4 vote:b0>b2 vote:b2>h1 vote:b4>b2 vote:b7>b2 vote:b9>h1 result:3:b2:ok:b2=3,b4=1,h1=2 >night-seer >night-wolves >dawn >day-debate 4:b4:ally:b7 4:h1:suspect:b0 4:b0:defend:h1 4:b4:rally:b0 4:b7:ally:b9 4:h1:suspect:b0 4:b0:defend:h1 skip:h0 skip:b0 skip:b4 skip:b7 skip:b9 4:b7:rally:b0 4:h0:ally:b4 >day-vote vote:h1>h0 vote:b0>h1 vote:b4>b0 vote:b7>b0 vote:b9>h1 result:4:-:tie:b0=2,b7=1,h0=1,h1=2 >day-revote vote:b0>h1 vote:b4>b0 vote:b7>b0 vote:b9>h1 vote:h1>b0 result:4:b0:ok:b0=3,h1=2 >night-seer >night-wolves >dawn >day-debate 5:h1:suspect:h0 5:b4:rally:h0 5:b7:rally:h0 skip:h1 skip:b4 skip:b7 skip:b9 5:h1:suspect:b7 5:b7:defend:h1 5:h0:suspect:b7 5:b7:defend:h0 5:b4:rally:b7 5:h1:suspect:b4 5:b4:suspect:h1 5:b9:doubt:b4 >day-vote vote:b4>h1 vote:b7>h1 vote:b9>h1 vote:h0>b9 result:5:h1:ok:b4=1,b9=1,h1=3 >night-seer >night-wolves >dawn >day-debate 6:b4:toldYou:h1 6:h0:suspect:b7 6:b7:defend:h0 6:h0:suspect:b9 6:b9:defend:h0 6:b4:rally:b9 skip:b4 skip:b7 skip:b9 >day-vote vote:h0>b7 result:6:b9:ok:b7=1,b9=2,h0=1 >night-wolves >dawn >day-debate 7:b4:ally:b7 7:h0:suspect:b7 7:b7:defend:h0 7:b4:rally:b7 skip:b4 skip:b7 >day-vote vote:b4>h0 vote:b7>h0 result:7:h0:ok:b4=1,h0=2 >finished",
+  "states": "dd6bce2bb693826d"
+ },
+ "12-27": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b4:suspect:b9 1:b6:ally:b5 1:b8:suspect:b9 1:b5:ally:b6 1:b7:suspect:b9 1:b1:ally:b10 1:b11:ally:b6 1:b0:suspect:b9 1:b3:suspect:b9 1:b9:defend:b4 1:b10:suspect:b9 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b9:ok:b4=1,b9=11 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:b9 2:b3:wrong:b9 2:b4:ally:b6 2:b6:ally:b11 2:b8:suspect:b4 2:b5:suspect:b4 2:b7:ally:b11 2:b1:suspect:b4 2:b11:ally:b1 2:b0:suspect:b4 2:b3:suspect:b8 2:b10:suspect:b4 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:2:b4:ok:b4=8,b8=3 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 3:b0:toldYou:b4 3:b8:toldYou:b4 3:b6:ally:b10 3:b8:suspect:b7 3:b7:defend:b8 3:b1:suspect:b7 3:b11:suspect:b7 3:b0:ally:b11 3:b3:ally:b10 3:b10:ally:b1 skip:b0 skip:b1 skip:b3 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:3:b7:ok:b7=7,b8=2 >night-seer >night-wolves >night-witch >dawn >day-debate 4:b8:toldYou:b7 4:b11:toldYou:b7 4:b6:suspect:b10 4:b8:suspect:b10 4:b11:suspect:b10 4:b0:suspect:b10 4:b3:ally:b11 4:b10:defend:b6 skip:b0 skip:b3 skip:b6 skip:b8 skip:b10 skip:b11 >day-vote result:4:b10:ok:b10=5,b6=1 >hunter-shot >night-seer >night-wolves >dawn >day-debate 5:b8:wrong:b10 5:b11:wrong:b10 5:b8:suspect:b3 5:b11:ally:b8 5:b3:defend:b8 skip:b3 skip:b8 skip:b11 >day-vote result:5:b3:ok:b3=2,b8=1 >finished",
+  "states": "5a1588dab0a1cc7a"
+ },
+ "12-28": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b6 1:b5:suspect:b6 1:b6:defend:b2 1:h0:ally:b0 1:b0:ally:h0 1:b9:suspect:b6 1:b1:suspect:b6 1:b3:suspect:b6 1:b8:suspect:b6 1:b10:suspect:b6 1:b7:ally:b0 1:h0:suspect:b9 1:b9:suspect:h0 1:b2:rally:b9 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 1:h0:suspect:b2 1:b2:suspect:h0 1:b5:rally:b2 >day-vote vote:h0>b7 result:1:b6:ok:b2=2,b6=11,b7=1 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:h0:suspect:b1 2:b1:defend:h0 2:h0:ally:b10 2:b10:ally:h0 2:b3:toldYou:b6 2:b5:toldYou:b6 2:b5:suspect:b0 2:b9:suspect:b0 2:h0:suspect:b9 2:b9:suspect:h0 2:b1:rally:b9 2:b0:defend:b5 2:b3:suspect:b0 2:b8:ally:b5 skip:h0 skip:b0 skip:b1 skip:b3 skip:b5 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:b0>b9 vote:b1>b0 vote:b3>b0 vote:b5>b0 vote:b7>b0 vote:b8>b0 vote:b9>h0 vote:b10>b0 result:2:b0:ok:b0=7,b9=1,h0=3 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 3:b3:toldYou:b0 skip:h0 skip:b1 skip:b3 skip:b5 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:b1>h0 vote:b3>h0 vote:b5>h0 vote:b7>h0 vote:b8>h0 vote:b9>h0 vote:b10>h0 result:3:h0:ok:h0=10 >finished",
+  "states": "8e9f74856f3e0fbd"
+ },
+ "12-29": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b0:suspect:b3 1:h1:suspect:b2 1:b2:suspect:h1 1:b0:rally:b2 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 1:h0:ally:b9 1:b9:ally:h0 1:h0:suspect:h1 1:h1:defend:b2 >day-vote vote:h1>b9 vote:b0>b2 vote:b1>b2 vote:b2>h1 vote:b3>b2 vote:b4>b2 vote:b6>b2 vote:b7>b2 vote:b8>b2 vote:b9>b2 result:1:b2:ok:b2=9,b9=1,h1=1 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate skip:h1 skip:b0 skip:b1 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 2:h1:ally:b4 >day-vote vote:b0>h1 vote:b1>h1 vote:b3>h1 vote:b4>h1 vote:b6>h1 vote:b7>h1 vote:b8>h1 vote:b9>h1 vote:h0>b9 result:2:h1:ok:b9=1,h1=9 >night-guard >night-wolves >night-witch >dawn >day-debate 3:b0:suspect:b8 3:b4:suspect:b8 3:h0:suspect:b8 3:b8:defend:h0 3:b0:rally:b8 3:b1:suspect:b8 3:b9:suspect:b8 skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b8 vote:b1>b8 vote:b3>b8 vote:b4>b8 vote:b6>b8 vote:b7>b8 vote:b8>h0 vote:b9>b8 result:3:b8:ok:b6=1,b8=8,h0=1 >night-guard >night-wolves >night-witch >dawn >day-debate 4:b0:wrong:b8 4:b9:wrong:b8 4:b0:suspect:b4 4:b4:defend:b0 4:b9:ally:b6 4:b3:suspect:b4 4:b7:suspect:b4 4:b6:suspect:b4 skip:b0 skip:b3 skip:b4 skip:b6 skip:b7 skip:b9 >day-vote result:4:b4:ok:b0=1,b4=5 >night-guard >night-wolves >dawn >finished",
+  "states": "176c66da717cbd26"
+ },
+ "12-30": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b6:suspect:b7 1:b1:suspect:b7 1:b8:suspect:b7 1:b10:suspect:b7 1:b2:ally:b11 1:b0:ally:b2 1:b9:suspect:b7 1:b4:suspect:b1 1:b7:defend:b6 1:b3:ally:b4 1:b11:suspect:b7 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b7:ok:b1=3,b7=9 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b1:toldYou:b7 2:b8:toldYou:b7 2:b6:ally:b10 2:b1:suspect:b0 2:b8:suspect:b0 2:b10:suspect:b0 2:b2:ally:b1 2:b0:defend:b1 2:b9:suspect:b0 2:b4:suspect:b0 2:b3:suspect:b0 2:b11:suspect:b0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:2:b0:ok:b0=10,b4=1 >night-seer >night-wolves >night-witch >dawn >day-debate 3:b1:wrong:b0 3:b4:wrong:b0 3:b6:suspect:b4 3:b1:suspect:b4 3:b8:ally:b2 3:b10:suspect:b2 3:b2:defend:b10 3:b9:suspect:b4 3:b4:defend:b6 3:b11:ally:b2 skip:b1 skip:b2 skip:b4 skip:b6 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:3:b4:ok:b1=1,b10=1,b2=1,b4=6 >night-seer >night-wolves >night-witch >dawn >day-debate 4:b1:toldYou:b4 4:b6:ally:b8 4:b1:ally:b8 4:b8:ally:b2 4:b2:ally:b8 4:b9:suspect:b11 4:b11:defend:b9 skip:b1 skip:b2 skip:b6 skip:b8 skip:b9 skip:b11 >day-vote result:4:b11:ok:b11=6,b9=1 >hunter-shot >night-wolves >night-witch >dawn >day-debate 5:b6:suspect:b2 5:b1:suspect:b2 5:b2:defend:b6 skip:b1 skip:b2 skip:b6 >day-vote result:5:b2:ok:b2=2,b6=1 >finished",
+  "states": "94de765dba295e83"
+ },
+ "12-31": {
+  "winner": "village",
+  "thread": ">night-seer >night-wolves >dawn >mayor-election >day-debate 1:b0:suspect:b1 1:b8:suspect:b1 1:h0:suspect:b5 1:b5:suspect:h0 1:h0:suspect:b7 1:b7:defend:h0 1:b0:rally:b7 1:b6:ally:b0 1:b10:suspect:b5 1:b3:suspect:b5 1:b1:defend:b0 1:b9:ally:b4 1:b4:doubt:b1 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:b0>b5 vote:b1>b5 vote:b3>b5 vote:b4>b5 vote:b5>h0 vote:b6>b5 vote:b7>b5 vote:b8>b5 vote:b9>b5 vote:b10>b5 result:1:b5:ok:b5=10,h0=1 >night-seer >night-wolves >dawn >day-debate 2:b10:wrong:b5 2:h0:suspect:b6 2:b6:defend:h0 2:h0:suspect:b4 2:b4:defend:h0 2:b0:rally:b4 2:b8:suspect:b4 skip:h0 skip:b0 skip:b1 skip:b3 skip:b4 skip:b6 skip:b8 skip:b9 skip:b10 >day-vote vote:b0>b4 vote:b1>b4 vote:b3>b4 vote:b4>h0 vote:b6>b4 vote:b8>b4 vote:b9>b4 vote:b10>b4 result:2:b4:ok:b4=7,h0=1 >night-wolves >dawn >day-debate 3:b8:wrong:b4 3:b0:suspect:h0 3:b8:suspect:h0 3:b6:suspect:b8 3:h0:ally:b3 3:b3:ally:h0 3:h0:suspect:b0 3:b0:suspect:h0 3:b8:rally:b0 3:b1:suspect:h0 skip:h0 skip:b0 skip:b1 skip:b3 skip:b6 skip:b8 skip:b9 >day-vote vote:b0>h0 vote:b1>h0 vote:b3>h0 vote:b6>b0 vote:b8>h0 vote:b9>b0 result:3:h0:ok:b0=2,h0=4 >night-wolves >dawn >day-debate 4:b0:toldYou:h0 4:b1:toldYou:h0 4:b0:suspect:b6 4:b6:defend:b0 4:b3:ally:b0 4:b1:ally:b0 4:b9:ally:b3 skip:b0 skip:b1 skip:b3 skip:b6 skip:b9 >day-vote result:4:b6:ok:b1=2,b6=3 >night-wolves >dawn >day-debate 5:b3:suspect:b9 5:b1:suspect:b9 5:b9:defend:b3 skip:b1 skip:b3 skip:b9 >day-vote result:5:b9:ok:b3=1,b9=2 >finished",
+  "states": "e8ea3905ba74b146"
+ },
+ "12-32": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b6:suspect:b3 1:b5:suspect:b3 1:h1:suspect:b1 1:b1:defend:h1 1:b6:rally:b1 1:h0:suspect:h1 1:b5:rally:h1 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 1:h1:defend:h0 >day-vote vote:h0>b7 vote:h1>h0 result:1:b3:ok:b3=6,b7=1,h0=3,h1=4 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:b5:wrong:b3 2:h1:suspect:b6 2:b6:suspect:h1 2:b5:rally:b6 2:b2:suspect:b6 2:b0:suspect:b6 skip:h1 skip:b0 skip:b1 skip:b2 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:h1>b2 result:2:b6:ok:b2=3,b6=7,h1=2 >night-guard >night-seer >night-wolves >dawn >day-debate 3:b0:wrong:b6 3:b2:wrong:b6 3:h1:suspect:b5 3:b5:suspect:h1 3:b2:suspect:h1 3:h1:defend:b2 3:b0:suspect:b2 skip:h1 skip:b0 skip:b1 skip:b2 skip:b5 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b2 vote:b1>h1 vote:b2>h1 vote:b5>h1 vote:b7>h1 vote:b8>b2 vote:b9>h1 result:3:h1:ok:b2=2,h1=6 >night-guard >night-seer >night-wolves >dawn >day-debate 4:b2:toldYou:h1 4:b5:toldYou:h1 4:b5:suspect:b8 4:b2:suspect:b8 4:b0:ally:b7 4:b8:defend:b5 4:b9:ally:b0 4:b1:suspect:b8 4:b7:ally:b9 skip:b0 skip:b1 skip:b2 skip:b5 skip:b7 skip:b8 skip:b9 >day-vote result:4:b8:ok:b1=2,b8=6 >night-guard >night-seer >night-wolves >dawn >day-debate 5:b1:toldYou:b8 5:b2:toldYou:b8 5:b5:suspect:b9 5:b2:ally:b7 5:b0:ally:b5 5:b9:defend:b5 5:b1:ally:b0 5:b7:doubt:b9 skip:b0 skip:b1 skip:b2 skip:b5 skip:b7 skip:b9 >day-vote result:5:b9:ok:b0=2,b9=5 >night-guard >night-seer >night-wolves >dawn >hunter-shot >finished",
+  "states": "49df728670e6a348"
+ },
+ "12-33": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b8:suspect:b9 1:b11:suspect:b9 1:b1:ally:b4 1:b6:suspect:b9 1:b4:ally:b0 1:b7:suspect:b9 1:b0:ally:b11 1:b9:defend:b8 1:b2:suspect:b9 1:b10:ally:b5 1:b5:suspect:b9 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b9:ok:b8=1,b9=13 >night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b2:wrong:b9 2:b6:wrong:b9 2:b8:suspect:b1 2:b11:suspect:b6 2:b1:defend:b8 2:b6:defend:b11 2:b4:suspect:b6 2:b7:ally:b4 2:b0:suspect:b6 2:b2:ally:b4 2:b10:suspect:b6 2:b5:ally:b4 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:2:b6:ok:b0=2,b1=1,b6=9,b8=1 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 3:b0:wrong:b6 3:b4:wrong:b6 3:b11:suspect:b0 3:b1:ally:b5 3:b4:suspect:b0 3:b7:suspect:b0 3:b0:defend:b11 3:b2:suspect:b0 3:b10:suspect:b0 3:b5:ally:b2 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b7 skip:b10 skip:b11 >day-vote result:3:b0:ok:b0=10,b11=1 >night-raven >night-wolves >night-witch >dawn >day-debate 4:b2:wrong:b0 4:b7:wrong:b0 4:b11:ally:b5 4:b7:suspect:b11 4:b2:suspect:b11 4:b10:ally:b5 4:b5:suspect:b11 skip:b2 skip:b5 skip:b7 skip:b10 skip:b11 >day-vote result:4:b11:ok:b11=4,b2=1 >finished",
+  "states": "dab16e2965560f54"
+ },
+ "12-34": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:ally:b7 1:b7:ally:h0 1:h0:suspect:b3 1:b3:suspect:h0 1:b2:rally:b3 1:b0:ally:b10 1:b5:ally:h0 1:b6:ally:b1 1:b8:ally:b1 1:b10:suspect:b3 1:b1:suspect:b3 1:b4:suspect:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 1:h0:ally:b2 >day-vote vote:h0>b3 result:1:b3:ok:b3=11,b6=1 >night-wolves >dawn >day-debate 2:b2:suspect:b4 2:h0:ally:b8 2:b8:ally:h0 2:b0:suspect:b4 2:h0:suspect:b8 2:b8:defend:h0 2:b2:rally:b8 2:b5:suspect:b4 2:b7:suspect:b4 2:b6:suspect:b4 2:b10:suspect:b4 2:h0:suspect:b0 2:b0:suspect:h0 skip:h0 skip:b0 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 >day-vote vote:h0>b5 result:2:b4:ok:b4=7,b5=1,h0=1 >hunter-shot >night-wolves >dawn >day-debate 3:b2:wrong:b4 3:h0:ally:b2 3:b5:wrong:b4 3:b2:suspect:b6 3:h0:ally:b5 3:b5:ally:h0 3:b7:suspect:b2 3:b6:defend:b2 3:h0:ally:b5 3:b10:suspect:b6 skip:b2 skip:b5 skip:b6 skip:b7 skip:b10 >day-vote vote:h0>b2 result:3:b6:ok:b10=1,b2=2,b6=3 >night-wolves >dawn >day-debate 4:b2:toldYou:b6 4:b2:suspect:b7 4:b5:ally:b2 4:b7:defend:b2 4:b10:ally:b5 skip:b2 skip:b5 skip:b7 skip:b10 >day-vote result:4:b7:ok:b2=1,b7=3 >finished",
+  "states": "5d337279f750efd4"
+ },
+ "12-35": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate skip:h0 skip:b0 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:h0>b9 vote:h1>b9 result:1:b3:ok:b0=2,b3=4,b4=1,b5=1,b9=2,h0=2 >night-guard >night-seer >night-raven >night-wolves >dawn >hunter-shot >day-debate 2:b6:suspect:b9 2:b7:suspect:b8 2:h1:suspect:b0 2:b0:suspect:h1 2:b6:rally:b0 2:b9:defend:b6 2:b4:suspect:b0 2:h1:defend:b0 2:b8:defend:b7 2:b5:ally:b6 skip:b0 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>h1 vote:b4>b0 vote:b5>b0 vote:b6>b0 vote:b7>b8 vote:b8>b0 vote:b9>b0 result:2:b0:ok:b0=6,b8=1,h1=1 >night-guard >night-seer >night-wolves >dawn >finished",
+  "states": "7818da6c42e51ebc"
+ },
+ "12-36": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b10:ally:b11 1:b1:ally:b10 1:b3:suspect:b8 1:b8:defend:b3 1:b5:suspect:b8 1:b0:suspect:b8 1:b2:ally:b0 1:b11:suspect:b8 1:b4:suspect:b8 1:b9:suspect:b8 1:b6:suspect:b8 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b8:ok:b3=1,b8=11 >night-guard >night-seer >night-wolves >dawn >hunter-shot >day-debate 2:b5:wrong:b8 2:b9:wrong:b8 2:b10:ally:b2 2:b1:suspect:b5 2:b5:defend:b1 2:b2:suspect:b5 2:b11:suspect:b5 2:b4:ally:b10 2:b9:suspect:b5 2:b6:suspect:b5 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b9 skip:b10 skip:b11 >day-vote result:2:b5:ok:b4=1,b5=7 >night-guard >night-wolves >dawn >finished",
+  "states": "cb7c536c1e6587a0"
+ },
+ "12-37": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:b1 1:b1:defend:h0 1:b8:rally:b1 1:b9:suspect:b1 1:b3:ally:b10 1:b2:suspect:b1 1:b10:ally:b0 1:b0:suspect:b1 1:h0:suspect:b0 1:b0:defend:h0 1:b8:rally:b0 1:b5:suspect:b1 1:b6:ally:b9 1:b7:ally:b10 1:b4:ally:b9 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b3 result:1:b1:ok:b0=1,b1=11,b3=1 >night-guard >night-seer >night-wolves >dawn >day-debate 2:h0:suspect:b9 2:b9:suspect:h0 2:b8:rally:b9 2:h0:suspect:b2 2:b2:defend:h0 2:h0:ally:b6 2:b0:wrong:b1 2:b5:wrong:b1 skip:h0 skip:b0 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:b0>h0 vote:b2>h0 vote:b4>h0 vote:b5>b9 vote:b6>b9 vote:b7>b9 vote:b8>b9 vote:b9>h0 vote:b10>h0 result:2:h0:ok:b9=4,h0=5 >night-guard >night-wolves >dawn >day-debate 3:b9:wrong:h0 3:b8:suspect:b9 3:b9:defend:b8 3:b2:suspect:b9 3:b10:suspect:b9 3:b0:suspect:b9 3:b6:ally:b4 3:b7:ally:b10 3:b4:ally:b7 skip:b0 skip:b2 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote result:3:b9:ok:b8=1,b9=7 >night-guard >night-wolves >dawn >day-debate 4:b0:wrong:b9 4:b2:wrong:b9 4:b8:suspect:b0 4:b2:suspect:b0 4:b10:ally:b6 4:b0:defend:b8 4:b6:ally:b4 4:b7:suspect:b0 4:b4:suspect:b0 skip:b0 skip:b2 skip:b4 skip:b6 skip:b7 skip:b8 skip:b10 >day-vote result:4:b0:ok:b0=6,b8=1 >finished",
+  "states": "aff1ae005fc19290"
+ },
+ "12-38": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:h1:suspect:b1 1:b1:defend:h1 1:b5:rally:b1 1:b4:ally:h0 1:h1:suspect:b9 1:b9:defend:h1 1:b5:rally:b9 1:h0:suspect:b5 1:h1:ally:b8 1:b8:ally:h1 1:h0:suspect:b2 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 1:b2:suspect:h0 1:b4:rally:b2 1:h0:ally:b0 >day-vote vote:h1>b1 vote:b0>b9 vote:b1>h1 vote:b2>b9 vote:b3>b2 vote:b4>b9 vote:b5>b9 vote:b6>b2 vote:b7>b9 vote:b8>b9 vote:b9>h1 result:1:b9:ok:b1=1,b2=2,b9=6,h1=3 >night-guard >night-seer >night-wolves >dawn >day-debate 2:h0:suspect:b7 2:b7:defend:h0 2:b5:rally:b7 2:b4:suspect:b7 2:h0:suspect:h1 2:b5:rally:h1 2:b4:rally:h1 2:h0:suspect:b4 2:h1:ally:b3 2:b3:ally:h1 2:b2:doubt:b4 2:h1:defend:h0 2:b8:suspect:b7 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 >day-vote vote:h0>b5 vote:h1>b0 result:2:b7:ok:b0=1,b1=1,b5=1,b7=8,h0=1 >night-guard >night-seer >night-wolves >dawn >day-debate 3:b4:wrong:b7 3:h0:suspect:h1 3:b4:rally:h1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b8 3:h1:suspect:b8 3:b8:defend:h1 3:b4:rally:b8 3:h1:defend:h0 >day-vote vote:h1>b8 vote:b0>b8 vote:b1>b8 vote:b2>b1 vote:b3>b8 vote:b4>b8 vote:b6>b8 vote:b8>h1 result:3:b8:ok:b1=1,b8=8,h1=1 >night-seer >night-wolves >dawn >day-debate 4:h0:suspect:b0 4:b0:defend:h0 4:h1:suspect:b1 4:b1:defend:h1 4:b4:rally:b1 4:h0:ally:b1 4:b2:suspect:h0 4:b3:suspect:h1 4:h0:suspect:h1 4:b4:rally:h1 4:h1:suspect:b3 4:b3:suspect:h1 4:b4:rally:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:h0 4:h1:ally:b2 >day-vote vote:h1>b3 vote:b0>h1 vote:b1>h1 vote:b2>h0 vote:b3>h1 vote:b4>h1 result:4:h1:ok:b3=1,h0=1,h1=6 >hunter-shot >night-seer >night-wolves >dawn >day-debate 5:b3:wrong:h1 5:b4:suspect:b3 5:h0:suspect:b3 5:b3:suspect:h0 5:h0:suspect:b1 5:b1:defend:h0 5:b4:rally:b1 5:b0:ally:b4 5:h0:defend:b3 skip:b0 skip:b1 skip:b3 skip:b4 skip:h0 >day-vote vote:b0>b3 vote:b1>b3 vote:b3>h0 vote:b4>b3 result:5:b3:ok:b3=4,h0=1 >finished",
+  "states": "2a31fb178eb9e327"
+ },
+ "12-39": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >hunter-shot >mayor-election >day-debate 1:b4:ally:b11 1:b7:suspect:b1 1:b3:ally:b4 1:b6:suspect:b1 1:b8:suspect:b1 1:b10:suspect:b1 1:b9:ally:b4 1:b11:ally:b6 1:b2:ally:b4 1:b1:defend:b7 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b1:ok:b1=10,b7=1 >night-guard >night-seer >night-wolves >dawn >day-debate 2:b7:wrong:b1 2:b8:wrong:b1 2:b4:suspect:b8 2:b7:ally:b4 2:b3:suspect:b8 2:b8:defend:b4 2:b10:suspect:b8 2:b9:ally:b11 2:b11:suspect:b8 2:b2:suspect:b8 skip:b2 skip:b3 skip:b4 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:2:b8:ok:b7=1,b8=7 >night-guard >night-seer >night-wolves >dawn >day-debate 3:b3:wrong:b8 3:b10:wrong:b8 3:b7:suspect:b3 3:b3:defend:b7 3:b10:suspect:b3 3:b9:suspect:b3 3:b11:ally:b9 3:b2:suspect:b3 skip:b2 skip:b3 skip:b7 skip:b9 skip:b10 skip:b11 >day-vote result:3:b3:ok:b11=1,b3=5 >night-guard >night-wolves >dawn >finished",
+  "states": "6bd4b52523d07ee5"
+ },
+ "12-40": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b5:suspect:h0 1:b9:suspect:h0 1:b7:suspect:h0 1:b0:suspect:h0 1:h0:defend:b0 1:b1:suspect:h0 1:b2:ally:b8 1:b3:suspect:h0 1:h0:ally:b6 1:b6:ally:h0 1:b8:suspect:h0 1:h0:defend:b8 1:b4:ally:b2 1:b10:ally:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:b0>h0 vote:b1>h0 vote:b2>h0 vote:b3>h0 vote:b4>h0 vote:b5>h0 vote:b6>h0 vote:b7>h0 vote:b8>h0 vote:b9>h0 vote:b10>h0 result:1:h0:ok:h0=14 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:h0 2:b1:wrong:h0 2:b5:suspect:b7 2:b9:suspect:b7 2:b7:defend:b5 2:b0:suspect:b5 2:b1:suspect:b0 2:b3:suspect:b7 2:b6:suspect:b5 2:b8:suspect:b7 2:b4:suspect:b7 2:b10:suspect:b7 skip:b0 skip:b1 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote result:2:b7:ok:b0=1,b5=3,b7=8 >night-seer >night-raven >night-wolves >night-witch >dawn >day-debate 3:b3:toldYou:b7 3:b5:toldYou:b7 3:b5:suspect:b6 3:b9:suspect:b6 3:b0:ally:b8 3:b3:ally:b10 3:b6:defend:b5 3:b8:suspect:b6 3:b4:suspect:b6 3:b10:ally:b3 skip:b0 skip:b3 skip:b4 skip:b5 skip:b6 skip:b8 skip:b9 skip:b10 >day-vote result:3:b6:ok:b5=4,b6=6 >night-raven >night-wolves >night-witch >dawn >day-debate 4:b9:toldYou:b6 4:b9:suspect:b0 4:b0:defend:b9 4:b3:suspect:b0 4:b8:ally:b9 4:b4:suspect:b0 4:b10:suspect:b0 skip:b0 skip:b3 skip:b4 skip:b8 skip:b9 skip:b10 >day-vote result:4:b0:ok:b0=5,b3=1 >finished",
+  "states": "db33b301de7fa508"
+ },
+ "12-41": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b2:suspect:b0 1:h1:ally:b0 1:b0:ally:h1 1:h0:suspect:b5 1:h1:ally:b7 1:b7:ally:h1 1:h1:suspect:b3 1:b3:defend:h1 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 1:b2:rally:b3 >day-vote vote:h1>h0 vote:b0>b3 vote:b1>b3 vote:b2>b3 vote:b3>b5 vote:b4>b3 vote:b5>b3 vote:b6>b3 vote:b7>b3 vote:b8>b3 result:1:b3:ok:b3=9,b5=1,h0=1 >night-raven >night-wolves >dawn >day-debate 2:h1:suspect:b1 2:b1:suspect:h1 2:h0:suspect:b0 skip:h1 skip:b0 skip:b1 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 2:b0:defend:h0 2:h1:ally:b5 >day-vote vote:h0>b1 vote:b0>h0 vote:b1>h1 vote:b4>h0 vote:b5>h1 vote:b6>h1 vote:b7>h1 vote:b8>h1 result:2:h1:ok:b1=1,h0=2,h1=8 >night-wolves >dawn >day-debate 3:b5:suspect:b4 3:b1:suspect:b4 3:b7:suspect:b4 3:b0:ally:b6 3:b6:ally:b7 3:b4:defend:b5 3:b8:suspect:b4 skip:b0 skip:b1 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 >day-vote result:3:b4:ok:b4=6,b5=2 >night-wolves >dawn >day-debate 4:b5:toldYou:b4 4:b7:toldYou:b4 4:b5:ally:b7 4:b1:suspect:b6 4:b7:suspect:b6 4:b0:suspect:b6 4:b6:defend:b1 skip:b0 skip:b1 skip:b5 skip:b6 skip:b7 >day-vote result:4:b6:ok:b0=1,b6=4 >night-wolves >dawn >day-debate 5:b5:ally:b1 5:b1:suspect:b0 5:b0:defend:b1 skip:b0 skip:b1 skip:b5 >day-vote result:5:b0:ok:b0=2,b1=1 >finished",
+  "states": "41d0e5dc4bb7b966"
+ },
+ "12-42": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:b6:ally:b2 1:b2:ally:b6 1:b9:suspect:b1 1:b1:defend:b9 1:b0:suspect:b1 1:b7:suspect:b1 1:b8:suspect:b1 1:b10:ally:b0 1:b11:suspect:b1 1:b5:suspect:b1 1:b4:suspect:b1 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b1:ok:b1=13,b5=1 >night-seer >night-raven >night-wolves >dawn >day-debate 2:b0:wrong:b1 2:b7:wrong:b1 2:b6:suspect:b0 2:b2:suspect:b5 2:b0:defend:b6 2:b7:ally:b2 2:b8:ally:b10 2:b10:suspect:b0 2:b11:ally:b2 2:b5:defend:b2 2:b4:ally:b2 skip:b0 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:2:b0:ok:b0=7,b5=1,b6=3 >night-seer >night-wolves >dawn >day-debate 3:b6:toldYou:b0 3:b10:toldYou:b0 3:b6:suspect:b8 3:b7:suspect:b8 3:b8:defend:b6 3:b10:suspect:b8 3:b11:suspect:b8 3:b5:ally:b4 3:b4:suspect:b8 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b10 skip:b11 >day-vote result:3:b8:ok:b7=2,b8=5 >night-wolves >dawn >day-debate 4:b6:toldYou:b8 4:b7:toldYou:b8 4:b6:suspect:b5 4:b7:suspect:b5 4:b10:ally:b11 4:b11:ally:b6 4:b5:defend:b6 skip:b5 skip:b6 skip:b7 skip:b10 skip:b11 >day-vote result:4:b5:ok:b5=4,b7=1 >finished",
+  "states": "ef03f4d0ebdcbc90"
+ },
+ "12-43": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b4:suspect:b6 1:b1:ally:h0 1:b9:ally:b3 1:b0:suspect:b6 1:b7:suspect:b6 1:b5:ally:b3 1:b6:defend:b4 1:h0:ally:b5 1:b5:ally:h0 1:b2:suspect:b6 1:b10:suspect:b6 1:b3:suspect:b6 1:b8:suspect:b6 1:h0:suspect:b1 1:b1:suspect:h0 1:h0:suspect:b7 1:b7:suspect:h0 1:b4:rally:b7 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b9 result:1:b6:ok:b6=11,b7=1,b9=1 >hunter-shot >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:b6 2:h0:suspect:b2 2:b2:defend:h0 2:h0:suspect:b0 2:b0:suspect:h0 2:b4:rally:b0 2:b10:wrong:b6 2:h0:defend:b0 2:b1:suspect:b4 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b9 skip:b10 >day-vote vote:h0>b10 result:2:b0:ok:b0=6,b10=1,b2=1,b4=1 >night-seer >night-wolves >dawn >day-debate 3:b4:suspect:h0 3:b9:suspect:h0 3:b5:ally:b2 3:b2:ally:b9 3:b10:suspect:h0 3:b3:suspect:h0 3:h0:suspect:b9 3:b9:suspect:h0 3:h0:ally:b5 3:b5:ally:h0 skip:b2 skip:b3 skip:b4 skip:b5 skip:b9 skip:b10 >day-vote vote:h0>b5 result:3:h0:ok:b5=1,h0=6 >finished",
+  "states": "4465fec205504b91"
+ },
+ "12-44": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-wolves >dawn >mayor-election >day-debate 1:b3:suspect:b5 1:b4:suspect:b5 1:b0:suspect:b5 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b7 skip:b8 skip:b9 1:h0:suspect:b1 1:b1:defend:h0 1:h1:suspect:b5 1:b5:defend:h1 1:h1:suspect:b1 1:b1:suspect:h1 1:h0:ally:b0 1:b0:ally:h0 skip:h0 >day-vote vote:b0>b5 vote:b1>b5 vote:b2>b5 vote:b3>b5 vote:b4>b5 vote:b5>b1 vote:b7>b5 vote:b8>b5 vote:b9>b5 vote:h0>b3 result:1:b5:ok:b0=1,b1=1,b3=1,b5=9 >night-guard >night-wolves >dawn >hunter-shot >day-debate 2:b0:wrong:b5 2:h0:suspect:b8 2:b8:suspect:h0 2:h0:defend:b8 2:b3:wrong:b5 2:b3:suspect:b8 2:b4:suspect:b8 2:h0:defend:b8 2:b0:suspect:b8 2:b9:suspect:b8 2:b7:suspect:b8 2:b2:ally:b7 skip:b0 skip:b2 skip:b3 skip:b4 skip:b7 skip:b8 skip:b9 >day-vote vote:b0>b8 vote:b2>b8 vote:b3>b8 vote:b4>b8 vote:b7>b8 vote:b8>b4 vote:b9>b8 result:2:b8:ok:b4=1,b8=7 >night-guard >night-wolves >dawn >day-debate 3:b0:wrong:b8 3:h0:suspect:b7 3:b7:defend:h0 skip:h0 skip:b0 skip:b2 skip:b3 skip:b4 skip:b7 >day-vote vote:h0>b4 result:3:h0:ok:b3=2,b4=1,h0=4 >night-guard >night-wolves >dawn >day-debate 4:b3:suspect:b0 4:b4:ally:b3 4:b0:defend:b3 4:b7:suspect:b0 skip:b0 skip:b3 skip:b4 skip:b7 >day-vote result:4:b0:ok:b0=4,b3=1 >night-wolves >dawn >finished",
+  "states": "5dfc86f679b3748d"
+ },
+ "12-45": {
+  "winner": "village",
+  "thread": ">night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b3:ally:b2 1:b10:suspect:b3 1:b5:suspect:b3 1:b7:suspect:b3 1:b2:ally:b1 1:b6:suspect:b3 1:b11:suspect:b3 1:b9:ally:b7 1:b0:suspect:b3 1:b1:suspect:b3 1:b4:suspect:b3 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b9 skip:b10 skip:b11 >day-vote result:1:b3:ok:b10=1,b3=11,b9=2 >night-seer >night-wolves >night-witch >dawn >day-debate 2:b0:wrong:b3 2:b1:wrong:b3 2:b10:suspect:b0 2:b5:suspect:b10 2:b7:suspect:b10 2:b2:suspect:b10 2:b6:suspect:b10 2:b11:suspect:b10 2:b9:suspect:b10 2:b0:defend:b10 2:b1:ally:b2 2:b4:ally:b9 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b9 skip:b10 skip:b11 >day-vote result:2:b10:ok:b0=1,b10=10 >night-wolves >night-witch >dawn >day-debate 3:b2:wrong:b10 3:b6:wrong:b10 3:b5:ally:b1 3:b7:suspect:b5 3:b2:ally:b0 3:b6:suspect:b5 3:b11:ally:b1 3:b0:suspect:b7 3:b1:suspect:b5 3:b4:suspect:b5 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b11 >day-vote result:3:b5:ok:b5=5,b7=3 >night-wolves >night-witch >dawn >hunter-shot >day-debate 4:b6:toldYou:b5 4:b2:suspect:b0 4:b6:suspect:b0 4:b11:suspect:b2 4:b0:defend:b2 4:b4:suspect:b0 skip:b0 skip:b2 skip:b4 skip:b6 skip:b11 >day-vote result:4:b0:ok:b0=3,b2=2 >night-wolves >night-witch >dawn >day-debate 5:b2:toldYou:b0 5:b6:toldYou:b0 5:b2:suspect:b11 5:b6:ally:b2 5:b11:defend:b2 skip:b2 skip:b6 skip:b11 >day-vote result:5:b11:ok:b11=2,b2=1 >finished",
+  "states": "6ba4132c917ff948"
+ },
+ "12-46": {
+  "winner": "village",
+  "thread": ">night-guard >night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:h0:suspect:b8 1:b8:suspect:h0 1:h0:suspect:b2 1:b2:defend:h0 skip:h0 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b10 result:1:h0:ok:b10=1,h0=12 >hunter-shot >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 2:b8:wrong:h0 2:b8:ally:b2 2:b6:ally:b9 2:b1:suspect:b5 2:b5:defend:b1 2:b4:suspect:b5 2:b3:suspect:b5 2:b10:suspect:b1 2:b2:suspect:b5 2:b0:suspect:b5 2:b7:suspect:b5 2:b9:suspect:b5 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote result:2:b5:ok:b1=3,b5=9 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 3:b0:toldYou:b5 3:b2:toldYou:b5 3:b6:suspect:b3 3:b1:suspect:b10 3:b4:ally:b9 3:b3:defend:b6 3:b10:defend:b1 3:b2:doubt:b3 3:b0:suspect:b10 3:b7:suspect:b10 3:b9:suspect:b10 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b9 skip:b10 >day-vote result:3:b10:ok:b1=2,b10=7 >night-guard >night-seer >night-wolves >night-witch >dawn >day-debate 4:b0:toldYou:b10 4:b6:suspect:b3 4:b1:ally:b2 4:b3:defend:b6 4:b2:doubt:b3 4:b0:suspect:b6 4:b7:suspect:b6 4:b9:ally:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b6 skip:b7 skip:b9 >day-vote result:4:b6:ok:b0=1,b6=6 >finished",
+  "states": "f662dc3eabe83607"
+ },
+ "12-47": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >dawn >mayor-election >day-debate 1:h0:suspect:b4 skip:h1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 1:h1:suspect:h0 1:b6:rally:h0 1:b3:rally:h0 >day-vote vote:b0>h0 vote:b1>h0 vote:b2>h0 vote:b3>h0 vote:b4>h0 vote:b5>h0 vote:b6>h0 vote:b7>h0 vote:b8>h0 vote:h1>b1 result:1:h0:ok:b1=3,h0=10 >night-guard >night-seer >night-raven >night-wolves >dawn >day-debate 2:b6:suspect:b1 2:b3:ally:b7 2:b4:suspect:b1 2:b7:ally:b0 2:b8:suspect:b1 2:b0:ally:b8 2:b2:doubt:b1 2:b1:defend:b6 2:b5:suspect:b1 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 >day-vote result:2:b1:ok:b1=10,b6=2 >night-guard >night-seer >night-raven >night-wolves >dawn >hunter-shot >day-debate 3:b4:wrong:b1 3:b8:wrong:b1 3:b4:suspect:b8 3:b7:suspect:b4 3:b8:defend:b4 3:b0:ally:b7 3:b2:doubt:b4 3:b5:ally:b7 skip:b0 skip:b2 skip:b4 skip:b5 skip:b7 skip:b8 >day-vote result:3:b4:ok:b0=2,b4=4,b8=3 >night-guard >night-seer >night-wolves >dawn >finished",
+  "states": "be85030f184377d7"
+ },
+ "12-48": {
+  "winner": "loups",
+  "thread": ">night-guard >night-seer >night-raven >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b0:ally:b2 1:b6:suspect:b10 1:b5:suspect:b10 1:b1:suspect:b10 1:b7:suspect:b10 1:b8:suspect:b10 1:b11:ally:b7 1:b10:defend:b6 1:b4:ally:b2 1:b9:suspect:b10 1:b2:ally:b7 skip:b0 skip:b1 skip:b2 skip:b4 skip:b5 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 skip:b11 >day-vote result:1:b10:ok:b10=13,b6=1 >night-guard >night-raven >night-wolves >dawn >day-debate 2:b6:wrong:b10 2:b7:wrong:b10 2:b0:suspect:b7 2:b6:suspect:b7 2:b1:suspect:b7 2:b7:defend:b0 2:b8:suspect:b7 2:b11:suspect:b7 2:b4:suspect:b7 2:b9:suspect:b7 2:b2:ally:b11 skip:b0 skip:b1 skip:b2 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 skip:b11 >day-vote result:2:b7:ok:b7=9,b9=1 >hunter-shot >night-raven >night-wolves >dawn >day-debate 3:b0:wrong:b7 3:b6:wrong:b7 3:b0:suspect:b6 3:b6:defend:b0 3:b1:suspect:b6 3:b8:ally:b4 3:b11:ally:b4 3:b4:ally:b1 skip:b0 skip:b1 skip:b4 skip:b6 skip:b8 skip:b11 >day-vote result:3:b6:ok:b0=1,b6=7 >night-raven >night-wolves >dawn >finished",
+  "states": "6f750b32c5539a60"
+ },
+ "12-49": {
+  "winner": "loups",
+  "thread": ">night-seer >night-wolves >night-witch >dawn >mayor-election >day-debate 1:b7:suspect:b3 1:b2:suspect:b3 1:b3:defend:b7 1:h0:suspect:b4 1:b4:defend:h0 1:b7:rally:b4 1:h0:suspect:b1 1:b1:defend:h0 1:b2:rally:b1 1:b10:ally:b9 1:b6:ally:b0 1:b8:ally:b6 1:b0:suspect:b3 1:b9:ally:b2 skip:b0 skip:b1 skip:b2 skip:b3 skip:b4 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:b0>b3 vote:b1>b3 vote:b2>b3 vote:b3>b4 vote:b4>b3 vote:b6>b3 vote:b7>b3 vote:b8>b3 vote:b9>b3 vote:b10>b3 result:1:b3:ok:b3=10,b4=1 >hunter-shot >night-wolves >night-witch >dawn >day-debate 2:h0:ally:b9 2:b2:wrong:b3 2:b7:wrong:b3 skip:h0 skip:b0 skip:b1 skip:b2 skip:b6 skip:b7 skip:b8 skip:b9 skip:b10 >day-vote vote:h0>b1 result:2:-:tie:b0=3,b1=1,b2=3,b7=3 >day-revote vote:h0>b0 result:2:b0:ok:b0=4,b2=3,b7=3 >night-wolves >night-witch >dawn >day-debate 3:b7:ally:b1 3:h0:suspect:b2 3:b2:suspect:h0 3:h0:defend:b2 3:b10:suspect:b2 3:b1:ally:b7 3:b6:suspect:b2 3:b8:suspect:b2 skip:b1 skip:b2 skip:b6 skip:b7 skip:b8 skip:b10 >day-vote vote:b1>b2 vote:b2>h0 vote:b6>b2 vote:b7>b2 vote:b8>b2 vote:b10>b2 result:3:b2:ok:b2=5,b7=1,h0=1 >night-wolves >night-witch >dawn >day-debate 4:b6:wrong:b2 4:b8:wrong:b2 4:b7:suspect:b6 4:b10:ally:b7 4:b6:defend:b7 4:b8:suspect:b6 skip:b6 skip:b7 skip:b8 skip:b10 >day-vote result:4:b6:ok:b10=1,b6=3 >night-wolves >dawn >finished",
+  "states": "e4db3c56093260b7"
+ }
+}

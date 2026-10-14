@@ -17,8 +17,8 @@ interface GameCardProps {
   icon: ReactNode
   /**
    * Badge « Mieux à plusieurs » (hub en mode solo, jeu soloFit 'group') :
-   * le jeu reste proposé, mais le visiteur seul sait AVANT le clic que les
-   * bots n'y font que de la figuration.
+   * le jeu reste proposé, mais le visiteur seul sait AVANT le clic qu'il se
+   * joue surtout entre potes (voir GameMeta.soloFit).
    */
   groupHint?: boolean
   /**

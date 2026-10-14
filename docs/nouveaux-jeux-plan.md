@@ -275,8 +275,14 @@ Extension du pattern `stripEngineSecretForUser` avec un « profil de vue » :
 - **Bots en déduction sociale** : au Loup-Garou ils jouent pour de vrai
   (score de soupçon public, réactions au trait, mémoire d'une manche — voir
   `src/lib/loup-garou/{bot-debate,engine}.ts`) ; une table peut se lancer
-  seul avec trois bots. Les autres jeux sociaux (Imposteur, Espion) gardent
-  des bots basiques, à porter sur le même socle une fois stabilisé.
+  seul avec trois bots. À l'Imposteur, les bots donnent un indice tiré du
+  catalogue de LEUR mot et votent sur les indices de la table (voir
+  `src/lib/imposteur/{bot-clue,bot-brain}.ts`), et la table solo se joue à
+  cinq ; leurs paroles sont portées sur le socle commun du Loup-Garou
+  (`src/lib/online/bot-speech.ts`, fil `src/components/online/bot-speech/`) :
+  réactions aux indices forts, annonces de vote, défense, boutons humains
+  Accuser / Me défendre (`src/lib/imposteur/bot-speech.ts`). L'Espion garde
+  des bots basiques.
 - **Volume de contenu (Quiz/Imposteur)** : généré par lots avec relecture ;
   format extensible pour en rajouter au fil de l'eau.
 - **Refactor Lot 0** : touche la route action existante → filet des 143 tests

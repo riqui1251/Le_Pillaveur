@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { DebateFeed } from '@/components/online/loup-garou/DebateFeed'
 import { lgPlayerIcon } from '@/components/online/loup-garou/debate-feed'
+import { genreOf, genreOfId } from '@/components/online/bot-speech/bot-speech-feed'
 
 /**
  * LOUP-GAROU sur grand écran : la table vue du dessus — les joueurs sont des
@@ -62,6 +63,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
   const alive = state.players.filter((p) => p.alive)
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
+  const genreOfPlayer = (id: string | null | undefined) => genreOfId(state.players, id)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) => lgPlayerIcon(p, room.members)
   const roleName = (role: LGRole) => t(`roles.${role}.name`)
 
@@ -95,7 +97,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
                 {p.name}
                 {!p.alive && <Skull aria-hidden className="h-6 w-6 text-[#6B6455]" />}
                 {state.mayorId === p.id && (
-                  <Medal className="h-6 w-6 text-amber-700" aria-label={t('mayorBadge')} />
+                  <Medal className="h-6 w-6 text-amber-700" aria-label={t('mayorBadge', { genre: genreOf(p) })} />
                 )}
                 {p.role && RoleIcon && (
                   <span className={cn('flex items-center gap-1.5 text-xl', ROLE_META[p.role].ink)}>
@@ -165,20 +167,20 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
             ) : (
               state.lastNightDeaths.map((d) => (
                 <p key={d.playerId} className="font-display text-3xl font-bold text-red-200">
-                  {t('dawnDeath', { name: nameOf(d.playerId), role: roleName(d.role) })}
+                  {t('dawnDeath', { name: nameOf(d.playerId), genre: genreOfPlayer(d.playerId), role: roleName(d.role) })}
                 </p>
               ))
             )}
             {state.ravenTargetId && (
               <p className="text-2xl font-bold text-slate-200">
-                {t('ravenMarkBanner', { name: nameOf(state.ravenTargetId) })}
+                {t('ravenMarkBanner', { name: nameOf(state.ravenTargetId), genre: genreOfPlayer(state.ravenTargetId) })}
               </p>
             )}
           </>
         )}
         {state.phase === 'hunter-shot' && (
           <p className="font-display text-4xl font-bold text-gold">
-            {t('hunterWaiting', { name: nameOf(state.pendingHunterId) })}
+            {t('hunterWaiting', { name: nameOf(state.pendingHunterId), genre: genreOfPlayer(state.pendingHunterId) })}
           </p>
         )}
         {state.phase === 'day-debate' && (
@@ -218,6 +220,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
             {state.lastVoteResult.eliminatedId
               ? t('voteBanner', {
                   name: nameOf(state.lastVoteResult.eliminatedId),
+                  genre: genreOfPlayer(state.lastVoteResult.eliminatedId),
                   role: state.lastVoteResult.role ? roleName(state.lastVoteResult.role) : '—',
                 })
               : t('voteTieBanner')}
@@ -226,7 +229,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
         {/* Bannière du maire (persiste une fois élu) */}
         {state.mayorId && state.phase !== 'mayor-election' && (
           <p className="text-lg font-semibold text-amber-200/80">
-            {t('mayorBanner', { name: nameOf(state.mayorId) })}
+            {t('mayorBanner', { name: nameOf(state.mayorId), genre: genreOfPlayer(state.mayorId) })}
           </p>
         )}
       </div>
@@ -265,7 +268,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
                         <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                         {p.name}
                         {state.mayorId === p.id && (
-                          <Medal className="h-5 w-5 text-amber-700" aria-label={t('mayorBadge')} />
+                          <Medal className="h-5 w-5 text-amber-700" aria-label={t('mayorBadge', { genre: genreOf(p) })} />
                         )}
                         {p.role && RoleIcon && (
                           <RoleIcon
@@ -289,7 +292,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
                         <Skull aria-hidden className="h-5 w-5 text-cream/50" />
                         {p.name}
                         {state.mayorId === p.id && (
-                          <Medal className="h-5 w-5 text-gold/70" aria-label={t('mayorBadge')} />
+                          <Medal className="h-5 w-5 text-gold/70" aria-label={t('mayorBadge', { genre: genreOf(p) })} />
                         )}
                         {p.role && RoleIcon && (
                           <RoleIcon

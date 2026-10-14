@@ -72,10 +72,12 @@ import {
 import { BOT_PERSONAS, botDisplayName, botTickDelayMs, personaForBotName } from '@/lib/online/bot-personas'
 import { buildMenteurState } from '@/lib/menteur/server-adapter'
 import { buildLGState } from '@/lib/loup-garou/server-adapter'
+import { buildImposteurState } from '@/lib/imposteur/server-adapter'
 import { buildQuizState } from '@/lib/quiz/server-adapter'
 import { buildCrobardState } from '@/lib/crobard/server-adapter'
 import type { MenteurState } from '@/lib/menteur/engine'
 import type { LGState } from '@/lib/loup-garou/engine'
+import type { ImposteurState } from '@/lib/imposteur/engine'
 import type { QuizState } from '@/lib/quiz/engine'
 import type { CrobardState } from '@/lib/crobard/engine'
 
@@ -440,6 +442,69 @@ describe('serviceTick — Loup-Garou (échéance de phase, tick bot « au cas o�
       phaseEndsAt: NOW - 1_000,
     }
     expect(adapter.serviceTick!(state, NOW)?.body.action).toBe('advance')
+  })
+})
+
+describe('serviceTick — Imposteur (indice du bot au tour, tick « au cas où », échéance)', () => {
+  const adapter = getGameAdapter('imposteur')!
+  const solo = () => buildImposteurState([human('u1')], 'fr', 4, 'seed-imp')
+
+  it('vote avec des bots à table : tick bot 2,5-5,5 s, puis l’échéance seule une fois refusé (skipBot)', () => {
+    const base = solo()
+    const vote: ImposteurState = {
+      ...base,
+      phase: 'vote',
+      phaseSeq: 4,
+      phaseEndsAt: NOW + 60_000,
+      clueTurnIdx: base.clueOrder.length,
+    }
+    expect(adapter.serviceTick!(vote, NOW)).toEqual({ body: { action: 'bot' }, dueAt: NOW + 5500 })
+    expect(adapter.serviceTick!(vote, NOW, lower)?.dueAt).toBe(NOW + 2500)
+    expect(adapter.serviceTick!(vote, NOW, { skipBot: true })).toEqual({
+      body: { action: 'advance', phaseKey: 'vote#4' },
+      dueAt: NOW + 60_000,
+    })
+    // Tous les bots ont voté : le tick « au cas où » reste armé (une accusation peut encore leur parvenir).
+    const voted = Object.fromEntries(vote.players.filter((p) => p.isBot).map((p) => [p.id, 'u1']))
+    expect(adapter.serviceTick!({ ...vote, pendingVotes: voted }, NOW)?.body).toEqual({ action: 'bot' })
+  })
+
+  it('indices : le tempo du bot au tour ; au tour d’un humain, le tick « au cas où »', () => {
+    const base = solo()
+    const botFirst: ImposteurState = {
+      ...base,
+      phase: 'clue',
+      phaseSeq: 1,
+      phaseEndsAt: NOW + 45_000,
+      clueOrder: [...base.clueOrder.filter((id) => id !== 'u1'), 'u1'],
+      clueTurnIdx: 0,
+    }
+    const bot = botFirst.players.find((p) => p.id === botFirst.clueOrder[0])!
+    expect(adapter.serviceTick!(botFirst, NOW)).toEqual({
+      body: { action: 'bot' },
+      dueAt: NOW + personaForBotName(bot.name)!.tempoMaxMs,
+    })
+    const humanTurn: ImposteurState = { ...botFirst, clueTurnIdx: botFirst.clueOrder.length - 1 }
+    expect(adapter.serviceTick!(humanTurn, NOW)).toEqual({ body: { action: 'bot' }, dueAt: NOW + 5500 })
+    expect(adapter.serviceTick!(humanTurn, NOW, { skipBot: true })).toEqual({
+      body: { action: 'advance', phaseKey: 'clue#1' },
+      dueAt: NOW + 45_000,
+    })
+  })
+
+  it('table sans bot : l’échéance seule ; révélation menée par un bot : 3,2 s', () => {
+    const humans = buildImposteurState(['u1', 'u2', 'u3'].map((id) => human(id)), 'fr', 0, 'seed-imp')
+    const clue: ImposteurState = { ...humans, phase: 'clue', phaseSeq: 1, phaseEndsAt: NOW + 45_000 }
+    expect(adapter.serviceTick!(clue, NOW)).toEqual({ body: { action: 'advance', phaseKey: 'clue#1' }, dueAt: NOW + 45_000 })
+    const base = solo()
+    const reveal: ImposteurState = {
+      ...base,
+      phase: 'reveal',
+      phaseSeq: 5,
+      phaseEndsAt: NOW + 60_000,
+      players: [...base.players.filter((p) => p.isBot), ...base.players.filter((p) => !p.isBot)],
+    }
+    expect(adapter.serviceTick!(reveal, NOW)).toEqual({ body: { action: 'bot' }, dueAt: NOW + 3200 })
   })
 })
 

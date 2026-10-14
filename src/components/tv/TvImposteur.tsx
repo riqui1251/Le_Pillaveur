@@ -4,11 +4,13 @@ import { Pencil, Skull, Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
-import type { ImposteurClientView } from '@/lib/imposteur/engine'
-import { IMPOSTEUR_CLUE_MS, IMPOSTEUR_VOTE_MS } from '@/lib/imposteur/engine'
+import type { ImposteurClientView, ImposteurSpeech } from '@/lib/imposteur/engine'
+import { IMPOSTEUR_CLUE_MS, IMPOSTEUR_VOTE_MS, imposteurCitedClue } from '@/lib/imposteur/engine'
 import { cn } from '@/lib/utils'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { BotSpeechFeed } from '@/components/online/bot-speech/BotSpeechFeed'
+import { genreOf, genreOfId, type LineTranslator } from '@/components/online/bot-speech/bot-speech-feed'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
@@ -25,8 +27,16 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
   const totalPhaseMs = state.phase === 'clue' ? IMPOSTEUR_CLUE_MS : IMPOSTEUR_VOTE_MS
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
+  const revealGenre = genreOfId(state.players, reveal?.eliminatedId)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const tr: LineTranslator = {
+    has: (key) => t.has(key),
+    format: (key, values) => t(key, values),
+  }
+  const speechValues = (sp: ImposteurSpeech) => ({
+    clue: imposteurCitedClue(state.clues, sp.targetId, sp.round),
+  })
 
   // ── Fin de partie : révélation complète ──────────────────────────────────
   if (finished) {
@@ -63,7 +73,9 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
                     : 'bg-emerald-500/20 text-emerald-100'
                 )}
               >
-                {p.team === 'imposteur' ? t('victory.teamImposteur') : t('victory.teamCivil')}
+                {p.team === 'imposteur'
+                  ? t('victory.teamImposteur', { genre: genreOf(p) })
+                  : t('victory.teamCivil', { genre: genreOf(p) })}
               </span>
             </div>
           ))}
@@ -110,10 +122,10 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
           {reveal.eliminatedId ? (
             <>
               <p className="text-5xl font-black text-white">
-                {t('reveal.outTitle', { name: nameOf(reveal.eliminatedId) })}
+                {t('reveal.outTitle', { name: nameOf(reveal.eliminatedId), genre: revealGenre })}
               </p>
               <p className="text-3xl text-white/70">
-                {t('reveal.outWord', { word: reveal.word ?? '—' })}
+                {t('reveal.outWord', { word: reveal.word ?? '—', genre: revealGenre })}
               </p>
               <p
                 className={cn(
@@ -123,15 +135,21 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
                     : 'bg-emerald-500/20 text-emerald-100'
                 )}
               >
-                {reveal.team === 'imposteur' ? t('reveal.wasImposteur') : t('reveal.wasCivil')}
+                {reveal.team === 'imposteur'
+                  ? t('reveal.wasImposteur', { genre: revealGenre })
+                  : t('reveal.wasCivil', { genre: revealGenre })}
               </p>
-              <p className="text-2xl font-bold text-amber-200">
-                {t('reveal.sips', { name: nameOf(reveal.eliminatedId), sips: reveal.sips })}
-              </p>
+              {reveal.sips > 0 && (
+                <p className="text-2xl font-bold text-amber-200">
+                  {t('reveal.sips', { name: nameOf(reveal.eliminatedId), sips: reveal.sips })}
+                </p>
+              )}
             </>
           ) : (
             <>
-              <p className="text-5xl font-black text-white">{t('reveal.tieTitle')}</p>
+              <p className="text-5xl font-black text-white">
+                {reveal.tie ? t('reveal.tieTitle') : t('reveal.noVote')}
+              </p>
               <p className="text-2xl text-white/60">{t('reveal.tieMsg')}</p>
             </>
           )}
@@ -173,6 +191,22 @@ export function TvImposteur({ room, state }: { room: TvRoomDto; state: Imposteur
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Fil des paroles : les 4 dernières bulles de la manche */}
+      {(state.phase === 'clue' || state.phase === 'vote') && (
+        <div className="flex justify-center">
+          <BotSpeechFeed
+            speeches={state.speech ?? []}
+            round={state.round}
+            players={state.players}
+            iconOf={iconOf}
+            variant="tv"
+            tr={tr}
+            feedAria={t('feedAria')}
+            valuesOf={speechValues}
+          />
         </div>
       )}
 

@@ -350,7 +350,7 @@
     "seul-avec-des-bots": {
       "title": "Jugar solo: los juegos con bots",
       "description": "¿No hay nadie esta noche? Abre una mesa y los bots la completan: Hombre Lobo, quiz, Président, Purple… Gratis, en línea, solo o a dos.",
-      "intro": "Nadie disponible, o ganas de entrenar antes de la próxima fiesta: en estos juegos, el anfitrión de la mesa puede completar los asientos vacíos con bots desde la sala, y la partida arranca incluso por debajo del mínimo de jugadores — en solitario, pues. Los bots tienen cada uno su nombre y su personalidad, y cumplen en su asiento: responden en El Gran Pillaveur, el quiz con pulsadores, juegan sus cartas en Président, votan y acusan en Hombre Lobo, apuestan en Purple y 1220, tiran el dado en El Pequeño Bebedor. Esos son los juegos que de verdad se juegan en solitario. En El Impostor, ¿Quién es el Espía?, Crobard, El Gran Farol, Sans Filtre, Dilemmes o El Mentiroso, los bots completan una mesa sin darle vida: un bot no dibuja, no inventa faroles, no cuenta nada ni dirige la investigación, y en El Mentiroso puja, pero sin una cara que leer, el farol pierde toda la gracia. Esos juegos piden jugadores de verdad. Si alguien se desconecta a mitad de partida, un bot lo sustituye para que la mesa siga. Es la misma lista que el atajo «Jugar solo con bots» de la portada. Todo ocurre en línea, en tu móvil, y en cuanto le cojas el truco a un juego, basta con compartir el código de la mesa para que tus amigos ocupen los asientos."
+      "intro": "Nadie disponible, o ganas de entrenar antes de la próxima fiesta: en estos juegos, el anfitrión de la mesa puede completar los asientos vacíos con bots desde la sala, y la partida arranca incluso por debajo del mínimo de jugadores — en solitario, pues. Los bots tienen cada uno su nombre y su personalidad, y cumplen en su asiento: responden en El Gran Pillaveur, el quiz con pulsadores, juegan sus cartas en Président, votan y acusan en Hombre Lobo, apuestan en Purple y 1220, tiran el dado en El Pequeño Bebedor. Esos son los juegos que de verdad se juegan en solitario. En El Impostor, los bots dan pistas de verdad sacadas de su palabra y votan contra quien dio la pista que no encaja: una mesa de cinco se juega en solitario, aunque el farol brilla de verdad entre amigos. En ¿Quién es el Espía?, Crobard, El Gran Farol, Sans Filtre, Dilemmes o El Mentiroso, los bots completan una mesa sin darle vida: un bot no dibuja, no inventa faroles, no cuenta nada ni dirige la investigación, y en El Mentiroso puja, pero sin una cara que leer, el farol pierde toda la gracia. Esos juegos piden jugadores de verdad. Si alguien se desconecta a mitad de partida, un bot lo sustituye para que la mesa siga. Es la misma lista que el atajo «Jugar solo con bots» de la portada. Todo ocurre en línea, en tu móvil, y en cuanto le cojas el truco a un juego, basta con compartir el código de la mesa para que tus amigos ocupen los asientos."
     },
     "en-grand-groupe": {
       "title": "Juegos de fiesta para grupos grandes",
@@ -1291,7 +1291,7 @@
       },
       "imposteur": {
         "title": "Juega a El Impostor online gratis — una palabra, un intruso",
-        "description": "Una palabra secreta para todos… menos uno: pistas, votos y faroleo. De 3 a 16 jugadores, chat de voz, gratis, sin instalación — o solo con bots."
+        "description": "Una palabra secreta para todos… menos uno: pistas, votos y faroleo. De 3 a 16 jugadores, chat de voz, gratis, sin instalación — o solo, con bots que investigan."
       },
       "quiz": {
         "title": "Juega a El Gran Pillaveur — el quiz de fiesta online gratis",
@@ -2459,7 +2459,7 @@
         "round": "Ronda {n}",
         "diceOnTable": "{n} dados en la mesa",
         "you": "(tú)",
-        "eliminated": "Eliminado 💀",
+        "eliminated": "{genre, select, f {Eliminada} m {Eliminado} other {Fuera del juego}} 💀",
         "spectator": "Sin dados — disfruta del espectáculo 👀",
         "currentBid": "Apuesta actual",
         "bidBy": "de {name}",
@@ -2486,7 +2486,7 @@
           "calzaWonCapped": "🎯 Calza acertado: {name} ya tiene el máximo de dados, nada que recuperar.",
           "calzaLost": "{name} intentó Calza y falló: pierde un dado y bebe {sips} trago{sips, plural, one {} other {s}} 🍺",
           "calzaLostSoft": "{name} intentó Calza y falló: pierde un dado",
-          "eliminatedMsg": "💀 {name} se queda sin dados — ¡de un trago, eliminado!",
+          "eliminatedMsg": "💀 {name} se queda sin dados — ¡de un trago, {genre, select, f {eliminada} m {eliminado} other {fuera del juego}}!",
           "continue": "Siguiente ronda"
         },
         "victoryTitle": "¡{name} gana la mesa!",
@@ -2556,12 +2556,13 @@
         "voted": "Voto registrado — esperando a los demás…",
         "spectatorVote": "Los vivos están votando…",
         "reveal": {
-          "outTitle": "¡{name} queda eliminado!",
-          "outWord": "Su palabra era «{word}»",
-          "wasImposteur": "¡Era el IMPOSTOR!",
-          "wasCivil": "Era inocente…",
+          "outTitle": "¡{name} {genre, select, f {queda eliminada} m {queda eliminado} other {queda fuera del juego}}!",
+          "outWord": "{genre, select, f {Su palabra} m {Su palabra} other {Su palabra}} era «{word}»",
+          "wasImposteur": "¡{genre, select, f {Era la IMPOSTORA} m {Era el IMPOSTOR} other {Era el IMPOSTOR}}!",
+          "wasCivil": "{genre, select, f {Era inocente} m {Era inocente} other {Era inocente}}…",
           "sips": "{name} bebe {sips} trago{sips, plural, one {} other {s}} 🍺",
           "tieTitle": "¡Empate!",
+          "noVote": "¡Nadie ha votado!",
           "tieMsg": "Nadie sale — el impostor sigue respirando…",
           "continue": "Siguiente ronda",
           "seeResult": "Ver el veredicto"
@@ -2572,8 +2573,8 @@
           "civilDrinks": "El impostor termina su copa 🍻",
           "imposteurDrinks": "Los civiles beben: 3 tragos cada uno 🍺",
           "fullReveal": "Las palabras eran…",
-          "teamCivil": "Civil",
-          "teamImposteur": "Impostor",
+          "teamCivil": "{genre, select, f {Civil} m {Civil} other {Civil}}",
+          "teamImposteur": "{genre, select, f {Impostora} m {Impostor} other {Impostor}}",
           "replay": "Jugar de nuevo",
           "rematchWaiting": "Esperando a los demás ({count}/{total})",
           "backToMenu": "Volver al menú"
@@ -2584,6 +2585,98 @@
         "countdown": {
           "title": "¡Preparaos!",
           "hint": "Memoriza tu palabra secreta — llegan las pistas…"
+        },
+        "feedAria": "Hilo de la conversación",
+        "accusedYou": "⚡ ¡Defiéndete!",
+        "speakAccuse": "Acusar",
+        "speakDefend": "Defenderme",
+        "speakPickAccuse": "¿A quién acusas?",
+        "speakCancel": "Cancelar",
+        "speechLeft": "Intervenciones restantes: {n}/{max}",
+        "botSay": {
+          "suspect": "{name}, tu «{clue}» no encaja con mi palabra 🤨",
+          "suspect_2": "¿«{clue}»? En serio, {name}… esto huele a impostor.",
+          "suspect_3": "{name} dijo «{clue}»… yo no veo la relación 🤔",
+          "defend": "¡¿Qué?! {name}, mi pista encaja perfectamente, ¡reléela!",
+          "defend_2": "{name}, {target, select, f {qué prisa tienes} m {qué prisa tienes} other {cuánta prisa}} por acusarme… ¿qué escondes?",
+          "defend_3": "¿Yo? Mi pista iba clavada con las demás, {name}.",
+          "ally": "{name}, tu «{clue}» va bien con mi palabra 🤝",
+          "ally_2": "«{clue}», ¡yo también lo pensé! {name}, estamos en sintonía 👌",
+          "ally_3": "¡Buena, {name}! «{clue}» me dice mucho 👍",
+          "rally": "¡Bien visto! {name} con su «{clue}», a mí también me chirría 👀",
+          "rally_2": "Confirmo, «{clue}» no encaja: {target, select, f {{name} está pillada} m {{name} está pillado} other {{name} se delata}}.",
+          "rally_3": "{speaker, select, f {No soy la única que duda} m {No soy el único que duda} other {Somos varios los que dudamos}} de «{clue}», {name} 🧐",
+          "doubt": "{speaker, select, f {No estoy segura} m {No estoy seguro} other {No tan rápido}} con {name}, su pista se sostiene.",
+          "doubt_2": "Calma, no echamos a {name} por una pista algo rara.",
+          "doubt_3": "Mmm, {name} me parece legal… ¿buscamos en otro lado?",
+          "ask": "{name}, ¿y tú, a quién votas?",
+          "ask_2": "{speaker, select, f {Estoy un poco perdida} m {Estoy un poco perdido} other {Ya no sé muy bien}}, {name}, ¿qué pista te chirrió?",
+          "ask_3": "A ver {name}, ¿quién es tu impostor?",
+          "intent": "Personalmente, voto a {name}.",
+          "intent_2": "Mi voto va para {name} 🗳️",
+          "intent_3": "{name}, tu pista no me convence: voto contra ti.",
+          "toldYou": "¡Lo dije! {name} y su pista, eso sonaba raro.",
+          "toldYou_2": "{target, select, f {¡{name}, desenmascarada!} m {¡{name}, desenmascarado!} other {¡Bingo con {name}!}} Su pista ya me olía mal.",
+          "toldYou_3": "¡Ahí está! {speaker, select, f {Estaba segura} m {Estaba seguro} other {Lo sabía}}, {name} tenía la otra palabra 😎",
+          "wrong": "Bueno… {speaker, select, f {me equivoqué} m {me equivoqué} other {la pifié}} con {name}.",
+          "wrong_2": "Uy, {target, select, f {{name} era inocente} m {{name} era inocente} other {{name} no tenía nada que ver}}… {speaker, select, f {perdón} m {perdón} other {mea culpa}} 🙈",
+          "wrong_3": "Fallé con {name}… leí mal su pista."
+        },
+        "botSayTrait": {
+          "prudent": {
+            "suspect": "Puedo equivocarme, pero «{clue}»… {name}, tengo una duda.",
+            "suspect_2": "Mmm, «{clue}»… no digo que seas tú, {name}.",
+            "suspect_3": "{speaker, select, f {No estoy segura} m {No estoy seguro} other {Nada es seguro}}, pero {name} con «{clue}»… me escama.",
+            "defend": "Despacio, {name}… mi pista encaja, te lo aseguro.",
+            "defend_2": "{speaker, select, f {Estoy tan perdida como tú} m {Estoy tan perdido como tú} other {Dudo tanto como tú}}, {name}, pero mi pista se sostiene.",
+            "defend_3": "{target, select, f {¿Estás segura, {name}?} m {¿Estás seguro, {name}?} other {¿Lo has pensado bien, {name}?}} Mi pista fue honesta."
+          },
+          "farceur": {
+            "suspect": "¿«{clue}»? {name}, ¿eso lo sacaste de un sombrero? 🎩",
+            "suspect_2": "{name}, ¿«{clue}»? ¿Qué describes, la luna? 😂",
+            "suspect_3": "{speaker, select, f {¿Estoy loca} m {¿Estoy loco} other {¿Estoy soñando}} o {name} ha soltado «{clue}»? 😄",
+            "defend": "Si el impostor soy yo, {name}, {speaker, select, f {nadie me avisó} m {nadie me avisó} other {nadie me dijo nada}} 😅",
+            "defend_2": "Espera {name}, {target, select, f {¿lo dices en serio} m {¿lo dices en serio} other {¿estás de broma}}? ¡Mi pista es arte!",
+            "defend_3": "¿Yo, el impostor? {name}, si ni siquiera tengo nivel 🤪"
+          },
+          "suiveur": {
+            "suspect": "Si «{clue}» os chirría, a mí también, {name}.",
+            "suspect_2": "{name}, «{clue}»… {speaker, select, f {no soy la única que duda} m {no soy el único que duda} other {somos varios los que dudamos}}, ¿no?",
+            "suspect_3": "Si votamos a {name}, ¡me apunto! «{clue}» no está claro.",
+            "defend": "No, no, {name}, ¡yo hice como todo el mundo! 🐑",
+            "defend_2": "{name}, pregunta a los demás: ¡mi pista encajaba con las suyas!",
+            "defend_3": "{name}, {target, select, f {qué cara tienes} m {qué cara tienes} other {vaya morro}}… los demás sí me creen."
+          },
+          "agressif": {
+            "suspect": "{name}, tu «{clue}» sale de la nada. ¡Confiesa!",
+            "suspect_2": "{target, select, f {{name} es una mentirosa} m {{name} es un mentiroso} other {{name} miente}}: ¡«{clue}» no engaña a nadie!",
+            "suspect_3": "{speaker, select, f {Dispuesta a apostar} m {Dispuesto a apostar} other {Apuesto fuerte}}: con «{clue}», ¡{name} es el impostor!",
+            "defend": "¿Me acusas, {name}? ¡Relee tu pista primero!",
+            "defend_2": "{name}, {target, select, f {mira quién habla} m {mira quién habla} other {habla por ti}}, ¡tu pista era peor!",
+            "defend_3": "¿Yo? ¿Con mi pista de hierro? {name}, ¡tú intentas cubrirte!"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
         }
       },
       "tutorial": {
@@ -2605,7 +2698,7 @@
       "about": {
         "p1": "El juego saca una pareja de palabras cercanas, playa y piscina, café y té. La mayoría de la mesa recibe una de ellas en su móvil; el impostor, o los impostores, reciben la otra. La gran maldad del juego: nadie sabe en qué bando está. Ves tu palabra y punto, y ese «sol» que todos describen puede ser el tuyo… o no.",
         "p2": "Por turnos, cada uno escribe una pista corta en 45 segundos; tu propia palabra se rechaza. Luego se vota en secreto al jugador más sospechoso, 60 segundos. El eliminado sale con su palabra y su bando al descubierto; en caso de empate nadie sale y los supervivientes repiten. El pueblo gana cuando cae el último impostor; los impostores ganan con tres supervivientes, o en cuanto dejan de ser minoría.",
-        "p3": "La duda de los demás también es la tuya: una pista demasiado precisa te delata si eres el intruso, una demasiado vaga te hace parecer culpable. Dos impostores a partir de siete jugadores, hasta tres. En modo aperitivo, un inocente eliminado por error bebe tres tragos. Las palabras existen en cuatro idiomas; los bots votan al azar, perfectos para aprender."
+        "p3": "La duda de los demás también es la tuya: una pista demasiado precisa te delata si eres el intruso, una demasiado vaga te hace parecer culpable. Dos impostores a partir de siete jugadores, hasta tres. En modo aperitivo, un inocente eliminado por error bebe tres tragos. Las palabras existen en cuatro idiomas. En solitario, juegas en una mesa de cinco con cuatro bots: cada uno da una pista de verdad sacada de su palabra y luego vota contra quien dio la pista que no encaja, sin conocer su bando mejor que tú."
       }
     },
     "bluff": {
@@ -2705,7 +2798,7 @@
           "seeResult": "Ver el resultado",
           "continue": "Siguiente ronda",
           "outcome": {
-            "spyCaught": "¡{name} era el espía — descubierto!",
+            "spyCaught": "¡{genre, select, f {{name} era la espía — descubierta} m {{name} era el espía — descubierto} other {Se cae la máscara: {name} era el espía}}!",
             "accusationFailed": "Objetivo equivocado… ¡el espía escapa!",
             "spyGuessedRight": "¡{name} adivinó el lugar!",
             "spyGuessedWrong": "¡Respuesta equivocada del espía!",
@@ -2775,7 +2868,7 @@
         "foundButton": "¡ACERTADO!",
         "tabooButton": "¡TABÚ!",
         "teammateHint": "{name} está describiendo una palabra en voz alta — ¡pulsa en cuanto tu equipo acierte!",
-        "opponentHint": "Escucha bien: ¡si {name} dice una palabra prohibida, denúncialo!",
+        "opponentHint": "Escucha bien: ¡si {name} dice una palabra prohibida, {genre, select, f {denúnciala} m {denúncialo} other {denuncia el tabú}}!",
         "waitingReturn": "Esperando el regreso de {name} — bot en {seconds}s",
         "roundEnd": {
           "title": "Resumen de la ronda",
@@ -3826,9 +3919,9 @@
         "revealHint": "La noche cae en unos segundos…",
         "mayorPrompt": "🎖️ ¿A quién elegís alcalde? Su voto contará doble en el linchamiento.",
         "mayorVoted": "Voto registrado — esperando a los demás…",
-        "mayorBadge": "Alcalde — su voto cuenta doble en el linchamiento",
+        "mayorBadge": "{genre, select, f {Alcaldesa} m {Alcalde} other {Alcaldía}} — su voto cuenta doble en el linchamiento",
         "youAreMayor": "🎖️ ¡Eres el alcalde! Tu voto cuenta doble en el linchamiento.",
-        "mayorBanner": "🎖️ {name} es el alcalde — su voto cuenta doble en el linchamiento.",
+        "mayorBanner": "🎖️ {name} {genre, select, f {es la alcaldesa} m {es el alcalde} other {ocupa la alcaldía}} — su voto cuenta doble en el linchamiento.",
         "wolfChatTitle": "Chat de los lobos (privado)",
         "seerPrompt": "🔮 ¿A quién sondeas esta noche?",
         "seerDone": "Visión recibida — el pueblo aún duerme…",
@@ -3846,10 +3939,10 @@
         "witchKill": "Poción de muerte…",
         "witchNone": "No hacer nada",
         "dawnNobody": "¡Nadie murió esta noche! 🎉",
-        "dawnDeath": "💀 {name} ha muerto — era {role} (+3 🍺)",
-        "dawnDeathSoft": "💀 {name} ha muerto — era {role}",
+        "dawnDeath": "💀 {name} {genre, select, f {ha muerto} m {ha muerto} other {ha muerto}} — era {role} (+3 🍺)",
+        "dawnDeathSoft": "💀 {name} {genre, select, f {ha muerto} m {ha muerto} other {ha muerto}} — era {role}",
         "hunterPrompt": "🏹 Último aliento: ¡llévate a alguien!",
-        "hunterWaiting": "{name} carga su rifle…",
+        "hunterWaiting": "{name} {genre, select, f {carga su rifle} m {carga su rifle} other {carga su rifle}}…",
         "debatePrompt": "🗣️ Debate: ¿quién es el lobo?",
         "debateHint": "Acusa, defiéndete, haz equipo — o por voz.",
         "speakAccuse": "Acusar",
@@ -3868,7 +3961,7 @@
         "revotePrompt": "¡Empate! Desempatad entre los igualados.",
         "voted": "Voto sellado — esperando a los demás…",
         "spectatorVote": "Los vivos están votando…",
-        "voteBanner": "⚖️ {name} fue linchado — era {role}",
+        "voteBanner": "⚖️ {genre, select, f {{name} fue linchada} m {{name} fue linchado} other {El pueblo linchó a {name}}} — era {role}",
         "voteTieBanner": "⚖️ Empate — nadie fue expulsado",
         "village": "El pueblo ({alive}/{total} vivos)",
         "victory": {
@@ -3972,11 +4065,11 @@
         },
         "guardPrompt": "¿A quién proteges de los lobos esta noche?",
         "guardDone": "Esta noche velas por {name}. 🛡️",
-        "guardForbidden": "Prohibido: {name} (ya protegido la noche pasada).",
+        "guardForbidden": "Prohibido: {name} ({genre, select, f {ya protegida} m {ya protegido} other {ya bajo tu protección}} la noche pasada).",
         "ravenPrompt": "¿A quién marcas con tu pluma negra?",
         "ravenDone": "Tu marca pesa sobre {name}. 🐦‍⬛",
-        "ravenMarkBanner": "🐦‍⬛ ¡{name} lleva la marca del Cuervo: +2 votos en su contra hoy!",
-        "ravenMarkBadge": "Marcado por el Cuervo (+2 votos)",
+        "ravenMarkBanner": "🐦‍⬛ ¡{name} lleva la marca del Cuervo: +2 votos {genre, select, f {en su contra} m {en su contra} other {en su contra}} hoy!",
+        "ravenMarkBadge": "{genre, select, f {Marcada por el Cuervo} m {Marcado por el Cuervo} other {Marca del Cuervo}} (+2 votos)",
         "elderAttackedBanner": "⏳ Los lobos te atacaron esta noche.",
         "dayChatTitle": "Chat del pueblo",
         "ravenRevoteNotice": "La marca del Cuervo (+2 votos) ya no cuenta en la segunda votación.",
@@ -4324,9 +4417,9 @@
         "leadHint": "Tú abres: simple, pareja, trío o póker — a elegir.",
         "out": "¡Has terminado! Posición {rank} — mira a los demás sudar.",
         "roles": {
-          "president": "Presidente",
+          "president": "{genre, select, f {Presidenta} m {Presidente} other {Presidente}}",
           "trou": "Trou",
-          "vicePresident": "Vicepresidente",
+          "vicePresident": "{genre, select, f {Vicepresidenta} m {Vicepresidente} other {Vicepresidente}}",
           "viceTrou": "Vice-Trou"
         },
         "exchangeInfo": "Intercambios automáticos: el Trou da sus 2 mejores cartas al Presidente (que devuelve sus 2 peores), el Vice-Trou da su mejor carta al Vicepresidente (que devuelve su peor).",
@@ -4338,7 +4431,7 @@
         "waitingReturn": "Esperando a que vuelva {name} — bot en {seconds}s",
         "finished": {
           "title": "¡Fin de la partida!",
-          "subtitle": "{name} es Presidente — inclinaos.",
+          "subtitle": "{name} {genre, select, f {es Presidenta} m {es Presidente} other {ocupa la presidencia}} — inclinaos.",
           "replay": "Jugar otra vez",
           "rematchWaiting": "Revancha {count}/{total}…",
           "backToMenu": "Volver al menú"

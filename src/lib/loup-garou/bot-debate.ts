@@ -1,6 +1,23 @@
-import { botTraitsFor, type BotTraits } from '@/lib/online/bot-personas'
 import {
-  lgAlive,
+  ASK_MAX_PER_ROUND,
+  ASK_MIN_REMAINING_MS,
+  REACTIONS_PER_HUMAN_SPEECH,
+  REMARKS_MAX_PER_ROUND,
+  SECOND_REACTION_MIN_AUDACE as SPEECH_SECOND_REACTION_MIN_AUDACE,
+  STANDS_BY_MIN_LOYAUTE,
+  askOf,
+  botsByTempo,
+  lastHumanSpeech,
+  pick,
+  reactionBudget,
+  reactionDare,
+  readSpeechTable,
+  remarkOf,
+  standsBy as speechStandsBy,
+  type SpeechMove,
+  type SpeechTable,
+} from '@/lib/online/bot-speech'
+import {
   lgBotEventRemark,
   lgMostSuspect,
   lgSuspicion,
@@ -39,16 +56,19 @@ import {
  * PUR : `rand` injecté (même graine ⇒ même séquence), aucun curseur dans
  * l'état — l'avancement se déduit de `debateSpeech` + `debateSkips`, une
  * partie en cours reprend au bon point après un déploiement.
+ *
+ * La table, les compteurs, le dé des réactions, la remarque et
+ * l'interpellation viennent du socle commun aux jeux à débat
+ * (src/lib/online/bot-speech.ts) ; restent ici l'ordre des coups et ce qui
+ * n'appartient qu'au Loup-Garou (la voyante, le maire, le skip groupé).
  */
 
 /** Temps de débat sous lequel on n'interpelle plus un humain silencieux. */
-export const LG_ASK_MIN_REMAINING_MS = 20_000
+export const LG_ASK_MIN_REMAINING_MS = ASK_MIN_REMAINING_MS
 /** Interpellations max par manche (deux en 60 s, ce serait du harcèlement). */
-export const LG_ASK_MAX_PER_ROUND = 2
+export const LG_ASK_MAX_PER_ROUND = ASK_MAX_PER_ROUND
 /** Remarques d'ouverture (« je l'avais dit », « je me suis planté ») max par manche. */
-export const LG_REMARKS_MAX_PER_ROUND = 2
-/** Paroles de bots max en réaction à UNE parole humaine (l'accusé + un autre). */
-const REACTIONS_PER_HUMAN_SPEECH = 2
+export const LG_REMARKS_MAX_PER_ROUND = REMARKS_MAX_PER_ROUND
 /**
  * Part d'alliance à l'ouverture : 15 % pour un traître, 45 % pour un fidèle
  * (0,15 + 0,3 × loyauté — un converti à 0,5 retrouve les 30 % historiques).
@@ -56,99 +76,43 @@ const REACTIONS_PER_HUMAN_SPEECH = 2
 export const OPENING_ALLY_SHARE_MIN = 0.15
 export const OPENING_ALLY_SHARE_SPAN = 0.3
 /** Au-delà de cette loyauté (strict), un bot n'abonde jamais contre l'allié qu'il s'est choisi. */
-export const STANDS_BY_ALLY_MIN_LOYAUTE = 0.5
+export const STANDS_BY_ALLY_MIN_LOYAUTE = STANDS_BY_MIN_LOYAUTE
 /** Sous cette audace, un bot n'ose pas accuser le maire. */
 const MAYOR_ACCUSE_MIN_AUDACE = 0.4
 /** Sous cette audace, un bot qui a déjà répondu à un humain ne revient jamais à la charge. */
-export const SECOND_REACTION_MIN_AUDACE = 0.4
+export const SECOND_REACTION_MIN_AUDACE = SPEECH_SECOND_REACTION_MIN_AUDACE
 
 type Kind = LGDebateSpeech['kind']
 
 const isRemark = (kind: Kind) => (LG_REMARK_KINDS as readonly string[]).includes(kind)
+const isAsk = (kind: Kind) => kind === 'ask'
 
-type Table = {
-  state: LGState
-  /** Paroles de la manche courante, dans l'ordre du fil. */
-  speech: LGDebateSpeech[]
-  byId: Map<string, LGPlayer>
-  alive: LGPlayer[]
-  bots: LGPlayer[]
-  humans: LGPlayer[]
-  traits: (b: LGPlayer) => BotTraits
-  count: (id: string) => number
-  /** A pris la parole ce round, remarque d'ouverture exclue. */
-  opened: (id: string) => boolean
-  /**
-   * A déjà répondu à un humain ce round : deux paroles hors remarque et
-   * interpellation, soit son ouverture et une réaction — ou, accusé avant
-   * d'ouvrir, deux réactions.
-   */
-  reacted: (id: string) => boolean
-  spokeAfter: (id: string, index: number) => boolean
-  /** Paroles max de ce bot dans la manche : son bavardage, borné par le plafond moteur. */
-  cap: (id: string) => number
-  underCap: (id: string) => boolean
-  /** Le bot s'est allié à `targetId` ce round, de sa propre voix. */
-  alliedTo: (id: string, targetId: string) => boolean
-}
+type Table = SpeechTable<Kind, LGPlayer> & { state: LGState }
 
 function speak(playerId: string, kind: Kind, targetId: string | null): LGAction {
   return { type: 'DEBATE_SPEAK', playerId, kind, targetId }
 }
 
-function pick<T>(arr: readonly T[], rand: () => number): T {
-  return arr[Math.min(arr.length - 1, Math.floor(rand() * arr.length))]
-}
-
-/** Bots triés par tempo croissant, puis ordre de table. */
-function botsByTempo(table: Table): LGPlayer[] {
-  return table.bots
-    .map((b, i) => ({ b, i, tempo: table.traits(b).tempoMinMs }))
-    .sort((x, y) => x.tempo - y.tempo || x.i - y.i)
-    .map((x) => x.b)
+function speakMove(move: SpeechMove<Kind>): LGAction {
+  return speak(move.playerId, move.kind, move.targetId)
 }
 
 function readTable(state: LGState): Table {
-  const alive = lgAlive(state)
-  const speech = state.debateSpeech.filter((sp) => sp.round === state.round)
-  const byId = new Map(state.players.map((p) => [p.id, p]))
-  const traitsCache = new Map<string, BotTraits>()
-  const traits = (b: LGPlayer): BotTraits => {
-    let t = traitsCache.get(b.id)
-    if (!t) {
-      t = botTraitsFor(b.name)
-      traitsCache.set(b.id, t)
-    }
-    return t
-  }
-  const count = (id: string) => speech.filter((sp) => sp.playerId === id).length
-  const cap = (id: string) => {
-    const p = byId.get(id)
-    return p ? Math.min(LG_SPEECH_CAP, traits(p).bavardage) : LG_SPEECH_CAP
-  }
   return {
+    ...readSpeechTable({
+      players: state.players,
+      speech: state.debateSpeech,
+      round: state.round,
+      engineCap: LG_SPEECH_CAP,
+      isRemark,
+      isAsk,
+    }),
     state,
-    speech,
-    byId,
-    alive,
-    bots: alive.filter((p) => p.isBot),
-    humans: alive.filter((p) => !p.isBot),
-    traits,
-    count,
-    opened: (id) => speech.some((sp) => sp.playerId === id && !isRemark(sp.kind)),
-    reacted: (id) =>
-      speech.filter((sp) => sp.playerId === id && !isRemark(sp.kind) && sp.kind !== 'ask').length >= 2,
-    spokeAfter: (id, index) => speech.slice(index + 1).some((sp) => sp.playerId === id),
-    cap,
-    underCap: (id) => count(id) < cap(id),
-    alliedTo: (id, targetId) =>
-      speech.some((sp) => sp.playerId === id && sp.kind === 'ally' && sp.targetId === targetId),
   }
 }
 
-/** Un bot fidèle n'abonde ni ne contre-accuse l'allié qu'il s'est choisi dans la manche. */
 function standsBy(table: Table, bot: LGPlayer, targetId: string): boolean {
-  return table.traits(bot).loyaute > STANDS_BY_ALLY_MIN_LOYAUTE && table.alliedTo(bot.id, targetId)
+  return speechStandsBy(table, bot, targetId, STANDS_BY_ALLY_MIN_LOYAUTE)
 }
 
 /** Ce que la voyante bot sait de `targetId` — null si elle ne l'a pas sondé (ou n'est pas voyante). */
@@ -189,8 +153,10 @@ export function lgBotDebateMove(
   if (majoritySkipped) return null
 
   // (b0) Un mot sur la manche écoulée avant d'ouvrir.
-  const remark = remarkOf(table)
-  if (remark) return [remark]
+  const remark = remarkOf(table, (bot) => lgBotEventRemark(state, bot.id), {
+    maxPerRound: LG_REMARKS_MAX_PER_ROUND,
+  })
+  if (remark) return [speakMove(remark)]
 
   // (b) OUVERTURE du prochain bot muet, par tempo croissant.
   const silent = botsByTempo(table).filter((b) => !table.opened(b.id) && table.underCap(b.id))
@@ -200,9 +166,14 @@ export function lgBotDebateMove(
   }
   if (silent.length > 0) return null
 
-  // (c) INTERPELLATION d'un humain silencieux par le bot le plus audacieux.
-  const ask = askOf(table, now)
-  if (ask) return [ask]
+  // (c) INTERPELLATION d'un humain muet (ni parole ni skip) par le bot le plus
+  // audacieux à qui il reste une parole.
+  const ask = askOf(table, now, state.phaseEndsAt, {
+    minRemainingMs: LG_ASK_MIN_REMAINING_MS,
+    maxPerRound: LG_ASK_MAX_PER_ROUND,
+    isSilent: (h) => table.count(h.id) === 0 && !state.debateSkips.includes(h.id),
+  })
+  if (ask) return [speak(ask.playerId, 'ask', ask.targetId)]
 
   // (d) Tous ont parlé, rien n'attend : les bots passent au vote ensemble.
   return skipAll()
@@ -221,41 +192,18 @@ export function lgBotDebateMove(
  * sauf l'accusé lui-même, qui répond tant que le plafond moteur le permet.
  */
 function reactionOf(table: Table, rand: () => number): LGAction | null {
-  const { speech, byId, traits } = table
-  let index = -1
-  for (let i = speech.length - 1; i >= 0; i -= 1) {
-    const author = byId.get(speech[i].playerId)
-    if (author && !author.isBot) {
-      index = i
-      break
-    }
-  }
-  if (index < 0) return null
-  const human = speech[index]
-  const author = byId.get(human.playerId)
-  if (!author) return null
-  const answers = speech
-    .slice(index + 1)
-    .filter((sp) => byId.get(sp.playerId)?.isBot && !isRemark(sp.kind))
-  if (answers.length >= REACTIONS_PER_HUMAN_SPEECH) return null
+  const { byId, traits } = table
+  const last = lastHumanSpeech(table)
+  if (!last) return null
+  const { index, speech: human, author } = last
+  const { answers, left } = reactionBudget(table, index, REACTIONS_PER_HUMAN_SPEECH)
+  if (left <= 0) return null
   const authorId = author.alive ? author.id : null
 
-  // Rien n'est écrit dans l'état quand un bot engagé décline : sans ce garde,
-  // il rejouerait le dé au tick suivant tant que la parole humaine n'a pas ses
-  // deux réponses. Ordre de consultation d'un tick : l'accusé, puis les autres
-  // par tempo — ceux consultés avant le premier répondant se sont tus.
+  // L'accusé est consulté en premier, puis les autres par tempo ; un engagé
+  // qui a décliné ne rejoue pas son dé au tick suivant (reactionDare).
   const accusedId = human.kind === 'suspect' ? human.targetId : null
-  const order = botsByTempo(table)
-  const rank = (id: string) => (id === accusedId ? -1 : order.findIndex((b) => b.id === id))
-  const firstAnswerer = answers[0]?.playerId
-  const consultedBefore = (id: string) =>
-    firstAnswerer !== undefined && firstAnswerer !== accusedId && rank(id) < rank(firstAnswerer)
-  const dares = (b: LGPlayer): boolean => {
-    if (!table.reacted(b.id)) return true
-    if (consultedBefore(b.id)) return false
-    const { audace } = traits(b)
-    return audace >= SECOND_REACTION_MIN_AUDACE && rand() < audace
-  }
+  const dares = reactionDare(table, { answers, accusedId, rand, minAudace: SECOND_REACTION_MIN_AUDACE })
 
   if (human.kind === 'suspect' && human.targetId) {
     const accused = byId.get(human.targetId)
@@ -312,24 +260,6 @@ function reactionOf(table: Table, rand: () => number): LGAction | null {
 }
 
 /**
- * Remarque d'ouverture sur la manche écoulée (« je l'avais dit pour X »,
- * « je me suis planté sur X ») : un bot par tick, dans l'ordre de table, avant
- * sa propre ouverture, au plus LG_REMARKS_MAX_PER_ROUND par manche — et
- * seulement s'il lui reste ensuite une parole pour ouvrir.
- */
-function remarkOf(table: Table): LGAction | null {
-  const remarks = table.speech.filter((sp) => isRemark(sp.kind))
-  if (remarks.length >= LG_REMARKS_MAX_PER_ROUND) return null
-  for (const bot of table.bots) {
-    if (table.opened(bot.id) || table.count(bot.id) + 1 >= table.cap(bot.id)) continue
-    if (remarks.some((sp) => sp.playerId === bot.id)) continue
-    const remark = lgBotEventRemark(table.state, bot.id)
-    if (remark) return speak(bot.id, remark.kind, remark.targetId)
-  }
-  return null
-}
-
-/**
  * Ouverture : se défendre s'il est accusé ; la voyante doute d'une accusation
  * visant un villageois qu'elle a vu et accuse d'office un loup vu ; sinon
  * accuser le plus suspect du score public pondéré par son caractère — les
@@ -369,32 +299,4 @@ function openingOf(table: Table, bot: LGPlayer, rand: () => number): LGAction | 
     return speak(bot.id, 'ally', pick(calm.length > 0 ? calm : pool, rand).id)
   }
   return speak(bot.id, 'suspect', pick(tied, rand))
-}
-
-/**
- * « Et toi, tu votes qui ? » : une fois par humain muet (ni parole ni skip),
- * tant qu'il reste du temps pour répondre, par le bot le plus audacieux à qui
- * il reste une parole — l'interpellation peut être sa dernière (sinon une
- * table solo sans bavard ne s'adressait jamais à l'humain) ; un taiseux qui
- * a déjà ouvert n'en a plus, et jamais deux fois le même bot dans la manche.
- */
-function askOf(table: Table, now: number): LGAction | null {
-  const { state, speech, humans, bots, traits, underCap } = table
-  if (humans.length === 0) return null
-  if (state.phaseEndsAt === null || state.phaseEndsAt - now <= LG_ASK_MIN_REMAINING_MS) return null
-  if (speech.filter((sp) => sp.kind === 'ask').length >= LG_ASK_MAX_PER_ROUND) return null
-  const silentHuman = humans.find(
-    (h) =>
-      table.count(h.id) === 0 &&
-      !state.debateSkips.includes(h.id) &&
-      !speech.some((sp) => sp.kind === 'ask' && sp.targetId === h.id)
-  )
-  if (!silentHuman) return null
-  let asker: LGPlayer | null = null
-  for (const bot of bots) {
-    if (!underCap(bot.id)) continue
-    if (speech.some((sp) => sp.kind === 'ask' && sp.playerId === bot.id)) continue
-    if (!asker || traits(bot).audace > traits(asker).audace) asker = bot
-  }
-  return asker ? speak(asker.id, 'ask', silentHuman.id) : null
 }

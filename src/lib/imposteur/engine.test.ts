@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isEmptyClueText,
   createImposteurState,
   currentImposteurActorId,
   imposteurAlive,
@@ -18,6 +19,9 @@ import {
   IMPOSTEUR_REVEAL_MIN_MS,
   IMPOSTEUR_SIPS_PER_ALIVE,
   IMPOSTEUR_VOTE_MS,
+  IMPOSTEUR_SPEECH_CAP,
+  imposteurCitedClue,
+  type ImposteurSpeechKind,
   type ImposteurState,
   type ImposteurWordPair,
 } from './engine'
@@ -329,6 +333,27 @@ describe('révélation, gorgées et victoires', () => {
     expect(next.lastReveal).toBeNull()
   })
 
+  it('previousReveal : la révélation de la manche d’avant survit à l’ouverture de la suivante', () => {
+    const s0 = make(5)
+    expect(s0.previousReveal).toBeNull()
+    const civil = s0.players.find((p) => p.team === 'civil')!
+    const s1 = eliminate(s0, civil.id)
+    const reveal1 = s1.lastReveal
+    expect(s1.previousReveal).toBeNull()
+    const r2 = reduceImposteur(s1, { type: 'CONTINUE', playerId: civil.id, now: readAt(s1) })
+    expect(r2.round).toBe(2)
+    expect(r2.lastReveal).toBeNull()
+    expect(r2.previousReveal).toEqual(reveal1)
+    // Manche 2 sans un seul vote : sa révélation (vide) remplace la précédente.
+    let s2 = clueAll(r2)
+    s2 = reduceImposteur(s2, { type: 'ADVANCE', claimedKey: phaseKey(s2), now: s2.phaseEndsAt! })
+    const reveal2 = s2.lastReveal
+    expect(reveal2).toMatchObject({ round: 2, eliminatedId: null })
+    const r3 = reduceImposteur(s2, { type: 'ADVANCE', claimedKey: phaseKey(s2), now: s2.phaseEndsAt! })
+    expect(r3.round).toBe(3)
+    expect(r3.previousReveal).toEqual(reveal2)
+  })
+
   it('imposteur éliminé : 2 × survivants gorgées, victoire du village', () => {
     const s0 = make(4)
     const imposteur = s0.players.find((p) => p.team === 'imposteur')!
@@ -341,6 +366,35 @@ describe('révélation, gorgées et victoires', () => {
     const done = reduceImposteur(s, { type: 'CONTINUE', playerId: imposteur.id, now: readAt(s) })
     expect(done.phase).toBe('finished')
     expect(done.winnerTeam).toBe('civil')
+  })
+
+  it('un bot éliminé ne boit rien, civil comme imposteur ; un humain garde ses gorgées', () => {
+    const asBot = (s: ImposteurState, id: string): ImposteurState => ({
+      ...s,
+      players: s.players.map((p) => (p.id === id ? { ...p, isBot: true } : p)),
+    })
+    const s0 = make(5)
+    const civil = s0.players.find((p) => p.team === 'civil')!
+    const imposteur = s0.players.find((p) => p.team === 'imposteur')!
+
+    const botCivil = eliminate(asBot(s0, civil.id), civil.id).lastReveal
+    expect(botCivil).toMatchObject({ eliminatedId: civil.id, team: 'civil', word: civil.word, sips: 0 })
+    const botImposteur = eliminate(asBot(s0, imposteur.id), imposteur.id).lastReveal
+    expect(botImposteur).toMatchObject({ eliminatedId: imposteur.id, team: 'imposteur', sips: 0 })
+
+    // Même table, mêmes votes, sièges humains : barème inchangé.
+    expect(eliminate(s0, civil.id).lastReveal?.sips).toBe(IMPOSTEUR_SIPS_CIVIL_OUT)
+    expect(eliminate(s0, imposteur.id).lastReveal?.sips).toBe(IMPOSTEUR_SIPS_PER_ALIVE * 4)
+    // Un bot À TABLE ne change rien aux gorgées d'un humain éliminé.
+    expect(eliminate(asBot(s0, imposteur.id), civil.id).lastReveal?.sips).toBe(IMPOSTEUR_SIPS_CIVIL_OUT)
+  })
+
+  it('zéro voix exprimée : ni égalité ni éliminé (l’écran dit « personne n’a voté »)', () => {
+    const s = clueAll(make(4))
+    const after = reduceImposteur(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt! })
+    expect(after.phase).toBe('reveal')
+    expect(after.lastReveal).toMatchObject({ tally: {}, eliminatedId: null, tie: false, sips: 0 })
+    expect(imposteurAlive(after)).toHaveLength(4)
   })
 
   it('table de 3 : la partie démarre (pas de victoire immédiate), imposteur gagne à 2', () => {
@@ -442,5 +496,194 @@ describe('vues anti-triche', () => {
 
     const tvBefore = toImposteurSpectatorView(s0)
     expect(tvBefore.players.every((p) => p.word === '' && p.team === null)).toBe(true)
+  })
+
+  it('previousReveal passe aux vues (public) sans rien faire fuiter', () => {
+    const s0 = make(5)
+    const civil = s0.players.find((p) => p.team === 'civil')!
+    let s = clueAll(s0)
+    for (const p of imposteurAlive(s)) {
+      if (s.phase !== 'vote') break
+      const target = p.id === civil.id ? imposteurAlive(s).find((q) => q.id !== p.id)!.id : civil.id
+      s = reduceImposteur(s, { type: 'VOTE', playerId: p.id, targetId: target, now: T0 })
+    }
+    const next = reduceImposteur(s, { type: 'CONTINUE', playerId: civil.id, now: readAt(s) })
+    expect(next.previousReveal?.eliminatedId).toBe(civil.id)
+    for (const p of imposteurAlive(next)) {
+      const view = toImposteurClientView(next, p.id)
+      expect(view.previousReveal).toEqual(next.previousReveal)
+      const json = JSON.stringify(view)
+      expect(json).not.toContain('rngState')
+      expect(json).not.toContain('pendingVotes')
+      expect(json).not.toContain('imposteur"')
+    }
+    expect(toImposteurSpectatorView(next).previousReveal).toEqual(next.previousReveal)
+  })
+
+  it('lang dans la vue ; l’AUTRE mot de la paire absent pour un vivant, les deux absents en TV', () => {
+    const raw = createImposteurState(FOUR, [{ a: 'plage', b: 'piscine' }], 'seed', T0, undefined, 'es')
+    expect(raw.lang).toBe('es')
+    expect(createImposteurState(FOUR, PAIRS, 'seed', T0).lang).toBe('fr')
+    for (const p of raw.players) {
+      const view = toImposteurClientView(raw, p.id)
+      expect(view.lang).toBe('es')
+      const json = JSON.stringify(view)
+      const other = p.word === 'plage' ? 'piscine' : 'plage'
+      expect(json).toContain(p.word)
+      expect(json).not.toContain(other)
+      expect(json).not.toContain('rngState')
+      expect(json).not.toContain('pendingVotes')
+      expect(json).not.toContain('imposteur"')
+    }
+    const tv = JSON.stringify(toImposteurSpectatorView(raw))
+    expect(tv).not.toContain('plage')
+    expect(tv).not.toContain('piscine')
+  })
+})
+
+describe('paroles (SPEAK)', () => {
+  const speak = (s: ImposteurState, playerId: string, kind: ImposteurSpeechKind, targetId: string) =>
+    reduceImposteur(s, { type: 'SPEAK', playerId, kind, targetId })
+
+  /** Joue la manche : `outId` sort par un vote unanime, puis on ouvre la suivante. */
+  function nextRoundWithout(state: ImposteurState, outId: string): ImposteurState {
+    let s = clueAll(state)
+    for (const p of imposteurAlive(s)) {
+      if (s.phase !== 'vote') break
+      const target = p.id === outId ? imposteurAlive(s).find((q) => q.id !== outId)!.id : outId
+      s = reduceImposteur(s, { type: 'VOTE', playerId: p.id, targetId: target, now: T0 })
+    }
+    return reduceImposteur(s, { type: 'CONTINUE', playerId: imposteurAlive(s)[0].id, now: readAt(s) })
+  }
+
+  it('acceptée pendant les indices et le vote : ajoutée au fil, version +1, chrono intact', () => {
+    const s = make(5)
+    const [a, b] = s.players.map((p) => p.id)
+    const said = speak(s, a, 'suspect', b)
+    expect(said.speech).toEqual([{ playerId: a, kind: 'suspect', targetId: b, round: 1 }])
+    expect(said.version).toBe(s.version + 1)
+    expect(said.clueTurnIdx).toBe(s.clueTurnIdx)
+    expect(said.phaseEndsAt).toBe(s.phaseEndsAt)
+    expect(phaseKey(said)).toBe(phaseKey(s))
+    const vote = clueAll(s)
+    expect(vote.phase).toBe('vote')
+    expect(speak(vote, a, 'intent', b).speech).toEqual([{ playerId: a, kind: 'intent', targetId: b, round: 1 }])
+  })
+
+  it('refusée en compte à rebours, révélation et fin de partie (NOT_SPEECH_PHASE)', () => {
+    const raw = createImposteurState(FOUR, PAIRS, 'seed', T0)
+    expect(raw.phase).toBe('countdown')
+    expect(() => speak(raw, 'a', 'suspect', 'b')).toThrow('NOT_SPEECH_PHASE')
+
+    const s0 = make(4)
+    const imposteur = s0.players.find((p) => p.team === 'imposteur')!
+    let s = clueAll(s0)
+    for (const p of imposteurAlive(s)) {
+      if (s.phase !== 'vote') break
+      const target = p.id === imposteur.id ? imposteurAlive(s).find((q) => q.id !== imposteur.id)!.id : imposteur.id
+      s = reduceImposteur(s, { type: 'VOTE', playerId: p.id, targetId: target, now: T0 })
+    }
+    expect(s.phase).toBe('reveal')
+    const [x, y] = imposteurAlive(s).map((p) => p.id)
+    expect(() => speak(s, x, 'suspect', y)).toThrow('NOT_SPEECH_PHASE')
+    const done = reduceImposteur(s, { type: 'CONTINUE', playerId: x, now: readAt(s) })
+    expect(done.phase).toBe('finished')
+    expect(() => speak(done, x, 'suspect', y)).toThrow('NOT_SPEECH_PHASE')
+  })
+
+  it('un éliminé ne parle plus (ELIMINATED) ; kind inconnu (INVALID_KIND) ; joueur inconnu', () => {
+    const s0 = make(5)
+    const out = s0.players.find((p) => p.team === 'civil')!
+    const s = nextRoundWithout(s0, out.id)
+    expect(s.phase).toBe('clue')
+    const alive = imposteurAlive(s).map((p) => p.id)
+    expect(() => speak(s, out.id, 'suspect', alive[0])).toThrow('ELIMINATED')
+    expect(() => speak(s, alive[0], 'gossip' as ImposteurSpeechKind, alive[1])).toThrow('INVALID_KIND')
+    expect(() => speak(s, 'nobody', 'suspect', alive[1])).toThrow('UNKNOWN_PLAYER')
+  })
+
+  it('cible : jamais soi ni un inconnu ; un éliminé seulement pour une remarque (toldYou / wrong)', () => {
+    const s0 = make(5)
+    const out = s0.players.find((p) => p.team === 'civil')!
+    const s = nextRoundWithout(s0, out.id)
+    const [a, b] = imposteurAlive(s).map((p) => p.id)
+    expect(() => speak(s, a, 'suspect', a)).toThrow('INVALID_TARGET')
+    expect(() => speak(s, a, 'suspect', 'nobody')).toThrow('INVALID_TARGET')
+    for (const kind of ['suspect', 'defend', 'ally', 'rally', 'doubt', 'ask', 'intent'] as const) {
+      expect(() => speak(s, a, kind, out.id), kind).toThrow('INVALID_TARGET')
+    }
+    expect(speak(s, a, 'wrong', out.id).speech?.at(-1)).toEqual({ playerId: a, kind: 'wrong', targetId: out.id, round: 2 })
+    expect(speak(s, b, 'toldYou', out.id).speech?.at(-1)?.kind).toBe('toldYou')
+  })
+
+  it(`plafond de ${IMPOSTEUR_SPEECH_CAP} paroles par joueur et par manche (ALREADY_SPOKE)`, () => {
+    let s = make(5)
+    const [a, b, c] = s.players.map((p) => p.id)
+    s = speak(s, a, 'suspect', b)
+    s = speak(s, a, 'ally', c)
+    s = speak(s, a, 'doubt', b)
+    expect(() => speak(s, a, 'suspect', c)).toThrow('ALREADY_SPOKE')
+    // Les autres gardent les leurs.
+    expect(speak(s, b, 'defend', a).speech).toHaveLength(4)
+  })
+
+  it('élagage à l’ouverture de la manche : on garde celle qui s’achève, jamais plus de deux', () => {
+    const s0 = make(7, 'prune')
+    const [a, b] = s0.players.map((p) => p.id)
+    const civils = s0.players.filter((p) => p.team === 'civil' && p.id !== a && p.id !== b)
+    let s = speak(s0, a, 'suspect', b)
+    s = nextRoundWithout(s, civils[0].id)
+    expect(s.round).toBe(2)
+    expect(s.speech).toEqual([{ playerId: a, kind: 'suspect', targetId: b, round: 1 }])
+    s = speak(s, b, 'defend', a)
+    s = nextRoundWithout(s, civils[1].id)
+    expect(s.round).toBe(3)
+    expect(s.speech).toEqual([{ playerId: b, kind: 'defend', targetId: a, round: 2 }])
+  })
+
+  it('vues téléphone et TV : le fil passe, sans rngState, pendingVotes ni camp de vivant', () => {
+    let s = make(5)
+    const [a, b] = s.players.map((p) => p.id)
+    s = speak(s, a, 'suspect', b)
+    for (const view of [toImposteurClientView(s, a), toImposteurClientView(s, b), toImposteurSpectatorView(s)]) {
+      expect(view.speech).toEqual(s.speech)
+      const json = JSON.stringify(view)
+      expect(json).not.toContain('rngState')
+      expect(json).not.toContain('pendingVotes')
+      expect(json).not.toContain('imposteur"')
+    }
+  })
+
+  it('état d’avant le champ (sans speech) : on parle quand même, la manche suivante élague', () => {
+    const { speech: _speech, ...legacy } = make(5)
+    const old = legacy as ImposteurState
+    const said = speak(old, old.players[0].id, 'suspect', old.players[1].id)
+    expect(said.speech).toHaveLength(1)
+    const out = old.players.find((p) => p.team === 'civil' && p.id !== old.players[0].id)!
+    expect(nextRoundWithout(old, out.id).speech).toEqual([])
+  })
+
+  it('indice cité par une bulle : le dernier de la cible à la manche de la parole ou avant, « … » s’il n’a rien dit', () => {
+    const clues = [
+      { playerId: 'a', text: 'sable', round: 1 },
+      { playerId: 'b', text: 'chlore', round: 1 },
+      { playerId: 'a', text: 'vagues', round: 2 },
+    ]
+    expect(imposteurCitedClue(clues, 'a', 2)).toBe('vagues')
+    expect(imposteurCitedClue(clues, 'a', 1)).toBe('sable')
+    // Accusé en manche 2 avant d'avoir parlé : la bulle cite sa manche passée, pas « … ».
+    expect(imposteurCitedClue(clues, 'b', 2)).toBe('chlore')
+    expect(imposteurCitedClue(clues, 'c', 2)).toBe(IMPOSTEUR_EMPTY_CLUE)
+    expect(imposteurCitedClue(clues, null, 2)).toBe(IMPOSTEUR_EMPTY_CLUE)
+  })
+})
+
+describe('isEmptyClueText', () => {
+  it('rien que des points, quelle que soit leur forme, est un indice vide', () => {
+    for (const t of ['…', '...', ' . . . ', '..…', '.']) expect(isEmptyClueText(t)).toBe(true)
+  })
+
+  it('un vrai indice, même ponctué, ne l’est pas', () => {
+    for (const t of ['soleil', 'été...', '...plage', '', '   ']) expect(isEmptyClueText(t)).toBe(false)
   })
 })

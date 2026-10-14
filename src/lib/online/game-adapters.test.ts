@@ -9,6 +9,8 @@ import { buildTabouState, markTabouPlayerLeft } from '@/lib/tabou/server-adapter
 import type { TabouState } from '@/lib/tabou/engine'
 import { buildLGState } from '@/lib/loup-garou/server-adapter'
 import type { LGState } from '@/lib/loup-garou/engine'
+import { buildImposteurState } from '@/lib/imposteur/server-adapter'
+import { IMPOSTEUR_EMPTY_CLUE, type ImposteurState } from '@/lib/imposteur/engine'
 
 /**
  * Les bornes de joueurs vivent à DEUX endroits : le registre (vérité serveur,
@@ -144,5 +146,88 @@ describe('Loup-Garou : parole humaine au débat (debate-speak)', () => {
       error: 'INVALID_TARGET',
       status: 403,
     })
+  })
+})
+
+describe('Imposteur : indice humain par POST', () => {
+  const adapter = GAME_ADAPTERS.imposteur
+  /** 1 humain + 4 bots, l'humain au tour d'indice. */
+  const humanTurn = (): ImposteurState => {
+    const built = buildImposteurState([{ userId: 'u1', user: { displayName: 'Riri' } }], 'fr', 4, 7)
+    return {
+      ...built,
+      phase: 'clue',
+      phaseEndsAt: Date.now() + 45_000,
+      clueOrder: ['u1', ...built.clueOrder.filter((id) => id !== 'u1')],
+      clueTurnIdx: 0,
+    }
+  }
+  const clue = (text: unknown) => adapter.applyAction(humanTurn(), 'u1', { action: 'clue', text })
+
+  it('« … » est refusé (403) : réservé à l’indice automatique du muet', () => {
+    expect(clue(IMPOSTEUR_EMPTY_CLUE)).toEqual({ ok: false, error: 'INVALID_CLUE', status: 403 })
+    expect(clue(` ${IMPOSTEUR_EMPTY_CLUE}  `)).toEqual({ ok: false, error: 'INVALID_CLUE', status: 403 })
+  })
+
+  it('un vrai indice passe ; un corps sans texte reste une action invalide (400)', () => {
+    const result = clue('indice')
+    expect(result.ok).toBe(true)
+    if (result.ok) expect((result.state as ImposteurState).clues).toEqual([{ playerId: 'u1', text: 'indice', round: 1 }])
+    expect(clue(42)).toEqual({ ok: false, error: 'invalid_action', status: 400 })
+  })
+})
+
+describe('Imposteur : paroles humaines et tick bot', () => {
+  const adapter = GAME_ADAPTERS.imposteur
+  /** 1 humain + 4 bots, au vote (aucun bot n'a voté). */
+  const atVote = (): ImposteurState => {
+    const built = buildImposteurState([{ userId: 'u1', user: { displayName: 'Riri' } }], 'fr', 4, 7)
+    return { ...built, phase: 'vote', phaseEndsAt: Date.now() + 60_000, clueTurnIdx: built.clueOrder.length }
+  }
+
+  it('speak est mappé : Accuser / Me défendre passent, le fil grandit', () => {
+    const s = atVote()
+    const result = adapter.applyAction(s, 'u1', { action: 'speak', kind: 'suspect', targetId: 'bot-1' })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect((result.state as ImposteurState).speech).toEqual([{ playerId: 'u1', kind: 'suspect', targetId: 'bot-1', round: 1 }])
+    }
+    expect(adapter.applyAction(s, 'u1', { action: 'speak', kind: 'defend', targetId: 'bot-2' }).ok).toBe(true)
+  })
+
+  it('un kind réservé aux bots est une interdiction (INVALID_KIND, 403), pas une action mal formée', () => {
+    for (const kind of ['intent', 'ask', 'rally', 'toldYou', 'nimporte']) {
+      expect(adapter.applyAction(atVote(), 'u1', { action: 'speak', kind, targetId: 'bot-1' }), kind).toEqual({
+        ok: false,
+        error: 'INVALID_KIND',
+        status: 403,
+      })
+    }
+  })
+
+  it('corps incomplet ou inconnu : 400', () => {
+    expect(adapter.applyAction(atVote(), 'u1', { action: 'speak', kind: 'suspect' })).toEqual({
+      ok: false,
+      error: 'invalid_action',
+      status: 400,
+    })
+    expect(adapter.applyAction(atVote(), 'u1', { action: 'speak', targetId: 'bot-1' }).ok).toBe(false)
+    expect(adapter.applyAction(atVote(), 'u1', { action: 'chuchoter' })).toEqual({
+      ok: false,
+      error: 'invalid_action',
+      status: 400,
+    })
+  })
+
+  it('tick bot « au cas où » sans bot concerné : NOT_BOT_TURN est un conflit attendu (409)', () => {
+    const s = atVote()
+    const voted = Object.fromEntries(s.players.filter((p) => p.isBot).map((p) => [p.id, 'u1']))
+    expect(adapter.applyAction({ ...s, pendingVotes: voted }, 'u1', { action: 'bot' })).toEqual({
+      ok: false,
+      error: 'NOT_BOT_TURN',
+      status: 409,
+    })
+    // Bots sans vote : le tick réussit toujours (une parole ou le vote groupé).
+    expect(adapter.applyAction(s, 'u1', { action: 'bot' }).ok).toBe(true)
   })
 })

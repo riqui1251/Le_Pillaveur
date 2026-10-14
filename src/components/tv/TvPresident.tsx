@@ -4,6 +4,7 @@ import { Crown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
+import { genreOf } from '@/components/online/bot-speech/bot-speech-feed'
 import type { PreClientView } from '@/lib/president/engine'
 import { preRankOf, preSuitOf, PRE_RANKS, PRE_SUITS, PRE_TURN_MS } from '@/lib/president/engine'
 import { cn } from '@/lib/utils'
@@ -77,7 +78,7 @@ export function TvPresident({ room, state }: { room: TvRoomDto; state: PreClient
                     <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                     {p.name}
                     <span className="text-lg font-bold uppercase opacity-70">
-                      {i === 0 ? t('roles.president') : isTrou ? t('roles.trou') : ''}
+                      {i === 0 ? t('roles.president', { genre: genreOf(p) }) : isTrou ? t('roles.trou') : ''}
                     </span>
                   </div>
                 )

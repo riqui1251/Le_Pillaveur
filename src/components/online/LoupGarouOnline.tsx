@@ -43,7 +43,6 @@ import {
   lgTeamOf,
   LG_SPEECH_CAP,
   type LGClientView,
-  type LGPlayerView,
   type LGRole,
 } from '@/lib/loup-garou/engine'
 import type { LGSpeakKind } from '@/lib/loup-garou/server-adapter'
@@ -55,7 +54,9 @@ import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerT
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { DebateFeed } from './loup-garou/DebateFeed'
+import { TargetGrid } from './TargetGrid'
 import { lgPlayerIcon } from './loup-garou/debate-feed'
+import { genreOf, genreOfId } from './bot-speech/bot-speech-feed'
 
 /**
  * LOUP-GAROU en ligne. La vue reçue est déjà filtrée par le serveur selon QUI
@@ -126,63 +127,6 @@ const NIGHT_PHASES = new Set([
   'night-wolves',
   'night-witch',
 ])
-
-/**
- * Grille de cibles (sonde / vote loup / potion / tir / vote du jour) —
- * chaque cible est une mini-carte crème qu'on « abat » sur la table. Noms en
- * encre pure (pas de cosmétiques : illisibles sur crème).
- */
-function TargetGrid({
-  players,
-  iconOf,
-  onPick,
-  disabled,
-  chosenId,
-  excludeIds = [],
-  youLabel,
-  selfId,
-}: {
-  players: LGPlayerView[]
-  iconOf: (p: { id: string; name: string; isBot: boolean }) => string
-  onPick: (id: string) => void
-  disabled: boolean
-  chosenId?: string | null
-  excludeIds?: string[]
-  youLabel: string
-  selfId: string
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {players.map((p) => {
-        const excluded = excludeIds.includes(p.id)
-        const chosen = chosenId === p.id
-        return (
-          <button
-            key={p.id}
-            onClick={() => onPick(p.id)}
-            disabled={disabled || excluded}
-            className={cn(
-              'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[#24201A] transition-all',
-              'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep',
-              chosen
-                ? '-translate-y-0.5 border-gold bg-cream ring-2 ring-gold'
-                : 'border-[#D8CCAE] bg-cream',
-              !disabled && !excluded && 'hover:-translate-y-0.5 active:scale-95',
-              excluded && 'opacity-35'
-            )}
-          >
-            <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-            <span className="min-w-0 flex-1 truncate text-xs font-bold">
-              {p.name}
-              {p.id === selfId && <span className="text-[#6B6455]"> {youLabel}</span>}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 /** Cadence conservée : une relève en delta ne coûte presque rien au repos. */
 const GAME_CHAT_POLL_MS = 3000
@@ -491,6 +435,7 @@ export function LoupGarouOnline() {
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
+  const genreOfPlayer = (id: string | null | undefined) => genreOfId(view.players, id)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) => lgPlayerIcon(p, room.members)
   const roleName = (role: LGRole) => t(`roles.${role}.name`)
 
@@ -824,7 +769,7 @@ export function LoupGarouOnline() {
         <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-2 text-center text-xs font-bold text-amber-100">
           {view.mayorId === user.id
             ? t('youAreMayor')
-            : t('mayorBanner', { name: nameOf(view.mayorId) })}
+            : t('mayorBanner', { name: nameOf(view.mayorId), genre: genreOfPlayer(view.mayorId) })}
         </div>
       )}
 
@@ -909,6 +854,7 @@ export function LoupGarouOnline() {
           {view.lastVoteResult.eliminatedId
             ? t('voteBanner', {
                 name: nameOf(view.lastVoteResult.eliminatedId),
+                genre: genreOfPlayer(view.lastVoteResult.eliminatedId),
                 role: view.lastVoteResult.role ? roleName(view.lastVoteResult.role) : '—',
               })
             : t('voteTieBanner')}
@@ -991,7 +937,10 @@ export function LoupGarouOnline() {
                     />
                     {view.guardLastProtectedId && (
                       <p className="text-center text-xs text-white/45">
-                        {t('guardForbidden', { name: nameOf(view.guardLastProtectedId) })}
+                        {t('guardForbidden', {
+                          name: nameOf(view.guardLastProtectedId),
+                          genre: genreOfPlayer(view.guardLastProtectedId),
+                        })}
                       </p>
                     )}
                   </>
@@ -1142,6 +1091,7 @@ export function LoupGarouOnline() {
                     <p key={d.playerId} className="text-sm font-bold text-red-200">
                       {t(isSoft ? 'dawnDeathSoft' : 'dawnDeath', {
                         name: nameOf(d.playerId),
+                        genre: genreOfPlayer(d.playerId),
                         role: roleName(d.role),
                       })}
                     </p>
@@ -1150,7 +1100,7 @@ export function LoupGarouOnline() {
               )}
               {view.ravenTargetId && (
                 <p className="mt-2 rounded-xl bg-slate-500/15 px-3 py-1.5 text-xs font-bold text-slate-200">
-                  {t('ravenMarkBanner', { name: nameOf(view.ravenTargetId) })}
+                  {t('ravenMarkBanner', { name: nameOf(view.ravenTargetId), genre: genreOfPlayer(view.ravenTargetId) })}
                 </p>
               )}
               {view.elderAttackedRound === view.round && (
@@ -1200,7 +1150,9 @@ export function LoupGarouOnline() {
                 </p>
               </div>
               <p className="text-center text-sm font-bold text-amber-200">
-                {iAmHunter ? t('hunterPrompt') : t('hunterWaiting', { name: nameOf(view.pendingHunterId) })}
+                {iAmHunter
+                  ? t('hunterPrompt')
+                  : t('hunterWaiting', { name: nameOf(view.pendingHunterId), genre: genreOfPlayer(view.pendingHunterId) })}
               </p>
               {iAmHunter && (
                 <TargetGrid
@@ -1221,7 +1173,7 @@ export function LoupGarouOnline() {
               <p className="text-center text-xs text-white/45">{t('debateHint')}</p>
               {view.ravenTargetId && (
                 <p className="rounded-xl bg-slate-500/15 px-3 py-1.5 text-center text-xs font-bold text-slate-200">
-                  {t('ravenMarkBanner', { name: nameOf(view.ravenTargetId) })}
+                  {t('ravenMarkBanner', { name: nameOf(view.ravenTargetId), genre: genreOfPlayer(view.ravenTargetId) })}
                 </p>
               )}
               <DebateFeed
@@ -1379,8 +1331,8 @@ export function LoupGarouOnline() {
                         {view.ravenTargetId === p.id && view.phase === 'day-vote' && (
                           <span
                             className="flex shrink-0 items-center gap-0.5 text-xs font-black text-slate-600"
-                            title={t('ravenMarkBadge')}
-                            aria-label={t('ravenMarkBadge')}
+                            title={t('ravenMarkBadge', { genre: genreOf(p) })}
+                            aria-label={t('ravenMarkBadge', { genre: genreOf(p) })}
                           >
                             <Bird aria-hidden className="h-3 w-3" />
                             +2
@@ -1418,7 +1370,7 @@ export function LoupGarouOnline() {
                   {p.id === user.id && <span className="text-[#6B6455]"> {t('you')}</span>}
                 </span>
                 {view.mayorId === p.id && (
-                  <Medal className="h-3.5 w-3.5 shrink-0 text-amber-700" aria-label={t('mayorBadge')} />
+                  <Medal className="h-3.5 w-3.5 shrink-0 text-amber-700" aria-label={t('mayorBadge', { genre: genreOf(p) })} />
                 )}
                 {p.role && RoleIcon && (
                   <RoleIcon
@@ -1444,7 +1396,7 @@ export function LoupGarouOnline() {
                   {p.id === user.id && <span className="text-cream/40"> {t('you')}</span>}
                 </span>
                 {view.mayorId === p.id && (
-                  <Medal className="h-3.5 w-3.5 shrink-0 text-gold/70" aria-label={t('mayorBadge')} />
+                  <Medal className="h-3.5 w-3.5 shrink-0 text-gold/70" aria-label={t('mayorBadge', { genre: genreOf(p) })} />
                 )}
                 {p.role && RoleIcon && (
                   <RoleIcon

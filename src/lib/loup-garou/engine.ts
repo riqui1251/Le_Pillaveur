@@ -1,6 +1,7 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import type { BotTrait } from '@/lib/online/bot-personas'
+import { mostSuspect, speechSuspicion, type BotSpeech, type SpeechMood } from '@/lib/online/bot-speech'
 import { LG_DEBATE_DEFAULT_MS } from './debate'
 
 /**
@@ -110,14 +111,11 @@ export type LGDeath = { playerId: string; role: LGRole; cause: LGDeathCause; rou
  * sont réservés aux bots : le lien avec la parole qu'ils commentent se lit
  * par l'ordre du fil, {name} reste le seul argument. `toldYou` / `wrong`
  * (remarques d'ouverture sur un mort révélé de la veille) sont les seules
- * paroles dont la cible peut être morte.
+ * paroles dont la cible peut être morte. Forme commune aux jeux à débat
+ * (`BotSpeech`, src/lib/online/bot-speech.ts).
  */
-export type LGDebateSpeech = {
-  playerId: string
-  kind: 'suspect' | 'defend' | 'ally' | 'rally' | 'doubt' | 'ask' | 'toldYou' | 'wrong'
-  targetId: string | null
-  round: number
-}
+export type LGDebateKind = 'suspect' | 'defend' | 'ally' | 'rally' | 'doubt' | 'ask' | 'toldYou' | 'wrong'
+export type LGDebateSpeech = BotSpeech<LGDebateKind>
 
 /** Remarques d'ouverture : la seule parole tolérée vers un joueur mort. */
 export const LG_REMARK_KINDS = ['toldYou', 'wrong'] as const satisfies readonly LGDebateSpeech['kind'][]
@@ -1037,7 +1035,9 @@ function addScore(score: Map<string, number>, id: string | null | undefined, n: 
 /**
  * SCORE DE SOUPÇON d'un bot sur chaque vivant (hors lui) — l'unique logique
  * derrière ses accusations, son vote, la potion de mort de la sorcière et le
- * tir du chasseur. Information PUBLIQUE :
+ * tir du chasseur. Le fil de paroles est lu par le socle commun aux jeux à
+ * débat (`speechSuspicion`) ; s'y ajoute ce qui n'appartient qu'au
+ * Loup-Garou. Information PUBLIQUE :
  *   • ce round : +2 par `suspect`/`rally` reçu, −1 par `doubt`, −2 par `ally`,
  *     +1 à l'accusateur visé par un `defend` ;
  *   • +1 la marque du Corbeau, −2 le maire, +1 par voix reçue au dernier vote
@@ -1059,7 +1059,7 @@ function addScore(score: Map<string, number>, id: string | null | undefined, n: 
  * bot met +100 à un loup vu, −100 à un villageois vu.
  * Égalités : à l'appelant (ordre de table via `lgMostSuspect`, puis hasard).
  */
-export type LGBotMood = { rancune: number; loyaute: number }
+export type LGBotMood = SpeechMood
 
 export function lgSuspicion(
   state: LGState,
@@ -1070,35 +1070,27 @@ export function lgSuspicion(
   const bot = playerOf(state, botId)
   const isWolf = bot?.role === 'loup'
   const today = lgLatestDebateRound(state)
-  const grudge = (n: number) => Math.round(n * mood.rancune)
-  const bond = Math.round(2 * mood.loyaute)
-  const score = new Map<string, number>()
-  for (const p of state.players) {
-    if (!p.alive || p.id === botId) continue
-    if (isWolf && p.role === 'loup') continue
-    score.set(p.id, 0)
-  }
-  const deathOf = new Map(state.deaths.map((d) => [d.playerId, d]))
   const isHuman = (id: string) => playerOf(state, id)?.isBot === false
+  const score = speechSuspicion({
+    candidates: state.players
+      .filter((p) => p.alive && p.id !== botId && !(isWolf && p.role === 'loup'))
+      .map((p) => p.id),
+    speech: state.debateSpeech,
+    round: today,
+    botId,
+    trait,
+    mood,
+    isHuman,
+  })
+  const deathOf = new Map(state.deaths.map((d) => [d.playerId, d]))
   const add = (id: string | null, n: number) => addScore(score, id, n)
 
   for (const sp of state.debateSpeech) {
     const w = trait === 'suiveur' && isHuman(sp.playerId) ? 2 : 1
-    if (sp.round === today) {
-      if (sp.kind === 'suspect' || sp.kind === 'rally') add(sp.targetId, 2 * w)
-      else if (sp.kind === 'doubt') add(sp.targetId, -w)
-      else if (sp.kind === 'ally') add(sp.targetId, -2 * w)
-      else if (sp.kind === 'defend') add(sp.targetId, w)
-      if (sp.targetId === botId) {
-        if (sp.kind === 'suspect') add(sp.playerId, grudge(3))
-        else if (sp.kind === 'rally') add(sp.playerId, grudge(2))
-      }
-      if (sp.kind === 'ally' && sp.playerId === botId) add(sp.targetId, -bond)
-    } else if (sp.round === today - 1 && sp.kind === 'suspect' && sp.targetId) {
+    if (sp.round === today - 1 && sp.kind === 'suspect' && sp.targetId) {
       const death = deathOf.get(sp.targetId)
       if (death?.role === 'loup') add(sp.playerId, -2 * w)
       else if (death?.cause === 'vote') add(sp.playerId, 2 * w)
-      if (sp.targetId === botId) add(sp.playerId, grudge(2))
     }
     if (isWolf && sp.kind === 'suspect' && sp.targetId && sp.round >= today - 1) {
       const named = playerOf(state, sp.targetId)
@@ -1119,23 +1111,9 @@ export function lgSuspicion(
 /**
  * Les mieux classés d'un score, dans l'ordre de `candidates` (ordre de table :
  * égalité stable ; l'appelant départage au hasard s'il le souhaite). Un
- * candidat absent du score est ignoré.
+ * candidat absent du score est ignoré. Socle commun : `mostSuspect`.
  */
-export function lgMostSuspect(score: Map<string, number>, candidates: readonly string[]): string[] {
-  let best = -Infinity
-  let tied: string[] = []
-  for (const id of candidates) {
-    const sc = score.get(id)
-    if (sc === undefined) continue
-    if (sc > best) {
-      best = sc
-      tied = [id]
-    } else if (sc === best) {
-      tied.push(id)
-    }
-  }
-  return tied
-}
+export const lgMostSuspect = mostSuspect
 
 /** Vivant le plus soupçonné par la sorcière (score > 0 : un suspect CLAIR), hors `excluded`. */
 function topDebateSuspect(state: LGState, witchId: string, excluded: (string | null)[]): string | null {

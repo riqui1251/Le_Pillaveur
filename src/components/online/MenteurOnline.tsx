@@ -21,6 +21,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { genreOf, genreOfId } from './bot-speech/bot-speech-feed'
 
 /**
  * LE MENTEUR en ligne (serveur-autoritaire). La vue reçue est déjà filtrée :
@@ -313,7 +314,7 @@ export function MenteurOnline() {
                   {p.id === user.id && <span className="text-white/70"> {t('you')}</span>}
                 </p>
                 <p className="text-xs text-white/75">
-                  {dead ? t('eliminated') : `🎲 ${p.diceCount}`}
+                  {dead ? t('eliminated', { genre: genreOf(p) }) : `🎲 ${p.diceCount}`}
                   {/* Même échelle que le classement : gorgées bues, pas dés perdus (F35). */}
                   {p.sipsTotal > 0 && !dead && ` · 🍺 ${p.sipsTotal}`}
                 </p>
@@ -419,7 +420,10 @@ export function MenteurOnline() {
             )}
             {reveal.eliminatedId && (
               <p className="text-center text-xs font-bold text-amber-200">
-                {t('reveal.eliminatedMsg', { name: nameOf(reveal.eliminatedId) })}
+                {t('reveal.eliminatedMsg', {
+                  name: nameOf(reveal.eliminatedId),
+                  genre: genreOfId(view.players, reveal.eliminatedId),
+                })}
               </p>
             )}
             <Button

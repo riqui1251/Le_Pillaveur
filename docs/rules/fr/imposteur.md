@@ -48,6 +48,9 @@ imposteurs au plus).
   le plus nerveux.
 - À **10 et plus**, l'indice de chacun se noie dans la masse : passez à deux
   ou trois imposteurs, sinon le village gagne trop facilement.
+- **Avec des bots**, « Essayer avec des bots » ouvre une table de 5, un
+  imposteur par défaut : il doit survivre à deux votes avant d'atteindre les
+  3 derniers — assez de manches pour démasquer quelqu'un sur ses indices.
 
 ## Victoire
 
@@ -75,6 +78,7 @@ avait deviné le mot du village.
 - Un **innocent éliminé à tort** boit **3 gorgées**.
 - Un **imposteur démasqué** boit **2 gorgées par survivant** — plus il tombe
   tôt, plus l'addition est légère.
+- Un **bot** éliminé ne boit rien : pas de verre, pas de gorgées.
 - À la fin : si le village l'emporte, l'imposteur finit son verre ; s'il
   passe entre les mailles, les civils trinquent.
 
@@ -111,9 +115,19 @@ de gorgées disparaissent, les règles ne bougent pas.
 
 ### Peut-on jouer seul, avec des bots ?
 
-Oui. « Essayer avec des bots » ouvre une table privée avec deux bots ; vos
-amis peuvent rejoindre en cours de route. Les bots votent au hasard et sont
-assumés faibles : parfaits pour apprendre, pas pour enquêter.
+Oui. « Essayer avec des bots » ouvre une table privée de cinq : vous et
+quatre bots, et vos amis peuvent rejoindre en cours de route. Chaque bot donne
+un indice tiré de son propre mot, plus ou moins précis selon son caractère,
+puis vote contre celui dont l'indice ne colle pas. Comme vous, il ignore son
+camp — un bot peut être l'imposteur sans le savoir — et il compte parmi les
+3 derniers survivants.
+
+Les bots parlent aussi, avec sobriété : ils relèvent un indice qui sonne
+faux (« … », un indice qui trahit l'autre mot, une redite), saluent un indice
+qui colle au leur, annoncent leur vote avant de le poser et se défendent
+quand on les accuse. Vous avez vos propres boutons « Accuser » et « Me
+défendre » : une accusation bien placée peut retourner le vote d'un bot
+suiveur avant qu'il ne vote.
 
 ### Combien de temps dure une partie ?
 

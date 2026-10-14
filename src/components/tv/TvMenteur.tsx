@@ -7,6 +7,7 @@ import { botAvatarFromName } from '@/lib/online/bot-personas'
 import type { MenteurClientView } from '@/lib/menteur/engine'
 import { CssDie } from '@/components/games/CssDie'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { genreOfId } from '@/components/online/bot-speech/bot-speech-feed'
 import { cn } from '@/lib/utils'
 
 /**
@@ -125,7 +126,10 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
           )}
           {reveal.eliminatedId && (
             <p className="text-2xl font-bold text-amber-200">
-              {t('reveal.eliminatedMsg', { name: nameOf(reveal.eliminatedId) })}
+              {t('reveal.eliminatedMsg', {
+                name: nameOf(reveal.eliminatedId),
+                genre: genreOfId(state.players, reveal.eliminatedId),
+              })}
             </p>
           )}
         </div>

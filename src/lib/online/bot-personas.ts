@@ -36,14 +36,18 @@
  * Le TIC DE LANGAGE donne une voix à chacun dans le fil du débat : un bout de
  * phrase à lui, collé devant (« Statistiquement, … ») ou derrière
  * (« …véridique ! ») sa parole. Le texte vit dans le catalogue i18n sous
- * `games.loup-garou.game.botTic.<ticKey>` — ici seulement la clé (ASCII, les
- * noms portent des accents) et la position. Un converti n'a pas de tic.
+ * `games.<jeu>.game.botTic.<ticKey>` de CHAQUE jeu à débat (Loup-Garou, puis
+ * Imposteur) : des copies identiques, tenues égales par un test entre jeux,
+ * plutôt qu'un namespace partagé qui alourdirait le socle des messages de
+ * toutes les pages. Ici seulement la clé (ASCII, les noms portent des
+ * accents) et la position. Un converti n'a pas de tic.
  *
  * Le GENRE (f/m, celui du lore de chaque fiche) accorde les phrases du débat :
  * Suzette « s'est plantée », on trouve Raoul louche parce qu'« il nous cache
  * un truc ». Il alimente les `{speaker, select, …}` / `{target, select, …}`
- * du catalogue ; un humain ou un converti, dont le pseudo ne dit rien, tombe
- * dans la branche `other`, épicène.
+ * du catalogue, et le `{genre, select, …}` des annonces qui nomment un bot
+ * (« Bernadette est éliminée », « Raoul est le maire ») ; un humain ou un
+ * converti, dont le pseudo ne dit rien, tombe dans la branche `other`, épicène.
  */
 
 export type BotTrait = 'prudent' | 'farceur' | 'suiveur' | 'agressif'
@@ -53,9 +57,9 @@ export type BotTicPosition = 'prefix' | 'suffix'
 export type BotGenre = 'f' | 'm'
 
 /**
- * Valeur d'un argument `speaker` / `target` des phrases du débat : le genre
- * du persona, ou `other` — la branche neutre, obligatoire en ICU — pour un
- * humain, un converti ou une cible absente.
+ * Valeur d'un argument `speaker` / `target` des phrases du débat, ou `genre`
+ * des annonces : le genre du persona, ou `other` — la branche neutre,
+ * obligatoire en ICU — pour un humain, un converti ou une cible absente.
  */
 export type SpeechGenre = BotGenre | 'other'
 
@@ -166,7 +170,7 @@ export function personaForBotName(name: string | null | undefined): BotPersona |
  * Genre d'un bot pour les phrases du débat : celui de son persona, `other`
  * (branche neutre des select ICU) pour un déserteur converti, dont le pseudo
  * ne dit rien. Pour un humain, ne pas appeler : son pseudo peut être celui
- * d'un persona (lgGenreOf, dans le fil du débat, filtre sur isBot).
+ * d'un persona (genreOf, dans le fil des paroles, filtre sur isBot).
  */
 export function botGenreFor(name: string | null | undefined): SpeechGenre {
   return personaForBotName(name)?.genre ?? 'other'

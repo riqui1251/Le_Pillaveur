@@ -60,18 +60,29 @@ export type GameMeta = {
    *   Loup-Garou), ou le jeu est un pari de chacun contre le hasard (Purple,
    *   1220, le plateau du Petit Buveur) où leur niveau ne change rien ;
    * - 'group' : le sel du jeu, c'est la discussion ou le bluff entre
-   *   humains, et les bots n'y font que de la figuration (indice « … » et
-   *   vote au hasard à l'Imposteur, aucune accusation à l'Espion, aucun
-   *   dessin à Crobard, juge au hasard à Sans Filtre, bluffs tirés des
-   *   mauvaises réponses au Grand Bluff, votes de persona à Dilemmes) : seul,
-   *   on n'y voit rien. Le Menteur y est aussi : ses bots enchérissent sur
-   *   les probabilités, mais un bluff sans visage à lire ne retient personne
-   *   — quitté en 1 à 2 min seul, comme les autres.
+   *   humains, et les bots n'y font que de la figuration (aucune accusation
+   *   à l'Espion, aucun dessin à Crobard, juge au hasard à Sans Filtre,
+   *   bluffs tirés des mauvaises réponses au Grand Bluff, votes de persona à
+   *   Dilemmes) : seul, on n'y voit rien. Le Menteur y est aussi : ses bots
+   *   enchérissent sur les probabilités, mais un bluff sans visage à lire ne
+   *   retient personne — quitté en 1 à 2 min seul, comme les autres.
+   *   L'Imposteur y reste en attendant la mesure : ses bots donnent de vrais
+   *   indices et votent sur ce qu'ils entendent (src/lib/imposteur/bot-brain.ts),
+   *   mais seule la durée de ses parties solo dira s'il tient sans potes.
    * Lu par le hub en mode solo (rangée « Parfaits en solo » d'abord, badge
    * « Mieux à plusieurs » ensuite) et par TryBotsGate (encart « ce jeu se
    * joue entre potes » + `soloAlternativeFor`). Ne retire jamais un jeu.
    */
   soloFit?: 'great' | 'group';
+  /**
+   * Bots que « Essayer avec des bots » pose sur la table solo — réservé aux
+   * jeux `botsFillable` (un test le garde). Absent : juste de quoi lancer
+   * seul (minPlayers − 1), lu par `soloBotsCount`. Pourquoi plus : à 3,
+   * L'Imposteur se jouait en une manche (l'imposteur y gagne à 2 survivants),
+   * à pile ou face ; à 5, il lui faut survivre à deux votes avant d'atteindre
+   * les 3 derniers — de quoi enquêter sur les indices.
+   */
+  soloBots?: number;
   /** Proposé en mode Soft (sans gorgées) — sous-ensemble des jeux onlineReady. */
   softModeReady?: boolean;
   /**
@@ -199,6 +210,7 @@ export const GAMES: GameMeta[] = [
     minPlayers: 3,
     botsFillable: true,
     soloFit: 'group',
+    soloBots: 4,
     maxPlayers: 16,
     onlineOnly: true,
     softModeReady: true,
@@ -633,6 +645,11 @@ export function splitBySoloFit<T extends Pick<GameMeta, 'soloFit'>>(
     great: games.filter((g) => g.soloFit === 'great'),
     others: games.filter((g) => g.soloFit !== 'great'),
   };
+}
+
+/** Bots posés sur la table solo de « Essayer avec des bots » (voir `soloBots`). */
+export function soloBotsCount(game: Pick<GameMeta, 'soloBots' | 'minPlayers'>): number {
+  return game.soloBots ?? Math.max(0, (game.minPlayers ?? 2) - 1);
 }
 
 /**

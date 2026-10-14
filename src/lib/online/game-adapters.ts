@@ -55,6 +55,7 @@ import {
   IMPOSTEUR_MAX_PLAYERS,
   type ImposteurState,
 } from '@/lib/imposteur/engine'
+import { imposteurBotTickDelayMs } from '@/lib/imposteur/bot-tick'
 import {
   parseQuizState,
   serializeQuizState,
@@ -668,6 +669,14 @@ const imposteurAdapter: GameAdapter = {
       input = { type: 'advance', phaseKey: body.phaseKey }
     } else if (body.action === 'continue') {
       input = { type: 'continue' }
+    } else if (
+      body.action === 'speak' &&
+      typeof body.kind === 'string' &&
+      typeof body.targetId === 'string'
+    ) {
+      // Le kind est jugé par l'adaptateur du jeu : hors des boutons humains,
+      // INVALID_KIND (403), pas une action mal formée.
+      input = { type: 'speak', kind: body.kind, targetId: body.targetId }
     } else if (body.action === 'bot') {
       input = { type: 'bot' }
     } else if (body.action === 'replace-left') {
@@ -677,9 +686,10 @@ const imposteurAdapter: GameAdapter = {
     }
     const result = applyImposteurRoomAction(state, userId, input)
     if (!result.ok) {
-      // Les erreurs de tick (déjà avancé / pas encore l'heure) sont des 409
-      // « conflits » attendus, pas des interdictions.
-      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
+      // Les erreurs de tick (déjà avancé / pas encore l'heure / tick bot « au
+      // cas où » sans bot concerné) sont des 409 « conflits » attendus, pas
+      // des interdictions.
+      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED', 'NOT_BOT_TURN'].includes(
         result.error
       )
       return { ok: false, error: result.error, status: conflict ? 409 : 403 }
@@ -697,23 +707,26 @@ const imposteurAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markImposteurPlayerLeft(state as ImposteurState, userId, at),
   rejoin: (state, userId) => rejoinImposteurPlayer(state as ImposteurState, userId),
-  // ImposteurOnline : échéance de phase + bot au tour (indice, « continuer »
-  // après 3,2 s de révélation) ou bots retardataires au vote.
+  // ImposteurOnline : échéance de phase + tick bot calculé par la même
+  // fonction que le client (imposteurBotTickDelayMs) — indice du bot au tour,
+  // « continuer » après 3,2 s de révélation, et tick « au cas où » dès qu'un
+  // bot vivant est à table pendant les indices et le vote (paroles, vote
+  // groupé). NOT_BOT_TURN fait retomber le minuteur sur l'échéance (skipBot).
   serviceTick(rawState, now, options) {
     const state = rawState as ImposteurState
     const actor = playerById(state.players, currentImposteurActorId(state))
-    const pendingVoteBot =
-      state.phase === 'vote'
-        ? state.players.find((p) => p.isBot && !p.eliminated && !state.pendingVotes[p.id])
-        : undefined
     return serviceTickOf(state.players, now, options, {
       advance: advanceAt(state),
       botDelayMs: (rand) =>
-        !actor?.isBot && !pendingVoteBot
-          ? null
-          : state.phase === 'reveal'
-            ? 3200
-            : botTickDelayMs(actor?.isBot ? actor.name : pendingVoteBot?.name, rand),
+        imposteurBotTickDelayMs(
+          {
+            phase: state.phase,
+            actorIsBot: Boolean(actor?.isBot),
+            actorName: actor?.name,
+            hasAliveBot: state.players.some((p) => p.isBot && !p.eliminated),
+          },
+          rand
+        ),
     })
   },
 }

@@ -1,5 +1,6 @@
 import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
  * L'IMPOSTEUR (Undercover apéro) — moteur PUR, serveur-autoritaire.
@@ -50,6 +51,10 @@ export type ImposteurTeam = 'civil' | 'imposteur'
 
 export type ImposteurWordPair = { a: string; b: string }
 
+/** Langues des paires de mots (= langues de salle). */
+export const IMPOSTEUR_LANGS = ['fr', 'en', 'es', 'it'] as const
+export type ImposteurLang = (typeof IMPOSTEUR_LANGS)[number]
+
 export type ImposteurPlayer = {
   id: string
   name: string
@@ -79,6 +84,81 @@ export type ImposteurReveal = {
 
 export type ImposteurPhase = 'countdown' | 'clue' | 'vote' | 'reveal' | 'finished'
 
+/**
+ * Prise de parole PUBLIQUE, des bots et des humains (boutons Accuser / Me
+ * défendre), structurée pour être localisée côté client (`botSay.<kind>`
+ * sous games.imposteur.game). Mêmes sens qu'au Loup-Garou pour les kinds
+ * partagés — c'est ce qui permet le score de soupçon commun (speechSuspicion)
+ * —, plus `intent` (« je vote X », annoncé avant le vote groupé des bots).
+ * `toldYou` / `wrong` sont les remarques d'ouverture sur l'éliminé de la
+ * manche d'avant : les seules paroles qui visent un éliminé. Toute parole a
+ * une cible : chaque phrase du catalogue la nomme.
+ */
+export type ImposteurSpeechKind =
+  | 'suspect'
+  | 'defend'
+  | 'ally'
+  | 'rally'
+  | 'doubt'
+  | 'ask'
+  | 'intent'
+  | 'toldYou'
+  | 'wrong'
+export type ImposteurSpeech = BotSpeech<ImposteurSpeechKind>
+
+export const IMPOSTEUR_SPEECH_KINDS = [
+  'suspect',
+  'defend',
+  'ally',
+  'rally',
+  'doubt',
+  'ask',
+  'intent',
+  'toldYou',
+  'wrong',
+] as const satisfies readonly ImposteurSpeechKind[]
+/** Phases où l'on parle : pendant les indices et pendant le vote. */
+export const IMPOSTEUR_SPEAK_PHASES = ['clue', 'vote'] as const satisfies readonly ImposteurPhase[]
+/**
+ * Paroles max par joueur et par manche : pour un bot, une annonce de vote et
+ * deux paroles (son bavardage borne celles-ci) ; un humain dispose des trois.
+ */
+export const IMPOSTEUR_SPEECH_CAP = 3
+/** Remarques d'ouverture : les seules paroles tolérées vers un éliminé. */
+export const IMPOSTEUR_REMARK_KINDS = ['toldYou', 'wrong'] as const satisfies readonly ImposteurSpeechKind[]
+/** Paroles qu'un HUMAIN peut émettre par les boutons (le reste est réservé aux bots). */
+export const IMPOSTEUR_HUMAN_SPEAK_KINDS = ['suspect', 'defend'] as const satisfies readonly ImposteurSpeechKind[]
+export type ImposteurHumanSpeakKind = (typeof IMPOSTEUR_HUMAN_SPEAK_KINDS)[number]
+/** Annonces de vote max par manche : au-delà, le fil ne serait plus qu'une liste de votes. */
+export const IMPOSTEUR_INTENTS_MAX = 4
+/**
+ * Sous ce temps de vote restant, les bots votent sans plus parler : l'échéance
+ * ne doit jamais les trouver en train d'annoncer (ils s'abstiendraient).
+ */
+export const IMPOSTEUR_BOT_VOTE_MARGIN_MS = 15_000
+
+export function isImposteurRemark(kind: ImposteurSpeechKind): boolean {
+  return (IMPOSTEUR_REMARK_KINDS as readonly string[]).includes(kind)
+}
+
+/**
+ * L'indice qu'une bulle cite de sa cible (`{clue}` de suspect / ally / rally) :
+ * son dernier indice donné à la manche de la parole ou avant. Accusée avant
+ * d'avoir parlé, la cible l'est sur sa manche passée — citer « … » ferait
+ * croire à la table qu'elle s'est tue. « … » seulement si elle n'a encore rien dit.
+ */
+export function imposteurCitedClue(
+  clues: readonly ImposteurClue[],
+  targetId: string | null,
+  round: number
+): string {
+  for (let i = clues.length - 1; i >= 0; i -= 1) {
+    const clue = clues[i]
+    if (clue.playerId === targetId && clue.round <= round) return clue.text
+  }
+  return IMPOSTEUR_EMPTY_CLUE
+}
+
 export type ImposteurState = TimedPhaseState & {
   version: number
   phase: ImposteurPhase
@@ -91,11 +171,31 @@ export type ImposteurState = TimedPhaseState & {
   /** SECRET — votes en cours (voterId → targetId). */
   pendingVotes: Record<string, string>
   lastReveal: ImposteurReveal | null
+  /**
+   * Révélation de la manche d'AVANT (public : décompte, éliminé, mot, camp —
+   * déjà annoncés). `lastReveal` est vidé à l'ouverture de chaque manche :
+   * sans cette copie, ni la table ni les bots ne se souviendraient de qui
+   * avait été voté. Optionnelle : absente des parties lancées avant le champ.
+   */
+  previousReveal?: ImposteurReveal | null
   round: number
   winnerTeam: ImposteurTeam | null
   rematchVotes: string[]
   /** Nombre d'imposteurs de la partie (choix hôte ou défaut, figé au lancement). */
   imposteurCount: number
+  /**
+   * Langue de la paire tirée (public). Optionnelle : les parties lancées avant
+   * ce champ sont lues comme françaises (parseImposteurState). Elle indexe le
+   * catalogue d'indices des bots côté serveur — la paire elle-même n'est pas
+   * stockée, elle se déduit des deux mots distincts de `players`.
+   */
+  lang?: ImposteurLang
+  /**
+   * Paroles PUBLIQUES de la manche courante et de celle d'avant (élaguées à
+   * l'ouverture de chaque manche : les remarques d'ouverture lisent la
+   * précédente). Optionnelle : absente des parties lancées avant le champ.
+   */
+  speech?: ImposteurSpeech[]
   /** SECRET serveur. */
   rngState: number
 }
@@ -105,6 +205,7 @@ export type ImposteurAction =
   | { type: 'VOTE'; playerId: string; targetId: string; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
+  | { type: 'SPEAK'; playerId: string; kind: ImposteurSpeechKind; targetId: string }
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
@@ -139,8 +240,11 @@ export function maxImposteurCount(playerCount: number): number {
   return Math.min(IMPOSTEUR_MAX_COUNT, Math.max(1, Math.floor((playerCount - 1) / 2)))
 }
 
-/** Normalisation permissive (minuscules + sans accents) pour la validation. */
-function normalize(text: string): string {
+/**
+ * Normalisation permissive (minuscules + sans accents) pour la validation —
+ * et pour comparer deux indices entre eux (« Été » = « ete »).
+ */
+export function normalizeClue(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
@@ -154,12 +258,21 @@ function normalize(text: string): string {
  * en est un fragment parlant (≥ 3 lettres : « pisc ») — les tout petits mots
  * accidentels (« la » pour « plage ») restent permis. « … » toujours accepté.
  */
+/**
+ * Indice « vide » : rien que des points (« … », « ... », « . . . »). Réservé
+ * à l'indice automatique (échéance, bot sans catalogue) ; un humain ne s'en
+ * sert pas pour passer son tour sur-le-champ.
+ */
+export function isEmptyClueText(text: string): boolean {
+  return /^[.…]+$/u.test(text.replace(/\s+/gu, ''))
+}
+
 export function isValidClue(text: string, ownWord: string): boolean {
   const trimmed = text.trim()
   if (trimmed === IMPOSTEUR_EMPTY_CLUE) return true
   if (trimmed.length < 1 || trimmed.length > IMPOSTEUR_CLUE_MAX_LEN) return false
-  const clue = normalize(trimmed)
-  const word = normalize(ownWord)
+  const clue = normalizeClue(trimmed)
+  const word = normalizeClue(ownWord)
   if (clue.length === 0 || word.length === 0) return clue.length > 0
   if (clue.includes(word)) return false
   return !(clue.length >= 3 && word.includes(clue))
@@ -172,7 +285,8 @@ export function createImposteurState(
   pairs: ImposteurWordPair[],
   seed: string | number,
   now: number = Date.now(),
-  imposteurCount?: number
+  imposteurCount?: number,
+  lang: ImposteurLang = 'fr'
 ): ImposteurState {
   if (players.length < IMPOSTEUR_MIN_PLAYERS) throw new ImposteurEngineError('NOT_ENOUGH_PLAYERS')
   if (players.length > IMPOSTEUR_MAX_PLAYERS) throw new ImposteurEngineError('TOO_MANY_PLAYERS')
@@ -215,10 +329,13 @@ export function createImposteurState(
     clues: [],
     pendingVotes: {},
     lastReveal: null,
+    previousReveal: null,
     round: 1,
     winnerTeam: null,
     rematchVotes: [],
     imposteurCount: count,
+    lang,
+    speech: [],
     rngState: rng.getState(),
   }
 }
@@ -286,8 +403,11 @@ function resolveVotes(state: ImposteurState, now: number): ImposteurState {
         p.id === eliminatedId ? { ...p, eliminated: true } : p
       )
       const aliveAfter = players.filter((p) => !p.eliminated).length
-      sips =
-        target.team === 'imposteur'
+      // Un bot n'a pas de verre : lui compter des gorgées affichait à la
+      // table une pénalité que personne ne boit.
+      sips = target.isBot
+        ? 0
+        : target.team === 'imposteur'
           ? IMPOSTEUR_SIPS_PER_ALIVE * aliveAfter
           : IMPOSTEUR_SIPS_CIVIL_OUT
     }
@@ -352,12 +472,15 @@ function afterReveal(state: ImposteurState, now: number): ImposteurState {
     }
   }
   // Nouvelle manche d'indices (ordre = vivants, ordre de table conservé).
+  // Le fil ne garde que la manche qui s'achève : jamais plus de deux manches.
   return {
     ...state,
     clueOrder: alive.map((p) => p.id),
     clueTurnIdx: 0,
     pendingVotes: {},
+    previousReveal: state.lastReveal,
     lastReveal: null,
+    speech: (state.speech ?? []).filter((sp) => sp.round === state.round),
     round: state.round + 1,
     ...enterPhase(state.phaseSeq, 'clue', IMPOSTEUR_CLUE_MS, now),
     phase: 'clue',
@@ -431,6 +554,30 @@ export function reduceImposteur(state: ImposteurState, action: ImposteurAction):
         throw new ImposteurEngineError('READING_TIME')
       }
       return afterReveal(state, action.now)
+    }
+
+    case 'SPEAK': {
+      if (!(IMPOSTEUR_SPEAK_PHASES as readonly string[]).includes(state.phase)) {
+        throw new ImposteurEngineError('NOT_SPEECH_PHASE')
+      }
+      if (!(IMPOSTEUR_SPEECH_KINDS as readonly string[]).includes(action.kind)) {
+        throw new ImposteurEngineError('INVALID_KIND')
+      }
+      const actor = state.players.find((p) => p.id === action.playerId)
+      if (!actor) throw new ImposteurEngineError('UNKNOWN_PLAYER')
+      if (actor.eliminated) throw new ImposteurEngineError('ELIMINATED')
+      const target = state.players.find((p) => p.id === action.targetId)
+      if (!target || target.id === actor.id) throw new ImposteurEngineError('INVALID_TARGET')
+      // Seule une remarque d'ouverture (« je l'avais dit pour X ») vise un éliminé.
+      if (target.eliminated && !isImposteurRemark(action.kind)) throw new ImposteurEngineError('INVALID_TARGET')
+      const speech = state.speech ?? []
+      const mine = speech.filter((sp) => sp.playerId === actor.id && sp.round === state.round)
+      if (mine.length >= IMPOSTEUR_SPEECH_CAP) throw new ImposteurEngineError('ALREADY_SPOKE')
+      return {
+        ...state,
+        speech: [...speech, { playerId: actor.id, kind: action.kind, targetId: target.id, round: state.round }],
+        version: state.version + 1,
+      }
     }
 
     case 'LEAVE': {

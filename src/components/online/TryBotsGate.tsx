@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { requestAgeVerification } from '@/components/legal/AgeGate'
-import { GAMES, hasContentIn, soloAlternativeFor } from '@/lib/games'
+import { GAMES, hasContentIn, soloAlternativeFor, soloBotsCount } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { resolveOnlineErrorCode } from '@/lib/online-errors'
@@ -28,7 +28,7 @@ function isExistingAccountResponse(data: unknown): boolean {
 /**
  * « Essayer avec des bots » — le chemin le plus court entre un visiteur
  * froid (SEO, page règles, vitrine d'un jeu) et une vraie partie :
- * pseudo → compte invité → table privée créée avec les bots qui manquent →
+ * pseudo → compte invité → table privée créée avec ses bots (soloBotsCount) →
  * lobby, prêt à lancer. Aucune inscription.
  *
  * Réservé aux jeux botsFillable dont les cartes existent dans la langue de
@@ -178,16 +178,17 @@ export function TryBotsGate({
         showApiError(roomData?.error)
         return
       }
-      // 3. Les bots qui manquent pour pouvoir lancer seul (best-effort :
-      //    le callout du lobby permet de compléter en un clic au besoin).
+      // 3. Les bots de la table solo (best-effort : le callout du lobby
+      //    permet de compléter en un clic au besoin) — de quoi lancer seul,
+      //    ou davantage quand le jeu le demande (GameMeta.soloBots).
       //    Aucun pour « Inviter des potes » : la table attend les vrais.
-      const missing = mode === 'friends' ? 0 : Math.max(0, (game.minPlayers ?? 2) - 1)
-      if (missing > 0) {
+      const bots = mode === 'friends' ? 0 : soloBotsCount(game)
+      if (bots > 0) {
         await fetch(`/api/online/rooms/${roomData.room.id}/settings`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ botsCount: missing }),
+          body: JSON.stringify({ botsCount: bots }),
         }).catch(() => null)
       }
       // 4. Direction le lobby, session fraîche.

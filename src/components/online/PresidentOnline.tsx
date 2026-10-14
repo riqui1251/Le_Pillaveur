@@ -20,7 +20,7 @@ import {
   PRE_TURN_MS,
   type PreClientView,
 } from '@/lib/president/engine'
-import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
+import { botAvatarFromName, botTickDelayMs, type SpeechGenre } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -29,6 +29,7 @@ import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
+import { genreOf, genreOfId } from './bot-speech/bot-speech-feed'
 
 /**
  * PRÉSIDENT en ligne (serveur-autoritaire). Main triée en éventail
@@ -179,19 +180,19 @@ export function PresidentOnline() {
   const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
-  const roleLabel = (role: string) =>
+  const roleLabel = (role: string, genre: SpeechGenre) =>
     role === 'president'
-      ? t('roles.president')
+      ? t('roles.president', { genre })
       : role === 'trou'
         ? t('roles.trou')
         : role === 'vicePresident'
-          ? t('roles.vicePresident')
+          ? t('roles.vicePresident', { genre })
           : t('roles.viceTrou')
   // Étiquette de rôle d'une ligne de classement (👑 / 🎖️ / 🪠 / 🕳️).
-  const rankRoleLabel = (i: number, len: number): string => {
-    if (i === 0) return `👑 ${t('roles.president')}`
+  const rankRoleLabel = (i: number, len: number, genre: SpeechGenre): string => {
+    if (i === 0) return `👑 ${t('roles.president', { genre })}`
     if (i === len - 1) return `🕳️ ${t('roles.trou')}`
-    if (len >= 4 && i === 1) return `🎖️ ${t('roles.vicePresident')}`
+    if (len >= 4 && i === 1) return `🎖️ ${t('roles.vicePresident', { genre })}`
     if (len >= 4 && i === len - 2) return `🪠 ${t('roles.viceTrou')}`
     return ''
   }
@@ -286,7 +287,7 @@ export function PresidentOnline() {
             <Crown className="h-14 w-14 text-gold" />
             <h2 className="font-display text-3xl font-bold text-gold">{t('finished.title')}</h2>
             <p className="max-w-xs text-sm text-white/60">
-              {t('finished.subtitle', { name: nameOf(ranking[0] ?? null) })}
+              {t('finished.subtitle', { name: nameOf(ranking[0] ?? null), genre: genreOfId(view.players, ranking[0]) })}
             </p>
           </motion.div>
         }
@@ -311,7 +312,7 @@ export function PresidentOnline() {
                       {p.name}
                     </span>
                     <span className="text-xs font-bold uppercase tracking-wide text-white/75">
-                      {rankRoleLabel(i, ranking.length)}
+                      {rankRoleLabel(i, ranking.length, genreOf(p))}
                     </span>
                   </div>
                 )
@@ -367,7 +368,7 @@ export function PresidentOnline() {
                   {p.name}
                 </span>
                 <span className="text-xs font-bold uppercase tracking-wide text-white/75">
-                  {rankRoleLabel(i, ranking.length)}
+                  {rankRoleLabel(i, ranking.length, genreOf(p))}
                 </span>
               </div>
             )
@@ -478,7 +479,7 @@ export function PresidentOnline() {
               <PlayerAvatarGlyph value={iconOf(p)} />
               <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
               {p.role && (
-                <span aria-hidden title={roleLabel(p.role)}>
+                <span aria-hidden title={roleLabel(p.role, genreOf(p))}>
                   {ROLE_BADGES[p.role]}
                 </span>
               )}

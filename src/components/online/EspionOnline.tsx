@@ -23,6 +23,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { genreOfId } from './bot-speech/bot-speech-feed'
 
 /**
  * QUI EST L'ESPION ? en ligne (serveur-autoritaire). `location` est null
@@ -194,7 +195,7 @@ export function EspionOnline() {
   if (view.phase === 'reveal' && reveal) {
     const outcomeText =
       reveal.outcome === 'spy-caught'
-        ? t('reveal.outcome.spyCaught', { name: nameOf(reveal.spyId) })
+        ? t('reveal.outcome.spyCaught', { name: nameOf(reveal.spyId), genre: genreOfId(view.players, reveal.spyId) })
         : reveal.outcome === 'accusation-failed'
           ? t('reveal.outcome.accusationFailed')
           : reveal.outcome === 'spy-guessed-right'

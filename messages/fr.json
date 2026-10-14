@@ -350,7 +350,7 @@
     "seul-avec-des-bots": {
       "title": "Jouer seul : les jeux avec des bots",
       "description": "Pas de monde ce soir ? Ouvrez une table, les bots complètent : Loup-Garou, quiz, Président, Purple… Gratuit, en ligne, seul ou à deux.",
-      "intro": "Personne de disponible, ou l'envie de s'entraîner avant la prochaine soirée : sur ces jeux, l'hôte de la table peut « compléter avec des bots » depuis le lobby, et la partie se lance même sous le minimum de joueurs — tout seul, donc. Les bots ont chacun leur nom et leur personnalité, et ils tiennent leur siège : ils répondent au Grand Pillaveur, le quiz à buzzers, jouent leurs cartes au Président, votent et accusent au Loup-Garou, parient à Purple et au 1220, lancent le dé au Petit Buveur. Ce sont les jeux qui se jouent vraiment seul. À L'Imposteur, à Qui est l'Espion ?, au Crobard, au Grand Bluff, à Sans Filtre, à Dilemmes ou au Menteur, les bots complètent une table sans la faire vivre : un bot n'y dessine pas, n'y invente aucun bluff, n'y raconte rien et n'y mène pas l'enquête ; aux dés du Menteur, il enchérit, mais sans visage à lire, le bluff tombe à plat. Ces jeux-là veulent de vrais joueurs. Si quelqu'un décroche en cours de partie, un bot le remplace pour que la table continue. C'est la même liste que le raccourci « Jouer seul avec les bots » de la vitrine. Tout se passe en ligne, sur votre téléphone, et une fois un jeu pris en main, il suffit de partager le code de la table pour que vos amis prennent les sièges à leur tour."
+      "intro": "Personne de disponible, ou l'envie de s'entraîner avant la prochaine soirée : sur ces jeux, l'hôte de la table peut « compléter avec des bots » depuis le lobby, et la partie se lance même sous le minimum de joueurs — tout seul, donc. Les bots ont chacun leur nom et leur personnalité, et ils tiennent leur siège : ils répondent au Grand Pillaveur, le quiz à buzzers, jouent leurs cartes au Président, votent et accusent au Loup-Garou, parient à Purple et au 1220, lancent le dé au Petit Buveur. Ce sont les jeux qui se jouent vraiment seul. À L'Imposteur, les bots donnent de vrais indices tirés de leur mot et votent contre celui dont l'indice ne colle pas : une table de cinq se joue seul, même si le bluff y prend tout son sel entre amis. À Qui est l'Espion ?, au Crobard, au Grand Bluff, à Sans Filtre, à Dilemmes ou au Menteur, les bots complètent une table sans la faire vivre : un bot n'y dessine pas, n'y invente aucun bluff, n'y raconte rien et n'y mène pas l'enquête ; aux dés du Menteur, il enchérit, mais sans visage à lire, le bluff tombe à plat. Ces jeux-là veulent de vrais joueurs. Si quelqu'un décroche en cours de partie, un bot le remplace pour que la table continue. C'est la même liste que le raccourci « Jouer seul avec les bots » de la vitrine. Tout se passe en ligne, sur votre téléphone, et une fois un jeu pris en main, il suffit de partager le code de la table pour que vos amis prennent les sièges à leur tour."
     },
     "en-grand-groupe": {
       "title": "Jeux de soirée en grand groupe",
@@ -1291,7 +1291,7 @@
       },
       "imposteur": {
         "title": "Jouer à L'Imposteur en ligne gratuit — un mot, un intrus",
-        "description": "Un mot secret pour tous… sauf un : indices, votes et bluff au sommet. 3 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul, les bots complètent."
+        "description": "Un mot secret pour tous… sauf un : indices, votes et bluff. 3 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul, face à des bots qui enquêtent."
       },
       "quiz": {
         "title": "Jouer au Grand Pillaveur — le quiz apéro en ligne gratuit",
@@ -2459,7 +2459,7 @@
         "round": "Manche {n}",
         "diceOnTable": "{n} dés sur la table",
         "you": "(toi)",
-        "eliminated": "Éliminé 💀",
+        "eliminated": "{genre, select, f {Éliminée} m {Éliminé} other {Hors jeu}} 💀",
         "spectator": "Tu n'as plus de dés — profite du spectacle 👀",
         "currentBid": "Enchère en cours",
         "bidBy": "par {name}",
@@ -2486,7 +2486,7 @@
           "calzaWonCapped": "🎯 Calza réussi : {name} a déjà le maximum de dés, rien à regagner.",
           "calzaLost": "{name} a tenté Calza et se plante : perd un dé et boit {sips} gorgée{sips, plural, one {} other {s}} 🍺",
           "calzaLostSoft": "{name} a tenté Calza et se plante : perd un dé",
-          "eliminatedMsg": "💀 {name} n'a plus de dés — cul sec, éliminé !",
+          "eliminatedMsg": "💀 {name} n’a plus de dés — cul sec, {genre, select, f {éliminée} m {éliminé} other {hors jeu}} !",
           "continue": "Manche suivante"
         },
         "victoryTitle": "{name} remporte la table !",
@@ -2556,12 +2556,13 @@
         "voted": "Vote enregistré — on attend les autres…",
         "spectatorVote": "Les vivants votent…",
         "reveal": {
-          "outTitle": "{name} est éliminé !",
-          "outWord": "Son mot était « {word} »",
-          "wasImposteur": "C'était l'IMPOSTEUR !",
-          "wasCivil": "C'était un innocent…",
+          "outTitle": "{name} {genre, select, f {est éliminée} m {est éliminé} other {est hors jeu}} !",
+          "outWord": "{genre, select, f {Son mot était « {word} »} m {Son mot était « {word} »} other {Son mot était « {word} »}}",
+          "wasImposteur": "{genre, select, f {C’était l’IMPOSTEUR !} m {C’était l’IMPOSTEUR !} other {C’était l’IMPOSTEUR !}}",
+          "wasCivil": "{genre, select, f {C’était une innocente…} m {C’était un innocent…} other {Ce n’était pas un imposteur…}}",
           "sips": "{name} boit {sips} gorgée{sips, plural, one {} other {s}} 🍺",
           "tieTitle": "Égalité !",
+          "noVote": "Personne n'a voté !",
           "tieMsg": "Personne ne sort — l'imposteur respire encore…",
           "continue": "Manche suivante",
           "seeResult": "Voir le verdict"
@@ -2572,8 +2573,8 @@
           "civilDrinks": "L'imposteur finit son verre 🍻",
           "imposteurDrinks": "Les civils trinquent : 3 gorgées chacun 🍺",
           "fullReveal": "Les mots étaient…",
-          "teamCivil": "Civil",
-          "teamImposteur": "Imposteur",
+          "teamCivil": "{genre, select, f {Civile} m {Civil} other {Civil}}",
+          "teamImposteur": "{genre, select, f {Imposteur} m {Imposteur} other {Imposteur}}",
           "replay": "Rejouer",
           "rematchWaiting": "En attente des autres ({count}/{total})",
           "backToMenu": "Retour au menu"
@@ -2584,6 +2585,98 @@
         "countdown": {
           "title": "Préparez-vous !",
           "hint": "Mémorise ton mot secret — les indices arrivent…"
+        },
+        "feedAria": "Fil des échanges",
+        "accusedYou": "⚡ Défends-toi !",
+        "speakAccuse": "Accuser",
+        "speakDefend": "Me défendre",
+        "speakPickAccuse": "Qui accuses-tu ?",
+        "speakCancel": "Annuler",
+        "speechLeft": "Paroles restantes : {n}/{max}",
+        "botSay": {
+          "suspect": "{name}, ton « {clue} », ça colle pas avec mon mot 🤨",
+          "suspect_2": "« {clue} » ? Sérieux, {name}… ça sent l’imposteur.",
+          "suspect_3": "{name} a dit « {clue} »… moi, je vois pas le rapport 🤔",
+          "defend": "Quoi ?! {name}, mon indice colle parfaitement, relis-le !",
+          "defend_2": "{name}, {target, select, f {t’es bien pressée} m {t’es bien pressé} other {quelle hâte}} de m’accuser… ça cache quoi ?",
+          "defend_3": "Moi ? Mon indice allait pile avec les autres, {name} !",
+          "ally": "{name}, ton « {clue} » va bien avec mon mot 🤝",
+          "ally_2": "« {clue} », j’y ai pensé aussi ! {name}, on est raccord 👌",
+          "ally_3": "Joli, {name} ! « {clue} », ça me parle à fond 👍",
+          "rally": "Bien vu ! {name} avec son « {clue} », j’ai tiqué aussi 👀",
+          "rally_2": "Je confirme, « {clue} », ça colle pas : {target, select, f {{name} est grillée} m {{name} est grillé} other {{name} se trahit}}.",
+          "rally_3": "{speaker, select, f {Je suis pas la seule} m {Je suis pas le seul} other {On est au moins deux}} à tiquer sur « {clue} », {name} 🧐",
+          "doubt": "{speaker, select, f {Pas sûre} m {Pas sûr} other {Pas si vite}} pour {name}, son indice tient la route.",
+          "doubt_2": "Du calme, on sort pas {name} pour un indice un peu bizarre.",
+          "doubt_3": "Hum, {name} me paraît réglo… on cherche ailleurs ?",
+          "ask": "{name}, et toi, tu votes qui ?",
+          "ask_2": "{speaker, select, f {Je suis un peu perdue} m {Je suis un peu perdu} other {Je sais plus trop}}, {name}, quel indice t’a fait tiquer ?",
+          "ask_3": "Alors {name}, ton imposteur, c’est qui ?",
+          "intent": "Perso, je vote {name}.",
+          "intent_2": "Mon vote part sur {name} 🗳️",
+          "intent_3": "{name}, ton indice me convainc pas : je vote contre toi.",
+          "toldYou": "Je l’avais dit ! {name} et son indice, ça sonnait faux.",
+          "toldYou_2": "{target, select, f {{name} démasquée !} m {{name} démasqué !} other {Bingo pour {name} !}} Son indice m’avait mis la puce à l’oreille.",
+          "toldYou_3": "Et voilà ! {speaker, select, f {J’en étais sûre} m {J’en étais sûr} other {Je le sentais}}, {name} avait l’autre mot 😎",
+          "wrong": "Bon… {speaker, select, f {je me suis plantée} m {je me suis planté} other {j’ai eu tout faux}} sur {name}.",
+          "wrong_2": "Oups, {target, select, f {{name} était innocente} m {{name} était innocent} other {{name} n’y était pour rien}}… {speaker, select, f {désolée} m {désolé} other {toutes mes excuses}} 🙈",
+          "wrong_3": "Raté pour {name}… j’avais mal lu son indice."
+        },
+        "botSayTrait": {
+          "prudent": {
+            "suspect": "Je peux me tromper, mais « {clue} »… {name}, j’ai un doute.",
+            "suspect_2": "Hmm, « {clue} »… je dis pas que c’est toi, {name}.",
+            "suspect_3": "{speaker, select, f {Pas certaine} m {Pas certain} other {Rien de sûr}}, mais {name} avec « {clue} »… ça me chiffonne.",
+            "defend": "Doucement {name}… mon indice colle, je t’assure.",
+            "defend_2": "{speaker, select, f {Je suis aussi perdue que toi} m {Je suis aussi perdu que toi} other {Je doute autant que toi}}, {name}, mais mon indice tient.",
+            "defend_3": "{target, select, f {Tu es sûre de toi, {name} ?} m {Tu es sûr de toi, {name} ?} other {Tu y as bien réfléchi, {name} ?}} Mon indice était honnête."
+          },
+          "farceur": {
+            "suspect": "« {clue} » ? {name}, t’as tiré ça d’un chapeau ? 🎩",
+            "suspect_2": "{name}, « {clue} » ? Tu décris quoi, la lune ? 😂",
+            "suspect_3": "{speaker, select, f {Je suis pas folle} m {Je suis pas fou} other {Je rêve pas}}, {name} a bien sorti « {clue} » ?! 😄",
+            "defend": "Si c’est moi l’imposteur, {name}, {speaker, select, f {personne m’a prévenue} m {personne m’a prévenu} other {on m’a rien dit}} 😅",
+            "defend_2": "Attends {name}, {target, select, f {t’es sérieuse} m {t’es sérieux} other {tu rigoles}} ? Mon indice, c’est de l’art !",
+            "defend_3": "Moi, l’imposteur ? {name}, j’ai même pas le niveau 🤪"
+          },
+          "suiveur": {
+            "suspect": "Si vous trouvez « {clue} » louche, moi aussi, {name}.",
+            "suspect_2": "{name}, « {clue} »… {speaker, select, f {je suis pas la seule à tiquer} m {je suis pas le seul à tiquer} other {on est plusieurs à tiquer}}, non ?",
+            "suspect_3": "Si on vote {name}, j’en suis ! « {clue} », c’est pas clair.",
+            "defend": "Non non {name}, j’ai fait comme tout le monde, moi ! 🐑",
+            "defend_2": "{name}, demande aux autres : mon indice collait avec les leurs !",
+            "defend_3": "{name}, {target, select, f {t’es gonflée} m {t’es gonflé} other {quel culot}}… les autres me croient, eux."
+          },
+          "agressif": {
+            "suspect": "{name}, ton « {clue} » sort de nulle part. Avoue !",
+            "suspect_2": "{target, select, f {{name} est une menteuse} m {{name} est un menteur} other {{name} ment}} : « {clue} », ça trompe personne !",
+            "suspect_3": "{speaker, select, f {Prête à parier} m {Prêt à parier} other {Je parie gros}} : « {clue} », c’est {name} l’imposteur !",
+            "defend": "Tu m’accuses, {name} ? Relis ton indice d’abord !",
+            "defend_2": "{name}, {target, select, f {t’es mal placée pour parler} m {t’es mal placé pour parler} other {parle pour toi}}, ton indice était pire !",
+            "defend_3": "Moi ? Avec mon indice béton ? {name}, tu cherches à te couvrir !"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
         }
       },
       "tutorial": {
@@ -2605,7 +2698,7 @@
       "about": {
         "p1": "Le jeu tire une paire de mots proches, plage et piscine, café et thé. La majorité de la table reçoit l'un des deux sur son téléphone ; le ou les imposteurs reçoivent l'autre. La grande méchanceté du jeu : personne ne sait dans quel camp il est. Tu vois ton mot, un point c'est tout, et ce « soleil » que tout le monde décrit est peut-être le tien… ou pas.",
         "p2": "À tour de rôle, chacun écrit un indice court en 45 secondes ; ton propre mot est refusé. Puis on vote en secret pour le joueur le plus suspect, 60 secondes. L'éliminé sort mot et camp découverts ; à égalité, personne ne sort et on repart entre survivants. Le village gagne quand tous les imposteurs sont tombés, les imposteurs gagnent à trois survivants ou dès qu'ils ne sont plus minoritaires.",
-        "p3": "Le doute des autres est aussi le tien : un indice trop précis te démasque si tu es l'intrus, un indice trop vague te fait passer pour coupable. Deux imposteurs à partir de sept joueurs, jusqu'à trois. En mode apéro, un innocent éliminé à tort boit trois gorgées. Les mots existent en quatre langues ; les bots votent au hasard, parfaits pour apprendre."
+        "p3": "Le doute des autres est aussi le tien : un indice trop précis te démasque si tu es l'intrus, un indice trop vague te fait passer pour coupable. Deux imposteurs à partir de sept joueurs, jusqu'à trois. En mode apéro, un innocent éliminé à tort boit trois gorgées. Les mots existent en quatre langues. Seul, tu joues à cinq avec quatre bots : chacun donne un vrai indice tiré de son mot, puis vote contre celui dont l'indice ne colle pas — sans connaître son camp plus que toi."
       }
     },
     "bluff": {
@@ -2705,7 +2798,7 @@
           "seeResult": "Voir le résultat",
           "continue": "Manche suivante",
           "outcome": {
-            "spyCaught": "{name} était l'espion — démasqué !",
+            "spyCaught": "{genre, select, f {{name} était l’espionne — démasquée !} m {{name} était l’espion — démasqué !} other {Le masque tombe : {name} était l’espion !}}",
             "accusationFailed": "Mauvaise cible… l'espion s'échappe !",
             "spyGuessedRight": "{name} a deviné le lieu !",
             "spyGuessedWrong": "Mauvaise réponse de l'espion !",
@@ -2775,7 +2868,7 @@
         "foundButton": "TROUVÉ !",
         "tabooButton": "TABOU !",
         "teammateHint": "{name} décrit un mot à voix haute — clique dès que ton équipe trouve !",
-        "opponentHint": "Écoute bien : si {name} prononce un mot interdit, dénonce-le !",
+        "opponentHint": "Écoute bien : si {name} prononce un mot interdit, {genre, select, f {dénonce-la} m {dénonce-le} other {crie au tabou}} !",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "roundEnd": {
           "title": "Bilan de la manche",
@@ -3826,9 +3919,9 @@
         "revealHint": "La nuit tombe dans quelques secondes…",
         "mayorPrompt": "🎖️ Qui élisez-vous maire ? Son vote comptera double au lynchage.",
         "mayorVoted": "Vote enregistré — on attend les autres…",
-        "mayorBadge": "Maire — son vote compte double au lynchage",
+        "mayorBadge": "{genre, select, f {Maire} m {Maire} other {Maire}} — son vote compte double au lynchage",
         "youAreMayor": "🎖️ Tu es le maire ! Ton vote compte double au lynchage.",
-        "mayorBanner": "🎖️ {name} est le maire — son vote compte double au lynchage.",
+        "mayorBanner": "🎖️ {name} {genre, select, f {est la maire} m {est le maire} other {est maire}} — son vote compte double au lynchage.",
         "wolfChatTitle": "Chat des loups (privé)",
         "seerPrompt": "🔮 Qui veux-tu sonder cette nuit ?",
         "seerDone": "Vision reçue — le village dort encore…",
@@ -3846,10 +3939,10 @@
         "witchKill": "Potion de mort…",
         "witchNone": "Ne rien faire",
         "dawnNobody": "Personne n’est mort cette nuit ! 🎉",
-        "dawnDeath": "💀 {name} est mort — c’était {role} (+3 🍺)",
-        "dawnDeathSoft": "💀 {name} est mort — c’était {role}",
+        "dawnDeath": "💀 {name} {genre, select, f {est morte} m {est mort} other {n’a pas survécu à la nuit}} — c’était {role} (+3 🍺)",
+        "dawnDeathSoft": "💀 {name} {genre, select, f {est morte} m {est mort} other {n’a pas survécu à la nuit}} — c’était {role}",
         "hunterPrompt": "🏹 Dernier souffle : emporte quelqu’un !",
-        "hunterWaiting": "{name} arme son fusil…",
+        "hunterWaiting": "{name} {genre, select, f {arme son fusil} m {arme son fusil} other {arme son fusil}}…",
         "debatePrompt": "🗣️ Débat : qui est le loup ?",
         "debateHint": "Accuse, défends-toi, fais équipe — ou au vocal.",
         "speakAccuse": "Accuser",
@@ -3868,7 +3961,7 @@
         "revotePrompt": "Égalité ! Départagez les ex-aequo.",
         "voted": "Vote scellé — on attend les autres…",
         "spectatorVote": "Les vivants votent…",
-        "voteBanner": "⚖️ {name} a été lynché — c’était {role}",
+        "voteBanner": "⚖️ {genre, select, f {{name} a été lynchée} m {{name} a été lynché} other {Le village a lynché {name}}} — c’était {role}",
         "voteTieBanner": "⚖️ Égalité au vote — personne n’est sorti",
         "village": "Le village ({alive}/{total} vivants)",
         "victory": {
@@ -3972,11 +4065,11 @@
         },
         "guardPrompt": "Qui protèges-tu des loups cette nuit ?",
         "guardDone": "Tu veilles sur {name} cette nuit. 🛡️",
-        "guardForbidden": "Interdit : {name} (déjà protégé la nuit dernière).",
+        "guardForbidden": "Interdit : {name} ({genre, select, f {déjà protégée} m {déjà protégé} other {déjà sous ta garde}} la nuit dernière).",
         "ravenPrompt": "Qui marques-tu de ta plume noire ?",
         "ravenDone": "Ta marque pèse sur {name}. 🐦‍⬛",
-        "ravenMarkBanner": "🐦‍⬛ {name} porte la marque du Corbeau : +2 voix contre lui au vote !",
-        "ravenMarkBadge": "Marqué par le Corbeau (+2 voix)",
+        "ravenMarkBanner": "🐦‍⬛ {name} porte la marque du Corbeau : +2 voix {genre, select, f {contre elle} m {contre lui} other {à son encontre}} au vote !",
+        "ravenMarkBadge": "{genre, select, f {Marquée par le Corbeau} m {Marqué par le Corbeau} other {Marque du Corbeau}} (+2 voix)",
         "elderAttackedBanner": "⏳ Vous avez été pris pour cible par les loups cette nuit.",
         "dayChatTitle": "Chat du village",
         "ravenRevoteNotice": "La marque du Corbeau (+2 voix) ne compte plus au revote.",
@@ -4324,9 +4417,9 @@
         "leadHint": "Tu mènes : simple, paire, brelan ou carré — au choix.",
         "out": "Tu as fini ! Position {rank} — regarde les autres transpirer.",
         "roles": {
-          "president": "Président",
+          "president": "{genre, select, f {Présidente} m {Président} other {Président}}",
           "trou": "Trou",
-          "vicePresident": "Vice-Président",
+          "vicePresident": "{genre, select, f {Vice-Présidente} m {Vice-Président} other {Vice-Président}}",
           "viceTrou": "Vice-Trou"
         },
         "exchangeInfo": "Échanges automatiques : le Trou donne ses 2 meilleures cartes au Président (qui rend ses 2 pires), le Vice-Trou donne sa meilleure au Vice-Président (qui rend sa pire).",
@@ -4338,7 +4431,7 @@
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "finished": {
           "title": "Fin de partie !",
-          "subtitle": "{name} est Président — inclinez-vous.",
+          "subtitle": "{name} {genre, select, f {est Présidente} m {est Président} other {prend la présidence}} — inclinez-vous.",
           "replay": "Rejouer",
           "rematchWaiting": "Revanche {count}/{total}…",
           "backToMenu": "Retour au menu"

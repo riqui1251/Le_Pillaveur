@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GAMES, getGameById, hasContentIn, soloAlternativeFor, splitBySoloFit, type GameMeta } from './games'
+import { GAMES, getGameById, hasContentIn, soloAlternativeFor, soloBotsCount, splitBySoloFit, type GameMeta } from './games'
 import { locales } from '@/i18n/routing'
 
 /**
@@ -153,6 +153,29 @@ describe('tenue en solo (soloFit)', () => {
 
   it('Toucher-Coulé, sans complément par bots au lobby, reste hors classement', () => {
     expect(getGameById('toucher-coule')?.soloFit).toBeUndefined()
+  })
+})
+
+describe('table solo d’« Essayer avec des bots » (soloBots)', () => {
+  it('réservé aux jeux botsFillable, sans dépasser la table ni rester sous le minimum', () => {
+    for (const game of GAMES.filter((g) => g.soloBots !== undefined)) {
+      const bots = game.soloBots!
+      expect(game.botsFillable, `${game.id} : soloBots sans bots au lobby`).toBe(true)
+      expect(Number.isInteger(bots) && bots >= 1, `${game.id} : soloBots = ${bots}`).toBe(true)
+      expect(bots, `${game.id} : plus de bots que de sièges libres`).toBeLessThanOrEqual(game.maxPlayers! - 1)
+      expect(bots + 1, `${game.id} : table solo sous le minimum`).toBeGreaterThanOrEqual(game.minPlayers!)
+    }
+  })
+
+  it('L’Imposteur se joue à 5 (quatre bots) : au moins deux votes avant que l’imposteur gagne', () => {
+    expect(soloBotsCount(getGameById('imposteur')!)).toBe(4)
+  })
+
+  it('sans soloBots : juste de quoi lancer seul (minPlayers − 1)', () => {
+    expect(soloBotsCount(getGameById('loup-garou')!)).toBe(getGameById('loup-garou')!.minPlayers! - 1)
+    expect(soloBotsCount({ minPlayers: 3 })).toBe(2)
+    expect(soloBotsCount({})).toBe(1)
+    expect(soloBotsCount({ minPlayers: 1 })).toBe(0)
   })
 })
 

@@ -350,7 +350,7 @@
     "seul-avec-des-bots": {
       "title": "Play solo: games with bots",
       "description": "Nobody around tonight? Open a table and the bots fill the seats: Werewolf, quiz, Président, Purple… Free, online, alone or as a pair.",
-      "intro": "Nobody free, or just the wish to practise before the next party: on these games the table host can fill the empty seats with bots from the lobby, and the game starts even below the minimum player count — on your own, then. Each bot has its own name and personality, and they hold their seat: they answer at The Big Pillaveur Quiz, the buzzer quiz, play their cards at Président, vote and accuse at Werewolf, bet at Purple and 1220, roll the dice at The Little Drinker. Those are the games you can truly play alone. At The Impostor, Who's the Spy?, Crobard, The Big Bluff, Sans Filtre, Dilemmes or Liar's Dice, bots fill a table without bringing it to life: a bot doesn't draw, makes up no bluffs, tells no stories and leads no investigation, and at Liar's Dice it does bid, but with no face to read, the bluffing falls flat. Those games want real players. If someone drops out mid-game, a bot steps in so the table keeps going. It is the same list as the “Play solo with bots” shortcut on the home page. Everything happens online, on your phone, and once you have the hang of a game, sharing the table code is all it takes for your friends to take the seats in turn."
+      "intro": "Nobody free, or just the wish to practise before the next party: on these games the table host can fill the empty seats with bots from the lobby, and the game starts even below the minimum player count — on your own, then. Each bot has its own name and personality, and they hold their seat: they answer at The Big Pillaveur Quiz, the buzzer quiz, play their cards at Président, vote and accuse at Werewolf, bet at Purple and 1220, roll the dice at The Little Drinker. Those are the games you can truly play alone. At The Impostor, bots give real clues drawn from their word and vote against whoever's clue doesn't fit: a table of five works solo, even if the bluffing is at its best among friends. At Who's the Spy?, Crobard, The Big Bluff, Sans Filtre, Dilemmes or Liar's Dice, bots fill a table without bringing it to life: a bot doesn't draw, makes up no bluffs, tells no stories and leads no investigation, and at Liar's Dice it does bid, but with no face to read, the bluffing falls flat. Those games want real players. If someone drops out mid-game, a bot steps in so the table keeps going. It is the same list as the “Play solo with bots” shortcut on the home page. Everything happens online, on your phone, and once you have the hang of a game, sharing the table code is all it takes for your friends to take the seats in turn."
     },
     "en-grand-groupe": {
       "title": "Party games for big groups",
@@ -1291,7 +1291,7 @@
       },
       "imposteur": {
         "title": "Play The Impostor online free — one word, one intruder",
-        "description": "A secret word for everyone… except one: clues, votes and bluffing. 3–16 players, voice chat, free, no install — or solo, bots fill the seats."
+        "description": "A secret word for everyone… except one: clues, votes and bluffing. 3–16 players, voice chat, free, no install — or solo, against bots that give real clues."
       },
       "quiz": {
         "title": "Play The Big Pillaveur Quiz online free — buzz first",
@@ -2459,7 +2459,7 @@
         "round": "Round {n}",
         "diceOnTable": "{n} dice on the table",
         "you": "(you)",
-        "eliminated": "Eliminated 💀",
+        "eliminated": "{genre, select, f {Eliminated} m {Eliminated} other {Eliminated}} 💀",
         "spectator": "No dice left — enjoy the show 👀",
         "currentBid": "Current bid",
         "bidBy": "by {name}",
@@ -2486,7 +2486,7 @@
           "calzaWonCapped": "🎯 Calza landed: {name} already has the max dice, nothing to win back.",
           "calzaLost": "{name} tried Calza and missed: loses a die and drinks {sips} sip{sips, plural, one {} other {s}} 🍺",
           "calzaLostSoft": "{name} tried Calza and missed: loses a die",
-          "eliminatedMsg": "💀 {name} has no dice left — bottoms up, eliminated!",
+          "eliminatedMsg": "💀 {name} has no dice left — bottoms up, {genre, select, f {eliminated} m {eliminated} other {eliminated}}!",
           "continue": "Next round"
         },
         "victoryTitle": "{name} wins the table!",
@@ -2556,12 +2556,13 @@
         "voted": "Vote saved — waiting for the others…",
         "spectatorVote": "The living are voting…",
         "reveal": {
-          "outTitle": "{name} is eliminated!",
-          "outWord": "Their word was \"{word}\"",
-          "wasImposteur": "They were the IMPOSTOR!",
-          "wasCivil": "They were innocent…",
+          "outTitle": "{name} {genre, select, f {is eliminated} m {is eliminated} other {is eliminated}}!",
+          "outWord": "{genre, select, f {Her word} m {His word} other {Their word}} was \"{word}\"",
+          "wasImposteur": "{genre, select, f {She was} m {He was} other {They were}} the IMPOSTOR!",
+          "wasCivil": "{genre, select, f {She was} m {He was} other {They were}} innocent…",
           "sips": "{name} drinks {sips} sip{sips, plural, one {} other {s}} 🍺",
           "tieTitle": "It's a tie!",
+          "noVote": "Nobody voted!",
           "tieMsg": "Nobody is out — the impostor lives on…",
           "continue": "Next round",
           "seeResult": "See the verdict"
@@ -2572,8 +2573,8 @@
           "civilDrinks": "The impostor finishes their drink 🍻",
           "imposteurDrinks": "The civilians drink: 3 sips each 🍺",
           "fullReveal": "The words were…",
-          "teamCivil": "Civilian",
-          "teamImposteur": "Impostor",
+          "teamCivil": "{genre, select, f {Civilian} m {Civilian} other {Civilian}}",
+          "teamImposteur": "{genre, select, f {Impostor} m {Impostor} other {Impostor}}",
           "replay": "Play again",
           "rematchWaiting": "Waiting for the others ({count}/{total})",
           "backToMenu": "Back to menu"
@@ -2584,6 +2585,98 @@
         "countdown": {
           "title": "Get ready!",
           "hint": "Memorise your secret word — clues are coming…"
+        },
+        "feedAria": "Table talk",
+        "accusedYou": "⚡ Defend yourself!",
+        "speakAccuse": "Accuse",
+        "speakDefend": "Defend myself",
+        "speakPickAccuse": "Who do you accuse?",
+        "speakCancel": "Cancel",
+        "speechLeft": "Speeches left: {n}/{max}",
+        "botSay": {
+          "suspect": "{name}, your “{clue}” doesn’t fit my word 🤨",
+          "suspect_2": "“{clue}”? Seriously, {name}… that smells like the impostor.",
+          "suspect_3": "{name} said “{clue}”… I don’t see the link 🤔",
+          "defend": "What?! {name}, my clue fits perfectly, read it again!",
+          "defend_2": "{name}, {target, select, f {you’re quick} m {you’re quick} other {you’re in a rush}} to accuse me… hiding something?",
+          "defend_3": "Me? My clue went right along with the others, {name}!",
+          "ally": "{name}, your “{clue}” goes well with my word 🤝",
+          "ally_2": "“{clue}”, I thought of that too! {name}, we’re in sync 👌",
+          "ally_3": "Nice one, {name}! “{clue}” really speaks to me 👍",
+          "rally": "Good call! {name} and that “{clue}”, it bugged me too 👀",
+          "rally_2": "Agreed, “{clue}” doesn’t fit: {target, select, f {{name} gave herself away} m {{name} gave himself away} other {{name} slipped up}}.",
+          "rally_3": "{speaker, select, f {I’m not the only one} m {I’m not the only one} other {At least two of us are}} bothered by “{clue}”, {name} 🧐",
+          "doubt": "{speaker, select, f {Not so sure} m {Not so sure} other {Not so fast}} about {name}, that clue holds up.",
+          "doubt_2": "Easy, we don’t vote out {name} for one odd clue.",
+          "doubt_3": "Hmm, {name} seems legit to me… shall we look elsewhere?",
+          "ask": "{name}, what about you, who are you voting for?",
+          "ask_2": "{speaker, select, f {I’m a bit lost} m {I’m a bit lost} other {I’m not so sure}}, {name}, which clue bugged you?",
+          "ask_3": "So {name}, who’s your impostor?",
+          "intent": "Personally, I’m voting {name}.",
+          "intent_2": "My vote goes to {name} 🗳️",
+          "intent_3": "{name}, your clue doesn’t convince me: I’m voting against you.",
+          "toldYou": "I said so! {name} and that clue, it rang false.",
+          "toldYou_2": "{target, select, f {{name}, unmasked!} m {{name}, unmasked!} other {Bingo for {name}!}} That clue tipped me off.",
+          "toldYou_3": "There you go! {speaker, select, f {I was sure of it} m {I was sure of it} other {I knew it}}, {name} had the other word 😎",
+          "wrong": "Well… {speaker, select, f {I got it wrong} m {I got it wrong} other {I was totally off}} about {name}.",
+          "wrong_2": "Oops, {target, select, f {{name} was innocent} m {{name} was innocent} other {{name} had nothing to do with it}}… {speaker, select, f {sorry} m {sorry} other {my apologies}} 🙈",
+          "wrong_3": "Missed on {name}… I misread that clue."
+        },
+        "botSayTrait": {
+          "prudent": {
+            "suspect": "I may be wrong, but “{clue}”… {name}, I have a doubt.",
+            "suspect_2": "Hmm, “{clue}”… not saying it’s you, {name}.",
+            "suspect_3": "{speaker, select, f {Not certain} m {Not certain} other {Nothing’s certain}}, but {name} with “{clue}”… it bugs me.",
+            "defend": "Easy, {name}… my clue fits, I promise.",
+            "defend_2": "{speaker, select, f {I’m as lost as you} m {I’m as lost as you} other {I doubt as much as you}}, {name}, but my clue holds.",
+            "defend_3": "{target, select, f {Are you sure, {name}?} m {Are you sure, {name}?} other {Did you think it through, {name}?}} My clue was honest."
+          },
+          "farceur": {
+            "suspect": "“{clue}”? {name}, did you pull that out of a hat? 🎩",
+            "suspect_2": "{name}, “{clue}”? What are you describing, the moon? 😂",
+            "suspect_3": "{speaker, select, f {Am I crazy} m {Am I crazy} other {Am I dreaming}}, or did {name} just say “{clue}”?! 😄",
+            "defend": "If I’m the impostor, {name}, {speaker, select, f {nobody told me} m {nobody told me} other {that’s news to me}} 😅",
+            "defend_2": "Wait {name}, {target, select, f {are you serious} m {are you serious} other {are you kidding}}? My clue is pure art!",
+            "defend_3": "Me, the impostor? {name}, I’m not even that good 🤪"
+          },
+          "suiveur": {
+            "suspect": "If you all find “{clue}” fishy, so do I, {name}.",
+            "suspect_2": "{name}, “{clue}”… {speaker, select, f {I’m not the only one bothered} m {I’m not the only one bothered} other {a few of us are bothered}}, right?",
+            "suspect_3": "If we vote {name}, count me in! “{clue}” isn’t clear.",
+            "defend": "No no {name}, I did like everyone else! 🐑",
+            "defend_2": "{name}, ask the others: my clue matched theirs!",
+            "defend_3": "{name}, {target, select, f {you’ve got some nerve} m {you’ve got some nerve} other {what a cheek}}… the others believe me."
+          },
+          "agressif": {
+            "suspect": "{name}, your “{clue}” came out of nowhere. Confess!",
+            "suspect_2": "{target, select, f {{name} is a liar} m {{name} is a liar} other {{name} is lying}}: “{clue}” fools nobody!",
+            "suspect_3": "{speaker, select, f {Ready to bet} m {Ready to bet} other {I’d bet big}}: “{clue}”, {name} is the impostor!",
+            "defend": "You accuse me, {name}? Reread your own clue first!",
+            "defend_2": "{name}, {target, select, f {you’re hardly one to talk} m {you’re hardly one to talk} other {speak for yourself}}, your clue was worse!",
+            "defend_3": "Me? With my rock-solid clue? {name}, you’re covering yourself!"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
         }
       },
       "tutorial": {
@@ -2605,7 +2698,7 @@
       "about": {
         "p1": "The game draws a pair of close words, beach and pool, coffee and tea. Most of the table gets one of them on their phone; the impostor, or impostors, get the other. The game's real cruelty: nobody knows which side they are on. You see your word, full stop, and that “sun” everyone keeps describing may be yours… or not.",
         "p2": "In turn, each player types a short clue within 45 seconds; your own word is refused. Then everyone votes in secret for the most suspicious player, 60 seconds. The eliminated player leaves with word and side revealed; on a tie nobody leaves and the survivors go again. The village wins once every impostor is out; the impostors win at three survivors, or once they are no longer a minority.",
-        "p3": "The others' doubt is yours too: a clue too precise unmasks you if you are the intruder, one too vague makes you look guilty. Two impostors from seven players, up to three. In drinking mode, an innocent wrongly voted out drinks three sips. Words come in four languages; bots vote at random, perfect for learning."
+        "p3": "The others' doubt is yours too: a clue too precise unmasks you if you are the intruder, one too vague makes you look guilty. Two impostors from seven players, up to three. In drinking mode, an innocent wrongly voted out drinks three sips. Words come in four languages. On your own, you play a table of five with four bots: each gives a real clue drawn from its own word, then votes against whoever's clue doesn't fit — knowing its side no better than you do."
       }
     },
     "bluff": {
@@ -2705,7 +2798,7 @@
           "seeResult": "See the result",
           "continue": "Next round",
           "outcome": {
-            "spyCaught": "{name} was the spy — caught!",
+            "spyCaught": "{name} was the spy — {genre, select, f {caught} m {caught} other {caught}}!",
             "accusationFailed": "Wrong target… the spy gets away!",
             "spyGuessedRight": "{name} guessed the location!",
             "spyGuessedWrong": "Wrong guess from the spy!",
@@ -2775,7 +2868,7 @@
         "foundButton": "GOT IT!",
         "tabooButton": "TABOO!",
         "teammateHint": "{name} is describing a word out loud — click as soon as your team guesses it!",
-        "opponentHint": "Listen closely: if {name} says a forbidden word, call it out!",
+        "opponentHint": "Listen closely: if {name} says a forbidden word, {genre, select, f {call it out} m {call it out} other {call it out}}!",
         "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
         "roundEnd": {
           "title": "Round summary",
@@ -3826,9 +3919,9 @@
         "revealHint": "Night falls in a few seconds…",
         "mayorPrompt": "🎖️ Who do you elect as mayor? Their vote will count double at the lynching.",
         "mayorVoted": "Vote recorded — waiting for the others…",
-        "mayorBadge": "Mayor — their vote counts double at the lynching",
+        "mayorBadge": "Mayor — {genre, select, f {her} m {his} other {their}} vote counts double at the lynching",
         "youAreMayor": "🎖️ You are the mayor! Your vote counts double at the lynching.",
-        "mayorBanner": "🎖️ {name} is the mayor — their vote counts double at the lynching.",
+        "mayorBanner": "🎖️ {name} is the mayor — {genre, select, f {her} m {his} other {their}} vote counts double at the lynching.",
         "wolfChatTitle": "Wolves' chat (private)",
         "seerPrompt": "🔮 Who do you probe tonight?",
         "seerDone": "Vision received — the village still sleeps…",
@@ -3846,10 +3939,10 @@
         "witchKill": "Death potion…",
         "witchNone": "Do nothing",
         "dawnNobody": "Nobody died tonight! 🎉",
-        "dawnDeath": "💀 {name} is dead — they were {role} (+3 🍺)",
-        "dawnDeathSoft": "💀 {name} is dead — they were {role}",
+        "dawnDeath": "💀 {name} is dead — {genre, select, f {she was} m {he was} other {they were}} {role} (+3 🍺)",
+        "dawnDeathSoft": "💀 {name} is dead — {genre, select, f {she was} m {he was} other {they were}} {role}",
         "hunterPrompt": "🏹 Last breath: take someone with you!",
-        "hunterWaiting": "{name} is loading their rifle…",
+        "hunterWaiting": "{name} is loading {genre, select, f {her} m {his} other {their}} rifle…",
         "debatePrompt": "🗣️ Debate: who is the wolf?",
         "debateHint": "Accuse, defend yourself, team up — or on voice.",
         "speakAccuse": "Accuse",
@@ -3868,7 +3961,7 @@
         "revotePrompt": "Tie! Break it between the tied players.",
         "voted": "Vote sealed — waiting for the others…",
         "spectatorVote": "The living are voting…",
-        "voteBanner": "⚖️ {name} was lynched — they were {role}",
+        "voteBanner": "⚖️ {name} was lynched — {genre, select, f {she was} m {he was} other {they were}} {role}",
         "voteTieBanner": "⚖️ Tied vote — nobody was banished",
         "village": "The village ({alive}/{total} alive)",
         "victory": {
@@ -3972,11 +4065,11 @@
         },
         "guardPrompt": "Who do you shield from the wolves tonight?",
         "guardDone": "You are watching over {name} tonight. 🛡️",
-        "guardForbidden": "Not allowed: {name} (protected last night).",
+        "guardForbidden": "Not allowed: {name} ({genre, select, f {protected} m {protected} other {protected}} last night).",
         "ravenPrompt": "Who gets your black feather?",
         "ravenDone": "Your mark weighs on {name}. 🐦‍⬛",
-        "ravenMarkBanner": "🐦‍⬛ {name} bears the Raven’s mark: +2 votes against them today!",
-        "ravenMarkBadge": "Marked by the Raven (+2 votes)",
+        "ravenMarkBanner": "🐦‍⬛ {name} bears the Raven’s mark: +2 votes against {genre, select, f {her} m {him} other {them}} today!",
+        "ravenMarkBadge": "{genre, select, f {Marked by the Raven} m {Marked by the Raven} other {Marked by the Raven}} (+2 votes)",
         "elderAttackedBanner": "⏳ You were targeted by the wolves tonight.",
         "dayChatTitle": "Village chat",
         "ravenRevoteNotice": "The Raven's mark (+2 votes) no longer counts in the revote.",
@@ -4324,9 +4417,9 @@
         "leadHint": "You lead: single, pair, triple or quad — your choice.",
         "out": "You are out! Position {rank} — watch the others sweat.",
         "roles": {
-          "president": "President",
+          "president": "{genre, select, f {President} m {President} other {President}}",
           "trou": "Trou",
-          "vicePresident": "Vice-President",
+          "vicePresident": "{genre, select, f {Vice-President} m {Vice-President} other {Vice-President}}",
           "viceTrou": "Vice-Trou"
         },
         "exchangeInfo": "Automatic exchanges: the Trou gives their 2 best cards to the President (who returns their 2 worst), the Vice-Trou gives their best card to the Vice-President (who returns their worst).",
@@ -4338,7 +4431,7 @@
         "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
         "finished": {
           "title": "Game over!",
-          "subtitle": "{name} is President — bow down.",
+          "subtitle": "{name} {genre, select, f {is President} m {is President} other {is President}} — bow down.",
           "replay": "Play again",
           "rematchWaiting": "Rematch {count}/{total}…",
           "backToMenu": "Back to menu"

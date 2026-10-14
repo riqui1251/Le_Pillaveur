@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Eye, EyeOff, Pencil, Send, Skull, Trophy, UserX } from 'lucide-react'
+import { Eye, EyeOff, Megaphone, Pencil, Send, Shield, Skull, Trophy, UserX } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -14,11 +14,17 @@ import { Button } from '@/components/ui/button'
 import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
 import { cn } from '@/lib/utils'
 import {
+  isEmptyClueText,
   isValidClue,
   IMPOSTEUR_CLUE_MAX_LEN,
+  IMPOSTEUR_SPEECH_CAP,
+  imposteurCitedClue,
   type ImposteurClientView,
+  type ImposteurHumanSpeakKind,
+  type ImposteurSpeech,
 } from '@/lib/imposteur/engine'
-import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
+import { imposteurBotTickDelayMs } from '@/lib/imposteur/bot-tick'
+import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -26,6 +32,9 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
+import { TargetGrid } from './TargetGrid'
+import { BotSpeechFeed } from './bot-speech/BotSpeechFeed'
+import { genreOf, genreOfId, type LineTranslator } from './bot-speech/bot-speech-feed'
 
 /**
  * L'IMPOSTEUR en ligne (serveur-autoritaire). La vue est déjà filtrée par le
@@ -47,6 +56,25 @@ function parseView(json: string | null | undefined): ImposteurClientView | null 
 
 const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 
+/**
+ * Le dernier joueur qui m'a accusé ou a abondé contre moi dans la manche,
+ * tant que je ne me suis pas défendu depuis — la cible de « Me défendre ».
+ */
+function lastAccuserOf(
+  speech: readonly ImposteurSpeech[],
+  meId: string,
+  isAlive: (id: string) => boolean
+): string | null {
+  for (let i = speech.length - 1; i >= 0; i -= 1) {
+    const sp = speech[i]
+    if (sp.playerId === meId && sp.kind === 'defend') return null
+    if ((sp.kind === 'suspect' || sp.kind === 'rally') && sp.targetId === meId && isAlive(sp.playerId)) {
+      return sp.playerId
+    }
+  }
+  return null
+}
+
 export function ImposteurOnline() {
   const { user } = useAuth()
   const isSoft = user?.ambianceMode === 'soft'
@@ -56,6 +84,8 @@ export function ImposteurOnline() {
   const [hideWord, setHideWord] = useState(false)
   const reducedMotion = useReducedMotion()
   const [clueInput, setClueInput] = useState('')
+  // Grille d'accusation ouverte par « Accuser » (distincte de la grille de vote).
+  const [speakMode, setSpeakMode] = useState(false)
 
   const inGame = room?.gameId === 'imposteur' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
@@ -78,28 +108,29 @@ export function ImposteurOnline() {
 
   // Ticks « arbitre » (bots + remplacement), avec secours par rang : tout
   // humain restant arbitre, éliminé inclus (un spectateur pilote les ticks).
-  // Bot au tour (indice / continuer) ou bots retardataires au vote.
+  // Délai calculé comme le filet serveur (bot-tick.ts) : indice du bot au
+  // tour, « continuer » de la révélation, et tick « au cas où » dès qu'un bot
+  // vivant est à table (paroles, vote groupé) — NOT_BOT_TURN (409) s'il n'a
+  // rien à faire.
   const botActor = view?.players.find((p) => p.id === room?.currentTurnUserId)
-  const pendingVoteBot =
-    view?.phase === 'vote'
-      ? view.players.find((p) => p.isBot && !p.eliminated && !p.hasVoted)
-      : undefined
+  const botDelayMs = view
+    ? imposteurBotTickDelayMs(
+        {
+          phase: view.phase,
+          actorIsBot: Boolean(botActor?.isBot),
+          actorName: botActor?.name,
+          hasAliveBot: view.players.some((p) => p.isBot && !p.eliminated),
+        },
+        Math.random
+      )
+    : null
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
     userId: user?.id,
     players: view?.players,
     enabled: Boolean(view && user && room && view.phase !== 'finished'),
-    botTick:
-      botActor?.isBot || pendingVoteBot
-        ? {
-            body: { action: 'bot' },
-            delayMs:
-              view?.phase === 'reveal'
-                ? 3200
-                : botTickDelayMs(botActor?.isBot ? botActor.name : pendingVoteBot?.name),
-          }
-        : null,
+    botTick: botDelayMs === null ? null : { body: { action: 'bot' }, delayMs: botDelayMs },
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
   })
 
@@ -125,10 +156,26 @@ export function ImposteurOnline() {
     return () => clearTimeout(timer)
   }, [stateVersion, afkWatchable])
 
-  // Vide le champ d'indice à chaque nouvel état.
+  // Vide le champ d'indice à chaque tour de parole — pas à chaque version :
+  // les bots parlent pendant que l'humain cherche son indice, et chaque
+  // parole effacerait ce qu'il est en train de taper.
+  const phaseKeyOfView = view?.phaseKey
   useEffect(() => {
     setClueInput('')
-  }, [stateVersion])
+  }, [phaseKeyOfView])
+
+  // La grille d'accusation se referme quand MA parole est passée, à chaque
+  // phase et à chaque manche — ni à chaque version ni à chaque indice : les
+  // bots parlent et jouent toutes les quelques secondes et la fermeraient
+  // sous le doigt du joueur.
+  const mySpeechCount =
+    view && user
+      ? (view.speech ?? []).filter((sp) => sp.round === view.round && sp.playerId === user.id).length
+      : 0
+  const speechRoundKey = view ? `${view.phase}#${view.round}` : null
+  useEffect(() => {
+    setSpeakMode(false)
+  }, [speechRoundKey, mySpeechCount])
 
   if (!inGame) {
     return <GameOnlineLobby gameId="imposteur" />
@@ -152,6 +199,7 @@ export function ImposteurOnline() {
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
+  const revealGenre = genreOfId(view.players, reveal?.eliminatedId)
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
@@ -160,15 +208,34 @@ export function ImposteurOnline() {
     postAction({ ...body, expectedVersion: room.stateVersion })
 
   const clueTrimmed = clueInput.trim()
-  const clueOk = me ? isValidClue(clueTrimmed, me.word) && clueTrimmed !== '…' : false
+  const clueOk = me ? isValidClue(clueTrimmed, me.word) && !isEmptyClueText(clueTrimmed) : false
   const totalPhaseMs = view.phase === 'clue' ? 45_000 : 60_000
   const currentRoundClues = view.clues.filter((c) => c.round === view.round)
   const pastClues = view.clues.filter((c) => c.round < view.round)
+
+  // Paroles : on parle pendant les indices (hors de son propre tour) et le vote.
+  const speaking = view.phase === 'clue' || view.phase === 'vote'
+  const roundSpeech = (view.speech ?? []).filter((sp) => sp.round === view.round)
+  const speechLeft = Math.max(0, IMPOSTEUR_SPEECH_CAP - mySpeechCount)
+  const canSpeak = iAmAlive && !busy && speechLeft > 0
+  const isAlive = (id: string) => view.players.some((p) => p.id === id && !p.eliminated)
+  const accuserId = lastAccuserOf(roundSpeech, user.id, isAlive)
+  const speak = (kind: ImposteurHumanSpeakKind, targetId: string) =>
+    void sendAction({ action: 'speak', kind, targetId })
+  const tr: LineTranslator = {
+    has: (key) => t.has(key),
+    format: (key, values) => t(key, values),
+  }
+  const speechValues = (sp: ImposteurSpeech) => ({
+    clue: imposteurCitedClue(view.clues, sp.targetId, sp.round),
+  })
 
   // ── Écran de fin ─────────────────────────────────────────────────────────
   if (finished) {
     const civilWon = view.winnerTeam === 'civil'
     const won = view.players.find((p) => p.id === user.id)?.team === view.winnerTeam
+    // Un bot ne boit pas : la ligne des gorgées ne vise que des perdants humains.
+    const humanLosers = view.players.some((p) => !p.isBot && p.team !== view.winnerTeam)
     return (
       <OnlineEndScreen
         confetti
@@ -187,7 +254,7 @@ export function ImposteurOnline() {
             <h2 className={cn('font-display text-3xl font-bold', civilWon ? 'text-emerald-200' : 'text-red-200')}>
               {civilWon ? t('victory.civilWin') : t('victory.imposteurWin')}
             </h2>
-            {!isSoft && (
+            {!isSoft && humanLosers && (
               <p className="text-sm text-white/60">
                 {civilWon ? t('victory.civilDrinks') : t('victory.imposteurDrinks')}
               </p>
@@ -228,7 +295,9 @@ export function ImposteurOnline() {
                       : 'bg-emerald-500/20 text-emerald-100'
                   )}
                 >
-                  {p.team === 'imposteur' ? t('victory.teamImposteur') : t('victory.teamCivil')}
+                  {p.team === 'imposteur'
+                    ? t('victory.teamImposteur', { genre: genreOf(p) })
+                    : t('victory.teamCivil', { genre: genreOf(p) })}
                 </span>
               </div>
             ))}
@@ -393,10 +462,10 @@ export function ImposteurOnline() {
               <>
                 <UserX className="mx-auto h-8 w-8 text-red-300" />
                 <p className="font-display text-lg font-bold text-gold">
-                  {t('reveal.outTitle', { name: nameOf(reveal.eliminatedId) })}
+                  {t('reveal.outTitle', { name: nameOf(reveal.eliminatedId), genre: revealGenre })}
                 </p>
                 <p className="text-sm text-white/70">
-                  {t('reveal.outWord', { word: reveal.word ?? '—' })}
+                  {t('reveal.outWord', { word: reveal.word ?? '—', genre: revealGenre })}
                 </p>
                 <p
                   className={cn(
@@ -406,9 +475,11 @@ export function ImposteurOnline() {
                       : 'bg-emerald-500/20 text-emerald-100'
                   )}
                 >
-                  {reveal.team === 'imposteur' ? t('reveal.wasImposteur') : t('reveal.wasCivil')}
+                  {reveal.team === 'imposteur'
+                    ? t('reveal.wasImposteur', { genre: revealGenre })
+                    : t('reveal.wasCivil', { genre: revealGenre })}
                 </p>
-                {!isSoft && (
+                {!isSoft && reveal.sips > 0 && (
                   <p className="text-sm font-bold text-amber-200">
                     {t('reveal.sips', { name: nameOf(reveal.eliminatedId), sips: reveal.sips })}
                   </p>
@@ -416,7 +487,10 @@ export function ImposteurOnline() {
               </>
             ) : (
               <>
-                <p className="font-display text-lg font-bold text-gold">{t('reveal.tieTitle')}</p>
+                {/* Zéro voix exprimée n'est pas une égalité (tie = false). */}
+                <p className="font-display text-lg font-bold text-gold">
+                  {reveal.tie ? t('reveal.tieTitle') : t('reveal.noVote')}
+                </p>
                 <p className="text-sm text-white/60">{t('reveal.tieMsg')}</p>
               </>
             )}
@@ -538,6 +612,70 @@ export function ImposteurOnline() {
             )
           })}
         </ul>
+        {/* Fil des paroles (bots et humains) */}
+        {speaking && (
+          <BotSpeechFeed
+            speeches={view.speech ?? []}
+            round={view.round}
+            players={view.players}
+            iconOf={iconOf}
+            meId={user.id}
+            variant="phone"
+            tr={tr}
+            feedAria={t('feedAria')}
+            aimedBadge={{ kinds: ['suspect', 'rally'], text: t('accusedYou') }}
+            valuesOf={speechValues}
+          />
+        )}
+        {/* Accuser / Me défendre : hors de mon tour d'indice, vivant */}
+        {speaking && iAmAlive && !isMyClueTurn && (
+          speakMode ? (
+            <div className="space-y-2">
+              <p className="text-center text-xs font-semibold text-white/60">{t('speakPickAccuse')}</p>
+              <TargetGrid
+                players={view.players.filter((p) => !p.eliminated && p.id !== user.id)}
+                iconOf={iconOf}
+                onPick={(id) => speak('suspect', id)}
+                disabled={!canSpeak}
+                youLabel={t('you')}
+                selfId={user.id}
+              />
+              <Button
+                onClick={() => setSpeakMode(false)}
+                variant="outline"
+                className="w-full rounded-xl border-white/[0.15] bg-white/5 py-2 text-xs text-white/70"
+              >
+                {t('speakCancel')}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <div className={cn('grid gap-2', accuserId ? 'grid-cols-2' : 'grid-cols-1')}>
+                <Button
+                  onClick={() => setSpeakMode(true)}
+                  disabled={!canSpeak}
+                  className="rounded-xl bg-gradient-to-r from-suit-red to-red-700 px-2 py-2.5 text-xs font-bold"
+                >
+                  <Megaphone className="mr-1 h-3.5 w-3.5 shrink-0" />
+                  {t('speakAccuse')}
+                </Button>
+                {accuserId && (
+                  <Button
+                    onClick={() => speak('defend', accuserId)}
+                    disabled={!canSpeak}
+                    className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-2 py-2.5 text-xs font-bold"
+                  >
+                    <Shield className="mr-1 h-3.5 w-3.5 shrink-0" />
+                    {t('speakDefend')}
+                  </Button>
+                )}
+              </div>
+              <p className="text-center text-[11px] text-white/40">
+                {t('speechLeft', { n: speechLeft, max: IMPOSTEUR_SPEECH_CAP })}
+              </p>
+            </div>
+          )
+        )}
         {/* Manches précédentes (aide-mémoire compact) */}
         {pastClues.length > 0 && (
           <details className="text-xs text-white/50">

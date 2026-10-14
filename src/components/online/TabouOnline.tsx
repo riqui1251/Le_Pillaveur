@@ -22,6 +22,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { genreOf } from './bot-speech/bot-speech-feed'
 
 /**
  * TABOU VOCAL en ligne (serveur-autoritaire). `currentWord` n'est envoyé
@@ -261,7 +262,7 @@ export function TabouOnline() {
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
           <Ear className="h-7 w-7 text-white/50" />
           <p className="text-sm font-semibold text-white/60">
-            {t('opponentHint', { name: describer?.name ?? '' })}
+            {t('opponentHint', { name: describer?.name ?? '', genre: genreOf(describer) })}
           </p>
           <Button
             onClick={() => void sendAction({ action: 'taboo-called' })}

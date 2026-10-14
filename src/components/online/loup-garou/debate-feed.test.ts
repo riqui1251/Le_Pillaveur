@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest'
-// Le moteur ICU de next-intl (next-intl → use-intl → intl-messageformat) : les
-// select speaker/target du catalogue sont rendus ici comme en production.
-import { IntlMessageFormat } from 'intl-messageformat'
 import type { LGDebateSpeech } from '@/lib/loup-garou/engine'
-import { BOT_PERSONAS, DEFAULT_BOT_EMOJI, type BotTrait } from '@/lib/online/bot-personas'
-import fr from '../../../../messages/fr.json'
-import en from '../../../../messages/en.json'
-import es from '../../../../messages/es.json'
-import it_ from '../../../../messages/it.json'
+import { DEFAULT_BOT_EMOJI } from '@/lib/online/bot-personas'
+import { describeSpeechCatalogue, icuTranslator } from '../bot-speech/catalogue-spec'
 import {
   LG_SAY_VARIANTS_MAX,
   LG_TV_FEED_SIZE,
@@ -103,54 +97,7 @@ function translator(catalogue: Record<string, string>): LGLineTranslator {
   }
 }
 
-/** Le même catalogue plat, rendu par le vrai moteur ICU : select speaker/target compris. */
-function icuTranslator(catalogue: Record<string, string>, locale = 'fr'): LGLineTranslator {
-  const formats = new Map<string, IntlMessageFormat>()
-  return {
-    has: (key) => key in catalogue,
-    format: (key, values) => {
-      let format = formats.get(key)
-      if (!format) {
-        format = new IntlMessageFormat(catalogue[key], locale)
-        formats.set(key, format)
-      }
-      return String(format.format(values))
-    },
-  }
-}
-
-type Game = {
-  botSay: Record<string, string>
-  botSayTrait: Record<string, Record<string, string>>
-  botTic: Record<string, string>
-}
-
-const LOCALES: Record<string, Game> = {
-  fr: fr.games['loup-garou'].game,
-  en: en.games['loup-garou'].game,
-  es: es.games['loup-garou'].game,
-  it: it_.games['loup-garou'].game,
-}
-
-/** Le catalogue d'une langue à plat, relatif au namespace du jeu (`botSay.suspect_2`, `botTic.raoul`…). */
-function flatten(game: Game): Record<string, string> {
-  const flat: Record<string, string> = {}
-  for (const [kind, text] of Object.entries(game.botSay)) flat[`botSay.${kind}`] = text
-  for (const [trait, kinds] of Object.entries(game.botSayTrait)) {
-    for (const [kind, text] of Object.entries(kinds)) flat[`botSayTrait.${trait}.${kind}`] = text
-  }
-  for (const [key, text] of Object.entries(game.botTic)) flat[`botTic.${key}`] = text
-  return flat
-}
-
-/** Les clés de phrases (base et variantes `_n`), sans les tics. */
-function sayKeys(game: Game): string[] {
-  return Object.keys(flatten(game)).filter((key) => !key.startsWith('botTic.'))
-}
-
-const baseOf = (key: string) => key.replace(/_\d+$/, '')
 const BASE_KINDS = ['ally', 'ask', 'defend', 'doubt', 'rally', 'suspect', 'toldYou', 'wrong']
-const GENRES = ['f', 'm', 'other'] as const
 const SEEDS = Array.from({ length: 40 }, (_, i) => `p-${i}`)
 
 describe('lgBotTic : le tic du persona, jamais pour un humain ou un converti', () => {
@@ -372,114 +319,11 @@ describe('lgBotLine : accord en genre de l’auteur et de la cible (select ICU)'
   })
 })
 
-describe('catalogue des phrases du débat (fr, en, es, it)', () => {
-  const NAME = 'Mauricette'
-
-  it('clés : 8 kinds de base, 4 traits × suspect/defend, variantes contiguës (`_2` avant `_3`), au moins 2 par phrase', () => {
-    const traits = [...new Set<BotTrait>(BOT_PERSONAS.map((p) => p.trait))].sort()
-    expect(traits).toEqual(['agressif', 'farceur', 'prudent', 'suiveur'])
-    for (const [locale, game] of Object.entries(LOCALES)) {
-      expect([...new Set(Object.keys(game.botSay).map(baseOf))].sort(), locale).toEqual(BASE_KINDS)
-      expect(Object.keys(game.botSayTrait).sort(), locale).toEqual(traits)
-      for (const trait of traits) {
-        expect([...new Set(Object.keys(game.botSayTrait[trait]).map(baseOf))].sort(), `${locale}.${trait}`).toEqual(['defend', 'suspect'])
-      }
-      const keys = sayKeys(game)
-      for (const key of keys) {
-        const variant = key.match(/^(.*)_(\d+)$/)
-        if (!variant) {
-          expect(keys, `${locale}.${key} : sans variante _2`).toContain(`${key}_2`)
-          continue
-        }
-        const n = Number(variant[2])
-        expect(n, `${locale}.${key}`).toBeGreaterThanOrEqual(2)
-        expect(keys, `${locale}.${key} : précédente absente`).toContain(n === 2 ? variant[1] : `${variant[1]}_${n - 1}`)
-      }
-    }
-  })
-
-  it('rendu ICU, chaque clé × (speaker, target) ∈ {f, m, other}² : ≤ 70 caractères, nom présent, aucune accolade, pas d’espace parasite', () => {
-    for (const [locale, game] of Object.entries(LOCALES)) {
-      const flat = flatten(game)
-      for (const key of sayKeys(game)) {
-        const format = new IntlMessageFormat(flat[key], locale)
-        for (const speaker of GENRES) {
-          for (const target of GENRES) {
-            const line = String(format.format({ name: NAME, speaker, target }))
-            const label = `${locale}.${key} ${speaker}/${target} : ${line}`
-            expect([...line].length, label).toBeLessThanOrEqual(70)
-            expect(line, label).toContain(NAME)
-            expect(line, label).not.toMatch(/[{}]/)
-            expect(line.trim(), label).toBe(line)
-            expect(line, label).not.toMatch(/\s{2}/)
-          }
-        }
-      }
-    }
-  })
-
-  it('les variantes d’une même phrase sont toutes différentes ; apostrophe typographique seulement (l’ASCII est un quote ICU)', () => {
-    for (const [locale, game] of Object.entries(LOCALES)) {
-      const flat = flatten(game)
-      const byBase = new Map<string, string[]>()
-      for (const key of sayKeys(game)) {
-        expect(flat[key], `${locale}.${key}`).not.toContain("'")
-        byBase.set(baseOf(key), [...(byBase.get(baseOf(key)) ?? []), flat[key]])
-      }
-      for (const [base, texts] of byBase) expect(new Set(texts).size, `${locale}.${base}`).toBe(texts.length)
-    }
-  })
-
-  it('chaque persona compose une ligne réelle dans les 4 langues (tic + nom visé présents)', () => {
-    for (const [locale, game] of Object.entries(LOCALES)) {
-      const real = icuTranslator(flatten(game), locale)
-      for (const persona of BOT_PERSONAS) {
-        const line = lgBotLine('suspect', bot(persona.name), RIQUI, real)
-        const tic = game.botTic[persona.ticKey]
-        expect(line, `${locale}.${persona.name}`).toContain('Riqui')
-        expect(line, `${locale}.${persona.name}`).toContain(tic)
-        if (persona.ticPosition === 'prefix') expect(line!.startsWith(tic), `${locale}.${persona.name} : ${line}`).toBe(true)
-        else expect(line!.endsWith(tic), `${locale}.${persona.name} : ${line}`).toBe(true)
-      }
-    }
-  })
-
-  it('20 tics distincts par langue, exactement ceux des personas, sans argument ICU, ≤ 30 caractères', () => {
-    const ticKeys = BOT_PERSONAS.map((p) => p.ticKey).sort()
-    for (const [locale, game] of Object.entries(LOCALES)) {
-      const tics = game.botTic
-      expect(Object.keys(tics).sort(), locale).toEqual(ticKeys)
-      expect(new Set(Object.values(tics)).size, `${locale} : tics identiques`).toBe(ticKeys.length)
-      for (const [key, text] of Object.entries(tics)) {
-        expect(text, `${locale}.${key}`).not.toContain('{')
-        expect([...text].length, `${locale}.${key} : ${text}`).toBeLessThanOrEqual(30)
-        expect(text.trim(), `${locale}.${key}`).toBe(text)
-      }
-    }
-  })
-
-  it('un préfixe à virgule ne redouble jamais le premier mot de la phrase (« Moi pareil, pareil… »), quelle que soit la variante ou la cible', () => {
-    const word = (s: string | undefined) => (s ?? '').toLowerCase().replace(/[^a-zà-ÿ]/g, '')
-    const targets = [bot('Suzette'), bot('Raoul'), RIQUI]
-    for (const [locale, game] of Object.entries(LOCALES)) {
-      const real = icuTranslator(flatten(game), locale)
-      for (const persona of BOT_PERSONAS) {
-        const tic = game.botTic[persona.ticKey]
-        if (persona.ticPosition !== 'prefix' || !tic.endsWith(',')) continue
-        const last = word(tic.split(' ').pop())
-        for (const kind of BASE_KINDS as LGDebateSpeech['kind'][]) {
-          for (const target of targets) {
-            for (const seed of SEEDS) {
-              const line = lgBotLine(kind, bot(persona.name), target, real, { seed })
-              expect(line, `${locale}.${persona.name}.${kind}`).not.toBeNull()
-              const first = word(line!.slice(tic.length).trim().split(' ')[0])
-              expect(first, `${locale}.${persona.name}.${kind} : ${line}`).not.toBe(last)
-            }
-          }
-        }
-      }
-    }
-  })
+// Exigences communes aux catalogues de paroles des jeux à débat (fabrique partagée avec l'Imposteur).
+describeSpeechCatalogue({
+  node: 'games.loup-garou.game',
+  kinds: BASE_KINDS,
+  traitKinds: ['defend', 'suspect'],
 })
 
 describe('lgPlayerIcon', () => {
