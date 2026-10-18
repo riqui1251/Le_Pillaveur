@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { createRng } from './rng'
-import { generateCase, pickCaseType, type CaseGenContext } from './case-generator'
-import type { CaseType } from './types'
+import {
+  CASE_TYPE_BASE_WEIGHTS,
+  generateCase,
+  getCaseTypePool,
+  pickCaseType,
+  type CaseGenContext,
+} from './case-generator'
+import type { CaseType, Difficulty } from './types'
 
 const DEFI_DRINKS = [1, 2, 1, 3, 2, 1, 2] // jeu de données de test (drinks par défi)
 
@@ -107,5 +113,68 @@ describe('case-generator déterministe', () => {
     const rng = createRng('pick')
     const c = pickCaseType(rng)
     expect(typeof c).toBe('string')
+  })
+})
+
+describe('difficulté et fréquence des cases (en ligne)', () => {
+  const DRINK = new Set<CaseType>([
+    'gorgée', 'tous', 'solo', 'double-peine', 'bombe', 'roulette-russe', 'malediction', 'vote', 'inversion',
+  ])
+  const CHALLENGE = new Set<CaseType>(['defi', 'question', 'defi-chaine'])
+
+  const shares = (difficulty: Difficulty) => {
+    const rng = createRng(`freq-${difficulty}`)
+    const draws = 20_000
+    let drink = 0
+    let challenge = 0
+    let defi = 0
+    let normal = 0
+    for (let i = 0; i < draws; i += 1) {
+      const { type } = generateCase(rng, ctx({ difficulty }))
+      if (DRINK.has(type)) drink += 1
+      if (CHALLENGE.has(type)) challenge += 1
+      if (type === 'defi') defi += 1
+      if (type === 'normal') normal += 1
+    }
+    return { drink: drink / draws, challenge: challenge / draws, defi: defi / draws, normal: normal / draws }
+  }
+
+  const facile = shares('facile')
+  const normal = shares('normal')
+  const difficile = shares('difficile')
+  const extreme = shares('extreme')
+
+  it('facile : moins de cases à gorgées, plus de cases normales', () => {
+    expect(facile.drink).toBeLessThan(normal.drink * 0.75)
+    expect(facile.normal).toBeGreaterThan(normal.normal * 1.3)
+  })
+
+  it('difficile : plus de défis et de gorgées qu’en normal', () => {
+    expect(difficile.defi).toBeGreaterThan(normal.defi * 1.3)
+    expect(difficile.challenge).toBeGreaterThan(normal.challenge * 1.3)
+    expect(difficile.drink).toBeGreaterThan(normal.drink * 1.1)
+  })
+
+  it('extrême : encore plus punitif que difficile', () => {
+    expect(extreme.drink).toBeGreaterThan(difficile.drink)
+    expect(extreme.normal).toBeLessThan(difficile.normal)
+  })
+
+  it('normal garde les poids historiques (tirage inchangé graine pour graine)', () => {
+    expect(getCaseTypePool('normal')).toEqual(CASE_TYPE_BASE_WEIGHTS)
+    const pool = getCaseTypePool('difficile')
+    expect(pool.map((e) => e.type)).toEqual(CASE_TYPE_BASE_WEIGHTS.map((e) => e.type))
+  })
+
+  it('excludeTypes : types jamais tirés, ordre RNG inchangé sans exclusion', () => {
+    const rng = createRng('exclude')
+    const excludeTypes: CaseType[] = ['gorgée', 'defi', 'normal', 'avance']
+    for (let i = 0; i < 3000; i += 1) {
+      const c = generateCase(rng, ctx({ difficulty: 'extreme', excludeTypes, boostPercent: 100 }))
+      expect(excludeTypes).not.toContain(c.type)
+    }
+    const a = createRng('same')
+    const b = createRng('same')
+    expect(generateCase(a, ctx({ excludeTypes: [] }))).toEqual(generateCase(b, ctx()))
   })
 })

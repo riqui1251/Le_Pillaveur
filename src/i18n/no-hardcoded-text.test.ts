@@ -72,23 +72,7 @@ const TEXTES_ADMIS: Record<string, string> = {}
  * texte nettoyé aussi, pour que la liste raccourcisse avec le fichier. On
  * retire l'entrée le jour où le fichier est propre.
  */
-const LISTE_D_ATTENTE: Record<string, { depuis: string; raison: string; textes: string[] }> = {
-  'app/[locale]/games/petit-buveur/components/game.tsx': {
-    depuis: '2026-09-25',
-    raison:
-      'plateau local du Petit Buveur, hors périmètre de ce chantier. « Résultat » et les deux issues du ' +
-      'duel ont déjà leur clé (games.petit-buveur.game.duel.result, .winnerStays, .opponentWins — ces ' +
-      'deux-là en t.rich, les noms sont des composants) ; « Actions de tour » en demande une nouvelle',
-    textes: [
-      'Actions de tour',
-      'gagne et reste ·',
-      'recule d&apos;une case',
-      'gagne ·',
-      'recule d&apos;une case',
-      'Résultat',
-    ],
-  },
-}
+const LISTE_D_ATTENTE: Record<string, { depuis: string; raison: string; textes: string[] }> = {}
 
 type Finding = { line: number; text: string }
 

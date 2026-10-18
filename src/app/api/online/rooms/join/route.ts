@@ -11,6 +11,7 @@ import { getGameAdapter } from '@/lib/online/game-adapters'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { forgetDeparture } from '@/lib/online/departures'
 import { armRoomTicker } from '@/lib/online/room-ticker'
+import { apiError, withApiRoute } from '@/lib/api-route'
 import {
   checkRateLimit,
   rateLimitResponse,
@@ -49,7 +50,13 @@ function humanCapacity(gameId: string | null, settingsJson: string | null): numb
   return getGameAdapter(gameId)?.maxPlayers ?? null
 }
 
-export async function POST(request: Request) {
+/**
+ * Écritures de la reprise de siège tentées au plus : chaque échec veut dire
+ * qu'un coup est passé entre la lecture et l'écriture.
+ */
+const REJOIN_WRITE_ATTEMPTS = 3
+
+export const POST = withApiRoute('online/rooms/join POST', async (request: Request) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
@@ -106,31 +113,41 @@ export async function POST(request: Request) {
   if (room.status !== 'waiting') {
     // Retour en partie : un joueur marqué « parti » peut reprendre sa place
     // tant qu'un bot ne l'a pas remplacé (voir src/lib/online/replacement.ts).
-    if (room.status === 'playing') {
-      let rejoinedJson: string | null = null
+    // Compare-and-swap sur stateVersion, comme /action : un update nu
+    // réécrivait l'état lu au début de la requête, effaçant un coup joué
+    // pendant ce temps sous le même numéro de version. En cas de conflit on
+    // relit la salle et on recalcule la reprise sur l'état frais.
+    for (let attempt = 1; room.status === 'playing'; attempt += 1) {
       const adapter = getGameAdapter(room.gameId)
-      if (adapter) {
-        const state = adapter.parse(room.gameStateJson)
-        const next = state ? adapter.rejoin(state, user.id) : null
-        if (next) rejoinedJson = adapter.serialize(next)
+      if (!adapter) break
+      const state = adapter.parse(room.gameStateJson)
+      const next = state ? adapter.rejoin(state, user.id) : null
+      if (!next) {
         // Partie terminée, hors reprise de siège — et hors version sentinelle
         // de la relance (négative) : la nouvelle partie s'y distribue, l'état
         // terminé n'y est plus qu'un reliquat.
-        finishedGame = !next && Boolean(state) && room.stateVersion > 0 && adapter.isFinished(state)
+        finishedGame = Boolean(state) && room.stateVersion > 0 && adapter.isFinished(state)
+        break
       }
-      if (rejoinedJson) {
+      const stateVersion = room.stateVersion + 1
+      const { count } = await prisma.onlineRoom.updateMany({
+        where: { id: room.id, stateVersion: room.stateVersion },
+        data: {
+          gameStateJson: adapter.serialize(next),
+          stateVersion,
+          currentTurnUserId: adapter.isFinished(next) ? null : adapter.currentActorId(next),
+        },
+      })
+      if (count > 0) {
         // Une seule table à la fois : les autres sont quittées proprement
         // (marqué « parti » si une partie y tourne, hôte transféré, salle
-        // vide supprimée) — voir leaveOtherRooms.
+        // vide supprimée) — voir leaveOtherRooms. APRÈS l'écriture de l'état :
+        // un siège n'est rendu qu'à un joueur que la partie a bien repris.
         await leaveOtherRooms(user.id, room.id)
         await prisma.onlineRoomMember.upsert({
           where: { roomId_userId: { roomId: room.id, userId: user.id } },
           create: { roomId: room.id, userId: user.id, isReady: true },
           update: { lastSeenAt: new Date(), isReady: true },
-        })
-        await prisma.onlineRoom.update({
-          where: { id: room.id },
-          data: { gameStateJson: rejoinedJson, stateVersion: room.stateVersion + 1 },
         })
         // Un humain de retour à une table désertée : le minuteur de service,
         // coupé faute d'humain présent, reprend sur l'état écrit.
@@ -138,14 +155,18 @@ export async function POST(request: Request) {
         forgetDeparture(user.id, room.id)
         // L'effectif de la partie en cours (liveGames) vient de changer.
         invalidateLobbiesCache()
-        publishRoomChanged(room.id, { type: 'changed', stateVersion: room.stateVersion + 1 })
+        publishRoomChanged(room.id, { type: 'changed', stateVersion })
         const dto = await buildRoomDto(room.id, user.id)
         return NextResponse.json({ room: dto })
       }
+      if (attempt >= REJOIN_WRITE_ATTEMPTS) return apiError('version_conflict', 409)
+      room = await prisma.onlineRoom.findUnique({ where: { id: room.id }, include: membersSelect })
+      if (!room) return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
     }
     // Une partie EN COURS ne s'ouvre toujours pas : on n'entre pas au milieu
     // d'une donne. Une partie FINIE, si — la suite est commune avec le lobby.
-    if (!finishedGame) {
+    // Relue pendant un conflit, la table a pu revenir en attente entre-temps.
+    if (!finishedGame && room.status !== 'waiting') {
       return NextResponse.json(onlineErrorBody('game_already_started'), { status: 409 })
     }
   }
@@ -223,4 +244,4 @@ export async function POST(request: Request) {
 
   const dto = await buildRoomDto(room.id, user.id)
   return NextResponse.json({ room: dto })
-}
+})

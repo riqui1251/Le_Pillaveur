@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
+  autoAction,
   createInitialState,
   reduce,
-  currentPlayerId,
   EngineError,
   type EngineState,
   type EngineSettings,
@@ -17,17 +17,17 @@ const PLAYERS: EnginePlayerInit[] = [
   { id: 'p3', name: 'Chloé' },
 ]
 
-/** Pilote une partie jusqu'à la fin de façon déterministe. */
+/**
+ * Pilote une partie jusqu'à la fin de façon déterministe. Les choix passent par
+ * autoAction : le moteur refuse désormais une résolution sans cible ni choix
+ * (avant, il visait en silence le premier autre joueur).
+ */
 function playToEnd(seed: string, maxSteps = 5000): { state: EngineState; steps: number } {
   let state = createInitialState(PLAYERS, SETTINGS, seed)
   let steps = 0
   while (state.phase !== 'finished' && steps < maxSteps) {
-    if (state.phase === 'playing') {
-      const pid = currentPlayerId(state)!
-      state = reduce(state, { type: 'ROLL', playerId: pid })
-    } else if (state.phase === 'awaiting-interaction') {
-      state = reduce(state, { type: 'RESOLVE_INTERACTION', playerId: state.pending!.playerId })
-    }
+    const next = autoAction(state)
+    state = reduce(next.state, next.action)
     steps += 1
   }
   return { state, steps }
@@ -123,9 +123,10 @@ describe('cases interactives', () => {
 
   it('pile-face : seule la cible peut boire, déterministe', () => {
     const s = withPending('pile-face', { type: 'pile-face', effect: 2 })
-    const choice = { targetId: 'p2', side: 'pile' as const }
-    const a = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice })
-    const b = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice })
+    const staged = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1', choice: { targetId: 'p2' } })
+    const choice = { side: 'pile' as const }
+    const a = reduce(staged, { type: 'RESOLVE_INTERACTION', playerId: 'p2', choice })
+    const b = reduce(staged, { type: 'RESOLVE_INTERACTION', playerId: 'p2', choice })
     expect(a).toEqual(b)
     expect(a.players.find((p) => p.id === 'p3')!.drinks).toBe(0)
     expect([0, 2]).toContain(a.players.find((p) => p.id === 'p2')!.drinks)
@@ -170,10 +171,15 @@ describe('cases interactives', () => {
     expect(d).toBeLessThanOrEqual(12)
   })
 
-  it('chance : l’acteur avance de 2', () => {
+  // Le +2 n'est plus implicite : c'est l'une des deux options de la case.
+  it('chance « +2 cases » : l’acteur avance de 2', () => {
     const s = withPending('chance', { type: 'chance', effect: 0 })
     s.players[0].position = 5
-    const next = reduce(s, { type: 'RESOLVE_INTERACTION', playerId: 'p1' })
+    const next = reduce(s, {
+      type: 'RESOLVE_INTERACTION',
+      playerId: 'p1',
+      choice: { chanceChoice: 'plus2' },
+    })
     expect(next.players.find((p) => p.id === 'p1')!.position).toBe(7)
   })
 

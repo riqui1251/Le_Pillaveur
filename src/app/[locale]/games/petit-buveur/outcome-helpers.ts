@@ -1,6 +1,5 @@
-import type { EffectOutcome } from './case-notification'
-import type { Case, PetitBuveurT } from './case-config'
-import { protectedBadgeHtml } from './case-notification'
+import type { PetitBuveurT } from './case-config'
+import { protectedBadgeHtml, type EffectOutcome } from './case-notification'
 
 export function outcomeCaseBase(): EffectOutcome {
   return { type: 'caseBase' }
@@ -17,8 +16,12 @@ export function outcomeI18n(
   return { type: 'i18n', key, ...opts }
 }
 
+/** Aplati : buildNotificationHtml ne cherche la description de la case (caseBase) qu'au premier niveau. */
 export function outcomeCompose(...items: EffectOutcome[]): EffectOutcome {
-  return { type: 'compose', items }
+  return {
+    type: 'compose',
+    items: items.flatMap(item => (item.type === 'compose' && !item.separator ? item.items : [item])),
+  }
 }
 
 export function outcomeWithCaseBase(...rest: EffectOutcome[]): EffectOutcome {
@@ -188,38 +191,40 @@ export function outcomeInversion(
   })
 }
 
-export function outcomeMirrorLink(
-  actorId: string,
-  targetPlayerId: string,
-  turns: number
-): EffectOutcome {
-  return outcomeI18n('game.outcomes.mirrorLink', {
-    params: { count: turns },
+/** Miroir inversé : sens unique (l'acteur boit → la cible boit), jusqu'à la fin du prochain tour de l'acteur. */
+export function outcomeMirrorLink(actorId: string, targetPlayerId: string): EffectOutcome {
+  return outcomeI18n('game.outcomes.mirrorLinkOneWay', {
     playerRefs: { actor: actorId, target: targetPlayerId },
   })
 }
 
-export function outcomeRewindSafe(targetPlayerId: string): EffectOutcome {
-  return outcomeI18n('game.outcomes.rewindSafe', {
-    playerRefs: { player: targetPlayerId },
+/** Effet négatif bloqué pour un joueur touché par un effet de groupe. */
+export function outcomeShielded(t: PetitBuveurT, playerId: string): EffectOutcome {
+  return outcomeI18n('game.outcomes.shielded', {
+    htmlParams: { protected: protectedBadgeHtml(t) },
+    playerRefs: { player: playerId },
   })
+}
+
+export function outcomeTeleportSelf(actorId: string, rank: string): EffectOutcome {
+  return outcomeI18n('game.outcomes.teleportSelf', {
+    params: { rank },
+    playerRefs: { actor: actorId },
+  })
+}
+
+export function outcomeReplayedCase(via: string, caseLabel: string): EffectOutcome {
+  return outcomeI18n('game.outcomes.replayedCase', { params: { via, case: caseLabel } })
+}
+
+export function outcomeDoubleCaseStep(index: number, caseLabel: string): EffectOutcome {
+  return outcomeI18n('game.outcomes.doubleCaseStep', { params: { index, case: caseLabel } })
 }
 
 export function outcomeMelange(targetPlayerId: string): EffectOutcome {
   return outcomeI18n('game.outcomes.melange', {
     playerRefs: { player: targetPlayerId },
   })
-}
-
-export function outcomeGenericApplied(targetPlayerId: string, caseType: Case['type']): EffectOutcome {
-  return outcomeI18n('game.outcomes.genericApplied', {
-    params: { type: caseType },
-    playerRefs: { player: targetPlayerId },
-  })
-}
-
-export function outcomeNoPreviousCase(): EffectOutcome {
-  return outcomeI18n('game.outcomes.noPreviousCase')
 }
 
 export function outcomeChainLinked(

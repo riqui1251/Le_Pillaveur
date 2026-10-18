@@ -2059,7 +2059,39 @@
           "seeAllHint": "Parcourez tous les joueurs pour afficher les totaux"
         },
         "turnLabel": "Au tour de",
-        "nextUp": "Ensuite"
+        "nextUp": "Ensuite",
+        "live": {
+          "effectsLabel": "Effets touchés par les balles ce tour",
+          "previewLabel": "Valeur finale de chaque balle selon la case où elle tombe",
+          "slotLabel": "Case {n} : {values}",
+          "none": "aucun effet",
+          "cancelled": "Annulé",
+          "jackpot": "Jackpot {value}",
+          "swapped": "compte inversé",
+          "nothing": "sans effet",
+          "doubled": "doublé",
+          "extraBall": "balle bonus",
+          "short": {
+            "multiplier": "×2",
+            "addBall": "+ balle",
+            "addSip": "+1",
+            "subtractSip": "−1",
+            "cancellation": "Annulation",
+            "colorSwap": "Couleur",
+            "mystery": "Mystère",
+            "shake": "Mélange",
+            "roundDrinks": "Tournée",
+            "jackpot": "Jackpot",
+            "teleportation": "Téléport",
+            "gravityFlip": "Gravité",
+            "slowMotion": "Ralenti",
+            "split": "Division",
+            "scoreSwap": "Inversion",
+            "doubleEffect": "Effet ×2",
+            "magnetLeft": "Aimant",
+            "magnetRight": "Aimant"
+          }
+        }
       },
       "a11y": {
         "turnResult": "Résultat : {drinks} gorgées à boire, {gives} à donner.",
@@ -3432,6 +3464,7 @@
           "🍺 Selon la case atterrie, bois des gorgées ou relève un défi.",
           "⚡ Les cases spéciales déclenchent des effets : échanges, malédictions, protections...",
           "🏆 Le premier à atteindre la case 30 gagne la partie !",
+          "⚔️ Duel : si tu t'arrêtes sur une case occupée, tu peux défier un joueur présent ; le perdant recule d'une case, sauf s'il est protégé.",
           "⚠️ À consommer avec modération."
         ],
         "resume": "Reprendre la partie en cours",
@@ -3441,6 +3474,7 @@
             "🌿 Selon la case, prends des gages ou relève un défi.",
             "⚡ Les cases spéciales déclenchent des effets : échanges, malédictions, protections…",
             "🏆 Le premier arrivé sur la case 30 gagne la partie !",
+            "⚔️ Duel : si tu t'arrêtes sur une case occupée, tu peux défier un joueur présent ; le perdant recule d'une case, sauf s'il est protégé.",
             "🌿 Mode soft : mêmes jeux, sans une goutte."
           ],
           "difficulties": {
@@ -3453,7 +3487,8 @@
             "extreme": {
               "desc": "Gage géant possible — réservé aux experts"
             }
-          }
+          },
+          "tagline": "Avance sur le plateau, gage après gage !"
         }
       },
       "difficultyLabels": {
@@ -3542,13 +3577,25 @@
           "deHonteForward": "Avance d'une case !",
           "deHonteBack": "Recule d'une case !",
           "wheelLegendSafe": "Sauvé",
-          "wheelLegendDrink": "Gorgées"
+          "wheelLegendDrink": "Gorgées",
+          "deHonteCannotBack": "Déjà sur la case 1 : pas de recul !"
         },
         "outcomeNothing": "Aucun dégât — sauvé !",
         "history": {
           "title": "Historique des effets",
           "empty": "Aucun effet pour l'instant"
-        }
+        },
+        "effectsLegend": "Légende des effets",
+        "notes": {
+          "bridgeForward": "🌉 Pont (case {case}) : les joueurs qui s'y trouvaient avancent d'une case !",
+          "bridgeBack": "🌉 Pont (case {case}) : les joueurs qui s'y trouvaient reculent d'une case !",
+          "nothingToReplay": "Rien à rejouer : aucune case jouée avant — {player} est safe !",
+          "noEffect": "Personne n'est concerné : la case reste sans effet."
+        },
+        "verdictWaiting": "{name} juge si {target} a relevé le défi…",
+        "sideWaiting": "{name} choisit pile ou face… ({seconds} s)",
+        "sidePrompt": "{actor} lance la pièce pour toi : choisis ton côté !",
+        "secondsLeft": "{seconds} s restantes"
       },
       "defis": [
         {
@@ -3770,7 +3817,10 @@
         "pontAdvance": "avance",
         "pontBack": "recule",
         "loterieCancelled": "🎰 Loterie annulée (pas assez de joueurs).",
-        "loterieResult": "🎰 Loterie ! {drinker} boit 2 gorgées, {mover} avance d'une case."
+        "loterieResult": "🎰 Loterie ! {drinker} boit 2 gorgées, {mover} avance d'une case.",
+        "reculGroupeNobody": "⬅️ Recul groupé ! Personne n'est derrière {actor} : personne ne recule.",
+        "pontNoBack": "🌉 Pont ({side}) ! Case {case} : impossible de reculer, personne ne bouge.",
+        "loterieProtected": "🎰 Loterie ! {drinker} devait boire 2 gorgées mais {protected} — {mover} avance d'une case."
       },
       "shameDice": {
         "diceLabel": "Dé : {value}",
@@ -3844,7 +3894,8 @@
           "applyCase": "Appliquer l'effet de la case",
           "changeOpponent": "Changer d'adversaire",
           "winnerStays": "{winner} gagne et reste · {loser} recule d'une case",
-          "opponentWins": "{winner} gagne · {loser} recule d'une case"
+          "opponentWins": "{winner} gagne · {loser} recule d'une case",
+          "loserProtected": "{winner} gagne · {loser} est protégé et ne recule pas"
         },
         "dialogs": {
           "teleport": "🌀 Téléport",
@@ -3898,7 +3949,11 @@
           "mirrorDescShort": "Quand l'un boit, l'autre aussi",
           "protectedStatus": "{player} est protégé",
           "cursedStatus": "{player} est maudit ({count} tours)",
-          "chainStatus": "{from} → {to} ({count} tours)"
+          "chainStatus": "{from} → {to} ({count} tours)",
+          "mirrorDescOneWay": "Quand {a} boit, {b} boit aussi",
+          "mirrorDescShortOneWay": "Quand l'initiateur boit, sa cible boit aussi",
+          "turnsLeft": "{count, plural, one {# tour restant} other {# tours restants}}",
+          "activeTitle": "Effets en cours"
         },
         "wheel": {
           "defis": "Roue des défis",
@@ -3958,7 +4013,14 @@
           "curseApplied": "👻 {player} est maintenant maudit pendant {count} tours !",
           "skipTurnNext": "⏭️ {player} ne lancera pas au prochain tour !",
           "anchorApplied": "⚓ {player} ne pourra pas avancer au prochain tour !",
-          "rouletteSafe": "🔫 Click… {player} est safe !"
+          "rouletteSafe": "🔫 Click… {player} est safe !",
+          "shielded": "🛡️ {player} {protected}",
+          "teleportSelf": "🌀 {actor} est déjà {rank} du classement : aucun échange.",
+          "replayedCase": "🔁 {via} : la case « {case} » est rejouée.",
+          "doubleCaseStep": "🎲 Effet {index} : {case}",
+          "mirrorLinkOneWay": "🪞 Miroir inversé : quand {actor} boit, {target} boit aussi, jusqu'à la fin du prochain tour de {actor} !",
+          "replayNothing": "🔁 Rien à rejouer : aucune case n'a encore été jouée.",
+          "duelLoserProtected": "⚔️ Duel terminé : {winner} gagne, mais {loser} est protégé et ne recule pas."
         },
         "messages": {
           "cheers": [
@@ -4024,7 +4086,10 @@
         "yourTurn": "À toi de jouer !",
         "soundOn": "Activer le son",
         "soundOff": "Couper le son",
-        "tapToSkip": "Toucher pour passer"
+        "tapToSkip": "Toucher pour passer",
+        "turnActions": "Actions de tour",
+        "defaultPlayerName": "Joueur {number}",
+        "notEnoughPlayers": "Il faut au moins 2 joueurs pour commencer une partie !"
       },
       "tutorial": {
         "steps": [
@@ -4067,7 +4132,8 @@
         },
         "resolveCase": {
           "solo": "🎯 {actor} prend 1 gage, les autres sont safe !",
-          "loterieResult": "🎰 Loterie ! {drinker} prend 2 gages, {mover} avance d'une case."
+          "loterieResult": "🎰 Loterie ! {drinker} prend 2 gages, {mover} avance d'une case.",
+          "loterieProtected": "🎰 Loterie ! {drinker} devait prendre 2 gages mais {protected} — {mover} avance d'une case."
         },
         "shameDice": {
           "twoSips": "2 gages",
@@ -4105,7 +4171,9 @@
             "curseDesc": "Prend 1 gage supplémentaire à chaque tour",
             "chainDesc": "Lié à un partenaire : subissent les mêmes effets (gages)",
             "mirrorDesc": "Quand l'un prend un gage, l'autre aussi ({a} ↔ {b})",
-            "mirrorDescShort": "Quand l'un prend un gage, l'autre aussi"
+            "mirrorDescShort": "Quand l'un prend un gage, l'autre aussi",
+            "mirrorDescOneWay": "Quand {a} prend un gage, {b} en prend un aussi",
+            "mirrorDescShortOneWay": "Quand l'initiateur prend un gage, sa cible en prend un aussi"
           },
           "outcomes": {
             "pileFaceLose": "🪙 Pile ou face : tirage {result}, {player} prend {count} gage(s) !",
@@ -4121,7 +4189,8 @@
             "everyoneDrinksHonor": "Tout le monde prend {count} gage(s) pour honorer « {compliment} »",
             "everyoneDrinksExcept": "Tout le monde prend {count} gage(s) sauf",
             "wheelDefiOrDrink": "{player} — relève le défi ou prends 2 gages !",
-            "wheelDrink": "{player} prend un gage (joueur au tour)."
+            "wheelDrink": "{player} prend un gage (joueur au tour).",
+            "mirrorLinkOneWay": "🪞 Miroir inversé : quand {actor} prend un gage, {target} en prend un aussi, jusqu'à la fin du prochain tour de {actor} !"
           },
           "messages": {
             "drinking": [
@@ -4147,12 +4216,26 @@
               "Allez, on y va !"
             ]
           }
+        },
+        "online": {
+          "spectacle": {
+            "wheelSafe": "SAFE — aucun gage !",
+            "wheelDrinks": "{count} gage(s) !",
+            "pfWin": "Pari gagné — personne ne prend de gage",
+            "pfLose": "{name} prend {count} gage(s) !",
+            "deHonteDrink": "2 gages !",
+            "wheelLegendDrink": "Gages"
+          }
         }
       },
       "about": {
         "p1": "Le jeu de plateau de l'apéro : un dé, des pions, trente cases à effets et des défis. Chacun avance au rythme du dé, et chaque case a son caractère : défis à réaliser, gorgées données ou reçues, événements collectifs, cases spéciales qui visent un joueur précis. Le premier arrivé au bout du plateau gagne, et en ligne, la victoire compte pour le classement du site.",
         "p2": "À ton tour, lance le dé : ton pion avance case par case et la case se révèle. Applique son effet, défi, échange, événement… La table juge si le défi est réussi, personne ne tient la règle. Certains passages déclenchent des mini-moments : roue de la fortune, pile ou face, dé de la honte. L'hôte règle la difficulté au lobby, de facile à extrême, et le chat vocal sert pour les défis.",
         "p3": "Les défis refusés coûtent plus cher que les défis tentés, et certaines cases permettent de cibler les pions adverses : garde un œil dessus. Un joueur qui quitte est remplacé par un bot au bout de trois minutes. Jusqu'à 99 en ligne en théorie ; au-delà de huit, on attend longtemps son tour, fais deux tables. Le Petit Buveur se joue aussi en local, sur un seul téléphone."
+      },
+      "diceOverlay": {
+        "rolling": "{name} lance le dé…",
+        "result": "{name} fait {value}"
       }
     },
     "quiz": {

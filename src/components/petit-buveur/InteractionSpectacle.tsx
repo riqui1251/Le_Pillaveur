@@ -19,7 +19,7 @@ const WHEEL_SEGMENTS = 15
 /** Un segment sur trois est « sauvé » — même règle que le moteur (roue). */
 const isSafeSegment = (i: number) => (i + 1) % 3 === 0
 
-type Labels = {
+export type SpectacleLabels = {
   wheelSafe: string
   wheelDrinks: string
   wheelLegendSafe: string
@@ -32,6 +32,8 @@ type Labels = {
   deHonteDrink: string
   deHonteForward: string
   deHonteBack: string
+  /** 6 au dé de la honte sur la case 1 : le pion ne peut pas reculer. */
+  deHonteCannotBack?: string
 }
 
 /** Gorgées infligées par le tirage (0 = safe), toutes variantes confondues. */
@@ -40,7 +42,17 @@ function interactionDrinks(inter: LastInteraction): number {
   return inter.drinks
 }
 
-function outcomeText(inter: LastInteraction, labels: Labels, targetName: string): string {
+/**
+ * `actorFromPosition` : index de l'acteur AVANT l'effet du tirage. À 0, le 6
+ * du dé de la honte ne fait pas reculer (règle 14) : jamais de recul annoncé.
+ * Sans libellé dédié, « sauvé » reste vrai (il ne s'est rien passé).
+ */
+export function outcomeText(
+  inter: LastInteraction,
+  labels: SpectacleLabels,
+  targetName: string,
+  actorFromPosition?: number
+): string {
   switch (inter.kind) {
     case 'roue':
     case 'roue-defis':
@@ -53,6 +65,7 @@ function outcomeText(inter: LastInteraction, labels: Labels, targetName: string)
       if (inter.value <= 2) return labels.deHonteSafe
       if (inter.value <= 4) return labels.deHonteDrink
       if (inter.value === 5) return labels.deHonteForward
+      if (actorFromPosition === 0) return labels.deHonteCannotBack ?? labels.deHonteSafe
       return labels.deHonteBack
   }
 }
@@ -187,17 +200,23 @@ export function InteractionSpectacle({
   actorName,
   targetName,
   labels,
+  actorFromPosition,
 }: {
   interaction: LastInteraction | null | undefined
   /** Libellé traduit du type de case (ex. « Roue »). */
   caseLabel: string
   actorName: string
   targetName: string
-  labels: Labels
+  labels: SpectacleLabels
+  /** Index (0..29) de l'acteur avant l'effet du tirage — voir outcomeText. */
+  actorFromPosition?: number
 }) {
   const reduced = useReducedMotion() ?? false
   const [current, setCurrent] = useState<LastInteraction | null>(null)
+  const [currentFrom, setCurrentFrom] = useState<number | undefined>(undefined)
   const [showOutcome, setShowOutcome] = useState(false)
+  const fromRef = useRef(actorFromPosition)
+  fromRef.current = actorFromPosition
   // `undefined` = premier rendu : on mémorise le tirage déjà présent SANS le
   // rejouer (rejoindre/recharger la page ne rejoue pas un vieux spectacle).
   const lastSeenRef = useRef<string | null | undefined>(undefined)
@@ -213,6 +232,8 @@ export function InteractionSpectacle({
     lastSeenRef.current = interactionKey
     const inter = JSON.parse(interactionKey) as LastInteraction
     setCurrent(inter)
+    // Figée au début : la vue peut passer au tour suivant avant la fin du spectacle.
+    setCurrentFrom(fromRef.current)
     setShowOutcome(false)
     playGameSound(inter.kind === 'de-honte' ? 'dice-roll' : 'wheel')
     // Durée du suspense alignée sur chaque animation (la roue tourne 4,5 s).
@@ -282,7 +303,7 @@ export function InteractionSpectacle({
                       : 'border-emerald-400/40 bg-emerald-700/70 text-emerald-50'
                   )}
                 >
-                  {outcomeText(current, labels, targetName)}
+                  {outcomeText(current, labels, targetName, currentFrom)}
                 </motion.p>
               )}
             </AnimatePresence>

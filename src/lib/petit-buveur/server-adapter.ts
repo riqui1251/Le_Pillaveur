@@ -1,6 +1,8 @@
 import {
+  autoAction,
   createInitialState,
-  currentPlayerId,
+  currentDeciderId,
+  passDepartedTurns,
   reduce,
   EngineError,
   type EngineState,
@@ -100,24 +102,54 @@ export type RoomActionResult =
   | { ok: true; state: EngineState }
   | { ok: false; error: string }
 
+/** Pile ou face : délai laissé à la cible pour choisir son côté avant tirage au hasard. */
+export const PB_SIDE_CHOICE_MS = 20_000
+
+/** Étape `side` qui commence : son échéance est posée à l'horloge serveur. */
+export function withSideDeadline(state: EngineState, now: number): EngineState {
+  const p = state.pending
+  if (p?.stage !== 'side' || p.deadlineAt != null) return state
+  return { ...state, pending: { ...p, deadlineAt: now + PB_SIDE_CHOICE_MS } }
+}
+
+function applyEngine(state: EngineState, action: EngineAction, now: number): RoomActionResult {
+  try {
+    // Le joueur qui doit agir a pu quitter la table entre-temps (cible de pile ou face).
+    return { ok: true, state: withSideDeadline(passDepartedTurns(reduce(state, action)), now) }
+  } catch (e) {
+    return { ok: false, error: e instanceof EngineError ? e.message : 'ENGINE_ERROR' }
+  }
+}
+
 /**
  * Applique une action de salle de façon autoritaire. La validation du tour est
- * portée par le moteur (`reduce` lève NOT_YOUR_TURN, INTERACTION_PENDING, etc.).
+ * portée par le moteur (`reduce` lève NOT_YOUR_TURN, INTERACTION_PENDING,
+ * INVALID_TARGET, INVALID_CHOICE…).
  */
 export function applyRoomAction(
   state: EngineState,
   userId: string,
-  input: RoomActionInput
+  input: RoomActionInput,
+  now: number = Date.now()
 ): RoomActionResult {
   const action: EngineAction =
     input.type === 'roll'
       ? { type: 'ROLL', playerId: userId }
       : { type: 'RESOLVE_INTERACTION', playerId: userId, choice: input.choice }
-  try {
-    return { ok: true, state: reduce(state, action) }
-  } catch (e) {
-    return { ok: false, error: e instanceof EngineError ? e.message : 'ENGINE_ERROR' }
+  return applyEngine(state, action, now)
+}
+
+/**
+ * Délai de l'étape `side` dépassé : le côté de la cible est tiré au hasard
+ * (RNG du moteur). NOT_DUE tant que l'échéance n'est pas atteinte.
+ */
+export function applyTimeoutAction(state: EngineState, now: number): RoomActionResult {
+  const p = state.pending
+  if (state.phase === 'finished' || p?.stage !== 'side' || p.deadlineAt == null || now < p.deadlineAt) {
+    return { ok: false, error: 'NOT_DUE' }
   }
+  const next = autoAction(state)
+  return applyEngine(next.state, next.action, now)
 }
 
 /** Vue client : tout l'état SAUF `rngState` (secret serveur). */
@@ -144,7 +176,16 @@ function withPlayer(
   }
 }
 
-/** Marque un joueur « parti » (délai de grâce avant remplacement). Null si rien à faire. */
+/**
+ * Marque un joueur « parti » (délai de grâce avant remplacement). Null si rien
+ * à faire. Si c'était à lui de lancer, la main passe aussitôt au suivant encore
+ * présent : la table ne reste pas figée 3 min. Ses tours suivants sont sautés
+ * tant qu'il n'est ni revenu ni remplacé.
+ *
+ * Une décision en attente (case, verdict, côté) n'est PAS tirée ici : elle peut
+ * finir la partie, et les routes de départ n'enregistrent pas les résultats.
+ * Le tick de service la joue comme pour un bot (`applyBotAction`).
+ */
 export function markPlayerLeft(
   state: EngineState,
   playerId: string,
@@ -152,7 +193,16 @@ export function markPlayerLeft(
 ): EngineState | null {
   const player = state.players.find((p) => p.id === playerId)
   if (!player || player.isBot || player.leftAt || state.phase === 'finished') return null
-  return withPlayer(state, playerId, { leftAt: at })
+  const left = withPlayer(state, playerId, { leftAt: at })
+  return withSideDeadline(passDepartedTurns(left, { resolvePending: false }), at)
+}
+
+/** Le joueur qui doit décider est un bot, ou a quitté la table : le serveur décide pour lui. */
+export function deciderPlaysAuto(state: EngineState): boolean {
+  if (state.phase === 'finished') return false
+  const deciderId = currentDeciderId(state)
+  const decider = state.players.find((p) => p.id === deciderId)
+  return Boolean(decider?.isBot || decider?.leftAt)
 }
 
 /** Le joueur parti reprend sa place (tant qu'un bot ne l'a pas remplacé). */
@@ -188,38 +238,17 @@ export function convertPlayerToBot(state: EngineState, playerId: string): Engine
 }
 
 /**
- * IA du bot Petit Buveur : rejoue exactement l'espace d'action du client —
- * ROLL sur son tour, puis résolution des cases interactives avec un choix
- * plausible (cible aléatoire, côté de pièce, option de téléport). Le hasard
- * des CHOIX utilise Math.random (c'est une entrée « joueur », pas un tirage
- * du moteur) ; les dés/cases restent tirés par le RNG seedé du moteur.
+ * IA du bot Petit Buveur : il agit quand c'est à lui de décider — son tour, ou
+ * le côté de pile ou face quand il en est la cible. Lancer, cible (jamais
+ * lui-même), verdict d'un défi, côté, option : tirés au hasard par le RNG du
+ * moteur, donc rejouables à graine égale. Même chose pour la décision en
+ * attente d'un joueur parti.
  */
-export function applyBotAction(state: EngineState): RoomActionResult {
-  const activeId = currentPlayerId(state)
-  const active = state.players.find((p) => p.id === activeId)
-  if (!active?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
-
-  let action: EngineAction
-  if (!state.pending) {
-    action = { type: 'ROLL', playerId: active.id }
-  } else {
-    const caseType = state.pending.caseType
-    let choice: InteractionChoice | undefined
-    if (state.pending.needsTarget || TARGET_INTERACTIVE_CASES.has(caseType)) {
-      const target = state.players[Math.floor(Math.random() * state.players.length)]
-      choice = { targetId: target.id }
-    } else if (caseType === 'teleport') {
-      choice = { option: Math.random() < 0.5 ? 'leader' : 'last' }
-    }
-    action = { type: 'RESOLVE_INTERACTION', playerId: active.id, choice }
+export function applyBotAction(state: EngineState, now: number = Date.now()): RoomActionResult {
+  if (!deciderPlaysAuto(state)) return { ok: false, error: 'NOT_BOT_TURN' }
+  if (!state.pending && state.players[state.currentPlayer]?.leftAt) {
+    return { ok: true, state: withSideDeadline(passDepartedTurns(state), now) }
   }
-
-  try {
-    return { ok: true, state: reduce(state, action) }
-  } catch (e) {
-    return { ok: false, error: e instanceof EngineError ? e.message : 'ENGINE_ERROR' }
-  }
+  const next = autoAction(state)
+  return applyEngine(next.state, next.action, now)
 }
-
-/** Cases à modale dont la résolution attend un `targetId` (miroir du client). */
-const TARGET_INTERACTIVE_CASES = new Set(['vote', 'echange', 'pile-face', 'defi-chaine'])

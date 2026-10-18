@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { Volume2, VolumeX, ChevronDown, ChevronsDown, ArrowRight, Tv } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,25 @@ import { playGameSound, isSoundMuted, setSoundMuted as persistSoundMuted } from 
 import { useCastRoom } from '@/hooks/useCastRoom'
 import type { PlinkoCastState } from '@/lib/cast-types'
 import { SPECIAL_PIN_COLORS, type SpecialPinType } from '@/lib/plinko-pins'
+import { useReducedMotion } from 'framer-motion'
+import {
+  applyScoreEffect,
+  ballCategory,
+  calculateFinalSips,
+  previewSlotValues,
+  tallyTurn,
+  type BallColor,
+} from '../plinko-scoring'
+import {
+  createLiveBalls,
+  snapshotEffects,
+  withHit,
+  withLanding,
+  withSpawn,
+  type LiveBalls,
+  type LivePinHit,
+} from '../plinko-live'
+import { LiveEffectsBar, LiveSlotValues, PinBubbleLayer, type PinBubble } from './live-feedback'
 
 // --- MODIFICATION: Exporter le type DifficultyLevel ---
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
@@ -88,7 +107,6 @@ const MIN_NORMAL_PIN_DISTANCE_PERCENT = 5;
 // --- Configuration des Pins Spéciaux ---
 // --- MODIFICATION: Calculer le nombre de pins spéciaux comme 30% des pins normaux --- 
 const SPECIAL_PINS_PERCENTAGE = 0.35;
-const JACKPOT_VALUE = 7;
 const MAX_ROUND_DRINKS = 2; // Plafond tournées générales par partie
 
 // Table de poids pour le tirage des types de pins (plus haut = plus fréquent)
@@ -200,6 +218,10 @@ interface TurnResult {
 }
 
 type ResultDisplayPhase = 'tournees' | 'details' | 'final';
+
+const PIN_BUBBLE_MS = 900;
+
+const IDLE_LIVE_BALLS: LiveBalls = createLiveBalls();
 
 // Génération statique des pins
 const generateStaticPinsConfig = (rows: number, minPinsPerRow: number, maxPinsPerRow: number) => {
@@ -353,6 +375,31 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   // Tooltip sur pin spécial (tap mobile)
   const [pinTooltip, setPinTooltip] = useState<{ id: string; x: number; y: number; type: SpecialPinType } | null>(null)
 
+  // Effets touchés par chaque balle pendant le tour : écrit seulement quand un pion agit, jamais à chaque image.
+  const [liveBalls, setLiveBalls] = useState<LiveBalls | null>(null)
+  const [pinBubbles, setPinBubbles] = useState<PinBubble[]>([])
+  const pinBubbleSeqRef = useRef(0)
+  const pinBubbleTimersRef = useRef(new Set<ReturnType<typeof setTimeout>>())
+  const reduceMotion = !!useReducedMotion()
+  const showPinBubble = (x: number, y: number, hit: LivePinHit, category: BallColor) => {
+    const key = ++pinBubbleSeqRef.current
+    setPinBubbles(prev => [...prev, { key, x, y, hit, category }])
+    const timer = setTimeout(() => {
+      pinBubbleTimersRef.current.delete(timer)
+      setPinBubbles(prev => prev.filter(b => b.key !== key))
+    }, PIN_BUBBLE_MS)
+    pinBubbleTimersRef.current.add(timer)
+  }
+  const clearPinBubbles = () => {
+    pinBubbleTimersRef.current.forEach(clearTimeout)
+    pinBubbleTimersRef.current.clear()
+    setPinBubbles([])
+  }
+  useEffect(() => {
+    const timers = pinBubbleTimersRef.current
+    return () => { timers.forEach(clearTimeout); timers.clear() }
+  }, [])
+
   // Légende repliée par défaut : les pins portent désormais leur glyphe, la
   // légende n'est qu'un rappel — et repliée elle ne déborde plus sous le pli mobile.
   const [legendOpen, setLegendOpen] = useState(false)
@@ -489,6 +536,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         setExtraBalls([]);
         setBallPositions({ red: { x: 50, y: -10, color: 'red' }, green: { x: 50, y: -10, color: 'green' } });
         setPinTooltip(null);
+        setLiveBalls(null);
+        clearPinBubbles();
 
         // Régénérer le plateau à chaque nouveau tour
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
@@ -628,41 +677,6 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   }
   // ----------------------------------------------------------------------------------------------------
 
-  // --- MODIFICATION: Adapter calculateFinalSips pour TOUS les nouveaux effets --- 
-  const calculateFinalSips = useCallback((baseSips: number, ballData: BallAnimationData): number => {
-      // 1. Vérifier si effets annulés
-      if (ballData.effects.effectsReset) {
-          return Math.round(baseSips); // Retourne juste la valeur de la case
-      }
-      
-      // 2. Vérifier si Jackpot
-      if (ballData.effects.jackpotHit) {
-          return JACKPOT_VALUE; // Retourne la valeur fixe du jackpot
-      }
-      
-      // 3. Calcul standard (si pas annulé et pas jackpot)
-      let finalSips = baseSips;
-      
-      // Appliquer le multiplicateur
-      if (ballData.effects.multiplierCount > 0) {
-          if (isCumulativeMode) {
-              // Mode cumulatif: Appliquer 2^N
-              finalSips *= Math.pow(2, ballData.effects.multiplierCount);
-          } else {
-              // Mode normal: Appliquer x2 une seule fois
-              finalSips *= 2;
-          }
-      }
-      
-      // Ajouter/Retirer les gorgées (déjà cumulatif par nature)
-      finalSips += ballData.effects.sipsToAdd;
-
-      finalSips = Math.max(0, finalSips - ballData.effects.sipsToSubtract);
-
-      return Math.round(finalSips); // Arrondir au cas où les multiplicateurs créent des décimales
-  }, [isCumulativeMode]); // <-- Dépendance OK
-  // ----------------------------------------------------------------------------------------
-
   const dropBalls = () => {
     if (isAnimating) return;
     if (!canvasRef.current) {
@@ -680,6 +694,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
     setExtraBalls([]); 
     setFinalSlotIndices({ red: null, green: null, extra: null }); 
+    setLiveBalls(createLiveBalls());
+    clearPinBubbles();
     setIsAnimating(true);
     setTurnResult(null); 
     // setTurnEffectLogs(null); // SUPPRIMÉ: Assurer la réinitialisation avant le lancer
@@ -723,6 +739,12 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     };
 
     let lastTime = performance.now();
+    let turnSlotValues = slotSipValues;
+    // Parties du même point à la même vitesse, les deux balles suivaient une fois sur deux la même
+    // trajectoire jusqu'en bas : au premier rebond, la rouge et la verte partent de côtés opposés.
+    const firstBounceSide = Math.random() < 0.5 ? -1 : 1;
+    const firstBounceSideFor = (ballId: string) =>
+      ballId === 'red' ? firstBounceSide : ballId === 'green' ? -firstBounceSide : (Math.random() < 0.5 ? -1 : 1);
     const lastCollisionPin = new Map<string, string | null>();
     // --- MODIFICATION: Stocker les données complètes des balles extra finies ---
     const finishedExtraBallsDataThisTurn: BallAnimationData[] = []; 
@@ -845,7 +867,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 }
                 // Impulsion tangentielle aléatoire au tout premier impact
                 if (!ballData.firstPinHit) {
-                  const side = Math.random() < 0.5 ? -1 : 1;
+                  const side = firstBounceSideFor(ballData.id);
                   const tx = -ny; const ty = nx; // tangente
                   const tangentBoost = isSmBreakpoint ? 120 : 80; // px/s
                   ballData.velocityX += tx * tangentBoost * side;
@@ -885,7 +907,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     }
                     // Impulsion tangentielle aléatoire si premier impact
                     if (!ballData.firstPinHit) {
-                      const side = Math.random() < 0.5 ? -1 : 1;
+                      const side = firstBounceSideFor(ballData.id);
                       const txS = -nyS; const tyS = nxS;
                       const tangentBoostS = isSmBreakpoint ? 120 : 80;
                       ballData.velocityX += txS * tangentBoostS * side;
@@ -921,6 +943,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     let needsGlobalStateUpdate = false;
                     let newSlotValuesForShake: number[] | null = null;
                     let roundDrinksIncrement = 0;
+                    const doubledByArmedEffect = !!ballData.effects.doubleEffectArmed;
+                    let mysteryResolved: SpecialPinType | null = null;
+                    let addBallSpawned = false;
 
                     switch (sPin.type) {
                         case 'addBall': {
@@ -938,6 +963,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                                     effects: { multiplierCount: 0, sipsToAdd: 0, sipsToSubtract: 0, hitCountPerPin: new Map<string, number>(), effectsReset: false, jackpotHit: false },
                                 };
                                 newlyAddedBalls.push(newExtraBallData);
+                                addBallSpawned = true;
                                 // Marquer que cette balle a activé un addBall
                                 ballData.effects.hitCountPerPin.set('addBall', 1);
                             }
@@ -970,10 +996,6 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                             newlyAddedBalls.push(newBall);
                             break;
                         }
-                        case 'scoreSwap': {
-                            ballData.effects.scoreSwap = true;
-                            break;
-                        }
                         case 'doubleEffect': {
                             ballData.effects.doubleEffectArmed = true;
                             break;
@@ -992,31 +1014,15 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                             ballData.effects.magnetDir = 'right';
                             break;
                         }
-                        case 'multiplier': 
-                            ballData.effects.multiplierCount++; 
-                            // ballData.effectLog.push(...); // SUPPRIMÉ
-                            break;
-                        case 'addSip': 
-                            ballData.effects.sipsToAdd++; 
-                            // ballData.effectLog.push(...); // SUPPRIMÉ
-                            break;
-                        case 'subtractSip': 
-                            ballData.effects.sipsToSubtract++; 
-                            // ballData.effectLog.push(...); // SUPPRIMÉ
-                            break;
+                        case 'multiplier':
+                        case 'addSip':
+                        case 'subtractSip':
                         case 'cancellation':
-                            ballData.effects.effectsReset = true;
-                            // ballData.effectLog.push(...); // SUPPRIMÉ
+                        case 'colorSwap':
+                        case 'jackpot':
+                        case 'scoreSwap':
+                            applyScoreEffect(ballData, sPin.type);
                             break;
-                        case 'colorSwap': {
-                            // Inverser la couleur
-                            ballData.color = ballData.color === 'red' ? 'green' : 'red';
-                            // Inverser la fonction donner/recevoir en échangeant les effets addSip et subtractSip
-                            const tempAdd = ballData.effects.sipsToAdd;
-                            ballData.effects.sipsToAdd = ballData.effects.sipsToSubtract;
-                            ballData.effects.sipsToSubtract = tempAdd;
-                            break;
-                        }
                         case 'mystery': {
                             const possibleEffects: SpecialPinType[] = ['multiplier', 'addBall', 'addSip', 'subtractSip', 'cancellation', 'colorSwap', 'shake', 'roundDrinks', 'jackpot', 'teleportation'];
                             const filteredPossibleEffects = possibleEffects.filter(type => type !== 'mystery'); 
@@ -1046,7 +1052,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                                         // effectLog: [] // SUPPRIMÉ
                                     };
                                     newlyAddedBalls.push(newExtraBallData); 
-                                    // ballData.effectLog.push(...); // SUPPRIMÉ
+                                    mysteryResolved = 'addBall';
                                     break;
                                 } 
                                 // Ajouter d'autres cas pour mystery si nécessaire
@@ -1063,10 +1069,6 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                         case 'roundDrinks':
                             roundDrinksIncrement++;
                             needsGlobalStateUpdate = true;
-                            // ballData.effectLog.push(...); // SUPPRIMÉ
-                            break;
-                        case 'jackpot':
-                            ballData.effects.jackpotHit = true;
                             // ballData.effectLog.push(...); // SUPPRIMÉ
                             break;
                         case 'teleportation': {
@@ -1105,20 +1107,19 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                         ballData.effects.doubleEffectArmed = false;
                         // Rejouer le même effet immédiatement (sans boucle infinie)
                         switch (sPin.type) {
-                          case 'multiplier': ballData.effects.multiplierCount++; break;
-                          case 'addSip': ballData.effects.sipsToAdd++; break;
-                          case 'subtractSip': ballData.effects.sipsToSubtract++; break;
-                          case 'cancellation': ballData.effects.effectsReset = true; break;
-                          case 'colorSwap': {
-                            ballData.color = ballData.color === 'red' ? 'green' : 'red';
-                            const tmp = ballData.effects.sipsToAdd; ballData.effects.sipsToAdd = ballData.effects.sipsToSubtract; ballData.effects.sipsToSubtract = tmp;
-                            break; }
+                          case 'multiplier':
+                          case 'addSip':
+                          case 'subtractSip':
+                          case 'cancellation':
+                          case 'colorSwap':
+                          case 'jackpot':
+                          case 'scoreSwap':
+                            applyScoreEffect(ballData, sPin.type); break;
                           case 'shake': {
                             const { min, max } = DIFFICULTY_SETTINGS[difficulty].range;
                             newSlotValuesForShake = Array.from({ length: TARGET_NUM_SLOTS }, () => Math.floor(Math.random() * (max - min + 1)) + min );
                             needsGlobalStateUpdate = true; break; }
                           case 'roundDrinks': roundDrinksIncrement++; needsGlobalStateUpdate = true; break;
-                          case 'jackpot': ballData.effects.jackpotHit = true; break;
                           case 'teleportation': {
                             const randomX = Math.random() * (DROP_START_X_MAX - DROP_START_X_MIN) + DROP_START_X_MIN;
                             ballData.x = randomX; ballData.y = 0; ballData.velocityY = INITIAL_VELOCITY_Y; ballData.velocityX = (Math.random() - 0.5) * 2; break;
@@ -1141,7 +1142,6 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                             };
                             newlyAddedBalls.push(newBall); break;
                           }
-                          case 'scoreSwap': ballData.effects.scoreSwap = true; break;
                           case 'doubleEffect': /* no-op: ne pas re-armer */ break;
                           case 'magnetLeft': {
                             const now = performance.now();
@@ -1173,6 +1173,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                     // Appliquer les mises à jour d'état global SI nécessaire
                     if (needsGlobalStateUpdate) {
                         if (newSlotValuesForShake) {
+                            // Sans elle, l'arrivée compterait les cases d'avant le mélange, alors que le plateau (et l'aperçu) montrent les nouvelles.
+                            turnSlotValues = newSlotValuesForShake;
                             setSlotSipValues(newSlotValuesForShake);
                         }
                         if (roundDrinksIncrement > 0) {
@@ -1187,6 +1189,19 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                         description: getPinEffect(sPin.type),
                         color: ballData.color
                     });
+
+                    // Le doublement ne rejoue ni « mystère » ni un « + balle » déjà consommé : pas de ×2 affiché pour rien.
+                    const liveHit: LivePinHit = {
+                        type: sPin.type,
+                        doubled: doubledByArmedEffect && sPin.type !== 'doubleEffect' && sPin.type !== 'mystery' && sPin.type !== 'addBall',
+                        ...(sPin.type === 'mystery' ? { resolved: mysteryResolved } : {}),
+                        ...(sPin.type === 'addBall' && !addBallSpawned ? { inert: true } : {}),
+                    };
+                    const liveSource = { id: ballData.id, color: ballData.color, effects: snapshotEffects(ballData.effects) };
+                    setLiveBalls(prev => withHit(prev ?? createLiveBalls(), liveSource, liveHit));
+                    if (ballData.id === 'red' || ballData.id === 'green') {
+                        showPinBubble(sPin.x, sPin.y, liveHit, ballCategory(ballData, true));
+                    }
 
                 }
                 // shouldTriggerEffect faux : effet déjà consommé ce tour, rien à faire.
@@ -1216,8 +1231,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         if (ballYPx >= heightPx - ballRadiusPx) {
             const slotWidthPercent = 100 / TARGET_NUM_SLOTS;
             const slotIndex = Math.min(TARGET_NUM_SLOTS - 1, Math.max(0, Math.floor(ballData.x / slotWidthPercent)));
-            const baseSips = slotSipValues[slotIndex] ?? 0;
-            const finalSips = calculateFinalSips(baseSips, ballData);
+            const baseSips = turnSlotValues[slotIndex] ?? 0;
+            const finalSips = calculateFinalSips(baseSips, ballData.effects, isCumulativeMode);
 
             ballData.finalSipResult = finalSips; // Stocker le résultat
             ballData.active = false; // Marquer comme inactive
@@ -1228,6 +1243,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
             if (!isSoundMuted() && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
               navigator.vibrate(18)
             }
+
+            const landedSource = { id: ballData.id, color: ballData.color, effects: snapshotEffects(ballData.effects) };
+            setLiveBalls(prev => withLanding(prev ?? createLiveBalls(), landedSource, slotIndex, finalSips, baseSips));
 
             if (ballData.id === 'red' || ballData.id === 'green') {
                 setFinalSlotIndices(prev => ({ ...prev, [ballData.id as 'red' | 'green']: slotIndex }));
@@ -1244,6 +1262,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
       // Ajouter les nouvelles balles extra générées pendant ce frame
       if (newlyAddedBalls.length > 0) {
           currentAnimState.extra.push(...newlyAddedBalls);
+          const spawned = newlyAddedBalls.map(b => ({ id: b.id, color: b.color, effects: snapshotEffects(b.effects) }));
+          setLiveBalls(prev => withSpawn(prev ?? createLiveBalls(), spawned));
       }
       currentAnimState.extra.forEach(extraBall => processBallFrame(extraBall));
 
@@ -1298,42 +1318,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
       finalGreenData: BallAnimationData | null,
       finishedExtraBalls: BallAnimationData[] 
     ) => {
-    // Calculer les gorgées de base en fonction de la couleur FINALE de chaque balle principale
-    const redBase = finalRedData?.finalSipResult ?? 0;
-    const greenBase = finalGreenData?.finalSipResult ?? 0;
-    const redSwap = finalRedData?.effects.scoreSwap ? 1 : 0;
-    const greenSwap = finalGreenData?.effects.scoreSwap ? 1 : 0;
-    let totalRedSips = 0;
-    let totalGreenSips = 0;
-    // Appliquer Score Swap: si activé, on inverse l’affectation
-    if (finalRedData) {
-      if (finalRedData.color === 'red') {
-        if (redSwap) totalGreenSips += redBase; else totalRedSips += redBase;
-      } else {
-        if (redSwap) totalRedSips += redBase; else totalGreenSips += redBase;
-      }
-    }
-    if (finalGreenData) {
-      if (finalGreenData.color === 'green') {
-        if (greenSwap) totalRedSips += greenBase; else totalGreenSips += greenBase;
-      } else {
-        if (greenSwap) totalGreenSips += greenBase; else totalRedSips += greenBase;
-      }
-    }
-    
-    // (déjà pris en compte plus haut via la logique Score Swap)
-    
-
-    // Traiter chaque balle supplémentaire en fonction de sa couleur FINALE
-    finishedExtraBalls.forEach(ballData => {
-        const sips = ballData.finalSipResult ?? 0;
-        // Ajouter les gorgées à la catégorie correspondant à la couleur finale de la balle
-        if (ballData.color === 'red') {
-            totalRedSips += sips;
-        } else {
-            totalGreenSips += sips;
-        }
-    });
+    const { redSips: totalRedSips, greenSips: totalGreenSips } = tallyTurn(finalRedData, finalGreenData, finishedExtraBalls);
 
     const currentPlayer = players[currentPlayerIndex];
 
@@ -1445,6 +1430,19 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     </div>
   ) : undefined
 
+  // ── Retour en direct : effets touchés et valeurs finales prévues ───────────
+
+  const liveView = liveBalls ?? IDLE_LIVE_BALLS
+  const isLiveIdle = liveBalls === null
+  const liveRedPreview = useMemo(
+    () => previewSlotValues(slotSipValues, liveView.red.effects, isCumulativeMode),
+    [slotSipValues, liveView.red.effects, isCumulativeMode],
+  )
+  const liveGreenPreview = useMemo(
+    () => previewSlotValues(slotSipValues, liveView.green.effects, isCumulativeMode),
+    [slotSipValues, liveView.green.effects, isCumulativeMode],
+  )
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
@@ -1520,7 +1518,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
             <div
               ref={canvasRef}
-              className="relative w-full overflow-hidden rounded-2xl border border-gold/15 bg-felt-deep"
+              className="relative w-full overflow-hidden rounded-2xl border border-gold/[0.15] bg-felt-deep"
               style={{ height: 'clamp(360px, 60vh, 550px)' }}
               onClick={() => setPinTooltip(null)}
             >
@@ -1595,8 +1593,15 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 </div>
               )}
 
-              {/* Cases en bas */}
-              <div className="absolute bottom-0 w-full flex">
+              {/* Bandeau des effets touchés, en surimpression sous les balles */}
+              <LiveEffectsBar live={liveView} idle={isLiveIdle} isCumulativeMode={isCumulativeMode} reduceMotion={reduceMotion} />
+
+              {/* Cases en bas : pendant un tour, valeur finale prévue de chaque balle */}
+              <div
+                role={isLiveIdle ? undefined : 'group'}
+                aria-label={isLiveIdle ? undefined : t('game.live.previewLabel')}
+                className="absolute bottom-0 w-full flex"
+              >
                 {slotSipValues.map((sips, index) => {
                   const isRedHit = finalSlotIndices.red === index
                   const isGreenHit = finalSlotIndices.green === index
@@ -1608,11 +1613,14 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                       key={index}
                       className={cn(
                         'flex h-11 sm:h-14 items-center justify-center border-t border-x border-gold/[0.15] transition-colors duration-200',
+                        !isLiveIdle && 'flex-col gap-1 px-0.5 sm:gap-1.5',
                         isBoth ? 'bg-gradient-to-r from-suit-red/60 to-emerald-700/60' : isRedHit ? 'bg-suit-red/60' : isGreenHit ? 'bg-emerald-700/60' : isExtraHit ? 'bg-gold/40' : 'bg-black/30',
                       )}
                       style={{ width: `${100 / TARGET_NUM_SLOTS}%` }}
                     >
-                      <span className={cn('font-display font-bold text-sm sm:text-base', isHit ? 'text-cream' : 'text-cream/60')}>{sips}</span>
+                      {isLiveIdle
+                        ? <span className={cn('font-display font-bold text-sm sm:text-base', isHit ? 'text-cream' : 'text-cream/60')}>{sips}</span>
+                        : <LiveSlotValues live={liveView} slot={index} base={sips} redBallValue={liveRedPreview[index]} greenBallValue={liveGreenPreview[index]} />}
                     </div>
                   )
                 })}
@@ -1660,6 +1668,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                   }}
                 />
               ))}
+
+              {/* Bulles d'effet au-dessus des pins touchés par une balle principale */}
+              <PinBubbleLayer bubbles={pinBubbles} reduceMotion={reduceMotion} />
             </div>
 
             {/* ── Légende repliable des pins spéciaux ─────────────────────── */}

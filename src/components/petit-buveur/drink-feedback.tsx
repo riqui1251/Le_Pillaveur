@@ -2,14 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { useAmbianceMode, type AmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { playGameSound } from '@/lib/sound/game-sounds'
 
 /**
  * Feedback visuel des gorgées — partagé local + online.
  *
  * `useDrinkDeltas` détecte les hausses de compteur entre deux rendus et émet
- * des événements éphémères ; `FloatingDrinkBadge` fait flotter « +N 🍺 » sur
- * la carte du joueur, `PulsingCount` fait pulser le compteur à chaque change.
+ * des événements éphémères ; `FloatingDrinkBadge` fait flotter « +N 🍺 »
+ * (« +N 🌿 » en ambiance Soft) sur la carte du joueur, `PulsingCount` fait
+ * pulser le compteur à chaque change.
  */
 
 export type DrinkDelta = { key: number; playerId: string; delta: number }
@@ -48,9 +50,16 @@ export function useDrinkDeltas(drinksById: Record<string, number>, ttlMs = 1500)
   return deltas
 }
 
+/** Picto d'un gage : pas d'alcool à l'écran en ambiance Soft (🌿, comme ses textes). */
+export function drinkIcon(ambiance: AmbianceMode): string {
+  return ambiance === 'soft' ? '🌿' : '🍺'
+}
+
 /** « +N 🍺 » qui flotte au-dessus d'un conteneur en `position: relative`. */
 export function FloatingDrinkBadge({ deltas }: { deltas: DrinkDelta[] }) {
   const reduced = useReducedMotion()
+  const { mode } = useAmbianceMode()
+  const icon = drinkIcon(mode)
   return (
     <AnimatePresence>
       {deltas.map((d) => (
@@ -63,7 +72,7 @@ export function FloatingDrinkBadge({ deltas }: { deltas: DrinkDelta[] }) {
           className="pointer-events-none absolute -top-1 right-2 z-20 whitespace-nowrap rounded-full border border-suit-red/60 bg-suit-red px-2 py-0.5 text-xs font-bold text-cream shadow-lg"
           aria-hidden
         >
-          +{d.delta} 🍺
+          +{d.delta} {icon}
         </motion.span>
       ))}
     </AnimatePresence>

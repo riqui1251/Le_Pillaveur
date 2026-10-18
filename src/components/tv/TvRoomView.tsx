@@ -47,27 +47,6 @@ import type { PbcClientView } from '@/lib/petit-bac/engine'
 import { TvPresident } from './TvPresident'
 import type { PreClientView } from '@/lib/president/engine'
 
-const GAME_TITLES: Record<string, string> = {
-  'petit-buveur': 'Le Petit Buveur',
-  'toucher-coule': 'Toucher-Coulé',
-  menteur: 'Le Menteur',
-  imposteur: "L'Imposteur",
-  quiz: 'Le Grand Pillaveur',
-  'loup-garou': 'Loup-Garou',
-  '1220': '1220',
-  purple: 'Purple',
-  bluff: 'Le Grand Bluff',
-  espion: "Qui est l'Espion ?",
-  tabou: 'Tabou Vocal',
-  crobard: 'Crobard',
-  'telephone-dessine': 'Téléphone Dessiné',
-  'sans-filtre': 'Sans Filtre',
-  'mots-codes': 'Mots Codés',
-  dilemmes: 'Dilemmes',
-  'petit-bac': 'Petit Bac',
-  president: 'Président',
-}
-
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
 
 function parseState(json: string | null): ParsedState {
@@ -87,6 +66,9 @@ function isFinished(state: ParsedState): boolean {
 /** Orchestrateur TV : lit la salle par code et affiche l'écran adapté (lobby / jeu / victoire). */
 export function TvRoomView({ code }: { code: string }) {
   const t = useTranslations('tv')
+  const tCatalog = useTranslations('games.catalog')
+  const gameTitle = (id: string | null | undefined) =>
+    id && tCatalog.has(`${id}.title`) ? tCatalog(`${id}.title`) : t('brand')
   const normalized = code.toUpperCase()
   const { room, notFound, frame } = useTvRoom(normalized)
   const countedRef = useRef(false)
@@ -135,14 +117,7 @@ export function TvRoomView({ code }: { code: string }) {
   // Salle de CAST (jeu LOCAL diffusé) : rendu par castKind, aucune notion de join.
   if (room.status === 'cast') {
     const castState = parseState(room.gameStateJson) as unknown as CastState | null
-    const castTitle =
-      castState?.castKind === 'plinko'
-        ? 'Plinko'
-        : castState?.castKind === 'pmu'
-          ? 'Course PMU'
-          : castState?.castKind === 'petit-buveur'
-            ? 'Le Petit Buveur'
-            : t('brand')
+    const castTitle = gameTitle(castState?.castKind)
     return (
       <TvStage title={castTitle} code={room.code}>
         {castState?.castKind === 'plinko' ? (
@@ -153,7 +128,7 @@ export function TvRoomView({ code }: { code: string }) {
           castState.winner ? (
             <TvVictory room={room} gameId="petit-buveur" state={castState as unknown as EngineState} />
           ) : (
-            <TvPetitBuveur room={room} state={castState as unknown as EngineState} />
+            <TvPetitBuveur room={room} state={castState} />
           )
         ) : (
           <div className="flex flex-1 items-center justify-center">
@@ -164,7 +139,7 @@ export function TvRoomView({ code }: { code: string }) {
     )
   }
 
-  const title = (room.gameId && GAME_TITLES[room.gameId]) || t('brand')
+  const title = gameTitle(room.gameId)
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   // QR/lien SANS préfixe de langue : chaque scanneur atterrit dans SA locale.
   // Via /invite/CODE pour que le lien partagé porte l'aperçu OG de la table.

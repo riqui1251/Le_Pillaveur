@@ -2059,7 +2059,39 @@
           "seeAllHint": "Recorre a todos los jugadores para ver los totales"
         },
         "turnLabel": "Turno de",
-        "nextUp": "Después"
+        "nextUp": "Después",
+        "live": {
+          "effectsLabel": "Efectos tocados por las bolas en este turno",
+          "previewLabel": "Valor final de cada bola según la casilla donde caiga",
+          "slotLabel": "Casilla {n}: {values}",
+          "none": "ningún efecto",
+          "cancelled": "Anulado",
+          "jackpot": "Jackpot {value}",
+          "swapped": "conteo invertido",
+          "nothing": "sin efecto",
+          "doubled": "duplicado",
+          "extraBall": "bola extra",
+          "short": {
+            "multiplier": "×2",
+            "addBall": "+ bola",
+            "addSip": "+1",
+            "subtractSip": "−1",
+            "cancellation": "Anulación",
+            "colorSwap": "Color",
+            "mystery": "Misterio",
+            "shake": "Mezcla",
+            "roundDrinks": "Ronda",
+            "jackpot": "Jackpot",
+            "teleportation": "Teletransporte",
+            "gravityFlip": "Gravedad",
+            "slowMotion": "Cámara lenta",
+            "split": "División",
+            "scoreSwap": "Intercambio",
+            "doubleEffect": "Efecto ×2",
+            "magnetLeft": "Imán",
+            "magnetRight": "Imán"
+          }
+        }
       },
       "a11y": {
         "turnResult": "Resultado: {drinks} tragos para beber, {gives} para repartir.",
@@ -3419,7 +3451,7 @@
           },
           "difficile": {
             "label": "🔥 Difícil",
-            "desc": "No más desafíos y sorbos"
+            "desc": "Más desafíos y sorbos"
           },
           "extreme": {
             "label": "💀 Extremo",
@@ -3432,6 +3464,7 @@
           "🍺 Dependiendo de la caja que hayas recibido, toma sorbos o acepta un desafío.",
           "⚡ Las cajas especiales desencadenan efectos: intercambios, maldiciones, protecciones...",
           "🏆 ¡El primero en llegar a la casilla 30 gana el juego!",
+          "⚔️ Duelo: si te detienes en una casilla ocupada, puedes retar a un jugador que esté allí; el perdedor retrocede una casilla, salvo si está protegido.",
           "⚠️Consumir con moderación."
         ],
         "resume": "Reanudar el juego actual",
@@ -3441,6 +3474,7 @@
             "🌿 Según la casilla, toma prendas o acepta un desafío.",
             "⚡ Las casillas especiales activan efectos: intercambios, maldiciones, protecciones…",
             "🏆 ¡El primero en llegar a la casilla 30 gana la partida!",
+            "⚔️ Duelo: si te detienes en una casilla ocupada, puedes retar a un jugador que esté allí; el perdedor retrocede una casilla, salvo si está protegido.",
             "🌿 Modo soft: los mismos juegos, sin una gota."
           ],
           "difficulties": {
@@ -3453,7 +3487,8 @@
             "extreme": {
               "desc": "Prenda gigante posible — solo para expertos"
             }
-          }
+          },
+          "tagline": "¡Avanza por el tablero, prenda tras prenda!"
         }
       },
       "difficultyLabels": {
@@ -3475,7 +3510,7 @@
         "recul": "Retiro",
         "avance": "Avance",
         "tous": "Todos",
-        "roue": "Rueda para sorber",
+        "roue": "Ruleta de sorbos",
         "echange": "Intercambio",
         "bombe": "Bomba",
         "protection": "Protección",
@@ -3486,7 +3521,7 @@
         "defi-chaine": "Desafío en cadena",
         "piege": "Trampa",
         "melange": "Mezcla",
-        "passe-tour": "toma tu turno",
+        "passe-tour": "Pierde turno",
         "double-peine": "Doble castigo",
         "solo": "Solo",
         "copie": "Copiar",
@@ -3542,13 +3577,25 @@
           "deHonteForward": "¡Avanza una casilla!",
           "deHonteBack": "¡Retrocede una casilla!",
           "wheelLegendSafe": "Salvado",
-          "wheelLegendDrink": "Tragos"
+          "wheelLegendDrink": "Tragos",
+          "deHonteCannotBack": "Ya en la casilla 1: ¡no retrocede!"
         },
         "outcomeNothing": "Sin daños — ¡a salvo!",
         "history": {
           "title": "Historial de efectos",
           "empty": "Aún no hay efectos"
-        }
+        },
+        "effectsLegend": "Leyenda de efectos",
+        "notes": {
+          "bridgeForward": "🌉 Puente (casilla {case}): ¡quienes estaban en ella avanzan una casilla!",
+          "bridgeBack": "🌉 Puente (casilla {case}): ¡quienes estaban en ella retroceden una casilla!",
+          "nothingToReplay": "Nada que repetir: aún no se ha jugado ninguna casilla — ¡{player} está a salvo!",
+          "noEffect": "Nadie se ve afectado: la casilla no tiene efecto."
+        },
+        "verdictWaiting": "{name} decide si {target} superó el desafío…",
+        "sideWaiting": "{name} elige cara o cruz… ({seconds} s)",
+        "sidePrompt": "{actor} lanza la moneda por ti: ¡elige tu lado!",
+        "secondsLeft": "Quedan {seconds} s"
       },
       "defis": [
         {
@@ -3725,7 +3772,7 @@
         "recul": "¡Retroceda 1 espacio!",
         "avance": "¡Avanza {count} casilla(s)!",
         "tous": "¡Todos beben {count} sorbos excepto la persona objetivo! 🍻",
-        "roue": "🎯 Caso especial: ¡Sip Wheel!",
+        "roue": "🎯 Casilla especial: ¡ruleta de sorbos!",
         "roue-defis": "🎭 ¡Rueda de Desafíos!",
         "de-honte": "🎲 ¡Dados de vergüenza! Tira los dados del destino.",
         "pile-face": "🪙¡Cara o cruz! El objetivo elige y prueba suerte.",
@@ -3739,7 +3786,7 @@
         "defi-chaine": "🔗¡Desafío en cadena! ¡Enlazado 5 turnos a un compañero!",
         "piege": "🕳️ ¡Trampa! ¡Bebe tantos sorbos como tu posición!",
         "melange": "🔀 ¡Mezcla! ¡Las posiciones son mixtas!",
-        "passe-tour": "⏭️ ¡Toma tu turno! El objetivo no rodará el próximo turno.",
+        "passe-tour": "⏭️ ¡Pierde turno! El objetivo no tirará en el próximo turno.",
         "double-peine": "💥 ¡Doble pena! ¡El objetivo bebe {count} sorbos × 2!",
         "solo": "🎯 ¡En solitario! Todos están a salvo, bebes 1 sorbo.",
         "copie": "👯 ¡Copia! El objetivo sufre el mismo movimiento que tú este turno.",
@@ -3770,7 +3817,10 @@
         "pontAdvance": "avance",
         "pontBack": "da un paso atrás",
         "loterieCancelled": "🎰 Lotería cancelada (no hay suficientes jugadores).",
-        "loterieResult": "🎰 ¡Lotería! {drinker} bebe 2 sorbos, {mover} avanza un espacio."
+        "loterieResult": "🎰 ¡Lotería! {drinker} bebe 2 sorbos, {mover} avanza un espacio.",
+        "reculGroupeNobody": "⬅️ ¡Retiro grupal! Nadie está detrás de {actor}: nadie retrocede.",
+        "pontNoBack": "🌉 ¡Puente ({side})! Casilla {case}: imposible retroceder, nadie se mueve.",
+        "loterieProtected": "🎰 ¡Lotería! {drinker} debía beber 2 sorbos pero {protected} — {mover} avanza una casilla."
       },
       "shameDice": {
         "safe": "Seguro",
@@ -3812,8 +3862,9 @@
           "result": "Resultado",
           "applyCase": "Aplicar efecto de cuadro",
           "changeOpponent": "Cambiar oponente",
-          "winnerStays": "{winner} wins and stays · {loser} moves back one square",
-          "opponentWins": "{winner} wins · {loser} moves back one square"
+          "winnerStays": "{winner} gana y se queda · {loser} retrocede una casilla",
+          "opponentWins": "{winner} gana · {loser} retrocede una casilla",
+          "loserProtected": "{winner} gana · {loser} está protegido y no retrocede"
         },
         "dialogs": {
           "teleport": "🌀 Teletransportarse",
@@ -3823,24 +3874,24 @@
           "chance": "🍀 Caso de suerte",
           "exchange": "🔄 Caja de cambio",
           "saveGame": "💾 Juego en progreso",
-          "teleportPrompt": "Swap your position with:",
-          "teleportLeader": "🏆 1st in ranking ({name})",
-          "teleportLast": "🐢 Last place ({name})",
-          "votePrompt": "Hands up — who drinks {count} sips?",
-          "shameDiceRules": "1–2 safe · 3–4 sips · 5 advance · 6 back",
-          "rollD6": "Roll the D6",
-          "diceRolling": "The die is rolling…",
+          "teleportPrompt": "Intercambia tu posición con:",
+          "teleportLeader": "🏆 El 1.º de la clasificación ({name})",
+          "teleportLast": "🐢 El último ({name})",
+          "votePrompt": "Mano alzada: ¿quién bebe {count} sorbos?",
+          "shameDiceRules": "1–2 a salvo · 3–4 sorbos · 5 avanza · 6 retrocede",
+          "rollD6": "Tirar el D6",
+          "diceRolling": "El dado rueda…",
           "coinChooses": "elige cara o cruz",
           "coinChoice": "Elección: {choice}",
-          "drinksToTake": "{count} sip(s) to drink",
-          "coinSpinning": "The coin is spinning…",
-          "chancePrompt": "Choose your action:",
-          "chanceReroll": "🎲 Roll the die again",
-          "chanceAdvance": "➡️ Move forward 2 squares",
-          "chainTitle": "Chain challenge",
-          "chainPrompt": "Choose your partner for {count} linked turns",
-          "chainChooser": "{player} chooses",
-          "exchangePrompt": "Choose a player to swap positions with:"
+          "drinksToTake": "{count} sorbo(s) por beber",
+          "coinSpinning": "La moneda gira…",
+          "chancePrompt": "Elige tu acción:",
+          "chanceReroll": "🎲 Volver a tirar el dado",
+          "chanceAdvance": "➡️ Avanzar 2 casillas",
+          "chainTitle": "Desafío en cadena",
+          "chainPrompt": "Elige a tu compañero para {count} turnos vinculados",
+          "chainChooser": "{player} elige",
+          "exchangePrompt": "Elige un jugador con quien intercambiar tu posición:"
         },
         "save": {
           "prompt": "Hay un juego en curso. ¿Quieres reanudarlo o empezar un nuevo juego?",
@@ -3859,15 +3910,19 @@
           "chainDesc": "Vinculado a una pareja: sufre los mismos efectos (sorbos)",
           "mirror": "espejo inverso",
           "protected": "¡ESTABA PROTEGIDO!",
-          "skipTurn": "Skip your turn",
-          "skipTurnDesc": "Will automatically skip next turn",
-          "anchor": "Anchor",
-          "anchorDesc": "Cannot advance next turn",
-          "mirrorDesc": "When one drinks, the other too ({a} ↔ {b})",
-          "mirrorDescShort": "When one drinks, the other too",
-          "protectedStatus": "{player} is protected",
-          "cursedStatus": "{player} is cursed ({count} turns)",
-          "chainStatus": "{from} → {to} ({count} turns)"
+          "skipTurn": "Pierde turno",
+          "skipTurnDesc": "Se saltará automáticamente su próximo turno",
+          "anchor": "Ancla",
+          "anchorDesc": "No podrá avanzar en el próximo turno",
+          "mirrorDesc": "Cuando uno bebe, el otro también ({a} ↔ {b})",
+          "mirrorDescShort": "Cuando uno bebe, el otro también",
+          "protectedStatus": "{player} está protegido",
+          "cursedStatus": "{player} está maldito ({count} turnos)",
+          "chainStatus": "{from} → {to} ({count} turnos)",
+          "mirrorDescOneWay": "Cuando {a} bebe, {b} también bebe",
+          "mirrorDescShortOneWay": "Cuando el iniciador bebe, su objetivo también bebe",
+          "turnsLeft": "{count, plural, one {Queda # turno} other {Quedan # turnos}}",
+          "activeTitle": "Efectos actuales"
         },
         "messages": {
           "cheers": [
@@ -3939,7 +3994,7 @@
         "caseLabel": "Casilla {number}",
         "loading": "Cargando la partida…",
         "drinksShort": "{count} sorbo(s)",
-        "turnsRemaining": "{count} turn(s)",
+        "turnsRemaining": "{count} turno(s)",
         "next": "Siguiente",
         "continue": "Continuar",
         "close": "Cerrar",
@@ -3952,64 +4007,64 @@
           "difficulty": "Dificultad"
         },
         "target": {
-          "title": "Who to target?",
-          "hint": "The square effect will be revealed after your choice",
-          "random": "Random player",
-          "me": "Me —"
+          "title": "¿A quién apuntar?",
+          "hint": "El efecto de la casilla se revelará después de tu elección",
+          "random": "Jugador al azar",
+          "me": "Yo —"
         },
         "history": {
           "title": "Acción anterior",
           "selfTarget": "(uno mismo / sin objetivo)"
         },
         "wheel": {
-          "defis": "Challenge wheel",
-          "drinks": "Sip wheel",
-          "turnOf": "Turn of {player}",
-          "spin": "Spin the wheel",
-          "spinning": "The wheel is spinning…",
-          "legend": "Legend"
+          "defis": "Ruleta de desafíos",
+          "drinks": "Ruleta de sorbos",
+          "turnOf": "Turno de {player}",
+          "spin": "Girar la ruleta",
+          "spinning": "La ruleta gira…",
+          "legend": "Leyenda"
         },
         "outcomes": {
-          "skipTurn": "⏭️ {player} automatically skips this turn.",
-          "teleport": "🌀 {actor} swaps place with {partner} ({rank} in ranking)!",
+          "skipTurn": "⏭️ {player} se salta automáticamente este turno.",
+          "teleport": "🌀 ¡{actor} intercambia su lugar con {partner} ({rank} de la clasificación)!",
           "teleportLeader": "1st",
-          "teleportLast": "last",
-          "voteProtected": "🗳️ Vote: {player} {protected}",
-          "voteDrink": "🗳️ Vote: {player} drinks {count} sip(s)!",
-          "pileFaceWin": "🪙 Heads or tails: {player} chose {choice}, draw {result} — safe!",
-          "pileFaceLose": "🪙 Heads or tails: draw {result}, {player} drinks {count} sip(s)!",
-          "duelChallengerWins": "⚔️ Duel over: {challenger} wins (stays), {opponent} moves back one square.",
-          "duelOpponentWins": "⚔️ Duel over: {opponent} wins, {challenger} moves back one square.",
-          "challengeSuccess": "✅ {player} completed the challenge!",
-          "challengeDrink": "🍺 {player} drank {count} sip(s)!",
-          "noPreviousCase": "No previous square, you are safe!",
-          "safeCase": "Safe square! Player {player} is safe this turn.",
-          "trap": "🕳️ Trap! {player} drinks {count} sip(s) (position {position})!",
-          "trapWithMessage": "🕳️ Trap! {player} drinks {count} sip(s) (position {position}) {message}",
-          "move": "{arrow} {player} moves from square {from} to square {to}!",
-          "drinks": "{player} drinks {count} sip(s)!",
-          "bombe": "💣 {player} triggered a bomb! Everyone drinks {count} sip(s), but {name} drinks double!",
-          "protectionApplied": "🛡️ {player} is protected for a full round (everyone else plays once)!",
-          "miroirSwap": "🪞 {player} swapped all positions! (first ↔ last)",
-          "trapProtected": "🕳️ Trap! {player} should have drunk {count} sip(s) (position {position}) but {protected}",
-          "doublePeine": "💥 {player} drinks {count} sips (double penalty)!",
-          "copie": "👯 {player} copies the die ({delta}): square {from} → {to}!",
+          "teleportLast": "último",
+          "voteProtected": "🗳️ Votación: {player} {protected}",
+          "voteDrink": "🗳️ Votación: ¡{player} bebe {count} sorbo(s)!",
+          "pileFaceWin": "🪙 Cara o cruz: {player} eligió {choice}, salió {result} — ¡a salvo!",
+          "pileFaceLose": "🪙 Cara o cruz: salió {result}, ¡{player} bebe {count} sorbo(s)!",
+          "duelChallengerWins": "⚔️ Duelo terminado: {challenger} gana (se queda), {opponent} retrocede una casilla.",
+          "duelOpponentWins": "⚔️ Duelo terminado: {opponent} gana, {challenger} retrocede una casilla.",
+          "challengeSuccess": "✅ ¡{player} superó el desafío!",
+          "challengeDrink": "🍺 ¡{player} bebió {count} sorbo(s)!",
+          "noPreviousCase": "No hay casilla anterior, ¡estás a salvo!",
+          "safeCase": "¡Casilla segura! {player} está a salvo este turno.",
+          "trap": "🕳️ ¡Trampa! ¡{player} bebe {count} sorbo(s) (posición {position})!",
+          "trapWithMessage": "🕳️ ¡Trampa! {player} bebe {count} sorbo(s) (posición {position}) {message}",
+          "move": "{arrow} ¡{player} pasa de la casilla {from} a la casilla {to}!",
+          "drinks": "¡{player} bebe {count} sorbo(s)!",
+          "bombe": "💣 ¡{player} hizo estallar una bomba! Todos beben {count} sorbo(s), ¡pero {name} bebe el doble!",
+          "protectionApplied": "🛡️ ¡{player} está protegido durante una vuelta completa de la mesa (todos los demás juegan una vez)!",
+          "miroirSwap": "🪞 ¡{player} invirtió todas las posiciones! (primero ↔ último)",
+          "trapProtected": "🕳️ ¡Trampa! {player} debía beber {count} sorbo(s) (posición {position}) pero {protected}",
+          "doublePeine": "💥 ¡{player} bebe {count} sorbos (doble castigo)!",
+          "copie": "👯 {player} copia el dado ({delta}): ¡casilla {from} → {to}!",
           "rouletteProtected": "🔫 {player} {protected}",
-          "rouletteMiss": "🔫 Miss! {player} drinks {count} sips!",
-          "inversion": "🔃 Inversion! {last} (last) drinks {count} sip(s) instead of {player}!",
-          "mirrorLink": "🪞 {actor} is linked to {target}: when one drinks, the other too ({count} turn(s) from {actor})!",
-          "rewindSafe": "⏪ No previous square — {player} is safe!",
-          "melange": "🔀 {player} shuffled all positions!",
-          "genericApplied": "Square {type} applied to {player}",
-          "chainLinked": "🔗 {actor} → {target} — linked for {count} turns!",
-          "chanceAdvance": "🍀 Luck: {player} moves forward 2 squares (square {case})!",
-          "exchange": "🔄 {a} and {b} swapped positions!",
-          "everyoneDrinksHonor": "Everyone drinks {count} sip(s) to honor \"{compliment}\"",
-          "everyoneDrinksExcept": "Everyone drinks {count} sip(s) except",
-          "wheelDefi": "🎭 Challenge: {label}!",
-          "wheelDefiDrink": "{player} drinks {count} sips.",
-          "wheelDefiPlay": "{player} — your turn to play!",
-          "wheelDefiOrDrink": "{player} — complete the challenge or drink 2 sips!",
+          "rouletteMiss": "🔫 ¡Mala suerte! ¡{player} bebe {count} sorbos!",
+          "inversion": "🔃 ¡Inversión! ¡{last} (último) bebe {count} sorbo(s) en lugar de {player}!",
+          "mirrorLink": "🪞 {actor} está vinculado a {target}: ¡cuando uno bebe, el otro también ({count} turno(s) de {actor})!",
+          "rewindSafe": "⏪ No hay casilla anterior — ¡{player} está a salvo!",
+          "melange": "🔀 ¡{player} mezcló todas las posiciones!",
+          "genericApplied": "Casilla {type} aplicada a {player}",
+          "chainLinked": "🔗 {actor} → {target} — ¡vinculados durante {count} turnos!",
+          "chanceAdvance": "🍀 Suerte: ¡{player} avanza 2 casillas (casilla {case})!",
+          "exchange": "🔄 ¡{a} y {b} intercambiaron sus posiciones!",
+          "everyoneDrinksHonor": "Todos beben {count} sorbo(s) en honor a \"{compliment}\"",
+          "everyoneDrinksExcept": "Todos beben {count} sorbo(s) excepto",
+          "wheelDefi": "🎭 Desafío: ¡{label}!",
+          "wheelDefiDrink": "{player} bebe {count} sorbos.",
+          "wheelDefiPlay": "{player} — ¡te toca!",
+          "wheelDefiOrDrink": "{player} — ¡supera el desafío o bebe 2 sorbos!",
           "wheelResult": "🎯 Resultado de la ruleta: {label}!",
           "wheelDrink": "{player} bebe (jugador en turno).",
           "cannotRecul": "❌ {player} está en la casilla 1 y no puede retroceder!",
@@ -4019,12 +4074,22 @@
           "curseApplied": "👻 {player} está maldito durante {count} turnos!",
           "skipTurnNext": "⏭️ {player} no tirará en el próximo turno!",
           "anchorApplied": "⚓ {player} no podrá avanzar en el próximo turno!",
-          "rouletteSafe": "🔫 Click… {player} está a salvo!"
+          "rouletteSafe": "🔫 Click… {player} está a salvo!",
+          "shielded": "🛡️ {player} {protected}",
+          "teleportSelf": "🌀 {actor} ya es {rank} de la clasificación: no hay intercambio.",
+          "replayedCase": "🔁 {via}: se vuelve a jugar la casilla «{case}».",
+          "doubleCaseStep": "🎲 Efecto {index}: {case}",
+          "mirrorLinkOneWay": "🪞 Espejo inverso: cuando {actor} bebe, {target} también bebe, ¡hasta el final del próximo turno de {actor}!",
+          "replayNothing": "🔁 Nada que repetir: todavía no se ha jugado ninguna casilla.",
+          "duelLoserProtected": "⚔️ Duelo terminado: gana {winner}, pero {loser} está protegido y no retrocede."
         },
         "yourTurn": "¡Te toca jugar!",
         "soundOn": "Activar el sonido",
         "soundOff": "Silenciar",
-        "tapToSkip": "Toca para saltar"
+        "tapToSkip": "Toca para saltar",
+        "turnActions": "Acciones del turno",
+        "defaultPlayerName": "Jugador {number}",
+        "notEnoughPlayers": "¡Se necesitan al menos 2 jugadores para empezar una partida!"
       },
       "tutorial": {
         "steps": [
@@ -4067,7 +4132,8 @@
         },
         "resolveCase": {
           "solo": "🎯 ¡{actor} toma 1 prenda, los demás están a salvo!",
-          "loterieResult": "🎰 ¡Lotería! {drinker} toma 2 prendas, {mover} avanza una casilla."
+          "loterieResult": "🎰 ¡Lotería! {drinker} toma 2 prendas, {mover} avanza una casilla.",
+          "loterieProtected": "🎰 ¡Lotería! {drinker} debía tomar 2 prendas pero {protected} — {mover} avanza una casilla."
         },
         "shameDice": {
           "twoSips": "2 prendas",
@@ -4105,7 +4171,9 @@
             "curseDesc": "Toma 1 prenda extra en cada ronda",
             "chainDesc": "Vinculado a una pareja: sufren los mismos efectos (prendas)",
             "mirrorDesc": "Cuando uno toma una prenda, el otro también ({a} ↔ {b})",
-            "mirrorDescShort": "Cuando uno toma una prenda, el otro también"
+            "mirrorDescShort": "Cuando uno toma una prenda, el otro también",
+            "mirrorDescOneWay": "Cuando {a} toma una prenda, {b} también toma una",
+            "mirrorDescShortOneWay": "Cuando el iniciador toma una prenda, su objetivo también toma una"
           },
           "outcomes": {
             "pileFaceLose": "🪙 Cara o cruz: sorteo {result}, ¡{player} toma {count} prenda(s)!",
@@ -4121,7 +4189,8 @@
             "everyoneDrinksHonor": "Todos toman {count} prenda(s) para honrar «{compliment}»",
             "everyoneDrinksExcept": "Todos toman {count} prenda(s) excepto",
             "wheelDefiOrDrink": "{player} — ¡acepta el desafío o toma 2 prendas!",
-            "wheelDrink": "{player} toma una prenda (jugador en turno)."
+            "wheelDrink": "{player} toma una prenda (jugador en turno).",
+            "mirrorLinkOneWay": "🪞 Espejo inverso: cuando {actor} toma una prenda, {target} también toma una, ¡hasta el final del próximo turno de {actor}!"
           },
           "messages": {
             "drinking": [
@@ -4147,12 +4216,26 @@
               "¡Vamos, allá va!"
             ]
           }
+        },
+        "online": {
+          "spectacle": {
+            "wheelSafe": "SAFE — ¡ninguna prenda!",
+            "wheelDrinks": "¡{count} prenda(s)!",
+            "pfWin": "Apuesta ganada — nadie toma prenda",
+            "pfLose": "¡{name} toma {count} prenda(s)!",
+            "deHonteDrink": "¡2 prendas!",
+            "wheelLegendDrink": "Prendas"
+          }
         }
       },
       "about": {
         "p1": "El juego de tablero del aperitivo: un dado, fichas, treinta casillas con efectos y retos. Cada uno avanza al ritmo del dado, y cada casilla tiene su carácter: retos que cumplir, tragos que dar o recibir, eventos colectivos, casillas especiales que apuntan a un jugador concreto. El primero en llegar al final del tablero gana, y en línea, la victoria cuenta para la clasificación del sitio.",
         "p2": "En tu turno, lanza el dado: tu ficha avanza casilla a casilla y la casilla se revela. Aplica su efecto, reto, intercambio, evento… La mesa juzga si el reto está superado, nadie vigila las reglas. Algunos pasos desencadenan minimomentos: ruleta de la fortuna, cara o cruz, dado de la vergüenza. El anfitrión ajusta la dificultad en la sala, de fácil a extrema, y el chat de voz para los retos.",
         "p3": "Los retos rechazados cuestan más que los intentados, y algunas casillas permiten apuntar a las fichas rivales: no las pierdas de vista. Un jugador que se va es sustituido por un bot a los tres minutos. Hasta 99 en línea en teoría; a partir de ocho se espera mucho el turno, mejor abrir dos mesas. El Pequeño Bebedor también se juega en local, en un solo móvil."
+      },
+      "diceOverlay": {
+        "rolling": "{name} lanza el dado…",
+        "result": "{name} saca un {value}"
       }
     },
     "quiz": {

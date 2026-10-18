@@ -69,6 +69,21 @@
   pointer-events: none;
 }
 
+/* Spécificité volontairement plus forte que les utilitaires posés par le jeu
+   local et la version en ligne (text-[8px], text-cream/30, text-white/30) :
+   crème à 0,75 = contraste ≥ 5,6:1 sur toutes les cases, feutre Soft et case
+   active (fond or) compris ; 11 px minimum au téléphone. */
+.pb-board .pb-board-case:not(.pb-board-start) .pb-board-case-num {
+  color: rgb(var(--cream-rgb) / 0.75);
+  font-size: 11px;
+}
+
+@media (min-width: 640px) {
+  .pb-board .pb-board-case:not(.pb-board-start) .pb-board-case-num {
+    font-size: 12px;
+  }
+}
+
 .pb-board-players {
   z-index: 2;
 }

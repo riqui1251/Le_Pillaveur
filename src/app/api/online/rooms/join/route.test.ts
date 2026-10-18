@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const { userMock, roomMock, memberMock, inviteMock, dtoMock, leaveMock, purgeMock, canJoinMock, adapterMock, bus, cache } =
   vi.hoisted(() => ({
     userMock: vi.fn(),
-    roomMock: { findUnique: vi.fn(), update: vi.fn() },
+    roomMock: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     memberMock: { upsert: vi.fn() },
     inviteMock: { updateMany: vi.fn() },
     dtoMock: vi.fn(),
@@ -48,9 +48,22 @@ const fakeAdapter = {
   maxPlayers: 4,
   parse: (json: string | null) => (json ? JSON.parse(json) : null),
   serialize: (state: unknown) => JSON.stringify(state),
-  rejoin: () => null,
+  rejoin: (() => null) as (state: unknown, userId: string) => unknown,
   isFinished: (state: unknown) => (state as { phase: string }).phase === 'finished',
+  currentActorId: () => 'host',
 }
+
+/** Reprise de siège : l'état porte `left`, le joueur qui revient en sort. */
+const rejoinAdapter = {
+  ...fakeAdapter,
+  rejoin: (state: unknown, userId: string) => {
+    const s = state as { phase: string; moves: number; left: string[] }
+    return s.left.includes(userId) ? { ...s, left: s.left.filter((id) => id !== userId) } : null
+  },
+}
+
+const leftRoom = (over: Record<string, unknown> = {}) =>
+  playingRoom({ gameStateJson: JSON.stringify({ phase: 'bidding', moves: 0, left: ['bob'] }), ...over })
 
 /** Salle de Menteur lancée, deux joueurs. */
 const playingRoom = (over: Record<string, unknown> = {}) => ({
@@ -218,5 +231,81 @@ describe('POST /join — par identifiant, sans le code', () => {
 
     expect((await join(undefined, { roomId: 'room-1' })).status).toBe(200)
     expect(canJoinMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /join — reprise de siège (compare-and-swap)', () => {
+  beforeEach(() => {
+    adapterMock.mockReturnValue(rejoinAdapter)
+  })
+
+  it('écrit la reprise sur la version lue, puis rend le siège', async () => {
+    roomMock.findUnique.mockResolvedValue(leftRoom())
+    roomMock.updateMany.mockResolvedValue({ count: 1 })
+
+    const res = await join('bob')
+
+    expect(res.status).toBe(200)
+    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(roomMock.updateMany).toHaveBeenCalledWith({
+      where: { id: 'room-1', stateVersion: 9 },
+      data: {
+        gameStateJson: JSON.stringify({ phase: 'bidding', moves: 0, left: [] }),
+        stateVersion: 10,
+        currentTurnUserId: 'host',
+      },
+    })
+    expect(memberMock.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ create: { roomId: 'room-1', userId: 'bob', isReady: true } })
+    )
+    expect(leaveMock).toHaveBeenCalledWith('bob', 'room-1')
+    expect(bus.publishRoomChanged).toHaveBeenCalledWith('room-1', { type: 'changed', stateVersion: 10 })
+  })
+
+  it('conflit : le coup joué entre-temps est conservé, la reprise est recalculée sur l’état frais', async () => {
+    roomMock.findUnique
+      .mockResolvedValueOnce(leftRoom())
+      .mockResolvedValueOnce(
+        leftRoom({ gameStateJson: JSON.stringify({ phase: 'bidding', moves: 1, left: ['bob'] }), stateVersion: 10 })
+      )
+    roomMock.updateMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 })
+
+    const res = await join('bob')
+
+    expect(res.status).toBe(200)
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(2)
+    expect(roomMock.updateMany.mock.calls[1][0]).toMatchObject({
+      where: { id: 'room-1', stateVersion: 10 },
+      data: { gameStateJson: JSON.stringify({ phase: 'bidding', moves: 1, left: [] }), stateVersion: 11 },
+    })
+    expect(memberMock.upsert).toHaveBeenCalledTimes(1)
+    expect(bus.publishRoomChanged).toHaveBeenCalledWith('room-1', { type: 'changed', stateVersion: 11 })
+  })
+
+  it('conflit : remplacé par un bot entre-temps, la partie en cours reste fermée et aucun siège n’est rendu', async () => {
+    roomMock.findUnique
+      .mockResolvedValueOnce(leftRoom())
+      .mockResolvedValueOnce(leftRoom({ gameStateJson: JSON.stringify({ phase: 'bidding', moves: 1, left: [] }), stateVersion: 10 }))
+    roomMock.updateMany.mockResolvedValue({ count: 0 })
+
+    const res = await join('bob')
+
+    expect(res.status).toBe(409)
+    expect((await res.json()).error).toBe('game_already_started')
+    expect(memberMock.upsert).not.toHaveBeenCalled()
+    expect(leaveMock).not.toHaveBeenCalled()
+  })
+
+  it('conflits répétés : refus borné version_conflict, rien d’écrit sans condition', async () => {
+    roomMock.findUnique.mockResolvedValue(leftRoom())
+    roomMock.updateMany.mockResolvedValue({ count: 0 })
+
+    const res = await join('bob')
+
+    expect(res.status).toBe(409)
+    expect((await res.json()).error).toBe('version_conflict')
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(3)
+    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(memberMock.upsert).not.toHaveBeenCalled()
   })
 })
