@@ -40,11 +40,11 @@ Oui. Qui est l'Espion ? est proposé dans le mode sans alcool du site.
 
 ### Peut-on jouer seul, avec des bots ?
 
-Oui pour découvrir la mécanique (« Essayer avec des bots »), mais l'espion se débusque en conversation et un bot ne discute pas. Les bots complètent une table, ils ne la font pas vivre : il faut de vraies voix.
+Oui. « Essayer avec des bots » ouvre une table privée de cinq : toi et quatre bots, de quoi interroger et comparer plusieurs suspects, et tes amis peuvent rejoindre en cours de route. Dès qu'un bot est à table, un fil de questions par boutons s'ajoute au vocal : les bots s'interrogent entre eux, te posent au moins une question sur trois et attendent ta réponse (« ça dépend » compris). Équipiers, ils accusent sur preuves et refusent de suivre une accusation sans fondement (« Je ne suis pas d'accord ») ; espion, le bot recopie ce qu'il entend et devine le lieu quand il est sûr de lui. Un carnet regroupe les réponses de la manche par question, et un dernier appel, avant la fin du chrono, vise le joueur que rien n'a blanchi : attendre en silence ne suffit plus.
 
 ### Combien de temps dure une partie ?
 
-L'hôte règle la discussion (3, 5 ou 7 minutes par manche) et le nombre de manches à gagner (3, 5 ou 7). Une partie standard — 5 minutes, 3 manches gagnantes — dure 15 à 25 minutes. Chrono écoulé sans accusation ? L'espion remporte la manche.
+L'hôte règle la discussion (3, 5 ou 7 minutes par manche) et le nombre de manches à gagner (3, 5 ou 7). Une partie standard — 5 minutes, 3 manches gagnantes — dure 15 à 25 minutes. Seul face aux bots, la manche dure 3 minutes, sauf si tu choisis une autre durée. Chrono écoulé sans accusation ? L'espion remporte la manche.
 
 ### À 3 joueurs, ça tourne ?
 

@@ -1,4 +1,5 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
  * LE MENTEUR (Perudo apéro) — moteur PUR, serveur-autoritaire.
@@ -22,8 +23,12 @@ export const MENTEUR_START_DICE = 5
  * est ouvert à toute la table : sans plancher, le premier impatient relançait
  * les dés avant que les autres aient vu les gobelets levés (F33). Le Menteur
  * n'a PAS d'horloge de phase — on horodate donc l'entrée en révélation.
- * Un BOT en est exempt (il ne lit rien, et son tick de service est cadencé
- * côté client) : une table 100 % bots ne peut donc jamais rester figée.
+ * Le bot qui mène la révélation y est soumis lui aussi dès qu'un humain non
+ * parti est assis, même éliminé : exempté, il refermait à 2,6 s la révélation
+ * où l'humain venait de le démasquer. Ses ticks (bot-tick.ts) dépassent le
+ * plancher d'au moins 1 s, client comme serveur : le tick serveur n'est donc
+ * jamais refusé, sinon skipBot figerait une révélation sans échéance. Une
+ * table sans humain présent reste exemptée et ne peut pas se figer.
  */
 export const MENTEUR_REVEAL_MIN_MS = 4_000
 export const MENTEUR_MIN_PLAYERS = 2
@@ -47,6 +52,32 @@ export type MenteurPlayer = {
 
 export type MenteurBid = { qty: number; face: number; by: string }
 
+/**
+ * Une enchère de la manche telle que les gobelets levés la jugent : `bluff`
+ * = son auteur n'avait AUCUN dé de la face (jokers compris hors Palifico).
+ */
+export type MenteurDuelBid = MenteurBid & { bluff: boolean }
+
+/**
+ * Fait BRUT d'un défi (« Menteur ! » ou Calza), gardé toute la partie. Rien
+ * d'agrégé : la réputation et le « qui m'a fait boire » se dérivent de cette
+ * liste, au lieu de figer une donnée calculée qui dupliquerait les règles.
+ * Tout y est public : les dés qui fondent `bluff` étaient levés à cet instant.
+ */
+export type MenteurDuel = {
+  round: number
+  /** Auteur de l'enchère défiée. */
+  bidderId: string
+  challengerId: string
+  mode: 'dudo' | 'calza'
+  /** L'enchère défiée tenait (au moins la quantité annoncée). */
+  held: boolean
+  /** Qui a perdu un dé ; null sur un Calza réussi. */
+  loserId: string | null
+  /** Toute la chaîne de la manche, de l'ouverture à l'enchère défiée. */
+  bids: MenteurDuelBid[]
+}
+
 /** Résultat PUBLIC d'un défi — tous les gobelets sont levés. */
 export type MenteurReveal = {
   bid: MenteurBid
@@ -68,6 +99,76 @@ export type MenteurReveal = {
 }
 
 export type MenteurPhase = 'bidding' | 'reveal' | 'finished'
+
+/**
+ * Parole PUBLIQUE d'un bot, portée par son coup (`botSay.<kind>` sous
+ * games.menteur.game) : elle naît dans la MÊME réduction que l'enchère ou le
+ * défi, sans tick ni version de plus. Le kind est le seul message : le texte
+ * des phrases ne révèle rien, et le kind se calcule sur les seuls dés du bot.
+ *   • enchère : sure (je la tiens), unsure (ça passe ou ça casse), ally (je
+ *     te suis sur ta face), grudge (pique d'ouverture à qui l'a fait perdre) ;
+ *   • « Menteur ! » : suspect, ou again contre un bluffeur déjà démasqué ;
+ *   • Calza : exact.
+ * gotcha, held, caught et wrongCall sont les réactions à la révélation :
+ * dérivées de la vue publique côté client, jamais écrites dans l'état.
+ */
+export type MenteurSpeechKind =
+  | 'sure'
+  | 'unsure'
+  | 'ally'
+  | 'suspect'
+  | 'exact'
+  | 'again'
+  | 'grudge'
+  | 'gotcha'
+  | 'held'
+  | 'caught'
+  | 'wrongCall'
+export type MenteurSpeech = BotSpeech<MenteurSpeechKind>
+
+export const MENTEUR_SPEECH_KINDS = [
+  'sure',
+  'unsure',
+  'ally',
+  'suspect',
+  'exact',
+  'again',
+  'grudge',
+  'gotcha',
+  'held',
+  'caught',
+  'wrongCall',
+] as const satisfies readonly MenteurSpeechKind[]
+
+/** Paroles max par joueur et par manche ; le bavardage du persona borne en dessous. */
+export const MENTEUR_SPEECH_CAP = 2
+/** Les remarques sur une manche passée : le bluff déjà démasqué, le dé perdu. */
+export const MENTEUR_REMARK_KINDS = ['again', 'grudge'] as const satisfies readonly MenteurSpeechKind[]
+/**
+ * Aucune parole humaine : l'adaptateur HTTP ne lit pas `say`, le chat vocal
+ * de la table suffit aux humains.
+ */
+export const MENTEUR_HUMAN_SPEECH_KINDS = [] as const satisfies readonly MenteurSpeechKind[]
+
+/** Les kinds qu'un coup peut porter ; les réactions de révélation n'y sont jamais. */
+const SAY_KINDS_OF: Record<'BID' | 'DUDO' | 'CALZA', readonly MenteurSpeechKind[]> = {
+  BID: ['sure', 'unsure', 'ally', 'grudge'],
+  DUDO: ['suspect', 'again'],
+  CALZA: ['exact'],
+}
+
+export function isMenteurRemark(kind: MenteurSpeechKind): boolean {
+  return (MENTEUR_REMARK_KINDS as readonly string[]).includes(kind)
+}
+
+/** Le Menteur n'interpelle personne : on répond par son coup, pas par une question. */
+export function isMenteurAsk(kind: MenteurSpeechKind): boolean {
+  void kind
+  return false
+}
+
+/** La parole jointe à un coup : son kind et le joueur qu'elle nomme. */
+export type MenteurSay = { kind: MenteurSpeechKind; targetId: string }
 
 export type MenteurState = {
   version: number
@@ -91,12 +192,26 @@ export type MenteurState = {
   /** Manche Palifico en cours (un joueur vivant n'a plus qu'un dé) : les 1 ne
    * sont plus jokers et la face de l'enchère est verrouillée sur la manche. */
   palifico: boolean
+  /**
+   * PUBLIC — chaîne des enchères de la manche en cours, gardée pendant la
+   * révélation, vidée au CONTINUE. Optionnel : un état sérialisé avant son
+   * arrivée n'en a pas (parseMenteurState complète).
+   */
+  bids?: MenteurBid[]
+  /** PUBLIC — un fait brut par défi, toute la partie (cf. MenteurDuel). */
+  duels?: MenteurDuel[]
+  /**
+   * PUBLIC — paroles des bots, celles de la manche en cours et de la
+   * précédente au plus : le CONTINUE ne garde que la manche qui s'achève.
+   * Optionnel comme `bids` (parseMenteurState complète).
+   */
+  speech?: MenteurSpeech[]
 }
 
 export type MenteurAction =
-  | { type: 'BID'; playerId: string; qty: number; face: number }
-  | { type: 'DUDO'; playerId: string; now: number }
-  | { type: 'CALZA'; playerId: string; now: number }
+  | { type: 'BID'; playerId: string; qty: number; face: number; say?: MenteurSay }
+  | { type: 'DUDO'; playerId: string; now: number; say?: MenteurSay }
+  | { type: 'CALZA'; playerId: string; now: number; say?: MenteurSay }
   | { type: 'CONTINUE'; playerId: string; now: number }
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
@@ -194,9 +309,74 @@ export function menteurRevealElapsedMs(state: MenteurState, now: number): number
   return now - state.revealAt
 }
 
+/**
+ * Un humain non parti est assis à table, vivant ou éliminé (il regarde la
+ * révélation). Prend aussi les joueurs de la vue client : MenteurOnline et le
+ * filet serveur calculent le délai du bot sur la même règle que le moteur.
+ */
+export function menteurHumanSeated(players: readonly Pick<MenteurPlayer, 'isBot' | 'leftAt'>[]): boolean {
+  return players.some((p) => !p.isBot && !p.leftAt)
+}
+
 /** Une manche Palifico débute quand un joueur vivant n'a plus qu'un dé. */
 function computePalifico(players: MenteurPlayer[], rulePalifico: boolean): boolean {
   return rulePalifico && players.some((p) => p.dice.length === 1)
+}
+
+/**
+ * Le défi qui vient d'être lancé, en faits bruts, ajouté à `duels`. Calculé
+ * dans la MÊME réduction que la révélation, sur les dés qu'elle lève, avec
+ * le compteur du moteur : la marque de bluff ne réécrit aucune règle.
+ */
+function withDuel(
+  state: MenteurState,
+  alive: MenteurPlayer[],
+  bid: MenteurBid,
+  outcome: Pick<MenteurDuel, 'challengerId' | 'mode' | 'held' | 'loserId'>
+): MenteurDuel[] {
+  const chain = state.bids ?? []
+  const last = chain[chain.length - 1]
+  // Une manche commencée avant l'arrivée de la chaîne (état sérialisé plus
+  // ancien) n'a pas l'enchère défiée : on la rajoute pour que le duel la porte.
+  const sameAsLast = last && last.by === bid.by && last.qty === bid.qty && last.face === bid.face
+  const full = sameAsLast ? chain : [...chain, bid]
+  const bids = full.map((b) => {
+    const author = alive.filter((p) => p.id === b.by)
+    return { ...b, bluff: author.length > 0 && countMatches(author, b.face, state.palifico) === 0 }
+  })
+  return [...(state.duels ?? []), { round: state.round, bidderId: bid.by, ...outcome, bids }]
+}
+
+/**
+ * Le fil après un coup qui porte `say`, ou tel quel sans parole. Validé dans
+ * la réduction du coup lui-même : un kind hors de ceux du coup (une réaction
+ * de révélation comprise), une cible autre que celle que le coup désigne, ou
+ * un plafond atteint refusent le COUP entier — le cerveau du bot ne propose
+ * que des paroles valides, la simulation le vérifie.
+ *   • sure / unsure visent le joueur qui doit répondre à l'enchère ;
+ *   • ally, suspect, again et exact visent l'enchérisseur précédent ;
+ *   • grudge, à l'ouverture seulement, vise un autre joueur en lice.
+ */
+function withSay(
+  state: MenteurState,
+  actor: MenteurPlayer,
+  type: keyof typeof SAY_KINDS_OF,
+  say: MenteurSay | undefined,
+  expectedTargetId: string | null
+): MenteurSpeech[] {
+  if (!say) return state.speech ?? []
+  if (!SAY_KINDS_OF[type].includes(say.kind)) throw new MenteurEngineError('INVALID_KIND')
+  const opening = state.currentBid === null
+  if ((say.kind === 'grudge' && !opening) || (say.kind === 'ally' && opening)) {
+    throw new MenteurEngineError('INVALID_KIND')
+  }
+  const target = state.players.find((p) => p.id === say.targetId)
+  if (!target || target.id === actor.id || !isMenteurAlive(target)) throw new MenteurEngineError('INVALID_TARGET')
+  if (say.kind !== 'grudge' && target.id !== expectedTargetId) throw new MenteurEngineError('INVALID_TARGET')
+  const speech = state.speech ?? []
+  const mine = speech.filter((sp) => sp.playerId === actor.id && sp.round === state.round)
+  if (mine.length >= MENTEUR_SPEECH_CAP) throw new MenteurEngineError('ALREADY_SPOKE')
+  return [...speech, { playerId: actor.id, kind: say.kind, targetId: target.id, round: state.round }]
 }
 
 export type MenteurRules = { palifico?: boolean; calza?: boolean }
@@ -235,6 +415,9 @@ export function createMenteurState(
     ruleCalza: Boolean(rules.calza),
     revealAt: null,
     palifico: computePalifico(withDice, rulePalifico),
+    bids: [],
+    duels: [],
+    speech: [],
   }
 }
 
@@ -249,10 +432,16 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       if (!isLegalRaise(state.currentBid, action.qty, action.face, menteurTotalDice(state), state.palifico)) {
         throw new MenteurEngineError('ILLEGAL_BID')
       }
+      const bid: MenteurBid = { qty: action.qty, face: action.face, by: actor.id }
+      const turnIdx = nextAliveIdx(state, state.turnIdx)
+      // sure / unsure parlent au joueur qui doit répondre ; ally à celui qu'on suit.
+      const answers = action.say?.kind === 'ally' ? (state.currentBid?.by ?? null) : state.players[turnIdx].id
       return {
         ...state,
-        currentBid: { qty: action.qty, face: action.face, by: actor.id },
-        turnIdx: nextAliveIdx(state, state.turnIdx),
+        currentBid: bid,
+        bids: [...(state.bids ?? []), bid],
+        speech: withSay(state, actor, 'BID', action.say, answers),
+        turnIdx,
         version: state.version + 1,
       }
     }
@@ -263,6 +452,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       if (actor.id !== action.playerId) throw new MenteurEngineError('NOT_YOUR_TURN')
       const bid = state.currentBid
       if (!bid) throw new MenteurEngineError('NO_BID_TO_CHALLENGE')
+      const speech = withSay(state, actor, 'DUDO', action.say, bid.by)
 
       const alive = menteurAlivePlayers(state)
       const matchCount = countMatches(alive, bid.face, state.palifico)
@@ -298,6 +488,8 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
           mode: 'dudo',
           gainedId: null,
         },
+        duels: withDuel(state, alive, bid, { challengerId: actor.id, mode: 'dudo', held: bidHeld, loserId }),
+        speech,
         version: state.version + 1,
       }
     }
@@ -309,6 +501,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       if (actor.id !== action.playerId) throw new MenteurEngineError('NOT_YOUR_TURN')
       const bid = state.currentBid
       if (!bid) throw new MenteurEngineError('NO_BID_TO_CHALLENGE')
+      const speech = withSay(state, actor, 'CALZA', action.say, bid.by)
 
       const alive = menteurAlivePlayers(state)
       const matchCount = countMatches(alive, bid.face, state.palifico)
@@ -341,6 +534,8 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
             mode: 'calza',
             gainedId,
           },
+          duels: withDuel(state, alive, bid, { challengerId: actor.id, mode: 'calza', held: true, loserId: null }),
+          speech,
           rngState: rng.getState(),
           version: state.version + 1,
         }
@@ -375,6 +570,13 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
           mode: 'calza',
           gainedId: null,
         },
+        duels: withDuel(state, alive, bid, {
+          challengerId: actor.id,
+          mode: 'calza',
+          held: matchCount >= bid.qty,
+          loserId: actor.id,
+        }),
+        speech,
         version: state.version + 1,
       }
     }
@@ -383,10 +585,13 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       if (state.phase !== 'reveal') throw new MenteurEngineError('NOT_REVEAL')
       const asker = state.players.find((p) => p.id === action.playerId)
       if (!asker) throw new MenteurEngineError('UNKNOWN_PLAYER')
-      if (!asker.isBot && menteurRevealElapsedMs(state, action.now) < MENTEUR_REVEAL_MIN_MS) {
+      const mustRead = !asker.isBot || menteurHumanSeated(state.players)
+      if (mustRead && menteurRevealElapsedMs(state, action.now) < MENTEUR_REVEAL_MIN_MS) {
         throw new MenteurEngineError('READING_TIME')
       }
       const alive = menteurAlivePlayers(state)
+      // Le fil ne garde que la manche qui s'achève : jamais plus de deux manches.
+      const speech = (state.speech ?? []).filter((sp) => sp.round === state.round)
       if (alive.length <= 1) {
         return {
           ...state,
@@ -394,6 +599,8 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
           revealAt: null,
           winnerId: alive[0]?.id ?? null,
           currentBid: null,
+          bids: [],
+          speech,
           version: state.version + 1,
         }
       }
@@ -417,6 +624,8 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
         revealAt: null,
         turnIdx,
         currentBid: null,
+        bids: [],
+        speech,
         lastReveal: null,
         round: state.round + 1,
         rngState: rng.getState(),

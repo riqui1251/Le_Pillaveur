@@ -171,6 +171,18 @@ describe('table solo d’« Essayer avec des bots » (soloBots)', () => {
     expect(soloBotsCount(getGameById('imposteur')!)).toBe(4)
   })
 
+  it('Le Menteur s’essaie à 4 (trois bots) et reste « mieux à plusieurs » jusqu’à la mesure de prod', () => {
+    const menteur = getGameById('menteur')!
+    expect(soloBotsCount(menteur)).toBe(3)
+    expect(menteur.soloFit).toBe('group')
+  })
+
+  it('L’Espion s’essaie à 5 (quatre bots) et reste « mieux à plusieurs » jusqu’à la mesure de prod', () => {
+    const espion = getGameById('espion')!
+    expect(soloBotsCount(espion)).toBe(4)
+    expect(espion.soloFit).toBe('group')
+  })
+
   it('sans soloBots : juste de quoi lancer seul (minPlayers − 1)', () => {
     expect(soloBotsCount(getGameById('loup-garou')!)).toBe(getGameById('loup-garou')!.minPlayers! - 1)
     expect(soloBotsCount({ minPlayers: 3 })).toBe(2)

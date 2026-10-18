@@ -16,7 +16,7 @@ import { useSaveOnlinePreferences } from '@/hooks/useSaveOnlinePreferences'
 import { OnlineCollection } from '@/components/online/OnlineCollection'
 import { isDefaultOnlineLook } from '@/lib/online/cosmetics'
 import { DEFAULT_ONLINE_PREFERENCES } from '@/lib/online-preferences'
-import { GAMES, hasContentIn, type GameMeta } from '@/lib/games'
+import { GAMES, hasContentIn, soloBotsCount, type GameMeta } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { GameIconById } from '@/components/hub/GameIconById'
@@ -32,6 +32,7 @@ import { isCapacitorApp } from '@/lib/native-app'
 import { copyText, shareLink } from '@/lib/native-share'
 import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
 import { lgDebateMinutes } from '@/lib/loup-garou/debate'
+import { espionDiscussionMinutes } from '@/lib/espion/discussion'
 import { forceLaunchDecision, MC_TEAM_MIN_PLAYERS } from '@/components/online/lobby-launch'
 
 const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
@@ -1274,6 +1275,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           Math.max(0, maxBots - botsCount)
         )
         if (missing <= 0) return null
+        // Seul à table, l'hôte reçoit la table solo du jeu (soloBots), la même
+        // que « Essayer avec des bots » — pas un duel au minimum de joueurs.
+        const fill =
+          room.members.length === 1
+            ? Math.min(Math.max(missing, soloBotsCount(game) - botsCount), Math.max(0, maxBots - botsCount))
+            : missing
         return (
           <div className="mb-3 flex items-center gap-3 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3.5 py-3">
             <span className="text-xl" aria-hidden>🤖</span>
@@ -1283,7 +1290,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             </div>
             <button
               type="button"
-              onClick={() => updateSettings({ botsCount: botsCount + missing })}
+              onClick={() => updateSettings({ botsCount: botsCount + fill })}
               className="min-h-[44px] shrink-0 rounded-xl bg-violet-500/25 px-3 py-2 text-xs font-bold text-violet-100 transition-colors hover:bg-violet-500/40"
             >
               {tOnline('botsCallout.fill')}
@@ -1927,7 +1934,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             </p>
             <div className="grid grid-cols-3 gap-2">
               {[3, 5, 7].map((value) => {
-                const active = (room.settings.espionDiscussionMin ?? 5) === value
+                // La durée qui sera RÉELLEMENT jouée : sans choix de l'hôte,
+                // 3 min quand il est seul face aux bots (espionDiscussionMinutes,
+                // la même règle que le lanceur) — surligner « 5 » mentirait.
+                const active = espionDiscussionMinutes(room.settings.espionDiscussionMin, room.members.length) === value
                 return (
                   <button
                     key={value}

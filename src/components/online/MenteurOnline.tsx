@@ -11,9 +11,9 @@ import { OnlineEndScreen } from './OnlineEndScreen'
 import { PhaseCountdown } from './PhaseCountdown'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { isLegalRaise, type MenteurBid, type MenteurClientView } from '@/lib/menteur/engine'
+import { isLegalRaise, menteurHumanSeated, type MenteurBid, type MenteurClientView } from '@/lib/menteur/engine'
+import { menteurBotTickDelayMs } from '@/lib/menteur/bot-tick'
 import { CssDie } from '@/components/games/CssDie'
-import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
@@ -21,7 +21,9 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
-import { genreOf, genreOfId } from './bot-speech/bot-speech-feed'
+import { genreOf, genreOfId, playerIcon } from './bot-speech/bot-speech-feed'
+import { BID_LADDER_PHONE, BidLadder } from './menteur/BidLadder'
+import { MenteurSpeechFeed } from './menteur/MenteurSpeechFeed'
 
 /**
  * LE MENTEUR en ligne (serveur-autoritaire). La vue reçue est déjà filtrée :
@@ -103,20 +105,28 @@ export function MenteurOnline() {
 
   // Ticks « arbitre » (avec secours par rang, cf. useBotReferee) : tour d'un
   // bot → un coup ; joueur parti depuis 3 min → remplacement. expectedVersion
-  // rend les ticks concurrents inoffensifs (le serveur revalide tout).
+  // rend les ticks concurrents inoffensifs (le serveur revalide tout). Délai
+  // calculé comme le filet serveur (bot-tick.ts) : la révélation que mène un
+  // bot reste 5 s à l'écran dès qu'un humain est assis.
   const activeActor = view?.players.find((p) => p.id === room?.currentTurnUserId)
+  const botDelayMs = view
+    ? menteurBotTickDelayMs(
+        {
+          phase: view.phase,
+          actorIsBot: Boolean(activeActor?.isBot),
+          actorName: activeActor?.name,
+          humanSeated: menteurHumanSeated(view.players),
+        },
+        Math.random
+      )
+    : null
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
     userId: user?.id,
     players: view?.players,
     enabled: Boolean(view && user && room && view.phase !== 'finished'),
-    botTick: activeActor?.isBot
-      ? {
-          body: { action: 'bot' },
-          delayMs: view?.phase === 'reveal' ? 2600 : botTickDelayMs(activeActor.name),
-        }
-      : null,
+    botTick: botDelayMs === null ? null : { body: { action: 'bot' }, delayMs: botDelayMs },
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
   })
 
@@ -165,11 +175,23 @@ export function MenteurOnline() {
   const finished = view.phase === 'finished'
   const reveal = view.lastReveal
   const winner = view.players.find((p) => p.id === view.winnerId)
+  // Champs optionnels : une vue d'avant leur arrivée n'en a pas.
+  const bids = view.bids ?? []
+  const duels = view.duels ?? []
+  const lastDuel = view.phase === 'reveal' ? duels[duels.length - 1] : undefined
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  // Portrait du persona, ou l'icône du compte (un déserteur converti la garde).
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) => playerIcon(p, room.members)
+  const revealing = view.phase === 'reveal' && Boolean(reveal)
+  // Le fil se lit sous l'enchère pendant les enchères, puis dans le panneau
+  // de révélation, où la réaction du bot se lit avec le résultat, pendant le
+  // plancher de lecture. Le fil sous l'enchère reste monté à la révélation,
+  // masqué à l'œil : déplacé, sa région aria-live renaîtrait déjà remplie, et
+  // le lecteur d'écran tairait le « Menteur ! » né avec la révélation et la
+  // réaction ; la copie du panneau est muette (aria-hidden).
+  const speechFeed = <MenteurSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
 
   // Le serveur diffuse le nouvel état (SSE) → useOnlineRoom rafraîchit ; le
   // hook, lui, annonce les refus (enchère illégale, tour perdu…).
@@ -335,12 +357,30 @@ export function MenteurOnline() {
             <p className="mt-1 flex items-center justify-center gap-2 text-2xl font-black">
               {view.currentBid.qty} × <Die face={view.currentBid.face} size="md" />
             </p>
+            {/* L'échelle ne montre rien de plus que la grosse enchère tant
+                qu'elle n'a qu'un échelon ; à la révélation, le panneau la
+                reprend en entier avec ses bluffs. */}
+            {view.phase === 'bidding' && bids.length > 1 && (
+              <div className="mt-2">
+                <BidLadder
+                  bids={bids}
+                  players={view.players}
+                  iconOf={iconOf}
+                  variant="phone"
+                  limit={BID_LADDER_PHONE}
+                />
+              </div>
+            )}
           </>
         ) : (
           <p className="text-sm font-semibold text-white/80">{t('noBid')}</p>
         )}
         <p className="mt-1 text-xs text-white/70">{t('pillaveurHint')}</p>
       </div>
+
+      {/* Paroles des bots, portées par leurs coups : monté dès les enchères,
+          même vide, pour que la région aria-live existe avant la 1re bulle. */}
+      <div className={revealing ? 'sr-only' : undefined}>{speechFeed}</div>
 
       {/* Indicateur de tour */}
       <AnimatePresence mode="wait">
@@ -401,6 +441,9 @@ export function MenteurOnline() {
                 </div>
               ))}
             </div>
+            {lastDuel && lastDuel.round === view.round && (
+              <BidLadder bids={lastDuel.bids} players={view.players} iconOf={iconOf} variant="phone" titled />
+            )}
             {reveal.mode === 'calza' && reveal.loserId ? (
               <p className="text-center text-sm font-bold text-red-200">
                 {t(isSoft ? 'reveal.calzaLostSoft' : 'reveal.calzaLost', { name: nameOf(reveal.loserId), sips: reveal.sips })}
@@ -426,6 +469,7 @@ export function MenteurOnline() {
                 })}
               </p>
             )}
+            <div aria-hidden>{speechFeed}</div>
             <Button
               onClick={() => void sendAction({ action: 'continue' })}
               disabled={busy}

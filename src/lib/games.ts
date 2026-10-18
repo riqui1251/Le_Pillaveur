@@ -60,8 +60,8 @@ export type GameMeta = {
    *   Loup-Garou), ou le jeu est un pari de chacun contre le hasard (Purple,
    *   1220, le plateau du Petit Buveur) où leur niveau ne change rien ;
    * - 'group' : le sel du jeu, c'est la discussion ou le bluff entre
-   *   humains, et les bots n'y font que de la figuration (aucune accusation
-   *   à l'Espion, aucun dessin à Crobard, juge au hasard à Sans Filtre,
+   *   humains, et les bots n'y font que de la figuration (aucun dessin à
+   *   Crobard, juge au hasard à Sans Filtre,
    *   bluffs tirés des mauvaises réponses au Grand Bluff, votes de persona à
    *   Dilemmes) : seul, on n'y voit rien. Le Menteur y est aussi : ses bots
    *   enchérissent sur les probabilités, mais un bluff sans visage à lire ne
@@ -69,6 +69,10 @@ export type GameMeta = {
    *   L'Imposteur y reste en attendant la mesure : ses bots donnent de vrais
    *   indices et votent sur ce qu'ils entendent (src/lib/imposteur/bot-brain.ts),
    *   mais seule la durée de ses parties solo dira s'il tient sans potes.
+   *   L'Espion aussi : ses bots questionnent, répondent et accusent sur le
+   *   fil par boutons (src/lib/espion/bot-brain.ts), mais il était quitté en
+   *   1 à 2 min seul avant ce fil ; la mesure de ses nouvelles parties solo
+   *   tranchera.
    * Lu par le hub en mode solo (rangée « Parfaits en solo » d'abord, badge
    * « Mieux à plusieurs » ensuite) et par TryBotsGate (encart « ce jeu se
    * joue entre potes » + `soloAlternativeFor`). Ne retire jamais un jeu.
@@ -190,6 +194,10 @@ export const GAMES: GameMeta[] = [
     botsFillable: true,
     // Quitté en 1 à 2 min seul contre des bots (07/10/2026) : voir soloFit.
     soloFit: 'group',
+    // Table d'essai à 4 depuis le 14/10/2026, au lieu du duel où 38 % des
+    // manches tombaient dès la 1re enchère. soloFit reste 'group' tant que les
+    // parties solo d'après cette date n'ont pas été comparées à la mesure du 07/10.
+    soloBots: 3,
     maxPlayers: 6,
     onlineOnly: true,
     softModeReady: true,
@@ -436,6 +444,11 @@ export const GAMES: GameMeta[] = [
     onlineOnly: true,
     botsFillable: true,
     soloFit: 'group',
+    // Table d'essai à 5 : à 3, l'humain n'avait que deux bots à interroger et
+    // l'espion se jouait à pile ou face entre eux. soloFit reste 'group' tant
+    // que les parties solo d'après le déploiement n'ont pas été mesurées en prod
+    // (durée, abandons, parties rejouées, face au Quiz et au Président).
+    soloBots: 4,
     softModeReady: true,
   },
   {

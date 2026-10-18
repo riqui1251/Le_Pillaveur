@@ -2469,6 +2469,11 @@
         "dudo": "LIAR!",
         "calza": "CALZA!",
         "illegalBid": "Bid too low: raise the quantity or the face.",
+        "bidsTitle": "Bids this round",
+        "bidsAria": "Bids this round, first to last",
+        "bidChipAria": "{name} bid {qty, plural, one {# die} other {# dice}} showing {face}",
+        "bluffMark": "not a single one",
+        "bluffMarkAria": "{name} didn’t have a single one",
         "reveal": {
           "title": "Cups up!",
           "bidHeld": "The bid held: {count} dice (called {qty} ×)",
@@ -2489,7 +2494,100 @@
         "backToMenu": "Back to menu",
         "waitingReturn": "Waiting for {name} to come back — bot in {seconds}s",
         "afkWarning": "{name} is inactive — kicked and replaced by a bot in {seconds}s",
-        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot"
+        "afkWarningSelf": "⚠️ Your turn! Play within {seconds}s or you will be kicked and replaced by a bot",
+        "feedAria": "Table chatter",
+        "speechAimedYou": "⚡ You’re challenged!",
+        "botSay": {
+          "sure": "Easy, {name}.",
+          "sure_2": "Got a good feeling about this one. Your turn, {name}.",
+          "sure_3": "Cool as ice. Your move, {name} 😌",
+          "unsure": "Make or break, {name}.",
+          "unsure_2": "{name}, you’ll let me through, right? 🙏",
+          "unsure_3": "Fingers crossed under the cup, {name}.",
+          "ally": "I’m with you, {name}. We go up together.",
+          "ally_2": "One face, one team, {name}!",
+          "ally_3": "{name}, I trust you on this one 🤝",
+          "suspect": "You’re bluffing, {name}!",
+          "suspect_2": "Too big for me, {name}. LIAR!",
+          "suspect_3": "{name}, I don’t buy it for a second.",
+          "exact": "No more, no less, {name}. CALZA!",
+          "exact_2": "Spot on, {name}. Not one die too many 🎯",
+          "exact_3": "I believe you down to the last die, {name}.",
+          "again": "Not twice, {name}.",
+          "again_2": "Pulling that one again, {name}? LIAR!",
+          "again_3": "{name}, {target, select, f {we’ve seen you bluff before} m {we’ve seen you bluff before} other {we’ve seen you bluff before}}. Same old song 😏",
+          "grudge": "We’ve got a score to settle, {name}.",
+          "grudge_2": "You cost me a die, {name}. This round’s for you 😤",
+          "grudge_3": "{name}, {target, select, f {I haven’t forgotten you} m {I haven’t forgotten you} other {I’ve got a long memory}}. Payback starts now!",
+          "gotcha": "I knew it, {name}!",
+          "gotcha_2": "Caught with your hand in the cup, {name} 😏",
+          "gotcha_3": "Some were missing, {name}. Dice don’t lie!",
+          "held": "Should’ve believed me, {name}.",
+          "held_2": "It all adds up, {name}. Doubting costs you a die!",
+          "held_3": "{speaker, select, f {Me, a liar?} m {Me, a liar?} other {Me, lying?}} Count again, {name} 😇",
+          "caught": "Well spotted, {name}… that one was too big.",
+          "caught_2": "{speaker, select, f {You got me} m {You got me} other {Well played}}, {name}. Hats off 🎩",
+          "caught_3": "Can you see through cups, {name}? 😅",
+          "wrongCall": "{name}, I should’ve believed you.",
+          "wrongCall_2": "It held?! Respect, {name} 🙈",
+          "wrongCall_3": "{speaker, select, f {I got carried away} m {I got carried away} other {I called it too fast}}, {name}. Your bid was good."
+        },
+        "botSayTrait": {
+          "prudent": {
+            "sure": "I’ve weighed this one carefully, {name}.",
+            "sure_2": "For once, I’m {speaker, select, f {sure of myself} m {sure of myself} other {confident}}, {name}.",
+            "sure_3": "You can doubt, {name}. I don’t.",
+            "suspect": "{speaker, select, f {Sorry} m {Sorry} other {Forgive me}}, {name}, but I’d like to see.",
+            "suspect_2": "That’s a lot, isn’t it, {name}? I’m calling LIAR… gently.",
+            "suspect_3": "I’m not so sure, {name}… shall we lift the cups?"
+          },
+          "farceur": {
+            "sure": "Me, bluff? Never before midnight, {name} 😇",
+            "sure_2": "Scout’s honour, {name} 🤞",
+            "sure_3": "{name}, do I look like a liar to you? 😉",
+            "suspect": "{name}, your cup’s nose is growing 🤥",
+            "suspect_2": "Once upon a time… a bluff signed {name} 📖",
+            "suspect_3": "That’s all baloney, {name}!"
+          },
+          "suiveur": {
+            "sure": "If the table believes it, so do I. Your turn, {name}.",
+            "sure_2": "Everyone’s going up, so up I go, {name}!",
+            "sure_3": "{name}, I’m going with the flow, and it feels right 😊",
+            "suspect": "I say what the others say: smells like a bluff, {name}.",
+            "suspect_2": "If everyone doubts, I doubt too. LIAR, {name}!",
+            "suspect_3": "{name}, I was following you… but this is where I get off."
+          },
+          "agressif": {
+            "sure": "Raise or shut up, {name}.",
+            "sure_2": "{name}, your turn to tremble 😈",
+            "sure_3": "Go on, {name}, {speaker, select, f {call me a liar} m {call me a liar} other {doubt me}}, I dare you!",
+            "suspect": "You’re bluffing, {name}! Cups up!",
+            "suspect_2": "You lie through your teeth, {name}. LIAR!",
+            "suspect_3": "{name}, {target, select, f {you’re cornered} m {you’re cornered} other {nowhere to run}}! The dice will talk."
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [
@@ -2507,7 +2605,7 @@
           },
           {
             "title": "Who drinks?",
-            "body": "The dice get revealed: the loser of the bet drinks based on the gap. Dice are re-rolled and the game goes on."
+            "body": "The dice get revealed: the loser of the bet loses a die and drinks as many sips as dice lost so far (1, then 2, then 3…). Dice are re-rolled and the game goes on."
           }
         ]
       },
@@ -2784,7 +2882,11 @@
           "support": "{count}/{needed} supporters needed",
           "supportButton": "I support this accusation",
           "supported": "Support registered — waiting for the others…",
-          "youAreAccused": "You've been accused! Defend yourself out loud…"
+          "youAreAccused": "You've been accused! Defend yourself out loud…",
+          "declineButton": "I don’t agree",
+          "declined": "Objection noted — you’re not following.",
+          "for": "For",
+          "against": "Against"
         },
         "reveal": {
           "location": "The location was: {location}",
@@ -2810,13 +2912,289 @@
           "title": "Get ready!",
           "hint": "Discover your role — discussion starts now…"
         },
-        "tvDiscussionHint": "Discussion in full swing…"
+        "tvDiscussionHint": "Discussion in full swing…",
+        "qa": {
+          "any": "it depends",
+          "any_2": "hard to say",
+          "any_3": "a bit of everything",
+          "where": {
+            "q": "is it indoors or outdoors?",
+            "q_2": "is it under a roof or in the open air?",
+            "inside": "indoors",
+            "inside_2": "inside, under a roof",
+            "inside_3": "between four walls",
+            "outside": "outdoors",
+            "outside_2": "out in the open",
+            "outside_3": "outside, in the fresh air"
+          },
+          "when": {
+            "q": "do you go there by day or by night?",
+            "q_2": "is it more of a day or a night place?",
+            "day": "during the day",
+            "day_2": "in daytime",
+            "day_3": "mostly by day",
+            "night": "mostly at night",
+            "night_2": "late in the evening",
+            "night_3": "after dark"
+          },
+          "price": {
+            "q": "is it expensive to go there?",
+            "q_2": "do you need to bring your wallet?",
+            "free": "it’s free",
+            "free_2": "it costs nothing",
+            "free_3": "not a penny",
+            "cheap": "not too pricey",
+            "cheap_2": "a few bucks",
+            "cheap_3": "on a small budget",
+            "pricey": "it’s expensive",
+            "pricey_2": "it costs a fortune",
+            "pricey_3": "you need deep pockets"
+          },
+          "outfit": {
+            "q": "what do people wear there?",
+            "q_2": "how do you dress to go there?",
+            "casual": "everyday clothes",
+            "casual_2": "just casual",
+            "casual_3": "jeans and sneakers",
+            "smart": "something smart",
+            "smart_2": "dressed to the nines",
+            "smart_3": "elegant clothes",
+            "uniform": "a uniform",
+            "uniform_2": "work clothes",
+            "uniform_3": "special gear, it’s required",
+            "swim": "a swimsuit",
+            "swim_2": "something light",
+            "swim_3": "not much at all"
+          },
+          "noise": {
+            "q": "is it quiet or noisy?",
+            "q_2": "can you hear yourself talk there?",
+            "quiet": "it’s quiet",
+            "quiet_2": "pretty silent",
+            "quiet_3": "people speak softly",
+            "loud": "it’s noisy",
+            "loud_2": "a real racket",
+            "loud_3": "you can barely hear a thing"
+          },
+          "food": {
+            "q": "do you eat there?",
+            "q_2": "can you get something to eat there?",
+            "meal": "a proper meal",
+            "meal_2": "you sit down to eat",
+            "meal_3": "you eat well there",
+            "snack": "something to nibble",
+            "snack_2": "a quick snack",
+            "snack_3": "food on the go",
+            "none": "you don’t eat there",
+            "none_2": "nothing to eat",
+            "none_3": "no food to speak of"
+          },
+          "crowd": {
+            "q": "is it crowded?",
+            "q_2": "are there lots of people?",
+            "few": "hardly anyone",
+            "few_2": "just a handful of people",
+            "few_3": "not many people",
+            "crowd": "packed",
+            "crowd_2": "a big crowd",
+            "crowd_3": "people everywhere"
+          },
+          "company": {
+            "q": "who do you go there with?",
+            "q_2": "do you go there alone or with others?",
+            "alone": "on my own",
+            "alone_2": "by myself",
+            "alone_3": "nobody with me",
+            "friends": "with friends",
+            "friends_2": "with my mates",
+            "friends_3": "with the whole gang",
+            "family": "with family",
+            "family_2": "with the kids",
+            "family_3": "the whole family",
+            "work": "for work",
+            "work_2": "with colleagues",
+            "work_3": "it’s for my job"
+          },
+          "stay": {
+            "q": "do you stay there long?",
+            "q_2": "how long do you spend there?",
+            "minutes": "a few minutes",
+            "minutes_2": "just passing through",
+            "minutes_3": "in and out quickly",
+            "hours": "a few hours",
+            "hours_2": "an afternoon",
+            "hours_3": "an evening or so",
+            "days": "several days",
+            "days_2": "you sleep there",
+            "days_3": "days, maybe more"
+          },
+          "moving": {
+            "q": "do you stay put or move around?",
+            "q_2": "do you walk around a lot there?",
+            "fixed": "you stay put",
+            "fixed_2": "you barely move",
+            "fixed_3": "not much moving around",
+            "moving": "always on the move",
+            "moving_2": "people keep moving",
+            "moving_3": "lots of walking around"
+          },
+          "entry": {
+            "q": "can anyone just walk in?",
+            "q_2": "do you need a ticket or a pass?",
+            "open": "free entry",
+            "open_2": "anyone can come in",
+            "open_3": "you just walk in",
+            "ticket": "you need a ticket",
+            "ticket_2": "ticket required",
+            "ticket_3": "you show a ticket at the door",
+            "restricted": "restricted access",
+            "restricted_2": "you need a badge",
+            "restricted_3": "not for just anyone"
+          },
+          "mood": {
+            "q": "what’s the vibe like?",
+            "q_2": "do people have fun there?",
+            "fun": "good fun",
+            "fun_2": "a relaxed vibe",
+            "fun_3": "it’s a party",
+            "serious": "rather serious",
+            "serious_2": "no joking around",
+            "serious_3": "a focused vibe",
+            "tense": "it’s tense",
+            "tense_2": "there’s tension",
+            "tense_3": "everyone’s on edge"
+          }
+        },
+        "feedAria": "Conversation feed",
+        "accusedYou": "⚡ They’re after you!",
+        "askedYou": "{name} asks you:",
+        "askButton": "Ask a question",
+        "yourTurnToAsk": "Your turn to ask a question!",
+        "askWho": "Who are you asking?",
+        "askWhich": "Which question for {name}?",
+        "asksLeft": "Questions left: {n}/{max}",
+        "speakSuspect": "Something’s fishy",
+        "speakDefend": "Defend myself",
+        "speakPickSuspect": "Who seems fishy to you?",
+        "speechLeft": "Speeches left: {n}/{max}",
+        "tvAsking": "{asker} asks {target}:",
+        "you": "(you)",
+        "notebook": {
+          "title": "Answer notebook",
+          "empty": "No answers yet this round."
+        },
+        "guess": {
+          "strikeHint": "Tap a location to cross it out.",
+          "pickHint": "Tap the location you’re guessing: one try only!",
+          "toGuess": "I’m guessing the location",
+          "toStrike": "Back to crossing out"
+        },
+        "botSay": {
+          "question": "{name}, {question}",
+          "question_2": "Tell me, {name}, {question}",
+          "question_3": "Question for {name}: {question}",
+          "answer": "{name}, I’d say: {answer}.",
+          "answer_2": "For me, {name}: {answer}.",
+          "answer_3": "My answer, {name}: {answer}.",
+          "accuse": "I accuse {name}! Who’s with me? 👉",
+          "accuse_2": "{target, select, f {The spy is {name}} m {The spy is {name}} other {It’s {name} who’s spying on us}}: I accuse!",
+          "accuse_3": "Hold on, everyone: {name} doesn’t know where we are!",
+          "rally": "Count me in! {name} has been off the mark from the start.",
+          "rally_2": "Yeah, {name} seems to be seeing this place for the first time 🧐",
+          "rally_3": "Clearly {name} isn’t from around here. I’m backing this!",
+          "doubt": "Disagree: {name} seems to know the place.",
+          "doubt_2": "Not me! {name} gets every question right.",
+          "doubt_3": "I’m not buying it: nothing proves {name} is spying on us.",
+          "suspect": "{name}, are we talking about the same place? 🤨",
+          "suspect_2": "Hmm, {name}, your version and mine don’t match.",
+          "suspect_3": "I’m keeping an eye on {name} 👀",
+          "defend": "Me? I know exactly where we are, {name}!",
+          "defend_2": "{name}, reread my answers: it all adds up!",
+          "defend_3": "Wrong track, {name}! Look for the spy elsewhere.",
+          "ally": "That answer rings true, {name} 🤝",
+          "ally_2": "{speaker, select, f {I’ll vouch for {name}} m {I’ll vouch for {name}} other {I’ll vouch for {name}}} 👌",
+          "ally_3": "Nothing to report on {name}. Rock solid.",
+          "toldYou": "Told you so: it was {name}!",
+          "toldYou_2": "{name}, {target, select, f {I had you spotted} m {I had you spotted} other {I had my eye on you}} from the first question 😎",
+          "toldYou_3": "Case {name}: closed. I called it 🕵️",
+          "wrong": "Sorry, {name}, I was seeing spies everywhere 🙈",
+          "wrong_2": "Botched tail… no hard feelings, {name}?",
+          "wrong_3": "{speaker, select, f {My nose failed me} m {My nose failed me} other {My instincts misfired}} on {name}. Handing in my badge 😬"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "answer": "Um… {answer}, I think, {name}.",
+            "answer_2": "Unless I’m wrong, {name}: {answer}.",
+            "answer_3": "{name}… {answer}, I believe.",
+            "accuse": "When in doubt… I accuse {name}. Don’t hate me 🙏",
+            "accuse_2": "{name}… it’s you, right? I accuse, then.",
+            "accuse_3": "{speaker, select, f {Not entirely sure} m {Not entirely sure} other {Can’t be certain}}, but I accuse {name}.",
+            "defend": "I hear you, {name}, but I know this place.",
+            "defend_2": "Check the notebook, {name}… it all fits, right?",
+            "defend_3": "Spying? Me? I’d never dare, {name}."
+          },
+          "farceur": {
+            "answer": "Top secret, {name}: {answer} 🤫",
+            "answer_2": "{name}, {answer}. Agent’s honour!",
+            "answer_3": "Drumroll… {answer}, {name}! 🥁",
+            "accuse": "{name}, your fake mustache is peeling off! I accuse you 😂",
+            "accuse_2": "Your earpiece is showing, {name}! I accuse you.",
+            "accuse_3": "{name} Bond, I presume? I accuse you! 🕶️",
+            "defend": "Me, on a secret mission? {name}, I get lost in my own street!",
+            "defend_2": "My only secret, {name}? My pancake recipe 🥞",
+            "defend_3": "Search me, {name}: no mic, no gadgets!"
+          },
+          "suiveur": {
+            "answer": "{name}, {answer}… same as you?",
+            "answer_2": "No copying: {answer}, {name} 😇",
+            "answer_3": "So… {answer}. That OK, {name}?",
+            "accuse": "I’m saying what you’re all thinking: I accuse {name}!",
+            "accuse_2": "{name}, the table has spoken: I accuse you! 👉",
+            "accuse_3": "Well, if nobody else will… I accuse {name} 👀",
+            "defend": "Ask the others, {name}: we all said the same thing!",
+            "defend_2": "{name}, if you accuse me, accuse the whole table then!",
+            "defend_3": "I’m just following, {name}! Look at who’s leading 😅"
+          },
+          "agressif": {
+            "answer": "Bluntly, {name}: {answer}. Next!",
+            "answer_2": "Write it down, {name}: {answer}!",
+            "answer_3": "Straight off, {name}: {answer}!",
+            "accuse": "Interrogation over: I accuse {name}!",
+            "accuse_2": "{name}, you’ve never set foot here. I accuse you!",
+            "accuse_3": "{name}, {target, select, f {you’re the spy} m {you’re the spy} other {you’re spying on us}}! Confess 😤",
+            "defend": "Diversion! And you, {name}, where are you from?",
+            "defend_2": "My answers are spotless, {name}. Yours, meh!",
+            "defend_3": "It takes one to know one, {name}!"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [
           {
             "title": "A secret location, a spy",
-            "body": "Everyone knows the location... except the spy, who knows nothing! Ask each other questions out loud to unmask the intruder without giving away the location."
+            "body": "Everyone knows the location… except the spy, who knows nothing! Ask each other questions to unmask the intruder without giving the place away: out loud, and with buttons as soon as a bot is at the table."
           },
           {
             "title": "Accuse or support",
@@ -2831,7 +3209,7 @@
       "about": {
         "p1": "Everyone gets the same secret location on their phone… except one person, who only reads “You are the spy”. By asking each other questions you hunt for the intruder, while the spy tries to work out where you are from the answers. The group wins by unmasking the spy; the spy wins by staying hidden or by guessing the location.",
         "p2": "Questions are asked out loud over voice chat: “Do you go there often?”, “Is the food good?”. Once convinced, you accuse in public: the table has 15 seconds to back you, a majority triggers the reveal. An unmasked spy can still guess the location; time out with no accusation, the round is theirs. The host sets 3, 5 or 7 minutes per round, and as many rounds to win.",
-        "p3": "All the tension lives in the question: precise enough to test, vague enough not to give the place away. Answer on the spot, hesitation betrays you; as the spy, recycle other players' words. Three players works, from eight the intruder melts into the crowd. Locations come in four languages. Bots can fill a table but do not talk: you need real voices."
+        "p3": "All the tension lives in the question: precise enough to test, vague enough not to give the place away. Answer on the spot, hesitation betrays you; as the spy, recycle other players' words. Three players works, from eight the intruder melts into the crowd. Locations come in four languages. As soon as a bot sits at the table, a button-driven question feed joins the voice chat: bots question each other, quiz you, accuse on evidence and refuse to back a baseless accusation."
       }
     },
     "tabou": {

@@ -2469,6 +2469,11 @@
         "dudo": "MENTEUR !",
         "calza": "CALZA !",
         "illegalBid": "Enchère trop basse : monte la quantité ou la face.",
+        "bidsTitle": "Enchères de la manche",
+        "bidsAria": "Enchères de la manche, de la première à la dernière",
+        "bidChipAria": "{name} a annoncé {qty, plural, one {# dé} other {# dés}} de {face}",
+        "bluffMark": "sans un seul",
+        "bluffMarkAria": "{name} n’en avait aucun",
         "reveal": {
           "title": "Les gobelets sont levés !",
           "bidHeld": "L'enchère tenait : {count} dés (annoncé {qty} ×)",
@@ -2489,7 +2494,100 @@
         "backToMenu": "Retour au menu",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
-        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
+        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot",
+        "feedAria": "Fil de la table",
+        "speechAimedYou": "⚡ On te défie !",
+        "botSay": {
+          "sure": "Facile, {name}.",
+          "sure_2": "Je la sens bien, celle-là. À toi, {name}.",
+          "sure_3": "Zéro stress. Ton tour, {name} 😌",
+          "unsure": "Ça passe ou ça casse, {name}.",
+          "unsure_2": "{name}, tu me laisses passer, hein ? 🙏",
+          "unsure_3": "Je croise les doigts sous le gobelet, {name}.",
+          "ally": "Je te suis, {name}. On monte ensemble.",
+          "ally_2": "Même face, même combat, {name} !",
+          "ally_3": "{name}, je te fais confiance sur ce coup-là 🤝",
+          "suspect": "Tu bluffes, {name} !",
+          "suspect_2": "Trop gros pour moi, {name}. MENTEUR !",
+          "suspect_3": "{name}, j’y crois pas une seconde.",
+          "exact": "Ni plus ni moins, {name}. CALZA !",
+          "exact_2": "Pile poil, {name}. Pas un dé de trop 🎯",
+          "exact_3": "Je te crois au dé près, {name}.",
+          "again": "Pas deux fois, {name}.",
+          "again_2": "Tu nous refais le coup, {name} ? MENTEUR !",
+          "again_3": "{name}, on t’a déjà {target, select, f {vue} m {vu} other {vu}} bluffer. On connaît la chanson 😏",
+          "grudge": "On a un compte à régler, {name}.",
+          "grudge_2": "Tu m’as coûté un dé, {name}. Cette manche, c’est pour toi 😤",
+          "grudge_3": "{name}, {target, select, f {je t’ai pas oubliée} m {je t’ai pas oublié} other {j’ai bonne mémoire}}. La revanche commence !",
+          "gotcha": "Je le savais, {name} !",
+          "gotcha_2": "La main dans le gobelet, {name} 😏",
+          "gotcha_3": "Il en manquait, {name}. Les dés, eux, mentent pas !",
+          "held": "Fallait me croire, {name}.",
+          "held_2": "Le compte y est, {name}. Douter, ça coûte un dé !",
+          "held_3": "{speaker, select, f {Menteuse, moi ?} m {Menteur, moi ?} other {Moi, mentir ?}} Recompte, {name} 😇",
+          "caught": "Bien vu, {name}… celle-là était trop grosse.",
+          "caught_2": "{speaker, select, f {Tu m’as eue} m {Tu m’as eu} other {Bien joué}}, {name}. Chapeau 🎩",
+          "caught_3": "Tu vois à travers les gobelets, {name} ? 😅",
+          "wrongCall": "{name}, j’aurais dû te croire.",
+          "wrongCall_2": "Ça tenait ?! Respect, {name} 🙈",
+          "wrongCall_3": "{speaker, select, f {Je me suis emballée} m {Je me suis emballé} other {J’ai crié trop vite}}, {name}. Ton enchère était bonne."
+        },
+        "botSayTrait": {
+          "prudent": {
+            "sure": "Celle-là, je l’ai bien pesée, {name}.",
+            "sure_2": "Pour une fois, je suis {speaker, select, f {sûre de moi} m {sûr de moi} other {en confiance}}, {name}.",
+            "sure_3": "Tu peux douter, {name}. Moi, non.",
+            "suspect": "{speaker, select, f {Désolée} m {Désolé} other {Pardon}}, {name}, mais je demande à voir.",
+            "suspect_2": "Ça fait beaucoup, non, {name} ? Je crie MENTEUR… doucement.",
+            "suspect_3": "Je n’y crois pas trop, {name}… on lève les gobelets ?"
+          },
+          "farceur": {
+            "sure": "Moi, bluffer ? Jamais avant minuit, {name} 😇",
+            "sure_2": "Parole de scout, {name} 🤞",
+            "sure_3": "{name}, j’ai une tête à mentir, moi ? 😉",
+            "suspect": "{name}, ton gobelet a le nez qui s’allonge 🤥",
+            "suspect_2": "Il était une fois… un bluff signé {name} 📖",
+            "suspect_3": "Du pipeau, tout ça, {name} !"
+          },
+          "suiveur": {
+            "sure": "Si la table y croit, j’y crois. À toi, {name}.",
+            "sure_2": "Tout le monde monte, alors je monte, {name} !",
+            "sure_3": "{name}, je suis le mouvement, et je le sens bien 😊",
+            "suspect": "Je dis comme les autres : ça sent le bluff, {name}.",
+            "suspect_2": "Si tout le monde doute, je doute aussi. MENTEUR, {name} !",
+            "suspect_3": "{name}, je te suivais… mais là, je descends du train."
+          },
+          "agressif": {
+            "sure": "Monte ou tais-toi, {name}.",
+            "sure_2": "{name}, à toi de trembler 😈",
+            "sure_3": "Vas-y, {name}, {speaker, select, f {traite-moi de menteuse} m {traite-moi de menteur} other {doute de moi}}, pour voir !",
+            "suspect": "Tu bluffes, {name} ! Gobelets en l’air !",
+            "suspect_2": "Tu mens comme tu respires, {name}. MENTEUR !",
+            "suspect_3": "{name}, {target, select, f {t’es coincée} m {t’es coincé} other {plus d’issue pour toi}} ! Les dés vont parler."
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [
@@ -2507,7 +2605,7 @@
           },
           {
             "title": "Qui boit ?",
-            "body": "Les dés sont comptés : le perdant du pari boit des gorgées selon l’écart. Les dés sont relancés et la partie continue."
+            "body": "Les dés sont comptés : le perdant du pari perd un dé et boit autant de gorgées que de dés déjà perdus (1, puis 2, puis 3…). Les dés sont relancés et la partie continue."
           }
         ]
       },
@@ -2784,7 +2882,11 @@
           "support": "{count}/{needed} soutiens nécessaires",
           "supportButton": "Je soutiens l'accusation",
           "supported": "Soutien enregistré — en attente des autres…",
-          "youAreAccused": "Tu es accusé ! Défends-toi à voix haute…"
+          "youAreAccused": "On t’accuse ! Défends-toi à voix haute…",
+          "declineButton": "Je ne suis pas d’accord",
+          "declined": "Refus enregistré — tu ne suis pas.",
+          "for": "Pour",
+          "against": "Contre"
         },
         "reveal": {
           "location": "Le lieu était : {location}",
@@ -2810,13 +2912,289 @@
           "title": "Préparez-vous !",
           "hint": "Découvrez votre rôle — la discussion commence…"
         },
-        "tvDiscussionHint": "La discussion bat son plein…"
+        "tvDiscussionHint": "La discussion bat son plein…",
+        "qa": {
+          "any": "ça dépend",
+          "any_2": "difficile à dire",
+          "any_3": "un peu de tout",
+          "where": {
+            "q": "on y est plutôt dedans ou dehors ?",
+            "q_2": "c’est à l’abri ou en plein air ?",
+            "inside": "dedans",
+            "inside_2": "à l’intérieur, sous un toit",
+            "inside_3": "entre quatre murs",
+            "outside": "dehors",
+            "outside_2": "en plein air",
+            "outside_3": "à l’extérieur, au grand air"
+          },
+          "when": {
+            "q": "on y va plutôt le jour ou la nuit ?",
+            "q_2": "c’est un endroit de jour ou de nuit ?",
+            "day": "en journée",
+            "day_2": "plutôt le jour",
+            "day_3": "de jour, en pleine lumière",
+            "night": "plutôt la nuit",
+            "night_2": "le soir, tard",
+            "night_3": "une fois la nuit tombée"
+          },
+          "price": {
+            "q": "ça coûte cher d’y aller ?",
+            "q_2": "il faut sortir le portefeuille ?",
+            "free": "c’est gratuit",
+            "free_2": "ça ne coûte rien",
+            "free_3": "pas un centime",
+            "cheap": "pas trop cher",
+            "cheap_2": "quelques euros",
+            "cheap_3": "un petit budget",
+            "pricey": "c’est cher",
+            "pricey_2": "ça coûte une fortune",
+            "pricey_3": "il faut les moyens"
+          },
+          "outfit": {
+            "q": "on y porte quoi, comme tenue ?",
+            "q_2": "tu t’habilles comment pour y aller ?",
+            "casual": "comme tous les jours",
+            "casual_2": "en tenue normale",
+            "casual_3": "jean et baskets",
+            "smart": "plutôt chic",
+            "smart_2": "sur son trente-et-un",
+            "smart_3": "en tenue élégante",
+            "uniform": "en uniforme",
+            "uniform_2": "en tenue de travail",
+            "uniform_3": "une tenue spéciale, imposée",
+            "swim": "en maillot de bain",
+            "swim_2": "en tenue légère",
+            "swim_3": "pas grand-chose sur le dos"
+          },
+          "noise": {
+            "q": "c’est calme ou bruyant ?",
+            "q_2": "on s’y entend parler ?",
+            "quiet": "c’est calme",
+            "quiet_2": "plutôt silencieux",
+            "quiet_3": "on y parle à voix basse",
+            "loud": "c’est bruyant",
+            "loud_2": "un sacré vacarme",
+            "loud_3": "on s’entend à peine"
+          },
+          "food": {
+            "q": "on y mange ?",
+            "q_2": "on peut y manger quelque chose ?",
+            "meal": "un vrai repas",
+            "meal_2": "on s’y met à table",
+            "meal_3": "on y mange bien",
+            "snack": "de quoi grignoter",
+            "snack_2": "un petit en-cas",
+            "snack_3": "sur le pouce",
+            "none": "on n’y mange pas",
+            "none_2": "rien à manger",
+            "none_3": "pas vraiment de quoi manger"
+          },
+          "crowd": {
+            "q": "il y a du monde ?",
+            "q_2": "on y est nombreux ?",
+            "few": "peu de monde",
+            "few_2": "on y est quelques-uns",
+            "few_3": "presque personne",
+            "crowd": "plein de monde",
+            "crowd_2": "c’est la foule",
+            "crowd_3": "on se marche dessus"
+          },
+          "company": {
+            "q": "on y va avec qui ?",
+            "q_2": "tu y vas avec qui, en général ?",
+            "alone": "en solo",
+            "alone_2": "sans personne",
+            "alone_3": "personne avec moi",
+            "friends": "entre amis",
+            "friends_2": "avec des potes",
+            "friends_3": "avec toute la bande",
+            "family": "en famille",
+            "family_2": "avec les enfants",
+            "family_3": "avec toute la famille",
+            "work": "pour le boulot",
+            "work_2": "entre collègues",
+            "work_3": "pour le travail"
+          },
+          "stay": {
+            "q": "on y reste longtemps ?",
+            "q_2": "tu y passes combien de temps ?",
+            "minutes": "quelques minutes",
+            "minutes_2": "juste en passant",
+            "minutes_3": "le temps d’un passage",
+            "hours": "quelques heures",
+            "hours_2": "un après-midi",
+            "hours_3": "une soirée, à peu près",
+            "days": "plusieurs jours",
+            "days_2": "on y dort sur place",
+            "days_3": "des jours, voire plus"
+          },
+          "moving": {
+            "q": "on y reste en place ou on bouge ?",
+            "q_2": "on s’y déplace beaucoup ?",
+            "fixed": "on reste à sa place",
+            "fixed_2": "on bouge à peine",
+            "fixed_3": "pas trop de mouvement",
+            "moving": "on bouge tout le temps",
+            "moving_2": "ça circule sans arrêt",
+            "moving_3": "on y marche beaucoup"
+          },
+          "entry": {
+            "q": "n’importe qui peut y entrer ?",
+            "q_2": "il faut un billet ou une autorisation ?",
+            "open": "entrée libre",
+            "open_2": "tout le monde peut entrer",
+            "open_3": "on entre comme on veut",
+            "ticket": "il faut un billet",
+            "ticket_2": "billet obligatoire",
+            "ticket_3": "on montre son ticket à l’entrée",
+            "restricted": "accès réservé",
+            "restricted_2": "il faut un badge",
+            "restricted_3": "pas pour tout le monde"
+          },
+          "mood": {
+            "q": "l’ambiance est comment ?",
+            "q_2": "on s’y amuse ?",
+            "fun": "on s’amuse bien",
+            "fun_2": "ambiance détendue",
+            "fun_3": "c’est la fête",
+            "serious": "plutôt sérieux",
+            "serious_2": "on ne rigole pas trop",
+            "serious_3": "ambiance concentrée",
+            "tense": "c’est tendu",
+            "tense_2": "il y a de la tension",
+            "tense_3": "on n’y est pas tranquille"
+          }
+        },
+        "feedAria": "Fil des échanges",
+        "accusedYou": "⚡ C’est toi qu’on vise !",
+        "askedYou": "{name} te demande :",
+        "askButton": "Poser une question",
+        "yourTurnToAsk": "À toi de poser une question !",
+        "askWho": "À qui la poses-tu ?",
+        "askWhich": "Quelle question pour {name} ?",
+        "asksLeft": "Questions restantes : {n}/{max}",
+        "speakSuspect": "Je trouve ça louche",
+        "speakDefend": "Me défendre",
+        "speakPickSuspect": "Qui trouves-tu louche ?",
+        "speechLeft": "Paroles restantes : {n}/{max}",
+        "tvAsking": "{asker} demande à {target} :",
+        "you": "(toi)",
+        "notebook": {
+          "title": "Carnet des réponses",
+          "empty": "Pas encore de réponse cette manche."
+        },
+        "guess": {
+          "strikeHint": "Touche un lieu pour le rayer.",
+          "pickHint": "Touche le lieu que tu devines : un seul essai !",
+          "toGuess": "Je devine le lieu",
+          "toStrike": "Revenir aux ratures"
+        },
+        "botSay": {
+          "question": "{name}, {question}",
+          "question_2": "Dis-moi, {name}, {question}",
+          "question_3": "Question pour {name} : {question}",
+          "answer": "{name}, je dirais : {answer}.",
+          "answer_2": "Pour moi, {name} : {answer}.",
+          "answer_3": "Ma réponse, {name} : {answer}.",
+          "accuse": "J’accuse {name} ! Qui me suit ? 👉",
+          "accuse_2": "{target, select, f {L’espionne, c’est {name}} m {L’espion, c’est {name}} other {C’est {name} qui nous espionne}} : j’accuse !",
+          "accuse_3": "Stop, tout le monde : {name} ne sait pas où on est !",
+          "rally": "Je signe ! {name} répond à côté depuis le début.",
+          "rally_2": "Ouais, {name} a l’air de découvrir l’endroit 🧐",
+          "rally_3": "Clairement, {name} est pas d’ici. Je soutiens !",
+          "doubt": "Pas d’accord : {name} a l’air de connaître l’endroit.",
+          "doubt_2": "Sans moi ! {name} répond juste à chaque question.",
+          "doubt_3": "Je marche pas : rien ne prouve que {name} nous espionne.",
+          "suspect": "{name}, on parle bien du même endroit ? 🤨",
+          "suspect_2": "Hmm, {name}, ta version et la mienne, ça fait deux.",
+          "suspect_3": "Je garde un œil sur {name}, moi 👀",
+          "defend": "Moi ? Je sais très bien où on est, {name} !",
+          "defend_2": "{name}, relis mes réponses : tout colle !",
+          "defend_3": "Fausse piste, {name} ! L’espion, cherche-le ailleurs.",
+          "ally": "Ta réponse sent le vécu, {name} 🤝",
+          "ally_2": "{speaker, select, f {Je me porte garante de {name}} m {Je me porte garant de {name}} other {Moi, je fais confiance à {name}}} 👌",
+          "ally_3": "Rien à signaler sur {name}. Du solide.",
+          "toldYou": "Je vous l’avais dit : c’était {name} !",
+          "toldYou_2": "{name}, je t’avais {target, select, f {repérée} m {repéré} other {à l’œil}} dès la première question 😎",
+          "toldYou_3": "Dossier {name} : classé. J’avais vu juste 🕵️",
+          "wrong": "Pardon, {name}, j’ai vu des espions partout 🙈",
+          "wrong_2": "Filature ratée… sans rancune, {name} ?",
+          "wrong_3": "{speaker, select, f {Mon flair m’a lâchée} m {Mon flair m’a lâché} other {Mon flair a déraillé}} sur {name}. Je rends mon badge 😬"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "answer": "Euh… {answer}, je crois, {name}.",
+            "answer_2": "Sauf erreur, {name} : {answer}.",
+            "answer_3": "{name}… {answer}, il me semble.",
+            "accuse": "Dans le doute… j’accuse {name}. Me tapez pas 🙏",
+            "accuse_2": "{name}… c’est toi, non ? J’accuse, du coup.",
+            "accuse_3": "{speaker, select, f {Pas tout à fait sûre} m {Pas tout à fait sûr} other {Sans certitude}}, mais j’accuse {name}.",
+            "defend": "Je te comprends, {name}, mais je connais l’endroit.",
+            "defend_2": "Relis le carnet, {name}… tout se tient, non ?",
+            "defend_3": "Espionner ? Moi ? Je n’oserais jamais, {name}."
+          },
+          "farceur": {
+            "answer": "Top secret, {name} : {answer} 🤫",
+            "answer_2": "{name}, {answer}. Parole d’agent !",
+            "answer_3": "Suspense… {answer}, {name} ! 🥁",
+            "accuse": "{name}, ta fausse moustache se décolle ! J’accuse 😂",
+            "accuse_2": "Ton oreillette dépasse, {name} ! J’accuse.",
+            "accuse_3": "{name} Bond, je présume ? J’accuse ! 🕶️",
+            "defend": "Moi, en mission secrète ? {name}, je me perds dans mon quartier !",
+            "defend_2": "Mon seul secret, {name} ? Ma recette de crêpes 🥞",
+            "defend_3": "Fouille-moi, {name} : zéro micro, zéro gadget !"
+          },
+          "suiveur": {
+            "answer": "{name}, {answer}… comme vous, non ?",
+            "answer_2": "Sans copier : {answer}, {name} 😇",
+            "answer_3": "Bah… {answer}. Ça te va, {name} ?",
+            "accuse": "Je dis tout haut ce que vous pensez : j’accuse {name} !",
+            "accuse_2": "{name}, la table a parlé : j’accuse ! 👉",
+            "accuse_3": "Bon, si personne se lance… j’accuse {name} 👀",
+            "defend": "Demande aux autres, {name} : on a tous dit la même chose !",
+            "defend_2": "{name}, si tu m’accuses, accuse toute la table, alors !",
+            "defend_3": "Je fais que suivre, {name} ! Regarde plutôt qui mène 😅"
+          },
+          "agressif": {
+            "answer": "Cash, {name} : {answer}. Suivant !",
+            "answer_2": "Écris-le, {name} : {answer} !",
+            "answer_3": "Du tac au tac, {name} : {answer} !",
+            "accuse": "Interrogatoire terminé : j’accuse {name} !",
+            "accuse_2": "{name}, t’as jamais mis les pieds ici. J’accuse !",
+            "accuse_3": "{name}, {target, select, f {t’es l’espionne} m {t’es l’espion} other {tu nous espionnes}} ! Avoue 😤",
+            "defend": "Diversion ! Et toi, {name}, t’es d’où ?",
+            "defend_2": "Mes réponses sont nickel, {name}. Les tiennes, bof !",
+            "defend_3": "Qui accuse s’accuse, {name} !"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [
           {
             "title": "Un lieu secret, un espion",
-            "body": "Tout le monde connaît le lieu... sauf l'espion, qui ne sait rien ! Posez-vous des questions à voix haute pour démasquer l'intrus sans trahir le lieu."
+            "body": "Tout le monde connaît le lieu… sauf l’espion, qui ne sait rien ! Posez-vous des questions pour démasquer l’intrus sans trahir le lieu : à voix haute, et par boutons dès qu’un bot est à table."
           },
           {
             "title": "Accuser ou soutenir",
@@ -2831,7 +3209,7 @@
       "about": {
         "p1": "Tout le monde reçoit le même lieu secret sur son téléphone… sauf une personne, qui lit seulement « Tu es l'espion ». En vous posant des questions les uns aux autres, vous cherchez l'intrus, pendant que l'espion essaie de deviner où vous êtes à partir des réponses. Le groupe gagne en le démasquant ; l'espion gagne s'il reste caché ou s'il devine le lieu.",
         "p2": "Les questions se posent à voix haute au chat vocal : « Tu y vas souvent ? », « On y mange bien ? ». Convaincu, tu accuses publiquement : la table a 15 secondes pour te rallier, et la majorité déclenche la révélation. Démasqué, l'espion peut encore deviner le lieu ; chrono écoulé sans accusation, la manche est à lui. L'hôte règle 3, 5 ou 7 minutes par manche, et 3, 5 ou 7 manches à gagner.",
-        "p3": "Toute la tension tient dans la question : assez précise pour tester, assez floue pour ne pas vendre le lieu. Réponds du tac au tac, l'hésitation trahit ; espion, recycle les mots des autres. À trois ça tourne, à huit et plus l'intrus se fond dans la masse. Les lieux existent en quatre langues. Les bots complètent une table, mais ne discutent pas : il faut de vraies voix."
+        "p3": "Toute la tension tient dans la question : assez précise pour tester, assez floue pour ne pas vendre le lieu. Réponds du tac au tac, l'hésitation trahit ; espion, recycle les mots des autres. À trois ça tourne, à huit et plus l'intrus se fond dans la masse. Les lieux existent en quatre langues. Dès qu’un bot est à table, un fil de questions par boutons s’ajoute au vocal : les bots s’interrogent, te questionnent, accusent sur preuves et refusent de suivre une accusation sans fondement."
       }
     },
     "tabou": {

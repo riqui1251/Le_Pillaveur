@@ -4,19 +4,28 @@ import { Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
-import type { EspionClientView } from '@/lib/espion/engine'
+import { pendingEspionQuestion, ESPION_QUESTION_TIMEOUT_MS, type EspionClientView } from '@/lib/espion/engine'
 import { cn } from '@/lib/utils'
+import { useDeadline } from '@/hooks/useDeadline'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { EspionTableTalk, espionExchangeKeys } from '@/components/online/espion/EspionTableTalk'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
  * QUI EST L'ESPION ? sur grand écran : timer principal, liste des joueurs
  * (JAMAIS le lieu ni les rôles avant la révélation), bannière d'accusation
  * en direct avec les soutiens qui s'accumulent — la vue TV est neutre.
+ * Dès qu'un bot est à table, comme sur les téléphones : la question en cours
+ * en grand, et le fil des quatre dernières bulles. Le fil ne porte que des
+ * ids de questions et des codes de réponses, jamais le lieu.
  */
 export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClientView }) {
   const t = useTranslations('games.espion.game')
+  const hasBot = state.players.some((p) => p.isBot && !p.leftAt)
+  const pending = hasBot ? pendingEspionQuestion(state, Date.now()) : null
+  // La question sans réponse quitte l'écran à son échéance de 25 s, sans attendre une nouvelle version.
+  useDeadline(pending ? pending.askedAt + ESPION_QUESTION_TIMEOUT_MS : null)
   const finished = state.phase === 'finished'
   const reveal = state.lastReveal
   const nameOf = (id: string | null | undefined) =>
@@ -96,9 +105,24 @@ export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClient
             })}
           </p>
         </div>
+      ) : pending ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+          <p className="text-2xl font-semibold text-cyan-200">
+            {t('tvAsking', { asker: nameOf(pending.askerId), target: nameOf(pending.targetId) })}
+          </p>
+          <p className="max-w-4xl text-5xl font-black leading-tight text-white first-letter:uppercase">
+            {t(espionExchangeKeys({ authorId: pending.askerId, round: state.round, questionId: pending.questionId }, (key) => t.has(key)).question)}
+          </p>
+        </div>
       ) : (
         <div className="flex flex-1 items-center justify-center">
           <p className="text-3xl text-white/40">{t('tvDiscussionHint')}</p>
+        </div>
+      )}
+
+      {hasBot && (
+        <div className="flex justify-center">
+          <EspionTableTalk speech={state.speech ?? []} round={state.round} players={state.players} iconOf={iconOf} variant="tv" />
         </div>
       )}
 

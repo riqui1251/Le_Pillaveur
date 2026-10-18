@@ -11,6 +11,13 @@ import { buildLGState } from '@/lib/loup-garou/server-adapter'
 import type { LGState } from '@/lib/loup-garou/engine'
 import { buildImposteurState } from '@/lib/imposteur/server-adapter'
 import { IMPOSTEUR_EMPTY_CLUE, type ImposteurState } from '@/lib/imposteur/engine'
+import { buildMenteurState } from '@/lib/menteur/server-adapter'
+import type { MenteurState } from '@/lib/menteur/engine'
+import { buildEspionState } from '@/lib/espion/server-adapter'
+import { reduceEspion, toEspionSpectatorView, type EspionState } from '@/lib/espion/engine'
+import { espionBotTickDelayMs } from '@/lib/espion/bot-tick'
+import { espionLocationIdOf, espionLocationsFor } from '@/lib/espion/data'
+import { phaseKey } from './phase-clock'
 
 /**
  * Les bornes de joueurs vivent à DEUX endroits : le registre (vérité serveur,
@@ -30,6 +37,169 @@ describe('bornes de joueurs : registre ↔ GAMES', () => {
       )
     })
   }
+})
+
+describe('Espion : devinette par identifiant', () => {
+  const adapter = GAME_ADAPTERS.espion
+  /** Salle en anglais, 3 humains, en discussion ; renvoie aussi l'espion. */
+  const englishRoom = (): { state: EspionState; spyId: string } => {
+    const members = ['u1', 'u2', 'u3'].map((userId) => ({ userId, user: { displayName: userId } }))
+    const built = buildEspionState(members, 'en', 0, 11)
+    const state = reduceEspion(built, { type: 'ADVANCE', claimedKey: phaseKey(built), now: built.phaseEndsAt! })
+    return { state, spyId: state.players.find((p) => p.role === 'spy')!.id }
+  }
+  const outcome = (result: ReturnType<typeof adapter.applyAction>) =>
+    result.ok ? (result.state as EspionState).lastReveal?.outcome : result
+
+  it('le corps locationId est accepté et jugé sur le lieu de la salle', () => {
+    const { state, spyId } = englishRoom()
+    const locationId = espionLocationIdOf(state.location)!
+    expect(outcome(adapter.applyAction(state, spyId, { action: 'guess-location', locationId }))).toBe('spy-guessed-right')
+    const other = espionLocationsFor('fr').find((l) => l.id !== locationId)!.id
+    expect(outcome(adapter.applyAction(state, spyId, { action: 'guess-location', locationId: other }))).toBe('spy-guessed-wrong')
+  })
+
+  it('l’ancien corps location (nom) reste accepté', () => {
+    const { state, spyId } = englishRoom()
+    expect(outcome(adapter.applyAction(state, spyId, { action: 'guess-location', location: state.location }))).toBe(
+      'spy-guessed-right'
+    )
+  })
+
+  it('id mal formé ou corps vide : action invalide (400)', () => {
+    const { state, spyId } = englishRoom()
+    for (const body of [{ locationId: 'Plage!' }, { locationId: 42 }, {}]) {
+      expect(adapter.applyAction(state, spyId, { action: 'guess-location', ...body })).toEqual({
+        ok: false,
+        error: 'invalid_action',
+        status: 400,
+      })
+    }
+  })
+})
+
+describe('Espion : fil de questions, statuts des refus', () => {
+  const adapter = GAME_ADAPTERS.espion
+  /** 2 humains + 3 bots, en discussion. */
+  const table = (): EspionState => {
+    const members = ['u1', 'u2'].map((userId) => ({ userId, user: { displayName: userId } }))
+    const built = buildEspionState(members, 'fr', 3, 'fil')
+    return reduceEspion(built, { type: 'ADVANCE', claimedKey: phaseKey(built), now: built.phaseEndsAt! })
+  }
+  const play = (state: EspionState, userId: string, body: Record<string, unknown>): EspionState => {
+    const result = adapter.applyAction(state, userId, body)
+    if (!result.ok) throw new Error(result.error)
+    return result.state as EspionState
+  }
+  const refusal = (result: ReturnType<typeof adapter.applyAction>) =>
+    result.ok ? 'accepté' : { error: result.error, status: result.status }
+
+  it('courses entre joueurs et tick sans bot concerné : conflits attendus (409)', () => {
+    const s = table()
+    const asked = play(s, 'u1', { action: 'ask', targetId: 'u2', questionId: 'when' })
+    expect(refusal(adapter.applyAction(asked, 'u2', { action: 'ask', targetId: 'bot-1', questionId: 'where' }))).toEqual({
+      error: 'QUESTION_PENDING',
+      status: 409,
+    })
+    expect(refusal(adapter.applyAction(s, 'u2', { action: 'answer', value: 'night' }))).toEqual({
+      error: 'NO_PENDING_QUESTION',
+      status: 409,
+    })
+    const accused = play(s, 'u1', { action: 'accuse', targetId: 'bot-1' })
+    for (const body of [
+      { action: 'accuse', targetId: 'bot-2' },
+      { action: 'ask', targetId: 'bot-2', questionId: 'where' },
+    ]) {
+      expect(refusal(adapter.applyAction(accused, 'u2', body)), body.action).toEqual({
+        error: 'ACCUSATION_IN_PROGRESS',
+        status: 409,
+      })
+    }
+    expect(refusal(adapter.applyAction(s, 'u1', { action: 'bot' }))).toEqual({ error: 'NOT_BOT_TURN', status: 409 })
+    expect(refusal(adapter.applyAction(asked, 'u2', { action: 'answer', value: 'night' }))).toBe('accepté')
+  })
+
+  it('soutien ou refus arrivé après la clôture de l’accusation : conflit attendu (409)', () => {
+    // 5 actifs, majorité 3 : deux refus de bots rendent l'accusation de u1 perdue d'avance.
+    const accused = play(table(), 'u1', { action: 'accuse', targetId: 'bot-1' })
+    const now = accused.activeAccusation!.endsAt - 1_000
+    let rejected = reduceEspion(accused, { type: 'DECLINE', playerId: 'bot-2', now })
+    rejected = reduceEspion(rejected, { type: 'DECLINE', playerId: 'bot-3', now })
+    expect(rejected.activeAccusation).toBeNull()
+    for (const action of ['support', 'decline']) {
+      expect(refusal(adapter.applyAction(rejected, 'u2', { action })), action).toEqual({
+        error: 'NO_ACTIVE_ACCUSATION',
+        status: 409,
+      })
+    }
+    // Fenêtre écoulée, tick d'échéance pas encore passé.
+    const lapsed: EspionState = { ...accused, activeAccusation: { ...accused.activeAccusation!, endsAt: Date.now() - 1 } }
+    for (const action of ['support', 'decline']) {
+      expect(refusal(adapter.applyAction(lapsed, 'u2', { action })), action).toEqual({
+        error: 'ACCUSATION_EXPIRED',
+        status: 409,
+      })
+    }
+  })
+
+  it('interdictions (403) : parole hors boutons, question inconnue, valeur étrangère, refus de l’accusateur', () => {
+    const s = table()
+    expect(refusal(adapter.applyAction(s, 'u1', { action: 'speak', kind: 'ally', targetId: 'u2' }))).toEqual({
+      error: 'INVALID_KIND',
+      status: 403,
+    })
+    expect(refusal(adapter.applyAction(s, 'u1', { action: 'speak', kind: 'suspect', targetId: 'u2' }))).toBe('accepté')
+    expect(refusal(adapter.applyAction(s, 'u1', { action: 'ask', targetId: 'u2', questionId: 'weather' }))).toEqual({
+      error: 'UNKNOWN_QUESTION',
+      status: 403,
+    })
+    const asked = play(s, 'u1', { action: 'ask', targetId: 'u2', questionId: 'when' })
+    expect(refusal(adapter.applyAction(asked, 'u2', { action: 'answer', value: 'swim' }))).toEqual({
+      error: 'INVALID_ANSWER',
+      status: 403,
+    })
+    const accused = play(s, 'u1', { action: 'accuse', targetId: 'bot-1' })
+    expect(refusal(adapter.applyAction(accused, 'u1', { action: 'decline' }))).toEqual({
+      error: 'CANNOT_DECLINE',
+      status: 403,
+    })
+    expect(refusal(adapter.applyAction(accused, 'u2', { action: 'decline' }))).toBe('accepté')
+  })
+
+  it('corps mal formés : action invalide (400)', () => {
+    const s = table()
+    for (const body of [
+      { action: 'ask', targetId: 'u2' },
+      { action: 'ask', questionId: 'when' },
+      { action: 'ask', targetId: 2, questionId: 'when' },
+      { action: 'answer' },
+      { action: 'answer', value: 3 },
+      { action: 'speak', kind: 'suspect' },
+      { action: 'speak', targetId: 'u2' },
+    ]) {
+      expect(adapter.applyAction(s, 'u1', body), JSON.stringify(body)).toEqual({
+        ok: false,
+        error: 'invalid_action',
+        status: 400,
+      })
+    }
+  })
+
+  it('serviceTick : le tick bot tombe au délai du client (espionBotTickDelayMs, borne haute), l’échéance reste due', () => {
+    const s = table()
+    const now = s.phaseEndsAt! - s.discussionMs
+    const tick = adapter.serviceTick!(s, now)!
+    const clientDelay = espionBotTickDelayMs(toEspionSpectatorView(s), now, () => 1)!
+    expect(tick).toEqual({ body: { action: 'bot' }, dueAt: now + clientDelay })
+    for (const r of [0, 0.5, 0.999]) {
+      expect(espionBotTickDelayMs(toEspionSpectatorView(s), now, () => r)!).toBeLessThanOrEqual(clientDelay)
+    }
+    // Tick bot déjà refusé sur cette version : seule l'échéance du chrono reste.
+    expect(adapter.serviceTick!(s, now, { skipBot: true })).toEqual({
+      body: { action: 'advance', phaseKey: phaseKey(s) },
+      dueAt: s.phaseEndsAt,
+    })
+  })
 })
 
 describe('Petit Buveur : bots de l’hôte, tour joué par le serveur', () => {
@@ -146,6 +316,75 @@ describe('Loup-Garou : parole humaine au débat (debate-speak)', () => {
       error: 'INVALID_TARGET',
       status: 403,
     })
+  })
+})
+
+describe('Menteur : Calza humain et statuts des refus', () => {
+  const adapter = GAME_ADAPTERS.menteur
+  /** 1 humain + 3 bots (table d'essai solo), l'humain au tour face à l'enchère d'un bot. */
+  const humanFacingBid = (calza: boolean): MenteurState => {
+    const built = buildMenteurState([{ userId: 'u1', user: { displayName: 'Riri' } }], 3, 7, { calza })
+    const bot = built.players.find((p) => p.isBot)!
+    return {
+      ...built,
+      phase: 'bidding',
+      turnIdx: built.players.findIndex((p) => p.id === 'u1'),
+      currentBid: { qty: 3, face: 4, by: bot.id },
+    }
+  }
+
+  it('calza passe quand la règle est active (le bouton répondait invalid_action)', () => {
+    const result = adapter.applyAction(humanFacingBid(true), 'u1', { action: 'calza' })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect((result.state as MenteurState).lastReveal).toMatchObject({ mode: 'calza', challengerId: 'u1' })
+    }
+  })
+
+  it('règle désactivée : CALZA_DISABLED est une interdiction (403)', () => {
+    expect(adapter.applyAction(humanFacingBid(false), 'u1', { action: 'calza' })).toEqual({
+      ok: false,
+      error: 'CALZA_DISABLED',
+      status: 403,
+    })
+  })
+
+  it('tick bot pendant le tour de l’humain : NOT_BOT_TURN est un conflit attendu (409)', () => {
+    expect(adapter.applyAction(humanFacingBid(true), 'u1', { action: 'bot' })).toEqual({
+      ok: false,
+      error: 'NOT_BOT_TURN',
+      status: 409,
+    })
+  })
+
+  it('les autres refus du moteur restent des interdictions (403)', () => {
+    const s = humanFacingBid(true)
+    const bot = s.players.find((p) => p.isBot)!
+    expect(adapter.applyAction(s, bot.id, { action: 'dudo' })).toEqual({
+      ok: false,
+      error: 'NOT_YOUR_TURN',
+      status: 403,
+    })
+    expect(adapter.applyAction(s, 'u1', { action: 'bid', qty: 2, face: 4 })).toEqual({
+      ok: false,
+      error: 'ILLEGAL_BID',
+      status: 403,
+    })
+  })
+
+  it('un `say` envoyé par un humain est ignoré : le coup passe, sans parole', () => {
+    const s = humanFacingBid(true)
+    const bot = s.players.find((p) => p.isBot)!
+    const next = s.players[(s.turnIdx + 1) % s.players.length]
+    const bid = adapter.applyAction(s, 'u1', { action: 'bid', qty: 4, face: 4, say: { kind: 'sure', targetId: next.id } })
+    expect(bid.ok).toBe(true)
+    if (bid.ok) {
+      expect((bid.state as MenteurState).currentBid).toEqual({ qty: 4, face: 4, by: 'u1' })
+      expect((bid.state as MenteurState).speech).toEqual([])
+    }
+    const dudo = adapter.applyAction(s, 'u1', { action: 'dudo', say: { kind: 'suspect', targetId: bot.id } })
+    expect(dudo.ok).toBe(true)
+    if (dudo.ok) expect((dudo.state as MenteurState).speech).toEqual([])
   })
 })
 

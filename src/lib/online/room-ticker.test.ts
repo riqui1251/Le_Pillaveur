@@ -387,7 +387,7 @@ describe('serviceTick — Menteur (bot au tour, révélation)', () => {
     expect(adapter.serviceTick!(state, NOW, lower)?.dueAt).toBe(NOW + botTickDelayMs(botName, () => 0))
   })
 
-  it('révélation menée par un bot : 2,6 s de lecture, quel que soit le persona', () => {
+  it('révélation menée par un bot, un humain assis : 5 s de lecture, quel que soit le persona', () => {
     const { state } = withBotToPlay()
     // Sans perdant désigné, le premier vivant mène le « continuer » : le bot.
     const reveal: MenteurState = {
@@ -396,7 +396,7 @@ describe('serviceTick — Menteur (bot au tour, révélation)', () => {
       lastReveal: null,
       players: [...state.players.filter((p) => p.isBot), ...state.players.filter((p) => !p.isBot)],
     }
-    expect(adapter.serviceTick!(reveal, NOW)).toEqual({ body: { action: 'bot' }, dueAt: NOW + 2600 })
+    expect(adapter.serviceTick!(reveal, NOW)).toEqual({ body: { action: 'bot' }, dueAt: NOW + 5000 })
   })
 
   it('tour d’un humain, ou plus aucun humain présent : rien', () => {

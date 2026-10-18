@@ -411,7 +411,7 @@ describe('speechSuspicion : la part publique du score de soupçon', () => {
 })
 
 describe('le socle ne dépend d’aucun jeu', () => {
-  it('ni bot-speech.ts ni le fil client n’importent le Loup-Garou ou l’Imposteur', () => {
+  it('ni bot-speech.ts ni le fil client n’importent le Loup-Garou, l’Imposteur, le Menteur ou l’Espion', () => {
     const src = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
     const files = [
       'lib/online/bot-speech.ts',
@@ -422,7 +422,7 @@ describe('le socle ne dépend d’aucun jeu', () => {
       const source = readFileSync(join(src, file), 'utf8')
       const imports = [...source.matchAll(/\bfrom\s+['"]([^'"]+)['"]/g)].map((m) => m[1])
       expect(imports.length, file).toBeGreaterThan(0)
-      expect(imports.filter((spec) => /loup-garou|imposteur/.test(spec)), file).toEqual([])
+      expect(imports.filter((spec) => /loup-garou|imposteur|menteur|espion/.test(spec)), file).toEqual([])
     }
   })
 

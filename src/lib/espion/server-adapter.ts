@@ -1,7 +1,6 @@
 import {
   createEspionState,
   currentEspionActorId,
-  espionActive,
   reduceEspion,
   toEspionClientView,
   toEspionSpectatorView,
@@ -10,12 +9,18 @@ import {
   ESPION_DEFAULT_ROUNDS_TO_WIN,
   ESPION_MIN_PLAYERS,
   ESPION_MAX_PLAYERS,
+  ESPION_HUMAN_SPEAK_KINDS,
+  type EspionHumanSpeakKind,
   type EspionState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getEspionLocations } from './data'
+// ⚠️ Le carnet est réservé au serveur (data/attributes.test.ts, G5) : il n'entre dans le cerveau qu'en dépendance.
+import { espionAttrsOf } from './data/attributes'
 import { randomSeed } from '@/lib/petit-buveur/rng'
+import { espionBotMove } from './bot-speech'
+import type { EspionBotDeps } from './bot-brain'
 
 /**
  * Adaptateur serveur de Qui est l'Espion ? : sérialisation, mapping HTTP →
@@ -77,6 +82,11 @@ export function parseEspionState(json: string | null): EspionState | null {
       ...raw,
       rematchVotes: raw.rematchVotes ?? [],
       remainingLocations: raw.remainingLocations ?? [],
+      // Parties lancées avant le fil de questions : fil vide, aucun refus.
+      speech: Array.isArray(raw.speech) ? raw.speech : [],
+      activeAccusation: raw.activeAccusation
+        ? { ...raw.activeAccusation, declined: raw.activeAccusation.declined ?? [] }
+        : null,
     }
   } catch {
     return null
@@ -86,6 +96,11 @@ export function parseEspionState(json: string | null): EspionState | null {
 export type EspionRoomActionInput =
   | { type: 'accuse'; targetId: string }
   | { type: 'support' }
+  | { type: 'decline' }
+  | { type: 'ask'; targetId: string; questionId: string }
+  | { type: 'answer'; value: string }
+  | { type: 'speak'; kind: string; targetId: string }
+  | { type: 'guess-location'; locationId: string }
   | { type: 'guess-location'; location: string }
   | { type: 'advance'; phaseKey: string }
   | { type: 'continue' }
@@ -118,13 +133,50 @@ export function applyEspionRoomAction(
           ok: true,
           state: reduceEspion(state, { type: 'SUPPORT', playerId: userId, now: Date.now() }),
         }
+      case 'decline':
+        return {
+          ok: true,
+          state: reduceEspion(state, { type: 'DECLINE', playerId: userId, now: Date.now() }),
+        }
+      case 'ask':
+        return {
+          ok: true,
+          state: reduceEspion(state, {
+            type: 'ASK',
+            playerId: userId,
+            targetId: input.targetId,
+            questionId: input.questionId,
+            now: Date.now(),
+          }),
+        }
+      case 'answer':
+        return {
+          ok: true,
+          state: reduceEspion(state, { type: 'ANSWER', playerId: userId, value: input.value, now: Date.now() }),
+        }
+      case 'speak':
+        // Un humain n'a que « Je trouve ça louche » et « Me défendre » ; les
+        // autres paroles (alliance, remarques…) sont celles des bots.
+        if (!(ESPION_HUMAN_SPEAK_KINDS as readonly string[]).includes(input.kind)) {
+          return { ok: false, error: 'INVALID_KIND' }
+        }
+        return {
+          ok: true,
+          state: reduceEspion(state, {
+            type: 'SPEAK',
+            playerId: userId,
+            kind: input.kind as EspionHumanSpeakKind,
+            targetId: input.targetId,
+            now: Date.now(),
+          }),
+        }
       case 'guess-location':
         return {
           ok: true,
           state: reduceEspion(state, {
             type: 'GUESS_LOCATION',
             playerId: userId,
-            location: input.location,
+            ...('locationId' in input ? { locationId: input.locationId } : { location: input.location }),
             now: Date.now(),
           }),
         }
@@ -196,31 +248,29 @@ export function espionSpectatorViewJson(state: EspionState): string {
 
 // ─── Bots ────────────────────────────────────────────────────────────────────
 
+/** Le carnet prêté au cerveau des bots : seul ce module serveur l'importe. */
+export const ESPION_BOT_DEPS: EspionBotDeps = { attrsOf: espionAttrsOf }
+
 /**
- * Un bot n'accuse jamais et ne devine jamais le lieu (IA volontairement
- * faible, assumée — les bots n'existent qu'en REMPLACEMENT d'un joueur
- * parti). Il soutient une accusation en cours avec ~40 % de proba par tick
- * (le rythme des ticks « arbitre » côté client fait office de délai
- * aléatoire) — évite qu'une partie reste bloquée sur un bot absent sans
- * pour autant le rendre décisif.
+ * Les bots sont choisis par l'hôte au lobby (table complétée, partie solo)
+ * ou remplacent un joueur parti. En discussion, le planificateur
+ * (bot-speech.ts) joue UNE écriture par tick quand une échéance publique est
+ * due : devinette, soutien ou refus groupés, réponse, accusation, dernier
+ * appel ou question suivante. Au reveal, le premier présent, s'il est bot,
+ * « continue ». `rand`, `now` et `deps` sont injectables : une partie se
+ * rejoue à l'identique.
  */
-export function applyEspionBotAction(state: EspionState): EspionRoomActionResult {
+export function applyEspionBotAction(
+  state: EspionState,
+  rand: () => number = Math.random,
+  now: number = Date.now(),
+  deps: EspionBotDeps = ESPION_BOT_DEPS
+): EspionRoomActionResult {
   try {
-    if (state.phase === 'discussion' && state.activeAccusation) {
-      const active = espionActive(state)
-      const pendingBots = active.filter(
-        (p) => p.isBot && !state.activeAccusation!.supporters.includes(p.id)
-      )
-      if (pendingBots.length === 0) return { ok: false, error: 'NOT_BOT_TURN' }
-      let next = state
-      for (const bot of pendingBots) {
-        if (!next.activeAccusation) break // déjà résolu par un soutien précédent de cette boucle
-        if (Math.random() < 0.4) {
-          next = reduceEspion(next, { type: 'SUPPORT', playerId: bot.id, now: Date.now() })
-        }
-      }
-      if (next === state) return { ok: false, error: 'NOT_BOT_TURN' }
-      return { ok: true, state: next }
+    if (state.phase === 'discussion') {
+      const actions = espionBotMove(state, now, rand, deps)
+      if (!actions) return { ok: false, error: 'NOT_BOT_TURN' }
+      return { ok: true, state: actions.reduce(reduceEspion, state) }
     }
 
     const actorId = currentEspionActorId(state)
@@ -229,7 +279,7 @@ export function applyEspionBotAction(state: EspionState): EspionRoomActionResult
     if (state.phase === 'reveal') {
       return {
         ok: true,
-        state: reduceEspion(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() }),
+        state: reduceEspion(state, { type: 'CONTINUE', playerId: actor.id, now }),
       }
     }
     return { ok: false, error: 'NOT_BOT_TURN' }

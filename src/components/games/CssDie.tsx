@@ -17,14 +17,17 @@ const DIE_PIPS: Record<number, Array<[number, number]>> = {
   6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]],
 }
 
-const BOX: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+// xs : le dé d'une puce de l'échelle des enchères, à côté d'un avatar.
+const BOX: Record<'xs' | 'sm' | 'md' | 'lg' | 'xl', string> = {
+  xs: 'h-5 w-5 p-[3px] rounded-md',
   sm: 'h-8 w-8 p-1',
   md: 'h-10 w-10 p-[5px]',
   lg: 'h-12 w-12 p-1.5',
   xl: 'h-20 w-20 p-2.5 rounded-2xl',
 }
 
-const PIP: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+const PIP: Record<'xs' | 'sm' | 'md' | 'lg' | 'xl', string> = {
+  xs: 'h-[3px] w-[3px]',
   sm: 'h-1.5 w-1.5',
   md: 'h-[7px] w-[7px]',
   lg: 'h-2 w-2',
@@ -36,7 +39,7 @@ export function CssDie({
   size = 'md',
 }: {
   face: number
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 }) {
   const pips = DIE_PIPS[face] ?? []
   return (

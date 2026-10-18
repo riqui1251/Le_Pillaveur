@@ -3,11 +3,12 @@
 import { Skull, Trophy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
-import { botAvatarFromName } from '@/lib/online/bot-personas'
 import type { MenteurClientView } from '@/lib/menteur/engine'
 import { CssDie } from '@/components/games/CssDie'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
-import { genreOfId } from '@/components/online/bot-speech/bot-speech-feed'
+import { genreOfId, playerIcon } from '@/components/online/bot-speech/bot-speech-feed'
+import { BID_LADDER_TV, BidLadder } from '@/components/online/menteur/BidLadder'
+import { MenteurSpeechFeed } from '@/components/online/menteur/MenteurSpeechFeed'
 import { cn } from '@/lib/utils'
 
 /**
@@ -23,10 +24,14 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
   const activeId = state.phase === 'bidding' ? state.players[state.turnIdx]?.id : null
   const reveal = state.lastReveal
   const finished = state.phase === 'finished'
+  const bids = state.bids ?? []
+  const duels = state.duels ?? []
+  const lastDuel = state.phase === 'reveal' ? duels[duels.length - 1] : undefined
   const nameOf = (id: string | null | undefined) =>
     state.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
-    p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) => playerIcon(p, room.members)
+  const revealing = state.phase === 'reveal' && Boolean(reveal)
+  const speechFeed = <MenteurSpeechFeed view={state} iconOf={iconOf} variant="tv" />
 
   // ── Podium final ─────────────────────────────────────────────────────────
   if (finished) {
@@ -107,6 +112,9 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
               </div>
             ))}
           </div>
+          {lastDuel && lastDuel.round === state.round && (
+            <BidLadder bids={lastDuel.bids} players={state.players} iconOf={iconOf} variant="tv" titled />
+          )}
           {reveal.mode === 'calza' && reveal.loserId ? (
             <p className="text-3xl font-black text-red-200">
               {t('reveal.calzaLost', { name: nameOf(reveal.loserId), sips: reveal.sips })}
@@ -132,6 +140,8 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
               })}
             </p>
           )}
+          {/* La réaction du bot se lit avec le résultat, comme sur les téléphones. */}
+          {speechFeed}
         </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-6">
@@ -143,6 +153,9 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
               <p className="flex items-center gap-5 text-8xl font-black text-white">
                 {state.currentBid.qty} × <CssDie face={state.currentBid.face} size="xl" />
               </p>
+              {bids.length > 1 && (
+                <BidLadder bids={bids} players={state.players} iconOf={iconOf} variant="tv" limit={BID_LADDER_TV} />
+              )}
             </>
           ) : (
             <p className="text-4xl font-black text-white/70">{t('noBid')}</p>
@@ -152,6 +165,9 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
           </p>
         </div>
       )}
+
+      {/* Paroles des bots : les dernières bulles de la manche */}
+      {!revealing && <div className="flex justify-center">{speechFeed}</div>}
 
       {/* Joueurs : gobelets anonymes */}
       <div className="flex flex-wrap items-center justify-center gap-3">

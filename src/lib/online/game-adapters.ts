@@ -33,10 +33,12 @@ import {
 } from '@/lib/menteur/server-adapter'
 import {
   currentMenteurActorId,
+  menteurHumanSeated,
   toMenteurClientView,
   MENTEUR_MAX_PLAYERS,
   type MenteurState,
 } from '@/lib/menteur/engine'
+import { menteurBotTickDelayMs } from '@/lib/menteur/bot-tick'
 import {
   parseImposteurState,
   serializeImposteurState,
@@ -163,10 +165,12 @@ import {
 import {
   currentEspionActorId,
   toEspionClientView,
+  toEspionSpectatorView,
   ESPION_MIN_PLAYERS,
   ESPION_MAX_PLAYERS,
   type EspionState,
 } from '@/lib/espion/engine'
+import { espionBotTickDelayMs } from '@/lib/espion/bot-tick'
 import {
   parseTabouState,
   serializeTabouState,
@@ -606,6 +610,10 @@ const menteurAdapter: GameAdapter = {
       input = { type: 'bid', qty: body.qty, face: body.face }
     } else if (body.action === 'dudo') {
       input = { type: 'dudo' }
+    } else if (body.action === 'calza') {
+      // Mappé sans regarder la règle : désactivée, c'est le moteur qui refuse
+      // (CALZA_DISABLED, 403), comme pour un coup interdit.
+      input = { type: 'calza' }
     } else if (body.action === 'continue') {
       input = { type: 'continue' }
     } else if (body.action === 'bot') {
@@ -617,11 +625,10 @@ const menteurAdapter: GameAdapter = {
     }
     const result = applyMenteurRoomAction(state, userId, input)
     if (!result.ok) {
-      return {
-        ok: false,
-        error: result.error,
-        status: result.error === 'NOTHING_TO_REPLACE' ? 409 : 403,
-      }
+      // Tick bot d'un autre client déjà joué, rien à remplacer : conflits
+      // attendus (409, useGameAction reste muet), pas des interdictions.
+      const conflict = result.error === 'NOT_BOT_TURN' || result.error === 'NOTHING_TO_REPLACE'
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
     }
     return { ok: true, state: result.state }
   },
@@ -637,13 +644,22 @@ const menteurAdapter: GameAdapter = {
   markLeft: (state, userId, at) => markMenteurPlayerLeft(state as MenteurState, userId, at),
   rejoin: (state, userId) => rejoinMenteurPlayer(state as MenteurState, userId),
   // MenteurOnline : bot au tour (enchère, ou « continuer » de la révélation
-  // après 2,6 s de lecture).
+  // qu'il mène), délai calculé par la même fonction que le client
+  // (menteurBotTickDelayMs) : 5 s de lecture dès qu'un humain est assis.
   serviceTick(rawState, now, options) {
     const state = rawState as MenteurState
     const actor = playerById(state.players, currentMenteurActorId(state))
     return serviceTickOf(state.players, now, options, {
       botDelayMs: (rand) =>
-        !actor?.isBot ? null : state.phase === 'reveal' ? 2600 : botTickDelayMs(actor.name, rand),
+        menteurBotTickDelayMs(
+          {
+            phase: state.phase,
+            actorIsBot: Boolean(actor?.isBot),
+            actorName: actor?.name,
+            humanSeated: menteurHumanSeated(state.players),
+          },
+          rand
+        ),
     })
   },
 }
@@ -1099,7 +1115,33 @@ const espionAdapter: GameAdapter = {
       input = { type: 'accuse', targetId: body.targetId }
     } else if (body.action === 'support') {
       input = { type: 'support' }
+    } else if (body.action === 'decline') {
+      input = { type: 'decline' }
+    } else if (
+      body.action === 'ask' &&
+      typeof body.targetId === 'string' &&
+      typeof body.questionId === 'string'
+    ) {
+      // Question inconnue : refusée par le moteur (UNKNOWN_QUESTION, 403).
+      input = { type: 'ask', targetId: body.targetId, questionId: body.questionId }
+    } else if (body.action === 'answer' && typeof body.value === 'string') {
+      input = { type: 'answer', value: body.value }
+    } else if (
+      body.action === 'speak' &&
+      typeof body.kind === 'string' &&
+      typeof body.targetId === 'string'
+    ) {
+      // Le kind est jugé par l'adaptateur du jeu : hors des boutons humains,
+      // INVALID_KIND (403), pas une action mal formée.
+      input = { type: 'speak', kind: body.kind, targetId: body.targetId }
+    } else if (
+      body.action === 'guess-location' &&
+      typeof body.locationId === 'string' &&
+      /^[a-z0-9-]+$/.test(body.locationId)
+    ) {
+      input = { type: 'guess-location', locationId: body.locationId }
     } else if (body.action === 'guess-location' && typeof body.location === 'string') {
+      // Client ouvert avant le passage aux identifiants : devinette par nom.
       input = { type: 'guess-location', location: body.location }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
       input = { type: 'advance', phaseKey: body.phaseKey }
@@ -1114,9 +1156,22 @@ const espionAdapter: GameAdapter = {
     }
     const result = applyEspionRoomAction(state, userId, input)
     if (!result.ok) {
-      const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
-        result.error
-      )
+      // Courses entre joueurs (deux questions, deux accusations, une réponse
+      // après l'expiration, un soutien ou un refus arrivé après la clôture de
+      // l'accusation, par majorité, rejet anticipé ou fin de fenêtre) et ticks
+      // déjà joués : des conflits attendus (409, useGameAction reste muet), pas
+      // des interdictions.
+      const conflict = [
+        'NOTHING_TO_REPLACE',
+        'NOT_EXPIRED',
+        'PHASE_CHANGED',
+        'NOT_BOT_TURN',
+        'QUESTION_PENDING',
+        'ACCUSATION_IN_PROGRESS',
+        'NO_PENDING_QUESTION',
+        'NO_ACTIVE_ACCUSATION',
+        'ACCUSATION_EXPIRED',
+      ].includes(result.error)
       return { ok: false, error: result.error, status: conflict ? 409 : 403 }
     }
     return { ok: true, state: result.state }
@@ -1133,8 +1188,10 @@ const espionAdapter: GameAdapter = {
   markLeft: (state, userId, at) => markEspionPlayerLeft(state as EspionState, userId, at),
   rejoin: (state, userId) => rejoinEspionPlayer(state as EspionState, userId),
   // EspionOnline : `advance` à la PLUS PROCHE des deux échéances (accusation
-  // en cours ou chrono principal) + bot qui soutient une accusation (au
-  // hasard côté moteur : un refus retombe sur l'échéance) ou mène le reveal.
+  // en cours ou chrono principal) + tick bot calculé par la même fonction que
+  // le client (espionBotTickDelayMs), sur la vue publique : la prochaine
+  // échéance d'un bot (décision, réponse, question, dernier appel) ou le
+  // reveal qu'il mène. Toute échéance listée écrit.
   serviceTick(rawState, now, options) {
     const state = rawState as EspionState
     const accusation = state.activeAccusation
@@ -1144,19 +1201,9 @@ const espionAdapter: GameAdapter = {
         : accusation
           ? Math.min(accusation.endsAt, state.phaseEndsAt)
           : state.phaseEndsAt
-    const supportBot =
-      state.phase === 'discussion' && accusation ? state.players.find((p) => p.isBot) : undefined
-    const revealActorIsBot =
-      state.phase === 'reveal' &&
-      Boolean(playerById(state.players, currentEspionActorId(state))?.isBot)
     return serviceTickOf(state.players, now, options, {
       advance: advanceAt(state, dueAt),
-      botDelayMs: (rand) =>
-        !supportBot && !revealActorIsBot
-          ? null
-          : state.phase === 'reveal'
-            ? 2500
-            : botTickDelayMs(supportBot?.name, rand),
+      botDelayMs: (rand) => espionBotTickDelayMs(toEspionSpectatorView(state), now, rand),
     })
   },
 }
