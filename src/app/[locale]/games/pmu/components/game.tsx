@@ -313,9 +313,14 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
   const tTv = useTranslations('tv')
   const { code: castCode, active: castActive, start: startCast, push: pushCast, pushFrame: pushCastFrame, stop: stopCast } = useCastRoom('pmu')
 
+  const raceSeqRef = useRef(0)
+
   const buildCastState = useCallback((): PmuCastState => {
     const castPhase: PmuCastState['phase'] =
       phase === 'racing' ? 'racing' : phase === 'payout' || phase === 'results' ? 'finished' : 'waiting'
+    const stage: PmuCastState['stage'] =
+      phase === 'betting' || phase === 'payout' || phase === 'results' ? phase : phase === 'racing' ? undefined : 'setup'
+    const betOf = (id: string) => bets[id] ?? 2
     return {
       castKind: 'pmu',
       phase: castPhase,
@@ -328,10 +333,27 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
         colorTo: h.colorTo,
         players: h.players.map((p) => p.name),
         position: Math.min(h.position, FINISH),
+        ...(mode === 'paris' && stage !== 'setup' ? { bets: h.players.map((p) => betOf(p.id)) } : {}),
       })),
       winnerKey: winner?.key ?? null,
+      // Pendant le choix du mode, celui de la course précédente n'est plus le bon : la TV attend sans titre.
+      mode: phase === 'mode-select' ? undefined : mode,
+      stage,
+      race: raceSeqRef.current,
+      distSips: mode === 'libre' && phase === 'results' ? distSips : null,
+      payouts:
+        mode === 'paris' && winner && castPhase === 'finished'
+          ? winner.players.map((p) => ({
+              name: p.name,
+              sips: betOf(p.id) * 2,
+              target: allPlayers.find((x) => x.id === payoutTargets[p.id])?.name ?? null,
+            }))
+          : [],
+      ...(mode === 'paris' && winner && castPhase === 'finished'
+        ? { noTargets: allPlayers.every((p) => winner.players.some((x) => x.id === p.id)) }
+        : {}),
     }
-  }, [phase, horses, winner, FINISH])
+  }, [phase, horses, winner, mode, bets, distSips, payoutTargets, allPlayers, FINISH])
 
   const buildRef = useRef(buildCastState)
   buildRef.current = buildCastState
@@ -344,9 +366,11 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
   // Pousse le plateau/état sur les transitions STABLES (phase, vainqueur, parieurs)
   // — surtout pas à chaque tick de course (les positions passent par les trames).
   const horsePlayersSig = horses.map((h) => `${h.key}:${h.players.map((p) => p.id).join(',')}`).join('|')
+  const betsSig = JSON.stringify(bets)
+  const targetsSig = JSON.stringify(payoutTargets)
   useEffect(() => {
     if (castActive) pushCast(JSON.stringify(buildRef.current()))
-  }, [castActive, phase, winner, horsePlayersSig, pushCast])
+  }, [castActive, phase, winner, horsePlayersSig, mode, betsSig, targetsSig, distSips, pushCast])
 
   // Diffuse les positions des chevaux pendant la course (~12/s).
   const lastFrameRef = useRef(0)
@@ -359,7 +383,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
     horses.forEach((h) => {
       positions[h.key] = Math.min(h.position, FINISH)
     })
-    pushCastFrame(JSON.stringify({ positions }))
+    pushCastFrame(JSON.stringify({ positions, race: raceSeqRef.current }))
   }, [castActive, phase, horses, pushCastFrame, FINISH])
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -386,6 +410,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
 
   const startRace = () => {
     if (intervalId) clearInterval(intervalId)
+    raceSeqRef.current += 1
     setPhase('racing')
 
     // Durée cible du vainqueur : 15–35 secondes

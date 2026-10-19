@@ -14,7 +14,8 @@ import { randomSeed } from '@/lib/petit-buveur/rng'
 
 /**
  * Adaptateur serveur du 1220 : sérialisation, mapping HTTP → actions moteur,
- * vues (aucune info cachée, une seule vue sert joueur + spectateur).
+ * vues (une seule vue sert joueur + spectateur, sans la graine des dés —
+ * voir toGame1220ClientView).
  * Consommé par le registre `src/lib/online/game-adapters.ts`.
  */
 

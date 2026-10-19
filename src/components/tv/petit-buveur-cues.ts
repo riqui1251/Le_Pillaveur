@@ -1,29 +1,27 @@
-import type { EngineState } from '@/lib/petit-buveur/engine'
+import { outcomeSignature, type EngineView } from '@/components/online/petit-buveur/view-helpers'
 import type { PetitBuveurCastState } from '@/lib/cast-types'
 
-/** Le dé reste affiché puis laisse place au reveal de case — TV muette, aucun son joué ici. */
-export const DICE_HOLD_MS = 1300
-export const CASE_HOLD_MS = 2600
+/**
+ * Chronologie de l'écran TV du Petit Buveur : quand montrer le dé, quand
+ * laisser marcher les pions, quand dévoiler la fin. La TV ne doit jamais
+ * montrer un résultat avant le téléphone le plus lent (celui qui lance).
+ */
 
 /**
- * Ce que la TV lit du Petit Buveur : l'état du moteur en ligne OU le payload
- * diffusé par une partie locale. Les deux portent pions et tour courant ; le
- * dé et la case arrivent par des champs différents.
+ * Dé qui roule puis résultat lu : le téléphone qui lance fait rouler au moins
+ * 700 ms puis tient le résultat 750 ms (PetitBuveurOnline, runDiceAction).
+ * Partis à la réception de l'état, ces délais gardent la TV derrière le
+ * téléphone. Le jeu local, lui, pousse le moment où sa valeur s'affiche
+ * (LOCAL_DICE_ROLL_MS / LOCAL_DICE_RESULT_MS de board-display).
  */
-export type TvPetitBuveurState = {
-  players: { id: string; name: string; position: number; drinks: number }[]
-  currentPlayer: number
-} & Partial<Pick<EngineState, 'version' | 'lastDice' | 'lastCase'>> &
-  Pick<PetitBuveurCastState, 'dice' | 'reveal' | 'ambiance'>
+export const TV_DICE_ROLL_MS = 700
+export const TV_DICE_RESULT_MS = 750
 
-export type TvPetitBuveurCues = {
-  /** Change à chaque lancer à montrer ; null = rien à montrer. */
-  diceKey: string | null
-  dice: number | null
-  /** Change à chaque case à révéler ; null = rien à révéler. */
-  caseKey: string | null
-  caseType: string | null
-}
+/** Dé local resté « en train de rouler » (téléphone fermé en plein lancer) : la TV lâche l'overlay. */
+export const TV_CAST_ROLLING_MAX_MS = 4_000
+
+/** Pion arrivé sur la case 30 avant l'écran de fin (END_REVEAL_DELAY_MS du téléphone). */
+export const TV_END_REVEAL_MS = 500
 
 function isDieValue(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 6
@@ -33,32 +31,82 @@ function isSeq(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
+export type TvRollCue = {
+  /** Identité du lancer : change à chaque nouveau lancer, jamais à une autre écriture. */
+  key: string
+  value: number
+  actorId: string
+}
+
 /**
- * En ligne, une seule `version` sert de déclencheur au dé puis à la case (une
- * action appliquée = tout rejouer). En local diffusé, dé et case ont chacun
- * leur `seq` : le téléphone pousse le lancer avant que le pion n'arrive.
+ * Lancer appliqué par la DERNIÈRE action du moteur, ou null. `version` change
+ * aussi pour un choix de cible, un départ, un retour… : seul le journal dit si
+ * l'action était un lancer (`case:…`, ou `win` sans effet de case : dé
+ * gagnant). La relance de la case Chance (`resolved:chance`, ou `win` si elle
+ * gagne) porte `diceLanding` ; le moteur garde ce dernier effet tant qu'une
+ * action n'en enregistre pas d'autre (choix de cible d'une case tombée par la
+ * relance) : sans le journal, la TV rejouerait le dé.
  */
-export function petitBuveurTvCues(state: TvPetitBuveurState): TvPetitBuveurCues {
-  const castDice = state.dice && isDieValue(state.dice.value) && isSeq(state.dice.seq) ? state.dice : null
-  const castReveal =
-    state.reveal && typeof state.reveal.caseType === 'string' && state.reveal.caseType && isSeq(state.reveal.seq)
-      ? state.reveal
-      : null
-  const version = typeof state.version === 'number' ? state.version : null
-
-  const onlineDice = version !== null && isDieValue(state.lastDice) ? state.lastDice : null
-  const onlineCase = version !== null && state.lastCase?.type ? state.lastCase.type : null
-
+export function onlineRollCue(
+  view: Pick<EngineView, 'log' | 'lastDice' | 'lastOutcome' | 'outcomeHistory'>
+): TvRollCue | null {
+  if (!isDieValue(view.lastDice)) return null
+  const last = view.log?.[view.log.length - 1]
+  if (!last || typeof last.message !== 'string') return null
+  const outcome = view.lastOutcome ?? null
+  const relaunched =
+    (last.message === 'resolved:chance' || last.message === 'win') && typeof outcome?.diceLanding === 'number'
+  const rolled = last.message.startsWith('case:') || (last.message === 'win' && !outcome) || relaunched
+  if (!rolled) return null
   return {
-    diceKey: castDice ? `cast:${castDice.seq}` : onlineDice !== null ? `v:${version}` : null,
-    dice: castDice ? castDice.value : onlineDice,
-    caseKey: castReveal ? `cast:${castReveal.seq}` : onlineCase !== null ? `v:${version}` : null,
-    caseType: castReveal ? castReveal.caseType : onlineCase,
+    key: `${last.turn}|${last.playerId}|${last.message}|${outcomeSignature(view)}`,
+    value: view.lastDice,
+    actorId: relaunched && outcome ? outcome.actorId : last.playerId,
   }
 }
 
-/** Délai avant la carte de case : elle attend que le dé, s'il est à l'écran, ait fini. */
-export function caseRevealDelay(diceShownAt: number | null, now: number): number {
-  if (diceShownAt === null) return 0
-  return Math.max(0, DICE_HOLD_MS - (now - diceShownAt))
+/** Tirage interactif (roue, pièce, dé de la honte) à mettre en scène, ou null. */
+export function onlineInteractionKey(view: Pick<EngineView, 'lastInteraction' | 'lastOutcome' | 'outcomeHistory'>): string | null {
+  if (!view.lastInteraction) return null
+  return `${JSON.stringify(view.lastInteraction)}|${outcomeSignature(view)}`
+}
+
+export type TvCastCues = {
+  /** Change à chaque lancer poussé ; null = rien à montrer. */
+  diceKey: string | null
+  /** Valeur lue (1..6) ; null tant que le dé roule sur le téléphone. */
+  dice: number | null
+  diceSeq: number | null
+  /** 'rolling' / 'result' : ce que montre le téléphone ; null : ancien téléphone (dé poussé au début, valeur comprise). */
+  dicePhase: 'rolling' | 'result' | null
+  /** Change à chaque case poussée ; null = aucune case. */
+  revealKey: string | null
+  caseType: string | null
+  revealSeq: number | null
+}
+
+/** Partie LOCALE diffusée : dé et case ont chacun leur `seq` (voir PetitBuveurCastState). */
+export function castCues(state: Pick<PetitBuveurCastState, 'dice' | 'reveal'>): TvCastCues {
+  const raw = state.dice && isSeq(state.dice.seq) ? state.dice : null
+  const phase = raw?.phase === 'rolling' || raw?.phase === 'result' ? raw.phase : null
+  const dice = raw && (phase === 'rolling' || isDieValue(raw.value)) ? raw : null
+  const reveal =
+    state.reveal && typeof state.reveal.caseType === 'string' && state.reveal.caseType && isSeq(state.reveal.seq)
+      ? state.reveal
+      : null
+  return {
+    diceKey: dice ? `cast:${dice.seq}` : null,
+    dice: dice && phase !== 'rolling' ? dice.value : null,
+    diceSeq: dice ? dice.seq : null,
+    dicePhase: dice ? phase : null,
+    revealKey: reveal ? `cast:${reveal.seq}` : null,
+    caseType: reveal ? reveal.caseType : null,
+    revealSeq: reveal ? reveal.seq : null,
+  }
+}
+
+/** La case poussée appartient au lancer en cours (et non au tour précédent). */
+export function castRevealIsCurrent(cues: Pick<TvCastCues, 'diceSeq' | 'revealSeq'>): boolean {
+  if (cues.revealSeq === null) return false
+  return cues.diceSeq === null || cues.revealSeq > cues.diceSeq
 }

@@ -8,7 +8,7 @@ import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
 import { Dice6, Trophy, ArrowRight, RefreshCw, Home, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User, Check, Beer, Leaf, Volume2, VolumeX, Tv } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useCastRoom } from '@/hooks/useCastRoom'
-import type { PetitBuveurCastState } from '@/lib/cast-types'
+import type { PetitBuveurCastEffect, PetitBuveurCastReveal, PetitBuveurCastStage } from '@/lib/cast-types'
 import { Card } from '@/components/ui/card'
 import { Player as BasePlayer, PlayerPreferences, PLAYER_ICONS, resolveValidatedPlayerName, getPlayerNameValidationError } from '@/lib/players'
 import { nameValidationI18nKey } from '@/lib/name-moderation'
@@ -48,7 +48,9 @@ import {
   buildEffectsSummaryHtml,
   buildLastActionHtml,
   buildNotificationHtml,
+  formatCaseDescription,
   normalizeSavedCase,
+  resolveOutcomeHtml,
   toStoredCase,
 } from '../case-notification'
 import {
@@ -95,6 +97,10 @@ import {
   boardHighlightClass,
   boardHighlights,
   buildLocalCastState,
+  castEffectOf,
+  LOCAL_DICE_RESULT_MS,
+  LOCAL_DICE_ROLL_MS,
+  localRevealContent,
   nextCastCue,
   rankByShownPosition,
   shownPosition,
@@ -450,29 +456,54 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const { muted, toggleMuted, play: playSound } = useGameSounds()
 
   // ── Cast sur TV (jeu local diffusé) ──────────────────────────────────────
+  // La TV ne reçoit que ce que cet écran montre déjà : la valeur du dé quand
+  // l'overlay l'affiche, l'effet d'une case quand sa fenêtre s'ouvre (jamais
+  // pendant le choix de cible ni le duel, qui le gardent caché). Le payload
+  // est assemblé plus bas, une fois les fenêtres et les effets connus.
   const tTv = useTranslations('tv')
   const { code: castCode, active: castActive, start: startCast, push: pushCast, stop: stopCast } = useCastRoom('petit-buveur')
-  const [castDice, setCastDice] = useState<{ value: number; seq: number } | null>(null)
-  const [castReveal, setCastReveal] = useState<{ caseType: CaseType; seq: number } | null>(null)
-  const castDiceRoll = (value: number) => setCastDice(prev => nextCastCue(prev, { value }, Date.now()))
-  const castCaseReveal = (caseType: CaseType) =>
-    setCastReveal(prev => nextCastCue(prev, { caseType }, Date.now()))
-  const buildPbCastState = useCallback((): PetitBuveurCastState => buildLocalCastState({
-    players,
-    currentPlayer,
-    winnerId: winner?.id ?? null,
-    dice: castDice,
-    reveal: castReveal,
-    ambiance,
-  }), [players, currentPlayer, winner, castDice, castReveal, ambiance])
-  const toggleCast = () => {
-    if (castActive) void stopCast()
-    else void startCast(JSON.stringify(buildPbCastState()))
+  const [castDice, setCastDice] = useState<{ value: number; seq: number; phase: 'rolling' | 'result' } | null>(null)
+  /** Carte TV laissée par la dernière fenêtre d'effet, une fois refermée (« Action précédente »). */
+  const [castLastReveal, setCastLastReveal] = useState<PetitBuveurCastReveal | null>(null)
+  /** Seq de la fenêtre d'effet ouverte : le verdict d'un défi la complète sans la retourner à nouveau. */
+  const [castNotificationSeq, setCastNotificationSeq] = useState(0)
+  /**
+   * Une seule suite pour le dé et les cases, lue hors du rendu : la case d'un
+   * tour dépasse toujours son dé, même appelée depuis un minuteur posé avant
+   * le lancer. Date.now() la garde croissante après un remontage du jeu.
+   */
+  const castSeqRef = useRef(0)
+  const nextCastSeq = () => {
+    castSeqRef.current = nextCastCue({ seq: castSeqRef.current }, {}, Date.now()).seq
+    return castSeqRef.current
   }
-  // Tour par tour → push à chaque changement d'état (positions, tour, vainqueur).
-  useEffect(() => {
-    if (castActive) pushCast(JSON.stringify(buildPbCastState()))
-  }, [castActive, buildPbCastState, pushCast])
+  /** Dé du tour en cours (relance Chance comprise), rappelé sur la carte de la case. */
+  const castRollRef = useRef<number | null>(null)
+  /** Pions à l'arrivée sur la case : les pastilles de la carte TV en sont l'écart. */
+  const castLandingRef = useRef<{
+    players: { id: string; position: number; drinks: number }[]
+    caseNumber: number | null
+    dice: number | null
+  } | null>(null)
+  const castDiceRoll = () => setCastDice({ value: 0, seq: nextCastSeq(), phase: 'rolling' })
+  const castDiceResult = (value: number) => {
+    const fresh = nextCastSeq()
+    setCastDice(prev => ({ value, seq: prev?.phase === 'rolling' ? prev.seq : fresh, phase: 'result' }))
+  }
+  const markCastLanding = (position: number | null) => {
+    castLandingRef.current = {
+      players: playersRef.current.map(p => ({ id: p.id, position: p.position, drinks: p.drinks })),
+      caseNumber: position == null ? null : position + 1,
+      dice: position == null ? null : castRollRef.current,
+    }
+  }
+  const resetCastTurn = () => {
+    // Sans quoi la TV rappellerait le dernier dé de la partie d'avant (« X fait 6 ») au premier joueur.
+    setCastDice(null)
+    setCastLastReveal(null)
+    castLandingRef.current = null
+    castRollRef.current = null
+  }
 
   const prevWinnerRef = useRef(false)
   useEffect(() => {
@@ -754,6 +785,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     
     if (saveData) {
       resetTurnRefs()
+      resetCastTurn()
       winnerRef.current = saveData.winner
       commitCurrentPlayer(saveData.currentPlayer);
       commitTurnCount(saveData.turnCount);
@@ -954,6 +986,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     replayViaRef.current = null
     // Total des dés du tour (relance Chance comprise) : c'est ce que copie la case Copie.
     lastMoveDeltaRef.current = 0
+    castRollRef.current = null
 
     if (currentPlayerObj.skipNextTurn) {
       const skipped = clonePlayers(playersRef.current)
@@ -963,7 +996,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       setIsProcessingTurn(true)
       commitPlayers(skipped)
       const skipOutcome = outcomeSkipTurnSelf(currentPlayerObj.id)
-      castCaseReveal('passe-tour')
+      markCastLanding(null)
       showCaseOutcome({ type: 'passe-tour', effect: 0, description: undefined }, skipOutcome)
       recordLastAction(currentPlayerObj, 'passe-tour', skipOutcome, null)
       return
@@ -994,7 +1027,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     }
 
     const result = Math.floor(Math.random() * 6) + 1;
-    castDiceRoll(result);
+    castDiceRoll();
     const overlayIcon = <PlayerIcon player={player} size="sm" />;
     setDiceOverlay({ phase: 'rolling', playerName: player.name, playerIcon: overlayIcon });
 
@@ -1003,13 +1036,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     let resultTimer: ReturnType<typeof setTimeout> | undefined;
     const showResult = () => {
       setDiceOverlay({ phase: 'result', value: result, playerName: player.name, playerIcon: overlayIcon });
-      resultTimer = setTimeout(proceed, 700);
+      castRollRef.current = result;
+      castDiceResult(result);
+      resultTimer = setTimeout(proceed, LOCAL_DICE_RESULT_MS);
       diceSkipRef.current = () => {
         if (resultTimer) clearTimeout(resultTimer);
         proceed();
       };
     };
-    const rollTimer = setTimeout(showResult, 750);
+    const rollTimer = setTimeout(showResult, LOCAL_DICE_ROLL_MS);
     diceSkipRef.current = () => {
       clearTimeout(rollTimer);
       showResult();
@@ -1052,7 +1087,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       return;
     }
 
-    castCaseReveal(caseType.type);
+    markCastLanding(currentPosition);
     setPendingCase(caseType);
     setPendingPosition(currentPosition);
 
@@ -1225,8 +1260,59 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     [caseNotification, notificationCtx]
   )
 
+  // Carte TV : le contenu de la fenêtre « Effet de la case » pendant qu'elle est ouverte.
+  const castNotificationOpen = showNotification && Boolean(caseNotification)
+  const castNotificationMain = castNotificationOpen ? getCaseEffectMainHtml(activeNotificationHtml) : ''
+  const castNotificationOutcome = caseNotification?.outcome
+  const castCaseText =
+    castNotificationOpen &&
+    caseNotification &&
+    (castNotificationOutcome?.type === 'caseBase' ||
+      (castNotificationOutcome?.type === 'compose' && castNotificationOutcome.items.some(i => i.type === 'caseBase')))
+      ? formatCaseDescription(caseNotification.case, t)
+      : null
+  // Calculée au rendu : la carte part dans le même envoi que les gorgées et effets qu'elle annonce.
+  const castLiveReveal: PetitBuveurCastReveal | null =
+    castNotificationOpen && caseNotification
+      ? {
+          ...localRevealContent({
+            caseType: caseNotification.case.type,
+            mainHtml: castNotificationMain,
+            caseText: castCaseText,
+            landing: castLandingRef.current,
+            players,
+            targetId: caseNotification.targetPlayerId ?? null,
+            verdictPending: Boolean(pendingChallenge),
+          }),
+          seq: castNotificationSeq,
+        }
+      : null
+  const castLiveRevealJson = castLiveReveal ? JSON.stringify(castLiveReveal) : null
+  useEffect(() => {
+    if (!castLiveRevealJson) return
+    // Même carte (re-rendu, ou fenêtre rouverte à l'identique) : garder l'objet évite un rendu de plus du jeu.
+    setCastLastReveal(prev =>
+      prev && JSON.stringify(prev) === castLiveRevealJson ? prev : (JSON.parse(castLiveRevealJson) as PetitBuveurCastReveal)
+    )
+  }, [castLiveRevealJson])
+
+  /** Tour fini sans fenêtre d'effet (Chance : avancer de 2) : la TV reprend l'« Action précédente ». */
+  const castLastAction = (caseType: CaseType, outcome: EffectOutcome) => {
+    const content = localRevealContent({
+      caseType,
+      mainHtml: resolveOutcomeHtml(outcome, notificationCtx),
+      caseText: null,
+      landing: castLandingRef.current,
+      players: playersRef.current,
+      targetId: null,
+      verdictPending: false,
+    })
+    setCastLastReveal({ ...content, seq: nextCastSeq() })
+  }
+
   function showCaseNotification(state: CaseNotificationState) {
     nextHandledRef.current = false
+    setCastNotificationSeq(nextCastSeq())
     const replay = replayViaRef.current
     replayViaRef.current = null
     // La case annoncée est celle rejouée : la roue des gorgées, elle, se notifie en « gorgée » ou « normale ».
@@ -1396,7 +1482,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setDeHonteRolling(true)
 
     const result = Math.floor(Math.random() * 6) + 1
-    castDiceRoll(result)
     const duration = 900
     const interval = 90
     const steps = Math.floor(duration / interval)
@@ -1887,6 +1972,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       const resetPlayers = resetPlayersForNewGame(playersRef.current)
 
       resetTurnRefs()
+      resetCastTurn()
 
       // Initialiser tous les états du jeu
       commitGameStarted(true);
@@ -1922,6 +2008,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   // ne correspond pas forcément aux props du prélobby).
   const resetGame = () => {
     resetTurnRefs()
+    resetCastTurn()
     clearTurnBlockingUi()
     lastTargetIdRef.current = null
     commitCurrentPlayer(0);
@@ -2425,6 +2512,108 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     setShowWheel(false)
   }
 
+  /** Issue du duel telle que sa fenêtre l'annonce, une fois la roue arrêtée. */
+  const duelResultLine = (): string | null => {
+    const challenger = players[currentPlayer]
+    const opponent = players.find(p => p.id === duelOpponentId)
+    if (!duelWheelResult || !challenger || !opponent) return null
+    const challengerWins = duelWheelResult.value === 1
+    const [duelWinner, duelLoser] = challengerWins
+      ? [challenger, opponent]
+      : [opponent, challenger]
+    const names = { winner: duelWinner.name, loser: duelLoser.name }
+    if (isPlayerProtected(duelLoser)) return t('game.duel.loserProtected', names)
+    return challengerWins
+      ? t('game.duel.winnerStays', names)
+      : t('game.duel.opponentWins', names)
+  }
+
+  // Fenêtre ouverte avant l'effet, telle que la TV doit la montrer : le choix
+  // de cible et le duel sans la case ; un tirage, son résultat une fois arrêté.
+  const castStage: PetitBuveurCastStage | null = showDuelDialog && duelBoardPosition != null
+    ? {
+        kind: 'duel',
+        caseNumber: duelBoardPosition + 1,
+        opponentId: duelPhase === 'wheel' ? duelOpponentId : null,
+        rolling: duelWheelSpinning,
+        result: duelResultLine(),
+      }
+    : showTargetDialog
+      ? { kind: 'target' }
+      : showWheel
+        ? {
+            kind: 'case',
+            caseType: wheelMode === 'defis' ? 'roue-defis' : 'roue',
+            rolling: wheelSpinning,
+            result: wheelResult ? t('game.resultLabel', { outcome: wheelResult.label }) : null,
+          }
+        : showDeHonteDialog
+          ? {
+              kind: 'case',
+              caseType: 'de-honte',
+              rolling: deHonteRolling,
+              die: deHonteResult != null && !deHonteRolling ? deHonteResult : null,
+              result:
+                deHonteResult != null && !deHonteRolling
+                  ? t('game.resultLabel', { outcome: getDeHonteOutcomeLabel(deHonteResult, t) })
+                  : null,
+            }
+          : showPileFaceDialog
+            ? {
+                kind: 'case',
+                caseType: 'pile-face',
+                targetId: pileFaceTargetId,
+                rolling: pileFaceFlipping,
+                result:
+                  !pileFaceFlipping && pileFaceFlipResult && pileFaceChoice
+                    ? getPileFaceOutcomeLabel(pileFaceChoice, pileFaceFlipResult, t).label
+                    : null,
+              }
+            : showChanceDialog
+              ? { kind: 'case', caseType: 'chance' }
+              : showExchangeDialog
+                ? { kind: 'case', caseType: 'echange' }
+                : showChainDialog
+                  ? { kind: 'case', caseType: 'defi-chaine', effect: pendingCase?.effect || 5 }
+                  : showTeleportDialog
+                    ? { kind: 'case', caseType: 'teleport' }
+                    : showVoteDialog
+                      ? { kind: 'case', caseType: 'vote', effect: pendingCase?.effect ?? 3 }
+                      : null
+  const buildCastPayload = () => JSON.stringify(
+    buildLocalCastState({
+      players: players.map(p => ({
+        id: p.id,
+        name: p.name,
+        position: p.position,
+        drinks: p.drinks,
+        icon: p.preferences?.icon,
+      })),
+      currentPlayer,
+      winnerId: winner?.id ?? null,
+      dice: castDice,
+      reveal: castLiveReveal ?? castLastReveal,
+      ambiance,
+      turnCount,
+      difficulty: gameDifficulty,
+      effects: collectActiveEffects()
+        .map(castEffectOf)
+        .filter((e): e is PetitBuveurCastEffect => e !== null),
+      stage: castStage,
+      snapKey: boardSnapKey,
+    })
+  )
+  // Sans diffusion, rien à construire ni à sérialiser à chaque rendu.
+  const castPayload = castActive ? buildCastPayload() : ''
+  // Tour par tour → push à chaque changement de ce que l'écran montre.
+  useEffect(() => {
+    if (castActive) pushCast(castPayload)
+  }, [castActive, castPayload, pushCast])
+  const toggleCast = () => {
+    if (castActive) void stopCast()
+    else void startCast(buildCastPayload())
+  }
+
   if (!gameStarted) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-cream/70">
@@ -2836,20 +3025,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                         <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.duel.result')}</p>
                         <p className="mt-1 font-display text-2xl font-bold text-gold">{duelWheelResult.label}</p>
                         <p className="mt-2 text-sm text-cream/70">
-                          {(() => {
-                            const challenger = players[currentPlayer]
-                            const opponent = players.find(p => p.id === duelOpponentId)
-                            if (!challenger || !opponent) return null
-                            const challengerWins = duelWheelResult.value === 1
-                            const [duelWinner, duelLoser] = challengerWins
-                              ? [challenger, opponent]
-                              : [opponent, challenger]
-                            const names = { winner: duelWinner.name, loser: duelLoser.name }
-                            if (isPlayerProtected(duelLoser)) return t('game.duel.loserProtected', names)
-                            return challengerWins
-                              ? t('game.duel.winnerStays', names)
-                              : t('game.duel.opponentWins', names)
-                          })()}
+                          {duelResultLine()}
                         </p>
                         <Button
                           onClick={finishDuelAndTarget}
@@ -3190,6 +3366,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                       params: { case: newPosition + 1 },
                     })
                     recordLastAction(currentPlayerObj, 'chance', chanceOutcome, null)
+                    castLastAction('chance', chanceOutcome)
                     advanceToNextPlayer()
                   }
                 }}

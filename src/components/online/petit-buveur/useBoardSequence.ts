@@ -16,7 +16,11 @@ type Stage = 'dice' | 'final'
  * l'étape intermédiaire. « Rejouer » (nouvelle partie dans la salle) pose
  * les pions sur la case 1 sans les faire reculer.
  */
-export function useBoardSequence(view: EngineView | null, frozen: boolean) {
+export function useBoardSequence(
+  view: EngineView | null,
+  frozen: boolean,
+  opts?: { silent?: boolean; keepPace?: boolean }
+) {
   const sig = outcomeSignature(view)
   const staged = useMemo(() => (view ? diceStageTargets(view.players, view.lastOutcome) : null), [view])
   const outcomeActor = view?.lastOutcome?.actorId ?? null
@@ -61,7 +65,12 @@ export function useBoardSequence(view: EngineView | null, frozen: boolean) {
   }, [view])
 
   const targets = current.stage === 'dice' && staged ? staged : finalTargets
-  const { positions, isStepping } = useSteppedPositions(targets, { frozen, snapKey: epoch })
+  const { positions, isStepping } = useSteppedPositions(targets, {
+    frozen,
+    snapKey: epoch,
+    silent: opts?.silent,
+    keepPace: opts?.keepPace,
+  })
 
   const landedOnDice = current.stage === 'dice' && !frozen && !isStepping
   useEffect(() => {

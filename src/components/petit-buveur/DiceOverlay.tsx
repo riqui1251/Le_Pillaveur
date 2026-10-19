@@ -27,21 +27,33 @@ const PIPS: Record<number, [number, number][]> = {
   6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]],
 }
 
-export function DiceFace({ value, accent, size = 96 }: { value: number; accent?: boolean; size?: number }) {
+export function DiceFace({
+  value,
+  accent,
+  size = 96,
+  sizeRem,
+}: {
+  value: number
+  accent?: boolean
+  size?: number
+  /** Taille en rem (écran TV, dont le rem suit la télé) ; prime sur `size` (px). */
+  sizeRem?: number
+}) {
   const pips = PIPS[value] ?? PIPS[1]
+  const length = (factor: number) => (sizeRem != null ? `${sizeRem * factor}rem` : size * factor)
   return (
     <div
       className={
         'relative grid grid-cols-3 grid-rows-3 place-items-center rounded-2xl border-2 border-[#D8CCAE] bg-cream p-3 shadow-2xl ' +
         (accent ? 'ring-4 ring-gold shadow-gold/40' : 'shadow-black/50')
       }
-      style={{ width: size, height: size }}
+      style={{ width: length(1), height: length(1) }}
     >
       {pips.map(([row, col], i) => (
         <span
           key={i}
           className="rounded-full bg-[#24201A]"
-          style={{ gridRow: row + 1, gridColumn: col + 1, width: size * 0.167, height: size * 0.167 }}
+          style={{ gridRow: row + 1, gridColumn: col + 1, width: length(0.167), height: length(0.167) }}
         />
       ))}
     </div>

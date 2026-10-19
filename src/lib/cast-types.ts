@@ -24,8 +24,50 @@ export type PlinkoCastState = {
     redSips: number
     greenSips: number
   } | null
-  scoreboard: { name: string; totalRed: number; totalGreen: number }[]
+  scoreboard: {
+    name: string
+    totalRed: number
+    totalGreen: number
+    /** Tours joués (gorgées + pions spéciaux touchés), comme le détail de fin du téléphone. */
+    turns?: { redSips: number; greenSips: number; powerups: SpecialPinType[] }[]
+  }[]
   roundDrinks: number
+  /** Index dans `scoreboard` du joueur au tour (les noms peuvent se répéter). */
+  currentPlayerIndex?: number
+  /** Mode cumulatif : nécessaire pour prévoir la valeur finale de chaque case. */
+  cumulative?: boolean
+  /** Effets touchés par chaque balle ce tour (bande « Boit | Donne » du téléphone) ; null au repos. */
+  live?: PlinkoCastLive | null
+  /** Case surlignée en or : celle de la DERNIÈRE balle bonus arrivée (ordre d'arrivée, pas de création). */
+  extraSlot?: number | null
+  /** Fin de partie : écran affiché par le téléphone, que la TV suit sans devancer les totaux. */
+  results?: { phase: 'tournees' | 'details' | 'final'; playerIndex: number } | null
+}
+
+/** Miroir sérialisable de `LiveBalls` (src/app/[locale]/games/plinko/plinko-live.ts). */
+export type PlinkoCastLiveBall = {
+  id: string
+  isMain: boolean
+  category: 'red' | 'green'
+  effects: {
+    multiplierCount: number
+    sipsToAdd: number
+    sipsToSubtract: number
+    effectsReset: boolean
+    jackpotHit: boolean
+    scoreSwap?: boolean
+  }
+  hits: { type: SpecialPinType; resolved?: SpecialPinType | null; doubled: boolean; inert?: boolean }[]
+  landed: boolean
+  slot: number | null
+  finalSips: number | null
+  landedBase: number | null
+}
+
+export type PlinkoCastLive = {
+  red: PlinkoCastLiveBall
+  green: PlinkoCastLiveBall
+  extras: PlinkoCastLiveBall[]
 }
 
 /**
@@ -51,13 +93,27 @@ export type PmuCastState = {
     players: string[]
     /** Position 0..finish (instantané ; positions live via les trames pendant la course). */
     position: number
+    /** Mode paris : mise de chaque parieur, alignée sur `players`. */
+    bets?: number[]
   }[]
   winnerKey: string | null
+  mode?: 'libre' | 'paris'
+  /** Écran du téléphone dans la phase : `waiting` = setup | betting, `finished` = payout | results. */
+  stage?: 'setup' | 'betting' | 'payout' | 'results'
+  /** Numéro de course : la TV ignore les trames d'une course précédente. */
+  race?: number
+  /** Mode libre : gorgées à distribuer, poussées quand le téléphone les affiche. */
+  distSips?: number | null
+  /** Mode paris : gains des parieurs gagnants ; `target` = cible choisie sur le téléphone (null tant qu'aucune). */
+  payouts?: { name: string; sips: number; target: string | null }[]
+  /** Mode paris, fin : aucun joueur ne peut recevoir de gorgées (tous sur le cheval gagnant). */
+  noTargets?: boolean
 }
 
 /** Positions live des chevaux pendant la course (canal éphémère, ~12/s). */
 export type PmuCastFrame = {
   positions: Record<string, number>
+  race?: number
 }
 
 /**
@@ -70,20 +126,102 @@ export type PmuCastFrame = {
  * chaque nouveau `dice.seq` et la carte de case à chaque nouveau `reveal.seq`
  * (après la fin du dé s'il est encore à l'écran). Les `seq` ne doivent jamais
  * revenir en arrière pendant une diffusion, sinon la TV ne rejoue rien.
+ *
+ * Tout est poussé au moment où le téléphone l'affiche, jamais avant : la
+ * valeur du dé quand il la montre, l'effet de la case quand sa fenêtre
+ * s'ouvre (pas pendant le choix de cible ni le duel, qui la gardent cachée).
+ * Les champs ajoutés après coup restent optionnels : une TV et un téléphone
+ * de versions différentes continuent de se comprendre.
  */
 export type PetitBuveurCastState = {
   castKind: 'petit-buveur'
-  players: { id: string; name: string; position: number; drinks: number }[]
+  /** `icon` : celle du téléphone (emoji ou identifiant d'icône), sinon l'initiale. */
+  players: { id: string; name: string; position: number; drinks: number; icon?: string }[]
   currentPlayer: number
   phase: 'playing' | 'finished'
   winner: string | null
-  /** Dernier lancer (valeur 1..6). Absent tant que personne n'a lancé. */
-  dice?: { value: number; seq: number } | null
-  /** Dernière case révélée (`CaseType` du jeu). Absent tant qu'aucune case n'est tombée. */
-  reveal?: { caseType: string; seq: number } | null
+  /**
+   * Dernier lancer. `phase` 'rolling' tant que le dé roule sur le téléphone
+   * (valeur 0 : pas encore lue), puis 'result' quand il montre la valeur (1..6).
+   * Sans `phase` (ancien téléphone) : poussé au début du dé, valeur comprise.
+   */
+  dice?: { value: number; seq: number; phase?: 'rolling' | 'result' } | null
+  /** Effet de la dernière case, une fois affiché par le téléphone. Absent tant qu'aucune case n'est tombée. */
+  reveal?: PetitBuveurCastReveal | null
   /** Ambiance de la table qui diffuse : en Soft, la TV n'affiche aucune bière. */
   ambiance?: 'alcool' | 'soft'
+  /** Tour de table affiché par le téléphone (« Tour N »). */
+  turnCount?: number
+  /** Difficulté de la partie (`Difficulty` du jeu), pour l'écran de fin. */
+  difficulty?: string
+  /** Liste « Effets en cours » du téléphone. */
+  effects?: PetitBuveurCastEffect[]
+  /** Fenêtre ouverte sur le téléphone avant l'effet de la case ; null sinon. */
+  stage?: PetitBuveurCastStage | null
+  /** Change quand le téléphone pose les pions sans les faire marcher (Rejouer, reprise). */
+  snapKey?: number
 }
+
+export type PetitBuveurCastEffectKind = 'protection' | 'curse' | 'chain' | 'skip' | 'anchor' | 'mirror'
+
+export type PetitBuveurCastEffect = {
+  kind: PetitBuveurCastEffectKind
+  playerId: string
+  /** Partenaire d'une chaîne, cible d'un miroir. */
+  partnerId?: string
+  /** Tours restants, comme le téléphone les compte. */
+  remaining: number
+}
+
+/** Gorgées bues et déplacement d'un joueur pendant l'effet de la case. */
+export type PetitBuveurCastChange = { playerId: string; drinks: number; from: number; to: number }
+
+/**
+ * Effet de la case, poussé quand la fenêtre « Effet de la case » s'ouvre sur
+ * le téléphone, mis à jour au verdict d'un défi (même `seq`), puis laissé tel
+ * quel jusqu'au lancer suivant, comme l'« Action précédente » du téléphone.
+ * Les textes sont ceux du téléphone, dans sa langue.
+ */
+export type PetitBuveurCastReveal = {
+  /** `CaseType` du jeu. */
+  caseType: string
+  seq: number
+  /** Texte de la case quand l'effet le reprend (défi, question). */
+  detail?: string | null
+  /** Le reste du texte de l'effet, paragraphe par paragraphe, sans le résumé des effets en cours. */
+  lines?: string[]
+  /** Case (1..30) où le lanceur est tombé ; null pour un tour passé. */
+  caseNumber?: number | null
+  /** Dé du lancer qui a mené à la case ; null pour un tour passé. */
+  dice?: number | null
+  targetId?: string | null
+  changes?: PetitBuveurCastChange[]
+  /** Défi ou question en cours : le téléphone attend le verdict (relevé ou bu). */
+  verdictPending?: boolean
+}
+
+/**
+ * Fenêtre ouverte sur le téléphone AVANT l'effet. `target` (« Qui cibler ? »)
+ * et `duel` ne portent jamais la case tombée : le téléphone la garde cachée
+ * jusqu'au choix. `result` : la ligne que le téléphone affiche une fois le
+ * tirage arrêté (langue du téléphone), jamais pendant.
+ */
+export type PetitBuveurCastStage =
+  | { kind: 'target' }
+  | { kind: 'duel'; caseNumber: number; opponentId?: string | null; rolling?: boolean; result?: string | null }
+  | {
+      kind: 'case'
+      /** `CaseType` du jeu. */
+      caseType: string
+      /** Valeur de la case (gorgées d'un vote, tours d'une chaîne). */
+      effect?: number
+      /** Joueur qui choisit pile ou face. */
+      targetId?: string | null
+      rolling?: boolean
+      result?: string | null
+      /** Dé de la honte : valeur tirée, une fois affichée. */
+      die?: number | null
+    }
 
 export type CastState = PlinkoCastState | PmuCastState | PetitBuveurCastState
 export type CastFrame = PlinkoCastFrame | PmuCastFrame

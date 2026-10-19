@@ -18,9 +18,26 @@ export type DrinkDelta = { key: number; playerId: string; delta: number }
 
 let deltaKey = 0
 
-export function useDrinkDeltas(drinksById: Record<string, number>, ttlMs = 1500): DrinkDelta[] {
+export function useDrinkDeltas(
+  drinksById: Record<string, number>,
+  ttlMs = 1500,
+  opts?: { silent?: boolean }
+): DrinkDelta[] {
   const [deltas, setDeltas] = useState<DrinkDelta[]>([])
   const prevRef = useRef<Record<string, number> | null>(null)
+  // Un minuteur par lot, vidé au démontage seulement : lié au nettoyage de
+  // l'effet, le retrait d'un lot sautait dès que les gorgées rechangeaient en
+  // moins de `ttlMs`, et son « +N » restait affiché pour de bon.
+  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+  const silent = opts?.silent ?? false
+
+  useEffect(() => {
+    const timers = timersRef.current
+    return () => {
+      timers.forEach(clearTimeout)
+      timers.clear()
+    }
+  }, [])
 
   useEffect(() => {
     const prev = prevRef.current
@@ -38,14 +55,15 @@ export function useDrinkDeltas(drinksById: Record<string, number>, ttlMs = 1500)
     }
     if (fresh.length === 0) return
 
-    playGameSound('drink')
+    if (!silent) playGameSound('drink')
     setDeltas((cur) => [...cur, ...fresh])
     const keys = new Set(fresh.map((f) => f.key))
     const timer = setTimeout(() => {
+      timersRef.current.delete(timer)
       setDeltas((cur) => cur.filter((d) => !keys.has(d.key)))
     }, ttlMs)
-    return () => clearTimeout(timer)
-  }, [drinksById, ttlMs])
+    timersRef.current.add(timer)
+  }, [drinksById, ttlMs, silent])
 
   return deltas
 }

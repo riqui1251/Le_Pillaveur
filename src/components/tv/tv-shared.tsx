@@ -9,11 +9,20 @@ export const TV_PALETTE = [
   '#a78bfa', '#fb7185', '#22d3ee', '#facc15',
 ]
 
+/**
+ * Taille en px de la toile de référence (1280×720, 1rem = 16px) vers rem :
+ * l'écran TV met le rem à l'échelle de la télé (src/styles/tv.css), un px
+ * fixe resterait minuscule sur une grande télé.
+ */
+export function tvRem(px: number): string {
+  return `${px / 16}rem`
+}
+
 export function tvColor(index: number): string {
   return TV_PALETTE[((index % TV_PALETTE.length) + TV_PALETTE.length) % TV_PALETTE.length]
 }
 
-/** Avatar TV : pastille colorée + initiale, lisible à distance. */
+/** Avatar TV : pastille colorée + initiale, lisible à distance. `size` en px de la toile de référence (1rem = 16px), rendu en rem pour suivre l'échelle de l'écran. */
 export function TvAvatar({
   name,
   index,
@@ -32,7 +41,7 @@ export function TvAvatar({
         'inline-flex shrink-0 items-center justify-center rounded-full font-black text-black/80 shadow-lg',
         active && 'ring-4 ring-white/80',
       )}
-      style={{ width: size, height: size, backgroundColor: tvColor(index), fontSize: size * 0.44 }}
+      style={{ width: tvRem(size), height: tvRem(size), backgroundColor: tvColor(index), fontSize: tvRem(size * 0.44) }}
       aria-hidden
     >
       {initial}

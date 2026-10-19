@@ -7,6 +7,7 @@ import { BrandMark } from '@/components/brand/BrandLogo'
 import { useFullscreen } from '@/hooks/useFullscreen'
 import { isCapacitorApp } from '@/lib/native-app'
 import { JoinQR } from './JoinQR'
+import { useHtmlClass } from './TvModeRoot'
 import { useKeepScreenAwake } from './use-keep-screen-awake'
 
 /**
@@ -34,6 +35,7 @@ export function TvStage({
   const t = useTranslations('tv')
   const { isFullscreen, isSupported, toggleFullscreen } = useFullscreen()
   useKeepScreenAwake()
+  useHtmlClass('tv-canvas')
   // Coquille mobile, connue après montage (comme FullscreenButton) : la
   // WebView y annule aussitôt tout plein écran d'élément — le bouton restait
   // visible mais ne faisait rien, alors que l'app occupe déjà l'écran.
@@ -43,29 +45,28 @@ export function TvStage({
   }, [])
 
   return (
-    <div className="app-felt fixed inset-0 flex flex-col overflow-hidden text-white">
-      <header className="flex items-center justify-between gap-6 border-b border-gold/15 px-6 py-4 sm:px-10">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-felt-deep p-1.5">
+    <div className="tv-stage app-felt fixed inset-0 flex flex-col overflow-hidden text-white">
+      {/* En-tête compact (≈ 6 rem sur une toile de 45) : chaque rem pris ici
+          manque au jeu, et le QR ne sert plus qu'aux retardataires. */}
+      <header className="flex shrink-0 items-center justify-between gap-6 border-b border-gold/20 px-8 py-2">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-felt-deep p-1.5">
             <BrandMark className="h-full w-full" />
           </div>
           <div className="min-w-0">
-            {/* Contraste : /70 sur le feutre était trop pâle pour une capitale
-                de 12px vue à trois mètres — remonté à /90. */}
-            <p className="font-display text-xs font-semibold uppercase tracking-[0.3em] text-gold/90">{t('brand')}</p>
-            <h1 className="truncate font-display text-2xl font-bold sm:text-3xl">{title}</h1>
+            <p className="font-display text-base font-semibold uppercase tracking-[0.3em] text-gold/90">{t('brand')}</p>
+            <h1 className="truncate font-display text-4xl font-bold leading-tight">{title}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-4">
           {joinUrl && (
-            <div className="flex items-center gap-4 rounded-2xl border border-[#D8CCAE] bg-cream px-4 py-2.5 text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]">
+            <div className="flex items-center gap-4 rounded-2xl border border-[#D8CCAE] bg-cream py-1 pl-5 pr-1 text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]">
               <div className="text-right">
-                {/* 11px → 12px et encre assombrie (#6B6455 tombait juste sous
-                    le seuil AA sur la plaque crème). */}
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#55503F]">{t('scanToJoin')}</p>
-                <p className="font-mono text-3xl font-black tracking-[0.35em] text-[#24201A] sm:text-4xl">{code}</p>
+                {/* Encre assombrie : #6B6455 tombait juste sous le seuil AA sur la plaque crème. */}
+                <p className="text-base font-semibold uppercase tracking-[0.2em] text-[#55503F]">{t('scanToJoin')}</p>
+                <p className="font-mono text-4xl font-black leading-tight tracking-[0.3em] text-[#24201A]">{code}</p>
               </div>
-              <JoinQR url={joinUrl} size={92} />
+              <JoinQR url={joinUrl} size={64} className="rounded-xl p-1.5 shadow-none" />
             </div>
           )}
           {/* Plein écran : impossible à déclencher au chargement (les
@@ -77,12 +78,12 @@ export function TvStage({
               type="button"
               onClick={() => void toggleFullscreen()}
               aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-felt-deep text-gold transition-colors hover:bg-gold/[0.15] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-felt-deep text-gold transition-colors hover:bg-gold/[0.15] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
             >
               {isFullscreen ? (
-                <Minimize2 aria-hidden className="h-5 w-5" />
+                <Minimize2 aria-hidden className="h-7 w-7" />
               ) : (
-                <Maximize2 aria-hidden className="h-5 w-5" />
+                <Maximize2 aria-hidden className="h-7 w-7" />
               )}
             </button>
           )}

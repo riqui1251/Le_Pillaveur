@@ -5,6 +5,7 @@ import {
   currentPurpleActorId,
   checkPurpleBet,
   PurpleEngineError,
+  toPurpleClientView,
   type PurpleState,
   type PurpleCard,
 } from './engine'
@@ -221,5 +222,17 @@ describe('départ / retour / remplacement', () => {
     )
     next = reducePurple(next, { type: 'REPLACE_LEFT', now: 1000, graceMs: 500 })
     expect(next.players.find((p) => p.id === me)?.isBot).toBe(true)
+  })
+})
+
+describe('toPurpleClientView', () => {
+  it('masque le paquet restant et retire la graine (vue joueur et écran TV public)', () => {
+    const state = freshState()
+    const view = toPurpleClientView(state)
+    expect(view).not.toHaveProperty('rngState')
+    expect(view.deck).toHaveLength(state.deck.length)
+    expect(view.deck.every((c) => c.value === '' && c.suit === '')).toBe(true)
+    expect(JSON.stringify(view)).not.toContain(JSON.stringify(state.deck[0]))
+    expect(state.deck[0].value).not.toBe('')
   })
 })

@@ -2619,7 +2619,8 @@
           "lucien": "…tranquillo.",
           "germaine": "…e sbrigatevi!",
           "bricole": "…dovrebbe reggere."
-        }
+        },
+        "hiddenBluffs": "{count, plural, one {+ # rilancio precedente con «nemmeno uno»} other {+ # rilanci precedenti con «nemmeno uno»}}"
       },
       "tutorial": {
         "steps": [
@@ -3338,7 +3339,8 @@
         },
         "choosing": {
           "pickWord": "Scegli una parola da disegnare",
-          "waitingFor": "{name} sta scegliendo una parola…"
+          "waitingFor": "{name} sta scegliendo una parola…",
+          "waitingForName": "<b>{name}</b> sta scegliendo una parola…"
         },
         "roundEnd": {
           "title": "Riepilogo manche",
@@ -3355,7 +3357,8 @@
         "countdown": {
           "title": "Preparatevi!",
           "hint": "La prima manche inizia ora…"
-        }
+        },
+        "drawerIs": "<b>{name}</b> disegna"
       },
       "tutorial": {
         "steps": [
@@ -3412,6 +3415,12 @@
         "countdown": {
           "title": "Preparatevi!",
           "hint": "Ognuno sta per scrivere la propria frase iniziale…"
+        },
+        "tv": {
+          "round": "Manche {current}/{total}",
+          "writing": "Ognuno scrive la sua frase di partenza",
+          "drawing": "Ognuno disegna la frase ricevuta",
+          "guessing": "Ognuno indovina il disegno ricevuto"
         }
       },
       "tutorial": {
@@ -4520,7 +4529,8 @@
         "elderAttackedBanner": "⏳ Sei stato preso di mira dai lupi questa notte.",
         "dayChatTitle": "Chat del villaggio",
         "ravenRevoteNotice": "Il segno del Corvo (+2 voti) non conta più nella rivotazione.",
-        "hunterMoment": "Il Cacciatore imbraccia il fucile!"
+        "hunterMoment": "Il Cacciatore imbraccia il fucile!",
+        "votedCount": "{n}/{total} hanno votato"
       },
       "tutorial": {
         "steps": [
@@ -4659,7 +4669,8 @@
           "replay": "Gioca ancora",
           "rematchWaiting": "Rivincita {count}/{total}…",
           "backToMenu": "Torna al menu"
-        }
+        },
+        "tvRemaining": "parole da trovare"
       },
       "tutorial": {
         "steps": [
@@ -6149,7 +6160,8 @@
     "startingHint": "Ognuno legge le regole sul proprio telefono.",
     "fullscreen": "Schermo intero",
     "exitFullscreen": "Esci dallo schermo intero",
-    "changeCode": "Cambia codice"
+    "changeCode": "Cambia codice",
+    "host": "Host"
   },
   "gameTutorial": {
     "next": "Avanti",

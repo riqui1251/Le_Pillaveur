@@ -37,28 +37,45 @@ const PIP: Record<'xs' | 'sm' | 'md' | 'lg' | 'xl', string> = {
 export function CssDie({
   face,
   size = 'md',
+  rem,
 }: {
   face: number
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  /**
+   * Côté en rem, points et marge compris (écran TV, dont le rem suit la
+   * télé) : les tailles nommées gardent des points en px, minuscules en 4K.
+   * Remplace `size`.
+   */
+  rem?: number
 }) {
   const pips = DIE_PIPS[face] ?? []
+  const r = (k: number) => `${Math.round((rem ?? 0) * k * 1000) / 1000}rem`
+  const boxStyle = rem === undefined ? undefined : { width: r(1), height: r(1), padding: r(0.125), borderRadius: r(0.2) }
+  const pipStyle = rem === undefined ? undefined : { width: r(0.17), height: r(0.17) }
   return (
     <span
       role="img"
       aria-label={`${face}`}
       className={cn(
         'inline-grid select-none grid-cols-3 grid-rows-3 place-items-center rounded-lg border shadow-inner',
-        BOX[size],
+        rem === undefined && BOX[size],
         face === 1
           ? 'border-amber-400/60 bg-amber-500/20 text-amber-300'
           : 'border-white/25 bg-white/95 text-gray-900'
       )}
+      style={boxStyle}
     >
       {Array.from({ length: 9 }, (_, i) => {
         const row = Math.floor(i / 3)
         const col = i % 3
         const on = pips.some(([r, c]) => r === row && c === col)
-        return <span key={i} className={cn('rounded-full bg-current', PIP[size], !on && 'opacity-0')} />
+        return (
+          <span
+            key={i}
+            className={cn('rounded-full bg-current', rem === undefined && PIP[size], !on && 'opacity-0')}
+            style={pipStyle}
+          />
+        )
       })}
     </span>
   )

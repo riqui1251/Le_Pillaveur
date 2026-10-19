@@ -24,6 +24,8 @@ export type BidLadderProps = {
   limit?: number
   /** Titre visible au-dessus des puces ; sans lui, la liste n'est nommée que pour les lecteurs d'écran. */
   titled?: boolean
+  /** Côté des dés en rem (écran TV, cf. CssDie) ; absent = taille nommée de la variante. */
+  dieRem?: number
 }
 
 /**
@@ -37,7 +39,7 @@ export type BidLadderProps = {
  * (le nom, la quantité, la face, puis la marque) : un « 3 × » lu « 3 fois »
  * à côté d'un dé sans nom ne dirait rien.
  */
-export function BidLadder({ bids, players, iconOf, variant, limit, titled = false }: BidLadderProps) {
+export function BidLadder({ bids, players, iconOf, variant, limit, titled = false, dieRem }: BidLadderProps) {
   const t = useTranslations('games.menteur.game')
   if (bids.length === 0) return null
   const tv = variant === 'tv'
@@ -61,7 +63,7 @@ export function BidLadder({ bids, players, iconOf, variant, limit, titled = fals
         className={cn('flex flex-wrap items-center justify-center', tv ? 'gap-3' : 'gap-1')}
       >
         {start > 0 && (
-          <li aria-hidden className={cn('font-bold text-white/50', tv ? 'text-2xl' : 'text-xs')}>
+          <li aria-hidden className={cn('font-bold', tv ? 'text-2xl text-white/70' : 'text-xs text-white/50')}>
             …
           </li>
         )}
@@ -99,7 +101,7 @@ export function BidLadder({ bids, players, iconOf, variant, limit, titled = fals
                 )}
                 <span className="tabular-nums">{bid.qty}</span>
                 <span className="text-white/60">×</span>
-                <CssDie face={bid.face} size={tv ? 'md' : 'xs'} />
+                <CssDie face={bid.face} size={tv ? 'md' : 'xs'} rem={dieRem} />
                 {bluff && (
                   <span className={cn('text-red-300', tv ? 'ml-1 text-xl' : 'ml-0.5 text-[11px]')}>
                     {t('bluffMark')}

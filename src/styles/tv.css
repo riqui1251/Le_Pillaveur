@@ -1,0 +1,31 @@
+/* Échelle de l'écran TV : tout l'affichage est dessiné en rem sur une toile de
+   80 × 45 rem (16:9), et le rem suit l'écran. 1rem vaut 16px sur un 1280×720,
+   24px sur un 1920×1080, 48px sur une 4K : les proportions restent les mêmes
+   d'une télé à l'autre, là où des tailles fixes laissaient un plateau minuscule
+   au milieu d'une grande télé et coupaient le bas sur une petite.
+   La plus petite des deux dimensions décide : sur un écran plus large que
+   16:9, c'est la hauteur qui borne, sinon le bas de la toile serait coupé. */
+html.tv-mode {
+  font-size: 16px;
+}
+
+@media (orientation: landscape) {
+  html.tv-mode {
+    font-size: 1.25vw;
+    font-size: max(6px, min(1.25vw, 2.2222vh));
+  }
+}
+
+/* Écran de jeu (`tv-canvas`, posé par TvStage) tenu en portrait — téléphone,
+   tablette : la toile se cale sur la largeur, pour que rien ne sorte à gauche
+   ou à droite, et la hauteur en trop défile. L'accueil /tv (saisie du code)
+   garde la taille normale, lisible au doigt. */
+@media (orientation: portrait) {
+  html.tv-mode.tv-canvas {
+    font-size: 1.25vw;
+  }
+
+  html.tv-mode .tv-stage {
+    overflow-y: auto;
+  }
+}

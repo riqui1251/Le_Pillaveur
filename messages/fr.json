@@ -2619,7 +2619,8 @@
           "lucien": "…tranquille.",
           "germaine": "…et que ça saute !",
           "bricole": "…ça devrait tenir."
-        }
+        },
+        "hiddenBluffs": "{count, plural, one {+ # enchère « sans un seul » plus tôt} other {+ # enchères « sans un seul » plus tôt}}"
       },
       "tutorial": {
         "steps": [
@@ -3338,7 +3339,8 @@
         },
         "choosing": {
           "pickWord": "Choisis un mot à dessiner",
-          "waitingFor": "{name} choisit un mot…"
+          "waitingFor": "{name} choisit un mot…",
+          "waitingForName": "<b>{name}</b> choisit un mot…"
         },
         "roundEnd": {
           "title": "Bilan de la manche",
@@ -3355,7 +3357,8 @@
         "countdown": {
           "title": "Préparez-vous !",
           "hint": "La première manche commence…"
-        }
+        },
+        "drawerIs": "<b>{name}</b> dessine"
       },
       "tutorial": {
         "steps": [
@@ -3412,6 +3415,12 @@
         "countdown": {
           "title": "Préparez-vous !",
           "hint": "Chacun va écrire sa propre phrase de départ…"
+        },
+        "tv": {
+          "round": "Manche {current}/{total}",
+          "writing": "Chacun écrit sa phrase de départ",
+          "drawing": "Chacun dessine la phrase reçue",
+          "guessing": "Chacun devine le dessin reçu"
         }
       },
       "tutorial": {
@@ -4520,7 +4529,8 @@
         "elderAttackedBanner": "⏳ Vous avez été pris pour cible par les loups cette nuit.",
         "dayChatTitle": "Chat du village",
         "ravenRevoteNotice": "La marque du Corbeau (+2 voix) ne compte plus au revote.",
-        "hunterMoment": "Le Chasseur arme son fusil !"
+        "hunterMoment": "Le Chasseur arme son fusil !",
+        "votedCount": "{n}/{total} ont voté"
       },
       "tutorial": {
         "steps": [
@@ -4659,7 +4669,8 @@
           "replay": "Rejouer",
           "rematchWaiting": "Revanche {count}/{total}…",
           "backToMenu": "Retour au menu"
-        }
+        },
+        "tvRemaining": "mots à trouver"
       },
       "tutorial": {
         "steps": [
@@ -6149,7 +6160,8 @@
     "startingHint": "Chacun lit les règles sur son téléphone.",
     "fullscreen": "Plein écran",
     "exitFullscreen": "Quitter le plein écran",
-    "changeCode": "Changer de code"
+    "changeCode": "Changer de code",
+    "host": "Hôte"
   },
   "gameTutorial": {
     "next": "Suivant",

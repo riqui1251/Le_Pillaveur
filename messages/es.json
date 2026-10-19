@@ -2619,7 +2619,8 @@
           "lucien": "…tranqui.",
           "germaine": "…¡y rapidito!",
           "bricole": "…eso debería aguantar."
-        }
+        },
+        "hiddenBluffs": "{count, plural, one {+ # apuesta anterior con «ni uno solo»} other {+ # apuestas anteriores con «ni uno solo»}}"
       },
       "tutorial": {
         "steps": [
@@ -3338,7 +3339,8 @@
         },
         "choosing": {
           "pickWord": "Elige una palabra para dibujar",
-          "waitingFor": "{name} está eligiendo una palabra…"
+          "waitingFor": "{name} está eligiendo una palabra…",
+          "waitingForName": "<b>{name}</b> está eligiendo una palabra…"
         },
         "roundEnd": {
           "title": "Resumen de la ronda",
@@ -3355,7 +3357,8 @@
         "countdown": {
           "title": "¡Preparaos!",
           "hint": "La primera ronda empieza ya…"
-        }
+        },
+        "drawerIs": "<b>{name}</b> dibuja"
       },
       "tutorial": {
         "steps": [
@@ -3412,6 +3415,12 @@
         "countdown": {
           "title": "¡Prepárate!",
           "hint": "Cada uno va a escribir su propia frase inicial…"
+        },
+        "tv": {
+          "round": "Ronda {current}/{total}",
+          "writing": "Cada uno escribe su frase inicial",
+          "drawing": "Cada uno dibuja la frase recibida",
+          "guessing": "Cada uno adivina el dibujo recibido"
         }
       },
       "tutorial": {
@@ -4520,7 +4529,8 @@
         "elderAttackedBanner": "⏳ Los lobos te atacaron esta noche.",
         "dayChatTitle": "Chat del pueblo",
         "ravenRevoteNotice": "La marca del Cuervo (+2 votos) ya no cuenta en la segunda votación.",
-        "hunterMoment": "¡El Cazador desenfunda su rifle!"
+        "hunterMoment": "¡El Cazador desenfunda su rifle!",
+        "votedCount": "{n}/{total} han votado"
       },
       "tutorial": {
         "steps": [
@@ -4659,7 +4669,8 @@
           "replay": "Jugar otra vez",
           "rematchWaiting": "Revancha {count}/{total}…",
           "backToMenu": "Volver al menú"
-        }
+        },
+        "tvRemaining": "palabras por encontrar"
       },
       "tutorial": {
         "steps": [
@@ -6149,7 +6160,8 @@
     "startingHint": "Cada uno lee las reglas en su móvil.",
     "fullscreen": "Pantalla completa",
     "exitFullscreen": "Salir de pantalla completa",
-    "changeCode": "Cambiar de código"
+    "changeCode": "Cambiar de código",
+    "host": "Anfitrión"
   },
   "gameTutorial": {
     "next": "Siguiente",

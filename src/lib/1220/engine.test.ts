@@ -7,6 +7,7 @@ import {
   defaultChoices1220,
   GAME_1220_SETUP_MS,
   type Game1220State,
+  toGame1220ClientView,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
 
@@ -225,5 +226,13 @@ describe('départ / retour / remplacement', () => {
     const p1 = s.players.find((p) => p.id === 'p1')
     expect(p1?.isBot).toBe(true)
     expect(p1?.leftAt).toBeNull()
+  })
+})
+
+describe('toGame1220ClientView', () => {
+  it('ne transmet pas la graine des lancers (vue joueur et écran TV public)', () => {
+    const view = toGame1220ClientView(freshState())
+    expect(view).not.toHaveProperty('rngState')
+    expect(view.phaseKey).toBe(phaseKey(freshState()))
   })
 })

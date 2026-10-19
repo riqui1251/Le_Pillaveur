@@ -456,11 +456,24 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
           name: p.name,
           totalRed: rs.reduce((s, r) => s + r.redSips, 0),
           totalGreen: rs.reduce((s, r) => s + r.greenSips, 0),
+          turns: rs.map((r) => ({ redSips: r.redSips, greenSips: r.greenSips, powerups: r.powerups.map((pu) => pu.type) })),
         }
       }),
       roundDrinks: roundDrinksCount,
+      currentPlayerIndex,
+      cumulative: isCumulativeMode,
+      live: liveBalls,
+      extraSlot: finalSlotIndices.extra,
+      // L'effet de fin de partie ne saute « tournées » qu'au rendu suivant : sans
+      // cette correction, la TV afficherait un instant un écran que le téléphone ne montre pas.
+      results: gameOver
+        ? {
+            phase: resultDisplayPhase === 'tournees' && roundDrinksCount === 0 ? 'details' : resultDisplayPhase,
+            playerIndex: currentPlayerResultIndex,
+          }
+        : null,
     }
-  }, [players, currentPlayerIndex, gameOver, isAnimating, turnResult, slotSipValues, finalSlotIndices, playerResults, roundDrinksCount, pinPositions, specialPins])
+  }, [players, currentPlayerIndex, gameOver, isAnimating, turnResult, slotSipValues, finalSlotIndices, playerResults, roundDrinksCount, pinPositions, specialPins, isCumulativeMode, liveBalls, resultDisplayPhase, currentPlayerResultIndex])
 
   const toggleCast = () => {
     if (castActive) void stopCast()

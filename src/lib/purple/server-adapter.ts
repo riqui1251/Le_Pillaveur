@@ -13,7 +13,8 @@ import { randomSeed } from '@/lib/petit-buveur/rng'
 
 /**
  * Adaptateur serveur du Purple : sérialisation, mapping HTTP → actions
- * moteur, vues (aucune info cachée, une seule vue sert joueur + spectateur).
+ * moteur, vues (une seule vue sert joueur + spectateur, paquet restant masqué
+ * et graine retirée — voir toPurpleClientView).
  * Consommé par le registre `src/lib/online/game-adapters.ts`.
  */
 

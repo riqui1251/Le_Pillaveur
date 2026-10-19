@@ -292,6 +292,15 @@ export function reducePurple(state: PurpleState, action: PurpleAction): PurpleSt
   }
 }
 
+const HIDDEN_CARD: PurpleCard = { value: '', suit: '', color: 'black' }
+
+/**
+ * Le paquet restant voyage masqué, et sans la graine qui le rejoue : son ordre
+ * donnait les prochaines cartes avant de parier, à tout joueur comme à
+ * quiconque lit l'écran TV public avec le code de la table. Seule sa taille
+ * s'affiche (« N cartes restantes »).
+ */
 export function toPurpleClientView(state: PurpleState) {
-  return state
+  const { rngState: _rngState, ...visible } = state
+  return { ...visible, deck: state.deck.map(() => HIDDEN_CARD) }
 }

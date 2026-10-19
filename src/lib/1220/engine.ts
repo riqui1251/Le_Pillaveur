@@ -8,8 +8,9 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  * Contrairement aux autres jeux, il n'y a pas de tour : chaque joueur règle
  * ses propres paris une fois en phase `setup` (parité/plage/chiffres), puis
  * en phase `play` N'IMPORTE QUEL joueur peut déclencher un lancer partagé
- * (d12+d20) évalué contre les paris de TOUT LE MONDE. Zéro info cachée →
- * aucune vue anti-triche nécessaire, la même vue sert joueur et spectateur.
+ * (d12+d20) évalué contre les paris de TOUT LE MONDE. Rien à cacher entre
+ * joueurs : une seule vue sert joueur et spectateur, sans la graine des dés
+ * (elle prédirait le prochain lancer — voir toGame1220ClientView).
  *
  * La mise en place est SIMULTANÉE : aucun acteur unique, donc l'anti-AFK
  * commun (`replace-afk`, qui vise le joueur au tour) ne s'y applique pas. Elle
@@ -272,9 +273,12 @@ export function currentGame1220ActorId(_state: Game1220State): string | null {
 }
 
 /**
- * Aucune info cachée : la même vue sert joueur et spectateur TV. `phaseKey`
- * accompagne l'état pour que les clients renvoient l'échéance qu'ils ont vue.
+ * La même vue sert joueur et spectateur TV. `phaseKey` accompagne l'état pour
+ * que les clients renvoient l'échéance qu'ils ont vue. Seule la graine reste
+ * au serveur : elle permettait de calculer le prochain lancer avant de parier,
+ * y compris depuis l'écran TV public.
  */
 export function toGame1220ClientView(state: Game1220State) {
-  return { ...state, phaseKey: phaseKey(state) }
+  const { rngState: _rngState, ...visible } = state
+  return { ...visible, phaseKey: phaseKey(state) }
 }

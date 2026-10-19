@@ -2,9 +2,16 @@ import type { Metadata } from 'next'
 import { getMessages } from 'next-intl/server'
 import { tvSlice } from '@/i18n/messages-slices'
 import { ClientMessages } from '@/components/i18n/ClientMessages'
+import { TvModeRoot } from '@/components/tv/TvModeRoot'
 // Cosmétiques en ligne (écussons de rôle de TvLobby, via RankCrest) — sortis
 // de globals.css, servis à ce segment seulement, comme /games et /compte.
 import '@/styles/online-cosmetics.css'
+import '@/styles/tv.css'
+
+// `tv-canvas` : écran de salle (/tv/CODE), que TvStage maintient ensuite ; pas
+// l'accueil /tv, qui garde la taille normale en portrait.
+const TV_MODE_BOOT =
+  "var c=document.documentElement.classList;c.add('tv-mode');if(/\\/tv\\/[^/]/.test(location.pathname))c.add('tv-canvas')"
 
 // Page personnelle ou utilitaire : à ne pas indexer par les moteurs.
 export const metadata: Metadata = {
@@ -23,5 +30,13 @@ export default async function Layout({
   // jeux, que le layout de langue n'embarque plus — voir
   // src/i18n/messages-slices.ts. Un grand écran sur le wifi du salon, pas un
   // téléphone en 4G : le poids compte moins ici.
-  return <ClientMessages messages={tvSlice(await getMessages({ locale }))}>{children}</ClientMessages>
+  return (
+    <ClientMessages messages={tvSlice(await getMessages({ locale }))}>
+      {/* Avant l'hydratation : sans échelle, la première image d'une télé
+          serait dessinée en tailles de bureau puis sauterait. */}
+      <script dangerouslySetInnerHTML={{ __html: TV_MODE_BOOT }} />
+      <TvModeRoot />
+      {children}
+    </ClientMessages>
+  )
 }

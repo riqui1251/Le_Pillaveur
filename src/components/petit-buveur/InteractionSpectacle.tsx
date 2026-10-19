@@ -36,8 +36,20 @@ export type SpectacleLabels = {
   deHonteCannotBack?: string
 }
 
+/**
+ * Durée du suspense de chaque tirage, alignée sur son animation (la roue
+ * tourne 4,5 s) : le résultat ne s'écrit qu'après. L'écran TV suit les mêmes.
+ */
+export function spectacleSpinMs(kind: LastInteraction['kind'], reduced: boolean): number {
+  if (reduced) return 150
+  return kind === 'de-honte' ? 1300 : kind === 'pile-face' ? 1900 : 4600
+}
+
+/** Maintien du résultat à l'écran après le suspense. */
+export const SPECTACLE_OUTCOME_HOLD_MS = 2200
+
 /** Gorgées infligées par le tirage (0 = safe), toutes variantes confondues. */
-function interactionDrinks(inter: LastInteraction): number {
+export function interactionDrinks(inter: LastInteraction): number {
   if (inter.kind === 'de-honte') return inter.value === 3 || inter.value === 4 ? 2 : 0
   return inter.drinks
 }
@@ -236,13 +248,12 @@ export function InteractionSpectacle({
     setCurrentFrom(fromRef.current)
     setShowOutcome(false)
     playGameSound(inter.kind === 'de-honte' ? 'dice-roll' : 'wheel')
-    // Durée du suspense alignée sur chaque animation (la roue tourne 4,5 s).
-    const spinMs = reduced ? 150 : inter.kind === 'de-honte' ? 1300 : inter.kind === 'pile-face' ? 1900 : 4600
+    const spinMs = spectacleSpinMs(inter.kind, reduced)
     const outcomeTimer = setTimeout(() => {
       setShowOutcome(true)
       playGameSound(interactionDrinks(inter) > 0 ? 'drink' : 'dice-result')
     }, spinMs)
-    const hideTimer = setTimeout(() => setCurrent(null), spinMs + 2200)
+    const hideTimer = setTimeout(() => setCurrent(null), spinMs + SPECTACLE_OUTCOME_HOLD_MS)
     return () => {
       clearTimeout(outcomeTimer)
       clearTimeout(hideTimer)

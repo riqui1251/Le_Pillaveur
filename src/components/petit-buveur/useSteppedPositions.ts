@@ -24,11 +24,21 @@ export function useSteppedPositions(
     frozen?: boolean
     onStep?: (playerId: string, position: number) => void
     snapKey?: string | number
+    /** Aucun son de pas (écran TV, muet). */
+    silent?: boolean
+    /**
+     * Garde le pas case par case (et le gel) même sous prefers-reduced-motion :
+     * l'écran TV suit la chronologie des téléphones, pas son propre réglage.
+     */
+    keepPace?: boolean
   }
 ): { positions: Record<string, number>; isStepping: boolean } {
-  const reduced = useReducedMotion()
+  const prefersReduced = useReducedMotion()
+  const reduced = Boolean(prefersReduced) && !opts?.keepPace
   const frozen = opts?.frozen ?? false
   const snapKey = opts?.snapKey
+  const silentRef = useRef(opts?.silent ?? false)
+  silentRef.current = opts?.silent ?? false
   const [display, setDisplay] = useState<Record<string, number>>(targets)
   const [seenSnapKey, setSeenSnapKey] = useState(snapKey)
   const onStepRef = useRef(opts?.onStep)
@@ -72,7 +82,7 @@ export function useSteppedPositions(
           return prev
         }
         for (const id of step.moved) {
-          playGameSound('step')
+          if (!silentRef.current) playGameSound('step')
           onStepRef.current?.(id, step.next[id])
         }
         return step.next

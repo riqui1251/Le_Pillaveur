@@ -3,6 +3,10 @@ import {
   boardHighlightClass,
   boardHighlights,
   buildLocalCastState,
+  castChanges,
+  castEffectOf,
+  htmlToLines,
+  localRevealContent,
   nextCastCue,
   rankByShownPosition,
   shownPosition,
@@ -87,6 +91,118 @@ describe('diffusion TV d’une partie locale (#24)', () => {
     expect(first).toEqual({ value: 4, seq: 1000 })
     expect(sameMs.seq).toBe(1001)
     expect(clockBack.seq).toBe(1002)
+  })
+
+  it('la case d’un tour passe après son dé, même horloge en retard', () => {
+    expect(nextCastCue({ seq: 5 }, { caseType: 'gorgée' }, 3, 2_000).seq).toBe(2_001)
+  })
+
+  it('porte les champs ajoutés (icônes, tour, effets, fenêtre, saut) seulement quand ils sont donnés', () => {
+    const state = buildLocalCastState({
+      players: [
+        { id: 'A', name: 'Alice', position: 3, drinks: 2, icon: '🦊' },
+        { id: 'B', name: 'Bob', position: 0, drinks: 0, icon: null },
+      ],
+      currentPlayer: 1,
+      winnerId: null,
+      dice: { value: 0, seq: 12, phase: 'rolling' },
+      reveal: null,
+      ambiance: 'alcool',
+      turnCount: 4,
+      difficulty: 'difficile',
+      effects: [{ kind: 'curse', playerId: 'A', remaining: 2 }],
+      stage: { kind: 'target' },
+      snapKey: 3,
+    })
+    expect(state.players).toEqual([
+      { id: 'A', name: 'Alice', position: 3, drinks: 2, icon: '🦊' },
+      { id: 'B', name: 'Bob', position: 0, drinks: 0 },
+    ])
+    expect(state).toMatchObject({ turnCount: 4, difficulty: 'difficile', stage: { kind: 'target' }, snapKey: 3 })
+    expect(state.effects).toEqual([{ kind: 'curse', playerId: 'A', remaining: 2 }])
+    const bare = buildLocalCastState({ players: [], currentPlayer: 0, winnerId: null, dice: null, reveal: null, ambiance: 'soft' })
+    expect(Object.keys(bare)).not.toContain('stage')
+    expect(Object.keys(bare)).not.toContain('effects')
+  })
+})
+
+describe('carte TV d’un effet de case local', () => {
+  it('texte de la notification en paragraphes, sans balise, entités décodées', () => {
+    const html =
+      '<span class="player-name font-semibold">Tom &amp; Jerry</span> boit <strong>3</strong> gorgée(s) !\n\n<span class="italic text-sm">Santé &quot;!&quot;</span>'
+    expect(htmlToLines(html)).toEqual(['Tom & Jerry boit 3 gorgée(s) !', 'Santé "!"'])
+    expect(htmlToLines('')).toEqual([])
+    expect(htmlToLines('a<br/>b &#39;c&#39; &#x1F37A;')).toEqual(['a', "b 'c' 🍺"])
+  })
+
+  it('pastilles : qui a bu et qui a bougé depuis l’arrivée sur la case', () => {
+    const before = [
+      { id: 'A', position: 6, drinks: 1 },
+      { id: 'B', position: 2, drinks: 0 },
+      { id: 'C', position: 4, drinks: 3 },
+    ]
+    const after = [
+      { id: 'A', position: 8, drinks: 1 },
+      { id: 'B', position: 2, drinks: 2 },
+      { id: 'C', position: 4, drinks: 3 },
+    ]
+    expect(castChanges(before, after)).toEqual([
+      { playerId: 'A', drinks: 0, from: 6, to: 8 },
+      { playerId: 'B', drinks: 2, from: 2, to: 2 },
+    ])
+  })
+
+  it('effets en cours : le genre vient de l’id de la liste du téléphone', () => {
+    expect(castEffectOf({ id: 'prot-A', player: { id: 'A' }, remainingTurns: 2 })).toEqual({
+      kind: 'protection',
+      playerId: 'A',
+      remaining: 2,
+    })
+    expect(castEffectOf({ id: 'link-A', player: { id: 'A' }, linkedPlayer: { id: 'B' }, remainingTurns: 5 })).toEqual({
+      kind: 'chain',
+      playerId: 'A',
+      partnerId: 'B',
+      remaining: 5,
+    })
+    expect(castEffectOf({ id: 'mirror-A', player: { id: 'A' }, linkedPlayer: { id: 'C' }, remainingTurns: 1 })?.kind).toBe(
+      'mirror'
+    )
+    expect(castEffectOf({ id: 'autre-A', player: { id: 'A' }, remainingTurns: 1 })).toBeNull()
+  })
+
+  it('défi : le texte de la case à part, le reste en lignes, verdict en attente', () => {
+    const content = localRevealContent({
+      caseType: 'defi',
+      mainHtml: 'Défi : Imite un chat ou bois 2 gorgée(s) !\n\nJoueur ciblé : <span class="player-name">Bob</span>',
+      caseText: 'Défi : Imite un chat ou bois 2 gorgée(s) !',
+      landing: { players: [{ id: 'B', position: 2, drinks: 0 }], caseNumber: 7, dice: 4 },
+      players: [{ id: 'B', position: 2, drinks: 0 }],
+      targetId: 'B',
+      verdictPending: true,
+    })
+    expect(content).toEqual({
+      caseType: 'defi',
+      detail: 'Défi : Imite un chat ou bois 2 gorgée(s) !',
+      lines: ['Joueur ciblé : Bob'],
+      caseNumber: 7,
+      dice: 4,
+      targetId: 'B',
+      changes: [],
+      verdictPending: true,
+    })
+  })
+
+  it('tour passé : ni case ni dé', () => {
+    const content = localRevealContent({
+      caseType: 'passe-tour',
+      mainHtml: '⏭️ Bob passe automatiquement ce tour.',
+      caseText: null,
+      landing: { players: [], caseNumber: null, dice: null },
+      players: [],
+      targetId: null,
+      verdictPending: false,
+    })
+    expect(content).toMatchObject({ caseNumber: null, dice: null, detail: null, lines: ['⏭️ Bob passe automatiquement ce tour.'] })
   })
 })
 
