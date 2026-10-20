@@ -5429,7 +5429,8 @@
         "active": "En curso",
         "resolved": "Resueltos"
       },
-      "journalDesc": "{count, plural, one {La última acción del equipo de moderación.} other {Las # últimas acciones del equipo de moderación, de la más reciente a la más antigua.}}"
+      "journalDesc": "Todo el historial del equipo de moderación: {count, plural, one {# acción} other {# acciones}}, de la más reciente a la más antigua.",
+      "journalLoadError": "No se pudo cargar el registro del equipo."
     },
     "growth": {
       "registeredShareLabel": "Proporción de cuentas registradas",
@@ -5475,7 +5476,7 @@
       "queueAckAction": "Reconocer",
       "journalTitle": "Registro del equipo",
       "journalDesc": "Trazabilidad del equipo de moderación",
-      "journalAll": "{count, plural, one {La última acción} other {Las # últimas acciones}}",
+      "journalAll": "Todo el registro",
       "journalEmpty": "Ninguna acción reciente.",
       "journalBan": "{actor} baneó a {target}",
       "journalBanReason": "{actor} baneó a {target} — «{detail}»",

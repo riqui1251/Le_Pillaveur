@@ -5429,7 +5429,8 @@
         "active": "Open",
         "resolved": "Resolved"
       },
-      "journalDesc": "{count, plural, one {The moderation team's last action.} other {The moderation team's last # actions, newest first.}}"
+      "journalDesc": "The moderation team's full history: {count, plural, one {# action} other {# actions}}, newest first.",
+      "journalLoadError": "Couldn't load the team log."
     },
     "growth": {
       "registeredShareLabel": "Share of registered accounts",
@@ -5475,7 +5476,7 @@
       "queueAckAction": "Acknowledge",
       "journalTitle": "Team log",
       "journalDesc": "Moderation team traceability",
-      "journalAll": "{count, plural, one {The last action} other {The last # actions}}",
+      "journalAll": "Full log",
       "journalEmpty": "No recent action.",
       "journalBan": "{actor} banned {target}",
       "journalBanReason": "{actor} banned {target} — “{detail}”",

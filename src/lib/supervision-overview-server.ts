@@ -961,8 +961,17 @@ export function invalidateGrowthStats(): void {
   growthCache = null
 }
 
+/**
+ * Les acquittements (feedback, pseudo) ne sont pas des actes de journal : ils
+ * encombreraient la liste sans rien apprendre. Écartés EN BASE, pour que le
+ * total de la pagination et le découpage des pages ne les comptent pas.
+ */
+const JOURNAL_HIDDEN_ACTIONS = ['feedback-ack', 'name-flag-ack']
+const JOURNAL_BAN_EVENT_WHERE = { action: { notIn: JOURNAL_HIDDEN_ACTIONS } }
+
 /** Nature d'entrée de journal déduite de l'action stockée sur AccountBanEvent. */
 function journalKindForAction(action: string): JournalKind | null {
+  if (JOURNAL_HIDDEN_ACTIONS.includes(action)) return null
   switch (action) {
     case 'unban':
       return 'unban'
@@ -980,45 +989,59 @@ function journalKindForAction(action: string): JournalKind | null {
     // banni » par défaut.
     case 'metrics-exclusion':
       return 'site-setting'
-    // Les acquittements (feedback, pseudo) ne sont pas des actes de journal :
-    // ils encombreraient la liste sans rien apprendre.
-    case 'feedback-ack':
-    case 'name-flag-ack':
-      return null
     default:
       return 'ban'
   }
 }
 
-async function getJournal(limit = 20): Promise<JournalEntry[]> {
+/**
+ * Ordre du journal : la plus récente d'abord, l'id départageant deux actions
+ * de la même milliseconde — sans lui, une page relue pourrait permuter deux
+ * entrées de part et d'autre d'une frontière de page.
+ */
+const JOURNAL_ORDER = [{ createdAt: 'desc' as const }, { id: 'desc' as const }]
+
+function compareJournalEntries(a: JournalEntry, b: JournalEntry): number {
+  const byDate = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  if (byDate !== 0) return byDate
+  return a.id < b.id ? 1 : a.id > b.id ? -1 : 0
+}
+
+/**
+ * Les `depth` entrées les plus récentes du journal, fusionné depuis ses quatre
+ * sources. Lire les `depth` plus récentes de CHAQUE source suffit : aucune
+ * entrée plus ancienne d'une source ne peut passer devant elles.
+ */
+async function readJournal(depth: number): Promise<JournalEntry[]> {
   const [banEvents, grants, featureBans, terms] = await Promise.all([
     prisma.accountBanEvent.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: limit * 2,
+      where: JOURNAL_BAN_EVENT_WHERE,
+      orderBy: JOURNAL_ORDER,
+      take: depth,
       include: {
         user: { select: { displayName: true } },
         actor: { select: { displayName: true } },
       },
     }),
     prisma.cosmeticGrant.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: limit,
+      orderBy: JOURNAL_ORDER,
+      take: depth,
       include: {
         user: { select: { displayName: true } },
         grantedBy: { select: { displayName: true } },
       },
     }),
     prisma.featureBan.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: limit,
+      orderBy: JOURNAL_ORDER,
+      take: depth,
       include: {
         user: { select: { displayName: true } },
         actor: { select: { displayName: true } },
       },
     }),
     prisma.moderationTerm.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: limit,
+      orderBy: JOURNAL_ORDER,
+      take: depth,
     }),
   ])
 
@@ -1077,9 +1100,35 @@ async function getJournal(limit = 20): Promise<JournalEntry[]> {
     })),
   ]
 
-  return entries
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, limit)
+  return entries.sort(compareJournalEntries).slice(0, depth)
+}
+
+/** Les dernières entrées, pour la Salle (vue d'ensemble rafraîchie en boucle) : sans comptage. */
+function getJournal(limit = 20): Promise<JournalEntry[]> {
+  return readJournal(limit)
+}
+
+/**
+ * Une page du journal de l'équipe (Modération › Journal), avec le total pour
+ * la pagination. Le coût croît avec la profondeur de la page — au pire
+ * `skip + take` lignes par source —, supportable pour un journal d'équipe lu
+ * à la demande, jamais en boucle.
+ */
+export async function getJournalPage({
+  skip,
+  take,
+}: {
+  skip: number
+  take: number
+}): Promise<{ entries: JournalEntry[]; total: number }> {
+  const [merged, banEvents, grants, featureBans, terms] = await Promise.all([
+    readJournal(skip + take),
+    prisma.accountBanEvent.count({ where: JOURNAL_BAN_EVENT_WHERE }),
+    prisma.cosmeticGrant.count(),
+    prisma.featureBan.count(),
+    prisma.moderationTerm.count(),
+  ])
+  return { entries: merged.slice(skip, skip + take), total: banEvents + grants + featureBans + terms }
 }
 
 async function getQueue(actorRole: string): Promise<QueueItem[]> {

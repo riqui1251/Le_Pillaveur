@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode, type RefObject } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
@@ -187,8 +187,9 @@ import { cn } from '@/lib/utils'
 const ACCOUNTS_PAGE_SIZE = 25
 const FEEDBACK_PAGE_SIZE = 25
 
-/** Entrées du journal de l'équipe visibles dans la Salle ; les 20 servies sont dans Modération › Journal. */
+/** Entrées du journal de l'équipe visibles dans la Salle ; tout l'historique est dans Modération › Journal. */
 const TEAM_JOURNAL_PREVIEW = 5
+const TEAM_JOURNAL_PAGE_SIZE = 25
 
 /** Pastilles du bandeau santé qui déplient un détail sous lui plutôt que de mener ailleurs. */
 const HEALTH_TOGGLE_KEYS: readonly string[] = ['retention', HEALTH_OK_GROUP]
@@ -3277,6 +3278,100 @@ function MethodDialog({
 }
 
 /**
+ * Modération › Journal : tout l'historique de l'équipe, page par page
+ * (/api/admin/journal), hors de la boucle de 15 s. La page se relit quand
+ * l'exploitant en change, et quand la vue d'ensemble voit passer une action
+ * nouvelle (`latestId`) : sans quoi la liste et son total resteraient ceux de
+ * l'ouverture.
+ */
+function TeamJournalPanel({
+  latestId,
+  renderEntries,
+}: {
+  latestId: string | undefined
+  renderEntries: (entries: JournalEntry[]) => ComponentProps<typeof JournalList>['entries']
+}) {
+  const t = useTranslations('supervision')
+  const [page, setPage] = useState(1)
+  const [journal, setJournal] = useState<{ entries: JournalEntry[]; total: number } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  // Une réponse plus ancienne (page changée entre-temps) peut arriver après
+  // la plus récente : seule la dernière requête lancée écrit.
+  const requestSeq = useRef(0)
+
+  const load = useCallback(async (target: number) => {
+    const seq = ++requestSeq.current
+    const isLatest = () => seq === requestSeq.current
+    setLoading(true)
+    setFailed(false)
+    try {
+      const params = new URLSearchParams({ page: String(target), pageSize: String(TEAM_JOURNAL_PAGE_SIZE) })
+      const res = await fetch(`/api/admin/journal?${params.toString()}`, { credentials: 'include' })
+      if (!res.ok) throw new Error(`journal ${res.status}`)
+      const data = (await res.json()) as { entries?: JournalEntry[]; total?: number }
+      if (!isLatest()) return
+      const total = data.total ?? 0
+      // Page vidée entre deux lectures (sanction levée, par exemple) : on
+      // retombe sur la dernière page qui existe, pas sur « aucune action ».
+      const lastPage = Math.max(1, Math.ceil(total / TEAM_JOURNAL_PAGE_SIZE))
+      if (target > lastPage) {
+        setPage(lastPage)
+        return
+      }
+      setJournal({ entries: data.entries ?? [], total })
+    } catch {
+      if (isLatest()) setFailed(true)
+    } finally {
+      if (isLatest()) setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load(page)
+  }, [load, page, latestId])
+
+  const total = journal?.total ?? 0
+  const pages = Math.max(1, Math.ceil(total / TEAM_JOURNAL_PAGE_SIZE))
+
+  return (
+    <SectionCard
+      icon={ScrollText}
+      title={t('room.journalTitle')}
+      description={total > 0 ? t('moderationTab.journalDesc', { count: total }) : t('room.journalDesc')}
+      bodyClassName="space-y-3"
+    >
+      {failed ? (
+        <ErrorState
+          icon={AlertTriangle}
+          message={t('moderationTab.journalLoadError')}
+          retryLabel={t('states.retry')}
+          onRetry={() => void load(page)}
+        />
+      ) : !journal ? (
+        <SkeletonRows rows={5} />
+      ) : journal.entries.length === 0 ? (
+        <EmptyState icon={ScrollText} title={t('room.journalEmpty')} />
+      ) : (
+        <JournalList entries={renderEntries(journal.entries)} />
+      )}
+      {!failed && (
+        <Pager
+          page={page}
+          pageSize={TEAM_JOURNAL_PAGE_SIZE}
+          total={total}
+          onPage={setPage}
+          busy={loading}
+          summary={t('states.pageSummary', { page, pages, total })}
+          previousLabel={t('states.previousPage')}
+          nextLabel={t('states.nextPage')}
+        />
+      )}
+    </SectionCard>
+  )
+}
+
+/**
  * Le tableau de bord lit l'URL (?tab=, ?userId=) dès sa racine : il vit sous
  * sa propre frontière Suspense, condition que Next pose à useSearchParams
  * depuis que le site n'est plus forcé en rendu dynamique. La page reste de
@@ -4539,8 +4634,8 @@ function SupervisionDashboard() {
 
   // Journal de l'équipe : l'heure pour aujourd'hui, le jour sinon — une
   // heure seule ferait passer une action d'avant-hier pour une de ce matin.
-  // La Salle en montre les dernières entrées, Modération › Journal tout ce
-  // que le serveur sert.
+  // La Salle en montre les dernières entrées (vue d'ensemble), Modération ›
+  // Journal tout l'historique, page par page (TeamJournalPanel).
   const teamJournal = overview?.journal ?? []
   const journalTime = (iso: string) => {
     const at = new Date(iso)
@@ -4929,14 +5024,12 @@ function SupervisionDashboard() {
             description={t('room.journalDesc')}
             actions={
               teamJournal.length > TEAM_JOURNAL_PREVIEW ? (
-                // Le serveur sert les 20 dernières actions, pas tout le
-                // journal : le lien dit combien il en ouvre.
                 <button
                   type="button"
                   onClick={() => selectTab('moderation', 'journal', { reveal: true })}
                   className="-mx-1 inline-flex min-h-[32px] items-center gap-1 rounded-md px-1 text-xs font-semibold text-amber-200 transition-colors hover:text-amber-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
                 >
-                  {t('room.journalAll', { count: teamJournal.length })}
+                  {t('room.journalAll')}
                   <ChevronRight className="h-3.5 w-3.5" aria-hidden />
                 </button>
               ) : undefined
@@ -5796,26 +5889,10 @@ function SupervisionDashboard() {
             </>
           )}
 
-          {/* Tout ce que la vue d'ensemble sert du journal (la Salle n'en
-              montre que le début), de la plus récente à la plus ancienne. */}
+          {/* Tout l'historique de l'équipe (la Salle n'en montre que le
+              début), de la plus récente à la plus ancienne. */}
           {moderationView === 'journal' && moderationViews.includes('journal') && (
-            <SectionCard
-              icon={ScrollText}
-              title={t('room.journalTitle')}
-              description={
-                teamJournal.length > 0
-                  ? t('moderationTab.journalDesc', { count: teamJournal.length })
-                  : t('room.journalDesc')
-              }
-            >
-              {!liveSettled ? (
-                <SkeletonRows rows={5} />
-              ) : teamJournal.length === 0 ? (
-                <EmptyState icon={ScrollText} title={t('room.journalEmpty')} />
-              ) : (
-                <JournalList entries={teamJournalEntries(teamJournal)} />
-              )}
-            </SectionCard>
+            <TeamJournalPanel latestId={teamJournal[0]?.id} renderEntries={teamJournalEntries} />
           )}
         </section>
         )}

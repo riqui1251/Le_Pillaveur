@@ -5429,7 +5429,8 @@
         "active": "En cours",
         "resolved": "Traités"
       },
-      "journalDesc": "{count, plural, one {La dernière action de l'équipe de modération.} other {Les # dernières actions de l'équipe de modération, de la plus récente à la plus ancienne.}}"
+      "journalDesc": "Tout l'historique de l'équipe de modération : {count, plural, one {# action} other {# actions}}, de la plus récente à la plus ancienne.",
+      "journalLoadError": "Impossible de charger le journal de l'équipe."
     },
     "growth": {
       "registeredShareLabel": "Part de comptes enregistrés",
@@ -5475,7 +5476,7 @@
       "queueAckAction": "Acquitter",
       "journalTitle": "Journal de l'équipe",
       "journalDesc": "Traçabilité de l'équipe de modération",
-      "journalAll": "{count, plural, one {La dernière action} other {Les # dernières actions}}",
+      "journalAll": "Tout le journal",
       "journalEmpty": "Aucune action récente.",
       "journalBan": "{actor} a banni {target}",
       "journalBanReason": "{actor} a banni {target} — « {detail} »",
