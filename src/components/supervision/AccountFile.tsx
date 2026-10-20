@@ -1107,7 +1107,7 @@ function RecentGamesSection({ activity, userId }: { activity: AccountActivity; u
       description={t('recentDesc')}
       actions={
         <Link
-          href={`/supervision?tab=overview&userId=${encodeURIComponent(userId)}`}
+          href={`/supervision?tab=stats&view=games&userId=${encodeURIComponent(userId)}`}
           className="inline-flex h-8 items-center rounded-lg border border-white/[0.15] bg-white/[0.04] px-2.5 text-xs font-medium text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
         >
           {t('seeInJournal')}

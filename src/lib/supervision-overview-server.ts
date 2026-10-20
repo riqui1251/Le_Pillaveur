@@ -75,10 +75,18 @@ const ONLINE_PLAY_WINDOW_DAYS = { d1: 1, d7: 7, d30: 30 }
 const ONLINE_LAUNCH_SERIES_DAYS = 14
 
 /** Fenêtres des parties locales, en jours de Paris (aujourd'hui inclus). */
-const LOCAL_PLAY_WINDOW_DAYS = { d7: 7, d30: 30 }
+const LOCAL_PLAY_WINDOW_DAYS = { d1: 1, d7: 7, d30: 30 }
 const LOCAL_PLAY_SERIES_DAYS = 14
 
 const HOUR_MS = 60 * 60 * 1000
+
+/**
+ * Jours de la série quotidienne de la vue d'ensemble : les 14 jours tracés,
+ * plus un. L'écart des visiteurs d'une semaine sur l'autre ne compare que des
+ * jours RÉVOLUS (aujourd'hui, entamé, le tirerait vers le bas chaque matin) :
+ * il lui faut deux semaines entières avant aujourd'hui.
+ */
+const DAILY_SERIES_DAYS = 15
 
 export type DailyPoint = { date: string; visitors: number; parties: number }
 
@@ -146,6 +154,12 @@ export type QueueItem = {
 /** Compteurs sur 1, 7 et 30 jours de Paris (aujourd'hui inclus). */
 export type ParisDayWindows = { d1: number; d7: number; d30: number }
 
+/** Parties lancées : solo (au plus un humain, contre des bots) ou à deux humains et plus. */
+export type LaunchSplit = { solo: number; withHumans: number }
+
+/** Parties lancées d'un jeu en ligne sur une fenêtre ; `withHumans` = dont parties à deux humains ou plus. */
+export type GameLaunches = { gameId: string; gameTitle: string; launches: number; withHumans: number }
+
 /**
  * Jeu en ligne tiré du JOURNAL DES PARTIES (OnlineGameSession), la seule
  * source qui compte chaque lancement — solo contre des bots, jeux sans
@@ -174,18 +188,21 @@ export type OnlinePlayStats = {
    * humains ou plus ; humains = sièges sans botName. Parties jouées par
    * l'équipe ou des comptes de test SEULS exclues.
    */
-  launchesByDay: Array<{ day: string; solo: number; withHumans: number }>
+  launchesByDay: Array<{ day: string } & LaunchSplit>
   /**
-   * Parties LANCÉES par jeu sur les 7 derniers jours de Paris (aujourd'hui
-   * inclus), mêmes règles que `launchesByDay` : revanches comprises, parties
-   * jouées par l'équipe ou des comptes de test SEULS exclues ; `withHumans` =
-   * dont parties à deux humains ou plus (le reste est solo contre des bots).
-   * La somme des `launches` = total des 7 derniers jours de `launchesByDay`.
-   * Titre tiré du catalogue (identifiant brut pour un jeu retiré). Jeux sans
-   * lancement absents ; tri par lancements décroissants, puis parties avec
-   * humains, puis titre.
+   * Parties LANCÉES sur 1, 7 et 30 jours de Paris (aujourd'hui inclus, rien
+   * au-delà), mêmes règles que `launchesByDay`. La série ne couvre que 14
+   * jours : sans ces totaux, la période de 30 jours de l'écran n'aurait pas de
+   * chiffre. d1 et d7 redonnent le dernier jour et les 7 derniers de la série.
    */
-  launchesByGame7d: Array<{ gameId: string; gameTitle: string; launches: number; withHumans: number }>
+  launches: { d1: LaunchSplit; d7: LaunchSplit; d30: LaunchSplit }
+  /**
+   * Les mêmes lancements, par jeu, sur les mêmes fenêtres. Titre tiré du
+   * catalogue (identifiant brut pour un jeu retiré). Jeux sans lancement
+   * absents ; tri par lancements décroissants, puis parties avec humains,
+   * puis titre. La somme des `launches` d'une fenêtre = son total.
+   */
+  launchesByGame: { d1: GameLaunches[]; d7: GameLaunches[]; d30: GameLaunches[] }
   /**
    * Sièges humains SANS compte (ni compte ni bot) des parties lancées sur
    * 30 jours : compte supprimé depuis, ou humain jamais rattaché à un membre
@@ -227,13 +244,17 @@ export type LocalPlayStats = {
   /** Lancées / terminées par jour de Paris sur 14 jours, du plus ancien au plus récent. */
   byDay: Array<{ day: string; starts: number; ends: number }>
   /**
-   * Par jeu, sur les 7 et 30 derniers jours de Paris (aujourd'hui inclus).
-   * Jeux sans aucun événement absents ; tri par lancements décroissants, puis
-   * fins, puis titre.
+   * Par jeu, sur 1, 7 et 30 jours de Paris (aujourd'hui inclus). Jeux sans
+   * aucun événement absents ; tri par lancements décroissants, puis fins,
+   * puis titre.
    */
-  byGame: { d7: LocalGameTotals[]; d30: LocalGameTotals[] }
+  byGame: { d1: LocalGameTotals[]; d7: LocalGameTotals[]; d30: LocalGameTotals[] }
   /** Totaux des mêmes fenêtres. */
-  totals: { d7: { starts: number; ends: number }; d30: { starts: number; ends: number } }
+  totals: {
+    d1: { starts: number; ends: number }
+    d7: { starts: number; ends: number }
+    d30: { starts: number; ends: number }
+  }
 }
 
 export type GrowthStats = {
@@ -333,7 +354,7 @@ function gameTitleFor(gameId: string | null): string {
 }
 
 /**
- * Série 14 derniers jours de PARIS : visiteurs uniques (DailyVisitor, déjà
+ * Série des derniers jours de PARIS : visiteurs uniques (DailyVisitor, déjà
  * datés au jour de Paris) + parties distinctes (OnlineMatchResult,
  * dédupliquées par salle au sein d'un même jour de Paris).
  */
@@ -401,7 +422,12 @@ export async function cleanupStaleCastRooms(): Promise<void> {
 /** Effectif RÉEL des salles listées, par statut (`cast` compris). */
 export type LiveTablesByStatus = Record<LiveTableStatus, number>
 
-async function getLiveTables(): Promise<{ tables: LiveTable[]; byStatus: LiveTablesByStatus }> {
+async function getLiveTables(): Promise<{
+  tables: LiveTable[]
+  byStatus: LiveTablesByStatus
+  /** Tables de JEU figées, comptées en base (hors `cast`) : la pastille « Tables » du bandeau santé. */
+  stalledGameTables: number
+}> {
   // Purge les salles abandonnées (plus aucun tick client depuis 1h) avant de
   // lister : sinon les fantômes qui n'intéressent plus personne restent
   // affichés « en jeu » indéfiniment dans Supervision. Les salles de cast
@@ -433,7 +459,7 @@ async function getLiveTables(): Promise<{ tables: LiveTable[]; byStatus: LiveTab
   // construction celles dont `updatedAt` est le plus ANCIEN — un simple
   // « 20 dernières modifiées » les aurait donc toutes coupées, c'est-à-dire
   // précisément ce que l'exploitant doit voir (F46).
-  const [freshest, stalest, statusRows] = await Promise.all([
+  const [freshest, stalest, statusRows, gameTables] = await Promise.all([
     prisma.onlineRoom.findMany({
       where: { status: { in: LIVE_STATUSES } },
       orderBy: { updatedAt: 'desc' },
@@ -457,6 +483,9 @@ async function getLiveTables(): Promise<{ tables: LiveTable[]; byStatus: LiveTab
       where: { status: { in: LIVE_STATUSES } },
       _count: { _all: true },
     }),
+    // La liste ci-dessous marque aussi ses tables figées, mais elle est
+    // plafonnée et compte la diffusion TV : le bandeau santé lit ce comptage.
+    countGameTables(Date.now()),
   ])
 
   const byStatus: LiveTablesByStatus = { waiting: 0, briefing: 0, playing: 0, cast: 0 }
@@ -500,7 +529,7 @@ async function getLiveTables(): Promise<{ tables: LiveTable[]; byStatus: LiveTab
     // Bloquées : la plus figée en tête. Vivantes : la plus fraîche en tête.
     return a.stalled ? b.idleSeconds - a.idleSeconds : a.idleSeconds - b.idleSeconds
   })
-  return { tables, byStatus }
+  return { tables, byStatus, stalledGameTables: gameTables.stalled }
 }
 
 /** Partie du journal telle que la lit `getOnlinePlayStats` (voir la requête). */
@@ -545,36 +574,45 @@ export function summarizeOnlinePlay(
   const launches = new Map(
     parisDaysBack(ONLINE_LAUNCH_SERIES_DAYS, now).map((day) => [day, { day, solo: 0, withHumans: 0 }])
   )
-  const weekStartMs = windowStartMs(ONLINE_PLAY_WINDOW_DAYS.d7)
-  const launchesByGame = new Map<string, { launches: number; withHumans: number }>()
+  const today = parisDayString(now)
+  const launchWindows = (['d1', 'd7', 'd30'] as const).map((key) => ({
+    key,
+    sinceMs: windowStartMs(ONLINE_PLAY_WINDOW_DAYS[key]),
+    split: { solo: 0, withHumans: 0 },
+    byGame: new Map<string, { launches: number; withHumans: number }>(),
+  }))
 
   for (const session of sessions) {
     const startedMs = session.startedAt.getTime()
     // La requête borne déjà ; on ne se fie pas à l'appelant pour la fenêtre.
     if (startedMs < oldestMs) continue
 
-    // Équipe et comptes de test exclus de la série aussi : une partie où tous
-    // les humains sont internes (un essai de TryBotsGate) n'est pas une partie
-    // de joueur. Une table équipe + joueur, elle, reste une partie de joueur.
-    // Un siège sans compte (supprimé ou non rattaché) n'est pas présumé interne.
+    // Équipe et comptes de test exclus des lancements aussi : une partie où
+    // tous les humains sont internes (un essai de TryBotsGate) n'est pas une
+    // partie de joueur. Une table équipe + joueur, elle, reste une partie de
+    // joueur. Un siège sans compte (supprimé ou non rattaché) n'est pas
+    // présumé interne. Rien après aujourd'hui (jour de Paris), quoi que serve
+    // l'appelant.
     const internalOnly = session.humanSeats.length > 0 && session.humanSeats.every(isInternal)
-    const launch = internalOnly ? undefined : launches.get(parisDayString(session.startedAt))
-    if (launch) {
+    const day = parisDayString(session.startedAt)
+    if (!internalOnly && day <= today) {
       // Humains = sièges sans botName. `humanCount` ne compte que les sièges
       // RATTACHÉS à un compte au lancement : un humain non rattaché y passait
       // pour un bot. Le plus grand des deux, pour qu'une ligne sans sièges
       // écrits garde son effectif.
       const humans = Math.max(session.humanCount, session.humanSeats.length)
-      if (humans >= 2) launch.withHumans += 1
-      else launch.solo += 1
-      // Par jeu : seulement une partie déjà comptée dans la série (jour de la
-      // série, donc jamais après aujourd'hui), et des 7 derniers jours — les
-      // deux graphes s'additionnent au même total.
-      if (startedMs >= weekStartMs) {
-        const byGame = launchesByGame.get(session.gameId) ?? { launches: 0, withHumans: 0 }
+      const kind = humans >= 2 ? 'withHumans' : 'solo'
+      const launch = launches.get(day)
+      if (launch) launch[kind] += 1
+      // Mêmes parties, par fenêtre et par jeu : chaque total recoupe la série
+      // sur les jours qu'elle couvre.
+      for (const span of launchWindows) {
+        if (startedMs < span.sinceMs) continue
+        span.split[kind] += 1
+        const byGame = span.byGame.get(session.gameId) ?? { launches: 0, withHumans: 0 }
         byGame.launches += 1
-        if (humans >= 2) byGame.withHumans += 1
-        launchesByGame.set(session.gameId, byGame)
+        if (kind === 'withHumans') byGame.withHumans += 1
+        span.byGame.set(session.gameId, byGame)
       }
     }
 
@@ -600,6 +638,17 @@ export function summarizeOnlinePlay(
   }
 
   const [d1, d7, d30] = windows
+  const [launchD1, launchD7, launchD30] = launchWindows
+  const sortedGames = (byGame: Map<string, { launches: number; withHumans: number }>): GameLaunches[] =>
+    [...byGame]
+      .map(([gameId, row]) => ({ gameId, gameTitle: gameTitleFor(gameId), ...row }))
+      .sort(
+        (a, b) =>
+          b.launches - a.launches ||
+          b.withHumans - a.withHumans ||
+          a.gameTitle.localeCompare(b.gameTitle, 'fr') ||
+          a.gameId.localeCompare(b.gameId)
+      )
   return {
     journalSince: GAME_JOURNAL_SINCE,
     uniquePlayers: {
@@ -611,15 +660,12 @@ export function summarizeOnlinePlay(
     staffExcluded: staff.size,
     testExcluded: tests.size,
     launchesByDay: [...launches.values()],
-    launchesByGame7d: [...launchesByGame]
-      .map(([gameId, row]) => ({ gameId, gameTitle: gameTitleFor(gameId), ...row }))
-      .sort(
-        (a, b) =>
-          b.launches - a.launches ||
-          b.withHumans - a.withHumans ||
-          a.gameTitle.localeCompare(b.gameTitle, 'fr') ||
-          a.gameId.localeCompare(b.gameId)
-      ),
+    launches: { d1: launchD1.split, d7: launchD7.split, d30: launchD30.split },
+    launchesByGame: {
+      d1: sortedGames(launchD1.byGame),
+      d7: sortedGames(launchD7.byGame),
+      d30: sortedGames(launchD30.byGame),
+    },
     deletedSeats30,
   }
 }
@@ -681,14 +727,19 @@ function positiveCount(value: number): number {
 export function summarizeLocalPlay(rows: LocalGameDailyRow[], now: Date, since: string | null): LocalPlayStats {
   const today = parisDayString(now)
   const windowStart = {
+    d1: parisDayOffset(LOCAL_PLAY_WINDOW_DAYS.d1 - 1, now),
     d7: parisDayOffset(LOCAL_PLAY_WINDOW_DAYS.d7 - 1, now),
     d30: parisDayOffset(LOCAL_PLAY_WINDOW_DAYS.d30 - 1, now),
   }
   const byDay = new Map(
     parisDaysBack(LOCAL_PLAY_SERIES_DAYS, now).map((day) => [day, { day, starts: 0, ends: 0 }])
   )
-  const byGame = { d7: new Map<string, LocalGameTotals>(), d30: new Map<string, LocalGameTotals>() }
-  const totals = { d7: { starts: 0, ends: 0 }, d30: { starts: 0, ends: 0 } }
+  const byGame = {
+    d1: new Map<string, LocalGameTotals>(),
+    d7: new Map<string, LocalGameTotals>(),
+    d30: new Map<string, LocalGameTotals>(),
+  }
+  const totals = { d1: { starts: 0, ends: 0 }, d7: { starts: 0, ends: 0 }, d30: { starts: 0, ends: 0 } }
 
   for (const row of rows) {
     if (row.day > today) continue
@@ -700,7 +751,7 @@ export function summarizeLocalPlay(rows: LocalGameDailyRow[], now: Date, since: 
       point.starts += starts
       point.ends += ends
     }
-    for (const key of ['d7', 'd30'] as const) {
+    for (const key of ['d1', 'd7', 'd30'] as const) {
       if (row.day < windowStart[key]) continue
       const game = byGame[key].get(row.gameId) ?? {
         gameId: row.gameId,
@@ -729,7 +780,7 @@ export function summarizeLocalPlay(rows: LocalGameDailyRow[], now: Date, since: 
   return {
     since: since && since <= today ? since : null,
     byDay: [...byDay.values()],
-    byGame: { d7: sorted(byGame.d7), d30: sorted(byGame.d30) },
+    byGame: { d1: sorted(byGame.d1), d7: sorted(byGame.d7), d30: sorted(byGame.d30) },
     totals,
   }
 }
@@ -759,6 +810,37 @@ async function getLocalPlayStats(now: Date): Promise<LocalPlayStats | null> {
     console.error('growth stats: parties locales illisibles:', errorTrace(error))
     return null
   }
+}
+
+/**
+ * Comptage RÉEL des tables de jeu en cours et figées, en base et sans charger
+ * une seule ligne : le dérivé de la liste affichée était plafonné par ses
+ * `take` (30 lignes), donc faux dès qu'il y a du monde. Même définition que la
+ * colonne `stalled` de la liste — inactivité = plus récent entre l'écriture
+ * d'état de la salle et la présence de ses membres — et mêmes seuils par
+ * statut. Les salles `cast` (afficheur TV) sont hors sujet : aucune partie à
+ * abandonner. Partagé par la tuile « Tables figées » (croissance, en cache) et
+ * la pastille « Tables » du bandeau santé (vue d'ensemble) : sinon les deux
+ * écrans se contrediraient sous le même mot.
+ */
+async function countGameTables(now: number): Promise<{ live: number; stalled: number }> {
+  const rows = await prisma.$queryRawUnsafe<Array<{ live: bigint | null; stalled: bigint | null }>>(
+    `SELECT COUNT(*) as live,
+            SUM(CASE WHEN MAX(r.updatedAt, COALESCE(m.lastSeen, 0)) < CASE r.status
+                  WHEN 'waiting' THEN ?
+                  WHEN 'briefing' THEN ?
+                  ELSE ? END
+                THEN 1 ELSE 0 END) as stalled
+     FROM OnlineRoom r
+     LEFT JOIN (
+       SELECT roomId, MAX(lastSeenAt) as lastSeen FROM OnlineRoomMember GROUP BY roomId
+     ) m ON m.roomId = r.id
+     WHERE r.status IN ('waiting', 'briefing', 'playing')`,
+    now - STALLED_MS.waiting,
+    now - STALLED_MS.briefing,
+    now - STALLED_MS.playing
+  )
+  return { live: Number(rows[0]?.live ?? 0), stalled: Number(rows[0]?.stalled ?? 0) }
 }
 
 /**
@@ -811,29 +893,7 @@ async function computeGrowthStats(): Promise<GrowthStats> {
        LIMIT 12`,
       playersSince.getTime()
     ),
-    // Comptage RÉEL des tables figées, en base et sans charger une seule
-    // ligne : le dérivé de la liste affichée était plafonné par ses `take`
-    // (30 lignes), donc faux dès qu'il y a du monde. Même définition que la
-    // colonne `stalled` de la liste — inactivité = plus récent entre
-    // l'écriture d'état de la salle et la présence de ses membres — et mêmes
-    // seuils par statut, sinon les deux écrans se contrediraient. Les salles
-    // `cast` (afficheur TV) sont hors sujet : aucune partie à abandonner.
-    prisma.$queryRawUnsafe<Array<{ live: bigint | null; stalled: bigint | null }>>(
-      `SELECT COUNT(*) as live,
-              SUM(CASE WHEN MAX(r.updatedAt, COALESCE(m.lastSeen, 0)) < CASE r.status
-                    WHEN 'waiting' THEN ?
-                    WHEN 'briefing' THEN ?
-                    ELSE ? END
-                  THEN 1 ELSE 0 END) as stalled
-       FROM OnlineRoom r
-       LEFT JOIN (
-         SELECT roomId, MAX(lastSeenAt) as lastSeen FROM OnlineRoomMember GROUP BY roomId
-       ) m ON m.roomId = r.id
-       WHERE r.status IN ('waiting', 'briefing', 'playing')`,
-      now - STALLED_MS.waiting,
-      now - STALLED_MS.briefing,
-      now - STALLED_MS.playing
-    ),
+    countGameTables(now),
     getOnlinePlayStats(new Date(now)),
     getLocalPlayStats(new Date(now)),
   ])
@@ -844,8 +904,7 @@ async function computeGrowthStats(): Promise<GrowthStats> {
   // écrit quand une partie meurt sans résultat (voir le rapport). Le chiffre
   // affiché est donc celui des tables de JEU figées À L'INSTANT — celles
   // qu'on peut encore sauver — et le libellé doit le dire.
-  const liveRooms = Number(abandonedRows[0]?.live ?? 0)
-  const stalledRooms = Number(abandonedRows[0]?.stalled ?? 0)
+  const { live: liveRooms, stalled: stalledRooms } = abandonedRows
 
   return {
     registeredShare: {
@@ -1099,7 +1158,7 @@ async function getRetentionLastRun(actorRole: string): Promise<RetentionLastRun 
  */
 export async function getSupervisionOverview(actorRole: string) {
   const [dailySeries, live, journal, queue, retentionLastRun] = await Promise.all([
-    getDailySeries(14),
+    getDailySeries(DAILY_SERIES_DAYS),
     getLiveTables(),
     getJournal(20),
     getQueue(actorRole),
@@ -1110,6 +1169,7 @@ export async function getSupervisionOverview(actorRole: string) {
     dailySeries,
     liveTables: live.tables,
     liveTablesByStatus: live.byStatus,
+    stalledGameTables: live.stalledGameTables,
     journal,
     queue,
     retentionLastRun,

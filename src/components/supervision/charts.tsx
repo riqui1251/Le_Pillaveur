@@ -281,7 +281,7 @@ export function ColumnChart({
     return (
       <figure className={cn('min-w-0', className)}>
         <ChartEmpty label={emptyLabel} minHeight={height} />
-        {caption && <figcaption className="mt-2 text-[11px] leading-relaxed text-cream/70">{caption}</figcaption>}
+        {caption && <figcaption className="mt-2 text-xs leading-relaxed text-cream/70">{caption}</figcaption>}
       </figure>
     )
   }
@@ -432,7 +432,7 @@ export function ColumnChart({
         className="min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
       >
         {showLegend && (
-          <ul className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-cream/80">
+          <ul className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-cream/80">
             {k > 1 &&
               series.map((s) => (
                 <li key={s.key} className="inline-flex items-center gap-1.5">
@@ -636,7 +636,7 @@ export function ColumnChart({
         </tbody>
       </table>
 
-      {caption && <figcaption className="mt-2 text-[11px] leading-relaxed text-cream/70">{caption}</figcaption>}
+      {caption && <figcaption className="mt-2 text-xs leading-relaxed text-cream/70">{caption}</figcaption>}
     </figure>
   )
 }
@@ -832,7 +832,7 @@ export function BarList({
           <span className={cn('block truncate text-sm text-cream/90', row.onClick && 'group-hover:underline')}>
             {row.label}
           </span>
-          {row.hint && <span className="block truncate text-[11px] text-cream/70">{row.hint}</span>}
+          {row.hint && <span className="block truncate text-xs text-cream/70">{row.hint}</span>}
         </span>
         <span
           aria-hidden
@@ -919,7 +919,7 @@ export function BarList({
     <figure className={cn('min-w-0', className)}>
       <div role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : ariaLabel} className="min-w-0">
         {showLegend && (
-          <p aria-hidden className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-2 text-[11px] text-cream/80">
+          <p aria-hidden className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-2 text-xs text-cream/80">
             {primaryLabel && (
               <span className="inline-flex items-center gap-1.5">
                 <Swatch tone={tone} />

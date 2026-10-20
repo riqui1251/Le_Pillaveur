@@ -101,7 +101,12 @@ export function tableDurationLabel(
   return reliability === 'estimated' ? `≈ ${label}` : label
 }
 
-export function GameSessionsPanel({ userId }: { userId?: string } = {}) {
+/**
+ * `bare` : sans le cadre ni le titre de SectionCard, pour un usage dans un
+ * bloc déjà titré et encadré (le dépliant « Journal des parties » de la vue
+ * Jeux) — jamais de cadre dans le cadre.
+ */
+export function GameSessionsPanel({ userId, bare = false }: { userId?: string; bare?: boolean } = {}) {
   const t = useTranslations('supervision.gameSessions')
   const tStates = useTranslations('supervision.states')
   const tUnits = useTranslations('supervision.units')
@@ -175,18 +180,15 @@ export function GameSessionsPanel({ userId }: { userId?: string } = {}) {
     date: format.dateTime(new Date(GAME_JOURNAL_SINCE_DAY), { dateStyle: 'short', timeZone: PARIS_TIME_ZONE }),
   })
 
-  return (
-    <SectionCard
-      icon={History}
-      title={t('title')}
-      description={
-        <>
-          {t('desc')} {journalSince}
-          {userId && <span className="block text-amber-200/70">{t('filteredByAccount')}</span>}
-        </>
-      }
-      bodyClassName="space-y-3"
-    >
+  const description = (
+    <>
+      {t('desc')} {journalSince}
+      {userId && <span className="block text-amber-200/70">{t('filteredByAccount')}</span>}
+    </>
+  )
+
+  const body = (
+    <>
       <DurationReliabilityLegend />
       {!loaded ? (
         <SkeletonRows rows={3} />
@@ -300,6 +302,21 @@ export function GameSessionsPanel({ userId }: { userId?: string } = {}) {
         previousLabel={tStates('previousPage')}
         nextLabel={tStates('nextPage')}
       />
+    </>
+  )
+
+  if (bare) {
+    return (
+      <div className="min-w-0 space-y-3">
+        <p className="text-xs leading-relaxed text-white/70">{description}</p>
+        {body}
+      </div>
+    )
+  }
+
+  return (
+    <SectionCard icon={History} title={t('title')} description={description} bodyClassName="space-y-3">
+      {body}
     </SectionCard>
   )
 }

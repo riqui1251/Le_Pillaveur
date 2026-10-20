@@ -5114,6 +5114,13 @@
     "unknownCountry": "Unknown",
     "rolesHelpTitle": "Roles and permissions",
     "rolesHierarchy": "Hierarchy: player < moderator < admin < super admin < founder — only a higher rank can sanction or modify an account (never a peer). Moderators: temporary ban only.",
+    "roleDescriptions": {
+      "fondateur": "Highest rank: full control over every account (including deleting super administrators). Cannot be assigned from the interface.",
+      "superadmin": "Full management except founders: supervision, roles (up to admin), bans and permanent deletion of lower ranks.",
+      "admin": "Management of players and moderators: supervision, stats, roles (up to moderator) and bans of lower ranks.",
+      "moderator": "Read-only supervision, player history and activity (sign-ins, time, games), temporary bans of players only.",
+      "user": "Standard player: local games, personal account and cloud sync of their players."
+    },
     "roles": {
       "fondateur": "Founder",
       "superadmin": "Super admin",
@@ -5121,27 +5128,13 @@
       "moderator": "Moderator",
       "user": "Player"
     },
-    "subtitles": {
-      "full": "Full dashboard — stats, games, visitors and accounts.",
-      "bans": "Account and ban management.",
-      "accounts": "Player account review and moderation."
-    },
     "tabs": {
       "section": "Section",
       "overview": "The Room",
-      "geo": "Country / IP",
-      "accounts": "Accounts ({count})",
-      "bans": "Banned ({count})",
-      "feedback": "Feedback ({count})",
-      "feedbackResolved": "Resolved ({count})",
-      "moderation": "Name moderation",
+      "stats": "Statistics",
+      "moderation": "Moderation",
       "accountsShort": "Accounts",
-      "bansShort": "Sanctions",
-      "moderationShort": "Terms",
-      "feedbackShort": "Reports",
-      "feedbackResolvedShort": "Resolved",
-      "ops": "Server monitoring",
-      "opsShort": "Monitoring"
+      "ops": "Server"
     },
     "moderation": {
       "title": "Profanity filter",
@@ -5181,15 +5174,11 @@
       "activeBrowsers": "Active browsers",
       "activeBrowsersHint": "Statistics accepted, staff included (last {minutes} min.)",
       "today": "Today",
-      "todayHint": "Distinct browsers, statistics accepted, staff included",
       "week": "7 days",
       "weekHint": "Distinct browsers, statistics accepted, staff included",
-      "month": "30 days",
-      "monthHint": "Distinct browsers, statistics accepted"
+      "month": "30 days"
     },
     "accounts": {
-      "overviewTitle": "Accounts",
-      "total": "Total",
       "moderators": "Moderators",
       "admins": "Admins",
       "superAdmins": "Super admins",
@@ -5203,6 +5192,7 @@
       "players": "Players",
       "allStatus": "All",
       "online": "Online",
+      "onlineFilterDesc": "Online: accounts seen in the last {minutes} minutes, staff and guests included — accounts, not browsers.",
       "banned": "Banned",
       "kindPlaceholder": "Type",
       "allKinds": "All types",
@@ -5237,9 +5227,7 @@
       "matchCount": "{total} account{plural} found",
       "kindSummary": "{total, plural, one {# account} other {# accounts}}: {password} password · {google} Google · {guests, plural, one {# guest} other {# guests}}{orphans, plural, =0 {} other { (including # orphaned)}}",
       "countsNote": "Guests included. Since the presence tracking update ({date}), last activity follows a page actually in use: visible tab and an interaction within the last 30 minutes (before, a tab left open was enough). It does not prove the person is playing.",
-      "byKindTitle": "By account type",
-      "byRoleTitle": "By role",
-      "playersRoleHint": "guests included"
+      "byRoleLine": "By role: {players, plural, one {# player} other {# players}} · {moderators, plural, one {# moderator} other {# moderators}} · {admins, plural, one {# admin} other {# admins}} · {superadmins, plural, one {# super admin} other {# super admins}} · {founders, plural, one {# founder} other {# founders}}"
     },
     "units": {
       "s": "s",
@@ -5261,8 +5249,6 @@
       "players": "Players",
       "accounts": "Accounts",
       "category": "Category",
-      "status": "Status",
-      "tables": "Tables",
       "device": "Device",
       "visits": "Visits"
     },
@@ -5275,11 +5261,8 @@
       "staleGuest": "inactive for {days} d — the cookie may have been lost"
     },
     "bans": {
-      "activeTitle": "Active bans",
       "activeOverview": "{count} suspended account(s)",
-      "suspendedCount": "{count} suspended account(s)",
       "noneActive": "No active ban.",
-      "noneOverview": "No ban in progress.",
       "currentTitle": "Current bans",
       "currentDesc": "Suspended accounts (permanent or unexpired temporary)",
       "noneCurrent": "No active ban.",
@@ -5292,40 +5275,26 @@
       "until": "until {date}",
       "unban": "Unban"
     },
-    "connected": {
-      "recentTitle": "Recently connected accounts",
-      "recentWindowDesc": "Accounts active in the last {minutes} minutes, all types (guests included), with their IP and country",
-      "noneRecent": "No recently connected account."
-    },
     "activeAccounts": {
       "title": "Active accounts",
-      "desc": "Distinct accounts that visit and play, in Paris days. Accounts, not people: one player can have several. Staff and test accounts excluded.",
-      "definition": "Definition",
       "refreshError": "Refresh failed: the figures shown are from the last successful calculation.",
       "loadError": "Could not load the active accounts dashboard.",
-      "accountsTitle": "Accounts",
-      "onlineNow": "Online now",
       "accountsUnit": "{count, plural, one {account} other {accounts}}",
-      "onlineNowDef": "Player accounts whose last activity is less than {minutes} min old: a page actually in use or a sign-in, on any device, whether or not statistics were accepted. Recounted on every opening and refresh, unlike the other figures in this dashboard (cached).",
-      "activeLabel": "Active · {window}",
       "activeTodayDef": "Accounts that, since midnight (Paris time), started a visit with at least 60 s of active time (an interaction in the last {minutes} minutes) OR took a seat in an online game. Guests included.",
       "activeWindowDef": "Accounts that, over the last {days} Paris days (today included), started a visit with at least 60 s of active time (an interaction in the last {minutes} minutes) OR took a seat in an online game. Guests included.",
       "newLabel": "New accounts",
       "newDef": "Accounts created during the period AND active during that same period (a visit with at least 60 s active or a seat in an online game). A guest created without playing is not counted here: it is counted separately, below.",
       "returningLabel": "Returning",
       "returningDef": "Accounts active during the period and created before its first day.",
-      "excluded": "Not counted: + {staff} staff · {test, plural, one {# test account excluded} other {# test accounts excluded}}",
-      "excludedDef": "Staff accounts and test accounts active over 30 days, removed from every figure in this dashboard. Staff is identified by CURRENT role: a former moderator who became a player again shows up in the figures. A test account is flagged from its account page.",
-      "idleGuests": "Guests created without playing · {weekLabel}: {week} · {monthLabel}: {month}",
+      "excluded": "Not counted over 30 days: + {staff} staff · {test, plural, one {# test account excluded} other {# test accounts excluded}}",
+      "excludedDef": "Staff accounts and test accounts active over 30 days, removed from every figure drawn from account activity: active, new and returning accounts, returns, unique players, most active accounts and visits. Online games follow their own rule (games played by staff or test accounts alone are excluded) and local games exclude no one. Staff is identified by CURRENT role: a former moderator who became a player again shows up in the figures. A test account is flagged from its account page.",
       "idleGuestsDef": "Guest accounts created over the last 7 or 30 Paris days without being active in that time (no seat in an online game, no visit with at least 60 s active): neither new accounts nor returning ones. Often a visitor who tried a game against bots and then gave up. Unreachable guests inactive for 7 days are deleted automatically and then leave this count, which therefore underestimates the 30-day window. Guests created before the game log started are left out: their activity from back then is known nowhere. Staff and test accounts excluded.",
       "playersTitle": "Unique players",
       "playersTodayDef": "Accounts that, since midnight (Paris time), took a seat in an online game OR spent at least 60 s on a game screen (local or online) during a visit. Guests included.",
       "playersWindowDef": "Accounts that, over the last {days} Paris days (today included), took a seat in an online game OR spent at least 60 s on a game screen (local or online) during a visit. Guests included.",
-      "deletedSeats": "Seats without an account, not counted · {todayLabel}: {today} · {weekLabel}: {week} · {monthLabel}: {month}",
       "deletedSeatsDef": "Human seats (not bots) in online games launched during the period that are no longer linked to any account: account deleted since (erasure request, purged guest) or player never linked to an account at launch, which cannot be told apart. One per seat, never added to accounts. When an account is deleted, unique players for past days go down and this count goes up by its seats.",
-      "visitsTitle": "Visits (7 days)",
-      "visitsScope": "Only accounts that accepted statistics, visits tracked since {date}: nothing is measured on other accounts and devices.",
-      "visitsScopeNone": "Only accounts that accepted statistics: no visit tracked yet.",
+      "visitsScope": "Visits (median length, share on phones, devices): only accounts that accepted statistics, staff and test accounts excluded, tracked since {date}; nothing is measured on other accounts and devices.",
+      "visitsScopeNone": "Visits (median length, share on phones, devices): only accounts that accepted statistics; no visit tracked yet.",
       "medianVisit": "Median visit length",
       "medianVisitDef": "Visits started over the last 7 Paris days, from the first heartbeat to the last plus 60 s; breaks under 30 min stay within the visit. Half of the visits are shorter, half are longer.",
       "medianActive": "Median active time per account",
@@ -5333,15 +5302,12 @@
       "gameShare": "Share of time in game",
       "gameShareDetail": "{game} in game out of {visible} on the site",
       "gameShareDef": "Time spent on a game screen (local or online) divided by time on the site (tab visible), across all visits of the last 7 days. An estimate: local play leaves no other trace.",
-      "seriesTitle": "Last 14 days",
       "seriesAccounts": "Active accounts",
       "seriesPlayers": "Unique players",
-      "seriesLaunches": "Games launched",
       "seriesDay": "{date}: {value}",
       "legendNoData": "Before measurements started (no data)",
       "seriesRecomputed": "Series are recalculated on every read: an account deleted since then drops out of the totals, past days included.",
-      "seriesDef": "Per Paris day: active accounts and unique players as defined above, for that day only; games launched according to the game log, rematches included, excluding games played by staff or test accounts alone. Active accounts and unique players share the same scale; games have their own.",
-      "returnsTitle": "Returns",
+      "seriesDef": "Per Paris day: active accounts and unique players as defined, for that day only, on the same scale (same unit: accounts). Days before tracking began are hatched.",
       "returnD1Label": "Back on D+1",
       "returnD7Label": "Back on D+7",
       "returnCount": "{retained} of {cohort}",
@@ -5357,15 +5323,12 @@
       "topLineUntracked": "visits not tracked · {games, plural, =0 {no online game} one {# online game} other {# online games}}",
       "topDef": "Accounts active over the last 7 Paris days, ranked by active time from visits (“visits not tracked” without accepted statistics, ranked as zero), then by online games in which they took a seat. An operations tool, never shown to players.",
       "browsersTitle": "Browsers without an account (statistics accepted)",
-      "browsersValues": "Today: {today} · 7 days: {week}",
       "browsersNotAdded": "A different unit from accounts: these figures are never added to account counts.",
       "browsersDef": "Distinct browsers that accepted statistics, seen since midnight or over the last 7 Paris days, and on which no account has been seen. One visitor counts twice on two devices; declining statistics makes them invisible.",
       "coverage": "Game log: every account, since {journal}. Visits: accounts that accepted statistics, since {visits}.",
       "coverageNoVisits": "Game log: every account, since {journal}. Visits: none tracked yet.",
-      "newReturningLabel": "New and returning among active accounts",
       "activeCount": "{count, plural, one {# active account} other {# active accounts}}",
       "newReturningAria": "New accounts and returning accounts among active accounts · {window}",
-      "definitionOf": "Definition: {label}",
       "seriesAccountsTitle": "Active accounts and unique players per day",
       "seriesNewTitle": "New accounts by day of creation",
       "seriesNewRegistered": "Registered accounts",
@@ -5386,14 +5349,94 @@
         "unknown": "Unknown"
       }
     },
+    "method": {
+      "button": "Method",
+      "close": "Close",
+      "title": "Statistics method",
+      "desc": "What each figure in the Statistics tab measures, and what it leaves out, grouped by theme.",
+      "definitionOf": "Definition: {label}",
+      "windowed": "{label} · {window}",
+      "groups": {
+        "audience": "Audience",
+        "players": "Players",
+        "games": "Games",
+        "quality": "Quality"
+      },
+      "names": {
+        "excluded": "Team and test accounts",
+        "idleGuests": "Guests created without playing",
+        "deletedSeats": "Seats without an account"
+      }
+    },
+    "statsTab": {
+      "viewsAria": "Statistics view",
+      "periodAria": "Period",
+      "days": "{days, plural, one {# day} other {# days}}",
+      "countLine": "{label}: {count}",
+      "growthError": "Unable to load games and growth indicators.",
+      "audience": {
+        "visitorsWindowDef": "Distinct browsers that accepted statistics, seen at least once during the period (Paris days, today included), staff included. Browsers, not accounts or people: the same player counts twice on two devices, and declining statistics makes them invisible. Change (7 days only): the last 7 full days, today excluded because it is still under way, compared with the 7 days before; hidden while the comparison includes the day the consent banner was shown to everyone again.",
+        "activeBrowsersDef": "Browsers that accepted statistics and were last present less than {minutes} min ago, staff included. Browsers: an account open on two devices counts twice, and a visitor without an account counts too. The “online” badge in the header counts something else: accounts, whether or not they accepted statistics.",
+        "phoneShare": "Share on phones",
+        "phoneShareDetail": "{phone, plural, =0 {No visits} one {# visit} other {# visits}} out of {total}",
+        "phoneShareDef": "Visits started on a phone (“Mobile” category) among all visits started over the last 7 Paris days; tablets are counted separately. Only accounts that accepted statistics, excluding staff and test accounts. The breakdown by device is in “Visit devices”.",
+        "ipTitle": "Visitors and players by IP",
+        "browsersNote": "Visitors, active browsers, daily chart and countries: browsers that accepted statistics, with or without an account, staff included — never added to accounts."
+      },
+      "players": {
+        "newReturning": "New · returning",
+        "topShowAll": "Show all {count} accounts",
+        "detailTitle": "Account details"
+      },
+      "games": {
+        "launches": "Games launched",
+        "launchesDetail": "online and local",
+        "launchesDetailLocalSince": "online and local, local counted since {date}",
+        "launchesOnlineOnly": "online only: local games unreadable",
+        "launchesDef": "Online games launched (game log) plus local games launched (anonymous counters) during the period, Paris days, today included. Two sources added together for an order of magnitude: each has its own tile and definition. Rematches included, whether or not the game is finished; online games played by staff or test accounts alone are excluded, local games cannot be (they have no account).",
+        "online": "Online",
+        "onlineSplit": "{solo} solo · {withHumans} with other humans",
+        "local": "Local",
+        "localUnavailable": "Unreadable for now",
+        "seriesSolo": "Online, solo against bots",
+        "seriesWithHumans": "Online, with other humans",
+        "seriesLocal": "Local",
+        "legendBeforeMeasure": "Before one of the counts began (no data)",
+        "onlineSince": "Online games: log kept since {date}.",
+        "localSince": "Local games counted since {date}.",
+        "localMissing": "Local games unreadable for now: only online games are shown.",
+        "tableTitle": "By game",
+        "tableDef": "Games launched during the period, by game: online (game log, solo and with other humans together) and local (anonymous counters), then their sum. Rematches included, whether or not the game is finished; online games played by staff or test accounts alone are left out. “—”: count unreadable for now, so no total. Under each game: its online games with other humans (two humans or more) and its finished local games.",
+        "rowWithHumans": "{count, plural, =0 {none with other humans} other {# with other humans}}",
+        "rowNoEndScreen": "no end screen",
+        "tableEmpty": "No game launched during the period.",
+        "detailTitle": "All-time and players by game",
+        "journalTitle": "Game log",
+        "localNote": "Local games: two anonymous counters per game and per day, with no account and no device — no unique players, no staff exclusion.",
+        "playersExcluded": "Unique players, not counted over 30 days: + {staff} staff · {test, plural, one {# test account excluded} other {# test accounts excluded}}"
+      }
+    },
+    "moderationTab": {
+      "viewsAria": "Moderation view",
+      "views": {
+        "reports": "Reports",
+        "sanctions": "Sanctions",
+        "words": "Words and names",
+        "journal": "Log"
+      },
+      "scopeAria": "Reports to show",
+      "scope": {
+        "active": "Open",
+        "resolved": "Resolved"
+      },
+      "journalDesc": "{count, plural, one {The moderation team's last action.} other {The moderation team's last # actions, newest first.}}"
+    },
     "growth": {
-      "title": "Growth",
-      "desc": "Every figure carries the exact definition of the query behind it.",
       "registeredShareLabel": "Share of registered accounts",
       "registeredShareDef": "Share of the accounts CREATED in the last {days} days that carry an e-mail, among all those created over the same window. This is not a funnel: nothing links a registered account to the guest account used before it, so the share of guests who later signed up stays out of reach.",
       "abandonedLabel": "Stalled tables",
       "abandonedDetail": "{stalled} stalled out of {live} live tables",
-      "abandonedDef": "Every live play table (waiting, briefing or playing) with nothing moving since its state’s threshold: 3 min waiting, 5 min briefing, 10 min playing. Counted in the database, not from the list below; TV displays are excluded. A snapshot: a game that dies without a result leaves nothing to count afterwards.",
+      "abandonedDef": "Every live play table (waiting, briefing or playing) with nothing moving since its state’s threshold: 3 min waiting, 5 min briefing, 10 min playing. Counted in the database, like the “Tables” indicator in The Room, not from the capped “Live” list; TV displays are excluded. A snapshot: a game that dies without a result leaves nothing to count afterwards.",
       "playersByGameTitle": "Players per game, online",
       "playersByGameDef": "Accounts that STARTED an online game of that game over the last {days} days — one row per player per game, 12 games at most. The start is what counts, not the finish: a game left halfway still shows up. Local games (same device) and TV mode write nothing, so they do not appear here.",
       "noData": "No online game started within this window.",
@@ -5403,53 +5446,20 @@
       "registeredShareEmpty": "No account created within this window."
     },
     "onlinePlayers": {
-      "title": "Online game players",
-      "desc": "Game log kept since {date}: every account, guests included, and nothing before that date. Raw counts, with no trend or percentage: there is not enough history yet.",
       "accountsDetail": "{count, plural, one {account} other {accounts}}, {guests, plural, =0 {no guests} one {including # guest} other {including # guests}}",
-      "todayDef": "Distinct accounts that took a seat in at least one online game launched since midnight, Paris time. Bots, staff accounts and test accounts excluded.",
-      "windowDef": "Distinct accounts that took a seat in at least one online game launched over the last {days} days (Paris time), today included. Bots, staff accounts and test accounts excluded.",
-      "staffExcluded": "{count, plural, =0 {Staff excluded: no staff account played over 30 days.} one {Staff excluded: # staff account played over 30 days and is not counted.} other {Staff excluded: # staff accounts played over 30 days and are not counted.}}",
-      "testExcluded": "{count, plural, =0 {Test accounts excluded: none played over 30 days.} one {Test accounts excluded: # test account played over 30 days and is not counted.} other {Test accounts excluded: # test accounts played over 30 days and are not counted.}}",
-      "deletedSeats": "{count, plural, =0 {No seat without an account over 30 days.} one {# seat without an account (deleted account or unlinked player) over 30 days, not counted: when an account is deleted, past figures go down.} other {# seats without an account (deleted account or unlinked player) over 30 days, not counted: when an account is deleted, past figures go down.}}",
-      "loadError": "Could not load online game players and growth indicators.",
       "launchesTitle": "Games launched per day",
-      "launchesTotal": "{total, plural, one {# game launched} other {# games launched}} over {days} days: {solo} solo against bots, {withHumans} with other humans.",
-      "launchesNone": "No game launched over {days} days.",
       "launchesDef": "Every launch counts, rematches included, whether or not the game was finished, on the Paris day it started. Solo: a single human at the table, facing bots. Games played by staff or test accounts alone are excluded. Local games and TV mode write nothing to the log.",
-      "legendSolo": "Solo against bots",
-      "legendWithHumans": "With other humans",
-      "legendBeforeJournal": "Before the log (no data)",
-      "range": "From {from} to {to}, Paris days.",
-      "byGameTitle": "Games launched, by game · {window}",
-      "byGameHint": "{count, plural, one {# game launched} other {# games launched}}",
-      "byGameEmpty": "No online game launched over 7 days.",
-      "byGameDef": "Online games launched over the last 7 Paris days (today included), by game, rematches included, whether or not the game was finished. “With other humans”: at least two human players at the table; the rest is solo against bots. Games played by staff or test accounts alone are excluded. Added up, the games give back the total of the last 7 days in the per-day chart; the share is that of the week's launches."
+      "range": "From {from} to {to}, Paris days."
     },
     "localPlay": {
-      "title": "Local games",
-      "desc": "Games played on a single phone, counted since {date}: two anonymous counters per game and per day, with no account, no device and no IP address. Raw volumes: no unique players, no staff exclusion.",
-      "descEmpty": "Games played on a single phone: no local game counted yet. Two anonymous counters per game and per day, with no account, no device and no IP address.",
-      "totalsDetail": "{starts, plural, one {game started} other {games started}}, {ends, plural, =0 {none finished} one {# finished} other {# finished}}",
-      "windowDef": "Game pages opened in local mode with a table of players over the last {days} days (Paris time), today included, and games that reached their end screen over the same period.",
-      "byDayTitle": "Local games per day",
-      "byDayTotal": "{starts, plural, =0 {None started} one {# started} other {# started}} and {ends, plural, =0 {none finished} one {# finished} other {# finished}} over {days} days.",
       "byDayEmpty": "No local game counted yet.",
-      "legendStarts": "Started",
-      "legendEnds": "Finished",
-      "legendBeforeMeasure": "Before tracking began (no data)",
-      "byGameTitle": "Local games, by game · {window}",
       "endsHint": "{count, plural, =0 {none finished} one {# finished} other {# finished}}",
-      "noEndScreen": "no end screen, never “finished”",
-      "byGameEmpty": "No local game started in the last {days} days.",
-      "def": "Started: the game page opens in local mode with a table of players; a rematch played on the same page does not count as a new start. Finished: the started game reaches its end screen; only the first finish after a start counts, rematches add none. Finishes therefore never exceed starts: the gap is the openings abandoned before the end. Games without an end screen are never “finished”. Online games and TV mode are not counted here; the share is that of starts in the window."
+      "def": "Started: the game page opens in local mode with a table of players; a rematch played on the same page does not count as a new start. Finished: the started game reaches its end screen; only the first finish after a start counts, rematches add none. Finishes therefore never exceed starts: the gap is the openings abandoned before the end. Games without an end screen are never “finished”. Online games and TV mode are not counted here."
     },
     "room": {
-      "todayLabel": "Today",
-      "weekLabel": "7 days",
-      "vsPrevWeek": "vs prev. 7 d.",
-      "trendTitle": "Trend — last 14 days",
+      "vsPrevWeek": "last 7 full days vs prior 7",
       "trendVisitors": "Browsers (statistics accepted, staff included)",
-      "liveTablesTitle": "Tables in progress",
+      "liveTablesTitle": "Live",
       "liveTablesDesc": "Rooms active right now",
       "liveTablesEmpty": "No table in progress.",
       "liveTablesEmptyHint": "The room is quiet for now.",
@@ -5463,8 +5473,9 @@
       "queueEmptyHint": "No pending report or suspicious name.",
       "queueViewAction": "View",
       "queueAckAction": "Acknowledge",
-      "journalTitle": "Action log",
+      "journalTitle": "Team log",
       "journalDesc": "Moderation team traceability",
+      "journalAll": "{count, plural, one {The last action} other {The last # actions}}",
       "journalEmpty": "No recent action.",
       "journalBan": "{actor} banned {target}",
       "journalBanReason": "{actor} banned {target} — “{detail}”",
@@ -5477,6 +5488,7 @@
       "stalledFor": "Stalled for {duration}",
       "turnLabel": "{name} to play",
       "castHost": "Cast by {name}",
+      "castIdleFor": "Screen idle for {duration}",
       "journalRoleChange": "{actor} changed {target}’s role: {detail}",
       "journalAccountDelete": "{actor} deleted an account",
       "journalAccountDeleteTyped": "{actor} deleted an account ({kind}, {role})",
@@ -5488,12 +5500,26 @@
       "visitorsSeries": "Browsers",
       "visitorsDef": "Distinct browsers that accepted statistics, seen at least once on that Paris day, staff included. Browsers, not accounts or people: the same player counts twice on two devices, and declining statistics makes them invisible.",
       "visitorsConsentNote": "On {date}, the consent banner was shown to everyone again: a browser no longer counts until it has answered. The step on that day is not a drop in traffic.",
-      "partiesChartTitle": "Rooms with a ranked game, per day",
-      "partiesChartSubtitle": "Online rooms that finished at least one game with a ranked result",
-      "partiesSeries": "Rooms",
-      "partiesDef": "Online rooms that recorded at least one ranked result on that Paris day, counted once per room and per day. Several games record no result (no winner), and neither do games with a single human against bots: so this is not the number of games launched, which is shown in “Online game players”. Staff and test accounts included.",
-      "liveTablesByStatus": "Tables in progress by status",
-      "liveTablesByStatusDef": "Every room in progress, counted in the database (the list below shows 30 at most). TV casting has its own segment, while the “Stalled tables” tile leaves it out."
+      "liveStatusCount": {
+        "playing": "{count, plural, one {# playing} other {# playing}}",
+        "briefing": "{count, plural, one {# in briefing} other {# in briefing}}",
+        "waiting": "{count, plural, one {# waiting} other {# waiting}}",
+        "cast": "{count, plural, one {# casting} other {# casting}}"
+      },
+      "liveShown": "{shown} shown below, the most recent and the most stalled",
+      "playersCount": "{count, plural, one {# player} other {# players}}",
+      "openedFor": "open for {duration}",
+      "weekTitle": "This week",
+      "weekDesc": "Last 7 days, Paris time, today included",
+      "weekVisitors": "Visitors · {window}",
+      "weekActive": "Active accounts · {window}",
+      "weekLaunches": "Online games · {window}",
+      "weekLaunchesHint": "Started, rematches and solo against bots included",
+      "weekReturning": "Returning · {window}",
+      "weekReturningHint": "out of {count, plural, one {# active account} other {# active accounts}}",
+      "weekUnavailable": "Unavailable for now",
+      "weekFreshness": "Active accounts, online games and returning accounts computed at {time} — recalculated at most once every {minutes} min.",
+      "allStats": "All statistics"
     },
     "retentionRun": {
       "lastRun": "Last data clean-up: {date}",
@@ -5508,19 +5534,18 @@
     "games": {
       "playedTitle": "Games played",
       "playedDesc": "Cloud aggregate of synced accounts",
-      "totalParties": " — {count} game{plural} total",
+      "totalParties": "{count, plural, one {# game in total} other {# games in total}}",
       "parties": "games",
       "noneRecorded": "No game recorded yet.",
-      "allTimeNote": "All-time total, all periods combined: local players' games synced to accounts, statistics stored in the database and ranked online games (one per room). This is not recent activity: for the week, see “Games launched, by game”."
+      "allTimeNote": "All-time total, all periods combined: local players' games synced to accounts, statistics stored in the database and ranked online games (one per room). This is not recent activity: for the selected period, see the “By game” table."
     },
     "geo": {
-      "onlineByCountry": "Online by country",
+      "onlineByCountry": "Active browsers by country",
       "onlineByCountryWindowDesc": "Browsers active in the last {minutes} minutes.",
       "todayByCountry": "Connected today by country",
       "todayByCountryDesc": "Browsers (statistics accepted, staff included) seen since midnight, Paris time.",
       "tapCountry": " Tap a country to see visitors.",
       "noData": "No data yet.",
-      "visitorsTitle": "Visitors and players",
       "filterPlaceholder": "Filter by IP, username, email or country…",
       "noVisitors": "No visitor recorded yet.",
       "noSearchResults": "No results for this search.",
@@ -5537,7 +5562,7 @@
       "countryDialogTitle": "Visitors — {title}",
       "countryDialogDesc": "List of visitors and accounts for this country. Tap a card to see all IPs.",
       "noVisitorsForCountry": "No visitor for this country.",
-      "scopeOnline": "online",
+      "scopeOnline": "active browsers",
       "scopeToday": "today"
     },
     "visitorCard": {
@@ -5576,7 +5601,7 @@
     },
     "feedback": {
       "activeTitle": "Open feedback",
-      "activeDesc": "Bugs, suggestions and comments to handle. Once resolved, feedback moves to the Resolved tab.",
+      "activeDesc": "Bugs, suggestions and comments to handle. Once resolved, feedback moves to the Resolved filter.",
       "resolvedTitle": "Resolved feedback",
       "resolvedDesc": "History of feedback marked as resolved.",
       "searchActive": "Search bug, author, message…",
@@ -5608,7 +5633,7 @@
     },
     "firstGameFeedback": {
       "title": "First-game ratings",
-      "desc": "The rating each player gives at the end of their very first game, asked only once. Ratings with a comment also land in the feedback below; bare ratings only live here.",
+      "desc": "The rating each player gives at the end of their very first game, asked only once. Ratings with a comment also land in Moderation › Reports; bare ratings only live here.",
       "refresh": "Refresh",
       "loadError": "Couldn't load the first-game ratings.",
       "forbidden": "Session expired or access removed: sign in again.",
@@ -5880,12 +5905,13 @@
     "buildStamp": "Deployed build",
     "header": {
       "onlineCount": "{count} online",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "onlineTitle": "{count, plural, =0 {No account seen} one {# account seen} other {# accounts seen}} in the last {minutes} minutes, staff and guests included. Open the list in Accounts.",
+      "updatedAt": "updated · {time}"
     },
     "navGroups": {
       "analysis": "Analytics",
       "community": "Community",
-      "moderation": "Moderation",
       "server": "Server"
     },
     "journalFilter": {
@@ -6038,7 +6064,7 @@
         "streams": "SSE streams",
         "streamsHint": "{accounts, plural, =0 {no accounts} one {# account} other {# accounts}} · {max} max per account",
         "crashes": "Crashes (24 h)",
-        "crashesHint": "Details in The Room",
+        "crashesHint": "Details in Statistics",
         "unreadable": "Unreadable"
       },
       "units": {
@@ -6076,6 +6102,27 @@
         "failedHint": "The last sweep ended with an error: details in The Room.",
         "staleHint": "More than {hours} h without a sweep: the advertised retention periods are no longer guaranteed."
       }
+    },
+    "health": {
+      "aria": "Site health",
+      "labels": {
+        "probe": "Site",
+        "backups": "Backups",
+        "ops": "Monitoring",
+        "retention": "Clean-up",
+        "crashes": "Crashes",
+        "stalled": "Tables"
+      },
+      "okGroup": "All clear: {labels}",
+      "jobState": "{job}: {state}",
+      "opsUnreadable": "server status unreadable",
+      "retentionOk": "last run less than {hours} h ago",
+      "retentionNever": "never run since the update",
+      "retentionFailed": "{count, plural, =0 {the last run failed} one {# block failed} other {# blocks failed}}",
+      "retentionStale": "no run for more than {hours} h",
+      "crashes": "{count, plural, =0 {none in the last 24 h} one {# in the last 24 h} other {# in the last 24 h}}",
+      "crashesUnreadable": "unreadable",
+      "stalled": "{count, plural, =0 {none stalled} one {# stalled} other {# stalled}}"
     }
   },
   "voice": {

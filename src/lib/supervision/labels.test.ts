@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { idleLabel, rateLabel } from '@/lib/supervision/labels'
+import { deltaLabel, idleLabel, rateLabel } from '@/lib/supervision/labels'
+
+describe('deltaLabel', () => {
+  it('même typographie que rateLabel, signe toujours écrit', () => {
+    expect(deltaLabel(12)).toBe('+12 %')
+    expect(deltaLabel(0)).toBe('+0 %')
+    expect(deltaLabel(-5)).toBe('−5 %')
+  })
+})
 
 describe('rateLabel', () => {
   it('« — » pour un taux non calculable, jamais « 0 % »', () => {

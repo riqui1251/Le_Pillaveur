@@ -1,7 +1,7 @@
 "use client"
 
-import type { ComponentType, ReactNode } from 'react'
-import { Check, Loader2, X } from 'lucide-react'
+import { useCallback, useEffect, useId, useRef, useState, type ComponentType, type ReactNode, type RefObject } from 'react'
+import { BookOpen, Check, ChevronDown, CircleAlert, CircleCheck, CircleX, Info, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -31,13 +31,16 @@ export function SupervisionShell({ children }: { children: ReactNode }) {
  * En-tête compact : ligne 1 = identité (bouclier + titre + actualiser),
  * TOUJOURS sur une ligne, même à 375 px (le bouton reste icône-seule sur
  * mobile — jamais orphelin sur sa propre ligne). Ligne 2 = méta (sur-titre,
- * en ligne, rôle) en chips qui peuvent s'enrouler sans casser la mise en page.
+ * en ligne, rôle, heure de fraîcheur) en chips qui peuvent s'enrouler sans
+ * casser la mise en page.
  */
 export function SupervisionHeader({
   kicker,
   title,
   roleBadge,
   onlineLabel,
+  online,
+  updatedLabel,
   onRefresh,
   refreshLabel,
   refreshing,
@@ -45,14 +48,25 @@ export function SupervisionHeader({
   kicker: string
   title: string
   roleBadge: ReactNode
-  /** Absent : pastille « en ligne » masquée (compte sans accès aux statistiques). */
+  /** Pastille « en ligne » simple, sans action (fiche d'un compte). */
   onlineLabel?: string
+  /**
+   * Pastille « N en ligne » cliquable vers la liste filtrée (tableau de bord).
+   * `description` dit sa définition au lecteur d'écran (nom accessible) :
+   * sans elle, rien ne distingue ce chiffre des navigateurs actifs. Pas de
+   * `title` : invisible au toucher, et la définition se lit en clair sous le
+   * filtre « En ligne » de Comptes, où la pastille mène. Absente, comme
+   * `onlineLabel` : pastille masquée (compte sans accès aux statistiques).
+   */
+  online?: { label: string; description: string; onClick: () => void }
+  /** « à jour · 14:32 » : dernière actualisation réussie des données en direct. */
+  updatedLabel?: string
   onRefresh: () => void
   refreshLabel: string
   refreshing?: boolean
 }) {
   return (
-    <header className="space-y-2 border-b border-gold/15 pb-4">
+    <header className="space-y-2 border-b border-gold/[0.15] pb-4">
       <div className="flex items-center gap-2.5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-gold/10 text-gold sm:h-10 sm:w-10">
           <ShieldGlyph />
@@ -71,15 +85,53 @@ export function SupervisionHeader({
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <span className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-gold/60">{kicker}</span>
         <span className="h-3 w-px shrink-0 bg-white/10" aria-hidden />
-        {onlineLabel && (
+        {!online && onlineLabel && (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
             {onlineLabel}
           </span>
         )}
+        {online && (
+          <button
+            type="button"
+            onClick={online.onClick}
+            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200 transition-colors hover:border-emerald-400/50 hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+            {online.label}
+            {/* Le nom accessible commence par le texte visible, puis la définition. */}
+            <span className="sr-only">{` — ${online.description}`}</span>
+          </button>
+        )}
         {roleBadge}
+        {updatedLabel && <span className="text-xs tabular-nums text-white/70">{updatedLabel}</span>}
       </div>
     </header>
+  )
+}
+
+/** Ton d'un compteur : neutre par défaut, ou coloré selon l'urgence. */
+export type CountTone = 'neutral' | 'danger' | 'warning'
+
+/**
+ * Compteur posé après un libellé (onglet, vue, filtre). Rien quand il est
+ * vide ou absent : un « 0 » permanent dans la navigation ne dit rien.
+ */
+function CountBadge({ count, tone }: { count?: number | string; tone?: CountTone }) {
+  if (count == null || count === '') return null
+  return (
+    <span
+      className={cn(
+        'ml-0.5 rounded-full px-1.5 py-px text-xs font-semibold tabular-nums',
+        tone === 'danger'
+          ? 'bg-suit-red/20 text-red-200'
+          : tone === 'warning'
+            ? 'bg-amber-500/20 text-amber-200'
+            : 'bg-white/10 text-white/70'
+      )}
+    >
+      {count}
+    </span>
   )
 }
 
@@ -90,31 +142,60 @@ export type SupervisionNavGroup = {
     label: string
     icon: IconType
     count?: number | string
-    /** Ton du compteur : neutre par défaut, ou coloré selon l'urgence. */
-    tone?: 'neutral' | 'danger' | 'warning'
+    tone?: CountTone
   }>
+}
+
+/**
+ * Amène `element` dans la partie visible de `container`, À L'HORIZONTALE
+ * seulement : scrollIntoView ferait aussi défiler la page à la verticale.
+ * `margin` dégage le fondu des bords.
+ */
+function revealHorizontally(container: HTMLElement, element: HTMLElement, margin = 16) {
+  const box = container.getBoundingClientRect()
+  const item = element.getBoundingClientRect()
+  if (item.left < box.left + margin) container.scrollLeft -= box.left + margin - item.left
+  else if (item.right > box.right - margin) container.scrollLeft += item.right - (box.right - margin)
+}
+
+/** Id du bouton d'un onglet : le panneau ouvert s'en sert pour se nommer (aria-labelledby). */
+export function supervisionNavItemId(value: string): string {
+  return `supervision-nav-${value}`
 }
 
 /**
  * Navigation à icônes. Une seule rangée, groupes séparés par de l'espace
  * (pas d'étiquette de groupe ni de trait vertical — plus rien à lire pour
  * distinguer les familles, juste à voir). Défile horizontalement quand ça ne
- * tient pas, avec un fondu aux bords en indice discret (masque CSS, aucun
- * état JS à maintenir).
+ * tient pas, avec un fondu aux bords en indice discret (masque CSS). À 375
+ * px, cinq onglets n'y tiennent pas : l'onglet actif est ramené à l'écran à
+ * chaque changement, y compris quand un lien de la page l'ouvre (file,
+ * « Tout le journal »…), sinon rien de surligné n'y paraîtrait.
  */
 export function SupervisionNav({
   groups,
   active,
   onSelect,
   groupAria,
+  navRef,
 }: {
   groups: SupervisionNavGroup[]
   active: string
   onSelect: (value: string) => void
   groupAria: string
+  /** Réf de la barre, pour que la page y ramène le focus après un lien interne. */
+  navRef?: RefObject<HTMLElement>
 }) {
+  const ownRef = useRef<HTMLElement>(null)
+  const ref = navRef ?? ownRef
+  useEffect(() => {
+    const nav = ref.current
+    const current = nav?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (nav && current) revealHorizontally(nav, current)
+  }, [active, ref])
   return (
     <nav
+      ref={ref}
       aria-label={groupAria}
       className="flex items-center gap-3 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 [-ms-overflow-style:none] [-webkit-mask-image:linear-gradient(to_right,transparent,black_14px,black_calc(100%-14px),transparent)] [mask-image:linear-gradient(to_right,transparent,black_14px,black_calc(100%-14px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
@@ -126,6 +207,7 @@ export function SupervisionNav({
             return (
               <button
                 key={item.value}
+                id={supervisionNavItemId(item.value)}
                 type="button"
                 onClick={() => onSelect(item.value)}
                 aria-current={isActive ? 'page' : undefined}
@@ -133,25 +215,12 @@ export function SupervisionNav({
                   'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50',
                   isActive
                     ? 'border border-amber-400/40 bg-amber-500/[0.15] text-amber-100'
-                    : 'border border-transparent text-white/60 hover:bg-white/[0.06] hover:text-white'
+                    : 'border border-transparent text-white/70 hover:bg-white/[0.06] hover:text-white'
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="whitespace-nowrap">{item.label}</span>
-                {item.count != null && item.count !== '' && (
-                  <span
-                    className={cn(
-                      'ml-0.5 rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums',
-                      item.tone === 'danger'
-                        ? 'bg-suit-red/20 text-red-200'
-                        : item.tone === 'warning'
-                          ? 'bg-amber-500/20 text-amber-200'
-                          : 'bg-white/10 text-white/60'
-                    )}
-                  >
-                    {item.count}
-                  </span>
-                )}
+                <CountBadge count={item.count} tone={item.tone} />
               </button>
             )
           })}
@@ -192,7 +261,7 @@ export function SectionCard({
             {title}
           </h2>
           {description && (
-            <p className="mt-0.5 text-xs leading-relaxed text-white/45">{description}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-white/70">{description}</p>
           )}
         </div>
         {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -237,13 +306,16 @@ export function KpiPlaque({
     >
       {/* En alerte, libellé et indice en crème PLEINE : sur le rouge d'enseigne,
           /75 et /70 tombaient à ~3,4:1 et ~3,2:1, sous les 4,5:1 exigés pour
-          du texte de 10-11 px ; le crème plein donne ~5:1 (même /90 plafonne
+          du texte de 12 px ; le crème plein donne ~5:1 (même /90 plafonne
           à ~4,3:1). L'indice porte parfois l'information d'état (« La base ne
           répond pas »). */}
-      <p className={cn('text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]', alert ? 'text-cream' : 'text-[#6B6455]')}>
+      {/* 12 px : le libellé nomme le chiffre, c'est une information, pas un décor. */}
+      <p className={cn('break-words text-xs font-semibold uppercase tracking-wide', alert ? 'text-cream' : 'text-[#6B6455]')}>
         {label}
       </p>
-      <p className="mt-0.5 flex items-baseline gap-1.5 font-display text-2xl font-bold tabular-nums sm:text-3xl">
+      {/* flex-wrap : à 375 px, deux plaques par ligne, l'écart (« ▲ +12 % vs
+          7 j. préc. ») passe sous le chiffre au lieu de déborder. */}
+      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 font-display text-2xl font-bold tabular-nums sm:text-3xl">
         {value}
         {delta && (
           <span className={cn('text-xs font-bold', delta.direction === 'up' ? (alert ? 'text-cream' : 'text-emerald-700') : 'text-suit-red')}>
@@ -252,7 +324,7 @@ export function KpiPlaque({
         )}
       </p>
       {trend && <div className="mt-1.5">{trend}</div>}
-      {hint && <p className={cn('mt-0.5 text-[11px]', alert ? 'text-cream' : 'text-[#6B6455]')}>{hint}</p>}
+      {hint && <p className={cn('mt-0.5 break-words text-xs', alert ? 'text-cream' : 'text-[#6B6455]')}>{hint}</p>}
     </div>
   )
 }
@@ -266,26 +338,26 @@ export function KpiPlaque({
 export type LiveTableStatus = 'waiting' | 'briefing' | 'playing' | 'cast'
 
 const LIVE_STATUS_TONE: Record<LiveTableStatus, string> = {
-  waiting: 'border-white/15 bg-white/[0.05] text-white/55',
-  briefing: 'border-gold/40 bg-gold/15 text-amber-100',
-  playing: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200',
-  cast: 'border-chip-blue/40 bg-chip-blue/15 text-sky-200',
+  waiting: 'border-white/20 bg-white/[0.05] text-white/80',
+  briefing: 'border-gold/40 bg-gold/[0.15] text-amber-100',
+  playing: 'border-emerald-400/30 bg-emerald-500/[0.15] text-emerald-200',
+  cast: 'border-chip-blue/40 bg-chip-blue/[0.15] text-sky-200',
 }
 
 /**
- * Mini-table ovale — le même vocabulaire visuel que le lobby Table Ronde.
- * Une table FIGÉE (aucune écriture d'état ni présence depuis le seuil du
- * statut) se distingue au premier coup d'œil : bordure rouge d'enseigne et
- * bandeau d'inactivité. C'est exactement ce que l'exploitant doit repérer.
+ * Une table en direct, sur une ligne compacte (deux au téléphone) : jeu,
+ * code, statut, joueurs, durée, tour ou hôte. Une table FIGÉE (aucune
+ * écriture d'état ni présence depuis le seuil de son statut, F46) passe en
+ * rouge d'enseigne avec son inactivité écrite : c'est exactement ce que
+ * l'exploitant doit repérer, la page la range en tête de liste.
  */
-export function LiveTableCard({
+export function LiveTableRow({
   icon,
   gameTitle,
   code,
   status,
   statusLabel,
-  memberCount,
-  memberNames,
+  players,
   elapsed,
   stalled,
   stalledLabel,
@@ -299,74 +371,85 @@ export function LiveTableCard({
   code: string
   status: LiveTableStatus
   statusLabel: string
-  memberCount: number
-  memberNames: string[]
+  /** Ex. « 4 joueurs · Léa, Max +2 ». */
+  players: string
+  /** Ex. « ouverte depuis 12 min ». */
   elapsed: string
   /** Table sans aucun signe de vie depuis le seuil de son statut (F46). */
   stalled?: boolean
   /** Ex. « Figée depuis 12 min » — affiché seulement si `stalled`. */
   stalledLabel?: string
-  /** Ex. « Tour : Léa » quand le jeu tient un tour courant. */
+  /** Ex. « Au tour de Léa » ou « Diffusée par Max ». */
   turnLabel?: string
   /** Fermeture forcée (admin) : bouton rendu seulement si `onClose` est fourni. */
   closeLabel?: string
   onClose?: () => void
   closing?: boolean
 }) {
-  const extra = memberCount - memberNames.length
   return (
-    <div
+    <li
       className={cn(
-        // `min-w-0` pour la même raison que SectionCard : posée dans une
-        // grille, la carte ne pouvait pas descendre sous la largeur de son
-        // contenu (pseudos, « Figée depuis… », « Au tour de… ») et débordait.
-        'min-w-0 rounded-2xl border p-3',
-        stalled ? 'border-suit-red/50 bg-suit-red/[0.07]' : 'border-gold/15 bg-felt-deep/50'
+        // Sous 640 px, le bouton passe sous le texte (comme la file « À
+        // traiter ») : à côté, il ne laissait presque rien du nom du jeu.
+        'flex min-w-0 flex-col gap-2 rounded-xl border px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3',
+        stalled ? 'border-suit-red/50 bg-suit-red/[0.07]' : 'border-white/10 bg-white/[0.02]'
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-bold text-white">
-          {icon}
-          <span className="truncate">{gameTitle}</span>
-        </span>
-        <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide', LIVE_STATUS_TONE[status])}>
-          {status === 'playing' && <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 align-middle" aria-hidden />}
-          {statusLabel}
-        </span>
-      </div>
-      <div className="my-2 flex h-11 items-center justify-center rounded-[50%/70%] border border-gold/25 bg-gradient-to-b from-felt to-felt-deep font-display text-sm font-bold tracking-widest text-cream">
-        {code}
-      </div>
-      {stalled && stalledLabel && (
-        <p className="mb-2 flex items-center gap-1.5 rounded-lg border border-suit-red/40 bg-suit-red/15 px-2 py-1 text-[11px] font-bold text-red-200">
-          <AlertGlyph />
-          {stalledLabel}
-        </p>
-      )}
-      {turnLabel && (
-        <p className="mb-1.5 truncate text-[11px] font-medium text-amber-200/80">{turnLabel}</p>
-      )}
-      <div className="flex items-center justify-between gap-2 text-[11px] text-white/45">
-        <span className="min-w-0 truncate">
-          {memberNames.length > 0 ? memberNames.join(', ') : '—'}
-          {extra > 0 ? ` +${extra}` : ''}
-        </span>
-        <span className="flex shrink-0 items-center gap-2">
-          <span>{elapsed}</span>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={closing}
-              className="inline-flex items-center gap-1 rounded-full border border-suit-red/40 bg-suit-red/10 px-2 py-0.5 text-[10px] font-bold text-red-200 transition hover:bg-suit-red/25 disabled:opacity-50"
-            >
-              {closing ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
-              {closeLabel}
-            </button>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-white">
+            {icon}
+            <span className="min-w-0 break-words">{gameTitle}</span>
+          </span>
+          <span className="font-mono text-xs font-semibold tracking-widest text-cream">{code}</span>
+          <span
+            className={cn(
+              'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-px text-xs font-semibold',
+              LIVE_STATUS_TONE[status]
+            )}
+          >
+            {status === 'playing' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />}
+            {statusLabel}
+          </span>
+        </div>
+        {stalled && stalledLabel && (
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-bold text-red-200">
+            <AlertGlyph />
+            {stalledLabel}
+          </p>
+        )}
+        <p className="mt-1 flex min-w-0 flex-wrap gap-x-2 gap-y-0.5 text-xs text-white/70">
+          <span className="min-w-0 break-words">{players}</span>
+          <span aria-hidden>·</span>
+          <span className="tabular-nums">{elapsed}</span>
+          {turnLabel && (
+            <>
+              <span aria-hidden>·</span>
+              <span className="min-w-0 break-words font-medium text-amber-200">{turnLabel}</span>
+            </>
           )}
-        </span>
+        </p>
       </div>
-    </div>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={closing}
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1 self-end rounded-lg border px-2.5 py-1 text-xs font-bold transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 sm:self-auto',
+            stalled
+              ? 'border-suit-red/60 bg-suit-red/30 text-red-100 hover:bg-suit-red/50'
+              : 'border-suit-red/40 bg-suit-red/10 text-red-200 hover:bg-suit-red/20'
+          )}
+        >
+          {closing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+          {closeLabel}
+          {/* Dix « Fermer » identiques ne disent pas quelle table on ferme :
+              le nom accessible garde le libellé visible en tête, puis la table. */}
+          <span className="sr-only">{` — ${gameTitle} ${code}`}</span>
+        </button>
+      )}
+    </li>
   )
 }
 
@@ -404,7 +487,7 @@ export function JournalList({
       {entries.map((e) => (
         <li key={e.id} className="flex items-baseline gap-2.5 border-b border-dashed border-white/[0.06] py-2 text-xs last:border-0">
           <span className={cn('h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full', JOURNAL_DOT[e.kind])} aria-hidden />
-          <span className="w-11 shrink-0 tabular-nums text-white/35">{e.time}</span>
+          <span className="w-11 shrink-0 tabular-nums text-white/70">{e.time}</span>
           <span className="min-w-0 flex-1 text-white/75">{e.text}</span>
         </li>
       ))}
@@ -465,10 +548,13 @@ export function QueueList({
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-white">{it.title}</p>
-                <p className="text-xs text-white/45 line-clamp-2 sm:truncate">{it.subtitle}</p>
+                <p className="text-xs text-white/70 line-clamp-2 sm:truncate">{it.subtitle}</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
+              {/* Libellé visible en tête du nom accessible, puis l'entrée :
+                  « Voir » répété sur chaque ligne ne dirait pas laquelle (le
+                  titre seul se répète d'un signalement de même type à l'autre). */}
               <button
                 type="button"
                 onClick={() => onView(it.id)}
@@ -476,6 +562,10 @@ export function QueueList({
                 className="rounded-lg border border-white/[0.15] bg-white/5 px-2.5 py-1 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
               >
                 {viewLabel}
+                <span className="sr-only">
+                  {' — '}
+                  {it.title} · {it.subtitle}
+                </span>
               </button>
               {it.canAcknowledge !== false && (
               <button
@@ -486,6 +576,10 @@ export function QueueList({
               >
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 {acknowledgeLabel}
+                <span className="sr-only">
+                  {' — '}
+                  {it.title} · {it.subtitle}
+                </span>
               </button>
               )}
             </div>
@@ -493,6 +587,93 @@ export function QueueList({
         )
       })}
     </ul>
+  )
+}
+
+export type HealthStripPill = {
+  key: string
+  tone: 'ok' | 'warn' | 'bad'
+  label: string
+  detail: string
+}
+
+const HEALTH_TONE: Record<HealthStripPill['tone'], { icon: IconType; className: string }> = {
+  bad: { icon: CircleX, className: 'border-suit-red/50 bg-suit-red/20 text-red-100 hover:bg-suit-red/30' },
+  warn: { icon: CircleAlert, className: 'border-amber-400/40 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20' },
+  ok: { icon: CircleCheck, className: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20' },
+}
+
+/**
+ * Bandeau santé : une pastille par problème, en tête, puis UNE pastille verte
+ * qui regroupe tout ce qui va bien (« En ordre : Site · Sauvegardes… »).
+ * Icône ET mots, jamais la couleur seule. Chaque pastille est un bouton :
+ * `toggleKeys` désigne celles qui déplient un détail sous le bandeau
+ * (aria-expanded), les autres mènent ailleurs (onglet, section). Purement
+ * présentationnel : le tri et le regroupement viennent de
+ * src/lib/supervision/health.ts.
+ */
+export function HealthStrip({
+  ariaLabel,
+  alerts,
+  ok,
+  okGroupKey,
+  okGroupLabel,
+  toggleKeys,
+  expandedKey,
+  onSelect,
+  children,
+}: {
+  ariaLabel: string
+  alerts: HealthStripPill[]
+  ok: HealthStripPill[]
+  /** Clé passée à `onSelect` pour la pastille verte. */
+  okGroupKey: string
+  /** Texte de la pastille verte, noms déjà joints. */
+  okGroupLabel: string
+  toggleKeys: readonly string[]
+  expandedKey: string | null
+  onSelect: (key: string) => void
+  /** Détail déplié, rendu sous les pastilles. */
+  children?: ReactNode
+}) {
+  if (alerts.length === 0 && ok.length === 0) return null
+  const pillClass =
+    'inline-flex max-w-full items-start gap-1.5 rounded-full border px-3 py-1 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50'
+  const expandedProps = (key: string) =>
+    toggleKeys.includes(key) ? { 'aria-expanded': expandedKey === key } : {}
+  const OkIcon = HEALTH_TONE.ok.icon
+  return (
+    <section aria-label={ariaLabel} className="min-w-0 space-y-2">
+      <ul className="flex min-w-0 flex-wrap gap-2">
+        {alerts.map((pill) => {
+          const { icon: Icon, className } = HEALTH_TONE[pill.tone]
+          return (
+            <li key={pill.key} className="min-w-0 max-w-full">
+              <button type="button" onClick={() => onSelect(pill.key)} className={cn(pillClass, className)} {...expandedProps(pill.key)}>
+                <Icon className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="min-w-0 break-words">
+                  <span className="font-bold">{pill.label}</span> · {pill.detail}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+        {ok.length > 0 && (
+          <li className="min-w-0 max-w-full">
+            <button
+              type="button"
+              onClick={() => onSelect(okGroupKey)}
+              className={cn(pillClass, HEALTH_TONE.ok.className)}
+              {...expandedProps(okGroupKey)}
+            >
+              <OkIcon className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="min-w-0 break-words font-medium">{okGroupLabel}</span>
+            </button>
+          </li>
+        )}
+      </ul>
+      {children}
+    </section>
   )
 }
 
@@ -562,46 +743,287 @@ export function ErrorState({
   )
 }
 
-// ── Glyphes internes (évite d'alourdir les imports d'icônes de la page) ──────
+/**
+ * État d'une définition à un geste : ouverte ou non, et l'id du bloc déplié
+ * que le bouton désigne (aria-controls).
+ */
+export function useDefinitionToggle() {
+  const [open, setOpen] = useState(false)
+  const panelId = `definition-${useId()}`
+  const toggle = useCallback(() => setOpen((value) => !value), [])
+  return { open, toggle, panelId }
+}
 
 /**
- * Indicateur de croissance : la valeur ET sa définition, écrites noir sur
- * blanc juste en dessous. Un chiffre dont on ignore la définition ne sert à
- * rien — l'exploitant doit pouvoir le défendre sans nous appeler (F45).
- * `children` : un graphe du kit (répartition…) entre la valeur et sa
- * définition, qui reste en dernier.
+ * Bouton « i » d'une définition. Pas d'infobulle au survol : invisible au
+ * toucher, et une définition de trois lignes ne tient pas dans une bulle. Le
+ * texte se déplie SOUS le chiffre ou le titre (InfoPanel), là où l'œil lit
+ * déjà. 24 px de cible, l'icône seule en fait 16. `label` : nom accessible
+ * complet, « Définition : Comptes actifs ».
+ */
+export function InfoToggle({
+  label,
+  expanded,
+  onToggle,
+  controls,
+}: {
+  label: string
+  expanded: boolean
+  onToggle: () => void
+  controls: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      aria-label={label}
+      className={cn(
+        'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50',
+        expanded ? 'bg-gold/20 text-gold' : 'text-white/70 hover:bg-white/10 hover:text-gold'
+      )}
+    >
+      <Info className="h-4 w-4" aria-hidden />
+    </button>
+  )
+}
+
+/**
+ * Définition dépliée par InfoToggle, à liseré or. Reste dans le DOM, masquée
+ * (`hidden`), pour que aria-controls désigne toujours un élément existant.
+ * Aucune classe d'affichage ici : elle l'emporterait sur `[hidden]`.
+ */
+export function InfoPanel({ id, open, children }: { id: string; open: boolean; children: ReactNode }) {
+  return (
+    <div
+      id={id}
+      hidden={!open}
+      className="mt-1.5 min-w-0 break-words border-l-2 border-gold/60 pl-2.5 text-xs leading-relaxed text-cream/80"
+    >
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Indicateur chiffré : le libellé et son « i », la valeur, son unité, puis la
+ * définition dépliée sous le chiffre. Un chiffre dont on ignore la définition
+ * ne sert à rien — l'exploitant doit pouvoir le défendre sans nous appeler
+ * (F45) ; elle reste donc à un geste, sans encombrer la tuile. `children` : un
+ * graphe du kit (répartition…) sous la valeur. `definitionLabel` : nom
+ * accessible du bouton, traduit par la page (« Définition : … »). `delta` :
+ * écart à la période précédente, flèche ET signe écrits (pas la couleur seule).
  */
 export function GrowthMetric({
   label,
   value,
   detail,
   definition,
+  definitionLabel,
   tone = 'default',
+  delta,
   children,
 }: {
   label: string
   value: string
   detail?: string
-  definition: string
+  definition: ReactNode
+  definitionLabel: string
   tone?: 'default' | 'alert'
+  delta?: { direction: 'up' | 'down'; label: string }
   children?: ReactNode
 }) {
+  const info = useDefinitionToggle()
   return (
     <div
       className={cn(
         // min-w-0 : posée dans une grille, la carte (et le graphe qu'elle
         // peut porter) doit pouvoir descendre sous la largeur de son contenu.
         'min-w-0 rounded-xl border p-3',
-        tone === 'alert' ? 'border-suit-red/35 bg-suit-red/[0.07]' : 'border-white/10 bg-white/[0.02]'
+        tone === 'alert' ? 'border-suit-red/[0.35] bg-suit-red/[0.07]' : 'border-white/10 bg-white/[0.02]'
       )}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</p>
-      <p className="mt-0.5 font-display text-2xl font-bold tabular-nums text-white">{value}</p>
-      {detail && <p className="text-xs text-white/50">{detail}</p>}
-      {children && <div className="mt-2.5 min-w-0">{children}</div>}
-      <p className="mt-1.5 border-t border-white/[0.07] pt-1.5 text-[11px] leading-relaxed text-white/40">
-        {definition}
+      <div className="flex min-w-0 items-start gap-1">
+        <p className="min-w-0 break-words py-1 text-xs font-semibold uppercase tracking-wide text-white/80">{label}</p>
+        <InfoToggle label={definitionLabel} expanded={info.open} onToggle={info.toggle} controls={info.panelId} />
+      </div>
+      {/* flex-wrap : à 375 px, l'écart passe sous le chiffre plutôt que de déborder. */}
+      <p className="flex flex-wrap items-baseline gap-x-1.5 break-words font-display text-2xl font-bold tabular-nums text-white">
+        {value}
+        {delta && (
+          <span className={cn('text-xs font-bold', delta.direction === 'up' ? 'text-emerald-300' : 'text-red-300')}>
+            {delta.direction === 'up' ? '▲' : '▼'} {delta.label}
+          </span>
+        )}
       </p>
+      {detail && <p className="break-words text-xs text-white/70">{detail}</p>}
+      <InfoPanel id={info.panelId} open={info.open}>
+        {definition}
+      </InfoPanel>
+      {children && <div className="mt-2.5 min-w-0">{children}</div>}
+    </div>
+  )
+}
+
+/**
+ * Pied UNIQUE d'une section de statistiques : ce que ses chiffres laissent de
+ * côté (exclusions, couverture des sources), l'heure de leur calcul quand ils
+ * sortent d'un cache, et « Méthode », qui réunit toutes les définitions dans
+ * une seule fenêtre. Remplace les lignes de fraîcheur et d'exclusion qui se
+ * répétaient sous chaque bloc.
+ */
+export function StatsFooter({
+  notes,
+  freshness,
+  methodLabel,
+  onMethod,
+}: {
+  notes?: Array<{ key: string; content: ReactNode }>
+  /** « Calculé à 14:32 — recalculé au plus une fois toutes les 5 min. » */
+  freshness?: string
+  methodLabel: string
+  onMethod: () => void
+}) {
+  return (
+    <footer className="min-w-0 space-y-2 border-t border-white/[0.07] pt-3 text-xs leading-relaxed text-white/70">
+      {notes && notes.length > 0 && (
+        <ul className="min-w-0 space-y-1">
+          {notes.map((note) => (
+            <li key={note.key} className="min-w-0 break-words">
+              {note.content}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        {freshness && <p className="min-w-0 flex-1 break-words">{freshness}</p>}
+        <button
+          type="button"
+          onClick={onMethod}
+          className="ml-auto inline-flex min-h-[24px] shrink-0 items-center gap-1.5 rounded-md px-1.5 font-semibold text-gold transition-colors hover:bg-gold/10 hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+        >
+          <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {methodLabel}
+        </button>
+      </div>
+    </footer>
+  )
+}
+
+/**
+ * Choix exclusif en boutons collés (vues de l'onglet Statistiques, période) :
+ * tout est visible d'un coup d'œil, contrairement à une liste déroulante.
+ * aria-pressed dit le bouton choisi au lecteur d'écran, le fond et la graisse
+ * le disent à l'œil (jamais la couleur seule). Trop large pour l'écran (375
+ * px, langue longue, compteurs), la rangée passe à la ligne plutôt que de
+ * défiler : une option rangée hors champ, sans indice, passait pour absente
+ * — et l'option choisie par un lien de la page (« Tout le journal ») avec
+ * elle. `count` : compteur après le libellé, comme dans la navigation
+ * (signalements en cours, sanctions actives).
+ */
+export function SegmentedControl<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  className,
+}: {
+  /** Nom du groupe pour le lecteur d'écran (« Vue », « Période »). */
+  label: string
+  options: ReadonlyArray<{ value: T; label: string; icon?: IconType; count?: number | string; tone?: CountTone }>
+  value: T
+  onChange: (value: T) => void
+  className?: string
+}) {
+  return (
+    <div role="group" aria-label={label} className={cn('min-w-0 max-w-full', className)}>
+      <div className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+        {options.map((option) => {
+          const active = option.value === value
+          const Icon = option.icon
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(option.value)}
+              className={cn(
+                'inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/50',
+                active
+                  ? 'border border-amber-400/40 bg-amber-500/20 font-semibold text-amber-100'
+                  : 'border border-transparent font-medium text-white/70 hover:bg-white/[0.06] hover:text-white'
+              )}
+            >
+              {Icon && <Icon className="h-4 w-4 shrink-0" />}
+              {option.label}
+              <CountBadge count={option.count} tone={option.tone} />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Détail replié d'une vue : un bouton pleine largeur (aria-expanded) et son
+ * contenu, monté seulement une fois ouvert — un panneau qui charge ses
+ * propres données (journal des parties, liste des visiteurs) ne coûte rien
+ * tant qu'on ne le déplie pas. Le conteneur reste dans le DOM pour que
+ * aria-controls désigne toujours un élément existant. Contrôlé (`open`,
+ * `onOpenChange`) quand la page doit l'ouvrir elle-même, libre sinon. Le
+ * bouton est posé dans un titre (motif accordéon) : un bloc replié reste
+ * dans le plan de la page pour qui navigue par titres. `headingLevel` : h3
+ * sous le titre d'une vue, ses propres titres internes passant en h4.
+ */
+export function Disclosure({
+  title,
+  icon: Icon,
+  open: controlledOpen,
+  onOpenChange,
+  defaultOpen = false,
+  headingLevel = 3,
+  children,
+  className,
+}: {
+  title: ReactNode
+  icon?: IconType
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  defaultOpen?: boolean
+  headingLevel?: 2 | 3 | 4
+  children: ReactNode
+  className?: string
+}) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen)
+  const open = controlledOpen ?? uncontrolledOpen
+  const panelId = `disclosure-${useId()}`
+  const toggle = () => {
+    if (controlledOpen === undefined) setUncontrolledOpen(!open)
+    onOpenChange?.(!open)
+  }
+  const Heading = headingLevel === 2 ? 'h2' : headingLevel === 4 ? 'h4' : 'h3'
+  return (
+    <div className={cn('min-w-0 rounded-xl border border-white/10 bg-white/[0.02]', className)}>
+      <Heading className="min-w-0">
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          aria-controls={panelId}
+          className="flex min-h-[44px] w-full min-w-0 items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-white transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/50 sm:px-4"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            {Icon && <Icon className="h-4 w-4 shrink-0 text-amber-400" />}
+            <span className="min-w-0 break-words">{title}</span>
+          </span>
+          <ChevronDown className={cn('h-4 w-4 shrink-0 text-white/70 transition-transform', open && 'rotate-180')} aria-hidden />
+        </button>
+      </Heading>
+      <div id={panelId} hidden={!open}>
+        {open && <div className="min-w-0 space-y-4 border-t border-white/[0.07] p-3 sm:p-4">{children}</div>}
+      </div>
     </div>
   )
 }
@@ -655,6 +1077,8 @@ export function Pager({
     </div>
   )
 }
+
+// ── Glyphes internes (évite d'alourdir les imports d'icônes de la page) ──────
 
 function ShieldGlyph() {
   return (

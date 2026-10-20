@@ -170,19 +170,6 @@ export function assignableRoles(actorRole: string): UserRole[] {
   })
 }
 
-export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
-  fondateur:
-    'Grade suprême : contrôle total sur tous les comptes (y compris suppression des super administrateurs). Non attribuable via l\'interface.',
-  superadmin:
-    'Gestion complète sauf les fondateurs : supervision, rôles (jusqu\'à admin), bannissements et suppression définitive des grades inférieurs.',
-  admin:
-    'Gestion des joueurs et modérateurs : supervision, stats, rôles (jusqu\'à modérateur) et bannissements des grades inférieurs.',
-  moderator:
-    'Supervision en lecture, historiques et activité des joueurs (connexion, temps, jeux), bannissement temporaire des joueurs uniquement.',
-  user:
-    'Joueur standard : jeux locaux, compte personnel et synchronisation cloud de ses joueurs.',
-}
-
 export function roleLabel(role: string): string {
   switch (normalizeRole(role)) {
     case 'fondateur':

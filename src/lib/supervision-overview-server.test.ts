@@ -148,9 +148,28 @@ describe('summarizeOnlinePlay', () => {
     expect(stats.testExcluded).toBe(0)
   })
 
+  it('compte les lancements sur 1, 7 et 30 jours de Paris, solo et avec humains', () => {
+    expect(stats.launches).toEqual({
+      d1: { solo: 1, withHumans: 0 },
+      d7: { solo: 3, withHumans: 2 },
+      // + pmu du 18/10 à 23 h 30 à Paris ; l'équipe seule (21/10) et le 20/09 restent dehors.
+      d30: { solo: 4, withHumans: 2 },
+    })
+  })
+
+  it('totaux du jour et des 7 jours : ceux de la série sur les mêmes jours', () => {
+    const sum = (days: typeof stats.launchesByDay) =>
+      days.reduce((acc, d) => ({ solo: acc.solo + d.solo, withHumans: acc.withHumans + d.withHumans }), {
+        solo: 0,
+        withHumans: 0,
+      })
+    expect(stats.launches.d1).toEqual(sum(stats.launchesByDay.slice(-1)))
+    expect(stats.launches.d7).toEqual(sum(stats.launchesByDay.slice(-7)))
+  })
+
   it('compte les lancements par jeu sur 7 jours de Paris, avec humains ventilés, titres du catalogue', () => {
     // pmu : lancée le 18/10 à 23 h 30 à Paris (hors des 7 jours), ou par l'équipe seule.
-    expect(stats.launchesByGame7d).toEqual([
+    expect(stats.launchesByGame.d7).toEqual([
       { gameId: 'quiz', gameTitle: 'Le Grand Pillaveur', launches: 3, withHumans: 1 },
       { gameId: 'menteur', gameTitle: 'Le Menteur', launches: 2, withHumans: 1 },
     ])
@@ -160,7 +179,22 @@ describe('summarizeOnlinePlay', () => {
     const lastWeek = stats.launchesByDay.slice(-7)
     expect(lastWeek[0].day).toBe('2026-10-19')
     const seriesTotal = lastWeek.reduce((sum, d) => sum + d.solo + d.withHumans, 0)
-    expect(stats.launchesByGame7d.reduce((sum, g) => sum + g.launches, 0)).toBe(seriesTotal)
+    expect(stats.launchesByGame.d7.reduce((sum, g) => sum + g.launches, 0)).toBe(seriesTotal)
+  })
+
+  it('par jeu sur 1 et 30 jours : mêmes règles, chaque fenêtre refait sa borne', () => {
+    expect(stats.launchesByGame.d1).toEqual([
+      { gameId: 'quiz', gameTitle: 'Le Grand Pillaveur', launches: 1, withHumans: 0 },
+    ])
+    expect(stats.launchesByGame.d30).toEqual([
+      { gameId: 'quiz', gameTitle: 'Le Grand Pillaveur', launches: 3, withHumans: 1 },
+      { gameId: 'menteur', gameTitle: 'Le Menteur', launches: 2, withHumans: 1 },
+      { gameId: 'pmu', gameTitle: 'Course PMU', launches: 1, withHumans: 0 },
+    ])
+    for (const key of ['d1', 'd7', 'd30'] as const) {
+      const total = stats.launches[key].solo + stats.launches[key].withHumans
+      expect(stats.launchesByGame[key].reduce((sum, g) => sum + g.launches, 0)).toBe(total)
+    }
   })
 
   it('par jeu : écarte les parties des comptes de test seuls, garde un jeu retiré sous son identifiant', () => {
@@ -177,7 +211,7 @@ describe('summarizeOnlinePlay', () => {
       ],
       NOW,
       ['t1']
-    ).launchesByGame7d
+    ).launchesByGame.d7
     // À égalité de lancements : la partie avec humains d'abord.
     expect(byGame).toEqual([
       { gameId: 'pmu', gameTitle: 'Course PMU', launches: 1, withHumans: 1 },
@@ -189,7 +223,12 @@ describe('summarizeOnlinePlay', () => {
     const empty = summarizeOnlinePlay([], NOW)
     expect(empty.launchesByDay).toHaveLength(14)
     expect(empty.launchesByDay.every((d) => d.solo === 0 && d.withHumans === 0)).toBe(true)
-    expect(empty.launchesByGame7d).toEqual([])
+    expect(empty.launchesByGame).toEqual({ d1: [], d7: [], d30: [] })
+    expect(empty.launches).toEqual({
+      d1: { solo: 0, withHumans: 0 },
+      d7: { solo: 0, withHumans: 0 },
+      d30: { solo: 0, withHumans: 0 },
+    })
   })
 })
 
@@ -232,6 +271,13 @@ describe('summarizeLocalPlay', () => {
     expect(byDay.get('2026-10-20')).toEqual({ day: '2026-10-20', starts: 0, ends: 0 })
   })
 
+  it('aujourd’hui : seules les lignes du jour de Paris', () => {
+    expect(stats.byGame.d1).toEqual([
+      { gameId: 'pmu', gameTitle: titleOf('pmu'), starts: 3, ends: 4, noEndScreen: false },
+    ])
+    expect(stats.totals.d1).toEqual({ starts: 3, ends: 4 })
+  })
+
   it('par jeu sur 7 jours : tri par lancements, titres du catalogue, jeux sans écran de fin signalés', () => {
     expect(stats.byGame.d7).toEqual([
       { gameId: 'pmu', gameTitle: titleOf('pmu'), starts: 3, ends: 4, noEndScreen: false },
@@ -261,8 +307,12 @@ describe('summarizeLocalPlay', () => {
     expect(empty.since).toBeNull()
     expect(empty.byDay).toHaveLength(14)
     expect(empty.byDay.every((d) => d.starts === 0 && d.ends === 0)).toBe(true)
-    expect(empty.byGame).toEqual({ d7: [], d30: [] })
-    expect(empty.totals).toEqual({ d7: { starts: 0, ends: 0 }, d30: { starts: 0, ends: 0 } })
+    expect(empty.byGame).toEqual({ d1: [], d7: [], d30: [] })
+    expect(empty.totals).toEqual({
+      d1: { starts: 0, ends: 0 },
+      d7: { starts: 0, ends: 0 },
+      d30: { starts: 0, ends: 0 },
+    })
   })
 })
 
@@ -342,7 +392,8 @@ describe('getGrowthStats', () => {
     expect(growth.onlinePlay.uniquePlayers.d30).toBe(0)
     // Le jeu de chaque partie est lu ; celle du compte de test seul n'est pas un lancement.
     expect(prismaMock.onlineGameSession.findMany.mock.calls[0][0].select).toMatchObject({ gameId: true })
-    expect(growth.onlinePlay.launchesByGame7d).toEqual([])
+    expect(growth.onlinePlay.launchesByGame.d7).toEqual([])
+    expect(growth.onlinePlay.launches.d30).toEqual({ solo: 0, withHumans: 0 })
     expect(growth).not.toHaveProperty('retentionD1')
     expect(growth).not.toHaveProperty('retentionD7')
     expect(growth.windows).toEqual({ registeredShareDays: 30, playersByGameDays: 7 })
@@ -428,6 +479,36 @@ describe('getSupervisionOverview — tables en cours', () => {
       where: { status: { in: ['waiting', 'briefing', 'playing', 'cast'] } },
       _count: { _all: true },
     })
+  })
+
+  it('tables figées du bandeau santé : comptées en base, hors diffusion TV, comme la tuile de la vue Qualité', async () => {
+    mockEmptyOverview()
+    // Une diffusion TV muette depuis 40 min, marquée figée dans la liste.
+    prismaMock.onlineRoom.findMany.mockResolvedValue([
+      {
+        id: 'tv1',
+        code: 'TV1',
+        gameId: 'pmu',
+        status: 'cast',
+        visibility: 'private',
+        currentTurnUserId: null,
+        createdAt: new Date(Date.now() - 60 * 60_000),
+        updatedAt: new Date(Date.now() - 40 * 60_000),
+        host: null,
+        _count: { members: 0 },
+        members: [],
+      },
+    ])
+    prismaMock.$queryRawUnsafe.mockImplementation(async (sql: string) =>
+      sql.includes('OnlineRoom r') ? [{ live: BigInt(12), stalled: BigInt(3) }] : []
+    )
+
+    const overview = await getSupervisionOverview('admin')
+
+    expect(overview.liveTables[0].stalled).toBe(true)
+    expect(overview.stalledGameTables).toBe(3)
+    const sql = prismaMock.$queryRawUnsafe.mock.calls.map(([query]) => String(query)).find((q) => q.includes('OnlineRoom r'))
+    expect(sql).toContain("WHERE r.status IN ('waiting', 'briefing', 'playing')")
   })
 })
 

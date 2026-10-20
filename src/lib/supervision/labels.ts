@@ -12,6 +12,15 @@ export function rateLabel(rate: number | null): string {
 }
 
 /**
+ * Écart en pour-cent déjà arrondi (« +12 % », « −5 % ») : même typographie
+ * que rateLabel, posé à côté de lui dans les mêmes rangées de tuiles. Signe
+ * toujours écrit, vrai signe moins : la flèche ne porte pas seule le sens.
+ */
+export function deltaLabel(percent: number): string {
+  return `${percent >= 0 ? '+' : '−'}${Math.abs(percent)} %`
+}
+
+/**
  * Durée d'inactivité à partir de laquelle on parle de table figée (F46) :
  * « 7 min » sous l'heure (jamais « 0 min »), « 2 h 05 » au-delà.
  */

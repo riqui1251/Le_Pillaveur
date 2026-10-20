@@ -5114,6 +5114,13 @@
     "unknownCountry": "Desconocido",
     "rolesHelpTitle": "Roles y permisos",
     "rolesHierarchy": "Jerarquía: jugador < moderador < admin < super admin < fundador — solo un rango superior puede sancionar o modificar una cuenta (nunca un par). Moderadores: solo ban temporal.",
+    "roleDescriptions": {
+      "fondateur": "Rango supremo: control total sobre todas las cuentas (incluida la eliminación de los superadministradores). No se puede asignar desde la interfaz.",
+      "superadmin": "Gestión completa salvo los fundadores: supervisión, roles (hasta admin), baneos y eliminación definitiva de los rangos inferiores.",
+      "admin": "Gestión de jugadores y moderadores: supervisión, estadísticas, roles (hasta moderador) y baneos de los rangos inferiores.",
+      "moderator": "Supervisión en lectura, historiales y actividad de los jugadores (conexión, tiempo, juegos), baneo temporal solo de jugadores.",
+      "user": "Jugador estándar: juegos locales, cuenta personal y sincronización en la nube de sus jugadores."
+    },
     "roles": {
       "fondateur": "Fundador",
       "superadmin": "Super admin",
@@ -5121,27 +5128,13 @@
       "moderator": "Moderador",
       "user": "Jugador"
     },
-    "subtitles": {
-      "full": "Panel completo — estadísticas, juegos, visitantes y cuentas.",
-      "bans": "Gestión de cuentas y baneos.",
-      "accounts": "Consulta y moderación de cuentas de jugadores."
-    },
     "tabs": {
       "section": "Sección",
       "overview": "La Sala",
-      "geo": "País / IP",
-      "accounts": "Cuentas ({count})",
-      "bans": "Baneados ({count})",
-      "feedback": "Comentarios ({count})",
-      "feedbackResolved": "Resueltos ({count})",
-      "moderation": "Moderación nombres",
+      "stats": "Estadísticas",
+      "moderation": "Moderación",
       "accountsShort": "Cuentas",
-      "bansShort": "Sanciones",
-      "moderationShort": "Términos",
-      "feedbackShort": "Reportes",
-      "feedbackResolvedShort": "Resueltos",
-      "ops": "Monitorización del servidor",
-      "opsShort": "Monitorización"
+      "ops": "Servidor"
     },
     "moderation": {
       "title": "Filtro anti-insultos",
@@ -5181,15 +5174,11 @@
       "activeBrowsers": "Navegadores activos",
       "activeBrowsersHint": "Estadísticas aceptadas, equipo incluido (últimos {minutes} min.)",
       "today": "Hoy",
-      "todayHint": "Navegadores distintos, estadísticas aceptadas, equipo incluido",
       "week": "7 días",
       "weekHint": "Navegadores distintos, estadísticas aceptadas, equipo incluido",
-      "month": "30 días",
-      "monthHint": "Navegadores distintos, estadísticas aceptadas"
+      "month": "30 días"
     },
     "accounts": {
-      "overviewTitle": "Cuentas",
-      "total": "Total",
       "moderators": "Moderadores",
       "admins": "Admins",
       "superAdmins": "Super admins",
@@ -5203,6 +5192,7 @@
       "players": "Jugadores",
       "allStatus": "Todos",
       "online": "En línea",
+      "onlineFilterDesc": "En línea: cuentas vistas en los últimos {minutes} minutos, equipo e invitados incluidos — cuentas, no navegadores.",
       "banned": "Baneados",
       "kindPlaceholder": "Tipo",
       "allKinds": "Todos los tipos",
@@ -5237,9 +5227,7 @@
       "matchCount": "{total} cuenta{plural} encontrada{plural}",
       "kindSummary": "{total, plural, one {# cuenta} other {# cuentas}}: {password} con contraseña · {google} Google · {guests, plural, one {# invitado} other {# invitados}}{orphans, plural, =0 {} one { (# huérfano incluido)} other { (# huérfanos incluidos)}}",
       "countsNote": "Invitados incluidos. Desde la actualización del seguimiento de presencia ({date}), la última actividad sigue una página realmente en uso: pestaña visible e interacción en los últimos 30 minutos (antes bastaba con una pestaña abierta). No prueba que la persona esté jugando.",
-      "byKindTitle": "Por tipo de cuenta",
-      "byRoleTitle": "Por rol",
-      "playersRoleHint": "invitados incluidos"
+      "byRoleLine": "Por rol: {players, plural, one {# jugador} other {# jugadores}} · {moderators, plural, one {# moderador} other {# moderadores}} · {admins, plural, one {# admin} other {# admins}} · {superadmins, plural, one {# super admin} other {# super admins}} · {founders, plural, one {# fundador} other {# fundadores}}"
     },
     "units": {
       "s": "s",
@@ -5261,8 +5249,6 @@
       "players": "Jugadores",
       "accounts": "Cuentas",
       "category": "Categoría",
-      "status": "Estado",
-      "tables": "Mesas",
       "device": "Dispositivo",
       "visits": "Visitas"
     },
@@ -5275,11 +5261,8 @@
       "staleGuest": "inactivo desde hace {days} d — la cookie puede haberse perdido"
     },
     "bans": {
-      "activeTitle": "Baneos activos",
       "activeOverview": "{count} cuenta(s) suspendida(s)",
-      "suspendedCount": "{count} cuenta(s) suspendida(s)",
       "noneActive": "Ningún baneo activo.",
-      "noneOverview": "Ningún baneo en curso.",
       "currentTitle": "Baneos en curso",
       "currentDesc": "Cuentas suspendidas (permanente o temporal no expirado)",
       "noneCurrent": "Ningún baneo activo.",
@@ -5292,40 +5275,26 @@
       "until": "hasta el {date}",
       "unban": "Desbanear"
     },
-    "connected": {
-      "recentTitle": "Cuentas conectadas recientemente",
-      "recentWindowDesc": "Cuentas activas en los últimos {minutes} minutos, de todo tipo (invitados incluidos), con su IP y país",
-      "noneRecent": "Ninguna cuenta conectada recientemente."
-    },
     "activeAccounts": {
       "title": "Cuentas activas",
-      "desc": "Cuentas distintas que visitan y juegan, en días de París. Cuentas, no personas: un mismo jugador puede tener varias. Equipo y cuentas de prueba excluidos.",
-      "definition": "Definición",
       "refreshError": "No se ha podido actualizar: las cifras mostradas son las del último cálculo correcto.",
       "loadError": "No se ha podido cargar el panel de cuentas activas.",
-      "accountsTitle": "Cuentas",
-      "onlineNow": "En línea ahora",
       "accountsUnit": "{count, plural, one {cuenta} other {cuentas}}",
-      "onlineNowDef": "Cuentas de jugadores cuya última actividad tiene menos de {minutes} min: página realmente en uso o autenticación, en cualquier dispositivo, con o sin estadísticas aceptadas. Se vuelve a contar en cada apertura y actualización, a diferencia de las demás cifras del panel (en caché).",
-      "activeLabel": "Activas · {window}",
       "activeTodayDef": "Cuentas que, desde la medianoche (hora de París), empezaron una visita con al menos 60 s de tiempo activo (interacción en los últimos {minutes} minutos) O se sentaron en una partida en línea. Invitados incluidos.",
       "activeWindowDef": "Cuentas que, en los últimos {days} días de París (hoy incluido), empezaron una visita con al menos 60 s de tiempo activo (interacción en los últimos {minutes} minutos) O se sentaron en una partida en línea. Invitados incluidos.",
       "newLabel": "Cuentas nuevas",
       "newDef": "Cuentas creadas en el periodo Y activas en ese mismo periodo (visita con al menos 60 s activos o asiento en una partida en línea). Un invitado creado sin jugar no se cuenta aquí: se cuenta aparte, más abajo.",
       "returningLabel": "Recurrentes",
       "returningDef": "Cuentas activas en el periodo y creadas antes de su primer día.",
-      "excluded": "Fuera del recuento: + {staff} del equipo · {test, plural, one {# cuenta de prueba excluida} other {# cuentas de prueba excluidas}}",
-      "excludedDef": "Cuentas del equipo y cuentas de prueba activas en 30 días, retiradas de todas las cifras de este panel. El equipo se reconoce por su rol ACTUAL: un antiguo moderador que vuelve a ser jugador reaparece en las cifras. Una cuenta de prueba se marca desde su ficha.",
-      "idleGuests": "Invitados creados sin jugar · {weekLabel}: {week} · {monthLabel}: {month}",
+      "excluded": "Fuera del recuento en 30 días: + {staff} del equipo · {test, plural, one {# cuenta de prueba excluida} other {# cuentas de prueba excluidas}}",
+      "excludedDef": "Cuentas del equipo y cuentas de prueba activas en 30 días, retiradas de todas las cifras sacadas de la actividad de las cuentas: cuentas activas, nuevas y recurrentes, retornos, jugadores únicos, cuentas más activas y visitas. Las partidas en línea siguen su propia regla (se excluyen las partidas jugadas solo por el equipo o por cuentas de prueba) y las partidas locales no excluyen a nadie. El equipo se reconoce por su rol ACTUAL: un antiguo moderador que vuelve a ser jugador reaparece en las cifras. Una cuenta de prueba se marca desde su ficha.",
       "idleGuestsDef": "Cuentas de invitado creadas en los últimos 7 o 30 días de París sin haber estado activas en ese tiempo (ni asiento en una partida en línea, ni visita con al menos 60 s activos): ni cuentas nuevas ni recurrentes. A menudo, un visitante que probó una partida contra bots y la abandonó. Los invitados inaccesibles e inactivos desde hace 7 días se eliminan automáticamente y salen entonces de este recuento, que por tanto subestima la ventana de 30 días. Quedan fuera los invitados creados antes del inicio del registro de partidas: su actividad de entonces no consta en ningún sitio. Sin el equipo ni las cuentas de prueba.",
       "playersTitle": "Jugadores únicos",
       "playersTodayDef": "Cuentas que, desde la medianoche (hora de París), se sentaron en una partida en línea O pasaron al menos 60 s en una pantalla de juego (local o en línea) durante una visita. Invitados incluidos.",
       "playersWindowDef": "Cuentas que, en los últimos {days} días de París (hoy incluido), se sentaron en una partida en línea O pasaron al menos 60 s en una pantalla de juego (local o en línea) durante una visita. Invitados incluidos.",
-      "deletedSeats": "Asientos sin cuenta, fuera del recuento · {todayLabel}: {today} · {weekLabel}: {week} · {monthLabel}: {month}",
       "deletedSeatsDef": "Asientos humanos (sin bots) de las partidas en línea lanzadas en el periodo que ya no están vinculados a ninguna cuenta: cuenta eliminada después (solicitud de supresión, invitado purgado) o jugador nunca vinculado a una cuenta al lanzar la partida, indistinguibles. Uno por asiento, nunca sumado a las cuentas. Cuando se elimina una cuenta, los jugadores únicos de los días pasados bajan y este recuento sube en sus asientos.",
-      "visitsTitle": "Visitas (7 días)",
-      "visitsScope": "Solo cuentas que aceptaron las estadísticas, visitas registradas desde el {date}: en las demás cuentas y dispositivos no se mide nada.",
-      "visitsScopeNone": "Solo cuentas que aceptaron las estadísticas: todavía no hay ninguna visita registrada.",
+      "visitsScope": "Visitas (duración mediana, proporción en móvil, dispositivos): solo cuentas que aceptaron las estadísticas, sin el equipo ni las cuentas de prueba, registradas desde el {date}; en las demás cuentas y dispositivos no se mide nada.",
+      "visitsScopeNone": "Visitas (duración mediana, proporción en móvil, dispositivos): solo cuentas que aceptaron las estadísticas; todavía no hay ninguna visita registrada.",
       "medianVisit": "Duración mediana de una visita",
       "medianVisitDef": "Visitas iniciadas en los últimos 7 días de París, del primer latido al último más 60 s; las pausas de menos de 30 min siguen dentro de la visita. La mitad de las visitas duran menos y la otra mitad más.",
       "medianActive": "Tiempo activo mediano por cuenta",
@@ -5333,15 +5302,12 @@
       "gameShare": "Parte del tiempo en partida",
       "gameShareDetail": "{game} en partida de {visible} en el sitio",
       "gameShareDef": "Tiempo pasado en una pantalla de juego (local o en línea) dividido entre el tiempo en el sitio (pestaña visible), sumando todas las visitas de los últimos 7 días. Es una estimación: el juego local no deja ningún otro rastro.",
-      "seriesTitle": "Últimos 14 días",
       "seriesAccounts": "Cuentas activas",
       "seriesPlayers": "Jugadores únicos",
-      "seriesLaunches": "Partidas lanzadas",
       "seriesDay": "{date}: {value}",
       "legendNoData": "Antes del inicio de las mediciones (sin datos)",
       "seriesRecomputed": "Series recalculadas en cada lectura: una cuenta eliminada después sale de los totales, días pasados incluidos.",
-      "seriesDef": "Por día de París: cuentas activas y jugadores únicos según las definiciones anteriores, solo para ese día; partidas lanzadas según el registro, revanchas incluidas, sin las partidas jugadas solo por el equipo o por cuentas de prueba. Cuentas activas y jugadores únicos comparten la misma escala; las partidas tienen la suya.",
-      "returnsTitle": "Regresos",
+      "seriesDef": "Por día de París: cuentas activas y jugadores únicos según sus definiciones, solo para ese día, en la misma escala (misma unidad: cuentas). Los días anteriores al inicio de las mediciones aparecen rayados.",
       "returnD1Label": "Regreso en D+1",
       "returnD7Label": "Regreso en D+7",
       "returnCount": "{retained} de {cohort}",
@@ -5357,15 +5323,12 @@
       "topLineUntracked": "visitas no registradas · {games, plural, =0 {ninguna partida en línea} one {# partida en línea} other {# partidas en línea}}",
       "topDef": "Cuentas activas en los últimos 7 días de París, ordenadas por tiempo activo de las visitas («visitas no registradas» sin estadísticas aceptadas, contadas como cero) y después por partidas en línea en las que se sentaron. Herramienta de gestión, nunca visible para los jugadores.",
       "browsersTitle": "Navegadores sin cuenta (estadísticas aceptadas)",
-      "browsersValues": "Hoy: {today} · 7 días: {week}",
       "browsersNotAdded": "Una unidad distinta de las cuentas: estas cifras nunca se suman a los recuentos de cuentas.",
       "browsersDef": "Navegadores distintos que aceptaron las estadísticas, vistos desde la medianoche o en los últimos 7 días de París, y en los que no se ha visto ninguna cuenta. Un mismo visitante cuenta dos veces en dos dispositivos; rechazar las estadísticas lo vuelve invisible.",
       "coverage": "Registro de partidas: todas las cuentas, desde el {journal}. Visitas: cuentas que aceptaron las estadísticas, desde el {visits}.",
       "coverageNoVisits": "Registro de partidas: todas las cuentas, desde el {journal}. Visitas: ninguna registrada todavía.",
-      "newReturningLabel": "Nuevas y recurrentes entre las cuentas activas",
       "activeCount": "{count, plural, one {# cuenta activa} other {# cuentas activas}}",
       "newReturningAria": "Cuentas nuevas y recurrentes entre las cuentas activas · {window}",
-      "definitionOf": "Definición: {label}",
       "seriesAccountsTitle": "Cuentas activas y jugadores únicos por día",
       "seriesNewTitle": "Cuentas nuevas por día de creación",
       "seriesNewRegistered": "Cuentas registradas",
@@ -5386,14 +5349,94 @@
         "unknown": "Desconocido"
       }
     },
+    "method": {
+      "button": "Método",
+      "close": "Cerrar",
+      "title": "Método de las estadísticas",
+      "desc": "Lo que mide cada cifra de la pestaña Estadísticas, y lo que deja fuera, ordenado por tema.",
+      "definitionOf": "Definición: {label}",
+      "windowed": "{label} · {window}",
+      "groups": {
+        "audience": "Audiencia",
+        "players": "Jugadores",
+        "games": "Juegos",
+        "quality": "Calidad"
+      },
+      "names": {
+        "excluded": "Equipo y cuentas de prueba",
+        "idleGuests": "Invitados creados sin jugar",
+        "deletedSeats": "Asientos sin cuenta"
+      }
+    },
+    "statsTab": {
+      "viewsAria": "Vista de las estadísticas",
+      "periodAria": "Periodo",
+      "days": "{days, plural, one {# día} other {# días}}",
+      "countLine": "{label}: {count}",
+      "growthError": "No se pudieron cargar las partidas ni los indicadores de crecimiento.",
+      "audience": {
+        "visitorsWindowDef": "Navegadores distintos que aceptaron las estadísticas, vistos al menos una vez en el periodo (días de París, hoy incluido), equipo incluido. Navegadores, no cuentas ni personas: un mismo jugador cuenta dos veces en dos dispositivos, y rechazar las estadísticas lo vuelve invisible. Variación (solo 7 días): los últimos 7 días completos, sin hoy porque está en curso, comparados con los 7 días anteriores; oculta mientras la comparación incluya el día en que el aviso de consentimiento se volvió a mostrar a todos.",
+        "activeBrowsersDef": "Navegadores que aceptaron las estadísticas cuya última presencia fue hace menos de {minutes} min, equipo incluido. Navegadores: una cuenta abierta en dos dispositivos cuenta dos veces, y un visitante sin cuenta también cuenta. La pastilla «en línea» de la cabecera cuenta otra cosa: cuentas, hayan aceptado o no las estadísticas.",
+        "phoneShare": "Proporción en móvil",
+        "phoneShareDetail": "{phone, plural, =0 {Ninguna visita} one {# visita} other {# visitas}} de {total}",
+        "phoneShareDef": "Visitas iniciadas en un teléfono (categoría «Móvil») entre todas las visitas iniciadas en los últimos 7 días de París; las tabletas aparte. Solo las cuentas que aceptaron las estadísticas, sin el equipo ni las cuentas de prueba. El detalle por dispositivo está en «Dispositivos de las visitas».",
+        "ipTitle": "Visitantes y jugadores por IP",
+        "browsersNote": "Visitantes, navegadores activos, gráfico diario y países: navegadores que aceptaron las estadísticas, con o sin cuenta, equipo incluido — nunca sumados a las cuentas."
+      },
+      "players": {
+        "newReturning": "Nuevas · recurrentes",
+        "topShowAll": "Ver las {count} cuentas",
+        "detailTitle": "Detalle de las cuentas"
+      },
+      "games": {
+        "launches": "Partidas lanzadas",
+        "launchesDetail": "en línea y locales",
+        "launchesDetailLocalSince": "en línea y locales, locales contadas desde el {date}",
+        "launchesOnlineOnly": "solo en línea: partidas locales ilegibles",
+        "launchesDef": "Partidas en línea lanzadas (registro de partidas) más partidas locales lanzadas (contadores anónimos) en el periodo, días de París, hoy incluido. Dos fuentes sumadas para dar un orden de magnitud: cada una tiene su tarjeta y su definición. Revanchas incluidas, termine o no la partida; se excluyen las partidas en línea jugadas solo por el equipo o por cuentas de prueba, las locales no pueden excluirse (no tienen cuenta).",
+        "online": "En línea",
+        "onlineSplit": "{solo} en solitario · {withHumans} entre humanos",
+        "local": "Locales",
+        "localUnavailable": "Ilegibles por ahora",
+        "seriesSolo": "En línea, en solitario contra bots",
+        "seriesWithHumans": "En línea, entre humanos",
+        "seriesLocal": "Locales",
+        "legendBeforeMeasure": "Antes del inicio de una medición (sin datos)",
+        "onlineSince": "Partidas en línea: registro desde el {date}.",
+        "localSince": "Partidas locales contadas desde el {date}.",
+        "localMissing": "Partidas locales ilegibles por ahora: solo se muestran las partidas en línea.",
+        "tableTitle": "Por juego",
+        "tableDef": "Partidas lanzadas en el periodo, por juego: en línea (registro de partidas, en solitario y entre humanos juntas) y locales (contadores anónimos), y luego su suma. Revanchas incluidas, termine o no la partida; se dejan fuera las partidas en línea jugadas solo por el equipo o por cuentas de prueba. «—»: medición ilegible por ahora, por lo que no hay total. Bajo cada juego: sus partidas en línea entre humanos (dos humanos o más) y sus partidas locales terminadas.",
+        "rowWithHumans": "{count, plural, =0 {ninguna entre humanos} other {# entre humanos}}",
+        "rowNoEndScreen": "sin pantalla final",
+        "tableEmpty": "Ninguna partida lanzada en el periodo.",
+        "detailTitle": "Desde el inicio y jugadores por juego",
+        "journalTitle": "Registro de partidas",
+        "localNote": "Partidas locales: dos contadores anónimos por juego y por día, sin cuenta ni dispositivo — ni jugadores únicos ni exclusión del equipo.",
+        "playersExcluded": "Jugadores únicos, fuera del recuento en 30 días: + {staff} del equipo · {test, plural, one {# cuenta de prueba excluida} other {# cuentas de prueba excluidas}}"
+      }
+    },
+    "moderationTab": {
+      "viewsAria": "Vista de la moderación",
+      "views": {
+        "reports": "Reportes",
+        "sanctions": "Sanciones",
+        "words": "Palabras y nombres",
+        "journal": "Registro"
+      },
+      "scopeAria": "Reportes a mostrar",
+      "scope": {
+        "active": "En curso",
+        "resolved": "Resueltos"
+      },
+      "journalDesc": "{count, plural, one {La última acción del equipo de moderación.} other {Las # últimas acciones del equipo de moderación, de la más reciente a la más antigua.}}"
+    },
     "growth": {
-      "title": "Crecimiento",
-      "desc": "Cada cifra lleva la definición exacta de la consulta que la produce.",
       "registeredShareLabel": "Proporción de cuentas registradas",
       "registeredShareDef": "Proporción de las cuentas CREADAS en los últimos {days} días que tienen correo, entre todas las creadas en la misma ventana. No es un embudo: nada vincula una cuenta registrada con la cuenta invitada usada antes, así que la proporción de invitados que luego se registran queda fuera de alcance.",
       "abandonedLabel": "Mesas bloqueadas",
       "abandonedDetail": "{stalled} bloqueadas de {live} mesas en curso",
-      "abandonedDef": "Todas las mesas de juego en curso (en espera, briefing o en juego) sin nada que se mueva desde el umbral de su estado: 3 min en espera, 5 min en briefing, 10 min en juego. Contadas en la base de datos, no sobre la lista de abajo; las pantallas de TV quedan excluidas. Foto del momento: una partida que muere sin resultado no deja nada que contar después.",
+      "abandonedDef": "Todas las mesas de juego en curso (en espera, briefing o en juego) sin nada que se mueva desde el umbral de su estado: 3 min en espera, 5 min en briefing, 10 min en juego. Contadas en la base de datos, como el indicador «Mesas» de La Sala, y no sobre la lista «En directo», limitada; las pantallas de TV quedan excluidas. Foto del momento: una partida que muere sin resultado no deja nada que contar después.",
       "playersByGameTitle": "Jugadores por juego, en línea",
       "playersByGameDef": "Cuentas que han INICIADO una partida en línea de ese juego en los últimos {days} días — una fila por jugador y por juego, 12 juegos como máximo. Cuenta el inicio, no el final: una partida abandonada a medias también figura. Las partidas locales (mismo dispositivo) y el modo TV no registran nada: no aparecen aquí.",
       "noData": "Ninguna partida en línea iniciada en esta ventana.",
@@ -5403,53 +5446,20 @@
       "registeredShareEmpty": "Ninguna cuenta creada en esta ventana."
     },
     "onlinePlayers": {
-      "title": "Jugadores del juego en línea",
-      "desc": "Registro de partidas llevado desde el {date}: todas las cuentas, invitados incluidos, y nada antes de esa fecha. Cifras brutas, sin tendencia ni porcentaje: todavía falta perspectiva.",
       "accountsDetail": "{count, plural, one {cuenta} other {cuentas}}, {guests, plural, =0 {ningún invitado} one {# invitado incluido} other {# invitados incluidos}}",
-      "todayDef": "Cuentas distintas que ocuparon un asiento en al menos una partida en línea lanzada desde la medianoche, hora de París. Bots, cuentas del equipo y cuentas de prueba excluidos.",
-      "windowDef": "Cuentas distintas que ocuparon un asiento en al menos una partida en línea lanzada en los últimos {days} días (hora de París), hoy incluido. Bots, cuentas del equipo y cuentas de prueba excluidos.",
-      "staffExcluded": "{count, plural, =0 {Equipo excluido: ninguna cuenta del equipo jugó en 30 días.} one {Equipo excluido: # cuenta del equipo jugó en 30 días y no se cuenta.} other {Equipo excluido: # cuentas del equipo jugaron en 30 días y no se cuentan.}}",
-      "testExcluded": "{count, plural, =0 {Cuentas de prueba excluidas: ninguna jugó en 30 días.} one {Cuentas de prueba excluidas: # cuenta de prueba jugó en 30 días y no se cuenta.} other {Cuentas de prueba excluidas: # cuentas de prueba jugaron en 30 días y no se cuentan.}}",
-      "deletedSeats": "{count, plural, =0 {Ningún asiento sin cuenta en 30 días.} one {# asiento sin cuenta (cuenta eliminada o jugador no vinculado) en 30 días, fuera del recuento: cuando se elimina una cuenta, las cifras pasadas bajan.} other {# asientos sin cuenta (cuenta eliminada o jugador no vinculado) en 30 días, fuera del recuento: cuando se elimina una cuenta, las cifras pasadas bajan.}}",
-      "loadError": "No se han podido cargar los jugadores del juego en línea ni los indicadores de crecimiento.",
       "launchesTitle": "Partidas lanzadas por día",
-      "launchesTotal": "{total, plural, one {# partida lanzada} other {# partidas lanzadas}} en {days} días: {solo} en solitario contra bots, {withHumans} con otros humanos.",
-      "launchesNone": "Ninguna partida lanzada en {days} días.",
       "launchesDef": "Cuenta cada lanzamiento, revanchas incluidas, termine o no la partida, en el día de París en que empezó. En solitario: un solo humano en la mesa, frente a bots. Las partidas jugadas solo por el equipo o por cuentas de prueba quedan excluidas. Las partidas locales y el modo TV no escriben nada en el registro.",
-      "legendSolo": "En solitario contra bots",
-      "legendWithHumans": "Con otros humanos",
-      "legendBeforeJournal": "Antes del registro (sin datos)",
-      "range": "Del {from} al {to}, días de París.",
-      "byGameTitle": "Partidas lanzadas por juego · {window}",
-      "byGameHint": "{count, plural, one {# partida lanzada} other {# partidas lanzadas}}",
-      "byGameEmpty": "Ninguna partida en línea lanzada en 7 días.",
-      "byGameDef": "Partidas en línea lanzadas en los últimos 7 días de París (hoy incluido), por juego, revanchas incluidas, termine o no la partida. «Con otros humanos»: al menos dos jugadores humanos en la mesa; el resto es en solitario contra bots. Quedan excluidas las partidas jugadas solo por el equipo o por cuentas de prueba. Sumados, los juegos dan el total de los últimos 7 días del gráfico por día; la proporción es la de los lanzamientos de la semana."
+      "range": "Del {from} al {to}, días de París."
     },
     "localPlay": {
-      "title": "Partidas locales",
-      "desc": "Juegos jugados en un solo teléfono, contados desde el {date}: dos contadores anónimos por juego y por día, sin cuenta, sin dispositivo y sin dirección IP. Volúmenes brutos: ni jugadores únicos ni exclusión del equipo.",
-      "descEmpty": "Juegos jugados en un solo teléfono: todavía no se ha contado ninguna partida local. Dos contadores anónimos por juego y por día, sin cuenta, sin dispositivo y sin dirección IP.",
-      "totalsDetail": "{starts, plural, one {partida lanzada} other {partidas lanzadas}}, {ends, plural, =0 {ninguna terminada} one {# terminada} other {# terminadas}}",
-      "windowDef": "Páginas de juego abiertas en modo local con una mesa de jugadores en los últimos {days} días (hora de París), hoy incluido, y partidas que llegaron a su pantalla final en el mismo periodo.",
-      "byDayTitle": "Partidas locales por día",
-      "byDayTotal": "{starts, plural, =0 {Ninguna lanzada} one {# lanzada} other {# lanzadas}} y {ends, plural, =0 {ninguna terminada} one {# terminada} other {# terminadas}} en {days} días.",
       "byDayEmpty": "Todavía no se ha contado ninguna partida local.",
-      "legendStarts": "Lanzadas",
-      "legendEnds": "Terminadas",
-      "legendBeforeMeasure": "Antes de la medición (sin datos)",
-      "byGameTitle": "Partidas locales por juego · {window}",
       "endsHint": "{count, plural, =0 {ninguna terminada} one {# terminada} other {# terminadas}}",
-      "noEndScreen": "sin pantalla final, nunca «terminada»",
-      "byGameEmpty": "Ninguna partida local lanzada en {days} días.",
-      "def": "Lanzada: la página del juego se abre en modo local con una mesa de jugadores; una revancha jugada en la misma página no cuenta como nuevo lanzamiento. Terminada: la partida lanzada llega a su pantalla final; solo cuenta el primer final tras un lanzamiento, las revanchas no suman. Los finales nunca superan los lanzamientos: la diferencia son las aperturas abandonadas antes del final. Los juegos sin pantalla final nunca están «terminados». Ni las partidas en línea ni el modo TV cuentan aquí; la proporción es la de los lanzamientos del periodo."
+      "def": "Lanzada: la página del juego se abre en modo local con una mesa de jugadores; una revancha jugada en la misma página no cuenta como nuevo lanzamiento. Terminada: la partida lanzada llega a su pantalla final; solo cuenta el primer final tras un lanzamiento, las revanchas no suman. Los finales nunca superan los lanzamientos: la diferencia son las aperturas abandonadas antes del final. Los juegos sin pantalla final nunca están «terminados». Ni las partidas en línea ni el modo TV cuentan aquí."
     },
     "room": {
-      "todayLabel": "Hoy",
-      "weekLabel": "7 días",
-      "vsPrevWeek": "vs 7 d. ant.",
-      "trendTitle": "Tendencia — últimos 14 días",
+      "vsPrevWeek": "7 días completos vs 7 ant.",
       "trendVisitors": "Navegadores (estadísticas aceptadas, equipo incluido)",
-      "liveTablesTitle": "Mesas en curso",
+      "liveTablesTitle": "En directo",
       "liveTablesDesc": "Salas activas ahora mismo",
       "liveTablesEmpty": "Ninguna mesa en curso.",
       "liveTablesEmptyHint": "La sala está tranquila por ahora.",
@@ -5463,8 +5473,9 @@
       "queueEmptyHint": "Ningún reporte ni nombre sospechoso pendiente.",
       "queueViewAction": "Ver",
       "queueAckAction": "Reconocer",
-      "journalTitle": "Registro de acciones",
+      "journalTitle": "Registro del equipo",
       "journalDesc": "Trazabilidad del equipo de moderación",
+      "journalAll": "{count, plural, one {La última acción} other {Las # últimas acciones}}",
       "journalEmpty": "Ninguna acción reciente.",
       "journalBan": "{actor} baneó a {target}",
       "journalBanReason": "{actor} baneó a {target} — «{detail}»",
@@ -5477,6 +5488,7 @@
       "stalledFor": "Bloqueada desde hace {duration}",
       "turnLabel": "Turno de {name}",
       "castHost": "Emitida por {name}",
+      "castIdleFor": "Pantalla inactiva desde hace {duration}",
       "journalRoleChange": "{actor} cambió el rango de {target}: {detail}",
       "journalAccountDelete": "{actor} eliminó una cuenta",
       "journalAccountDeleteTyped": "{actor} eliminó una cuenta ({kind}, {role})",
@@ -5488,12 +5500,26 @@
       "visitorsSeries": "Navegadores",
       "visitorsDef": "Navegadores distintos que aceptaron las estadísticas, vistos al menos una vez ese día de París, equipo incluido. Navegadores, no cuentas ni personas: un mismo jugador cuenta dos veces en dos dispositivos, y rechazar las estadísticas lo vuelve invisible.",
       "visitorsConsentNote": "El {date}, el aviso de consentimiento se volvió a mostrar a todos: un navegador deja de contar mientras no haya respondido. El escalón de ese día no es una caída de visitas.",
-      "partiesChartTitle": "Salas con una partida clasificada, por día",
-      "partiesChartSubtitle": "Salas en línea que terminaron al menos una partida con resultado clasificado",
-      "partiesSeries": "Salas",
-      "partiesDef": "Salas en línea que registraron al menos un resultado clasificado ese día de París, contadas una vez por sala y por día. Varios juegos no registran ningún resultado (no hay ganador), ni tampoco las partidas con un solo humano contra bots: por tanto, no es el número de partidas lanzadas, que se lee en «Jugadores del juego en línea». Equipo y cuentas de prueba incluidos.",
-      "liveTablesByStatus": "Mesas en curso por estado",
-      "liveTablesByStatusDef": "Todas las salas en curso, contadas en la base de datos (la lista de abajo muestra 30 como máximo). La emisión en TV tiene su propio segmento, mientras que la tarjeta «Mesas bloqueadas» la excluye."
+      "liveStatusCount": {
+        "playing": "{count, plural, one {# en juego} other {# en juego}}",
+        "briefing": "{count, plural, one {# en instrucciones} other {# en instrucciones}}",
+        "waiting": "{count, plural, one {# en espera} other {# en espera}}",
+        "cast": "{count, plural, one {# emisión} other {# emisiones}}"
+      },
+      "liveShown": "{shown} mostradas abajo, las más recientes y las más bloqueadas",
+      "playersCount": "{count, plural, one {# jugador} other {# jugadores}}",
+      "openedFor": "abierta desde hace {duration}",
+      "weekTitle": "Esta semana",
+      "weekDesc": "Últimos 7 días, hora de París, hoy incluido",
+      "weekVisitors": "Visitantes · {window}",
+      "weekActive": "Cuentas activas · {window}",
+      "weekLaunches": "Partidas en línea · {window}",
+      "weekLaunchesHint": "Iniciadas, revanchas y solo contra bots incluidas",
+      "weekReturning": "Recurrentes · {window}",
+      "weekReturningHint": "de {count, plural, one {# cuenta activa} other {# cuentas activas}}",
+      "weekUnavailable": "No disponible por ahora",
+      "weekFreshness": "Cuentas activas, partidas en línea y recurrentes calculadas a las {time} — se recalculan como mucho cada {minutes} min.",
+      "allStats": "Todas las estadísticas"
     },
     "retentionRun": {
       "lastRun": "Última limpieza de datos: {date}",
@@ -5508,19 +5534,18 @@
     "games": {
       "playedTitle": "Partidas por juego",
       "playedDesc": "Agregado cloud de cuentas sincronizadas",
-      "totalParties": " — {count} partida{plural} en total",
+      "totalParties": "{count, plural, one {# partida en total} other {# partidas en total}}",
       "parties": "partidas",
       "noneRecorded": "Ninguna partida registrada por ahora.",
-      "allTimeNote": "Acumulado desde siempre, todos los periodos juntos: partidas de los jugadores locales sincronizadas en las cuentas, estadísticas guardadas en la base de datos y partidas en línea clasificadas (una por sala). No es la actividad reciente: para la semana, ver «Partidas lanzadas por juego»."
+      "allTimeNote": "Acumulado desde siempre, todos los periodos juntos: partidas de los jugadores locales sincronizadas en las cuentas, estadísticas guardadas en la base de datos y partidas en línea clasificadas (una por sala). No es la actividad reciente: para el periodo elegido, ver la tabla «Por juego»."
     },
     "geo": {
-      "onlineByCountry": "En línea por país",
+      "onlineByCountry": "Navegadores activos por país",
       "onlineByCountryWindowDesc": "Navegadores activos en los últimos {minutes} minutos.",
       "todayByCountry": "Conectados hoy por país",
       "todayByCountryDesc": "Navegadores (estadísticas aceptadas, equipo incluido) vistos desde la medianoche, hora de París.",
       "tapCountry": " Toca un país para ver visitantes.",
       "noData": "Sin datos por ahora.",
-      "visitorsTitle": "Visitantes y jugadores",
       "filterPlaceholder": "Filtrar por IP, usuario, email o país…",
       "noVisitors": "Ningún visitante registrado.",
       "noSearchResults": "Sin resultados para esta búsqueda.",
@@ -5537,7 +5562,7 @@
       "countryDialogTitle": "Visitantes — {title}",
       "countryDialogDesc": "Lista de visitantes y cuentas para este país. Toca una tarjeta para ver todas las IP.",
       "noVisitorsForCountry": "Ningún visitante para este país.",
-      "scopeOnline": "en línea",
+      "scopeOnline": "navegadores activos",
       "scopeToday": "hoy"
     },
     "visitorCard": {
@@ -5608,7 +5633,7 @@
     },
     "firstGameFeedback": {
       "title": "Valoraciones tras la 1.ª partida",
-      "desc": "La nota que da cada jugador al terminar su primerísima partida, pedida una sola vez. Las valoraciones con comentario también llegan a los comentarios de abajo; las notas solas solo aparecen aquí.",
+      "desc": "La nota que da cada jugador al terminar su primerísima partida, pedida una sola vez. Las valoraciones con comentario también llegan a Moderación › Reportes; las notas solas solo aparecen aquí.",
       "refresh": "Actualizar",
       "loadError": "No se pudieron cargar las valoraciones de la 1.ª partida.",
       "forbidden": "Sesión caducada o acceso retirado: hay que volver a iniciar sesión.",
@@ -5880,12 +5905,13 @@
     "buildStamp": "Versión desplegada",
     "header": {
       "onlineCount": "{count} en línea",
-      "refresh": "Actualizar"
+      "refresh": "Actualizar",
+      "onlineTitle": "{count, plural, =0 {Ninguna cuenta vista} one {# cuenta vista} other {# cuentas vistas}} en los últimos {minutes} minutos, equipo e invitados incluidos. Abrir la lista en Cuentas.",
+      "updatedAt": "actualizado · {time}"
     },
     "navGroups": {
       "analysis": "Análisis",
       "community": "Comunidad",
-      "moderation": "Moderación",
       "server": "Servidor"
     },
     "journalFilter": {
@@ -6038,7 +6064,7 @@
         "streams": "Flujos SSE",
         "streamsHint": "{accounts, plural, =0 {ninguna cuenta} one {# cuenta} other {# cuentas}} · {max} como máximo por cuenta",
         "crashes": "Fallos 24 h",
-        "crashesHint": "Detalle en La Sala",
+        "crashesHint": "Detalle en Estadísticas",
         "unreadable": "Ilegible"
       },
       "units": {
@@ -6076,6 +6102,27 @@
         "failedHint": "El último barrido terminó con un error: detalle en La Sala.",
         "staleHint": "Más de {hours} h sin barrido: los plazos de conservación anunciados ya no están garantizados."
       }
+    },
+    "health": {
+      "aria": "Estado del sitio",
+      "labels": {
+        "probe": "Sitio",
+        "backups": "Copias de seguridad",
+        "ops": "Monitorización",
+        "retention": "Limpieza",
+        "crashes": "Fallos",
+        "stalled": "Mesas"
+      },
+      "okGroup": "En orden: {labels}",
+      "jobState": "{job}: {state}",
+      "opsUnreadable": "estado del servidor ilegible",
+      "retentionOk": "última ejecución hace menos de {hours} h",
+      "retentionNever": "sin ejecutar desde la actualización",
+      "retentionFailed": "{count, plural, =0 {la última ejecución falló} one {# bloque con error} other {# bloques con error}}",
+      "retentionStale": "ninguna ejecución desde hace más de {hours} h",
+      "crashes": "{count, plural, =0 {ninguno en las últimas 24 h} one {# en las últimas 24 h} other {# en las últimas 24 h}}",
+      "crashesUnreadable": "ilegibles",
+      "stalled": "{count, plural, =0 {ninguna bloqueada} one {# bloqueada} other {# bloqueadas}}"
     }
   },
   "voice": {

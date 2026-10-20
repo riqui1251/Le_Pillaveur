@@ -1,12 +1,12 @@
 "use client"
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
 import {
   Ban,
-  CalendarDays,
+  BarChart3,
   Clock,
   Crown,
   FileText,
@@ -39,7 +39,6 @@ import {
   Inbox,
   AlertTriangle,
   Sparkles,
-  RefreshCw,
   UserCheck,
   ServerCog,
 } from 'lucide-react'
@@ -47,6 +46,7 @@ import { deviceLabel, type DeviceKind } from '@/lib/device-from-user-agent'
 import { isGuestPurgeOverdue, parseAccountDeleteLogDetail, type AccountKind } from '@/lib/account-kind'
 import type { LocalPlayStats, OnlinePlayStats, RetentionLastRun } from '@/lib/supervision-overview-server'
 import type { ActiveAccountsStats } from '@/lib/active-accounts-server'
+import type { OpsJobView } from '@/lib/ops-status-types'
 import { useAuth } from '@/hooks/useAuth'
 import {
   assignableRoles,
@@ -65,18 +65,52 @@ import {
   canViewSupervisionAnalytics,
   canViewSupervisionBans,
   canViewUserFeedback,
-  ROLE_DESCRIPTIONS,
   roleLabel,
 } from '@/lib/roles'
 import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
-import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
+import { PARIS_TIME_ZONE, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
 import { ACTIVE_WINDOW_MS, HONEST_PRESENCE_SINCE } from '@/lib/heartbeat'
 import { ANALYTICS_CONSENT_V2_SINCE } from '@/lib/auth-cookies'
 import { isOnline, ONLINE_WINDOW_MS } from '@/lib/presence'
 import { type IpNetworkGroup } from '@/lib/ip-network'
-import { idleLabel, rateLabel } from '@/lib/supervision/labels'
+import { deltaLabel, idleLabel, rateLabel } from '@/lib/supervision/labels'
 import { networkGroupsOf } from '@/lib/supervision/ip-groups'
+import {
+  DEFAULT_STATS_VIEW,
+  isModerationView,
+  isStatsView,
+  isSupervisionTab,
+  moderationViewsFor,
+  RESOLVED_SCOPE_PARAM,
+  resolveSupervisionLocation,
+  STATS_VIEWS,
+  supervisionNavGroupsFor,
+  supervisionTabsFor,
+  supervisionUrlPatch,
+  type FeedbackScope,
+  type ModerationView,
+  type StatsView,
+  type SupervisionTab,
+  type SupervisionView,
+} from '@/lib/supervision/navigation'
+import {
+  DEFAULT_STATS_PERIOD,
+  gameRows,
+  gamesByDay,
+  measureSpan,
+  oldestComputedAt,
+  parseStatsPeriod,
+  phoneShare,
+  STATS_PERIOD_STORAGE_KEY,
+  STATS_PERIODS,
+  weekOverWeekDelta,
+  type MeasureSpan,
+  type StatsPeriod,
+} from '@/lib/supervision/stats-period'
+import { HEALTH_OK_GROUP, healthPills, splitHealthPills, type HealthKey } from '@/lib/supervision/health'
+import { accountsCoverageSince, weekFigures } from '@/lib/supervision/week'
+import { methodGroups, resolveMessage, type MethodGroup, type MethodParams } from '@/lib/supervision/method'
 import { parisDayToDate } from '@/lib/supervision/paris-day'
 import { RETENTION_RUN_STALE_MS, retentionRunStatus } from '@/lib/supervision/retention-run'
 import { FIRST_GAME_FEEDBACK_TYPE } from '@/lib/feedback'
@@ -90,9 +124,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent } from '@/components/ui/tabs'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -111,16 +145,25 @@ import {
   SupervisionShell,
   SupervisionHeader,
   SupervisionNav,
+  supervisionNavItemId,
   SectionCard,
   KpiPlaque,
-  LiveTableCard,
+  LiveTableRow,
+  HealthStrip,
   JournalList,
   QueueList,
   GrowthMetric,
+  InfoToggle,
+  InfoPanel,
+  StatsFooter,
+  SegmentedControl,
+  Disclosure,
+  useDefinitionToggle,
   Pager,
   SkeletonRows,
   EmptyState,
   ErrorState,
+  type CountTone,
   type SupervisionNavGroup,
 } from '@/components/supervision/SupervisionLayout'
 import {
@@ -143,6 +186,29 @@ import { cn } from '@/lib/utils'
  */
 const ACCOUNTS_PAGE_SIZE = 25
 const FEEDBACK_PAGE_SIZE = 25
+
+/** Entrées du journal de l'équipe visibles dans la Salle ; les 20 servies sont dans Modération › Journal. */
+const TEAM_JOURNAL_PREVIEW = 5
+
+/** Pastilles du bandeau santé qui déplient un détail sous lui plutôt que de mener ailleurs. */
+const HEALTH_TOGGLE_KEYS: readonly string[] = ['retention', HEALTH_OK_GROUP]
+
+/** Onglet ouvert par une pastille du bandeau : la sonde et les sauvegardes dans Serveur, le détail des plantages dans la vue Qualité des Statistiques. */
+const HEALTH_TARGET: Readonly<Record<string, { tab: SupervisionTab; view?: SupervisionView } | undefined>> = {
+  probe: { tab: 'ops' },
+  backups: { tab: 'ops' },
+  ops: { tab: 'ops' },
+  crashes: { tab: 'stats', view: 'quality' },
+} satisfies Partial<Record<HealthKey, { tab: SupervisionTab; view?: SupervisionView }>>
+
+/** Libellé et icône de chaque onglet de la navigation. */
+const TAB_META: Readonly<Record<SupervisionTab, { labelKey: `tabs.${string}`; icon: typeof LayoutDashboard }>> = {
+  overview: { labelKey: 'tabs.overview', icon: LayoutDashboard },
+  stats: { labelKey: 'tabs.stats', icon: BarChart3 },
+  accounts: { labelKey: 'tabs.accountsShort', icon: Users },
+  moderation: { labelKey: 'tabs.moderation', icon: Gavel },
+  ops: { labelKey: 'tabs.ops', icon: ServerCog },
+}
 
 // Toutes les dates de la Supervision s'affichent à l'heure de Paris
 // (PARIS_TIME_ZONE, src/lib/paris-time.ts, partagé avec les panneaux autonomes).
@@ -231,37 +297,109 @@ function useDayCharts() {
   }, [t, format])
 }
 
+/** Nom accessible d'un bouton « i » : « Définition : Comptes actifs ». */
+function useDefinitionLabel() {
+  const t = useTranslations('supervision')
+  return useCallback((label: string) => t('method.definitionOf', { label }), [t])
+}
+
 /**
- * Intitulé d'un graphe, et sa précision d'une ligne (unité, périmètre).
- * `level` suit la hiérarchie de la carte : h3 directement sous le titre de
- * la section, h4 sous un groupe déjà titré. Un h4 passe en casse normale,
- * pour ne pas se confondre avec le titre en capitales de son groupe — sauf
- * `caps`, pour un graphe posé en tuile parmi des tuiles titrées en capitales.
+ * Intitulé d'un graphe ou d'un groupe de chiffres, et sa précision d'une
+ * ligne (unité, périmètre). `level` suit la hiérarchie de la carte : h3
+ * directement sous le titre de la section, h4 sous un groupe déjà titré. Un
+ * h4 passe en casse normale, pour ne pas se confondre avec le titre en
+ * capitales de son groupe — sauf `caps`, pour un graphe posé en tuile parmi
+ * des tuiles titrées en capitales. `definition` : la longue légende du graphe,
+ * dépliée sous le titre par son « i » au lieu de s'étaler sous le graphe.
+ * `headingClassName` remplace le style du titre (titres de groupe).
  */
 function ChartHeading({
   title,
   subtitle,
   level = 3,
   caps = level === 3,
+  definition,
+  icon,
+  className,
+  headingClassName,
 }: {
   title: string
   subtitle?: string
   level?: 3 | 4
   caps?: boolean
+  definition?: ReactNode
+  icon?: ReactNode
+  className?: string
+  headingClassName?: string
 }) {
+  const definitionLabel = useDefinitionLabel()
+  const info = useDefinitionToggle()
   const Heading = level === 3 ? 'h3' : 'h4'
+  const titleClass =
+    headingClassName ??
+    (caps ? 'text-xs font-semibold uppercase tracking-wide text-cream/80' : 'text-sm font-semibold text-cream/90')
   return (
-    <div className="mb-2.5 min-w-0">
-      <Heading
-        className={cn(
-          'break-words font-semibold',
-          caps ? 'text-[11px] uppercase tracking-wide text-cream/80' : 'text-sm text-cream/90'
+    <div className={cn('mb-2.5 min-w-0', className)}>
+      <div className="flex min-w-0 items-start gap-1">
+        {/* Hauteur minimale du bouton de 24 px : titre et « i » restent alignés. */}
+        <Heading className={cn('flex min-h-[24px] min-w-0 items-center gap-1.5 break-words', titleClass)}>
+          {icon}
+          <span className="min-w-0 break-words">{title}</span>
+        </Heading>
+        {definition && (
+          <InfoToggle
+            label={definitionLabel(title)}
+            expanded={info.open}
+            onToggle={info.toggle}
+            controls={info.panelId}
+          />
         )}
-      >
-        {title}
-      </Heading>
-      {subtitle && <p className="mt-0.5 break-words text-xs text-cream/70">{subtitle}</p>}
+      </div>
+      {subtitle && <p className="break-words text-xs text-cream/70">{subtitle}</p>}
+      {definition && (
+        <InfoPanel id={info.panelId} open={info.open}>
+          {definition}
+        </InfoPanel>
+      )}
     </div>
+  )
+}
+
+/**
+ * Ligne de texte (exclusion, décompte à part) et sa définition à un geste.
+ * `name` nomme la définition pour le lecteur d'écran, la ligne elle-même
+ * portant des chiffres.
+ */
+function DefinedLine({ text, name, definition }: { text: ReactNode; name: string; definition: ReactNode }) {
+  const definitionLabel = useDefinitionLabel()
+  const info = useDefinitionToggle()
+  return (
+    <div className="min-w-0">
+      <div className="flex min-w-0 items-start gap-1">
+        <p className="min-w-0 break-words py-1">{text}</p>
+        <InfoToggle label={definitionLabel(name)} expanded={info.open} onToggle={info.toggle} controls={info.panelId} />
+      </div>
+      <InfoPanel id={info.panelId} open={info.open}>
+        {definition}
+      </InfoPanel>
+    </div>
+  )
+}
+
+/**
+ * Pied d'une section de statistiques servie depuis un cache : son heure de
+ * calcul, écrite pour ne pas passer pour du temps réel.
+ */
+function useFreshnessLabel() {
+  const t = useTranslations('supervision')
+  const format = useFormatter()
+  return useCallback(
+    (computedAt: string | Date, cacheSeconds: number) =>
+      t('growth.freshness', {
+        time: format.dateTime(new Date(computedAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
+        minutes: Math.max(1, Math.round(cacheSeconds / 60)),
+      }),
+    [t, format]
   )
 }
 
@@ -426,11 +564,10 @@ type GrowthStats = {
   playersByGame: Array<{ gameId: string; gameTitle: string; players: number }>
   abandonedTables: { stalled: number; live: number; rate: number | null }
   /**
-   * Joueurs uniques et parties lancées en ligne, tirés du journal des parties
-   * (lot 4). Type importé du serveur, pas recopié. Optionnel : une réponse
-   * antérieure au lot 4 n'affiche simplement pas la section.
+   * Parties lancées en ligne (par jour, par fenêtre, par jeu), tirées du
+   * journal des parties. Type importé du serveur, pas recopié.
    */
-  onlinePlay?: OnlinePlayStats
+  onlinePlay: OnlinePlayStats
   /**
    * Parties locales, compteurs anonymes. Absent d'une réponse antérieure,
    * null quand leur lecture a échoué côté serveur : la section ne s'affiche
@@ -490,6 +627,12 @@ type SupervisionOverview = {
    * retombe alors sur la liste.
    */
   liveTablesByStatus?: Record<LiveTable['status'], number>
+  /**
+   * Tables de JEU figées, comptées en base hors diffusion TV : même comptage
+   * que la tuile « Tables figées » de la vue Qualité. Absent d'une réponse
+   * antérieure : la liste sert de repli, diffusion TV écartée.
+   */
+  stalledGameTables?: number
   journal: JournalEntry[]
   queue: QueueItem[]
   /**
@@ -1115,7 +1258,8 @@ function UserActivityLines({
  * (drapeau, nom, effectif et %), et chaque rangée reste un bouton qui ouvre
  * la liste des visiteurs de ce pays. Le périmètre (`scope`) est passé
  * explicitement : il se déduisait autrefois du titre traduit (« aujourd' »,
- * « today », « oggi »…), ce qui cassait à la première reformulation.
+ * « today », « oggi »…), ce qui cassait à la première reformulation. Un bloc
+ * de la vue Audience : cinq pays d'emblée, les autres sur « Voir tout ».
  */
 function CountryList({
   title,
@@ -1150,16 +1294,12 @@ function CountryList({
   }))
 
   return (
-    <SectionCard
-      icon={Globe}
-      title={title}
-      description={
-        <>
-          {description}
-          {onCountryClick && t('geo.tapCountry')}
-        </>
-      }
-    >
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+      <ChartHeading
+        title={title}
+        icon={<Globe className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />}
+        subtitle={onCountryClick ? `${description}${t('geo.tapCountry')}` : description}
+      />
       {rows.length === 0 ? (
         <EmptyState icon={Inbox} title={t('geo.noData')} />
       ) : (
@@ -1168,12 +1308,12 @@ function CountryList({
           ariaLabel={title}
           rows={barRows}
           showShare
-          limit={10}
+          limit={5}
           categoryLabel={t('charts.country')}
           primaryLabel={t('charts.browsers')}
         />
       )}
-    </SectionCard>
+    </div>
   )
 }
 
@@ -1571,16 +1711,12 @@ function IpVisitorList({
     })
   }, [rows, query, locale, t])
 
+  // Posée dans le détail replié de la vue Audience, qui porte déjà son titre.
   return (
-    <SectionCard
-      className="md:col-span-2"
-      icon={Network}
-      title={t('geo.visitorsTitle')}
-      description={t('visitorCard.listDesc')}
-      bodyClassName="space-y-3"
-    >
+    <div className="min-w-0 space-y-3">
+        <p className="break-words text-xs leading-relaxed text-white/70">{t('visitorCard.listDesc')}</p>
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
           <Input
             className="bg-black/30 pl-9"
             placeholder={t('geo.filterPlaceholder')}
@@ -1600,425 +1736,35 @@ function IpVisitorList({
             onNetworkClick={onNetworkClick}
           />
         )}
-    </SectionCard>
-  )
-}
-
-/**
- * Réécrit un paramètre de l'URL courante SANS navigation : ni rechargement,
- * ni défilement, ni nouveau rendu serveur. Next synchronise useSearchParams
- * sur history.replaceState. `null` retire le paramètre.
- */
-function replaceUrlParam(key: string, value: string | null) {
-  const url = new URL(window.location.href)
-  if (value === null) url.searchParams.delete(key)
-  else url.searchParams.set(key, value)
-  window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
-}
-
-/**
- * Tendance de la Salle sur 14 jours de Paris : DEUX graphes, un par unité —
- * des navigateurs d'un côté, des salles de jeu de l'autre —, chacun avec sa
- * graduation et sa définition. Plus de courbes superposées à deux échelles
- * (l'ancien TrendChart), dont la comparaison était trompeuse.
- */
-function RoomTrendCharts({ points }: { points: DailyPoint[] }) {
-  const t = useTranslations('supervision')
-  const texts = useChartTexts()
-  const { columns, ariaFor, shortDay } = useDayCharts()
-  const days = points.map((p) => p.date)
-  const visitorsTitle = t('room.visitorsChartTitle')
-  const partiesTitle = t('room.partiesChartTitle')
-  // Consentement de version 2 : le bandeau a été reposé à tous et un
-  // navigateur ne compte plus tant qu'il n'a pas répondu. Tant que ce jour
-  // est dans la fenêtre, on le dit sous le graphe : la marche qu'il dessine
-  // n'est pas une chute de fréquentation (même raison que le delta masqué).
-  const consentBreakShown = days.length > 0 && days[0] <= ANALYTICS_CONSENT_V2_SINCE
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="min-w-0">
-        <ChartHeading title={visitorsTitle} subtitle={t('room.trendVisitors')} />
-        <ColumnChart
-          {...texts.column}
-          ariaLabel={ariaFor(visitorsTitle, days)}
-          data={columns(points.map((p) => ({ day: p.date, values: { visitors: p.visitors } })))}
-          series={[{ key: 'visitors', label: t('room.visitorsSeries'), tone: 'gold' }]}
-          caption={
-            <>
-              {t('room.visitorsDef')}
-              {consentBreakShown && ` ${t('room.visitorsConsentNote', { date: shortDay(ANALYTICS_CONSENT_V2_SINCE) })}`}
-            </>
-          }
-        />
-      </div>
-      <div className="min-w-0">
-        <ChartHeading title={partiesTitle} subtitle={t('room.partiesChartSubtitle')} />
-        <ColumnChart
-          {...texts.column}
-          ariaLabel={ariaFor(partiesTitle, days)}
-          data={columns(points.map((p) => ({ day: p.date, values: { parties: p.parties } })))}
-          // Vert, teinte propre aux résultats classés (celle des victoires de la
-          // fiche compte) : le bleu est pris par les « Parties lancées » du
-          // tableau des comptes actifs, une AUTRE mesure que la définition
-          // ci-dessous prend soin de distinguer — même teinte, on les rapprocherait.
-          series={[{ key: 'parties', label: t('room.partiesSeries'), tone: 'green' }]}
-          caption={t('room.partiesDef')}
-        />
-      </div>
     </div>
   )
 }
 
 /**
- * Parties lancées par jour de Paris, en colonnes empilées À L'ÉCHELLE : solo
- * contre des bots en bas (crème), avec d'autres humains au-dessus (or), le
- * total écrit au-dessus de chaque pile. Les jours d'avant le journal sont
- * rayés — un 0 y mentirait.
+ * Réécrit des paramètres de l'URL courante SANS navigation : ni rechargement,
+ * ni défilement, ni nouveau rendu serveur. Next synchronise useSearchParams
+ * sur history.replaceState. `null` retire le paramètre. Un seul
+ * replaceState pour tous : onglet et vue changent ensemble.
  */
-function OnlineLaunchesChart({
-  days,
-  journalSince,
-}: {
-  days: OnlinePlayStats['launchesByDay']
-  journalSince: string
-}) {
-  const t = useTranslations('supervision')
-  const texts = useChartTexts()
-  const { columns, ariaFor } = useDayCharts()
-  const series: ChartSeries[] = [
-    { key: 'solo', label: t('onlinePlayers.legendSolo'), tone: 'cream' },
-    { key: 'withHumans', label: t('onlinePlayers.legendWithHumans'), tone: 'gold' },
-  ]
-  return (
-    <ColumnChart
-      {...texts.column}
-      ariaLabel={ariaFor(t('onlinePlayers.launchesTitle'), days.map((d) => d.day))}
-      data={columns(
-        days.map((d) => ({
-          day: d.day,
-          values: { solo: d.solo, withHumans: d.withHumans },
-          muted: d.day < journalSince,
-        }))
-      )}
-      series={series}
-      stacked
-      mutedLabel={t('onlinePlayers.legendBeforeJournal')}
-    />
-  )
+function replaceUrlParams(patch: Record<string, string | null>) {
+  const url = new URL(window.location.href)
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null) url.searchParams.delete(key)
+    else url.searchParams.set(key, value)
+  }
+  window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+function replaceUrlParam(key: string, value: string | null) {
+  replaceUrlParams({ [key]: value })
 }
 
 /**
- * « Joueurs en ligne » (lot 4) : comptes distincts assis à une partie en ligne
- * et parties lancées par jour, tirés du JOURNAL DES PARTIES — la seule source
- * qui voit le solo contre des bots et tous les comptes, invités compris.
- * Effectifs bruts, jamais de pourcentage : le journal n'a que quelques jours.
- * Servi avec la croissance (même route, même cache de quelques minutes).
- */
-function OnlinePlayersSection({
-  onlinePlay,
-  computedAt,
-  cacheSeconds,
-}: {
-  onlinePlay: OnlinePlayStats
-  computedAt: string
-  cacheSeconds: number
-}) {
-  const t = useTranslations('supervision')
-  const format = useFormatter()
-  const texts = useChartTexts()
-  const dayCharts = useDayCharts()
-  const { uniquePlayers, launchesByDay } = onlinePlay
-  // Absent d'une réponse antérieure à ce champ : liste simplement vide.
-  const launchesByGame = onlinePlay.launchesByGame7d ?? []
-  const journalSinceLabel = format.dateTime(parisDayToDate(onlinePlay.journalSince), {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: PARIS_TIME_ZONE,
-  })
-  // Tant que le journal est plus jeune que la fenêtre, la tuile le dit : « 30
-  // jours » promettrait un mois de données qui n'existent pas. Jour de début de
-  // la fenêtre lu à l'heure du calcul (la valeur est mise en cache).
-  const windowLabel = (label: string, days: number) =>
-    parisDayOffset(days - 1, new Date(computedAt)) < onlinePlay.journalSince
-      ? t('gameSessions.windowSince', { window: label, date: journalSinceLabel })
-      : label
-  // Jours de PARIS glissants, aujourd'hui compris (voir summarizeOnlinePlay).
-  const windows = [
-    {
-      key: 'd1',
-      label: t('stats.today'),
-      definition: t('onlinePlayers.todayDef'),
-      value: uniquePlayers.d1,
-      guests: uniquePlayers.guests.d1,
-    },
-    {
-      key: 'd7',
-      label: windowLabel(t('stats.week'), 7),
-      definition: t('onlinePlayers.windowDef', { days: 7 }),
-      value: uniquePlayers.d7,
-      guests: uniquePlayers.guests.d7,
-    },
-    {
-      key: 'd30',
-      label: windowLabel(t('stats.month'), 30),
-      definition: t('onlinePlayers.windowDef', { days: 30 }),
-      value: uniquePlayers.d30,
-      guests: uniquePlayers.guests.d30,
-    },
-  ]
-  const solo = launchesByDay.reduce((sum, d) => sum + d.solo, 0)
-  const withHumans = launchesByDay.reduce((sum, d) => sum + d.withHumans, 0)
-
-  return (
-    <SectionCard
-      icon={Gamepad2}
-      title={t('onlinePlayers.title')}
-      description={t('onlinePlayers.desc', {
-        date: format.dateTime(parisDayToDate(onlinePlay.journalSince), {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          timeZone: PARIS_TIME_ZONE,
-        }),
-      })}
-      bodyClassName="space-y-4"
-    >
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-        {windows.map((w) => (
-          <div key={w.key} className="min-w-0">
-            <GrowthMetric
-              label={w.label}
-              value={String(w.value)}
-              detail={t('onlinePlayers.accountsDetail', { count: w.value, guests: w.guests })}
-              definition={w.definition}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Ce que les effectifs ne comptent pas, dit à côté d'eux. */}
-      <ul className="space-y-1 text-xs leading-relaxed text-white/55">
-        <li className="min-w-0">{t('onlinePlayers.staffExcluded', { count: onlinePlay.staffExcluded })}</li>
-        <li className="min-w-0">{t('onlinePlayers.testExcluded', { count: onlinePlay.testExcluded })}</li>
-        <li className="min-w-0">{t('onlinePlayers.deletedSeats', { count: onlinePlay.deletedSeats30 })}</li>
-      </ul>
-
-      <div className="min-w-0">
-        <ChartHeading
-          title={t('onlinePlayers.launchesTitle')}
-          subtitle={
-            solo + withHumans > 0
-              ? t('onlinePlayers.launchesTotal', { total: solo + withHumans, days: launchesByDay.length, solo, withHumans })
-              : t('onlinePlayers.launchesNone', { days: launchesByDay.length })
-          }
-        />
-        <OnlineLaunchesChart days={launchesByDay} journalSince={onlinePlay.journalSince} />
-        {launchesByDay.length > 0 && (
-          <p className="mt-2 text-[11px] text-cream/70">
-            {t('onlinePlayers.range', {
-              from: dayCharts.shortDay(launchesByDay[0].day),
-              to: dayCharts.shortDay(launchesByDay[launchesByDay.length - 1].day),
-            })}
-          </p>
-        )}
-        <p className="mt-1.5 text-[11px] leading-relaxed text-cream/70">{t('onlinePlayers.launchesDef')}</p>
-      </div>
-
-      {/* Les mêmes lancements, par jeu, sur 7 jours : les deux graphes
-          s'additionnent au même total (7 derniers jours de la série). Solo
-          et « avec humains » gardent leurs teintes du graphe par jour. */}
-      <div className="min-w-0">
-        <ChartHeading
-          title={t('onlinePlayers.byGameTitle', { window: windowLabel(t('stats.week'), 7) })}
-        />
-        <BarList
-          {...texts.list}
-          ariaLabel={t('onlinePlayers.byGameTitle', { window: windowLabel(t('stats.week'), 7) })}
-          rows={launchesByGame.map((g) => ({
-            key: g.gameId,
-            label: <GameBarLabel gameId={g.gameId} title={g.gameTitle} />,
-            value: Math.max(0, g.launches - g.withHumans),
-            secondary: g.withHumans,
-            hint: t('onlinePlayers.byGameHint', { count: g.launches }),
-          }))}
-          showShare
-          limit={8}
-          tone="cream"
-          secondaryTone="gold"
-          primaryLabel={t('onlinePlayers.legendSolo')}
-          secondaryLabel={t('onlinePlayers.legendWithHumans')}
-          categoryLabel={t('charts.game')}
-          emptyLabel={t('onlinePlayers.byGameEmpty')}
-        />
-        <p className="mt-2 text-[11px] leading-relaxed text-cream/70">{t('onlinePlayers.byGameDef')}</p>
-      </div>
-
-      <p className="border-t border-white/[0.07] pt-2 text-[11px] text-white/35">
-        {t('growth.freshness', {
-          time: format.dateTime(new Date(computedAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
-          minutes: Math.max(1, Math.round(cacheSeconds / 60)),
-        })}
-      </p>
-    </SectionCard>
-  )
-}
-
-/**
- * « Parties locales » : les jeux joués sur UN téléphone qui tourne autour de
- * la table, invisibles du journal des parties en ligne. Source : compteurs
- * anonymes LocalGameDaily (local-game-beacon.ts → /api/analytics/local-game),
- * deux nombres par jeu et par jour de Paris — ni compte ni appareil, donc des
- * volumes bruts : pas de joueurs uniques, pas d'exclusion de l'équipe.
- *
- * Lancées et terminées côte à côte : une fin n'est comptée qu'après un
- * lancement du même jeu (les revanches sur la même page n'en ajoutent pas),
- * donc fins ≤ lancements et leur écart se lit comme les ouvertures quittées
- * avant le premier écran de fin. Les jeux sans écran de fin le disent sur
- * leur ligne plutôt que d'afficher un « 0 terminée » trompeur.
- * Servi avec la croissance (même route, même cache de quelques minutes).
- */
-function LocalPlaySection({
-  localPlay,
-  computedAt,
-  cacheSeconds,
-}: {
-  localPlay: LocalPlayStats
-  computedAt: string
-  cacheSeconds: number
-}) {
-  const t = useTranslations('supervision')
-  const format = useFormatter()
-  const texts = useChartTexts()
-  const dayCharts = useDayCharts()
-  const { since, byDay, byGame, totals } = localPlay
-  const sinceShort = since
-    ? format.dateTime(parisDayToDate(since), { day: '2-digit', month: '2-digit', timeZone: PARIS_TIME_ZONE })
-    : ''
-  // Fenêtre plus vieille que la mesure : la tuile le dit, comme pour le
-  // journal des parties en ligne — « 30 jours » promettrait un mois de
-  // données qui n'existent pas. Jour lu à l'heure du calcul (valeur en cache).
-  const windowLabel = (label: string, days: number) =>
-    since && parisDayOffset(days - 1, new Date(computedAt)) < since
-      ? t('gameSessions.windowSince', { window: label, date: sinceShort })
-      : label
-  const windows = [
-    { key: 'd7' as const, days: 7, label: windowLabel(t('stats.week'), 7) },
-    { key: 'd30' as const, days: 30, label: windowLabel(t('stats.month'), 30) },
-  ]
-  // Lancées en or (la mesure principale), terminées en crème : côte à côte
-  // sur la même échelle, jamais empilées — elles ne s'additionnent pas.
-  const series: ChartSeries[] = [
-    { key: 'starts', label: t('localPlay.legendStarts'), tone: 'gold' },
-    { key: 'ends', label: t('localPlay.legendEnds'), tone: 'cream' },
-  ]
-  const seriesStarts = byDay.reduce((sum, d) => sum + d.starts, 0)
-  const seriesEnds = byDay.reduce((sum, d) => sum + d.ends, 0)
-
-  return (
-    <SectionCard
-      icon={Smartphone}
-      title={t('localPlay.title')}
-      description={
-        since
-          ? t('localPlay.desc', {
-              date: format.dateTime(parisDayToDate(since), {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                timeZone: PARIS_TIME_ZONE,
-              }),
-            })
-          : t('localPlay.descEmpty')
-      }
-      bodyClassName="space-y-4"
-    >
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        {windows.map((w) => (
-          <div key={w.key} className="min-w-0">
-            <GrowthMetric
-              label={w.label}
-              value={String(totals[w.key].starts)}
-              detail={t('localPlay.totalsDetail', { starts: totals[w.key].starts, ends: totals[w.key].ends })}
-              definition={t('localPlay.windowDef', { days: w.days })}
-            />
-          </div>
-        ))}
-      </div>
-
-      <div className="min-w-0">
-        <ChartHeading
-          title={t('localPlay.byDayTitle')}
-          subtitle={t('localPlay.byDayTotal', { starts: seriesStarts, ends: seriesEnds, days: byDay.length })}
-        />
-        <ColumnChart
-          {...texts.column}
-          emptyLabel={t('localPlay.byDayEmpty')}
-          ariaLabel={dayCharts.ariaFor(t('localPlay.byDayTitle'), byDay.map((d) => d.day))}
-          data={dayCharts.columns(
-            byDay.map((d) => ({
-              day: d.day,
-              values: { starts: d.starts, ends: d.ends },
-              // Avant le premier jour compté : rayé, un 0 y mentirait.
-              muted: !since || d.day < since,
-            }))
-          )}
-          series={series}
-          mutedLabel={t('localPlay.legendBeforeMeasure')}
-        />
-        {byDay.length > 0 && (
-          <p className="mt-2 text-[11px] text-cream/70">
-            {t('onlinePlayers.range', {
-              from: dayCharts.shortDay(byDay[0].day),
-              to: dayCharts.shortDay(byDay[byDay.length - 1].day),
-            })}
-          </p>
-        )}
-      </div>
-
-      {/* Par jeu, 7 et 30 jours côte à côte sur grand écran, l'un sous
-          l'autre au téléphone. La barre porte les lancements (et leur part
-          dans la fenêtre) ; les fins sont écrites sous le titre du jeu. */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {windows.map((w) => (
-          <div key={w.key} className="min-w-0">
-            <ChartHeading title={t('localPlay.byGameTitle', { window: w.label })} />
-            <BarList
-              {...texts.list}
-              ariaLabel={t('localPlay.byGameTitle', { window: w.label })}
-              rows={byGame[w.key].map((g) => ({
-                key: g.gameId,
-                label: <GameBarLabel gameId={g.gameId} title={g.gameTitle} />,
-                value: g.starts,
-                hint: g.noEndScreen ? t('localPlay.noEndScreen') : t('localPlay.endsHint', { count: g.ends }),
-              }))}
-              showShare
-              limit={8}
-              tone="gold"
-              primaryLabel={t('localPlay.legendStarts')}
-              categoryLabel={t('charts.game')}
-              emptyLabel={t('localPlay.byGameEmpty', { days: w.days })}
-            />
-          </div>
-        ))}
-      </div>
-      <p className="text-[11px] leading-relaxed text-cream/70">{t('localPlay.def')}</p>
-
-      <p className="border-t border-white/[0.07] pt-2 text-[11px] text-white/40">
-        {t('growth.freshness', {
-          time: format.dateTime(new Date(computedAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
-          minutes: Math.max(1, Math.round(cacheSeconds / 60)),
-        })}
-      </p>
-    </SectionCard>
-  )
-}
-
-/**
- * Ligne discrète de la vue d'ensemble : preuve que le ménage des données
- * tourne (RGPD-20). En évidence dès qu'un bloc échoue ou que le dernier
- * passage date de plus de 24 h — Promise.allSettled masquerait sinon des
- * échecs répétés que personne ne regarde.
+ * Détail du ménage des données, déplié sous le bandeau santé de la Salle :
+ * preuve qu'il tourne (RGPD-20). En évidence dès qu'un bloc échoue ou que le
+ * dernier passage date de plus de 24 h — Promise.allSettled masquerait sinon
+ * des échecs répétés que personne ne regarde ; la pastille du bandeau passe
+ * alors au rouge.
  */
 function RetentionRunLine({ run }: { run: RetentionLastRun | null }) {
   const t = useTranslations('supervision.retentionRun')
@@ -2026,7 +1772,7 @@ function RetentionRunLine({ run }: { run: RetentionLastRun | null }) {
 
   if (run === null) {
     return (
-      <p className="flex min-w-0 items-start gap-1.5 text-[11px] leading-relaxed text-white/40">
+      <p className="flex min-w-0 items-start gap-1.5 text-xs leading-relaxed text-white/70">
         <Trash2 className="mt-0.5 h-3 w-3 shrink-0" />
         <span className="min-w-0 break-words">{t('never')}</span>
       </p>
@@ -2043,10 +1789,10 @@ function RetentionRunLine({ run }: { run: RetentionLastRun | null }) {
   return (
     <div
       className={cn(
-        'min-w-0 text-[11px] leading-relaxed',
+        'min-w-0 text-xs leading-relaxed',
         status.alert
-          ? 'rounded-lg border border-suit-red/35 bg-suit-red/[0.07] px-3 py-2 text-red-200'
-          : 'text-white/40'
+          ? 'rounded-lg border border-suit-red/[0.35] bg-suit-red/[0.07] px-3 py-2 text-red-200'
+          : 'text-white/70'
       )}
     >
       <p className="flex min-w-0 items-start gap-1.5">
@@ -2082,7 +1828,7 @@ function RetentionRunLine({ run }: { run: RetentionLastRun | null }) {
           <summary
             className={cn(
               '-mx-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 [&::-webkit-details-marker]:hidden',
-              status.alert ? 'text-red-200/80 hover:text-red-100' : 'text-white/45 hover:text-white/75'
+              status.alert ? 'text-red-200/80 hover:text-red-100' : 'text-white/70 hover:text-white'
             )}
           >
             <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-open:rotate-90" />
@@ -2129,114 +1875,57 @@ const RETURN_COHORT_DAYS = { d1: { from: 8, to: 2 }, d7: { from: 21, to: 8 } } a
 /** Fenêtre « actif » d'un battement, en minutes (src/lib/heartbeat.ts), pour les définitions. */
 const ACTIVE_WINDOW_MINUTES = Math.round(ACTIVE_WINDOW_MS / 60_000)
 
-/** Sous-titre d'un groupe de chiffres du tableau des comptes actifs. */
-const ACTIVITY_GROUP_TITLE = 'text-[11px] font-semibold uppercase tracking-wide text-white/45'
-
 /**
- * Définition courte d'un chiffre, repliée : la vue garde sa densité sur
- * téléphone, et chaque chiffre reste défendable sans nous appeler (F45).
- * `summary` remplace « Définition » quand un même bloc en porte plusieurs
- * (« Définition : Nouveaux comptes », « Définition : Revenants »).
+ * Tuile d'un chiffre : GrowthMetric (libellé et « i », valeur, unité,
+ * définition dépliée sous le chiffre) avec le nom accessible du « i » traduit.
  */
-function MetricDefinition({ text, className, summary }: { text: string; className?: string; summary?: string }) {
-  const t = useTranslations('supervision.activeAccounts')
-  return (
-    <details
-      className={cn(
-        'group mt-1.5 min-w-0 border-t border-white/[0.07] text-[11px] leading-relaxed text-white/45',
-        className
-      )}
-    >
-      <summary className="-mx-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-1.5 text-white/55 transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 [&::-webkit-details-marker]:hidden">
-        <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-open:rotate-90" />
-        {summary ?? t('definition')}
-      </summary>
-      <p className="min-w-0 break-words pb-0.5">{text}</p>
-    </details>
-  )
-}
-
-/** Tuile d'un chiffre : valeur (ou contenu libre), précision, définition repliée. */
 function ActivityMetric({
   label,
   value,
   detail,
   definition,
+  tone,
+  delta,
   children,
 }: {
   label: string
-  value?: string
+  value: string
   detail?: string
-  definition: string
+  definition: ReactNode
+  tone?: 'default' | 'alert'
+  delta?: { direction: 'up' | 'down'; label: string }
   children?: ReactNode
 }) {
+  const definitionLabel = useDefinitionLabel()
   return (
-    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-      <p className="break-words text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</p>
-      {value !== undefined && (
-        <p className="mt-0.5 break-words font-display text-2xl font-bold tabular-nums text-white">{value}</p>
-      )}
+    <GrowthMetric
+      label={label}
+      value={value}
+      detail={detail}
+      definition={definition}
+      definitionLabel={definitionLabel(label)}
+      tone={tone}
+      delta={delta}
+    >
       {children}
-      {detail && <p className="break-words text-xs text-white/50">{detail}</p>}
-      <MetricDefinition text={definition} />
-    </div>
+    </GrowthMetric>
   )
 }
 
 /**
- * Nouveaux et revenants PARMI LES ACTIFS, fenêtre par fenêtre, en barres
- * 100 % : c'est une partition exacte (nouveau = créé dans la fenêtre et
- * actif, revenant = actif et créé avant), donc nouveaux + revenants = actifs,
- * et la part des nouveaux se lit sans calcul. Les deux définitions restent
- * sous la carte, chacune nommée.
+ * Plusieurs définitions derrière un seul « i », chacune nommée : une tuile
+ * qui oppose deux mesures (nouveaux / revenants) les définit ensemble.
  */
-function NewReturningSplit({
-  accounts,
-  windowLabels,
-}: {
-  accounts: ActiveAccountsStats['accounts']
-  windowLabels: { d7: string; d30: string }
-}) {
-  const t = useTranslations('supervision')
-  const texts = useChartTexts()
+function NamedDefinitions({ items }: { items: Array<{ key: string; name: string; text: string }> }) {
   return (
-    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-      <p className="break-words text-[11px] font-semibold uppercase tracking-wide text-cream/80">
-        {t('activeAccounts.newReturningLabel')}
-      </p>
-      <div className="mt-2.5 grid gap-4 sm:grid-cols-2">
-        {(['d7', 'd30'] as const).map((key) => (
-          <div key={key} className="min-w-0">
-            <p className="mb-2 flex min-w-0 flex-wrap items-baseline gap-x-2 text-xs">
-              <span className="break-words font-semibold text-cream">{windowLabels[key]}</span>
-              <span className="tabular-nums text-cream/70">
-                {t('activeAccounts.activeCount', { count: accounts.active[key] })}
-              </span>
-            </p>
-            <StackedBar
-              {...texts.stacked}
-              ariaLabel={t('activeAccounts.newReturningAria', { window: windowLabels[key] })}
-              segments={[
-                { key: 'new', label: t('activeAccounts.newLabel'), value: accounts.newAccounts[key], tone: 'gold' },
-                { key: 'returning', label: t('activeAccounts.returningLabel'), value: accounts.returning[key], tone: 'cream' },
-              ]}
-              categoryLabel={t('charts.category')}
-              valueLabel={t('charts.accounts')}
-            />
-          </div>
-        ))}
-      </div>
-      <MetricDefinition
-        summary={t('activeAccounts.definitionOf', { label: t('activeAccounts.newLabel') })}
-        text={t('activeAccounts.newDef')}
-        className="mt-3"
-      />
-      <MetricDefinition
-        summary={t('activeAccounts.definitionOf', { label: t('activeAccounts.returningLabel') })}
-        text={t('activeAccounts.returningDef')}
-        className="mt-0"
-      />
-    </div>
+    <dl className="space-y-1.5">
+      {items.map((item) => (
+        <div key={item.key} className="min-w-0">
+          <dt className="font-semibold text-cream">{item.name}</dt>
+          <dd className="break-words">{item.text}</dd>
+        </div>
+      ))}
+    </dl>
   )
 }
 
@@ -2246,15 +1935,18 @@ function NewReturningSplit({
  * vide : « — », jamais « 0 sur 0 ». Cohorte rognée au début du journal
  * (`createdSince`) : dit sous le chiffre, pendant les 2 à 3 semaines où elle
  * le précède — « 0 sur 2 » ne doit pas se lire comme une rétention nulle.
+ * `tone` : l'appelant décide de l'alerte (personne de revenu à J+7).
  */
 function ReturnMetric({
   label,
   cohort,
   definition,
+  tone,
 }: {
   label: string
   cohort: ActiveAccountsStats['retention']['d1']
   definition: string
+  tone?: 'default' | 'alert'
 }) {
   const t = useTranslations('supervision.activeAccounts')
   const format = useFormatter()
@@ -2275,129 +1967,8 @@ function ReturnMetric({
       value={empty ? '—' : t('returnCount', { retained: cohort.retained, cohort: cohort.cohort })}
       detail={!empty && since ? `${detail} ${t('returnPartial', { date: since })}` : detail}
       definition={definition}
+      tone={tone}
     />
-  )
-}
-
-/**
- * Séries de 14 jours de Paris du tableau des comptes actifs, en trois
- * graphes gradués :
- * - comptes actifs et joueurs uniques CÔTE À CÔTE, sur la même échelle :
- *   même unité (des comptes), les hauteurs se comparent colonne à colonne ;
- * - parties lancées, autre unité, graduées à part ;
- * - nouveaux comptes au jour de leur CRÉATION, empilés comptes enregistrés /
- *   invités (le total d'une pile = les nouveaux du jour).
- * Les jours antérieurs à la source d'une série sont rayés : un 0 y mentirait.
- */
-function ActivitySeriesCharts({
-  series,
-  accountsSince,
-  journalSince,
-}: {
-  series: ActiveAccountsStats['series']
-  accountsSince: string
-  journalSince: string
-}) {
-  const t = useTranslations('supervision')
-  const texts = useChartTexts()
-  const { columns, ariaFor, fullDay, shortDay } = useDayCharts()
-  const days = series.map((d) => d.day)
-  const accountsSeries: ChartSeries[] = [
-    { key: 'activeAccounts', label: t('activeAccounts.seriesAccounts'), tone: 'gold' },
-    { key: 'uniquePlayers', label: t('activeAccounts.seriesPlayers'), tone: 'cream' },
-  ]
-  // Bleu : un total sans partage solo / avec humains (la série n'en porte pas),
-  // donc pas les teintes crème / or du graphe « Parties lancées par jour » ; et
-  // surtout pas le vert des parties CLASSÉES, une autre mesure.
-  const launchesSeries: ChartSeries[] = [{ key: 'launches', label: t('activeAccounts.seriesLaunches'), tone: 'blue' }]
-  // Invités en violet : la teinte de leur badge de type partout ailleurs.
-  const newSeries: ChartSeries[] = [
-    { key: 'registered', label: t('activeAccounts.seriesNewRegistered'), tone: 'gold' },
-    { key: 'guests', label: t('activeAccounts.seriesNewGuests'), tone: 'violet' },
-  ]
-  // Les sièges sans compte ne sont pas des joueurs uniques : jamais dans les
-  // colonnes, mais toujours dits, jour par jour (ils l'étaient en infobulle).
-  const deletedSeatDays = series.filter((d) => d.deletedSeats > 0)
-  const accountsTitle = t('activeAccounts.seriesAccountsTitle')
-  const launchesTitle = t('activeAccounts.seriesLaunches')
-  const newTitle = t('activeAccounts.seriesNewTitle')
-
-  return (
-    <div className="min-w-0">
-      {/* La période en clair, sous « 14 derniers jours » : l'axe n'écrit que le
-          numéro du jour, sans mois — une série à cheval sur deux mois (« 31 1 »)
-          ne se daterait plus qu'au survol. Même ligne que « Joueurs du jeu en ligne ». */}
-      {days.length > 0 && (
-        <p className="mb-4 text-[11px] text-cream/70">
-          {t('onlinePlayers.range', { from: shortDay(days[0]), to: shortDay(days[days.length - 1]) })}
-        </p>
-      )}
-      <div className="min-w-0 space-y-6">
-        <div className="min-w-0">
-          <ChartHeading level={4} title={accountsTitle} />
-          <ColumnChart
-            {...texts.column}
-            ariaLabel={ariaFor(accountsTitle, days)}
-            data={columns(
-              series.map((d) => ({
-                day: d.day,
-                values: { activeAccounts: d.activeAccounts, uniquePlayers: d.uniquePlayers },
-                muted: d.day < accountsSince,
-              }))
-            )}
-            series={accountsSeries}
-            mutedLabel={t('activeAccounts.legendNoData')}
-          />
-          {deletedSeatDays.length > 0 && (
-            <p className="mt-2 break-words text-[11px] leading-relaxed text-cream/70">
-              {t('activeAccounts.seriesDeletedSeatsDays', {
-                days: deletedSeatDays
-                  .map((d) => t('activeAccounts.seriesDay', { date: fullDay(d.day), value: d.deletedSeats }))
-                  .join(' · '),
-              })}
-            </p>
-          )}
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="min-w-0">
-            <ChartHeading level={4} title={launchesTitle} />
-            <ColumnChart
-              {...texts.column}
-              ariaLabel={ariaFor(launchesTitle, days)}
-              data={columns(
-                series.map((d) => ({ day: d.day, values: { launches: d.launches }, muted: d.day < journalSince }))
-              )}
-              series={launchesSeries}
-              mutedLabel={t('activeAccounts.legendNoData')}
-            />
-          </div>
-          <div className="min-w-0">
-            <ChartHeading level={4} title={newTitle} />
-            <ColumnChart
-              {...texts.column}
-              ariaLabel={ariaFor(newTitle, days)}
-              data={columns(
-                series.map((d) => {
-                  // Champs absents d'une réponse antérieure : 0, jamais NaN.
-                  const total = d.newAccounts ?? 0
-                  const guests = Math.min(total, d.newGuests ?? 0)
-                  return {
-                    day: d.day,
-                    values: { registered: total - guests, guests },
-                    muted: d.day < accountsSince,
-                  }
-                })
-              )}
-              series={newSeries}
-              stacked
-              mutedLabel={t('activeAccounts.legendNoData')}
-              caption={t('activeAccounts.seriesNewDef')}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -2420,7 +1991,7 @@ function TopAccountsBars({
   const max = Math.max(0, ...accounts.map((acc) => acc.activeSeconds ?? 0))
   return (
     <div className="min-w-0">
-      <p aria-hidden className="mb-1 flex justify-end px-3 text-[11px] text-cream/70">
+      <p aria-hidden className="mb-1 flex justify-end px-3 text-xs text-cream/70">
         {t('activeAccounts.topActiveHeader')}
       </p>
       <ol className="space-y-1.5">
@@ -2495,7 +2066,8 @@ function VisitDevicesBars({ devices }: { devices: ActiveAccountsStats['visits'][
   const title = t('activeAccounts.devicesTitle')
   return (
     <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-      <ChartHeading level={4} caps title={title} />
+      {/* h3 : un bloc de la vue, voisin du graphe des visiteurs, pas sous lui. */}
+      <ChartHeading title={title} definition={t('activeAccounts.devicesDef')} />
       <BarList
         {...texts.list}
         ariaLabel={title}
@@ -2523,285 +2095,1184 @@ function VisitDevicesBars({ devices }: { devices: ActiveAccountsStats['visits'][
         primaryLabel={t('charts.visits')}
         emptyLabel={t('activeAccounts.devicesEmpty')}
       />
-      <MetricDefinition text={t('activeAccounts.devicesDef')} />
+    </div>
+  )
+}
+
+/** Intitulé de chaque période du sélecteur, et des fenêtres des mesures. */
+const PERIOD_LABEL_KEY = { d1: 'stats.today', d7: 'stats.week', d30: 'stats.month' } as const satisfies Record<
+  StatsPeriod,
+  string
+>
+
+/** Les trois fenêtres, pour une mesure servie sur chacune. */
+const ALL_WINDOWS = ['d1', 'd7', 'd30'] as const
+
+/** « 08/10 » : un jour de Paris en court, pour les intitulés « depuis le … ». */
+function useParisShortDate() {
+  const format = useFormatter()
+  return useCallback(
+    (day: string) => format.dateTime(parisDayToDate(day), { day: '2-digit', month: '2-digit', timeZone: PARIS_TIME_ZONE }),
+    [format]
+  )
+}
+
+/**
+ * Fenêtre RÉELLEMENT lue pour une mesure (stats-period.ts) : « 7 jours », ou
+ * « 30 jours · depuis le 08/10 » quand la mesure est plus jeune que sa
+ * fenêtre.
+ */
+function useSpanWindow() {
+  const t = useTranslations('supervision')
+  const shortDate = useParisShortDate()
+  return useCallback(
+    (span: MeasureSpan) => {
+      const window = t(PERIOD_LABEL_KEY[span.key])
+      return span.since ? t('gameSessions.windowSince', { window, date: shortDate(span.since) }) : window
+    },
+    [t, shortDate]
+  )
+}
+
+/**
+ * Nom d'un chiffre suivi de sa fenêtre : « Comptes actifs · 7 jours ». Sous
+ * « Aujourd'hui », une mesure qui n'existe que sur 7 jours le dit ainsi dans
+ * son intitulé — jamais un chiffre sous une période qu'il ne mesure pas.
+ */
+function useSpanLabel() {
+  const t = useTranslations('supervision')
+  const spanWindow = useSpanWindow()
+  return useCallback(
+    (label: string, span: MeasureSpan) => t('method.windowed', { label, window: spanWindow(span) }),
+    [t, spanWindow]
+  )
+}
+
+/** Bloc d'une vue des Statistiques : un seul cadre, jamais de cadre dans le cadre. */
+function StatsPanel({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3 sm:p-4', className)}>{children}</div>
+  )
+}
+
+/**
+ * Comptes actifs et joueurs uniques par jour de Paris, sur 14 jours, côte à
+ * côte sur la même échelle (même unité : des comptes). Les jours antérieurs
+ * aux sources sont rayés : un 0 y mentirait. Les sièges sans compte ne sont
+ * pas des joueurs uniques : jamais dans les colonnes, mais dits jour par jour.
+ */
+function PlayersSeriesChart({ series, accountsSince }: { series: ActiveAccountsStats['series']; accountsSince: string }) {
+  const t = useTranslations('supervision')
+  const texts = useChartTexts()
+  const { columns, ariaFor, fullDay, shortDay } = useDayCharts()
+  const days = series.map((d) => d.day)
+  const title = t('activeAccounts.seriesAccountsTitle')
+  const deletedSeatDays = series.filter((d) => d.deletedSeats > 0)
+  return (
+    <div className="min-w-0">
+      <ChartHeading
+        title={title}
+        subtitle={
+          days.length > 0
+            ? t('onlinePlayers.range', { from: shortDay(days[0]), to: shortDay(days[days.length - 1]) })
+            : undefined
+        }
+        definition={t('activeAccounts.seriesDef')}
+      />
+      <ColumnChart
+        {...texts.column}
+        ariaLabel={ariaFor(title, days)}
+        data={columns(
+          series.map((d) => ({
+            day: d.day,
+            values: { activeAccounts: d.activeAccounts, uniquePlayers: d.uniquePlayers },
+            muted: d.day < accountsSince,
+          }))
+        )}
+        series={[
+          { key: 'activeAccounts', label: t('activeAccounts.seriesAccounts'), tone: 'gold' },
+          { key: 'uniquePlayers', label: t('activeAccounts.seriesPlayers'), tone: 'cream' },
+        ]}
+        mutedLabel={t('activeAccounts.legendNoData')}
+        caption={
+          <>
+            {deletedSeatDays.length > 0 && (
+              <span className="block break-words">
+                {t('activeAccounts.seriesDeletedSeatsDays', {
+                  days: deletedSeatDays
+                    .map((d) => t('activeAccounts.seriesDay', { date: fullDay(d.day), value: d.deletedSeats }))
+                    .join(' · '),
+                })}
+              </span>
+            )}
+            {/* Le passé bouge (visites en cascade, places à compte nul) : dit en clair. */}
+            <span className="block break-words">{t('activeAccounts.seriesRecomputed')}</span>
+          </>
+        }
+      />
     </div>
   )
 }
 
 /**
- * « Comptes actifs » (lot 7) : combien de comptes différents viennent et
- * jouent, nouveaux ou revenants, combien de temps, et s'ils reviennent.
- * Panneau hors de la boucle de 15 s : chargé à l'ouverture de la vue
- * d'ensemble et sur son propre bouton Actualiser, servi avec son heure de
- * calcul. Une valeur déjà affichée reste en place si l'actualisation échoue.
+ * Nouveaux comptes au jour de leur CRÉATION, empilés comptes enregistrés /
+ * invités (le total d'une pile = les nouveaux du jour). Invités en violet :
+ * la teinte de leur badge de type partout ailleurs.
  */
-function ActiveAccountsSection({
-  stats,
-  loading,
-  failed,
-  onRefresh,
-}: {
-  stats: ActiveAccountsStats | null
-  loading: boolean
-  failed: boolean
-  onRefresh: () => void
-}) {
+function NewAccountsChart({ series, accountsSince }: { series: ActiveAccountsStats['series']; accountsSince: string }) {
   const t = useTranslations('supervision')
+  const texts = useChartTexts()
+  const { columns, ariaFor } = useDayCharts()
+  const days = series.map((d) => d.day)
+  const title = t('activeAccounts.seriesNewTitle')
   return (
-    <SectionCard
-      icon={UserCheck}
-      title={t('activeAccounts.title')}
-      description={t('activeAccounts.desc')}
-      actions={
-        <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
-          <RefreshCw className={cn('mr-1 h-3.5 w-3.5', loading && 'animate-spin')} />
-          {t('refresh')}
-        </Button>
-      }
-      bodyClassName="space-y-5"
-    >
-      {stats ? (
-        <>
-          {failed && (
-            <p role="alert" className="rounded-lg border border-rose-500/25 bg-rose-500/[0.06] px-3 py-2 text-xs text-rose-100">
-              {t('activeAccounts.refreshError')}
-            </p>
-          )}
-          <ActiveAccountsBody stats={stats} />
-        </>
-      ) : failed ? (
-        <ErrorState
-          icon={AlertTriangle}
-          message={t('activeAccounts.loadError')}
-          retryLabel={t('states.retry')}
-          onRetry={onRefresh}
-        />
-      ) : (
-        <SkeletonRows rows={3} />
-      )}
-    </SectionCard>
+    <div className="min-w-0">
+      <ChartHeading level={4} title={title} definition={t('activeAccounts.seriesNewDef')} />
+      <ColumnChart
+        {...texts.column}
+        ariaLabel={ariaFor(title, days)}
+        data={columns(
+          series.map((d) => {
+            // Champs absents d'une réponse antérieure : 0, jamais NaN.
+            const total = d.newAccounts ?? 0
+            const guests = Math.min(total, d.newGuests ?? 0)
+            return { day: d.day, values: { registered: total - guests, guests }, muted: d.day < accountsSince }
+          })
+        )}
+        series={[
+          { key: 'registered', label: t('activeAccounts.seriesNewRegistered'), tone: 'gold' },
+          { key: 'guests', label: t('activeAccounts.seriesNewGuests'), tone: 'violet' },
+        ]}
+        stacked
+        mutedLabel={t('activeAccounts.legendNoData')}
+      />
+    </div>
   )
 }
 
-function ActiveAccountsBody({ stats }: { stats: ActiveAccountsStats }) {
+/** Comptes affichés d'emblée parmi les plus actifs (le serveur en sert 10). */
+const TOP_ACCOUNTS_PREVIEW = 5
+
+/**
+ * Vue Joueurs : combien de comptes viennent, nouveaux ou revenants, et
+ * s'ils reviennent. Quatre chiffres, une courbe, les plus actifs ; le reste
+ * (part des comptes enregistrés, invités sans jouer, sièges sans compte,
+ * navigateurs sans compte, nouveaux comptes par jour, temps actif) replié.
+ * Chargée à l'ouverture de l'onglet, hors de la boucle de 15 s.
+ */
+function StatsPlayersView({
+  period,
+  stats,
+  failed,
+  onRetry,
+  growth,
+  growthFailed,
+  onRetryGrowth,
+  onMethod,
+}: {
+  period: StatsPeriod
+  stats: ActiveAccountsStats | null
+  failed: boolean
+  onRetry: () => void
+  growth: GrowthStats | null
+  growthFailed: boolean
+  onRetryGrowth: () => void
+  onMethod: (group: MethodGroup) => void
+}) {
+  const t = useTranslations('supervision')
+  if (!stats) {
+    return failed ? (
+      <ErrorState icon={AlertTriangle} message={t('activeAccounts.loadError')} retryLabel={t('states.retry')} onRetry={onRetry} />
+    ) : (
+      <SkeletonRows rows={4} />
+    )
+  }
+  return (
+    <PlayersBody
+      period={period}
+      stats={stats}
+      refreshFailed={failed}
+      growth={growth}
+      growthFailed={growthFailed}
+      onRetryGrowth={onRetryGrowth}
+      onMethod={onMethod}
+    />
+  )
+}
+
+function PlayersBody({
+  period,
+  stats,
+  refreshFailed,
+  growth,
+  growthFailed,
+  onRetryGrowth,
+  onMethod,
+}: {
+  period: StatsPeriod
+  stats: ActiveAccountsStats
+  refreshFailed: boolean
+  growth: GrowthStats | null
+  growthFailed: boolean
+  onRetryGrowth: () => void
+  onMethod: (group: MethodGroup) => void
+}) {
   const t = useTranslations('supervision')
   const format = useFormatter()
   const units = useDurationUnits()
-  const { accounts, players, visits, retention } = stats
+  const freshness = useFreshnessLabel()
+  const spanLabel = useSpanLabel()
+  const spanWindow = useSpanWindow()
+  const texts = useChartTexts()
+  const [topExpanded, setTopExpanded] = useState(false)
+  const { accounts, players, visits, retention, coverage } = stats
   const computedAt = new Date(stats.computedAt)
-  const { journalSince, visitsSince } = stats.coverage
-  // Comptes actifs et joueurs uniques viennent du journal OU des visites : la
-  // plus ancienne des deux sources ouvre leur couverture.
-  const accountsSince = visitsSince && visitsSince < journalSince ? visitsSince : journalSince
-  const shortDay = (day: string) =>
-    format.dateTime(parisDayToDate(day), { day: '2-digit', month: '2-digit', timeZone: PARIS_TIME_ZONE })
+  // Journal OU visites : la plus ancienne des deux sources (même règle que la Salle).
+  const accountsSince = accountsCoverageSince(coverage)
   const fullDay = (day: string) =>
     format.dateTime(parisDayToDate(day), { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: PARIS_TIME_ZONE })
-  // Tant que la source est plus jeune que la fenêtre, l'intitulé le dit :
-  // « 30 jours » promettrait un mois de données qui n'existent pas. Jour de
-  // début lu à l'heure du calcul (la valeur est mise en cache).
-  const windowLabel = (label: string, days: number, since: string) =>
-    parisDayOffset(days - 1, computedAt) < since
-      ? t('gameSessions.windowSince', { window: label, date: shortDay(since) })
-      : label
   const duration = (seconds: number | null) => (seconds == null ? '—' : formatPresenceDuration(seconds, units))
-  // Jours de PARIS glissants, aujourd'hui compris.
-  const windows = [
-    { key: 'd1', label: t('stats.today'), days: 1 },
-    { key: 'd7', label: t('stats.week'), days: 7 },
-    { key: 'd30', label: t('stats.month'), days: 30 },
-  ] as const
-  const pairLabels = {
-    d7: windowLabel(t('stats.week'), 7, accountsSince),
-    d30: windowLabel(t('stats.month'), 30, accountsSince),
-  }
-  const hasVisibleTime = visits.visibleSeconds7d > 0
+
+  // Fenêtres réellement lues : nouveaux, revenants et invités sans jouer
+  // n'existent que sur 7 et 30 jours (« Aujourd'hui » lit 7 jours, et le dit) ;
+  // les navigateurs sans compte, sur 1 et 7 jours.
+  const activeSpan = measureSpan(period, ALL_WINDOWS, { computedAt, since: accountsSince })
+  const pairSpan = measureSpan(period, ['d7', 'd30'] as const, { computedAt, since: accountsSince })
+  const idleSpan = measureSpan(period, ['d7', 'd30'] as const, { computedAt, since: coverage.journalSince })
+  const seatsSpan = measureSpan(period, ALL_WINDOWS, { computedAt, since: coverage.journalSince })
+  const browsersSpan = measureSpan(period, ['d1', 'd7'] as const)
+  const weekSpan = measureSpan(period, ['d7'] as const, { computedAt, since: coverage.visitsSince })
+  const activeKey = activeSpan.key
+  const pairKey = pairSpan.key
+  const top = stats.topAccounts7d
+  const shownTop = topExpanded ? top : top.slice(0, TOP_ACCOUNTS_PREVIEW)
+  const d7Cohort = retention.d7
+  const footerAt = oldestComputedAt(stats.computedAt, growth?.computedAt) ?? stats.computedAt
 
   return (
-    <>
-      {/* Comptes : en ligne, actifs, nouveaux et revenants. */}
-      <div className="min-w-0 space-y-2.5">
-        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.accountsTitle')}</h3>
-        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-          <ActivityMetric
-            label={t('activeAccounts.onlineNow')}
-            value={String(accounts.onlineNow)}
-            detail={t('activeAccounts.accountsUnit', { count: accounts.onlineNow })}
-            definition={t('activeAccounts.onlineNowDef', { minutes: ONLINE_WINDOW_MINUTES })}
-          />
-          {windows.map((w) => (
-            <ActivityMetric
-              key={w.key}
-              label={t('activeAccounts.activeLabel', { window: windowLabel(w.label, w.days, accountsSince) })}
-              value={String(accounts.active[w.key])}
-              detail={t('onlinePlayers.accountsDetail', { count: accounts.active[w.key], guests: accounts.guests[w.key] })}
-              definition={
-                w.days === 1
-                  ? t('activeAccounts.activeTodayDef', { minutes: ACTIVE_WINDOW_MINUTES })
-                  : t('activeAccounts.activeWindowDef', { days: w.days, minutes: ACTIVE_WINDOW_MINUTES })
-              }
+    <div className="min-w-0 space-y-4">
+      {refreshFailed && (
+        <p role="alert" className="rounded-lg border border-rose-500/25 bg-rose-500/[0.06] px-3 py-2 text-xs text-rose-100">
+          {t('activeAccounts.refreshError')}
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <ActivityMetric
+          label={spanLabel(t('activeAccounts.title'), activeSpan)}
+          value={String(accounts.active[activeKey])}
+          detail={t('onlinePlayers.accountsDetail', { count: accounts.active[activeKey], guests: accounts.guests[activeKey] })}
+          definition={
+            activeKey === 'd1'
+              ? t('activeAccounts.activeTodayDef', { minutes: ACTIVE_WINDOW_MINUTES })
+              : t('activeAccounts.activeWindowDef', { days: activeSpan.days, minutes: ACTIVE_WINDOW_MINUTES })
+          }
+        />
+        {/* Partition exacte des actifs (nouveau = créé dans la fenêtre,
+            revenant = créé avant) : la barre se lit sans calcul. */}
+        <ActivityMetric
+          label={spanLabel(t('statsTab.players.newReturning'), pairSpan)}
+          value={`${accounts.newAccounts[pairKey]} · ${accounts.returning[pairKey]}`}
+          detail={t('activeAccounts.activeCount', { count: accounts.active[pairKey] })}
+          definition={
+            <NamedDefinitions
+              items={[
+                { key: 'new', name: t('activeAccounts.newLabel'), text: t('activeAccounts.newDef') },
+                { key: 'returning', name: t('activeAccounts.returningLabel'), text: t('activeAccounts.returningDef') },
+              ]}
             />
-          ))}
-        </div>
-        <NewReturningSplit accounts={accounts} windowLabels={pairLabels} />
-        {/* Ce que les effectifs ne comptent pas, dit à côté d'eux. */}
-        <div className="min-w-0 text-xs text-white/55">
-          <p className="break-words">
-            {t('activeAccounts.excluded', { staff: accounts.staffExcluded, test: accounts.testExcluded })}
-          </p>
-          <MetricDefinition text={t('activeAccounts.excludedDef')} className="mt-0 border-t-0" />
-          <p className="break-words">
-            {t('activeAccounts.idleGuests', {
-              weekLabel: pairLabels.d7,
-              week: accounts.idleGuests.d7,
-              monthLabel: pairLabels.d30,
-              month: accounts.idleGuests.d30,
-            })}
-          </p>
-          <MetricDefinition text={t('activeAccounts.idleGuestsDef')} className="mt-0 border-t-0" />
-        </div>
+          }
+        >
+          <StackedBar
+            {...texts.stacked}
+            ariaLabel={t('activeAccounts.newReturningAria', { window: spanWindow(pairSpan) })}
+            segments={[
+              { key: 'new', label: t('activeAccounts.newLabel'), value: accounts.newAccounts[pairKey], tone: 'gold' },
+              { key: 'returning', label: t('activeAccounts.returningLabel'), value: accounts.returning[pairKey], tone: 'cream' },
+            ]}
+            categoryLabel={t('charts.category')}
+            valueLabel={t('charts.accounts')}
+          />
+        </ActivityMetric>
+        <ReturnMetric
+          label={t('activeAccounts.returnD1Label')}
+          cohort={retention.d1}
+          definition={t('activeAccounts.returnDef', { days: 1, ...RETURN_COHORT_DAYS.d1, min: RETURN_RATE_MIN_COHORT })}
+        />
+        {/* Personne de revenu à J+7 sur une cohorte non vide : l'alerte de la vue. */}
+        <ReturnMetric
+          label={t('activeAccounts.returnD7Label')}
+          cohort={d7Cohort}
+          definition={t('activeAccounts.returnDef', { days: 7, ...RETURN_COHORT_DAYS.d7, min: RETURN_RATE_MIN_COHORT })}
+          tone={d7Cohort.cohort > 0 && d7Cohort.retained === 0 ? 'alert' : 'default'}
+        />
       </div>
 
-      {/* Joueurs uniques : journal des parties ou temps en partie des visites. */}
-      <div className="min-w-0 space-y-2.5">
-        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.playersTitle')}</h3>
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          {windows.map((w) => (
-            <ActivityMetric
-              key={w.key}
-              label={windowLabel(w.label, w.days, accountsSince)}
-              value={String(players.unique[w.key])}
-              detail={t('activeAccounts.accountsUnit', { count: players.unique[w.key] })}
-              definition={
-                w.days === 1
-                  ? t('activeAccounts.playersTodayDef')
-                  : t('activeAccounts.playersWindowDef', { days: w.days })
-              }
-            />
-          ))}
-        </div>
-        {/* Sièges sans compte : hors effectifs, jamais additionnés aux comptes. */}
-        <div className="min-w-0 text-xs text-white/55">
-          <p className="break-words">
-            {t('activeAccounts.deletedSeats', {
-              todayLabel: t('stats.today'),
-              today: players.deletedSeats.d1,
-              weekLabel: windowLabel(t('stats.week'), 7, journalSince),
-              week: players.deletedSeats.d7,
-              monthLabel: windowLabel(t('stats.month'), 30, journalSince),
-              month: players.deletedSeats.d30,
-            })}
-          </p>
-          <MetricDefinition text={t('activeAccounts.deletedSeatsDef')} className="mt-0 border-t-0" />
-        </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <StatsPanel>
+          <PlayersSeriesChart series={stats.series} accountsSince={accountsSince} />
+        </StatsPanel>
+        <StatsPanel>
+          <ChartHeading title={t('activeAccounts.topTitle')} definition={t('activeAccounts.topDef')} />
+          {top.length === 0 ? (
+            <p className="text-sm text-cream/70">{t('activeAccounts.topEmpty')}</p>
+          ) : (
+            <>
+              <TopAccountsBars accounts={shownTop} duration={duration} />
+              {top.length > TOP_ACCOUNTS_PREVIEW && (
+                <button
+                  type="button"
+                  onClick={() => setTopExpanded((open) => !open)}
+                  aria-expanded={topExpanded}
+                  className="mt-2 inline-flex min-h-[32px] items-center gap-1 rounded-md text-xs font-semibold text-amber-200 transition-colors hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                >
+                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', topExpanded && 'rotate-180')} aria-hidden />
+                  {topExpanded ? t('charts.collapse') : t('statsTab.players.topShowAll', { count: top.length })}
+                </button>
+              )}
+            </>
+          )}
+        </StatsPanel>
       </div>
 
-      {/* Visites : consentement seulement, dit en tête du groupe. */}
-      <div className="min-w-0 space-y-2.5">
-        <div className="min-w-0">
-          <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.visitsTitle')}</h3>
-          <p className="mt-0.5 break-words text-xs text-white/55">
-            {visitsSince
-              ? t('activeAccounts.visitsScope', { date: shortDay(visitsSince) })
-              : t('activeAccounts.visitsScopeNone')}
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+      <Disclosure title={t('statsTab.players.detailTitle')} icon={UserCheck}>
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          {growth ? (
+            // Les deux effectifs sont écrits dans la légende de la barre, avec leur part.
+            <ActivityMetric
+              label={t('method.windowed', {
+                label: t('growth.registeredShareLabel'),
+                window: t('statsTab.days', { days: growth.windows.registeredShareDays }),
+              })}
+              value={rateLabel(growth.registeredShare.share)}
+              definition={t('growth.registeredShareDef', { days: growth.windows.registeredShareDays })}
+            >
+              <StackedBar
+                {...texts.stacked}
+                ariaLabel={t('growth.registeredShareLabel')}
+                segments={[
+                  { key: 'registered', label: t('growth.registeredSegment'), value: growth.registeredShare.registered, tone: 'gold' },
+                  { key: 'guests', label: t('growth.guestsSegment'), value: growth.registeredShare.guests, tone: 'violet' },
+                ]}
+                categoryLabel={t('charts.category')}
+                valueLabel={t('charts.accounts')}
+                emptyLabel={t('growth.registeredShareEmpty')}
+              />
+            </ActivityMetric>
+          ) : growthFailed ? (
+            <ErrorState icon={AlertTriangle} message={t('statsTab.growthError')} retryLabel={t('states.retry')} onRetry={onRetryGrowth} />
+          ) : (
+            <SkeletonRows rows={1} />
+          )}
           <ActivityMetric
-            label={t('activeAccounts.medianVisit')}
-            value={duration(visits.medianVisitSeconds7d)}
-            definition={t('activeAccounts.medianVisitDef')}
-          />
-          <ActivityMetric
-            label={t('activeAccounts.medianActive')}
+            label={spanLabel(t('activeAccounts.medianActive'), weekSpan)}
             value={duration(visits.medianActiveSecondsPerAccount7d)}
             definition={t('activeAccounts.medianActiveDef', { minutes: ACTIVE_WINDOW_MINUTES })}
           />
-          <ActivityMetric
-            label={t('activeAccounts.gameShare')}
-            value={hasVisibleTime ? rateLabel(visits.gameSeconds7d / visits.visibleSeconds7d) : '—'}
-            detail={
-              hasVisibleTime
+        </div>
+
+        {/* Décomptes à part, jamais additionnés aux comptes actifs. */}
+        <div className="min-w-0 space-y-1 text-xs text-white/70">
+          <DefinedLine
+            text={t('statsTab.countLine', {
+              label: spanLabel(t('method.names.idleGuests'), idleSpan),
+              count: accounts.idleGuests[idleSpan.key],
+            })}
+            name={t('method.names.idleGuests')}
+            definition={t('activeAccounts.idleGuestsDef')}
+          />
+          <DefinedLine
+            text={t('statsTab.countLine', {
+              label: spanLabel(t('method.names.deletedSeats'), seatsSpan),
+              count: players.deletedSeats[seatsSpan.key],
+            })}
+            name={t('method.names.deletedSeats')}
+            definition={t('activeAccounts.deletedSeatsDef')}
+          />
+          {/* Autre unité que les comptes : des navigateurs, dits comme tels. */}
+          <DefinedLine
+            text={t('statsTab.countLine', {
+              label: spanLabel(t('activeAccounts.browsersTitle'), browsersSpan),
+              count: stats.browsersWithoutAccount[browsersSpan.key],
+            })}
+            name={t('activeAccounts.browsersTitle')}
+            definition={
+              <>
+                {t('activeAccounts.browsersDef')} {t('activeAccounts.browsersNotAdded')}
+              </>
+            }
+          />
+        </div>
+
+        <NewAccountsChart series={stats.series} accountsSince={accountsSince} />
+      </Disclosure>
+
+      {/* Un seul pied : ce qui est hors effectifs, la couverture des deux
+          sources, l'heure du calcul (valeurs en cache, la plus ancienne). */}
+      <StatsFooter
+        notes={[
+          {
+            key: 'excluded',
+            content: (
+              <DefinedLine
+                text={t('activeAccounts.excluded', { staff: accounts.staffExcluded, test: accounts.testExcluded })}
+                name={t('method.names.excluded')}
+                definition={t('activeAccounts.excludedDef')}
+              />
+            ),
+          },
+          {
+            key: 'coverage',
+            content: coverage.visitsSince
+              ? t('activeAccounts.coverage', { journal: fullDay(coverage.journalSince), visits: fullDay(coverage.visitsSince) })
+              : t('activeAccounts.coverageNoVisits', { journal: fullDay(coverage.journalSince) }),
+          },
+        ]}
+        freshness={freshness(footerAt, stats.cacheSeconds)}
+        methodLabel={t('method.button')}
+        onMethod={() => onMethod('players')}
+      />
+    </div>
+  )
+}
+
+/**
+ * Vue Audience : les NAVIGATEURS qui viennent (statistiques acceptées) —
+ * une autre unité que les comptes, jamais additionnée à eux. Le nombre de la
+ * période, les navigateurs actifs maintenant, deux chiffres de visites (7
+ * jours, dit), la courbe par jour, les appareils, les pays ; la liste des
+ * visiteurs par IP repliée.
+ */
+function StatsAudienceView({
+  period,
+  stats,
+  dailySeries,
+  activeAccounts,
+  activeAccountsFailed,
+  onCountryClick,
+  onIpClick,
+  onNetworkClick,
+  onMethod,
+}: {
+  period: StatsPeriod
+  stats: StatsResponse | null
+  dailySeries: DailyPoint[]
+  activeAccounts: ActiveAccountsStats | null
+  activeAccountsFailed: boolean
+  onCountryClick: (country: string | null, scope: 'online' | 'today') => void
+  onIpClick: (ip: string) => void
+  onNetworkClick: (ip: string, network: string) => void
+  onMethod: (group: MethodGroup) => void
+}) {
+  const t = useTranslations('supervision')
+  const units = useDurationUnits()
+  const texts = useChartTexts()
+  const { columns, ariaFor, shortDay } = useDayCharts()
+  const spanLabel = useSpanLabel()
+  const freshness = useFreshnessLabel()
+  const visitorsSpan = measureSpan(period, ALL_WINDOWS)
+  const visits = activeAccounts?.visits
+  const visitsSpan = measureSpan(period, ['d7'] as const, {
+    computedAt: new Date(activeAccounts?.computedAt ?? Date.now()),
+    since: activeAccounts?.coverage.visitsSince ?? null,
+  })
+  const visitors = stats ? { d1: stats.visitors.today, d7: stats.visitors.week, d30: stats.visitors.month }[visitorsSpan.key] : null
+  // Écart d'une semaine sur l'autre : sur 7 jours seulement, jours RÉVOLUS
+  // (stats-period.ts) — jamais sous « Aujourd'hui », entamé, ni sous 30 jours,
+  // que la série de 15 jours ne sait pas comparer.
+  const delta = period === 'd7' ? weekOverWeekDelta(dailySeries, parisDayString(), ANALYTICS_CONSENT_V2_SINCE) : null
+  const phone = visits ? phoneShare(visits.devices7d ?? []) : null
+  const visitsPending = activeAccountsFailed ? t('room.weekUnavailable') : t('loading')
+  // Les 14 jours tracés : la série en sert un de plus, pour l'écart.
+  const points = dailySeries.slice(-14)
+  const days = points.map((p) => p.date)
+  const chartTitle = t('room.visitorsChartTitle')
+  // Consentement de version 2 : le bandeau a été reposé à tous et un
+  // navigateur ne compte plus tant qu'il n'a pas répondu. Tant que ce jour
+  // est dans la fenêtre, on le dit sous le graphe, À DÉCOUVERT : la marche
+  // qu'il dessine n'est pas une chute de fréquentation.
+  const consentBreakShown = days.length > 0 && days[0] <= ANALYTICS_CONSENT_V2_SINCE
+
+  return (
+    <div className="min-w-0 space-y-4">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        {/* NAVIGATEURS ayant accepté les statistiques (DailyVisitor), pas des
+            comptes ni des personnes : l'indice le dit. */}
+        <ActivityMetric
+          label={t('room.weekVisitors', { window: t(PERIOD_LABEL_KEY[visitorsSpan.key]) })}
+          value={visitors == null ? '—' : String(visitors)}
+          detail={t('stats.weekHint')}
+          delta={
+            delta != null
+              ? { direction: delta >= 0 ? 'up' : 'down', label: `${deltaLabel(delta)} ${t('room.vsPrevWeek')}` }
+              : undefined
+          }
+          definition={t('statsTab.audience.visitorsWindowDef')}
+        />
+        {/* Des navigateurs encore : la pastille « en ligne » de l'en-tête,
+            elle, compte des comptes. La définition le rappelle. */}
+        <ActivityMetric
+          label={t('stats.activeBrowsers')}
+          value={stats ? String(stats.visitors.onlineNow) : '—'}
+          detail={t('stats.activeBrowsersHint', { minutes: ONLINE_WINDOW_MINUTES })}
+          definition={t('statsTab.audience.activeBrowsersDef', { minutes: ONLINE_WINDOW_MINUTES })}
+        />
+        <ActivityMetric
+          label={spanLabel(t('activeAccounts.medianVisit'), visitsSpan)}
+          value={visits ? (visits.medianVisitSeconds7d == null ? '—' : formatPresenceDuration(visits.medianVisitSeconds7d, units)) : '—'}
+          detail={visits ? undefined : visitsPending}
+          definition={t('activeAccounts.medianVisitDef')}
+        />
+        <ActivityMetric
+          label={spanLabel(t('statsTab.audience.phoneShare'), visitsSpan)}
+          value={phone ? rateLabel(phone.share) : '—'}
+          detail={
+            phone
+              ? t('statsTab.audience.phoneShareDetail', { phone: phone.phone, total: phone.total })
+              : visits
+                ? t('activeAccounts.devicesEmpty')
+                : visitsPending
+          }
+          definition={t('statsTab.audience.phoneShareDef')}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <StatsPanel>
+          <ChartHeading
+            title={chartTitle}
+            subtitle={
+              days.length > 0
+                ? `${t('room.trendVisitors')} · ${t('onlinePlayers.range', { from: shortDay(days[0]), to: shortDay(days[days.length - 1]) })}`
+                : t('room.trendVisitors')
+            }
+            definition={t('room.visitorsDef')}
+          />
+          <ColumnChart
+            {...texts.column}
+            ariaLabel={ariaFor(chartTitle, days)}
+            data={columns(points.map((p) => ({ day: p.date, values: { visitors: p.visitors } })))}
+            series={[{ key: 'visitors', label: t('room.visitorsSeries'), tone: 'gold' }]}
+            caption={consentBreakShown ? t('room.visitorsConsentNote', { date: shortDay(ANALYTICS_CONSENT_V2_SINCE) }) : undefined}
+          />
+        </StatsPanel>
+        {/* Les visites de 7 jours, par appareil (champ absent d'une réponse antérieure : rien). */}
+        {visits ? (
+          <VisitDevicesBars devices={visits.devices7d ?? []} />
+        ) : (
+          <StatsPanel>
+            <p className="text-xs text-white/70">{visitsPending}</p>
+          </StatsPanel>
+        )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <CountryList
+          title={t('geo.onlineByCountry')}
+          description={t('geo.onlineByCountryWindowDesc', { minutes: ONLINE_WINDOW_MINUTES })}
+          rows={stats?.visitors.onlineByCountry ?? []}
+          scope="online"
+          onCountryClick={onCountryClick}
+        />
+        <CountryList
+          title={t('geo.todayByCountry')}
+          description={t('geo.todayByCountryDesc')}
+          rows={stats?.visitors.visitorsTodayByCountry ?? []}
+          scope="today"
+          onCountryClick={onCountryClick}
+        />
+      </div>
+
+      <Disclosure title={t('statsTab.audience.ipTitle')} icon={Network}>
+        <IpVisitorList rows={stats?.visitorIpList ?? []} onIpClick={onIpClick} onNetworkClick={onNetworkClick} />
+      </Disclosure>
+
+      {/* Deux unités dans la même vue : chaque note dit à quels blocs elle
+          s'applique, jamais un périmètre de comptes posé sur des navigateurs. */}
+      <StatsFooter
+        notes={[
+          { key: 'browsers', content: t('statsTab.audience.browsersNote') },
+          {
+            key: 'scope',
+            content: activeAccounts?.coverage.visitsSince
+              ? t('activeAccounts.visitsScope', { date: shortDay(activeAccounts.coverage.visitsSince) })
+              : t('activeAccounts.visitsScopeNone'),
+          },
+        ]}
+        freshness={activeAccounts ? freshness(activeAccounts.computedAt, activeAccounts.cacheSeconds) : undefined}
+        methodLabel={t('method.button')}
+        onMethod={() => onMethod('audience')}
+      />
+    </div>
+  )
+}
+
+/** Rangées du tableau par jeu affichées avant « Voir tout ». */
+const GAME_TABLE_PREVIEW = 8
+
+/** Effectif d'une colonne du tableau par jeu : « — » quand la mesure manque. */
+function countCell(value: number | null): string {
+  return value == null ? '—' : String(value)
+}
+
+/**
+ * Vue Jeux : les parties de la période, en ligne (journal des parties) et
+ * locales (compteurs anonymes), un graphe par jour qui empile les deux, un
+ * tableau par jeu. Le cumul depuis toujours et les joueurs par jeu sont
+ * repliés ; le journal des parties aussi, sauf quand un lien « voir dans le
+ * journal » l'ouvre (?userId=).
+ */
+function StatsGamesView({
+  period,
+  growth,
+  growthFailed,
+  onRetryGrowth,
+  activeAccounts,
+  allTime,
+  journalUserId,
+  journalOpen,
+  onJournalOpenChange,
+  journalRef,
+  onShowAllJournal,
+  onMethod,
+}: {
+  period: StatsPeriod
+  growth: GrowthStats | null
+  growthFailed: boolean
+  onRetryGrowth: () => void
+  activeAccounts: ActiveAccountsStats | null
+  allTime: StatsResponse['games'] | undefined
+  journalUserId: string | undefined
+  journalOpen: boolean
+  onJournalOpenChange: (open: boolean) => void
+  journalRef: RefObject<HTMLDivElement>
+  onShowAllJournal: () => void
+  onMethod: (group: MethodGroup) => void
+}) {
+  const t = useTranslations('supervision')
+  return (
+    <div className="min-w-0 space-y-4">
+      {growth ? (
+        <GamesBody period={period} growth={growth} activeAccounts={activeAccounts} allTime={allTime} onMethod={onMethod} />
+      ) : growthFailed ? (
+        <ErrorState icon={AlertTriangle} message={t('statsTab.growthError')} retryLabel={t('states.retry')} onRetry={onRetryGrowth} />
+      ) : (
+        <SkeletonRows rows={4} />
+      )}
+
+      {/* Journal des parties : panneau autonome, monté seulement une fois
+          déplié (il charge ses propres pages). Un lien « voir dans le
+          journal » d'une fiche compte l'ouvre et y défile (journalRef). */}
+      <div ref={journalRef} className="min-w-0 scroll-mt-4">
+        <Disclosure
+          title={t('statsTab.games.journalTitle')}
+          icon={ScrollText}
+          open={journalOpen}
+          onOpenChange={onJournalOpenChange}
+        >
+          {journalUserId && (
+            <div className="flex justify-end">
+              <Button size="sm" variant="ghost" className="text-white/70" onClick={onShowAllJournal}>
+                <X className="mr-1 h-3.5 w-3.5" />
+                {t('journalFilter.showAll')}
+              </Button>
+            </div>
+          )}
+          {/* Sans son propre cadre ni son titre : le dépliant les porte déjà. */}
+          <GameSessionsPanel userId={journalUserId} bare />
+        </Disclosure>
+      </div>
+    </div>
+  )
+}
+
+function GamesBody({
+  period,
+  growth,
+  activeAccounts,
+  allTime,
+  onMethod,
+}: {
+  period: StatsPeriod
+  growth: GrowthStats
+  activeAccounts: ActiveAccountsStats | null
+  allTime: StatsResponse['games'] | undefined
+  onMethod: (group: MethodGroup) => void
+}) {
+  const t = useTranslations('supervision')
+  const texts = useChartTexts()
+  const { columns, ariaFor, shortDay } = useDayCharts()
+  const shortDate = useParisShortDate()
+  const spanLabel = useSpanLabel()
+  const freshness = useFreshnessLabel()
+  const [tableExpanded, setTableExpanded] = useState(false)
+  const { onlinePlay, localPlay } = growth
+  // null : lecture des parties locales en échec côté serveur.
+  const local = localPlay ?? null
+  const computedAt = new Date(growth.computedAt)
+  const onlineSpan = measureSpan(period, ALL_WINDOWS, { computedAt, since: onlinePlay.journalSince })
+  const localSpan = measureSpan(period, ALL_WINDOWS, { computedAt, since: local?.since ?? null })
+  // La somme et le tableau par jeu portent la fenêtre de la part EN LIGNE,
+  // que rien ne coupe : les parties en ligne d'avant le premier jour local y
+  // sont bien comptées. Un local plus jeune que la fenêtre est dit à part
+  // (indice de la tuile, note du tableau), jamais dans l'intitulé, qui
+  // annoncerait sinon une période que la part en ligne déborde.
+  const key = onlineSpan.key
+  const online = onlinePlay.launches[key]
+  const onlineTotal = online.solo + online.withHumans
+  const localTotals = local ? local.totals[key] : null
+  const accountsComputedAt = activeAccounts ? new Date(activeAccounts.computedAt) : computedAt
+  const playersSpan = measureSpan(period, ALL_WINDOWS, {
+    computedAt: accountsComputedAt,
+    since: activeAccounts ? accountsCoverageSince(activeAccounts.coverage) : null,
+  })
+
+  const days = gamesByDay(onlinePlay.launchesByDay, onlinePlay.journalSince, local ? { days: local.byDay, since: local.since } : null)
+  const dayKeys = days.map((d) => d.day)
+  const chartTitle = t('onlinePlayers.launchesTitle')
+  // Solo et « entre humains » gardent leurs teintes de toujours (crème, or) ;
+  // les locales prennent le bleu, une autre source.
+  const series: ChartSeries[] = [
+    { key: 'solo', label: t('statsTab.games.seriesSolo'), tone: 'cream' },
+    { key: 'withHumans', label: t('statsTab.games.seriesWithHumans'), tone: 'gold' },
+    ...(local ? [{ key: 'local', label: t('statsTab.games.seriesLocal'), tone: 'blue' as const }] : []),
+  ]
+  const chartNotes = [
+    dayKeys.length > 0 && dayKeys[0] < onlinePlay.journalSince
+      ? t('statsTab.games.onlineSince', { date: shortDate(onlinePlay.journalSince) })
+      : null,
+    local === null
+      ? t('statsTab.games.localMissing')
+      : local.since === null
+        ? t('localPlay.byDayEmpty')
+        : dayKeys.length > 0 && dayKeys[0] < local.since
+          ? t('statsTab.games.localSince', { date: shortDate(local.since) })
+          : null,
+  ].filter((note): note is string => note !== null)
+
+  const rows = gameRows(onlinePlay.launchesByGame[key], local ? local.byGame[key] : null)
+  const shownRows = tableExpanded ? rows : rows.slice(0, GAME_TABLE_PREVIEW)
+  const tableTitle = spanLabel(t('statsTab.games.tableTitle'), onlineSpan)
+  const allTimeGames = allTime?.games ?? []
+  const footerAt = oldestComputedAt(growth.computedAt, activeAccounts?.computedAt) ?? growth.computedAt
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <ActivityMetric
+          label={spanLabel(t('statsTab.games.launches'), onlineSpan)}
+          value={String(onlineTotal + (localTotals?.starts ?? 0))}
+          detail={
+            !localTotals
+              ? t('statsTab.games.launchesOnlineOnly')
+              : localSpan.since
+                ? t('statsTab.games.launchesDetailLocalSince', { date: shortDate(localSpan.since) })
+                : t('statsTab.games.launchesDetail')
+          }
+          definition={t('statsTab.games.launchesDef')}
+        />
+        <ActivityMetric
+          label={spanLabel(t('statsTab.games.online'), onlineSpan)}
+          value={String(onlineTotal)}
+          detail={t('statsTab.games.onlineSplit', { solo: online.solo, withHumans: online.withHumans })}
+          definition={t('onlinePlayers.launchesDef')}
+        />
+        <ActivityMetric
+          label={spanLabel(t('statsTab.games.local'), localSpan)}
+          value={localTotals ? String(localTotals.starts) : '—'}
+          detail={localTotals ? t('localPlay.endsHint', { count: localTotals.ends }) : t('statsTab.games.localUnavailable')}
+          definition={t('localPlay.def')}
+        />
+        {/* Le SEUL chiffre de joueurs de l'onglet : celui du tableau des
+            comptes actifs, qui voit aussi le jeu local (temps en partie des
+            visites), sur la définition de la courbe de la vue Joueurs. */}
+        <ActivityMetric
+          label={spanLabel(t('activeAccounts.playersTitle'), playersSpan)}
+          value={activeAccounts ? String(activeAccounts.players.unique[playersSpan.key]) : '—'}
+          detail={
+            activeAccounts
+              ? t('activeAccounts.accountsUnit', { count: activeAccounts.players.unique[playersSpan.key] })
+              : t('loading')
+          }
+          definition={
+            playersSpan.key === 'd1'
+              ? t('activeAccounts.playersTodayDef')
+              : t('activeAccounts.playersWindowDef', { days: playersSpan.days })
+          }
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <StatsPanel>
+          <ChartHeading
+            title={chartTitle}
+            subtitle={
+              dayKeys.length > 0
+                ? t('onlinePlayers.range', { from: shortDay(dayKeys[0]), to: shortDay(dayKeys[dayKeys.length - 1]) })
+                : undefined
+            }
+            definition={
+              <NamedDefinitions
+                items={[
+                  { key: 'online', name: t('statsTab.games.online'), text: t('onlinePlayers.launchesDef') },
+                  { key: 'local', name: t('statsTab.games.local'), text: t('localPlay.def') },
+                ]}
+              />
+            }
+          />
+          <ColumnChart
+            {...texts.column}
+            ariaLabel={ariaFor(chartTitle, dayKeys)}
+            data={columns(
+              days.map((d) => ({
+                day: d.day,
+                values: { solo: d.solo, withHumans: d.withHumans, local: d.local },
+                muted: d.muted,
+              }))
+            )}
+            series={series}
+            stacked
+            mutedLabel={t('statsTab.games.legendBeforeMeasure')}
+            caption={chartNotes.length > 0 ? chartNotes.join(' ') : undefined}
+          />
+        </StatsPanel>
+
+        <StatsPanel>
+          <ChartHeading title={tableTitle} definition={t('statsTab.games.tableDef')} />
+          {local?.since && localSpan.since && (
+            <p className="mb-2 text-xs text-cream/70">{t('statsTab.games.localSince', { date: shortDate(local.since) })}</p>
+          )}
+          {rows.length === 0 ? (
+            <EmptyState icon={Gamepad2} title={t('statsTab.games.tableEmpty')} />
+          ) : (
+            <>
+              <table className="w-full table-fixed text-sm">
+                <caption className="sr-only">{tableTitle}</caption>
+                <thead>
+                  <tr className="text-xs text-white/70">
+                    <th scope="col" className="py-1.5 pr-2 text-left font-semibold">
+                      {t('charts.game')}
+                    </th>
+                    <th scope="col" className="w-[3.75rem] py-1.5 pl-1 text-right font-semibold">
+                      {t('statsTab.games.online')}
+                    </th>
+                    <th scope="col" className="w-[3.75rem] py-1.5 pl-1 text-right font-semibold">
+                      {t('statsTab.games.local')}
+                    </th>
+                    <th scope="col" className="w-[3.25rem] py-1.5 pl-1 text-right font-semibold">
+                      {t('charts.total')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shownRows.map((row) => {
+                    // Sous le nom, ce que les colonnes ne disent pas : un jeu en
+                    // ligne joué seulement en solo contre des bots, un jeu local
+                    // quitté avant la fin. Dans la colonne du jeu, la seule assez
+                    // large à 375 px ; chaque mot n'appartient qu'à une source
+                    // (« entre humains » en ligne, « terminées » en local).
+                    const details = [
+                      row.online != null && row.online > 0 && row.withHumans != null
+                        ? t('statsTab.games.rowWithHumans', { count: row.withHumans })
+                        : null,
+                      row.local != null && row.local > 0
+                        ? row.noEndScreen
+                          ? t('statsTab.games.rowNoEndScreen')
+                          : t('localPlay.endsHint', { count: row.ends ?? 0 })
+                        : null,
+                    ].filter((detail): detail is string => detail !== null)
+                    return (
+                      <tr key={row.gameId} className="border-t border-white/[0.07] align-top">
+                        <th scope="row" className="py-2 pr-2 text-left font-medium text-white">
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <GameIconById id={row.gameId} className="h-4 w-4 shrink-0 text-gold" />
+                            <span className="min-w-0 break-words">{row.gameTitle}</span>
+                          </span>
+                          {details.length > 0 && (
+                            <span className="mt-0.5 block break-words pl-[1.375rem] text-xs font-normal text-white/70">
+                              {details.join(' · ')}
+                            </span>
+                          )}
+                        </th>
+                        <td className="py-2 pl-1 text-right tabular-nums text-white/80">{countCell(row.online)}</td>
+                        <td className="py-2 pl-1 text-right tabular-nums text-white/80">{countCell(row.local)}</td>
+                        <td className="py-2 pl-1 text-right font-semibold tabular-nums text-white">{countCell(row.total)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              {rows.length > GAME_TABLE_PREVIEW && (
+                <button
+                  type="button"
+                  onClick={() => setTableExpanded((open) => !open)}
+                  aria-expanded={tableExpanded}
+                  className="mt-2 inline-flex min-h-[32px] items-center gap-1 rounded-md text-xs font-semibold text-amber-200 transition-colors hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                >
+                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', tableExpanded && 'rotate-180')} aria-hidden />
+                  {tableExpanded ? t('charts.collapse') : t('charts.showAll', { count: rows.length })}
+                </button>
+              )}
+            </>
+          )}
+        </StatsPanel>
+      </div>
+
+      <Disclosure title={t('statsTab.games.detailTitle')} icon={Gamepad2}>
+        {/* Un cumul, pas une activité : la note reste à découvert, sans quoi
+            on lirait la liste comme les parties de la période. */}
+        <div className="min-w-0">
+          {/* h4 : sous le titre du dépliant (h3). */}
+          <ChartHeading
+            level={4}
+            caps
+            title={t('games.playedTitle')}
+            subtitle={allTime?.totalParties != null ? t('games.totalParties', { count: allTime.totalParties }) : undefined}
+          />
+          {allTimeGames.length === 0 ? (
+            <EmptyState icon={Gamepad2} title={t('games.noneRecorded')} />
+          ) : (
+            <BarList
+              {...texts.list}
+              ariaLabel={t('games.playedTitle')}
+              rows={allTimeGames.map((game) => ({
+                key: game.gameId,
+                label: <GameBarLabel gameId={game.gameId} title={game.title} />,
+                value: game.partiesPlayed,
+              }))}
+              total={allTime?.totalParties}
+              showShare
+              limit={8}
+              categoryLabel={t('charts.game')}
+              primaryLabel={t('games.parties')}
+            />
+          )}
+          <p className="mt-2 break-words text-xs leading-relaxed text-white/70">{t('games.allTimeNote')}</p>
+        </div>
+        {/* Pas de part en % : un joueur de deux jeux compte dans les deux. */}
+        <div className="min-w-0">
+          <ChartHeading
+            level={4}
+            caps
+            title={t('method.windowed', {
+              label: t('growth.playersByGameTitle'),
+              window: t('statsTab.days', { days: growth.windows.playersByGameDays }),
+            })}
+            definition={t('growth.playersByGameDef', { days: growth.windows.playersByGameDays })}
+          />
+          <BarList
+            {...texts.list}
+            ariaLabel={t('growth.playersByGameTitle')}
+            rows={growth.playersByGame.map((row) => ({
+              key: row.gameId,
+              label: <GameBarLabel gameId={row.gameId} title={row.gameTitle} />,
+              value: row.players,
+            }))}
+            categoryLabel={t('charts.game')}
+            primaryLabel={t('charts.players')}
+            emptyLabel={t('growth.noData')}
+          />
+        </div>
+      </Disclosure>
+
+      {/* L'exclusion de l'équipe ne vaut ici que pour les joueurs uniques :
+          les parties ont leurs propres règles, dites par la note suivante et
+          par les définitions des tuiles. */}
+      <StatsFooter
+        notes={[
+          ...(activeAccounts
+            ? [
+                {
+                  key: 'excluded',
+                  content: (
+                    <DefinedLine
+                      text={t('statsTab.games.playersExcluded', {
+                        staff: activeAccounts.accounts.staffExcluded,
+                        test: activeAccounts.accounts.testExcluded,
+                      })}
+                      name={t('method.names.excluded')}
+                      definition={t('activeAccounts.excludedDef')}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          { key: 'local', content: t('statsTab.games.localNote') },
+        ]}
+        freshness={freshness(footerAt, growth.cacheSeconds)}
+        methodLabel={t('method.button')}
+        onMethod={() => onMethod('games')}
+      />
+    </>
+  )
+}
+
+/**
+ * Vue Qualité : ce qui casse ou déçoit — tables figées, part du temps passé
+ * en partie, plantages côté joueur, avis après la première partie. Ni la
+ * période ni ses fenêtres ne s'y appliquent : chaque chiffre dit la sienne.
+ */
+function StatsQualityView({
+  growth,
+  activeAccounts,
+  activeAccountsFailed,
+  onMethod,
+}: {
+  growth: GrowthStats | null
+  activeAccounts: ActiveAccountsStats | null
+  activeAccountsFailed: boolean
+  onMethod: (group: MethodGroup) => void
+}) {
+  const t = useTranslations('supervision')
+  const units = useDurationUnits()
+  const spanLabel = useSpanLabel()
+  const freshness = useFreshnessLabel()
+  const visits = activeAccounts?.visits
+  const hasVisibleTime = visits ? visits.visibleSeconds7d > 0 : false
+  const duration = (seconds: number) => formatPresenceDuration(seconds, units)
+  const visitsSpan = measureSpan('d7', ['d7'] as const, {
+    computedAt: new Date(activeAccounts?.computedAt ?? Date.now()),
+    since: activeAccounts?.coverage.visitsSince ?? null,
+  })
+  const footerAt = oldestComputedAt(growth?.computedAt, activeAccounts?.computedAt)
+  // Les deux caches ont la même durée de vie ; la plus longue, par prudence.
+  const cacheSeconds = Math.max(growth?.cacheSeconds ?? 0, activeAccounts?.cacheSeconds ?? 0)
+  return (
+    <div className="min-w-0 space-y-4">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <ActivityMetric
+          label={t('growth.abandonedLabel')}
+          value={growth ? String(growth.abandonedTables.stalled) : '—'}
+          detail={
+            growth
+              ? t('growth.abandonedDetail', { stalled: growth.abandonedTables.stalled, live: growth.abandonedTables.live })
+              : t('loading')
+          }
+          definition={t('growth.abandonedDef')}
+          tone={growth && growth.abandonedTables.stalled > 0 ? 'alert' : 'default'}
+        />
+        <ActivityMetric
+          label={spanLabel(t('activeAccounts.gameShare'), visitsSpan)}
+          value={visits && hasVisibleTime ? rateLabel(visits.gameSeconds7d / visits.visibleSeconds7d) : '—'}
+          detail={
+            visits
+              ? hasVisibleTime
                 ? t('activeAccounts.gameShareDetail', {
                     game: duration(visits.gameSeconds7d),
                     visible: duration(visits.visibleSeconds7d),
                   })
-                : undefined
-            }
-            definition={t('activeAccounts.gameShareDef')}
-          />
+                : t('activeAccounts.devicesEmpty')
+              : activeAccountsFailed
+                ? t('room.weekUnavailable')
+                : t('loading')
+          }
+          definition={t('activeAccounts.gameShareDef')}
+        />
+      </div>
+
+      {/* Panneaux autonomes, hors de la boucle de 15 s (F40), chargés à
+          l'ouverture de la vue. */}
+      <ClientErrorsPanel />
+      <FirstGameFeedbackPanel />
+
+      <StatsFooter
+        freshness={footerAt ? freshness(footerAt, cacheSeconds) : undefined}
+        methodLabel={t('method.button')}
+        onMethod={() => onMethod('quality')}
+      />
+    </div>
+  )
+}
+
+
+/**
+ * « Méthode » : toutes les définitions de l'onglet Statistiques dans une
+ * seule fenêtre, rangées par thème (src/lib/supervision/method.ts), avec
+ * les valeurs que les tuiles interpolent (minutes, jours, seuil de cohorte).
+ * Elle s'ouvre sur le thème de la section dont on a suivi le lien : le
+ * focus va à son titre, qui défile en vue ; la fermeture le rend au bouton.
+ * Seule la liste défile : le titre, le X et le bouton « Fermer » restent à
+ * l'écran au téléphone (pas de touche Échap), et toucher le voile ferme
+ * aussi — une fenêtre de lecture, rien à perdre.
+ */
+function MethodDialog({
+  group,
+  onClose,
+  growthWindows,
+}: {
+  group: MethodGroup | null
+  onClose: () => void
+  growthWindows: MethodParams['growthWindows']
+}) {
+  const t = useTranslations('supervision')
+  const headingRefs = useRef<Partial<Record<MethodGroup, HTMLHeadingElement | null>>>({})
+  const groups = useMemo(
+    () =>
+      methodGroups({
+        onlineMinutes: ONLINE_WINDOW_MINUTES,
+        activeMinutes: ACTIVE_WINDOW_MINUTES,
+        returnCohorts: RETURN_COHORT_DAYS,
+        returnMinCohort: RETURN_RATE_MIN_COHORT,
+        growthWindows,
+      }),
+    [growthWindows]
+  )
+  const translate = (key: string, values?: Record<string, string | number>) => t(key, values)
+
+  return (
+    <Dialog open={group !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="flex max-h-[85vh] flex-col border-white/10 bg-felt-deep text-white sm:max-w-2xl"
+        // Le gabarit de base retient le toucher du voile (fenêtres de saisie) :
+        // rendre la main à Radix, qui ferme.
+        onPointerDownOutside={undefined}
+        onInteractOutside={undefined}
+        onOpenAutoFocus={(event) => {
+          const target = group ? headingRefs.current[group] : null
+          if (!target) return
+          event.preventDefault()
+          target.focus()
+        }}
+      >
+        <DialogHeader className="shrink-0 pr-8">
+          <DialogTitle>{t('method.title')}</DialogTitle>
+          <DialogDescription className="text-white/70">{t('method.desc')}</DialogDescription>
+        </DialogHeader>
+        <div className="-mx-4 min-h-0 flex-1 space-y-6 overflow-y-auto px-4 sm:-mx-6 sm:px-6">
+          {groups.map(({ group: key, entries }) => (
+            <section key={key} className="min-w-0" aria-labelledby={`method-${key}`}>
+              <h3
+                id={`method-${key}`}
+                ref={(node) => {
+                  headingRefs.current[key] = node
+                }}
+                tabIndex={-1}
+                className="mb-2 scroll-mt-2 border-b border-gold/30 pb-1 font-display text-sm font-bold uppercase tracking-wide text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+              >
+                {t(`method.groups.${key}`)}
+              </h3>
+              <dl className="min-w-0 space-y-3">
+                {entries.map((entry) => (
+                  <div key={entry.id} className="min-w-0">
+                    <dt className="break-words text-sm font-semibold text-cream">{resolveMessage(entry.term, translate)}</dt>
+                    <dd className="mt-0.5 break-words text-xs leading-relaxed text-white/80">
+                      {resolveMessage(entry.definition, translate)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
         </div>
-        {/* Les mêmes visites de 7 jours, par appareil (champ absent d'une réponse antérieure : rien). */}
-        <VisitDevicesBars devices={visits.devices7d ?? []} />
-      </div>
-
-      <div className="min-w-0 space-y-2.5">
-        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.seriesTitle')}</h3>
-        <ActivitySeriesCharts series={stats.series} accountsSince={accountsSince} journalSince={journalSince} />
-        {/* Le passé bouge (visites en cascade, places à compte nul) : dit en clair, pas seulement replié. */}
-        <p className="min-w-0 break-words text-[11px] leading-relaxed text-white/55">
-          {t('activeAccounts.seriesRecomputed')}
-        </p>
-        <MetricDefinition text={t('activeAccounts.seriesDef')} />
-      </div>
-
-      <div className="min-w-0 space-y-2.5">
-        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.returnsTitle')}</h3>
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          <ReturnMetric
-            label={t('activeAccounts.returnD1Label')}
-            cohort={retention.d1}
-            definition={t('activeAccounts.returnDef', { days: 1, ...RETURN_COHORT_DAYS.d1, min: RETURN_RATE_MIN_COHORT })}
-          />
-          <ReturnMetric
-            label={t('activeAccounts.returnD7Label')}
-            cohort={retention.d7}
-            definition={t('activeAccounts.returnDef', { days: 7, ...RETURN_COHORT_DAYS.d7, min: RETURN_RATE_MIN_COHORT })}
-          />
-        </div>
-      </div>
-
-      {/* Les plus actifs sur 7 jours, chacun vers sa fiche (noms résolus à la lecture). */}
-      <div className="min-w-0 space-y-2">
-        <h3 className={ACTIVITY_GROUP_TITLE}>{t('activeAccounts.topTitle')}</h3>
-        {stats.topAccounts7d.length === 0 ? (
-          <p className="text-sm text-cream/70">{t('activeAccounts.topEmpty')}</p>
-        ) : (
-          <TopAccountsBars accounts={stats.topAccounts7d} duration={duration} />
-        )}
-        <MetricDefinition text={t('activeAccounts.topDef')} />
-      </div>
-
-      {/* Autre unité que les comptes : encadré à part, jamais additionné. */}
-      <div className="min-w-0 rounded-xl border border-dashed border-white/15 p-3">
-        <h3 className={cn(ACTIVITY_GROUP_TITLE, 'flex min-w-0 items-center gap-1.5')}>
-          <Globe className="h-3.5 w-3.5 shrink-0 text-white/40" />
-          <span className="min-w-0 break-words">{t('activeAccounts.browsersTitle')}</span>
-        </h3>
-        <p className="mt-1 break-words text-sm tabular-nums text-white/80">
-          {t('activeAccounts.browsersValues', {
-            today: stats.browsersWithoutAccount.d1,
-            week: stats.browsersWithoutAccount.d7,
-          })}
-        </p>
-        <p className="mt-0.5 break-words text-[11px] text-white/50">{t('activeAccounts.browsersNotAdded')}</p>
-        <MetricDefinition text={t('activeAccounts.browsersDef')} />
-      </div>
-
-      <div className="space-y-1 border-t border-white/[0.07] pt-2 text-[11px]">
-        <p className="min-w-0 break-words text-white/50">
-          {visitsSince
-            ? t('activeAccounts.coverage', { journal: fullDay(journalSince), visits: fullDay(visitsSince) })
-            : t('activeAccounts.coverageNoVisits', { journal: fullDay(journalSince) })}
-        </p>
-        <p className="text-white/35">
-          {t('growth.freshness', {
-            time: format.dateTime(computedAt, { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
-            minutes: Math.max(1, Math.round(stats.cacheSeconds / 60)),
-          })}
-        </p>
-      </div>
-    </>
+        <DialogFooter className="shrink-0">
+          <DialogClose asChild>
+            <Button variant="outline" className="min-h-[44px]">
+              {t('method.close')}
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -2823,13 +3294,11 @@ export default function SupervisionPage() {
 
 function SupervisionDashboard() {
   const t = useTranslations('supervision')
-  const tCommon = useTranslations('common')
   const tErrors = useTranslations('errors')
   const locale = useLocale()
   const format = useFormatter()
   const durationUnits = useDurationUnits()
   const honestPresenceSince = useHonestPresenceSince()
-  const chartTexts = useChartTexts()
   const dayCharts = useDayCharts()
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -2840,19 +3309,40 @@ function SupervisionDashboard() {
   // ?userId= : journal des parties restreint à un compte (lien « voir dans le
   // journal » de la fiche). Le nom n'y figure jamais, seul l'id.
   const journalUserId = searchParams.get('userId') || undefined
+  // ?view= : vue de l'onglet ouvert (Statistiques : Audience, Joueurs, Jeux,
+  // Qualité ; Modération : Signalements, Sanctions, Mots et pseudos, Journal).
+  const viewParam = searchParams.get('view')
+  // ?scope=resolved : filtre « Traités » des signalements.
+  const scopeParam = searchParams.get('scope')
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [overview, setOverview] = useState<SupervisionOverview | null>(null)
+  // Premier aller-retour de loadLive terminé, réponses reçues ou non : la
+  // Salle et Statistiques n'ont rien d'autre à attendre pour quitter leur
+  // squelette (le chargement des COMPTES, qu'elles n'affichent pas, n'y
+  // entre pas).
+  const [liveSettled, setLiveSettled] = useState(false)
+  // Heure de la dernière actualisation RÉUSSIE de loadLive (« à jour · 14:32 »
+  // de l'en-tête) : un tour en échec laisse l'heure du précédent, qui dit
+  // depuis quand les chiffres affichés n'ont pas bougé.
+  const [liveUpdatedAt, setLiveUpdatedAt] = useState<Date | null>(null)
+  // Bandeau santé de la Salle, hors de la boucle de 15 s : relus à
+  // l'ouverture de la Salle et au bouton Actualiser. undefined = pas encore
+  // lus (aucune pastille), null = lecture en échec (pastille orange).
+  const [opsJobs, setOpsJobs] = useState<OpsJobView[] | null | undefined>(undefined)
+  const [crashes24h, setCrashes24h] = useState<number | null | undefined>(undefined)
+  // Détail déplié sous le bandeau : le ménage, ou tout ce qui va bien.
+  const [healthExpanded, setHealthExpanded] = useState<string | null>(null)
   // Indicateurs de croissance : hors de la boucle de 15 s (F40), chargés une
-  // seule fois à l'ouverture de l'onglet et servis avec leur date de calcul.
+  // seule fois à l'ouverture de l'onglet Statistiques et servis avec leur
+  // date de calcul.
   const [growth, setGrowth] = useState<GrowthStats | null>(null)
   // Échec du chargement de la croissance : affiché, et il ne bloque plus
   // l'arrivée sur le journal filtré (qui attendait ces indicateurs).
   const [growthFailed, setGrowthFailed] = useState(false)
   // Tableau des comptes actifs (lot 7) : même régime que la croissance, hors
-  // de la boucle — chargé à l'ouverture de la vue d'ensemble, puis sur son
-  // propre bouton Actualiser.
+  // de la boucle — chargé à l'ouverture de la Salle (« Cette semaine ») ou de
+  // Statistiques, puis sur Actualiser.
   const [activeAccounts, setActiveAccounts] = useState<ActiveAccountsStats | null>(null)
-  const [activeAccountsLoading, setActiveAccountsLoading] = useState(false)
   const [activeAccountsFailed, setActiveAccountsFailed] = useState(false)
   const [queueBusyId, setQueueBusyId] = useState<string | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -2867,14 +3357,38 @@ function SupervisionDashboard() {
   const [bans, setBans] = useState<ActiveBan[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Premier chargement des données (≠ auth) → squelette plutôt que page vide.
-  const [dataLoaded, setDataLoaded] = useState(false)
   const [editingNames, setEditingNames] = useState<Record<string, string>>({})
   const [accountSearch, setAccountSearch] = useState('')
   // Accordéon de la liste des comptes : seuls les comptes DÉPLIÉS montrent
   // le détail (email, IP, actions) — la liste reste compacte.
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState<SupervisionTab>('overview')
+  // Onglet lu dans l'URL : jusque-là, `activeTab` n'est que la valeur de
+  // départ. Les chargements propres à un onglet l'attendent — sans quoi une
+  // arrivée sur ?tab=stats ou ?tab=accounts tirait d'abord ceux de La Salle,
+  // et les comptes actifs deux fois.
+  const [locationReady, setLocationReady] = useState(false)
+  // Vues des Statistiques et de la Modération, reflétées dans ?view=.
+  // Gardées en passant sur un autre onglet : on y revient là où on les avait
+  // laissées.
+  const [statsView, setStatsView] = useState<StatsView>(DEFAULT_STATS_VIEW)
+  const statsViewRef = useRef(statsView)
+  statsViewRef.current = statsView
+  const [moderationView, setModerationView] = useState<ModerationView>('reports')
+  const moderationViewRef = useRef(moderationView)
+  moderationViewRef.current = moderationView
+  // Filtre des signalements (« En cours » / « Traités ») : il détermine ce
+  // que le serveur renvoie, plus aucun tri côté navigateur. Reflété dans
+  // ?scope=resolved pour qu'un rechargement garde les traités.
+  const [feedbackScope, setFeedbackScope] = useState<FeedbackScope>('active')
+  const feedbackScopeRef = useRef(feedbackScope)
+  feedbackScopeRef.current = feedbackScope
+  // Période des Statistiques : 7 jours, ou celle que ce navigateur a choisie
+  // la dernière fois (relue après le premier rendu, voir plus bas).
+  const [statsPeriod, setStatsPeriod] = useState<StatsPeriod>(DEFAULT_STATS_PERIOD)
+  // Journal des parties de la vue Jeux : replié, sauf arrivée par « voir
+  // dans le journal » (?userId=).
+  const [journalOpen, setJournalOpen] = useState(Boolean(journalUserId))
   const [accountFilterRole, setAccountFilterRole] = useState('all')
   const [accountFilterStatus, setAccountFilterStatus] = useState('all')
   const [accountFilterKind, setAccountFilterKind] = useState('all')
@@ -2883,6 +3397,9 @@ function SupervisionDashboard() {
   // plus derrière des inscrits récents qui ne sont jamais revenus.
   const [accountSort, setAccountSort] = useState<'activity' | 'created'>('activity')
   const [rolesHelpOpen, setRolesHelpOpen] = useState(false)
+  // « Méthode » des statistiques : null = fermée, sinon le thème sur lequel
+  // elle s'ouvre (celui de la section dont on a suivi le lien).
+  const [methodGroup, setMethodGroup] = useState<MethodGroup | null>(null)
   const [ipLookup, setIpLookup] = useState<{
     ip: string
     /**
@@ -2986,108 +3503,8 @@ function SupervisionDashboard() {
   const showAccountActivity = user ? canViewAccountActivity(user.role) : false
   const assignableRoleOptions = user ? assignableRoles(user.role) : []
   const showAnalytics = user ? canViewSupervisionAnalytics(user.role) : false
-  const showBansTab = user ? canViewSupervisionBans(user.role) : false
-  const showFeedbackTab = user ? canViewUserFeedback(user.role) : false
-  // Surveillance du serveur : fondateurs seulement. La route le vérifie
-  // aussi ; ici, c'est seulement ne pas montrer un onglet qui répondrait 403.
-  const showOpsTab = user ? canViewOpsStatus(user.role) : false
   // Lire un retour est ouvert aux modérateurs, le CLORE reste admin+ (F44).
   const canTriageFeedback = user ? canManageUserFeedback(user.role) : false
-  const defaultTab = showAnalytics ? 'overview' : 'accounts'
-  // Onglets que ce rôle peut ouvrir : mêmes conditions que la navigation et
-  // les TabsContent. Un ?tab= inconnu ou hors de portée retombe sur l'onglet
-  // par défaut (vue d'ensemble, ou Comptes sans les statistiques).
-  const allowedTabs = useMemo(() => {
-    const tabs = ['accounts']
-    if (showAnalytics) tabs.push('overview', 'geo')
-    if (showBansTab) tabs.push('bans')
-    if (canEditAccounts) tabs.push('moderation')
-    if (showFeedbackTab) tabs.push('feedback', 'feedback-resolved')
-    if (showOpsTab) tabs.push('ops')
-    return tabs
-  }, [showAnalytics, showBansTab, canEditAccounts, showFeedbackTab, showOpsTab])
-
-  const subtitle = showAnalytics
-    ? t('subtitles.full')
-    : showBansTab
-      ? t('subtitles.bans')
-      : t('subtitles.accounts')
-
-  // L'onglet ouvert détermine ce que le serveur renvoie : « en cours » (tout
-  // ce qui n'est pas résolu) ou « résolus ». Plus de tri côté navigateur.
-  const feedbackScope = activeTab === 'feedback-resolved' ? 'resolved' : 'active'
-
-  // Navigation groupée par famille (Analyse / Communauté / Modération / Serveur).
-  const navGroups = useMemo<SupervisionNavGroup[]>(() => {
-    const groups: SupervisionNavGroup[] = []
-    if (showAnalytics) {
-      groups.push({
-        label: t('navGroups.analysis'),
-        items: [
-          { value: 'overview', label: t('tabs.overview'), icon: LayoutDashboard },
-          { value: 'geo', label: t('tabs.geo'), icon: Globe },
-        ],
-      })
-    }
-    const community: SupervisionNavGroup = {
-      label: t('navGroups.community'),
-      // Total NON filtré, invités compris : l'ancien `usersTotal || stats…`
-      // mêlait deux définitions et suivait la recherche en cours.
-      items: [{ value: 'accounts', label: t('tabs.accountsShort'), icon: Users, count: accountCounts?.total || '' }],
-    }
-    if (showBansTab) {
-      community.items.push({
-        value: 'bans',
-        label: t('tabs.bansShort'),
-        icon: Gavel,
-        count: bans.length || '',
-        tone: bans.length > 0 ? 'danger' : 'neutral',
-      })
-    }
-    groups.push(community)
-
-    const moderation: SupervisionNavGroup = { label: t('navGroups.moderation'), items: [] }
-    if (canEditAccounts) {
-      moderation.items.push({ value: 'moderation', label: t('tabs.moderationShort'), icon: ScrollText })
-    }
-    if (showFeedbackTab) {
-      moderation.items.push({
-        value: 'feedback',
-        label: t('tabs.feedbackShort'),
-        icon: MessageSquareWarning,
-        count: activeFeedbackTotal || '',
-        tone: activeFeedbackTotal > 0 ? 'warning' : 'neutral',
-      })
-      moderation.items.push({
-        value: 'feedback-resolved',
-        label: t('tabs.feedbackResolvedShort'),
-        icon: CheckCheck,
-        count: resolvedFeedbackTotal || '',
-      })
-    }
-    if (moderation.items.length > 0) groups.push(moderation)
-
-    // Groupe à part, en dernier : l'état de la machine n'est ni de l'analyse
-    // ni de la modération, et seuls les fondateurs le voient.
-    if (showOpsTab) {
-      groups.push({
-        label: t('navGroups.server'),
-        items: [{ value: 'ops', label: t('tabs.opsShort'), icon: ServerCog }],
-      })
-    }
-    return groups
-  }, [
-    showAnalytics,
-    showBansTab,
-    canEditAccounts,
-    showFeedbackTab,
-    showOpsTab,
-    accountCounts?.total,
-    bans.length,
-    activeFeedbackTotal,
-    resolvedFeedbackTotal,
-    t,
-  ])
 
   const tRef = useRef(t)
   const tErrorsRef = useRef(tErrors)
@@ -3096,6 +3513,46 @@ function SupervisionDashboard() {
 
   const userId = user?.id
   const userRole = user?.role
+
+  // Onglets et vues de Modération que ce rôle peut ouvrir : mêmes conditions
+  // que les routes qui les alimentent (navigation.ts). Serveur reste aux
+  // fondateurs : la route le vérifie aussi, ici c'est seulement ne pas
+  // montrer un onglet qui répondrait 403.
+  const allowedTabs = useMemo(() => (userRole ? supervisionTabsFor(userRole) : []), [userRole])
+  const moderationViews = useMemo(() => (userRole ? moderationViewsFor(userRole) : []), [userRole])
+
+  // Navigation en trois familles : Salle et Statistiques, Comptes et
+  // Modération, Serveur à part (l'état de la machine n'est ni de l'analyse ni
+  // de la modération, et seuls les fondateurs le voient).
+  const navGroups = useMemo<SupervisionNavGroup[]>(() => {
+    if (!userRole) return []
+    return supervisionNavGroupsFor(userRole).map((group) => ({
+      label: t(`navGroups.${group.key}`),
+      items: group.tabs.map((tab) => {
+        const item = { value: tab, label: t(TAB_META[tab].labelKey), icon: TAB_META[tab].icon }
+        // Total NON filtré, invités compris : l'ancien `usersTotal || stats…`
+        // mêlait deux définitions et suivait la recherche en cours.
+        if (tab === 'accounts') return { ...item, count: accountCounts?.total || '' }
+        if (tab === 'moderation') {
+          return {
+            ...item,
+            count: activeFeedbackTotal || '',
+            tone: activeFeedbackTotal > 0 ? ('warning' as const) : ('neutral' as const),
+          }
+        }
+        return item
+      }),
+    }))
+  }, [userRole, accountCounts?.total, activeFeedbackTotal, t])
+
+  /** Compteur d'une vue de Modération : signalements en cours, sanctions actives. */
+  const moderationViewBadge = (view: ModerationView): { count?: number | string; tone?: CountTone } => {
+    if (view === 'reports') {
+      return { count: activeFeedbackTotal || '', tone: activeFeedbackTotal > 0 ? 'warning' : 'neutral' }
+    }
+    if (view === 'sanctions') return { count: bans.length || '', tone: bans.length > 0 ? 'danger' : 'neutral' }
+    return {}
+  }
 
   /**
    * Un chargeur PAR domaine plutôt qu'un « tout recharger » (F40). Seul
@@ -3143,7 +3600,6 @@ function SupervisionDashboard() {
         if (!silent) setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
       } finally {
         setUsersLoading(false)
-        setDataLoaded(true)
       }
     },
     [
@@ -3192,8 +3648,13 @@ function SupervisionDashboard() {
         ])
         if (statsRes.ok) setStats(await statsRes.json())
         if (overviewRes.ok) setOverview(await overviewRes.json())
+        // « À jour » seulement quand les deux réponses sont arrivées : une
+        // moitié en échec laisse des chiffres d'avant à l'écran.
+        if (statsRes.ok && overviewRes.ok) setLiveUpdatedAt(new Date())
       } catch (e) {
         if (!silent) setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
+      } finally {
+        setLiveSettled(true)
       }
     },
     [userRole]
@@ -3224,24 +3685,72 @@ function SupervisionDashboard() {
   /**
    * Comptes actifs : une requête à part, jamais dans la boucle (un parcours
    * de 31 jours de visites et de journal, mis en cache côté serveur). Un échec
-   * garde la valeur déjà affichée : le panneau le signale au-dessus.
+   * garde la valeur déjà affichée : le panneau le signale au-dessus. Une
+   * lecture en cours sert aussi à qui la redemande (changement d'onglet,
+   * Actualiser) : jamais deux parcours en parallèle.
    */
-  const loadActiveAccounts = useCallback(async () => {
+  const activeAccountsRequest = useRef<Promise<void> | null>(null)
+  const loadActiveAccounts = useCallback((): Promise<void> => {
     if (!userRole || !canViewSupervisionAnalytics(userRole)) {
       setActiveAccounts(null)
-      return
+      return Promise.resolve()
     }
-    setActiveAccountsLoading(true)
+    if (activeAccountsRequest.current) return activeAccountsRequest.current
     setActiveAccountsFailed(false)
-    try {
-      const res = await fetch('/api/admin/accounts/activity', { credentials: 'include' })
-      if (!res.ok) throw new Error(`accounts activity ${res.status}`)
-      setActiveAccounts(await res.json())
-    } catch {
-      setActiveAccountsFailed(true)
-    } finally {
-      setActiveAccountsLoading(false)
+    const request = (async () => {
+      try {
+        const res = await fetch('/api/admin/accounts/activity', { credentials: 'include' })
+        if (!res.ok) throw new Error(`accounts activity ${res.status}`)
+        setActiveAccounts(await res.json())
+      } catch {
+        setActiveAccountsFailed(true)
+      } finally {
+        activeAccountsRequest.current = null
+      }
+    })()
+    activeAccountsRequest.current = request
+    return request
+  }, [userRole])
+
+  /**
+   * Entrées du bandeau santé qui ne viennent pas de la vue d'ensemble : les
+   * plantages des 24 h (tout admin) et les tâches root du VPS (fondateurs, la
+   * route refuse les autres). Jamais dans la boucle de 15 s : ce sont des
+   * fichiers d'état et un comptage, relus à l'ouverture de la Salle et sur
+   * Actualiser. Un échec donne null — « illisible », pas « tout va bien ».
+   */
+  const loadSalleHealth = useCallback(async () => {
+    if (!userRole || !canViewSupervisionAnalytics(userRole)) return
+    const loadCrashes = async () => {
+      try {
+        const res = await fetch('/api/admin/client-errors', { credentials: 'include' })
+        if (!res.ok) throw new Error(`client-errors ${res.status}`)
+        const data: unknown = await res.json()
+        const total =
+          data && typeof data === 'object' && 'total24h' in data && typeof data.total24h === 'number'
+            ? data.total24h
+            : null
+        setCrashes24h(total)
+      } catch {
+        setCrashes24h(null)
+      }
     }
+    const loadOpsJobs = async () => {
+      if (!canViewOpsStatus(userRole)) return
+      try {
+        const res = await fetch('/api/admin/ops-status', { credentials: 'include', cache: 'no-store' })
+        if (!res.ok) throw new Error(`ops-status ${res.status}`)
+        const data: unknown = await res.json()
+        // Réponse d'un serveur antérieur à la route, ou page d'erreur du proxy.
+        if (!data || typeof data !== 'object' || !('jobs' in data) || !Array.isArray(data.jobs)) {
+          throw new Error('ops-status: réponse illisible')
+        }
+        setOpsJobs(data.jobs as OpsJobView[])
+      } catch {
+        setOpsJobs(null)
+      }
+    }
+    await Promise.all([loadCrashes(), loadOpsJobs()])
   }, [userRole])
 
   const loadFeedback = useCallback(
@@ -3296,20 +3805,20 @@ function SupervisionDashboard() {
         if (!silent) setError(e instanceof Error ? e.message : tErrorsRef.current('generic'))
       } finally {
         if (!silent) setBusy(false)
-        setDataLoaded(true)
       }
     },
     [userId, userRole, loadUsers, loadSettings, loadBans, loadLive, loadFeedback]
   )
 
   /**
-   * Dernier ?tab= appliqué. L'onglet affiché vit dans l'état ; l'URL n'en est
-   * que le reflet, relu seulement quand elle CHANGE (premier rendu connecté,
-   * navigation vers un autre ?tab=). selectTab met l'état à jour tout de suite
-   * et l'URL un rendu plus tard : sans ce repère, une autre dépendance qui
-   * bougerait entre les deux rejouerait l'ancien onglet.
+   * Dernier triplet ?tab= / ?view= / ?scope= appliqué. L'onglet, la vue et le
+   * filtre affichés vivent dans l'état ; l'URL n'en est que le reflet, relue
+   * seulement quand elle CHANGE (premier rendu connecté, navigation vers un
+   * autre ?tab=). selectTab met l'état à jour tout de suite et l'URL un rendu
+   * plus tard : sans ce repère, une autre dépendance qui bougerait entre les
+   * deux rejouerait l'ancien onglet.
    */
-  const appliedTabParam = useRef<string | null | undefined>(undefined)
+  const appliedLocation = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (loading) return
@@ -3320,41 +3829,159 @@ function SupervisionDashboard() {
 
   useEffect(() => {
     if (loading || !userRole || !canAccessSupervision(userRole)) return
-    if (appliedTabParam.current === tabParam) return
-    appliedTabParam.current = tabParam
-    setActiveTab(tabParam && allowedTabs.includes(tabParam) ? tabParam : defaultTab)
-  }, [loading, userRole, tabParam, allowedTabs, defaultTab])
+    const requested = `${tabParam ?? ''}|${viewParam ?? ''}|${scopeParam ?? ''}`
+    if (appliedLocation.current === requested) return
+    const resolved = resolveSupervisionLocation({
+      tab: tabParam,
+      view: viewParam,
+      scope: scopeParam,
+      userId: journalUserId ?? null,
+      role: userRole,
+    })
+    setActiveTab(resolved.tab)
+    setLocationReady(true)
+    if (isStatsView(resolved.view)) setStatsView(resolved.view)
+    if (isModerationView(resolved.view)) setModerationView(resolved.view)
+    if (resolved.feedbackScope) setFeedbackScope(resolved.feedbackScope)
+    // Ancien lien redirigé (?tab=overview&userId=, ?tab=geo, ?tab=bans,
+    // ?tab=feedback…), vue absente, inconnue ou hors de portée, onglet hors
+    // de portée : l'URL suit ce qui est réellement ouvert, sinon un
+    // rechargement après « tout afficher » rouvrirait La Salle au lieu du
+    // journal.
+    const scope = resolved.feedbackScope === 'resolved' ? RESOLVED_SCOPE_PARAM : null
+    const patch: Record<string, string | null> = {}
+    if (tabParam && resolved.tab !== tabParam) patch.tab = resolved.tab
+    if ((viewParam || null) !== resolved.view) patch.view = resolved.view
+    if ((scopeParam || null) !== scope) patch.scope = scope
+    const pick = (key: string, current: string | null) => (key in patch ? patch[key] : current)
+    appliedLocation.current = `${pick('tab', tabParam) ?? ''}|${pick('view', viewParam) ?? ''}|${pick('scope', scopeParam) ?? ''}`
+    if (Object.keys(patch).length > 0) replaceUrlParams(patch)
+  }, [loading, userRole, tabParam, viewParam, scopeParam, journalUserId])
 
   /**
-   * Change d'onglet et l'écrit dans l'URL (?tab=), sans recharger ni défiler.
-   * replaceUrlParam plutôt que router.replace : le routeur de
+   * Change d'onglet et l'écrit dans l'URL (?tab=, ?view=, ?scope=), sans
+   * recharger ni défiler. Sans `view`, l'onglet rouvre la vue où on l'avait
+   * laissé. replaceUrlParams plutôt que router.replace : le routeur de
    * @/i18n/navigation ne transmet pas `scroll: false`, et une navigation
    * relancerait le rendu serveur (layout gardé par la session) à chaque clic
    * d'onglet. Remplacer plutôt qu'empiler : le retour arrière ne rejoue pas
    * chaque onglet visité, il quitte la Supervision ou revient d'une fiche.
+   *
+   * `reveal` : lien posé DANS un panneau (file, « Tout le journal »,
+   * pastilles, adresses IP). Quand l'onglet change, le panneau quitté est
+   * démonté avec le bouton qui avait le focus, et la page garderait son
+   * défilement au milieu du nouvel onglet : on remonte à la navigation si
+   * elle est sortie de l'écran et on rend le focus à l'onglet ouvert. Sans
+   * changement d'onglet, rien ne bouge.
    */
-  const selectTab = useCallback((tab: string) => {
-    appliedTabParam.current = tab
+  const navRef = useRef<HTMLElement>(null)
+  const activeTabRef = useRef(activeTab)
+  activeTabRef.current = activeTab
+  const selectTab = useCallback((tab: SupervisionTab, view?: SupervisionView, options?: { reveal?: boolean }) => {
+    const tabChanged = activeTabRef.current !== tab
+    activeTabRef.current = tab
+    // ?view=, ?scope= et ?userId= ne valent que là où ils servent : retirés
+    // ailleurs, ils ne traînent pas dans un lien copié depuis un autre onglet
+    // (supervisionUrlPatch).
+    let nextView: SupervisionView | null = null
+    if (tab === 'stats') {
+      const statsTarget = isStatsView(view) ? view : statsViewRef.current
+      statsViewRef.current = statsTarget
+      setStatsView(statsTarget)
+      nextView = statsTarget
+    } else if (tab === 'moderation') {
+      const moderationTarget = isModerationView(view) ? view : moderationViewRef.current
+      moderationViewRef.current = moderationTarget
+      setModerationView(moderationTarget)
+      nextView = moderationTarget
+    }
+    const patch = supervisionUrlPatch({ tab, view: nextView, feedbackScope: feedbackScopeRef.current })
+    appliedLocation.current = `${tab}|${nextView ?? ''}|${patch.scope ?? ''}`
     setActiveTab(tab)
-    replaceUrlParam('tab', tab)
+    replaceUrlParams(patch)
+    if (options?.reveal && tabChanged) {
+      // Après le rendu du nouvel onglet : son bouton porte alors aria-current.
+      window.requestAnimationFrame(() => {
+        const nav = navRef.current
+        if (!nav) return
+        if (nav.getBoundingClientRect().top < 0) nav.scrollIntoView({ block: 'start' })
+        nav.querySelector<HTMLElement>('[aria-current="page"]')?.focus({ preventScroll: true })
+      })
+    }
   }, [])
 
-  // Arrivée par « voir dans le journal » : le panneau est loin sous les
-  // indicateurs. On l'amène à l'écran une fois par compte filtré, quand ce qui
-  // le précède est chargé (sinon il redescend sous la croissance et les tables).
+  /** Nom d'onglet venu d'un composant générique (navigation) : ignoré s'il est inconnu. */
+  const selectTabValue = useCallback(
+    (value: string) => {
+      if (isSupervisionTab(value)) selectTab(value)
+    },
+    [selectTab]
+  )
+
+  /** Ouvre une vue des Statistiques depuis son sélecteur. */
+  const selectStatsView = useCallback((view: StatsView) => selectTab('stats', view), [selectTab])
+
+  /** Ouvre une vue de la Modération depuis son sélecteur. */
+  const selectModerationView = useCallback((view: ModerationView) => selectTab('moderation', view), [selectTab])
+
+  /**
+   * Ouvre les signalements sur un filtre : depuis le filtre lui-même ou la
+   * file « À traiter » de la Salle (toujours « en cours », où l'entrée vit).
+   */
+  const openFeedbackReports = useCallback(
+    (scope: FeedbackScope, options?: { reveal?: boolean }) => {
+      feedbackScopeRef.current = scope
+      setFeedbackScope(scope)
+      selectTab('moderation', 'reports', options)
+    },
+    [selectTab]
+  )
+
+  // Période mémorisée par navigateur. Relue APRÈS le premier rendu : le
+  // rendu serveur ne la connaît pas, et un stockage bloqué (navigation
+  // privée, données effacées) laisse simplement 7 jours.
+  useEffect(() => {
+    try {
+      const saved = parseStatsPeriod(window.localStorage.getItem(STATS_PERIOD_STORAGE_KEY))
+      if (saved) setStatsPeriod(saved)
+    } catch {
+      // Stockage indisponible : la période par défaut reste.
+    }
+  }, [])
+
+  const changeStatsPeriod = useCallback((period: StatsPeriod) => {
+    setStatsPeriod(period)
+    try {
+      window.localStorage.setItem(STATS_PERIOD_STORAGE_KEY, period)
+    } catch {
+      // Stockage indisponible : la période vaut pour cette visite seulement.
+    }
+  }, [])
+
+  // Un lien « voir dans le journal » arrivé après coup (même page, autre
+  // compte) déplie aussi le journal.
+  useEffect(() => {
+    if (journalUserId) setJournalOpen(true)
+  }, [journalUserId])
+
+  // Arrivée par « voir dans le journal » : le journal est en bas de la vue
+  // Jeux, sous les chiffres. On l'amène à l'écran une fois par compte
+  // filtré, quand ce qui le précède est chargé (sinon il redescend sous les
+  // tuiles, le graphe et le tableau par jeu).
   const journalPanelRef = useRef<HTMLDivElement>(null)
   const journalScrolledFor = useRef<string | null>(null)
-  const overviewLoaded = overview !== null
+  // « En direct » de la Salle, cible de la pastille « Tables » du bandeau.
+  const liveSectionRef = useRef<HTMLDivElement>(null)
   // Chargée OU en échec : dans les deux cas, ce qui précède le journal a sa hauteur.
   const growthSettled = growth !== null || growthFailed
-  // Idem pour les comptes actifs, placés eux aussi au-dessus du journal.
+  // Idem pour les comptes actifs, dont la vue Jeux tire ses joueurs uniques.
   const activeAccountsSettled = activeAccounts !== null || activeAccountsFailed
   useEffect(() => {
     if (
       !journalUserId ||
-      activeTab !== 'overview' ||
-      !dataLoaded ||
-      !overviewLoaded ||
+      activeTab !== 'stats' ||
+      statsView !== 'games' ||
+      !journalOpen ||
       !growthSettled ||
       !activeAccountsSettled
     ) {
@@ -3363,7 +3990,7 @@ function SupervisionDashboard() {
     if (journalScrolledFor.current === journalUserId) return
     journalScrolledFor.current = journalUserId
     journalPanelRef.current?.scrollIntoView({ block: 'start' })
-  }, [journalUserId, activeTab, dataLoaded, overviewLoaded, growthSettled, activeAccountsSettled])
+  }, [journalUserId, activeTab, statsView, journalOpen, growthSettled, activeAccountsSettled])
 
   // Comptes : rechargés quand la page ou un filtre change, avec un court
   // délai pour ne pas interroger la base à chaque frappe.
@@ -3415,24 +4042,35 @@ function SupervisionDashboard() {
   // rien — le serveur garde la valeur quelques minutes et l'écran affiche
   // l'heure du calcul.
   useEffect(() => {
-    if (loading || !userId || !userRole || activeTab !== 'overview') return
+    if (loading || !userId || !userRole || !locationReady || activeTab !== 'stats') return
     if (growth) return
     void loadGrowth()
-  }, [loading, userId, userRole, activeTab, growth, loadGrowth])
+  }, [loading, userId, userRole, locationReady, activeTab, growth, loadGrowth])
 
-  // Comptes actifs : même règle. Ni l'état de chargement ni l'échec ne sont
-  // des dépendances — un échec relancerait la requête en boucle ; on réessaie
-  // au prochain retour sur l'onglet ou par le bouton du panneau.
+  // Comptes actifs : même règle, sur la Salle (« Cette semaine ») comme sur
+  // Statistiques — la route est mise en cache, la croissance, elle, reste
+  // propre à Statistiques. Ni l'état de chargement ni l'échec ne sont des
+  // dépendances — un échec relancerait la requête en boucle ; on réessaie au
+  // prochain retour sur l'onglet, par Actualiser ou par le bouton du panneau.
+  // Actualiser les relit aussi : sans quoi « Cette semaine » restait figée
+  // sur la première réponse pendant toute la session.
   useEffect(() => {
-    if (loading || !userId || !userRole || activeTab !== 'overview') return
+    if (loading || !userId || !userRole || !locationReady) return
+    if (activeTab !== 'stats' && activeTab !== 'overview') return
     if (activeAccounts) return
     void loadActiveAccounts()
-  }, [loading, userId, userRole, activeTab, activeAccounts, loadActiveAccounts])
+  }, [loading, userId, userRole, locationReady, activeTab, activeAccounts, loadActiveAccounts])
+
+  // Bandeau santé : relu à chaque ouverture de la Salle.
+  useEffect(() => {
+    if (loading || !userId || !userRole || !locationReady || activeTab !== 'overview') return
+    void loadSalleHealth()
+  }, [loading, userId, userRole, locationReady, activeTab, loadSalleHealth])
 
   const handleIpClick = useCallback(async (ip: string) => {
     ipLookupForRef.current = ip
     setAccountSearch(ip)
-    selectTab('accounts')
+    selectTab('accounts', undefined, { reveal: true })
     setIpLookupLoading(true)
     setIpLookup(null)
     try {
@@ -3461,7 +4099,7 @@ function SupervisionDashboard() {
     const token = `network:${network}`
     ipLookupForRef.current = token
     setAccountSearch('')
-    selectTab('accounts')
+    selectTab('accounts', undefined, { reveal: true })
     setIpLookupLoading(true)
     setIpLookup(null)
     try {
@@ -3782,26 +4420,20 @@ function SupervisionDashboard() {
     )
   }
 
-  // La Salle — tendance dérivée de la même série 14 j (pas d'appel dédié) :
-  // delta semaine = 7 derniers points vs les 7 précédents. Plus de delta du
-  // jour : il comparait une journée entamée à la veille entière (presque
-  // toujours rouge le matin), et DailyVisitor ne garde pas l'heure qui
-  // permettrait de comparer à la même heure la veille.
+  // La Salle — tendance tirée de la série quotidienne (pas d'appel dédié).
+  // Écart d'une semaine sur l'autre : les 7 jours RÉVOLUS contre les 7 d'avant,
+  // même règle que la vue Audience (stats-period.ts). Plus de delta du jour :
+  // il comparait une journée entamée à la veille entière (presque toujours
+  // rouge le matin), et DailyVisitor ne garde pas l'heure qui permettrait de
+  // comparer à la même heure la veille.
   const trendPoints = overview?.dailySeries ?? []
-  const last7 = trendPoints.slice(-7)
-  const prev7 = trendPoints.slice(-14, -7)
-  const sumBy = (arr: DailyPoint[], key: 'visitors' | 'parties') => arr.reduce((s, p) => s + p[key], 0)
-  const prevWeekVisitors = sumBy(prev7, 'visitors')
+  const todayParis = parisDayString()
+  const weekVisitorsDelta = weekOverWeekDelta(trendPoints, todayParis, ANALYTICS_CONSENT_V2_SINCE)
   // Consentement de version 2 : le bandeau est reposé à tous et les
-  // navigateurs ne comptent plus tant qu'ils n'ont pas répondu. Une
-  // comparaison qui inclut ce jour (ou un jour d'avant) montrerait une chute
-  // de fréquentation qui n'en est pas une : pas de delta tant que la période de
-  // comparaison n'est pas entièrement postérieure.
-  const comparableSince = (day: string | undefined) => day !== undefined && day > ANALYTICS_CONSENT_V2_SINCE
-  const weekVisitorsDelta =
-    prev7.length > 0 && prevWeekVisitors > 0 && comparableSince(prev7[0]?.date)
-      ? Math.round(((sumBy(last7, 'visitors') - prevWeekVisitors) / prevWeekVisitors) * 100)
-      : null
+  // navigateurs ne comptent plus tant qu'ils n'ont pas répondu. Une courbe
+  // qui inclut ce jour (ou un jour d'avant) montrerait une chute de
+  // fréquentation qui n'en est pas une.
+  const comparableSince = (day: string) => day > ANALYTICS_CONSENT_V2_SINCE
   // Mini-courbe sous la SEULE plaque « 7 jours » (la même, sous deux plaques
   // voisines, se lisait deux fois au lecteur d'écran), en teintes lisibles
   // sur le crème. Jours RÉVOLUS seulement : finir sur aujourd'hui, entamé,
@@ -3809,7 +4441,6 @@ function SupervisionDashboard() {
   // pour laquelle le delta du jour a été retiré. Et seulement APRÈS la reprise
   // du bandeau de consentement : sa marche n'est pas une baisse, et seul le
   // graphe de tendance porte la note qui le dit (même règle que le delta).
-  const todayParis = parisDayString()
   const sparkPoints = trendPoints.filter((p) => p.date < todayParis && comparableSince(p.date))
   const visitorsSparkline =
     sparkPoints.length > 1 ? (
@@ -3822,17 +4453,165 @@ function SupervisionDashboard() {
       />
     ) : undefined
   const liveTables = overview?.liveTables ?? []
-  // Comptes de la barre par statut : ceux de la BASE, pas ceux de la liste
-  // affichée, plafonnée à 30 salles (voir getLiveTables). La liste ne sert
-  // que de repli face à un serveur antérieur à ce champ.
+  // Effectifs par statut : ceux de la BASE, pas ceux de la liste affichée,
+  // plafonnée à 30 salles (voir getLiveTables). La liste ne sert que de repli
+  // face à un serveur antérieur à ce champ.
   const liveStatusCount = (status: LiveTable['status']) =>
     overview?.liveTablesByStatus?.[status] ?? liveTables.filter((tbl) => tbl.status === status).length
+  const liveStatusOrder = ['playing', 'briefing', 'waiting', 'cast'] as const
+  const liveTotal = liveStatusOrder.reduce((sum, status) => sum + liveStatusCount(status), 0)
+  const liveSummary = liveStatusOrder
+    .filter((status) => liveStatusCount(status) > 0)
+    .map((status) => t(`room.liveStatusCount.${status}`, { count: liveStatusCount(status) }))
+    .join(' · ')
+  // Tables figées en tête, les plus anciennement figées d'abord ; les autres
+  // gardent l'ordre du serveur (tri stable).
+  // Un afficheur TV inactif n'est pas une table figée : il n'a aucune partie
+  // à débloquer, la purge des salles de cast le retire, et la pastille
+  // « Tables » comme la vue Qualité l'excluent déjà.
+  const isStalledGame = (tbl: LiveTable) => tbl.stalled && tbl.status !== 'cast'
+  const sortedLiveTables = [...liveTables].sort((a, b) =>
+    isStalledGame(a) === isStalledGame(b)
+      ? isStalledGame(a)
+        ? b.idleSeconds - a.idleSeconds
+        : 0
+      : isStalledGame(a)
+        ? -1
+        : 1
+  )
+  const liveStatusLabel = (status: LiveTable['status']) =>
+    t(
+      status === 'waiting'
+        ? 'room.statusWaiting'
+        : status === 'briefing'
+          ? 'room.statusBriefing'
+          : status === 'cast'
+            ? 'room.statusCast'
+            : 'room.statusPlaying'
+    )
 
+  // Bandeau santé : rien n'y figure tant que sa source n'est pas lue.
+  const health = splitHealthPills(
+    healthPills(
+      {
+        opsJobs,
+        retention: overview?.retentionLastRun,
+        crashes24h,
+        stalledTables: overview
+          ? (overview.stalledGameTables ?? liveTables.filter((tbl) => tbl.stalled && tbl.status !== 'cast').length)
+          : undefined,
+        now: Date.now(),
+      },
+      (key, values) => t(key, values)
+    )
+  )
+  const retentionInAlert = health.alerts.some((pill) => pill.key === 'retention')
+  // Tables figées → « En direct », juste en dessous ; ménage et groupe vert →
+  // détail déplié sous le bandeau ; le reste → HEALTH_TARGET.
+  const selectHealthPill = (key: string) => {
+    const target = HEALTH_TARGET[key]
+    if (target) {
+      selectTab(target.tab, target.view, { reveal: true })
+    } else if (key === 'stalled') {
+      // Le focus suit le défilement : le Tab suivant mène aux tables.
+      const section = liveSectionRef.current
+      if (!section) return
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      section.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' })
+      section.focus({ preventScroll: true })
+    } else {
+      setHealthExpanded((open) => (open === key ? null : key))
+    }
+  }
+
+  // « Cette semaine » : tiré du tableau des comptes actifs, « — » tant qu'il
+  // manque. L'intitulé dit le premier jour mesuré quand la source est plus
+  // jeune que la semaine.
+  const week = activeAccounts ? weekFigures(activeAccounts) : null
+  const weekWindow = (since: string | null | undefined) =>
+    since
+      ? t('gameSessions.windowSince', {
+          window: t('stats.week'),
+          date: format.dateTime(parisDayToDate(since), { day: '2-digit', month: '2-digit', timeZone: PARIS_TIME_ZONE }),
+        })
+      : t('stats.week')
+  const weekPendingHint = activeAccountsFailed ? t('room.weekUnavailable') : t('loading')
+
+  // Journal de l'équipe : l'heure pour aujourd'hui, le jour sinon — une
+  // heure seule ferait passer une action d'avant-hier pour une de ce matin.
+  // La Salle en montre les dernières entrées, Modération › Journal tout ce
+  // que le serveur sert.
+  const teamJournal = overview?.journal ?? []
+  const journalTime = (iso: string) => {
+    const at = new Date(iso)
+    return parisDayString(at) === todayParis
+      ? format.dateTime(at, { timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
+      : format.dateTime(at, { day: '2-digit', month: '2-digit', timeZone: PARIS_TIME_ZONE })
+  }
+  const teamJournalEntries = (entries: JournalEntry[]) =>
+    entries.map((e) => ({
+      id: e.id,
+      kind: e.kind,
+      time: journalTime(e.createdAt),
+      // Phrase traduite d'un bloc, puis le lien vers la fiche de la cible :
+      // découper la phrase autour du pseudo casserait dès qu'il apparaît
+      // aussi dans le nom de l'acteur.
+      text: e.targetUserId ? (
+        <>
+          {journalText(t, e)}{' '}
+          <Link
+            href={accountFileHref(e.targetUserId)}
+            title={t('accounts.openFileOf', { name: e.targetName ?? '—' })}
+            className="whitespace-nowrap text-amber-300/80 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+          >
+            {t('visitorCard.openFile')}
+          </Link>
+        </>
+      ) : (
+        journalText(t, e)
+      ),
+    }))
+
+  // « N en ligne » : COMPTES actifs (User.lastSeenAt, presence.ts), équipe et
+  // invités compris. Sans statistiques (modérateurs), pas de chiffre du tout
+  // plutôt qu'un « 0 en ligne » permanent.
+  const onlineCount = stats ? stats.connectedAccounts.filter((acc) => isOnline(acc.lastSeenAt)).length : null
+  const openOnlineAccounts = () => {
+    changeAccountSearch('')
+    setAccountFilterRole('all')
+    setAccountFilterKind('all')
+    setAccountFilterActivity('all')
+    setAccountFilterStatus('online')
+    selectTab('accounts')
+  }
+
+  // Les tableaux mis en cache côté serveur sont relus (le cache répond tant
+  // qu'il est frais, l'heure de calcul affichée le dit) : la croissance sur
+  // Statistiques, les comptes actifs sur Statistiques ET sur La Salle, dont
+  // « Cette semaine » restait sinon figée sur la première réponse.
+  const refreshAll = () => {
+    void loadAll()
+    if (activeTab === 'overview') {
+      void loadSalleHealth()
+      void loadActiveAccounts()
+    }
+    if (activeTab === 'stats') {
+      void loadGrowth()
+      void loadActiveAccounts()
+    }
+  }
+
+  // « Voir » : un signalement s'ouvre dans Modération › Signalements, filtre
+  // « en cours » (là où il attend) ; un pseudo suspect dans Comptes, cherché.
   const handleQueueAction = (id: string) => {
     const item = overview?.queue.find((q) => q.id === id)
     if (!item) return
-    if (item.href === 'accounts') changeAccountSearch(item.title)
-    selectTab(item.href)
+    if (item.href === 'feedback') {
+      openFeedbackReports('active', { reveal: true })
+      return
+    }
+    changeAccountSearch(item.title)
+    selectTab('accounts', undefined, { reveal: true })
   }
 
   const handleQueueAcknowledge = async (id: string) => {
@@ -3867,46 +4646,26 @@ function SupervisionDashboard() {
         kicker={t('kicker')}
         title={t('title')}
         roleBadge={<RoleBadge role={user.role} compact />}
-        // « En ligne » = COMPTES actifs (User.lastSeenAt), la définition de
-        // presence.ts : les navigateurs consentants ne sont qu'une tuile à
-        // part. Sans statistiques (modérateurs), pas de chiffre du tout plutôt
-        // qu'un « 0 en ligne » permanent.
-        onlineLabel={
-          stats
-            ? t('header.onlineCount', {
-                count: stats.connectedAccounts.filter((acc) => isOnline(acc.lastSeenAt)).length,
+        online={
+          onlineCount !== null
+            ? {
+                label: t('header.onlineCount', { count: onlineCount }),
+                description: t('header.onlineTitle', { count: onlineCount, minutes: ONLINE_WINDOW_MINUTES }),
+                onClick: openOnlineAccounts,
+              }
+            : undefined
+        }
+        updatedLabel={
+          liveUpdatedAt
+            ? t('header.updatedAt', {
+                time: format.dateTime(liveUpdatedAt, { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
               })
             : undefined
         }
-        onRefresh={() => void loadAll()}
+        onRefresh={refreshAll}
         refreshLabel={t('header.refresh')}
         refreshing={busy}
       />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="mr-auto text-sm text-white/50">{subtitle}</p>
-        <button
-          type="button"
-          onClick={() => setRolesHelpOpen((open) => !open)}
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-white/60 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-          aria-expanded={rolesHelpOpen}
-        >
-          <Info className="h-3.5 w-3.5" />
-          {t('rolesHelpTitle')}
-          {rolesHelpOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-        </button>
-      </div>
-
-      {rolesHelpOpen && (
-        <div className="space-y-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 text-sm leading-relaxed text-white/70">
-          <p><strong className="text-yellow-200">{t('roles.fondateur')}</strong> — {ROLE_DESCRIPTIONS.fondateur}</p>
-          <p><strong className="text-rose-200">{t('roles.superadmin')}</strong> — {ROLE_DESCRIPTIONS.superadmin}</p>
-          <p><strong className="text-amber-200">{t('roles.admin')}</strong> — {ROLE_DESCRIPTIONS.admin}</p>
-          <p><strong className="text-teal-200">{t('roles.moderator')}</strong> — {ROLE_DESCRIPTIONS.moderator}</p>
-          <p><strong className="text-white/80">{t('roles.user')}</strong> — {ROLE_DESCRIPTIONS.user}</p>
-          <p className="text-xs text-white/40">{t('rolesHierarchy')}</p>
-        </div>
-      )}
 
       {error && (
         <ErrorState
@@ -3920,269 +4679,75 @@ function SupervisionDashboard() {
       <SupervisionNav
         groups={navGroups}
         active={activeTab}
-        onSelect={selectTab}
+        onSelect={selectTabValue}
         groupAria={t('tabs.section')}
+        navRef={navRef}
       />
 
-      <Tabs value={activeTab} onValueChange={selectTab} className="min-w-0 space-y-4">
-        {showAnalytics && (
-        <>
-        <TabsContent value="overview" className="space-y-4">
-          {!dataLoaded ? (
+      {/* Pas de tablist : la navigation est faite de boutons aria-current, en
+          familles. Des tabpanel sans onglet ne portaient aucun nom et
+          ajoutaient un arrêt de tabulation vide ; le panneau ouvert se nomme
+          par le bouton actif, et seul lui est monté. */}
+      <div className="min-w-0 space-y-4">
+        {showAnalytics && activeTab === 'overview' && (
+        <section aria-labelledby={supervisionNavItemId('overview')} className="min-w-0 space-y-5">
+          {/* La Salle est un écran de TRIAGE : ce qui va mal, ce qui attend,
+              ce qui se joue, puis la semaine en quatre chiffres. Les
+              graphiques et les définitions vivent dans Statistiques. */}
+          {!liveSettled ? (
             <SkeletonRows rows={4} />
           ) : (
           <>
-          {/* Jour, 7 jours et courbe : NAVIGATEURS ayant accepté les
-              statistiques (DailyVisitor), pas des comptes ni des personnes —
-              les libellés le disent, et rien n'est additionné aux comptes. */}
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <KpiPlaque
-              label={t('room.todayLabel')}
-              value={stats?.visitors.today ?? 0}
-              hint={t('stats.todayHint')}
-            />
-            <KpiPlaque
-              label={t('room.weekLabel')}
-              value={stats?.visitors.week ?? 0}
-              hint={t('stats.weekHint')}
-              delta={
-                weekVisitorsDelta != null
-                  ? {
-                      direction: weekVisitorsDelta >= 0 ? 'up' : 'down',
-                      label: `${weekVisitorsDelta >= 0 ? '+' : ''}${weekVisitorsDelta}% ${t('room.vsPrevWeek')}`,
-                    }
-                  : undefined
-              }
-              trend={visitorsSparkline}
-            />
-            <KpiPlaque
-              // Navigateurs (statistiques acceptées), pas des comptes : jamais
-              // intitulé « en ligne », réservé à la présence des comptes.
-              label={t('stats.activeBrowsers')}
-              value={stats?.visitors.onlineNow ?? 0}
-              hint={t('stats.activeBrowsersHint', { minutes: ONLINE_WINDOW_MINUTES })}
-            />
-            <KpiPlaque
-              label={t('room.queueTitle')}
-              value={overview?.queue.length ?? 0}
-              tone={overview && overview.queue.length > 0 ? 'alert' : 'default'}
-            />
-          </div>
-
-          {/* Dernier ménage des données (lot 8) : sous les chiffres du jour,
-              pour qu'une alerte ne passe pas inaperçue en bas de page. */}
-          {overview && overview.retentionLastRun !== undefined && (
-            <RetentionRunLine run={overview.retentionLastRun} />
-          )}
-
-          <SectionCard
-            icon={CalendarDays}
-            title={t('room.trendTitle')}
-            description={
-              trendPoints.length > 0
-                ? t('onlinePlayers.range', {
-                    from: dayCharts.shortDay(trendPoints[0].date),
-                    to: dayCharts.shortDay(trendPoints[trendPoints.length - 1].date),
-                  })
-                : undefined
-            }
+          <HealthStrip
+            ariaLabel={t('health.aria')}
+            alerts={health.alerts}
+            ok={health.ok}
+            okGroupKey={HEALTH_OK_GROUP}
+            okGroupLabel={t('health.okGroup', { labels: health.ok.map((pill) => pill.label).join(' · ') })}
+            toggleKeys={HEALTH_TOGGLE_KEYS}
+            expandedKey={healthExpanded}
+            onSelect={selectHealthPill}
           >
-            <RoomTrendCharts points={trendPoints} />
-          </SectionCard>
+            {healthExpanded === 'retention' && retentionInAlert && overview?.retentionLastRun !== undefined && (
+              <RetentionRunLine run={overview.retentionLastRun} />
+            )}
+            {healthExpanded === HEALTH_OK_GROUP && health.ok.length > 0 && (
+              <ul className="min-w-0 space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 text-xs leading-relaxed text-white/70">
+                {health.ok.map((pill) => (
+                  <li key={pill.key} className="min-w-0 break-words">
+                    {pill.key === 'retention' && overview?.retentionLastRun !== undefined ? (
+                      <RetentionRunLine run={overview.retentionLastRun} />
+                    ) : (
+                      <>
+                        <span className="font-semibold text-white">{pill.label}</span> · {pill.detail}
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </HealthStrip>
 
-          <ActiveAccountsSection
-            stats={activeAccounts}
-            loading={activeAccountsLoading}
-            failed={activeAccountsFailed}
-            onRefresh={() => void loadActiveAccounts()}
-          />
-
-          {growth && (
-            <SectionCard
-              icon={Sparkles}
-              title={t('growth.title')}
-              description={t('growth.desc')}
-              bodyClassName="space-y-4"
-            >
-              {/* Rétention J+1 / J+7 retirée (lot 7) : remplacée par les retours
-                  du tableau des comptes actifs, sur de vrais jours d'activité. */}
-              <div className="grid gap-2.5 sm:grid-cols-2">
-                {/* Les deux effectifs (ex-« 5 enregistrés, 7 invités ») sont
-                    écrits dans la légende de la barre, avec leur part. */}
-                <GrowthMetric
-                  label={t('growth.registeredShareLabel')}
-                  value={rateLabel(growth.registeredShare.share)}
-                  definition={t('growth.registeredShareDef', {
-                    days: growth.windows.registeredShareDays,
-                  })}
-                >
-                  <StackedBar
-                    {...chartTexts.stacked}
-                    ariaLabel={t('growth.registeredShareLabel')}
-                    segments={[
-                      {
-                        key: 'registered',
-                        label: t('growth.registeredSegment'),
-                        value: growth.registeredShare.registered,
-                        tone: 'gold',
-                      },
-                      { key: 'guests', label: t('growth.guestsSegment'), value: growth.registeredShare.guests, tone: 'violet' },
-                    ]}
-                    categoryLabel={t('charts.category')}
-                    valueLabel={t('charts.accounts')}
-                    emptyLabel={t('growth.registeredShareEmpty')}
-                  />
-                </GrowthMetric>
-                <GrowthMetric
-                  label={t('growth.abandonedLabel')}
-                  value={String(growth.abandonedTables.stalled)}
-                  detail={t('growth.abandonedDetail', {
-                    stalled: growth.abandonedTables.stalled,
-                    live: growth.abandonedTables.live,
-                  })}
-                  definition={t('growth.abandonedDef')}
-                  tone={growth.abandonedTables.stalled > 0 ? 'alert' : 'default'}
-                />
-              </div>
-
-              {/* Pas de part en % : un joueur de deux jeux compte dans les deux,
-                  les lignes ne s'additionnent pas. */}
-              <div className="min-w-0">
-                <ChartHeading title={t('growth.playersByGameTitle')} />
-                <BarList
-                  {...chartTexts.list}
-                  ariaLabel={t('growth.playersByGameTitle')}
-                  rows={growth.playersByGame.map((row) => ({
-                    key: row.gameId,
-                    label: <GameBarLabel gameId={row.gameId} title={row.gameTitle} />,
-                    value: row.players,
-                  }))}
-                  categoryLabel={t('charts.game')}
-                  primaryLabel={t('charts.players')}
-                  emptyLabel={t('growth.noData')}
-                />
-                <p className="mt-2 text-[11px] leading-relaxed text-cream/70">
-                  {t('growth.playersByGameDef', {
-                    days: growth.windows.playersByGameDays,
-                  })}
-                </p>
-              </div>
-
-              {/* Ces chiffres sortent d'un cache serveur : on dit à quelle
-                  heure ils ont été calculés plutôt que de les laisser passer
-                  pour du temps réel. */}
-              <p className="border-t border-white/[0.07] pt-2 text-[11px] text-white/35">
-                {t('growth.freshness', {
-                  time: format.dateTime(new Date(growth.computedAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
-                  minutes: Math.max(1, Math.round(growth.cacheSeconds / 60)),
-                })}
-              </p>
-            </SectionCard>
-          )}
-
-          {growthFailed && !growth && (
-            <SectionCard icon={Gamepad2} title={t('onlinePlayers.title')}>
-              <ErrorState
-                icon={AlertTriangle}
-                message={t('onlinePlayers.loadError')}
-                retryLabel={t('states.retry')}
-                onRetry={() => void loadGrowth()}
-              />
-            </SectionCard>
-          )}
-
-          {growth?.onlinePlay && (
-            <OnlinePlayersSection
-              onlinePlay={growth.onlinePlay}
-              computedAt={growth.computedAt}
-              cacheSeconds={growth.cacheSeconds}
-            />
-          )}
-
-          {growth?.localPlay && (
-            <LocalPlaySection
-              localPlay={growth.localPlay}
-              computedAt={growth.computedAt}
-              cacheSeconds={growth.cacheSeconds}
-            />
-          )}
-
+          {/* À traiter d'abord : c'est la seule chose qui attend une décision.
+              Une colonne sous 1024 px, la file au-dessus. */}
           <div className="grid gap-4 lg:grid-cols-2">
-            <SectionCard icon={Gamepad2} title={t('room.liveTablesTitle')} description={t('room.liveTablesDesc')}>
-              {liveTables.length === 0 ? (
-                <EmptyState icon={Gamepad2} title={t('room.liveTablesEmpty')} hint={t('room.liveTablesEmptyHint')} />
-              ) : (
-                <div className="min-w-0 space-y-4">
-                  {/* Teintes des pastilles de statut des cartes : attente neutre,
-                      briefing or, en jeu vert, diffusion bleu jeton. Toutes les
-                      salles en cours, comptées en base (pas les 30 listées) ; la
-                      diffusion TV y est un segment NOMMÉ, alors que « tables en
-                      cours » de la tuile Tables figées l'exclut. */}
-                  <StackedBar
-                    {...chartTexts.stacked}
-                    ariaLabel={t('room.liveTablesByStatus')}
-                    segments={[
-                      { key: 'waiting', label: t('room.statusWaiting'), value: liveStatusCount('waiting'), tone: 'cream' },
-                      { key: 'briefing', label: t('room.statusBriefing'), value: liveStatusCount('briefing'), tone: 'gold' },
-                      { key: 'playing', label: t('room.statusPlaying'), value: liveStatusCount('playing'), tone: 'green' },
-                      { key: 'cast', label: t('room.statusCast'), value: liveStatusCount('cast'), tone: 'blue' },
-                    ]}
-                    categoryLabel={t('charts.status')}
-                    valueLabel={t('charts.tables')}
-                  />
-                  <p className="text-[11px] text-cream/70">{t('room.liveTablesByStatusDef')}</p>
-                  <div className="grid gap-2.5 sm:grid-cols-2">
-                    {liveTables.map((tbl) => (
-                      <LiveTableCard
-                        key={tbl.id}
-                        icon={tbl.gameId ? <GameIconById id={tbl.gameId} className="h-4 w-4 shrink-0 text-gold" /> : undefined}
-                        gameTitle={tbl.gameTitle}
-                        code={tbl.code}
-                        status={tbl.status}
-                        statusLabel={t(
-                          tbl.status === 'waiting'
-                            ? 'room.statusWaiting'
-                            : tbl.status === 'briefing'
-                              ? 'room.statusBriefing'
-                              : tbl.status === 'cast'
-                                ? 'room.statusCast'
-                                : 'room.statusPlaying'
-                        )}
-                        memberCount={tbl.memberCount}
-                        memberNames={tbl.memberNames}
-                        elapsed={formatPresenceDuration((Date.now() - new Date(tbl.createdAt).getTime()) / 1000, durationUnits)}
-                        stalled={tbl.stalled}
-                        stalledLabel={t('room.stalledFor', { duration: idleLabel(tbl.idleSeconds) })}
-                        turnLabel={
-                          tbl.status === 'cast'
-                            ? tbl.hostName
-                              ? t('room.castHost', { name: tbl.hostName })
-                              : undefined
-                            : tbl.currentTurnName
-                              ? t('room.turnLabel', { name: tbl.currentTurnName })
-                              : undefined
-                        }
-                        closeLabel={canEditAccounts ? t('room.closeTable') : undefined}
-                        onClose={
-                          canEditAccounts
-                            ? () =>
-                                setCloseTableDialog({
-                                  roomId: tbl.id,
-                                  code: tbl.code,
-                                  gameTitle: tbl.gameTitle,
-                                  memberCount: tbl.memberCount,
-                                })
-                            : undefined
-                        }
-                        closing={closingRoomId === tbl.id}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </SectionCard>
-
-            <SectionCard icon={MessageSquareWarning} title={t('room.queueTitle')} description={t('room.queueDesc')}>
+            <SectionCard
+              icon={MessageSquareWarning}
+              title={
+                <>
+                  {t('room.queueTitle')}
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-px text-xs font-bold tabular-nums',
+                      (overview?.queue ?? []).length > 0 ? 'bg-suit-red/20 text-red-200' : 'bg-white/10 text-white/70'
+                    )}
+                  >
+                    {(overview?.queue ?? []).length}
+                  </span>
+                </>
+              }
+              description={t('room.queueDesc')}
+            >
               {(overview?.queue ?? []).length === 0 ? (
                 <EmptyState icon={CheckCheck} title={t('room.queueEmpty')} hint={t('room.queueEmptyHint')} />
               ) : (
@@ -4203,275 +4768,276 @@ function SupervisionDashboard() {
                 />
               )}
             </SectionCard>
-          </div>
 
-          {/* Journal des parties : panneau autonome, hors de la boucle de
-              15 s (F40) — il se charge à l'ouverture de l'onglet. */}
-          <div ref={journalPanelRef} className="min-w-0 scroll-mt-4 space-y-2">
-            {journalUserId && (
-              <div className="flex justify-end">
-                <Button size="sm" variant="ghost" className="text-white/60" onClick={() => replaceUrlParam('userId', null)}>
-                  <X className="mr-1 h-3.5 w-3.5" />
-                  {t('journalFilter.showAll')}
-                </Button>
-              </div>
-            )}
-            <GameSessionsPanel userId={journalUserId} />
-          </div>
-
-          {/* Plantages côté joueur : même parti pris, panneau autonome chargé
-              à l'ouverture de l'onglet (route /api/admin/client-errors). */}
-          <ClientErrorsPanel />
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <SectionCard icon={ScrollText} title={t('room.journalTitle')} description={t('room.journalDesc')}>
-              {(overview?.journal ?? []).length === 0 ? (
-                <EmptyState icon={ScrollText} title={t('room.journalEmpty')} />
-              ) : (
-                <JournalList
-                  entries={(overview?.journal ?? []).map((e) => ({
-                    id: e.id,
-                    kind: e.kind,
-                    time: format.dateTime(new Date(e.createdAt), { timeStyle: 'short', timeZone: PARIS_TIME_ZONE }),
-                    // Phrase traduite d'un bloc, puis le lien vers la fiche de
-                    // la cible : découper la phrase autour du pseudo casserait
-                    // dès qu'il apparaît aussi dans le nom de l'acteur.
-                    text: e.targetUserId ? (
-                      <>
-                        {journalText(t, e)}{' '}
-                        <Link
-                          href={accountFileHref(e.targetUserId)}
-                          title={t('accounts.openFileOf', { name: e.targetName ?? '—' })}
-                          className="whitespace-nowrap text-amber-300/80 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-                        >
-                          {t('visitorCard.openFile')}
-                        </Link>
-                      </>
-                    ) : (
-                      journalText(t, e)
-                    ),
-                  }))}
-                />
-              )}
-            </SectionCard>
-
-            <SectionCard
-              icon={Gamepad2}
-              title={t('games.playedTitle')}
-              description={
-                stats?.games?.totalParties != null
-                  ? t('games.totalParties', {
-                      count: stats.games.totalParties,
-                      plural: stats.games.totalParties > 1 ? 's' : '',
-                    })
-                  : undefined
-              }
+            {/* tabIndex -1 : la pastille « Tables » y pose le focus. */}
+            <div
+              ref={liveSectionRef}
+              tabIndex={-1}
+              className="min-w-0 scroll-mt-4 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
             >
-              {(stats?.games?.games ?? []).length === 0 ? (
-                <EmptyState icon={Gamepad2} title={t('games.noneRecorded')} />
-              ) : (
-                <>
-                  <BarList
-                    {...chartTexts.list}
-                    ariaLabel={t('games.playedTitle')}
-                    rows={(stats?.games?.games ?? []).map((game) => ({
-                      key: game.gameId,
-                      label: <GameBarLabel gameId={game.gameId} title={game.title} />,
-                      value: game.partiesPlayed,
-                    }))}
-                    total={stats?.games?.totalParties}
-                    showShare
-                    limit={10}
-                    categoryLabel={t('charts.game')}
-                    primaryLabel={t('games.parties')}
-                  />
-                  {/* Un cumul, pas une activité : dit sous la liste, sans quoi
-                      on la lirait comme les parties de la semaine. */}
-                  <p className="mt-2 text-[11px] leading-relaxed text-cream/70">{t('games.allTimeNote')}</p>
-                </>
-              )}
-            </SectionCard>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Tous les comptes, invités compris (lot 2) : la tuile ne comptait
-                que les comptes à mot de passe (15 sur 28). Même décompte que
-                la liste Comptes et que la répartition par rôle. */}
-            <SectionCard icon={Users} title={t('accounts.overviewTitle')} bodyClassName="space-y-5">
-              <p className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-                <span className="font-display text-3xl font-bold tabular-nums text-white">{stats?.accounts.total ?? 0}</span>
-                <span className="text-xs text-cream/70">{t('accounts.total')}</span>
-              </p>
-              {stats?.accounts.byKind && (
-                <div className="min-w-0">
-                  <ChartHeading title={t('accounts.byKindTitle')} />
-                  {/* Les quatre types du serveur sont DISJOINTS : la barre fait
-                      bien 100 % des comptes (invités orphelins à part). */}
-                  <StackedBar
-                    {...chartTexts.stacked}
-                    ariaLabel={t('accounts.byKindTitle')}
-                    segments={[
-                      { key: 'password', label: t('accountKind.password'), value: stats.accounts.byKind.password, tone: 'gold' },
-                      { key: 'google', label: t('accountKind.google'), value: stats.accounts.byKind.google, tone: 'blue' },
-                      { key: 'guest', label: t('accounts.kindGuests'), value: stats.accounts.byKind.guest, tone: 'violet' },
-                      {
-                        key: 'guestOrphan',
-                        label: t('accounts.kindOrphans'),
-                        value: stats.accounts.byKind.guestOrphan,
-                        tone: 'cream',
-                      },
-                    ]}
-                    categoryLabel={t('accounts.kindPlaceholder')}
-                    valueLabel={t('charts.accounts')}
-                  />
-                  <p className="mt-2 text-xs leading-relaxed text-cream/70">
-                    {t('accounts.kindSummary', kindSummaryValues(stats.accounts.total, stats.accounts.byKind))}
-                  </p>
-                </div>
-              )}
-              {/* Joueurs compris (rôle « user », invités compris) : ils
-                  manquaient à l'ancienne grille, qui ne montrait que l'équipe.
-                  Un rôle à 0 reste affiché : « 0 modérateur » est une information. */}
-              <div className="min-w-0">
-                <ChartHeading title={t('accounts.byRoleTitle')} />
-                <BarList
-                  {...chartTexts.list}
-                  ariaLabel={t('accounts.byRoleTitle')}
-                  rows={[
-                    {
-                      key: 'user',
-                      label: t('accounts.players'),
-                      value: stats?.accounts.byRole.user ?? 0,
-                      hint: t('accounts.playersRoleHint'),
-                    },
-                    { key: 'moderator', label: t('accounts.moderators'), value: stats?.accounts.byRole.moderator ?? 0 },
-                    { key: 'admin', label: t('accounts.admins'), value: stats?.accounts.byRole.admin ?? 0 },
-                    { key: 'superadmin', label: t('accounts.superAdmins'), value: stats?.accounts.byRole.superadmin ?? 0 },
-                    { key: 'fondateur', label: t('accounts.founders'), value: stats?.accounts.byRole.fondateur ?? 0 },
-                  ]}
-                  showShare
-                  categoryLabel={t('accounts.rolePlaceholder')}
-                  primaryLabel={t('charts.accounts')}
-                />
-              </div>
-            </SectionCard>
-
-            <SectionCard icon={Gavel} title={t('bans.activeTitle')} description={t('bans.suspendedCount', { count: bans.length })}>
-              {bans.length === 0 ? (
-                <EmptyState icon={ShieldCheck} title={t('bans.noneOverview')} />
-              ) : (
-                <ul className="space-y-2">
-                  {bans.slice(0, 5).map((b) => (
-                    <li key={b.id} className="text-sm text-white/70">
-                      <span className="font-medium text-white">{b.displayName}</span>
-                      {b.accountCode && <span className="font-mono text-amber-200/70"> {b.accountCode}</span>}
-                      {' — '}
-                      {b.banType === 'permanent'
-                        ? t('bans.permanent').toLowerCase()
-                        : t('bans.until', {
-                            date: b.bannedUntil ? format.dateTime(new Date(b.bannedUntil), { dateStyle: 'medium', timeZone: PARIS_TIME_ZONE }) : '?',
-                          })}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </SectionCard>
-          </div>
-
-          <SectionCard
-            icon={Globe}
-            title={t('connected.recentTitle')}
-            description={t('connected.recentWindowDesc', { minutes: ONLINE_WINDOW_MINUTES })}
-          >
-              {(stats?.connectedAccounts ?? []).length === 0 ? (
-                <EmptyState icon={Inbox} title={t('connected.noneRecent')} />
-              ) : (
-                <ul className="space-y-2">
-                  {stats?.connectedAccounts.map((acc) => (
-                    <li
-                      key={acc.id}
-                      className="min-w-0 space-y-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-3"
-                    >
-                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
-                        <span className="text-base leading-none">{countryFlag(acc.country)}</span>
-                        <AccountNameLink
-                          userId={acc.id}
-                          name={acc.displayName}
-                          className="text-sm font-medium text-white sm:text-base"
-                        />
-                        <AccountCodeBadge code={acc.accountCode} />
-                        {/* Rôle pour l'équipe seulement : le type (badge voisin)
-                            dit déjà invité ou compte, plus de « Joueur » accolé
-                            à « Invité ». */}
-                        {acc.role !== 'user' && <RoleBadge role={acc.role} compact />}
-                        {/* Liste servie par User.lastSeenAt, tous types, invités
-                            compris ; « En ligne » recalculé à chaque rendu. */}
-                        <AccountKindBadge kind={acc.accountKind} lastSeenAt={acc.lastSeenAt} createdAt={null} compact />
-                        {isOnline(acc.lastSeenAt) && (
-                          <Badge className="border-green-500/30 bg-green-500/10 text-[10px] text-green-300 sm:text-xs">
-                            {t('accounts.online')}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="space-y-1.5 border-t border-white/5 pt-2 text-xs text-white/45">
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                          <IpAddressDisplay
-                            ips={
-                              acc.ips && acc.ips.length > 0
-                                ? acc.ips
-                                : acc.ip
-                                  ? [{ ip: acc.ip, country: acc.country, lastSeenAt: acc.lastSeenAt ?? '' }]
-                                  : []
+              <SectionCard icon={Radio} title={t('room.liveTablesTitle')} description={t('room.liveTablesDesc')} className="h-full">
+                {liveTables.length === 0 ? (
+                  <EmptyState icon={Gamepad2} title={t('room.liveTablesEmpty')} hint={t('room.liveTablesEmptyHint')} />
+                ) : (
+                  <div className="min-w-0 space-y-2.5">
+                    {/* Effectifs comptés en base, diffusion TV comprise ; la
+                        liste, elle, est plafonnée par le serveur. */}
+                    <p className="break-words text-xs font-medium text-white/80">
+                      {liveSummary}
+                      {liveTotal > liveTables.length && ` · ${t('room.liveShown', { shown: liveTables.length })}`}
+                    </p>
+                    <ul className="space-y-1.5">
+                      {sortedLiveTables.map((tbl) => {
+                        const extra = tbl.memberCount - tbl.memberNames.length
+                        const names = tbl.memberNames.join(', ') + (extra > 0 ? ` +${extra}` : '')
+                        return (
+                          <LiveTableRow
+                            key={tbl.id}
+                            icon={tbl.gameId ? <GameIconById id={tbl.gameId} className="h-4 w-4 shrink-0 text-gold" /> : undefined}
+                            gameTitle={tbl.gameTitle}
+                            code={tbl.code}
+                            status={tbl.status}
+                            statusLabel={liveStatusLabel(tbl.status)}
+                            players={
+                              names
+                                ? `${t('room.playersCount', { count: tbl.memberCount })} · ${names}`
+                                : t('room.playersCount', { count: tbl.memberCount })
                             }
-                            onIpClick={handleIpClick}
-                            onNetworkClick={handleNetworkLookup}
-                            compact
-                            device={acc.lastDevice}
+                            elapsed={
+                              tbl.status === 'cast' && tbl.stalled
+                                ? t('room.castIdleFor', { duration: idleLabel(tbl.idleSeconds) })
+                                : t('room.openedFor', {
+                                    duration: formatPresenceDuration(
+                                      (Date.now() - new Date(tbl.createdAt).getTime()) / 1000,
+                                      durationUnits
+                                    ),
+                                  })
+                            }
+                            stalled={isStalledGame(tbl)}
+                            stalledLabel={t('room.stalledFor', { duration: idleLabel(tbl.idleSeconds) })}
+                            turnLabel={
+                              tbl.status === 'cast'
+                                ? tbl.hostName
+                                  ? t('room.castHost', { name: tbl.hostName })
+                                  : undefined
+                                : tbl.currentTurnName
+                                  ? t('room.turnLabel', { name: tbl.currentTurnName })
+                                  : undefined
+                            }
+                            closeLabel={canEditAccounts ? t('room.closeTable') : undefined}
+                            onClose={
+                              canEditAccounts
+                                ? () =>
+                                    setCloseTableDialog({
+                                      roomId: tbl.id,
+                                      code: tbl.code,
+                                      gameTitle: tbl.gameTitle,
+                                      memberCount: tbl.memberCount,
+                                    })
+                                : undefined
+                            }
+                            closing={closingRoomId === tbl.id}
                           />
-                        </div>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span>{countryLabel(acc.country, locale, t('unknownCountry'))}</span>
-                          {acc.lastSeenAt && (
-                            <span>
-                              · {format.dateTime(new Date(acc.lastSeenAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                        )
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </SectionCard>
+            </div>
+          </div>
+
+          {/* La semaine en quatre plaques, sans graphique : le détail, les
+              définitions et les autres périodes sont dans Statistiques. */}
+          <section aria-labelledby="salle-week-title" className="min-w-0 space-y-2.5">
+            <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1.5">
+              <div className="min-w-0">
+                <h2 id="salle-week-title" className="text-base font-semibold text-white">
+                  {t('room.weekTitle')}
+                </h2>
+                <p className="text-xs text-white/70">{t('room.weekDesc')}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => selectTab('stats', undefined, { reveal: true })}
+                className="-mx-1 inline-flex min-h-[32px] items-center gap-1 rounded-md px-1 text-xs font-semibold text-amber-200 transition-colors hover:text-amber-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+              >
+                {t('room.allStats')}
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              {/* NAVIGATEURS ayant accepté les statistiques (DailyVisitor), pas
+                  des comptes ni des personnes : l'indice le dit, et rien n'est
+                  additionné aux comptes des plaques voisines. */}
+              <KpiPlaque
+                label={t('room.weekVisitors', { window: t('stats.week') })}
+                value={stats ? stats.visitors.week : '—'}
+                hint={t('stats.weekHint')}
+                delta={
+                  weekVisitorsDelta != null
+                    ? {
+                        direction: weekVisitorsDelta >= 0 ? 'up' : 'down',
+                        label: `${deltaLabel(weekVisitorsDelta)} ${t('room.vsPrevWeek')}`,
+                      }
+                    : undefined
+                }
+                trend={visitorsSparkline}
+              />
+              {/* Comptes, hors équipe et comptes de test (tableau des comptes
+                  actifs) : aucun écart affiché, la réponse n'en donne pas. */}
+              <KpiPlaque
+                label={t('room.weekActive', { window: weekWindow(week?.accountsSince) })}
+                value={week ? week.activeAccounts : '—'}
+                hint={
+                  week
+                    ? t('onlinePlayers.accountsDetail', { count: week.activeAccounts, guests: week.guests })
+                    : weekPendingHint
+                }
+              />
+              <KpiPlaque
+                label={t('room.weekLaunches', { window: weekWindow(week?.launchesSince) })}
+                value={week ? week.launches : '—'}
+                hint={week ? t('room.weekLaunchesHint') : weekPendingHint}
+              />
+              <KpiPlaque
+                label={t('room.weekReturning', { window: weekWindow(week?.accountsSince) })}
+                value={week ? week.returning : '—'}
+                hint={week ? t('room.weekReturningHint', { count: week.activeAccounts }) : weekPendingHint}
+              />
+            </div>
+            {/* Trois plaques sur quatre sortent d'un cache, pas de la boucle
+                en direct : l'heure de l'en-tête ne vaut pas pour elles. */}
+            {activeAccounts && (
+              <p className="break-words text-xs text-white/70">
+                {t('room.weekFreshness', {
+                  time: format.dateTime(new Date(activeAccounts.computedAt), {
+                    timeStyle: 'short',
+                    timeZone: PARIS_TIME_ZONE,
+                  }),
+                  minutes: Math.max(1, Math.round(activeAccounts.cacheSeconds / 60)),
+                })}
+              </p>
+            )}
+          </section>
+
+          {/* Les dernières actions seulement : la suite est dans
+              Modération › Journal. */}
+          <SectionCard
+            icon={ScrollText}
+            title={t('room.journalTitle')}
+            description={t('room.journalDesc')}
+            actions={
+              teamJournal.length > TEAM_JOURNAL_PREVIEW ? (
+                // Le serveur sert les 20 dernières actions, pas tout le
+                // journal : le lien dit combien il en ouvre.
+                <button
+                  type="button"
+                  onClick={() => selectTab('moderation', 'journal', { reveal: true })}
+                  className="-mx-1 inline-flex min-h-[32px] items-center gap-1 rounded-md px-1 text-xs font-semibold text-amber-200 transition-colors hover:text-amber-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                >
+                  {t('room.journalAll', { count: teamJournal.length })}
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              ) : undefined
+            }
+          >
+            {teamJournal.length === 0 ? (
+              <EmptyState icon={ScrollText} title={t('room.journalEmpty')} />
+            ) : (
+              <JournalList entries={teamJournalEntries(teamJournal.slice(0, TEAM_JOURNAL_PREVIEW))} />
+            )}
           </SectionCard>
           </>
           )}
-        </TabsContent>
-
-        <TabsContent value="geo" className="grid gap-4 md:grid-cols-2">
-          <CountryList
-            title={t('geo.onlineByCountry')}
-            description={t('geo.onlineByCountryWindowDesc', { minutes: ONLINE_WINDOW_MINUTES })}
-            rows={stats?.visitors.onlineByCountry ?? []}
-            scope="online"
-            onCountryClick={handleCountryClick}
-          />
-          <CountryList
-            title={t('geo.todayByCountry')}
-            description={t('geo.todayByCountryDesc')}
-            rows={stats?.visitors.visitorsTodayByCountry ?? []}
-            scope="today"
-            onCountryClick={handleCountryClick}
-          />
-          <IpVisitorList
-            rows={stats?.visitorIpList ?? []}
-            onIpClick={handleIpClick}
-            onNetworkClick={handleNetworkLookup}
-          />
-        </TabsContent>
-        </>
+        </section>
         )}
 
-        <TabsContent value="accounts" className="space-y-4">
+        {showAnalytics && activeTab === 'stats' && (
+        <section aria-labelledby={supervisionNavItemId('stats')} className="min-w-0 space-y-4">
+          {/* Les vues n'ont pas de cadre titré : sans ce titre, le plan de la
+              page passait du h1 aux h3 des blocs sans nommer la vue ouverte.
+              À l'œil, le sélecteur le dit déjà. */}
+          <h2 className="sr-only">{t(`method.groups.${statsView}`)}</h2>
+          {/* Barre d'outils : la vue (une question à la fois) et la période,
+              mémorisée par navigateur. La vue Qualité n'en dépend pas :
+              chacun de ses chiffres dit sa propre fenêtre. */}
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+            <SegmentedControl
+              label={t('statsTab.viewsAria')}
+              options={STATS_VIEWS.map((view) => ({ value: view, label: t(`method.groups.${view}`) }))}
+              value={statsView}
+              onChange={selectStatsView}
+            />
+            {statsView !== 'quality' && (
+              <SegmentedControl
+                label={t('statsTab.periodAria')}
+                options={STATS_PERIODS.map((period) => ({ value: period, label: t(PERIOD_LABEL_KEY[period]) }))}
+                value={statsPeriod}
+                onChange={changeStatsPeriod}
+              />
+            )}
+          </div>
+
+          {statsView === 'audience' &&
+            // Visiteurs, pays et courbe viennent de la boucle en direct : son
+            // premier retour suffit, réponse reçue ou non.
+            (!liveSettled ? (
+              <SkeletonRows rows={4} />
+            ) : (
+              <StatsAudienceView
+                period={statsPeriod}
+                stats={stats}
+                dailySeries={overview?.dailySeries ?? []}
+                activeAccounts={activeAccounts}
+                activeAccountsFailed={activeAccountsFailed}
+                onCountryClick={handleCountryClick}
+                onIpClick={handleIpClick}
+                onNetworkClick={handleNetworkLookup}
+                onMethod={setMethodGroup}
+              />
+            ))}
+          {statsView === 'players' && (
+            <StatsPlayersView
+              period={statsPeriod}
+              stats={activeAccounts}
+              failed={activeAccountsFailed}
+              onRetry={() => void loadActiveAccounts()}
+              growth={growth}
+              growthFailed={growthFailed}
+              onRetryGrowth={() => void loadGrowth()}
+              onMethod={setMethodGroup}
+            />
+          )}
+          {statsView === 'games' && (
+            <StatsGamesView
+              period={statsPeriod}
+              growth={growth}
+              growthFailed={growthFailed}
+              onRetryGrowth={() => void loadGrowth()}
+              activeAccounts={activeAccounts}
+              allTime={stats?.games}
+              journalUserId={journalUserId}
+              journalOpen={journalOpen}
+              onJournalOpenChange={setJournalOpen}
+              journalRef={journalPanelRef}
+              onShowAllJournal={() => replaceUrlParam('userId', null)}
+              onMethod={setMethodGroup}
+            />
+          )}
+          {statsView === 'quality' && (
+            <StatsQualityView
+              growth={growth}
+              activeAccounts={activeAccounts}
+              activeAccountsFailed={activeAccountsFailed}
+              onMethod={setMethodGroup}
+            />
+          )}
+        </section>
+        )}
+
+        {activeTab === 'accounts' && (
+        <section aria-labelledby={supervisionNavItemId('accounts')} className="min-w-0 space-y-4">
           <SectionCard title={t('accounts.adminTitle')} description={t('accounts.adminDesc')} bodyClassName="space-y-3">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
@@ -4573,13 +5139,35 @@ function SupervisionDashboard() {
                 )}
               </div>
 
-              {/* Décompte NON filtré, le même que la tuile de la vue
-                  d'ensemble : il ne bouge pas avec la recherche. */}
+              {/* La définition de « en ligne » à découvert, là où mène la
+                  pastille de l'en-tête : un title ne se lit pas au toucher. */}
+              {accountFilterStatus === 'online' && (
+                <p className="break-words text-xs text-white/70">
+                  {t('accounts.onlineFilterDesc', { minutes: ONLINE_WINDOW_MINUTES })}
+                </p>
+              )}
+
+              {/* Décompte NON filtré : il ne bouge pas avec la recherche. */}
               {accountCounts && (
                 <div className="space-y-0.5">
                   <p className="text-xs leading-relaxed text-white/60">
                     {t('accounts.kindSummary', kindSummaryValues(accountCounts.total, accountCounts))}
                   </p>
+                  {/* Répartition par rôle (joueurs compris, invités compris),
+                      qui vivait dans une carte de la Salle. Servie avec les
+                      statistiques : absente pour qui ne les voit pas. Un rôle
+                      à 0 reste écrit : « 0 modérateur » est une information. */}
+                  {stats && (
+                    <p className="text-xs leading-relaxed text-white/70">
+                      {t('accounts.byRoleLine', {
+                        players: stats.accounts.byRole.user,
+                        moderators: stats.accounts.byRole.moderator,
+                        admins: stats.accounts.byRole.admin,
+                        superadmins: stats.accounts.byRole.superadmin,
+                        founders: stats.accounts.byRole.fondateur,
+                      })}
+                    </p>
+                  )}
                   <p className="text-[11px] leading-relaxed text-white/35">
                     {t('accounts.countsNote', { date: honestPresenceSince })}
                   </p>
@@ -5038,11 +5626,94 @@ function SupervisionDashboard() {
                 nextLabel={t('states.nextPage')}
               />
           </SectionCard>
-        </TabsContent>
+        </section>
+        )}
 
-        {showBansTab && (
-        <TabsContent value="bans">
-          <SectionCard icon={Ban} title={t('bans.currentTitle')} description={t('bans.currentDesc')} bodyClassName="space-y-3">
+        {/* Modération : une vue à la fois (signalements, sanctions, mots et
+            pseudos, journal de l'équipe), chacune montrée seulement au rôle
+            dont la route répondrait. Un modérateur n'a que les signalements :
+            pas de sélecteur à un seul bouton. */}
+        {allowedTabs.includes('moderation') && activeTab === 'moderation' && (
+        <section aria-labelledby={supervisionNavItemId('moderation')} className="min-w-0 space-y-4">
+          {moderationViews.length > 1 && (
+            <SegmentedControl
+              label={t('moderationTab.viewsAria')}
+              options={moderationViews.map((view) => ({
+                value: view,
+                label: t(`moderationTab.views.${view}`),
+                ...moderationViewBadge(view),
+              }))}
+              value={moderationView}
+              onChange={selectModerationView}
+            />
+          )}
+
+          {/* Avis de 1re partie : leur route répond dès modérateur. Qui voit les
+              Statistiques les lit dans la vue Qualité ; les autres ici, au-dessus
+              des retours où arrivent ceux qui portent un commentaire. */}
+          {moderationView === 'reports' && moderationViews.includes('reports') && !showAnalytics && (
+            <FirstGameFeedbackPanel />
+          )}
+          {moderationView === 'reports' && moderationViews.includes('reports') && (
+            <SectionCard
+              icon={feedbackScope === 'active' ? MessageSquareWarning : CheckCheck}
+              title={t(feedbackScope === 'active' ? 'feedback.activeTitle' : 'feedback.resolvedTitle')}
+              description={t(feedbackScope === 'active' ? 'feedback.activeDesc' : 'feedback.resolvedDesc')}
+              bodyClassName="space-y-4"
+            >
+              {/* Le filtre choisit ce que le serveur renvoie ; ses deux
+                  compteurs viennent de la même réponse. */}
+              <SegmentedControl
+                label={t('moderationTab.scopeAria')}
+                options={[
+                  {
+                    value: 'active',
+                    label: t('moderationTab.scope.active'),
+                    count: activeFeedbackTotal || '',
+                    tone: activeFeedbackTotal > 0 ? 'warning' : 'neutral',
+                  },
+                  { value: 'resolved', label: t('moderationTab.scope.resolved'), count: resolvedFeedbackTotal || '' },
+                ]}
+                value={feedbackScope}
+                onChange={openFeedbackReports}
+              />
+              <FeedbackSearchBar
+                value={feedbackSearch}
+                onChange={setFeedbackSearch}
+                placeholder={t(feedbackScope === 'active' ? 'feedback.searchActive' : 'feedback.searchResolved')}
+                resultCount={feedbackTotal}
+                totalCount={feedbackScope === 'active' ? activeFeedbackTotal : resolvedFeedbackTotal}
+              />
+              <FeedbackListSection
+                items={feedbackItems}
+                emptyMessage={
+                  feedbackLoading
+                    ? t('loading')
+                    : feedbackScope === 'active'
+                      ? t(feedbackSearch.trim() ? 'feedback.noActiveSearch' : 'feedback.noActive')
+                      : t(feedbackSearch.trim() ? 'feedback.noResolvedSearch' : 'feedback.noResolved')
+                }
+                onSelect={openFeedback}
+              />
+              <Pager
+                page={feedbackPage}
+                pageSize={FEEDBACK_PAGE_SIZE}
+                total={feedbackTotal}
+                onPage={setFeedbackPage}
+                busy={feedbackLoading}
+                summary={t('states.pageSummary', {
+                  page: feedbackPage,
+                  pages: Math.max(1, Math.ceil(feedbackTotal / FEEDBACK_PAGE_SIZE)),
+                  total: feedbackTotal,
+                })}
+                previousLabel={t('states.previousPage')}
+                nextLabel={t('states.nextPage')}
+              />
+            </SectionCard>
+          )}
+
+          {moderationView === 'sanctions' && moderationViews.includes('sanctions') && (
+            <SectionCard icon={Ban} title={t('bans.currentTitle')} description={t('bans.currentDesc')} bodyClassName="space-y-3">
               {bans.length === 0 ? (
                 <EmptyState icon={ShieldCheck} title={t('bans.noneActive')} />
               ) : (
@@ -5057,13 +5728,13 @@ function SupervisionDashboard() {
                           {b.displayName}
                           <AccountCodeBadge code={b.accountCode} />
                         </p>
-                        {b.email && <p className="truncate text-xs text-white/45">{b.email}</p>}
+                        {b.email && <p className="truncate text-xs text-white/70">{b.email}</p>}
                       </div>
-                      <Badge className="border-red-500/30 bg-red-500/15 text-red-200">
+                      <Badge className="border-red-500/30 bg-red-500/[0.15] text-red-200">
                         {b.banType === 'permanent' ? t('bans.permanent') : t('bans.temporary')}
                       </Badge>
                     </div>
-                    <div className="mt-2 space-y-1 text-sm text-white/60">
+                    <div className="mt-2 space-y-1 text-sm text-white/70">
                       {b.bannedAt && (
                         <p>{t('bans.bannedOn', { date: format.dateTime(new Date(b.bannedAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE }) })}</p>
                       )}
@@ -5091,132 +5762,103 @@ function SupervisionDashboard() {
                   </div>
                 ))
               )}
-          </SectionCard>
-        </TabsContent>
-        )}
-
-        {canEditAccounts && (
-        <TabsContent value="moderation" className="space-y-4">
-          {user && canManageSiteSettings(user.role) && (
-            <SectionCard icon={Radio} title={t('siteSettings.title')} description={t('siteSettings.desc')}>
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white">{t('siteSettings.voiceLabel')}</p>
-                  <p className="text-xs text-white/50">
-                    {voiceEnabled === null
-                      ? '…'
-                      : voiceEnabled
-                        ? t('siteSettings.voiceOn')
-                        : t('siteSettings.voiceOff')}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant={voiceEnabled ? 'destructive' : 'default'}
-                  disabled={busy || voiceEnabled === null}
-                  onClick={() => void toggleGlobalVoice(!voiceEnabled)}
-                >
-                  {voiceEnabled ? t('siteSettings.disable') : t('siteSettings.enable')}
-                </Button>
-              </div>
             </SectionCard>
           )}
-          <ModerationTermsPanel />
-          <NameModerationAttemptsPanel />
-        </TabsContent>
+
+          {moderationView === 'words' && moderationViews.includes('words') && (
+            <>
+              {canManageSiteSettings(user.role) && (
+                <SectionCard icon={Radio} title={t('siteSettings.title')} description={t('siteSettings.desc')}>
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white">{t('siteSettings.voiceLabel')}</p>
+                      <p className="text-xs text-white/70">
+                        {voiceEnabled === null
+                          ? '…'
+                          : voiceEnabled
+                            ? t('siteSettings.voiceOn')
+                            : t('siteSettings.voiceOff')}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={voiceEnabled ? 'destructive' : 'default'}
+                      disabled={busy || voiceEnabled === null}
+                      onClick={() => void toggleGlobalVoice(!voiceEnabled)}
+                    >
+                      {voiceEnabled ? t('siteSettings.disable') : t('siteSettings.enable')}
+                    </Button>
+                  </div>
+                </SectionCard>
+              )}
+              <ModerationTermsPanel />
+              <NameModerationAttemptsPanel />
+            </>
+          )}
+
+          {/* Tout ce que la vue d'ensemble sert du journal (la Salle n'en
+              montre que le début), de la plus récente à la plus ancienne. */}
+          {moderationView === 'journal' && moderationViews.includes('journal') && (
+            <SectionCard
+              icon={ScrollText}
+              title={t('room.journalTitle')}
+              description={
+                teamJournal.length > 0
+                  ? t('moderationTab.journalDesc', { count: teamJournal.length })
+                  : t('room.journalDesc')
+              }
+            >
+              {!liveSettled ? (
+                <SkeletonRows rows={5} />
+              ) : teamJournal.length === 0 ? (
+                <EmptyState icon={ScrollText} title={t('room.journalEmpty')} />
+              ) : (
+                <JournalList entries={teamJournalEntries(teamJournal)} />
+              )}
+            </SectionCard>
+          )}
+        </section>
         )}
 
-        {showFeedbackTab && (
-        <TabsContent value="feedback" className="space-y-4">
-          {/* Avis de 1re partie, résumés : panneau autonome chargé à
-              l'ouverture de l'onglet (route /api/admin/first-game-feedback),
-              hors de loadAll et du rechargement de 15 s. */}
-          <FirstGameFeedbackPanel />
-          <SectionCard icon={MessageSquareWarning} title={t('feedback.activeTitle')} description={t('feedback.activeDesc')} bodyClassName="space-y-4">
-              <FeedbackSearchBar
-                value={feedbackSearch}
-                onChange={setFeedbackSearch}
-                placeholder={t('feedback.searchActive')}
-                resultCount={feedbackTotal}
-                totalCount={activeFeedbackTotal}
-              />
-              <FeedbackListSection
-                items={feedbackItems}
-                emptyMessage={
-                  feedbackLoading
-                    ? t('loading')
-                    : feedbackSearch.trim()
-                      ? t('feedback.noActiveSearch')
-                      : t('feedback.noActive')
-                }
-                onSelect={openFeedback}
-              />
-              <Pager
-                page={feedbackPage}
-                pageSize={FEEDBACK_PAGE_SIZE}
-                total={feedbackTotal}
-                onPage={setFeedbackPage}
-                busy={feedbackLoading}
-                summary={t('states.pageSummary', {
-                  page: feedbackPage,
-                  pages: Math.max(1, Math.ceil(feedbackTotal / FEEDBACK_PAGE_SIZE)),
-                  total: feedbackTotal,
-                })}
-                previousLabel={t('states.previousPage')}
-                nextLabel={t('states.nextPage')}
-              />
-          </SectionCard>
-        </TabsContent>
-        )}
-
-        {showFeedbackTab && (
-        <TabsContent value="feedback-resolved" className="space-y-4">
-          <SectionCard icon={CheckCheck} title={t('feedback.resolvedTitle')} description={t('feedback.resolvedDesc')} bodyClassName="space-y-4">
-              <FeedbackSearchBar
-                value={feedbackSearch}
-                onChange={setFeedbackSearch}
-                placeholder={t('feedback.searchResolved')}
-                resultCount={feedbackTotal}
-                totalCount={resolvedFeedbackTotal}
-              />
-              <FeedbackListSection
-                items={feedbackItems}
-                emptyMessage={
-                  feedbackLoading
-                    ? t('loading')
-                    : feedbackSearch.trim()
-                      ? t('feedback.noResolvedSearch')
-                      : t('feedback.noResolved')
-                }
-                onSelect={openFeedback}
-              />
-              <Pager
-                page={feedbackPage}
-                pageSize={FEEDBACK_PAGE_SIZE}
-                total={feedbackTotal}
-                onPage={setFeedbackPage}
-                busy={feedbackLoading}
-                summary={t('states.pageSummary', {
-                  page: feedbackPage,
-                  pages: Math.max(1, Math.ceil(feedbackTotal / FEEDBACK_PAGE_SIZE)),
-                  total: feedbackTotal,
-                })}
-                previousLabel={t('states.previousPage')}
-                nextLabel={t('states.nextPage')}
-              />
-          </SectionCard>
-        </TabsContent>
-        )}
-
-        {/* Surveillance : panneau autonome (route /api/admin/ops-status). Monté
+        {/* Serveur : panneau autonome (route /api/admin/ops-status). Monté
             seulement onglet ouvert, son rafraîchissement de 60 s s'arrête
             avec lui. */}
-        {showOpsTab && (
-        <TabsContent value="ops" className="space-y-4">
+        {allowedTabs.includes('ops') && activeTab === 'ops' && (
+        <section aria-labelledby={supervisionNavItemId('ops')} className="min-w-0 space-y-4">
           <OpsStatusPanel />
-        </TabsContent>
+        </section>
         )}
-      </Tabs>
+      </div>
+
+      {/* Aide sur les rôles : une référence, pas une information du jour —
+          en pied de page sur tous les onglets, juste avant l'empreinte de
+          version, plutôt qu'en tête où elle repoussait le travail. */}
+      <section className="min-w-0 border-t border-white/10 pt-4">
+        <button
+          type="button"
+          onClick={() => setRolesHelpOpen((open) => !open)}
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+          aria-expanded={rolesHelpOpen}
+          aria-controls="supervision-roles-help"
+        >
+          <Info className="h-3.5 w-3.5" aria-hidden />
+          {t('rolesHelpTitle')}
+          <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', rolesHelpOpen && 'rotate-180')} aria-hidden />
+        </button>
+        {rolesHelpOpen && (
+          <div
+            id="supervision-roles-help"
+            className="mt-3 space-y-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 text-sm leading-relaxed text-white/80"
+          >
+            <p><strong className="text-yellow-200">{t('roles.fondateur')}</strong> — {t('roleDescriptions.fondateur')}</p>
+            <p><strong className="text-rose-200">{t('roles.superadmin')}</strong> — {t('roleDescriptions.superadmin')}</p>
+            <p><strong className="text-amber-200">{t('roles.admin')}</strong> — {t('roleDescriptions.admin')}</p>
+            <p><strong className="text-teal-200">{t('roles.moderator')}</strong> — {t('roleDescriptions.moderator')}</p>
+            <p><strong className="text-white">{t('roles.user')}</strong> — {t('roleDescriptions.user')}</p>
+            <p className="text-xs text-white/70">{t('rolesHierarchy')}</p>
+          </div>
+        )}
+      </section>
 
       <Dialog open={!!closeTableDialog} onOpenChange={(open) => !open && setCloseTableDialog(null)}>
         <DialogContent className="border-red-500/30 bg-felt-deep text-white">
@@ -5583,6 +6225,8 @@ function SupervisionDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      <MethodDialog group={methodGroup} onClose={() => setMethodGroup(null)} growthWindows={growth?.windows ?? null} />
     </SupervisionShell>
   )
 }
