@@ -12,6 +12,7 @@ import {
   BLUFF_VOTE_MS,
   BLUFF_POINTS_FOUND_REAL,
   BLUFF_POINTS_PER_FOOLED,
+  BLUFF_REVEAL_MIN_MS,
   type BluffState,
   type BluffPrompt,
 } from './engine'
@@ -257,17 +258,59 @@ describe('CONTINUE', () => {
     // Personne ne vote → ADVANCE résout par abstention.
     s = reduceBluff(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + BLUFF_VOTE_MS })
     expect(s.phase).toBe('reveal')
-    s = reduceBluff(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    const readAt = T0 + BLUFF_VOTE_MS + BLUFF_REVEAL_MIN_MS
+    s = reduceBluff(s, { type: 'CONTINUE', playerId: 'p0', now: readAt })
     expect(s.phase).toBe('submit')
+    expect(s.revealAt).toBeNull()
     expect(s.promptIdx).toBe(1)
     expect(s.lastReveal).toBeNull()
-    s = submitAll(s)
-    s = reduceBluff(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + BLUFF_VOTE_MS })
-    s = reduceBluff(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    s = submitAll(s, readAt)
+    s = reduceBluff(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: readAt + BLUFF_VOTE_MS })
+    s = reduceBluff(s, { type: 'CONTINUE', playerId: 'p0', now: readAt + BLUFF_VOTE_MS + BLUFF_REVEAL_MIN_MS })
     expect(s.phase).toBe('finished')
     expect(s.phaseEndsAt).toBeNull()
     // Tout le monde à 0 point (personne n'a voté) → égalité, pas de gagnant unique.
     expect(s.winnerId).toBeNull()
+  })
+
+  it('plancher de lecture : un humain trop pressé est refusé (READING_TIME), la vue dit quand', () => {
+    let s = submitAll(make(4))
+    const revealedAt = T0 + BLUFF_VOTE_MS
+    s = reduceBluff(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: revealedAt })
+    expect(s.revealAt).toBe(revealedAt)
+    expect(toBluffClientView(s, 'p1').continueAt).toBe(revealedAt + BLUFF_REVEAL_MIN_MS)
+    expect(toBluffSpectatorView(s).continueAt).toBe(revealedAt + BLUFF_REVEAL_MIN_MS)
+    expect(() =>
+      reduceBluff(s, { type: 'CONTINUE', playerId: 'p1', now: revealedAt + BLUFF_REVEAL_MIN_MS - 1 })
+    ).toThrow('READING_TIME')
+    const next = reduceBluff(s, { type: 'CONTINUE', playerId: 'p1', now: revealedAt + BLUFF_REVEAL_MIN_MS })
+    expect(next.phase).toBe('submit')
+    expect(toBluffClientView(next, 'p1').continueAt).toBeNull()
+  })
+
+  it('un bot meneur attend aussi le plancher tant qu’un humain est assis ; un état d’avant le plancher passe', () => {
+    const players = [
+      { id: 'bot-1', name: 'Bot', isBot: true },
+      { id: 'p1', name: 'P1' },
+      { id: 'p2', name: 'P2' },
+    ]
+    const raw = createBluffState(players, PROMPTS, 'seed', T0 - BLUFF_COUNTDOWN_MS, 3)
+    let s = reduceBluff(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+    s = submitAll(s)
+    s = reduceBluff(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + BLUFF_VOTE_MS })
+    expect(currentBluffActorId(s)).toBe('bot-1')
+    expect(() =>
+      reduceBluff(s, { type: 'CONTINUE', playerId: 'bot-1', now: T0 + BLUFF_VOTE_MS + 1_000 })
+    ).toThrow('READING_TIME')
+    // Humains partis : plus personne à faire lire, le bot enchaîne.
+    const alone = { ...s, players: s.players.map((p) => (p.isBot ? p : { ...p, leftAt: T0 })) }
+    expect(
+      reduceBluff(alone, { type: 'CONTINUE', playerId: 'bot-1', now: T0 + BLUFF_VOTE_MS + 1_000 }).phase
+    ).toBe('submit')
+    // Partie sérialisée avant l'horodatage : jamais bloquée.
+    const legacy = { ...s, revealAt: null }
+    expect(reduceBluff(legacy, { type: 'CONTINUE', playerId: 'p1', now: T0 + BLUFF_VOTE_MS }).phase).toBe('submit')
+    expect(toBluffClientView(legacy, 'p1').continueAt).toBeNull()
   })
 
   it('refuse hors phase reveal ou pour un joueur inconnu', () => {

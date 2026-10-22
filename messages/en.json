@@ -3050,6 +3050,8 @@
           "realAnswer": "The real answer: \"{answer}\"",
           "continue": "Next round",
           "seeResult": "See the result",
+          "continueIn": "Next round in {seconds}s",
+          "seeResultIn": "Result in {seconds}s",
           "realTag": "The real answer",
           "bluffBy": "Bluff by {name}",
           "votedBy": "Picked by {names}",

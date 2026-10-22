@@ -3050,6 +3050,8 @@
           "realAnswer": "La respuesta verdadera: «{answer}»",
           "continue": "Siguiente ronda",
           "seeResult": "Ver el resultado",
+          "continueIn": "Siguiente ronda en {seconds} s",
+          "seeResultIn": "Resultado en {seconds} s",
           "realTag": "La respuesta verdadera",
           "bluffBy": "Farol de {name}",
           "votedBy": "Elegida por {names}",

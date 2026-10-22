@@ -1,4 +1,10 @@
-import { createBluffState, reduceBluff, type BluffPrompt, type BluffState } from '@/lib/bluff/engine'
+import {
+  createBluffState,
+  reduceBluff,
+  BLUFF_REVEAL_MIN_MS,
+  type BluffPrompt,
+  type BluffState,
+} from '@/lib/bluff/engine'
 import { getBluffPrompts } from '@/lib/bluff/data'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { BOT_PERSONAS, botDisplayName } from '@/lib/online/bot-personas'
@@ -82,8 +88,10 @@ function vote(state: BluffState, count: number, realEvery = 3): BluffState {
   return next
 }
 
+/** Au plancher de lecture : avant, le moteur refuse le CONTINUE (READING_TIME). */
 function cont(state: BluffState): BluffState {
-  return reduceBluff(state, { type: 'CONTINUE', playerId: state.players[0].id, now: Date.now() })
+  const now = Math.max(Date.now(), (state.revealAt ?? 0) + BLUFF_REVEAL_MIN_MS)
+  return reduceBluff(state, { type: 'CONTINUE', playerId: state.players[0].id, now })
 }
 
 /** Échéance lointaine : le minuteur reste visible sur l'aperçu. */

@@ -77,6 +77,7 @@ export function parseBluffState(json: string | null): BluffState | null {
       pendingFakes: raw.pendingFakes ?? {},
       pendingVotes: raw.pendingVotes ?? {},
       candidates: raw.candidates ?? [],
+      revealAt: raw.revealAt ?? null,
     }
   } catch {
     return null

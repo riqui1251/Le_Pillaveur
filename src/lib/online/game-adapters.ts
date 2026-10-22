@@ -156,6 +156,7 @@ import {
   toBluffClientView,
   BLUFF_MIN_PLAYERS,
   BLUFF_MAX_PLAYERS,
+  BLUFF_REVEAL_BOT_TICK_MS,
   type BluffState,
 } from '@/lib/bluff/engine'
 import {
@@ -1101,7 +1102,7 @@ const bluffAdapter: GameAdapter = {
   markLeft: (state, userId, at) => markBluffPlayerLeft(state as BluffState, userId, at),
   rejoin: (state, userId) => rejoinBluffPlayer(state as BluffState, userId),
   // BluffOnline : échéance de phase + bots en attente (bluff, vote) ou bot
-  // meneur du reveal (2,5 s de lecture).
+  // meneur du reveal (plancher de lecture + 1 s).
   serviceTick(rawState, now, options) {
     const state = rawState as BluffState
     const pendingBot =
@@ -1119,7 +1120,7 @@ const bluffAdapter: GameAdapter = {
         !pendingBot && !revealActorIsBot
           ? null
           : state.phase === 'reveal'
-            ? 2500
+            ? BLUFF_REVEAL_BOT_TICK_MS
             : botTickDelayMs(pendingBot?.name, rand),
     })
   },

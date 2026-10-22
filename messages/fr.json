@@ -3050,6 +3050,8 @@
           "realAnswer": "La vraie réponse : « {answer} »",
           "continue": "Manche suivante",
           "seeResult": "Voir le résultat",
+          "continueIn": "Manche suivante dans {seconds} s",
+          "seeResultIn": "Résultat dans {seconds} s",
           "realTag": "La vraie réponse",
           "bluffBy": "Bluff de {name}",
           "votedBy": "Choisie par {names}",

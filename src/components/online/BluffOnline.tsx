@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
   BLUFF_FAKE_MAX_LEN,
+  BLUFF_REVEAL_BOT_TICK_MS,
   BLUFF_SUBMIT_MS,
   BLUFF_VOTE_MS,
   type BluffClientView,
@@ -23,6 +24,7 @@ import {
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useDeadline } from '@/hooks/useDeadline'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -83,6 +85,9 @@ export function BluffOnline() {
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const tutorial = useGameTutorial('bluff', inGame)
   const cosmetics = useMemberCosmetics(room)
+  // Le moteur refuse « Manche suivante » avant le temps de lecture
+  // (READING_TIME) : le bouton reste grisé, décompte affiché, jusque-là.
+  const continueUnlocked = useDeadline(view?.continueAt ?? null)
 
   // ÉCHÉANCE DE PHASE : tick « advance » arbitré par rang (cf. useAdvanceTick)
   // — le rang 0 tire à l'échéance, le suivant prend le relais 4 s plus tard si
@@ -118,7 +123,7 @@ export function BluffOnline() {
       pendingBot || revealActorIsBot
         ? {
             body: { action: 'bot' },
-            delayMs: view?.phase === 'reveal' ? 2500 : botTickDelayMs(pendingBot?.name),
+            delayMs: view?.phase === 'reveal' ? BLUFF_REVEAL_BOT_TICK_MS : botTickDelayMs(pendingBot?.name),
           }
         : null,
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
@@ -148,6 +153,8 @@ export function BluffOnline() {
 
   const finished = view.phase === 'finished'
   const reveal = view.lastReveal
+  const continueLocked = view.continueAt != null && !continueUnlocked
+  const isLastRound = view.promptIdx + 1 >= view.totalRounds
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
@@ -494,10 +501,20 @@ export function BluffOnline() {
           variant="primary"
           size="gameLg"
           className="w-full"
-          disabled={busy}
+          disabled={busy || continueLocked}
           onClick={() => void sendAction({ action: 'continue' })}
         >
-          {view.promptIdx + 1 >= view.totalRounds ? t('reveal.seeResult') : t('reveal.continue')}
+          {continueLocked ? (
+            <PhaseCountdown endsAt={view.continueAt}>
+              {({ seconds }) =>
+                isLastRound ? t('reveal.seeResultIn', { seconds }) : t('reveal.continueIn', { seconds })
+              }
+            </PhaseCountdown>
+          ) : isLastRound ? (
+            t('reveal.seeResult')
+          ) : (
+            t('reveal.continue')
+          )}
         </Button>
       )}
     </OnlineActionBar>

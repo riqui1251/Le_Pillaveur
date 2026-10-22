@@ -26,6 +26,18 @@ export const BLUFF_SUBMIT_MS = 45_000
 export const BLUFF_VOTE_MS = 60_000
 /** Longueur maximale d'un bluff. */
 export const BLUFF_FAKE_MAX_LEN = 60
+/**
+ * Plancher de lecture du reveal : avant lui, « Manche suivante » d'un joueur
+ * est refusé (READING_TIME). Sans lui, le premier toucher effaçait la vraie
+ * réponse, les auteurs et les votes avant que la table ait pu les lire.
+ */
+export const BLUFF_REVEAL_MIN_MS = 5_000
+/**
+ * Tick du bot qui mène le reveal : le plancher + 1 s de marge, pour que le
+ * moteur ne lui oppose jamais READING_TIME à l'arrondi d'horloge près — le
+ * reveal n'a pas d'échéance, un tick refusé le figerait.
+ */
+export const BLUFF_REVEAL_BOT_TICK_MS = BLUFF_REVEAL_MIN_MS + 1_000
 /** Points pour avoir trouvé la vraie réponse. */
 export const BLUFF_POINTS_FOUND_REAL = 1000
 /** Points par joueur trompé par SON bluff. */
@@ -83,6 +95,8 @@ export type BluffState = TimedPhaseState & {
   /** SECRET pendant `vote` — playerId → candidateId voté. */
   pendingVotes: Record<string, string>
   lastReveal: BluffRoundResult | null
+  /** Entrée en reveal (epoch ms serveur), null hors reveal. */
+  revealAt: number | null
   rematchVotes: string[]
   winnerId: string | null
   /** SECRET serveur. */
@@ -121,6 +135,16 @@ function normalize(text: string): string {
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .trim()
+}
+
+/**
+ * Millisecondes écoulées depuis l'entrée en reveal. Un état sérialisé AVANT
+ * l'horodatage (revealAt absent) est traité comme déjà lisible : on ne bloque
+ * jamais une partie en cours.
+ */
+export function bluffRevealElapsedMs(state: BluffState, now: number): number {
+  if (state.revealAt == null) return Number.POSITIVE_INFINITY
+  return now - state.revealAt
 }
 
 // ─── Création ────────────────────────────────────────────────────────────────
@@ -163,6 +187,7 @@ export function createBluffState(
     candidates: [],
     pendingVotes: {},
     lastReveal: null,
+    revealAt: null,
     rematchVotes: [],
     winnerId: null,
     rngState: rng.getState(),
@@ -271,6 +296,7 @@ function resolveVotes(state: BluffState, now: number): BluffState {
     players,
     pendingVotes: {},
     lastReveal,
+    revealAt: now,
     ...enterPhase(state.phaseSeq, 'reveal', null, now),
     phase: 'reveal',
     version: state.version + 1,
@@ -347,8 +373,13 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
 
     case 'CONTINUE': {
       if (state.phase !== 'reveal') throw new BluffEngineError('NOT_REVEAL')
-      if (!state.players.some((p) => p.id === action.playerId)) {
-        throw new BluffEngineError('UNKNOWN_PLAYER')
+      const asker = state.players.find((p) => p.id === action.playerId)
+      if (!asker) throw new BluffEngineError('UNKNOWN_PLAYER')
+      // Un bot meneur lit aussi pour la table : sans humain assis, personne
+      // à faire attendre.
+      const mustRead = !asker.isBot || bluffActive(state).some((p) => !p.isBot)
+      if (mustRead && bluffRevealElapsedMs(state, action.now) < BLUFF_REVEAL_MIN_MS) {
+        throw new BluffEngineError('READING_TIME')
       }
       const nextIdx = state.promptIdx + 1
       if (nextIdx >= state.roundPrompts.length) {
@@ -359,6 +390,7 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
           phase: 'finished',
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,
+          revealAt: null,
           winnerId: leaders.length === 1 ? leaders[0].id : null,
           version: state.version + 1,
         }
@@ -370,6 +402,7 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
         candidates: [],
         pendingVotes: {},
         lastReveal: null,
+        revealAt: null,
         ...enterPhase(state.phaseSeq, 'submit', BLUFF_SUBMIT_MS, action.now),
         phase: 'submit',
         version: state.version + 1,
@@ -463,6 +496,8 @@ export type BluffClientView = Omit<
   myCandidateId: string | null
   /** Candidats anonymisés (texte seul) — null hors phase de vote. */
   voteOptions: Array<{ candidateId: string; text: string }> | null
+  /** Reveal : instant (epoch ms serveur) où « Manche suivante » est accepté. */
+  continueAt: number | null
 }
 
 /**
@@ -493,6 +528,10 @@ export function toBluffClientView(state: BluffState, viewerId: string): BluffCli
     voteOptions:
       state.phase === 'vote'
         ? candidates.map((c) => ({ candidateId: c.candidateId, text: c.text }))
+        : null,
+    continueAt:
+      state.phase === 'reveal' && state.revealAt != null
+        ? state.revealAt + BLUFF_REVEAL_MIN_MS
         : null,
     players: players.map((p) => ({
       ...p,
