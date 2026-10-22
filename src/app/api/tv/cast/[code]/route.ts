@@ -2,12 +2,19 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-server'
 import { prisma } from '@/lib/prisma'
 import { publishRoomChanged } from '@/lib/online/room-bus'
+import { readJsonBodyLimited } from '@/lib/rate-limit'
 
 /**
  * Mise à jour (PUT) et fin (DELETE) d'une salle de cast. Réservé au créateur
  * (hostUserId) : lui seul pousse l'état d'affichage de son jeu local.
  */
 export const dynamic = 'force-dynamic'
+
+/**
+ * Même plafond que la création (POST /api/tv/cast) : l'état poussé est écrit
+ * tel quel dans `gameStateJson`, et ce PUT, lui, n'était pas borné.
+ */
+const MAX_CAST_BODY_BYTES = 256 * 1024
 
 type Params = { params: Promise<{ code: string }> }
 
@@ -30,7 +37,11 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   }
 
-  const body = (await request.json().catch(() => ({}))) as { state?: string }
+  const parsed = await readJsonBodyLimited<{ state?: unknown } | null>(request, MAX_CAST_BODY_BYTES)
+  if (!parsed.ok && parsed.reason === 'too_large') {
+    return NextResponse.json({ error: 'body-too-large' }, { status: 413 })
+  }
+  const body = (parsed.ok ? parsed.body : null) ?? {}
   await prisma.onlineRoom.update({
     where: { id: resolved.room.id },
     data: {
